@@ -41,15 +41,17 @@ System 3: search agent
 | Doc | What it is | Read when |
 |-----|-----------|-----------|
 | `System_1_data_engineering_plan.md` | Detailed build plan for all 6 ETL pipelines | Before writing any pipeline code |
-| `Personal_build_plan.md` | 8-week execution plan, repo structure, cost model | Session planning |
-| `Agentic_search_architecture_QA.md` | Full architecture Q&A and decisions | Architecture decisions |
 | `NCBI_databases_and_APIs_reference.md` | Raw data on all 39 NCBI databases, FTP paths, record counts | Checking FTP URLs and file formats |
-| `KG_prototype_feedback.md` | SME feedback and query patterns that define quality bar | Designing CQ tests |
-| `Decision_log_agentic_search.md` | Architecture decisions already made | Before re-deciding something |
-| `Innovation_proposal_2026.md` | Full system proposal | Context and framing |
-| `Biolink_repos_explained.md` | BioLink/LinkML reference | Schema design |
+| `planning/Personal_build_plan.md` | 8-week execution plan, repo structure, cost model | Session planning |
+| `planning/Two_track_plan.md` | Two-track execution strategy | Planning sessions |
+| `architecture/Agentic_search_architecture_QA.md` | Full architecture Q&A and decisions | Architecture decisions |
+| `architecture/Biolink_repos_explained.md` | BioLink/LinkML reference | Schema design |
+| `context/KG_prototype_feedback.md` | SME feedback and query patterns that define quality bar | Designing CQ tests |
+| `context/Decision_log_agentic_search.md` | Architecture decisions already made | Before re-deciding something |
+| `context/Innovation_proposal_2026.md` | Full system proposal | Context and framing |
+| `context/Vision_of_success.md` | Vision and success criteria | Context and framing |
 
-Reference repo deep-dive: `reference/ncbi_ai_agents-Deep-Dive/` (symlink to prior work)
+Reference symlinks: `reference/ncbi_ai_agents/` (prior work), `reference/personal-os-work/`
 
 ---
 
