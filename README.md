@@ -1,0 +1,82 @@
+# NCBI agentic search
+
+Ask a question in English. Get a cited, multi-database answer in seconds.
+
+Connects 6 NCBI databases (Gene, PubMed, ClinVar, MedGen, Taxonomy, SNP) into a BioLink-compliant knowledge graph. An 8-agent AI system understands your question, plans retrieval across databases, and synthesizes cited answers.
+
+5 ways to access:
+- Web UI: interactive search with graph visualization
+- MCP server: for AI agents (Claude, GPT, Gemini)
+- REST API: for programmatic access (OpenAPI spec)
+- CLI: `ncbi-search "pathogenic BRCA1 variants in breast cancer"`
+- KGX export: bulk graph download for data scientists
+
+150M+ nodes. 6 databases. 30+ more on-demand via ELink. Every fact cited. Every connection visible.
+
+---
+
+## Status
+
+Building System 1 (data engineering). Phase 1: Gene + ClinVar + MedGen ETL pipelines.
+
+| System | Status |
+|--------|--------|
+| System 1: data pipelines | In progress |
+| System 2: knowledge graph | Not started |
+| System 3: search agent | Not started |
+
+---
+
+## Architecture
+
+```
+System 1: data engineering
+  NCBI FTP -> parse -> BioLink map -> validate -> KGX files
+
+System 2: knowledge graph
+  KGX files -> normalize -> merge -> Neo4j
+
+System 3: search agent (8 agents)
+  Query -> understand -> plan -> retrieve -> synthesize -> cite
+```
+
+See `docs/System_1_data_engineering_plan.md` for detailed build plan.
+See `docs/Agentic_search_architecture_QA.md` for full architecture decisions.
+
+---
+
+## Quick start
+
+```bash
+# Prerequisites
+python 3.11+
+neo4j community edition (local)
+
+# Setup
+git clone https://github.com/[you]/agentic-search-data-engineering
+cd agentic-search-data-engineering
+cp .env.example .env  # add your NCBI API key
+pip install -r requirements.txt
+
+# Run Gene ETL (Phase 1, Step 1)
+python data-pipelines/gene/pipeline.py
+```
+
+---
+
+## Data sources (System 1)
+
+| Database | Records | BioLink category | FTP source |
+|----------|---------|-----------------|-----------|
+| Gene | 94M | `biolink:Gene` | ftp.ncbi.nlm.nih.gov/gene/DATA/ |
+| ClinVar | 4.5M | `biolink:SequenceVariant` | ftp.ncbi.nlm.nih.gov/pub/clinvar/ |
+| MedGen | 233K | `biolink:Disease` | ftp.ncbi.nlm.nih.gov/pub/medgen/ |
+| PubMed | 40M | `biolink:Article` | ftp.ncbi.nlm.nih.gov/pubmed/baseline/ |
+| Taxonomy | 2.9M | `biolink:OrganismTaxon` | ftp.ncbi.nlm.nih.gov/pub/taxonomy/ |
+| SNP (clinical) | ~500K | `biolink:SequenceVariant` | Via ClinVar cross-references |
+
+---
+
+## License
+
+Apache 2.0. See LICENSE.

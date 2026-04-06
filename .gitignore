@@ -1,0 +1,58 @@
+# Data (large FTP downloads - never commit)
+data/raw/
+data/ftp_cache/
+data/kgx/
+*.gz
+*.tar.gz
+*.xml.gz
+*.zip
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+venv/
+env/
+.venv/
+*.pyc
+
+# Node
+node_modules/
+npm-debug.log*
+.npm
+
+# Neo4j
+neo4j/data/
+neo4j/logs/
+neo4j/import/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# LangSmith / observability
+.langchain/
+
+# Temporary
+tmp/
+temp/
+scratch/
