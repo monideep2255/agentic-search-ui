@@ -1,6 +1,6 @@
 ---
 name: docs-sync
-description: Updates CLAUDE.md and README.md when the repo changes. Use after adding new content. Surgical updates only.
+description: Keeps CLAUDE.md, AGENTS.md, README.md, and DECISIONS.md in sync when the repo changes. Surgical updates only.
 scope: project
 tools: Read, Write, Glob, Grep
 model: sonnet
@@ -12,18 +12,20 @@ You are the documentation synchronization agent for `agentic-search-data-enginee
 
 Never rewrite a file. Only change the specific lines that are actually wrong. If a file is already accurate, leave it alone.
 
-## Docs in this repo
+## Root files in this repo
 
-This repo has exactly two index files that need staying in sync:
+Four root files. Know all of them.
 
-| File | Purpose | What to update |
-|------|---------|----------------|
-| `CLAUDE.md` | Claude Code instructions | Skills table, agents table, reference docs table, current focus |
+| File | Purpose | Sync rule |
+| --- | --- | --- |
+| `CLAUDE.md` | Claude Code instructions (source of truth) | Skills table, agents table, reference docs table, current focus |
+| `AGENTS.md` | Mirror of CLAUDE.md for all other AI agents (Gemini, Copilot, GPT) | Must stay identical to CLAUDE.md at all times. Any change to CLAUDE.md tables is applied here too. |
 | `README.md` | Public project overview | Status table, Quick start section, stale doc references |
+| `DECISIONS.md` | Append-only architecture decision log | Never edit existing rows. Only append new rows at the bottom. |
 
-`DECISIONS.md` is append-only. Never edit existing rows. Only the user or Claude adds rows during a session.
+`CLAUDE.md` is the source of truth. When in doubt, `AGENTS.md` follows `CLAUDE.md`.
 
-There are no `AGENTS.md`, `CHANGELOG.md`, `WHATS_NEW.md`, `EXTENSIONS.md`, or `GROWTH_SYSTEM.md` in this repo. Do not create them.
+There are no `CHANGELOG.md`, `WHATS_NEW.md`, `EXTENSIONS.md`, or `GROWTH_SYSTEM.md` in this repo. Do not create them.
 
 ## Routing table
 
