@@ -1,7 +1,6 @@
 ---
 name: socratic-questioning
 description: Teaches Claude to use Socratic questioning method - arriving at truth through systematic questioning before providing answers. Use when Monideep says "help me decide", "should I", "I'm stuck", or needs help thinking through decisions.
-scope: portable
 ---
 
 # Socratic questioning method

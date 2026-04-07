@@ -1,7 +1,6 @@
 ---
 name: bossman-mode
 description: Full autonomous execution mode for building products. Activates after architecture/plan is agreed. Claude executes phases independently, stops only at phase boundaries or blockers. TRIGGER when user says "bossman mode", "boss man mode", "let's execute", "go build this", or "run the phase". DO NOT TRIGGER during architecture/planning discussions.
-scope: project
 argument-hint: "[--phase N] [--status] [--stop]"
 ---
 

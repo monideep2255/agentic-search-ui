@@ -1,7 +1,6 @@
 ---
 name: first-principles
 description: Explains concepts using first-principles thinking - breaks complex topics into fundamental truths with simple language. TRIGGER when user asks "what is X", "explain Y", "how does X work", "teach me about", "I don't understand", or needs a technical concept clarified. Also trigger on "break this down" or "ELI5". DO NOT TRIGGER for career advice (use board) or skill practice (use forge).
-scope: portable
 ---
 
 # First principles & simple explanations
