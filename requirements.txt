@@ -3,7 +3,9 @@ linkml>=1.7
 biolink-model>=4.0
 kgx>=2.3
 sssom>=0.4          # SSSOM mapping files (cross-database identifier resolution)
-curies>=0.7         # CURIE prefix expansion / contraction
+# Note: curies is a transitive dep pulled by both biolink-model and sssom with
+# conflicting constraints. Do not pin it directly - let the resolver handle it.
+# Tested with curies 0.13.1: all imports (biolink_model, kgx, sssom, Bio.Entrez) work.
 
 # NCBI access
 biopython>=1.83     # Bio.Entrez for ESearch / ELink / EFetch

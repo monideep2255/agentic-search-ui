@@ -9,7 +9,7 @@ You are not starting the plan. The user will kick off the plan and give all inst
 ## 1. Clone and Python environment
 
 ```bash
-git clone <github-url> agentic-search-data-engineering
+git clone https://github.com/monideep2255/agentic-search-data-engineering.git agentic-search-data-engineering
 cd agentic-search-data-engineering
 
 python3.11 -m venv venv
@@ -24,8 +24,9 @@ These are Confluence-style docs. Read-only context. Do not edit them.
 
 ```bash
 mkdir -p reference
-ln -s <path-to>/ncbi_ai_agents-ncbi-kg reference/ncbi_ai_agents-ncbi-kg
-ln -s <path-to>/personal-os-work       reference/personal-os-work
+ln -s <path-on-work-computer-to>/ncbi_ai_agents reference/ncbi_ai_agents-ncbi-kg
+ln -s <path-on-work-computer-to>/personal-os-work reference/personal-os-work
+# Find the paths with: find ~ -maxdepth 4 -name "ncbi_ai_agents" -type d 2>/dev/null
 ```
 
 ## 3. Configure .env
