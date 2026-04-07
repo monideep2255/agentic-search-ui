@@ -2,7 +2,9 @@
 
 Claude Code instructions for `agentic-search-data-engineering`. This IS a software project.
 
-Stack: Python 3.11+, FastAPI, LangGraph, Neo4j, React, LinkML, KGX.
+This repo covers System 1 (data pipelines) and System 2 (knowledge graph) only. System 3 (search agent, FastAPI, LangGraph, UI, delivery channels) lives in a separate repository. Do not add System 3 dependencies or code here.
+
+Stack: Python 3.11+, LinkML, BioLink 4.x, KGX, PostgreSQL 15 + Apache AGE.
 
 ---
 
@@ -10,28 +12,28 @@ Stack: Python 3.11+, FastAPI, LangGraph, Neo4j, React, LinkML, KGX.
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | **System 1: data pipelines** | Building now. Phase 1: Gene + ClinVar + MedGen (core triangle). |
-| 2 | **Knowledge graph** | Schema defined alongside pipelines. Neo4j load after Phase 1. |
-| 3 | **Search agent** | Weeks 5-6. Do not start until 6-database graph is loaded. |
+| 1 | System 1: data pipelines | Building now. Phase 1: Gene + ClinVar + MedGen (core triangle). |
+| 2 | System 2: knowledge graph | Schema defined alongside pipelines. PostgreSQL + AGE load after Phase 1. |
+| 3 | System 3: search agent | Lives in a separate repository. Do not build here. |
 
 ---
 
 ## Architecture
 
-Three systems. Build in order. Do not jump ahead.
+Three systems. This repo holds System 1 and System 2 only. System 3 lives in a separate repository.
 
 ```
-System 1: data engineering
+System 1: data engineering (this repo)
   Input:  NCBI FTP bulk files
   Output: BioLink-compliant KGX files (nodes.tsv + edges.tsv per database)
 
-System 2: knowledge graph
+System 2: knowledge graph (this repo)
   Input:  KGX files from System 1
-  Output: Merged graph in Neo4j, queryable via Cypher
+  Output: Merged graph in PostgreSQL + Apache AGE, queryable via openCypher
 
-System 3: search agent
+System 3: search agent (separate repo, do not build here)
   Input:  User query
-  Output: Cited multi-database answer from Neo4j + on-demand ELink/EFetch
+  Output: Cited multi-database answer from graph + on-demand ELink/EFetch
 ```
 
 ---
@@ -42,16 +44,31 @@ System 3: search agent
 |-----|-----------|-----------|
 | `System_1_data_engineering_plan.md` | Detailed build plan for all 6 ETL pipelines | Before writing any pipeline code |
 | `NCBI_databases_and_APIs_reference.md` | Raw data on all 39 NCBI databases, FTP paths, record counts | Checking FTP URLs and file formats |
-| `planning/Personal_build_plan.md` | 8-week execution plan, repo structure, cost model | Session planning |
-| `planning/Two_track_plan.md` | Two-track execution strategy | Planning sessions |
-| `architecture/Agentic_search_architecture_QA.md` | Full architecture Q&A and decisions | Architecture decisions |
 | `architecture/Biolink_repos_explained.md` | BioLink/LinkML reference | Schema design |
-| `context/KG_prototype_feedback.md` | SME feedback and query patterns that define quality bar | Designing CQ tests |
-| `context/Decision_log_agentic_search.md` | Architecture decisions already made | Before re-deciding something |
 | `context/Innovation_proposal_2026.md` | Full system proposal | Context and framing |
-| `context/Vision_of_success.md` | Vision and success criteria | Context and framing |
 
-Reference symlinks: `reference/ncbi_ai_agents/` (prior work), `reference/personal-os-work/`
+Reference symlinks: `reference/ncbi_ai_agents-ncbi-kg/` (prior NCBI KG work, ncbi-kg branch), `reference/personal-os-work/`
+
+## Canonical reference pipeline
+
+The most valuable reference is an existing 9-step BioLink pipeline at:
+
+`reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/`
+
+Same code is also at `reference/personal-os-work/NIH/KG/Use-case-WG/PoC/Pipeline/glucose_metabolism_kg_package/glucose_metabolism_kg/src/glucose_metabolism_kg/` (it was moved into the ncbi-kg repo).
+
+Patterns to copy directly:
+
+- `utils.py:91-104` - idempotent FTP download with cache
+- `utils.py:35-86` - NCBI Entrez retry with exponential backoff and rate limiting
+- `assembly.py` - dedup, dangling-edge validation, MONDO stub injection
+- `export.py` - KGX TSV + JSON-LD + Neo4j CSV export (Neo4j CSV part needs adapting for AGE)
+- `config.py` - dataclass-based configuration with `__post_init__` directory creation
+- `variants.py` - chunked DataFrame processing for large gzipped files
+
+Reference BioLink schema (8 categories, 15 predicates) is encoded in `assembly.py` and `export.py` of the reference pipeline. Copy categories and predicates verbatim where they apply.
+
+Reference repo's own CLAUDE.md (with full architecture, file map, and 100/100 task tracker) is at `reference/ncbi_ai_agents-ncbi-kg/CLAUDE.md`. Skim it before designing new pipelines.
 
 ---
 
@@ -112,6 +129,10 @@ Every fact must be clickable back to its NCBI source record. This is the trust m
 | first-principles | Explains BioLink, LangGraph, Neo4j, LinkML concepts |
 | objective-review | `/objective-review` - critical feedback |
 | socratic-questioning | Clarifying questions before big decisions |
+| best-practices | Session-start checklist, code change safety rules, commit hygiene |
+| qa-gate | Post-task quality gate before any pipeline commit |
+| release-workflow | End-to-end release: chains qa-gate then ship |
+| visualization-standards | Mermaid and schema diagram standards for pipelines and KGX flows |
 
 ---
 
@@ -137,12 +158,15 @@ Gitignored: `data/raw/`, `data/ftp_cache/`, `.env`, `*.gz`, `*.xml.gz`, `node_mo
 
 ## Cost targets (from Personal_build_plan.md)
 
-- Claude Code Max: $100/month (already paying)
-- LLM API: $50-150/month (Sonnet for search, Haiku for eval)
-- VPS: $25-50/month (Hetzner CX31 or DigitalOcean)
-- Total 2-month budget: $300-500 cash
+This repo (System 1 + 2) only:
 
-Frugal principle: lead with free/cheapest tier. Neo4j Community (free), LangSmith free tier (5K traces/month), PostHog free tier (1M events/month).
+- Claude Code Max: $100/month (already paying)
+- VPS: $10-15/month (Hetzner CX31 with PostgreSQL + AGE, disk-based, handles 150M nodes on 8GB RAM)
+- Storage for FTP dumps: $1-5/month or local disk
+
+System 3 costs (LLM API, observability, etc.) belong to the separate System 3 repo.
+
+Frugal principle: lead with free/cheapest tier. PostgreSQL + AGE (free, replaces Neo4j Enterprise at ~$100-200/month savings).
 
 ---
 

@@ -1,0 +1,32 @@
+# BioLink / schema
+linkml>=1.7
+biolink-model>=4.0
+kgx>=2.3
+sssom>=0.4          # SSSOM mapping files (cross-database identifier resolution)
+curies>=0.7         # CURIE prefix expansion / contraction
+
+# NCBI access
+biopython>=1.83     # Bio.Entrez for ESearch / ELink / EFetch
+tenacity>=8.2       # exponential backoff for FTP and Entrez retries
+
+# Data processing
+lxml>=5.0           # XML parsing (ClinVar, PubMed)
+pandas>=2.0
+pyarrow>=15.0
+numpy>=1.26
+
+# Knowledge graph (System 2: PostgreSQL + Apache AGE)
+# Apache AGE is a PostgreSQL extension - no separate Python driver needed.
+# Communicate with it via psycopg2 + raw SQL calling the cypher() function.
+psycopg2-binary>=2.9
+
+# Utilities
+requests>=2.31
+tqdm>=4.66
+python-dotenv>=1.0
+pyyaml>=6.0
+click>=8.1          # CLI entry points for each pipeline
+
+# Testing
+pytest>=8.0
+pytest-cov>=5.0
