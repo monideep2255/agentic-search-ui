@@ -4,9 +4,6 @@ description: Handles GitHub push/pull operations. Use when asked to sync with Gi
 scope: project
 tools: Bash
 model: sonnet
-depends_on:
-  - .claude/rules/git-workflow.md
-depended_by: []
 ---
 
 # Git sync agent

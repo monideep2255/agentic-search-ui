@@ -2,10 +2,6 @@
 description: "Always identify and attack the bottleneck before optimizing anything else."
 scope: portable
 alwaysApply: true
-depends_on: []
-depended_by:
-  - CLAUDE.md
-  - .claude/README.md
 ---
 
 ## Attack the constraint

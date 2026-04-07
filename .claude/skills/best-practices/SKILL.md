@@ -1,15 +1,6 @@
 ---
 name: best-practices
 description: Session-start checklist, code change safety rules, and commit hygiene for the agentic-search-data-engineering repo (System 1 + System 2 only).
-depends_on:
-  - .claude/rules/git-workflow.md
-  - .claude/rules/decision-logging.md
-  - .claude/rules/file-protection.md
-  - .claude/rules/system-design-patterns.md
-depended_by:
-  - CLAUDE.md
-  - .claude/skills/qa-gate/SKILL.md
-  - .claude/skills/release-workflow/SKILL.md
 ---
 
 # Best practices

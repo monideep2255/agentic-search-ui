@@ -1,13 +1,6 @@
 ---
 name: release-workflow
 description: End-to-end release workflow for a pipeline change. Chains qa-gate then ship. No Railway, no deploy step - this repo lands files on disk.
-depends_on:
-  - .claude/skills/qa-gate/SKILL.md
-  - .claude/skills/ship/SKILL.md
-  - .claude/skills/best-practices/SKILL.md
-  - .claude/rules/git-workflow.md
-depended_by:
-  - CLAUDE.md
 ---
 
 # Release workflow

@@ -3,9 +3,6 @@ description: "Log non-trivial decisions to DECISIONS.md when choosing between al
 scope: portable
 alwaysApply: true
 depends_on: [DECISIONS.md]
-depended_by:
-  - CLAUDE.md
-  - .claude/README.md
 ---
 
 ## Decision logging

@@ -1,11 +1,6 @@
 ---
 name: visualization-standards
 description: Mermaid diagram and schema visualization standards for documenting pipelines, KGX flows, and the BioLink graph schema. Adapted from the reference NCBI KG project, stripped of UI / Cytoscape / React content.
-depends_on:
-  - .claude/rules/writing-style.md
-  - .claude/skills/documentation-standards/SKILL.md
-depended_by:
-  - CLAUDE.md
 ---
 
 # Visualization standards

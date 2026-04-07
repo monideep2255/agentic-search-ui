@@ -1,10 +1,5 @@
 ---
 scope: portable
-depends_on: []
-depended_by:
-  - CLAUDE.md
-  - .claude/README.md
-  - .claude/rules/pdf-docx-conversion.md
 ---
 
 ## Writing style

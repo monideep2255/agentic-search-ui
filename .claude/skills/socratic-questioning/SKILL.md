@@ -2,14 +2,6 @@
 name: socratic-questioning
 description: Teaches Claude to use Socratic questioning method - arriving at truth through systematic questioning before providing answers. Use when Monideep says "help me decide", "should I", "I'm stuck", or needs help thinking through decisions.
 scope: portable
-depends_on: []
-depended_by:
-  - CLAUDE.md
-  - AGENTS.md
-  - .claude/README.md
-  - .claude/rules/communication-style.md
-  - .claude/skills/forge/SKILL.md
-  - .claude/skills/board/SKILL.md
 ---
 
 # Socratic questioning method

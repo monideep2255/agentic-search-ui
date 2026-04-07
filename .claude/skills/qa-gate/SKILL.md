@@ -1,16 +1,6 @@
 ---
 name: qa-gate
 description: Post-task quality gate that runs before any commit on a pipeline change. Six phases: tests, code standards, BioLink validation, KGX shape, dependency tracking, verdict.
-depends_on:
-  - .claude/skills/best-practices/SKILL.md
-  - .claude/skills/architecture-patterns/SKILL.md
-  - .claude/skills/eval-harness/SKILL.md
-  - .claude/skills/python-code-standards/SKILL.md
-  - .claude/skills/testing-standards/SKILL.md
-  - .claude/rules/dependency-tracking.md
-depended_by:
-  - .claude/skills/release-workflow/SKILL.md
-  - CLAUDE.md
 ---
 
 # QA gate

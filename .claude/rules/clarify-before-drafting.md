@@ -1,11 +1,5 @@
 ---
 scope: portable
-depends_on:
-  - .claude/agents/socratic.md
-  - .claude/rules/pause-before-acting.md
-depended_by:
-  - CLAUDE.md
-  - .claude/README.md
 ---
 
 ## Clarify before drafting

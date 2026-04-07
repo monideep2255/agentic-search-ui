@@ -2,10 +2,6 @@
 description: "File protection: no deletion without asking, no unnecessary file creation, no System 3 code"
 scope: portable
 alwaysApply: true
-depends_on: []
-depended_by:
-  - CLAUDE.md
-  - .claude/README.md
 ---
 
 ## File protection

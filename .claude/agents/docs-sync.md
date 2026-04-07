@@ -4,10 +4,6 @@ description: Updates CLAUDE.md and README.md when the repo changes. Use after ad
 scope: project
 tools: Read, Write, Glob, Grep
 model: sonnet
-depends_on:
-  - .claude/rules/writing-style.md
-depended_by:
-  - .claude/skills/ship/SKILL.md
 ---
 
 You are the documentation synchronization agent for `agentic-search-data-engineering`.
@@ -33,9 +29,9 @@ There are no `AGENTS.md`, `CHANGELOG.md`, `WHATS_NEW.md`, `EXTENSIONS.md`, or `G
 
 | Changed path | Files to check |
 | --- | --- |
-| `.claude/skills/` (new or removed) | `CLAUDE.md` Skills table |
-| `.claude/agents/` (new or removed) | `CLAUDE.md` Sub-agents table |
-| `.claude/rules/` (new or removed) | `CLAUDE.md` Key rules section |
+| `.claude/skills/` (new or removed) | `CLAUDE.md` and `AGENTS.md` Skills table |
+| `.claude/agents/` (new or removed) | `CLAUDE.md` and `AGENTS.md` Sub-agents table |
+| `.claude/rules/` (new or removed) | `CLAUDE.md` and `AGENTS.md` Key rules section |
 | `.claude/hooks/` | No doc update needed (hooks are internal) |
 | `docs/` (file added or removed) | `CLAUDE.md` Reference docs table, `README.md` if it links to that doc |
 | `data-pipelines/` (new pipeline dir) | `README.md` Data sources table, `CLAUDE.md` Build order if phase changed |

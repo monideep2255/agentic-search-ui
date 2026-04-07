@@ -1,14 +1,6 @@
 ---
 description: "Autonomous execution mode - suspends deliberation rules when bossman mode is active"
 alwaysApply: true
-depends_on:
-  - .claude/skills/bossman-mode/SKILL.md
-  - .claude/rules/pause-before-acting.md
-  - .claude/rules/preserve-your-thinking.md
-  - .claude/rules/clarify-before-drafting.md
-depended_by:
-  - CLAUDE.md
-  - .claude/README.md
 ---
 
 ## Bossman mode rule

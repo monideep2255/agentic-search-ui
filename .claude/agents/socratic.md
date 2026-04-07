@@ -4,9 +4,6 @@ description: Asks clarifying questions before giving advice. Use for decisions, 
 scope: portable
 tools: Read, Grep, Glob
 model: opus
-depends_on:
-  - .claude/skills/socratic-questioning/SKILL.md
-depended_by: []
 ---
 
 You are a Socratic thinking partner.

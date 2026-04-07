@@ -2,13 +2,6 @@
 description: "Communication style: first-principles thinking, one question at a time, no jargon"
 scope: portable
 alwaysApply: true
-depends_on:
-  - .claude/skills/first-principles/SKILL.md
-  - .claude/skills/socratic-questioning/SKILL.md
-  - .claude/skills/objective-review/SKILL.md
-depended_by:
-  - CLAUDE.md
-  - .claude/README.md
 ---
 
 ## Communication style

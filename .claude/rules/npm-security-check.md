@@ -2,11 +2,6 @@
 name: npm-security-check
 description: Before installing or recommending any npm package, run checks to catch supply chain attacks, malicious versions, and postinstall script exploits.
 scope: portable
-depends_on: []
-depended_by:
-  - CLAUDE.md
-  - .claude/README.md
-  - DEPENDENCIES.md
 ---
 
 ## npm security check

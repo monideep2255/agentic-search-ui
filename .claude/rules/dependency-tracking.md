@@ -10,12 +10,6 @@ Components with YAML frontmatter (skills, agents, rules) declare:
 ---
 name: my-skill
 description: ...
-depends_on:
-  - .claude/rules/git-workflow.md
-  - .claude/agents/docs-sync.md
-depended_by:
-  - CLAUDE.md
-  - .claude/skills/ship/SKILL.md
 ---
 ```
 

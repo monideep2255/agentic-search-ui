@@ -2,14 +2,6 @@
 name: objective-review
 description: Teaches Claude to provide critical, objective feedback instead of agreement and encouragement. Use when Monideep asks "review this", "is this good", "am I missing something", or presents work for feedback.
 scope: portable
-depends_on: []
-depended_by:
-  - CLAUDE.md
-  - AGENTS.md
-  - .claude/README.md
-  - .claude/rules/communication-style.md
-  - .claude/skills/forge/SKILL.md
-  - .claude/skills/system-retro/SKILL.md
 ---
 
 # Objective review skill

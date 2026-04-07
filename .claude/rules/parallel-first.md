@@ -2,11 +2,6 @@
 name: parallel-first
 description: Before starting any multi-part task, check if subtasks are independent and can run in parallel - using parallel tool calls or parallel subagents
 scope: portable
-depends_on: []
-depended_by:
-  - CLAUDE.md
-  - AGENTS.md
-  - .claude/README.md
 ---
 
 ## Parallel-first execution

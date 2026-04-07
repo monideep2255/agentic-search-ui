@@ -1,10 +1,5 @@
 ---
 scope: portable
-depends_on:
-  - .claude/rules/
-depended_by:
-  - CLAUDE.md
-  - .claude/README.md
 ---
 
 ## Pause before acting

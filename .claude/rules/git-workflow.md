@@ -2,11 +2,6 @@
 description: "Git workflow: work on main, clear commits, no formal PR, gitignored paths"
 scope: portable
 alwaysApply: true
-depends_on: []
-depended_by:
-  - CLAUDE.md
-  - .claude/README.md
-  - .claude/agents/git-sync.md
 ---
 
 ## Git workflow
