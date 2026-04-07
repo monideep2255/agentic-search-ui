@@ -47,15 +47,11 @@ System 3: search agent (separate repo, do not build here)
 | `architecture/Biolink_repos_explained.md` | BioLink/LinkML reference | Schema design |
 | `context/Innovation_proposal_2026.md` | Full system proposal | Context and framing |
 
-Reference symlinks: `reference/ncbi_ai_agents-ncbi-kg/` (prior NCBI KG work, ncbi-kg branch), `reference/personal-os-work/`
-
 ## Canonical reference pipeline
 
 The most valuable reference is an existing 9-step BioLink pipeline at:
 
 `reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/`
-
-Same code is also at `reference/personal-os-work/NIH/KG/Use-case-WG/PoC/Pipeline/glucose_metabolism_kg_package/glucose_metabolism_kg/src/glucose_metabolism_kg/` (it was moved into the ncbi-kg repo).
 
 Patterns to copy directly:
 
@@ -66,9 +62,9 @@ Patterns to copy directly:
 - `config.py` - dataclass-based configuration with `__post_init__` directory creation
 - `variants.py` - chunked DataFrame processing for large gzipped files
 
-Reference BioLink schema (8 categories, 15 predicates) is encoded in `assembly.py` and `export.py` of the reference pipeline. Copy categories and predicates verbatim where they apply.
+Reference BioLink schema (8 categories, 15 predicates) is encoded in `assembly.py` and `export.py`. Copy categories and predicates verbatim where they apply.
 
-Reference repo's own CLAUDE.md (with full architecture, file map, and 100/100 task tracker) is at `reference/ncbi_ai_agents-ncbi-kg/CLAUDE.md`. Skim it before designing new pipelines.
+Reference repo's own CLAUDE.md (full architecture and file map) is at `reference/ncbi_ai_agents-ncbi-kg/CLAUDE.md`. Skim it before designing new pipelines.
 
 ---
 
@@ -123,16 +119,24 @@ Every fact must be clickable back to its NCBI source record. This is the trust m
 
 ## Skills
 
-| Skill | Invocation |
-|-------|-----------|
-| bossman-mode | `/bossman` - autonomous execution after plan is agreed |
-| first-principles | Explains BioLink, LangGraph, Neo4j, LinkML concepts |
-| objective-review | `/objective-review` - critical feedback |
-| socratic-questioning | Clarifying questions before big decisions |
-| best-practices | Session-start checklist, code change safety rules, commit hygiene |
-| qa-gate | Post-task quality gate before any pipeline commit |
-| release-workflow | End-to-end release: chains qa-gate then ship |
-| visualization-standards | Mermaid and schema diagram standards for pipelines and KGX flows |
+| Skill | Purpose | Invocation |
+|-------|---------|-----------|
+| bossman-mode | Autonomous execution after plan is agreed | `/bossman` |
+| first-principles | Explains BioLink, LangGraph, AGE, LinkML concepts | `what is`, `explain` |
+| objective-review | Critical feedback, not agreement | `/objective-review` |
+| socratic-questioning | Clarifying questions before big decisions | `should I`, `help me decide` |
+| best-practices | Session-start checklist, change safety, commit hygiene | Read at session start |
+| qa-gate | Post-task quality gate before any pipeline commit | Read before commit |
+| release-workflow | End-to-end release: chains qa-gate then ship | Read before release |
+| visualization-standards | Mermaid and schema diagram standards for pipelines and KGX flows | Read when diagramming |
+| architecture-patterns | ETL + KG architectural patterns adapted from ncbi_ai_agents reference | Read before new pipeline |
+| documentation-standards | Doc style rules for all .md and docstrings in this repo | Read before writing docs |
+| python-code-standards | Python coding standards for ETL pipelines and graph loaders | Read before writing Python |
+| testing-standards | Testing standards for ETL, BioLink validation, KGX export | Read before writing tests |
+| eval-harness | Pipeline and KG quality gates (BioLink, dangling-edge, provenance) | Read before pipeline run |
+| repo-dive | First-principles analysis of a reference/ symlinked repo | `/repo-dive <path>` |
+| skill-adapt-verify | Verify a copied/adapted skill for stale paths, wrong-repo terms, style violations | `/skill-adapt-verify <path>` |
+| ship | Sync docs then commit and push | `/ship` |
 
 ---
 
@@ -156,18 +160,4 @@ Gitignored: `data/raw/`, `data/ftp_cache/`, `.env`, `*.gz`, `*.xml.gz`, `node_mo
 
 ---
 
-## Cost targets (from Personal_build_plan.md)
-
-This repo (System 1 + 2) only:
-
-- Claude Code Max: $100/month (already paying)
-- VPS: $10-15/month (Hetzner CX31 with PostgreSQL + AGE, disk-based, handles 150M nodes on 8GB RAM)
-- Storage for FTP dumps: $1-5/month or local disk
-
-System 3 costs (LLM API, observability, etc.) belong to the separate System 3 repo.
-
-Frugal principle: lead with free/cheapest tier. PostgreSQL + AGE (free, replaces Neo4j Enterprise at ~$100-200/month savings).
-
----
-
-*Created: 2026-04-06*
+Last updated: 2026-04-06
