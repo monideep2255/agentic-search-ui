@@ -281,6 +281,17 @@ Dispatching now. Next check-in at phase completion.
 - Researchers report back with context that builders will need
 - Skip if sufficient context from prior phases or planning stage
 
+**FTP/download verification (mandatory before any data download):**
+
+When a phase involves downloading data from external sources (FTP, HTTP, API):
+
+1. Researcher agent inventories the actual FTP directory listing (not just what the plan says)
+2. Present the user with the exact URLs and file names that will be downloaded
+3. Wait for user confirmation before any download begins
+4. This is the ONE exception to "do not ask" in bossman mode: external data downloads always get verified
+
+This prevents downloading wrong files, malicious data, or hitting the wrong FTP path. The plan documents expected files, but the live directory is the source of truth.
+
 ### Step 4: sub-planning (if needed)
 
 - For complex phases, dispatch sub-planner sub-agents to decompose specific areas

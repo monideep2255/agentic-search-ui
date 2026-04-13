@@ -42,6 +42,7 @@ Ask:
 - Architecture-level changes that contradict the agreed plan
 - Anything that affects phases beyond the current one
 - Deleting files or reverting prior work
+- External data downloads: present exact URLs and file names for user verification before downloading
 
 Deny:
 - Proceeding to the next phase without user MR approval
