@@ -45,6 +45,7 @@ System 3: search agent (separate repo, do not build here)
 | `System_1_data_engineering_plan.md` | Detailed build plan for all 6 ETL pipelines | Before writing any pipeline code |
 | `NCBI_databases_and_APIs_reference.md` | Raw data on all 39 NCBI databases, FTP paths, record counts | Checking FTP URLs and file formats |
 | `architecture/Biolink_repos_explained.md` | BioLink/LinkML reference | Schema design |
+| `architecture/Three_layer_data_architecture.md` | Layer 1 (graph), Layer 2 (on-demand API), Layer 3 (enrichment). What this repo does vs System 3. | Understanding system boundaries |
 | `context/Innovation_proposal_2026.md` | Full system proposal | Context and framing |
 | `bossman_execution_plan.md` | Phase-by-phase execution plan for System 1 pipelines (bossman mode reference) | Before starting any bossman phase |
 
