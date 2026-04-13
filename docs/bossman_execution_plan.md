@@ -6,6 +6,113 @@ Created: 2026-04-13. Based on System_1_data_engineering_plan.md.
 
 ---
 
+## End product
+
+When all 11 phases are complete, this repo produces:
+
+1. 6 ETL pipelines that download NCBI bulk data and output BioLink-compliant KGX files (nodes.tsv + edges.tsv per database)
+2. A merged knowledge graph in PostgreSQL + Apache AGE, queryable via openCypher
+3. Every node and edge traceable back to its NCBI source record (provenance on 100%)
+
+### Graph scale
+
+| Pipeline | Nodes | Edges | KGX size |
+|----------|-------|-------|----------|
+| Gene (all organisms) | ~94M | ~134M | ~40-60GB |
+| ClinVar | ~4.5M | ~9M | ~3-5GB |
+| MedGen | ~233K | ~500K | ~200MB |
+| PubMed | ~40M | ~40M+ | ~30-50GB |
+| Taxonomy | ~2.9M | ~2.9M | ~1-2GB |
+| SNP (full dbSNP) | ~1.2B | ~1.2B+ | ~200-400GB |
+| Total | ~1.4B | ~1.5B+ | ~300-500GB |
+
+### What you can query after Phase 4.1
+
+- "Find all pathogenic variants in BRCA1" (Gene -> ClinVar)
+- "What diseases are associated with HNF1A?" (Gene -> ClinVar -> MedGen)
+- "What publications mention BRCA1 and breast cancer?" (Gene -> PubMed, MeSH filter)
+- "What human genes are involved in glucose metabolism?" (Taxonomy + Gene -> GO)
+- "What is the European allele frequency of rs328?" (dbSNP population frequencies)
+- "What is the mutation spectrum for HNF1A?" (full dbSNP aggregate variant stats)
+
+This is System 1 + System 2. System 3 (search agent, FastAPI, LangGraph, UI) lives in a separate repo and consumes this graph.
+
+---
+
+## Timeline estimate
+
+### Coding time (bossman sessions)
+
+| Phase | Session | What | Coding estimate |
+|-------|---------|------|-----------------|
+| 1.0 | 1 | Schema + scaffolding | DONE (2026-04-13) |
+| 1.1 | 2 | Shared utilities (6 modules) | 1-2 hours |
+| 1.2+1.3+1.4 | 3 | Gene + ClinVar + MedGen ETL (parallel) | 2-4 hours |
+| 1.5 | 4 | Merge + validation | 1-2 hours |
+| 2.0 | 5 | PubMed ETL | 1-2 hours |
+| 2.1 | 6 | Taxonomy ETL | 1 hour |
+| 2.2 | 7 | 5-database merge | 1 hour |
+| 3.0 | 8 | SNP ETL (1.2B records) | 2-3 hours |
+| 3.1 | 9 | SNP-ClinVar merge + final merge | 1-2 hours |
+| 4.0 | 10 | PostgreSQL + AGE loader | 2-3 hours |
+| 4.1 | 11 | Cypher query validation | 1 hour |
+| Total coding | | | ~14-24 hours across 11 sessions |
+
+### Wall-clock time (downloads and processing that can't be compressed)
+
+| Task | Wall-clock | When to run |
+|------|-----------|-------------|
+| Gene FTP download (3GB) | 30-60 min | Phase 1.2, during session |
+| ClinVar XML download (2GB) | 20-30 min | Phase 1.3, during session |
+| MedGen download (115MB) | 5 min | Phase 1.4, during session |
+| PubMed baseline download (30GB) | 4-8 hours | Phase 2.0, start overnight |
+| Taxonomy download (500MB) | 10 min | Phase 2.1, during session |
+| dbSNP full download (100GB) | 8-16 hours | Phase 3.0, start overnight |
+| dbSNP VCF parsing (1.2B records) | 4-12 hours | Phase 3.0, after download |
+| AGE graph loading (1.4B nodes) | 6-24 hours | Phase 4.0, start overnight |
+| Node normalization (6 subgraphs) | 2-4 hours | Phase 3.1, during merge |
+
+### Realistic calendar
+
+Assuming 1-2 sessions per day, with overnight downloads:
+
+| Week | Phases | Milestone |
+|------|--------|-----------|
+| Week 1 | 1.0-1.5 | Core triangle complete: Gene + ClinVar + MedGen merged, queryable as KGX |
+| Week 2 | 2.0-2.2 | Literature + taxonomy added: 5 databases merged |
+| Week 3 | 3.0-3.1 | Full dbSNP: all 6 databases, 1.4B nodes merged |
+| Week 4 | 4.0-4.1 | Graph loaded in PostgreSQL + AGE, Cypher queries working |
+
+Phase 1 (core triangle) is the critical path. If only that ships, you still have a working KGX output covering Gene, ClinVar, and MedGen with full provenance.
+
+### Disk budget (355GB available on work computer)
+
+| After phase | Cumulative disk usage | Headroom |
+|-------------|----------------------|----------|
+| Phase 1.5 | ~10-15GB (human-only Gene + ClinVar + MedGen) | ~340GB |
+| Phase 2.2 | ~50-70GB (add PubMed + Taxonomy) | ~285GB |
+| Phase 3.1 | ~300-500GB (add full dbSNP) | Tight: process incrementally |
+| Phase 4.0 | AGE database ~200-300GB (replaces KGX intermediates) | Delete KGX after loading |
+
+Full dbSNP (Phase 3) is the disk constraint. Strategy: load each pipeline into AGE incrementally, delete KGX intermediates after loading.
+
+### Data storage
+
+All data lives on local disk (`/export`), not the NFS home directory (which is only 20GB). Paths are configured in `.env`:
+
+| Path | What lives here | Gitignored |
+|------|----------------|------------|
+| `/export/home/chakrabortim2/data/ftp_cache/` | Raw FTP downloads (gene_info.gz, ClinVar XML, etc.). Kept for re-runs. | Yes |
+| `/export/home/chakrabortim2/data/raw/` | Intermediate parsed data | Yes |
+| `/export/home/chakrabortim2/data/kgx/` | KGX output (nodes.tsv + edges.tsv per database). Deleted after AGE load. | Yes |
+| PostgreSQL data directory | AGE graph database (final storage) | N/A (system) |
+
+Disk: `/export` is local disk (C:), 4.3TB total, ~427GB free. Enough for Phase 1-2. Phase 3 (full dbSNP) requires incremental processing.
+
+The repo itself contains only code, schema, tests, and docs. No data files are committed to git.
+
+---
+
 ## Skill chain (every phase follows this)
 
 Each bossman phase integrates multiple skills in a fixed order. This is not optional.
