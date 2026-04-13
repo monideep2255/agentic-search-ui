@@ -1,6 +1,5 @@
 ---
-description: "Autonomous execution mode - suspends deliberation rules when bossman mode is active"
-alwaysApply: true
+description: "Autonomous execution mode - suspends deliberation rules, uses agent teams for builders, skill chain at phase end"
 ---
 
 ## Bossman mode rule
@@ -19,16 +18,25 @@ When bossman mode is active (user has invoked `/bossman` and activation checklis
 - File protection: never delete without informing.
 - Dependency tracking: track what you build.
 - Writing style: output quality stays high.
-- Git workflow: clean commits, no co-author lines.
-- Parallel-first: maximize speed.
+- Git workflow: phase branches, MRs, clean commits, no co-author lines.
+- Parallel-first: maximize speed via agent teams for builders.
 - Boil-the-lake: do it 100%.
+- Skill chain at phase end: qa-gate -> release-workflow -> ship (mandatory, no skips).
+
+### Dispatch model
+
+- 2+ parallel builder tasks: use agent teams (teammates in tmux panes)
+- Single-task roles (researcher, judge, test writer): use sub-agents
+- See `.claude/skills/bossman-mode/SKILL.md` for full team composition
 
 ### Three-state permissions
 
 Allow:
-- Write files, run commands, dispatch agents without conversational confirmation
+- Write files, run commands, dispatch agents and teammates without conversational confirmation
+- Create agent teams for parallel builder tasks
 - Make tactical decisions (library choice, file structure, naming) and log them
-- Execute an entire phase autonomously
+- Execute an entire phase autonomously on a phase branch
+- Run qa-gate, release-workflow, and ship at phase end
 
 Ask:
 - Architecture-level changes that contradict the agreed plan
@@ -36,9 +44,9 @@ Ask:
 - Deleting files or reverting prior work
 
 Deny:
-- Proceeding to the next phase without user approval
+- Proceeding to the next phase without user MR approval
 - Ignoring a blocker by guessing
-- Pushing to remote without explicit instruction
+- Pushing to main directly (push to phase branch only, merge via MR)
 
 ### When bossman mode is NOT active
 

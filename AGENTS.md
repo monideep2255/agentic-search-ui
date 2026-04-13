@@ -46,6 +46,7 @@ System 3: search agent (separate repo, do not build here)
 | `NCBI_databases_and_APIs_reference.md` | Raw data on all 39 NCBI databases, FTP paths, record counts | Checking FTP URLs and file formats |
 | `architecture/Biolink_repos_explained.md` | BioLink/LinkML reference | Schema design |
 | `context/Innovation_proposal_2026.md` | Full system proposal | Context and framing |
+| `bossman_execution_plan.md` | Phase-by-phase execution plan for System 1 pipelines (bossman mode reference) | Before starting any bossman phase |
 
 ## Canonical reference pipeline
 
@@ -121,7 +122,7 @@ Every fact must be clickable back to its NCBI source record. This is the trust m
 
 | Skill | Purpose | Invocation |
 |-------|---------|-----------|
-| bossman-mode | Autonomous execution after plan is agreed | `/bossman` |
+| bossman-mode | Autonomous execution with agent teams: parallel builders, judge, skill chain per phase | `/bossman` |
 | first-principles | Explains BioLink, LangGraph, AGE, LinkML concepts | `what is`, `explain` |
 | objective-review | Critical feedback, not agreement | `/objective-review` |
 | socratic-questioning | Clarifying questions before big decisions | `should I`, `help me decide` |
@@ -136,7 +137,7 @@ Every fact must be clickable back to its NCBI source record. This is the trust m
 | eval-harness | Pipeline and KG quality gates (BioLink, dangling-edge, provenance) | Read before pipeline run |
 | repo-dive | First-principles analysis of a reference/ symlinked repo | `/repo-dive <path>` |
 | skill-adapt-verify | Verify a copied/adapted skill for stale paths, wrong-repo terms, style violations | `/skill-adapt-verify <path>` |
-| ship | Sync docs then commit and push | `/ship` |
+| ship | Sync docs then commit and push phase branch | `/ship` |
 
 ---
 
@@ -154,10 +155,10 @@ Every fact must be clickable back to its NCBI source record. This is the trust m
 
 ## Git workflow
 
-Work on `main`. Clear descriptive commits. No Co-Authored-By lines ever.
+Work on phase branches, not directly on `main`. Branch naming: `phase/N.M-short-description`. One MR per phase; merge into `main` after user review. No Co-Authored-By lines ever.
 
-Gitignored: `data/raw/`, `data/ftp_cache/`, `.env`, `*.gz`, `*.xml.gz`, `node_modules/`, `__pycache__/`
+Gitignored: `data/raw/`, `data/ftp_cache/`, `.env`, `*.gz`, `*.xml.gz`, `node_modules/`, `__pycache__/`, `venv/`
 
 ---
 
-Last updated: 2026-04-06
+Last updated: 2026-04-13

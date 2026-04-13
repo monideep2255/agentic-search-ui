@@ -98,53 +98,106 @@ Inspired by Cursor's [Scaling long-running autonomous coding](https://cursor.com
 
 Bossman mode runs as a team, not a solo operator. The orchestrator (main session) decomposes, dispatches, and coordinates. Agents execute.
 
+### Dispatch mode: agent teams (primary) vs sub-agents (fallback)
+
+Bossman uses two dispatch mechanisms. Agent teams are the primary mode. Sub-agents are the fallback when teams are unavailable or overkill.
+
+| Mechanism | When to use | How it works |
+|-----------|-------------|--------------|
+| Agent teams | 2+ parallel builders in a phase | Orchestrator creates a team. Each builder becomes a teammate in its own tmux pane. Teammates share a task list, claim work independently, and can message each other. |
+| Sub-agents (Agent tool) | Single-task roles (researcher, judge, test writer), simple phases with 1 builder | Orchestrator dispatches via Agent tool. Sub-agent runs, reports back, context is discarded. No inter-agent communication. |
+
+Decision rule: if the phase has 2+ independent builder tasks, use agent teams. If the phase has only 1 builder or the role is read-only (researcher, judge), use sub-agents.
+
+### Agent teams setup
+
+Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `.claude/settings.json` (already configured).
+
+Display: tmux split panes. Each teammate gets its own pane. The orchestrator (lead) stays in the main pane and monitors progress via the shared task list.
+
+To create a team, the orchestrator asks Claude Code to spawn teammates:
+
+```
+Create an agent team for Phase [N]:
+- Teammate "builder-config-ftp": build shared/config.py and shared/ftp_client.py
+- Teammate "builder-entrez-mapper": build shared/entrez_client.py and shared/biolink_mapper.py
+- Teammate "builder-exporter-validator": build shared/kgx_exporter.py and shared/validator.py
+Use Sonnet for each teammate. Require plan approval before they start coding.
+```
+
+Each teammate receives its task via the shared task list. The lead monitors progress. When all builders complete, the lead dispatches the judge and test writer (as sub-agents, since those are sequential single-task roles).
+
 ### Team roles
 
-| Role | Count | Responsibility | Tool access | When dispatched |
-|------|-------|---------------|-------------|-----------------|
-| **Orchestrator** | 1 (main session) | Decompose phase into tasks, dispatch agents, track progress, report to user. Never builds directly when 2+ tasks exist. | All tools | Always active |
-| **Researcher** | 1-N | Fetch docs, read APIs, find examples, explore unfamiliar codebases BEFORE builders start. Uses web-research skill, context7 MCP, repo-dive. | Read-only: Read, Grep, Glob, WebFetch, WebSearch, MCP tools | Pre-build: runs first to give builders context |
-| **Planner** | 0-N | Sub-planners for complex areas. Spawned by orchestrator when a phase has sub-areas that need their own task decomposition. Planning is recursive and parallel. | Read-only: Read, Grep, Glob, Bash (read commands) | When phase complexity warrants it |
-| **Builder** | 1-N | Execute independent build tasks. Write code, create files, run commands. Each builder focuses on one task until done, then reports back. Does not coordinate with other builders. | All tools, isolation: worktree when modifying shared files | Parallel dispatch after research/planning |
-| **Judge** | 1 | Single quality gate. Reviews ALL builder output: does it work (functional), is it good (code quality), does it match the plan (completeness), any security issues? Replaces separate QA + reviewer roles. Simpler is better. | Read-only: Read, Grep, Glob, Bash (test/lint commands only) | After all builders complete |
-| **Test writer** | 1 | Write tests for what was built. Unit tests, integration tests, smoke tests as appropriate for the project. | All tools | After or alongside judge |
-| **Integrator** | 0-1 | Wire independently-built components together. Handle imports, configs, entry points, shared state. Only dispatched when builders produced isolated pieces that need connecting. | All tools | Only when builders worked on separate components that must connect |
+| Role | Count | Dispatch mode | Responsibility | When dispatched |
+|------|-------|---------------|---------------|-----------------|
+| **Orchestrator (lead)** | 1 (main session) | Always active | Decompose phase, create team, track tasks, coordinate. Never builds directly when 2+ tasks exist. | Always |
+| **Researcher** | 1-N | Sub-agent | Fetch docs, read APIs, find examples, explore codebases BEFORE builders start. | Pre-build |
+| **Planner** | 0-N | Sub-agent | Sub-planners for complex areas. Recursive decomposition. | When complexity warrants |
+| **Builder** | 2-N | Agent team (teammates) | Execute independent build tasks in parallel. Each builder owns one task in the shared task list. Runs in its own tmux pane. | After research/planning |
+| **Judge** | 1 | Sub-agent | Single quality gate. Reviews ALL builder output: functional, quality, plan adherence, security. | After all builders complete |
+| **Test writer** | 1 | Sub-agent | Write tests for what was built. Unit, integration, smoke tests. | After or alongside judge |
+| **Integrator** | 0-1 | Sub-agent | Wire independently-built components together. Only when builders produced isolated pieces. | Only when components need wiring |
 
 ### Key design principles (from [Cursor scaling agents](https://cursor.com/blog/scaling-agents))
 
-1. **Simpler beats complex.** Additional oversight roles create fragility, not quality. The judge is one agent, not three.
-2. **Workers don't coordinate with each other.** Each builder gets a task and grinds on it independently. The orchestrator handles coordination.
-3. **Planning is recursive.** Complex phases get sub-planners that run in parallel, each producing their own task list.
-4. **Fresh starts combat drift.** If a builder is stuck or going in circles, kill it and dispatch a new one with a clearer prompt rather than trying to course-correct.
-5. **The integrator is conditional.** Cursor found integrators bottleneck at scale. At our scale (3-8 agents), it adds value when components must connect. Skip it when builders produce self-contained deliverables.
-6. **Thin orchestrator.** The orchestrator's job is routing, not reading. To decide which agent gets which task, read file headers and frontmatter, not full contents. Delegate full reads to the agent that needs the information. When sub-agents return results, capture a one-line summary, not the full output. The orchestrator that accumulates the least context coordinates the best.
-7. **Fresh context per agent.** Every dispatched agent starts with a clean context window. Pre-inject only what that specific agent needs (task description, relevant file paths, architectural constraints, research findings). Never pass accumulated conversation history. The agent prompt template below enforces this.
+1. **Simpler beats complex.** The judge is one agent, not three.
+2. **Workers don't coordinate with each other.** Each builder gets a task and grinds independently. The orchestrator (lead) handles coordination via the shared task list.
+3. **Planning is recursive.** Complex phases get sub-planners in parallel.
+4. **Fresh starts combat drift.** If a builder teammate is stuck or going in circles, the lead can message it with a clearer prompt or ask it to start over.
+5. **The integrator is conditional.** Skip when builders produce self-contained deliverables.
+6. **Thin orchestrator.** The lead's job is routing and monitoring, not reading full file contents. Delegate reads to the agent that needs the information.
+7. **Fresh context per agent.** Every teammate starts with a clean context window. Pre-inject only what it needs via the task description.
 
 ### Team dispatch order
 
 ```
 Phase start
-  ├── Researchers (parallel) ─── gather context, docs, examples
-  ├── Sub-planners (parallel, if needed) ─── decompose complex sub-areas
+  ├── Researchers (sub-agents, parallel) ─── gather context, docs, examples
+  ├── Sub-planners (sub-agents, if needed) ─── decompose complex sub-areas
   │
   ├── [research + planning complete]
   │
-  ├── Builders (parallel) ─── execute tasks independently
+  ├── Create agent team ─── spawn builder teammates in tmux panes
+  ├── Builders (teammates, parallel) ─── each claims a task, executes independently
+  ├── Lead monitors ─── watches task list, messages stuck teammates
   │
-  ├── [all builders complete]
+  ├── [all builders complete, team disbanded]
   │
-  ├── Judge ─── single quality gate (pass/fail + details)
-  ├── Test writer (parallel with judge if targets are clear)
-  ├── Integrator (only if components need wiring)
+  ├── Judge (sub-agent) ─── single quality gate (pass/fail + details)
+  ├── Test writer (sub-agent, parallel with judge if targets clear)
+  ├── Integrator (sub-agent, only if components need wiring)
   │
   ├── [judge passed, tests written, integration done]
+  │
+  ├── Skill chain ─── qa-gate -> release-workflow -> ship
   │
   └── Phase checkpoint ─── report to user
 ```
 
+### Skill chain (every phase, no exceptions)
+
+After all team members complete, before the phase checkpoint:
+
+1. `qa-gate` (6 phases: tests, code standards, BioLink/KGX, schema/deps, docs, verdict)
+2. `release-workflow` (local verification, qa-gate confirmation, ship)
+3. `ship` (docs-sync agent, commit, push phase branch, create MR)
+
+Skills active during development (enforced by builders):
+
+- `python-code-standards`: type hints, docstrings, logging, no bare except
+- `testing-standards`: write tests alongside code, fixtures, no network in unit tests
+- `documentation-standards`: sentence case, no bold, no em dashes
+- `decision-logging`: log choices to DECISIONS.md as they happen
+
+Skills active at phase start:
+
+- `best-practices`: session checklist (venv, postgres, CLAUDE.md, git status)
+- `architecture-patterns`: read before designing new modules
+
 ### Agent prompt template
 
-When dispatching any team member, include in the prompt. Each agent gets a clean context window with only what it needs pre-injected. Do not paste accumulated conversation history, prior agent outputs, or full file contents into agent prompts. If an agent needs file content, give it the path and let it read the file itself.
+For sub-agents (researcher, judge, test writer, integrator):
 
 ```
 You are the [ROLE] on a bossman mode execution team.
@@ -160,7 +213,19 @@ Do not ask questions. Execute and report back.
 If stuck, report the blocker clearly. Do not guess on ambiguous requirements.
 ```
 
-Orchestrator rule: when a sub-agent returns, capture a one-line summary of what it produced and which files it touched. Do not inline the full result into your context.
+For agent team teammates (builders), the task is defined in the shared task list. The lead provides:
+
+```
+Task: [specific deliverable, e.g. "Build shared/config.py and shared/ftp_client.py"]
+Context: [1-3 sentences from research]
+Reference: [file paths to read for patterns, e.g. "reference/.../config.py:11-101"]
+Constraints: [provenance required, idempotent downloads, type hints on all public functions]
+Files to create: [exact paths]
+Tests to write: [exact test file paths]
+When done: mark task complete in the task list.
+```
+
+Orchestrator rule: when a sub-agent returns or a teammate marks a task complete, capture a one-line summary of what it produced and which files it touched. Do not inline the full result into your context.
 
 ### Reference repos
 
@@ -175,65 +240,103 @@ Read the reference repo's CLAUDE.md before dispatching agents to explore it.
 
 ## Execution protocol
 
-### Step 1: confirm entry and show team
+### Step 1: session start + branch creation
+
+1. Run `best-practices` session checklist (venv, postgres, CLAUDE.md, git status)
+2. Read `architecture-patterns` skill for the module type being built
+3. Read the phase definition from `docs/bossman_execution_plan.md`
+4. Create the phase branch: `git checkout main && git pull origin main && git checkout -b phase/N.M-description`
+
+### Step 2: confirm entry and show team
 
 Print:
 
 ```
 Bossman mode: ON
 Plan: [plan name or summary]
-Phase: [N] - [phase title]
+Phase: [N.M] - [phase title]
+Branch: phase/N.M-description
 Deliverables: [list what this phase produces]
 Estimated scope: [files to create/modify]
 
 Team:
-- Orchestrator: main session
-- Researchers: [N] agents for [what needs lookup]
+- Lead (orchestrator): main session
+- Researchers: [N] sub-agents for [what needs lookup]
 - Sub-planners: [N, or "none - phase is straightforward"]
-- Builders: [N] agents for [task list]
-- Judge: 1 agent (post-build)
-- Test writer: 1 agent (post-build)
+- Builders: [N] teammates via agent team in tmux panes [task list]
+- Judge: 1 sub-agent (post-build)
+- Test writer: 1 sub-agent (post-build)
 - Integrator: [1 if components need wiring, or "not needed"]
+
+Skills active: best-practices, architecture-patterns, python-code-standards,
+  testing-standards, documentation-standards, decision-logging
+Skills at phase end: qa-gate -> release-workflow -> ship
 
 Dispatching now. Next check-in at phase completion.
 ```
 
-### Step 2: research (if needed)
+### Step 3: research (if needed)
 
-- Dispatch researcher agents in parallel for any unfamiliar APIs, libraries, or codebases
+- Dispatch researcher sub-agents in parallel for unfamiliar APIs, libraries, codebases
 - Researchers report back with context that builders will need
-- Skip this step if the team already has sufficient context from prior phases or the planning stage
+- Skip if sufficient context from prior phases or planning stage
 
-### Step 3: sub-planning (if needed)
+### Step 4: sub-planning (if needed)
 
-- For complex phases, dispatch sub-planner agents to decompose specific areas
-- Sub-planners run in parallel, each producing a task list for their area
+- For complex phases, dispatch sub-planner sub-agents to decompose specific areas
+- Sub-planners run in parallel, each producing a task list
 - Orchestrator merges sub-plans into the builder dispatch
-- Skip for straightforward phases where task decomposition is obvious
+- Skip for straightforward phases
 
-### Step 4: dispatch builders
+### Step 5: dispatch builders (agent team)
 
-- Dispatch builder agents in parallel (one Agent tool call per task, all in a single message)
-- Each builder gets: research context, specific task, file paths, constraints
-- Use `isolation: "worktree"` for tasks that touch overlapping files
-- Builders do not coordinate with each other. They grind on their task and report back.
-- If a builder is stuck or going in circles: kill it and dispatch a fresh one with a clearer prompt
+For phases with 2+ parallel builder tasks:
 
-### Step 5: judge + tests + integration
+1. Create an agent team with one teammate per builder task
+2. Each teammate appears in its own tmux pane
+3. Define tasks in the shared task list with: deliverable, context, reference files, constraints, test files to write
+4. Teammates claim tasks and execute independently
+5. Lead monitors the task list and messages stuck teammates
+6. If a teammate is stuck: message it with a clearer prompt or ask it to start fresh
+7. When all tasks are marked complete, disband the team
 
-Once all builders report back:
+For phases with 1 builder task: use a sub-agent instead.
 
-1. Dispatch judge agent to review ALL builder output (functional correctness, code quality, plan adherence, security)
-2. Dispatch test writer agent (can run in parallel with judge if test targets are clear)
-3. Dispatch integrator agent ONLY if builders produced isolated components that need wiring
-4. If judge fails the work: triage. Minor issues = dispatch a builder fix agent. Major issues = escalate to user.
+### Step 6: judge + tests + integration
 
-### Step 6: phase checkpoint
+Once all builders complete:
 
-When the phase is complete (all agents done, judge passed), print:
+1. Dispatch judge sub-agent to review ALL builder output (functional correctness, code quality, plan adherence, security)
+2. Dispatch test writer sub-agent (can run in parallel with judge if test targets are clear)
+3. Dispatch integrator sub-agent ONLY if builders produced isolated components that need wiring
+4. If judge fails: minor issues = dispatch a fix sub-agent. Major issues = escalate to user.
+
+### Step 7: skill chain (qa-gate -> release-workflow -> ship)
+
+After judge passes and tests are written:
+
+1. Run `qa-gate` (6 phases, mandatory, no skips):
+   - Phase 1: `pytest -q` (all tests pass)
+   - Phase 2: `python-code-standards` + `testing-standards` check
+   - Phase 3: `eval-harness` (BioLink, KGX, dangling edges = 0, provenance = 100%)
+   - Phase 4: schema + `dependency-tracking` validation
+   - Phase 5: `documentation-standards` + `docs-sync` agent
+   - Phase 6: verdict checklist
+2. If qa-gate fails: fix root cause, restart from qa-gate Phase 1
+3. Run `release-workflow`:
+   - Local verification (small slice end-to-end)
+   - Confirm qa-gate passed
+   - Run `ship` (docs-sync, commit, push phase branch, create MR)
+
+### Step 8: phase checkpoint
+
+When the phase is complete (all agents done, judge passed, qa-gate passed, MR created), print:
 
 ```
-Phase [N] complete.
+Phase [N.M] complete.
+
+Branch: phase/N.M-description
+MR: [URL or "created, awaiting review"]
 
 What was done:
 - [deliverable 1]
@@ -241,11 +344,12 @@ What was done:
 - [deliverable 3]
 
 Team activity:
-- Researchers: [N] dispatched, [summary of findings]
-- Builders: [N] dispatched, [N] succeeded, [N] needed retry
+- Researchers: [N] sub-agents dispatched, [summary of findings]
+- Builders: [N] teammates in agent team, [N] succeeded, [N] needed retry
 - Judge result: [pass/fail with details]
 - Tests written: [count and location]
 - Integration: [done/not needed]
+- QA gate: [PASS/FAIL with phase details]
 
 Decisions made (without asking):
 - [decision 1]: chose X over Y because [reason]
@@ -260,13 +364,17 @@ Context health: [PEAK / GOOD / DEGRADING / CRITICAL]
 Next phase: [N+1] - [title]
 Recommendation: [proceed / adjust plan / stop and discuss / fresh session recommended]
 
-Waiting for your go.
+Waiting for your go. Merge the MR then say "next" to start the next phase.
 ```
 
-### Step 7: await approval
+### Step 9: await approval
 
-Do NOT proceed to the next phase until the user says to continue. The user may:
-- Say "go" or "next" to proceed to the next phase
+Do NOT proceed to the next phase until:
+1. The user approves and merges the MR
+2. The user says "go", "next", or similar
+
+The user may:
+- Review the MR and request changes (fix on the same branch, re-push)
 - Adjust the plan based on what they see
 - Ask questions about decisions made
 - Exit bossman mode with `/bossman --stop`
@@ -298,14 +406,14 @@ Blockers: [none or list]
 
 ## Growth path
 
-**Level 1 (now):** Single-phase execution with full agent team. Manual approval between phases. Orchestrator dispatches researchers, builders, judge, test writer. User reviews at checkpoints.
+**Level 1 (now):** Single-phase execution with agent teams for builders, sub-agents for other roles. Manual MR approval between phases. Skill chain enforced at phase end (qa-gate -> release-workflow -> ship). Branch-per-phase git workflow.
 
-**Level 2 (trust building):** Multi-phase execution. Judge agent gates phase transitions instead of user approval for non-architectural phases. Sub-planners handle recursive decomposition of complex phases.
+**Level 2 (trust building):** Judge sub-agent gates phase transitions instead of user MR approval for non-architectural phases. Sub-planners handle recursive decomposition of complex phases. Auto-merge MRs when qa-gate passes and no architecture changes detected.
 
-**Level 3 (Cursor-scale):** Full autonomous multi-phase execution. Checkpoint files written to disk at each phase boundary. Morning summary of everything built, tested, and judged while user was away. Hundreds of builders if the codebase warrants it. Fresh-start pattern: stuck agents get killed and restarted with clearer prompts rather than debugged in-place.
+**Level 3 (Cursor-scale):** Full autonomous multi-phase execution. Checkpoint files at phase boundaries. Morning summary of everything built, tested, and judged while user was away. Fresh-start pattern: stuck teammates get messaged with clearer prompts rather than debugged in-place.
 
-**Level 4 (multi-team):** Multiple independent agent teams for separate subsystems. Each team has its own orchestrator running its own research/build/judge cycle. A meta-orchestrator coordinates between teams at phase boundaries. Useful when the project spans different tech stacks, repos, or deployment targets.
+**Level 4 (multi-team):** Multiple independent agent teams for separate subsystems (e.g. one team for Gene ETL, one for ClinVar ETL, one for MedGen ETL running simultaneously). Each team has its own lead running its own research/build/judge cycle. A meta-orchestrator coordinates between teams at phase boundaries.
 
 ## Design inspiration
 
-Architecture inspired by Cursor's [Scaling long-running autonomous coding](https://cursor.com/blog/scaling-agents) post: strict planner/worker separation, single judge over multiple QA roles, workers that don't coordinate with each other, recursive sub-planning, and the principle that simpler systems outperform complex ones. Adapted for Claude Code's agent dispatch model and single-phase-at-a-time execution.
+Architecture inspired by Cursor's [Scaling long-running autonomous coding](https://cursor.com/blog/scaling-agents) post: strict planner/worker separation, single judge over multiple QA roles, workers that don't coordinate with each other, recursive sub-planning, and the principle that simpler systems outperform complex ones. Adapted for Claude Code's agent teams (experimental) with tmux split-pane display, sub-agents for single-task roles, and a fixed skill chain (qa-gate -> release-workflow -> ship) at phase boundaries.

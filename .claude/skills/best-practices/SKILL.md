@@ -56,7 +56,7 @@ Every node and every edge gets `source` and `source_url`. Functions that produce
 
 ## 4. Commit hygiene
 
-- Work on `main`. No PR process.
+- Work on phase branches (`phase/N.M-description`). One MR per phase, merged into `main` after review.
 - Commit messages in sentence case, descriptive, no emoji.
 - One logical change per commit. Pipeline + schema + tests for the same database go together; unrelated cleanup goes in a separate commit.
 - **Never add `Co-Authored-By` lines.** Project rule.

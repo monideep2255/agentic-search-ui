@@ -11,7 +11,7 @@ What "release" means in this repo:
 - KGX output (if any) has been regenerated and validated locally.
 - Docs and `DECISIONS.md` are in sync.
 
-There is no remote deploy. Postgres + AGE is local. The "release" is a clean commit on `main` and (optionally) a push to GitHub.
+There is no remote deploy. Postgres + AGE is local. The "release" is a clean commit on a phase branch, pushed to origin, with a merge request for review.
 
 Adapted from the reference NCBI KG `release-workflow` by stripping Railway, `phase-complete`, and the deployed-feature-branch model.
 
@@ -40,7 +40,8 @@ Invoke `.claude/skills/ship/SKILL.md`:
 1. Run `docs-sync` if any docstring, schema, or pipeline shape changed.
 2. `git add` only the files you intend to ship (no `git add -A`).
 3. `git commit` with a short, sentence-case message describing the why, not the what. **Never** add `Co-Authored-By` lines.
-4. Optionally `git push origin main`. Push only when the user has asked for it.
+4. Push the phase branch: `git push -u origin phase/N.M-description`
+5. Create a merge request (PR) with deliverables from the phase plan. Use the MR template.
 
 ## Step 4: post-release sanity
 
