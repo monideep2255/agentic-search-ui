@@ -1,0 +1,7 @@
+{
+  "model": "gpt-5.4-codex",
+  "approval_mode": "suggest",
+  "full_auto": false,
+  "sandbox": "local-only",
+  "notify": true
+}
