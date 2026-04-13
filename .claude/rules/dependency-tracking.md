@@ -1,6 +1,6 @@
 ## Dependency tracking
 
-Every component file in `.claude/` (skill, agent, rule, hook) and every Python module under `data-pipelines/` and `knowledge-graph/` should make its dependencies explicit. This prevents silent breakage when files move or get deleted.
+Every component file in `.claude/` (skill, agent, rule, hook) and every Python module under `system-01-data-pipelines/` and `system-02-knowledge-graph/` should make its dependencies explicit. This prevents silent breakage when files move or get deleted.
 
 ### For .claude/ components
 

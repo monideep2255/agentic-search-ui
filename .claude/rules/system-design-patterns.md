@@ -8,7 +8,7 @@ When writing a rule, agent, or skill, bucket actions explicitly:
 
 - Allow: agent does this freely (read files, run validators, query the graph read-only)
 - Deny: agent never does this (delete cached FTP downloads, drop tables, push secrets, modify files in `reference/`)
-- Ask: agent pauses and confirms first (creating new data-pipelines modules, modifying DECISIONS.md, schema changes, anything that touches `data/` or `knowledge-graph/schema/`)
+- Ask: agent pauses and confirms first (creating new data-pipelines modules, modifying DECISIONS.md, schema changes, anything that touches `data/` or `system-02-knowledge-graph/schema/`)
 
 Don't write rules that are ambiguous about which state an action falls into.
 
@@ -20,7 +20,7 @@ Pipeline steps should be safe to re-run. If a step needs to clean up, it should 
 
 The strongest constraint is removing the ability, not asking the agent not to use it. When designing a new agent, ask: should this agent be able to edit files? If not, restrict its tools list. Don't just say "don't edit" in the prompt.
 
-For this repo specifically: the docs-sync agent should not have access to `data-pipelines/` or `knowledge-graph/`. Read-only graph query agents (when they exist) should not have `Edit` or `Bash`.
+For this repo specifically: the docs-sync agent should not have access to `system-01-data-pipelines/` or `system-02-knowledge-graph/`. Read-only graph query agents (when they exist) should not have `Edit` or `Bash`.
 
 ### 4. Output truncation for large results
 

@@ -10,7 +10,7 @@ NCBI has 39 databases containing 4.4 billion records. A researcher investigating
 
 ## What System 1 does
 
-System 1 extracts data from 6 core NCBI databases, transforms it into BioLink-compliant KGX files, and prepares it for loading into the knowledge graph (System 2).
+System 1 extracts data from 6 core NCBI databases (Gene, ClinVar, MedGen, PubMed, Taxonomy, SNP), transforms it into BioLink-compliant KGX files, and prepares it for loading into the knowledge graph (System 2). PMC remains in Layer 2 (on-demand via API at query time).
 
 System 1 produces the raw materials. System 2 assembles and serves them.
 
@@ -22,7 +22,7 @@ System 1 boundary:
 
 System 2 boundary:
   Input:  KGX files from System 1
-  Output: Merged knowledge graph in Neo4j, queryable via Cypher
+  Output: Merged knowledge graph in PostgreSQL + Apache AGE, queryable via openCypher
 ```
 
 ---
@@ -61,17 +61,18 @@ System 2 boundary:
               |               |               |
               +-------+-------+-------+-------+
                       |               |
-                +-----+-----+  +-----+-----+
-                | PubMed    |  | Taxonomy   |  (+ SNP clinical subset)
-                | KGX       |  | KGX        |
-                +-----+-----+  +-----+-----+
-                      |               |
-                      v               v
-              +---------------------------+
-              |   All KGX files ready     |
-              |   for System 2 (merge +   |
-              |   normalize + Neo4j load) |
-              +---------------------------+
+                +-----+-----+  +-----+-----+  +-----+-----+
+                | PubMed    |  | Taxonomy   |  | SNP       |
+                | KGX       |  | KGX        |  | KGX       |
+                | (40M)     |  | (2.9M)     |  | (1.2B)    |
+                +-----+-----+  +-----+-----+  +-----+-----+
+                      |               |               |
+                      v               v               v
+              +------------------------------------------+
+              |   All 6 KGX file sets ready              |
+              |   for System 2 (merge +                  |
+              |   normalize + AGE load)                  |
+              +------------------------------------------+
 ```
 
 ---
@@ -82,7 +83,7 @@ Not all data lives in the same place. Three layers, each with a different purpos
 
 ### Layer 1: knowledge graph (fully ingested, 6 databases)
 
-These 6 databases are fully downloaded from FTP, parsed, mapped to BioLink, and loaded into Neo4j. The agent queries these via Cypher in milliseconds.
+These 6 databases are fully downloaded from FTP, parsed, mapped to BioLink, and loaded into PostgreSQL + Apache AGE. The agent queries these via openCypher in milliseconds.
 
 | Database | Records | BioLink category | Why it's in Layer 1 |
 |---|---|---|---|
@@ -90,8 +91,8 @@ These 6 databases are fully downloaded from FTP, parsed, mapped to BioLink, and 
 | PubMed | 40M articles | `biolink:Article` | Universal connector. 47 link types to 25+ databases. Literature is the glue. |
 | ClinVar | 4.5M variants | `biolink:SequenceVariant` | Variant-disease associations. Without it, can't go from variant to disease. |
 | MedGen | 233K concepts | `biolink:Disease` | Disease concept hub. Maps MONDO, OMIM, MeSH, SNOMED, HPO to one concept. |
-| Taxonomy | 2.9M organisms | `biolink:OrganismTaxon` | Scopes results to human (or any organism). Gene has 94M records across all species. |
-| SNP (clinical) | ~500K (clinical subset) | `biolink:SequenceVariant` | Variant-level detail beyond ClinVar. Clinical subset only, not all 1.2B. |
+| Taxonomy | 2.9M organisms | `biolink:OrganismTaxon` | Scopes results to human (or any organism). Gene has 94M records across all species. Full tree downloaded. |
+| SNP | 1.2B variants | `biolink:SequenceVariant` | Full dbSNP. Population frequencies, functional annotations, validation status. |
 
 Selection criteria:
 1. Connectivity: Gene (33 links) and PubMed (47 links) are the two highest-connectivity databases that are feasibly sized
@@ -102,7 +103,9 @@ Selection criteria:
 
 Reached at query time via ELink/EFetch. Not ingested. The agent follows connections from Layer 1 nodes into these databases via live API calls.
 
-Examples: Protein (1.57B records), Nucleotide (712M), Structure, OMIM, PubChem, GTR, GEO, dbVar, Assembly.
+Examples: PMC (12M full-text articles), Protein (1.57B records), Nucleotide (712M), Structure, OMIM, GTR, GEO, dbVar, Assembly.
+
+Excluded from all layers: SRA (raw sequencing reads, consumed by analysis pipelines, not search), dbGaP (controlled-access, requires individual Data Access Requests with IRB approval), PubChem (community-submitted chemical compound data with varying curation levels, poor fit for a system where every fact must trace to an authoritative source).
 
 Latency: 200-500ms per call. Budget: max 20 API calls per user query. Cached in Redis.
 
@@ -131,7 +134,7 @@ We ran `einfo.fcgi` against all 39 databases and counted outbound link types:
 | 2 | Protein | 38 | No | 1.57B records. Too large. Layer 2 via ELink. |
 | 3 | Nucleotide | 37 | No | 712M records. Too large. Layer 2 via ELink. |
 | 4 | Gene | 33 | Yes | Biology hub, manageable size (~2GB FTP) |
-| 5 | PubChem | 28 | No (Phase 2) | 123M compounds. Chemistry hub. Add later. |
+| 5 | PubChem | 28 | Excluded | Community-submitted data with varying curation. Not in any layer. |
 | 6 | BioProject | 26 | No | Study metadata. Low direct research value. |
 
 Gene and PubMed were chosen for connectivity AND size. Protein and Nucleotide have high connectivity but billions of records, so they go to Layer 2.
@@ -169,6 +172,8 @@ All 6 Layer 1 databases appear in these paths. The remaining databases (Protein,
 
 ## What data we need (FTP downloads)
 
+Principle: download everything available on FTP for each Layer 1 database. No cherry-picking, no "optional" files, no subsets. If a file exists in the FTP directory and contains data about the database's entities, download it. The file lists below are the known files; during pipeline build, inventory the actual FTP directory and add any files not listed here. Storage and processing strategy (incremental, streaming, cloud) are implementation decisions made later. The download scope is non-negotiable: all data.
+
 ### Gene pipeline
 
 | FTP file | Size | What it contains | Edges it produces |
@@ -176,9 +181,9 @@ All 6 Layer 1 databases appear in these paths. The remaining databases (Protein,
 | `gene_info.gz` | ~2GB | Gene records: ID, symbol, synonyms, chromosome, dbXrefs (HGNC, OMIM, Ensembl) | Gene nodes + identifier normalization xrefs |
 | `gene2go.gz` | ~200MB | Gene ID -> GO term mappings with evidence codes | Gene --[participates_in]--> BiologicalProcess/MolecularActivity/CellularComponent |
 | `gene2pubmed.gz` | ~500MB | Gene ID -> PMID links | Gene --[mentioned_in]--> Publication |
-| `gene_refseq_uniprotkb_collab.gz` | ~50MB | Gene ID -> UniProt accessions | Cross-reference for future Protein integration |
+| `gene_refseq_uniprotkb_collab.gz` | ~50MB | Gene ID -> UniProt accessions | Stored as xrefs on Gene nodes (UniProt IDs). No Protein nodes in Layer 1; Protein is reachable via Layer 2 ELink. |
 | `mim2gene_medgen` | ~5MB | OMIM -> Gene ID -> MedGen CUI | Disease --[associated_with]--> Gene |
-| `gene_orthologs.gz` | ~100MB | Cross-species ortholog mappings | Gene --[orthologous_to]--> Gene (optional, for cross-species queries) |
+| `gene_orthologs.gz` | ~100MB | Cross-species ortholog mappings | Gene --[orthologous_to]--> Gene |
 
 FTP path: `ftp.ncbi.nlm.nih.gov/gene/DATA/`
 
@@ -199,6 +204,8 @@ FTP path: `ftp.ncbi.nlm.nih.gov/pub/clinvar/`
 | `MedGenIDMappings.txt` | ~50MB | MedGen CUI -> MONDO, OMIM, Orphanet, MeSH, SNOMED, HPO | Disease node xrefs (ontology cross-references) |
 | `MGREL` | ~20MB | MedGen concept relationships (broader, narrower, related) | Disease --[subclass_of]--> Disease (hierarchy) |
 | `Names.RRF` or similar | ~30MB | Preferred names and synonyms for disease concepts | Disease node name and synonym properties |
+| `medgen_pubmed_lnk.txt` | ~10MB | MedGen CUI -> PMID links | Disease --[mentioned_in]--> Publication |
+| `MedGen_HPO_OMIM_Mapping.txt` | ~5MB | Additional HPO and OMIM cross-references | Disease node xrefs (strengthens ontology coverage) |
 
 FTP path: `ftp.ncbi.nlm.nih.gov/pub/medgen/`
 
@@ -211,23 +218,53 @@ FTP path: `ftp.ncbi.nlm.nih.gov/pub/medgen/`
 
 FTP path: `ftp.ncbi.nlm.nih.gov/pubmed/baseline/`
 
-Note: for alpha, start with 2024-2026 subset (~5M articles) to manage size. Expand to full baseline after proving the pipeline works.
+Download the full baseline. No subset. gene2pubmed links span the entire history of PubMed, and subsetting would create millions of dangling edges to nonexistent article nodes.
 
 ### Taxonomy pipeline
 
+Download the full taxonomy dump. All 2.9M organisms, full parent-child tree.
+
 | FTP file | Size | What it contains | Edges it produces |
 |---|---|---|---|
-| `taxdump.tar.gz` | ~500MB | names.dmp (organism names), nodes.dmp (taxonomy tree with parent-child) | OrganismTaxon --[subclass_of]--> OrganismTaxon (full lineage) |
+| `taxdump.tar.gz` | ~500MB | names.dmp (organism names), nodes.dmp (taxonomy tree with parent-child), division.dmp, gencode.dmp | OrganismTaxon --[subclass_of]--> OrganismTaxon (full lineage) |
 
 FTP path: `ftp.ncbi.nlm.nih.gov/pub/taxonomy/`
 
-### SNP pipeline (clinical subset only)
+### SNP pipeline (full dbSNP)
 
-| Source | Size | What it contains | Edges it produces |
+| FTP file | Size | What it contains | Edges it produces |
 |---|---|---|---|
-| ClinVar cross-references to dbSNP | ~100MB | rs IDs linked to clinically annotated variants | Variant nodes with dbSNP:rs IDs (merge with ClinVar variants) |
+| `chr_*.vcf.gz` (per-chromosome VCFs) | ~50GB compressed total | All 1.2B variant records: rs ID, position, alleles, functional class, frequency data | Variant --[is_sequence_variant_of]--> Gene |
+| `organism_data/human_9606_AlleleFreq_*.bcp.gz` | ~20GB | Population allele frequencies (ALFA: EUR, AFR, ASN, SAS, LAC, OTR) | Frequency properties on variant nodes |
+| `organism_data/human_9606_b151_e2.chr*.vcf.gz` | ~30GB | Human-specific variant annotations with functional consequences | Functional annotation properties on variant nodes |
 
-Not downloading all of dbSNP (1.2B records). Only the clinical subset referenced by ClinVar (~500K variants).
+FTP path: `ftp.ncbi.nlm.nih.gov/snp/`
+
+Full dbSNP download. 1.2B records. This is the largest single pipeline by an order of magnitude. Variants that also appear in ClinVar (via rs ID) merge into a single node with combined properties from both sources. Variants not in ClinVar still get Gene associations and population frequency data.
+
+Note: dbSNP FTP structure changed significantly in 2019 (from XML to VCF-based). Use the current VCF-based layout, not legacy XML.
+
+---
+
+## KGX output size estimates
+
+Estimated output sizes after each pipeline completes. These drive disk planning and merge time expectations.
+
+| Pipeline | Estimated nodes | Estimated edges | KGX TSV size estimate |
+|---|---|---|---|
+| Gene (all organisms) | ~94M | ~15M (gene2go) + ~25M (gene2pubmed) + ~94M (in_taxon) | ~40-60GB |
+| Gene (human only, tax_id=9606) | ~62K | ~500K (gene2go) + ~600K (gene2pubmed) + ~62K (in_taxon) | ~2-3GB |
+| ClinVar | ~4.5M variants | ~4.5M (variant-gene) + ~4.5M (variant-disease) | ~3-5GB |
+| MedGen | ~233K diseases | ~500K (subclass_of + xref edges) | ~200MB |
+| PubMed (full baseline) | ~40M articles | ~40M+ (MeSH edges) | ~30-50GB |
+| Taxonomy | ~2.9M organisms | ~2.9M (parent edges) | ~1-2GB |
+| SNP (full dbSNP) | ~1.2B variants | ~1.2B (variant-gene) + frequency data | ~200-400GB |
+
+Total across all 6 pipelines (all organisms, full dbSNP): ~1.4B nodes, ~1.5B+ edges, ~300-500GB KGX TSV.
+
+This requires incremental processing on the work computer (355GB). See "Where to run" section for the strategy.
+
+For the full dbSNP scenario, consider streaming the KGX export directly into AGE rather than materializing all TSV files on disk simultaneously.
 
 ---
 
@@ -237,7 +274,7 @@ Each pipeline follows the same 5-step pattern:
 
 ```
 Step 1: Download
-  FTP bulk download -> raw files stored in object storage
+  FTP bulk download -> raw files stored in local data/ftp_cache/
   Idempotent: skip if file hasn't changed (check FTP timestamp)
 
 Step 2: Parse
@@ -310,7 +347,7 @@ If the answer says "BRCA1 has 744 pathogenic variants," the user can click throu
 
 ## Schema: where it lives
 
-The BioLink schema is defined in System 2 (knowledge graph) as a LinkML YAML file. System 1 pipelines import and use this schema for mapping and validation.
+The BioLink schema is a shared artifact that lives at the repo root (`schema/biolink_ncbi.yaml`). Both System 1 (for mapping and validation) and System 2 (for graph loading) consume it. It is defined once, before any pipeline code, and updated when new node types or predicates are needed.
 
 ### Node types (from our 6 databases)
 
@@ -332,7 +369,7 @@ The BioLink schema is defined in System 2 (knowledge graph) as a LinkML YAML fil
 | BioLink predicate | Subject | Object | Source file |
 |---|---|---|---|
 | `biolink:gene_associated_with_condition` | Gene | Disease | mim2gene_medgen, ClinVar XML |
-| `biolink:is_sequence_variant_of` | SequenceVariant | Gene | ClinVar XML |
+| `biolink:is_sequence_variant_of` | SequenceVariant | Gene | ClinVar XML, dbSNP VCF |
 | `biolink:has_phenotype` | SequenceVariant | Disease | ClinVar XML |
 | `biolink:participates_in` | Gene | BiologicalProcess | gene2go |
 | `biolink:actively_involved_in` | Gene | MolecularActivity | gene2go |
@@ -374,7 +411,7 @@ Why first: these three databases have the richest cross-references to each other
 
 | Step | What | Output | Validates |
 |---|---|---|---|
-| 1a | Define LinkML schema (node types, edge types, required properties) | `schema/biolink_ncbi.yaml` | Schema is parseable and BioLink-compliant |
+| 1a | Define shared LinkML schema (node types, edge types, required properties) in `schema/` at repo root | `schema/biolink_ncbi.yaml` | Schema is parseable and BioLink-compliant, importable by both System 1 and System 2 |
 | 1b | Gene ETL pipeline: download gene_info, gene2go, gene2pubmed from FTP | Gene KGX (nodes.tsv + edges.tsv) | Gene nodes have NCBIGene: IDs, xrefs include HGNC/OMIM |
 | 1c | ClinVar ETL pipeline: download ClinVarFullRelease.xml from FTP | ClinVar KGX | Variant nodes link to Gene IDs and MedGen CUIs |
 | 1d | MedGen ETL pipeline: download MedGenIDMappings and MGREL from FTP | MedGen KGX | Disease nodes have MONDO IDs (where available) and xrefs |
@@ -386,32 +423,37 @@ Test queries after Phase 1:
 - "What diseases are associated with HNF1A?" (Gene -> ClinVar -> MedGen)
 - "What genes are associated with phenylketonuria?" (MedGen -> ClinVar -> Gene)
 
-### Phase 2: literature and organism context (PubMed + Taxonomy)
+### Phase 2: literature and full organism context (PubMed + Taxonomy)
 
-Why second: PubMed connects literature to genes (via gene2pubmed). Taxonomy scopes results to specific organisms. Both connect to Phase 1 nodes.
+Why second: PubMed connects literature to genes (via gene2pubmed). Taxonomy adds the full organism tree for hierarchical queries. Both connect to Phase 1 nodes.
+
+PMC stays in Layer 2 (on-demand via EFetch at query time).
 
 | Step | What | Output | Validates |
 |---|---|---|---|
-| 2a | PubMed ETL pipeline: download 2024-2026 baseline subset (~5M articles) | PubMed KGX | Article nodes with MeSH edges, linked to Gene via gene2pubmed |
-| 2b | Taxonomy ETL pipeline: download taxdump | Taxonomy KGX | Full lineage tree, Gene nodes get in_taxon edges |
+| 2a | PubMed ETL pipeline: download full baseline (~40M articles) | PubMed KGX | Article nodes with MeSH edges, linked to Gene via gene2pubmed |
+| 2b | Taxonomy ETL pipeline: download taxdump (full tree) | Taxonomy KGX | Full lineage tree with parent-child edges |
 | 2c | Full merge: all 5 KGX files through node normalization + merge | Merged graph stats | Cross-database traversal working |
 
 Test queries after Phase 2:
 - "What publications mention BRCA1 and breast cancer?" (Gene -> PubMed via gene2pubmed, filtered by MeSH)
 - "What human genes are involved in glucose metabolism?" (Taxonomy filter + Gene -> GO)
 
-### Phase 3: variant depth (SNP clinical subset)
+### Phase 3: variant depth (full dbSNP)
 
-Why third: adds variant-level detail beyond ClinVar. Depends on Phase 1 ClinVar nodes existing for merge.
+Why third: 1.2B variants is the largest pipeline by far. Depends on Phase 1 ClinVar and Gene nodes existing for merge (variants merge via rs ID, link to genes). Run this after the core pipelines are proven.
 
 | Step | What | Output | Validates |
 |---|---|---|---|
-| 3a | SNP ETL: extract clinically annotated variants from ClinVar cross-references | SNP KGX | Variant nodes with dbSNP:rs IDs merge with ClinVar variants |
-| 3b | Final merge: all 6 KGX files | Complete alpha graph | All 6 databases connected |
+| 3a | SNP ETL: download full dbSNP VCF files from FTP | SNP KGX (nodes.tsv + edges.tsv) | Variant nodes with dbSNP:rs IDs, population frequencies, functional annotations |
+| 3b | SNP-ClinVar merge: variants with rs IDs in both sources merge into single nodes | Merged variant nodes with combined ClinVar + dbSNP properties | rs ID match rate, no duplicate variant nodes |
+| 3c | Final merge: all 6 KGX files | Complete graph | All 6 databases connected |
 
 Test queries after Phase 3:
-- "What is the mutation spectrum for HNF1A?" (aggregate variant stats)
+- "What is the mutation spectrum for HNF1A?" (aggregate variant stats from full dbSNP)
 - "Which genes have both deletions and SNVs?" (variant type filtering)
+- "What is the European allele frequency of rs328?" (population frequency from ALFA)
+- "How many pathogenic variants in BRCA1 have MAF < 0.01?" (ClinVar significance + dbSNP frequency)
 
 ---
 
@@ -423,12 +465,12 @@ Test queries after Phase 3:
 - [ ] SSSOM mapping files for all cross-database identifier resolutions
 - [ ] BioLink validator passes on all KGX files
 - [ ] Merge report showing deduplication stats (nodes before/after)
-- [ ] KGX files ready for System 2 (Neo4j load)
+- [ ] KGX files ready for System 2 (AGE load)
 
 ## What System 1 does NOT do
 
-- Does not load data into Neo4j (that's System 2)
-- Does not define the schema (System 2 defines it, System 1 consumes it)
+- Does not load data into the graph database (that's System 2)
+- Does not own the schema alone (schema is shared in `schema/` at repo root, consumed by both System 1 and System 2)
 - Does not handle user queries (that's System 3)
 - Does not call live APIs (Layer 2/3 are query-time concerns in System 3)
 
@@ -447,7 +489,7 @@ You could also have System 2 in the same repo under a different folder (the repo
 System 2 = knowledge graph. It takes System 1's KGX files and turns them into a queryable graph.
 
 System 2 responsibilities:
-- Schema definition (LinkML YAML)
+- Schema consumption (shared LinkML YAML from `schema/`)
 - Node normalization (resolve canonical IDs across subgraphs)
 - Cat-Merge (deduplicate nodes, concatenate edges)
 - Graph database loader (KGX to graph database)
@@ -463,15 +505,15 @@ The software is free for both options. The cost difference is hardware.
 
 ### Option A: PostgreSQL + Apache AGE (recommended for personal budget)
 
-PostgreSQL is disk-based by design. 150M nodes on 8GB RAM is normal Postgres territory. Apache AGE adds openCypher support on top.
+PostgreSQL is disk-based by design. Even 1B+ nodes on 8-16GB RAM is normal Postgres territory with proper indexing. Apache AGE adds openCypher support on top.
 
 Infrastructure options:
 1. Run on work computer (355GB free, $0/month). Can switch to option 2 if needed.
-2. Run on a rented VPS ($10-15/month, Hetzner 8GB RAM, 160GB disk) for personal infrastructure.
+2. Run on a rented VPS ($15-25/month, Hetzner 8-16GB RAM, 500GB+ disk) for personal infrastructure.
 
 ### Option B: Neo4j Community Edition
 
-Neo4j wants the graph in memory for fast queries. 150M nodes needs 64GB+ RAM. That means $100-200/month for a VPS.
+Neo4j wants the graph in memory for fast queries. 1.4B nodes would need 256GB+ RAM. That means $500+/month for a VPS, ruling it out entirely at this scale.
 
 ### Comparison
 
@@ -480,7 +522,7 @@ Neo4j wants the graph in memory for fast queries. 150M nodes needs 64GB+ RAM. Th
 | Query language | Cypher | Cypher (same) |
 | Graph traversals | Yes | Yes |
 | Cost (software) | Free | Free |
-| Cost (hardware for 150M nodes) | $100-200/month (needs 64GB RAM) | $0-15/month (disk-based, 8GB RAM works) |
+| Cost (hardware for 1.4B nodes) | $500+/month (needs 256GB+ RAM) | $0-15/month (disk-based, 8-16GB RAM works) |
 | Maturity | 15+ years, industry standard | Postgres is 30+ years. AGE is younger (~3 years) but backed by Apache Foundation. |
 | What you lose | Nothing for your use case | Neo4j's built-in graph visualization browser, some advanced graph algorithms (GDS library) |
 | What you keep | - | Same Cypher queries, same traversal patterns, same schema design |
@@ -497,9 +539,11 @@ System 3 (search agents) does not change. The agents generate Cypher queries and
 
 Primary: work computer (355GB free, $0/month). This is NCBI work (Track 2, innovation project). The data is NCBI's public data, the pipelines serve the NCBI project. No IP issue.
 
-If the innovation proposal doesn't get funded and you want to continue as a personal project (Track 1), move to a $10-15/month VPS to keep it clean. The code and KGX files are portable since they are just files on disk.
+Disk constraint: with full dbSNP (1.2B variants), the total data footprint (raw FTP + KGX output + AGE data directory) can exceed 500GB. 355GB is not enough for simultaneous materialization of all KGX files. Strategy: process pipelines incrementally. Download, parse, load into AGE, then delete intermediate KGX files before starting the next pipeline. Keep raw FTP files cached for re-runs. The AGE database itself (storing the graph on disk) should fit within 200-300GB with proper compression and indexing.
 
-For portfolio/open source sharing: the code (pipelines, schema, agents) lives in a public GitHub repo regardless of where the data runs. The graph database with 150M nodes is too large to share as a download anyway. The portfolio is the code and architecture, not the running instance. A live demo would need a VPS ($10-15/month) separate from the work computer.
+If the innovation proposal doesn't get funded and you want to continue as a personal project (Track 1), move to a VPS with 500GB+ disk ($15-25/month) to keep it clean. The code and KGX files are portable since they are just files on disk.
+
+For portfolio/open source sharing: the code (pipelines, schema, agents) lives in a public GitHub repo regardless of where the data runs. The graph database with 1.4B nodes is too large to share as a download. The portfolio is the code and architecture, not the running instance. A live demo would need a VPS with sufficient disk separate from the work computer.
 
 ---
 
@@ -539,7 +583,7 @@ If those return sensible results, System 1 is working. If they return 0 or garba
 
 - [ ] NCBI API key in .env (already have it)
 - [ ] Python 3.11+ environment
-- [ ] Graph database installed locally (PostgreSQL + Apache AGE recommended, or Neo4j Community Edition)
+- [ ] Graph database installed locally (PostgreSQL + Apache AGE)
 - [ ] Clone/init the repo structure
 - [ ] LinkML installed (`pip install linkml`) for schema validation
 
@@ -554,9 +598,9 @@ Each pipeline needs a scheduled run to keep the graph current:
 | Gene | Weekly | Weekly | gene_info, gene2go, gene2pubmed all update weekly |
 | ClinVar | Weekly | Weekly | ClinVarFullRelease.xml updates weekly |
 | MedGen | Monthly | Monthly | Slower update cycle |
-| PubMed | Daily (update files) | Weekly for alpha, daily for production | Baseline is annual, daily updates are incremental XMLs |
+| PubMed | Daily (update files) | Weekly initially, daily for production | Baseline is annual, daily updates are incremental XMLs |
 | Taxonomy | Irregular (~monthly) | Monthly | taxdump updates less frequently |
-| SNP (clinical) | Tied to ClinVar updates | Weekly (after ClinVar pipeline) | Clinical subset extracted from ClinVar cross-refs |
+| SNP (full dbSNP) | Infrequent (~quarterly builds) | Quarterly | dbSNP builds are released infrequently. 1.2B records means re-processing is expensive. Only re-run on new builds. |
 
 For alpha: run all pipelines manually. Automate scheduling after the first successful full merge.
 
@@ -581,11 +625,14 @@ Build these shared utilities during the first pipeline (Gene), then reuse for al
 
 | Risk | Signal (when to worry) | Fallback response |
 |---|---|---|
-| PubMed baseline too large for VPS | Download exceeds available disk or load takes > 24 hours | Start with 2024-2026 subset (~5M articles). Expand after pipeline is proven. |
-| Graph database can't handle 150M nodes on available RAM | Cypher queries timeout or OOM during System 2 testing | If using Neo4j, switch to PostgreSQL + AGE (disk-based, handles 150M on 8GB). If already on AGE, reduce Gene to human-only (~60K genes). |
+| Full dbSNP too large for disk | 1.2B records produce 200-400GB of KGX TSV | Stream VCF parsing directly into AGE load (skip materializing full TSV). Or process per-chromosome and load incrementally, deleting intermediate files after each chromosome loads. |
+| PubMed baseline download stalls | 30GB download fails mid-transfer or takes > 12 hours | Use FTP resume (REST command). Download in batches of baseline XML files, not all at once. Run overnight. |
+| Graph database can't handle 1B+ nodes | Cypher queries timeout or OOM during System 2 testing | AGE is disk-based and handles large node counts on 8GB RAM. Add indexes on id, category, and frequently queried properties. If still slow, partition the SNP graph by chromosome. |
 | 2 months not enough for all 6 pipelines | Week 4 and only 2 pipelines done | Ship with core triangle (Gene + ClinVar + MedGen). Add PubMed/Taxonomy/SNP post-launch. |
 | ClinVar XML parsing too complex | VCV record structure changes or edge cases consume >3 days | Fall back to variant_summary.txt (tabular, simpler). Fewer fields but faster to parse. |
 | FTP download blocked or rate-limited | NCBI blocks IP during bulk download | Use weekend/off-hours downloads per NCBI usage policy. Pause between large files. |
+| Disk space exhaustion | Raw FTP + KGX output + AGE data directory exceed 355GB | Process pipelines sequentially: download, parse, load into AGE, delete intermediate KGX files. Keep raw FTP cached for re-runs. |
+| AGE openCypher gaps | Cypher queries fail or produce wrong results in AGE | AGE implements a subset of openCypher. Known gaps: no MERGE (use CREATE + manual dedup), no CALL procedures, limited path pattern support. All queries require wrapping in `SELECT * FROM cypher('graph_name', $$ ... $$)`. Test every query pattern against AGE early, not after building all pipelines. |
 
 ---
 
@@ -593,14 +640,16 @@ Build these shared utilities during the first pipeline (Gene), then reuse for al
 
 | Task | Estimated time | Why it can't be compressed |
 |---|---|---|
+| dbSNP FTP download (full, all chromosomes) | 8-16 hours | ~100GB compressed total, network bound. Largest single download. |
 | PubMed FTP baseline download (full) | 4-8 hours | 30GB compressed, network bound |
 | Gene FTP download (all files) | 30-60 minutes | ~3GB total |
 | ClinVar XML download | 20-30 minutes | ~2GB compressed |
-| Graph database loading 150M nodes | 2-6 hours | Disk I/O bound, index building |
-| Node normalization across 6 subgraphs | 1-2 hours | ID resolution over millions of records |
+| dbSNP VCF parsing (1.2B records) | 4-12 hours | CPU-bound per-chromosome VCF parsing. Parallelize across chromosomes. |
+| Graph database loading 1B+ nodes | 6-24 hours | Disk I/O bound, index building. SNP alone is 1.2B nodes. |
+| Node normalization across 6 subgraphs | 2-4 hours | ID resolution over billions of records |
 | Agent prompt tuning (System 3) | Days, not hours | Requires human judgment loops |
 
-Plan around these. Don't schedule "download PubMed + build pipeline" on the same day.
+Plan around these. dbSNP download + parse is a multi-day operation. Start it early. Run PubMed and dbSNP downloads in parallel on different nights.
 
 ---
 
@@ -638,7 +687,7 @@ Anne built a working BioLink-compliant KG pipeline for glucose metabolism (82,51
 | Provenance | No source URLs on nodes/edges | Source URLs required on every node and edge |
 | On-demand reach | Graph only | Layer 2 ELink/EFetch to 30+ databases at query time |
 | Mapping audit | No explicit mapping provenance | SSSOM files for every cross-database mapping |
-| Export formats | TSV, JSON-LD, Neo4j CSV | KGX (standard for merge), then Neo4j load in System 2 |
+| Export formats | TSV, JSON-LD, Neo4j CSV | KGX (standard for merge), then AGE load in System 2 |
 
 ---
 
@@ -653,10 +702,11 @@ Anne built a working BioLink-compliant KG pipeline for glucose metabolism (82,51
 | Keep all records regardless of ontology coverage | Drop records without canonical IDs | No data loss. Partially mapped records are still valuable. Coverage improves over time as upstream databases add cross-references. |
 | Fallback ID hierarchy (MONDO -> MedGen CUI -> OMIM) | Single canonical or nothing | Maximizes node connectivity. 70-80% get MONDO, remainder still addressable. |
 | Core triangle first (Gene + ClinVar + MedGen) | Build all 6 in parallel | Richest cross-references between them. Subsequent databases connect to existing nodes. Reduces risk of orphan islands. |
-| PubMed alpha subset (2024-2026, ~5M articles) | Full baseline (40M articles, 30GB) | Proves the pipeline works before committing to full baseline. Expand later. |
-| PostgreSQL + AGE over Neo4j for personal build | Neo4j Community, DuckDB, KuzuDB (abandoned by Apple) | Disk-based (150M nodes on 8GB RAM), free, Cypher support, $0-15/month vs $100-200/month for Neo4j. Same queries, cheaper hardware. |
-| Work computer as primary infrastructure ($0) | Rented VPS ($10-15/month) | 355GB free on C drive, more than enough. Can switch to VPS later if needed. |
+| Full PubMed baseline (40M articles) | 2024-2026 subset (~5M articles) | Subsetting creates millions of dangling gene2pubmed edges. Full baseline avoids this. Download overnight. |
+| PostgreSQL + AGE over Neo4j | Neo4j Community, DuckDB, KuzuDB (abandoned by Apple) | Disk-based (1.4B nodes on 8-16GB RAM), free, openCypher support, $0-25/month vs $500+/month for Neo4j at this scale. Same queries, cheaper hardware. |
+| Full dbSNP (1.2B records), not clinical subset | Clinical subset only (~500K via ClinVar cross-refs) | Population frequencies, functional annotations, and variant type data are needed for SME queries. Full dbSNP is the only way to answer "what is the allele frequency?" questions. |
+| Work computer as primary infrastructure ($0) | Rented VPS ($15-25/month) | 355GB free, enough with incremental processing (load then delete KGX intermediates). Can switch to VPS if disk becomes a blocker. |
 
 ---
 
-*Created: April 5, 2026. Based on Agentic_search_architecture_QA.md (April 2 brainstorming) refined through April 5 architecture review. Updated April 6, 2026: added graph database options (PostgreSQL + AGE vs Neo4j) and infrastructure decisions.*
+*Created: April 5, 2026. Based on Agentic_search_architecture_QA.md (April 2 brainstorming) refined through April 5 architecture review. Updated April 6, 2026: added graph database options (PostgreSQL + AGE vs Neo4j) and infrastructure decisions. Updated April 13, 2026: fixed stale Neo4j references, clarified schema ownership as shared artifact, added KGX output size estimates, simplified Taxonomy to model organisms for Phase 1, upgraded to full PubMed baseline (no subset), upgraded SNP to full dbSNP (1.2B records), updated risk and wall-clock tables for new scope.*

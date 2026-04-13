@@ -17,7 +17,7 @@ For this repo, "external" means anything in `reference/`. The reference symlinks
 
 - Looking up a single file or function (use Read or Grep)
 - Already-analyzed reference that has a deep-dive doc
-- Anything in `data-pipelines/`, `knowledge-graph/`, `docs/` (that's our own code, not external)
+- Anything in `system-01-data-pipelines/`, `system-02-knowledge-graph/`, `docs/` (that's our own code, not external)
 
 ## Process
 
@@ -66,7 +66,7 @@ Anything where the reference made a decision we should explicitly accept or over
 
 ### Step 4: do not vendor files
 
-The reference symlinks are documentation. Never copy a file from `reference/` into `data-pipelines/` or `knowledge-graph/`. Always rewrite from first principles, informed by the reference. This is a project-level rule (see CLAUDE.md "Canonical reference pipeline" section and the user's stated preference).
+The reference symlinks are documentation. Never copy a file from `reference/` into `system-01-data-pipelines/` or `system-02-knowledge-graph/`. Always rewrite from first principles, informed by the reference. This is a project-level rule (see CLAUDE.md "Canonical reference pipeline" section and the user's stated preference).
 
 ## Style rules
 

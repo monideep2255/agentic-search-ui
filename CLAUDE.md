@@ -91,7 +91,7 @@ Step 4: Validate  - LinkML validator, reject with reason (never silent discard)
 Step 5: Export    - KGX format: nodes.tsv + edges.tsv with provenance on every row
 ```
 
-Shared utilities live in `data-pipelines/shared/`. Never duplicate across pipelines.
+Shared utilities live in `system-01-data-pipelines/shared/`. Never duplicate across pipelines.
 
 ---
 

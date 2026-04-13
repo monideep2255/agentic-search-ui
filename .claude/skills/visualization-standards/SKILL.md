@@ -14,7 +14,7 @@ Adapted from the reference NCBI KG `visualization-standards` skill. Stripped: 8-
 - Documenting a new pipeline (Gene, ClinVar, MedGen, PubMed, Taxonomy, SNP).
 - Updating `docs/System_1_data_engineering_plan.md` architecture sections.
 - Drawing the System 1 → System 2 boundary for a design discussion.
-- Documenting BioLink schema relationships in `knowledge-graph/schema/`.
+- Documenting BioLink schema relationships in `system-02-knowledge-graph/schema/`.
 
 ## Mermaid hygiene
 

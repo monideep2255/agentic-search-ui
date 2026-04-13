@@ -107,7 +107,7 @@ Step 4: Validate  → LinkML validator, log rejections
 Step 5: Export    → KGX TSV with provenance on every row
 ```
 
-Shared utilities live in `data-pipelines/shared/`. Never duplicate.
+Shared utilities live in `system-01-data-pipelines/shared/`. Never duplicate.
 
 ## BioLink 4.x constants (verbatim from reference)
 

@@ -35,7 +35,7 @@ If a task drifts toward System 3, stop and ask the user.
 
 ## 3. Code change safety
 
-Before editing any Python module under `data-pipelines/` or `knowledge-graph/`:
+Before editing any Python module under `system-01-data-pipelines/` or `system-02-knowledge-graph/`:
 
 1. Read the full file, not just the function you intend to change.
 2. Grep for callers: `Grep` the symbol you are about to rename or change signature on.
@@ -69,7 +69,7 @@ Every node and every edge gets `source` and `source_url`. Functions that produce
 - Forgetting `CREATE EXTENSION age` after restoring a database. Symptom: `function ag_catalog.cypher does not exist`.
 - Loading `dotenv` from a stdin heredoc. Symptom: `AssertionError` deep in dotenv. Fix: use `dotenv_values(".env")` (returns a dict).
 - Treating `reference/` as part of the project. It is read-only Confluence-style documentation. Never edit, never vendor files out of it.
-- Writing schemas inside the pipeline modules. Schemas live in `knowledge-graph/schema/`, pipelines import them.
+- Writing schemas inside the pipeline modules. Schemas live in `system-02-knowledge-graph/schema/`, pipelines import them.
 
 ## 6. Three-state permissions
 
@@ -80,8 +80,8 @@ Allow:
 - Write tests against existing code.
 
 Ask:
-- Modify `knowledge-graph/schema/` or BioLink predicate constants.
-- Add a new pipeline directory under `data-pipelines/`.
+- Modify `system-02-knowledge-graph/schema/` or BioLink predicate constants.
+- Add a new pipeline directory under `system-01-data-pipelines/`.
 - Add a new dependency to `requirements.txt`.
 - Touch anything inside `data/` (other than reading metadata).
 

@@ -5,7 +5,7 @@ description: Post-task quality gate that runs before any commit on a pipeline ch
 
 # QA gate
 
-Run before committing any change to `data-pipelines/`, `knowledge-graph/`, `schema/`, or shared utilities. Six phases. Stop at the first failure, fix the root cause, restart from phase 1.
+Run before committing any change to `system-01-data-pipelines/`, `system-02-knowledge-graph/`, `schema/`, or shared utilities. Six phases. Stop at the first failure, fix the root cause, restart from phase 1.
 
 This is the rigid kind of skill. Do not skip phases. Do not reorder them.
 

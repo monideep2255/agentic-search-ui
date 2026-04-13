@@ -59,7 +59,7 @@ Or run against all recently modified `.claude/` files:
 
 ## Fix conventions
 
-- Stale paths: remove the reference entirely, or replace with the equivalent in this repo (`data-pipelines/`, `knowledge-graph/`, `reference/ncbi_ai_agents-ncbi-kg/`)
+- Stale paths: remove the reference entirely, or replace with the equivalent in this repo (`system-01-data-pipelines/`, `system-02-knowledge-graph/`, `reference/ncbi_ai_agents-ncbi-kg/`)
 - Wrong-repo content: delete. Do not try to translate examples from other repos into ETL examples unless the original concept genuinely applies
 - Broken pointers: remove the row from the table, or replace with an existing agent/skill
 - Em dashes: replace with a comma, a period, or "in particular" / "specifically" per writing-style.md

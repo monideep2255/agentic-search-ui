@@ -55,6 +55,43 @@ These rules **remain active**:
 
 ---
 
+## Context management
+
+Long-running bossman sessions degrade as context fills up. Three rules prevent this.
+
+### Context budget tiers
+
+| Tier | Context usage | Behavior |
+|------|--------------|----------|
+| PEAK | 0-30% | Full operation. Read files freely, inline results, detailed coordination. |
+| GOOD | 30-50% | Normal operation. No changes needed. |
+| DEGRADING | 50-70% | Economize reads: headers and frontmatter only for routing decisions. Summarize sub-agent results in one line. Warn in next phase checkpoint: "Context at ~X%. Consider fresh session after this phase." |
+| CRITICAL | 70%+ | Checkpoint immediately. Write progress to a markdown file (`bossman-checkpoint-phase-N.md` in project root), list what is done, what remains, and decisions made. Tell the user: "Context budget critical. Start a fresh session and resume from checkpoint." |
+
+### Degradation signals
+
+You cannot read your own token count. Watch for these output-quality signals instead:
+
+- Increasing vagueness: "appropriate handling" instead of specific file paths or code
+- Skipped protocol steps: missing team dispatch, missing phase checkpoint fields
+- Repeated phrases or filler where specifics should be
+- Sub-agent prompts getting shorter or less detailed than earlier dispatches
+- Summaries that restate rather than synthesize
+
+When 2+ signals appear in the same phase: treat as DEGRADING regardless of estimated usage.
+
+### Phase boundary = context reset point
+
+At every phase boundary (Step 6: phase checkpoint), explicitly assess context health. If DEGRADING or CRITICAL, the checkpoint file becomes the handoff document for a fresh session. Include in the checkpoint:
+
+1. Plan name and current phase number
+2. What was completed (with file paths)
+3. What remains (next phase details)
+4. Decisions made (from the decisions log)
+5. Any research context the next session will need
+
+---
+
 ## Execution team
 
 Inspired by Cursor's [Scaling long-running autonomous coding](https://cursor.com/blog/scaling-agents) architecture: strict separation between planning and execution, parallel workers, a single judge for quality gating, and simpler systems over complex ones.
@@ -80,6 +117,8 @@ Bossman mode runs as a team, not a solo operator. The orchestrator (main session
 3. **Planning is recursive.** Complex phases get sub-planners that run in parallel, each producing their own task list.
 4. **Fresh starts combat drift.** If a builder is stuck or going in circles, kill it and dispatch a new one with a clearer prompt rather than trying to course-correct.
 5. **The integrator is conditional.** Cursor found integrators bottleneck at scale. At our scale (3-8 agents), it adds value when components must connect. Skip it when builders produce self-contained deliverables.
+6. **Thin orchestrator.** The orchestrator's job is routing, not reading. To decide which agent gets which task, read file headers and frontmatter, not full contents. Delegate full reads to the agent that needs the information. When sub-agents return results, capture a one-line summary, not the full output. The orchestrator that accumulates the least context coordinates the best.
+7. **Fresh context per agent.** Every dispatched agent starts with a clean context window. Pre-inject only what that specific agent needs (task description, relevant file paths, architectural constraints, research findings). Never pass accumulated conversation history. The agent prompt template below enforces this.
 
 ### Team dispatch order
 
@@ -105,20 +144,32 @@ Phase start
 
 ### Agent prompt template
 
-When dispatching any team member, include in the prompt:
+When dispatching any team member, include in the prompt. Each agent gets a clean context window with only what it needs pre-injected. Do not paste accumulated conversation history, prior agent outputs, or full file contents into agent prompts. If an agent needs file content, give it the path and let it read the file itself.
 
 ```
 You are the [ROLE] on a bossman mode execution team.
 
-Context: [what researchers found, if applicable]
-Plan: [paste relevant phase details]
+Context: [1-3 sentences of what researchers found, not full output]
+Plan: [paste ONLY the relevant phase/task details, not the full plan]
 Your task: [specific deliverable]
 Constraints: [architectural decisions that apply]
 Files to touch: [specific paths, not vague areas]
+Files to read: [paths the agent should read itself for full context]
 
 Do not ask questions. Execute and report back.
 If stuck, report the blocker clearly. Do not guess on ambiguous requirements.
 ```
+
+Orchestrator rule: when a sub-agent returns, capture a one-line summary of what it produced and which files it touched. Do not inline the full result into your context.
+
+### Reference repos
+
+Read the reference repo's CLAUDE.md before dispatching agents to explore it.
+
+| Repo | Symlink path | What it is |
+|------|-------------|------------|
+| ncbi_ai_agents | `reference/ncbi_ai_agents-ncbi-kg` | Existing NCBI KG pipeline (glucose metabolism, 82K nodes, BioLink 4.x, KGX export) |
+| personal-os-work | `reference/personal-os-work` | Personal OS with skills, agents, rules patterns to port |
 
 ---
 
@@ -167,7 +218,6 @@ Dispatching now. Next check-in at phase completion.
 - Use `isolation: "worktree"` for tasks that touch overlapping files
 - Builders do not coordinate with each other. They grind on their task and report back.
 - If a builder is stuck or going in circles: kill it and dispatch a fresh one with a clearer prompt
-- Use Ralph Loop if available for sustained autonomous execution
 
 ### Step 5: judge + tests + integration
 
@@ -203,8 +253,12 @@ Decisions made (without asking):
 
 Blockers: [none, or list]
 
+Context health: [PEAK / GOOD / DEGRADING / CRITICAL]
+[If DEGRADING: "Checkpoint file written. Recommend fresh session for next phase."]
+[If CRITICAL: "Checkpoint file written. Fresh session required."]
+
 Next phase: [N+1] - [title]
-Recommendation: [proceed / adjust plan / stop and discuss]
+Recommendation: [proceed / adjust plan / stop and discuss / fresh session recommended]
 
 Waiting for your go.
 ```
@@ -246,11 +300,11 @@ Blockers: [none or list]
 
 **Level 1 (now):** Single-phase execution with full agent team. Manual approval between phases. Orchestrator dispatches researchers, builders, judge, test writer. User reviews at checkpoints.
 
-**Level 2 (trust building):** Multi-phase execution. Ralph Loop keeps the orchestrator running between phases. Judge agent gates phase transitions instead of user approval for non-architectural phases. Sub-planners handle recursive decomposition of complex phases.
+**Level 2 (trust building):** Multi-phase execution. Judge agent gates phase transitions instead of user approval for non-architectural phases. Sub-planners handle recursive decomposition of complex phases.
 
 **Level 3 (Cursor-scale):** Full autonomous multi-phase execution. Checkpoint files written to disk at each phase boundary. Morning summary of everything built, tested, and judged while user was away. Hundreds of builders if the codebase warrants it. Fresh-start pattern: stuck agents get killed and restarted with clearer prompts rather than debugged in-place.
 
-**Level 4 (multi-team):** Multiple independent agent teams for separate subsystems (e.g., Team A: API, Team B: frontend, Team C: data pipeline). Each team has its own orchestrator running its own research/build/judge cycle. A meta-orchestrator coordinates between teams at phase boundaries. Useful when the project spans different tech stacks, repos, or deployment targets.
+**Level 4 (multi-team):** Multiple independent agent teams for separate subsystems. Each team has its own orchestrator running its own research/build/judge cycle. A meta-orchestrator coordinates between teams at phase boundaries. Useful when the project spans different tech stacks, repos, or deployment targets.
 
 ## Design inspiration
 

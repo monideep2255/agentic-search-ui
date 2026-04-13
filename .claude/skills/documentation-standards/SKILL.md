@@ -121,9 +121,9 @@ When a decision is superseded, add a NEW row marked "(supersedes row from YYYY-M
 
 | File type | Docstring required | Example |
 |---|---|---|
-| `data-pipelines/<db>/parser.py` | Module + every public function | `parse_gene_info`, `parse_clinvar_chunk` |
-| `data-pipelines/shared/utils.py` | Module + every utility | `download_file`, `entrez_with_retry` |
-| `knowledge-graph/loaders/age_loader.py` | Module + class + every method | `AGELoader`, `load_nodes`, `load_edges` |
+| `system-01-data-pipelines/<db>/parser.py` | Module + every public function | `parse_gene_info`, `parse_clinvar_chunk` |
+| `system-01-data-pipelines/shared/utils.py` | Module + every utility | `download_file`, `entrez_with_retry` |
+| `system-02-knowledge-graph/loaders/age_loader.py` | Module + class + every method | `AGELoader`, `load_nodes`, `load_edges` |
 | `tests/**/test_*.py` | Module only (test names are self-documenting) | `"""Tests for clinvar parser."""` |
 | `*.md` in `docs/` | Front matter not required, but each file starts with H1 + 1-paragraph purpose | |
 

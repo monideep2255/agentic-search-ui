@@ -52,6 +52,10 @@ htmlcov/
 # LangSmith / observability
 .langchain/
 
+# Core dumps
+core.*
+core
+
 # Temporary
 tmp/
 temp/

@@ -2,23 +2,23 @@
 
 ## Executive summary
 
-We propose building an alpha version of agentic search for NCBI: a system where a biomedical researcher asks a plain English question and gets a single, cited answer sourced from across all NCBI databases (except SRA and dbGaP). Every fact traces to a specific record in a specific database. The system is built on a BioLink-compliant knowledge graph (KG) that maps the connections NCBI already maintains into a unified, queryable structure.
+We propose building an alpha version of agentic search for NCBI, a system where a biomedical researcher asks a plain English question and gets a comprehensive, cited answer sourced from across all NCBI databases (except SRA, dbGaP, and PubChem). Every fact traces to a specific record in a specific database. The system will be built on a BioLink-compliant knowledge graph (KG) that maps the connections NCBI already maintains into a unified, queryable structure.
 
 The alpha is a 6-month effort in two phases. Phase 1 (months 1-3) builds the KG and data pipelines, deploys on NCBI infrastructure, and onboards internal subject matter experts (SMEs). Phase 2 (months 4-6) adds automated quality monitoring, an evaluation pipeline, and prepares for limited external testing. A key goal of the alpha is testing whether search performs efficiently over a large-scale KG within a realistic compute budget.
 
-The project requires a core team of 2 (existing), 1 additional developer, and part-time access to NCBI data-type experts as databases are integrated. Infrastructure needs include Neo4j instances (~$1,000-2,000/month), enterprise large language model (LLM) API access (~$1,000-3,000/month), and an observability platform (~$500-1,500/month). The system will be built on Python/Django, React, and GraphQL, aligned with NCBI's standard technology stack.
+The project requires a core team of 3 (existing), 1 additional developer, and part-time access to NCBI SMEs as individual databases are integrated. Infrastructure needs include Neo4j instances (~$1,000-2,000/month), enterprise large language model (LLM) API access (~$1,000-3,000/month), and an observability platform (~$500-1,500/month). The system will be built on Python/Django, React, and GraphQL, aligned with NCBI's standard technology stack.
 
-This work is aligned with three strategic directives: NCBI's FY26 guiding principles (simplify discovery, optimize for AI consumption), NIH's Gold Standard Science plan (reproducibility, transparency), and America's AI Action Plan (AI-ready scientific datasets, National Science and Technology Council (NSTC) data quality standards). Two prior experiments (Model Context Protocol (MCP) orchestration and in-memory KG), along with the NLM/NCBI KG proof of concept (PoC), validated the approach and informed the architecture described in this proposal.
+This work is aligned with three strategic directives: NCBI's FY26 guiding principles (simplify discovery, optimize for AI consumption), NIH's Gold Standard Science plan (reproducibility, transparency), and America's AI Action Plan (AI-ready scientific datasets, National Science and Technology Council (NSTC) data quality standards). Two prior experiments (Model Context Protocol (MCP) orchestration and in-memory KG), along with the NLM/NCBI KG proof of concept (PoC), informed the approach and architecture described in this proposal.
 
 ## Vision
 
-A biomedical researcher asks 1 question and gets 1 answer, sourced from every relevant NCBI database, with every fact cited and every connection visible. No more navigating 30+ databases separately. No more being the integration layer. NCBI becomes a single, intelligent knowledge source.
+A biomedical researcher asks 1 question and gets 1 answer, sourced from relevant NCBI databases, with every fact cited and every connection visible. No more navigating 30+ databases separately. The data is already authoritative. Now it becomes integrated and searchable in plain language.
 
 ## The problem and why now
 
-Three strategic directives converge on the same need. NCBI's FY26 guiding principles call for simplifying content discovery, eliminating the need for users to understand NCBI's internal architecture, and optimizing content and metadata for AI and machine consumption. NIH's Gold Standard Science implementation plan (August 2025) requires that NIH-supported science be reproducible, transparent, and communicative of error and uncertainty. At the federal level, America's AI Action Plan (July 2025) directs agencies to build "the world's largest and highest quality AI-ready scientific datasets" and calls on the NSTC to set minimum data quality standards for biological data used in AI model training. Together, these directives point to the same gap: NCBI has the data and the knowledge of how entities connect across databases, but this knowledge is not yet mapped into a unified, queryable structure that meets these goals.
+Three strategic directives converge on the same need. NCBI's FY26 guiding principles call for simplifying content discovery, eliminating the need for users to understand NCBI's internal architecture, and optimizing content and metadata for AI and machine consumption. NIH's Gold Standard Science implementation plan (August 2025) requires that NIH-supported science be reproducible, transparent, and communicative of error and uncertainty. At the federal level, America's AI Action Plan (July 2025) directs agencies to build "the world's largest and highest quality AI-ready scientific datasets" and calls on the NSTC to set minimum data quality standards for biological data used in AI model training. Together, these directives point to the same gap: NCBI has the data and the knowledge of how entities connect across databases, but this knowledge is not yet mapped into a unified, queryable structure that meets these goals. The same gap exists externally. Researchers and AI developers already rely on NCBI data to build custom KGs and train models, but without a unified, standards-compliant structure, there is no authoritative foundation to build on directly.
 
-NCBI maintains over 30 specialized databases, each serving a distinct function in biomedical research. These databases operate independently, requiring biomedical researchers to navigate multiple interfaces and manually synthesize results across systems. The core bottleneck is not finding information within 1 database. It is connecting findings between them.
+The reason is structural. NCBI maintains over 30 specialized databases, each serving a distinct function in biomedical research. These databases operate independently, requiring biomedical researchers to navigate multiple interfaces and manually synthesize results across systems. The core bottleneck is not finding information within 1 database. It is connecting findings between them.
 
 A typical multi-database investigation looks like this: a biomedical researcher finds a variant mentioned in a PubMed Central (PMC) paper, follows a link to its classification in ClinVar, then navigates to Datasets for the gene's reference sequence. Some cross-links exist, but the researcher still drives the process, deciding what to look up next and tracking the connections manually. The researcher is the integration layer. This process consumes significant expert time per investigation, and the deeper risk is that connections get missed because no human can hold all the relationships in their head across 30+ databases.
 
@@ -29,6 +29,7 @@ The question is not whether this should be built, but who should build it. NCBI 
 - We own the data: NCBI serves structured, curated data directly from the source. External tools scrape or index with inherent lag.
 - We have the SMEs: NCBI data-type experts can validate outputs, creating a feedback loop that improves quality over time. This cannot be replicated with more compute.
 - We see the connections: A KG that links genes to diseases through variants through pathways answers questions that no single database or literature search can answer.
+- We see the provenance: NCBI curators establish and validate relationships between entities as part of their workflows. Some of that reasoning lives in the curation process but is never exposed to users. A KG can make it visible.
 
 ## What we are proposing
 
@@ -48,7 +49,7 @@ AI search: Gets answers out of the graph. The agent follows a structured loop (t
 
 The agent does not jump straight to action. It first checks guardrails (is this a valid biomedical question? is the query safe?), then thinks (what is the user really asking? what context and constraints matter?), then plans (which data sources are relevant? what sequence of retrieval steps will produce the best answer?), then acts (queries the KG, fetches related entities and relationships), and finally writes (synthesizes the data into a readable, cited answer and records context, decisions, and outcomes so the system stays consistent and improves over time). Every assertion links back to its source record.
 
-The KG: Sits between them as the single source of truth. Data engineering writes to it. AI search reads from it. This separation keeps the data layer stable while the search layer improves continuously. But architecture alone does not earn biomedical researcher adoption. Trust does.
+The KG sits between them as the single source of truth. Data engineering writes to it. AI search reads from it. This separation keeps the data layer stable while the search layer improves continuously. But architecture alone does not earn biomedical researcher adoption. Trust does.
 
 ### Trust at the center
 
@@ -56,9 +57,9 @@ Trust is the foundation this system is built on. Biomedical researchers will not
 
 - Full provenance: Every fact in every answer links to a specific record in a specific NCBI database. Nothing is generated from training data alone.
 - Evaluation feedback loop: The system improves through 3 layers of evaluation, all feeding back into the search and orchestration layer (not the data itself), keeping the KG stable while the agent continuously improves.
-  - Golden datasets: SMEs help build curated question-answer pairs that define what a correct answer looks like. The system scores itself against these.
-  - LLM-as-judge: An independent review layer checks each answer for citation accuracy, completeness, and grounding in the data.
-  - User feedback: direct signals (thumbs up/down) and behavioral signals (abandoned queries, repeat searches, session depth) track real-world quality.
+- Golden dataset: SMEs help build competency questions, curated-answer pairs that define what a correct answer looks like.
+- LLM-as-judge: An independent review layer checks each answer for citation accuracy, completeness, and grounding in the data.
+- User feedback: Direct signals (thumbs up/down) and behavioral signals (abandoned queries, repeat searches, session depth) track real-world quality.
 - Subject matter expert validation: NCBI data experts for each type of data review outputs, help build golden datasets, and define what good answers look like. Their expertise feeds directly into the evaluation loop.
 - What this is not: This is not a chatbot, a literature summarizer, or a general-purpose AI assistant. It is a structured data retrieval system where every answer can be verified against its source.
 
@@ -67,22 +68,22 @@ Trust is the foundation this system is built on. Biomedical researchers will not
 The system serves answers through multiple channels.
 
 - Web interface: for interactive research queries
-- REST (Representational State Transfer) API: for programmatic access and integration with existing tools
+- GraphQL (Graph Query Language) API: for programmatic access and integration with existing tools
 - MCP server: a standard interface for AI agents so external research pipelines can query NCBI data directly
 - KGX (Knowledge Graph Exchange) export: for bulk download in a standardized graph exchange format
 - CLI (Command-line interface) agent: for terminal-based querying and scripting into research workflows
 
 ### Alpha scope
 
-The alpha is not limited to a subset of NCBI data. The goal is to build a new KG for agentic search that integrates all NCBI databases following the BioLink standard and relevant ontologies. The two exceptions are SRA and dbGaP. SRA contains raw sequencing reads (petabytes of FASTQ files) that are consumed by analysis pipelines, not search queries. dbGaP is controlled-access data that requires individual Data Access Requests with IRB approval, making it a separate compliance effort. The system should be able to answer questions across any area that the underlying data covers.
+The alpha is not limited to a subset of NCBI data. The goal is to build a new KG for agentic search that integrates all NCBI databases following the BioLink standard and relevant ontologies. The exceptions are SRA, dbGaP, and PubChem. SRA contains raw sequencing reads (petabytes of FASTQ files) that are consumed by analysis pipelines, not search queries. dbGaP is controlled-access data that requires individual Data Access Requests with IRB approval, making it a separate compliance effort. PubChem contains community-submitted chemical compound data with varying levels of curation, making it a poor fit for a system where every fact must trace to an authoritative source. The system should be able to answer questions across any area that the underlying data covers.
 
-For literature, the system uses PubMed, which provides the full-text open access subset available in PMC, enriched via PubTator for structured entity extraction. Existing work on PubMed/PMC by other groups in the Division of Intramural Research (DIR) will be leveraged where possible. Datasets is a delivery service (not a database) that currently covers Genome, Virus, Gene, and a subset of Protein and Nuccore, giving the KG access to multiple underlying data types through a single integration point.
+For literature, the system uses PubMed, and the full-text open access subset available for PubMed in PMC, enriched via PubTator for structured entity extraction. Existing work on PubMed/PMC by other groups in the Division of Intramural Research (DIR) will be leveraged where possible. Datasets is a delivery service that currently covers Genome, Virus, Gene, and a subset of Protein and Nuccore, and enables easy KG access to multiple underlying data types through a single integration point.
 
 | Dimension | Alpha |
 |-----------|-------|
-| Data sources | All NCBI databases (except SRA and dbGaP), including PubMed/PMC, ClinVar, Datasets, MedGen, integrated into a BioLink-compliant KG with relevant ontologies |
+| Data sources | All NCBI databases (except SRA, dbGaP, and PubChem) integrated into a BioLink-compliant KG with relevant ontologies |
 | Search scope | Any query the integrated data sources can answer, not domain-restricted |
-| Graph | Target: all entities and relationships across integrated databases |
+| Graph | Targets all entities and relationships across integrated databases |
 | Users | Internal SMEs and select biomedical researchers (invite-only) |
 | Deployment | NCBI-managed infrastructure |
 
@@ -90,13 +91,13 @@ For literature, the system uses PubMed, which provides the full-text open access
 
 ### Personnel
 
-Alpha (0-to-1): The core team of 2 (existing) owns everything end to end, including architecture, data engineering, search agent, product direction, evaluation pipeline, and dogfooding. SMEs are stakeholders who validate outputs and help build golden datasets, not dedicated team members.
+Alpha (0-to-1): The core team of 3 (existing) owns everything end to end, including architecture, data engineering, search agent, product direction, evaluation pipeline, and dogfooding. SMEs are stakeholders who validate outputs and help build golden datasets, not dedicated team members.
 
 | Role | Need |
 |------|------|
-| Core team | 2 (existing). End-to-end: engineering, product, evaluation, dogfooding. |
+| Core team | 3 (existing). End-to-end: engineering, product, evaluation, dogfooding. |
 | Developer | 1 (new). Support data pipeline development and search agent engineering. |
-| SME stakeholders | NCBI data-type experts, part-time as needed per integrated database. Validate outputs, help build golden datasets, test the system. |
+| SME stakeholders | NCBI experts, part-time as needed per integrated database. Validate outputs, help build a golden dataset (competency questions with the correct answers), test the system. |
 
 ### Technology stack
 
@@ -106,18 +107,61 @@ The system will be built on Python/Django (backend and data pipelines), React (f
 
 | Area | What's needed | Estimated cost |
 |------|---------------|----------------|
-| Data engineering | NCBI API access for bulk data ingestion across all databases (except SRA and dbGaP). PubTator for structured entity extraction from literature. | Existing NCBI infrastructure |
+| Data engineering | NCBI API access for bulk data ingestion across all databases (except SRA, dbGaP and PubChem). PubTator for structured entity extraction from literature. | Existing NCBI infrastructure |
 | Graph database | Neo4j Enterprise or Professional instance (managed or self-hosted on NCBI servers) | ~$1,000-2,000/month |
 | LLM API access | Enterprise-tier access for query translation, answer synthesis, and evaluation. Estimated volume: hundreds to low thousands of queries/month during alpha. | ~$1,000-3,000/month |
 | Development | GitLab repository (existing). VS Code with LLM-assisted development tooling. | Existing |
 | Observability | LangSmith or Arize AI for tracing agent behavior, latency, and LLM call quality. NCBI/NLM-managed instance. | ~$500-1,500/month |
-| Analytics | NCBI Applog (existing) + Google Analytics for user behavior tracking, session analysis, and evaluation metrics. PostHog as alternative if additional event tracking is needed. | Minimal (existing infrastructure) |
+| Analytics | NCBI AppLog and Google Analytics (existing) for user behavior tracking, session analysis, and evaluation metrics. PostHog as alternative if additional event tracking is needed. | Minimal (existing infrastructure) |
+
+## Timeline
+
+With the resources above in place, the following timeline applies.
+
+### Phase 1: alpha foundation (months 1-3)
+
+Goals:
+
+- Expand database coverage leveraging existing NCBI data infrastructure and standards where available.
+- Get SMEs using it.
+
+| Month | What happens | Deliverables | How we know it's done |
+|-------|-------------|-------------|----------------------|
+| 1 | Build data pipelines across NCBI data sources (except SRA, dbGaP and PubChem). Each pipeline: pull data, map to BioLink, validate, load. Onboard internal SME. | BioLink schema definition. Per-source extract-transform-load (ETL) pipelines. Validation reports for each data source. | Each pipeline passes BioLink validation. Data loads into Neo4j without errors. Schema is reviewable. |
+| 2 | Load data into the graph. Extend the search agent to handle new entity types and relationships. | Populated KG across integrated databases. Search agent returning cross-database answers. Create preliminary golden dataset (competency questions with correct answers). | Cross-database Cypher queries return connected results. Agent answers sample questions with citations. Initial version of golden dataset is created. |
+| 3 | Deploy on NCBI servers. Onboard data-type SMEs. Validate and refine golden dataset. | Live system on NCBI infrastructure. First evaluation scores. | SMEs can query the system and get cited answers. Relevance score baseline established. |
+
+Exit criteria: SMEs can ask questions across integrated databases and get accurate, cited answers. Relevance score baseline established through SME evaluation.
+
+### Phase 2: alpha hardening (months 4-6)
+
+Goal: Measure quality systematically. Build automated checks. Prepare for limited alpha.
+
+| Month | What happens | Deliverables | How we know it's done |
+|-------|-------------|-------------|----------------------|
+| 4 | Build automated answer review system. Checks: Is every claim backed by data? Are citations correct? Did the agent miss a source? | LLM-as-judge pipeline. Automated quality gate. | Bad answers flagged before reaching users. Quality gate rejects ungrounded responses. |
+| 5 | Build full evaluation pipeline. User feedback collection, scoring against ground truth, session tracking. | Quality dashboard. Feedback collection interface. Scoring pipeline. | Dashboard shows accuracy trends. Feedback loop is active and feeding into agent improvements. |
+| 6 | Test graph traversal performance at scale (query speed depends primarily on edge count and traversal depth, not node count). Prepare for limited external testing. | Performance benchmarks across query types. Beta access plan for a limited set of external users. | Cross-database queries return results within acceptable latency at full graph scale. Ready to onboard initial external testers. |
+
+Exit criteria: Automated quality monitoring in place. Cross-database queries return accurate, cited answers at full graph scale within acceptable latency. Ready to test with a limited set of external users.
+
+Total: 6 months. The concept has been validated on a small scale. The alpha tests whether it holds at production scale.
+
+Publication plan: after Phase 2, once accurate metrics and usage data from production use provide publishable evidence.
+
+## What success looks like
+
+A successful alpha means internal SMEs and invited researchers can ask a plain language question and get a cited answer sourced from across NCBI databases, replacing a process that currently requires navigating multiple systems manually. Five metrics validate this:
+
+- Trust and guardrails: Every answer is verifiable against its source data, with no assertions generated from training data alone. The system rejects non-biomedical, malicious, and out-of-scope queries before they reach the graph.
+- Accuracy and validation: The system answers competency questions correctly, with every assertion traced to a specific record. Automated review scores answers against SME-curated correct answers and flags ungrounded responses.
+- Coverage: Cross-database queries return connected results across all integrated databases
+- Performance: Graph traversal completes within acceptable latency at full scale
+- Cost: Infrastructure and LLM API costs remain within the estimated budget at full graph scale
 
 ### Post-alpha (scaling)
 
-Once the alpha proves the system works, it generates the evaluation data, SME feedback, and performance benchmarks needed to justify scaling. A successful alpha means the system has proven it can answer cross-database questions accurately at scale, creating the foundation for broader external access, deeper answer quality improvements, and a path toward a more unified research experience across NCBI.
-
-Expanding to that next stage requires a dedicated team:
+The alpha generates the evaluation data, SME feedback, and performance benchmarks needed to justify scaling. Expanding to that next stage requires a dedicated team:
 
 | Role | Need |
 |------|------|
@@ -127,41 +171,9 @@ Expanding to that next stage requires a dedicated team:
 | Subject matter experts | Expanded SME coverage for deeper validation and answer quality |
 | Project management | Coordinate cross-team delivery as scope and stakeholders expand |
 
-## Timeline
-
-With the resources above in place, the following timeline applies. The proof of concept has validated the core approach at small scale. What remains is testing whether the system can search efficiently over a large-scale KG within a realistic compute budget, expanding database coverage, and hardening for production use.
-
-### Phase 1: alpha foundation (months 1-3)
-
-Goal: Expand database coverage, leveraging existing NCBI data infrastructure and standards where available. Deploy on NCBI infrastructure. Get SMEs using it.
-
-| Month | What happens | Deliverables | How we know it's done |
-|-------|-------------|-------------|----------------------|
-| 1 | Build data pipelines across NCBI data sources (except SRA and dbGaP). Each pipeline: pull data, map to BioLink, validate, load. Leverage existing DIR work on PMC/PubMed. | BioLink schema definition. Per-source extract-transform-load (ETL) pipelines. Validation reports for each data source. | Each pipeline passes BioLink validation. Data loads into Neo4j without errors. Schema is reviewable. |
-| 2 | Load data into the graph. Extend the search agent to handle new entity types and relationships. | Populated KG across integrated databases. Search agent returning cross-database answers. | Cross-database Cypher queries return connected results. Agent answers sample questions with citations. |
-| 3 | Deploy on NCBI servers. Onboard internal SMEs. Build initial evaluation dataset (50-500 ground-truth question-answer pairs). | Live system on NCBI infrastructure. Golden dataset. First evaluation scores. | SMEs can query the system and get cited answers. Relevance score baseline established. |
-
-Exit criteria: SMEs can ask questions across integrated databases and get accurate, cited answers. Relevance score baseline established through SME evaluation.
-
-### Phase 2: alpha hardening (months 4-6)
-
-Goal: Measure quality systematically. Build automated checks. Prepare for limited beta.
-
-| Month | What happens | Deliverables | How we know it's done |
-|-------|-------------|-------------|----------------------|
-| 4 | Build automated answer review system. Checks: Is every claim backed by data? Are citations correct? Did the agent miss a source? | LLM-as-judge pipeline. Automated quality gate. | Bad answers flagged before reaching users. Quality gate rejects ungrounded responses. |
-| 5 | Build full evaluation pipeline. User feedback collection, scoring against ground truth, session tracking. | Quality dashboard. Feedback collection interface. Scoring pipeline. | Dashboard shows accuracy trends. Feedback loop is active and feeding into agent improvements. |
-| 6 | Test graph traversal performance at scale (query speed depends primarily on edge count and traversal depth, not node count). Prepare for limited external testing. | Performance benchmarks across query types. Beta access plan for a limited set of external users. | Cross-database queries return results within acceptable latency at full graph scale. Ready to onboard initial external testers. |
-
-Exit criteria: Automated quality monitoring in place. Repeat engagement (users returning to the system for new investigations) as the primary adoption signal. Ready to test with a limited set of external users.
-
-Total: 6 months. The concept has been validated at small scale. The alpha tests whether it holds at production scale.
-
-Publication plan: after Phase 2, once accuracy metrics and usage data from production use provide publishable evidence.
-
 ## Prior work
 
-Over the last 6 months, we ran 2 experiments and contributed to the NLM/NCBI KG PoC. Together, these efforts validated the approach and directly informed the architecture proposed above. Each one solved a problem and revealed the next one.
+Over the last 6 months, we ran 2 experiments and contributed to the NLM/NCBI KG PoC. Together, these efforts informed the approach and directly informed the architecture proposed above. Each one solved a problem and revealed the next one.
 
 ### Experiment 1: MCP orchestration
 
@@ -202,6 +214,7 @@ These are the engineering foundations we will apply to the agentic search system
 ### Already validated (from the NLM/NCBI KG PoC)
 
 These patterns and tools have been proven in the parallel NLM/NCBI KG project and can be applied directly to the agentic search alpha:
+
 - BioLink validator for automated data quality checks
 - MCP server architecture (published and installable)
 - Data ingestion pipeline patterns (per-database, BioLink-mapped, validated)
@@ -212,9 +225,9 @@ These patterns and tools have been proven in the parallel NLM/NCBI KG project an
 | Risk | Mitigation |
 |------|-----------|
 | AI generates answers not grounded in the data | Every assertion must trace to a specific graph record. The guardrail layer validates queries before they reach the graph. The LLM-as-judge layer independently reviews answers for accuracy. Automated answer review flags bad answers before they reach users. |
-| System doesn't scale to all NCBI databases | BioLink schema is database-count agnostic. Each data source is added as an independent ingestion job. The alpha targets all databases (except SRA and dbGaP) from the start. |
-| SMEs don't engage with feedback | Early onboarding (month 3). Lightweight feedback interface. Visible impact so their feedback directly changes system behavior. |
-| Same term means different things across databases | BioLink standard + domain ontologies (GO, MONDO) handle entity alignment. Unmappable entities escalate to human experts. |
+| System doesn't scale to all NCBI databases | BioLink schema is database-count agnostic. Each data source is added as an independent ingestion job. The alpha targets all databases (except SRA, dbGaP and PubChem) from the start. |
+| SMEs don't engage with feedback | Early onboarding. Lightweight feedback interface. Visible impact so their feedback directly changes system behavior. |
+| Same term means different things across databases | BioLink standard and domain ontologies (GO, MONDO) handle entity alignment. Unmappable entities escalate to human experts. |
 | Security: prompt injection or adversarial input | The agent's guardrail layer rejects non-biomedical, malicious, and out-of-scope queries before they reach the graph. Read-only enforcement blocks any attempt to modify data. |
 | Security: data pipeline integrity | Each data ingestion pipeline validates against the BioLink schema before anything enters the graph. Malformed or suspicious records are rejected automatically. The 2-repository architecture enforces a strict security boundary where the AI search side has no write access to the KG. |
 

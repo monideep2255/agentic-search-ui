@@ -31,7 +31,7 @@ Pre-commit checks (run before every commit):
 ```bash
 ruff check .
 black --check .
-mypy data-pipelines/ knowledge-graph/
+mypy system-01-data-pipelines/ system-02-knowledge-graph/
 ```
 
 ## Type hints

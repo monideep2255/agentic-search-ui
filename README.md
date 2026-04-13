@@ -59,7 +59,7 @@ cp .env.example .env  # add your NCBI API key
 pip install -r requirements.txt
 
 # Run Gene ETL (Phase 1, Step 1)
-python data-pipelines/gene/pipeline.py
+python system-01-data-pipelines/gene/pipeline.py
 ```
 
 ---

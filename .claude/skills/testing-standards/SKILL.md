@@ -9,10 +9,10 @@ These standards apply to all tests in this repo. The work here is ETL and graph 
 
 ## Coverage requirements
 
-Minimum 70% line coverage on `data-pipelines/` and `knowledge-graph/`. Critical paths (assembly, validation, export) target 90%.
+Minimum 70% line coverage on `system-01-data-pipelines/` and `system-02-knowledge-graph/`. Critical paths (assembly, validation, export) target 90%.
 
 ```bash
-pytest --cov=data-pipelines --cov=knowledge-graph --cov-report=term-missing
+pytest --cov=system-01-data-pipelines --cov=system-02-knowledge-graph --cov-report=term-missing
 ```
 
 | Priority | Module type | Target |

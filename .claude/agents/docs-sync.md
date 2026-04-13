@@ -36,8 +36,8 @@ There are no `CHANGELOG.md`, `WHATS_NEW.md`, `EXTENSIONS.md`, or `GROWTH_SYSTEM.
 | `.claude/rules/` (new or removed) | `CLAUDE.md` and `AGENTS.md` Key rules section |
 | `.claude/hooks/` | No doc update needed (hooks are internal) |
 | `docs/` (file added or removed) | `CLAUDE.md` Reference docs table, `README.md` if it links to that doc |
-| `data-pipelines/` (new pipeline dir) | `README.md` Data sources table, `CLAUDE.md` Build order if phase changed |
-| `knowledge-graph/` | `README.md` Status table |
+| `system-01-data-pipelines/` (new pipeline dir) | `README.md` Data sources table, `CLAUDE.md` Build order if phase changed |
+| `system-02-knowledge-graph/` | `README.md` Status table |
 | `requirements.txt` | No doc update needed |
 | `TOMORROW.md` or `SETUP.md` | No doc update needed |
 | `README.md` itself | Check for stale doc links (e.g. paths that no longer exist in `docs/`) |
