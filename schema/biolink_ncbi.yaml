@@ -1,0 +1,502 @@
+# LinkML schema for NCBI KG - BioLink 4.x compliant
+# Defines 10 node types and 14 predicates for the agentic-search NCBI ETL pipeline.
+#
+# Consumed by:
+#   - System 1 (data pipelines): validates KGX output
+#   - System 2 (knowledge graph): PostgreSQL + AGE loader
+#
+# Depends on:
+#   - linkml:types (LinkML built-in types)
+#   - BioLink model 4.x category and predicate vocabulary
+
+id: https://w3id.org/ncbi-kg/biolink-ncbi
+name: biolink_ncbi
+title: NCBI knowledge graph BioLink schema
+description: >-
+  LinkML schema for BioLink-compliant NCBI knowledge graph nodes and edges.
+  Covers Gene, ClinVar, MedGen, PubMed, Taxonomy, and SNP pipelines.
+version: 0.1.0
+license: MIT
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  biolink: https://w3id.org/biolink/vocab/
+  NCBIGene: https://www.ncbi.nlm.nih.gov/gene/
+  ClinVar: https://www.ncbi.nlm.nih.gov/clinvar/variation/
+  dbSNP: https://www.ncbi.nlm.nih.gov/snp/
+  MONDO: http://purl.obolibrary.org/obo/MONDO_
+  MedGen: https://www.ncbi.nlm.nih.gov/medgen/
+  HP: http://purl.obolibrary.org/obo/HP_
+  PMID: https://pubmed.ncbi.nlm.nih.gov/
+  NCBITaxon: http://purl.obolibrary.org/obo/NCBITaxon_
+  GO: http://purl.obolibrary.org/obo/GO_
+  MeSH: http://id.nlm.nih.gov/mesh/
+  schema: http://schema.org/
+
+default_prefix: biolink
+default_range: string
+
+imports:
+  - linkml:types
+
+# ---------------------------------------------------------------------------
+# Slots (shared field definitions)
+# ---------------------------------------------------------------------------
+slots:
+
+  # --- node required fields ---
+  id:
+    description: Canonical CURIE identifier for the node (e.g. NCBIGene:7157, MONDO:0005148).
+    identifier: true
+    range: string
+    required: true
+
+  category:
+    description: BioLink category (e.g. biolink:Gene).
+    range: string
+    required: true
+
+  name:
+    description: Human-readable label.
+    range: string
+    required: true
+
+  source:
+    description: Database of origin (e.g. NCBIGene, ClinVar, MedGen).
+    range: string
+    required: true
+
+  source_url:
+    description: Direct URL to the source record. Every fact must be clickable.
+    range: uri
+    required: true
+
+  # --- node optional fields ---
+  description:
+    description: Free-text description of the entity.
+    range: string
+
+  xref:
+    description: Cross-references to other databases.
+    range: string
+    multivalued: true
+
+  symbol:
+    description: Official gene symbol (e.g. TP53).
+    range: string
+
+  in_taxon:
+    description: Taxonomy ID of the organism (e.g. NCBITaxon:9606).
+    range: string
+
+  chromosome:
+    description: Chromosome location (e.g. 17).
+    range: string
+
+  gene_type:
+    description: Gene biotype (e.g. protein-coding, ncRNA).
+    range: string
+
+  hgnc_id:
+    description: HGNC identifier for human genes.
+    range: string
+
+  omim_ids:
+    description: OMIM identifiers associated with the gene.
+    range: string
+    multivalued: true
+
+  ensembl_ids:
+    description: Ensembl gene identifiers.
+    range: string
+    multivalued: true
+
+  variant_type:
+    description: Type of sequence variant (e.g. single nucleotide variant, deletion).
+    range: string
+
+  clinical_significance:
+    description: ClinVar clinical significance (e.g. Pathogenic, Benign).
+    range: string
+
+  review_status:
+    description: ClinVar review status (e.g. criteria provided, single submitter).
+    range: string
+
+  conditions:
+    description: Associated conditions or diseases (pipe-delimited in KGX).
+    range: string
+
+  provided_by:
+    description: Pipeline or source that produced this record.
+    range: string
+
+  # --- edge required fields ---
+  subject:
+    description: Source node CURIE.
+    range: string
+    required: true
+
+  predicate:
+    description: BioLink predicate CURIE.
+    range: string
+    required: true
+
+  object:
+    description: Target node CURIE.
+    range: string
+    required: true
+
+  # --- edge optional fields ---
+  relation:
+    description: More specific relation URI when the predicate is broad.
+    range: string
+
+  evidence_code:
+    description: Evidence code supporting the edge (e.g. ECO:0000006).
+    range: string
+
+  knowledge_level:
+    description: KGX knowledge level (e.g. knowledge_assertion, statistical_association).
+    range: string
+
+  agent_type:
+    description: KGX agent type (e.g. manual_agent, automated_agent).
+    range: string
+
+  supporting_publications:
+    description: PMIDs or DOIs supporting this edge.
+    range: string
+    multivalued: true
+
+
+# ---------------------------------------------------------------------------
+# Enums
+# ---------------------------------------------------------------------------
+enums:
+
+  CategoryEnum:
+    description: BioLink 4.x node categories used in this KG.
+    permissible_values:
+      "biolink:Gene":
+        description: A region of the genome that encodes a gene product.
+      "biolink:SequenceVariant":
+        description: A genomic sequence variant (SNP, indel, structural).
+      "biolink:Disease":
+        description: A disease or medical condition. Preferred prefix MONDO.
+      "biolink:PhenotypicFeature":
+        description: A phenotypic abnormality. Preferred prefix HP.
+      "biolink:Article":
+        description: A published article or preprint. Prefix PMID.
+      "biolink:OrganismTaxon":
+        description: A taxonomic classification. Prefix NCBITaxon.
+      "biolink:BiologicalProcess":
+        description: A biological process from GO.
+      "biolink:MolecularActivity":
+        description: A molecular function/activity from GO.
+      "biolink:CellularComponent":
+        description: A cellular component from GO.
+      "biolink:OntologyClass":
+        description: A generic ontology term (MeSH descriptor).
+
+  PredicateEnum:
+    description: BioLink 4.x predicates used in this KG.
+    permissible_values:
+      "biolink:gene_associated_with_condition":
+        description: Gene to Disease association (from NCBI Gene, mim2gene_medgen).
+      "biolink:is_sequence_variant_of":
+        description: Variant to Gene (from ClinVar variant_summary).
+      "biolink:has_phenotype":
+        description: Variant to Disease/Phenotype (from ClinVar).
+      "biolink:participates_in":
+        description: Gene participates in a biological process (from gene2go).
+      "biolink:actively_involved_in":
+        description: Gene actively involved in a molecular activity (from gene2go).
+      "biolink:located_in":
+        description: Gene product located in a cellular component (from gene2go).
+      "biolink:mentioned_in":
+        description: Gene mentioned in an article (from gene2pubmed).
+      "biolink:has_mesh_annotation":
+        description: Article annotated with a MeSH term (from PubMed XML).
+      "biolink:in_taxon":
+        description: Entity belongs to a taxonomic group (from gene_info).
+      "biolink:subclass_of":
+        description: Hierarchical is-a relation (taxonomy lineage, disease ontology).
+      "biolink:close_match":
+        description: Cross-ontology near-equivalent mapping (MONDO to MedGen).
+      "biolink:exact_match":
+        description: Cross-ontology exact mapping (MONDO to MedGen).
+      "biolink:orthologous_to":
+        description: Gene to Gene orthology (from gene_orthologs).
+      "biolink:cited_in":
+        description: Variant cited in an article (from ClinVar citations).
+
+
+# ---------------------------------------------------------------------------
+# Classes: nodes
+# ---------------------------------------------------------------------------
+classes:
+
+  # --- Base node ---
+  Node:
+    description: >-
+      Abstract base for all KG nodes. Every node carries provenance.
+    abstract: true
+    slots:
+      - id
+      - category
+      - name
+      - source
+      - source_url
+      - description
+      - xref
+      - provided_by
+    slot_usage:
+      id:
+        required: true
+      category:
+        required: true
+      name:
+        required: true
+      source:
+        required: true
+      source_url:
+        required: true
+
+  GeneNode:
+    description: A gene from NCBI Gene (gene_info).
+    is_a: Node
+    slots:
+      - symbol
+      - in_taxon
+      - chromosome
+      - gene_type
+      - hgnc_id
+      - omim_ids
+      - ensembl_ids
+    slot_usage:
+      category:
+        equals_string: "biolink:Gene"
+      id:
+        pattern: "^NCBIGene:\\d+$"
+
+  SequenceVariantNode:
+    description: A sequence variant from ClinVar or dbSNP.
+    is_a: Node
+    slots:
+      - variant_type
+      - clinical_significance
+      - review_status
+      - conditions
+      - in_taxon
+      - chromosome
+    slot_usage:
+      category:
+        equals_string: "biolink:SequenceVariant"
+      id:
+        pattern: "^(ClinVar:\\d+|dbSNP:rs\\d+)$"
+
+  DiseaseNode:
+    description: A disease entity, preferably from MONDO with MedGen fallback.
+    is_a: Node
+    slot_usage:
+      category:
+        equals_string: "biolink:Disease"
+      id:
+        pattern: "^(MONDO:\\d{7}|MedGen:\\w+)$"
+
+  PhenotypicFeatureNode:
+    description: A phenotypic feature from HPO with MedGen fallback.
+    is_a: Node
+    slot_usage:
+      category:
+        equals_string: "biolink:PhenotypicFeature"
+      id:
+        pattern: "^(HP:\\d{7}|MedGen:\\w+)$"
+
+  ArticleNode:
+    description: A PubMed article.
+    is_a: Node
+    slot_usage:
+      category:
+        equals_string: "biolink:Article"
+      id:
+        pattern: "^PMID:\\d+$"
+
+  OrganismTaxonNode:
+    description: A taxonomic classification from NCBI Taxonomy.
+    is_a: Node
+    slot_usage:
+      category:
+        equals_string: "biolink:OrganismTaxon"
+      id:
+        pattern: "^NCBITaxon:\\d+$"
+
+  BiologicalProcessNode:
+    description: A GO biological process term.
+    is_a: Node
+    slot_usage:
+      category:
+        equals_string: "biolink:BiologicalProcess"
+      id:
+        pattern: "^GO:\\d{7}$"
+
+  MolecularActivityNode:
+    description: A GO molecular function term.
+    is_a: Node
+    slot_usage:
+      category:
+        equals_string: "biolink:MolecularActivity"
+      id:
+        pattern: "^GO:\\d{7}$"
+
+  CellularComponentNode:
+    description: A GO cellular component term.
+    is_a: Node
+    slot_usage:
+      category:
+        equals_string: "biolink:CellularComponent"
+      id:
+        pattern: "^GO:\\d{7}$"
+
+  OntologyClassNode:
+    description: A MeSH descriptor or other ontology term.
+    is_a: Node
+    slot_usage:
+      category:
+        equals_string: "biolink:OntologyClass"
+      id:
+        pattern: "^MeSH:[A-Z]\\d+$"
+
+  # --- Base edge ---
+  Association:
+    description: >-
+      Abstract base for all KG edges. Every edge carries provenance.
+    abstract: true
+    slots:
+      - id
+      - subject
+      - predicate
+      - object
+      - source
+      - source_url
+      - relation
+      - evidence_code
+      - knowledge_level
+      - agent_type
+      - provided_by
+      - clinical_significance
+      - review_status
+      - supporting_publications
+    slot_usage:
+      id:
+        required: false
+        identifier: false
+      subject:
+        required: true
+      predicate:
+        required: true
+      object:
+        required: true
+      source:
+        required: true
+      source_url:
+        required: true
+
+  GeneConditionAssociation:
+    description: Gene associated with a disease condition (mim2gene_medgen, gene_info).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:gene_associated_with_condition"
+
+  VariantGeneAssociation:
+    description: Sequence variant is a variant of a gene (ClinVar variant_summary).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:is_sequence_variant_of"
+
+  VariantPhenotypeAssociation:
+    description: Variant has a disease or phenotypic outcome (ClinVar).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:has_phenotype"
+
+  GeneProcessAssociation:
+    description: Gene participates in a biological process (gene2go).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:participates_in"
+
+  GeneMolecularActivityAssociation:
+    description: Gene actively involved in a molecular activity (gene2go).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:actively_involved_in"
+
+  GeneCellularComponentAssociation:
+    description: Gene product located in a cellular component (gene2go).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:located_in"
+
+  GenePubmedAssociation:
+    description: Gene mentioned in a PubMed article (gene2pubmed).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:mentioned_in"
+
+  ArticleMeshAssociation:
+    description: Article annotated with a MeSH term (PubMed XML).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:has_mesh_annotation"
+
+  TaxonAssociation:
+    description: Entity belongs to a taxonomic group (gene_info in_taxon).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:in_taxon"
+
+  SubclassAssociation:
+    description: Hierarchical is-a relation (taxonomy, disease ontology).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:subclass_of"
+
+  CloseMatchAssociation:
+    description: Cross-ontology near-equivalent mapping (MONDO to MedGen).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:close_match"
+
+  ExactMatchAssociation:
+    description: Cross-ontology exact mapping (MONDO to MedGen).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:exact_match"
+
+  OrthologyAssociation:
+    description: Gene to gene orthology (gene_orthologs).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:orthologous_to"
+
+  VariantCitationAssociation:
+    description: Variant cited in an article (ClinVar citations).
+    is_a: Association
+    slot_usage:
+      predicate:
+        equals_string: "biolink:cited_in"

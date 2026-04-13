@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "agentic-search-data-engineering"
+version = "0.1.0"
+description = "NCBI ETL pipelines (System 1) and BioLink knowledge graph (System 2)"
+requires-python = ">=3.11"
+# Dependencies managed in requirements.txt. Install with: pip install -r requirements.txt
+
+[project.scripts]
+gene-etl = "system_01_data_pipelines.gene.cli:main"
+clinvar-etl = "system_01_data_pipelines.clinvar.cli:main"
+medgen-etl = "system_01_data_pipelines.medgen.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: marks tests that hit the network or require postgres",
+]
+
+[tool.setuptools.package-dir]
+system_01_data_pipelines = "system-01-data-pipelines"
+system_02_knowledge_graph = "system-02-knowledge-graph"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "system_01_data_pipelines*",
+    "system_02_knowledge_graph*",
+]
