@@ -112,10 +112,10 @@ Each branch is created from main (after Phase 1.1 merges). Each gets its own MR.
 ## Execution map
 
 ```
-Session 1: Phase 1.0  schema + project scaffolding
+Session 1: Phase 1.0  schema + project scaffolding        DONE (2026-04-13, merged ad77889)
     |  branch: phase/1.0-schema-scaffolding -> MR -> merge
     v
-Session 2: Phase 1.1  shared utilities (6 modules)
+Session 2: Phase 1.1  shared utilities (6 modules)        NEXT
     |  branch: phase/1.1-shared-utilities -> MR -> merge
     v
 Session 3: Phase 1.2 + 1.3 + 1.4  Gene + ClinVar + MedGen ETL (PARALLEL)
@@ -150,32 +150,26 @@ Session 11: Phase 4.1  System 2: Cypher query validation
 
 ## Phase 1: core triangle (Gene + ClinVar + MedGen)
 
-### Phase 1.0: schema + project scaffolding
+### Phase 1.0: schema + project scaffolding (DONE 2026-04-13)
 
-Branch: `phase/1.0-schema-scaffolding`
+Branch: `phase/1.0-schema-scaffolding` (merged, deleted)
 
-Skills chain:
-- best-practices (session checklist)
-- architecture-patterns (read before schema design)
-- python-code-standards (type hints on schema utilities)
-- testing-standards (test alongside schema)
-- qa-gate (before ship)
-- ship (docs-sync, commit, push branch, create MR)
+Deliverables (all complete):
+- `schema/biolink_ncbi.yaml`: LinkML schema with 10 node types, 14 predicates, provenance fields required
+- `pyproject.toml`: project metadata, pytest config, Click entry points, package-dir mapping
+- `tests/conftest.py`: 4 shared fixtures (sample_node_dict, sample_edge_dict, tmp_output_dir, schema_path)
+- `tests/test_schema.py`: 5 tests validating schema structure
 
-Deliverables:
-- `schema/biolink_ncbi.yaml`: LinkML schema with 10 node types, 12+ predicates, provenance fields required
-- `pyproject.toml`: project metadata, pytest config, Click entry points
-- `tests/conftest.py`: shared fixtures (sample node, sample edge, temp output dir)
-- `tests/test_schema.py`: validates schema parses and contains all expected categories/predicates
+Pass criteria (all passed):
+- [x] `linkml validate schema/biolink_ncbi.yaml` exits 0
+- [x] All 10 node categories present
+- [x] 14 predicates present (2 more than plan minimum: orthologous_to, cited_in)
+- [x] Every node class requires: id, category, name, source, source_url
+- [x] `pytest tests/test_schema.py` passes (5/5)
 
-Parallel builders: 2 (schema, scaffolding)
-
-Pass criteria:
-- [ ] `linkml validate schema/biolink_ncbi.yaml` exits 0
-- [ ] All 10 node categories present (Gene, SequenceVariant, Disease, PhenotypicFeature, Article, OrganismTaxon, BiologicalProcess, MolecularActivity, CellularComponent, OntologyClass)
-- [ ] All 12 predicates present
-- [ ] Every node class requires: id, category, name, source, source_url
-- [ ] `pytest tests/test_schema.py` passes
+Decisions made:
+- 14 predicates instead of 12: added orthologous_to and cited_in (needed by Gene and ClinVar pipelines)
+- package-dir mapping in pyproject.toml: preserves hyphenated directory names while enabling Python imports
 
 ### Phase 1.1: shared utilities
 
