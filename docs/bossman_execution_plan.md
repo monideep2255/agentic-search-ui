@@ -2,31 +2,107 @@
 
 Phase-by-phase implementation plan for the 6 NCBI ETL pipelines. Each phase is one bossman session with integrated skill chain and branch+MR workflow. Use `/bossman-mode --phase N` to execute.
 
-Created: 2026-04-13. Based on System_1_data_engineering_plan.md.
+Created: 2026-04-13. Last updated: 2026-04-14.
+
+---
+
+## Plan overview
+
+```mermaid
+graph TD
+    subgraph "Phase 1: core triangle [DONE]"
+        P10[1.0 Schema + scaffolding]
+        P11[1.1 Shared utilities]
+        P12[1.2-1.4 Gene+ClinVar+MedGen ETL]
+        P15[1.5 Merge + validation]
+        P10 --> P11 --> P12 --> P15
+    end
+
+    subgraph "Gate 1: run locally [IN PROGRESS]"
+        G1R[Run medgen/gene/clinvar-etl]
+        G1V[KGX BioLink validation]
+        P15 --> G1R --> G1V
+    end
+
+    subgraph "Phase 2: literature + taxonomy"
+        P20[2.0 PubMed ETL code]
+        P21[2.1 Taxonomy ETL code]
+        P22[2.2 Five-database merge code]
+        G1V --> P20 & P21
+        P20 & P21 --> P22
+    end
+
+    subgraph "Gate 2: run locally"
+        G2R[Run pubmed/taxonomy-etl]
+        G2V[KGX BioLink validation]
+        P22 --> G2R --> G2V
+    end
+
+    subgraph "Phase 3: AGE loader + local graph"
+        P30[3.0 AGE loader code]
+        P30L[Load 5 databases into AGE]
+        P30Q[Cypher query validation]
+        G2V --> P30 --> P30L --> P30Q
+    end
+
+    subgraph "Gate 3: local graph validated"
+        G3D[Delete local KGX files]
+        P30Q --> G3D
+    end
+
+    subgraph "Phase 4: cloud deploy"
+        P40[4.0 Deploy 5-db to Hetzner VPS]
+        P40V[Verify remote queries]
+        G3D --> P40 --> P40V
+    end
+
+    subgraph "Phase 5: dbSNP on cloud"
+        P50[5.0 SNP ETL code]
+        P51[5.1 Run SNP pipeline on cloud]
+        P52[5.2 SNP-ClinVar merge on cloud]
+        P40V --> P50 --> P51 --> P52
+    end
+
+    subgraph "Gate 4: complete"
+        G4V[Full 6-db graph validation]
+        P52 --> G4V
+    end
+
+    style P10 fill:#2d6a2d,color:#fff
+    style P11 fill:#2d6a2d,color:#fff
+    style P12 fill:#2d6a2d,color:#fff
+    style P15 fill:#2d6a2d,color:#fff
+    style G1R fill:#c9a227,color:#000
+    style G1V fill:#c9a227,color:#000
+```
+
+Legend: green = done, yellow = in progress, default = pending.
+
+Each phase produces code only (parsers, pipeline orchestrators, tests). Each gate runs the pipelines on real NCBI FTP data and validates BioLink compliance via the NCATS KGX validator. KGX files are intermediates deleted after AGE load. The graph database is the end target, deployed to a cloud VPS for team access.
 
 ---
 
 ## End product
 
-When all 11 phases are complete, this repo produces:
+When all phases are complete, this repo produces:
 
 1. 6 ETL pipelines that download NCBI bulk data and output BioLink-compliant KGX files (nodes.tsv + edges.tsv per database)
-2. A merged knowledge graph in PostgreSQL + Apache AGE, queryable via openCypher
+2. A merged knowledge graph in PostgreSQL + Apache AGE, deployed on a Hetzner VPS, queryable via openCypher
 3. Every node and edge traceable back to its NCBI source record (provenance on 100%)
 
 ### Graph scale
 
 | Pipeline | Nodes | Edges | KGX size |
 |----------|-------|-------|----------|
-| Gene (all organisms) | ~94M | ~134M | ~40-60GB |
+| Gene (all organisms) | ~67.5M | ~278M | ~39GB |
 | ClinVar | ~4.5M | ~9M | ~3-5GB |
 | MedGen | ~233K | ~500K | ~200MB |
 | PubMed | ~40M | ~40M+ | ~30-50GB |
 | Taxonomy | ~2.9M | ~2.9M | ~1-2GB |
 | SNP (full dbSNP) | ~1.2B | ~1.2B+ | ~200-400GB |
-| Total | ~1.4B | ~1.5B+ | ~300-500GB |
+| Total | ~1.3B | ~1.5B+ | ~300-500GB |
 
-### What you can query after Phase 4.1
+### What you can query after Gate 4
 
 - "Find all pathogenic variants in BRCA1" (Gene -> ClinVar)
 - "What diseases are associated with HNF1A?" (Gene -> ClinVar -> MedGen)
@@ -45,20 +121,41 @@ This is System 1 + System 2. System 3 (search agent, FastAPI, LangGraph, UI) liv
 
 Each bossman phase produces code only: parsers, pipeline orchestrators, shared utilities, and tests. Tests use small inline fixtures, not real NCBI data. No data is downloaded during bossman sessions.
 
-The actual FTP downloads happen when you run the pipelines for the first time (e.g. `gene-etl`, `clinvar-etl`, `medgen-etl`). Running the pipelines is a separate step from building them. The "wall-clock time" table below estimates how long each download and processing run takes.
+The actual FTP downloads happen when you run the pipelines at each gate. Running the pipelines is a separate step from building them.
 
 ### Data validation gates (run after each phase group)
 
-After each group of pipeline phases is built and merged, run the pipelines on real data before building the next group. This catches data format surprises early instead of discovering them after all code is written.
+After each group of pipeline phases is built and merged, run the pipelines on real data before building the next group. This catches data format surprises early.
 
-| Gate | Run after | Commands | What to verify |
-|------|-----------|----------|----------------|
-| Gate 1 | Phase 1.5 | `medgen-etl`, `gene-etl --tax-id 9606`, `clinvar-etl` | KGX files exist in `/export/home/chakrabortim2/data/kgx/{gene,clinvar,medgen}/`, row counts are reasonable, no parse errors |
-| Gate 2 | Phase 2.2 | `pubmed-etl` (overnight), `taxonomy-etl` | PubMed and Taxonomy KGX files, 5-database merge report looks sane |
-| Gate 3 | Phase 3.1 | `snp-etl` (overnight) | dbSNP KGX files, final 6-database merge, check disk usage |
-| Gate 4 | Phase 4.1 | Run Cypher test queries | Graph responds correctly to the 3 test queries from the plan |
+Every gate runs the same validation checklist on each pipeline's KGX output before proceeding.
 
-Gate 1 is the next step. Run the three core triangle pipelines on real data, inspect the KGX output, then proceed to Phase 2.
+### Validation checklist (run at every gate, for every database)
+
+1. Pipeline runs without errors (no crashes, no uncaught exceptions)
+2. KGX files exist at `data/kgx/<database>/nodes.tsv` and `edges.tsv`
+3. Row counts match expected order of magnitude (see graph scale table above)
+4. All data downloaded, no organism filters, no subset sampling
+5. 0 duplicate node IDs
+6. 100% provenance coverage (every node and edge has source + source_url)
+7. Dangling edges logged and explained (cross-pipeline refs are expected, unexplained dangles are not)
+8. KGX BioLink validation via NCATS validator passes:
+   ```
+   pip install kgx
+   kgx validate data/kgx/<database>/nodes.tsv data/kgx/<database>/edges.tsv
+   ```
+   Checks: categories and predicates exist in official BioLink model, ID prefixes registered in BioLink prefix map, required KGX columns present, edge subjects/objects reference valid node IDs
+9. Validation report saved, any failures fixed before proceeding
+10. docs/data_inventory.md updated with download sizes, row counts, and validation results
+11. docs/learnings.md updated with any problems encountered and fixes applied
+
+### Gate status
+
+| Gate | Run after | What | Where | Status |
+|------|-----------|------|-------|--------|
+| Gate 1 | Phase 1.5 | Run medgen/gene/clinvar-etl, validate KGX | Local | In progress |
+| Gate 2 | Phase 2.2 | Run pubmed/taxonomy-etl, validate KGX | Local | Pending |
+| Gate 3 | Phase 3.0 | Load 5-db into AGE, Cypher queries, delete KGX | Local | Pending |
+| Gate 4 | Phase 5.2 | Full 6-db graph on cloud, all queries pass | Hetzner VPS | Pending |
 
 ### Coding time (bossman sessions)
 
@@ -66,70 +163,81 @@ Gate 1 is the next step. Run the three core triangle pipelines on real data, ins
 |-------|---------|------|--------|
 | 1.0 | 1 | Schema + scaffolding | DONE (2026-04-13) |
 | 1.1 | 2 | Shared utilities (6 modules) | DONE (2026-04-14) |
-| 1.2+1.3+1.4 | 3 | Gene + ClinVar + MedGen ETL (parallel) | DONE (2026-04-14) |
+| 1.2-1.4 | 3 | Gene + ClinVar + MedGen ETL | DONE (2026-04-14) |
 | 1.5 | 4 | Merge + validation | DONE (2026-04-14) |
-| Gate 1 | - | Run pipelines on real data | NEXT |
-| 2.0 | 5 | PubMed ETL | Pending (after Gate 1) |
+| Gate 1 | - | Run 3 pipelines locally, validate | In progress |
+| 2.0 | 5 | PubMed ETL | Pending |
 | 2.1 | 6 | Taxonomy ETL | Pending |
 | 2.2 | 7 | 5-database merge | Pending |
-| Gate 2 | - | Run PubMed + Taxonomy on real data | Pending |
-| 3.0 | 8 | SNP ETL (1.2B records) | Pending |
-| 3.1 | 9 | SNP-ClinVar merge + final merge | Pending |
-| Gate 3 | - | Run dbSNP on real data | Pending |
-| 4.0 | 10 | PostgreSQL + AGE loader | Pending |
-| 4.1 | 11 | Cypher query validation | Pending |
-| Gate 4 | - | Run Cypher test queries | Pending |
+| Gate 2 | - | Run PubMed + Taxonomy locally, validate | Pending |
+| 3.0 | 8 | AGE loader code + load 5-db locally | Pending |
+| Gate 3 | - | Validate local graph, delete KGX files | Pending |
+| 4.0 | 9 | Deploy 5-db graph to Hetzner VPS | Pending |
+| 5.0 | 10 | SNP ETL code | Pending |
+| 5.1 | 11 | Run SNP pipeline on cloud VPS | Pending |
+| 5.2 | 12 | SNP-ClinVar merge on cloud | Pending |
+| Gate 4 | - | Full 6-db graph validated on cloud | Pending |
 
-### Wall-clock time (downloads and processing that can't be compressed)
+### Wall-clock time (downloads and processing)
 
-| Task | Wall-clock | When to run |
-|------|-----------|-------------|
-| MedGen download (115MB) | 5 min | Gate 1 |
-| Gene FTP download (3GB) | 30-60 min | Gate 1 |
-| ClinVar download (500MB) | 20-30 min | Gate 1 |
-| PubMed baseline download (30GB) | 4-8 hours | Gate 2, start overnight |
-| Taxonomy download (500MB) | 10 min | Gate 2 |
-| dbSNP full download (100GB) | 8-16 hours | Gate 3, start overnight |
-| dbSNP VCF parsing (1.2B records) | 4-12 hours | Gate 3, after download |
-| AGE graph loading (1.4B nodes) | 6-24 hours | Gate 4, start overnight |
-| Node normalization (6 subgraphs) | 2-4 hours | Gate 3, during merge |
+| Task | Wall-clock | When |
+|------|-----------|------|
+| MedGen download (115MB) | 5 min | Gate 1 (local) |
+| Gene FTP download (3GB) | 30-60 min | Gate 1 (local) |
+| ClinVar download (500MB) | 20-30 min | Gate 1 (local) |
+| PubMed baseline download (30GB) | 4-8 hours | Gate 2 (local, overnight) |
+| Taxonomy download (500MB) | 10 min | Gate 2 (local) |
+| AGE load 5 databases (~140M nodes) | 2-6 hours | Phase 3.0 (local) |
+| pg_dump + transfer to Hetzner | 1-3 hours | Phase 4.0 |
+| dbSNP download (100GB) | 8-16 hours | Phase 5.1 (cloud, overnight) |
+| dbSNP VCF parsing (1.2B records) | 4-12 hours | Phase 5.1 (cloud) |
+| dbSNP load into AGE (incremental) | 6-24 hours | Phase 5.2 (cloud) |
 
 ### Realistic calendar
 
-| Week | Phases | Milestone | Status |
-|------|--------|-----------|--------|
-| Week 1 | 1.0-1.5 + Gate 1 | Core triangle code complete, run on real data | Code DONE (2026-04-14). Gate 1 NEXT. |
-| Week 2 | 2.0-2.2 + Gate 2 | Literature + taxonomy added, 5 databases merged | Pending |
-| Week 3 | 3.0-3.1 + Gate 3 | Full dbSNP, all 6 databases, 1.4B nodes merged | Pending |
-| Week 4 | 4.0-4.1 + Gate 4 | Graph loaded in PostgreSQL + AGE, Cypher queries working | Pending |
+| Week | What | Where | Status |
+|------|------|-------|--------|
+| Week 1 | Phase 1 code + Gate 1 | Local | Code DONE. Gate 1 in progress. |
+| Week 2 | Phase 2 code + Gate 2 | Local | Pending |
+| Week 3 | Phase 3 (AGE load) + Gate 3 + Phase 4 (deploy) | Local then cloud | Pending |
+| Week 4 | Phase 5 (dbSNP on cloud) + Gate 4 | Cloud | Pending |
 
-Phase 1 code completed in a single session (2026-04-14). Gate 1 (run pipelines on real data) is the next step before building Phase 2.
+### Why this order
 
-### Disk budget (434GB available on /export as of 2026-04-14)
+1. Phases 1-2 (code + Gates 1-2): build and test all non-dbSNP pipelines locally. Free, fast iteration.
+2. Phase 3 (AGE load locally): load 5-database graph into PostgreSQL + AGE on your machine. Validate with Cypher queries. Delete KGX intermediates.
+3. Phase 4 (deploy to cloud): `pg_dump` the validated local database, set up Hetzner VPS, `pg_restore` on cloud. Teammates and System 3 can now access the graph.
+4. Phase 5 (dbSNP on cloud): build the SNP ETL code locally, run the pipeline directly on the Hetzner VPS. dbSNP downloads and loads on the cloud instance where there's 500GB dedicated disk. No local storage pressure.
 
-| After gate | Cumulative disk usage | Headroom |
-|------------|----------------------|----------|
-| Gate 1 | ~10-15GB (human-only Gene + ClinVar + MedGen) | ~420GB |
-| Gate 2 | ~50-70GB (add PubMed + Taxonomy) | ~365GB |
-| Gate 3 | ~300-500GB (add full dbSNP) | Tight: process incrementally |
-| Gate 4 | AGE database ~200-300GB (replaces KGX intermediates) | Delete KGX after loading |
+Schema impact: none. The schema already defines `biolink:SequenceVariant` for both ClinVar (`ClinVar:{id}`) and dbSNP (`dbSNP:rs{id}`). They are different nodes in the graph, connected by an `exact_match` edge via the RS# field in ClinVar's variant_summary. No schema changes needed at any step.
 
-Full dbSNP (Phase 3) is the disk constraint. Strategy: load each pipeline into AGE incrementally, delete KGX intermediates after loading.
+### Disk budget
+
+Local disk (`/export`): 4.3TB total, ~403GB free as of 2026-04-14.
+
+| After step | Local disk used | Local headroom |
+|------------|----------------|----------------|
+| Gate 1 (KGX for 3 databases) | ~50-60GB | ~345GB |
+| Gate 2 (add PubMed + Taxonomy KGX) | ~100-130GB | ~275GB |
+| Phase 3 (AGE load + KGX on disk) | ~200-280GB | ~125GB |
+| Gate 3 (delete KGX, keep AGE) | ~100-150GB | ~255GB |
+| Phase 4 (pg_dump for transfer) | ~200-300GB temporarily | ~100GB |
+| After deploy (delete local AGE) | ~5GB (FTP cache only) | ~400GB |
+
+Cloud disk (Hetzner CX41 + 500GB volume): dedicated to this project.
+
+| After step | Cloud disk used | Cloud headroom |
+|------------|----------------|----------------|
+| Phase 4 (5-db graph restored) | ~100-150GB | ~350GB |
+| Phase 5 (add dbSNP) | ~250-350GB | ~150GB |
+
+No storage problems at any step.
 
 ### Data storage
 
-All data lives on local disk (`/export`), not the NFS home directory (which is only 20GB). Paths are configured in `.env`:
+Local: all data on `/export` (local LVM volume, not NFS home). Paths configured in `.env`. Symlinked to `data/` in the repo (gitignored). FTP cache kept for re-runs, KGX files deleted after AGE load.
 
-| Path | What lives here | Gitignored |
-|------|----------------|------------|
-| `/export/home/chakrabortim2/data/ftp_cache/` | Raw FTP downloads (gene_info.gz, ClinVar XML, etc.). Kept for re-runs. | Yes |
-| `/export/home/chakrabortim2/data/raw/` | Intermediate parsed data | Yes |
-| `/export/home/chakrabortim2/data/kgx/` | KGX output (nodes.tsv + edges.tsv per database). Deleted after AGE load. | Yes |
-| PostgreSQL data directory | AGE graph database (final storage) | N/A (system) |
-
-Disk: `/export` is local LVM volume (`/dev/mapper/usrvg1-export`), 4.3TB total, ~434GB free as of 2026-04-14. Enough for Gates 1-2. Gate 3 (full dbSNP) requires incremental processing.
-
-The repo itself contains only code, schema, tests, and docs. No data files are committed to git.
+Cloud: PostgreSQL + AGE database on Hetzner VPS. This is the production instance that System 3 connects to. Estimated cost: ~$25-30/month for 8 vCPU, 16GB RAM, 500GB disk.
 
 ---
 
@@ -180,7 +288,7 @@ MR REVIEW
 | When | Skills active | Rules active | Agents |
 |------|--------------|-------------|--------|
 | Phase start | best-practices, architecture-patterns | file-protection, dependency-tracking | none |
-| Development | python-code-standards, testing-standards, documentation-standards | parallel-first, boil-the-lake, attack-the-constraint, writing-style, decision-logging | bossman team (builders, judge, test writer) |
+| Development | python-code-standards, testing-standards, documentation-standards | parallel-first, boil-the-lake, attack-the-constraint, writing-style, decision-logging | sub-agents (builders, judge, test writer) |
 | Phase end | qa-gate (chains eval-harness), release-workflow, ship | git-workflow, file-protection | docs-sync, git-sync |
 | Review | objective-review (optional, if user asks) | none | none |
 
@@ -206,7 +314,7 @@ MR REVIEW
 |-------|------------|--------|
 | 1.0 | `phase/1.0-schema-scaffolding` | Merged, deleted |
 | 1.1 | `phase/1.1-shared-utilities` | Merged, deleted |
-| 1.2+1.3+1.4 | `phase/1.2-1.4-core-triangle-etl` | Merged, deleted (combined) |
+| 1.2-1.4 | `phase/1.2-1.4-core-triangle-etl` | Merged, deleted (combined) |
 | 1.5 | `phase/1.5-merge-validation` | Merged, deleted |
 
 ### Per-phase git flow
@@ -217,7 +325,7 @@ MR REVIEW
 3. [bossman builds, commits within branch]
 4. qa-gate passes
 5. git push -u origin phase/N.M-description
-6. gh pr create (using .github/pull_request_template.md)
+6. gh pr create
 7. user reviews MR
 8. merge into main, delete branch
 9. start next phase from updated main
@@ -232,62 +340,57 @@ The original plan called for three separate branches, but in practice these were
 ## Execution map
 
 ```
-Session 1: Phase 1.0  schema + project scaffolding        DONE (2026-04-13, merged ad77889)
-    |  branch: phase/1.0-schema-scaffolding -> MR -> merge
+Session 1: Phase 1.0  schema + project scaffolding        DONE (2026-04-13)
     v
-Session 2: Phase 1.1  shared utilities (6 modules)        DONE (2026-04-14, branch pushed e108a0c)
-    |  branch: phase/1.1-shared-utilities -> MR -> merge
+Session 2: Phase 1.1  shared utilities (6 modules)        DONE (2026-04-14)
     v
-Session 3: Phase 1.2 + 1.3 + 1.4  Gene + ClinVar + MedGen ETL              DONE (2026-04-14, combined branch)
-    |  branch: phase/1.2-1.4-core-triangle-etl -> MR -> merge
+Session 3: Phase 1.2-1.4  Gene+ClinVar+MedGen ETL         DONE (2026-04-14)
     v
-Session 4: Phase 1.5  merge + cross-pipeline validation                    DONE (2026-04-14)
-    |  branch: phase/1.5-merge-validation -> MR -> merge
+Session 4: Phase 1.5  merge + validation                  DONE (2026-04-14)
     v
---- GATE 1: run pipelines on real data ---                                 NEXT
-    |  medgen-etl (~5 min)
-    |  gene-etl --tax-id 9606 (~30-60 min)
-    |  clinvar-etl (~20-30 min)
-    |  verify KGX output, fix any parse errors before proceeding
+--- GATE 1: run 3 pipelines locally (all data) ---        IN PROGRESS
+    |  medgen-etl, gene-etl, clinvar-etl
+    |  kgx validate on each output
     v
-Session 5: Phase 2.0  PubMed ETL pipeline
-    |  branch: phase/2.0-pubmed-etl -> MR -> merge
+Session 5: Phase 2.0  PubMed ETL code
     v
-Session 6: Phase 2.1  Taxonomy ETL pipeline
-    |  branch: phase/2.1-taxonomy-etl -> MR -> merge
+Session 6: Phase 2.1  Taxonomy ETL code
     v
-Session 7: Phase 2.2  PubMed + Taxonomy merge into existing graph
-    |  branch: phase/2.2-literature-taxonomy-merge -> MR -> merge
+Session 7: Phase 2.2  5-database merge code
     v
---- GATE 2: run PubMed + Taxonomy on real data ---
-    |  pubmed-etl (4-8 hours, start overnight)
-    |  taxonomy-etl (~10 min)
-    |  verify 5-database merge report
+--- GATE 2: run PubMed + Taxonomy locally ---
+    |  pubmed-etl (overnight), taxonomy-etl
+    |  kgx validate on each output
     v
-Session 8: Phase 3.0  SNP ETL pipeline (1.2B records, streaming)
-    |  branch: phase/3.0-snp-etl -> MR -> merge
+Session 8: Phase 3.0  AGE loader code + load 5-db locally
+    |  load Gene+ClinVar+MedGen+PubMed+Taxonomy into AGE
+    |  run Cypher test queries
     v
-Session 9: Phase 3.1  SNP-ClinVar merge + final 6-database merge
-    |  branch: phase/3.1-final-merge -> MR -> merge
+--- GATE 3: local graph validated ---
+    |  delete KGX intermediates
     v
---- GATE 3: run dbSNP on real data ---
-    |  snp-etl (8-16 hour download + 4-12 hour parse, start overnight)
-    |  verify final 6-database merge, check disk usage
+Session 9: Phase 4.0  deploy to Hetzner VPS
+    |  pg_dump local, pg_restore on cloud
+    |  verify Cypher queries work remotely
     v
-Session 10: Phase 4.0  System 2: PostgreSQL + AGE loader
-    |  branch: phase/4.0-age-loader -> MR -> merge
+Session 10: Phase 5.0  SNP ETL code (built locally)
     v
-Session 11: Phase 4.1  System 2: Cypher query validation
-    |  branch: phase/4.1-cypher-validation -> MR -> merge
+Session 11: Phase 5.1  run SNP pipeline on cloud VPS
+    |  download dbSNP directly to cloud (100GB)
+    |  parse per chromosome, load into AGE incrementally
     v
---- GATE 4: run Cypher test queries ---
-    |  verify 3 test queries return correct results
+Session 12: Phase 5.2  SNP-ClinVar merge on cloud
+    |  link ClinVar variants to dbSNP via RS# field
+    v
+--- GATE 4: full 6-database graph on cloud ---
+    |  run all test queries
+    |  handoff to System 3
     |  system complete
 ```
 
 ---
 
-## Phase 1: core triangle (Gene + ClinVar + MedGen)
+## Phase 1: core triangle (Gene + ClinVar + MedGen) [DONE]
 
 ### Phase 1.0: schema + project scaffolding (DONE 2026-04-13)
 
@@ -296,172 +399,90 @@ Branch: `phase/1.0-schema-scaffolding` (merged, deleted)
 Deliverables (all complete):
 - `schema/biolink_ncbi.yaml`: LinkML schema with 10 node types, 14 predicates, provenance fields required
 - `pyproject.toml`: project metadata, pytest config, Click entry points, package-dir mapping
-- `tests/conftest.py`: 4 shared fixtures (sample_node_dict, sample_edge_dict, tmp_output_dir, schema_path)
+- `tests/conftest.py`: 4 shared fixtures
 - `tests/test_schema.py`: 5 tests validating schema structure
 
 Pass criteria (all passed):
 - [x] `linkml validate schema/biolink_ncbi.yaml` exits 0
 - [x] All 10 node categories present
-- [x] 14 predicates present (2 more than plan minimum: orthologous_to, cited_in)
+- [x] 14 predicates present (added orthologous_to and cited_in)
 - [x] Every node class requires: id, category, name, source, source_url
 - [x] `pytest tests/test_schema.py` passes (5/5)
-
-Decisions made:
-- 14 predicates instead of 12: added orthologous_to and cited_in (needed by Gene and ClinVar pipelines)
-- package-dir mapping in pyproject.toml: preserves hyphenated directory names while enabling Python imports
 
 ### Phase 1.1: shared utilities (DONE 2026-04-14)
 
 Branch: `phase/1.1-shared-utilities` (merged, deleted)
 
-Skills chain:
-- best-practices (session checklist)
-- architecture-patterns (idempotent steps, provenance as required param)
-- python-code-standards (all 6 modules)
-- testing-standards (6 test modules, mocked network)
-- qa-gate (6 phases)
-- ship (push branch, create MR)
-
 Deliverables (all in `system-01-data-pipelines/shared/`):
 
-| Module | Purpose | Reference pattern |
-|--------|---------|-------------------|
-| `config.py` | @dataclass PipelineConfig, loads .env, __post_init__ creates dirs | `reference/.../config.py:11-101` |
-| `ftp_client.py` | download_ftp_file with cache-hit check, idempotent | `reference/.../utils.py:91-104` |
-| `entrez_client.py` | configure_entrez, esearch with retry/backoff, esummary_batch | `reference/.../utils.py:35-86` |
-| `biolink_mapper.py` | map_node(), map_edge(), category/predicate registries | New, enforces provenance |
-| `kgx_exporter.py` | export_kgx writes nodes.tsv + edges.tsv | `reference/.../export.py` |
-| `validator.py` | validate_no_dangling, validate_no_duplicates, validate_provenance | `reference/.../utils.py:109-138` |
-
-Parallel builders: 3 (config+ftp, entrez+mapper, exporter+validator)
+| Module | Purpose |
+|--------|---------|
+| `config.py` | PipelineConfig dataclass, loads .env, creates dirs |
+| `ftp_client.py` | Idempotent FTP download with cache-hit check |
+| `entrez_client.py` | Entrez API with retry/backoff |
+| `biolink_mapper.py` | map_node/map_edge with category/predicate validation |
+| `kgx_exporter.py` | KGX TSV export with streaming append for large datasets |
+| `validator.py` | Dangling edge, duplicate, and provenance validation |
 
 Pass criteria (all passed):
-- [x] `pytest tests/shared/` all pass (82 tests across 6 modules)
+- [x] 82 tests across 6 modules, all passing
 - [x] All 6 modules importable
-- [x] map_node returns dict with id, category, name, source, source_url (all non-empty)
-- [x] map_edge returns dict with subject, predicate, object, source, source_url (all non-empty)
-- [x] validate_provenance catches missing source_url
+- [x] Provenance enforced at function signature level
 - [x] ftp_client skips download on cache hit
 
 ### Phase 1.2: Gene ETL pipeline (DONE 2026-04-14)
 
-Branch: `phase/1.2-1.4-core-triangle-etl` (combined branch with 1.3 and 1.4, merged, deleted)
+Branch: `phase/1.2-1.4-core-triangle-etl` (combined, merged, deleted)
 
-Skills chain: best-practices -> architecture-patterns -> python-code-standards -> testing-standards -> qa-gate -> ship
+FTP source: `ftp.ncbi.nlm.nih.gov/gene/DATA/` (6 files: gene_info, gene2go, gene2pubmed, mim2gene_medgen, gene_refseq_uniprotkb_collab, gene_orthologs)
 
-FTP source: `ftp.ncbi.nlm.nih.gov/gene/DATA/`
-
-| File | Size | Produces |
-|------|------|----------|
-| gene_info.gz | ~2GB | Gene nodes + in_taxon edges + xrefs (HGNC, OMIM, Ensembl) |
-| gene2go.gz | ~200MB | participates_in / actively_involved_in / located_in edges |
-| gene2pubmed.gz | ~500MB | mentioned_in edges (Gene -> Article) |
-| gene_refseq_uniprotkb_collab.gz | ~50MB | UniProt xrefs on Gene nodes |
-| mim2gene_medgen | ~5MB | gene_associated_with_condition edges |
-| gene_orthologs.gz | ~100MB | orthologous_to edges |
-
-Modules to create (9):
-- `gene/download.py`, `gene/parse_gene_info.py`, `gene/parse_gene2go.py`
-- `gene/parse_gene2pubmed.py`, `gene/parse_mim2gene.py`, `gene/parse_refseq_uniprot.py`
-- `gene/parse_orthologs.py`, `gene/pipeline.py`, `gene/cli.py`
-
-Parallel builders: 3
+9 modules created. Uses streaming edge export (append_edges) to handle 278M edges without OOM.
 
 Pass criteria (all passed):
-- [x] Gene nodes: id (NCBIGene:NNN), category (biolink:Gene), name, source, source_url, xrefs
-- [x] Correct GO predicates by aspect (P/F/C)
-- [x] Zero dangling edges, zero duplicates within Gene KGX
-- [x] 100% provenance coverage
-- [x] Pipeline runs with --tax-id 9606 for fast testing
-- [x] `pytest tests/gene/` passes (10 tests)
+- [x] 10 tests passing
+- [x] Correct CURIE format, GO predicate mapping, provenance
+- [x] Streaming edges to avoid OOM at full scale
 
 ### Phase 1.3: ClinVar ETL pipeline (DONE 2026-04-14)
 
-Branch: `phase/1.2-1.4-core-triangle-etl` (combined branch, merged, deleted)
+Branch: `phase/1.2-1.4-core-triangle-etl` (combined, merged, deleted)
 
-Skills chain: best-practices -> architecture-patterns -> python-code-standards -> testing-standards -> qa-gate -> ship
+FTP source: `ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/` (variant_summary.txt.gz + var_citations.txt)
 
-FTP source: `ftp.ncbi.nlm.nih.gov/pub/clinvar/`
-
-| File | Size | Produces |
-|------|------|----------|
-| variant_summary.txt.gz | ~500MB | Variant nodes + is_sequence_variant_of + has_phenotype edges (primary source) |
-| var_citations.txt | ~50MB | cited_in edges (Variant -> Article) |
-
-Decision: used variant_summary.txt.gz (tabular) as the primary source instead of ClinVarFullRelease.xml.gz. Simpler, faster, sufficient for all needed fields. XML parser was unnecessary complexity.
-
-Modules created (5):
-- `clinvar/download.py`, `clinvar/parse_variant_summary.py`, `clinvar/parse_var_citations.py`
-- `clinvar/pipeline.py`, `clinvar/cli.py`
+5 modules created. Uses variant_summary.txt.gz (tabular) not XML. Assembly filter (GRCh38) deduplicates, does not exclude data.
 
 Pass criteria (all passed):
-- [x] Variant nodes: id (ClinVar:NNN), category (biolink:SequenceVariant), clinical_significance, review_status
-- [x] is_sequence_variant_of edges to NCBIGene: IDs
-- [x] has_phenotype edges to MedGen CUI IDs
-- [x] Streaming line-by-line parser (memory safe for 500MB)
-- [x] 100% provenance
-- [x] `pytest tests/clinvar/` passes (16 tests)
+- [x] 16 tests passing
+- [x] Header-based column lookup (robust to column order changes)
+- [x] Streaming line-by-line parser
 
 ### Phase 1.4: MedGen ETL pipeline (DONE 2026-04-14)
 
-Branch: `phase/1.2-1.4-core-triangle-etl` (combined branch, merged, deleted)
+Branch: `phase/1.2-1.4-core-triangle-etl` (combined, merged, deleted)
 
-Skills chain: best-practices -> architecture-patterns -> python-code-standards -> testing-standards -> qa-gate -> ship
+FTP source: `ftp.ncbi.nlm.nih.gov/pub/medgen/` (5 files, all pipe-delimited)
 
-FTP source: `ftp.ncbi.nlm.nih.gov/pub/medgen/`
-
-| File | Size | Produces |
-|------|------|----------|
-| MedGenIDMappings.txt | ~50MB | Disease node xrefs (MONDO, OMIM, Orphanet, MeSH, SNOMED, HPO) |
-| MGREL | ~20MB | subclass_of edges (disease hierarchy) |
-| Names.RRF | ~30MB | Disease node names + synonyms |
-| medgen_pubmed_lnk.txt | ~10MB | mentioned_in edges |
-| MedGen_HPO_OMIM_Mapping.txt | ~5MB | Additional HPO/OMIM xrefs |
-
-Modules to create (8):
-- `medgen/download.py`, `medgen/parse_id_mappings.py`, `medgen/parse_names.py`
-- `medgen/parse_mgrel.py`, `medgen/parse_pubmed_links.py`, `medgen/parse_hpo_omim.py`
-- `medgen/pipeline.py`, `medgen/cli.py`
-
-Parallel builders: 2
+8 modules created. MONDO promotion with CUI-to-canonical-id rewriting in edges.
 
 Pass criteria (all passed):
-- [x] Disease nodes: id (MONDO or MedGen CUI), category (biolink:Disease or biolink:PhenotypicFeature)
+- [x] 18 tests passing
 - [x] MONDO canonical where available, MedGen CUI fallback
-- [x] xrefs include OMIM, Orphanet, MeSH, SNOMED, HPO
-- [x] subclass_of edges form DAG
-- [x] 100% provenance
-- [x] `pytest tests/medgen/` passes (18 tests)
-
-Decision: parse_id_mappings returns a cui_to_canonical_id map alongside nodes. pipeline.py rewrites all edge CUI references to canonical IDs (MONDO where promoted), preventing dangling edges within MedGen.
+- [x] Edge CUI references rewritten to canonical IDs
 
 ### Phase 1.5: merge + cross-pipeline validation (DONE 2026-04-14)
 
 Branch: `phase/1.5-merge-validation` (merged, deleted)
 
-Skills chain: best-practices -> architecture-patterns -> eval-harness (full validation) -> qa-gate -> ship
-
-Deliverables:
-- `system-01-data-pipelines/shared/merger.py`: merge_kgx (concat, dedup, stub injection, validate)
-- `system-01-data-pipelines/shared/merge_report.py`: statistics by category/predicate
-- `mappings/gene_hgnc.sssom.tsv`, `mappings/clinvar_mondo.sssom.tsv`, `mappings/gene_go.sssom.tsv`
-- `tests/integration/test_merge.py`, `tests/integration/test_cross_database_traversal.py`
-
-Parallel builders: 2 (merger+report, SSSOM files)
+Deliverables: merger.py, merge_report.py, 3 SSSOM mapping templates, 14 integration tests.
 
 Pass criteria (all passed):
-- [x] Zero dangling edges in merged output (stubs injected for cross-pipeline refs)
-- [x] Zero duplicate node IDs
-- [x] Gene IDs from ClinVar edges exist in merged nodes (or stubbed)
-- [x] MedGen CUIs from ClinVar edges exist (or stubbed)
-- [x] Expected counts to be verified at Gate 1 with real data
-- [x] 100% provenance
-- [x] Merge report generated
-- [x] `pytest tests/integration/` passes (14 tests)
+- [x] 14 integration tests passing
+- [x] Stub injection for dangling cross-pipeline refs
+- [x] Cross-database traversal tests (Gene -> ClinVar -> MedGen)
 
 ---
 
-## Phase 2: literature + taxonomy (future sessions)
+## Phase 2: literature + taxonomy
 
 ### Phase 2.0: PubMed ETL
 
@@ -469,7 +490,6 @@ Branch: `phase/2.0-pubmed-etl`
 FTP: `ftp.ncbi.nlm.nih.gov/pubmed/baseline/` (~30GB compressed, 40M articles)
 Nodes: biolink:Article with MeSH edges (has_mesh_annotation)
 Linked to Gene via gene2pubmed (already downloaded in Phase 1.2)
-Wall-clock: 4-8 hour download, run overnight
 
 ### Phase 2.1: Taxonomy ETL
 
@@ -484,121 +504,49 @@ Merge PubMed + Taxonomy into existing Phase 1 graph. Validate gene2pubmed edges 
 
 ---
 
-## Phase 3: variant depth (future sessions)
+## Phase 3: AGE loader (runs before dbSNP to free local disk)
 
-### Phase 3.0: SNP ETL (full dbSNP)
+### Phase 3.0: PostgreSQL + AGE loader
 
-Branch: `phase/3.0-snp-etl`
-FTP: `ftp.ncbi.nlm.nih.gov/snp/` (~100GB compressed, 1.2B records)
-Per-chromosome VCF parsing, parallelized. Streaming into KGX or direct AGE load.
-Wall-clock: 8-16 hour download + 4-12 hour parse
+Branch: `phase/3.0-age-loader`
+Build the AGE loader code, then load the 5-database KGX files into PostgreSQL + AGE locally. Create graph schema, load nodes/edges in batches, create indexes. Run Cypher test queries to validate. Delete KGX intermediates after validation passes.
 
-### Phase 3.1: SNP-ClinVar merge + final merge
-
-Branch: `phase/3.1-final-merge`
-Merge variants via rs ID. Combined ClinVar + dbSNP properties on matched variants.
-All 6 databases in one graph.
-
----
-
-## Phase 4: System 2 knowledge graph (future sessions)
-
-### Phase 4.0: PostgreSQL + AGE loader
-
-Branch: `phase/4.0-age-loader`
-KGX TSV to AGE graph. Schema creation, node/edge loading, index creation.
-
-### Phase 4.1: Cypher query validation
-
-Branch: `phase/4.1-cypher-validation`
-Run the 3 test queries from the plan against the loaded graph:
+Test queries:
 - Gene to variant traversal (BRCA1)
 - Disease to gene traversal (phenylketonuria -> PAH)
 - Gene to biological process (glucose metabolism genes)
 
 ---
 
-## Reference files
+## Phase 4: cloud deployment
 
-| File | Read when |
-|------|-----------|
-| `docs/System_1_data_engineering_plan.md` | Before any pipeline work |
-| `reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/utils.py` | Building shared utilities |
-| `reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/config.py` | Building config |
-| `reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/assembly.py` | Building merger |
-| `reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/export.py` | Building KGX exporter |
+### Phase 4.0: deploy to Hetzner VPS
 
-## Skills reference
-
-| Skill | When used | How |
-|-------|-----------|-----|
-| `best-practices` | Every phase start | Session checklist, scope discipline |
-| `architecture-patterns` | Before designing modules | ETL patterns, provenance, idempotency |
-| `python-code-standards` | During development + qa-gate Phase 2 | Type hints, docstrings, logging, error handling |
-| `testing-standards` | During development + qa-gate Phase 2 | Fixtures, mocking, coverage targets |
-| `documentation-standards` | During development + qa-gate Phase 5 | Sentence case, no bold, no em dashes |
-| `eval-harness` | qa-gate Phase 3 | BioLink validation, dangling edges, provenance |
-| `qa-gate` | Every phase end | 6-phase mandatory gate |
-| `release-workflow` | Every phase end | Chains qa-gate then ship |
-| `ship` | Final step | docs-sync, commit, push branch, create MR |
-| `decision-logging` | Continuous during dev | Log choices to DECISIONS.md |
-| `bossman-mode` | Wraps entire execution | Autonomous mode, suspended clarification |
-| `objective-review` | Optional, user-requested | Critical feedback on deliverables |
+Branch: `phase/4.0-cloud-deploy`
+Set up Hetzner CX41 + 500GB volume (~$25-30/month). Install PostgreSQL + AGE. `pg_dump` the local database, transfer to the VPS, `pg_restore`. Verify Cypher queries work remotely. This makes the graph accessible to teammates and System 3.
 
 ---
 
-## Agent teams (experimental)
+## Phase 5: dbSNP (runs on cloud VPS, not locally)
 
-Bossman mode uses Claude Code agent teams, not just sub-agents. Agent teams run as independent Claude Code instances with shared task lists and direct teammate communication.
+### Phase 5.0: SNP ETL code
 
-Enabled via `.claude/settings.json`:
-```json
-{
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
-  }
-}
-```
+Branch: `phase/5.0-snp-etl`
+Build the SNP ETL pipeline code locally. Per-chromosome VCF parsing, streaming. Tests with small fixtures.
 
-Display: tmux split panes (tmux is installed at `/usr/bin/tmux`). Each teammate gets its own pane.
+### Phase 5.1: run SNP pipeline on cloud
 
-### Team composition per phase
+Run the SNP pipeline directly on the Hetzner VPS. Download dbSNP (~100GB compressed) to the cloud instance. Parse per chromosome, load each chromosome into AGE incrementally. Never have the full KGX on disk at once.
 
-| Role | Count | Responsibility | Display |
-|------|-------|---------------|---------|
-| Lead (orchestrator) | 1 | Decomposes phase, spawns teammates, tracks progress | Main pane |
-| Researcher | 1-N | FTP inventory, reference pattern lookup, API docs | tmux pane |
-| Builder | 2-3 | Write code independently, one task per builder | tmux pane each |
-| Judge | 1 | Reviews all builder output: functional, quality, plan adherence | tmux pane |
-| Test writer | 1 | Unit tests, integration tests, fixture files | tmux pane |
+### Phase 5.2: SNP-ClinVar merge on cloud
 
-### Sub-agents vs agent teams
-
-| Aspect | Sub-agents (Agent tool) | Agent teams |
-|--------|------------------------|-------------|
-| Communication | Report back to main only | Teammates message each other |
-| Coordination | Main agent manages all | Shared task list, self-coordination |
-| Context | Fresh per dispatch | Full independent context window |
-| Best for | Quick focused tasks | Complex parallel builds |
-| Display | Inline results | tmux split panes |
-
-Use agent teams for Phase 1.2+1.3+1.4 (three parallel ETL pipelines). Use sub-agents for simpler phases (1.0, 1.5).
+Link ClinVar variants to dbSNP variants via the RS# field. Create `exact_match` edges between `ClinVar:{id}` and `dbSNP:rs{id}` for matched variants. All 6 databases in one graph.
 
 ---
 
 ## Testing strategy
 
 Testing is integrated at every phase, not an afterthought.
-
-### Per-phase testing
-
-| When | What | Skill |
-|------|------|-------|
-| During development | Write tests alongside code, one test file per module | testing-standards |
-| qa-gate Phase 1 | `pytest -q` all tests pass | qa-gate |
-| qa-gate Phase 2 | Test quality: fixtures, no network, one assert per concept | testing-standards |
-| qa-gate Phase 3 | BioLink validation, dangling edges = 0, provenance = 100% | eval-harness |
-| Phase 1.5 | Integration tests: cross-pipeline traversal, merge correctness | custom |
 
 ### Test file structure
 
@@ -645,9 +593,26 @@ All tests use inline fixtures (no separate fixture files). Total: 146 tests, all
 3. ClinVar uses variant_summary.txt.gz (tabular, streaming line-by-line), not XML. Simpler and sufficient.
 4. MONDO is canonical disease ID, MedGen CUI fallback. CUI-to-canonical-id rewriting in MedGen pipeline.
 5. No Entrez API in Phase 1. All data from FTP bulk files.
-6. Combined branch for parallel phases (1.2+1.3+1.4) when they touch different directories.
+6. Combined branch for parallel phases (1.2-1.4) when they touch different directories.
 7. Skill chain is fixed: best-practices -> architecture-patterns -> [dev with standards] -> qa-gate -> release-workflow -> ship.
-8. Sub-agents (not agent teams) used for parallel builders. Simpler, sufficient for the task.
+8. Sub-agents used for parallel builders. Simpler than full agent teams, sufficient for the task.
 9. Testing integrated at every phase via testing-standards + qa-gate + eval-harness.
-10. 146 tests across Phase 1 (5 schema + 82 shared + 10 gene + 16 clinvar + 18 medgen + 14 integration + 1 conftest).
+10. 146 tests across Phase 1 (5 schema + 82 shared + 10 gene + 16 clinvar + 18 medgen + 14 integration).
 11. Data validation gates between phase groups. Run pipelines on real data before building next group.
+12. KGX files are intermediates. Graph database is the end target. Delete KGX after AGE load.
+13. AGE loader (Phase 3) runs before dbSNP (Phase 5) to free local disk.
+14. dbSNP runs on cloud VPS, not locally. Avoids local storage pressure.
+15. Cloud deploy (Hetzner CX41 + 500GB volume, ~$25-30/month) for team access and System 3 integration.
+16. Gene pipeline streams edges to disk per parser batch (append_edges) to avoid OOM on 278M edges.
+17. ClinVar and dbSNP use different ID spaces (ClinVar:{id} vs dbSNP:rs{id}), no schema conflict. Connected via exact_match edges at Phase 5.2.
+
+---
+
+## Reference files
+
+| File | Read when |
+|------|-----------|
+| `docs/System_1_data_engineering_plan.md` | Before any pipeline work |
+| `docs/learnings.md` | After any pipeline run (add problems and solutions) |
+| `docs/data_inventory.md` | After any pipeline run (add download and output details) |
+| `reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/` | Building shared utilities, merger, exporter |

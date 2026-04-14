@@ -1,27 +1,20 @@
-# NCBI agentic search
+# NCBI data engineering
 
-Ask a question in English. Get a cited, multi-database answer in seconds.
+ETL pipelines and knowledge graph for 6 NCBI databases.
 
-Connects 6 NCBI databases (Gene, PubMed, ClinVar, MedGen, Taxonomy, SNP) into a BioLink-compliant knowledge graph. An 8-agent AI system understands your question, plans retrieval across databases, and synthesizes cited answers.
+Downloads bulk data from NCBI FTP, parses it, maps it to the BioLink model, validates with LinkML, and loads it into PostgreSQL + Apache AGE. The result is a BioLink-compliant knowledge graph queryable via openCypher.
 
-5 ways to access:
-- Web UI: interactive search with graph visualization
-- MCP server: for AI agents (Claude, GPT, Gemini)
-- REST API: for programmatic access (OpenAPI spec)
-- CLI: `ncbi-search "pathogenic BRCA1 variants in breast cancer"`
-- KGX export: bulk graph download for data scientists
-
-150M+ nodes. 6 databases. 30+ more on-demand via ELink. Every fact cited. Every connection visible.
+6 databases. ~1.4B nodes. ~1.5B edges. Every node and edge traced back to its NCBI source record.
 
 ---
 
 ## Status
 
-Phase 1 complete: Gene + ClinVar + MedGen ETL pipelines, 6 shared modules, merge infrastructure, 146 tests. Gate 1 next: run pipelines on real data.
+Phase 1 and Gate 1 complete: all three core triangle pipelines ran on real data (67.5M Gene, 4.4M ClinVar, 198K MedGen nodes). Phase 2 next: PubMed + Taxonomy ETL.
 
 | System | Status |
 |--------|--------|
-| System 1: data pipelines | Phase 1 done. Gate 1 (real data validation) next. |
+| System 1: data pipelines | Phase 1 done. Gate 1 done (real data validated). Phase 2 next. |
 | System 2: knowledge graph | Not started |
 | System 3: search agent | Not started |
 
@@ -29,18 +22,26 @@ Phase 1 complete: Gene + ClinVar + MedGen ETL pipelines, 6 shared modules, merge
 
 ## Architecture
 
+This repo builds Layer 1 of a three-layer data architecture:
+
+| Layer | What | Where | Latency |
+|-------|------|-------|---------|
+| Layer 1: knowledge graph | 6 NCBI databases fully ingested into PostgreSQL + AGE | This repo (System 1 + 2) | <10ms per Cypher query |
+| Layer 2: on-demand API | 30+ NCBI databases reached at query time via ELink/EFetch | Separate repo (System 3) | 200-500ms per call |
+| Layer 3: enrichment APIs | PubTator3, LitVar2, LitSense, ClinicalTrials.gov | Separate repo (System 3) | 500ms-2s per call |
+
+This repo handles Layer 1 only: download, parse, map, validate, load. Layers 2 and 3 are query-time concerns handled by the search agent in a separate repository.
+
 ```
-System 1: data engineering
-  NCBI FTP -> parse -> BioLink map -> validate -> KGX files
+System 1: data pipelines (this repo)
+  NCBI FTP -> parse -> BioLink map -> LinkML validate -> KGX files (nodes.tsv + edges.tsv)
 
-System 2: knowledge graph
-  KGX files -> normalize -> merge -> PostgreSQL + AGE
-
-System 3: search agent (8 agents)
-  Query -> understand -> plan -> retrieve -> synthesize -> cite
+System 2: knowledge graph (this repo)
+  KGX files -> normalize -> merge -> PostgreSQL + AGE -> queryable via openCypher
 ```
 
-See `docs/System_1_data_engineering_plan.md` for detailed build plan.
+See `docs/architecture/Three_layer_data_architecture.md` for the full three-layer design.
+See `docs/System_1_data_engineering_plan.md` for the detailed build plan.
 See `docs/bossman_execution_plan.md` for phase-by-phase execution status.
 
 ---
@@ -53,12 +54,15 @@ python 3.11+
 postgresql 15 + apache age (for System 2)
 
 # Setup
-git clone https://github.com/[you]/agentic-search-data-engineering
+git clone <repo-url>
 cd agentic-search-data-engineering
 cp .env.example .env  # add your NCBI API key
 pip install -r requirements.txt
 
-# Run Gene ETL (Phase 1, Step 1)
+# Run tests
+pytest tests/
+
+# Run Gene ETL
 python system-01-data-pipelines/gene/pipeline.py
 ```
 
@@ -68,9 +72,9 @@ python system-01-data-pipelines/gene/pipeline.py
 
 | Database | Records | BioLink category | FTP source |
 |----------|---------|-----------------|-----------|
-| Gene | 94M | `biolink:Gene` | ftp.ncbi.nlm.nih.gov/gene/DATA/ |
-| ClinVar | 4.5M | `biolink:SequenceVariant` | ftp.ncbi.nlm.nih.gov/pub/clinvar/ |
-| MedGen | 233K | `biolink:Disease` | ftp.ncbi.nlm.nih.gov/pub/medgen/ |
+| Gene | 67.5M | `biolink:Gene` | ftp.ncbi.nlm.nih.gov/gene/DATA/ |
+| ClinVar | 4.4M | `biolink:SequenceVariant` | ftp.ncbi.nlm.nih.gov/pub/clinvar/ |
+| MedGen | 198K | `biolink:Disease` | ftp.ncbi.nlm.nih.gov/pub/medgen/ |
 | PubMed | 40M | `biolink:Article` | ftp.ncbi.nlm.nih.gov/pubmed/baseline/ |
 | Taxonomy | 2.9M | `biolink:OrganismTaxon` | ftp.ncbi.nlm.nih.gov/pub/taxonomy/ |
 | SNP (full dbSNP) | 1.2B | `biolink:SequenceVariant` | ftp.ncbi.nlm.nih.gov/snp/ |

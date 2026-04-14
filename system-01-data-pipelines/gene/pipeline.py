@@ -41,7 +41,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from shared.config import PipelineConfig
-from shared.kgx_exporter import export_kgx
+from shared.kgx_exporter import export_nodes, init_edges_file, append_edges, EDGE_REQUIRED_COLUMNS
 from shared.validator import validate_all
 
 from gene.download import download_gene_files
@@ -172,40 +172,60 @@ def run_gene_pipeline(
     logger.info("Enriching Gene nodes with UniProt xrefs...")
     gene_nodes = _enrich_gene_nodes_with_uniprot(gene_nodes, gene_to_uniprot)
 
-    # Merge all nodes and edges
+    # Merge nodes (fits in memory at ~67M)
     all_nodes: list[dict] = gene_nodes + go_nodes
-    all_edges: list[dict] = (
-        taxon_edges + go_edges + pubmed_edges + mim_edges + ortholog_edges
-    )
 
     logger.info(
-        "Merge complete: %d total nodes (%d gene, %d GO), %d total edges",
+        "Nodes ready: %d total (%d gene, %d GO)",
         len(all_nodes),
         len(gene_nodes),
         len(go_nodes),
-        len(all_edges),
     )
 
-    # Step 9: Export KGX
+    # Step 9: Export KGX (stream edges to avoid OOM on 278M+ edges)
     logger.info("Exporting KGX files...")
-    nodes_path, edges_path = export_kgx(all_nodes, all_edges, config.kgx_output_dir, "gene")
+    nodes_path = export_nodes(all_nodes, config.kgx_output_dir, "gene")
 
-    # Step 10: Validate
-    logger.info("Running validation...")
-    validation_result = validate_all(all_nodes, all_edges, label="gene_pipeline")
+    # Determine edge columns from the first batch that has data
+    sample_edge = (taxon_edges or go_edges or pubmed_edges or mim_edges or ortholog_edges)[0]
+    edge_cols = EDGE_REQUIRED_COLUMNS + sorted(set(sample_edge.keys()) - set(EDGE_REQUIRED_COLUMNS))
 
-    if validation_result["passed"]:
-        logger.info("Gene pipeline validation passed")
-    else:
+    edges_path = init_edges_file(config.kgx_output_dir, "gene", fieldnames=edge_cols)
+
+    edge_batches = [
+        ("taxon", taxon_edges),
+        ("go", go_edges),
+        ("pubmed", pubmed_edges),
+        ("mim", mim_edges),
+        ("orthologs", ortholog_edges),
+    ]
+    total_edges = 0
+    edge_counts = {}
+    for name, edges in edge_batches:
+        count = len(edges)
+        edge_counts[name] = count
+        if edges:
+            append_edges(edges, edges_path, fieldnames=edge_cols)
+            total_edges += count
+            edges.clear()  # free memory after writing
+
+    logger.info("Exported %d total edges to %s", total_edges, edges_path)
+
+    # Step 10: Validate (skip full in-memory validation for large datasets,
+    # just check nodes since edges are already on disk)
+    logger.info("Running node validation...")
+    from shared.validator import validate_no_duplicates, validate_provenance
+    dup_nodes = validate_no_duplicates(all_nodes)
+    prov_nodes = validate_provenance(all_nodes, label="gene_pipeline:nodes")
+
+    if dup_nodes or prov_nodes:
         logger.warning(
-            "Gene pipeline validation warnings: dangling_edges=%d, "
-            "duplicate_nodes=%d, missing_provenance_nodes=%d, "
-            "missing_provenance_edges=%d",
-            len(validation_result["dangling_edges"]),
-            len(validation_result["duplicate_nodes"]),
-            len(validation_result["missing_provenance_nodes"]),
-            len(validation_result["missing_provenance_edges"]),
+            "Gene pipeline validation warnings: duplicate_nodes=%d, missing_provenance_nodes=%d",
+            len(dup_nodes),
+            len(prov_nodes),
         )
+    else:
+        logger.info("Gene pipeline node validation passed (edge validation skipped for memory, run merge validator on KGX files)")
 
     # Step 11: Summary stats
     logger.info(
@@ -216,12 +236,12 @@ def run_gene_pipeline(
         len(all_nodes),
         len(gene_nodes),
         len(go_nodes),
-        len(all_edges),
-        len(taxon_edges),
-        len(go_edges),
-        len(pubmed_edges),
-        len(mim_edges),
-        len(ortholog_edges),
+        total_edges,
+        edge_counts.get("taxon", 0),
+        edge_counts.get("go", 0),
+        edge_counts.get("pubmed", 0),
+        edge_counts.get("mim", 0),
+        edge_counts.get("orthologs", 0),
         nodes_path,
         edges_path,
     )

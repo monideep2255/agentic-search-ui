@@ -173,6 +173,67 @@ def export_edges(
     return path
 
 
+def init_edges_file(
+    output_dir: Path,
+    database: str,
+    fieldnames: list[str] | None = None,
+) -> Path:
+    """Create edges.tsv with header row only. Used for streaming writes.
+
+    Args:
+        output_dir: Root KGX output directory.
+        database: Database name used as subdirectory.
+        fieldnames: Column names. Defaults to EDGE_REQUIRED_COLUMNS if None.
+
+    Returns:
+        Path to the initialized edges.tsv file.
+    """
+    dest_dir = output_dir / database
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    path = dest_dir / "edges.tsv"
+    cols = fieldnames or EDGE_REQUIRED_COLUMNS
+    with open(path, "w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=cols, delimiter="\t")
+        writer.writeheader()
+    logger.info("Initialized edges file with %d columns at %s", len(cols), path)
+    return path
+
+
+def append_edges(
+    edges: list[dict],
+    edges_path: Path,
+    fieldnames: list[str] | None = None,
+) -> int:
+    """Append edges to an existing edges.tsv file. Frees memory after writing.
+
+    Designed for large pipelines that cannot hold all edges in memory at once.
+    Call init_edges_file first to create the header, then call this repeatedly
+    for each batch of edges.
+
+    Args:
+        edges: List of edge dicts to append.
+        edges_path: Path to the edges.tsv file (must already exist with header).
+        fieldnames: Column names matching the header. Defaults to EDGE_REQUIRED_COLUMNS.
+
+    Returns:
+        Number of edges written.
+    """
+    cols = fieldnames or EDGE_REQUIRED_COLUMNS
+    with open(edges_path, "a", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(
+            fh,
+            fieldnames=cols,
+            delimiter="\t",
+            extrasaction="ignore",
+            restval="",
+        )
+        for rec in edges:
+            row = {field: _serialize_value(rec.get(field, "")) for field in cols}
+            writer.writerow(row)
+    logger.info("Appended %d edges to %s", len(edges), edges_path)
+    return len(edges)
+
+
 def export_kgx(
     nodes: list[dict],
     edges: list[dict],

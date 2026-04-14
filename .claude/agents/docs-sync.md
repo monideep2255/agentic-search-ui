@@ -2,7 +2,7 @@
 name: docs-sync
 description: Keeps CLAUDE.md, AGENTS.md, README.md, and DECISIONS.md in sync when the repo changes. Surgical updates only.
 scope: project
-tools: Read, Write, Glob, Grep
+tools: Read, Edit, Glob, Grep
 model: sonnet
 ---
 

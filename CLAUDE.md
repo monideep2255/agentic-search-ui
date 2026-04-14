@@ -12,29 +12,23 @@ Stack: Python 3.11+, LinkML, BioLink 4.x, KGX, PostgreSQL 15 + Apache AGE.
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | System 1: data pipelines | Phase 1 complete (phases 1.0-1.5: schema, 6 shared modules, Gene + ClinVar + MedGen ETL, merge). Gate 1 is next: run pipelines on real data. |
-| 2 | System 2: knowledge graph | Schema defined alongside pipelines. PostgreSQL + AGE load after Phase 1. |
+| 1 | System 1: data pipelines | Phase 1 and Gate 1 complete (67.5M Gene, 4.4M ClinVar, 198K MedGen nodes produced on real data). Phase 2 next: PubMed + Taxonomy ETL, then AGE loader. |
+| 2 | System 2: knowledge graph | Schema defined alongside pipelines. PostgreSQL + AGE load in Phase 3. |
 | 3 | System 3: search agent | Lives in a separate repository. Do not build here. |
 
 ---
 
 ## Architecture
 
-Three systems. This repo holds System 1 and System 2 only. System 3 lives in a separate repository.
-
 ```
-System 1: data engineering (this repo)
-  Input:  NCBI FTP bulk files
-  Output: BioLink-compliant KGX files (nodes.tsv + edges.tsv per database)
+System 1: data pipelines (this repo)
+  NCBI FTP -> parse -> BioLink map -> LinkML validate -> KGX files
 
 System 2: knowledge graph (this repo)
-  Input:  KGX files from System 1
-  Output: Merged graph in PostgreSQL + Apache AGE, queryable via openCypher
-
-System 3: search agent (separate repo, do not build here)
-  Input:  User query
-  Output: Cited multi-database answer from graph + on-demand ELink/EFetch
+  KGX files -> normalize -> merge -> PostgreSQL + AGE -> openCypher
 ```
+
+This repo builds Layer 1 (fully ingested knowledge graph) of a three-layer data architecture. Layers 2 and 3 (on-demand API, enrichment) are query-time concerns in a separate repo. See `docs/architecture/Three_layer_data_architecture.md`.
 
 ---
 
@@ -76,10 +70,13 @@ Phase 1 first: Gene + ClinVar + MedGen. These three form the core triangle and s
 
 ```
 Phase 1 (weeks 1-2):  Gene ETL -> ClinVar ETL -> MedGen ETL -> first merge test  [DONE 2026-04-14]
-Phase 2 (weeks 3-4):  PubMed ETL -> Taxonomy ETL -> SNP ETL -> full merge
-Phase 3 (weeks 5-6):  Search agent (LangGraph, 8 agents, FastAPI)
-Phase 4 (weeks 7-8):  Web UI, CLI, eval pipeline, deploy
+Phase 2 (weeks 3-4):  PubMed ETL -> Taxonomy ETL -> five-database merge
+Phase 3 (weeks 5-6):  AGE loader -> load five databases into local graph -> Cypher validation
+Phase 4 (week 7):     Cloud deploy: five-database graph to Hetzner VPS
+Phase 5 (week 8):     dbSNP ETL on cloud -> SNP-ClinVar merge -> full six-database validation
 ```
+
+System 3 (search agent, FastAPI, LangGraph, UI) is tracked in the separate repository. Do not build here.
 
 ---
 
@@ -121,44 +118,19 @@ Every fact must be clickable back to its NCBI source record. This is the trust m
 
 ## Skills
 
+User-invocable skills (slash commands):
+
 | Skill | Purpose | Invocation |
 |-------|---------|-----------|
-| bossman-mode | Autonomous execution with agent teams: parallel builders, judge, skill chain per phase | `/bossman` |
-| first-principles | Explains BioLink, LangGraph, AGE, LinkML concepts | `what is`, `explain` |
+| bossman-mode | Autonomous execution with agent teams | `/bossman` |
 | objective-review | Critical feedback, not agreement | `/objective-review` |
-| socratic-questioning | Clarifying questions before big decisions | `should I`, `help me decide` |
-| best-practices | Session-start checklist, change safety, commit hygiene | Read at session start |
-| qa-gate | Post-task quality gate before any pipeline commit | Read before commit |
-| release-workflow | End-to-end release: chains qa-gate then ship | Read before release |
-| visualization-standards | Mermaid and schema diagram standards for pipelines and KGX flows | Read when diagramming |
-| architecture-patterns | ETL + KG architectural patterns adapted from ncbi_ai_agents reference | Read before new pipeline |
-| documentation-standards | Doc style rules for all .md and docstrings in this repo | Read before writing docs |
-| python-code-standards | Python coding standards for ETL pipelines and graph loaders | Read before writing Python |
-| testing-standards | Testing standards for ETL, BioLink validation, KGX export | Read before writing tests |
-| eval-harness | Pipeline and KG quality gates (BioLink, dangling-edge, provenance) | Read before pipeline run |
-| repo-dive | First-principles analysis of a reference/ symlinked repo | `/repo-dive <path>` |
-| skill-adapt-verify | Verify a copied/adapted skill for stale paths, wrong-repo terms, style violations | `/skill-adapt-verify <path>` |
-| ship | Sync docs then commit and push phase branch | `/ship` |
+| repo-dive | First-principles analysis of a reference/ repo | `/repo-dive <path>` |
+| skill-adapt-verify | Verify adapted skill for stale paths and style violations | `/skill-adapt-verify <path>` |
+| ship | Sync docs, commit, push phase branch | `/ship` |
 
----
+Auto-read skills (loaded by other skills or before specific tasks): best-practices, qa-gate, release-workflow, visualization-standards, architecture-patterns, documentation-standards, python-code-standards, testing-standards, eval-harness.
 
-## Key rules
-
-- `parallel-first`: all ETL steps that are independent run in parallel
-- `attack-the-constraint`: don't optimize non-bottlenecks. FTP download is the bottleneck in week 1, not parsing.
-- `bossman-mode`: once plan is agreed, execute autonomously per phase
-- `decision-logging`: log DECISIONS.md when choosing between alternatives (e.g. Neo4j Community vs AuraDB, LinkML vs raw YAML)
-- `boil-the-lake`: if the full pipeline is cheap to build, build the full version
-- `preserve-your-thinking`: on architecture judgment calls, ask first
-- `writing-style`: no em dashes, sentence case, no bold
-
----
-
-## Git workflow
-
-Work on phase branches, not directly on `main`. Branch naming: `phase/N.M-short-description`. One MR per phase; merge into `main` after user review. No Co-Authored-By lines ever.
-
-Gitignored: `data/raw/`, `data/ftp_cache/`, `.env`, `*.gz`, `*.xml.gz`, `node_modules/`, `__pycache__/`, `venv/`
+All rules are in `.claude/rules/` and loaded automatically. No need to duplicate here.
 
 ---
 

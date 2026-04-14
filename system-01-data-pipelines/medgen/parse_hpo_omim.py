@@ -7,7 +7,7 @@ Depends on:
     - system-01-data-pipelines/shared/biolink_mapper.py
 
 Reads:
-    - config.ftp_cache_dir/MedGen_HPO_OMIM_Mapping.txt.gz (gzipped, tab-separated with header)
+    - config.ftp_cache_dir/MedGen_HPO_OMIM_Mapping.txt.gz (gzipped, pipe-delimited with header)
 
 Writes:
     - nothing (returns parsed edge dicts to pipeline.py)
@@ -34,8 +34,8 @@ def _is_valid(value: str) -> bool:
 def parse_hpo_omim(path: Path) -> list[dict]:
     """Parse MedGen_HPO_OMIM_Mapping.txt.gz and return biolink:close_match edges.
 
-    The file is gzipped and tab-separated with a header line. Columns:
-        CUI | MedGenName | HPO_ID | OMIM_ID | relationship_type | ...
+    The file is gzipped and pipe-delimited with a header line. Columns:
+        #OMIM_CUI|MIM_number|OMIM_name|relationship|HPO_CUI|HPO_ID|HPO_name|MedGen_name|MedGen_source|STY|
 
     For each row:
     - If HPO_ID is valid: emit MedGen:{CUI} close_match HP:{HPO_ID}
@@ -65,17 +65,18 @@ def parse_hpo_omim(path: Path) -> list[dict]:
             if line.startswith("#"):
                 continue
 
-            parts = line.split("\t")
+            parts = line.split("|")
             if len(parts) < 3:
                 logger.debug("Line %d: too few columns, skipping", line_num)
                 continue
 
+            # Columns: OMIM_CUI|MIM_number|OMIM_name|relationship|HPO_CUI|HPO_ID|HPO_name|...
             cui = parts[0].strip()
-            hpo_id_raw = parts[2].strip() if len(parts) > 2 else ""
-            omim_id_raw = parts[3].strip() if len(parts) > 3 else ""
+            omim_id_raw = parts[1].strip() if len(parts) > 1 else ""
+            hpo_id_raw = parts[5].strip() if len(parts) > 5 else ""
 
             # Skip header row
-            if not header_seen and (cui.upper() in ("CUI", "#CUI", "MEDGENCUI")):
+            if not header_seen and (cui.upper() in ("CUI", "#CUI", "MEDGENCUI", "OMIM_CUI")):
                 header_seen = True
                 logger.debug("Skipped header line %d", line_num)
                 continue

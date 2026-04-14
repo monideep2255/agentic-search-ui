@@ -211,10 +211,10 @@ def test_parse_mgrel_skips_non_child(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 PUBMED_LINKS_FIXTURE = """\
-#UID\tPMID
-C0006142\t12345678
-C0006142\t87654321
-C1704292\t11111111
+#UID|CUI|NAME|PMID|
+34|C0006142|Breast Cancer|12345678|
+34|C0006142|Breast Cancer|87654321|
+35|C1704292|Congenital Nystagmus|11111111|
 """
 
 
@@ -247,11 +247,11 @@ def test_parse_pubmed_links_multiple_pmids(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 HPO_OMIM_FIXTURE = """\
-CUI\tMedGenName\tHPO_ID\tOMIM_ID\trelationship_type
-C0006142\tBreast Cancer\tHP:0100013\t114480\tOMIM
-C1704292\tCongenital Nystagmus\tHP:0000589\t604685\tOMIM
-C3333333\tSome Condition\t-\t123456\tOMIM
-C4444444\tAnother Condition\tHP:1234567\t-\tHPO
+#OMIM_CUI|MIM_number|OMIM_name|relationship|HPO_CUI|HPO_ID|HPO_name|MedGen_name|MedGen_source|STY|
+C0006142|114480|Breast Cancer|manifestation_of|C9999999|HP:0100013|Some phenotype|Breast Cancer|GTR|Disease or Syndrome|
+C1704292|604685|Congenital Nystagmus|manifestation_of|C8888888|HP:0000589|Nystagmus|Congenital Nystagmus|GTR|Finding|
+C3333333|123456|Some Condition|manifestation_of|C7777777|-|No phenotype|Some Condition|GTR|Disease or Syndrome|
+C4444444|-|Another Condition|manifestation_of|C6666666|HP:1234567|Another phenotype|Another Condition|GTR|Finding|
 """
 
 

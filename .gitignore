@@ -1,7 +1,5 @@
-# Data (large FTP downloads - never commit)
-data/raw/
-data/ftp_cache/
-data/kgx/
+# Data (symlink to /export, never commit)
+data/
 *.gz
 *.tar.gz
 *.xml.gz
