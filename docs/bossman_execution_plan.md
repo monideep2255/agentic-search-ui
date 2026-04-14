@@ -41,6 +41,12 @@ This is System 1 + System 2. System 3 (search agent, FastAPI, LangGraph, UI) liv
 
 ## Timeline estimate
 
+### What the phases produce (code vs data)
+
+Each bossman phase produces code only: parsers, pipeline orchestrators, shared utilities, and tests. Tests use small inline fixtures, not real NCBI data. No data is downloaded during bossman sessions.
+
+The actual FTP downloads happen when you run the pipelines for the first time (e.g. `gene-etl`, `clinvar-etl`, `medgen-etl`). Running the pipelines is a separate step from building them. The "wall-clock time" table below estimates how long each download and processing run takes.
+
 ### Coding time (bossman sessions)
 
 | Phase | Session | What | Coding estimate |
