@@ -47,6 +47,19 @@ Each bossman phase produces code only: parsers, pipeline orchestrators, shared u
 
 The actual FTP downloads happen when you run the pipelines for the first time (e.g. `gene-etl`, `clinvar-etl`, `medgen-etl`). Running the pipelines is a separate step from building them. The "wall-clock time" table below estimates how long each download and processing run takes.
 
+### Data validation gates (run after each phase group)
+
+After each group of pipeline phases is built and merged, run the pipelines on real data before building the next group. This catches data format surprises early instead of discovering them after all code is written.
+
+| Gate | Run after | Commands | What to verify |
+|------|-----------|----------|----------------|
+| Gate 1 | Phase 1.5 | `medgen-etl`, `gene-etl --tax-id 9606`, `clinvar-etl` | KGX files exist in `/export/home/chakrabortim2/data/kgx/{gene,clinvar,medgen}/`, row counts are reasonable, no parse errors |
+| Gate 2 | Phase 2.2 | `pubmed-etl` (overnight), `taxonomy-etl` | PubMed and Taxonomy KGX files, 5-database merge report looks sane |
+| Gate 3 | Phase 3.1 | `snp-etl` (overnight) | dbSNP KGX files, final 6-database merge, check disk usage |
+| Gate 4 | Phase 4.1 | Run Cypher test queries | Graph responds correctly to the 3 test queries from the plan |
+
+Gate 1 is the next step. Run the three core triangle pipelines on real data, inspect the KGX output, then proceed to Phase 2.
+
 ### Coding time (bossman sessions)
 
 | Phase | Session | What | Coding estimate |
@@ -237,6 +250,12 @@ Session 3: Phase 1.2 + 1.3 + 1.4  Gene + ClinVar + MedGen ETL              DONE 
 Session 4: Phase 1.5  merge + cross-pipeline validation                    DONE (2026-04-14)
     |  branch: phase/1.5-merge-validation -> MR -> merge
     v
+--- GATE 1: run pipelines on real data ---                                 NEXT
+    |  medgen-etl (~5 min)
+    |  gene-etl --tax-id 9606 (~30-60 min)
+    |  clinvar-etl (~20-30 min)
+    |  verify KGX output, fix any parse errors before proceeding
+    v
 Session 5: Phase 2.0  PubMed ETL pipeline
     |  branch: phase/2.0-pubmed-etl -> MR -> merge
     v
@@ -246,17 +265,30 @@ Session 6: Phase 2.1  Taxonomy ETL pipeline
 Session 7: Phase 2.2  PubMed + Taxonomy merge into existing graph
     |  branch: phase/2.2-literature-taxonomy-merge -> MR -> merge
     v
+--- GATE 2: run PubMed + Taxonomy on real data ---
+    |  pubmed-etl (4-8 hours, start overnight)
+    |  taxonomy-etl (~10 min)
+    |  verify 5-database merge report
+    v
 Session 8: Phase 3.0  SNP ETL pipeline (1.2B records, streaming)
     |  branch: phase/3.0-snp-etl -> MR -> merge
     v
 Session 9: Phase 3.1  SNP-ClinVar merge + final 6-database merge
     |  branch: phase/3.1-final-merge -> MR -> merge
     v
+--- GATE 3: run dbSNP on real data ---
+    |  snp-etl (8-16 hour download + 4-12 hour parse, start overnight)
+    |  verify final 6-database merge, check disk usage
+    v
 Session 10: Phase 4.0  System 2: PostgreSQL + AGE loader
     |  branch: phase/4.0-age-loader -> MR -> merge
     v
 Session 11: Phase 4.1  System 2: Cypher query validation
-       branch: phase/4.1-cypher-validation -> MR -> merge
+    |  branch: phase/4.1-cypher-validation -> MR -> merge
+    v
+--- GATE 4: run Cypher test queries ---
+    |  verify 3 test queries return correct results
+    |  system complete
 ```
 
 ---
