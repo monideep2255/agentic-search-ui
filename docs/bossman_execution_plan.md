@@ -225,10 +225,10 @@ Session 1: Phase 1.0  schema + project scaffolding        DONE (2026-04-13, merg
 Session 2: Phase 1.1  shared utilities (6 modules)        DONE (2026-04-14, branch pushed e108a0c)
     |  branch: phase/1.1-shared-utilities -> MR -> merge
     v
-Session 3: Phase 1.2 + 1.3 + 1.4  Gene + ClinVar + MedGen ETL (PARALLEL)   NEXT
-    |  three branches, three MRs, all merge into main
+Session 3: Phase 1.2 + 1.3 + 1.4  Gene + ClinVar + MedGen ETL              DONE (2026-04-14, combined branch)
+    |  branch: phase/1.2-1.4-core-triangle-etl -> MR -> merge
     v
-Session 4: Phase 1.5  merge + cross-pipeline validation
+Session 4: Phase 1.5  merge + cross-pipeline validation                    NEXT
     |  branch: phase/1.5-merge-validation -> MR -> merge
     v
 Session 5: Phase 2.0  PubMed ETL pipeline
