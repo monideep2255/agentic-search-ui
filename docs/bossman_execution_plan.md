@@ -62,34 +62,37 @@ Gate 1 is the next step. Run the three core triangle pipelines on real data, ins
 
 ### Coding time (bossman sessions)
 
-| Phase | Session | What | Coding estimate |
-|-------|---------|------|-----------------|
+| Phase | Session | What | Status |
+|-------|---------|------|--------|
 | 1.0 | 1 | Schema + scaffolding | DONE (2026-04-13) |
-| 1.1 | 2 | Shared utilities (6 modules) | 1-2 hours |
-| 1.2+1.3+1.4 | 3 | Gene + ClinVar + MedGen ETL (parallel) | 2-4 hours |
-| 1.5 | 4 | Merge + validation | 1-2 hours |
-| 2.0 | 5 | PubMed ETL | 1-2 hours |
-| 2.1 | 6 | Taxonomy ETL | 1 hour |
-| 2.2 | 7 | 5-database merge | 1 hour |
-| 3.0 | 8 | SNP ETL (1.2B records) | 2-3 hours |
-| 3.1 | 9 | SNP-ClinVar merge + final merge | 1-2 hours |
-| 4.0 | 10 | PostgreSQL + AGE loader | 2-3 hours |
-| 4.1 | 11 | Cypher query validation | 1 hour |
-| Total coding | | | ~14-24 hours across 11 sessions |
+| 1.1 | 2 | Shared utilities (6 modules) | DONE (2026-04-14) |
+| 1.2+1.3+1.4 | 3 | Gene + ClinVar + MedGen ETL (parallel) | DONE (2026-04-14) |
+| 1.5 | 4 | Merge + validation | DONE (2026-04-14) |
+| Gate 1 | - | Run pipelines on real data | NEXT |
+| 2.0 | 5 | PubMed ETL | Pending (after Gate 1) |
+| 2.1 | 6 | Taxonomy ETL | Pending |
+| 2.2 | 7 | 5-database merge | Pending |
+| Gate 2 | - | Run PubMed + Taxonomy on real data | Pending |
+| 3.0 | 8 | SNP ETL (1.2B records) | Pending |
+| 3.1 | 9 | SNP-ClinVar merge + final merge | Pending |
+| Gate 3 | - | Run dbSNP on real data | Pending |
+| 4.0 | 10 | PostgreSQL + AGE loader | Pending |
+| 4.1 | 11 | Cypher query validation | Pending |
+| Gate 4 | - | Run Cypher test queries | Pending |
 
 ### Wall-clock time (downloads and processing that can't be compressed)
 
 | Task | Wall-clock | When to run |
 |------|-----------|-------------|
-| Gene FTP download (3GB) | 30-60 min | Phase 1.2, during session |
-| ClinVar XML download (2GB) | 20-30 min | Phase 1.3, during session |
-| MedGen download (115MB) | 5 min | Phase 1.4, during session |
-| PubMed baseline download (30GB) | 4-8 hours | Phase 2.0, start overnight |
-| Taxonomy download (500MB) | 10 min | Phase 2.1, during session |
-| dbSNP full download (100GB) | 8-16 hours | Phase 3.0, start overnight |
-| dbSNP VCF parsing (1.2B records) | 4-12 hours | Phase 3.0, after download |
-| AGE graph loading (1.4B nodes) | 6-24 hours | Phase 4.0, start overnight |
-| Node normalization (6 subgraphs) | 2-4 hours | Phase 3.1, during merge |
+| MedGen download (115MB) | 5 min | Gate 1 |
+| Gene FTP download (3GB) | 30-60 min | Gate 1 |
+| ClinVar download (500MB) | 20-30 min | Gate 1 |
+| PubMed baseline download (30GB) | 4-8 hours | Gate 2, start overnight |
+| Taxonomy download (500MB) | 10 min | Gate 2 |
+| dbSNP full download (100GB) | 8-16 hours | Gate 3, start overnight |
+| dbSNP VCF parsing (1.2B records) | 4-12 hours | Gate 3, after download |
+| AGE graph loading (1.4B nodes) | 6-24 hours | Gate 4, start overnight |
+| Node normalization (6 subgraphs) | 2-4 hours | Gate 3, during merge |
 
 ### Realistic calendar
 
@@ -104,12 +107,12 @@ Assuming 1-2 sessions per day, with overnight downloads:
 
 Phase 1 (core triangle) is the critical path. If only that ships, you still have a working KGX output covering Gene, ClinVar, and MedGen with full provenance.
 
-### Disk budget (355GB available on work computer)
+### Disk budget (434GB available on /export as of 2026-04-14)
 
-| After phase | Cumulative disk usage | Headroom |
-|-------------|----------------------|----------|
-| Phase 1.5 | ~10-15GB (human-only Gene + ClinVar + MedGen) | ~340GB |
-| Phase 2.2 | ~50-70GB (add PubMed + Taxonomy) | ~285GB |
+| After gate | Cumulative disk usage | Headroom |
+|------------|----------------------|----------|
+| Gate 1 | ~10-15GB (human-only Gene + ClinVar + MedGen) | ~420GB |
+| Gate 2 | ~50-70GB (add PubMed + Taxonomy) | ~365GB |
 | Phase 3.1 | ~300-500GB (add full dbSNP) | Tight: process incrementally |
 | Phase 4.0 | AGE database ~200-300GB (replaces KGX intermediates) | Delete KGX after loading |
 
@@ -126,7 +129,7 @@ All data lives on local disk (`/export`), not the NFS home directory (which is o
 | `/export/home/chakrabortim2/data/kgx/` | KGX output (nodes.tsv + edges.tsv per database). Deleted after AGE load. | Yes |
 | PostgreSQL data directory | AGE graph database (final storage) | N/A (system) |
 
-Disk: `/export` is local disk (C:), 4.3TB total, ~427GB free. Enough for Phase 1-2. Phase 3 (full dbSNP) requires incremental processing.
+Disk: `/export` is local LVM volume (`/dev/mapper/usrvg1-export`), 4.3TB total, ~434GB free as of 2026-04-14. Enough for Gates 1-2. Gate 3 (full dbSNP) requires incremental processing.
 
 The repo itself contains only code, schema, tests, and docs. No data files are committed to git.
 
