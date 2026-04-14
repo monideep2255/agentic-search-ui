@@ -222,10 +222,10 @@ Each branch is created from main (after Phase 1.1 merges). Each gets its own MR.
 Session 1: Phase 1.0  schema + project scaffolding        DONE (2026-04-13, merged ad77889)
     |  branch: phase/1.0-schema-scaffolding -> MR -> merge
     v
-Session 2: Phase 1.1  shared utilities (6 modules)        NEXT
+Session 2: Phase 1.1  shared utilities (6 modules)        DONE (2026-04-14, branch pushed e108a0c)
     |  branch: phase/1.1-shared-utilities -> MR -> merge
     v
-Session 3: Phase 1.2 + 1.3 + 1.4  Gene + ClinVar + MedGen ETL (PARALLEL)
+Session 3: Phase 1.2 + 1.3 + 1.4  Gene + ClinVar + MedGen ETL (PARALLEL)   NEXT
     |  three branches, three MRs, all merge into main
     v
 Session 4: Phase 1.5  merge + cross-pipeline validation
@@ -278,9 +278,9 @@ Decisions made:
 - 14 predicates instead of 12: added orthologous_to and cited_in (needed by Gene and ClinVar pipelines)
 - package-dir mapping in pyproject.toml: preserves hyphenated directory names while enabling Python imports
 
-### Phase 1.1: shared utilities
+### Phase 1.1: shared utilities (DONE 2026-04-14)
 
-Branch: `phase/1.1-shared-utilities`
+Branch: `phase/1.1-shared-utilities` (pushed, pending MR merge)
 
 Skills chain:
 - best-practices (session checklist)
