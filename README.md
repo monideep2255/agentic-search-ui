@@ -40,9 +40,9 @@ System 2: knowledge graph (this repo)
   KGX files -> normalize -> merge -> PostgreSQL + AGE -> queryable via openCypher
 ```
 
-See `docs/architecture/Three_layer_data_architecture.md` for the full three-layer design.
-See `docs/System_1_data_engineering_plan.md` for the detailed build plan.
-See `docs/bossman_execution_plan.md` for phase-by-phase execution status.
+See [docs/architecture/Three_layer_data_architecture.md](docs/architecture/Three_layer_data_architecture.md) for the full three-layer design.
+See [docs/System_1_data_engineering_plan.md](docs/System_1_data_engineering_plan.md) for the detailed build plan.
+See [docs/bossman_execution_plan.md](docs/bossman_execution_plan.md) for phase-by-phase execution status.
 
 ---
 
@@ -81,6 +81,20 @@ python system-01-data-pipelines/gene/pipeline.py
 
 ---
 
+## Documentation
+
+| Doc | What it covers |
+|-----|---------------|
+| [Execution plan](docs/bossman_execution_plan.md) | Phase-by-phase build plan with status, gates, validation checklist, disk budget |
+| [Three-layer architecture](docs/architecture/Three_layer_data_architecture.md) | Layer 1 (graph), Layer 2 (on-demand API), Layer 3 (enrichment), cost breakdown |
+| [System 1 data engineering plan](docs/System_1_data_engineering_plan.md) | Detailed design for all 6 ETL pipelines |
+| [Data inventory](docs/data_inventory.md) | What data was downloaded, FTP URLs, file sizes, row counts, validation results |
+| [Learnings](docs/learnings.md) | Problems encountered and solutions, updated after every pipeline run |
+| [BioLink schema](schema/biolink_ncbi.yaml) | LinkML schema with 10 node types, 14 predicates |
+| [Decisions](DECISIONS.md) | Architecture and implementation decisions with rationale |
+
+---
+
 ## License
 
-Apache 2.0. See LICENSE.
+Apache 2.0. See [LICENSE](LICENSE).
