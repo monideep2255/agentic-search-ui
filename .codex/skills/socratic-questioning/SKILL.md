@@ -1,6 +1,6 @@
 ---
 name: socratic-questioning
-description: Teaches Codex to use Socratic questioning method - arriving at truth through systematic questioning before providing answers. Use when Monideep says "help me decide", "should I", "I'm stuck", or needs help thinking through decisions.
+description: Teaches Claude to use Socratic questioning method - arriving at truth through systematic questioning before providing answers. Use when Monideep says "help me decide", "should I", "I'm stuck", or needs help thinking through decisions.
 ---
 
 # Socratic questioning method
@@ -57,7 +57,7 @@ Instead of accepting ideas at face value, help Monideep:
 - Is this a fact or an opinion?
 
 **Example:**
-- Monideep: "NWS doesn't have time for new features"
+- Monideep: "The FTP download is too slow for overnight processing"
 - Ask: "How do we know this? Did they explicitly say that? Or are we interpreting their workload?"
 
 ### 4. perspective questions

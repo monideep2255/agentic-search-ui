@@ -5,13 +5,13 @@ description: Session-start checklist, code change safety rules, and commit hygie
 
 # Best practices
 
-Adapted from the reference NCBI KG skill. Stripped Railway, frontend, and feature-branch deploy content. This repo works directly on `main`, no Railway, no separate deploy step.
+Adapted from the reference NCBI KG skill. Stripped Railway, frontend, and feature-branch deploy content. This repo uses phase branches merged into main via PR. No Railway, no remote deploy.
 
 ## 1. Session start checklist
 
 Before doing any work in a fresh session:
 
-1. Read `AGENTS.md` for current focus and System 1 + 2 scope reminder.
+1. Read `CLAUDE.md` for current focus and System 1 + 2 scope reminder.
 2. Run `git status` and `git log -5 --oneline` to see what changed since last session.
 3. Skim `DECISIONS.md` for recent architecture decisions.
 4. Confirm Python venv is active: `which python` should point inside `venv/`.
@@ -39,7 +39,7 @@ Before editing any Python module under `system-01-data-pipelines/` or `system-02
 
 1. Read the full file, not just the function you intend to change.
 2. Grep for callers: `Grep` the symbol you are about to rename or change signature on.
-3. Check the module docstring for the `Depends on` / `Reads` / `Writes` block (see `.codex/rules/dependency-tracking.md`).
+3. Check the module docstring for the `Depends on` / `Reads` / `Writes` block (see `.claude/rules/dependency-tracking.md`).
 4. If the change touches schema, provenance, or BioLink predicates, log a row in `DECISIONS.md`.
 
 ### Idempotency

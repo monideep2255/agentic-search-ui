@@ -40,9 +40,9 @@ System 2: knowledge graph (this repo)
   KGX files -> normalize -> merge -> PostgreSQL + AGE -> queryable via openCypher
 ```
 
-See [docs/architecture/Three_layer_data_architecture.md](docs/architecture/Three_layer_data_architecture.md) for the full three-layer design.
-See [docs/System_1_data_engineering_plan.md](docs/System_1_data_engineering_plan.md) for the detailed build plan.
-See [docs/bossman_execution_plan.md](docs/bossman_execution_plan.md) for phase-by-phase execution status.
+- See [docs/architecture/Three_layer_data_architecture.md](docs/architecture/Three_layer_data_architecture.md) for the full three-layer design.
+- See [docs/System_1_data_engineering_plan.md](docs/System_1_data_engineering_plan.md) for the detailed build plan.
+- See [docs/bossman_execution_plan.md](docs/bossman_execution_plan.md) for phase-by-phase execution status.
 
 ---
 

@@ -5,7 +5,7 @@ description: Session-start checklist, code change safety rules, and commit hygie
 
 # Best practices
 
-Adapted from the reference NCBI KG skill. Stripped Railway, frontend, and feature-branch deploy content. This repo works directly on `main`, no Railway, no separate deploy step.
+Adapted from the reference NCBI KG skill. Stripped Railway, frontend, and feature-branch deploy content. This repo uses phase branches merged into main via PR. No Railway, no remote deploy.
 
 ## 1. Session start checklist
 

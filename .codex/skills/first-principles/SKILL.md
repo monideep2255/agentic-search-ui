@@ -1,6 +1,6 @@
 ---
 name: first-principles
-description: Explains concepts using first-principles thinking - breaks complex topics into fundamental truths with simple language. TRIGGER when user asks "what is X", "explain Y", "how does X work", "teach me about", "I don't understand", or needs a technical concept clarified. Also trigger on "break this down" or "ELI5". DO NOT TRIGGER for career advice (use board) or skill practice (use forge).
+description: Explains concepts using first-principles thinking - breaks complex topics into fundamental truths with simple language. TRIGGER when user asks "what is X", "explain Y", "how does X work", "teach me about", "I don't understand", or needs a technical concept clarified. Also trigger on "break this down" or "ELI5". DO NOT TRIGGER for planning tasks (use action-planner) or code review (use objective-review).
 ---
 
 # First principles & simple explanations
@@ -32,8 +32,8 @@ Break down complex topics into their most basic, fundamental truths:
 **Example axiom:** "People generally act in their own interest." You can't prove this universally. But accepting it as a starting point lets you reason about why incentive structures work, why policies fail when they ignore motivation, why people leave jobs.
 
 **Example:**
-- ❌ Bad: "You need to use Django because it's the standard framework"
-- ✅ Good: "Django is a tool that helps you build websites. It gives you pre-built components (login systems, databases, forms) so you don't rebuild everything from scratch. You'll learn Django because your team uses it and you'll need to maintain their existing work."
+- ❌ Bad: "You need to use BioLink because it's the standard model"
+- ✅ Good: "BioLink is a naming system for biological data. It gives every gene, disease, and variant a standard category and every connection a standard label. You'll use it because NCATS requires it for knowledge graph interoperability, and because it means any tool that speaks BioLink can read your graph without custom mapping."
 
 ### 2. very simple terms
 
@@ -60,7 +60,7 @@ When giving summaries or recommendations, always include:
 
 **Example:**
 - ❌ Bad: "Consider reaching out regarding the project"
-- ✅ Good: "Send an email to Tahir by Friday asking: What does web dev onboarding look like? How many hours per week? Can I start in January?"
+- ✅ Good: "Check the NCBI FTP directory listing by end of day: what files exist? What format are they? What delimiter do they use? Can you parse 3 rows successfully?"
 
 ## Output format
 

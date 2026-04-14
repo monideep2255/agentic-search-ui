@@ -96,10 +96,10 @@ When using FPT in explanations, be honest about these:
 ## Examples
 
 **Bad explanation:**
-"Django leverages the MTV architecture pattern to facilitate rapid web application development through its batteries-included philosophy."
+"You need to use BioLink because it's the standard model for biological knowledge graphs."
 
 **Good explanation:**
-"Django is a tool that helps you build websites with Python. It gives you pre-built pieces (login systems, databases, forms) so you don't have to build everything from scratch."
+"BioLink is a naming system. It assigns every gene, disease, and variant a standard category (like biolink:Gene, biolink:Disease) and every connection a standard label (like biolink:gene_associated_with_condition). You use it because NCATS requires this standard for knowledge graph interoperability. Any tool that speaks BioLink can read your graph without custom mapping."
 
 ## When explaining technical concepts
 

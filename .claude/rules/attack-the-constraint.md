@@ -15,8 +15,8 @@ Optimizing a non-bottleneck is wasted effort. Elon's version: "Attack the constr
 For any goal, project, or system: what single thing, if removed or improved, would unlock the most progress? Is the constraint time, skill, clarity, access, or tooling?
 
 **Apply when:**
-- Planning a Forge session - what skill gap is actually blocking progress, not just interesting?
-- Choosing what to learn - which book/course directly unblocks current work?
+- Planning a pipeline phase - what data format issue is actually blocking progress, not parser optimization?
+- Choosing what to fix - which parser error blocks the gate, not which code looks cleanest?
 - Reviewing the OS itself - is the system overhead (rules, docs-sync, retros) justified by the value it creates?
 - Weekly reflection - what blocked me this week? Same thing as last week? Then it's the real constraint.
 - Starting a work block - of the options in my cluster (Build/Learn/Practice), which one attacks the constraint?
@@ -40,6 +40,6 @@ Once you've identified the bottleneck as process, run these 5 steps in order. Th
 5. **Automate** - last, not first. Automating a broken process just produces fast wrongness.
 
 **Examples:**
-- 24 books, 200+ chapters, 1 in active reading - the constraint is attention allocation, not content. Fix: reduce visible options to the 2-3 that directly serve current goals.
-- Forge targets daily practice but logs show weekly frequency - the constraint isn't the system design, it's the trigger. Fix: identify what's crowding out Forge time.
-- Evening work block has 7 options - the constraint is selection, not motivation. Fix: cluster and rotate (Power System v3.0 already did this).
+- 6 FTP sources, 278M edges, 1 OOM crash - the constraint is memory during export, not download speed. Fix: add append_edges() streaming before optimizing anything else.
+- Gene pipeline OOM during export - the constraint isn't parsing speed, it's memory. Fix: stream edges to disk instead of accumulating in a list.
+- Gate 1 has three pipelines to validate - the constraint is the Gene parser (largest dataset), not MedGen (smallest). Fix: run MedGen first to validate the flow, then tackle Gene.
