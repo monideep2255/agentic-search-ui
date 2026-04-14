@@ -1,0 +1,6 @@
+#curie_map:
+#  NCBIGene: https://www.ncbi.nlm.nih.gov/gene/
+#  HGNC: https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/
+#mapping_set_id: gene_hgnc_mapping
+#mapping_set_description: Gene to HGNC identifier mappings from gene_info dbXrefs
+subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification
