@@ -17,11 +17,11 @@ Connects 6 NCBI databases (Gene, PubMed, ClinVar, MedGen, Taxonomy, SNP) into a 
 
 ## Status
 
-Building System 1 (data engineering). Phase 1: Gene + ClinVar + MedGen ETL pipelines.
+Phase 1 complete: Gene + ClinVar + MedGen ETL pipelines, 6 shared modules, merge infrastructure, 146 tests. Gate 1 next: run pipelines on real data.
 
 | System | Status |
 |--------|--------|
-| System 1: data pipelines | In progress |
+| System 1: data pipelines | Phase 1 done. Gate 1 (real data validation) next. |
 | System 2: knowledge graph | Not started |
 | System 3: search agent | Not started |
 
@@ -34,14 +34,14 @@ System 1: data engineering
   NCBI FTP -> parse -> BioLink map -> validate -> KGX files
 
 System 2: knowledge graph
-  KGX files -> normalize -> merge -> Neo4j
+  KGX files -> normalize -> merge -> PostgreSQL + AGE
 
 System 3: search agent (8 agents)
   Query -> understand -> plan -> retrieve -> synthesize -> cite
 ```
 
 See `docs/System_1_data_engineering_plan.md` for detailed build plan.
-See `docs/Agentic_search_architecture_QA.md` for full architecture decisions.
+See `docs/bossman_execution_plan.md` for phase-by-phase execution status.
 
 ---
 
@@ -50,7 +50,7 @@ See `docs/Agentic_search_architecture_QA.md` for full architecture decisions.
 ```bash
 # Prerequisites
 python 3.11+
-neo4j community edition (local)
+postgresql 15 + apache age (for System 2)
 
 # Setup
 git clone https://github.com/[you]/agentic-search-data-engineering
@@ -73,7 +73,7 @@ python system-01-data-pipelines/gene/pipeline.py
 | MedGen | 233K | `biolink:Disease` | ftp.ncbi.nlm.nih.gov/pub/medgen/ |
 | PubMed | 40M | `biolink:Article` | ftp.ncbi.nlm.nih.gov/pubmed/baseline/ |
 | Taxonomy | 2.9M | `biolink:OrganismTaxon` | ftp.ncbi.nlm.nih.gov/pub/taxonomy/ |
-| SNP (clinical) | ~500K | `biolink:SequenceVariant` | Via ClinVar cross-references |
+| SNP (full dbSNP) | 1.2B | `biolink:SequenceVariant` | ftp.ncbi.nlm.nih.gov/snp/ |
 
 ---
 

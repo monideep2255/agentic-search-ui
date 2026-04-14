@@ -12,7 +12,7 @@ Stack: Python 3.11+, LinkML, BioLink 4.x, KGX, PostgreSQL 15 + Apache AGE.
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | System 1: data pipelines | Building now. Phase 1: Gene + ClinVar + MedGen (core triangle). |
+| 1 | System 1: data pipelines | Phase 1 complete (phases 1.0-1.5: schema, 6 shared modules, Gene + ClinVar + MedGen ETL, merge). Gate 1 is next: run pipelines on real data. |
 | 2 | System 2: knowledge graph | Schema defined alongside pipelines. PostgreSQL + AGE load after Phase 1. |
 | 3 | System 3: search agent | Lives in a separate repository. Do not build here. |
 
@@ -75,7 +75,7 @@ Reference repo's own CLAUDE.md (full architecture and file map) is at `reference
 Phase 1 first: Gene + ClinVar + MedGen. These three form the core triangle and share cross-references (`mim2gene_medgen` maps all three). Build them together before adding PubMed or Taxonomy.
 
 ```
-Phase 1 (weeks 1-2):  Gene ETL -> ClinVar ETL -> MedGen ETL -> first merge test
+Phase 1 (weeks 1-2):  Gene ETL -> ClinVar ETL -> MedGen ETL -> first merge test  [DONE 2026-04-14]
 Phase 2 (weeks 3-4):  PubMed ETL -> Taxonomy ETL -> SNP ETL -> full merge
 Phase 3 (weeks 5-6):  Search agent (LangGraph, 8 agents, FastAPI)
 Phase 4 (weeks 7-8):  Web UI, CLI, eval pipeline, deploy
@@ -162,4 +162,4 @@ Gitignored: `data/raw/`, `data/ftp_cache/`, `.env`, `*.gz`, `*.xml.gz`, `node_mo
 
 ---
 
-Last updated: 2026-04-13
+Last updated: 2026-04-14
