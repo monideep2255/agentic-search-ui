@@ -228,7 +228,7 @@ Session 2: Phase 1.1  shared utilities (6 modules)        DONE (2026-04-14, bran
 Session 3: Phase 1.2 + 1.3 + 1.4  Gene + ClinVar + MedGen ETL              DONE (2026-04-14, combined branch)
     |  branch: phase/1.2-1.4-core-triangle-etl -> MR -> merge
     v
-Session 4: Phase 1.5  merge + cross-pipeline validation                    NEXT
+Session 4: Phase 1.5  merge + cross-pipeline validation                    DONE (2026-04-14)
     |  branch: phase/1.5-merge-validation -> MR -> merge
     v
 Session 5: Phase 2.0  PubMed ETL pipeline

@@ -1,0 +1,6 @@
+#curie_map:
+#  NCBIGene: https://www.ncbi.nlm.nih.gov/gene/
+#  GO: http://purl.obolibrary.org/obo/GO_
+#mapping_set_id: gene_go_mapping
+#mapping_set_description: Gene to GO term annotations from gene2go
+subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification
