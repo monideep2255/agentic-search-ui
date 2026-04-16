@@ -220,7 +220,7 @@ Specific exception types:
 - `ValidationError` - record fails BioLink schema
 - `CrossReferenceError` - cross-database identifier resolution failed
 
-Retry NCBI calls with exponential backoff. Pattern: `reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/utils.py:35-86`.
+Retry NCBI calls with exponential backoff. Pattern: `reference-repos/ncbi_ai_agents/KG/pipeline/src/glucose_metabolism_kg/utils.py:35-86`.
 
 ## Performance targets
 

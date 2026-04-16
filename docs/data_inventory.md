@@ -4,7 +4,7 @@ Tracks all data downloaded from NCBI FTP, with source URLs, file sizes, row coun
 
 ## Storage location
 
-All data is on local disk at `/export/home/chakrabortim2/data/`:
+All current local data is stored under the repo-local `data/` directory:
 - `ftp_cache/`: raw FTP downloads (kept for re-runs)
 - `kgx/`: KGX output per database (nodes.tsv + edges.tsv)
 - `raw/`: intermediate parsed data (currently unused)

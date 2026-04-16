@@ -1,6 +1,6 @@
 ---
 name: skill-adapt-verify
-description: Verify that a skill copied or adapted from personal-os-work has been properly adapted for this repo. Catches personal-os paths, NWS/Django/GQuery references, broken sub-agent pointers, writing-style violations, and missing frontmatter. Use after copying any .codex/skills/* or .codex/agents/* file from reference/personal-os-work/ or from any other external repo.
+description: Verify that a skill copied or adapted from personal-os-work has been properly adapted for this repo. Catches personal-os paths, NWS/Django/GQuery references, broken sub-agent pointers, writing-style violations, and missing frontmatter. Use after copying any .codex/skills/* or .codex/agents/* file from reference-repos/personal-os/ or from any other external repo.
 ---
 
 # skill-adapt-verify
@@ -9,8 +9,8 @@ Automates the "did I fully adapt this copied skill" check. Runs a script that gr
 
 ## When to use
 
-- After copying a skill from `reference/personal-os-work/.codex/skills/<name>/SKILL.md`
-- After copying an agent from `reference/personal-os-work/.codex/agents/<name>.md`
+- After copying a skill from `reference-repos/personal-os/.codex/skills/<name>/SKILL.md`
+- After copying an agent from `reference-repos/personal-os/.codex/agents/<name>.md`
 - After pulling a rule from another repo
 - Before committing any `.codex/*` file that originated outside this repo
 
@@ -59,7 +59,7 @@ Or run against all recently modified `.codex/` files:
 
 ## Fix conventions
 
-- Stale paths: remove the reference entirely, or replace with the equivalent in this repo (`system-01-data-pipelines/`, `system-02-knowledge-graph/`, `reference/ncbi_ai_agents-ncbi-kg/`)
+- Stale paths: remove the reference entirely, or replace with the equivalent in this repo (`system-01-data-pipelines/`, `system-02-knowledge-graph/`, `reference-repos/ncbi_ai_agents/`)
 - Wrong-repo content: delete. Do not try to translate examples from other repos into ETL examples unless the original concept genuinely applies
 - Broken pointers: remove the row from the table, or replace with an existing agent/skill
 - Em dashes: replace with a comma, a period, or "in particular" / "specifically" per writing-style.md

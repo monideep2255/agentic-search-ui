@@ -68,7 +68,7 @@ Use relative paths from repo root, no leading `/`:
 
 ```markdown
 See `docs/System_1_data_engineering_plan.md` section "Pipeline architecture".
-Reference pipeline at `reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/`.
+Reference pipeline at `reference-repos/ncbi_ai_agents/KG/pipeline/src/glucose_metabolism_kg/`.
 File-and-line refs use the format `path/file.py:42`.
 ```
 

@@ -233,8 +233,8 @@ Read the reference repo's CLAUDE.md before dispatching agents to explore it.
 
 | Repo | Symlink path | What it is |
 |------|-------------|------------|
-| ncbi_ai_agents | `reference/ncbi_ai_agents-ncbi-kg` | Existing NCBI KG pipeline (glucose metabolism, 82K nodes, BioLink 4.x, KGX export) |
-| personal-os-work | `reference/personal-os-work` | Personal OS with skills, agents, rules patterns to port |
+| ncbi_ai_agents | `reference-repos/ncbi_ai_agents` | Existing NCBI KG pipeline (glucose metabolism, 82K nodes, BioLink 4.x, KGX export) |
+| personal-os-work | `reference-repos/personal-os` | Personal OS with skills, agents, rules patterns to port |
 
 ---
 

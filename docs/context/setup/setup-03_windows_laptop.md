@@ -13,8 +13,8 @@ See `DECISIONS.md` (2026-04-16 entry) for the rationale.
   |-- data -> /export/home/chakrabortim2/data            <- symlink
   |-- .env                                               <- gitignored, has API key
   |-- env.example                                        <- checked in template
-  |-- reference/ncbi_ai_agents-ncbi-kg -> /home/chakrabortim2/ncbi_ai_agents
-  |-- reference/personal-os-work -> /home/chakrabortim2/personal-os-work
+  |-- reference-repos/ncbi_ai_agents -> /home/chakrabortim2/ncbi_ai_agents
+  |-- reference-repos/personal-os -> /home/chakrabortim2/personal-os-work
 
 /export/home/chakrabortim2/data/
   |-- ftp_cache/   5.0 GB   raw NCBI FTP downloads (skip re-downloads)
@@ -44,13 +44,13 @@ Total: ~51 GB
 You confirmed this is in progress. Target location on laptop:
 
 ```
-C:/Users/<you>/agentic-search-data/
+C:/Users/<you>/agentic-search-data-engineering/data/
   ├── ftp_cache/
   ├── kgx/
   └── raw/
 ```
 
-**Keep data outside the git repo folder.** Matches the server pattern (symlink on server, sibling dir on laptop). The repo's `data/` entry is a symlink on the server; on the laptop, `.env` points `DATA_DIR` at this sibling directory.
+Use the repo-local `data/` directory as the canonical storage root. On the laptop, `.env` should point `DATA_DIR` at `C:/Users/<you>/agentic-search-data-engineering/data`.
 
 If the rsync gets interrupted, rerun the same `rsync -avP` command and it resumes.
 
@@ -69,35 +69,35 @@ cd agentic-search-data-engineering
 
 ## Step 3: Clone the two reference repos
 
-These are symlinked in `reference/` on the server but are separate git repos. On the laptop, clone them somewhere convenient and point symlinks (or directories) at them.
+These are separate git repos that the main repo reads as read-only context. They live inside `reference-repos/`, which is gitignored, so each machine sets up its own.
+
+Clone them somewhere convenient on disk (HTTPS shown; SSH works too if you have a key set up):
 
 ```powershell
 cd C:\Users\<you>\
-git clone git@github.com:monideep2255/ncbi_ai_agents.git
-git clone git@github.com:monideep2255/personal-os-work.git
+git clone https://github.com/monideep2255/ncbi_ai_agents.git
+git clone https://github.com/monideep2255/personal-os-work.git
 ```
 
-Then inside the main repo, either:
-
-**Option A: Windows symlinks** (requires admin PowerShell or Developer Mode enabled):
+Check out the right branch for `ncbi_ai_agents`:
 
 ```powershell
-cd C:\Users\<you>\agentic-search-data-engineering\reference
-New-Item -ItemType SymbolicLink -Path "ncbi_ai_agents-ncbi-kg" -Target "C:\Users\<you>\ncbi_ai_agents"
-New-Item -ItemType SymbolicLink -Path "personal-os-work" -Target "C:\Users\<you>\personal-os-work"
+cd C:\Users\<you>\ncbi_ai_agents
+git checkout ncbi-kg
 ```
 
-**Option B: Junction points** (no admin needed, directories only):
+Then create junction points inside the main repo. Junctions work on any Windows account, no admin or Developer Mode needed:
 
 ```powershell
-cd C:\Users\<you>\agentic-search-data-engineering\reference
-cmd /c mklink /J ncbi_ai_agents-ncbi-kg C:\Users\<you>\ncbi_ai_agents
-cmd /c mklink /J personal-os-work C:\Users\<you>\personal-os-work
+cd C:\Users\<you>\agentic-search-data-engineering
+mkdir reference-repos
+cmd /c mklink /J reference-repos\ncbi_ai_agents C:\Users\<you>\ncbi_ai_agents
+cmd /c mklink /J reference-repos\personal-os C:\Users\<you>\personal-os-work
 ```
 
-**Option C: Copy directly** (simplest, but diverges from source over time):
+If the source folder names differ on your machine (for example you cloned personal-os-work into a folder called `Personal OS` with a space), the junction target is the only path that matters. Point the junction at whatever local path actually holds the clone.
 
-Just copy the reference repo contents into `reference/`. Easiest if you don't plan to update the references.
+If you prefer full Windows symlinks (requires admin PowerShell or Developer Mode), substitute `New-Item -ItemType SymbolicLink -Path <junction-name> -Target <source>` for each `mklink` line. Copying the folder contents directly into `reference-repos/` also works if you do not plan to pull updates into the reference repos.
 
 ---
 
@@ -134,10 +134,10 @@ PG_PASSWORD=<your_pg_password_or_empty>
 PG_DBNAME=ncbi_kg
 
 # Storage paths — use forward slashes on Windows, pathlib handles both
-DATA_DIR=C:/Users/<you>/agentic-search-data
-FTP_CACHE_DIR=C:/Users/<you>/agentic-search-data/ftp_cache
-KGX_OUTPUT_DIR=C:/Users/<you>/agentic-search-data/kgx
-RAW_DATA_DIR=C:/Users/<you>/agentic-search-data/raw
+DATA_DIR=C:/Users/<you>/agentic-search-data-engineering/data
+FTP_CACHE_DIR=C:/Users/<you>/agentic-search-data-engineering/data/ftp_cache
+KGX_OUTPUT_DIR=C:/Users/<you>/agentic-search-data-engineering/data/kgx
+RAW_DATA_DIR=C:/Users/<you>/agentic-search-data-engineering/data/raw
 ```
 
 **Why forward slashes:** Python's `pathlib.Path` handles both separators on Windows, but forward slashes avoid backslash escaping in the `.env` parser.
@@ -166,7 +166,7 @@ Four checks in order:
 pytest -q
 
 # 2. Config reads from .env and resolves to C: drive
-python -c "from shared.config import PipelineConfig; c=PipelineConfig.from_env(); print(c.data_dir, c.ftp_cache_dir)"
+python -c "from system_01_data_pipelines.shared.config import PipelineConfig; c=PipelineConfig.from_env(); print(c.data_dir, c.ftp_cache_dir)"
 #    Expected: paths starting with C:/Users/<you>/... not /export/...
 
 # 3. FTP cache is accessible
@@ -212,14 +212,14 @@ You can keep the server repo clone as a fallback SSH dev environment. It costs ~
 | Laptop sleep during long jobs | PubMed ETL is ~8 hours. Power settings → "never sleep when plugged in". Pause Windows Update during Gate 2. |
 | Phase 4 rsync to Hetzner VPS | 140 GB upload from home Wi-Fi: 6-16 hrs. Schedule as overnight/weekend. rsync resumes cleanly on drop. |
 | `<SERVER>` placeholder in this doc | Replace with your SSH hostname for the NCBI Linux box (whatever you type after `ssh`). |
-| Reference repos get updates | If you update the main repo's reference to a rule/skill, also push the matching change to the personal-os-work repo (see `.claude/skills/skill-adapt-verify`). |
+| Reference repos get updates | If you update the main repo's reference to a rule/skill, also push the matching change to the personal-os repo (see `.claude/skills/skill-adapt-verify`). |
 
 ---
 
 ## Where this leaves you
 
 - Repo on `C:/Users/<you>/agentic-search-data-engineering/`
-- Data on `C:/Users/<you>/agentic-search-data/` (exclusive, 355 GB free)
+- Data on `C:/Users/<you>/agentic-search-data-engineering/data/`
 - Reference repos at `C:/Users/<you>/ncbi_ai_agents/` and `C:/Users/<you>/personal-os-work/`
 - Server `/export` footprint: 0 GB
 - Ready to run Gate 2 (PubMed + Taxonomy + merge) on the laptop

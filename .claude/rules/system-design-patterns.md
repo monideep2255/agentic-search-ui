@@ -7,7 +7,7 @@ Mental models for designing pipelines, loaders, schemas, agents, and skills in t
 When writing a rule, agent, or skill, bucket actions explicitly:
 
 - Allow: agent does this freely (read files, run validators, query the graph read-only)
-- Deny: agent never does this (delete cached FTP downloads, drop tables, push secrets, modify files in `reference/`)
+- Deny: agent never does this (delete cached FTP downloads, drop tables, push secrets, modify files in `reference-repos/`)
 - Ask: agent pauses and confirms first (creating new data-pipelines modules, modifying DECISIONS.md, schema changes, anything that touches `data/` or `system-02-knowledge-graph/schema/`)
 
 Don't write rules that are ambiguous about which state an action falls into.

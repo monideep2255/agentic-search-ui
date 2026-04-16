@@ -201,7 +201,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 
 | Week | What | Where | Status |
 |------|------|-------|--------|
-| Week 1 | Phase 1 code + Gate 1 | NCBI server `/export` | DONE (2026-04-14 to 2026-04-16). Data migrated to Windows laptop on 2026-04-16 (see LOCAL_SETUP.md). |
+| Week 1 | Phase 1 code + Gate 1 | NCBI server `/export` | DONE (2026-04-14 to 2026-04-16). Data migrated to Windows laptop on 2026-04-16 (see `docs/context/setup/setup-03_windows_laptop.md`). |
 | Week 2 | Phase 2 code + Gate 2 | Windows laptop C: drive | 2.0 + 2.1 + 2.2 code DONE (2026-04-16). Gate 2 NEXT (pubmed/taxonomy run + 5-db merge validation), runs on laptop. |
 | Week 3 | Phase 3 (loader code) + Phase 4 (provision VPS, rsync from laptop, cloud load) + Gate 3 | Laptop then cloud | Pending |
 | Week 4 | Phase 5 (dbSNP on cloud) + Gate 4 | Cloud | Pending |
@@ -217,7 +217,7 @@ Schema impact: none. The schema already defines `biolink:SequenceVariant` for bo
 
 ### Disk budget
 
-Local disk (Windows laptop C: drive): 355GB free as of 2026-04-16 (exclusive, not shared). Gate 1 data migrated from NCBI server `/export` on 2026-04-16 (see LOCAL_SETUP.md).
+Local disk (Windows laptop C: drive): 355GB free as of 2026-04-16 (exclusive, not shared). Gate 1 data migrated from NCBI server `/export` on 2026-04-16 (see `docs/context/setup/setup-03_windows_laptop.md`).
 
 Project footprint after Gate 1 migration: Gene KGX 39GB + ClinVar KGX 2.6GB + MedGen KGX 4.7GB + FTP cache ~5GB = ~51GB.
 
@@ -241,7 +241,7 @@ No storage problems at any step.
 
 ### Data storage
 
-Local (current, post 2026-04-16 migration): all data on the Windows laptop C: drive at `C:/Users/<you>/agentic-search-data/`, exclusive to the user. Paths configured in `.env` (see LOCAL_SETUP.md for the full setup). FTP cache kept for re-runs, KGX files deleted after rsync to the Hetzner VPS and cloud validation passes.
+Local (current, post 2026-04-16 migration): all data on the Windows laptop C: drive under the repo-local path `C:/Users/<you>/agentic-search-data-engineering/data/`. Paths are configured in `.env` (see `docs/context/setup/setup-03_windows_laptop.md` for the full setup). FTP cache is kept for re-runs, and KGX files are deleted after rsync to the Hetzner VPS and cloud validation passes.
 
 Prior arrangement (retired 2026-04-16): data was symlinked from the repo to `/export/home/chakrabortim2/data/` on the NCBI server. `/export` is a 4.3TB LVM volume shared across ~925 machine users with no quota protection, which made the 51GB footprint a good-citizen concern and exposed the pipeline to silent disk contention. Migrated to laptop to eliminate both risks.
 
@@ -681,7 +681,7 @@ All tests use inline fixtures (no separate fixture files). Total: 180 tests, all
 17. ClinVar and dbSNP use different ID spaces (ClinVar:{id} vs dbSNP:rs{id}), no schema conflict. Connected via exact_match edges at Phase 5.2.
 18. Skip the local AGE load. Phase 3.0 builds the loader + a fixture smoke test; Phase 4.0 provisions the VPS, rsyncs KGX, and loads once on the cloud. Rationale: actual `/export` free space is 284GB (not 403GB as originally budgeted), and a local full load + pg_dump peak would overflow. A single cloud load avoids ~2-6 hours of duplicate load work and eliminates the ~150GB temporary pg_dump overhead. Trade-off: lose the ability to run full-scale Cypher validation locally; mitigated by the Phase 3.0 fixture smoke test proving loader logic before rsync. Earlier Hetzner billing starts ~2 weeks sooner (~$15).
 19. PubMed download is serial today ([download.py:97-104](../system-01-data-pipelines/pubmed/download.py#L97-L104)). Gate 2 runs overnight, so serial is acceptable. If Gate 2 retries become needed, switch to `ThreadPoolExecutor(max_workers=8)` to cut 4-8 hours to ~1-2 hours.
-20. Local development and all bulk data live on the user's Windows laptop C: drive (355GB exclusive), not the NCBI shared server `/export`. Gate 1 data was migrated on 2026-04-16 after the `/export` free-space audit revealed 284GB shared with ~925 users and no quota protection. Setup steps captured in `LOCAL_SETUP.md`. Phase 3.0 fixture smoke test uses Docker Desktop + a Linux PostgreSQL + AGE container. Phase 4 rsync to Hetzner runs over home Wi-Fi upload (6-16 hrs for ~140GB). No NIH funding or policy ties the pipeline to NCBI infrastructure; all NCBI data is public FTP.
+20. Local development and all bulk data live on the user's Windows laptop C: drive (355GB exclusive), not the NCBI shared server `/export`. Gate 1 data was migrated on 2026-04-16 after the `/export` free-space audit revealed 284GB shared with ~925 users and no quota protection. Setup steps captured in `docs/context/setup/setup-03_windows_laptop.md`. Phase 3.0 fixture smoke test uses Docker Desktop + a Linux PostgreSQL + AGE container. Phase 4 rsync to Hetzner runs over home Wi-Fi upload (6-16 hrs for ~140GB). No NIH funding or policy ties the pipeline to NCBI infrastructure; all NCBI data is public FTP.
 
 ---
 
@@ -689,8 +689,8 @@ All tests use inline fixtures (no separate fixture files). Total: 180 tests, all
 
 | File | Read when |
 |------|-----------|
-| `LOCAL_SETUP.md` | First time setting up the repo on a laptop; migrating from `/export`; verifying `.env` paths |
+| `docs/context/setup/setup-03_windows_laptop.md` | First time setting up the repo on a laptop; migrating from `/export`; verifying `.env` paths |
 | `docs/System_1_data_engineering_plan.md` | Before any pipeline work |
 | `docs/learnings.md` | After any pipeline run (add problems and solutions) |
 | `docs/data_inventory.md` | After any pipeline run (add download and output details) |
-| `reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/` | Building shared utilities, merger, exporter |
+| `reference-repos/ncbi_ai_agents/KG/pipeline/src/glucose_metabolism_kg/` | Building shared utilities, merger, exporter |

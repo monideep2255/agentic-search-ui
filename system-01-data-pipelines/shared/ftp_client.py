@@ -2,7 +2,7 @@
 ftp_client.py - Idempotent FTP/HTTP download with cache-hit check and directory listing.
 
 Adapted from:
-    reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/utils.py
+    reference-repos/ncbi_ai_agents/KG/pipeline/src/glucose_metabolism_kg/utils.py
     lines 91-104 (download_file pattern)
 
 Key behaviors:
@@ -63,7 +63,7 @@ def download_ftp_file(url: str, dest: Path, force: bool = False) -> Path:
             tmp.unlink()
         raise
 
-    tmp.rename(dest)
+    tmp.replace(dest)
     size_mb = dest.stat().st_size / 1e6
     logger.info("Downloaded %.1f MB -> %s", size_mb, dest.name)
 

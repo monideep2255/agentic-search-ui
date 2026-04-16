@@ -166,7 +166,7 @@ class CrossReferenceError(Exception):
 
 ### Retry with exponential backoff
 
-For NCBI Entrez and FTP calls. Match the canonical reference pipeline pattern at `reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/utils.py:35-86`.
+For NCBI Entrez and FTP calls. Match the canonical reference pipeline pattern at `reference-repos/ncbi_ai_agents/KG/pipeline/src/glucose_metabolism_kg/utils.py:35-86`.
 
 ```python
 def entrez_with_retry(

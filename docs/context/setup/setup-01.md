@@ -14,7 +14,7 @@ The initial scaffold created folders for all three systems. Before starting Phas
 rm -rf api cli eval mcp-server search-agent web-ui
 ```
 
-Keep only: `data-pipelines/`, `knowledge-graph/`, `docs/`, `reference/`. Everything System 3 belongs in the separate repo.
+Keep only: `data-pipelines/`, `knowledge-graph/`, `docs/`, `reference-repos/`. Everything System 3 belongs in the separate repo.
 
 ---
 
@@ -34,7 +34,7 @@ What to extract:
 - What broke or was left unfinished
 - MCP server architecture (already published and installable)
 
-Source: `reference/ncbi_ai_agents-ncbi-kg/` (symlink, ncbi-kg branch)
+Source: `reference-repos/ncbi_ai_agents/` (symlink, ncbi-kg branch)
 
 Action: read the repo end to end, focusing on `KG/pipeline/src/glucose_metabolism_kg/`. Look for pipeline scripts, schema definitions, BioLink mapping code, and any validation logic. The reference symlinks are your "Confluence documentation" — read for context, do not bulk-vendor files.
 
@@ -59,7 +59,7 @@ What: review the data engineering approach from the NLM/NCBI KG pipeline built b
 
 Why: this is the closest existing implementation to what we're building. Avoids repeating their mistakes and lets us reuse validated patterns directly.
 
-Where: `reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/` (canonical, this is where the working code now lives) — also mirrored at `reference/personal-os-work/NIH/KG/Use-case-WG/PoC/Pipeline/glucose_metabolism_kg_package/`
+Where: `reference-repos/ncbi_ai_agents/KG/pipeline/src/glucose_metabolism_kg/` (canonical, this is where the working code now lives) — also mirrored at `reference-repos/personal-os/NIH/KG/Use-case-WG/PoC/Pipeline/glucose_metabolism_kg_package/`
 
 Files:
 - `README.md` — pipeline overview
@@ -81,7 +81,7 @@ What: review the `.claude/` config from the ncbi_ai_agents repo to identify skil
 
 Why: that repo was built for a similar domain (NCBI + knowledge graphs). Its skills encode patterns for BioLink, Cypher, Python data pipelines, and testing that we should reuse rather than reinvent.
 
-Where: `reference/ncbi_ai_agents-ncbi-kg/.claude/` and `reference/personal-os-work/.claude/`
+Where: `reference-repos/ncbi_ai_agents/.claude/` and `reference-repos/personal-os/.claude/`
 
 Review:
 

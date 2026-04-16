@@ -1,17 +1,17 @@
 ---
 name: repo-dive
-description: Deep dive an external repo (typically symlinked into reference/) and produce a first-principles analysis. Adapted from personal-os-work for the data-engineering context. TRIGGER when user says "deep dive this repo", "what can we learn from X", or "analyze the reference at Y". DO NOT TRIGGER for normal code reading.
+description: Deep dive an external repo (typically symlinked into reference-repos/) and produce a first-principles analysis. Adapted from personal-os-work for the data-engineering context. TRIGGER when user says "deep dive this repo", "what can we learn from X", or "analyze the reference at Y". DO NOT TRIGGER for normal code reading.
 ---
 
 # repo-dive: external repo first-principles analysis
 
-For this repo, "external" means anything in `reference/`. The reference symlinks are read-only context. The job of this skill is to extract the parts that apply to System 1 + System 2 work and ignore the rest.
+For this repo, "external" means anything in `reference-repos/`. The reference symlinks are read-only context. The job of this skill is to extract the parts that apply to System 1 + System 2 work and ignore the rest.
 
 ## When to use
 
-- User shares a path under `reference/` and says "what can we learn from this"
+- User shares a path under `reference-repos/` and says "what can we learn from this"
 - New reference repo is symlinked and needs an analysis pass
-- Designing a new module and looking for prior art in `reference/ncbi_ai_agents-ncbi-kg/`
+- Designing a new module and looking for prior art in `reference-repos/ncbi_ai_agents/`
 
 ## When not to use
 
@@ -66,7 +66,7 @@ Anything where the reference made a decision we should explicitly accept or over
 
 ### Step 4: do not vendor files
 
-The reference symlinks are documentation. Never copy a file from `reference/` into `system-01-data-pipelines/` or `system-02-knowledge-graph/`. Always rewrite from first principles, informed by the reference. This is a project-level rule (see CLAUDE.md "Canonical reference pipeline" section and the user's stated preference).
+The reference symlinks are documentation. Never copy a file from `reference-repos/` into `system-01-data-pipelines/` or `system-02-knowledge-graph/`. Always rewrite from first principles, informed by the reference. This is a project-level rule (see CLAUDE.md "Canonical reference pipeline" section and the user's stated preference).
 
 ## Style rules
 

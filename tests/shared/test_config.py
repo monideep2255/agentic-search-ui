@@ -93,6 +93,34 @@ class TestPipelineConfigFromEnv:
             cfg = PipelineConfig.from_env()
         assert cfg.ncbi_api_key == "abc123"
 
+    def test_from_env_defaults_to_repo_data_dir(self, tmp_path):
+        """from_env() defaults DATA_DIR and subdirs to the configured data root."""
+        with patch.dict("os.environ", {"NCBI_EMAIL": "user@example.com"}, clear=True):
+            with patch("shared.config._default_data_root", return_value=tmp_path / "data"):
+                cfg = PipelineConfig.from_env(dotenv_path=tmp_path / "no.env")
+
+        assert cfg.data_dir == tmp_path / "data"
+        assert cfg.ftp_cache_dir == tmp_path / "data" / "ftp_cache"
+        assert cfg.kgx_output_dir == tmp_path / "data" / "kgx"
+        assert cfg.raw_data_dir == tmp_path / "data" / "raw"
+
+    def test_from_env_treats_blank_path_vars_as_unset(self, tmp_path):
+        """Blank path vars in .env should fall back to DATA_DIR-derived defaults."""
+        env = {
+            "NCBI_EMAIL": "user@example.com",
+            "DATA_DIR": str(tmp_path / "data"),
+            "FTP_CACHE_DIR": "",
+            "KGX_OUTPUT_DIR": "   ",
+            "RAW_DATA_DIR": "",
+        }
+        with patch.dict("os.environ", env, clear=True):
+            cfg = PipelineConfig.from_env(dotenv_path=tmp_path / "no.env")
+
+        assert cfg.data_dir == tmp_path / "data"
+        assert cfg.ftp_cache_dir == tmp_path / "data" / "ftp_cache"
+        assert cfg.kgx_output_dir == tmp_path / "data" / "kgx"
+        assert cfg.raw_data_dir == tmp_path / "data" / "raw"
+
     def test_from_env_raises_when_ncbi_email_missing(self, tmp_path):
         """from_env() raises ValueError when NCBI_EMAIL is absent."""
         # Use a non-existent dotenv path so load_dotenv cannot load a .env file,

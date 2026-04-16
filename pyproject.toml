@@ -23,13 +23,23 @@ markers = [
     "integration: marks tests that hit the network or require postgres",
 ]
 
+[tool.setuptools]
+packages = [
+    "system_01_data_pipelines",
+    "system_01_data_pipelines.shared",
+    "system_01_data_pipelines.gene",
+    "system_01_data_pipelines.clinvar",
+    "system_01_data_pipelines.medgen",
+    "system_01_data_pipelines.pubmed",
+    "system_01_data_pipelines.taxonomy",
+    "system_01_data_pipelines.merge",
+    "system_01_data_pipelines.snp",
+    "system_02_knowledge_graph",
+    "system_02_knowledge_graph.schema",
+    "system_02_knowledge_graph.loader",
+    "system_02_knowledge_graph.merge",
+]
+
 [tool.setuptools.package-dir]
 system_01_data_pipelines = "system-01-data-pipelines"
 system_02_knowledge_graph = "system-02-knowledge-graph"
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = [
-    "system_01_data_pipelines*",
-    "system_02_knowledge_graph*",
-]

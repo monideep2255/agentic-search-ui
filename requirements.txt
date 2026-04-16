@@ -14,7 +14,7 @@ tenacity>=8.2       # exponential backoff for FTP and Entrez retries
 # Data processing
 lxml>=5.0           # XML parsing (ClinVar, PubMed)
 pandas>=2.0
-pyarrow>=15.0
+pyarrow>=18.0      # 18.0 is the first release with Python 3.13 wheels
 numpy>=1.26
 
 # Knowledge graph (System 2: PostgreSQL + Apache AGE)

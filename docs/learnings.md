@@ -32,7 +32,7 @@ Fix: updated column indices to match real file header.
 
 Root cause: `build-backend = "setuptools.backends._legacy:_Backend"` does not exist. Should be `"setuptools.build_meta"`.
 
-Fix: corrected the build-backend string. Editable install now works, though CLI entry points still need `PYTHONPATH` due to the hyphenated directory name mapping issue with setuptools editable mode.
+Fix: corrected the build-backend string. A second follow-up fix on 2026-04-16 replaced `[tool.setuptools.packages.find]` with an explicit `packages = [...]` list because setuptools `find` skips directories whose names contain hyphens (`system-01-data-pipelines`), leaving the MAPPING dict empty and breaking CLI entry points. Explicit enumeration works around this.
 
 Lesson: test `pip install -e .` early, not after all code is written.
 

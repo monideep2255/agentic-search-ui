@@ -11,7 +11,7 @@ Exit codes:
     2 = bad invocation
 
 This is a text-grep check, not a semantic one. It catches the common drift
-patterns when skills are copied from reference/personal-os-work/ or similar
+patterns when skills are copied from reference-repos/personal-os/ or similar
 external repos. It will not catch everything, but it will catch the stuff
 that took three hours of manual editing last time.
 """

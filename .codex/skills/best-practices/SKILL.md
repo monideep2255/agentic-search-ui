@@ -61,14 +61,14 @@ Every node and every edge gets `source` and `source_url`. Functions that produce
 - One logical change per commit. Pipeline + schema + tests for the same database go together; unrelated cleanup goes in a separate commit.
 - **Never add `Co-Authored-By` lines.** Project rule.
 - Never `git push --force`. Never amend a published commit.
-- Never `git add -A` blindly. Stage specific files so you do not accidentally commit `.env`, `data/`, or `reference/`.
+- Never `git add -A` blindly. Stage specific files so you do not accidentally commit `.env`, `data/`, or `reference-repos/`.
 
 ## 5. Common pitfalls
 
 - Forgetting to activate the venv. Symptom: `ModuleNotFoundError` for `linkml` or `kgx`.
 - Forgetting `CREATE EXTENSION age` after restoring a database. Symptom: `function ag_catalog.cypher does not exist`.
 - Loading `dotenv` from a stdin heredoc. Symptom: `AssertionError` deep in dotenv. Fix: use `dotenv_values(".env")` (returns a dict).
-- Treating `reference/` as part of the project. It is read-only Confluence-style documentation. Never edit, never vendor files out of it.
+- Treating `reference-repos/` as part of the project. It is read-only Confluence-style documentation. Never edit, never vendor files out of it.
 - Writing schemas inside the pipeline modules. Schemas live in `system-02-knowledge-graph/schema/`, pipelines import them.
 
 ## 6. Three-state permissions
@@ -86,7 +86,7 @@ Ask:
 - Touch anything inside `data/` (other than reading metadata).
 
 Deny:
-- Edit anything inside `reference/`.
+- Edit anything inside `reference-repos/`.
 - Delete `data/ftp_cache/` or `data/kgx/` without explicit instruction.
 - Push to a remote branch other than `main`.
 - Add System 3 dependencies (FastAPI, LangGraph, React, MCP, Slack SDKs, etc.).

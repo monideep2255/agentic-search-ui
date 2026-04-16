@@ -56,7 +56,7 @@ postgresql 15 + apache age (for System 2)
 # Setup
 git clone <repo-url>
 cd agentic-search-data-engineering
-cp .env.example .env  # add your NCBI API key
+copy env.example .env  # or: cp env.example .env
 pip install -r requirements.txt
 
 # Run tests
@@ -92,7 +92,7 @@ python system-01-data-pipelines/gene/pipeline.py
 | [Learnings](docs/learnings.md) | Problems encountered and solutions, updated after every pipeline run |
 | [BioLink schema](schema/biolink_ncbi.yaml) | LinkML schema with 10 node types, 14 predicates |
 | [Decisions](DECISIONS.md) | Architecture and implementation decisions with rationale |
-| [Local setup](LOCAL_SETUP.md) | One-time migration guide for Windows laptop (repo clone, symlinks, venv, data rsync, verification) |
+| [Local setup](docs/context/setup/setup-03_windows_laptop.md) | One-time migration guide for Windows laptop (repo clone, symlinks, venv, data rsync, verification) |
 
 ---
 

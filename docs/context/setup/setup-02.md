@@ -1,5 +1,7 @@
 # Work computer setup
 
+Retired note: this document captures the old AlmaLinux `/export` workstation setup. The current local-storage policy is to keep downloaded data under the repo-local `data/` directory on the active machine; see `setup-03_windows_laptop.md` for the canonical workflow.
+
 Read this file first thing. Goal: get Claude Code environment-ready in under 30 minutes, no planning, no pipeline code.
 
 You are not starting the plan. The user will kick off the plan and give all instructions. You are just installing tools and verifying the environment.
@@ -41,9 +43,9 @@ pip install -r requirements.txt
 These are read-only context repos. Do not edit them.
 
 ```bash
-mkdir -p reference
-ln -sf /home/chakrabortim2/ncbi_ai_agents reference/ncbi_ai_agents-ncbi-kg
-ln -sf /home/chakrabortim2/personal-os-work reference/personal-os-work
+mkdir -p reference-repos
+ln -sf /home/chakrabortim2/ncbi_ai_agents reference-repos/ncbi_ai_agents
+ln -sf /home/chakrabortim2/personal-os-work reference-repos/personal-os
 ```
 
 If either path doesn't exist, find it:

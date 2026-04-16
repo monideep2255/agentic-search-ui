@@ -42,13 +42,13 @@ This repo builds Layer 1 (fully ingested knowledge graph) of a three-layer data 
 | `architecture/Three_layer_data_architecture.md` | Layer 1 (graph), Layer 2 (on-demand API), Layer 3 (enrichment). What this repo does vs System 3. | Understanding system boundaries |
 | `context/Innovation_proposal_2026.md` | Full system proposal | Context and framing |
 | `bossman_execution_plan.md` | Phase-by-phase execution plan for System 1 pipelines (bossman mode reference) | Before starting any bossman phase |
-| `../LOCAL_SETUP.md` | One-time setup guide for Windows laptop (repo clone, symlinks, venv, data rsync) | When setting up a new local dev environment |
+| `context/setup/setup-03_windows_laptop.md` | One-time setup guide for Windows laptop (repo clone, symlinks, venv, data rsync) | When setting up a new local dev environment |
 
 ## Canonical reference pipeline
 
 The most valuable reference is an existing 9-step BioLink pipeline at:
 
-`reference/ncbi_ai_agents-ncbi-kg/KG/pipeline/src/glucose_metabolism_kg/`
+`reference-repos/ncbi_ai_agents/KG/pipeline/src/glucose_metabolism_kg/`
 
 Patterns to copy directly:
 
@@ -61,7 +61,7 @@ Patterns to copy directly:
 
 Reference BioLink schema (8 categories, 15 predicates) is encoded in `assembly.py` and `export.py`. Copy categories and predicates verbatim where they apply.
 
-Reference repo's own CLAUDE.md (full architecture and file map) is at `reference/ncbi_ai_agents-ncbi-kg/CLAUDE.md`. Skim it before designing new pipelines.
+Reference repo's own CLAUDE.md (full architecture and file map) is at `reference-repos/ncbi_ai_agents/CLAUDE.md`. Skim it before designing new pipelines.
 
 ---
 
@@ -125,7 +125,7 @@ User-invocable skills (slash commands):
 |-------|---------|-----------|
 | bossman-mode | Autonomous execution with agent teams | `/bossman` |
 | objective-review | Critical feedback, not agreement | `/objective-review` |
-| repo-dive | First-principles analysis of a reference/ repo | `/repo-dive <path>` |
+| repo-dive | First-principles analysis of a reference-repos/ repo | `/repo-dive <path>` |
 | skill-adapt-verify | Verify adapted skill for stale paths and style violations | `/skill-adapt-verify <path>` |
 | ship | Sync docs, commit, push phase branch | `/ship` |
 

@@ -24,6 +24,30 @@ from dotenv import load_dotenv
 logger = logging.getLogger(__name__)
 
 
+def _repo_root() -> Path:
+    """Return the repository root from this module location."""
+    return Path(__file__).resolve().parents[2]
+
+
+def _default_data_root() -> Path:
+    """Return the canonical repo-local data root."""
+    return _repo_root() / "data"
+
+
+def _env_str(name: str, default: str = "") -> str:
+    """Read an environment variable, treating blank strings as unset."""
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    stripped = value.strip()
+    return stripped if stripped else default
+
+
+def _env_path(name: str, default: Path) -> Path:
+    """Read a path env var, treating blank strings as unset."""
+    return Path(_env_str(name, str(default)))
+
+
 @dataclass
 class PipelineConfig:
     """Configuration for all System 1 ETL pipelines.
@@ -42,17 +66,18 @@ class PipelineConfig:
     ncbi_api_key: str = ""
     """Optional NCBI API key. Raises rate limit from 3 to 10 requests/s."""
 
-    # Data directories
-    data_dir: Path = field(default_factory=lambda: Path("/export/home/chakrabortim2/data"))
+    # Data directories. Defaults point at the repo-local data/ tree so all
+    # downloaded data lands under the project's canonical storage root.
+    data_dir: Path = field(default_factory=_default_data_root)
     """Root data directory. All sub-directories are created under this path."""
 
-    ftp_cache_dir: Path = field(default_factory=lambda: Path("/export/home/chakrabortim2/data/ftp_cache"))
+    ftp_cache_dir: Path = field(default_factory=lambda: _default_data_root() / "ftp_cache")
     """Local cache for downloaded FTP files. Downloads are skipped on cache hit."""
 
-    kgx_output_dir: Path = field(default_factory=lambda: Path("/export/home/chakrabortim2/data/kgx"))
+    kgx_output_dir: Path = field(default_factory=lambda: _default_data_root() / "kgx")
     """Output directory for KGX TSV files (nodes.tsv + edges.tsv per database)."""
 
-    raw_data_dir: Path = field(default_factory=lambda: Path("/export/home/chakrabortim2/data/raw"))
+    raw_data_dir: Path = field(default_factory=lambda: _default_data_root() / "raw")
     """Directory for raw unparsed downloads (intermediate extraction artifacts)."""
 
     # PostgreSQL connection params
@@ -121,16 +146,18 @@ class PipelineConfig:
             logger.warning("PG_PORT=%r is not an integer; defaulting to 5432", pg_port_raw)
             pg_port = 5432
 
+        default_root = _default_data_root()
+        data_dir = _env_path("DATA_DIR", default_root)
         return cls(
             ncbi_email=ncbi_email,
-            ncbi_api_key=os.environ.get("NCBI_API_KEY", ""),
-            data_dir=Path(os.environ.get("DATA_DIR", "/export/home/chakrabortim2/data")),
-            ftp_cache_dir=Path(os.environ.get("FTP_CACHE_DIR", "/export/home/chakrabortim2/data/ftp_cache")),
-            kgx_output_dir=Path(os.environ.get("KGX_OUTPUT_DIR", "/export/home/chakrabortim2/data/kgx")),
-            raw_data_dir=Path(os.environ.get("RAW_DATA_DIR", "/export/home/chakrabortim2/data/raw")),
-            pg_host=os.environ.get("PG_HOST", "localhost"),
+            ncbi_api_key=_env_str("NCBI_API_KEY", ""),
+            data_dir=data_dir,
+            ftp_cache_dir=_env_path("FTP_CACHE_DIR", data_dir / "ftp_cache"),
+            kgx_output_dir=_env_path("KGX_OUTPUT_DIR", data_dir / "kgx"),
+            raw_data_dir=_env_path("RAW_DATA_DIR", data_dir / "raw"),
+            pg_host=_env_str("PG_HOST", "localhost"),
             pg_port=pg_port,
-            pg_user=os.environ.get("PG_USER", ""),
-            pg_password=os.environ.get("PG_PASSWORD", ""),
-            pg_dbname=os.environ.get("PG_DBNAME", ""),
+            pg_user=_env_str("PG_USER", ""),
+            pg_password=_env_str("PG_PASSWORD", ""),
+            pg_dbname=_env_str("PG_DBNAME", ""),
         )
