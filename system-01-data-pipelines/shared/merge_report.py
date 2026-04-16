@@ -52,8 +52,9 @@ def generate_merge_report(
     - Edges by predicate (table)
     - Stub nodes count
     - Validation result (passed/failed, per-issue counts)
-    - Cross-pipeline connectivity: ClinVar edges referencing Gene nodes,
-      ClinVar edges referencing MedGen nodes
+    - Cross-pipeline connectivity: ClinVar <-> Gene, ClinVar <-> MedGen,
+      Gene mentioned_in PubMed Article, Gene in_taxon NCBITaxon,
+      PubMed Article has_mesh_annotation MeSH, NCBITaxon subclass_of NCBITaxon
 
     Parameters
     ----------
@@ -104,23 +105,38 @@ def generate_merge_report(
     prov_edge_count = len(validation.get("missing_provenance_edges", []))
 
     # Cross-pipeline connectivity.
-    # Gene node IDs: CURIEs with NCBIGene: prefix.
-    # MedGen node IDs: CURIEs with MedGen: prefix.
-    # ClinVar edge: an edge whose subject or object starts with ClinVar:.
+    # Node ID sets by CURIE prefix for lookup.
     gene_ids: set[str] = {n["id"] for n in nodes if n.get("id", "").startswith("NCBIGene:")}
     medgen_ids: set[str] = {n["id"] for n in nodes if n.get("id", "").startswith("MedGen:")}
+    pmid_ids: set[str] = {n["id"] for n in nodes if n.get("id", "").startswith("PMID:")}
+    mesh_ids: set[str] = {n["id"] for n in nodes if n.get("id", "").startswith("MeSH:")}
+    taxon_ids: set[str] = {n["id"] for n in nodes if n.get("id", "").startswith("NCBITaxon:")}
 
     clinvar_to_gene = 0
     clinvar_to_medgen = 0
+    gene_to_pmid = 0
+    gene_to_taxon = 0
+    pmid_to_mesh = 0
+    taxon_to_taxon = 0
     for edge in edges:
         subject = edge.get("subject", "")
         obj = edge.get("object", "")
-        is_clinvar_edge = subject.startswith("ClinVar:") or obj.startswith("ClinVar:")
-        if is_clinvar_edge:
+        predicate = edge.get("predicate", "")
+
+        if subject.startswith("ClinVar:") or obj.startswith("ClinVar:"):
             if subject in gene_ids or obj in gene_ids:
                 clinvar_to_gene += 1
             if subject in medgen_ids or obj in medgen_ids:
                 clinvar_to_medgen += 1
+
+        if predicate == "biolink:mentioned_in" and subject in gene_ids and obj in pmid_ids:
+            gene_to_pmid += 1
+        if predicate == "biolink:in_taxon" and subject in gene_ids and obj in taxon_ids:
+            gene_to_taxon += 1
+        if predicate == "biolink:has_mesh_annotation" and subject in pmid_ids and obj in mesh_ids:
+            pmid_to_mesh += 1
+        if predicate == "biolink:subclass_of" and subject in taxon_ids and obj in taxon_ids:
+            taxon_to_taxon += 1
 
     lines: list[str] = [
         "# Merge report",
@@ -156,6 +172,10 @@ def generate_merge_report(
         "",
         f"ClinVar edges referencing Gene nodes: {clinvar_to_gene}",
         f"ClinVar edges referencing MedGen nodes: {clinvar_to_medgen}",
+        f"Gene mentioned_in PubMed Article edges resolved: {gene_to_pmid}",
+        f"Gene in_taxon NCBITaxon edges resolved: {gene_to_taxon}",
+        f"PubMed Article has_mesh_annotation MeSH edges resolved: {pmid_to_mesh}",
+        f"NCBITaxon subclass_of NCBITaxon edges resolved: {taxon_to_taxon}",
         "",
     ]
 
