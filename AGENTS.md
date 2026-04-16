@@ -42,6 +42,7 @@ This repo builds Layer 1 (fully ingested knowledge graph) of a three-layer data 
 | `architecture/Three_layer_data_architecture.md` | Layer 1 (graph), Layer 2 (on-demand API), Layer 3 (enrichment). What this repo does vs System 3. | Understanding system boundaries |
 | `context/Innovation_proposal_2026.md` | Full system proposal | Context and framing |
 | `bossman_execution_plan.md` | Phase-by-phase execution plan for System 1 pipelines (bossman mode reference) | Before starting any bossman phase |
+| `../LOCAL_SETUP.md` | One-time setup guide for Windows laptop (repo clone, symlinks, venv, data rsync) | When setting up a new local dev environment |
 
 ## Canonical reference pipeline
 
@@ -70,9 +71,9 @@ Phase 1 first: Gene + ClinVar + MedGen. These three form the core triangle and s
 
 ```
 Phase 1 (weeks 1-2):  Gene ETL -> ClinVar ETL -> MedGen ETL -> first merge test  [DONE 2026-04-14]
-Phase 2 (weeks 3-4):  PubMed ETL -> Taxonomy ETL -> five-database merge
-Phase 3 (weeks 5-6):  AGE loader -> load five databases into local graph -> Cypher validation
-Phase 4 (week 7):     Cloud deploy: five-database graph to Hetzner VPS
+Phase 2 (weeks 3-4):  PubMed ETL -> Taxonomy ETL -> five-database merge  [CODE DONE 2026-04-16; Gate 2 NEXT]
+Phase 3 (weeks 5-6):  AGE loader code -> Cypher validation (loader code only; no local load)
+Phase 4 (week 7):     Cloud deploy: provision Hetzner VPS -> rsync KGX from laptop -> load into AGE on cloud
 Phase 5 (week 8):     dbSNP ETL on cloud -> SNP-ClinVar merge -> full six-database validation
 ```
 
@@ -134,4 +135,4 @@ All rules are in `.claude/rules/` and loaded automatically. No need to duplicate
 
 ---
 
-Last updated: 2026-04-14
+Last updated: 2026-04-16
