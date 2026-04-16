@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 NODE_REQUIRED_COLUMNS: list[str] = ["id", "category", "name", "source", "source_url"]
 EDGE_REQUIRED_COLUMNS: list[str] = ["subject", "predicate", "object", "source", "source_url"]
 
-def _serialize_value(value: object) -> str:
+def serialize_value(value: object) -> str:
     """Serialize a value for TSV output. Pipe-join list/tuple values."""
     if isinstance(value, (list, tuple)):
         return "|".join(str(v) for v in value)
@@ -97,7 +97,7 @@ def _write_tsv(
             row: dict[str, str] = {}
             for field in fieldnames:
                 raw = rec.get(field, "")
-                row[field] = _serialize_value(raw)
+                row[field] = serialize_value(raw)
             writer.writerow(row)
 
     return path
@@ -228,7 +228,7 @@ def append_edges(
             restval="",
         )
         for rec in edges:
-            row = {field: _serialize_value(rec.get(field, "")) for field in cols}
+            row = {field: serialize_value(rec.get(field, "")) for field in cols}
             writer.writerow(row)
     logger.info("Appended %d edges to %s", len(edges), edges_path)
     return len(edges)
