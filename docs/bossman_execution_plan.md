@@ -189,7 +189,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | MedGen download (115MB) | 5 min | Gate 1 (local) |
 | Gene FTP download (3GB) | 30-60 min | Gate 1 (local) |
 | ClinVar download (500MB) | 20-30 min | Gate 1 (local) |
-| PubMed baseline download (30GB) | 4-8 hours | Gate 2 (local, overnight) |
+| PubMed baseline + updatefiles download (~54GB compressed, 1334 + 81 files) | 4-8 hours | Gate 2 (local, overnight) |
 | Taxonomy download (500MB) | 10 min | Gate 2 (local) |
 | AGE load 5 databases (~140M nodes) | 2-6 hours | Phase 3.0 (local) |
 | pg_dump + transfer to Hetzner | 1-3 hours | Phase 4.0 |
@@ -490,7 +490,7 @@ Pass criteria (all passed):
 
 ---
 
-## Phase 2: literature + taxonomy
+## Phase 2: literature + taxonomy [CODE DONE, Gate 2 NEXT]
 
 ### Phase 2.0: PubMed ETL (DONE 2026-04-16)
 
