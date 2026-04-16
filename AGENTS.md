@@ -12,7 +12,7 @@ Stack: Python 3.11+, LinkML, BioLink 4.x, KGX, PostgreSQL 15 + Apache AGE.
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | System 1: data pipelines | Phase 1 and Gate 1 complete (67.5M Gene, 4.4M ClinVar, 198K MedGen nodes produced on real data). Phase 2 next: PubMed + Taxonomy ETL, then AGE loader. |
+| 1 | System 1: data pipelines | Phase 1 and Gate 1 complete (67.5M Gene, 4.4M ClinVar, 198K MedGen nodes produced on real data). Phase 2 code complete (PubMed + Taxonomy ETL + 5-database merge). Gate 2 next: run pubmed-etl + taxonomy-etl + merge-etl on real data, validate KGX. |
 | 2 | System 2: knowledge graph | Schema defined alongside pipelines. PostgreSQL + AGE load in Phase 3. |
 | 3 | System 3: search agent | Lives in a separate repository. Do not build here. |
 

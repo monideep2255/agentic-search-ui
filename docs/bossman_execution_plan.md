@@ -322,7 +322,7 @@ MR REVIEW
 | 1.5 | `phase/1.5-merge-validation` | Merged, deleted |
 | 2.0 | `phase/2.0-pubmed-etl` | Merged, deleted |
 | 2.1 | `phase/2.1-taxonomy-etl` | Merged, deleted |
-| 2.2 | `phase/2.2-literature-taxonomy-merge` | Open |
+| 2.2 | `phase/2.2-literature-taxonomy-merge` | Merged, deleted |
 
 ### Per-phase git flow
 
@@ -530,7 +530,7 @@ Decision: in-memory list approach (2.7M nodes is small enough, no streaming need
 
 ### Phase 2.2: 5-database merge (DONE 2026-04-16)
 
-Branch: `phase/2.2-literature-taxonomy-merge`
+Branch: `phase/2.2-literature-taxonomy-merge` (merged PR #6, deleted)
 
 Deliverables (all complete):
 
@@ -616,13 +616,20 @@ tests/
     test_clinvar_pipeline.py           variant_summary, citations, end-to-end (16 tests)
   medgen/
     test_medgen_pipeline.py            id_mappings, names, mgrel, end-to-end (18 tests)
+  pubmed/
+    test_pubmed_pipeline.py            xml streaming + mesh stubs + end-to-end (12 tests)
+  taxonomy/
+    test_taxonomy_pipeline.py          nodes.dmp, names.dmp, end-to-end (11 tests)
   integration/
     conftest.py                        sys.path setup
     test_merge.py                      merge dedup, stubs, validation (9 tests)
     test_cross_database_traversal.py   Gene -> ClinVar -> MedGen triangle (5 tests)
+  merge/
+    conftest.py                        sys.path setup
+    test_five_database_merge.py        5-db orchestrator + cross-pipeline connectivity (11 tests)
 ```
 
-All tests use inline fixtures (no separate fixture files). Total: 146 tests, all passing.
+All tests use inline fixtures (no separate fixture files). Total: 180 tests, all passing.
 
 ### Testing rules
 

@@ -10,11 +10,11 @@ Downloads bulk data from NCBI FTP, parses it, maps it to the BioLink model, vali
 
 ## Status
 
-Phase 1 and Gate 1 complete: all three core triangle pipelines ran on real data (67.5M Gene, 4.4M ClinVar, 198K MedGen nodes). Phase 2 next: PubMed + Taxonomy ETL.
+Phase 2 code complete: PubMed ETL, Taxonomy ETL, and 5-database merge pipeline all merged. Gate 2 next: run all three on real data and validate KGX output.
 
 | System | Status |
 |--------|--------|
-| System 1: data pipelines | Phase 1 done. Gate 1 done (real data validated). Phase 2 next. |
+| System 1: data pipelines | Phase 2 code done (PubMed + Taxonomy + 5-db merge). Gate 2 next (real data run). |
 | System 2: knowledge graph | Not started |
 | System 3: search agent | Not started |
 
