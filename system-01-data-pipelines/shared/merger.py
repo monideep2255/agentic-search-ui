@@ -35,11 +35,14 @@ logger = logging.getLogger(__name__)
 _PREFIX_TO_CATEGORY: list[tuple[str, str]] = [
     ("NCBIGene:", "biolink:Gene"),
     ("PMID:", "biolink:Article"),
+    ("MeSH:", "biolink:OntologyClass"),
     ("GO:", "biolink:BiologicalProcess"),
     ("MedGen:", "biolink:Disease"),
     ("MONDO:", "biolink:Disease"),
     ("NCBITaxon:", "biolink:OrganismTaxon"),
     ("HP:", "biolink:PhenotypicFeature"),
+    ("ClinVar:", "biolink:SequenceVariant"),
+    ("UMLS:", "biolink:Disease"),
 ]
 
 

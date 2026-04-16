@@ -2,7 +2,7 @@
 
 Phase-by-phase implementation plan for the 6 NCBI ETL pipelines. Each phase is one bossman session with integrated skill chain and branch+MR workflow. Use `/bossman-mode --phase N` to execute.
 
-Created: 2026-04-13. Last updated: 2026-04-14.
+Created: 2026-04-13. Last updated: 2026-04-16 (Phase 2.2 complete).
 
 ---
 
@@ -18,22 +18,22 @@ graph TD
         P10 --> P11 --> P12 --> P15
     end
 
-    subgraph "Gate 1: run locally [IN PROGRESS]"
+    subgraph "Gate 1: run locally [DONE]"
         G1R[Run medgen/gene/clinvar-etl]
         G1V[KGX BioLink validation]
         P15 --> G1R --> G1V
     end
 
-    subgraph "Phase 2: literature + taxonomy"
-        P20[2.0 PubMed ETL code]
-        P21[2.1 Taxonomy ETL code]
-        P22[2.2 Five-database merge code]
+    subgraph "Phase 2: literature + taxonomy [DONE]"
+        P20[2.0 PubMed ETL code DONE]
+        P21[2.1 Taxonomy ETL code DONE]
+        P22[2.2 Five-database merge code DONE]
         G1V --> P20 & P21
         P20 & P21 --> P22
     end
 
-    subgraph "Gate 2: run locally"
-        G2R[Run pubmed/taxonomy-etl]
+    subgraph "Gate 2: run locally NEXT"
+        G2R[Run pubmed/taxonomy-etl + merge-etl]
         G2V[KGX BioLink validation]
         P22 --> G2R --> G2V
     end
@@ -72,8 +72,12 @@ graph TD
     style P11 fill:#2d6a2d,color:#fff
     style P12 fill:#2d6a2d,color:#fff
     style P15 fill:#2d6a2d,color:#fff
-    style G1R fill:#c9a227,color:#000
-    style G1V fill:#c9a227,color:#000
+    style G1R fill:#2d6a2d,color:#fff
+    style G1V fill:#2d6a2d,color:#fff
+    style P20 fill:#2d6a2d,color:#fff
+    style P21 fill:#2d6a2d,color:#fff
+    style P22 fill:#2d6a2d,color:#fff
+    style G2R fill:#c9a227,color:#000
 ```
 
 Legend: green = done, yellow = in progress, default = pending.
@@ -152,8 +156,8 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 
 | Gate | Run after | What | Where | Status |
 |------|-----------|------|-------|--------|
-| Gate 1 | Phase 1.5 | Run medgen/gene/clinvar-etl, validate KGX | Local | In progress |
-| Gate 2 | Phase 2.2 | Run pubmed/taxonomy-etl, validate KGX | Local | Pending |
+| Gate 1 | Phase 1.5 | Run medgen/gene/clinvar-etl, validate KGX | Local | DONE (2026-04-16) |
+| Gate 2 | Phase 2.2 | Run pubmed/taxonomy-etl + merge-etl, validate KGX | Local | Pending (NEXT) |
 | Gate 3 | Phase 3.0 | Load 5-db into AGE, Cypher queries, delete KGX | Local | Pending |
 | Gate 4 | Phase 5.2 | Full 6-db graph on cloud, all queries pass | Hetzner VPS | Pending |
 
@@ -165,11 +169,11 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | 1.1 | 2 | Shared utilities (6 modules) | DONE (2026-04-14) |
 | 1.2-1.4 | 3 | Gene + ClinVar + MedGen ETL | DONE (2026-04-14) |
 | 1.5 | 4 | Merge + validation | DONE (2026-04-14) |
-| Gate 1 | - | Run 3 pipelines locally, validate | In progress |
-| 2.0 | 5 | PubMed ETL | Pending |
-| 2.1 | 6 | Taxonomy ETL | Pending |
-| 2.2 | 7 | 5-database merge | Pending |
-| Gate 2 | - | Run PubMed + Taxonomy locally, validate | Pending |
+| Gate 1 | - | Run 3 pipelines locally, validate | DONE (2026-04-16) |
+| 2.0 | 5 | PubMed ETL | DONE (2026-04-16) |
+| 2.1 | 6 | Taxonomy ETL | DONE (2026-04-16) |
+| 2.2 | 7 | 5-database merge | DONE (2026-04-16) |
+| Gate 2 | - | Run PubMed + Taxonomy + merge-etl locally, validate | NEXT |
 | 3.0 | 8 | AGE loader code + load 5-db locally | Pending |
 | Gate 3 | - | Validate local graph, delete KGX files | Pending |
 | 4.0 | 9 | Deploy 5-db graph to Hetzner VPS | Pending |
@@ -197,8 +201,8 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 
 | Week | What | Where | Status |
 |------|------|-------|--------|
-| Week 1 | Phase 1 code + Gate 1 | Local | Code DONE. Gate 1 in progress. |
-| Week 2 | Phase 2 code + Gate 2 | Local | Pending |
+| Week 1 | Phase 1 code + Gate 1 | Local | DONE (2026-04-14 to 2026-04-16) |
+| Week 2 | Phase 2 code + Gate 2 | Local | 2.0 + 2.1 + 2.2 code DONE (2026-04-16). Gate 2 NEXT (pubmed/taxonomy run + 5-db merge validation). |
 | Week 3 | Phase 3 (AGE load) + Gate 3 + Phase 4 (deploy) | Local then cloud | Pending |
 | Week 4 | Phase 5 (dbSNP on cloud) + Gate 4 | Cloud | Pending |
 
@@ -316,6 +320,9 @@ MR REVIEW
 | 1.1 | `phase/1.1-shared-utilities` | Merged, deleted |
 | 1.2-1.4 | `phase/1.2-1.4-core-triangle-etl` | Merged, deleted (combined) |
 | 1.5 | `phase/1.5-merge-validation` | Merged, deleted |
+| 2.0 | `phase/2.0-pubmed-etl` | Merged, deleted |
+| 2.1 | `phase/2.1-taxonomy-etl` | Merged, deleted |
+| 2.2 | `phase/2.2-literature-taxonomy-merge` | Open |
 
 ### Per-phase git flow
 
@@ -348,17 +355,18 @@ Session 3: Phase 1.2-1.4  Gene+ClinVar+MedGen ETL         DONE (2026-04-14)
     v
 Session 4: Phase 1.5  merge + validation                  DONE (2026-04-14)
     v
---- GATE 1: run 3 pipelines locally (all data) ---        IN PROGRESS
-    |  medgen-etl, gene-etl, clinvar-etl
-    |  kgx validate on each output
+--- GATE 1: run 3 pipelines locally (all data) ---        DONE (2026-04-16)
+    |  medgen-etl (198K nodes, 48M edges)
+    |  gene-etl (67.5M nodes, 278M edges)
+    |  clinvar-etl (4.4M nodes, 14M edges)
     v
-Session 5: Phase 2.0  PubMed ETL code
+Session 5: Phase 2.0  PubMed ETL code                     DONE (2026-04-16)
     v
-Session 6: Phase 2.1  Taxonomy ETL code
+Session 6: Phase 2.1  Taxonomy ETL code                   DONE (2026-04-16)
     v
-Session 7: Phase 2.2  5-database merge code
+Session 7: Phase 2.2  5-database merge code               DONE (2026-04-16)
     v
---- GATE 2: run PubMed + Taxonomy locally ---
+--- GATE 2: run PubMed + Taxonomy + merge-etl locally --- NEXT
     |  pubmed-etl (overnight), taxonomy-etl
     |  kgx validate on each output
     v
@@ -484,23 +492,63 @@ Pass criteria (all passed):
 
 ## Phase 2: literature + taxonomy
 
-### Phase 2.0: PubMed ETL
+### Phase 2.0: PubMed ETL (DONE 2026-04-16)
 
-Branch: `phase/2.0-pubmed-etl`
-FTP: `ftp.ncbi.nlm.nih.gov/pubmed/baseline/` (~30GB compressed, 40M articles)
-Nodes: biolink:Article with MeSH edges (has_mesh_annotation)
-Linked to Gene via gene2pubmed (already downloaded in Phase 1.2)
+Branch: `phase/2.0-pubmed-etl` (merged, deleted)
 
-### Phase 2.1: Taxonomy ETL
+FTP: `ftp.ncbi.nlm.nih.gov/pubmed/baseline/` (1334 files, ~54GB compressed) + `updatefiles/` (81 files, current data through 2026-01-30)
 
-Branch: `phase/2.1-taxonomy-etl`
-FTP: `ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz` (~500MB)
-Nodes: biolink:OrganismTaxon with subclass_of edges (full lineage tree, 2.9M organisms)
+5 modules created: download, parse_pubmed_xml (lxml streaming), parse_mesh_nodes, pipeline (single-open-handle streaming for ~40M articles + ~300M MeSH edges), cli.
 
-### Phase 2.2: 5-database merge
+Pass criteria (all passed):
+- [x] 12 PubMed tests passing
+- [x] lxml.etree.iterparse with proper element + ancestor clearing
+- [x] One open() per file kind across whole loop (avoids 80M+ syscalls)
+- [x] include_updates default True
+- [x] BioLink: biolink:Article, biolink:OntologyClass, biolink:has_mesh_annotation
+
+Decision: serialize_value made public in kgx_exporter for cross-module use.
+
+### Phase 2.1: Taxonomy ETL (DONE 2026-04-16)
+
+Branch: `phase/2.1-taxonomy-etl` (merged, deleted)
+
+FTP: `ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz` (~70MB compressed, ~498MB extracted)
+
+5 modules created: download (with path traversal guard on tarball extraction), parse_nodes, parse_names, pipeline, cli.
+
+Format detail: NCBI taxdump uses `\t|\t` field delimiter and `\t|\n` row terminator (NOT standard tab).
+
+Pass criteria (all passed):
+- [x] 11 Taxonomy tests passing
+- [x] Tab-pipe-tab delimiter handled correctly
+- [x] Scientific name filter (name_class == "scientific name", with space)
+- [x] Root self-loop excluded (tax_id=1 doesn't subclass_of itself)
+- [x] BioLink: biolink:OrganismTaxon, biolink:subclass_of
+
+Decision: in-memory list approach (2.7M nodes is small enough, no streaming needed).
+
+### Phase 2.2: 5-database merge (DONE 2026-04-16)
 
 Branch: `phase/2.2-literature-taxonomy-merge`
-Merge PubMed + Taxonomy into existing Phase 1 graph. Validate gene2pubmed edges resolve. Validate in_taxon edges resolve.
+
+Deliverables (all complete):
+
+- `system-01-data-pipelines/merge/pipeline.py`: `run_five_database_merge` orchestrator (collect inputs, merge_kgx, inject_stubs, validate_merge, write merged TSVs, generate report)
+- `system-01-data-pipelines/merge/cli.py`: `merge-etl` command, registered in pyproject.toml
+- `shared/merger.py`: prefix map extended with MeSH (biolink:OntologyClass), ClinVar (biolink:SequenceVariant), UMLS (biolink:Disease) so stubs for dangling cross-pipeline refs get the correct category
+- `shared/merge_report.py`: connectivity metrics added for Gene->PMID, Gene->NCBITaxon, PMID->MeSH, NCBITaxon->NCBITaxon
+- `tests/merge/test_five_database_merge.py`: 11 integration tests covering the full 5-database fixture, gene2pubmed resolution, in_taxon resolution, MeSH edge resolution, partial-dataset stub injection, and missing-database graceful skip
+- `pyproject.toml`: `merge-etl`, `pubmed-etl`, `taxonomy-etl` scripts registered
+
+Pass criteria (all passed):
+
+- [x] 180 tests passing (146 Phase 1 + 23 Phase 2.0/2.1 + 11 merge)
+- [x] merge-etl runs against a 5-database fixture and produces merged nodes.tsv, edges.tsv, and merge_report.md
+- [x] Gene in_taxon edges resolve to NCBITaxon nodes (0 dangling)
+- [x] Gene mentioned_in edges resolve to PubMed Article nodes (0 dangling)
+- [x] PubMed has_mesh_annotation edges resolve to MeSH OntologyClass nodes (0 dangling)
+- [x] Omitting a database injects correctly-typed stubs rather than dropping edges
 
 ---
 
@@ -597,7 +645,7 @@ All tests use inline fixtures (no separate fixture files). Total: 146 tests, all
 7. Skill chain is fixed: best-practices -> architecture-patterns -> [dev with standards] -> qa-gate -> release-workflow -> ship.
 8. Sub-agents used for parallel builders. Simpler than full agent teams, sufficient for the task.
 9. Testing integrated at every phase via testing-standards + qa-gate + eval-harness.
-10. 146 tests across Phase 1 (5 schema + 82 shared + 10 gene + 16 clinvar + 18 medgen + 14 integration).
+10. 180 tests across Phase 1 and Phase 2 (5 schema + 82 shared + 10 gene + 16 clinvar + 18 medgen + 14 integration + 12 pubmed + 11 taxonomy + 11 five-database merge).
 11. Data validation gates between phase groups. Run pipelines on real data before building next group.
 12. KGX files are intermediates. Graph database is the end target. Delete KGX after AGE load.
 13. AGE loader (Phase 3) runs before dbSNP (Phase 5) to free local disk.
