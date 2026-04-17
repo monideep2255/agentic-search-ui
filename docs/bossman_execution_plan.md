@@ -25,9 +25,9 @@ graph TD
     end
 
     subgraph "Phase 2: literature + taxonomy [DONE]"
-        P20[2.0 PubMed ETL code DONE]
-        P21[2.1 Taxonomy ETL code DONE]
-        P22[2.2 Five-database merge code DONE]
+        P20[2.0 PubMed ETL code]
+        P21[2.1 Taxonomy ETL code]
+        P22[2.2 Five-database merge code]
         G1V --> P20 & P21
         P20 & P21 --> P22
     end
