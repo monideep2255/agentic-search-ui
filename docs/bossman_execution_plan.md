@@ -9,9 +9,9 @@ Created: 2026-04-13. Last updated: 2026-04-17 (Gate 2 complete: 115M nodes + 693
 ## Plan overview
 
 ```mermaid
-%%{init: {'flowchart': {'nodeSpacing': 60, 'rankSpacing': 100, 'padding': 20, 'useMaxWidth': false}, 'themeVariables': {'clusterBkg': '#f8f9fa', 'clusterBorder': '#6c757d'}}}%%
+%%{init: {'flowchart': {'nodeSpacing': 80, 'rankSpacing': 160, 'padding': 25, 'useMaxWidth': true, 'htmlLabels': true}}}%%
 graph TD
-    subgraph PHASE1 ["Phase 1: core triangle [DONE]"]
+    subgraph "Phase 1: core triangle [DONE]"
         P10[1.0 Schema + scaffolding]
         P11[1.1 Shared utilities]
         P12[1.2-1.4 Gene+ClinVar+MedGen ETL]
@@ -19,60 +19,55 @@ graph TD
         P10 --> P11 --> P12 --> P15
     end
 
-    subgraph GATE1 ["Gate 1: run locally [DONE]"]
+    subgraph "Gate 1: run locally [DONE]"
         G1R[Run medgen/gene/clinvar-etl]
         G1V[KGX BioLink validation]
-        G1R --> G1V
+        P15 --> G1R --> G1V
     end
-    P15 ==> G1R
 
-    subgraph PHASE2 ["Phase 2: literature + taxonomy [DONE]"]
+    subgraph "Phase 2: literature + taxonomy [DONE]"
         P20[2.0 PubMed ETL code]
         P21[2.1 Taxonomy ETL code]
         P22[2.2 Five-database merge code]
+        G1V --> P20 & P21
         P20 & P21 --> P22
     end
-    G1V ==> P20
-    G1V ==> P21
 
-    subgraph GATE2 ["Gate 2: run locally [DONE]"]
+    subgraph "Gate 2: run locally [DONE]"
         G2R[Run pubmed/taxonomy/gene-etl + merge-etl]
         G2V[KGX BioLink validation]
-        G2R --> G2V
+        P22 --> G2R --> G2V
     end
-    P22 ==> G2R
 
-    subgraph PHASE3 ["Phase 3: AGE loader code [NEXT]"]
+    subgraph "Phase 3: AGE loader code [NEXT]"
         P30[3.0 AGE loader + fixture smoke test]
+        G2V --> P30
     end
-    G2V ==> P30
 
-    subgraph PHASE4 ["Phase 4: cloud provision + load"]
+    subgraph "Phase 4: cloud provision + load"
         P40[4.0 Provision Hetzner VPS]
         P40R[rsync KGX to VPS]
         P40L[Load 5 databases into AGE on cloud]
         P40Q[Cypher query validation on cloud]
-        P40 --> P40R --> P40L --> P40Q
+        P30 --> P40 --> P40R --> P40L --> P40Q
     end
-    P30 ==> P40
 
-    subgraph GATE3 ["Gate 3: cloud graph validated"]
+    subgraph "Gate 3: cloud graph validated"
         G3D[Delete local KGX files]
+        P40Q --> G3D
     end
-    P40Q ==> G3D
 
-    subgraph PHASE5 ["Phase 5: dbSNP on cloud"]
+    subgraph "Phase 5: dbSNP on cloud"
         P50[5.0 SNP ETL code]
         P51[5.1 Run SNP pipeline on cloud]
         P52[5.2 SNP-ClinVar merge on cloud]
-        P50 --> P51 --> P52
+        G3D --> P50 --> P51 --> P52
     end
-    G3D ==> P50
 
-    subgraph GATE4 ["Gate 4: complete"]
+    subgraph "Gate 4: complete"
         G4V[Full 6-db graph validation]
+        P52 --> G4V
     end
-    P52 ==> G4V
 
     style P10 fill:#2d6a2d,color:#fff
     style P11 fill:#2d6a2d,color:#fff
