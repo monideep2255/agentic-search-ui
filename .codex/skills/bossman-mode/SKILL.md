@@ -1,6 +1,6 @@
 ---
 name: bossman-mode
-description: Full autonomous execution mode for building products. Activates after architecture/plan is agreed. Codex executes phases independently, stops only at phase boundaries or blockers. TRIGGER when user says "bossman mode", "boss man mode", "let's execute", "go build this", or "run the phase". DO NOT TRIGGER during architecture/planning discussions.
+description: Full autonomous execution mode for building products. Activates after architecture/plan is agreed. Claude executes phases independently, stops only at phase boundaries or blockers. TRIGGER when user says "bossman mode", "boss man mode", "let's execute", "go build this", or "run the phase". DO NOT TRIGGER during architecture/planning discussions.
 argument-hint: "[--phase N] [--status] [--stop]"
 ---
 
@@ -111,11 +111,11 @@ Decision rule: if the phase has 2+ independent builder tasks, use agent teams. I
 
 ### Agent teams setup
 
-Requires `CODEX_AGENT_TEAMS=1` in `.codex/settings.json` (already configured).
+Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `.claude/settings.json` (already configured).
 
 Display: tmux split panes. Each teammate gets its own pane. The orchestrator (lead) stays in the main pane and monitors progress via the shared task list.
 
-To create a team, the orchestrator asks Codex CLI to spawn teammates:
+To create a team, the orchestrator asks Claude Code to spawn teammates:
 
 ```
 Create an agent team for Phase [N]:
@@ -192,7 +192,7 @@ Skills active during development (enforced by builders):
 
 Skills active at phase start:
 
-- `best-practices`: session checklist (venv, postgres, AGENTS.md, git status)
+- `best-practices`: session checklist (venv, postgres, CLAUDE.md, git status)
 - `architecture-patterns`: read before designing new modules
 
 ### Agent prompt template
@@ -229,7 +229,7 @@ Orchestrator rule: when a sub-agent returns or a teammate marks a task complete,
 
 ### Reference repos
 
-Read the reference repo's AGENTS.md before dispatching agents to explore it.
+Read the reference repo's CLAUDE.md before dispatching agents to explore it.
 
 | Repo | Symlink path | What it is |
 |------|-------------|------------|
@@ -242,7 +242,7 @@ Read the reference repo's AGENTS.md before dispatching agents to explore it.
 
 ### Step 1: session start + branch creation
 
-1. Run `best-practices` session checklist (venv, postgres, AGENTS.md, git status)
+1. Run `best-practices` session checklist (venv, postgres, CLAUDE.md, git status)
 2. Read `architecture-patterns` skill for the module type being built
 3. Read the phase definition from `docs/bossman_execution_plan.md`
 4. Create the phase branch: `git checkout main && git pull origin main && git checkout -b phase/N.M-description`
@@ -427,4 +427,4 @@ Blockers: [none or list]
 
 ## Design inspiration
 
-Architecture inspired by Cursor's [Scaling long-running autonomous coding](https://cursor.com/blog/scaling-agents) post: strict planner/worker separation, single judge over multiple QA roles, workers that don't coordinate with each other, recursive sub-planning, and the principle that simpler systems outperform complex ones. Adapted for Codex CLI's agent teams (experimental) with tmux split-pane display, sub-agents for single-task roles, and a fixed skill chain (qa-gate -> release-workflow -> ship) at phase boundaries.
+Architecture inspired by Cursor's [Scaling long-running autonomous coding](https://cursor.com/blog/scaling-agents) post: strict planner/worker separation, single judge over multiple QA roles, workers that don't coordinate with each other, recursive sub-planning, and the principle that simpler systems outperform complex ones. Adapted for Claude Code's agent teams (experimental) with tmux split-pane display, sub-agents for single-task roles, and a fixed skill chain (qa-gate -> release-workflow -> ship) at phase boundaries.

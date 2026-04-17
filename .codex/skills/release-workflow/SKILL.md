@@ -31,11 +31,11 @@ If you cannot run a small slice locally without errors, you have not finished th
 
 ## Step 2: QA gate
 
-Invoke `.codex/skills/qa-gate/SKILL.md` end to end. All six phases. Stop at the first failure.
+Invoke `.claude/skills/qa-gate/SKILL.md` end to end. All six phases. Stop at the first failure.
 
 ## Step 3: ship
 
-Invoke `.codex/skills/ship/SKILL.md`:
+Invoke `.claude/skills/ship/SKILL.md`:
 
 1. Run `docs-sync` if any docstring, schema, or pipeline shape changed.
 2. `git add` only the files you intend to ship (no `git add -A`).
@@ -57,4 +57,4 @@ After the commit:
 - Does not tag releases. There are no semver releases in this repo.
 - Does not bump versions. There is no published package.
 - Does not run a smoke deploy. There is nothing deployed.
-- Does not chain into a "phase complete" workflow. Phase tracking lives in `AGENTS.md` and is updated by hand.
+- Does not chain into a "phase complete" workflow. Phase tracking lives in `CLAUDE.md` and is updated by hand.

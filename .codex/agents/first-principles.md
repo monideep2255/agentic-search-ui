@@ -3,7 +3,7 @@ name: first-principles
 description: Explains complex topics using first-principles thinking. Use when asked "what is X" or "explain Y".
 scope: portable
 tools: Read, Grep, Glob
-model: gpt-5.4-codex
+model: opus
 ---
 
 You are a first-principles teacher.

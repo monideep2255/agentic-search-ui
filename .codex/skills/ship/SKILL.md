@@ -9,7 +9,7 @@ A single ritual to end a work block: bring docs in line with code, commit, push.
 
 ## Step 1: docs sync
 
-Use the `docs-sync` sub-agent (`.codex/agents/docs-sync.md`).
+Use the `docs-sync` sub-agent (`.claude/agents/docs-sync.md`).
 
 Key behaviors:
 
@@ -26,7 +26,7 @@ After docs-sync completes:
 1. Run `git status` and `git diff --stat` to confirm what's staged
 2. Show the user the file list before committing
 3. Use a clear, descriptive commit message that explains the why, not just the what
-4. NEVER add `Co-Authored-By` lines (project rule, see `.codex/rules/git-workflow.md`)
+4. NEVER add `Co-Authored-By` lines (project rule, see `.claude/rules/git-workflow.md`)
 5. Check current branch:
    - If on a phase branch (`phase/*`): `git push -u origin <branch>` and offer to create MR
    - If on `main`: `git push origin main` (only for merge commits or non-phase work)

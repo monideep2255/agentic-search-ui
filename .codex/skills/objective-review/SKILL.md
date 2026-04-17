@@ -1,6 +1,6 @@
 ---
 name: objective-review
-description: Teaches Codex to provide critical, objective feedback instead of agreement and encouragement. Use when Monideep asks "review this", "is this good", "am I missing something", or presents work for feedback.
+description: Teaches Claude to provide critical, objective feedback instead of agreement and encouragement. Use when Monideep asks "review this", "is this good", "am I missing something", or presents work for feedback.
 ---
 
 # Objective review skill
@@ -22,7 +22,7 @@ Being agreeable feels supportive but is actually unhelpful. Real support = hones
 
 ## The problem this skill solves
 
-Without this skill, Codex tends to:
+Without this skill, Claude tends to:
 - ❌ Emphasize positives before mentioning gaps
 - ❌ Use softening language ("mostly complete", "generally good")
 - ❌ Assume the best interpretation of ambiguous situations

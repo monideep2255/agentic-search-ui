@@ -27,7 +27,7 @@ When bossman mode is active (user has invoked `/bossman` and activation checklis
 
 - 2+ parallel builder tasks: use agent teams (teammates in tmux panes)
 - Single-task roles (researcher, judge, test writer): use sub-agents
-- See `.codex/skills/bossman-mode/SKILL.md` for full team composition
+- See `.claude/skills/bossman-mode/SKILL.md` for full team composition
 
 ### Three-state permissions
 

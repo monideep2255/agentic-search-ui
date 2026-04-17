@@ -3,7 +3,7 @@
 
 Usage:
     python verify_adaptation.py <path-to-file>
-    python verify_adaptation.py --recent      # all modified .codex/ files per git
+    python verify_adaptation.py --recent      # all modified .claude/ files per git
 
 Exit codes:
     0 = clean, ready to commit
@@ -181,7 +181,7 @@ def check_headings(text: str, report: Report) -> None:
         allowed = {
             "BioLink", "LinkML", "KGX", "ETL", "KG", "AGE", "PostgreSQL",
             "NCBI", "API", "APIs", "LLM", "AI", "ML", "RAG", "MCP", "SQL",
-            "Codex", "Python", "Gene", "ClinVar", "MedGen", "PubMed", "SNP",
+            "Claude", "Python", "Gene", "ClinVar", "MedGen", "PubMed", "SNP",
             "Taxonomy", "FastAPI", "LangGraph", "Neo4j", "MONDO",
         }
         cap_non_first = sum(
@@ -199,12 +199,12 @@ def check_headings(text: str, report: Report) -> None:
 
 
 def check_pointers(text: str, target: Path, report: Report) -> None:
-    """Flag references to .codex/agents/<x> or .codex/skills/<x> that do not exist."""
-    codex_dir = REPO_ROOT / ".codex"
-    if not codex_dir.exists():
+    """Flag references to .claude/agents/<x> or .claude/skills/<x> that do not exist."""
+    claude_dir = REPO_ROOT / ".claude"
+    if not claude_dir.exists():
         return
-    existing_agents = {p.stem for p in (codex_dir / "agents").glob("*.md")}
-    existing_skills = {p.name for p in (codex_dir / "skills").iterdir() if p.is_dir()}
+    existing_agents = {p.stem for p in (claude_dir / "agents").glob("*.md")}
+    existing_skills = {p.name for p in (claude_dir / "skills").iterdir() if p.is_dir()}
 
     # look for backtick-wrapped slash-commands and table-row agent/skill names
     slash_cmds = re.finditer(r"`/([a-z][a-z0-9-]*)`", text)
@@ -220,7 +220,7 @@ def check_pointers(text: str, target: Path, report: Report) -> None:
             "broken-pointer",
             line_no,
             m.group(0),
-            f"No skill named '{name}' in .codex/skills/",
+            f"No skill named '{name}' in .claude/skills/",
         )
 
     # look for agent table rows like `| agent-name |` (rough heuristic)
@@ -269,7 +269,7 @@ def recent_targets() -> list[Path]:
         return []
     paths: list[Path] = []
     for line in out.splitlines():
-        if line.startswith(".codex/") and line.endswith(".md"):
+        if line.startswith(".claude/") and line.endswith(".md"):
             p = REPO_ROOT / line
             if p.exists():
                 paths.append(p)
@@ -301,7 +301,7 @@ def main(argv: list[str]) -> int:
     if argv[1] == "--recent":
         targets = recent_targets()
         if not targets:
-            print("No modified .codex/ files to check.")
+            print("No modified .claude/ files to check.")
             return 0
     else:
         targets = [Path(argv[1]).resolve()]

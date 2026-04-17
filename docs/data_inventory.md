@@ -2,6 +2,17 @@
 
 Tracks all data downloaded from NCBI FTP, with source URLs, file sizes, row counts, and attributes. Updated each time a pipeline runs on real data.
 
+## Table of contents
+
+- [Storage location](#storage-location)
+- [Taxonomy (downloaded 2026-04-16, Gate 2)](#taxonomy-downloaded-2026-04-16-gate-2)
+- [PubMed (downloaded + parsed 2026-04-16 to 2026-04-17, Gate 2)](#pubmed-downloaded--parsed-2026-04-16-to-2026-04-17-gate-2)
+- [Gene (re-exported 2026-04-17, Gate 2 streaming refactor)](#gene-re-exported-2026-04-17-gate-2-streaming-refactor)
+- [5-database merged KGX (generated 2026-04-17, Gate 2)](#5-database-merged-kgx-generated-2026-04-17-gate-2)
+- [MedGen (downloaded 2026-04-14, Gate 1)](#medgen-downloaded-2026-04-14-gate-1)
+- [Gene (downloaded 2026-04-14, Gate 1, all organisms)](#gene-downloaded-2026-04-14-gate-1-all-organisms)
+- [ClinVar (downloaded 2026-04-14, Gate 1)](#clinvar-downloaded-2026-04-14-gate-1)
+
 ## Storage location
 
 All current local data is stored under the repo-local `data/` directory on the Windows laptop C: drive:

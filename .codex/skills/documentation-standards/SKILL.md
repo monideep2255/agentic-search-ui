@@ -51,7 +51,7 @@ Class docstrings include `Attributes:`. Module docstrings include a one-paragrap
 
 ## File naming
 
-Markdown files in `docs/` follow `.codex/rules/file-naming.md`:
+Markdown files in `docs/` follow `.claude/rules/file-naming.md`:
 
 | Type | Format | Example |
 |---|---|---|
@@ -72,7 +72,7 @@ Reference pipeline at `reference-repos/ncbi_ai_agents/KG/pipeline/src/glucose_me
 File-and-line refs use the format `path/file.py:42`.
 ```
 
-In code-aware contexts (AGENTS.md, SETUP.md), use the markdown link format `[file.py:42](path/file.py#L42)` so the IDE renders it clickable.
+In code-aware contexts (CLAUDE.md, SETUP.md), use the markdown link format `[file.py:42](path/file.py#L42)` so the IDE renders it clickable.
 
 ## What every README should have
 

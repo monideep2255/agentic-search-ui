@@ -13,6 +13,6 @@ alwaysApply: true
 ## Before major interactions
 
 Always read these skills first:
-- `.codex/skills/first-principles/SKILL.md`
-- `.codex/skills/socratic-questioning/SKILL.md`
-- `.codex/skills/objective-review/SKILL.md` -- for review/feedback tasks
+- `.claude/skills/first-principles/SKILL.md`
+- `.claude/skills/socratic-questioning/SKILL.md`
+- `.claude/skills/objective-review/SKILL.md` -- for review/feedback tasks

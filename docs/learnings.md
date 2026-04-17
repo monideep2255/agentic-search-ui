@@ -2,6 +2,14 @@
 
 Problems encountered and solutions implemented during development. Each entry captures what went wrong, why, and how it was fixed so the same mistake is not repeated.
 
+## Table of contents
+
+- [Gate 2: Taxonomy + PubMed + 5-db merge on Windows laptop (2026-04-16)](#gate-2-taxonomy--pubmed--5-db-merge-on-windows-laptop-2026-04-16)
+- [Gate 1: MedGen pipeline on real data (2026-04-14)](#gate-1-medgen-pipeline-on-real-data-2026-04-14)
+- [Gate 1: Gene pipeline on real data (2026-04-14)](#gate-1-gene-pipeline-on-real-data-2026-04-14)
+- [Gate 1: ClinVar pipeline on real data (2026-04-14)](#gate-1-clinvar-pipeline-on-real-data-2026-04-14)
+- [Architecture discussions (2026-04-14)](#architecture-discussions-2026-04-14)
+
 ## Gate 2: Taxonomy + PubMed + 5-db merge on Windows laptop (2026-04-16)
 
 ### Observation: taxonomy-etl finished in 77 seconds, not 10 minutes

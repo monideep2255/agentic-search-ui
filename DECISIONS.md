@@ -1,6 +1,16 @@
 # Decisions
 
-Architecture and implementation decisions made during this project.
+Architecture and implementation decisions made during this project. Append-only table, most recent at the bottom. Use Ctrl-F on the date column to jump to a range.
+
+## Index by date
+
+- 2026-04-06: initial architecture (storage, scope, schema, licence, CURIE conventions) - rows 1-13
+- 2026-04-13: Phase 1-2 scope expansion (full PubMed, full dbSNP, Taxonomy, data principle, branch workflow) - rows 14-21
+- 2026-04-14: Phase 1 refinements + merge decisions (ClinVar tabular, combined branch, MONDO promotion, KGX intermediates, dbSNP ordering, Gene edge streaming) - rows 22-28
+- 2026-04-16: Windows laptop migration + BioLink 4.x fix + parallel pubmed + merge orchestrator + packaging fix - rows 29-36
+- 2026-04-17: Gate 2 mid-gate streaming refactors (merger, gene) + post-merge per-db KGX deletion - rows 37-39
+
+## Table
 
 | Date | Decision | Alternatives considered | Why |
 |------|----------|------------------------|-----|

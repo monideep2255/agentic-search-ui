@@ -26,7 +26,7 @@ For this repo, "external" means anything in `reference-repos/`. The reference sy
 Read in this order:
 
 1. The repo's own `README.md`
-2. The repo's own `AGENTS.md` (if present)
+2. The repo's own `CLAUDE.md` (if present)
 3. Top-level folder structure (one-level `ls`)
 4. `pyproject.toml` or `package.json` (versions, dependencies)
 5. The entry-point file (`__main__.py`, `cli.py`, `pipeline.py`)
@@ -66,7 +66,7 @@ Anything where the reference made a decision we should explicitly accept or over
 
 ### Step 4: do not vendor files
 
-The reference symlinks are documentation. Never copy a file from `reference-repos/` into `system-01-data-pipelines/` or `system-02-knowledge-graph/`. Always rewrite from first principles, informed by the reference. This is a project-level rule (see AGENTS.md "Canonical reference pipeline" section and the user's stated preference).
+The reference symlinks are documentation. Never copy a file from `reference-repos/` into `system-01-data-pipelines/` or `system-02-knowledge-graph/`. Always rewrite from first principles, informed by the reference. This is a project-level rule (see CLAUDE.md "Canonical reference pipeline" section and the user's stated preference).
 
 ## Style rules
 

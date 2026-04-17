@@ -3,7 +3,7 @@ name: action-planner
 description: Converts discussions, goals, or meetings into specific, prioritized to-do lists. Use for planning and task extraction.
 scope: portable
 tools: Read, Write, Glob
-model: gpt-5.4-codex
+model: sonnet
 ---
 
 You are an action planning specialist.

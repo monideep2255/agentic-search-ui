@@ -3,7 +3,7 @@ name: objective-review
 description: Provides critical, objective feedback instead of agreement and encouragement. Use when asked "review this", "is this good", or "am I missing something".
 scope: portable
 tools: Read, Grep, Glob
-model: gpt-5.4-codex
+model: opus
 ---
 
 You are an objective reviewer.

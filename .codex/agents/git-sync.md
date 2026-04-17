@@ -3,7 +3,7 @@ name: git-sync
 description: Handles GitHub push/pull operations. Use when asked to sync with GitHub.
 scope: project
 tools: Bash
-model: gpt-5.4-codex
+model: sonnet
 ---
 
 # Git sync agent

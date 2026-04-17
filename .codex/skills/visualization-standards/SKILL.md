@@ -18,7 +18,7 @@ Adapted from the reference NCBI KG `visualization-standards` skill. Stripped: 8-
 
 ## Mermaid hygiene
 
-Apply `.codex/rules/writing-style.md` to diagram labels:
+Apply `.claude/rules/writing-style.md` to diagram labels:
 
 - Sentence case in node labels. Capitalize only proper nouns and acronyms.
 - No emoji in node labels. The reference repo used emoji extensively; this repo does not.
@@ -101,7 +101,7 @@ erDiagram
 
 ### 4. System boundary diagram
 
-Purpose: show the System 1 / System 2 / System 3 split. Used in `AGENTS.md` and onboarding docs.
+Purpose: show the System 1 / System 2 / System 3 split. Used in `CLAUDE.md` and onboarding docs.
 
 Rules:
 - System 3 must be drawn as a dashed-border node labeled "separate repo".
@@ -112,13 +112,13 @@ Rules:
 - No emoji. Anywhere.
 - No bold inside labels.
 - No timing estimates. This repo is offline ETL; per-step latency is not a user-facing concept.
-- No "🟢 ⏳ ❌" status indicators inside diagrams. Status belongs in `AGENTS.md` tables.
+- No "🟢 ⏳ ❌" status indicators inside diagrams. Status belongs in `CLAUDE.md` tables.
 - No layer color palette lifted from the reference repo. The reference repo's 8-layer color scheme is for query-time pipelines; this repo has none.
 - No diagrams that mention Neo4j Browser, Cytoscape, React Flow, or any UI library.
 
 ## Schema tables
 
-Schema tables in markdown docs follow `.codex/skills/documentation-standards/SKILL.md`:
+Schema tables in markdown docs follow `.claude/skills/documentation-standards/SKILL.md`:
 
 - Sentence case headers.
 - One row per node category or per predicate.

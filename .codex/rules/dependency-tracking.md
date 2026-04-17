@@ -1,8 +1,8 @@
 ## Dependency tracking
 
-Every component file in `.codex/` (skill, agent, rule, hook) and every Python module under `system-01-data-pipelines/` and `system-02-knowledge-graph/` should make its dependencies explicit. This prevents silent breakage when files move or get deleted.
+Every component file in `.claude/` (skill, agent, rule, hook) and every Python module under `system-01-data-pipelines/` and `system-02-knowledge-graph/` should make its dependencies explicit. This prevents silent breakage when files move or get deleted.
 
-### For .codex/ components
+### For .claude/ components
 
 Components with YAML frontmatter (skills, agents, rules) declare:
 
@@ -16,7 +16,7 @@ description: ...
 What counts:
 
 - `depends_on`: other skills/agents/rules this component reads or invokes, config files it consumes
-- `depended_by`: index files (AGENTS.md, README.md) that list it, other components that reference it
+- `depended_by`: index files (CLAUDE.md, README.md) that list it, other components that reference it
 
 ### For Python modules
 
