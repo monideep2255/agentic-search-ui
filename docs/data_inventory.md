@@ -230,7 +230,7 @@ Original Gate 1 KGX (dated 2026-04-14) was overwritten by the streaming re-expor
 | Cross-pipeline connectivity | 99.99 % - 100 % for all 4 key paths |
 | Dangling edges after stubs | 0 (by construction) |
 | validation.passed | `False` (noise — stubs carry empty source_url, count as missing provenance; intentional, matches inject_stubs behavior) |
-| Awk 7-column check on merged/edges.tsv | (pending, running on 97.8 GB; expected all NF=8, 0 empty) |
+| Awk 7-column check on merged/edges.tsv | PASS - all 693,295,991 edges NF=8, 0 empty knowledge_level, 0 empty agent_type |
 
 ### Wall-clock time
 
