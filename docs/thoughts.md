@@ -10,4 +10,4 @@
 7. double check that all data meaning all is downloaded
 8. EMPTY SPACE BEFORE DBSNP?
 9. Want 1 week: build V1 of all the 3 systems. User research is critical (step 1 validation). Then try looking for ways to optimize etl pipelines (NCBI experts) + optimize search experience (what questions) + seed golden datasets -> Feedback loop development
-10. Architecture diagram must include (1) the code logic and why (2) overall high level schema (3) system 2 schema
+10. Architecture diagram must include (1) the code logic and why (2) overall high level schema (3) system 2 schema (3) rules (4) step by step process of cleaning (ETL) (4) How the ontology mapping was done

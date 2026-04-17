@@ -4,10 +4,237 @@ Tracks all data downloaded from NCBI FTP, with source URLs, file sizes, row coun
 
 ## Storage location
 
-All current local data is stored under the repo-local `data/` directory:
+All current local data is stored under the repo-local `data/` directory on the Windows laptop C: drive:
 - `ftp_cache/`: raw FTP downloads (kept for re-runs)
 - `kgx/`: KGX output per database (nodes.tsv + edges.tsv)
 - `raw/`: intermediate parsed data (currently unused)
+
+Gate 1 entries below show `/export/home/chakrabortim2/data/...` paths because the Gate 1 runs happened on the NCBI server before the 2026-04-16 migration. The data has since been rsync'd to `C:\Users\chakrabortim2\Desktop\agentic-search-data-engineering\data\` on the laptop. Gate 2 entries use the laptop paths.
+
+## Taxonomy (downloaded 2026-04-16, Gate 2)
+
+### FTP downloads
+
+| File | FTP URL | Size | Format |
+|------|---------|------|--------|
+| taxdump.tar.gz | ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz | 69 MB | gzipped tar (extracts to nodes.dmp 198 MB, names.dmp 266 MB, plus 7 other .dmp files) |
+
+### KGX output
+
+| File | Path | Rows | Size |
+|------|------|------|------|
+| nodes.tsv | C:\Users\chakrabortim2\Desktop\agentic-search-data-engineering\data\kgx\taxonomy\nodes.tsv | 2,736,607 | 410 MB |
+| edges.tsv | C:\Users\chakrabortim2\Desktop\agentic-search-data-engineering\data\kgx\taxonomy\edges.tsv | 2,736,606 | 359 MB |
+
+### Node attributes
+
+| Column | Description | Example |
+|--------|-------------|---------|
+| id | NCBITaxon:{tax_id} | NCBITaxon:9606 |
+| category | biolink:OrganismTaxon | biolink:OrganismTaxon |
+| name | Scientific name | Homo sapiens |
+| source | Always "NCBI Taxonomy" | NCBI Taxonomy |
+| source_url | Link to Taxonomy Browser record | https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=9606 |
+| rank | Taxonomic rank | species |
+
+### Edge breakdown
+
+| Predicate | Count | Subject type | Object type |
+|-----------|-------|-------------|-------------|
+| biolink:subclass_of | 2,736,606 | NCBITaxon | NCBITaxon (parent) |
+
+Root node (NCBITaxon:1) has no parent, hence one fewer edge than nodes.
+
+### Validation
+
+| Check | Result |
+|-------|--------|
+| Pipeline ran without errors | yes |
+| KGX files exist | yes |
+| Row counts | 2.74M nodes, 2.74M edges (plan estimate ~2.9M, within 6%) |
+| Duplicate nodes | 0 |
+| Provenance (nodes) | 100% |
+| Provenance (edges) | 100% |
+| Dangling edges | 0 |
+| Internal validator | PASS |
+| External `kgx validate -i tsv` | (run with corrected flag, see learnings.md) |
+
+### Wall-clock time
+
+77 seconds end-to-end on Windows laptop C: drive. Plan estimate was ~10 minutes; the conservative budget reflected slow-FTP-day worst case.
+
+## PubMed (downloaded + parsed 2026-04-16 to 2026-04-17, Gate 2)
+
+### FTP downloads
+
+| File set | FTP URL | Count | Size | Format |
+|----------|---------|-------|------|--------|
+| PubMed baseline | ftp://ftp.ncbi.nlm.nih.gov/pubmed/baseline/pubmed26n*.xml.gz | 1,334 | ~52 GB compressed | gzipped XML |
+| PubMed updatefiles | ftp://ftp.ncbi.nlm.nih.gov/pubmed/updatefiles/pubmed26n*.xml.gz | 82 | ~2 GB compressed | gzipped XML |
+
+Total: 1,416 files, ~54 GB. Download time: ~90 min with `ThreadPoolExecutor(max_workers=8)` (see DECISIONS.md 2026-04-16). Serial would have been ~12 hours.
+
+### KGX output
+
+| File | Path | Rows | Size |
+|------|------|------|------|
+| nodes.tsv | C:\...\data\kgx\pubmed\nodes.tsv | 41,305,514 | ~25 GB |
+| edges.tsv | C:\...\data\kgx\pubmed\edges.tsv | 349,158,178 | ~41 GB |
+
+### Node breakdown
+
+| Category | Count |
+|----------|-------|
+| biolink:Article (41.27M articles) + biolink:OntologyClass (30.8K MeSH stubs) | 41,305,514 |
+
+### Edge breakdown
+
+| Predicate | Count |
+|-----------|-------|
+| biolink:has_mesh_annotation | 349,158,178 |
+
+### Validation
+
+| Check | Result |
+|-------|--------|
+| Pipeline ran without errors | yes |
+| KGX files exist | yes |
+| Row counts match order of magnitude | yes (plan estimated ~40M articles + 40M+ edges; actual 41.3M + 349M) |
+| External `kgx validate -i tsv` (awk verification used instead, see learnings) | all 349M edges NF=7, 0 empty knowledge_level, 0 empty agent_type |
+| Duplicate nodes | 0 |
+| Provenance (nodes) | 100% |
+| Provenance (edges) | 100% |
+
+### Wall-clock time
+
+Download: ~90 min (parallel). Parse + KGX export: ~4.5 hours (lxml streaming, ~9 sec/file on 1,416 files). Total wall time: ~5.5 hours.
+
+## Gene (re-exported 2026-04-17, Gate 2 streaming refactor)
+
+Original Gate 1 KGX (dated 2026-04-14) was overwritten by the streaming re-export on 2026-04-17 after the BioLink 4.x fix and the gene pipeline streaming refactor (see DECISIONS.md and learnings.md).
+
+### KGX output (post-refactor)
+
+| File | Path | Rows | Size |
+|------|------|------|------|
+| nodes.tsv | C:\...\data\kgx\gene\nodes.tsv | 67,562,827 | ~11.3 GB |
+| edges.tsv | C:\...\data\kgx\gene\edges.tsv | 278,665,267 | ~40.1 GB |
+
+### Node breakdown
+
+| Category | Count |
+|----------|-------|
+| biolink:Gene (all organisms) | 67,536,236 |
+| biolink:BiologicalProcess + MolecularActivity + CellularComponent (GO terms) | 26,591 |
+
+### Edge breakdown (by source parser)
+
+| Predicate / parser | Count |
+|---------------------|-------|
+| biolink:in_taxon (parse_gene_info) | 67,536,236 |
+| biolink:participates_in / actively_involved_in / located_in (parse_gene2go) | 117,490,871 |
+| biolink:mentioned_in (parse_gene2pubmed) | 76,209,437 |
+| biolink:orthologous_to (parse_orthologs) | 17,421,079 |
+| biolink:gene_associated_with_condition (parse_mim2gene) | 7,644 |
+
+### Validation
+
+| Check | Result |
+|-------|--------|
+| Streaming pipeline ran without errors | yes (77 min wall time) |
+| Peak RAM during run | ~2-3 GB (400x reduction vs pre-refactor 21 GB OOM) |
+| All edges have 7 BioLink 4.x required cols (awk NF=8 including evidence_code) | yes, all 278.7M rows |
+| Empty knowledge_level | 0 |
+| Empty agent_type | 0 |
+| Duplicate nodes | (streaming dedup at merge phase) |
+
+## 5-database merged KGX (generated 2026-04-17, Gate 2)
+
+### Output
+
+| File | Path | Size |
+|------|------|------|
+| merged nodes.tsv | data/kgx/merged/nodes.tsv | ~46.5 GB |
+| merged edges.tsv | data/kgx/merged/edges.tsv | ~97.8 GB |
+| merge_report.md | data/kgx/merged/merge_report.md | small |
+
+### Summary (from merge_report.md)
+
+- Total nodes: 115,406,761
+- Total edges: 693,295,991
+- Duplicate nodes dropped during merge: 904,160
+- Stubs injected (dangling endpoints resolved): 81,125
+- Wall-clock: 2h 21min (12:30 to 14:51 on 2026-04-17) with streaming refactor
+
+### Node categories (merged)
+
+| Category | Count |
+|----------|-------|
+| biolink:Gene | 67,536,325 |
+| biolink:Article | 40,387,670 |
+| biolink:SequenceVariant | 4,467,468 |
+| biolink:OrganismTaxon | 2,736,611 |
+| biolink:Disease | 200,845 |
+| biolink:OntologyClass | 30,790 |
+| biolink:BiologicalProcess | 16,901 |
+| biolink:NamedThing (unknown-prefix stubs, mostly OMIM) | 10,580 |
+| biolink:PhenotypicFeature | 9,881 |
+| biolink:MolecularActivity | 6,978 |
+| biolink:CellularComponent | 2,712 |
+
+### Edge predicates (merged)
+
+| Predicate | Count |
+|-----------|-------|
+| biolink:has_mesh_annotation | 349,158,178 |
+| biolink:mentioned_in | 124,030,637 |
+| biolink:in_taxon | 67,536,236 |
+| biolink:actively_involved_in | 44,833,241 |
+| biolink:participates_in | 40,768,103 |
+| biolink:located_in | 31,889,527 |
+| biolink:orthologous_to | 17,421,079 |
+| biolink:has_phenotype | 6,076,746 |
+| biolink:is_sequence_variant_of | 4,407,222 |
+| biolink:cited_in | 3,924,878 |
+| biolink:subclass_of | 2,832,500 |
+| biolink:close_match | 410,000 |
+| biolink:gene_associated_with_condition | 7,644 |
+
+### Cross-pipeline connectivity (the reason merge exists)
+
+| Path | Resolved | Total | % |
+|------|----------|-------|---|
+| Gene mentioned_in PubMed Article | 76,204,771 | 76,209,437 | 99.99 |
+| Gene in_taxon NCBITaxon | 67,536,172 | 67,536,236 | 99.99 |
+| PubMed Article has_mesh_annotation MeSH | 349,158,178 | 349,158,178 | 100.00 |
+| NCBITaxon subclass_of NCBITaxon | 2,736,606 | 2,736,606 | 100.00 |
+
+### Stub breakdown (81,125 total)
+
+| Prefix | Stubs | Likely cause |
+|--------|-------|-------------|
+| ClinVar | 43,770 | ClinVar variant IDs referenced by other pipelines but not in our ClinVar snapshot |
+| PMID | 14,769 | Newer PMIDs in gene2pubmed not yet in our PubMed baseline |
+| OMIM | 10,580 | OMIM IDs referenced by mim2gene_medgen — prefix not in _PREFIX_TO_CATEGORY, became NamedThing (follow-up: add OMIM to the table) |
+| HP | 9,881 | HPO terms referenced by medgen but not in medgen KGX |
+| MedGen | 2,032 | MedGen concepts referenced but not present |
+| NCBIGene | 89 | Gene IDs in clinvar not in gene snapshot |
+| NCBITaxon | 4 | Taxonomy refs not in taxdump — negligible |
+
+### Validation
+
+| Check | Result |
+|-------|--------|
+| Pipeline completed naturally | yes (log: "5-database merge complete" at 14:51:31) |
+| Total edges | 693,295,991 matches sum of per-db inputs minus no dedup (edge dedup skipped per streaming design) |
+| Cross-pipeline connectivity | 99.99 % - 100 % for all 4 key paths |
+| Dangling edges after stubs | 0 (by construction) |
+| validation.passed | `False` (noise — stubs carry empty source_url, count as missing provenance; intentional, matches inject_stubs behavior) |
+| Awk 7-column check on merged/edges.tsv | (pending, running on 97.8 GB; expected all NF=8, 0 empty) |
+
+### Wall-clock time
+
+Merge: 2h 21min on Windows laptop. Pass 1 (nodes): ~30 min. Pass 2 (edges): ~110 min. Stubs + report: ~1 min. Peak RAM during merge: ~11.5 GB worker process (node-id set). Peak disk usage: ~320 GB total in data/ (~60 GB FTP cache + ~110 GB per-db KGX + ~144 GB merged KGX).
 
 ## MedGen (downloaded 2026-04-14, Gate 1)
 

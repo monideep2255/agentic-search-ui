@@ -83,69 +83,51 @@ def _parse_dbxrefs(dbxrefs_str: str) -> dict:
     return result
 
 
-def parse_gene_info(
+def iter_gene_info(
     path: Path,
     tax_id: int | None = None,
-) -> tuple[list[dict], list[dict]]:
-    """Parse gene_info.gz into BioLink Gene nodes and in_taxon edges.
+):
+    """Generator variant: yield one (node, edge) tuple per valid gene row.
 
-    Reads the file line by line to keep memory usage flat for large files.
-    Skips comment lines (starting with #). If tax_id is supplied, only
-    processes genes belonging to that organism.
+    Used by the pipeline for streaming. Memory stays O(1) per row instead of
+    O(67M) for the full list. Skipped rows do not yield anything.
 
     Args:
         path: Local path to the gzip-compressed gene_info file.
-        tax_id: NCBI Taxonomy ID to filter on (e.g. 9606 for human).
-                If None, all organisms are parsed.
+        tax_id: Optional NCBI Taxonomy ID filter.
 
-    Returns:
-        Tuple of (gene_nodes, taxon_edges) where each element is a list
-        of BioLink-compliant dicts ready for KGX export.
+    Yields:
+        (gene_node_dict, taxon_edge_dict) — both BioLink-compliant dicts.
 
     Raises:
         FileNotFoundError: If path does not exist.
-        ValueError: If a required BioLink field is empty (from map_node/map_edge).
     """
-    logger.info("Parsing gene_info from %s (tax_id=%s)", path, tax_id)
-
-    gene_nodes: list[dict] = []
-    taxon_edges: list[dict] = []
-    skipped = 0
+    logger.info("Streaming gene_info from %s (tax_id=%s)", path, tax_id)
     tax_id_str = str(tax_id) if tax_id is not None else None
 
     with gzip.open(path, "rt", encoding="utf-8") as fh:
         for raw_line in fh:
             line = raw_line.rstrip("\n")
-
-            # Skip header and comment lines
             if line.startswith("#"):
                 continue
 
             fields = line.split("\t")
             if len(fields) < 10:
-                skipped += 1
                 continue
 
             row_tax_id = fields[0].strip()
             gene_id = fields[1].strip()
             symbol = fields[2].strip()
-            # fields[3] = LocusTag, skip
-            # fields[4] = Synonyms, skip for now
             dbxrefs_raw = fields[5].strip()
             chromosome = fields[6].strip()
-            # fields[7] = map_location, skip
             description = fields[8].strip()
             type_of_gene = fields[9].strip()
 
             if not gene_id or gene_id == "-":
-                skipped += 1
                 continue
-
-            # Apply taxon filter
             if tax_id_str is not None and row_tax_id != tax_id_str:
                 continue
 
-            # Prefer description for the human-readable name, fall back to symbol
             name = description if description and description != "-" else symbol
             if not name or name == "-":
                 name = f"Gene {gene_id}"
@@ -155,8 +137,6 @@ def parse_gene_info(
             taxon_curie = f"NCBITaxon:{row_tax_id}"
 
             xrefs = _parse_dbxrefs(dbxrefs_raw)
-
-            # Build the cross-reference list for the xrefs field
             xrefs_list: list[str] = []
             if xrefs["hgnc_id"]:
                 xrefs_list.append(xrefs["hgnc_id"])
@@ -184,10 +164,8 @@ def parse_gene_info(
                     source_url=source_url,
                     **extra,
                 )
-                gene_nodes.append(node)
             except ValueError as exc:
                 logger.warning("Skipping gene %s: %s", gene_id, exc)
-                skipped += 1
                 continue
 
             try:
@@ -198,14 +176,38 @@ def parse_gene_info(
                     source=GENE_SOURCE,
                     source_url=source_url,
                 )
-                taxon_edges.append(edge)
             except ValueError as exc:
                 logger.warning("Skipping taxon edge for gene %s: %s", gene_id, exc)
+                continue
 
+            yield node, edge
+
+
+def parse_gene_info(
+    path: Path,
+    tax_id: int | None = None,
+) -> tuple[list[dict], list[dict]]:
+    """List-returning wrapper around iter_gene_info. Use for tests only.
+
+    Do NOT use in production pipelines — 67M gene nodes do not fit in RAM on
+    a laptop-scale machine. The Gene pipeline uses iter_gene_info directly.
+
+    Args:
+        path: Local path to the gzip-compressed gene_info file.
+        tax_id: NCBI Taxonomy ID to filter on. If None, all organisms.
+
+    Returns:
+        Tuple of (gene_nodes, taxon_edges) as lists.
+    """
+    logger.info("Parsing gene_info from %s (tax_id=%s) - LIST MODE", path, tax_id)
+    gene_nodes: list[dict] = []
+    taxon_edges: list[dict] = []
+    for node, edge in iter_gene_info(path, tax_id=tax_id):
+        gene_nodes.append(node)
+        taxon_edges.append(edge)
     logger.info(
-        "gene_info parse complete: %d gene nodes, %d taxon edges, %d skipped",
+        "gene_info parse complete: %d gene nodes, %d taxon edges",
         len(gene_nodes),
         len(taxon_edges),
-        skipped,
     )
     return gene_nodes, taxon_edges

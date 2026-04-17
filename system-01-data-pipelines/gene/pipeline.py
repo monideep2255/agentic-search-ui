@@ -1,32 +1,36 @@
-"""pipeline.py - Orchestrate the full Gene ETL pipeline.
+"""pipeline.py - Orchestrate the full Gene ETL pipeline (streaming).
 
-Coordinates download, parsing, node enrichment, KGX export, and validation
-for the NCBI Gene database. Produces nodes.tsv and edges.tsv under
-config.kgx_output_dir/gene/.
+Coordinates download, parsing, KGX export, and validation for the NCBI Gene
+database. Produces nodes.tsv and edges.tsv under config.kgx_output_dir/gene/.
+
+Memory profile: streams every large parser (gene_info, gene2go, gene2pubmed,
+gene_orthologs) through the shared append_nodes / append_edges helpers in
+10 000-row batches. Peak memory stays at a few hundred MB even on the full
+67 M gene / 278 M edge dataset, making the pipeline run on laptop-scale
+hardware. See DECISIONS.md (2026-04-17) and docs/learnings.md for the
+history of the streaming refactor.
 
 Steps:
     1. Download 6 Gene FTP files (idempotent)
-    2. Parse gene_info -> Gene nodes + in_taxon edges
-    3. Parse gene2go -> GO nodes + GO annotation edges
-    4. Parse gene2pubmed -> mentioned_in edges
-    5. Parse mim2gene_medgen -> gene_associated_with_condition edges
-    6. Parse gene_refseq_uniprotkb_collab -> UniProt xrefs for node enrichment
-    7. Parse gene_orthologs -> orthologous_to edges
-    8. Enrich Gene nodes with UniProt xrefs
-    9. Export via shared KGX exporter
-    10. Validate via shared validator
-    11. Log summary stats
+    2. Parse small inputs into memory (UniProt xref dict, mim2gene edges)
+    3. Peek at first gene_info and first gene2go rows to compute fieldnames
+    4. Init nodes.tsv and edges.tsv with union fieldnames
+    5. Stream gene_info -> enrich nodes with UniProt -> append to disk
+    6. Stream gene2go -> append unique GO nodes and edges
+    7. Stream gene2pubmed -> append edges
+    8. Stream gene_orthologs -> append edges
+    9. Flush mim2gene_medgen edges
+    10. Log summary stats
 
 Depends on:
     - system-01-data-pipelines/gene/download.py
-    - system-01-data-pipelines/gene/parse_gene_info.py
-    - system-01-data-pipelines/gene/parse_gene2go.py
-    - system-01-data-pipelines/gene/parse_gene2pubmed.py
+    - system-01-data-pipelines/gene/parse_gene_info.py (iter_gene_info)
+    - system-01-data-pipelines/gene/parse_gene2go.py (iter_gene2go)
+    - system-01-data-pipelines/gene/parse_gene2pubmed.py (iter_gene2pubmed)
     - system-01-data-pipelines/gene/parse_mim2gene.py
     - system-01-data-pipelines/gene/parse_refseq_uniprot.py
-    - system-01-data-pipelines/gene/parse_orthologs.py
-    - system-01-data-pipelines/shared/kgx_exporter.export_kgx
-    - system-01-data-pipelines/shared/validator.validate_all
+    - system-01-data-pipelines/gene/parse_orthologs.py (iter_orthologs)
+    - system-01-data-pipelines/shared/kgx_exporter (init/append helpers)
     - system-01-data-pipelines/shared/config.PipelineConfig
 
 Writes:
@@ -41,57 +45,73 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from shared.config import PipelineConfig
-from shared.kgx_exporter import export_nodes, init_edges_file, append_edges, EDGE_REQUIRED_COLUMNS
-from shared.validator import validate_all
+from shared.kgx_exporter import (
+    EDGE_REQUIRED_COLUMNS,
+    NODE_REQUIRED_COLUMNS,
+    append_edges,
+    append_nodes,
+    init_edges_file,
+    init_nodes_file,
+)
 
 from gene.download import download_gene_files
-from gene.parse_gene_info import parse_gene_info
-from gene.parse_gene2go import parse_gene2go
-from gene.parse_gene2pubmed import parse_gene2pubmed
+from gene.parse_gene_info import iter_gene_info
+from gene.parse_gene2go import iter_gene2go
+from gene.parse_gene2pubmed import iter_gene2pubmed
 from gene.parse_mim2gene import parse_mim2gene
-from gene.parse_orthologs import parse_orthologs
+from gene.parse_orthologs import iter_orthologs
 from gene.parse_refseq_uniprot import parse_refseq_uniprot
 
 logger = logging.getLogger(__name__)
 
+BATCH_SIZE = 10_000
+LOG_EVERY = 1_000_000
 
-def _enrich_gene_nodes_with_uniprot(
-    gene_nodes: list[dict],
+
+def _enrich_node_with_uniprot(
+    node: dict,
     gene_to_uniprot: dict[str, list[str]],
-) -> list[dict]:
-    """Add UniProt xrefs to Gene nodes in-place.
-
-    For each Gene node whose id is NCBIGene:{GeneID}, looks up
-    gene_to_uniprot[GeneID] and appends the UniProt accessions to the
-    node's xrefs list and sets a uniprot_xrefs field.
+) -> None:
+    """Append UniProt xrefs to a Gene node dict in place.
 
     Args:
-        gene_nodes: List of Gene node dicts (mutated in-place).
-        gene_to_uniprot: Dict from parse_refseq_uniprot mapping
-                         GeneID str -> list of UniProt accession strings.
-
-    Returns:
-        The same list with enriched nodes.
+        node: Gene node dict. Must have id like "NCBIGene:{GeneID}".
+        gene_to_uniprot: Map of GeneID str -> list of UniProt accession strings.
     """
-    enriched = 0
-    for node in gene_nodes:
-        node_id = node.get("id", "")
-        if not node_id.startswith("NCBIGene:"):
-            continue
-        gene_id = node_id[len("NCBIGene:"):]
-        uniprot_accs = gene_to_uniprot.get(gene_id, [])
-        if uniprot_accs:
-            node["uniprot_xrefs"] = uniprot_accs
-            existing_xrefs = node.get("xrefs", [])
-            if isinstance(existing_xrefs, list):
-                for acc in uniprot_accs:
-                    curie = f"UniProtKB:{acc}"
-                    if curie not in existing_xrefs:
-                        existing_xrefs.append(curie)
-                node["xrefs"] = existing_xrefs
-            enriched += 1
-    logger.info("Enriched %d Gene nodes with UniProt xrefs", enriched)
-    return gene_nodes
+    node_id = node.get("id", "")
+    if not node_id.startswith("NCBIGene:"):
+        return
+    gene_id = node_id[len("NCBIGene:"):]
+    uniprot_accs = gene_to_uniprot.get(gene_id, [])
+    if not uniprot_accs:
+        return
+
+    node["uniprot_xrefs"] = uniprot_accs
+    xrefs = node.get("xrefs", [])
+    if isinstance(xrefs, list):
+        for acc in uniprot_accs:
+            curie = f"UniProtKB:{acc}"
+            if curie not in xrefs:
+                xrefs.append(curie)
+        node["xrefs"] = xrefs
+
+
+def _flush(
+    batch: list[dict],
+    writer,
+    path: Path,
+    fieldnames: list[str],
+) -> int:
+    """Call writer(batch, path, fieldnames=...) and clear the batch.
+
+    Returns number of records written.
+    """
+    if not batch:
+        return 0
+    n = len(batch)
+    writer(batch, path, fieldnames=fieldnames)
+    batch.clear()
+    return n
 
 
 def run_gene_pipeline(
@@ -100,32 +120,25 @@ def run_gene_pipeline(
     skip_download: bool = False,
     force_download: bool = False,
 ) -> tuple[Path, Path]:
-    """Run the complete Gene ETL pipeline and return KGX output paths.
-
-    Downloads all required FTP files (unless skip_download=True), runs all
-    parsers, merges results, exports KGX TSV files, and runs the validation
-    suite. Validation failures are logged as warnings but do not abort the
-    pipeline.
+    """Run the complete Gene ETL pipeline with streaming and return KGX paths.
 
     Args:
         config: Pipeline configuration with ftp_cache_dir and kgx_output_dir set.
-        tax_id: NCBI Taxonomy ID to filter all parsers on (e.g. 9606 for human).
-                If None, all organisms are included. Recommended to set for
-                development/testing to avoid multi-GB memory usage.
-        skip_download: If True, skip the FTP download step and assume all files
-                       are already in config.ftp_cache_dir.
-        force_download: If True, re-download all files even when cached.
-                        Ignored when skip_download=True.
+        tax_id: NCBI Taxonomy ID filter. None = all organisms.
+        skip_download: If True, skip FTP download and use cached files.
+        force_download: If True, re-download even when cached. Ignored when
+                        skip_download=True.
 
     Returns:
-        Tuple of (nodes_path, edges_path) pointing to the written KGX TSV files.
+        (nodes_path, edges_path).
 
     Raises:
         FileNotFoundError: If skip_download=True and a required file is missing.
-        urllib.error.URLError: If a download fails (when skip_download=False).
+        urllib.error.URLError: If a download fails.
+        RuntimeError: If gene_info.gz yields zero rows (empty file or filter too strict).
     """
     logger.info(
-        "Starting Gene ETL pipeline (tax_id=%s, skip_download=%s)",
+        "Starting Gene ETL pipeline (tax_id=%s, skip_download=%s) [streaming]",
         tax_id,
         skip_download,
     )
@@ -144,104 +157,173 @@ def run_gene_pipeline(
     else:
         file_paths = download_gene_files(config, force=force_download)
 
-    # Step 2: Parse gene_info -> Gene nodes + in_taxon edges
-    logger.info("Parsing gene_info...")
-    gene_nodes, taxon_edges = parse_gene_info(file_paths["gene_info"], tax_id=tax_id)
-
-    # Step 3: Parse gene2go -> GO nodes + GO annotation edges
-    logger.info("Parsing gene2go...")
-    go_nodes, go_edges = parse_gene2go(file_paths["gene2go"], tax_id=tax_id)
-
-    # Step 4: Parse gene2pubmed -> mentioned_in edges
-    logger.info("Parsing gene2pubmed...")
-    pubmed_edges = parse_gene2pubmed(file_paths["gene2pubmed"], tax_id=tax_id)
-
-    # Step 5: Parse mim2gene_medgen -> gene_associated_with_condition edges
-    logger.info("Parsing mim2gene_medgen...")
-    mim_edges = parse_mim2gene(file_paths["mim2gene_medgen"])
-
-    # Step 6: Parse gene_refseq_uniprotkb_collab -> UniProt xrefs
-    logger.info("Parsing gene_refseq_uniprotkb_collab...")
+    # Step 2: Parse small inputs in memory
+    logger.info("Parsing small inputs (UniProt xrefs, mim2gene_medgen)...")
     gene_to_uniprot = parse_refseq_uniprot(file_paths["gene_refseq_uniprotkb_collab"])
-
-    # Step 7: Parse gene_orthologs -> orthologous_to edges
-    logger.info("Parsing gene_orthologs...")
-    ortholog_edges = parse_orthologs(file_paths["gene_orthologs"], tax_id=tax_id)
-
-    # Step 8: Enrich Gene nodes with UniProt xrefs
-    logger.info("Enriching Gene nodes with UniProt xrefs...")
-    gene_nodes = _enrich_gene_nodes_with_uniprot(gene_nodes, gene_to_uniprot)
-
-    # Merge nodes (fits in memory at ~67M)
-    all_nodes: list[dict] = gene_nodes + go_nodes
-
+    mim_edges = parse_mim2gene(file_paths["mim2gene_medgen"])
     logger.info(
-        "Nodes ready: %d total (%d gene, %d GO)",
-        len(all_nodes),
-        len(gene_nodes),
-        len(go_nodes),
+        "Small-input parse complete: UniProt dict=%d entries, mim_edges=%d",
+        len(gene_to_uniprot),
+        len(mim_edges),
     )
 
-    # Step 9: Export KGX (stream edges to avoid OOM on 278M+ edges)
-    logger.info("Exporting KGX files...")
-    nodes_path = export_nodes(all_nodes, config.kgx_output_dir, "gene")
+    # Step 3: Peek at first rows of the two node-producing generators so we
+    # can compute the union fieldname sets before opening the output files.
+    gen_gene = iter_gene_info(file_paths["gene_info"], tax_id=tax_id)
+    try:
+        first_gene_node, first_taxon_edge = next(gen_gene)
+    except StopIteration as exc:
+        raise RuntimeError(
+            f"gene_info.gz produced zero rows (tax_id={tax_id}). "
+            "Filter too strict or empty source file."
+        ) from exc
+    _enrich_node_with_uniprot(first_gene_node, gene_to_uniprot)
 
-    # Determine edge columns from the first batch that has data
-    sample_edge = (taxon_edges or go_edges or pubmed_edges or mim_edges or ortholog_edges)[0]
-    edge_cols = EDGE_REQUIRED_COLUMNS + sorted(set(sample_edge.keys()) - set(EDGE_REQUIRED_COLUMNS))
+    gen_gene2go = iter_gene2go(file_paths["gene2go"], tax_id=tax_id)
+    first_go_node: dict | None = None
+    first_go_edge: dict | None = None
+    for go_node_or_none, go_edge in gen_gene2go:
+        if first_go_edge is None:
+            first_go_edge = go_edge
+        if go_node_or_none is not None:
+            first_go_node = go_node_or_none
+            break
+    # If gene2go is empty or only yields None-nodes, GO nodes stay empty;
+    # we still need a valid edge sample for edge fieldnames.
 
+    # Union fieldnames
+    node_field_set: set[str] = set(first_gene_node.keys())
+    if first_go_node is not None:
+        node_field_set.update(first_go_node.keys())
+    node_cols = NODE_REQUIRED_COLUMNS + sorted(node_field_set - set(NODE_REQUIRED_COLUMNS))
+
+    edge_field_set: set[str] = set(first_taxon_edge.keys())
+    if first_go_edge is not None:
+        edge_field_set.update(first_go_edge.keys())
+    if mim_edges:
+        edge_field_set.update(mim_edges[0].keys())
+    edge_cols = EDGE_REQUIRED_COLUMNS + sorted(edge_field_set - set(EDGE_REQUIRED_COLUMNS))
+
+    # Step 4: Init output files
+    nodes_path = init_nodes_file(config.kgx_output_dir, "gene", fieldnames=node_cols)
     edges_path = init_edges_file(config.kgx_output_dir, "gene", fieldnames=edge_cols)
+    logger.info(
+        "Initialised KGX outputs: nodes_cols=%d, edges_cols=%d", len(node_cols), len(edge_cols)
+    )
 
-    edge_batches = [
-        ("taxon", taxon_edges),
-        ("go", go_edges),
-        ("pubmed", pubmed_edges),
-        ("mim", mim_edges),
-        ("orthologs", ortholog_edges),
-    ]
-    total_edges = 0
-    edge_counts = {}
-    for name, edges in edge_batches:
-        count = len(edges)
-        edge_counts[name] = count
-        if edges:
-            append_edges(edges, edges_path, fieldnames=edge_cols)
-            total_edges += count
-            edges.clear()  # free memory after writing
+    node_batch: list[dict] = []
+    edge_batch: list[dict] = []
+    counts = {
+        "gene_nodes": 0,
+        "go_nodes": 0,
+        "taxon_edges": 0,
+        "go_edges": 0,
+        "pubmed_edges": 0,
+        "ortholog_edges": 0,
+        "mim_edges": 0,
+    }
 
-    logger.info("Exported %d total edges to %s", total_edges, edges_path)
+    # Step 5: Stream gene_info (re-inject the peeked first pair)
+    logger.info("Streaming gene_info...")
+    node_batch.append(first_gene_node)
+    edge_batch.append(first_taxon_edge)
+    for gene_node, taxon_edge in gen_gene:
+        _enrich_node_with_uniprot(gene_node, gene_to_uniprot)
+        node_batch.append(gene_node)
+        edge_batch.append(taxon_edge)
+        if len(node_batch) >= BATCH_SIZE:
+            counts["gene_nodes"] += _flush(node_batch, append_nodes, nodes_path, node_cols)
+            counts["taxon_edges"] += _flush(edge_batch, append_edges, edges_path, edge_cols)
+            if counts["gene_nodes"] and counts["gene_nodes"] % LOG_EVERY == 0:
+                logger.info(
+                    "  gene_info: %d gene nodes, %d taxon edges so far",
+                    counts["gene_nodes"],
+                    counts["taxon_edges"],
+                )
+    counts["gene_nodes"] += _flush(node_batch, append_nodes, nodes_path, node_cols)
+    counts["taxon_edges"] += _flush(edge_batch, append_edges, edges_path, edge_cols)
+    logger.info(
+        "gene_info complete: %d gene nodes, %d taxon edges",
+        counts["gene_nodes"],
+        counts["taxon_edges"],
+    )
 
-    # Step 10: Validate (skip full in-memory validation for large datasets,
-    # just check nodes since edges are already on disk)
-    logger.info("Running node validation...")
-    from shared.validator import validate_no_duplicates, validate_provenance
-    dup_nodes = validate_no_duplicates(all_nodes)
-    prov_nodes = validate_provenance(all_nodes, label="gene_pipeline:nodes")
+    # Step 6: Stream gene2go (re-inject peeked first)
+    logger.info("Streaming gene2go...")
+    if first_go_node is not None:
+        node_batch.append(first_go_node)
+    if first_go_edge is not None:
+        edge_batch.append(first_go_edge)
+    for go_node_or_none, go_edge in gen_gene2go:
+        if go_node_or_none is not None:
+            node_batch.append(go_node_or_none)
+        edge_batch.append(go_edge)
+        if len(edge_batch) >= BATCH_SIZE:
+            counts["go_nodes"] += _flush(node_batch, append_nodes, nodes_path, node_cols)
+            counts["go_edges"] += _flush(edge_batch, append_edges, edges_path, edge_cols)
+            if counts["go_edges"] and counts["go_edges"] % LOG_EVERY == 0:
+                logger.info(
+                    "  gene2go: %d GO nodes, %d GO edges so far",
+                    counts["go_nodes"],
+                    counts["go_edges"],
+                )
+    counts["go_nodes"] += _flush(node_batch, append_nodes, nodes_path, node_cols)
+    counts["go_edges"] += _flush(edge_batch, append_edges, edges_path, edge_cols)
+    logger.info(
+        "gene2go complete: %d GO nodes, %d GO edges",
+        counts["go_nodes"],
+        counts["go_edges"],
+    )
 
-    if dup_nodes or prov_nodes:
-        logger.warning(
-            "Gene pipeline validation warnings: duplicate_nodes=%d, missing_provenance_nodes=%d",
-            len(dup_nodes),
-            len(prov_nodes),
-        )
-    else:
-        logger.info("Gene pipeline node validation passed (edge validation skipped for memory, run merge validator on KGX files)")
+    # Step 7: Stream gene2pubmed
+    logger.info("Streaming gene2pubmed...")
+    for edge in iter_gene2pubmed(file_paths["gene2pubmed"], tax_id=tax_id):
+        edge_batch.append(edge)
+        if len(edge_batch) >= BATCH_SIZE:
+            counts["pubmed_edges"] += _flush(edge_batch, append_edges, edges_path, edge_cols)
+            if counts["pubmed_edges"] and counts["pubmed_edges"] % LOG_EVERY == 0:
+                logger.info("  gene2pubmed: %d edges so far", counts["pubmed_edges"])
+    counts["pubmed_edges"] += _flush(edge_batch, append_edges, edges_path, edge_cols)
+    logger.info("gene2pubmed complete: %d edges", counts["pubmed_edges"])
 
-    # Step 11: Summary stats
+    # Step 8: Stream gene_orthologs
+    logger.info("Streaming gene_orthologs...")
+    for edge in iter_orthologs(file_paths["gene_orthologs"], tax_id=tax_id):
+        edge_batch.append(edge)
+        if len(edge_batch) >= BATCH_SIZE:
+            counts["ortholog_edges"] += _flush(edge_batch, append_edges, edges_path, edge_cols)
+    counts["ortholog_edges"] += _flush(edge_batch, append_edges, edges_path, edge_cols)
+    logger.info("gene_orthologs complete: %d edges", counts["ortholog_edges"])
+
+    # Step 9: Flush mim_edges (small)
+    if mim_edges:
+        counts["mim_edges"] = _flush(mim_edges, append_edges, edges_path, edge_cols)
+    logger.info("mim2gene_medgen complete: %d edges", counts["mim_edges"])
+
+    # Step 10: Summary (note: node/edge validation moved to merge phase because
+    # holding all 67M nodes in memory would defeat the streaming refactor)
+    total_nodes = counts["gene_nodes"] + counts["go_nodes"]
+    total_edges = (
+        counts["taxon_edges"]
+        + counts["go_edges"]
+        + counts["pubmed_edges"]
+        + counts["ortholog_edges"]
+        + counts["mim_edges"]
+    )
     logger.info(
         "Gene ETL pipeline complete: "
         "nodes=%d (gene=%d, go=%d), "
-        "edges=%d (taxon=%d, go=%d, pubmed=%d, mim=%d, orthologs=%d) "
+        "edges=%d (taxon=%d, go=%d, pubmed=%d, orthologs=%d, mim=%d) "
         "nodes_file=%s edges_file=%s",
-        len(all_nodes),
-        len(gene_nodes),
-        len(go_nodes),
+        total_nodes,
+        counts["gene_nodes"],
+        counts["go_nodes"],
         total_edges,
-        edge_counts.get("taxon", 0),
-        edge_counts.get("go", 0),
-        edge_counts.get("pubmed", 0),
-        edge_counts.get("mim", 0),
-        edge_counts.get("orthologs", 0),
+        counts["taxon_edges"],
+        counts["go_edges"],
+        counts["pubmed_edges"],
+        counts["ortholog_edges"],
+        counts["mim_edges"],
         nodes_path,
         edges_path,
     )

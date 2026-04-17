@@ -148,6 +148,8 @@ def map_edge(
     object: str,
     source: str,
     source_url: str,
+    knowledge_level: str = "knowledge_assertion",
+    agent_type: str = "manual_agent",
     **extra: object,
 ) -> dict:
     """Build a BioLink-compliant edge dict.
@@ -161,11 +163,20 @@ def map_edge(
         object: CURIE-formatted object node identifier.
         source: Source database name (e.g. "ClinVar").
         source_url: URL of the source record. Must be non-empty.
+        knowledge_level: BioLink 4.x knowledge_level slot. Defaults to
+            "knowledge_assertion" (the relationship is asserted as fact in the
+            source database). Override with "prediction", "statistical_association",
+            "logical_entailment", "observation", or "not_provided" when appropriate.
+        agent_type: BioLink 4.x agent_type slot. Defaults to "manual_agent"
+            (NCBI data is largely curator-asserted). Override with
+            "automated_agent", "data_analysis_pipeline", "computational_model",
+            "text_mining_agent", or "not_provided" for derived/computed edges.
         **extra: Additional fields added verbatim to the returned dict
                  (e.g. evidence_type, pmids, clinical_significance).
 
     Returns:
-        Dict with subject, predicate, object, source, source_url, and any extra fields.
+        Dict with subject, predicate, object, source, source_url, knowledge_level,
+        agent_type, and any extra fields.
 
     Raises:
         ValueError: If predicate is not in VALID_PREDICATES, or if any required
@@ -177,6 +188,8 @@ def map_edge(
         "object": object,
         "source": source,
         "source_url": source_url,
+        "knowledge_level": knowledge_level,
+        "agent_type": agent_type,
     }
     for field_name, value in required_fields.items():
         if not value:
@@ -196,6 +209,8 @@ def map_edge(
         "object": object,
         "source": source,
         "source_url": source_url,
+        "knowledge_level": knowledge_level,
+        "agent_type": agent_type,
     }
     edge.update(extra)
 

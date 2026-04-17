@@ -23,8 +23,18 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 # Required columns define provenance and identity - non-negotiable on every row.
+# BioLink 4.x Association requires knowledge_level + agent_type on every edge;
+# our map_edge sets sensible defaults so all pipelines populate them automatically.
 NODE_REQUIRED_COLUMNS: list[str] = ["id", "category", "name", "source", "source_url"]
-EDGE_REQUIRED_COLUMNS: list[str] = ["subject", "predicate", "object", "source", "source_url"]
+EDGE_REQUIRED_COLUMNS: list[str] = [
+    "subject",
+    "predicate",
+    "object",
+    "source",
+    "source_url",
+    "knowledge_level",
+    "agent_type",
+]
 
 def serialize_value(value: object) -> str:
     """Serialize a value for TSV output. Pipe-join list/tuple values."""
@@ -171,6 +181,69 @@ def export_edges(
     _write_tsv(edges, path, EDGE_REQUIRED_COLUMNS)
     logger.info("Wrote %d edges to %s", len(edges), path)
     return path
+
+
+def init_nodes_file(
+    output_dir: Path,
+    database: str,
+    fieldnames: list[str] | None = None,
+) -> Path:
+    """Create nodes.tsv with header row only. Used for streaming writes.
+
+    Mirrors init_edges_file. Pair with append_nodes for pipelines that cannot
+    hold all node dicts in memory (e.g. Gene at 67M nodes ~ 25 GB).
+
+    Args:
+        output_dir: Root KGX output directory.
+        database: Database name used as subdirectory.
+        fieldnames: Column names. Defaults to NODE_REQUIRED_COLUMNS if None.
+
+    Returns:
+        Path to the initialized nodes.tsv file.
+    """
+    dest_dir = output_dir / database
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    path = dest_dir / "nodes.tsv"
+    cols = fieldnames or NODE_REQUIRED_COLUMNS
+    with open(path, "w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=cols, delimiter="\t")
+        writer.writeheader()
+    logger.info("Initialized nodes file with %d columns at %s", len(cols), path)
+    return path
+
+
+def append_nodes(
+    nodes: list[dict],
+    nodes_path: Path,
+    fieldnames: list[str] | None = None,
+) -> int:
+    """Append nodes to an existing nodes.tsv file. Mirrors append_edges.
+
+    Designed for large pipelines that cannot hold all nodes in memory.
+    Call init_nodes_file first to create the header, then call this
+    repeatedly in batches.
+
+    Args:
+        nodes: List of node dicts to append.
+        nodes_path: Path to nodes.tsv (must already exist with header).
+        fieldnames: Column names matching the header. Defaults to NODE_REQUIRED_COLUMNS.
+
+    Returns:
+        Number of nodes written.
+    """
+    cols = fieldnames or NODE_REQUIRED_COLUMNS
+    with open(nodes_path, "a", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(
+            fh,
+            fieldnames=cols,
+            delimiter="\t",
+            extrasaction="ignore",
+            restval="",
+        )
+        for rec in nodes:
+            row = {field: serialize_value(rec.get(field, "")) for field in cols}
+            writer.writerow(row)
+    return len(nodes)
 
 
 def init_edges_file(

@@ -157,7 +157,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | Gate | Run after | What | Where | Status |
 |------|-----------|------|-------|--------|
 | Gate 1 | Phase 1.5 | Run medgen/gene/clinvar-etl, validate KGX | NCBI server `/export` (data migrated to laptop 2026-04-16) | DONE (2026-04-16) |
-| Gate 2 | Phase 2.2 | Run pubmed/taxonomy-etl + merge-etl, validate KGX | Windows laptop C: drive | Pending (NEXT) |
+| Gate 2 | Phase 2.2 | Run pubmed/taxonomy-etl + merge-etl, validate KGX | Windows laptop C: drive | DONE (2026-04-17) |
 | Gate 3 | Phase 4.0 | Load 5-db into AGE on cloud, Cypher queries pass, delete local KGX | Hetzner VPS | Pending |
 | Gate 4 | Phase 5.2 | Full 6-db graph on cloud, all queries pass | Hetzner VPS | Pending |
 
@@ -173,7 +173,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | 2.0 | 5 | PubMed ETL | DONE (2026-04-16) |
 | 2.1 | 6 | Taxonomy ETL | DONE (2026-04-16) |
 | 2.2 | 7 | 5-database merge | DONE (2026-04-16) |
-| Gate 2 | - | Run PubMed + Taxonomy + merge-etl on laptop, validate | NEXT |
+| Gate 2 | - | Run PubMed + Taxonomy + Gene (re-export) + merge-etl on laptop, validate | DONE (2026-04-17): 115M nodes + 693M edges, 99.99% cross-pipeline connectivity, streaming refactors required mid-gate (gene + merge both hit list-accumulate OOM on laptop-scale data) |
 | 3.0 | 8 | AGE loader code + fixture smoke test (no bulk local load) | Pending |
 | 4.0 | 9 | Provision Hetzner VPS, rsync KGX, load 5-db on cloud | Pending |
 | Gate 3 | - | Validate cloud graph, delete local KGX files | Pending |

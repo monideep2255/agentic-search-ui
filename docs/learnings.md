@@ -2,6 +2,144 @@
 
 Problems encountered and solutions implemented during development. Each entry captures what went wrong, why, and how it was fixed so the same mistake is not repeated.
 
+## Gate 2: Taxonomy + PubMed + 5-db merge on Windows laptop (2026-04-16)
+
+### Observation: taxonomy-etl finished in 77 seconds, not 10 minutes
+
+The plan estimated 10 minutes for taxonomy. Actual end-to-end time on the Windows laptop was 77 seconds: download 5s, extract 1s, parse nodes.dmp 6s, merge names + map nodes 6s, map edges 3s, export KGX TSVs 19s, internal validation 3s.
+
+The "10 minutes" estimate budgeted for a slow FTP day. With a fast NCBI connection and a local SSD, the parse-and-export work dominates and is small (2.74M records). No tuning needed.
+
+Lesson: estimates in `bossman_execution_plan.md` for small datasets are conservative ceilings, not predictions. When a step finishes faster than budgeted, that is the expected case, not a sign that something was skipped.
+
+### Problem: `kgx validate` requires `-i tsv` flag, not auto-detected
+
+The validation checklist in the plan shows `kgx validate data/kgx/<database>/nodes.tsv data/kgx/<database>/edges.tsv` with no flags. That fails on kgx 2.3.2 with `Error: Missing option '--input-format' / '-i'`.
+
+Fix: invoke as `kgx validate -i tsv data/kgx/<db>/nodes.tsv data/kgx/<db>/edges.tsv`. The validator does not infer format from the file extension.
+
+Lesson: update the validation checklist in `bossman_execution_plan.md` step 8 to include `-i tsv`. Carry this forward for every gate.
+
+### Problem: edges missing BioLink 4.x required `knowledge_level` and `agent_type` slots
+
+Once `kgx validate` ran with the right flag, it returned `ERROR: MISSING_EDGE_PROPERTY` for `knowledge_level` and `agent_type` on taxonomy edges. BioLink Model 4.x marks both as required slots on every `Association`. They define provenance metadata: how the assertion was made (knowledge_assertion vs prediction vs statistical_association) and what produced it (manual_agent vs automated_agent vs text_mining_agent).
+
+Root cause: `system-01-data-pipelines/shared/kgx_exporter.py` defined `EDGE_REQUIRED_COLUMNS = ["subject", "predicate", "object", "source", "source_url"]` — 5 columns. No pipeline mapper set `knowledge_level` or `agent_type`. The schema in `schema/biolink_ncbi.yaml` defined both as optional slots on `Association`, so internal LinkML validation passed. The external NCATS `kgx validate` enforces BioLink Model required slots, which our internal validator does not.
+
+Blast radius: all 5 pipelines (Gene, ClinVar, MedGen, Taxonomy, PubMed) use the same shared exporter and shared `map_edge()`. Gate 1 outputs (Gene, ClinVar, MedGen) have the same gap. Gate 1's validation step 8 was checked off in the plan but the external validator was never actually run on Gate 1 outputs (or it failed with the missing `-i tsv` flag and the failure was not surfaced).
+
+Fix:
+
+- `system-01-data-pipelines/shared/biolink_mapper.py`: added `knowledge_level: str = "knowledge_assertion"` and `agent_type: str = "manual_agent"` as kwargs on `map_edge()` with sensible defaults. Pipeline mappers can override per edge (e.g. `agent_type="automated_agent"` for Gene orthologs from HomoloGene, or for GO annotations with IEA evidence).
+- `system-01-data-pipelines/shared/kgx_exporter.py`: added both columns to `EDGE_REQUIRED_COLUMNS`. Streaming pipelines (Gene, PubMed) compute their fieldnames from this constant, so they pick up the new columns automatically.
+- `schema/biolink_ncbi.yaml`: marked `knowledge_level` and `agent_type` required in `Association.slot_usage` so the schema reflects what the exporter now produces.
+- `tests/shared/test_biolink_mapper.py`: added 2 tests covering the defaults and override behavior. Test count went from 180 to 184.
+
+Defaults reasoning: most NCBI data is curator-asserted (Taxonomy hierarchy, ClinVar submissions, MedGen concept relations, PubMed MeSH annotations, gene_info, mim2gene_medgen). `knowledge_assertion` + `manual_agent` is the right default. Edges that are computationally derived (Gene orthologs from HomoloGene, GO IEA annotations) should override; that work is deferred to a Phase 3 follow-up since it does not block Gate 2.
+
+Re-do scope and cost (mid-Gate-2 cleanup):
+
+- Code change: 1 file (`shared/kgx_exporter.py`) plus the mapper, schema, and tests. 184 tests pass after the change (was 180 + 4 new).
+- Re-export from cache, not re-download: FTP downloads were fine (untouched by the bug). Only the KGX output stage needed re-running. `<pipeline>-etl --skip-download` reuses the gigabytes of cached FTP files and just re-emits the TSVs with new code. Taxonomy re-export took 30 seconds; MedGen + ClinVar a few minutes each; Gene ~30 minutes (still streams 278M edges).
+- PubMed: caught mid-download, so kill + restart let us roll the BioLink fix and the parallel-download speedup (decision logged 2026-04-16) into a single restart with no extra cost.
+- Net wall-clock cost: ~2 hr (PubMed parallel download dominates). Net benefit: clean BioLink 4.x compliance across all 5 databases in one shot before `merge-etl` runs, instead of carrying the gap into Phase 3 and discovering it during AGE load.
+
+Lesson 1: external `kgx validate` is a different bar from internal LinkML schema validation. The external validator enforces the BioLink Model's required-slot list at the time the validator was published; that list grows with every BioLink minor release. Schema-says-optional does not mean validator-accepts. Run external `kgx validate -i tsv` at every gate, not just internal validation.
+
+Lesson 2: schema definition is documentation, not enforcement. A slot defined in the LinkML YAML does not appear in the KGX output unless the exporter writes the column. The schema, the mapper, and the exporter must all agree.
+
+Lesson 3: shared utility bugs hide because per-pipeline tests use small in-line fixtures that pass through the same broken shared code. The bug only surfaced on real-data validation. Lesson for the next gate: run external `kgx validate` on a small fixture as part of CI, not only at gate time.
+
+### Problem: gene pipeline OOMs on 33 GB laptop because nodes aren't streamed (2026-04-17)
+
+When gene-etl was re-run on the laptop during Gate 2 (to regenerate KGX with the BioLink 4.x fix), the python process grew to 21 GB RSS and crashed with `MemoryError`. The system had 33.9 GB total RAM, ~11 GB held by Windows + IDE + Claude + browser, leaving ~22 GB for gene — and parse_gene_info peaks above that.
+
+Root cause: edges were already streamed (fix from Gate 1, learnings section above), but nodes are not. `gene/parse_gene_info.py` returns a list of all 67M gene dicts at once, and `gene/pipeline.py` holds that list in RAM while calling `export_nodes(all_nodes, ...)`. Peak memory ~22-25 GB just for the node accumulation. Gate 1 succeeded because it ran on the NCBI server with 128+ GB RAM; on a 33 GB laptop the same design OOMs.
+
+Contrast with PubMed: `pubmed/pipeline.py` uses `lxml.etree.iterparse` with `elem.clear()` and calls `append_nodes()` + `append_edges()` per article. Peak ~200-500 MB even on 41M articles. Streaming from the start, not after-the-fact.
+
+Fix plan (executing 2026-04-17):
+
+- `system-01-data-pipelines/gene/parse_gene_info.py`: convert the return-a-list parser into a generator that yields one node dict per row.
+- `system-01-data-pipelines/shared/kgx_exporter.py`: add `init_nodes_file()` and `append_nodes()` mirroring the existing `init_edges_file()` / `append_edges()` streaming helpers.
+- `system-01-data-pipelines/gene/pipeline.py`: call `init_nodes_file()` before parsing, then `append_nodes()` per batch as the generator yields, and drop the accumulated-list pattern.
+- Tests: update gene pipeline tests to assert streaming behavior (nodes.tsv grows incrementally, RAM stays bounded).
+- Re-run: delete only `data/kgx/gene/` (keep `data/ftp_cache/gene_*.gz` — raw source is untouched), then `gene-etl --skip-download` with the new streaming code. Expected peak ~2-3 GB RAM.
+
+Lesson: when a pipeline works on a server but not on a laptop, the issue is almost always unbounded accumulation in RAM. The streaming refactor that worked for pubmed from day 1, and for gene edges after Gate 1, must also cover gene nodes. The rule going forward: any parser returning a list of >1M items should instead be a generator feeding a streaming writer, regardless of current RAM headroom. The "fits in server RAM" assumption is a time bomb for any dev environment.
+
+### Problem: merge-etl OOMs for the same streaming reason as gene (2026-04-17)
+
+After the gene streaming refactor landed and gene produced a clean KGX, `merge-etl` was started. RAM climbed from 43% to 96% load within seconds and the run was halted before OOM.
+
+Root cause: `system-01-data-pipelines/shared/merger.py` has the same anti-pattern that just bit gene. `load_kgx_nodes(path)` and `load_kgx_edges(path)` each read an entire KGX TSV into a list of dicts in RAM. At Phase 2.2 test time the files were tiny (inline fixtures, <1K rows) so nobody noticed. At Gate 2 real scale the files are:
+
+- gene: 67.5M nodes (11.3 GB TSV) + 278.7M edges (40.1 GB TSV)
+- pubmed: 41.3M nodes (25 GB TSV) + 349.2M edges (41 GB TSV)
+- medgen: 0.2M nodes + 48.3M edges
+- clinvar: 4.4M nodes + 14.4M edges
+- taxonomy: 2.7M nodes + 2.7M edges
+
+Load all 5 as list-of-dicts into RAM = ~200 GB, impossible on a 33 GB laptop.
+
+Fix plan (executing 2026-04-17):
+
+- `shared/merger.py`: add `stream_kgx_nodes(path)` and `stream_kgx_edges(path)` generators that yield one dict per row. Keep `load_kgx_nodes` / `load_kgx_edges` as thin wrappers around the generators, for tests that want full lists on small fixtures.
+- `shared/merger.py`: add `merge_kgx_streaming(node_paths, edge_paths, output_paths)` that runs in two passes. Pass 1 streams every nodes.tsv, dedups by id via an in-memory set of ~116M CURIE strings (~8 GB, fits on 33 GB), writes to merged/nodes.tsv in 10K-row batches. Pass 2 streams every edges.tsv, tracks dangling endpoints via set membership, writes to merged/edges.tsv in batches, and appends stub nodes for missing endpoints at the end of the nodes file.
+- `merge/pipeline.py`: swap `merge_kgx` + `inject_stubs` + `validate_merge` for the streaming version. Skip edge-level dedup at merge time (cross-pipeline edge collisions are rare by construction — each pipeline's edges are scoped to its own subject prefix; edge set dedup would require a 200 GB in-memory set that is not worth the cost).
+- Tests: existing Phase 2.2 merge tests use small fixtures and continue to pass via the list wrappers. Add one integration test that validates streaming on a synthetic medium-sized input.
+
+Memory projection:
+- Node ID set: ~8 GB (116M unique CURIEs)
+- Batch buffers: ~10 MB
+- Python runtime + Windows + IDE + Claude: ~10 GB
+- Peak: ~20 GB on a 33 GB laptop → ~60% load, safe margin
+
+Lesson: the "accumulate in list, then write" pattern in shared utilities is a landmine. It hid in `merger.py` through Phase 2.2 because all tests used tiny fixtures, and hit us within minutes of the first real-data merge attempt. New rule: any shared utility that reads or produces data proportional to FTP input size must be a generator or stream by default. The list version exists only for tests, with a loud docstring saying "do not use in production pipelines."
+
+### Observation: OMIM prefix missing from merger's _PREFIX_TO_CATEGORY (2026-04-17)
+
+The Gate 2 merge completed and injected 81,125 stubs for dangling cross-pipeline references. The stub prefix breakdown was:
+
+- ClinVar: 43,770 (expected: newer ClinVar IDs referenced but not yet in our snapshot)
+- PMID: 14,769 (expected: newer PMIDs in gene2pubmed not in our baseline)
+- HP: 9,881 (expected)
+- MedGen: 2,032 (expected)
+- **OMIM: 10,580** (unexpected - these became `biolink:NamedThing` because `OMIM:` is not in `_PREFIX_TO_CATEGORY` in `system-01-data-pipelines/shared/merger.py`)
+- NCBIGene: 89, NCBITaxon: 4 (negligible)
+
+Root cause: `_PREFIX_TO_CATEGORY` covers NCBIGene, PMID, MeSH, GO, MedGen, MONDO, NCBITaxon, HP, ClinVar, UMLS — but not OMIM. The Gene pipeline's mim2gene_medgen parser emits edges with OMIM CURIEs as endpoints. At merge time, those CURIEs had no matching node (OMIM is not one of our pipelines), so they became stubs with fallback category `biolink:NamedThing`.
+
+Fix (low priority, not a Gate 2 blocker): add `("OMIM:", "biolink:Disease"),` to `_PREFIX_TO_CATEGORY`. OMIM is a clinical disease/phenotype registry; categorising as `biolink:Disease` aligns with how MedGen and MONDO are already mapped. Re-running merge (or a post-merge rewrite) would move 10,580 stubs from NamedThing to Disease.
+
+Lesson: whenever the merger injects stubs as `biolink:NamedThing`, treat it as a gap in `_PREFIX_TO_CATEGORY`. Each Gate run should include a post-merge check: "how many NamedThing stubs, what prefix?" and add the missing row to the table.
+
+### Decision: delete per-db KGX after merge validates, keep merged + FTP cache
+
+Logged 2026-04-17 during Gate 2 execution. Once `merge-etl` finishes and the merged KGX passes validation (awk col check, row counts, cross-pipeline connectivity metrics resolve to 0 dangling), the per-database KGX directories are redundant. Deleting them reclaims ~130 GB of disk, giving clean headroom for Phase 3 fixture smoke tests and Phase 4 rsync staging.
+
+Guard before deletion (all must pass):
+- Merged nodes.tsv + edges.tsv both have the 7 BioLink 4.x edge columns
+- Row counts: merged ≥ sum of per-db minus expected dedup (no silent loss)
+- Gene->PMID, Gene->NCBITaxon, PMID->MeSH cross-pipeline edges resolve to valid nodes (0 dangling after merge)
+
+Recovery path if something later breaks: the FTP cache at `data/ftp_cache/` is untouched, so any per-db KGX can be regenerated with `<pipeline>-etl --skip-download` (minutes for everything except pubmed which is 2-3 hr for the parse+export).
+
+Extends the 2026-04-14 decision (KGX files are intermediates) to apply inside Gate 2 rather than only at Phase 4.
+
+### Observation: `run_in_background: true` with shell `&` produces misleading "completed" notifications
+
+Running `.venv/Scripts/<cli>.exe > log 2>&1 &` with `run_in_background: true` reports the bash shell as "completed (exit code 0)" almost immediately, even though the orphaned `.exe` keeps running. The exit code is the wrapper shell's, not the pipeline's.
+
+Verified for taxonomy-etl (77s actual run, completion event fired in seconds) and pubmed-etl (still running 1 hour in, completion event fired in seconds).
+
+Confirm a pipeline is actually alive by checking:
+1. `tasklist | grep -iE "python|<cli-name>"` for the running process
+2. Log file mtime is recent
+3. `du -sh data/ftp_cache/<db>/` is growing
+
+Lesson: do not trust "exit 0" from a backgrounded `&` invocation. The pipeline is not done until its own log says so or the KGX outputs land.
+
 ## Gate 1: MedGen pipeline on real data (2026-04-14)
 
 ### Problem: parse_pubmed_links and parse_hpo_omim returned 0 edges

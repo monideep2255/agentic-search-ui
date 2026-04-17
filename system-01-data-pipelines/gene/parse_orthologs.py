@@ -35,63 +35,36 @@ logger = logging.getLogger(__name__)
 ORTHOLOGS_SOURCE = "NCBI Gene Orthologs"
 
 
-def parse_orthologs(
+def iter_orthologs(
     path: Path,
     tax_id: int | None = None,
-) -> list[dict]:
-    """Parse gene_orthologs.gz into biolink:orthologous_to edges.
+):
+    """Generator variant: yield one ortholog edge per valid row. O(1) memory.
 
-    Each row produces one edge from NCBIGene:{GeneID} to
-    NCBIGene:{Other_GeneID}. When tax_id is supplied, only rows where
-    the given tax_id appears in either the tax_id or Other_tax_id column
-    are included.
-
-    Args:
-        path: Local path to the gzip-compressed gene_orthologs file.
-        tax_id: NCBI Taxonomy ID to filter on (e.g. 9606 for human).
-                Includes edges where either endpoint belongs to this organism.
-                If None, all orthology pairs are parsed.
-
-    Returns:
-        List of BioLink-compliant edge dicts ready for KGX export.
-
-    Raises:
-        FileNotFoundError: If path does not exist.
-        ValueError: If a required BioLink field is empty (from map_edge).
+    Yields:
+        biolink:orthologous_to edge dict per row.
     """
-    logger.info("Parsing gene_orthologs from %s (tax_id=%s)", path, tax_id)
-
-    edges: list[dict] = []
-    skipped = 0
+    logger.info("Streaming gene_orthologs from %s (tax_id=%s)", path, tax_id)
     tax_id_str = str(tax_id) if tax_id is not None else None
 
     with gzip.open(path, "rt", encoding="utf-8") as fh:
         for raw_line in fh:
             line = raw_line.rstrip("\n")
-
             if line.startswith("#"):
                 continue
-
             fields = line.split("\t")
             if len(fields) < 5:
-                skipped += 1
                 continue
 
             row_tax_id = fields[0].strip()
             gene_id = fields[1].strip()
-            # fields[2] = relationship (e.g. "Ortholog"), kept for reference
             other_tax_id = fields[3].strip()
             other_gene_id = fields[4].strip()
 
             if not gene_id or gene_id == "-":
-                skipped += 1
                 continue
-
             if not other_gene_id or other_gene_id == "-":
-                skipped += 1
                 continue
-
-            # Apply filter: include if either endpoint belongs to the target taxon
             if tax_id_str is not None:
                 if row_tax_id != tax_id_str and other_tax_id != tax_id_str:
                     continue
@@ -101,14 +74,13 @@ def parse_orthologs(
             source_url = f"https://www.ncbi.nlm.nih.gov/gene/{gene_id}"
 
             try:
-                edge = map_edge(
+                yield map_edge(
                     subject=gene_curie,
                     predicate="biolink:orthologous_to",
                     object=other_gene_curie,
                     source=ORTHOLOGS_SOURCE,
                     source_url=source_url,
                 )
-                edges.append(edge)
             except ValueError as exc:
                 logger.warning(
                     "Skipping ortholog edge %s -> %s: %s",
@@ -116,11 +88,24 @@ def parse_orthologs(
                     other_gene_curie,
                     exc,
                 )
-                skipped += 1
 
-    logger.info(
-        "gene_orthologs parse complete: %d edges, %d skipped",
-        len(edges),
-        skipped,
-    )
+
+def parse_orthologs(
+    path: Path,
+    tax_id: int | None = None,
+) -> list[dict]:
+    """List-returning wrapper around iter_orthologs. Use for tests only.
+
+    Do NOT use in production pipelines — 17M edges do not fit safely in RAM
+    alongside other gene parsers on a laptop-scale machine.
+
+    Args:
+        path: Local path to the gzip-compressed gene_orthologs file.
+        tax_id: NCBI Taxonomy ID to filter on. Either endpoint match triggers inclusion.
+
+    Returns:
+        List of BioLink-compliant edge dicts.
+    """
+    edges = list(iter_orthologs(path, tax_id=tax_id))
+    logger.info("gene_orthologs parse complete: %d edges", len(edges))
     return edges
