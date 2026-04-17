@@ -30,6 +30,11 @@ node_modules/
 npm-debug.log*
 .npm
 
+# Runtime logs (Chrome crashpad, ad-hoc debug files, scheduled-task state)
+debug.log
+*.log.tmp
+.claude/scheduled_tasks.lock
+
 # Neo4j
 neo4j/data/
 neo4j/logs/

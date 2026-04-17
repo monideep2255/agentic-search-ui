@@ -10,11 +10,11 @@ Downloads bulk data from NCBI FTP, parses it, maps it to the BioLink model, vali
 
 ## Status
 
-Phase 2 code complete: PubMed ETL, Taxonomy ETL, and 5-database merge pipeline all merged. Gate 2 next: run all three on real data and validate KGX output.
+Phase 2 complete: Gate 2 done (2026-04-17). PubMed ETL, Taxonomy ETL, and 5-database merge all ran on real data and KGX validated. Phase 3 next: AGE loader code and Cypher fixture smoke test.
 
 | System | Status |
 |--------|--------|
-| System 1: data pipelines | Phase 2 code done (PubMed + Taxonomy + 5-db merge). Gate 2 next (real data run). |
+| System 1: data pipelines | Phase 2 done. Gate 2 complete (2026-04-17, 5-db merge validated on real data). Phase 3 next. |
 | System 2: knowledge graph | Not started |
 | System 3: search agent | Not started |
 
@@ -87,6 +87,7 @@ python system-01-data-pipelines/gene/pipeline.py
 |-----|---------------|
 | [Execution plan](docs/bossman_execution_plan.md) | Phase-by-phase build plan with status, gates, validation checklist, disk budget |
 | [Three-layer architecture](docs/architecture/Three_layer_data_architecture.md) | Layer 1 (graph), Layer 2 (on-demand API), Layer 3 (enrichment), cost breakdown |
+| [Merge logic explained](docs/architecture/Merge_logic_explained.md) | First-principles walkthrough of the 5-database streaming merge, dedup strategy, stub injection |
 | [System 1 data engineering plan](docs/System_1_data_engineering_plan.md) | Detailed design for all 6 ETL pipelines |
 | [Data inventory](docs/data_inventory.md) | What data was downloaded, FTP URLs, file sizes, row counts, validation results |
 | [Learnings](docs/learnings.md) | Problems encountered and solutions, updated after every pipeline run |

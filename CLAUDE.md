@@ -12,7 +12,7 @@ Stack: Python 3.11+, LinkML, BioLink 4.x, KGX, PostgreSQL 15 + Apache AGE.
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | System 1: data pipelines | Phase 1 and Gate 1 complete (67.5M Gene, 4.4M ClinVar, 198K MedGen nodes produced on real data). Phase 2 code complete (PubMed + Taxonomy ETL + 5-database merge). Gate 2 next: run pubmed-etl + taxonomy-etl + merge-etl on real data, validate KGX. |
+| 1 | System 1: data pipelines | Phase 1 and Gate 1 complete (67.5M Gene, 4.4M ClinVar, 198K MedGen nodes produced on real data). Phase 2 complete: Gate 2 done (2026-04-17), 5-database merge validated on real data. Phase 3 next: AGE loader code + Cypher fixture smoke test. |
 | 2 | System 2: knowledge graph | Schema defined alongside pipelines. PostgreSQL + AGE load in Phase 3. |
 | 3 | System 3: search agent | Lives in a separate repository. Do not build here. |
 
@@ -40,6 +40,7 @@ This repo builds Layer 1 (fully ingested knowledge graph) of a three-layer data 
 | `NCBI_databases_and_APIs_reference.md` | Raw data on all 39 NCBI databases, FTP paths, record counts | Checking FTP URLs and file formats |
 | `architecture/Biolink_repos_explained.md` | BioLink/LinkML reference | Schema design |
 | `architecture/Three_layer_data_architecture.md` | Layer 1 (graph), Layer 2 (on-demand API), Layer 3 (enrichment). What this repo does vs System 3. | Understanding system boundaries |
+| `architecture/Merge_logic_explained.md` | First-principles walkthrough of the 5-database merge: streaming passes, dedup strategy, stub injection, dangling-edge detection | Before modifying merger.py or writing Phase 3 loader code |
 | `context/Innovation_proposal_2026.md` | Full system proposal | Context and framing |
 | `bossman_execution_plan.md` | Phase-by-phase execution plan for System 1 pipelines (bossman mode reference) | Before starting any bossman phase |
 | `context/setup/setup-03_windows_laptop.md` | One-time setup guide for Windows laptop (repo clone, symlinks, venv, data rsync) | When setting up a new local dev environment |
@@ -71,7 +72,7 @@ Phase 1 first: Gene + ClinVar + MedGen. These three form the core triangle and s
 
 ```
 Phase 1 (weeks 1-2):  Gene ETL -> ClinVar ETL -> MedGen ETL -> first merge test  [DONE 2026-04-14]
-Phase 2 (weeks 3-4):  PubMed ETL -> Taxonomy ETL -> five-database merge  [CODE DONE 2026-04-16; Gate 2 NEXT]
+Phase 2 (weeks 3-4):  PubMed ETL -> Taxonomy ETL -> five-database merge  [DONE 2026-04-17]
 Phase 3 (weeks 5-6):  AGE loader code -> Cypher validation (loader code only; no local load)
 Phase 4 (week 7):     Cloud deploy: provision Hetzner VPS -> rsync KGX from laptop -> load into AGE on cloud
 Phase 5 (week 8):     dbSNP ETL on cloud -> SNP-ClinVar merge -> full six-database validation
@@ -135,4 +136,4 @@ All rules are in `.claude/rules/` and loaded automatically. No need to duplicate
 
 ---
 
-Last updated: 2026-04-16
+Last updated: 2026-04-17
