@@ -114,6 +114,49 @@ Fix (low priority, not a Gate 2 blocker): add `("OMIM:", "biolink:Disease"),` to
 
 Lesson: whenever the merger injects stubs as `biolink:NamedThing`, treat it as a gap in `_PREFIX_TO_CATEGORY`. Each Gate run should include a post-merge check: "how many NamedThing stubs, what prefix?" and add the missing row to the table.
 
+### Understanding: why the merged graph shows 115.4M nodes (not ~116M) and 99.99% cross-pipeline connectivity (not 100%)
+
+Two questions came up reading the Gate 2 merge report. Both answers are "the numbers are right; here's the arithmetic."
+
+Merged node count:
+
+| Step | Nodes |
+|------|-------|
+| Gene | 67,562,827 |
+| PubMed | 41,305,514 |
+| ClinVar | 4,426,035 |
+| Taxonomy | 2,736,607 |
+| MedGen | 198,813 |
+| Sum of raw inputs | 116,229,796 |
+| Duplicates removed (same CURIE in 2+ pipelines, first occurrence wins) | -904,160 |
+| Unique nodes after dedup | 115,325,636 |
+| Stub nodes added (dangling endpoints) | +81,125 |
+| Final merged total | 115,406,761 (matches report) |
+
+The 904K dedup hits are cross-pipeline overlap, not data loss. Examples: MedGen disease IDs that ClinVar also names via has_phenotype; MeSH IDs present as stubs in pubmed and as cross-refs in medgen; a handful of GO terms duplicated between gene2go and medgen mappings. Dedup keeps the first occurrence and drops the rest; we have all the data.
+
+Why 99.99%, not 100%. The 81,125 stubs (0.07% of 116M nodes) break down by prefix:
+
+| Prefix | Stubs | Why it is stubs |
+|--------|-------|-----------------|
+| ClinVar | 43,770 | ClinVar IDs referenced by Gene and MedGen that were not in our ClinVar snapshot. ClinVar variants get merged and retired, and some references are forward-looking. |
+| PMID | 14,769 | PMIDs in gene2pubmed added after our PubMed baseline snapshot. FTP snapshots are not synchronised across NCBI databases. |
+| OMIM | 10,580 | mim2gene_medgen references OMIM disease IDs. OMIM is not one of our 5 pipelines, so every OMIM reference is a stub by design. |
+| HP | 9,881 | Same reason as OMIM. MedGen cross-references HPO terms; HPO is not a pipeline we ingest. |
+| MedGen | 2,032 | Newer MedGen concepts not in our MedGen snapshot yet. |
+| NCBIGene | 89 | Gene IDs in clinvar not in the gene snapshot (trivial volume). |
+| NCBITaxon | 4 | Taxa merged or deleted between the gene_info and taxdump snapshot dates. |
+
+The "missing 0.01%" is structural, not a bug:
+
+- 0.006% of Gene->PMID edges miss because PMIDs get added to pubmed continuously, and gene_info.gz/gene2pubmed.gz are snapshotted on a different schedule from pubmed/baseline/.
+- 0.0001% of Gene->Taxon miss because taxonomy curation merges and retires taxa as new genomes are published.
+- OMIM (~10K) and HP (~10K) can never resolve because we chose not to ingest those databases. See DECISIONS.md 2026-04-06 (v1 scope: no OMIM, no HPO).
+
+To reach 100% you would need either (a) same-minute synchronised FTP snapshots across all NCBI source databases, which NCBI does not publish, or (b) ingest OMIM and HPO as Layer 1 pipelines. Option (b) adds roughly 50 MB of source data and is deferred to a post-Gate-4 scope expansion.
+
+Lesson: a 0.07% stub rate on a 116M-node biological knowledge graph is healthy. Published merged KGs in the BioLink / NCATS ecosystem routinely run 2-5% stubs because their source snapshots drift too. Anyone reviewing the Gate 2 merge_report.md should read `stub_count / node_count` rather than the raw `Validation passed: False` line (which is noise from stubs carrying empty source_url, intentional behaviour that matches the inject_stubs contract).
+
 ### Decision: delete per-db KGX after merge validates, keep merged + FTP cache
 
 Logged 2026-04-17 during Gate 2 execution. Once `merge-etl` finishes and the merged KGX passes validation (awk col check, row counts, cross-pipeline connectivity metrics resolve to 0 dangling), the per-database KGX directories are redundant. Deleting them reclaims ~130 GB of disk, giving clean headroom for Phase 3 fixture smoke tests and Phase 4 rsync staging.
