@@ -402,6 +402,10 @@ classes:
         required: true
       source_url:
         required: true
+      knowledge_level:
+        required: true
+      agent_type:
+        required: true
 
   GeneConditionAssociation:
     description: Gene associated with a disease condition (mim2gene_medgen, gene_info).

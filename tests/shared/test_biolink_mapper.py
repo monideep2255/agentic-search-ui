@@ -161,6 +161,32 @@ class TestMapEdge:
         )
         assert edge["clinical_significance"] == "Pathogenic"
 
+    def test_default_knowledge_level_and_agent_type(self):
+        """map_edge sets BioLink 4.x defaults: knowledge_assertion + manual_agent."""
+        edge = map_edge(
+            subject="ClinVar:VCV000017599",
+            predicate="biolink:is_sequence_variant_of",
+            object="NCBIGene:672",
+            source="ClinVar",
+            source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/17599/",
+        )
+        assert edge["knowledge_level"] == "knowledge_assertion"
+        assert edge["agent_type"] == "manual_agent"
+
+    def test_knowledge_level_and_agent_type_overridable(self):
+        """map_edge accepts overrides for knowledge_level and agent_type."""
+        edge = map_edge(
+            subject="NCBIGene:672",
+            predicate="biolink:orthologous_to",
+            object="NCBIGene:12189",
+            source="NCBI Gene",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+            knowledge_level="prediction",
+            agent_type="automated_agent",
+        )
+        assert edge["knowledge_level"] == "prediction"
+        assert edge["agent_type"] == "automated_agent"
+
 
 class TestValidateCurie:
     def test_returns_true_for_valid_curie(self):
