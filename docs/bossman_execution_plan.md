@@ -2,7 +2,7 @@
 
 Phase-by-phase implementation plan for the 6 NCBI ETL pipelines. Each phase is one bossman session with integrated skill chain and branch+MR workflow. Use `/bossman-mode --phase N` to execute.
 
-Created: 2026-04-13. Last updated: 2026-04-16 (Phase 2.2 complete; architecture revised: skip local AGE load, load once on cloud; local development moved from shared NCBI `/export` to personal Windows laptop).
+Created: 2026-04-13. Last updated: 2026-04-17 (Gate 2 complete: 115M nodes + 693M edges merged with 99.99% cross-pipeline connectivity; streaming refactors landed mid-gate for gene and merge; Phase 3 next).
 
 ---
 
@@ -32,13 +32,13 @@ graph TD
         P20 & P21 --> P22
     end
 
-    subgraph "Gate 2: run locally NEXT"
-        G2R[Run pubmed/taxonomy-etl + merge-etl]
+    subgraph "Gate 2: run locally [DONE]"
+        G2R[Run pubmed/taxonomy/gene-etl + merge-etl]
         G2V[KGX BioLink validation]
         P22 --> G2R --> G2V
     end
 
-    subgraph "Phase 3: AGE loader code"
+    subgraph "Phase 3: AGE loader code [NEXT]"
         P30[3.0 AGE loader + fixture smoke test]
         G2V --> P30
     end
@@ -77,7 +77,9 @@ graph TD
     style P20 fill:#2d6a2d,color:#fff
     style P21 fill:#2d6a2d,color:#fff
     style P22 fill:#2d6a2d,color:#fff
-    style G2R fill:#c9a227,color:#000
+    style G2R fill:#2d6a2d,color:#fff
+    style G2V fill:#2d6a2d,color:#fff
+    style P30 fill:#c9a227,color:#000
 ```
 
 Legend: green = done, yellow = in progress, default = pending.
@@ -202,8 +204,8 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | Week | What | Where | Status |
 |------|------|-------|--------|
 | Week 1 | Phase 1 code + Gate 1 | NCBI server `/export` | DONE (2026-04-14 to 2026-04-16). Data migrated to Windows laptop on 2026-04-16 (see `docs/context/setup/setup-03_windows_laptop.md`). |
-| Week 2 | Phase 2 code + Gate 2 | Windows laptop C: drive | 2.0 + 2.1 + 2.2 code DONE (2026-04-16). Gate 2 NEXT (pubmed/taxonomy run + 5-db merge validation), runs on laptop. |
-| Week 3 | Phase 3 (loader code) + Phase 4 (provision VPS, rsync from laptop, cloud load) + Gate 3 | Laptop then cloud | Pending |
+| Week 2 | Phase 2 code + Gate 2 | Windows laptop C: drive | 2.0 + 2.1 + 2.2 code DONE (2026-04-16). Gate 2 DONE (2026-04-17): 115M nodes + 693M edges, 99.99% cross-pipeline connectivity; streaming refactors required mid-gate for gene and merge. |
+| Week 3 | Phase 3 (loader code) + Phase 4 (provision VPS, rsync from laptop, cloud load) + Gate 3 | Laptop then cloud | NEXT |
 | Week 4 | Phase 5 (dbSNP on cloud) + Gate 4 | Cloud | Pending |
 
 ### Why this order
@@ -370,11 +372,13 @@ Session 6: Phase 2.1  Taxonomy ETL code                   DONE (2026-04-16)
     v
 Session 7: Phase 2.2  5-database merge code               DONE (2026-04-16)
     v
---- GATE 2: run PubMed + Taxonomy + merge-etl on Windows laptop --- NEXT
-    |  pubmed-etl (overnight), taxonomy-etl
-    |  kgx validate on each output
+--- GATE 2: run PubMed + Taxonomy + Gene (re-export) + merge-etl on Windows laptop --- DONE (2026-04-17)
+    |  taxonomy-etl (77 s), pubmed-etl (5.5 hr parallel), gene-etl --skip-download (77 min streaming)
+    |  merge-etl (2h 21min): 115.4M nodes, 693.3M edges, 81K stubs, 99.99% cross-pipeline connectivity
+    |  awk verify: all 693M edges NF=8, 0 empty knowledge_level/agent_type
+    |  per-db KGX deleted post-validation (143.8 GB reclaimed)
     v
-Session 8: Phase 3.0  AGE loader code + fixture smoke test
+Session 8: Phase 3.0  AGE loader code + fixture smoke test  NEXT
     |  build AGE loader module (schema, batch insert, indexes)
     |  round-trip a tiny KGX fixture through Docker Desktop PG+AGE container
     |  NO bulk local load (reserved for cloud)
@@ -498,7 +502,7 @@ Pass criteria (all passed):
 
 ---
 
-## Phase 2: literature + taxonomy [CODE DONE, Gate 2 NEXT]
+## Phase 2: literature + taxonomy [DONE]
 
 ### Phase 2.0: PubMed ETL (DONE 2026-04-16)
 
@@ -648,7 +652,7 @@ tests/
     test_five_database_merge.py        5-db orchestrator + cross-pipeline connectivity (11 tests)
 ```
 
-All tests use inline fixtures (no separate fixture files). Total: 180 tests, all passing.
+All tests use inline fixtures (no separate fixture files). Total: 184 tests, all passing (180 through Phase 2.2 + 4 added during Gate 2 when `test_biolink_mapper.py` grew 2 tests for the new `knowledge_level` / `agent_type` defaults plus overrides).
 
 ### Testing rules
 
@@ -671,7 +675,7 @@ All tests use inline fixtures (no separate fixture files). Total: 180 tests, all
 7. Skill chain is fixed: best-practices -> architecture-patterns -> [dev with standards] -> qa-gate -> release-workflow -> ship.
 8. Sub-agents used for parallel builders. Simpler than full agent teams, sufficient for the task.
 9. Testing integrated at every phase via testing-standards + qa-gate + eval-harness.
-10. 180 tests across Phase 1 and Phase 2 (5 schema + 82 shared + 10 gene + 16 clinvar + 18 medgen + 14 integration + 12 pubmed + 11 taxonomy + 11 five-database merge).
+10. 184 tests across Phase 1, Phase 2, and Gate 2 fixes (5 schema + 86 shared including 4 new BioLink 4.x tests + 10 gene + 16 clinvar + 18 medgen + 14 integration + 12 pubmed + 11 taxonomy + 11 five-database merge). The 4 new tests cover `knowledge_level` / `agent_type` defaults and per-edge overrides in `map_edge`.
 11. Data validation gates between phase groups. Run pipelines on real data before building next group.
 12. KGX files are intermediates. Graph database is the end target. Delete KGX after AGE load.
 13. AGE loader (Phase 3) builds loader code only; full load moved to Phase 4 on the cloud VPS (see decision 18).
@@ -680,7 +684,10 @@ All tests use inline fixtures (no separate fixture files). Total: 180 tests, all
 16. Gene pipeline streams edges to disk per parser batch (append_edges) to avoid OOM on 278M edges.
 17. ClinVar and dbSNP use different ID spaces (ClinVar:{id} vs dbSNP:rs{id}), no schema conflict. Connected via exact_match edges at Phase 5.2.
 18. Skip the local AGE load. Phase 3.0 builds the loader + a fixture smoke test; Phase 4.0 provisions the VPS, rsyncs KGX, and loads once on the cloud. Rationale: actual `/export` free space is 284GB (not 403GB as originally budgeted), and a local full load + pg_dump peak would overflow. A single cloud load avoids ~2-6 hours of duplicate load work and eliminates the ~150GB temporary pg_dump overhead. Trade-off: lose the ability to run full-scale Cypher validation locally; mitigated by the Phase 3.0 fixture smoke test proving loader logic before rsync. Earlier Hetzner billing starts ~2 weeks sooner (~$15).
-19. PubMed download is serial today ([download.py:97-104](../system-01-data-pipelines/pubmed/download.py#L97-L104)). Gate 2 runs overnight, so serial is acceptable. If Gate 2 retries become needed, switch to `ThreadPoolExecutor(max_workers=8)` to cut 4-8 hours to ~1-2 hours.
+19. PubMed download parallelised with `ThreadPoolExecutor(max_workers=8)` during Gate 2 (SUPERSEDES the original "serial is acceptable" plan). Measured serial rate (31 sec/file × 1416 files = ~12 hr) overshot the 4-8 hr plan estimate, so the pre-approved parallel path was applied mid-gate. Cut pubmed download to ~90 min. Rationale logged in DECISIONS.md 2026-04-16.
+21. Gene pipeline streams all 5 parsers to disk (generators + `append_nodes` / `append_edges` per batch) instead of accumulating lists. Mid-Gate-2 refactor after `parse_gene_info` OOMed at ~21 GB on a 33 GB laptop. Peak RAM dropped to ~2 GB. Rule going forward: any parser producing >1M records must be a generator. Rationale logged in DECISIONS.md 2026-04-17.
+22. `shared/merger.py` streams both passes (nodes with dedup set, edges without dedup, stubs inline) instead of loading all 5 KGX files into memory. Mid-Gate-2 refactor after the list-accumulate design would have needed ~400 GB of RAM. Peak dropped to ~12 GB. Edge-level dedup skipped because cross-pipeline edge collisions are rare by construction. Rationale logged in DECISIONS.md 2026-04-17.
+23. After `merge-etl` completes and the merged KGX passes awk verification plus cross-pipeline connectivity checks, per-database KGX directories (`data/kgx/{gene,clinvar,medgen,pubmed,taxonomy}/`) are deleted to reclaim disk. Done at end of Gate 2: 143.8 GB reclaimed. FTP cache is kept as the regeneration source. Rationale in DECISIONS.md 2026-04-17.
 20. Local development and all bulk data live on the user's Windows laptop C: drive (355GB exclusive), not the NCBI shared server `/export`. Gate 1 data was migrated on 2026-04-16 after the `/export` free-space audit revealed 284GB shared with ~925 users and no quota protection. Setup steps captured in `docs/context/setup/setup-03_windows_laptop.md`. Phase 3.0 fixture smoke test uses Docker Desktop + a Linux PostgreSQL + AGE container. Phase 4 rsync to Hetzner runs over home Wi-Fi upload (6-16 hrs for ~140GB). No NIH funding or policy ties the pipeline to NCBI infrastructure; all NCBI data is public FTP.
 
 ---
@@ -691,6 +698,7 @@ All tests use inline fixtures (no separate fixture files). Total: 180 tests, all
 |------|-----------|
 | `docs/context/setup/setup-03_windows_laptop.md` | First time setting up the repo on a laptop; migrating from `/export`; verifying `.env` paths |
 | `docs/System_1_data_engineering_plan.md` | Before any pipeline work |
+| `docs/architecture/Merge_logic_explained.md` | First-principles walkthrough of the 5-database merge, the schema, the axioms (written during Gate 2) |
 | `docs/learnings.md` | After any pipeline run (add problems and solutions) |
 | `docs/data_inventory.md` | After any pipeline run (add download and output details) |
 | `reference-repos/ncbi_ai_agents/KG/pipeline/src/glucose_metabolism_kg/` | Building shared utilities, merger, exporter |
