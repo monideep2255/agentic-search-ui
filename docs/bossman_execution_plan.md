@@ -9,7 +9,7 @@ Created: 2026-04-13. Last updated: 2026-04-17 (Gate 2 complete: 115M nodes + 693
 ## Plan overview
 
 ```mermaid
-%%{init: {'flowchart': {'nodeSpacing': 80, 'rankSpacing': 160, 'padding': 25, 'useMaxWidth': true, 'htmlLabels': true}}}%%
+%%{init: {'flowchart': {'nodeSpacing': 55, 'rankSpacing': 90, 'padding': 15, 'useMaxWidth': true, 'htmlLabels': true}}}%%
 graph TD
     subgraph "Phase 1: core triangle [DONE]"
         P10[1.0 Schema + scaffolding]
