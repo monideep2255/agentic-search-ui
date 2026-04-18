@@ -238,6 +238,37 @@ Read the reference repo's CLAUDE.md before dispatching agents to explore it.
 
 ---
 
+## Multi-agent safety
+
+When 3+ builder teammates run in parallel (agent teams or worktrees), these conventions prevent agents from corrupting each other's work. Derived from OpenClaw's battle-tested multi-agent conventions (see `reference-repos/personal-os/Reference-repos/openclaw-Deep-Dive/`).
+
+### Scoped commits
+
+- Each builder commits only its own changes. Never `git add -A` or `git add .` across the full repo.
+- Stage files by name: `git add path/to/file1.py path/to/file2.py`.
+- When the user says "commit all," the lead groups changes into logical commits, not one giant commit.
+
+### File conflict handling
+
+- When a teammate encounters files it did not create or modify, it notes them and continues. It does not clean them up, reformat them, or include them in its commit.
+- If two teammates need to modify the same file, use `isolation: "worktree"` for both. The integrator agent wires the results together afterward.
+- If a teammate sees unexpected diffs in `git status`, it reports them in its completion summary but does not resolve them.
+
+### Git state protection
+
+- Do not create, apply, or drop `git stash` entries. Other teammates may be working.
+- Do not switch branches unless explicitly instructed by the lead.
+- Do not run `git pull --rebase --autostash`. Use `git pull --rebase` only when the lead coordinates it.
+- Do not create or remove `git worktree` checkouts unless explicitly requested.
+
+### Formatting auto-resolve
+
+- If staged + unstaged diffs are formatting-only (lint, whitespace, import order), auto-resolve without asking.
+- If a commit or push was already requested, auto-stage formatting-only follow-ups in the same commit or a tiny follow-up commit. No extra confirmation needed.
+- Only ask the user when changes are semantic (logic, data, behavior).
+
+---
+
 ## Execution protocol
 
 ### Step 1: session start + branch creation
