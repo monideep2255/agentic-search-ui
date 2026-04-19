@@ -573,6 +573,14 @@ Branch: `phase/3.0-age-loader`
 
 Build the AGE loader code. Create graph schema, batch node/edge INSERT, create indexes. Round-trip a tiny KGX fixture through a local PostgreSQL + AGE instance to prove loader logic before shipping to cloud. Do NOT do the full 5-database local load (disk budget).
 
+Prerequisites (install before running `/bossman-mode --phase 3.0`):
+
+- Repo cloned and venv active. `pytest -q` passes (184/184 baseline).
+- Linux PostgreSQL 15 + AGE reachable from the laptop. AGE does not install natively on Windows. Pick one path:
+  - Docker Desktop (recommended): install from https://www.docker.com/products/docker-desktop/, reboot, verify with `docker run --rm apache/age:latest postgres --version`. ~20 min setup. Free for personal use; check Docker Business licensing if your employer has >250 employees or >$10M revenue.
+  - WSL2 Ubuntu + native install (fallback): `wsl --install -d Ubuntu` then `apt install postgresql-15` and build AGE from source. ~45-60 min setup. No Docker license question.
+- On a personal computer is fine for Phase 3.0: it is code + tiny inline fixtures only, no NCBI data touched. Phase 4.0 requires returning to the work laptop where the 140GB merged KGX lives.
+
 Deliverables:
 - AGE loader module (schema creation, batched node insert, batched edge insert, index creation)
 - Fixture tests using small inline KGX to assert load + Cypher round-trip
@@ -700,6 +708,7 @@ All tests use inline fixtures (no separate fixture files). Total: 184 tests, all
 | `docs/context/setup/setup-03_windows_laptop.md` | First time setting up the repo on a laptop; migrating from `/export`; verifying `.env` paths |
 | `docs/System_1_data_engineering_plan.md` | Before any pipeline work |
 | `docs/architecture/Merge_logic_explained.md` | First-principles walkthrough of the 5-database merge, the schema, the axioms (written during Gate 2) |
+| `docs/architecture/AGE_loader_explained.md` | First-principles walkthrough of the Phase 3 AGE loader: KG structure, why AGE over Neo4j, performance expectations, hosting comparison (Hetzner vs Netcup vs Contabo, US vs EU) |
 | `docs/learnings.md` | After any pipeline run (add problems and solutions) |
 | `docs/data_inventory.md` | After any pipeline run (add download and output details) |
 | `reference-repos/ncbi_ai_agents/KG/pipeline/src/glucose_metabolism_kg/` | Building shared utilities, merger, exporter |
