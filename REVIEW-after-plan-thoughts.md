@@ -1,0 +1,12 @@
+3. Monideep task: do a data mapping, setting up rules by self and map it to what claude code did -> before loading into KG
+4. visualizations, schema of the architecture must be present
+5. Documentation of the end to end process must be present
+6. UI and everything must have biolink validation (KGX tests for BioLink conformity and that it will work for NCATS: https://github.com/biolink/kgx/blob/master/docs/kgx_biolink_validation.md)
+   - Run `kgx validate` on every KGX output after each gate
+   - Checks: categories and predicates exist in official BioLink model, ID prefixes are registered, required KGX columns present, edge subjects/objects reference valid node IDs
+   - Install: `pip install kgx`, then `kgx validate data/kgx/<database>/nodes.tsv data/kgx/<database>/edges.tsv`
+7. double check that all data meaning all is downloaded
+8. EMPTY SPACE BEFORE DBSNP?
+9. Want 1 week: build V1 of all the 3 systems. User research is critical (step 1 validation). Then try looking for ways to optimize etl pipelines (NCBI experts) + optimize search experience (what questions) + seed golden datasets -> Feedback loop development
+10. Architecture diagram must include (1) the code logic and why (2) overall high level schema (3) system 2 schema (3) rules (4) step by step process of cleaning (ETL) (4) How the ontology mapping was done
+11. make sure plan, decisions, learnings and any other relevant are always updated!
