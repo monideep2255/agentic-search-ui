@@ -16,11 +16,13 @@ medgen-etl = "system_01_data_pipelines.medgen.cli:main"
 pubmed-etl = "system_01_data_pipelines.pubmed.cli:main"
 taxonomy-etl = "system_01_data_pipelines.taxonomy.cli:main"
 merge-etl = "system_01_data_pipelines.merge.cli:main"
+age-load = "system_02_knowledge_graph.loader.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
     "integration: marks tests that hit the network or require postgres",
+    "docker: tests that require Docker Desktop running with apache/age:latest",
 ]
 
 [tool.setuptools]

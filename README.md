@@ -10,12 +10,12 @@ Downloads bulk data from NCBI FTP, parses it, maps it to the BioLink model, vali
 
 ## Status
 
-Phase 2 complete: Gate 2 done (2026-04-17). PubMed ETL, Taxonomy ETL, and 5-database merge all ran on real data and KGX validated. Phase 3 next: AGE loader code and Cypher fixture smoke test.
+Phase 3 complete: AGE loader built and smoke-tested (2026-04-19). 5-node + 3-edge round-trip confirmed via Docker Desktop. Phase 4 next: provision Hetzner VPS, rsync KGX, cloud load.
 
 | System | Status |
 |--------|--------|
-| System 1: data pipelines | Phase 2 done. Gate 2 complete (2026-04-17, 5-db merge validated on real data). Phase 3 next. |
-| System 2: knowledge graph | Not started |
+| System 1: data pipelines | Phase 3 done (2026-04-19). AGE loader module built and Docker smoke test passed. Phase 4 next: cloud deploy. |
+| System 2: knowledge graph | AGE loader module built (system-02-knowledge-graph/loader/). Full load in Phase 4. |
 | System 3: search agent | Not started |
 
 ---

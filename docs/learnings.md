@@ -4,11 +4,34 @@ Problems encountered and solutions implemented during development. Each entry ca
 
 ## Table of contents
 
+- [Phase 3.0: AGE loader on Docker Desktop (2026-04-19)](#phase-30-age-loader-on-docker-desktop-2026-04-19)
 - [Gate 2: Taxonomy + PubMed + 5-db merge on Windows laptop (2026-04-16)](#gate-2-taxonomy--pubmed--5-db-merge-on-windows-laptop-2026-04-16)
 - [Gate 1: MedGen pipeline on real data (2026-04-14)](#gate-1-medgen-pipeline-on-real-data-2026-04-14)
 - [Gate 1: Gene pipeline on real data (2026-04-14)](#gate-1-gene-pipeline-on-real-data-2026-04-14)
 - [Gate 1: ClinVar pipeline on real data (2026-04-14)](#gate-1-clinvar-pipeline-on-real-data-2026-04-14)
 - [Architecture discussions (2026-04-14)](#architecture-discussions-2026-04-14)
+
+## Phase 3.0: AGE loader on Docker Desktop (2026-04-19)
+
+### Problem: psycopg2 parameter binding conflicts with percent signs in CURIE values
+
+The first AGE loader prototype used the `cypher() UNWIND` approach: build a Cypher string with `%s` placeholders, pass it to `cursor.execute()` via psycopg2, and let psycopg2 substitute the batch values. This failed immediately because NCBI CURIEs contain colons and the Cypher string itself contains percent signs (from the AGE `cypher()` wrapper syntax). psycopg2 interprets every `%` in the query string as a parameter marker, so a CURIE like `NCBIGene:672` in a Cypher literal caused a `TypeError: not enough arguments for format string` before the query ever reached PostgreSQL.
+
+Root cause: psycopg2 uses `%s`-style parameter substitution at the Python level, before the string reaches the database. Any literal `%` in the SQL or Cypher string must be escaped as `%%`, but Cypher UNWIND templates contain their own `%`-style formatting needs, making the escaping brittle and easy to break on new CURIE prefixes.
+
+Fix: switch to direct INSERT into AGE's internal tables (`ag_catalog._ag_label_vertex` and `ag_catalog._ag_label_edge`) using standard parameterised SQL. AGE stores graph data in regular PostgreSQL heap tables; the `cypher()` function is a read/write wrapper for interactive use, not a requirement for bulk load. With direct INSERT, the SQL string contains no percent signs, psycopg2 parameter binding works normally, and CURIEs pass through as plain string values.
+
+Trade-off: direct INSERT couples the loader to AGE's internal schema. If a future AGE release renames or restructures these tables, the loader needs updating. Accepted: the AGE project has kept this table layout stable across all releases in the 1.x series, and the loader already imports `ag_catalog` functions by name so it is already coupled to AGE internals.
+
+Lesson: when a library's recommended query interface conflicts with the parameter binding of the underlying DB driver, reach for the lower-level interface. The `cypher()` wrapper is convenient for interactive Cypher; it is not the right tool for batch ETL where you control the insert path.
+
+### Observation: Docker Desktop smoke test confirmed 5-node + 3-edge round-trip on apache/age:latest
+
+The smoke test (`tests/loader/test_age_smoke.py`, 4 tests, `@pytest.mark.docker`) loads a tiny inline KGX fixture (5 nodes, 3 edges) into a fresh AGE graph, queries it back via `cypher()` SELECT, and asserts node properties and edge connectivity. All 4 tests passed against `apache/age:latest` on Docker Desktop. The loader correctly creates the graph, inserts vertex and edge records, builds indexes, and returns results via openCypher.
+
+This confirms the loader logic is sound before any cloud deployment. The full 5-database load (115M nodes, 693M edges) is reserved for Phase 4 on the Hetzner VPS.
+
+Lesson: a 5-node smoke test catches the wiring (connection, schema creation, insert path, query path) at negligible cost. Run it before assuming the full-scale load will work. The smoke test pays for itself the first time it catches a parameter binding bug (which it did here, see above).
 
 ## Gate 2: Taxonomy + PubMed + 5-db merge on Windows laptop (2026-04-16)
 

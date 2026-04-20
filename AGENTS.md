@@ -12,8 +12,8 @@ Stack: Python 3.11+, LinkML, BioLink 4.x, KGX, PostgreSQL 15 + Apache AGE.
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | System 1: data pipelines | Phase 1 and Gate 1 complete (67.5M Gene, 4.4M ClinVar, 198K MedGen nodes produced on real data). Phase 2 complete: Gate 2 done (2026-04-17), 5-database merge validated on real data. Phase 3 next: AGE loader code + Cypher fixture smoke test. |
-| 2 | System 2: knowledge graph | Schema defined alongside pipelines. PostgreSQL + AGE load in Phase 3. |
+| 1 | System 1: data pipelines | Phase 1 and Gate 1 complete (67.5M Gene, 4.4M ClinVar, 198K MedGen nodes produced on real data). Phase 2 complete: Gate 2 done (2026-04-17), 5-database merge validated on real data. Phase 3 complete: AGE loader done (2026-04-19), 5-node + 3-edge round-trip smoke test passed via Docker Desktop. Phase 4 next: provision Hetzner VPS, rsync KGX, cloud load. |
+| 2 | System 2: knowledge graph | AGE loader module built (system-02-knowledge-graph/loader/). Full load deferred to Phase 4 on cloud VPS. |
 | 3 | System 3: search agent | Lives in a separate repository. Do not build here. |
 
 ---
@@ -74,7 +74,7 @@ Phase 1 first: Gene + ClinVar + MedGen. These three form the core triangle and s
 ```
 Phase 1 (weeks 1-2):  Gene ETL -> ClinVar ETL -> MedGen ETL -> first merge test  [DONE 2026-04-14]
 Phase 2 (weeks 3-4):  PubMed ETL -> Taxonomy ETL -> five-database merge  [DONE 2026-04-17]
-Phase 3 (weeks 5-6):  AGE loader code -> Cypher validation (loader code only; no local load)
+Phase 3 (weeks 5-6):  AGE loader code -> Cypher validation (loader code only; no local load)  [DONE 2026-04-19]
 Phase 4 (week 7):     Cloud deploy: provision Hetzner VPS -> rsync KGX from laptop -> load into AGE on cloud
 Phase 5 (week 8):     dbSNP ETL on cloud -> SNP-ClinVar merge -> full six-database validation
 ```
