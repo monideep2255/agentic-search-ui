@@ -201,7 +201,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | ClinVar download (500MB) | 20-30 min | Gate 1 (local) |
 | PubMed baseline + updatefiles download (~54GB compressed, 1334 + 81 files) | 4-8 hours serial, 1-2 hours if parallelized | Gate 2 (laptop, overnight) |
 | Taxonomy download (500MB) | 10 min | Gate 2 (laptop) |
-| rsync KGX to Hetzner VPS (~75-95GB merged KGX) | 3-8 hours at home Wi-Fi upload (typical 20-50 Mbps up) | Phase 4.0 |
+| rsync KGX to Hetzner VPS (actual 144GB merged KGX, verified 2026-04-19) | 6-12 hours at home Wi-Fi upload (typical 20-50 Mbps up, with `--compress` on TSV) | Phase 4.0 |
 | AGE load 5 databases (~115M nodes) on cloud | 2-4 hours | Phase 4.0 (cloud) |
 
 ### Realistic calendar
@@ -587,7 +587,25 @@ Rationale: laptop C: drive has 355GB free, but holding the 5-database KGX (~140G
 
 Branch: `phase/4.0-cloud-deploy`
 
-Provision Hetzner CPX42 (8 vCPU, 16GB RAM, 320GB disk, Nuremberg datacenter, ~$34/month with IPv4). Install PostgreSQL + AGE. rsync merged KGX (~75-95GB) from the Windows laptop C: drive to the VPS (3-8 hours over home Wi-Fi upload). Run the AGE loader from Phase 3.0 on the VPS to load all 5 databases. Verify Cypher queries work remotely. After cloud validation passes, delete laptop KGX intermediates.
+Provision Hetzner CPX42 (8 vCPU, 16GB RAM, 320GB disk, Nuremberg datacenter, ~$34/month with IPv4). Install PostgreSQL + AGE. rsync merged KGX from the Windows laptop C: drive to the VPS. Run the AGE loader from Phase 3.0 on the VPS to load all 5 databases. Verify Cypher queries work remotely. After cloud validation passes, delete laptop KGX intermediates.
+
+Actual merged KGX size (verified 2026-04-19 post-Gate-2): 144 GB total (nodes.tsv 46.5 GB + edges.tsv 97.8 GB + merge_report.md). The earlier 75-95 GB estimate was low. Over typical home Wi-Fi upload (20-50 Mbps), wall-clock transfer is 6 to 12 hours with `--compress` enabled.
+
+Prerequisites (install before running `/bossman-mode --phase 4.0`):
+
+- Hetzner VPS provisioned and SSH reachable from the work laptop with no password. See `docs/context/setup/setup-04_hetzner_vps.md` for the end-to-end server provisioning + SSH key flow.
+- rsync installed on the work laptop via Scoop + cwRsync. See `docs/context/setup/setup-05_rsync_windows.md` for the install steps, the three Windows-specific gotchas (colon path parsing, cwRsync vs Windows OpenSSH pipe incompatibility, HOME not set), and the exact working command. Skipping this doc will cost ~1 hour of live debugging during the phase.
+- Merged KGX present at `C:/Users/<you>/agentic-search-data-engineering/data/kgx/merged/` with `nodes.tsv` and `edges.tsv` (Gate 2 output).
+- `pytest -q` passes (232 tests baseline).
+
+The exact rsync command (captured from the working 2026-04-19 setup, covers all three Windows gotchas):
+
+```powershell
+$env:HOME = $env:USERPROFILE
+rsync -avP --compress -e "/cygdrive/c/Users/chakrabortim2/scoop/apps/cwrsync/6.4.7/bin/ssh.exe -i /cygdrive/c/Users/chakrabortim2/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" "/cygdrive/c/Users/chakrabortim2/Desktop/agentic-search-data-engineering/data/kgx/merged/" root@<server-ip>:/root/data/kgx/merged/
+```
+
+Pre-step: `ssh root@<server-ip> "mkdir -p /root/data/kgx/merged"` before the first real transfer.
 
 Test queries (run on cloud; same as original Phase 3 test queries):
 - Gene to variant traversal (BRCA1)
@@ -725,6 +743,8 @@ All tests use inline fixtures (no separate fixture files). Total: 232 tests, all
 | File | Read when |
 |------|-----------|
 | `docs/context/setup/setup-03_windows_laptop.md` | First time setting up the repo on a laptop; migrating from `/export`; verifying `.env` paths |
+| `docs/context/setup/setup-04_hetzner_vps.md` | Provisioning the Hetzner CPX42, SSH key setup from both the personal computer and the work laptop, end-to-end verification before Phase 4.0 |
+| `docs/context/setup/setup-05_rsync_windows.md` | Installing rsync on a locked-down Windows laptop (Scoop + cwRsync), the three Windows gotchas (colon path, cwRsync vs Windows OpenSSH pipe incompatibility, HOME unset), and the final working rsync command for Phase 4.0 |
 | `docs/System_1_data_engineering_plan.md` | Before any pipeline work |
 | `docs/architecture/Merge_logic_explained.md` | First-principles walkthrough of the 5-database merge, the schema, the axioms (written during Gate 2) |
 | `docs/architecture/AGE_loader_explained.md` | First-principles walkthrough of the Phase 3 AGE loader: KG structure, why AGE over Neo4j, performance expectations, hosting comparison (Hetzner vs Netcup vs Contabo, US vs EU) |

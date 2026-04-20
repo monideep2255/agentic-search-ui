@@ -4,12 +4,82 @@ Problems encountered and solutions implemented during development. Each entry ca
 
 ## Table of contents
 
+- [Phase 4.0 pre-flight: rsync on Windows work laptop (2026-04-19)](#phase-40-pre-flight-rsync-on-windows-work-laptop-2026-04-19)
 - [Phase 3.0: AGE loader on Docker Desktop (2026-04-19)](#phase-30-age-loader-on-docker-desktop-2026-04-19)
 - [Gate 2: Taxonomy + PubMed + 5-db merge on Windows laptop (2026-04-16)](#gate-2-taxonomy--pubmed--5-db-merge-on-windows-laptop-2026-04-16)
 - [Gate 1: MedGen pipeline on real data (2026-04-14)](#gate-1-medgen-pipeline-on-real-data-2026-04-14)
 - [Gate 1: Gene pipeline on real data (2026-04-14)](#gate-1-gene-pipeline-on-real-data-2026-04-14)
 - [Gate 1: ClinVar pipeline on real data (2026-04-14)](#gate-1-clinvar-pipeline-on-real-data-2026-04-14)
 - [Architecture discussions (2026-04-14)](#architecture-discussions-2026-04-14)
+
+## Phase 4.0 pre-flight: rsync on Windows work laptop (2026-04-19)
+
+Three compounding problems blocked the rsync dry-run from the work laptop to the Hetzner VPS. Each surfaced only after the previous one was fixed. Full walkthrough lives in `docs/context/setup/setup-05_rsync_windows.md`; this section captures the root causes and fixes for future reference.
+
+### Problem 1: Windows C:/ paths misread as a remote host
+
+`rsync --dry-run -avP "C:/Users/.../merged/" root@host:/tmp/test/` fails with `The source and destination cannot both be remote`. rsync uses `:` as the host/path separator, so `C:` looks like a hostname.
+
+Fix: use the Cygwin-style path format that cwRsync expects. `C:/Users/<you>/...` becomes `/cygdrive/c/Users/<you>/...`.
+
+Lesson: any Windows rsync doc or script must use `/cygdrive/<drive>/` paths, not `C:/`. The shell accepts both but rsync's argument parser does not.
+
+### Problem 2: cwRsync cannot communicate over Windows OpenSSH pipes
+
+After fixing the path, rsync authenticated over SSH, invoked remote rsync (`Sending command: rsync --server ...`), then died immediately with:
+
+```
+debug2: channel 0: read failed rfd 4 maxlen 32768: Unknown error
+rsync: connection unexpectedly closed (0 bytes received so far) [Receiver]
+rsync error: error in rsync protocol data stream (code 12)
+```
+
+Root cause: cwRsync (Scoop's `cwrsync` package, version 6.4.7) is Cygwin-based and expects Cygwin-style pipes between itself and the ssh process. Windows 11 ships native OpenSSH at `C:\Windows\System32\OpenSSH\ssh.exe`, which is found first on PATH and which creates Windows native pipes, not Cygwin pipes. SSH authenticates successfully and remote rsync launches, but cwRsync's `read()` on the Windows pipe handles fails with `Unknown error`. The two binaries can see each other but cannot pass bytes.
+
+Symptom-level workarounds that do NOT work here: touching `~/.hushlogin` on the server (intended for MOTD pollution, which was not the cause), adjusting `-o LogLevel=QUIET`, removing `--compress`. None of these fix the pipe-model mismatch.
+
+Fix: force rsync to use cwRsync's bundled ssh binary via the `-e` flag. cwRsync ships its own Cygwin-compatible ssh at `C:\Users\<you>\scoop\apps\cwrsync\6.4.7\bin\ssh.exe`. When rsync uses that ssh, the pipe model is Cygwin on both sides, the handshake completes, and the transfer proceeds.
+
+Locate the bundled ssh with `Get-ChildItem "$env:USERPROFILE\scoop\apps\cwrsync" -Recurse -Filter "ssh.exe"`.
+
+Lesson: on Windows, cwRsync and Windows OpenSSH look interchangeable but are not. The `-e` flag is non-optional for cwRsync.
+
+### Problem 3: cwRsync's ssh does not find the Windows user's key
+
+After forcing cwRsync's ssh, the first run accepted the host fingerprint then fell through to an interactive password prompt for `root@<server-ip>`. Windows' native SSH had no trouble finding the same key in the same location, which is why `ssh root@<server-ip>` worked fine outside rsync.
+
+Root cause: Windows OpenSSH reads keys from `C:\Users\<you>\.ssh\`. cwRsync's ssh, being Cygwin-based, reads keys from `$HOME/.ssh/`. On Windows, `$HOME` is usually empty or unset. With no `$HOME`, Cygwin ssh falls back to a path that does not contain the user's ed25519 key, so it offers nothing and drops to password prompt.
+
+Fix, two parts:
+
+- Set `HOME` for the current PowerShell session: `$env:HOME = $env:USERPROFILE`.
+- Explicitly point ssh at the key file with `-i /cygdrive/c/Users/<you>/.ssh/id_ed25519` inside the `-e` string. Belt-and-suspenders.
+
+Also helpful: `-o StrictHostKeyChecking=accept-new` so the first-time host fingerprint is auto-accepted. Bypasses the interactive "yes" prompt on fresh runs.
+
+Lesson: Cygwin tools on Windows usually need `HOME` set explicitly. Any Cygwin-based Windows port (cwRsync, MSYS2 binaries, git bash tools) that expects dotfiles in `$HOME` will mis-behave on a Windows account where `$HOME` is unset.
+
+### The final working command
+
+Captured here for reference; full context in `setup-05_rsync_windows.md`.
+
+```powershell
+$env:HOME = $env:USERPROFILE
+rsync --dry-run -avP -e "/cygdrive/c/Users/<you>/scoop/apps/cwrsync/6.4.7/bin/ssh.exe -i /cygdrive/c/Users/<you>/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" "/cygdrive/c/Users/<you>/Desktop/agentic-search-data-engineering/data/kgx/merged/" root@<server-ip>:/tmp/rsync-test/
+```
+
+For the real Phase 4.0 transfer: drop `--dry-run`, add `--compress`, change the destination to a stable path like `/root/data/kgx/merged/`.
+
+### Observation: actual merged KGX is 144 GB, not 75-95 GB
+
+Gate 2 produced `data/kgx/merged/nodes.tsv` at 46.5 GB and `data/kgx/merged/edges.tsv` at 97.8 GB, totalling 144.3 GB. The bossman plan's original estimate was 75-95 GB. The underestimate came from treating the pre-BioLink-4.x edge schema as canonical; `knowledge_level` and `agent_type` columns added ~40 bytes per edge across 693 M edges (roughly 26 GB) plus provenance fields that were tighter in the original estimate.
+
+Impact on Phase 4.0:
+
+- Transfer time revised to 6 to 12 hours (was 3 to 8), with `--compress` helping since TSV is highly compressible.
+- Hetzner CPX42 disk still fits: 144 GB KGX + 80 to 120 GB AGE graph + Postgres work tables fits in 320 GB with headroom, but the peak is now ~250 GB, not ~200 GB.
+
+Lesson: re-measure KGX size at Gate 2 completion and update the plan before Phase 4.0 rsync scheduling. A 50 percent size underestimate is the difference between starting rsync after dinner and needing it over a weekend.
 
 ## Phase 3.0: AGE loader on Docker Desktop (2026-04-19)
 

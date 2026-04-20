@@ -45,6 +45,8 @@ This repo builds Layer 1 (fully ingested knowledge graph) of a three-layer data 
 | `context/Innovation_proposal_2026.md` | Full system proposal | Context and framing |
 | `bossman_execution_plan.md` | Phase-by-phase execution plan for System 1 pipelines (bossman mode reference) | Before starting any bossman phase |
 | `context/setup/setup-03_windows_laptop.md` | One-time setup guide for Windows laptop (repo clone, symlinks, venv, data rsync) | When setting up a new local dev environment |
+| `context/setup/setup-04_hetzner_vps.md` | End-to-end Hetzner CPX42 provisioning: SSH keys from personal computer and work laptop, rsync install, PostgreSQL + AGE install, pre-Phase-4.0 verification | Before Phase 4.0 cloud deploy work |
+| `context/setup/setup-05_rsync_windows.md` | First-principles rsync on a locked-down Windows laptop: Scoop + cwRsync install, cygdrive path format, cwRsync vs Windows OpenSSH pipe incompatibility, HOME env var fix, exact working command, transfer time estimate | Before running Phase 4.0 rsync from the work laptop |
 
 ## Canonical reference pipeline
 
