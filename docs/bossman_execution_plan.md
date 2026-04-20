@@ -16,6 +16,7 @@ Created: 2026-04-13. Last updated: 2026-04-19 (Phase 3.0 complete: AGE loader mo
 - [Phase 2: literature + taxonomy](#phase-2-literature--taxonomy-done)
 - [Phase 3: AGE loader code (no bulk local load)](#phase-3-age-loader-code-no-bulk-local-load-done-2026-04-19)
 - [Phase 4: provision VPS + rsync KGX + cloud load](#phase-4-provision-vps--rsync-kgx--cloud-load)
+- [Post-V1: user research and feedback loop](#post-v1-user-research-and-feedback-loop)
 - [Phase 5: dbSNP (deferred)](#phase-5-dbsnp-deferred--not-part-of-v1)
 - [Testing strategy](#testing-strategy)
 - [Key decisions](#key-decisions)
@@ -593,7 +594,35 @@ Test queries (run on cloud; same as original Phase 3 test queries):
 - Disease to gene traversal (phenylketonuria -> PAH)
 - Gene to biological process (glucose metabolism genes)
 
+Pre-load validation (before running AGE loader on cloud):
+
+1. Monideep manual data mapping: review the BioLink mapping rules and compare against what the pipelines produced. Verify categories, predicates, and ID prefixes match expectations before loading into the graph. This is a human review step, not automated.
+2. Verify all data downloaded: cross-check FTP cache against expected file list for all 5 databases. Confirm no partial downloads or missing files. Compare node/edge counts in merged KGX against Gate 2 validation report.
+3. Run `kgx validate -i tsv` on merged KGX files on the VPS after rsync, before loading into AGE. Catches any corruption during transfer.
+
 Gate 3 passes when cloud Cypher queries return the expected results.
+
+Post-Gate 3 steps:
+
+1. Delete KGX files on the VPS (~75-95GB freed)
+2. Delete KGX files on the laptop (~75-95GB freed)
+3. Snapshot the server via Hetzner console (~$1-2/month at $0.01/GB)
+4. Downgrade from CPX42 (320GB, ~$34/month) to CPX32 (240GB, ~$24-26/month)
+5. Steady-state: database serves Cypher queries to System 3, no writes, ~$24-26/month
+
+When data refresh is needed (re-run pipelines with newer NCBI dumps): temporarily upgrade back to CPX42 for the load window, then downgrade again.
+
+---
+
+## Post-V1: user research and feedback loop
+
+After Gate 3, the knowledge graph is live. The next priority is validating that the right data was ingested and the right queries are possible.
+
+1. User research: what questions do biomedical researchers actually ask? This determines whether the 5-database graph covers the core use cases or whether additional databases (dbSNP, Protein) need pre-ingesting.
+2. Optimize ETL pipelines: consult NCBI domain experts on data quality, update frequencies, and edge cases the current parsers may miss.
+3. Optimize search experience: what question patterns does System 3 need to handle well? Informs agent logic and Cypher query templates.
+4. Seed golden datasets: curate a set of known-correct query/answer pairs for evaluation. These become the test harness for System 3 development.
+5. Feedback loop: user research findings feed back into pipeline improvements (this repo) and agent design (System 3 repo).
 
 ---
 

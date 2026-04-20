@@ -176,6 +176,8 @@ flowchart TD
 | System 3: UI | Web interface for users | ~$0-10 (Vercel/Netlify) |
 | Total | | ~$44-64/month |
 
+Post-Gate 3 optimization: after the graph is validated, delete KGX files and downgrade Layer 1 from CPX42 (~$34) to CPX32 (~$24-26). Drops total to ~$34-56/month steady state.
+
 ---
 
 ## Why this repo is the foundation

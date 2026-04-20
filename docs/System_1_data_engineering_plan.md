@@ -27,6 +27,7 @@ What we are building, why, and how. Crystallized from the April 2 brainstorming 
 - [Risk signals and fallback plans](#risk-signals-and-fallback-plans)
 - [Wall-clock time (things that take real time regardless of coding speed)](#wall-clock-time-things-that-take-real-time-regardless-of-coding-speed)
 - [Lessons from Anne's glucose metabolism KG pipeline](#lessons-from-annes-glucose-metabolism-kg-pipeline)
+- [Architecture diagram checklist](#architecture-diagram-checklist)
 - [Decisions made during April 5 architecture review](#decisions-made-during-april-5-architecture-review)
 
 ---
@@ -713,6 +714,26 @@ Anne built a working BioLink-compliant KG pipeline for glucose metabolism (82,51
 | On-demand reach | Graph only | Layer 2 ELink/EFetch to 30+ databases at query time |
 | Mapping audit | No explicit mapping provenance | SSSOM files for every cross-database mapping |
 | Export formats | TSV, JSON-LD, Neo4j CSV | KGX (standard for merge), then AGE load in System 2 |
+
+---
+
+## Architecture diagram checklist
+
+Required diagrams for the complete architecture documentation. Each diagram should be present as a Mermaid diagram in the appropriate doc.
+
+| Diagram | What it shows | Where it lives | Status |
+|---------|--------------|----------------|--------|
+| Overall high-level schema | Three systems, three layers, how they connect | Three_layer_data_architecture.md | done (Mermaid added 2026-04-19) |
+| System 2 schema | BioLink node types, edge types, property slots | schema/biolink_ncbi.yaml + Biolink_repos_explained.md | done |
+| Database relationship map | How the 5 databases cross-reference each other | System_1_data_engineering_plan.md (this file) | done (Mermaid added 2026-04-19) |
+| ETL pipeline flow | 5-step pipeline: download, parse, map, validate, export | System_1_data_engineering_plan.md (this file) | done (Mermaid added 2026-04-19) |
+| Merge logic flow | Streaming passes, dedup, stub injection, dangling-edge detection | Merge_logic_explained.md | done |
+| AGE loader flow | KGX to AGE: connection, schema, batch insert, indexing | AGE_loader_explained.md | done |
+| ELink connectivity map | How NCBI databases link to each other via ELink | NCBI_databases_and_APIs_reference.md | done (Mermaid added 2026-04-19) |
+| Data flow end-to-end | FTP sources through KGX through AGE with node counts | data_inventory.md | done (Mermaid added 2026-04-19) |
+| Code logic and rules | Why each pipeline step exists, what rules govern it | .claude/rules/ + this file (pipeline architecture section) | done |
+| Ontology mapping process | How BioLink categories and predicates are assigned per database | Biolink_repos_explained.md + handling ontology gaps (this file) | done |
+| Phase dependency graph | Bossman phases, gates, dependencies | bossman_execution_plan.md | done |
 
 ---
 
