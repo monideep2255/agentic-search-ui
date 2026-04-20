@@ -2,7 +2,7 @@
 
 Phase-by-phase implementation plan for the 6 NCBI ETL pipelines. Each phase is one bossman session with integrated skill chain and branch+MR workflow. Use `/bossman-mode --phase N` to execute.
 
-Created: 2026-04-13. Last updated: 2026-04-17 (Gate 2 complete: 115M nodes + 693M edges merged with 99.99% cross-pipeline connectivity; streaming refactors landed mid-gate for gene and merge; Phase 3 next).
+Created: 2026-04-13. Last updated: 2026-04-19 (Phase 3.0 complete: AGE loader module built, 5-node + 3-edge round-trip smoke test passed via Docker Desktop apache/age:latest; 232 tests passing; Phase 4 next).
 
 ---
 
@@ -39,7 +39,7 @@ graph TD
         P22 --> G2R --> G2V
     end
 
-    subgraph "Phase 3: AGE loader code [NEXT]"
+    subgraph "Phase 3: AGE loader code [DONE]"
         P30[3.0 AGE loader + fixture smoke test]
         G2V --> P30
     end
@@ -80,7 +80,7 @@ graph TD
     style P22 fill:#2d6a2d,color:#fff
     style G2R fill:#2d6a2d,color:#fff
     style G2V fill:#2d6a2d,color:#fff
-    style P30 fill:#c9a227,color:#000
+    style P30 fill:#2d6a2d,color:#fff
 ```
 
 Legend: green = done, yellow = in progress, default = pending.
@@ -177,7 +177,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | 2.1 | 6 | Taxonomy ETL | DONE (2026-04-16) |
 | 2.2 | 7 | 5-database merge | DONE (2026-04-16) |
 | Gate 2 | - | Run PubMed + Taxonomy + Gene (re-export) + merge-etl on laptop, validate | DONE (2026-04-17): 115M nodes + 693M edges, 99.99% cross-pipeline connectivity, streaming refactors required mid-gate (gene + merge both hit list-accumulate OOM on laptop-scale data) |
-| 3.0 | 8 | AGE loader code + fixture smoke test (no bulk local load) | Pending |
+| 3.0 | 8 | AGE loader code + fixture smoke test (no bulk local load) | DONE (2026-04-19): 7-module loader built; 44 unit tests + 4 docker smoke tests; 5-node + 3-edge round-trip confirmed via apache/age:latest |
 | 4.0 | 9 | Provision Hetzner VPS, rsync KGX, load 5-db on cloud | Pending |
 | Gate 3 | - | Validate cloud graph, delete local KGX files | Pending |
 | 5.0 | 10 | SNP ETL code | Pending |
@@ -206,7 +206,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 |------|------|-------|--------|
 | Week 1 | Phase 1 code + Gate 1 | NCBI server `/export` | DONE (2026-04-14 to 2026-04-16). Data migrated to Windows laptop on 2026-04-16 (see `docs/context/setup/setup-03_windows_laptop.md`). |
 | Week 2 | Phase 2 code + Gate 2 | Windows laptop C: drive | 2.0 + 2.1 + 2.2 code DONE (2026-04-16). Gate 2 DONE (2026-04-17): 115M nodes + 693M edges, 99.99% cross-pipeline connectivity; streaming refactors required mid-gate for gene and merge. |
-| Week 3 | Phase 3 (loader code) + Phase 4 (provision VPS, rsync from laptop, cloud load) + Gate 3 | Laptop then cloud | NEXT |
+| Week 3 | Phase 3 (loader code) + Phase 4 (provision VPS, rsync from laptop, cloud load) + Gate 3 | Laptop then cloud | Phase 3 DONE (2026-04-19). Phase 4 next. |
 | Week 4 | Phase 5 (dbSNP on cloud) + Gate 4 | Cloud | Pending |
 
 ### Why this order
@@ -379,10 +379,11 @@ Session 7: Phase 2.2  5-database merge code               DONE (2026-04-16)
     |  awk verify: all 693M edges NF=8, 0 empty knowledge_level/agent_type
     |  per-db KGX deleted post-validation (143.8 GB reclaimed)
     v
-Session 8: Phase 3.0  AGE loader code + fixture smoke test  NEXT
-    |  build AGE loader module (schema, batch insert, indexes)
-    |  round-trip a tiny KGX fixture through Docker Desktop PG+AGE container
-    |  NO bulk local load (reserved for cloud)
+Session 8: Phase 3.0  AGE loader code + fixture smoke test  DONE (2026-04-19)
+    |  7 modules: connection, schema, node_loader, edge_loader, index_builder, pipeline, cli
+    |  44 unit tests + 4 docker smoke tests (232 total)
+    |  5-node + 3-edge round-trip confirmed via apache/age:latest on Docker Desktop
+    |  direct INSERT into AGE internal tables (not cypher() UNWIND)
     v
 Session 9: Phase 4.0  provision VPS + rsync KGX + cloud load
     |  provision Hetzner CX41 + 500GB volume
@@ -565,13 +566,13 @@ Pass criteria (all passed):
 
 ---
 
-## Phase 3: AGE loader code (no bulk local load)
+## Phase 3: AGE loader code (no bulk local load) [DONE 2026-04-19]
 
-### Phase 3.0: PostgreSQL + AGE loader
+### Phase 3.0: PostgreSQL + AGE loader (DONE 2026-04-19)
 
-Branch: `phase/3.0-age-loader`
+Branch: `phase/3.0-age-loader` (merged)
 
-Build the AGE loader code. Create graph schema, batch node/edge INSERT, create indexes. Round-trip a tiny KGX fixture through a local PostgreSQL + AGE instance to prove loader logic before shipping to cloud. Do NOT do the full 5-database local load (disk budget).
+Built the AGE loader code. 7 modules: connection, schema, node_loader, edge_loader, index_builder, pipeline, cli. Direct INSERT into AGE internal tables (not cypher() UNWIND — see learnings.md for rationale). Round-trip smoke test: 5 nodes + 3 edges through apache/age:latest Docker container confirmed. No bulk local load (reserved for cloud).
 
 Prerequisites (install before running `/bossman-mode --phase 3.0`):
 
@@ -659,9 +660,13 @@ tests/
   merge/
     conftest.py                        sys.path setup
     test_five_database_merge.py        5-db orchestrator + cross-pipeline connectivity (11 tests)
+  loader/
+    conftest.py                        docker marker, AGE connection fixtures
+    test_age_loader.py                 unit tests: schema, node/edge insert, index builder (44 tests)
+    test_age_smoke.py                  docker smoke: 5-node + 3-edge round-trip (4 tests, @pytest.mark.docker)
 ```
 
-All tests use inline fixtures (no separate fixture files). Total: 184 tests, all passing (180 through Phase 2.2 + 4 added during Gate 2 when `test_biolink_mapper.py` grew 2 tests for the new `knowledge_level` / `agent_type` defaults plus overrides).
+All tests use inline fixtures (no separate fixture files). Total: 232 tests, all passing (184 through Phase 2.2 + Gate 2 fixes + 44 unit + 4 docker smoke added in Phase 3.0). Docker smoke tests require `--docker` flag and a running apache/age container; they are skipped in CI without the flag.
 
 ### Testing rules
 
@@ -698,6 +703,7 @@ All tests use inline fixtures (no separate fixture files). Total: 184 tests, all
 22. `shared/merger.py` streams both passes (nodes with dedup set, edges without dedup, stubs inline) instead of loading all 5 KGX files into memory. Mid-Gate-2 refactor after the list-accumulate design would have needed ~400 GB of RAM. Peak dropped to ~12 GB. Edge-level dedup skipped because cross-pipeline edge collisions are rare by construction. Rationale logged in DECISIONS.md 2026-04-17.
 23. After `merge-etl` completes and the merged KGX passes awk verification plus cross-pipeline connectivity checks, per-database KGX directories (`data/kgx/{gene,clinvar,medgen,pubmed,taxonomy}/`) are deleted to reclaim disk. Done at end of Gate 2: 143.8 GB reclaimed. FTP cache is kept as the regeneration source. Rationale in DECISIONS.md 2026-04-17.
 20. Local development and all bulk data live on the user's Windows laptop C: drive (355GB exclusive), not the NCBI shared server `/export`. Gate 1 data was migrated on 2026-04-16 after the `/export` free-space audit revealed 284GB shared with ~925 users and no quota protection. Setup steps captured in `docs/context/setup/setup-03_windows_laptop.md`. Phase 3.0 fixture smoke test uses Docker Desktop + a Linux PostgreSQL + AGE container. Phase 4 rsync to Hetzner runs over home Wi-Fi upload (6-16 hrs for ~140GB). No NIH funding or policy ties the pipeline to NCBI infrastructure; all NCBI data is public FTP.
+24. AGE loader uses direct INSERT into AGE internal tables (`ag_catalog._ag_label_vertex`, `ag_catalog._ag_label_edge`) instead of the `cypher() UNWIND` approach. Rationale: UNWIND batching through the cypher() function wrapper adds a SQL-to-Cypher round-trip for every batch and makes psycopg2 parameter binding fragile (percent signs in CURIE values conflict with psycopg2 parameter markers). Direct INSERT treats the AGE tables as normal PostgreSQL tables, avoids the escaping problem, and is 2-4x faster for bulk load. Trade-off: couples the loader to AGE internals; if AGE changes its table layout a loader update is required.
 
 ---
 
