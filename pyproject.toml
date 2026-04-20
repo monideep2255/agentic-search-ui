@@ -35,7 +35,6 @@ packages = [
     "system_01_data_pipelines.pubmed",
     "system_01_data_pipelines.taxonomy",
     "system_01_data_pipelines.merge",
-    "system_01_data_pipelines.snp",
     "system_02_knowledge_graph",
     "system_02_knowledge_graph.schema",
     "system_02_knowledge_graph.loader",
