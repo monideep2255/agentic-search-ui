@@ -4,7 +4,7 @@ Post-plan review notes from Monideep. Items routed to appropriate docs where act
 
 1. Monideep task: do a data mapping, setting up rules by self and map it to what the pipeline code did, before loading into KG
 2. Visualizations, schema of the architecture must be present
-3. Documentation of the end to end process must be present
+3. Documentation of the end to end process must be present -> technical walk through similar to done for ncbi-kg, also simplify for both technical and non-technical audience, use @writing rules
 4. UI and everything must have BioLink validation (KGX tests for BioLink conformity and that it will work for NCATS: https://github.com/biolink/kgx/blob/master/docs/kgx_biolink_validation.md)
    - Run `kgx validate` on every KGX output after each gate
    - Checks: categories and predicates exist in official BioLink model, ID prefixes are registered, required KGX columns present, edge subjects/objects reference valid node IDs

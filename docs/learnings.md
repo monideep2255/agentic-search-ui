@@ -5,6 +5,7 @@ Problems encountered and solutions implemented during development. Each entry ca
 ## Table of contents
 
 - [Phase 4.0 pre-flight: rsync on Windows work laptop (2026-04-19)](#phase-40-pre-flight-rsync-on-windows-work-laptop-2026-04-19)
+- [Understanding: CURIE and how KGX uses it (2026-04-19)](#understanding-curie-and-how-kgx-uses-it-2026-04-19)
 - [Phase 3.0: AGE loader on Docker Desktop (2026-04-19)](#phase-30-age-loader-on-docker-desktop-2026-04-19)
 - [Gate 2: Taxonomy + PubMed + 5-db merge on Windows laptop (2026-04-16)](#gate-2-taxonomy--pubmed--5-db-merge-on-windows-laptop-2026-04-16)
 - [Gate 1: MedGen pipeline on real data (2026-04-14)](#gate-1-medgen-pipeline-on-real-data-2026-04-14)
@@ -80,6 +81,121 @@ Impact on Phase 4.0:
 - Hetzner CPX42 disk still fits: 144 GB KGX + 80 to 120 GB AGE graph + Postgres work tables fits in 320 GB with headroom, but the peak is now ~250 GB, not ~200 GB.
 
 Lesson: re-measure KGX size at Gate 2 completion and update the plan before Phase 4.0 rsync scheduling. A 50 percent size underestimate is the difference between starting rsync after dinner and needing it over a weekend.
+
+## Understanding: CURIE and how KGX uses it (2026-04-19)
+
+Came up during Phase 4.0 prep. Captured here so future sessions do not re-derive it.
+
+CURIE is not an internal convention. It is a W3C standard (https://www.w3.org/TR/curie/, 2010) with a global biomedical prefix registry at https://bioregistry.io (~1,900 prefixes). The prefix map in `schema/biolink_ncbi.yaml` is a curated subset of Bioregistry aligned with what the five pipelines emit. Any BioLink-compliant tool globally reads our CURIEs identically.
+
+### What is a CURIE
+
+CURIE stands for Compact URI (pronounced "curry"). It is a short, human-readable way to write a long URL by splitting it into a registered prefix and a local identifier, joined by a colon.
+
+Example: `NCBIGene:7157` is a CURIE. It is short for the URL `https://www.ncbi.nlm.nih.gov/gene/7157`, which is the NCBI Gene page for TP53 (a well-known tumor suppressor gene).
+
+The prefix is `NCBIGene`. The local identifier is `7157`. The colon separates them.
+
+### Why does it exist
+
+Knowledge graphs reference millions of entities. Each needs a globally unique, resolvable ID. You have two choices for the ID format: full URLs or CURIEs.
+
+Full URLs work but are ugly, repetitive, and waste disk. Writing `https://www.ncbi.nlm.nih.gov/gene/7157` on every edge of a 693M-edge graph adds gigabytes just for the prefix bytes.
+
+CURIEs give you the same global uniqueness with 10x less text. Define the prefix once at the top of the file, then write `NCBIGene:7157` everywhere. Any reader who knows the prefix mapping can reconstruct the full URL.
+
+### How does it work
+
+Two pieces: a prefix map that lives in one place, and short IDs that use it.
+
+```mermaid
+flowchart LR
+    PM[Prefix map<br/>NCBIGene = https://ncbi.nlm.nih.gov/gene/<br/>MONDO = http://purl.obolibrary.org/obo/MONDO_<br/>PMID = https://pubmed.ncbi.nlm.nih.gov/]
+    C1[NCBIGene:7157]
+    C2[MONDO:0005148]
+    C3[PMID:12345678]
+    U1[https://ncbi.nlm.nih.gov/gene/7157]
+    U2[http://purl.obolibrary.org/obo/MONDO_0005148]
+    U3[https://pubmed.ncbi.nlm.nih.gov/12345678]
+    PM --> C1 --> U1
+    PM --> C2 --> U2
+    PM --> C3 --> U3
+```
+
+The prefix map is defined in `schema/biolink_ncbi.yaml`. Every pipeline reads it so they all agree on what each prefix expands to.
+
+### How KGX uses it
+
+KGX is a tab-separated file format where every row is either a node or an edge. Every ID in every row is a CURIE. Five places you see them:
+
+Place 1: node `id` column. Examples:
+
+```
+NCBIGene:7157            a gene
+MONDO:0005148            a disease (type 2 diabetes)
+PMID:12345678            an article
+NCBITaxon:9606           an organism (human)
+```
+
+Place 2: node `category` column. BioLink categories are CURIEs too:
+
+```
+biolink:Gene
+biolink:Disease
+biolink:Article
+biolink:OrganismTaxon
+```
+
+Place 3: edge `subject` and `object` columns. They are CURIEs referencing nodes:
+
+```
+subject              predicate                               object
+NCBIGene:7157        biolink:gene_associated_with_condition  MONDO:0005148
+```
+
+Place 4: edge `predicate` column. Relationship type as a BioLink CURIE:
+
+```
+biolink:gene_associated_with_condition
+biolink:mentioned_in
+biolink:has_phenotype
+```
+
+Place 5: node `xrefs` column. Cross-references to the same entity in other databases:
+
+```
+xrefs
+HGNC:11998|UniProt:P04637|Ensembl:ENSG00000141510
+```
+
+### Why this matters for cross-pipeline merge
+
+CURIEs are the glue that lets five independent pipelines produce files that stitch into one graph.
+
+```mermaid
+flowchart TB
+    G[Gene pipeline<br/>writes edge:<br/>NCBIGene:7157 mentioned_in PMID:12345]
+    P[PubMed pipeline<br/>writes node:<br/>id = PMID:12345]
+    M[Merge step<br/>string-matches CURIEs]
+    GR[(Merged graph:<br/>Gene -> Article edge<br/>resolved to real node)]
+    G --> M
+    P --> M
+    M --> GR
+```
+
+Gene pipeline never talks to PubMed pipeline. They each produce their own KGX files independently. The merge step reads both, and when it sees `PMID:12345` as an edge endpoint from gene and the same CURIE as a node id from pubmed, it matches them by exact string equality. That is only possible because both pipelines agreed on the prefix map.
+
+If Gene used `PMID:12345` and PubMed used `pubmed:12345`, the match would fail and the edge would dangle. The prefix map is contract, not style.
+
+### What this means for you
+
+Three things to carry forward.
+
+Takeaway 1: every identifier in every KGX file in this project is a CURIE. Nodes, edges, categories, predicates, cross-references. No exceptions. If you see a bare number or a full URL in a KGX file, something is wrong.
+
+Takeaway 2: the prefix-to-category table in `system-01-data-pipelines/shared/merger.py` (the `_PREFIX_TO_CATEGORY` dict) is how dangling references get typed. When Gene references `OMIM:12345` but no OMIM pipeline exists, the merge step looks up `OMIM:` in this table to decide whether the stub should be a `biolink:Disease` or something else. Gaps in this table (like OMIM missing until 2026-04-17, see the OMIM observation above) mean stubs fall back to `biolink:NamedThing` and lose their type information.
+
+Takeaway 3: when you query the AGE graph with Cypher, every `id` comparison is CURIE string matching. `MATCH (g:Gene {id: 'NCBIGene:7157'})` not `MATCH (g:Gene {id: 7157})`. Miss the prefix and you get zero results, no error.
 
 ## Phase 3.0: AGE loader on Docker Desktop (2026-04-19)
 
