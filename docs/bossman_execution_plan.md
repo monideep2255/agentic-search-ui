@@ -232,7 +232,7 @@ Local (current, post 2026-04-16 migration): all data on the Windows laptop C: dr
 
 Prior arrangement (retired 2026-04-16): data was symlinked from the repo to `/export/home/chakrabortim2/data/` on the NCBI server. `/export` is a 4.3TB LVM volume shared across ~925 machine users with no quota protection, which made the 51GB footprint a good-citizen concern and exposed the pipeline to silent disk contention. Migrated to laptop to eliminate both risks.
 
-Cloud: PostgreSQL + AGE database on Hetzner VPS. This is the production instance that System 3 connects to. Estimated cost: ~$25-30/month for 8 vCPU, 16GB RAM, 500GB disk.
+Cloud: PostgreSQL + AGE database on Hetzner VPS (Nuremberg datacenter). This is the production instance that System 3 connects to. Cost: ~$34/month (CPX42: 8 vCPU, 16GB RAM, 320GB local disk + IPv4 address). No separate volume needed.
 
 ---
 
@@ -569,7 +569,7 @@ Rationale: laptop C: drive has 355GB free, but holding the 5-database KGX (~140G
 
 Branch: `phase/4.0-cloud-deploy`
 
-Provision Hetzner CX41 + 500GB volume (~$25-30/month). Install PostgreSQL + AGE. rsync KGX files from the Windows laptop C: drive to the VPS (6-16 hours over home Wi-Fi upload for ~140GB). Run the AGE loader from Phase 3.0 on the VPS to load all 5 databases. Verify Cypher queries work remotely. After cloud validation passes, delete laptop KGX intermediates.
+Provision Hetzner CPX42 (8 vCPU, 16GB RAM, 320GB disk, Nuremberg datacenter, ~$34/month with IPv4). Install PostgreSQL + AGE. rsync merged KGX (~75-95GB) from the Windows laptop C: drive to the VPS (3-8 hours over home Wi-Fi upload). Run the AGE loader from Phase 3.0 on the VPS to load all 5 databases. Verify Cypher queries work remotely. After cloud validation passes, delete laptop KGX intermediates.
 
 Test queries (run on cloud; same as original Phase 3 test queries):
 - Gene to variant traversal (BRCA1)
@@ -660,8 +660,8 @@ All tests use inline fixtures (no separate fixture files). Total: 232 tests, all
 11. Data validation gates between phase groups. Run pipelines on real data before building next group.
 12. KGX files are intermediates. Graph database is the end target. Delete KGX after AGE load.
 13. AGE loader (Phase 3) builds loader code only; full load moved to Phase 4 on the cloud VPS (see decision 18).
-14. dbSNP runs on cloud VPS, not locally. Avoids local storage pressure.
-15. Cloud deploy (Hetzner CX41 + 500GB volume, ~$25-30/month) for team access and System 3 integration.
+14. dbSNP deferred from V1. Population frequency queries served via NCBI dbSNP REST API in System 3.
+15. Cloud deploy (Hetzner CPX42, Nuremberg, 320GB local disk, ~$34/month with IPv4) for team access and System 3 integration. No separate volume needed.
 16. Gene pipeline streams edges to disk per parser batch (append_edges) to avoid OOM on 278M edges.
 17. ClinVar and dbSNP use different ID spaces (ClinVar:{id} vs dbSNP:rs{id}), no schema conflict. Connected via exact_match edges at Phase 5.2.
 18. Skip the local AGE load. Phase 3.0 builds the loader + a fixture smoke test; Phase 4.0 provisions the VPS, rsyncs KGX, and loads once on the cloud. Rationale: actual `/export` free space is 284GB (not 403GB as originally budgeted), and a local full load + pg_dump peak would overflow. A single cloud load avoids ~2-6 hours of duplicate load work and eliminates the ~150GB temporary pg_dump overhead. Trade-off: lose the ability to run full-scale Cypher validation locally; mitigated by the Phase 3.0 fixture smoke test proving loader logic before rsync. Earlier Hetzner billing starts ~2 weeks sooner (~$15).

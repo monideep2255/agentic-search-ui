@@ -298,7 +298,7 @@ Lesson: verify estimated counts against the live NCBI database (`all[filter]` se
 
 AGE (A Graph Extension) is a free extension for PostgreSQL that adds graph query support. It lets you store nodes and edges and query them with Cypher (the same language Neo4j uses), but the data lives on disk using PostgreSQL's storage engine instead of requiring everything in RAM.
 
-Why it matters for this project: our graph has 1.4 billion nodes (mostly dbSNP variants). Neo4j would need 256GB+ RAM for that ($500+/month in cloud). AGE handles it with 16GB RAM + 500GB disk because PostgreSQL is disk-based. Cost drops to ~$25-30/month on a Hetzner VPS.
+Why it matters for this project: our graph has 115M nodes across 5 databases (dbSNP was deferred from V1 and moved to System 3 as an API call). Neo4j would need 64GB+ RAM for 115M nodes ($200+/month in cloud). AGE handles it with 16GB RAM + 320GB disk because PostgreSQL is disk-based. Cost: ~$34/month on a Hetzner CPX42 (Nuremberg).
 
 AGE is not a separate database. It is PostgreSQL with a graph layer added. Same connection, same drivers (psycopg2), same backup tools (pg_dump). You just wrap Cypher in a SQL function call.
 
@@ -327,8 +327,8 @@ This means no cloud backup of KGX files is needed. The graph database is the aut
 Layer 1 (knowledge graph) is the only component that needs hosting. Layers 2 and 3 call free external APIs (NCBI ELink/EFetch, PubTator3, LitVar2, ClinicalTrials.gov) at query time. System 3 (search agent, UI) lives in a separate repo with its own hosting.
 
 Estimated cost for the full system:
-- Layer 1 AGE database (Hetzner CX41 + volume): ~$25-30/month
-- System 3 search agent + API: ~$10-20/month (separate VPS or Railway)
+- Layer 1 AGE database (Hetzner CPX42, Nuremberg, no volume): ~$34/month
+- System 3 search agent + API: ~$10-20/month (separate VPS)
 - System 3 UI: ~$0-10/month (Vercel/Netlify)
 - Layers 2 + 3 API calls: $0 (NCBI APIs are free with API key)
 - Total: ~$35-60/month for a 1.4B node knowledge graph with search agent

@@ -151,7 +151,7 @@ User query
     v
 System 3: search agent (separate repo)
     |
-    +-- Layer 1: Cypher query against AGE graph ---------> Hetzner CPX42 (~$30/month)
+    +-- Layer 1: Cypher query against AGE graph ---------> Hetzner CPX42 (~$34/month)
     |   (Gene, ClinVar, MedGen, PubMed, Taxonomy)
     |   Source: PostgreSQL + AGE database built by this repo
     |   Latency: <10ms
@@ -178,11 +178,11 @@ Cited multi-database answer
 
 | Component | What it does | Monthly cost |
 |-----------|-------------|-------------|
-| Layer 1: AGE database | Hosts the 115M node knowledge graph | ~$30 (Hetzner CPX42) |
+| Layer 1: AGE database | Hosts the 115M node knowledge graph | ~$34 (Hetzner CPX42 + IPv4, Nuremberg) |
 | Layers 2 + 3: NCBI APIs | Live queries to NCBI servers and enrichment APIs | $0 (free) |
 | System 3: search agent + API | Orchestrates queries, serves results | ~$10-20 (separate VPS) |
 | System 3: UI | Web interface for users | ~$0-10 (Vercel/Netlify) |
-| Total | | ~$40-60/month |
+| Total | | ~$44-64/month |
 
 ---
 

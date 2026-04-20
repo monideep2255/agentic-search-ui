@@ -509,11 +509,11 @@ PostgreSQL is disk-based by design. Even 1B+ nodes on 8-16GB RAM is normal Postg
 
 Infrastructure options:
 1. Run on work computer (355GB free, $0/month). Can switch to option 2 if needed.
-2. Run on a rented VPS ($15-25/month, Hetzner 8-16GB RAM, 500GB+ disk) for personal infrastructure.
+2. Run on a rented VPS (~$34/month, Hetzner CPX42: 8 vCPU, 16GB RAM, 320GB disk, Nuremberg datacenter) for production infrastructure.
 
 ### Option B: Neo4j Community Edition
 
-Neo4j wants the graph in memory for fast queries. 1.4B nodes would need 256GB+ RAM. That means $500+/month for a VPS, ruling it out entirely at this scale.
+Neo4j wants the graph in memory for fast queries. 115M nodes (our V1 scope) would need 64GB+ RAM. That means $200+/month for a VPS, ruling it out at this budget.
 
 ### Comparison
 
@@ -522,7 +522,7 @@ Neo4j wants the graph in memory for fast queries. 1.4B nodes would need 256GB+ R
 | Query language | Cypher | Cypher (same) |
 | Graph traversals | Yes | Yes |
 | Cost (software) | Free | Free |
-| Cost (hardware for 1.4B nodes) | $500+/month (needs 256GB+ RAM) | $0-15/month (disk-based, 8-16GB RAM works) |
+| Cost (hardware for 115M nodes) | $200+/month (needs 64GB+ RAM) | ~$34/month (disk-based, 16GB RAM, Hetzner CPX42) |
 | Maturity | 15+ years, industry standard | Postgres is 30+ years. AGE is younger (~3 years) but backed by Apache Foundation. |
 | What you lose | Nothing for your use case | Neo4j's built-in graph visualization browser, some advanced graph algorithms (GDS library) |
 | What you keep | - | Same Cypher queries, same traversal patterns, same schema design |
@@ -539,11 +539,11 @@ System 3 (search agents) does not change. The agents generate Cypher queries and
 
 Primary: work computer (355GB free, $0/month). This is NCBI work (Track 2, innovation project). The data is NCBI's public data, the pipelines serve the NCBI project. No IP issue.
 
-Disk constraint: with full dbSNP (1.2B variants), the total data footprint (raw FTP + KGX output + AGE data directory) can exceed 500GB. 355GB is not enough for simultaneous materialization of all KGX files. Strategy: process pipelines incrementally. Download, parse, load into AGE, then delete intermediate KGX files before starting the next pipeline. Keep raw FTP files cached for re-runs. The AGE database itself (storing the graph on disk) should fit within 200-300GB with proper compression and indexing.
+Disk constraint: with 5 databases (dbSNP deferred to System 3 API), the total merged KGX is ~75-95GB and the AGE database is ~80-120GB. 320GB on the Hetzner CPX42 handles this comfortably. Strategy: rsync merged KGX to VPS, load into AGE, delete KGX after validation. Keep raw FTP files on the laptop as regeneration source.
 
-If the innovation proposal doesn't get funded and you want to continue as a personal project (Track 1), move to a VPS with 500GB+ disk ($15-25/month) to keep it clean. The code and KGX files are portable since they are just files on disk.
+Production runs on the Hetzner CPX42 (~$34/month). The code and KGX files are portable since they are just files on disk.
 
-For portfolio/open source sharing: the code (pipelines, schema, agents) lives in a public GitHub repo regardless of where the data runs. The graph database with 1.4B nodes is too large to share as a download. The portfolio is the code and architecture, not the running instance. A live demo would need a VPS with sufficient disk separate from the work computer.
+For portfolio/open source sharing: the code (pipelines, schema, agents) lives in a public GitHub repo regardless of where the data runs. The graph database with 115M nodes is too large to share as a download. The portfolio is the code and architecture, not the running instance.
 
 ---
 
@@ -703,9 +703,9 @@ Anne built a working BioLink-compliant KG pipeline for glucose metabolism (82,51
 | Fallback ID hierarchy (MONDO -> MedGen CUI -> OMIM) | Single canonical or nothing | Maximizes node connectivity. 70-80% get MONDO, remainder still addressable. |
 | Core triangle first (Gene + ClinVar + MedGen) | Build all 6 in parallel | Richest cross-references between them. Subsequent databases connect to existing nodes. Reduces risk of orphan islands. |
 | Full PubMed baseline (40M articles) | 2024-2026 subset (~5M articles) | Subsetting creates millions of dangling gene2pubmed edges. Full baseline avoids this. Download overnight. |
-| PostgreSQL + AGE over Neo4j | Neo4j Community, DuckDB, KuzuDB (abandoned by Apple) | Disk-based (1.4B nodes on 8-16GB RAM), free, openCypher support, $0-25/month vs $500+/month for Neo4j at this scale. Same queries, cheaper hardware. |
-| Full dbSNP (1.2B records), not clinical subset | Clinical subset only (~500K via ClinVar cross-refs) | Population frequencies, functional annotations, and variant type data are needed for SME queries. Full dbSNP is the only way to answer "what is the allele frequency?" questions. |
-| Work computer as primary infrastructure ($0) | Rented VPS ($15-25/month) | 355GB free, enough with incremental processing (load then delete KGX intermediates). Can switch to VPS if disk becomes a blocker. |
+| PostgreSQL + AGE over Neo4j | Neo4j Community, DuckDB, KuzuDB (abandoned by Apple) | Disk-based (115M nodes on 16GB RAM), free, openCypher support, ~$34/month vs $200+/month for Neo4j at this scale. Same queries, cheaper hardware. |
+| dbSNP deferred from V1 (SUPERSEDED: was "full dbSNP 1.2B records") | Pre-ingest full dbSNP; clinical subset only | Population frequency queries answered by NCBI dbSNP REST API at query time in System 3. ClinVar nodes carry rs# identifiers. Pre-ingesting 1.2B nodes for queries an API call answers is waste. Revisit if user research shows API latency is unacceptable. |
+| Hetzner CPX42 (Nuremberg, 320GB disk, ~$34/month) as production VPS | Work computer only ($0); larger VPS with 500GB volume | 320GB handles 5-database AGE graph (~80-120GB) with headroom. No 500GB volume needed after dbSNP deferral. Laptop is development only; production is on the VPS. |
 
 ---
 
