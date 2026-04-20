@@ -1,8 +1,25 @@
 # Bossman execution plan: System 1 data pipelines
 
-Phase-by-phase implementation plan for the 6 NCBI ETL pipelines. Each phase is one bossman session with integrated skill chain and branch+MR workflow. Use `/bossman-mode --phase N` to execute.
+Phase-by-phase implementation plan for the 5 NCBI ETL pipelines. Each phase is one bossman session with integrated skill chain and branch+MR workflow. Use `/bossman-mode --phase N` to execute.
 
 Created: 2026-04-13. Last updated: 2026-04-19 (Phase 3.0 complete: AGE loader module built, 5-node + 3-edge round-trip smoke test passed via Docker Desktop apache/age:latest; 232 tests passing; Phase 4 next).
+
+## Table of contents
+
+- [Plan overview](#plan-overview)
+- [End product](#end-product)
+- [Timeline estimate](#timeline-estimate)
+- [Skill chain (every phase follows this)](#skill-chain-every-phase-follows-this)
+- [Branch + MR workflow](#branch--mr-workflow)
+- [Execution map](#execution-map)
+- [Phase 1: core triangle (Gene + ClinVar + MedGen)](#phase-1-core-triangle-gene--clinvar--medgen-done)
+- [Phase 2: literature + taxonomy](#phase-2-literature--taxonomy-done)
+- [Phase 3: AGE loader code (no bulk local load)](#phase-3-age-loader-code-no-bulk-local-load-done-2026-04-19)
+- [Phase 4: provision VPS + rsync KGX + cloud load](#phase-4-provision-vps--rsync-kgx--cloud-load)
+- [Phase 5: dbSNP (deferred)](#phase-5-dbsnp-deferred--not-part-of-v1)
+- [Testing strategy](#testing-strategy)
+- [Key decisions](#key-decisions)
+- [Reference files](#reference-files)
 
 ---
 
@@ -86,7 +103,7 @@ Each phase produces code only (parsers, pipeline orchestrators, tests). Each gat
 
 When all phases are complete, this repo produces:
 
-1. 6 ETL pipelines that download NCBI bulk data and output BioLink-compliant KGX files (nodes.tsv + edges.tsv per database)
+1. 5 ETL pipelines that download NCBI bulk data and output BioLink-compliant KGX files (nodes.tsv + edges.tsv per database)
 2. A merged knowledge graph in PostgreSQL + Apache AGE, deployed on a Hetzner VPS, queryable via openCypher
 3. Every node and edge traceable back to its NCBI source record (provenance on 100%)
 
@@ -663,7 +680,7 @@ All tests use inline fixtures (no separate fixture files). Total: 232 tests, all
 14. dbSNP deferred from V1. Population frequency queries served via NCBI dbSNP REST API in System 3.
 15. Cloud deploy (Hetzner CPX42, Nuremberg, 320GB local disk, ~$34/month with IPv4) for team access and System 3 integration. No separate volume needed.
 16. Gene pipeline streams edges to disk per parser batch (append_edges) to avoid OOM on 278M edges.
-17. ClinVar and dbSNP use different ID spaces (ClinVar:{id} vs dbSNP:rs{id}), no schema conflict. Connected via exact_match edges at Phase 5.2.
+17. ClinVar and dbSNP use different ID spaces (ClinVar:{id} vs dbSNP:rs{id}), no schema conflict. If dbSNP is later pre-ingested, connect via exact_match edges.
 18. Skip the local AGE load. Phase 3.0 builds the loader + a fixture smoke test; Phase 4.0 provisions the VPS, rsyncs KGX, and loads once on the cloud. Rationale: actual `/export` free space is 284GB (not 403GB as originally budgeted), and a local full load + pg_dump peak would overflow. A single cloud load avoids ~2-6 hours of duplicate load work and eliminates the ~150GB temporary pg_dump overhead. Trade-off: lose the ability to run full-scale Cypher validation locally; mitigated by the Phase 3.0 fixture smoke test proving loader logic before rsync. Earlier Hetzner billing starts ~2 weeks sooner (~$15).
 19. PubMed download parallelised with `ThreadPoolExecutor(max_workers=8)` during Gate 2 (SUPERSEDES the original "serial is acceptable" plan). Measured serial rate (31 sec/file × 1416 files = ~12 hr) overshot the 4-8 hr plan estimate, so the pre-approved parallel path was applied mid-gate. Cut pubmed download to ~90 min. Rationale logged in DECISIONS.md 2026-04-16.
 21. Gene pipeline streams all 5 parsers to disk (generators + `append_nodes` / `append_edges` per batch) instead of accumulating lists. Mid-Gate-2 refactor after `parse_gene_info` OOMed at ~21 GB on a 33 GB laptop. Peak RAM dropped to ~2 GB. Rule going forward: any parser producing >1M records must be a generator. Rationale logged in DECISIONS.md 2026-04-17.

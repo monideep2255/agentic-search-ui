@@ -2,6 +2,33 @@
 
 What we are building, why, and how. Crystallized from the April 2 brainstorming session (Agentic_search_architecture_QA.md) and the April 5 architecture review.
 
+## Table of contents
+
+- [The problem](#the-problem)
+- [What System 1 does](#what-system-1-does)
+- [Architecture overview](#architecture-overview)
+- [The three-layer data architecture](#the-three-layer-data-architecture)
+- [Why these 5 databases (evidence)](#why-these-5-databases-evidence)
+- [What data we need (FTP downloads)](#what-data-we-need-ftp-downloads)
+- [KGX output size estimates](#kgx-output-size-estimates)
+- [Pipeline architecture (per database)](#pipeline-architecture-per-database)
+- [Provenance: first-class requirement](#provenance-first-class-requirement)
+- [Schema: where it lives](#schema-where-it-lives)
+- [Build order](#build-order)
+- [What "done" looks like for System 1](#what-done-looks-like-for-system-1)
+- [What System 1 does NOT do](#what-system-1-does-not-do)
+- [Repo structure decision](#repo-structure-decision)
+- [How System 2 connects](#how-system-2-connects)
+- [Graph database options](#graph-database-options)
+- [Validation: how to know System 1 is working](#validation-how-to-know-system-1-is-working)
+- [Prerequisites (before writing the first pipeline)](#prerequisites-before-writing-the-first-pipeline)
+- [Update schedules (how often FTP sources refresh)](#update-schedules-how-often-ftp-sources-refresh)
+- [Shared utilities (reusable across all pipelines)](#shared-utilities-reusable-across-all-pipelines)
+- [Risk signals and fallback plans](#risk-signals-and-fallback-plans)
+- [Wall-clock time (things that take real time regardless of coding speed)](#wall-clock-time-things-that-take-real-time-regardless-of-coding-speed)
+- [Lessons from Anne's glucose metabolism KG pipeline](#lessons-from-annes-glucose-metabolism-kg-pipeline)
+- [Decisions made during April 5 architecture review](#decisions-made-during-april-5-architecture-review)
+
 ---
 
 ## The problem
@@ -10,7 +37,7 @@ NCBI has 39 databases containing 4.4 billion records. A researcher investigating
 
 ## What System 1 does
 
-System 1 extracts data from 6 core NCBI databases (Gene, ClinVar, MedGen, PubMed, Taxonomy, SNP), transforms it into BioLink-compliant KGX files, and prepares it for loading into the knowledge graph (System 2). PMC remains in Layer 2 (on-demand via API at query time).
+System 1 extracts data from 5 core NCBI databases (Gene, ClinVar, MedGen, PubMed, Taxonomy), transforms it into BioLink-compliant KGX files, and prepares it for loading into the knowledge graph (System 2). PMC remains in Layer 2 (on-demand via API at query time). dbSNP is deferred from V1; population frequency queries are handled by the NCBI dbSNP REST API at query time in System 3.
 
 System 1 produces the raw materials. System 2 assembles and serves them.
 
@@ -61,15 +88,15 @@ System 2 boundary:
               |               |               |
               +-------+-------+-------+-------+
                       |               |
-                +-----+-----+  +-----+-----+  +-----+-----+
-                | PubMed    |  | Taxonomy   |  | SNP       |
-                | KGX       |  | KGX        |  | KGX       |
-                | (40M)     |  | (2.9M)     |  | (1.2B)    |
-                +-----+-----+  +-----+-----+  +-----+-----+
-                      |               |               |
-                      v               v               v
+                +-----+-----+  +-----+-----+
+                | PubMed    |  | Taxonomy   |
+                | KGX       |  | KGX        |
+                | (40M)     |  | (2.9M)     |
+                +-----+-----+  +-----+-----+
+                      |               |
+                      v               v
               +------------------------------------------+
-              |   All 6 KGX file sets ready              |
+              |   All 5 KGX file sets ready              |
               |   for System 2 (merge +                  |
               |   normalize + AGE load)                  |
               +------------------------------------------+
@@ -81,9 +108,9 @@ System 2 boundary:
 
 Not all data lives in the same place. Three layers, each with a different purpose:
 
-### Layer 1: knowledge graph (fully ingested, 6 databases)
+### Layer 1: knowledge graph (fully ingested, 5 databases)
 
-These 6 databases are fully downloaded from FTP, parsed, mapped to BioLink, and loaded into PostgreSQL + Apache AGE. The agent queries these via openCypher in milliseconds.
+These 5 databases are fully downloaded from FTP, parsed, mapped to BioLink, and loaded into PostgreSQL + Apache AGE. The agent queries these via openCypher in milliseconds.
 
 | Database | Records | BioLink category | Why it's in Layer 1 |
 |---|---|---|---|
@@ -92,18 +119,17 @@ These 6 databases are fully downloaded from FTP, parsed, mapped to BioLink, and 
 | ClinVar | 4.5M variants | `biolink:SequenceVariant` | Variant-disease associations. Without it, can't go from variant to disease. |
 | MedGen | 233K concepts | `biolink:Disease` | Disease concept hub. Maps MONDO, OMIM, MeSH, SNOMED, HPO to one concept. |
 | Taxonomy | 2.9M organisms | `biolink:OrganismTaxon` | Scopes results to human (or any organism). Gene has 94M records across all species. Full tree downloaded. |
-| SNP | 1.2B variants | `biolink:SequenceVariant` | Full dbSNP. Population frequencies, functional annotations, validation status. |
 
 Selection criteria:
 1. Connectivity: Gene (33 links) and PubMed (47 links) are the two highest-connectivity databases that are feasibly sized
 2. SME feedback: every failed query in March 2026 testing failed because ClinVar, MedGen, Taxonomy, or SNP was missing
-3. Traversal completeness: these 6 databases appear in every core research traversal path. Remove any one and a path breaks.
+3. Traversal completeness: these 5 databases appear in every core research traversal path. Remove any one and a path breaks. dbSNP variant queries are served by the NCBI dbSNP REST API at query time in System 3.
 
 ### Layer 2: on-demand API (30+ remaining databases)
 
 Reached at query time via ELink/EFetch. Not ingested. The agent follows connections from Layer 1 nodes into these databases via live API calls.
 
-Examples: PMC (12M full-text articles), Protein (1.57B records), Nucleotide (712M), Structure, OMIM, GTR, GEO, dbVar, Assembly.
+Examples: PMC (12M full-text articles), dbSNP (1.2B variants, via NCBI REST API), Protein (1.57B records), Nucleotide (712M), Structure, OMIM, GTR, GEO, dbVar, Assembly.
 
 Excluded from all layers: SRA (raw sequencing reads, consumed by analysis pipelines, not search), dbGaP (controlled-access, requires individual Data Access Requests with IRB approval), PubChem (community-submitted chemical compound data with varying curation levels, poor fit for a system where every fact must trace to an authoritative source).
 
@@ -122,7 +148,21 @@ Not databases. These are specialized APIs that augment answers with deeper evide
 
 ---
 
-## Why these 6 databases (evidence)
+## Why these 5 databases (evidence)
+
+```mermaid
+%%{init: {'flowchart': {'nodeSpacing': 55, 'rankSpacing': 90}}}%%
+graph TD
+    Gene[Gene 94M] -->|gene2pubmed| PubMed[PubMed 40M]
+    Gene -->|in_taxon| Taxonomy[Taxonomy 2.9M]
+    Gene -->|gene2go| GO[GO terms]
+    Gene -->|mim2gene_medgen| MedGen[MedGen 233K]
+    ClinVar[ClinVar 4.5M] -->|variant-gene| Gene
+    ClinVar -->|variant-disease| MedGen
+    MedGen -->|subclass_of| MedGen
+    PubMed -->|has_mesh| MeSH[MeSH terms]
+    Taxonomy -->|subclass_of| Taxonomy
+```
 
 ### Evidence 1: connectivity ranking from live API data (April 2, 2026)
 
@@ -147,12 +187,12 @@ From March 2026 prototype testing (KG_prototype_feedback.md):
 |---|---|---|
 | "What diseases are caused by variants in HNF1A?" | ClinVar, MedGen | No variant-disease or disease concept mapping |
 | "What genes are associated with MODY?" | MedGen | No phenotypic series traversal |
-| "Which genes have both deletions and SNVs?" | SNP | No variant type annotations |
-| "Describe the mutation spectrum for HNF1A" | SNP | No aggregate variant statistics |
+| "Which genes have both deletions and SNVs?" | SNP | No variant type annotations. (dbSNP now deferred to System 3 API.) |
+| "Describe the mutation spectrum for HNF1A" | SNP | No aggregate variant statistics. (dbSNP now deferred to System 3 API.) |
 | "What genes are involved in glucose metabolism?" | Taxonomy | Can't scope Gene's 94M records to human |
 | "What pathways does TP53 participate in?" | Taxonomy | Same organism scoping problem |
 
-ClinVar, MedGen, Taxonomy, and SNP were chosen because real researchers asked real questions and the answers required these databases.
+ClinVar, MedGen, and Taxonomy were chosen because real researchers asked real questions and the answers required these databases. SNP queries from this feedback are now served by the NCBI dbSNP REST API at query time in System 3.
 
 ### Evidence 3: traversal path completeness
 
@@ -160,13 +200,13 @@ Core research traversal paths from the NCBI cross-database link map:
 
 ```
 Disease name:     MedGen -> ClinVar -> Gene -> Protein -> Structure
-Gene symbol:      Gene -> SNP -> ClinVar -> PubMed
+Gene symbol:      Gene -> ClinVar -> PubMed (SNP queries via System 3 API)
 Clinical variant: ClinVar -> Gene -> GTR
 Gene function:    Gene -> GO terms (via gene2go), scoped by Taxonomy
 Literature:       PubMed -> Gene (via gene2pubmed) -> ClinVar -> MedGen
 ```
 
-All 6 Layer 1 databases appear in these paths. The remaining databases (Protein, Structure, GTR) are reachable via Layer 2 ELink calls.
+All 5 Layer 1 databases appear in these paths. SNP traversals are handled by the NCBI dbSNP REST API in System 3. The remaining databases (Protein, Structure, GTR) are reachable via Layer 2 ELink calls.
 
 ---
 
@@ -230,19 +270,9 @@ Download the full taxonomy dump. All 2.9M organisms, full parent-child tree.
 
 FTP path: `ftp.ncbi.nlm.nih.gov/pub/taxonomy/`
 
-### SNP pipeline (full dbSNP)
+### SNP pipeline (deferred from V1)
 
-| FTP file | Size | What it contains | Edges it produces |
-|---|---|---|---|
-| `chr_*.vcf.gz` (per-chromosome VCFs) | ~50GB compressed total | All 1.2B variant records: rs ID, position, alleles, functional class, frequency data | Variant --[is_sequence_variant_of]--> Gene |
-| `organism_data/human_9606_AlleleFreq_*.bcp.gz` | ~20GB | Population allele frequencies (ALFA: EUR, AFR, ASN, SAS, LAC, OTR) | Frequency properties on variant nodes |
-| `organism_data/human_9606_b151_e2.chr*.vcf.gz` | ~30GB | Human-specific variant annotations with functional consequences | Functional annotation properties on variant nodes |
-
-FTP path: `ftp.ncbi.nlm.nih.gov/snp/`
-
-Full dbSNP download. 1.2B records. This is the largest single pipeline by an order of magnitude. Variants that also appear in ClinVar (via rs ID) merge into a single node with combined properties from both sources. Variants not in ClinVar still get Gene associations and population frequency data.
-
-Note: dbSNP FTP structure changed significantly in 2019 (from XML to VCF-based). Use the current VCF-based layout, not legacy XML.
+dbSNP (1.2B variants) is deferred from pre-ingestion. Population frequency and variant annotation queries are handled by the NCBI dbSNP REST API at query time in System 3. ClinVar nodes carry rs# identifiers as cross-references, so variant-to-SNP lookups remain possible without pre-ingesting dbSNP. Revisit if user research shows API latency is unacceptable.
 
 ---
 
@@ -258,17 +288,23 @@ Estimated output sizes after each pipeline completes. These drive disk planning 
 | MedGen | ~233K diseases | ~500K (subclass_of + xref edges) | ~200MB |
 | PubMed (full baseline) | ~40M articles | ~40M+ (MeSH edges) | ~30-50GB |
 | Taxonomy | ~2.9M organisms | ~2.9M (parent edges) | ~1-2GB |
-| SNP (full dbSNP) | ~1.2B variants | ~1.2B (variant-gene) + frequency data | ~200-400GB |
 
-Total across all 6 pipelines (all organisms, full dbSNP): ~1.4B nodes, ~1.5B+ edges, ~300-500GB KGX TSV.
-
-This requires incremental processing on the work computer (355GB). See "Where to run" section for the strategy.
-
-For the full dbSNP scenario, consider streaming the KGX export directly into AGE rather than materializing all TSV files on disk simultaneously.
+Total across all 5 pipelines (all organisms): ~115M nodes, ~693M edges, ~75-95GB KGX TSV.
 
 ---
 
 ## Pipeline architecture (per database)
+
+```mermaid
+%%{init: {'flowchart': {'nodeSpacing': 55, 'rankSpacing': 90}}}%%
+graph LR
+    D[1. FTP download] --> P[2. Parse raw files]
+    P --> M[3. Map to BioLink]
+    M --> V[4. Validate schema]
+    V --> E[5. Export KGX TSVs]
+    E --> N[nodes.tsv]
+    E --> G[edges.tsv]
+```
 
 Each pipeline follows the same 5-step pattern:
 
@@ -349,12 +385,12 @@ If the answer says "BRCA1 has 744 pathogenic variants," the user can click throu
 
 The BioLink schema is a shared artifact that lives at the repo root (`schema/biolink_ncbi.yaml`). Both System 1 (for mapping and validation) and System 2 (for graph loading) consume it. It is defined once, before any pipeline code, and updated when new node types or predicates are needed.
 
-### Node types (from our 6 databases)
+### Node types (from our 5 databases)
 
 | BioLink category | Canonical ID prefix | Source database | Fallback ID if canonical unavailable |
 |---|---|---|---|
 | `biolink:Gene` | NCBIGene: | Gene | (always available) |
-| `biolink:SequenceVariant` | ClinVar: or dbSNP:rs | ClinVar, SNP | (always available) |
+| `biolink:SequenceVariant` | ClinVar: | ClinVar | dbSNP rs# IDs available via ClinVar cross-references |
 | `biolink:Disease` | MONDO: | MedGen | MedGen CUI (e.g. MedGen:C0031485) |
 | `biolink:PhenotypicFeature` | HP: | MedGen | MedGen CUI |
 | `biolink:Article` | PMID: | PubMed | (always available) |
@@ -369,7 +405,7 @@ The BioLink schema is a shared artifact that lives at the repo root (`schema/bio
 | BioLink predicate | Subject | Object | Source file |
 |---|---|---|---|
 | `biolink:gene_associated_with_condition` | Gene | Disease | mim2gene_medgen, ClinVar XML |
-| `biolink:is_sequence_variant_of` | SequenceVariant | Gene | ClinVar XML, dbSNP VCF |
+| `biolink:is_sequence_variant_of` | SequenceVariant | Gene | ClinVar XML |
 | `biolink:has_phenotype` | SequenceVariant | Disease | ClinVar XML |
 | `biolink:participates_in` | Gene | BiologicalProcess | gene2go |
 | `biolink:actively_involved_in` | Gene | MolecularActivity | gene2go |
@@ -439,27 +475,17 @@ Test queries after Phase 2:
 - "What publications mention BRCA1 and breast cancer?" (Gene -> PubMed via gene2pubmed, filtered by MeSH)
 - "What human genes are involved in glucose metabolism?" (Taxonomy filter + Gene -> GO)
 
-### Phase 3: variant depth (full dbSNP)
+### Phase 3: AGE loader (deferred dbSNP to System 3 API)
 
-Why third: 1.2B variants is the largest pipeline by far. Depends on Phase 1 ClinVar and Gene nodes existing for merge (variants merge via rs ID, link to genes). Run this after the core pipelines are proven.
+dbSNP (1.2B variants) is deferred from pre-ingestion. Population frequency queries, variant type annotations, and mutation spectrum queries are handled by the NCBI dbSNP REST API at query time in System 3. ClinVar nodes carry rs# cross-references, so the graph still connects variants to their dbSNP identifiers without a separate SNP pipeline.
 
-| Step | What | Output | Validates |
-|---|---|---|---|
-| 3a | SNP ETL: download full dbSNP VCF files from FTP | SNP KGX (nodes.tsv + edges.tsv) | Variant nodes with dbSNP:rs IDs, population frequencies, functional annotations |
-| 3b | SNP-ClinVar merge: variants with rs IDs in both sources merge into single nodes | Merged variant nodes with combined ClinVar + dbSNP properties | rs ID match rate, no duplicate variant nodes |
-| 3c | Final merge: all 6 KGX files | Complete graph | All 6 databases connected |
-
-Test queries after Phase 3:
-- "What is the mutation spectrum for HNF1A?" (aggregate variant stats from full dbSNP)
-- "Which genes have both deletions and SNVs?" (variant type filtering)
-- "What is the European allele frequency of rs328?" (population frequency from ALFA)
-- "How many pathogenic variants in BRCA1 have MAF < 0.01?" (ClinVar significance + dbSNP frequency)
+Phase 3 instead covers the AGE loader: loading the 5-database merged KGX into PostgreSQL + Apache AGE.
 
 ---
 
 ## What "done" looks like for System 1
 
-- [ ] 6 ETL pipelines producing valid KGX files
+- [ ] 5 ETL pipelines producing valid KGX files
 - [ ] Every node has a source_url (clickable link to NCBI)
 - [ ] Every edge has source and provenance properties
 - [ ] SSSOM mapping files for all cross-database identifier resolutions
@@ -600,7 +626,7 @@ Each pipeline needs a scheduled run to keep the graph current:
 | MedGen | Monthly | Monthly | Slower update cycle |
 | PubMed | Daily (update files) | Weekly initially, daily for production | Baseline is annual, daily updates are incremental XMLs |
 | Taxonomy | Irregular (~monthly) | Monthly | taxdump updates less frequently |
-| SNP (full dbSNP) | Infrequent (~quarterly builds) | Quarterly | dbSNP builds are released infrequently. 1.2B records means re-processing is expensive. Only re-run on new builds. |
+| SNP (full dbSNP) | Infrequent (~quarterly builds) | Deferred | dbSNP deferred from V1 pre-ingestion. Served by NCBI dbSNP REST API in System 3. |
 
 For alpha: run all pipelines manually. Automate scheduling after the first successful full merge.
 
@@ -612,10 +638,10 @@ Every pipeline repeats the same download-parse-map-validate-export pattern. Extr
 
 | Utility | What it does | Used by |
 |---|---|---|
-| `shared/ftp_client.py` | FTP download with resume, timestamp check (skip if unchanged), progress logging | All 6 pipelines |
-| `shared/biolink_mapper.py` | Maps parsed records to BioLink categories and predicates, attaches provenance | All 6 pipelines |
-| `shared/kgx_exporter.py` | Writes validated records to KGX nodes.tsv + edges.tsv format | All 6 pipelines |
-| `shared/validator.py` | Runs BioLink/LinkML validation on records, logs rejections with reason | All 6 pipelines |
+| `shared/ftp_client.py` | FTP download with resume, timestamp check (skip if unchanged), progress logging | All 5 pipelines |
+| `shared/biolink_mapper.py` | Maps parsed records to BioLink categories and predicates, attaches provenance | All 5 pipelines |
+| `shared/kgx_exporter.py` | Writes validated records to KGX nodes.tsv + edges.tsv format | All 5 pipelines |
+| `shared/validator.py` | Runs BioLink/LinkML validation on records, logs rejections with reason | All 5 pipelines |
 
 Build these shared utilities during the first pipeline (Gene), then reuse for all subsequent pipelines.
 
@@ -625,10 +651,10 @@ Build these shared utilities during the first pipeline (Gene), then reuse for al
 
 | Risk | Signal (when to worry) | Fallback response |
 |---|---|---|
-| Full dbSNP too large for disk | 1.2B records produce 200-400GB of KGX TSV | Stream VCF parsing directly into AGE load (skip materializing full TSV). Or process per-chromosome and load incrementally, deleting intermediate files after each chromosome loads. |
+| Full dbSNP too large for disk | 1.2B records produce 200-400GB of KGX TSV | Deferred from V1. dbSNP served by NCBI REST API in System 3. If later re-added, stream VCF parsing directly into AGE load or process per-chromosome. |
 | PubMed baseline download stalls | 30GB download fails mid-transfer or takes > 12 hours | Use FTP resume (REST command). Download in batches of baseline XML files, not all at once. Run overnight. |
-| Graph database can't handle 1B+ nodes | Cypher queries timeout or OOM during System 2 testing | AGE is disk-based and handles large node counts on 8GB RAM. Add indexes on id, category, and frequently queried properties. If still slow, partition the SNP graph by chromosome. |
-| 2 months not enough for all 6 pipelines | Week 4 and only 2 pipelines done | Ship with core triangle (Gene + ClinVar + MedGen). Add PubMed/Taxonomy/SNP post-launch. |
+| Graph database can't handle 115M+ nodes | Cypher queries timeout or OOM during System 2 testing | AGE is disk-based and handles large node counts on 8GB RAM. Add indexes on id, category, and frequently queried properties. |
+| 2 months not enough for all 5 pipelines | Week 4 and only 2 pipelines done | Ship with core triangle (Gene + ClinVar + MedGen). Add PubMed/Taxonomy post-launch. |
 | ClinVar XML parsing too complex | VCV record structure changes or edge cases consume >3 days | Fall back to variant_summary.txt (tabular, simpler). Fewer fields but faster to parse. |
 | FTP download blocked or rate-limited | NCBI blocks IP during bulk download | Use weekend/off-hours downloads per NCBI usage policy. Pause between large files. |
 | Disk space exhaustion | Raw FTP + KGX output + AGE data directory exceed 355GB | Process pipelines sequentially: download, parse, load into AGE, delete intermediate KGX files. Keep raw FTP cached for re-runs. |
@@ -640,16 +666,15 @@ Build these shared utilities during the first pipeline (Gene), then reuse for al
 
 | Task | Estimated time | Why it can't be compressed |
 |---|---|---|
-| dbSNP FTP download (full, all chromosomes) | 8-16 hours | ~100GB compressed total, network bound. Largest single download. |
+| dbSNP FTP download (deferred) | N/A | Deferred from V1. dbSNP served by NCBI REST API in System 3. |
 | PubMed FTP baseline download (full) | 4-8 hours | 30GB compressed, network bound |
 | Gene FTP download (all files) | 30-60 minutes | ~3GB total |
 | ClinVar XML download | 20-30 minutes | ~2GB compressed |
-| dbSNP VCF parsing (1.2B records) | 4-12 hours | CPU-bound per-chromosome VCF parsing. Parallelize across chromosomes. |
-| Graph database loading 1B+ nodes | 6-24 hours | Disk I/O bound, index building. SNP alone is 1.2B nodes. |
-| Node normalization across 6 subgraphs | 2-4 hours | ID resolution over billions of records |
+| Graph database loading 115M+ nodes | 2-6 hours | Disk I/O bound, index building. |
+| Node normalization across 5 subgraphs | 1-2 hours | ID resolution over ~115M records |
 | Agent prompt tuning (System 3) | Days, not hours | Requires human judgment loops |
 
-Plan around these. dbSNP download + parse is a multi-day operation. Start it early. Run PubMed and dbSNP downloads in parallel on different nights.
+Plan around these. PubMed baseline download is the longest single operation. Run it overnight.
 
 ---
 
@@ -695,7 +720,7 @@ Anne built a working BioLink-compliant KG pipeline for glucose metabolism (82,51
 
 | Decision | Alternatives considered | Why |
 |---|---|---|
-| 6 core databases, not 39 | Ingest all 39, stay with original 4 | 6 covers all core traversal paths. 39 is infeasible (4.4B records). 4 misses Gene and PubMed (the two universal connectors). |
+| 5 core databases, not 39 (originally 6; dbSNP deferred) | Ingest all 39, stay with original 4 | 5 covers all core traversal paths. 39 is infeasible (4.4B records). 4 misses Gene and PubMed (the two universal connectors). dbSNP deferred to System 3 API. |
 | Hybrid architecture (graph + on-demand API) | Full ingestion, fully federated | Full ingestion costs months and massive infra. Fully federated has too much latency. Hybrid gives 90% coverage at 1% cost. |
 | Provenance on every node and edge from day one | Add provenance later | Retrofitting provenance means rebuilding every pipeline. Design it in from the start. Trust is the moat. |
 | BioLink as schema (adopt, not invent) | Custom schema, RDF/OWL | BioLink is the standard. Monarch, RTX-KG2, KG-Hub all use it. Interoperability matters for open source adoption. |
@@ -709,4 +734,4 @@ Anne built a working BioLink-compliant KG pipeline for glucose metabolism (82,51
 
 ---
 
-*Created: April 5, 2026. Based on Agentic_search_architecture_QA.md (April 2 brainstorming) refined through April 5 architecture review. Updated April 6, 2026: added graph database options (PostgreSQL + AGE vs Neo4j) and infrastructure decisions. Updated April 13, 2026: fixed stale Neo4j references, clarified schema ownership as shared artifact, added KGX output size estimates, simplified Taxonomy to model organisms for Phase 1, upgraded to full PubMed baseline (no subset), upgraded SNP to full dbSNP (1.2B records), updated risk and wall-clock tables for new scope.*
+*Created: April 5, 2026. Based on Agentic_search_architecture_QA.md (April 2 brainstorming) refined through April 5 architecture review. Updated April 6, 2026: added graph database options (PostgreSQL + AGE vs Neo4j) and infrastructure decisions. Updated April 13, 2026: fixed stale Neo4j references, clarified schema ownership as shared artifact, added KGX output size estimates, simplified Taxonomy to model organisms for Phase 1, upgraded to full PubMed baseline (no subset), upgraded SNP to full dbSNP (1.2B records), updated risk and wall-clock tables for new scope. Updated April 19, 2026: dbSNP deferred from V1 pre-ingestion. Population frequency queries served by NCBI dbSNP REST API at query time in System 3. Graph is now 5 databases (~115M nodes, ~693M edges).*

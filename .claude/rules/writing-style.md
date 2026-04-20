@@ -23,6 +23,7 @@ Rules for all documentation, Confluence pages, and external-facing content.
 - No line breaks/horizontal rules between sections unless specifically needed
 - No literal `\n` or `<br/>` in Mermaid diagrams. Keep node labels short (under 30 chars) or split into separate nodes
 - Table of contents on every doc with 3+ major (##) sections or more than ~100 lines. Place after the title and one-paragraph intro, before the first content section. Use a plain markdown bullet list linking to `##` headings only (subsection anchors break when headings get reworded). Heading label: "Table of contents" (sentence case). For append-only files like DECISIONS.md where the body is a single table, use an "Index by date" or "Index by theme" bullet list instead of a ToC to anchors.
+- For docs that qualify for a ToC: use the first-principles agent (`.claude/agents/first-principles.md`) to explain concepts, and include Mermaid diagrams where they help the reader understand relationships, flows, or architecture. The goal is that every substantial doc is both navigable (ToC) and visually clear (diagrams).
 
 ### Branding and attribution
 - Never mention specific LLM vendors or products (e.g. no brand names, no CLI tool names)

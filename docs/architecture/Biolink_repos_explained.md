@@ -2,6 +2,32 @@
 
 *Written using first-principles approach. Date: February 24, 2026.*
 
+## Table of contents
+
+- [Part 1: the two repos](#part-1-the-two-repos)
+- [What is `biolink-model`?](#what-is-biolink-model)
+- [What is `translator-ingests`?](#what-is-translator-ingests)
+- [Part 2: how biolink fits your NCBI KG project](#part-2-how-biolink-fits-your-ncbi-kg-project)
+- [What is the core problem biolink solves for you?](#what-is-the-core-problem-biolink-solves-for-you)
+- [How biolink fits into your three project aims](#how-biolink-fits-into-your-three-project-aims)
+- [The cross-KG query chain, concretely](#the-cross-kg-query-chain-concretely)
+- [What this means for you: concrete next steps](#what-this-means-for-you-concrete-next-steps)
+- [In one sentence](#in-one-sentence)
+
+```mermaid
+flowchart LR
+    BM["biolink-model\n(YAML dictionary)"]
+    TI["translator-ingests\n(Python ingest code)"]
+    KGX["KGX files\n(nodes + edges)"]
+    NCBI["NCBI raw data\n(ClinVar, Gene, MedGen)"]
+    AGE["PostgreSQL + AGE\n(knowledge graph)"]
+
+    BM -- "defines categories\nand predicates" --> TI
+    NCBI -- "raw FTP files" --> TI
+    TI -- "parse + map + validate" --> KGX
+    KGX -- "load" --> AGE
+```
+
 ---
 
 ## Part 1: the two repos

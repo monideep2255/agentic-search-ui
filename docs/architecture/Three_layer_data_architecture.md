@@ -11,6 +11,7 @@ How data flows from NCBI sources to user answers. Three layers, each with a diff
 - [Layer 3: enrichment and external APIs (System 3)](#layer-3-enrichment-and-external-apis-system-3)
 - [How they connect](#how-they-connect)
 - [Estimated monthly cost](#estimated-monthly-cost)
+- [Why this repo is the foundation](#why-this-repo-is-the-foundation)
 - [What this repo does and does not do](#what-this-repo-does-and-does-not-do)
 - [Handoff point](#handoff-point)
 - [Will Layer 2/3 API calls work?](#will-layer-23-api-calls-work)
@@ -145,31 +146,22 @@ Built by: System 3 (search agent) in a separate repo.
 
 System 3 queries all three layers at query time and combines the results into one cited answer. Layer 1 is a database query against the hosted graph. Layers 2 and 3 are live API calls to external services. All happen in parallel, orchestrated by the search agent.
 
-```
-User query
-    |
-    v
-System 3: search agent (separate repo)
-    |
-    +-- Layer 1: Cypher query against AGE graph ---------> Hetzner CPX42 (~$34/month)
-    |   (Gene, ClinVar, MedGen, PubMed, Taxonomy)
-    |   Source: PostgreSQL + AGE database built by this repo
-    |   Latency: <10ms
-    |
-    +-- Layer 2: NCBI E-utilities + REST APIs -----------> NCBI live servers (free)
-    |   (dbSNP, Protein, PMC, OMIM, GTR, Structure, GEO, dbVar, Assembly)
-    |   Source: NCBI public APIs, called at query time
-    |   Latency: 100-500ms per call
-    |   Cost: $0 (free with API key, 10 req/sec)
-    |
-    +-- Layer 3: enrichment APIs -----------------------> PubTator3, ClinicalTrials.gov, etc.
-    |   (PubTator3, LitVar2, LitSense, ClinicalTrials.gov, NCBI Datasets)
-    |   Source: NCBI and NIH enrichment services + external registries
-    |   Latency: 200ms-2s per call
-    |   Cost: $0 (free public APIs)
-    |
-    v
-Cited multi-database answer
+```mermaid
+flowchart TD
+    UQ["User query"]
+    S3["System 3: search agent\n(separate repo)"]
+    L1["Layer 1: AGE graph\nGene, ClinVar, MedGen,\nPubMed, Taxonomy"]
+    L2["Layer 2: NCBI APIs\ndbSNP, Protein, PMC,\nOMIM, GTR, GEO"]
+    L3["Layer 3: enrichment APIs\nPubTator3, LitVar2,\nClinicalTrials.gov"]
+    ANS["Cited multi-database answer"]
+
+    UQ --> S3
+    S3 --> L1
+    S3 --> L2
+    S3 --> L3
+    L1 -- "<10ms\nHetzner CPX42" --> ANS
+    L2 -- "100-500ms\nfree NCBI APIs" --> ANS
+    L3 -- "200ms-2s\nfree public APIs" --> ANS
 ```
 
 ---
@@ -186,15 +178,42 @@ Cited multi-database answer
 
 ---
 
+## Why this repo is the foundation
+
+This repo (System 1 + 2) is the base that makes System 3 tractable. Without the pre-built graph, System 3 would need 10-30 sequential API calls per query at 200-500ms each just to do basic traversals. With the graph, those traversals are <10ms Cypher queries. System 3's job becomes orchestration and presentation, not data wrangling.
+
+| System | What it does | Complexity type |
+|--------|-------------|-----------------|
+| System 1 (this repo) | Download, parse, map, validate, export | Data engineering: predictable, batch, offline |
+| System 2 (this repo) | Load graph, serve Cypher queries | Infrastructure: set up once, maintain |
+| System 3 (separate repo) | Everything the user actually touches | Software engineering: real-time, many moving parts |
+
+System 3 handles:
+
+- Query understanding: turning "what genes cause cystic fibrosis?" into a Cypher query against the graph
+- Multi-layer orchestration: querying Layer 1 (graph), Layer 2 (NCBI APIs), and Layer 3 (enrichment APIs) in parallel, merging results
+- Agent logic: deciding which layers to query, when to follow links, when to stop
+- Citation assembly: every fact in the answer traced back to its source (provenance from this repo makes this possible)
+- Caching: Redis for API responses to stay within NCBI rate limits under load
+- UI: web interface for users
+- Observability: logging, error tracking, latency monitoring
+- Rate limit management: 10 req/sec NCBI cap across concurrent users
+
+The 115M-node graph with provenance on every record is the hard part that makes everything downstream tractable.
+
+---
+
 ## What this repo does and does not do
 
 Does:
+
 - Download and ingest the 5 Layer 1 databases (System 1: ETL pipelines)
 - Load them into PostgreSQL + AGE on a cloud VPS (System 2: knowledge graph)
 - Validate the graph with Cypher queries
 - Produce a queryable graph that System 3 connects to
 
 Does not:
+
 - Call Layer 2 or Layer 3 APIs (that is System 3, query-time)
 - Build the search agent (that is System 3, separate repo)
 - Pre-ingest dbSNP, Protein, PMC, or any other Layer 2 database
@@ -207,12 +226,14 @@ Does not:
 Phase 4.0 (Cypher query validation) in the bossman execution plan is the handoff. Once Gene -> ClinVar -> MedGen traversals return correct results from the AGE graph on the Hetzner VPS, System 3 can connect and start building the agent layer on top.
 
 System 3 needs:
+
 - PostgreSQL + AGE running with the `ncbi_kg` database loaded
 - The BioLink schema (`schema/biolink_ncbi.yaml`) to know what node types and predicates exist
 - The CURIE prefix conventions (`NCBIGene:`, `MONDO:`, `PMID:`, etc.) to construct queries
 - An NCBI API key for Layer 2 and Layer 3 calls
 
 System 3 does not need:
+
 - The KGX files (deleted after AGE load)
 - The ETL pipeline code (System 3 talks to the database, not the pipelines)
 - This repo checked out (just the running database)

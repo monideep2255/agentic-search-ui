@@ -4,6 +4,20 @@ One-time setup guide for running this repo on your personal Windows laptop C: dr
 
 See `DECISIONS.md` (2026-04-16 entry) for the rationale.
 
+## Table of contents
+
+- [Current state on the server (what you are migrating from)](#current-state-on-the-server-what-you-are-migrating-from)
+- [What you need on the laptop](#what-you-need-on-the-laptop)
+- [Step 1: Download data from server (~51 GB)](#step-1-download-data-from-server-51-gb)
+- [Step 2: Clone the main repo](#step-2-clone-the-main-repo)
+- [Step 3: Clone the two reference repos](#step-3-clone-the-two-reference-repos)
+- [Step 4: Create `.env`](#step-4-create-env)
+- [Step 5: Python environment](#step-5-python-environment)
+- [Step 6: Verify the migration](#step-6-verify-the-migration)
+- [Step 7: Delete data from `/export` (AFTER Step 6 passes)](#step-7-delete-data-from-export-after-step-6-passes)
+- [Gotchas](#gotchas)
+- [Where this leaves you](#where-this-leaves-you)
+
 ---
 
 ## Current state on the server (what you are migrating from)

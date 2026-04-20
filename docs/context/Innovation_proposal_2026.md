@@ -1,5 +1,38 @@
 # NCBI agentic search - innovation project proposal
 
+We propose building an alpha version of agentic search for NCBI: a system where a biomedical researcher asks a plain English question and gets a comprehensive, cited answer sourced from across all NCBI databases. This document covers the full proposal, from vision and architecture through timeline, staffing, and risk mitigation.
+
+## Table of contents
+
+- [Executive summary](#executive-summary)
+- [Vision](#vision)
+- [The problem and why now](#the-problem-and-why-now)
+- [What we are proposing](#what-we-are-proposing)
+- [What's needed](#whats-needed)
+- [Timeline](#timeline)
+- [What success looks like](#what-success-looks-like)
+- [Prior work](#prior-work)
+- [Risks and mitigations](#risks-and-mitigations)
+- [Attachments and evidence](#attachments-and-evidence)
+
+```mermaid
+graph LR
+    subgraph "System 1: data pipelines"
+        A[NCBI FTP sources] --> B[ETL pipelines]
+        B --> C[BioLink mapping]
+        C --> D[KGX files]
+    end
+
+    subgraph "System 2: knowledge graph"
+        D --> E[PostgreSQL + AGE]
+    end
+
+    subgraph "System 3: search agent"
+        E --> F[Agentic search]
+        F --> G[Cited answers]
+    end
+```
+
 ## Executive summary
 
 We propose building an alpha version of agentic search for NCBI, a system where a biomedical researcher asks a plain English question and gets a comprehensive, cited answer sourced from across all NCBI databases (except SRA, dbGaP, and PubChem). Every fact traces to a specific record in a specific database. The system will be built on a BioLink-compliant knowledge graph (KG) that maps the connections NCBI already maintains into a unified, queryable structure.

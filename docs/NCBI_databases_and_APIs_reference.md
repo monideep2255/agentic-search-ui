@@ -2,6 +2,18 @@
 
 Comprehensive reference for all NCBI databases accessible via the Entrez E-utilities API and related research APIs.
 
+## Table of contents
+
+- [Provenance](#provenance)
+- [How to use this document](#how-to-use-this-document)
+- [Part 1: all 39 Entrez databases (live from API)](#part-1-all-39-entrez-databases-live-from-api)
+- [Part 2: database details (searchable fields and cross-links)](#part-2-database-details-searchable-fields-and-cross-links)
+- [Part 3: E-utilities API reference](#part-3-e-utilities-api-reference)
+- [Part 4: NCBI Datasets API (v2)](#part-4-ncbi-datasets-api-v2)
+- [Part 5: other NCBI APIs](#part-5-other-ncbi-apis)
+- [Part 6: cross-database link map](#part-6-cross-database-link-map)
+- [Part 7: NCBI usage policies](#part-7-ncbi-usage-policies)
+
 ---
 
 ## Provenance
@@ -994,6 +1006,29 @@ NCBI provides command-line tools (`esearch`, `efetch`, `elink`, `efilter`, `xtra
 ## Part 6: cross-database link map
 
 This is the graph of how databases connect to each other. Critical for agentic search: an agent that starts in PubMed and follows links can reach Gene, ClinVar, SNP, Protein, Structure, and more.
+
+```mermaid
+graph LR
+    PubMed -->|gene_rif| Gene
+    PubMed -->|clinvar| ClinVar
+    PubMed -->|snp| SNP
+    PubMed -->|pccompound| PubChem
+    Gene -->|snp| SNP
+    Gene -->|clinvar| ClinVar
+    Gene -->|protein| Protein
+    Gene -->|taxonomy| Taxonomy
+    ClinVar -->|medgen| MedGen
+    ClinVar -->|gene| Gene
+    ClinVar -->|gtr| GTR
+    SNP -->|clinvar| ClinVar
+    SNP -->|gene| Gene
+    Protein -->|structure| Structure
+    Protein -->|cdd| CDD
+    MedGen -->|omim| OMIM
+    Taxonomy -->|genome| Genome
+    Genome -->|assembly| Assembly
+    Assembly -->|nuccore| Nucleotide
+```
 
 ### Highest-connectivity databases (most outbound links)
 

@@ -7,6 +7,15 @@ Related code:
 - `system-01-data-pipelines/merge/pipeline.py` (run_five_database_merge)
 - `schema/biolink_ncbi.yaml` (LinkML schema)
 
+## Table of contents
+
+- [What is the merge?](#what-is-the-merge)
+- [Why does it exist?](#why-does-it-exist)
+- [How does it work?](#how-does-it-work)
+- [The axioms](#the-axioms)
+- [The schema](#the-schema)
+- [What this means for you](#what-this-means-for-you)
+
 ---
 
 ## What is the merge?

@@ -13,6 +13,38 @@ Tracks all data downloaded from NCBI FTP, with source URLs, file sizes, row coun
 - [Gene (downloaded 2026-04-14, Gate 1, all organisms)](#gene-downloaded-2026-04-14-gate-1-all-organisms)
 - [ClinVar (downloaded 2026-04-14, Gate 1)](#clinvar-downloaded-2026-04-14-gate-1)
 
+```mermaid
+graph LR
+    subgraph FTP["NCBI FTP sources"]
+        F1[gene_info.gz]
+        F2[variant_summary.gz]
+        F3[MedGenIDMappings.gz]
+        F4[pubmed baseline XMLs]
+        F5[taxdump.tar.gz]
+    end
+    subgraph KGX["Per-database KGX"]
+        K1[Gene: 67.5M nodes]
+        K2[ClinVar: 4.4M nodes]
+        K3[MedGen: 199K nodes]
+        K4[PubMed: 41.3M nodes]
+        K5[Taxonomy: 2.7M nodes]
+    end
+    subgraph Merged["Merged KGX"]
+        M[115.4M nodes + 693M edges]
+    end
+    F1 --> K1
+    F2 --> K2
+    F3 --> K3
+    F4 --> K4
+    F5 --> K5
+    K1 --> M
+    K2 --> M
+    K3 --> M
+    K4 --> M
+    K5 --> M
+    M --> AGE["PostgreSQL + AGE"]
+```
+
 ## Storage location
 
 All current local data is stored under the repo-local `data/` directory on the Windows laptop C: drive:

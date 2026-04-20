@@ -6,6 +6,15 @@ Read this file first thing. Goal: get Claude Code environment-ready in under 30 
 
 You are not starting the plan. The user will kick off the plan and give all instructions. You are just installing tools and verifying the environment.
 
+## Table of contents
+
+- [System requirements](#system-requirements)
+- [1. Clone and Python environment](#1-clone-and-python-environment)
+- [2. Recreate reference symlinks](#2-recreate-reference-symlinks)
+- [3. Configure .env](#3-configure-env)
+- [4. PostgreSQL + Apache AGE](#4-postgresql--apache-age)
+- [5. Verify environment](#5-verify-environment)
+
 ---
 
 ## System requirements

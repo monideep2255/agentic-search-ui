@@ -4,6 +4,14 @@ Everything needed to go from zero to writing the first ETL pipeline. Do these in
 
 This repository covers System 1 (data pipelines) and System 2 (knowledge graph) only. System 3 (search agent, FastAPI, LangGraph, UI, delivery channels) lives in a separate repository. Do not add System 3 dependencies or code here.
 
+## Table of contents
+
+- [Phase 0: scope cleanup (do this first)](#phase-0-scope-cleanup-do-this-first)
+- [Phase 1: context (understand before building)](#phase-1-context-understand-before-building)
+- [Phase 2: environment setup (prerequisites before first pipeline run)](#phase-2-environment-setup-prerequisites-before-first-pipeline-run)
+- [Phase 3: first code orientation](#phase-3-first-code-orientation)
+- [What done looks like (System 1 exit criteria)](#what-done-looks-like-system-1-exit-criteria)
+
 ---
 
 ## Phase 0: scope cleanup (do this first)
