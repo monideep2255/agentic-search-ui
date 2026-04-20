@@ -57,16 +57,9 @@ graph TD
         P40Q --> G3D
     end
 
-    subgraph "Phase 5: dbSNP on cloud"
-        P50[5.0 SNP ETL code]
-        P51[5.1 Run SNP pipeline on cloud]
-        P52[5.2 SNP-ClinVar merge on cloud]
-        G3D --> P50 --> P51 --> P52
-    end
-
-    subgraph "Gate 4: complete"
-        G4V[Full 6-db graph validation]
-        P52 --> G4V
+    subgraph "Gate 3: complete"
+        G4V[Full 5-db graph validation]
+        G3D --> G4V
     end
 
     style P10 fill:#2d6a2d,color:#fff
@@ -106,17 +99,18 @@ When all phases are complete, this repo produces:
 | MedGen | ~233K | ~500K | ~200MB |
 | PubMed | ~40M | ~40M+ | ~30-50GB (KGX TSV output; FTP download is ~54GB compressed) |
 | Taxonomy | ~2.9M | ~2.9M | ~1-2GB |
-| SNP (full dbSNP) | ~1.2B | ~1.2B+ | ~200-400GB |
-| Total | ~1.3B | ~1.5B+ | ~300-500GB |
+| Total (5 databases) | ~115M | ~693M | ~75-95GB |
 
-### What you can query after Gate 4
+Note: dbSNP (1.2B variants) is not pre-ingested. Population frequency queries use the NCBI dbSNP REST API at query time in System 3. See `docs/architecture/Three_layer_data_architecture.md` for the full Layer 1 vs Layer 2 rationale.
+
+### What you can query after Gate 3
 
 - "Find all pathogenic variants in BRCA1" (Gene -> ClinVar)
 - "What diseases are associated with HNF1A?" (Gene -> ClinVar -> MedGen)
 - "What publications mention BRCA1 and breast cancer?" (Gene -> PubMed, MeSH filter)
 - "What human genes are involved in glucose metabolism?" (Taxonomy + Gene -> GO)
-- "What is the European allele frequency of rs328?" (dbSNP population frequencies)
-- "What is the mutation spectrum for HNF1A?" (full dbSNP aggregate variant stats)
+- "What is the European allele frequency of rs328?" (System 3: NCBI dbSNP REST API call at query time)
+- "What is the mutation spectrum for HNF1A?" (System 3: NCBI dbSNP REST API call at query time)
 
 This is System 1 + System 2. System 3 (search agent, FastAPI, LangGraph, UI) lives in a separate repo and consumes this graph.
 
@@ -162,7 +156,6 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | Gate 1 | Phase 1.5 | Run medgen/gene/clinvar-etl, validate KGX | NCBI server `/export` (data migrated to laptop 2026-04-16) | DONE (2026-04-16) |
 | Gate 2 | Phase 2.2 | Run pubmed/taxonomy-etl + merge-etl, validate KGX | Windows laptop C: drive | DONE (2026-04-17) |
 | Gate 3 | Phase 4.0 | Load 5-db into AGE on cloud, Cypher queries pass, delete local KGX | Hetzner VPS | Pending |
-| Gate 4 | Phase 5.2 | Full 6-db graph on cloud, all queries pass | Hetzner VPS | Pending |
 
 ### Coding time (bossman sessions)
 
@@ -179,11 +172,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | Gate 2 | - | Run PubMed + Taxonomy + Gene (re-export) + merge-etl on laptop, validate | DONE (2026-04-17): 115M nodes + 693M edges, 99.99% cross-pipeline connectivity, streaming refactors required mid-gate (gene + merge both hit list-accumulate OOM on laptop-scale data) |
 | 3.0 | 8 | AGE loader code + fixture smoke test (no bulk local load) | DONE (2026-04-19): 7-module loader built; 44 unit tests + 4 docker smoke tests; 5-node + 3-edge round-trip confirmed via apache/age:latest |
 | 4.0 | 9 | Provision Hetzner VPS, rsync KGX, load 5-db on cloud | Pending |
-| Gate 3 | - | Validate cloud graph, delete local KGX files | Pending |
-| 5.0 | 10 | SNP ETL code | Pending |
-| 5.1 | 11 | Run SNP pipeline on cloud VPS | Pending |
-| 5.2 | 12 | SNP-ClinVar merge on cloud | Pending |
-| Gate 4 | - | Full 6-db graph validated on cloud | Pending |
+| Gate 3 | - | Validate cloud graph, delete local KGX files. System complete. | Pending |
 
 ### Wall-clock time (downloads and processing)
 
@@ -194,11 +183,8 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | ClinVar download (500MB) | 20-30 min | Gate 1 (local) |
 | PubMed baseline + updatefiles download (~54GB compressed, 1334 + 81 files) | 4-8 hours serial, 1-2 hours if parallelized | Gate 2 (laptop, overnight) |
 | Taxonomy download (500MB) | 10 min | Gate 2 (laptop) |
-| rsync KGX to Hetzner VPS (~140GB) | 6-16 hours at home Wi-Fi upload (typical 20-50 Mbps up) | Phase 4.0 |
-| AGE load 5 databases (~140M nodes) on cloud | 2-6 hours | Phase 4.0 (cloud) |
-| dbSNP download (100GB) | 8-16 hours | Phase 5.1 (cloud, overnight) |
-| dbSNP VCF parsing (1.2B records) | 4-12 hours | Phase 5.1 (cloud) |
-| dbSNP load into AGE (incremental) | 6-24 hours | Phase 5.2 (cloud) |
+| rsync KGX to Hetzner VPS (~75-95GB merged KGX) | 3-8 hours at home Wi-Fi upload (typical 20-50 Mbps up) | Phase 4.0 |
+| AGE load 5 databases (~115M nodes) on cloud | 2-4 hours | Phase 4.0 (cloud) |
 
 ### Realistic calendar
 
@@ -207,16 +193,15 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | Week 1 | Phase 1 code + Gate 1 | NCBI server `/export` | DONE (2026-04-14 to 2026-04-16). Data migrated to Windows laptop on 2026-04-16 (see `docs/context/setup/setup-03_windows_laptop.md`). |
 | Week 2 | Phase 2 code + Gate 2 | Windows laptop C: drive | 2.0 + 2.1 + 2.2 code DONE (2026-04-16). Gate 2 DONE (2026-04-17): 115M nodes + 693M edges, 99.99% cross-pipeline connectivity; streaming refactors required mid-gate for gene and merge. |
 | Week 3 | Phase 3 (loader code) + Phase 4 (provision VPS, rsync from laptop, cloud load) + Gate 3 | Laptop then cloud | Phase 3 DONE (2026-04-19). Phase 4 next. |
-| Week 4 | Phase 5 (dbSNP on cloud) + Gate 4 | Cloud | Pending |
+| Week 4 | Phase 4 (provision VPS + rsync + cloud load) + Gate 3 | Cloud | Pending. Gate 3 = system complete for V1. dbSNP added via System 3 API after user research validates the need. |
 
 ### Why this order
 
-1. Phases 1-2 (code + Gates 1-2): build and test all non-dbSNP pipelines on the Windows laptop. Free, fast iteration, exclusive 355GB C: drive.
+1. Phases 1-2 (code + Gates 1-2): build and test all 5 pipelines on the Windows laptop. Free, fast iteration, exclusive 355GB C: drive.
 2. Phase 3 (AGE loader code only): build the AGE loader module. Validate loader logic against a tiny KGX fixture locally on the laptop using Docker Desktop + a Linux PostgreSQL + AGE container (AGE round-trip smoke test). No full 5-database load locally. Rationale: a local full load + pg_dump peak (~300 GB) would exceed comfortable laptop headroom and is wasted work when the graph's final home is the cloud VPS.
-3. Phase 4 (provision VPS + rsync + cloud load): provision Hetzner CX41 + 500GB volume, install PostgreSQL + AGE, rsync KGX files from the laptop to the VPS (6-16 hrs over home Wi-Fi upload), run the AGE loader on the cloud instance, validate with Cypher queries. Gate 3 passes when cloud queries return expected results. Delete laptop KGX after cloud validation passes. Single load (not laptop then cloud) avoids duplicate 2-6 hour work and the ~150GB temporary pg_dump overhead.
-4. Phase 5 (dbSNP on cloud): build the SNP ETL code on the laptop, run the pipeline directly on the Hetzner VPS. dbSNP downloads and loads on the cloud instance where there's 500GB dedicated disk. No laptop storage pressure.
+3. Phase 4 (provision VPS + rsync + cloud load): provision Hetzner CPX42, install PostgreSQL + AGE, rsync merged KGX (~75-95GB) from the laptop to the VPS, run the AGE loader on the cloud instance, validate with Cypher queries. Gate 3 passes when cloud queries return expected results. Delete laptop KGX after cloud validation passes. This is the V1 completion point.
 
-Schema impact: none. The schema already defines `biolink:SequenceVariant` for both ClinVar (`ClinVar:{id}`) and dbSNP (`dbSNP:rs{id}`). They are different nodes in the graph, connected by an `exact_match` edge via the RS# field in ClinVar's variant_summary. No schema changes needed at any step.
+dbSNP: not pre-ingested. Population frequency queries handled by System 3 via the NCBI dbSNP REST API at query time. Decision: 1.2B extra nodes, 200-400GB, and 6-24 hours of load time for queries that a real-time API call answers equally well. Do user research first; add pre-ingestion only if API latency proves unacceptable at scale.
 
 ### Disk budget
 
@@ -231,16 +216,15 @@ Project footprint after Gate 1 migration: Gene KGX 39GB + ClinVar KGX 2.6GB + Me
 | Phase 3.0 (loader code + fixture smoke test only via Docker Desktop, no bulk local load) | ~136-157GB | ~198-219GB |
 | Phase 4.0 (rsync KGX from laptop to VPS, delete laptop KGX after cloud validation passes) | ~60GB (FTP cache only) | ~295GB |
 
-No local peak above 160GB. The original plan's ~280GB Phase 3 peak + ~300GB pg_dump peak have been eliminated by moving the full load to the cloud. Exclusive laptop storage eliminates the shared-volume risk of the NCBI `/export` setup.
+No local peak above 160GB. Exclusive laptop storage eliminates the shared-volume risk of the NCBI `/export` setup.
 
-Cloud disk (Hetzner CX41 + 500GB volume): dedicated to this project.
+Cloud disk (Hetzner CPX42, 320GB local disk): dedicated to this project.
 
 | After step | Cloud disk used | Cloud headroom |
 |------------|----------------|----------------|
-| Phase 4.0 (KGX uploaded + 5-db graph loaded; delete KGX after validation) | ~100-150GB | ~350GB |
-| Phase 5 (add dbSNP) | ~250-350GB | ~150GB |
+| Phase 4.0 (KGX uploaded ~75-95GB + 5-db AGE graph ~80-120GB; delete KGX after validation) | ~80-120GB | ~200GB |
 
-No storage problems at any step.
+No storage problems at any step. No 500GB volume needed (dbSNP not pre-ingested).
 
 ### Data storage
 
@@ -386,26 +370,14 @@ Session 8: Phase 3.0  AGE loader code + fixture smoke test  DONE (2026-04-19)
     |  direct INSERT into AGE internal tables (not cypher() UNWIND)
     v
 Session 9: Phase 4.0  provision VPS + rsync KGX + cloud load
-    |  provision Hetzner CX41 + 500GB volume
+    |  provision Hetzner CPX42 (8 vCPU, 16GB RAM, 320GB disk)
     |  install PostgreSQL + AGE on VPS
-    |  rsync KGX (~140GB) from laptop to VPS (~6-16 hrs over home Wi-Fi)
+    |  rsync merged KGX (~75-95GB) from laptop to VPS (~3-8 hrs over home Wi-Fi)
     |  run AGE loader on VPS for 5 databases
     |  run Cypher test queries on cloud
     v
---- GATE 3: cloud graph validated ---
+--- GATE 3: cloud graph validated --- V1 COMPLETE ---
     |  delete laptop KGX intermediates
-    v
-Session 10: Phase 5.0  SNP ETL code (built locally)
-    v
-Session 11: Phase 5.1  run SNP pipeline on cloud VPS
-    |  download dbSNP directly to cloud (100GB)
-    |  parse per chromosome, load into AGE incrementally
-    v
-Session 12: Phase 5.2  SNP-ClinVar merge on cloud
-    |  link ClinVar variants to dbSNP via RS# field
-    v
---- GATE 4: full 6-database graph on cloud ---
-    |  run all test queries
     |  handoff to System 3
     |  system complete
 ```
@@ -608,20 +580,15 @@ Gate 3 passes when cloud Cypher queries return the expected results.
 
 ---
 
-## Phase 5: dbSNP (runs on cloud VPS, not locally)
+## Phase 5: dbSNP (deferred — not part of V1)
 
-### Phase 5.0: SNP ETL code
+dbSNP pre-ingestion is deferred until user research validates that population frequency queries cannot be served by the NCBI dbSNP REST API at query time.
 
-Branch: `phase/5.0-snp-etl`
-Build the SNP ETL pipeline code locally. Per-chromosome VCF parsing, streaming. Tests with small fixtures.
+The NCBI dbSNP REST API (`api.ncbi.nlm.nih.gov/variation/v0/`) returns population frequencies, functional annotations, and variant type data for specific rs# IDs in 100-300ms. ClinVar nodes in the 5-database graph already carry rs# identifiers, so System 3 can follow the link and call the API at query time with no pre-ingestion.
 
-### Phase 5.1: run SNP pipeline on cloud
+Pre-ingesting dbSNP would add 1.2B nodes, 200-400GB of storage, 6-24 hours of load time, and 3 extra bossman sessions for queries that a live API call answers equally well. Do user research first. If allele frequency queries are a core use case and API latency is unacceptable at scale, revisit this decision and add Phase 5.
 
-Run the SNP pipeline directly on the Hetzner VPS. Download dbSNP (~100GB compressed) to the cloud instance. Parse per chromosome, load each chromosome into AGE incrementally. Never have the full KGX on disk at once.
-
-### Phase 5.2: SNP-ClinVar merge on cloud
-
-Link ClinVar variants to dbSNP variants via the RS# field. Create `exact_match` edges between `ClinVar:{id}` and `dbSNP:rs{id}` for matched variants. All 6 databases in one graph.
+If Phase 5 is later added: build SNP ETL code locally (per-chromosome VCF parsing, streaming), run the pipeline directly on the VPS (download dbSNP ~100GB to cloud), parse per chromosome, load each chromosome into AGE incrementally. Never have the full KGX on disk at once. Link ClinVar variants to dbSNP via the RS# field using `exact_match` edges.
 
 ---
 

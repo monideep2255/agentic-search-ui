@@ -1,10 +1,10 @@
 # NCBI data engineering
 
-ETL pipelines and knowledge graph for 6 NCBI databases.
+ETL pipelines and knowledge graph for 5 NCBI databases.
 
 Downloads bulk data from NCBI FTP, parses it, maps it to the BioLink model, validates with LinkML, and loads it into PostgreSQL + Apache AGE. The result is a BioLink-compliant knowledge graph queryable via openCypher.
 
-6 databases. ~1.4B nodes. ~1.5B edges. Every node and edge traced back to its NCBI source record.
+5 databases. ~115M nodes. ~693M edges. Every node and edge traced back to its NCBI source record.
 
 ---
 
@@ -26,7 +26,7 @@ This repo builds Layer 1 of a three-layer data architecture:
 
 | Layer | What | Where | Latency |
 |-------|------|-------|---------|
-| Layer 1: knowledge graph | 6 NCBI databases fully ingested into PostgreSQL + AGE | This repo (System 1 + 2) | <10ms per Cypher query |
+| Layer 1: knowledge graph | 5 NCBI databases fully ingested into PostgreSQL + AGE | This repo (System 1 + 2) | <10ms per Cypher query |
 | Layer 2: on-demand API | 30+ NCBI databases reached at query time via ELink/EFetch | Separate repo (System 3) | 200-500ms per call |
 | Layer 3: enrichment APIs | PubTator3, LitVar2, LitSense, ClinicalTrials.gov | Separate repo (System 3) | 500ms-2s per call |
 
@@ -77,7 +77,6 @@ python system-01-data-pipelines/gene/pipeline.py
 | MedGen | 198K | `biolink:Disease` | ftp.ncbi.nlm.nih.gov/pub/medgen/ |
 | PubMed | 40M | `biolink:Article` | ftp.ncbi.nlm.nih.gov/pubmed/baseline/ |
 | Taxonomy | 2.9M | `biolink:OrganismTaxon` | ftp.ncbi.nlm.nih.gov/pub/taxonomy/ |
-| SNP (full dbSNP) | 1.2B | `biolink:SequenceVariant` | ftp.ncbi.nlm.nih.gov/snp/ |
 
 ---
 
@@ -88,7 +87,7 @@ python system-01-data-pipelines/gene/pipeline.py
 | [Execution plan](docs/bossman_execution_plan.md) | Phase-by-phase build plan with status, gates, validation checklist, disk budget |
 | [Three-layer architecture](docs/architecture/Three_layer_data_architecture.md) | Layer 1 (graph), Layer 2 (on-demand API), Layer 3 (enrichment), cost breakdown |
 | [Merge logic explained](docs/architecture/Merge_logic_explained.md) | First-principles walkthrough of the 5-database streaming merge, dedup strategy, stub injection |
-| [System 1 data engineering plan](docs/System_1_data_engineering_plan.md) | Detailed design for all 6 ETL pipelines |
+| [System 1 data engineering plan](docs/System_1_data_engineering_plan.md) | Detailed design for all 5 ETL pipelines |
 | [Data inventory](docs/data_inventory.md) | What data was downloaded, FTP URLs, file sizes, row counts, validation results |
 | [Learnings](docs/learnings.md) | Problems encountered and solutions, updated after every pipeline run |
 | [BioLink schema](schema/biolink_ncbi.yaml) | LinkML schema with 10 node types, 14 predicates |

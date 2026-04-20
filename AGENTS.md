@@ -36,7 +36,7 @@ This repo builds Layer 1 (fully ingested knowledge graph) of a three-layer data 
 
 | Doc | What it is | Read when |
 |-----|-----------|-----------|
-| `System_1_data_engineering_plan.md` | Detailed build plan for all 6 ETL pipelines | Before writing any pipeline code |
+| `System_1_data_engineering_plan.md` | Detailed build plan for all 5 ETL pipelines | Before writing any pipeline code |
 | `NCBI_databases_and_APIs_reference.md` | Raw data on all 39 NCBI databases, FTP paths, record counts | Checking FTP URLs and file formats |
 | `architecture/Biolink_repos_explained.md` | BioLink/LinkML reference | Schema design |
 | `architecture/Three_layer_data_architecture.md` | Layer 1 (graph), Layer 2 (on-demand API), Layer 3 (enrichment). What this repo does vs System 3. | Understanding system boundaries |
@@ -75,8 +75,7 @@ Phase 1 first: Gene + ClinVar + MedGen. These three form the core triangle and s
 Phase 1 (weeks 1-2):  Gene ETL -> ClinVar ETL -> MedGen ETL -> first merge test  [DONE 2026-04-14]
 Phase 2 (weeks 3-4):  PubMed ETL -> Taxonomy ETL -> five-database merge  [DONE 2026-04-17]
 Phase 3 (weeks 5-6):  AGE loader code -> Cypher validation (loader code only; no local load)  [DONE 2026-04-19]
-Phase 4 (week 7):     Cloud deploy: provision Hetzner VPS -> rsync KGX from laptop -> load into AGE on cloud
-Phase 5 (week 8):     dbSNP ETL on cloud -> SNP-ClinVar merge -> full six-database validation
+Phase 4 (week 7):     Cloud deploy: provision Hetzner VPS -> rsync KGX from laptop -> load into AGE on cloud -> Gate 3 = V1 complete
 ```
 
 System 3 (search agent, FastAPI, LangGraph, UI) is tracked in the separate repository. Do not build here.

@@ -4,73 +4,138 @@ How data flows from NCBI sources to user answers. Three layers, each with a diff
 
 ## Table of contents
 
-- [Layer 1: knowledge graph](#layer-1-knowledge-graph-this-repo-fully-ingested)
+- [Layer 1: knowledge graph (System 1 + 2, this repo)](#layer-1-knowledge-graph-system-1--2-this-repo)
+- [Why these 5 databases for Layer 1?](#why-these-5-databases-for-layer-1)
 - [Why PostgreSQL + Apache AGE](#why-postgresql--apache-age)
-- [Layer 2: on-demand API](#layer-2-on-demand-api-system-3-repo-not-ingested)
-- [Layer 3: research APIs](#layer-3-research-apis-system-3-repo-answer-enrichment)
+- [Layer 2: NCBI on-demand APIs (System 3)](#layer-2-ncbi-on-demand-apis-system-3)
+- [Layer 3: enrichment and external APIs (System 3)](#layer-3-enrichment-and-external-apis-system-3)
 - [How they connect](#how-they-connect)
-- [Estimated monthly cost](#estimated-monthly-cost-for-the-full-system)
+- [Estimated monthly cost](#estimated-monthly-cost)
 - [What this repo does and does not do](#what-this-repo-does-and-does-not-do)
 - [Handoff point](#handoff-point)
 - [Will Layer 2/3 API calls work?](#will-layer-23-api-calls-work)
-- [Why these 6 databases for Layer 1?](#why-these-6-databases-for-layer-1)
 
 ---
 
-## Layer 1: knowledge graph (this repo, fully ingested)
+## Layer 1: knowledge graph (System 1 + 2, this repo)
 
-6 NCBI databases downloaded from FTP, parsed, mapped to BioLink, and loaded into PostgreSQL + Apache AGE. The search agent queries these via openCypher in milliseconds.
+5 NCBI databases downloaded in full from FTP, parsed, mapped to BioLink 4.x, and loaded into PostgreSQL + Apache AGE. The search agent queries these via openCypher at <10ms.
+
+These are the databases where graph traversal across millions of records is required. They cannot be served by API at query time without unacceptable latency.
 
 | Database | Records | BioLink category | Why Layer 1 |
 |----------|---------|-----------------|-------------|
 | Gene | 67.5M (all organisms) | biolink:Gene | Biology hub. 33 outbound link types. Connects to everything. |
 | PubMed | 40M articles | biolink:Article | Universal connector. 47 link types. Literature is the glue. |
-| ClinVar | 4.5M variants | biolink:SequenceVariant | Variant-disease associations. |
+| ClinVar | 4.5M variants | biolink:SequenceVariant | Variant-disease associations. Clinically curated. |
 | MedGen | 233K concepts | biolink:Disease | Disease concept hub. Maps MONDO, OMIM, MeSH, SNOMED, HPO. |
 | Taxonomy | 2.9M organisms | biolink:OrganismTaxon | Scopes results to human (or any organism). |
-| SNP | 1.2B variants | biolink:SequenceVariant | Full dbSNP. Population frequencies, functional annotations. |
 
 Built by: System 1 (ETL pipelines) + System 2 (AGE loader) in this repo.
 Latency: <10ms per Cypher query.
-Total: ~1.4B nodes, ~1.5B edges.
+Total: ~115M nodes, ~693M edges.
 
-### Why PostgreSQL + Apache AGE
+Excluded from pre-ingestion (all covered by Layer 2 or Layer 3 instead):
 
-PostgreSQL + AGE stores data on disk at `/export` (local LVM volume). We chose it over Neo4j because:
+| Database | Records | Why not Layer 1 |
+|----------|---------|-----------------|
+| dbSNP | 1.2B | Leaf node. Population frequency queries fetch a specific rs# record. The NCBI dbSNP REST API answers in 100-300ms. Pre-ingesting 1.2B nodes for this is waste. |
+| Protein | 1.57B | Sequence database. Most queries need a handful of records. On-demand EFetch. |
+| Nucleotide | 712M | Same pattern as Protein. |
+| PMC | 12M | Full text needed only after you know which articles matter. Too large to store. |
+| OMIM | 29K | Small but specialized. Niche queries only. On-demand EFetch. |
+| GTR | 64K | Genetic testing registry. Niche queries only. |
+| Structure | 251K | 3D structures. Needed only when following protein links. |
+| GEO | 8.7M | Expression data. Specialized research queries. |
 
-- Neo4j needs all data in RAM. At 1.4B nodes, that requires 256GB+ RAM ($500+/month for a cloud instance). We have 8-16GB.
-- AGE is disk-based. It handles 1.4B nodes on 8-16GB RAM because it uses PostgreSQL's disk-backed storage engine.
-- AGE supports openCypher, so the query language is the same as Neo4j.
-- Cost: $0 (PostgreSQL is already installed locally).
+Excluded entirely (not in any layer):
+
+| Database | Reason |
+|----------|--------|
+| SRA | Raw sequencing reads. Input to analysis pipelines, not search. |
+| dbGaP | Controlled-access. Requires individual Data Access Request with IRB approval. |
+| PubChem | Community-submitted with varying curation. Breaks the provenance trust moat. |
 
 ---
 
-## Layer 2: on-demand API (System 3 repo, not ingested)
+## Why these 5 databases for Layer 1?
 
-Reached at query time via ELink/EFetch. The search agent follows connections from Layer 1 nodes into these databases via live NCBI API calls. Nothing is pre-downloaded.
+Three criteria drove the selection.
 
-Examples: PMC (12M full-text articles), Protein (1.57B records), Nucleotide (712M), Structure, OMIM, GTR, GEO, dbVar, Assembly.
+### Criterion 1: hub connectivity
 
-Excluded from all layers: SRA (raw sequencing reads), dbGaP (controlled-access, requires IRB), PubChem (community-submitted, varying curation).
+The cross-database link map shows which databases are universal connectors, appearing as link targets from almost every other database:
 
-Latency: 200-500ms per API call. Budget: max 20 calls per user query. Cached in Redis.
+- PubMed: 47 link types to 25+ databases
+- Gene: 33 link types
+- Taxonomy: organism classification links from all sequence databases
+
+These three are the backbone. ClinVar and MedGen complete the clinical genetics triangle. Together they cover the traversal paths that matter most: disease -> gene -> variant -> literature.
+
+### Criterion 2: graph traversal requirement
+
+Graph traversals require joins across multiple entity types in one pass. "Find all genes linked to this disease, then find all variants of those genes, then find literature for those variants" is a single Cypher query against the pre-built graph. Done as sequential API calls it would take 10-30 round-trips at 200-500ms each, producing 2-15 seconds of latency on every user query.
+
+Gene (67.5M records), PubMed (40M records), ClinVar (4.5M records) are too large for ESearch-style ranked-result APIs to return graph neighborhoods. Pre-ingestion is the only way to make these traversals fast.
+
+### Criterion 3: leaf node vs skeleton
+
+Layer 1 databases form the graph skeleton: the connections between genes, diseases, variants, organisms, and literature. Layer 2 databases are leaf nodes: you reach them by following a link from a Layer 1 entity, fetch the specific record you need, and return. That pattern works fine with a live API call.
+
+dbSNP is the clearest example. ClinVar nodes in the graph carry rs# identifiers. When a user asks about allele frequency for a variant, System 3 reads the rs# from the ClinVar node and calls the NCBI dbSNP REST API. One API call, 100-300ms, correct answer. No 1.2B node pre-ingestion needed.
+
+---
+
+## Why PostgreSQL + Apache AGE
+
+PostgreSQL + AGE stores graph data on disk. We chose it over Neo4j because:
+
+- Neo4j needs all data in RAM. At 115M nodes, that requires 64GB+ RAM ($200+/month for a cloud instance). We have 16GB.
+- AGE is disk-based. It handles 115M+ nodes on 16GB RAM because it uses PostgreSQL's disk-backed storage engine.
+- AGE supports openCypher, so the query language is the same as Neo4j.
+- Cost: ~$30/month on a Hetzner CPX42 vs $200-500/month for Neo4j-grade hardware.
+
+---
+
+## Layer 2: NCBI on-demand APIs (System 3)
+
+Reached at query time via NCBI E-utilities (ELink, EFetch, ESummary) and database-specific REST APIs. The search agent follows connections from Layer 1 nodes into these databases via live API calls. Nothing is pre-downloaded.
+
+All of these use the NCBI API key (10 req/sec, free). Register at `www.ncbi.nlm.nih.gov/account/`.
+
+| Source | API | What it provides | When called |
+|--------|-----|-----------------|-------------|
+| dbSNP | `api.ncbi.nlm.nih.gov/variation/v0/` | Population frequencies, functional annotations, variant type for a specific rs# | After variant identified in ClinVar |
+| Protein | EFetch (`db=protein`) | Protein sequence, function, RefSeq accession | After gene-to-protein link followed |
+| Nucleotide | EFetch (`db=nuccore`) | Nucleotide sequence, RefSeq record | After gene or variant link followed |
+| PMC | EFetch (`db=pmc`) | Full-text article XML | After PubMed article identified as relevant |
+| OMIM | EFetch (`db=omim`) | Gene-disease relationships, inheritance patterns, clinical synopsis | After disease concept identified in MedGen |
+| GTR | EFetch (`db=gtr`) | Genetic tests available for a condition | After disease identified |
+| Structure | EFetch (`db=structure`) | 3D protein structure | After protein identified |
+| GEO DataSets | EFetch (`db=gds`) | Gene expression datasets | After gene or disease identified |
+| dbVar | ELink (`dbfrom=clinvar&db=dbvar`) | Structural variants associated with a gene or disease | After variant region identified |
+| Assembly | EFetch (`db=assembly`) | Genome assembly details | After organism identified |
+
+Latency: 100-500ms per API call. Budget: max 20 calls per user query. Responses cached in Redis (System 3).
 
 Built by: System 3 (search agent) in a separate repo.
 
 ---
 
-## Layer 3: research APIs (System 3 repo, answer enrichment)
+## Layer 3: enrichment and external APIs (System 3)
 
-Not databases. Specialized APIs that augment answers with deeper evidence. Called after initial results are found from Layer 1 and Layer 2.
+Not NCBI databases. Specialized APIs that augment answers with deeper evidence or data from outside NCBI. Called after initial results are found from Layer 1 and Layer 2.
 
-| API | What it adds | When called |
-|-----|-------------|-------------|
-| PubTator3 | Entity annotations on publications (genes, diseases, chemicals, mutations, species) | After PubMed results found |
-| LitVar2 | Variant-specific literature links | After variants identified |
-| LitSense | Sentence-level evidence from full text | After key publications identified |
-| ClinicalTrials.gov | Active clinical trials for diseases/genes | After diseases identified |
+| API | What it provides | When called |
+|-----|-----------------|-------------|
+| PubTator3 (`www.ncbi.nlm.nih.gov/research/pubtator3-api/`) | Entity annotations on publications: genes, diseases, chemicals, mutations, species | After PubMed articles identified |
+| LitVar2 (`www.ncbi.nlm.nih.gov/research/litvar2-api/`) | Variant-specific literature links | After variants identified |
+| LitSense (`www.ncbi.nlm.nih.gov/research/litsense-api/`) | Sentence-level evidence from full text | After key publications identified |
+| ClinicalTrials.gov (`clinicaltrials.gov/api/v2/`) | Active clinical trials for diseases or genes | After diseases or genes identified |
+| NCBI Datasets (`api.ncbi.nlm.nih.gov/datasets/v2/`) | Genome datasets, gene summaries, RefSeq catalogs | After gene or organism context needed |
+| NCBI E-utilities ESummary | Summary records for any NCBI database not covered above | Fallback for any ELink result |
 
-Latency: 500ms-2s per call. Called selectively, not on every query.
+Latency: 200ms-2s per call. Called selectively, not on every query.
 
 Built by: System 3 (search agent) in a separate repo.
 
@@ -78,7 +143,7 @@ Built by: System 3 (search agent) in a separate repo.
 
 ## How they connect
 
-System 3 queries all three layers independently at query time and combines the results into one cited answer. Layer 1 is a database query against our hosted graph. Layers 2 and 3 are live API calls to external NCBI services. All three happen in parallel, orchestrated by the search agent.
+System 3 queries all three layers at query time and combines the results into one cited answer. Layer 1 is a database query against the hosted graph. Layers 2 and 3 are live API calls to external services. All happen in parallel, orchestrated by the search agent.
 
 ```
 User query
@@ -86,67 +151,69 @@ User query
     v
 System 3: search agent (separate repo)
     |
-    +-- Layer 1: Cypher query against AGE graph ------> Hetzner VPS (~$25-30/month)
-    |   (Gene, ClinVar, MedGen, PubMed, Taxonomy, SNP)
+    +-- Layer 1: Cypher query against AGE graph ---------> Hetzner CPX42 (~$30/month)
+    |   (Gene, ClinVar, MedGen, PubMed, Taxonomy)
     |   Source: PostgreSQL + AGE database built by this repo
     |   Latency: <10ms
-    |   Cost: hosting only, data is pre-loaded
     |
-    +-- Layer 2: ELink/EFetch to NCBI APIs ------------> NCBI live servers (free)
-    |   (Protein, PMC, Structure, OMIM, GTR, etc.)
+    +-- Layer 2: NCBI E-utilities + REST APIs -----------> NCBI live servers (free)
+    |   (dbSNP, Protein, PMC, OMIM, GTR, Structure, GEO, dbVar, Assembly)
     |   Source: NCBI public APIs, called at query time
-    |   Latency: 200-500ms per call
+    |   Latency: 100-500ms per call
     |   Cost: $0 (free with API key, 10 req/sec)
     |
-    +-- Layer 3: enrichment APIs -----------------------> PubTator3, LitVar2, etc. (free)
-    |   Source: NCBI and NIH enrichment services
-    |   Latency: 500ms-2s per call
+    +-- Layer 3: enrichment APIs -----------------------> PubTator3, ClinicalTrials.gov, etc.
+    |   (PubTator3, LitVar2, LitSense, ClinicalTrials.gov, NCBI Datasets)
+    |   Source: NCBI and NIH enrichment services + external registries
+    |   Latency: 200ms-2s per call
     |   Cost: $0 (free public APIs)
     |
     v
 Cited multi-database answer
 ```
 
-System 3 fetches data from Layer 1 (our database) and separately from Layers 2 and 3 (external APIs). These are independent data sources combined at answer time. Layer 1 provides the pre-built graph connections. Layers 2 and 3 add on-demand detail that would be too large or too dynamic to pre-ingest.
+---
 
-### Estimated monthly cost for the full system
+## Estimated monthly cost
 
 | Component | What it does | Monthly cost |
 |-----------|-------------|-------------|
-| Layer 1: AGE database | Hosts the 1.4B node knowledge graph | ~$25-30 (Hetzner VPS) |
-| Layers 2 + 3: NCBI APIs | Live queries to NCBI servers | $0 (free) |
-| System 3: search agent + API | Orchestrates queries, serves results | ~$10-20 (separate VPS or Railway) |
+| Layer 1: AGE database | Hosts the 115M node knowledge graph | ~$30 (Hetzner CPX42) |
+| Layers 2 + 3: NCBI APIs | Live queries to NCBI servers and enrichment APIs | $0 (free) |
+| System 3: search agent + API | Orchestrates queries, serves results | ~$10-20 (separate VPS) |
 | System 3: UI | Web interface for users | ~$0-10 (Vercel/Netlify) |
-| Total | | ~$35-60/month |
+| Total | | ~$40-60/month |
 
 ---
 
 ## What this repo does and does not do
 
 Does:
-- Download and ingest 6 Layer 1 databases (System 1: ETL pipelines)
-- Load them into PostgreSQL + AGE locally (System 2: knowledge graph)
+- Download and ingest the 5 Layer 1 databases (System 1: ETL pipelines)
+- Load them into PostgreSQL + AGE on a cloud VPS (System 2: knowledge graph)
 - Validate the graph with Cypher queries
-- Deploy the graph to a cloud VPS for production use
+- Produce a queryable graph that System 3 connects to
 
 Does not:
-- Call Layer 2 or Layer 3 APIs (that's System 3, query-time)
-- Build the search agent (that's System 3, separate repo)
-- Serve a UI or API endpoint (that's System 3)
+- Call Layer 2 or Layer 3 APIs (that is System 3, query-time)
+- Build the search agent (that is System 3, separate repo)
+- Pre-ingest dbSNP, Protein, PMC, or any other Layer 2 database
+- Serve a UI or API endpoint (that is System 3)
 
 ---
 
 ## Handoff point
 
-Phase 4.1 (Cypher query validation) in the bossman execution plan is the handoff. Once Gene -> ClinVar -> MedGen traversals return correct results from the AGE graph, System 3 can connect and start building the agent layer on top.
+Phase 4.0 (Cypher query validation) in the bossman execution plan is the handoff. Once Gene -> ClinVar -> MedGen traversals return correct results from the AGE graph on the Hetzner VPS, System 3 can connect and start building the agent layer on top.
 
 System 3 needs:
 - PostgreSQL + AGE running with the `ncbi_kg` database loaded
-- The BioLink schema (schema/biolink_ncbi.yaml) to know what node types and predicates exist
-- The CURIE prefix conventions (NCBIGene:, MONDO:, PMID:, etc.) to construct queries
+- The BioLink schema (`schema/biolink_ncbi.yaml`) to know what node types and predicates exist
+- The CURIE prefix conventions (`NCBIGene:`, `MONDO:`, `PMID:`, etc.) to construct queries
+- An NCBI API key for Layer 2 and Layer 3 calls
 
 System 3 does not need:
-- The KGX files (those are intermediate, deleted after AGE load)
+- The KGX files (deleted after AGE load)
 - The ETL pipeline code (System 3 talks to the database, not the pipelines)
 - This repo checked out (just the running database)
 
@@ -158,58 +225,16 @@ Yes, with constraints.
 
 ### Why it works
 
-- NCBI E-utilities (ELink, EFetch, ESummary) are stable public APIs that have been running for 20+ years. They are the official programmatic interface to all 39 databases.
-- The latency budget (200-500ms per call, max 20 calls per query) is realistic. NCBI responses are typically 100-300ms for EFetch on small record sets.
-- Layer 2 databases (Protein at 1.57B records, PMC at 12M, Structure at 251K) are too large or too dynamic to pre-ingest. Protein alone is bigger than the entire Layer 1 graph. Pre-ingesting it would require terabytes of storage and weekly re-downloads.
+- NCBI E-utilities (ELink, EFetch, ESummary) are stable public APIs running for 20+ years. They are the official programmatic interface to all 39 databases.
+- The dbSNP REST API is newer (released 2020) but stable and actively maintained by NCBI.
+- ClinicalTrials.gov API v2 is maintained by NLM, the same organization that runs PubMed.
+- Latency budget (100-500ms per call, max 20 calls per query) is realistic. NCBI responses are typically 100-300ms for EFetch on small record sets.
 
 ### Where the risk is
 
-- Rate limiting: 10 req/sec with an API key. If System 3 has multiple concurrent users, cache misses under load could bottleneck.
-- NCBI occasionally throttles or blocks IPs that exceed limits, even with a key. The agent needs proper backoff.
-- Some EFetch responses are large (a full protein record, a PMC full-text XML). Parsing these at query time adds latency.
-- NCBI has occasional maintenance windows where APIs return errors for hours.
+- Rate limiting: 10 req/sec with an API key. Multiple concurrent users under load could hit this ceiling. Mitigate with Redis caching and request coalescing in System 3.
+- NCBI occasionally throttles IPs that exceed limits even with a key. The agent needs exponential backoff.
+- Some EFetch responses are large (full PMC article XML, full protein record). Parsing at query time adds latency.
+- NCBI maintenance windows (rare, typically a few hours per quarter) cause API errors. Mitigate with graceful degradation in System 3 (return Layer 1 results with a note that enrichment is temporarily unavailable).
 
-None of these are dealbreakers. They are engineering problems with known solutions (caching, retry logic, timeouts, fallback messages).
-
----
-
-## Why these 6 databases for Layer 1?
-
-The selection criteria were density of connections and role as a hub in the cross-database link graph. Three criteria drove the split.
-
-### Criterion 1: hub connectivity
-
-The cross-database link map (Part 6 of `NCBI_databases_and_APIs_reference.md`) shows which databases are universal connectors, appearing as link targets from almost every other database:
-
-- PubMed: 47 link types to 25+ databases
-- Gene: 33 link types
-- Taxonomy: organism classification links from all sequence databases
-
-These three are the backbone. ClinVar, MedGen, and SNP complete the clinical genetics triangle. Together they form the traversal paths that matter most: disease -> gene -> variant -> literature.
-
-### Criterion 2: what can't be served by API at query time
-
-The 6 Layer 1 databases need to be pre-ingested because:
-
-- Graph traversals require joins across multiple entity types. You cannot do "find all genes linked to this disease, then find all variants of those genes, then find literature for those variants" in a sequence of API calls without unacceptable latency (potentially dozens of round-trips).
-- Gene (67.5M records), SNP (1.2B records), PubMed (40M records) are too large to search via API for graph-style queries. ESearch returns ranked results, not graph neighborhoods.
-
-### Criterion 3: what's too large or wrong for Layer 1
-
-The databases left for Layer 2:
-
-| Database | Records | Why Layer 2 |
-|----------|---------|-------------|
-| Protein | 1.57B | Sequence database. Enormous, but most queries only need a handful of records. On-demand EFetch. |
-| Nucleotide | 712M | Same pattern as Protein. |
-| PMC | 12M | Full text only needed after you know which articles matter. Too large to store locally. |
-| OMIM | 29K | Small but specialized. Only needed for specific query types. |
-| GTR | 64K | Genetic testing registry. Niche queries only. |
-| Structure | 251K | 3D structures. Needed only when following protein links. |
-| GEO | 8.7M | Expression data. Specialized research queries. |
-
-Excluded entirely: SRA (raw sequencing reads), dbGaP (controlled-access, requires IRB), PubChem (community-submitted, varying curation).
-
-### The key insight
-
-Layer 1 holds the databases that form the graph skeleton. The connections between genes, diseases, variants, organisms, and literature are what make a knowledge graph useful. Layer 2 databases are leaf nodes: you reach them by following a link from a Layer 1 entity, grab the specific record you need, and return. That pattern works fine with an API call.
+None of these are dealbreakers. They are engineering problems with known solutions.
