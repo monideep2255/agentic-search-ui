@@ -12,8 +12,6 @@ This repository covers System 1 (data pipelines) and System 2 (knowledge graph) 
 - [Phase 3: first code orientation](#phase-3-first-code-orientation)
 - [What done looks like (System 1 exit criteria)](#what-done-looks-like-system-1-exit-criteria)
 
----
-
 ## Phase 0: scope cleanup (do this first)
 
 The initial scaffold created folders for all three systems. Before starting Phase 1, delete the System 3 folders:
@@ -23,8 +21,6 @@ rm -rf api cli eval mcp-server search-agent web-ui
 ```
 
 Keep only: `data-pipelines/`, `knowledge-graph/`, `docs/`, `reference-repos/`. Everything System 3 belongs in the separate repo.
-
----
 
 ## Phase 1: context (understand before building)
 
@@ -44,7 +40,7 @@ What to extract:
 
 Source: `reference-repos/ncbi_ai_agents/` (symlink, ncbi-kg branch)
 
-Action: read the repo end to end, focusing on `KG/pipeline/src/glucose_metabolism_kg/`. Look for pipeline scripts, schema definitions, BioLink mapping code, and any validation logic. The reference symlinks are your "Confluence documentation" — read for context, do not bulk-vendor files.
+Action: read the repo end to end, focusing on `KG/pipeline/src/glucose_metabolism_kg/`. Look for pipeline scripts, schema definitions, BioLink mapping code, and any validation logic. The reference symlinks are your "Confluence documentation". Read for context, do not bulk-vendor files.
 
 ### Step 2: review the proposal and architecture docs
 
@@ -53,11 +49,11 @@ What: read the innovation proposal and architecture Q&A.
 Why: the proposal defines what we are building. The architecture Q&A records every decision made during the April 2 and April 5 brainstorming sessions.
 
 Files (in order):
-1. `docs/System_1_data_engineering_plan.md` — what we're building and why (read first)
-2. `docs/architecture/Agentic_search_architecture_QA.md` — every architecture decision, with evidence
-3. `docs/context/Innovation_proposal_2026.md` — the full proposal (context and framing)
-4. `docs/planning/Two_track_plan.md` — personal build vs NCBI proposal (parallel tracks)
-5. `docs/planning/Personal_build_plan.md` — 8-week execution plan, cost model
+1. `docs/System_1_data_engineering_plan.md`: what we're building and why (read first)
+2. `docs/architecture/Agentic_search_architecture_QA.md`: every architecture decision, with evidence
+3. `docs/context/Innovation_proposal_2026.md`: the full proposal (context and framing)
+4. `docs/planning/Two_track_plan.md`: personal build vs NCBI proposal (parallel tracks)
+5. `docs/planning/Personal_build_plan.md`: 8-week execution plan, cost model
 
 Action: read all five. Note any open questions in DECISIONS.md.
 
@@ -67,12 +63,12 @@ What: review the data engineering approach from the NLM/NCBI KG pipeline built b
 
 Why: this is the closest existing implementation to what we're building. Avoids repeating their mistakes and lets us reuse validated patterns directly.
 
-Where: `reference-repos/ncbi_ai_agents/KG/pipeline/src/glucose_metabolism_kg/` (canonical, this is where the working code now lives) — also mirrored at `reference-repos/personal-os/NIH/KG/Use-case-WG/PoC/Pipeline/glucose_metabolism_kg_package/`
+Where: `reference-repos/ncbi_ai_agents/KG/pipeline/src/glucose_metabolism_kg/` (canonical, this is where the working code now lives), also mirrored at `reference-repos/personal-os/NIH/KG/Use-case-WG/PoC/Pipeline/glucose_metabolism_kg_package/`
 
 Files:
-- `README.md` — pipeline overview
-- `documentation_data_selection.md` — data selection rationale
-- `glucose_metabolism_kg_package/glucose_metabolism_kg/` — working pipeline code
+- `README.md`: pipeline overview
+- `documentation_data_selection.md`: data selection rationale
+- `glucose_metabolism_kg_package/glucose_metabolism_kg/`: working pipeline code
 
 What to extract:
 - FTP download patterns (idempotent downloads, checksum verification)
@@ -93,15 +89,15 @@ Where: `reference-repos/ncbi_ai_agents/.claude/` and `reference-repos/personal-o
 
 Review:
 
-- `ncbi_ai_agents-ncbi-kg/.claude/agents/` — 4 agents: `biomedical-expert.md`, `doc-sync.md`, `first-principles.md`, `git-sync.md`
-- `ncbi_ai_agents-ncbi-kg/.claude/skills/` — 15 skills including: `architecture-patterns`, `best-practices`, `python-code-standards`, `testing-standards`, `documentation-standards`
-- `personal-os-work/.claude/skills/` — `repo-dive`, `eval-harness`, `ship`, `objective-review`, `first-principles`
-- `personal-os-work/.claude/hooks/` — `scan-secrets.sh`, `session-start.sh`, `log-git-commands.sh`
-- `personal-os-work/.claude/rules/` — `system-design-patterns.md`, `dependency-tracking.md`
+- `ncbi_ai_agents-ncbi-kg/.claude/agents/`: 4 agents, specifically `biomedical-expert.md`, `doc-sync.md`, `first-principles.md`, `git-sync.md`
+- `ncbi_ai_agents-ncbi-kg/.claude/skills/`: 15 skills including `architecture-patterns`, `best-practices`, `python-code-standards`, `testing-standards`, `documentation-standards`
+- `personal-os-work/.claude/skills/`: `repo-dive`, `eval-harness`, `ship`, `objective-review`, `first-principles`
+- `personal-os-work/.claude/hooks/`: `scan-secrets.sh`, `session-start.sh`, `log-git-commands.sh`
+- `personal-os-work/.claude/rules/`: `system-design-patterns.md`, `dependency-tracking.md`
 
 Caveat: the working directory contains a space (`Tech Skills/`), which confuses the Explore subagent. Review these files manually with `Read` and `Glob` rather than dispatching a subagent.
 
-Action: for each component, decide: port as-is, adapt for ETL, or skip. Skip anything tied to deploy pipelines (`qa-gate`, `release-workflow`, `phase-complete`, `self-healing-deploy`, `nl-cypher-loop`, `visualization-standards`) — those are System 3 / Railway-specific. Log any behavioral changes in DECISIONS.md.
+Action: for each component, decide: port as-is, adapt for ETL, or skip. Skip anything tied to deploy pipelines (`qa-gate`, `release-workflow`, `phase-complete`, `self-healing-deploy`, `nl-cypher-loop`, `visualization-standards`), which are System 3 / Railway-specific. Log any behavioral changes in DECISIONS.md.
 
 ### Step 5: deep dive this repo + update CLAUDE.md
 
@@ -119,15 +115,13 @@ Decision logging: this repo maintains `DECISIONS.md` as a running log of every a
 
 After completing steps 1-5, stop and ask Monideep the following before writing any code:
 
-1. Which docs/ paths are final? (The CLAUDE.md references subdirs planning/, architecture/, context/ — confirm these match the actual folder structure.)
+1. Which docs/ paths are final? (The CLAUDE.md references subdirs planning/, architecture/, context/, so confirm these match the actual folder structure.)
 2. Are there any pipeline patterns from Anne's code (Step 3) or the ncbi-kg repo (Step 1) that should be copied directly into `data-pipelines/shared/`?
 3. Any additional skills or agents from the ncbi_ai_agents `.claude/` (Step 4) that should be ported before starting Phase 1?
 4. Any decisions made since April 6 that need to be added to DECISIONS.md before writing the first pipeline?
-5. Any other context — people, constraints, or access issues — that would change how Phase 1 is executed?
+5. Any other context (people, constraints, or access issues) that would change how Phase 1 is executed?
 
 Do not start Phase 2 or write any pipeline code until Monideep has answered these.
-
----
 
 ## Phase 2: environment setup (prerequisites before first pipeline run)
 
@@ -188,7 +182,7 @@ cp env.example .env
 Apache AGE is a PostgreSQL extension written in C. There is no PyPI package. From Python you reach it through `psycopg2` + raw SQL that wraps Cypher in a `cypher('graph_name', $$ ... $$)` call.
 
 ```bash
-# macOS (Homebrew) — Postgres
+# macOS (Homebrew): Postgres
 brew install postgresql@15
 brew services start postgresql@15
 
@@ -243,18 +237,14 @@ conn.close()
 
 Both must pass before starting any pipeline.
 
----
-
 ## Phase 3: first code orientation
 
 After setup, review these before writing the first pipeline:
 
-1. `DECISIONS.md` — architecture decisions already made. Do not re-debate these without updating the log.
-2. `docs/System_1_data_engineering_plan.md` section "Pipeline architecture" — the 5-step pattern every ETL must follow.
-3. `docs/System_1_data_engineering_plan.md` section "Build order" — Phase 1 first (Gene + ClinVar + MedGen), not any other order.
-4. `docs/NCBI_databases_and_APIs_reference.md` — exact FTP paths and file sizes before downloading anything.
-
----
+1. `DECISIONS.md`: architecture decisions already made. Do not re-debate these without updating the log.
+2. `docs/System_1_data_engineering_plan.md` section "Pipeline architecture": the 5-step pattern every ETL must follow.
+3. `docs/System_1_data_engineering_plan.md` section "Build order": Phase 1 first (Gene + ClinVar + MedGen), not any other order.
+4. `docs/NCBI_databases_and_APIs_reference.md`: exact FTP paths and file sizes before downloading anything.
 
 ## What done looks like (System 1 exit criteria)
 
@@ -267,7 +257,5 @@ From `docs/System_1_data_engineering_plan.md`:
 - [ ] BioLink validator passes on all KGX files
 - [ ] Merge report showing deduplication stats (nodes before/after)
 - [ ] KGX files loaded into PostgreSQL + AGE graph (System 2 ready)
-
----
 
 *Created: 2026-04-06*

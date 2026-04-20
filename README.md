@@ -10,11 +10,11 @@ Downloads bulk data from NCBI FTP, parses it, maps it to the BioLink model, vali
 
 ## Status
 
-Phase 3 complete: AGE loader built and smoke-tested (2026-04-19). 5-node + 3-edge round-trip confirmed via Docker Desktop. Phase 4 next: provision Hetzner VPS, rsync KGX, cloud load.
+Phase 3 complete: AGE loader built and smoke-tested (2026-04-19). Phase 4.0 in progress (2026-04-20): Hetzner VPS provisioned, 144 GB KGX rsynced, kgx validate running on VPS. AGE load and Gate 3 pending.
 
 | System | Status |
 |--------|--------|
-| System 1: data pipelines | Phase 3 done (2026-04-19). AGE loader module built and Docker smoke test passed. Phase 4 next: cloud deploy. |
+| System 1: data pipelines | Phase 4.0 in progress (2026-04-20). VPS provisioned, KGX rsynced (144 GB), kgx validate running. AGE load and Gate 3 pending. |
 | System 2: knowledge graph | AGE loader module built (system-02-knowledge-graph/loader/). Full load in Phase 4. |
 | System 3: search agent | Not started |
 

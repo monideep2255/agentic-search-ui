@@ -2,7 +2,7 @@
 
 Phase-by-phase implementation plan for the 5 NCBI ETL pipelines. Each phase is one bossman session with integrated skill chain and branch+MR workflow. Use `/bossman-mode --phase N` to execute.
 
-Created: 2026-04-13. Last updated: 2026-04-19 (Phase 3.0 complete: AGE loader module built, 5-node + 3-edge round-trip smoke test passed via Docker Desktop apache/age:latest; 232 tests passing; Phase 4 next).
+Created: 2026-04-13. Last updated: 2026-04-20 (Phase 4.0 in progress: Hetzner CPX42 provisioned, PostgreSQL 15.17 + Apache AGE 1.5.0 installed on VPS, `ncbi_kg` graph created, loader package deployed to `/root/repo/`, 144 GB KGX rsync complete at 17:38 after 121 retry attempts via `scripts/rsync-retry.sh`, `kgx validate` now running on VPS (PID 38213); AGE load and Gate 3 pending; see `docs/learnings.md`).
 
 ## Table of contents
 
@@ -21,8 +21,6 @@ Created: 2026-04-13. Last updated: 2026-04-19 (Phase 3.0 complete: AGE loader mo
 - [Testing strategy](#testing-strategy)
 - [Key decisions](#key-decisions)
 - [Reference files](#reference-files)
-
----
 
 ## Plan overview
 
@@ -98,8 +96,6 @@ Legend: green = done, yellow = in progress, default = pending.
 
 Each phase produces code only (parsers, pipeline orchestrators, tests). Each gate runs the pipelines on real NCBI FTP data and validates BioLink compliance via the NCATS KGX validator. KGX files are intermediates deleted after AGE load. The graph database is the end target, deployed to a cloud VPS for team access.
 
----
-
 ## End product
 
 When all phases are complete, this repo produces:
@@ -121,6 +117,20 @@ When all phases are complete, this repo produces:
 
 Note: dbSNP (1.2B variants) is not pre-ingested. Population frequency queries use the NCBI dbSNP REST API at query time in System 3. See `docs/architecture/Three_layer_data_architecture.md` for the full Layer 1 vs Layer 2 rationale.
 
+### Data content cutoff (what's actually in V1)
+
+The V1 graph is a point-in-time capture of five NCBI sources. The table below is the authoritative answer to "is record X in the KG?" - if it was added to NCBI after the cutoff, it is not. Live Entrez values are the April 20 re-verification from `docs/NCBI_databases_and_APIs_reference.md`.
+
+| Database | FTP file(s) downloaded | NCBI content cutoff | Our nodes | Live Entrez (2026-04-20) | Drift |
+|---|---|---|---|---:|---:|
+| Gene | `gene_info.gz` (+ 5 companion files) | 2026-04-14 | 67.5M live-slice genes | 68.1M alive (95.0M incl. retired) | -0.6M newer genes missing; retired slice intentionally excluded |
+| ClinVar | `variant_summary.txt.gz`, `var_citations.txt` | 2026-04-14 | 4.43M variant records (pre-cleanup) | 4.27M | +157K records curated-out between Apr 14 and Apr 17 still present in KG (PoC accepts this) |
+| MedGen | `MedGenIDMappings.txt.gz` + 4 companion files | 2026-04-14 | 198.8K xref'd concepts | 234.1K (incl. 35K bare concepts) | bare-concept slice intentionally excluded |
+| PubMed | baseline 2026 (1,334 files) + updatefiles (82 files) | Articles indexed through 2026-01-30 | 40.39M articles + 30.8K MeSH stubs (post-merge) | 40.42M | Articles indexed Feb-Apr 2026 (~30K) missing |
+| Taxonomy | `taxdump.tar.gz` | 2026-04-16 | 2.74M live taxa | 2.87M (incl. 97.9K merged IDs) | -0.14M newer taxa and merged-ID redirects missing |
+
+Snapshot strategy: V1 locks these cutoffs. Refresh in V2, or earlier if a specific cutoff blocks a real query. Re-running any single pipeline against fresh FTP files takes 10 min to 5.5 hr (PubMed is the long pole). See `docs/data_inventory.md` "Pipeline output vs live Entrez counts" for per-pipeline root cause.
+
 ### What you can query after Gate 3
 
 - "Find all pathogenic variants in BRCA1" (Gene -> ClinVar)
@@ -131,8 +141,6 @@ Note: dbSNP (1.2B variants) is not pre-ingested. Population frequency queries us
 - "What is the mutation spectrum for HNF1A?" (System 3: NCBI dbSNP REST API call at query time)
 
 This is System 1 + System 2. System 3 (search agent, FastAPI, LangGraph, UI) lives in a separate repo and consumes this graph.
-
----
 
 ## Timeline estimate
 
@@ -189,7 +197,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | 2.2 | 7 | 5-database merge | DONE (2026-04-16) |
 | Gate 2 | - | Run PubMed + Taxonomy + Gene (re-export) + merge-etl on laptop, validate | DONE (2026-04-17): 115M nodes + 693M edges, 99.99% cross-pipeline connectivity, streaming refactors required mid-gate (gene + merge both hit list-accumulate OOM on laptop-scale data) |
 | 3.0 | 8 | AGE loader code + fixture smoke test (no bulk local load) | DONE (2026-04-19): 7-module loader built; 44 unit tests + 4 docker smoke tests; 5-node + 3-edge round-trip confirmed via apache/age:latest |
-| 4.0 | 9 | Provision Hetzner VPS, rsync KGX, load 5-db on cloud | Pending |
+| 4.0 | 9 | Provision Hetzner VPS, rsync KGX, load 5-db on cloud | In progress (2026-04-20): VPS provisioned + PostgreSQL 15.17 + AGE 1.5.0 installed + `ncbi_kg` graph created + loader package deployed; 144 GB KGX rsync complete (17:38, 121 attempts via `scripts/rsync-retry.sh`); `kgx validate` running on VPS (PID 38213, ~55 min in, single-core). AGE load not yet started. |
 | Gate 3 | - | Validate cloud graph, delete local KGX files. System complete. | Pending |
 
 ### Wall-clock time (downloads and processing)
@@ -201,7 +209,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | ClinVar download (500MB) | 20-30 min | Gate 1 (local) |
 | PubMed baseline + updatefiles download (~54GB compressed, 1334 + 81 files) | 4-8 hours serial, 1-2 hours if parallelized | Gate 2 (laptop, overnight) |
 | Taxonomy download (500MB) | 10 min | Gate 2 (laptop) |
-| rsync KGX to Hetzner VPS (actual 144GB merged KGX, verified 2026-04-19) | 6-12 hours at home Wi-Fi upload (typical 20-50 Mbps up, with `--compress` on TSV) | Phase 4.0 |
+| rsync KGX to Hetzner VPS (actual 144GB merged KGX, verified 2026-04-19) | 4-12 hours at home Wi-Fi upload (nominal 20-50 Mbps up; effective 7-10 Mbps observed 2026-04-20 with `--compress`). Session drops at ~1-1.4 GB require the `scripts/rsync-retry.sh` auto-retry wrapper. | Phase 4.0 |
 | AGE load 5 databases (~115M nodes) on cloud | 2-4 hours | Phase 4.0 (cloud) |
 
 ### Realistic calendar
@@ -210,8 +218,8 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 |------|------|-------|--------|
 | Week 1 | Phase 1 code + Gate 1 | NCBI server `/export` | DONE (2026-04-14 to 2026-04-16). Data migrated to Windows laptop on 2026-04-16 (see `docs/context/setup/setup-03_windows_laptop.md`). |
 | Week 2 | Phase 2 code + Gate 2 | Windows laptop C: drive | 2.0 + 2.1 + 2.2 code DONE (2026-04-16). Gate 2 DONE (2026-04-17): 115M nodes + 693M edges, 99.99% cross-pipeline connectivity; streaming refactors required mid-gate for gene and merge. |
-| Week 3 | Phase 3 (loader code) + Phase 4 (provision VPS, rsync from laptop, cloud load) + Gate 3 | Laptop then cloud | Phase 3 DONE (2026-04-19). Phase 4 next. |
-| Week 4 | Phase 4 (provision VPS + rsync + cloud load) + Gate 3 | Cloud | Pending. Gate 3 = system complete for V1. dbSNP added via System 3 API after user research validates the need. |
+| Week 3 | Phase 3 (loader code) + Phase 4 (provision VPS, rsync from laptop, cloud load) + Gate 3 | Laptop then cloud | Phase 3 DONE (2026-04-19). Phase 4.0 started 2026-04-20: VPS + Postgres + AGE + loader all ready on the server; 144 GB KGX rsync complete (17:38, 121 attempts); `kgx validate` running on VPS; AGE load pending. |
+| Week 4 | Phase 4 (rsync finishes + cloud load + Cypher validation) + Gate 3 | Cloud | In progress. Gate 3 = system complete for V1. dbSNP added via System 3 API after user research validates the need. |
 
 ### Why this order
 
@@ -251,8 +259,6 @@ Local (current, post 2026-04-16 migration): all data on the Windows laptop C: dr
 Prior arrangement (retired 2026-04-16): data was symlinked from the repo to `/export/home/chakrabortim2/data/` on the NCBI server. `/export` is a 4.3TB LVM volume shared across ~925 machine users with no quota protection, which made the 51GB footprint a good-citizen concern and exposed the pipeline to silent disk contention. Migrated to laptop to eliminate both risks.
 
 Cloud: PostgreSQL + AGE database on Hetzner VPS (Nuremberg datacenter). This is the production instance that System 3 connects to. Cost: ~$34/month (CPX42: 8 vCPU, 16GB RAM, 320GB local disk + IPv4 address). No separate volume needed.
-
----
 
 ## Skill chain (every phase follows this)
 
@@ -315,8 +321,6 @@ MR REVIEW
 | preserve-your-thinking | Decisions were made during planning. Execute. |
 | clarify-before-drafting | Scope is defined. |
 
----
-
 ## Branch + MR workflow
 
 ### Branch naming
@@ -350,8 +354,6 @@ MR REVIEW
 ### Parallel phases (1.2 + 1.3 + 1.4)
 
 The original plan called for three separate branches, but in practice these were combined into a single branch (`phase/1.2-1.4-core-triangle-etl`) since all three pipelines touch different directories with no conflicts. One PR, one merge. Faster to review and ship.
-
----
 
 ## Execution map
 
@@ -388,19 +390,18 @@ Session 8: Phase 3.0  AGE loader code + fixture smoke test  DONE (2026-04-19)
     |  direct INSERT into AGE internal tables (not cypher() UNWIND)
     v
 Session 9: Phase 4.0  provision VPS + rsync KGX + cloud load
-    |  provision Hetzner CPX42 (8 vCPU, 16GB RAM, 320GB disk)
-    |  install PostgreSQL + AGE on VPS
-    |  rsync merged KGX (~75-95GB) from laptop to VPS (~3-8 hrs over home Wi-Fi)
-    |  run AGE loader on VPS for 5 databases
-    |  run Cypher test queries on cloud
+    |  provision Hetzner CPX42 (8 vCPU, 16GB RAM, 320GB disk)     [DONE 2026-04-20]
+    |  install PostgreSQL 15.17 + AGE 1.5.0 on VPS                [DONE 2026-04-20]
+    |  rsync 144 GB merged KGX from laptop to VPS (121 retries)   [DONE 2026-04-20 17:38]
+    |  kgx validate on VPS (PID 38213, single-core, ~55 min in)   [RUNNING]
+    |  run AGE loader on VPS for 5 databases                       [PENDING]
+    |  run Cypher test queries on cloud                            [PENDING]
     v
 --- GATE 3: cloud graph validated --- V1 COMPLETE ---
     |  delete laptop KGX intermediates
     |  handoff to System 3
     |  system complete
 ```
-
----
 
 ## Phase 1: core triangle (Gene + ClinVar + MedGen) [DONE]
 
@@ -492,8 +493,6 @@ Pass criteria (all passed):
 - [x] Stub injection for dangling cross-pipeline refs
 - [x] Cross-database traversal tests (Gene -> ClinVar -> MedGen)
 
----
-
 ## Phase 2: literature + taxonomy [DONE]
 
 ### Phase 2.0: PubMed ETL (DONE 2026-04-16)
@@ -554,15 +553,13 @@ Pass criteria (all passed):
 - [x] PubMed has_mesh_annotation edges resolve to MeSH OntologyClass nodes (0 dangling)
 - [x] Omitting a database injects correctly-typed stubs rather than dropping edges
 
----
-
 ## Phase 3: AGE loader code (no bulk local load) [DONE 2026-04-19]
 
 ### Phase 3.0: PostgreSQL + AGE loader (DONE 2026-04-19)
 
 Branch: `phase/3.0-age-loader` (merged)
 
-Built the AGE loader code. 7 modules: connection, schema, node_loader, edge_loader, index_builder, pipeline, cli. Direct INSERT into AGE internal tables (not cypher() UNWIND — see learnings.md for rationale). Round-trip smoke test: 5 nodes + 3 edges through apache/age:latest Docker container confirmed. No bulk local load (reserved for cloud).
+Built the AGE loader code. 7 modules: connection, schema, node_loader, edge_loader, index_builder, pipeline, cli. Direct INSERT into AGE internal tables (not cypher() UNWIND, see learnings.md for rationale). Round-trip smoke test: 5 nodes + 3 edges through apache/age:latest Docker container confirmed. No bulk local load (reserved for cloud).
 
 Prerequisites (install before running `/bossman-mode --phase 3.0`):
 
@@ -578,8 +575,6 @@ Deliverables:
 - Smoke-test script: loads fixture into local AGE, runs a handful of Cypher queries, tears down
 
 Rationale: laptop C: drive has 355GB free, but holding the 5-database KGX (~140GB) plus a full AGE database (~80-130GB) plus a pg_dump peak would squeeze a development workstation. Loading once on the cloud avoids duplicate work. The fixture smoke test runs via Docker Desktop with a Linux PostgreSQL + AGE container; do not install AGE natively on Windows.
-
----
 
 ## Phase 4: provision VPS + rsync KGX + cloud load
 
@@ -598,14 +593,23 @@ Prerequisites (install before running `/bossman-mode --phase 4.0`):
 - Merged KGX present at `C:/Users/<you>/agentic-search-data-engineering/data/kgx/merged/` with `nodes.tsv` and `edges.tsv` (Gate 2 output).
 - `pytest -q` passes (232 tests baseline).
 
-The exact rsync command (captured from the working 2026-04-19 setup, covers all three Windows gotchas):
+The exact rsync command (captured from the working 2026-04-19 dry-run and extended 2026-04-20 for the real transfer, covers all five Windows and network gotchas):
 
 ```powershell
+# From PowerShell (no MSYS path translation):
 $env:HOME = $env:USERPROFILE
-rsync -avP --compress -e "/cygdrive/c/Users/chakrabortim2/scoop/apps/cwrsync/6.4.7/bin/ssh.exe -i /cygdrive/c/Users/chakrabortim2/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" "/cygdrive/c/Users/chakrabortim2/Desktop/agentic-search-data-engineering/data/kgx/merged/" root@<server-ip>:/root/data/kgx/merged/
+rsync -avP --compress --partial --inplace --timeout=600 -e "/cygdrive/c/Users/chakrabortim2/scoop/apps/cwrsync/6.4.7/bin/ssh.exe -i /cygdrive/c/Users/chakrabortim2/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes" "/cygdrive/c/Users/chakrabortim2/Desktop/agentic-search-data-engineering/data/kgx/merged/" root@46.225.128.133:/root/data/kgx/merged/
 ```
 
-Pre-step: `ssh root@<server-ip> "mkdir -p /root/data/kgx/merged"` before the first real transfer.
+From Git Bash, prefix with `MSYS_NO_PATHCONV=1` to disable MSYS path translation (see `docs/context/setup/setup-05_rsync_windows.md` Gotcha 4).
+
+Because the connection drops every ~5 min / ~1.4 GB on home Wi-Fi (see setup-05 Gotcha 5), wrap the rsync in the retry loop:
+
+```bash
+bash scripts/rsync-retry.sh
+```
+
+Pre-step (one-time): `ssh root@46.225.128.133 "mkdir -p /root/data/kgx/merged"` before the first invocation.
 
 Test queries (run on cloud; same as original Phase 3 test queries):
 - Gene to variant traversal (BRCA1)
@@ -630,8 +634,6 @@ Post-Gate 3 steps:
 
 When data refresh is needed (re-run pipelines with newer NCBI dumps): temporarily upgrade back to CPX42 for the load window, then downgrade again.
 
----
-
 ## Post-V1: user research and feedback loop
 
 After Gate 3, the knowledge graph is live. The next priority is validating that the right data was ingested and the right queries are possible.
@@ -642,9 +644,7 @@ After Gate 3, the knowledge graph is live. The next priority is validating that 
 4. Seed golden datasets: curate a set of known-correct query/answer pairs for evaluation. These become the test harness for System 3 development.
 5. Feedback loop: user research findings feed back into pipeline improvements (this repo) and agent design (System 3 repo).
 
----
-
-## Phase 5: dbSNP (deferred — not part of V1)
+## Phase 5: dbSNP (deferred, not part of V1)
 
 dbSNP pre-ingestion is deferred until user research validates that population frequency queries cannot be served by the NCBI dbSNP REST API at query time.
 
@@ -653,8 +653,6 @@ The NCBI dbSNP REST API (`api.ncbi.nlm.nih.gov/variation/v0/`) returns populatio
 Pre-ingesting dbSNP would add 1.2B nodes, 200-400GB of storage, 6-24 hours of load time, and 3 extra bossman sessions for queries that a live API call answers equally well. Do user research first. If allele frequency queries are a core use case and API latency is unacceptable at scale, revisit this decision and add Phase 5.
 
 If Phase 5 is later added: build SNP ETL code locally (per-chromosome VCF parsing, streaming), run the pipeline directly on the VPS (download dbSNP ~100GB to cloud), parse per chromosome, load each chromosome into AGE incrementally. Never have the full KGX on disk at once. Link ClinVar variants to dbSNP via the RS# field using `exact_match` edges.
-
----
 
 ## Testing strategy
 
@@ -707,8 +705,6 @@ All tests use inline fixtures (no separate fixture files). Total: 232 tests, all
 - For new code: there must be a test next to it
 - Coverage target: 70%+ on shared utilities, parsers, and mappers
 
----
-
 ## Key decisions
 
 1. Parsers are separate files per FTP source, not monoliths. Enables parallel builders.
@@ -735,8 +731,7 @@ All tests use inline fixtures (no separate fixture files). Total: 232 tests, all
 23. After `merge-etl` completes and the merged KGX passes awk verification plus cross-pipeline connectivity checks, per-database KGX directories (`data/kgx/{gene,clinvar,medgen,pubmed,taxonomy}/`) are deleted to reclaim disk. Done at end of Gate 2: 143.8 GB reclaimed. FTP cache is kept as the regeneration source. Rationale in DECISIONS.md 2026-04-17.
 20. Local development and all bulk data live on the user's Windows laptop C: drive (355GB exclusive), not the NCBI shared server `/export`. Gate 1 data was migrated on 2026-04-16 after the `/export` free-space audit revealed 284GB shared with ~925 users and no quota protection. Setup steps captured in `docs/context/setup/setup-03_windows_laptop.md`. Phase 3.0 fixture smoke test uses Docker Desktop + a Linux PostgreSQL + AGE container. Phase 4 rsync to Hetzner runs over home Wi-Fi upload (6-16 hrs for ~140GB). No NIH funding or policy ties the pipeline to NCBI infrastructure; all NCBI data is public FTP.
 24. AGE loader uses direct INSERT into AGE internal tables (`ag_catalog._ag_label_vertex`, `ag_catalog._ag_label_edge`) instead of the `cypher() UNWIND` approach. Rationale: UNWIND batching through the cypher() function wrapper adds a SQL-to-Cypher round-trip for every batch and makes psycopg2 parameter binding fragile (percent signs in CURIE values conflict with psycopg2 parameter markers). Direct INSERT treats the AGE tables as normal PostgreSQL tables, avoids the escaping problem, and is 2-4x faster for bulk load. Trade-off: couples the loader to AGE internals; if AGE changes its table layout a loader update is required.
-
----
+25. Phase 4.0 rsync is wrapped in `scripts/rsync-retry.sh` instead of being run as a single invocation. Mid-phase fix 2026-04-20 after observing ~1-1.4 GB session drops on both corp and home networks (3 drops in the first 15 minutes). Root cause most likely home router NAT table eviction at ~5 min of wall-clock per TCP connection. `--partial --inplace` preserves the transferred bytes across reconnects so each retry resumes from the last committed offset. Expected wall-clock: 4-8 hr with ~60-120 retries at ~1.2 GB per session. Without the retry loop, the transfer would require manual resume after every drop. Trade-off: the retry loop does not protect against all failure modes (disk full on the receiver, authentication changes mid-transfer), which is why it stops after 200 attempts. Rationale logged in DECISIONS.md 2026-04-20 and `docs/learnings.md` Phase 4.0 execution section.
 
 ## Reference files
 

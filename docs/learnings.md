@@ -4,6 +4,7 @@ Problems encountered and solutions implemented during development. Each entry ca
 
 ## Table of contents
 
+- [Phase 4.0 execution: VPS setup + rsync drops (2026-04-20)](#phase-40-execution-vps-setup--rsync-drops-2026-04-20)
 - [Phase 4.0 pre-flight: rsync on Windows work laptop (2026-04-19)](#phase-40-pre-flight-rsync-on-windows-work-laptop-2026-04-19)
 - [Understanding: CURIE and how KGX uses it (2026-04-19)](#understanding-curie-and-how-kgx-uses-it-2026-04-19)
 - [Phase 3.0: AGE loader on Docker Desktop (2026-04-19)](#phase-30-age-loader-on-docker-desktop-2026-04-19)
@@ -12,6 +13,306 @@ Problems encountered and solutions implemented during development. Each entry ca
 - [Gate 1: Gene pipeline on real data (2026-04-14)](#gate-1-gene-pipeline-on-real-data-2026-04-14)
 - [Gate 1: ClinVar pipeline on real data (2026-04-14)](#gate-1-clinvar-pipeline-on-real-data-2026-04-14)
 - [Architecture discussions (2026-04-14)](#architecture-discussions-2026-04-14)
+
+## Phase 4.0 execution: VPS setup + rsync drops (2026-04-20)
+
+Started Phase 4.0 execution on 2026-04-20. The VPS provisioning, software install, and source upload went clean; the rsync transfer hit four separate problems before settling on an auto-retry loop. Sections in order of discovery.
+
+### State at start of the phase
+
+From earlier setup on 2026-04-19: Hetzner CPX42 (IP `46.225.128.133`) provisioned, SSH key-auth working from the work laptop, rsync dry-run succeeded in PowerShell. From Gate 2: 144 GB merged KGX on the laptop C drive. Everything else was fresh.
+
+### Problem 1: Git Bash MSYS path translation breaks rsync source path
+
+First real rsync attempt from Git Bash (not PowerShell) using the setup-05 documented `/cygdrive/c/...` path format failed with:
+
+```
+The source and destination cannot both be remote.
+rsync error: syntax or usage error (code 1)
+```
+
+Root cause: Git Bash's MSYS runtime auto-translates POSIX-looking paths into Windows paths when calling native Windows executables. So `/cygdrive/c/Users/...` gets rewritten to `C:\Users\...` before cwRsync.exe sees it. cwRsync then parses the `C:` as a remote host prefix, concludes both source and dest are remote, and aborts. Setup-05 was captured from PowerShell, which has no such path-translation layer, so the gotcha only appears when rsync is invoked from Git Bash or similar MSYS shells.
+
+Fix: prefix the rsync command with `MSYS_NO_PATHCONV=1` to disable MSYS path translation for that invocation. The `/cygdrive/c/...` string then reaches cwRsync unmodified.
+
+```bash
+MSYS_NO_PATHCONV=1 rsync -avP --compress -e "..." "/cygdrive/c/..." root@host:/path/
+```
+
+Lesson: setup-05's "final working command" works verbatim in PowerShell. In Git Bash, the same string needs `MSYS_NO_PATHCONV=1` in front of it. Update setup-05 or provide a Git Bash variant the next time the doc is touched.
+
+### Problem 2: misleading `completed (exit 0)` from background rsync
+
+Every rsync started with `run_in_background: true` fired a "completed (exit code 0)" task notification within seconds, even when the rsync was still running or had just died mid-transfer. This is the same bug flagged in the Gate 2 learnings (pipeline CLIs) but it also affects rsync.
+
+Root cause: the background wrapper reports the shell wrapper's exit code, which is 0 when the `tee` at the end of the pipeline exits 0, which it does whenever tee writes successfully, independent of whether rsync itself succeeded. Piping rsync through tee masks the rsync exit code from the wrapper's perspective.
+
+Fix: never trust the `completed (exit 0)` notification on backgrounded rsync. Confirm status by:
+
+1. Reading the rsync log (`tail /tmp/phase4_rsync.log`) for the final "sent/received" line or an error
+2. Running `ssh root@host "du -sh /root/data/kgx/merged/"` to see how many bytes actually landed
+3. Comparing landed bytes against the source total (144.3 GB)
+
+Lesson: extend the Gate 2 rule ("do not trust exit 0 from backgrounded `&` invocation") to include any pipe-terminating command. For rsync specifically, remote byte count is the only source of truth.
+
+### Problem 3: every SSH session dies at ~1-1.4 GB, regardless of network or throttle
+
+Five separate rsync invocations across two networks all terminated with "Connection reset by peer (104)" or "Broken pipe (32)" at between 1.0 and 1.4 GB of payload transferred. Observed sequence:
+
+| Attempt | Network | Flags | Drop point | Elapsed before drop |
+|---------|---------|-------|------------|---------------------|
+| 1 | Corp network | default | 1.02 GB | ~3 min |
+| 2 | Corp network | `--partial --timeout=300 ServerAliveInterval=30` | 1.33 GB | ~5 min |
+| 3 | Corp network | `--bwlimit=80000 --inplace` | 1.40 GB | ~5 min |
+| 4 | Home Wi-Fi | `--partial --inplace ServerAliveInterval=30` | 1.40 GB | ~5 min |
+| 5 | Home Wi-Fi | same as 4 | 1.40 GB | ~5 min |
+
+Both networks independently kill the session at ~1.4 GB. Drop point is not deterministic on file content (varies by hundreds of MB between attempts) but is deterministic on session age (~5 min) + bytes transferred.
+
+Most likely causes, in order of probability:
+
+1. Home router NAT table connection eviction: consumer routers (and some corp firewalls) prune NAT entries for TCP connections that have been up for more than a fixed time window, regardless of activity. Common default is 5-15 min for single TCP flows. The keep-alive packets every 30 s do not prevent eviction.
+2. ISP-level DPI / middle-mile reset: some ISPs inject TCP RST on flows that move more than 1-2 GB of encrypted traffic in a single connection (anti-exfiltration heuristic).
+3. Windows OpenSSH client resource limit: less likely because we are using cwRsync's bundled ssh, not Windows OpenSSH.
+
+What does NOT fix it:
+
+- `--bwlimit` (observed burst rate was 290 MB/s to 1.3 GB/s because the headline number is a cumulative average and the local buffer fills faster than the network)
+- Longer `ServerAliveInterval` or `TCPKeepAlive=yes` (connection is not idle, so keepalives do not apply)
+- Switching networks from corp to home (both drop at the same point)
+
+What does fix it: treat drops as normal, reconnect automatically. The `--partial --inplace` flags preserve all transferred bytes across sessions, so each new session resumes from the last committed offset on disk.
+
+Fix: `scripts/rsync-retry.sh`, a bash loop that reinvokes the rsync command on any non-zero exit code, up to 200 times, with a 10 s sleep between attempts. For a 144 GB source and ~1.2 GB per session, expect ~120 sessions, ~4-8 hr wall-clock depending on actual home uplink throughput (observed 7-10 Mbps effective, below the 39 Mbps test).
+
+```bash
+while true; do
+  rsync -avP --compress --partial --inplace --timeout=600 -e "..." "$SRC/" "$DST/"
+  [ $? -eq 0 ] && break
+  sleep 10
+done
+```
+
+Lesson: for large transfers over residential or corporate networks, never assume a single SSH session will live long enough to finish. Build resumable-retry-on-drop into every transfer script from the start. The marginal code cost is tiny; the alternative is watching a 90 percent transfer die at hour 4.
+
+### Understanding: how the retry loop actually fixes the drop problem
+
+Written in the teaching style because the troubleshooting framing above ("just wrap it in a loop") hides what is actually load-bearing. A reader who copies the loop without understanding the two flags inside it would re-send the same bytes forever.
+
+The retry loop is three things working together. Pull any one out and the transfer never finishes:
+
+1. A bash loop that keeps re-running rsync on failure
+2. The `--partial` rsync flag, which keeps already-transferred bytes on disk after a drop
+3. The `--inplace` rsync flag, which writes directly into the destination file (no temp + rename)
+
+What each piece does in plain English:
+
+The loop. A 4-line bash construct that calls rsync, checks its exit code, sleeps 10 seconds on failure, and tries again. Capped at 200 attempts. That is the entire script (`scripts/rsync-retry.sh`). The loop's only job is to hit Enter automatically when rsync dies. It has no idea what bytes have or have not been transferred. That part is rsync's job.
+
+```bash
+while true; do
+  rsync -avP --compress --partial --inplace --timeout=600 -e "..." "$SRC/" "$DST/"
+  [ $? -eq 0 ] && break
+  sleep 10
+done
+```
+
+`--partial`. Default rsync deletes the destination file when a transfer is interrupted, on the theory that a half-written file is dangerous (it looks complete but is not). `--partial` overrides that: keep the bytes that landed, even on failure. Without this flag, every retry starts from byte zero. A 144 GB transfer with ~100 drops would never make progress.
+
+`--inplace`. Default rsync writes incoming bytes to a temporary file (e.g. `.edges.tsv.abc123`) and renames it to the final name only after the transfer completes cleanly. Safe, but if the connection dies mid-stream the temp file is deleted. `--inplace` writes directly into the destination file as bytes arrive. Bytes on disk and bytes on the wire stay in sync. Next rsync invocation looks at the destination, sees a 7.5 GB `edges.tsv`, trusts it, and asks the sender to start at byte 7.5 GB + 1.
+
+How they combine. `--partial` keeps the bytes; `--inplace` puts them in the right file with the right name. Either flag alone is insufficient. Both together turn "connection drop" into "pause and resume", and the loop turns "pause and resume" into "fully automatic finish."
+
+Side-by-side picture:
+
+```
+Without retry loop:
+  rsync -> drop at 1.4 GB -> human re-types command -> drop at 2.8 GB -> human re-types -> ...
+  (~100 manual reruns, hours of babysitting)
+
+Without --partial:
+  loop -> rsync starts -> drop at 1.4 GB -> file deleted -> loop reruns -> drop at 1.4 GB -> ...
+  (infinite loop, never makes progress past 1.4 GB)
+
+Without --inplace:
+  loop -> rsync starts -> writes to .tmp -> drop at 1.4 GB -> .tmp deleted -> loop reruns -> ...
+  (same infinite loop, slightly different mechanism)
+
+With all three:
+  loop -> rsync -> drop at 1.4 GB (bytes stay) -> loop reruns -> resumes from 1.4 GB ->
+    drop at 2.8 GB -> loop reruns -> resumes from 2.8 GB -> ... -> done
+  (zero manual input after launch)
+```
+
+Why this pattern generalises beyond rsync. Any tool that (a) returns a non-zero exit code on network failure and (b) supports resuming from a partial state can be wrapped this way. Same shape:
+
+- `curl --continue-at -` for HTTP downloads
+- `wget -c` already retries plus resumes (no wrapper needed)
+- `aws s3 cp` retries internally on chunk failures (no wrapper needed)
+- `scp` does NOT support resume; the wrapper does not help; use rsync or HTTP instead
+
+For rsync over SSH on a flaky link, the loop + partial + inplace combination is canonical. Tools with built-in retry are exceptions, not the rule.
+
+Takeaway for future transfers. For any single-file or directory transfer over an untrusted network path that exceeds a few minutes, the default shape is `retry_loop + partial + inplace`. Reach for it before debating bandwidth limits, keep-alive intervals, or compression settings. Those are second-order tuning. Resumable retry is the first-order guarantee that the transfer eventually finishes.
+
+### Problem 4: attempt 24 hung silently for 33 min despite `--timeout=600`
+
+At 15:07:46 the retry loop started attempt 24. It printed `sending incremental file list` and then produced zero further output for 33 minutes. Server-side `edges.tsv` mtime stopped advancing at 15:08. The rsync.exe and ssh.exe processes on the laptop were still alive in `tasklist`, just not transferring. `--timeout=600` (10 min idle timeout) did not fire.
+
+Root cause: not fully isolated. Most likely a stuck SSH pre-transfer handshake or a TCP half-open state where the server silently dropped but the client socket was never notified. `--timeout=600` in rsync only applies once the data stream is flowing; if rsync is blocked in the handshake phase (before sending/receiving its first data byte), the timeout does not measure that window. A keep-alive probe would detect a dead TCP connection, but if the server or a middle hop is sending ACKs without forwarding data, the connection looks healthy to the client OS and the application hangs.
+
+Fix:
+
+1. Kill only the stuck rsync.exe and ssh.exe processes. Do not kill the retry loop's bash parent. The loop body's `if [ $? -eq 0 ] && break` check fires when its rsync child exits non-zero after the kill, and the loop sleeps 10 s then starts the next attempt. No script restart needed.
+2. Add `--append` to the rsync flags in `scripts/rsync-retry.sh`. This is addressed separately below and also mitigates the attempt-24 issue indirectly by reducing the time each attempt spends in non-data-transferring states.
+
+Detection heuristic for next time:
+
+```bash
+# If log mtime has not advanced in > 5 min and server byte count is static, assume hang:
+[ $(($(date +%s) - $(stat -c %Y /tmp/phase4_rsync.log))) -gt 300 ] && echo "HUNG, kill rsync.exe"
+```
+
+Or wrap the rsync call in GNU coreutils `timeout 600 rsync ...` to force a kill from outside rsync. Deferred unless hangs recur during the current transfer.
+
+Lesson: `--timeout=N` in rsync does not protect against every stall mode. An external watchdog (log mtime check, process liveness probe, or `timeout(1)` wrapper) is the only way to catch pre-transfer hangs. For a one-off transfer, manual kill on observation is acceptable; for a production pipeline, build the watchdog.
+
+### Decision: add `--append` to rsync flags after the attempt-24 hang
+
+At 33 GB of partial destination file, each fresh rsync attempt was spending 15-30 sec reading the local source file to compute block-level delta checksums before sending any new bytes. Default rsync behaviour with `--partial --inplace` still runs the delta algorithm on resume: it re-checksums the destination block-by-block, compares against source checksums, and finds the resume point. Over hundreds of retry attempts this compounds into 60-90 minutes of wasted local scan time on a 144 GB transfer.
+
+Fix: add `--append` to the rsync flags. `--append` tells rsync to treat the destination as a prefix of the source. It skips the delta-checksum step entirely and starts sending from `source[destination_size]` onwards. Combined with `--inplace` (direct writes, no temp file) and `--partial` (keep bytes on failure), this turns each retry into a pure "continue from EOF" operation.
+
+Trade-off: `--append` does not verify the overlapping portion. If any of the bytes already on disk are corrupt, `--append` will not detect it. `--append-verify` adds the checksum check back but brings the local-rescan cost back with it. The trade-off is acceptable for this transfer because `--inplace` guarantees rsync writes directly into the destination file without buffering or renaming, so the bytes on disk came straight from the sender with no intermediate corruption surface. If the final file fails the downstream `kgx validate` step on the VPS, the regeneration path is `<pipeline>-etl --skip-download` on the laptop plus a fresh rsync.
+
+For future transfers where destination integrity matters more than speed, use `--append-verify` instead. For this Phase 4.0 transfer, speed wins.
+
+### Understanding: why `--append` changes per-attempt cost from O(destination size) to O(1)
+
+Helps explain why the flag matters more as the transfer progresses.
+
+Default rsync resume, mechanics:
+
+1. Open source file (on laptop)
+2. Open destination file (on VPS, via ssh)
+3. Both sides compute rolling checksums over their local blocks
+4. Sender walks through source blocks, asks receiver "do you have this block?" for each
+5. Receiver replies yes/no by checksum match
+6. Sender transmits only the "no" blocks
+
+Cost: both sides scan their full local file to compute checksums. At 33 GB destination, the receiver reads 33 GB from disk per attempt (~5-10 sec on SSD), and the sender does the same on its local source. Plus a round trip of checksums over the network (~2-5 sec). Call it 15-30 sec per attempt.
+
+`--append` resume, mechanics:
+
+1. Sender stats the destination via ssh, gets its current size (e.g. 33 GB)
+2. Sender seeks to byte 33 GB in the source
+3. Sender reads and streams from that offset onward
+
+Cost: one stat syscall, one seek, plus the actual data transfer. Scan time is zero. The only cost that scales with file position is the seek itself, which is O(log N) on a filesystem and negligible on SSD.
+
+```mermaid
+flowchart LR
+    subgraph default ["Default: --partial without --append"]
+        D1[start attempt] --> D2[read full<br/>local src file]
+        D2 --> D3[compute block<br/>checksums]
+        D3 --> D4[exchange with<br/>receiver's checksums]
+        D4 --> D5[find resume<br/>point]
+        D5 --> D6[start sending<br/>new bytes]
+        style D2 fill:#f39c12,color:#000
+    end
+    subgraph append ["--append: trust the partial"]
+        A1[start attempt] --> A2[stat destination<br/>on receiver]
+        A2 --> A3[seek to offset<br/>in local src]
+        A3 --> A4[start sending<br/>from offset]
+        style A3 fill:#27ae60,color:#fff
+    end
+```
+
+When the overhead matters. The delta-resume overhead is fixed per attempt. For a single transfer that completes in one attempt, the overhead is zero. For a retry loop with N attempts, total overhead = N × O(destination size). The overhead grows because:
+
+- N grows with transfer size (more chances to drop)
+- destination size grows as the transfer progresses (more bytes to rescan)
+
+The product grows roughly quadratically in transfer progress. At 10 percent done with 10 attempts, overhead might be 2 min. At 90 percent done with 80 attempts, overhead would be 60+ min without `--append`. The further you go, the worse default resume gets. `--append` flattens this to near zero.
+
+Lesson: for any large, frequently-interrupted transfer, `--append` is the flag that keeps retry cost constant instead of growing with file position. Combine with external integrity checks (kgx validate, sha256sum) to catch any silent corruption that `--append` does not verify.
+
+### Problem 5: script edits do not propagate to the running bash retry loop
+
+Happened 2026-04-20 during the Phase 4.0 transfer. After adding `--append` to `scripts/rsync-retry.sh` to cut the per-attempt delta-resume overhead, the log continued showing the default resume pattern for 40+ minutes, suggesting the new flag was not taking effect.
+
+Symptom: each rsync attempt's progress line started with `131,072   0%    0.00kB/s    0:00:00` then immediately jumped to `1,861,222,400   1%    1.73GB/s`. This is the signature of rsync reading the local source file from byte 0 to compute delta checksums against the destination, NOT the `--append` signature (which would start at `41,387,720,704   42%    0.00kB/s` and begin sending new bytes within seconds).
+
+Root cause: bash parses a script into an abstract syntax tree (AST) once, at the moment of invocation, and holds that AST in the running process's memory. Every iteration of `while true; do ...; done` re-executes the in-memory AST. The script file on disk is not re-read between iterations. Editing `scripts/rsync-retry.sh` to add `--append` updated the file on disk but did nothing to the running loop's stored command arguments.
+
+Fix: kill the retry-loop bash parent process, then relaunch the script. Procedure:
+
+1. `wmic process where "name='bash.exe'" get ProcessId,CommandLine` to find the bash PID running `scripts/rsync-retry.sh`
+2. `taskkill //PID <retry_loop_bash_pid> //F` and also kill the in-flight rsync.exe + ssh.exe children
+3. Wait a few seconds for processes to exit cleanly
+4. Relaunch: `nohup bash scripts/rsync-retry.sh > /tmp/phase4_retry.out 2>&1 & disown`
+5. Tail the log and confirm the new attempt starts at a high offset (e.g. 41 GB / 42%) with no `1.9 GB/s` fake-cached-read phase
+
+Data loss on restart: zero. `--partial --inplace` guarantees that bytes already on disk at the destination are preserved across rsync invocations. Verified on 2026-04-20: 41 GB on disk pre-restart, 41.4 GB at first new attempt, +3 GB of real progress in 2 min post-restart with no bytes discarded.
+
+Lesson: when changing retry-loop flags mid-transfer, the correct sequence is (a) edit the script, (b) kill the retry-loop bash, (c) relaunch, (d) verify the log shows the new behaviour. Do not assume a file edit propagates to a running loop. Same caveat applies to any long-lived bash script that is modified while running.
+
+### Understanding: how to verify a rsync flag is actually in effect from the log output
+
+Complements Problem 5 above. The rsync command line is not echoed to stdout, so `grep -- --append /tmp/phase4_rsync.log` returns zero matches whether the flag is set or not. You have to infer from the progress pattern.
+
+Default resume (no `--append`):
+
+```
+edges.tsv
+      131,072   0%    0.00kB/s    0:00:00    1,861,222,400   1%    1.73GB/s    0:00:52    ...
+```
+
+The first few lines start at byte 0 and show 1-2 GB/s rates. This is the delta-checksum scan: rsync is reading the local source file fast (SSD read) to compute rolling block checksums. No network transfer happens during this phase. Only after rsync catches up to the destination's current size do you see real network rates (10-40 MB/s) and new bytes landing on the server.
+
+`--append` resume:
+
+```
+edges.tsv
+ 41,387,720,704  42%    0.00kB/s    0:00:00   41,609,068,544  42%  176.80MB/s  0:05:10   ...
+```
+
+The first progress line starts at the destination's current size (41.4 GB, 42% of the 97.8 GB source). There is no cached-read spike. The observed rate is the real network transfer rate, not a local-read rate.
+
+How to check which mode is active. Look at the first two progress entries of the most recent attempt:
+
+- Start offset at 0 and initial rate >1 GB/s: default resume, flag not active
+- Start offset at the destination's current size and rate in the tens of MB/s: `--append` active
+
+If the answer is "default resume" but the script claims `--append`, the retry loop is running stale. Restart it.
+
+### Problem 6: rate display in rsync is misleading for debugging
+
+During the drops we initially thought `--bwlimit=80000` (KB/s) was not working because the log showed 290 MB/s and even 1.3 GB/s. The throttle was in fact working at the send-socket layer, but the headline rate is rsync's cumulative average from start of file, not current throughput. A local buffer fills fast from SSD, drains slow over the network, and the cumulative-average display spikes high during initial buffer fill, then decays.
+
+How to read actual rate: compute `(bytes_sent_end - bytes_sent_start) / duration`. For attempt 4: sent 280 MB over 4:56 = 945 KB/s ≈ 7.5 Mbps, well below the 39 Mbps home uplink spec. That suggests either peak-hour residential congestion, rsync+compression CPU cost on Windows cwRsync, or Wi-Fi signal drop.
+
+Lesson: in any transfer log, compute actual throughput from byte deltas. The progress line's headline rate is a moving average, not an instantaneous measurement, and is especially misleading at transfer start.
+
+### What was successfully set up before the rsync loop
+
+Everything except the actual data transfer was complete and verified by the end of the first hour:
+
+- Phase branch `phase/4.0-cloud-deploy` created off clean `main`
+- Apache PGDG apt repo added, PostgreSQL 15.17 installed (`pg_config --version` confirms, `systemctl is-active postgresql` returns active)
+- Apache AGE 1.5.0 built from source against Postgres 15 dev headers, `age.so` installed at `/usr/lib/postgresql/15/lib/`
+- `ncbi_kg` database created, `age` extension loaded (version 1.5.0), graph `ncbi_kg` created (graphid 16969), confirmed via `SELECT * FROM ag_catalog.ag_graph`
+- `/root/data/kgx/merged/` directory pre-created on VPS (285 GB free, 301 GB total; the "320 GB" in the Hetzner CPX42 spec is decimal GB, and binary GiB after filesystem overhead is 301)
+- Source code uploaded via tar-over-ssh to `/root/repo/` (776 KB, excluded data/, .git/, venv, reference-repos, .claude)
+- Python 3.12 + venv + `pip install -e .` + psycopg2-binary + kgx CLI all installed; `age-load --help` confirms the loader CLI is on PATH in `/root/repo/.venv/bin/age-load`
+- 1.4 GB of partial `edges.tsv` on VPS from the failed attempts (will be resumed, not restarted)
+
+### Current state at time of writing (2026-04-20 ~14:27 local)
+
+- 1.4 GB of 144 GB transferred (~1 percent)
+- Auto-retry loop ready at `scripts/rsync-retry.sh`, not yet launched
+- VPS fully ready to run `kgx validate` and `age-load` the moment the transfer finishes
+- Laptop must stay awake for the next 4-8 hr; the phase completes on VPS side with no laptop dependency after rsync finishes
 
 ## Phase 4.0 pre-flight: rsync on Windows work laptop (2026-04-19)
 
@@ -168,6 +469,33 @@ xrefs
 HGNC:11998|UniProt:P04637|Ensembl:ENSG00000141510
 ```
 
+### Where each prefix comes from per database
+
+A natural follow-up question: did we invent these prefixes, or were they already there in NCBI's data? The answer is: NCBI provides bare numeric IDs in most files, and we prepend the standard prefix in the parser. We did not invent any prefixes. Every prefix in `schema/biolink_ncbi.yaml` traces to the W3C CURIE standard, the Bioregistry, or the BioLink Model.
+
+| Database | NCBI raw ID format | Prefix source | Resulting CURIE |
+|----------|---------------------|----------------|-----------------|
+| Gene | `7157` (bare integer) | We prepend `NCBIGene:` per BioLink convention | `NCBIGene:7157` |
+| Taxonomy | `9606` (bare integer) | We prepend `NCBITaxon:` | `NCBITaxon:9606` |
+| ClinVar | `17661` (VariationID, bare integer) | We prepend `ClinVar:` | `ClinVar:17661` |
+| MedGen | `C0011860` (CUI, bare alphanumeric) | We prepend `MedGen:` | `MedGen:C0011860` |
+| PubMed | `12345678` (PMID, bare integer) | We prepend `PMID:` | `PMID:12345678` |
+| MeSH (referenced by PubMed annotations) | `D003920` (bare descriptor) | We prepend `MeSH:` | `MeSH:D003920` |
+| GO (referenced inside `gene2go.gz`) | `GO:0008152` (already prefixed in source) | Passthrough | `GO:0008152` |
+| MONDO (referenced inside MedGen mapping file) | `MONDO:0007454` (already prefixed in source) | Passthrough | `MONDO:0007454` |
+| OMIM (referenced inside Gene's `mim2gene_medgen`) | `602023` (bare integer) | We prepend `OMIM:` | `OMIM:602023` |
+| HPO (referenced inside MedGen) | `HP:0001250` (already prefixed in source) | Passthrough | `HP:0001250` |
+
+Two patterns appear in the table:
+
+Pattern 1, "we prepend." NCBI's main entity files (gene_info, taxdump, variant_summary, MedGen RRF files, PubMed XML) use bare IDs because the file is scoped to one database, and the database name is implicit in the filename. The pipeline parser knows which database it is reading and prepends the matching prefix from `schema/biolink_ncbi.yaml`.
+
+Pattern 2, "passthrough." Cross-references inside NCBI files (a Gene record referencing a GO term, a MedGen concept referencing MONDO or HPO) often arrive already in CURIE form because NCBI is itself referencing an external ontology. The parser does not modify these strings; it validates that the prefix is in our schema and uses the value as-is.
+
+The single failure mode this design is vulnerable to: a prefix used inside a source file that is not in our schema. When that happens, the merge step injects a stub node with category fallback `biolink:NamedThing`, which is the type-loss the OMIM observation above documents. The fix is to add the missing prefix to `schema/biolink_ncbi.yaml` and to the merger's `_PREFIX_TO_CATEGORY` map. The CURIE itself is always well-formed; only its category mapping is at risk.
+
+The canonical assembly point in code is `system-01-data-pipelines/shared/biolink_mapper.py`. Every node and edge produced by the pipelines flows through that module, which validates the CURIE format and the prefix membership against the schema.
+
 ### Why this matters for cross-pipeline merge
 
 CURIEs are the glue that lets five independent pipelines produce files that stitch into one graph.
@@ -241,7 +569,7 @@ Lesson: update the validation checklist in `bossman_execution_plan.md` step 8 to
 
 Once `kgx validate` ran with the right flag, it returned `ERROR: MISSING_EDGE_PROPERTY` for `knowledge_level` and `agent_type` on taxonomy edges. BioLink Model 4.x marks both as required slots on every `Association`. They define provenance metadata: how the assertion was made (knowledge_assertion vs prediction vs statistical_association) and what produced it (manual_agent vs automated_agent vs text_mining_agent).
 
-Root cause: `system-01-data-pipelines/shared/kgx_exporter.py` defined `EDGE_REQUIRED_COLUMNS = ["subject", "predicate", "object", "source", "source_url"]` — 5 columns. No pipeline mapper set `knowledge_level` or `agent_type`. The schema in `schema/biolink_ncbi.yaml` defined both as optional slots on `Association`, so internal LinkML validation passed. The external NCATS `kgx validate` enforces BioLink Model required slots, which our internal validator does not.
+Root cause: `system-01-data-pipelines/shared/kgx_exporter.py` defined `EDGE_REQUIRED_COLUMNS = ["subject", "predicate", "object", "source", "source_url"]`, 5 columns. No pipeline mapper set `knowledge_level` or `agent_type`. The schema in `schema/biolink_ncbi.yaml` defined both as optional slots on `Association`, so internal LinkML validation passed. The external NCATS `kgx validate` enforces BioLink Model required slots, which our internal validator does not.
 
 Blast radius: all 5 pipelines (Gene, ClinVar, MedGen, Taxonomy, PubMed) use the same shared exporter and shared `map_edge()`. Gate 1 outputs (Gene, ClinVar, MedGen) have the same gap. Gate 1's validation step 8 was checked off in the plan but the external validator was never actually run on Gate 1 outputs (or it failed with the missing `-i tsv` flag and the failure was not surfaced).
 
@@ -269,7 +597,7 @@ Lesson 3: shared utility bugs hide because per-pipeline tests use small in-line 
 
 ### Problem: gene pipeline OOMs on 33 GB laptop because nodes aren't streamed (2026-04-17)
 
-When gene-etl was re-run on the laptop during Gate 2 (to regenerate KGX with the BioLink 4.x fix), the python process grew to 21 GB RSS and crashed with `MemoryError`. The system had 33.9 GB total RAM, ~11 GB held by Windows + IDE + Claude + browser, leaving ~22 GB for gene — and parse_gene_info peaks above that.
+When gene-etl was re-run on the laptop during Gate 2 (to regenerate KGX with the BioLink 4.x fix), the python process grew to 21 GB RSS and crashed with `MemoryError`. The system had 33.9 GB total RAM, ~11 GB held by Windows + IDE + LLM CLI tooling + browser, leaving ~22 GB for gene, and parse_gene_info peaks above that.
 
 Root cause: edges were already streamed (fix from Gate 1, learnings section above), but nodes are not. `gene/parse_gene_info.py` returns a list of all 67M gene dicts at once, and `gene/pipeline.py` holds that list in RAM while calling `export_nodes(all_nodes, ...)`. Peak memory ~22-25 GB just for the node accumulation. Gate 1 succeeded because it ran on the NCBI server with 128+ GB RAM; on a 33 GB laptop the same design OOMs.
 
@@ -281,7 +609,7 @@ Fix plan (executing 2026-04-17):
 - `system-01-data-pipelines/shared/kgx_exporter.py`: add `init_nodes_file()` and `append_nodes()` mirroring the existing `init_edges_file()` / `append_edges()` streaming helpers.
 - `system-01-data-pipelines/gene/pipeline.py`: call `init_nodes_file()` before parsing, then `append_nodes()` per batch as the generator yields, and drop the accumulated-list pattern.
 - Tests: update gene pipeline tests to assert streaming behavior (nodes.tsv grows incrementally, RAM stays bounded).
-- Re-run: delete only `data/kgx/gene/` (keep `data/ftp_cache/gene_*.gz` — raw source is untouched), then `gene-etl --skip-download` with the new streaming code. Expected peak ~2-3 GB RAM.
+- Re-run: delete only `data/kgx/gene/` (keep `data/ftp_cache/gene_*.gz`, raw source is untouched), then `gene-etl --skip-download` with the new streaming code. Expected peak ~2-3 GB RAM.
 
 Lesson: when a pipeline works on a server but not on a laptop, the issue is almost always unbounded accumulation in RAM. The streaming refactor that worked for pubmed from day 1, and for gene edges after Gate 1, must also cover gene nodes. The rule going forward: any parser returning a list of >1M items should instead be a generator feeding a streaming writer, regardless of current RAM headroom. The "fits in server RAM" assumption is a time bomb for any dev environment.
 
@@ -303,16 +631,99 @@ Fix plan (executing 2026-04-17):
 
 - `shared/merger.py`: add `stream_kgx_nodes(path)` and `stream_kgx_edges(path)` generators that yield one dict per row. Keep `load_kgx_nodes` / `load_kgx_edges` as thin wrappers around the generators, for tests that want full lists on small fixtures.
 - `shared/merger.py`: add `merge_kgx_streaming(node_paths, edge_paths, output_paths)` that runs in two passes. Pass 1 streams every nodes.tsv, dedups by id via an in-memory set of ~116M CURIE strings (~8 GB, fits on 33 GB), writes to merged/nodes.tsv in 10K-row batches. Pass 2 streams every edges.tsv, tracks dangling endpoints via set membership, writes to merged/edges.tsv in batches, and appends stub nodes for missing endpoints at the end of the nodes file.
-- `merge/pipeline.py`: swap `merge_kgx` + `inject_stubs` + `validate_merge` for the streaming version. Skip edge-level dedup at merge time (cross-pipeline edge collisions are rare by construction — each pipeline's edges are scoped to its own subject prefix; edge set dedup would require a 200 GB in-memory set that is not worth the cost).
+- `merge/pipeline.py`: swap `merge_kgx` + `inject_stubs` + `validate_merge` for the streaming version. Skip edge-level dedup at merge time (cross-pipeline edge collisions are rare by construction, since each pipeline's edges are scoped to its own subject prefix; edge set dedup would require a 200 GB in-memory set that is not worth the cost).
 - Tests: existing Phase 2.2 merge tests use small fixtures and continue to pass via the list wrappers. Add one integration test that validates streaming on a synthetic medium-sized input.
 
 Memory projection:
 - Node ID set: ~8 GB (116M unique CURIEs)
 - Batch buffers: ~10 MB
-- Python runtime + Windows + IDE + Claude: ~10 GB
+- Python runtime + Windows + IDE + LLM CLI tooling: ~10 GB
 - Peak: ~20 GB on a 33 GB laptop → ~60% load, safe margin
 
 Lesson: the "accumulate in list, then write" pattern in shared utilities is a landmine. It hid in `merger.py` through Phase 2.2 because all tests used tiny fixtures, and hit us within minutes of the first real-data merge attempt. New rule: any shared utility that reads or produces data proportional to FTP input size must be a generator or stream by default. The list version exists only for tests, with a loud docstring saying "do not use in production pipelines."
+
+### Understanding: the streaming pattern and why it is the default for ETL at scale
+
+Written because the two OOM sections above (gene nodes, merger) are specific incidents of one general pattern. If you only read the fix-and-move-on lessons, you will hit the same failure mode the next time a new pipeline is added. This section captures the rule so it generalises.
+
+The one-sentence rule. Any in-memory data structure whose size scales with input data size is a memory bomb waiting for a big-enough input. Replace it with a generator that yields one record at a time, paired with a writer that appends to disk as records arrive.
+
+Why this happens. There are three instincts that feel right during development and quietly break at scale:
+
+1. "Read the file into a list so I can iterate over it" → fine for 1K rows in a test fixture, fatal for 67M rows in production
+2. "Collect all the results, then pass them to the writer" → the collection IS the data, and the data is gigabytes
+3. "It worked on the big server, ship it" → the big server had 128 GB RAM; nobody tested it on a 33 GB laptop
+
+Each decision is local, feels reasonable, and passes unit tests. The blast radius only shows up when a human runs the pipeline on real input in an environment that was not the original dev machine.
+
+```mermaid
+flowchart LR
+    subgraph Accumulate ["Accumulate pattern: size grows with input"]
+        A1[read row 1] --> A2[append to list]
+        A2 --> A3[read row 2]
+        A3 --> A4[append to list]
+        A4 --> A5[... 67M rows ...]
+        A5 --> A6[list holds 67M dicts<br/>~22 GB RAM]
+        A6 --> A7[write all to TSV]
+    end
+    subgraph Stream ["Stream pattern: size is constant"]
+        S1[read row 1] --> S2[yield one dict]
+        S2 --> S3[writer appends to TSV]
+        S3 --> S4[read row 2]
+        S4 --> S5[yield one dict]
+        S5 --> S6[writer appends to TSV]
+        S6 --> S7[... 67M rows ...]
+        S7 --> S8[peak RAM ~2-3 GB<br/>regardless of input]
+    end
+    style A6 fill:#c0392b,color:#fff
+    style S8 fill:#27ae60,color:#fff
+```
+
+The two halves of the pattern. Both are needed; neither alone is sufficient:
+
+1. The parser becomes a generator. Instead of `def parse_gene_info() -> List[Node]: return all_nodes`, write `def parse_gene_info() -> Iterator[Node]: yield node_for_this_row`. Memory cost per record is transient; the record lives long enough to be written and then gets garbage collected.
+2. The writer supports append. Instead of `export_nodes(all_nodes, path)`, write `init_nodes_file(path)` then `append_nodes(batch, path)` per N rows. The TSV header is written once at init; data rows accumulate on disk, not in RAM.
+
+The pipeline glue is then:
+
+```python
+init_nodes_file(out_path)
+batch = []
+for node in parse_gene_info(ftp_cache):
+    batch.append(node)
+    if len(batch) >= 10_000:
+        append_nodes(batch, out_path)
+        batch.clear()
+if batch:
+    append_nodes(batch, out_path)
+```
+
+Peak memory: 10K dicts (about 5 MB), plus whatever state the generator carries. Constant regardless of input size.
+
+When to apply this. Three cheap tests tell you whether a code path needs streaming:
+
+1. Does the input size grow with the FTP source? If yes, stream. Gene, PubMed, dbSNP, the merger, the loader all qualify.
+2. Can output volume exceed 1 M records? If yes, stream the output writer too, not just the input.
+3. Can you explain the peak RAM without saying "depends on input size"? If no, you are one-big-input away from an OOM.
+
+When NOT to apply this. Streaming adds code complexity (generators, batching, append writers). Skip it when:
+
+- Input is bounded by a small constant (the NCBI Taxonomy tree is ~2.7M nodes, always; list approach was explicitly accepted in Phase 2.1 decision)
+- You need random access or multiple passes over the data (streams are single-pass; if you need to re-read, pay the disk cost once and stream again)
+- The data is reference material loaded at startup (~10K rows of config, ontology keys, prefix maps)
+
+For everything in the middle, default to streaming. The marginal cost of writing a generator is small; the cost of refactoring after an OOM in production is large.
+
+Four-way check you can run before merging any new ETL code:
+
+1. Does any parser return a `List[...]` of size proportional to the input? Convert to `Iterator[...]`.
+2. Does any pipeline step call `list(iterator)` to materialise a stream? Replace with a for-loop over the iterator.
+3. Does any writer accept `records: Sequence[dict]` and require the full list? Add an append API.
+4. Does any test use a fixture big enough to trigger real streaming behaviour? If not, add one integration test with a medium-scale synthetic input.
+
+The rule for future work. Every new pipeline on this project defaults to streaming end-to-end (parser as generator, exporter as append). Any deviation requires an explicit note in DECISIONS.md saying why the list approach is safe for the specific data (like the Phase 2.1 Taxonomy decision). "It worked in my tests" does not count.
+
+Pattern payoff. The gene streaming refactor (decision 21 in `docs/bossman_execution_plan.md`) and the merger streaming refactor (decision 22) turned memory peaks of 22 GB and ~400 GB respectively into peaks of 2 GB and ~12 GB on a 33 GB laptop. Same hardware, same data, same correctness. Only the memory model changed.
 
 ### Observation: OMIM prefix missing from merger's _PREFIX_TO_CATEGORY (2026-04-17)
 
@@ -322,10 +733,10 @@ The Gate 2 merge completed and injected 81,125 stubs for dangling cross-pipeline
 - PMID: 14,769 (expected: newer PMIDs in gene2pubmed not in our baseline)
 - HP: 9,881 (expected)
 - MedGen: 2,032 (expected)
-- **OMIM: 10,580** (unexpected - these became `biolink:NamedThing` because `OMIM:` is not in `_PREFIX_TO_CATEGORY` in `system-01-data-pipelines/shared/merger.py`)
+- OMIM: 10,580 (unexpected - these became `biolink:NamedThing` because `OMIM:` is not in `_PREFIX_TO_CATEGORY` in `system-01-data-pipelines/shared/merger.py`)
 - NCBIGene: 89, NCBITaxon: 4 (negligible)
 
-Root cause: `_PREFIX_TO_CATEGORY` covers NCBIGene, PMID, MeSH, GO, MedGen, MONDO, NCBITaxon, HP, ClinVar, UMLS — but not OMIM. The Gene pipeline's mim2gene_medgen parser emits edges with OMIM CURIEs as endpoints. At merge time, those CURIEs had no matching node (OMIM is not one of our pipelines), so they became stubs with fallback category `biolink:NamedThing`.
+Root cause: `_PREFIX_TO_CATEGORY` covers NCBIGene, PMID, MeSH, GO, MedGen, MONDO, NCBITaxon, HP, ClinVar, UMLS, but not OMIM. The Gene pipeline's mim2gene_medgen parser emits edges with OMIM CURIEs as endpoints. At merge time, those CURIEs had no matching node (OMIM is not one of our pipelines), so they became stubs with fallback category `biolink:NamedThing`.
 
 Fix (low priority, not a Gate 2 blocker): add `("OMIM:", "biolink:Disease"),` to `_PREFIX_TO_CATEGORY`. OMIM is a clinical disease/phenotype registry; categorising as `biolink:Disease` aligns with how MedGen and MONDO are already mapped. Re-running merge (or a post-merge rewrite) would move 10,580 stubs from NamedThing to Disease.
 
@@ -474,11 +885,51 @@ Lesson: 278M dicts in memory is not feasible. Any pipeline producing more than ~
 
 ### Observation: Gene count is 67.5M, not 94M as estimated
 
-The execution plan estimated ~94M genes based on early planning docs. The actual gene_info.gz file has 67,536,236 data rows. Verified against NCBI Gene Entrez search (`all[filter]`), which reports 67,736,810 records. The ~200K difference is likely records added after the FTP snapshot date. The 94M figure was never accurate.
+The execution plan estimated ~94M genes based on early planning docs. The actual gene_info.gz file has 67,536,236 data rows. Verified against NCBI Gene Entrez search (`all[filter]`), which at the time of Gate 1 reported 67,736,810 records. The ~200K difference is likely records added after the FTP snapshot date.
 
 All rows parsed, 0 skipped. We have all the data.
 
 Lesson: verify estimated counts against the live NCBI database (`all[filter]` search on the database homepage) before and after each gate run.
+
+Update (2026-04-20 re-verification): the Entrez Gene index now returns 95,048,437 records for `all[filter]` and 95,048,437 via `einfo.fcgi?db=gene`. That is not a data-loss problem on our side. Breakdown:
+
+- `alive[prop]` = 68,125,559 (currently live genes; the set `gene_info.gz` is built from)
+- `discontinued[prop]` = 25,894,790 (replaced, merged, or withdrawn genes retained for historical lookup)
+- Together with a small "secondary" slice, the total rolls up to ~95M
+
+The bulk flat file `gene_info.gz` contains only the live slice, and `gene_history.gz` tracks the discontinued slice. Our pipeline correctly ingests only the live slice, which is what we want for the V1 knowledge graph. The earlier claim that "the 94M figure was never accurate" is itself stale: the total including discontinued records is real and close to 95M today. The 67.5M number is the right number for our scope. If a future release needs discontinued-gene traceability (for citation resolution against old papers), download `gene_history.gz` as a second source and add a `replaced_by` edge type.
+
+### Lesson (2026-04-20): Entrez indexes vs bulk FTP flat files
+
+The Gene discrepancy is not a one-off: every pipeline we run shows a gap between the Entrez `einfo.fcgi?db={db}` record count and the node count our KGX produces. The pattern is consistent.
+
+- Entrez counts the **searchable index**, which includes live records plus retired, merged, and secondary records kept around so old identifiers still resolve.
+- Bulk FTP flat files contain the **live slice** only. Retired/merged records are shipped in a separate "history" file if at all.
+
+Measured on 2026-04-20 re-verification:
+
+| Pipeline | KGX nodes | Entrez | Gap | Root cause |
+|---|---:|---:|---:|---|
+| Gene | 67.5M | 95.0M | -29% | `gene_info.gz` live only; history slice (25.9M) in `gene_history.gz` |
+| MedGen | 198.8K | 234.1K | -15% | `MedGenIDMappings.txt.gz` covers xref'd concepts only; `NAMES.RRF.gz` has 236.9K including 38K bare concepts |
+| Taxonomy | 2.74M | 2.87M | -5% | `nodes.dmp` live only; 97.9K merged taxids live in `merged.dmp`, 863.6K deleted in `delnodes.dmp` |
+| ClinVar | 4.43M | 4.27M | +4% (our snapshot is pre-cleanup) | Snapshot date mismatch, not a structural issue |
+| PubMed (per-pipeline) | 41.3M | 40.4M | +2% (baseline+updatefiles overlap) | Merge dedup resolves to 40.39M, which matches Entrez |
+
+How to apply this:
+
+1. When a pipeline's node count is **below** the Entrez count, check whether it matches the line count of the source flat file. If yes, the gap is NCBI's filtering (live vs. all), not a pipeline bug. Document which slice we took and why.
+2. When a pipeline's node count is **above** the Entrez count, suspect source-file overlap (as with PubMed baseline+updatefiles) and confirm the merge step dedups it down.
+3. Before claiming "we have all the data", check both. Matching the FTP file line count proves we parsed everything; matching the Entrez count proves nothing if we did not intend to ingest the retired slice.
+4. Record the decision per pipeline in `data_inventory.md` so the gap is auditable. The table in "Pipeline output vs live Entrez counts" captures this for the 5 ingested databases.
+
+Concrete V1 decisions locked by this lesson:
+
+- Gene: live slice only. Discontinued GeneID resolution deferred to System 3 (load `gene_history.gz` later if needed).
+- MedGen: xref'd concepts only. Bare MedGen concepts excluded because they cannot be linked to anything else in the KG.
+- Taxonomy: live taxa only. No `merged.dmp` redirects in V1.
+- ClinVar: ship the 2026-04-14 snapshot for the PoC. 3.7% curation drift is structurally irrelevant. Refresh at V2.
+- PubMed: baseline+updatefiles overlap is expected; merge dedup is the correct fix, not pipeline-level dedup.
 
 ### Understanding: what is Apache AGE and why we use it
 

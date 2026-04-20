@@ -3,8 +3,8 @@
 Post-plan review notes from Monideep. Items routed to appropriate docs where actionable.
 
 1. Monideep task: do a data mapping, setting up rules by self and map it to what the pipeline code did, before loading into KG
-2. Visualizations, schema of the architecture must be present
-3. Documentation of the end to end process must be present -> technical walk through similar to done for ncbi-kg, also simplify for both technical and non-technical audience, use @writing rules
+2. Visualizations, schema of the architecture must be present -> connect system 1, system 2 and system 3 (obviously this repo focuses on system 1 and 2)
+3. Documentation of the end to end process must be present -> technical walk through similar to done for ncbi-kg, also simplify for both technical and non-technical audience, use @writing rules -> also add how system 3 to use system 2
 4. UI and everything must have BioLink validation (KGX tests for BioLink conformity and that it will work for NCATS: https://github.com/biolink/kgx/blob/master/docs/kgx_biolink_validation.md)
    - Run `kgx validate` on every KGX output after each gate
    - Checks: categories and predicates exist in official BioLink model, ID prefixes are registered, required KGX columns present, edge subjects/objects reference valid node IDs
@@ -15,6 +15,7 @@ Post-plan review notes from Monideep. Items routed to appropriate docs where act
 8. Architecture diagram must include (1) the code logic and why (2) overall high level schema (3) System 2 schema (4) rules (5) step by step process of cleaning (ETL) (6) how the ontology mapping was done
 9. Make sure plan, decisions, learnings and any other relevant docs are always updated!
 10. Post Gate 3 cost optimization: delete KGX files from both Hetzner and laptop after graph is validated, downgrade Hetzner from CPX42 (320GB, ~$34/month) to CPX32 (240GB, ~$24-26/month). KGX files are derived output, regeneratable by re-running pipelines. Only the AGE database needs to persist.
+11. update C:\Users\chakrabortim2\Desktop\agentic-search-data-engineering\docs\NCBI_databases_and_APIs_reference.md with real numbers. How are we going to weave in everything without introducing latency?
 
 ## Where each item landed
 

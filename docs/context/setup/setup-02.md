@@ -15,8 +15,6 @@ You are not starting the plan. The user will kick off the plan and give all inst
 - [4. PostgreSQL + Apache AGE](#4-postgresql--apache-age)
 - [5. Verify environment](#5-verify-environment)
 
----
-
 ## System requirements
 
 This is a work computer running AlmaLinux 8.10 (RHEL-compatible), not macOS or Windows.
@@ -32,8 +30,6 @@ This is a work computer running AlmaLinux 8.10 (RHEL-compatible), not macOS or W
 | Git | /opt/git |
 
 Storage warning: home directory is NFS-mounted with only 20G. Do not store FTP downloads or KGX output there. All data goes to `/export/home/chakrabortim2/data/` which has 427G available on local disk.
-
----
 
 ## 1. Clone and Python environment
 
@@ -135,7 +131,5 @@ Expected output: `Storage: OK`
 ```bash
 /usr/local/postgres/14.6/bin/pg_ctl -D /export/home/chakrabortim2/pgdata status
 ```
-
----
 
 Once checks 1 and 2 pass, tell the user. They will kick off the plan. Check 3 can wait until System 2 work begins.

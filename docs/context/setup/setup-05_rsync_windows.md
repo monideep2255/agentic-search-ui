@@ -8,8 +8,6 @@ Written in first-principles style so a smart high schooler could follow along. S
 - `setup-04_hetzner_vps.md`: Hetzner server provisioning and SSH access
 - This doc: the rsync piece, which fits between server SSH and the Phase 4.0 data transfer
 
----
-
 ## Table of contents
 
 - [Axioms](#axioms)
@@ -20,33 +18,29 @@ Written in first-principles style so a smart high schooler could follow along. S
 - [The Windows problem](#the-windows-problem)
 - [Install on a locked-down Windows laptop](#install-on-a-locked-down-windows-laptop)
 - [The three gotchas we hit](#the-three-gotchas-we-hit)
+- [Gotcha 4: Git Bash silently translates cygdrive paths](#gotcha-4-git-bash-silently-translates-cygdrive-paths)
+- [Gotcha 5: every SSH session dies at ~1-1.4 GB, use the retry loop](#gotcha-5-every-ssh-session-dies-at-1-14-gb-use-the-retry-loop)
 - [The final working command](#the-final-working-command)
 - [Why the transfer takes 6 to 12 hours](#why-the-transfer-takes-6-to-12-hours)
 - [What this means for you](#what-this-means-for-you)
-
----
 
 ## Axioms
 
 Named up front so anyone reading can challenge the floor this doc stands on.
 
 1. You have ~144 GB of merged KGX to move from the work laptop to the Hetzner server.
-2. Home Wi-Fi upload is 20 to 50 Mbps. A single transfer will take 6 to 12 hours.
-3. The connection will drop at least once during a 6-12 hour window. Any tool without resume is disqualified.
+2. Home Wi-Fi upload is 20 to 50 Mbps nominal. Effective rsync throughput in the 2026-04-20 run measured 7 to 10 Mbps on a 39 Mbps uplink (compression CPU cost on cwRsync, peak-hour Wi-Fi contention, rsync protocol overhead). A single transfer takes 6 to 12 hours at the nominal rate, longer if the effective rate stays under 10 Mbps.
+3. The connection will drop many times during the transfer, not just once. Observed pattern in the 2026-04-20 run: every SSH session dies at ~1-1.4 GB of payload regardless of network. Any tool without resume-on-drop is disqualified, and rsync must be wrapped in a retry loop (see Gotcha 5 and `scripts/rsync-retry.sh`).
 4. The work laptop is locked down: no admin, no Docker, no Program Files writes. Any install has to work in the user profile.
 5. SSH from the work laptop to the Hetzner server already works with a key (per `setup-04_hetzner_vps.md`).
 
 If any of these turn out false, revisit the choice of tool.
-
----
 
 ## What is rsync
 
 rsync is a file-copy tool that only sends what is missing or changed, and can resume after interruptions.
 
 Think of it as a shipping company that remembers what boxes are already at the destination. You ask it to deliver 144 GB. It asks the other end: what do you already have? It only ships the gap. If the truck breaks down halfway, the next truck continues from where the first stopped.
-
----
 
 ## Why does it exist
 
@@ -72,8 +66,6 @@ flowchart LR
 
 The drop is expected. Without rsync, the drop erases 4 hours of upload. With rsync, the drop costs a few seconds of verification and keeps going.
 
----
-
 ## How does it work
 
 Three clever things happen during a transfer.
@@ -95,8 +87,6 @@ flowchart TB
 ```
 
 rsync does not replace SSH. It rides on top of SSH, using it as the transport. You already set up SSH keys in `setup-04_hetzner_vps.md`; rsync reuses them.
-
----
 
 ## What is PowerShell and why are we using it
 
@@ -126,8 +116,6 @@ One important habit: when a command asks you to install something that changes t
 
 If you are comfortable in Git Bash or Windows Terminal and prefer it, both can host a PowerShell session inside them. Same thing. Look for `PS` at the start of the prompt.
 
----
-
 ## The Windows problem
 
 Unix ships rsync in the base install. Linux, macOS, FreeBSD, you get rsync for free.
@@ -142,8 +130,6 @@ Windows does not. rsync is not a Microsoft tool. It is a Unix tool. You have fou
 On a locked-down work machine with no admin, Scoop is the only option that reliably works in under 5 minutes.
 
 Scoop's main bucket does not have a package called `rsync`. It has a package called `cwrsync`. That is a Windows port of rsync based on Cygwin. When you install `cwrsync`, the command on the PATH is called `rsync`, so from your shell it looks and behaves the same.
-
----
 
 ## Install on a locked-down Windows laptop
 
@@ -192,8 +178,6 @@ ssh root@<server-ip> "which rsync"
 ```
 
 Expected: `/usr/bin/rsync`. If blank, install it on the server with `ssh root@<server-ip> "apt install -y rsync"`.
-
----
 
 ## The three gotchas we hit
 
@@ -246,7 +230,83 @@ Part B: point the ssh client directly at the key file using `-i`, so key discove
 
 Also helpful: `-o StrictHostKeyChecking=accept-new` so the first-time host fingerprint is accepted without an interactive prompt.
 
----
+## Gotcha 4: Git Bash silently translates cygdrive paths
+
+Discovered 2026-04-20 while running Phase 4.0 from Git Bash instead of PowerShell.
+
+Symptom: `rsync --dry-run -avP "/cygdrive/c/Users/.../merged/" root@host:/tmp/test/` fails with:
+
+```
+The source and destination cannot both be remote.
+rsync error: syntax or usage error (code 1)
+```
+
+Root cause: Git Bash ships with an MSYS runtime that auto-translates POSIX-looking paths into Windows paths when calling native Windows executables. So the `/cygdrive/c/Users/...` string gets rewritten to `C:\Users\...` before cwRsync.exe sees it. cwRsync then parses the `C:` as a remote host prefix, concludes both source and destination are remote, and aborts. PowerShell has no such translation layer, so the exact same command works there.
+
+Fix: prefix the rsync command with `MSYS_NO_PATHCONV=1` to disable MSYS path translation for that one invocation.
+
+```bash
+MSYS_NO_PATHCONV=1 rsync -avP --compress -e "..." "/cygdrive/c/..." root@host:/path/
+```
+
+The `-e` string itself (which also contains `/cygdrive/...` paths to the ssh binary and the key) survives the MSYS translation because it is quoted as a single argument and passed through to cwRsync by rsync's internal invocation, not by Git Bash.
+
+Lesson: the PowerShell-captured command in this doc is not portable to Git Bash as-is. If you prefer Git Bash, add `MSYS_NO_PATHCONV=1` in front of the rsync line. Everything else works identically.
+
+## Gotcha 5: every SSH session dies at ~1-1.4 GB, use the retry loop
+
+Discovered 2026-04-20 during the real Phase 4.0 transfer. Hit every rsync attempt across two different networks.
+
+Symptom: rsync authenticates, starts transferring, runs for 3 to 5 minutes, then dies with one of:
+
+```
+Connection reset by peer (104)
+rsync error: error in socket IO (code 10)
+```
+
+or
+
+```
+Read from remote host 46.225.128.133: Connection reset by peer
+client_loop: send disconnect: Connection reset by peer
+rsync: [sender] write error: Broken pipe (32)
+```
+
+Drop point is always in the 1.0 GB to 1.4 GB range of payload transferred. Pattern holds across:
+
+- Corporate office network (first attempts)
+- Home Wi-Fi (subsequent attempts)
+- With `--bwlimit=80000`, `--timeout=300`, `ServerAliveInterval=30`, `TCPKeepAlive=yes` (none of these prevent the drop)
+
+Root cause: most likely consumer router NAT table connection eviction. Many home routers (and some office firewalls) prune NAT entries for TCP connections that have been up for a fixed wall-clock duration, regardless of activity. Keepalive packets every 30 s do not reset the eviction timer. Possible contributing cause: ISP-level DPI or middle-mile TCP RST injection on flows that exceed ~1 GB of encrypted traffic in one connection.
+
+What does NOT fix it:
+
+- Throttling with `--bwlimit` (the headline rate in rsync's progress line is a cumulative average, not current throughput; the local buffer fills from SSD faster than the network drains, so the displayed number spikes high during buffer fill and misleads you about the actual wire rate)
+- Longer SSH keepalives (connection is not idle)
+- Switching networks
+
+What does fix it: treat drops as normal and reconnect automatically. With `--partial --inplace` flags, every byte that made it to disk on the receiver side is preserved across rsync invocations, so each new session resumes from the last committed offset. No bytes are lost, no bytes are re-sent.
+
+Fix: `scripts/rsync-retry.sh` in this repo. Bash loop that reinvokes the same rsync command on any non-zero exit code, up to 200 attempts, with a 10 s sleep between attempts. Expect ~60 to 120 iterations for a 144 GB source at ~1.2 GB per session, total wall-clock 4 to 8 hours at home-Wi-Fi speeds.
+
+```bash
+while true; do
+  rsync -avP --compress --partial --inplace --timeout=600 \
+    -e "/cygdrive/c/Users/<you>/scoop/apps/cwrsync/6.4.7/bin/ssh.exe \
+        -i /cygdrive/c/Users/<you>/.ssh/id_ed25519 \
+        -o StrictHostKeyChecking=accept-new \
+        -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes" \
+    "/cygdrive/c/Users/<you>/Desktop/agentic-search-data-engineering/data/kgx/merged/" \
+    root@<server-ip>:/root/data/kgx/merged/
+  [ $? -eq 0 ] && break
+  sleep 10
+done
+```
+
+Run it in a terminal that stays open until completion. In Git Bash, prefix with `MSYS_NO_PATHCONV=1` (see Gotcha 4).
+
+Lesson: for any large transfer over residential or corporate networks, do not assume a single SSH session will live long enough. Build resumable retry-on-drop into the transfer script from the start. The marginal code cost is tiny; the alternative is watching a 90 percent transfer die at hour 4 with no automatic recovery.
 
 ## The final working command
 
@@ -287,8 +347,6 @@ Flag explanation:
 - `-e "..."`: the ssh command to use for transport
 - `-i ...`: the private key file
 - `-o StrictHostKeyChecking=accept-new`: auto-accept new host fingerprints
-
----
 
 ## Why the transfer takes 6 to 12 hours
 
@@ -350,8 +408,6 @@ Option 2: live with it and run overnight. This is the default. Kick off rsync be
 
 If the transfer is still running when you sit down for Phase 4.0 bossman work, that is fine. Bossman detects KGX already on the server and skips the transfer step.
 
----
-
 ## What this means for you
 
 Three takeaways you will carry into Phase 4.0.
@@ -368,6 +424,4 @@ If anything in this doc stops working, suspect one of the three gotchas returnin
 - A new PowerShell session lost `HOME`: re-run `$env:HOME = $env:USERPROFILE` at the top of every new session. Or add it to your PowerShell profile for persistence.
 - You rotated your SSH key: update the `-i` path to the new key file.
 
----
-
-Last updated: 2026-04-19
+Last updated: 2026-04-20 (added Gotcha 4 Git Bash MSYS_NO_PATHCONV and Gotcha 5 session-drop retry loop after Phase 4.0 execution surfaced both)

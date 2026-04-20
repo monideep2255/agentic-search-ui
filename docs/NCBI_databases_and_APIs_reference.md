@@ -14,11 +14,9 @@ Comprehensive reference for all NCBI databases accessible via the Entrez E-utili
 - [Part 6: cross-database link map](#part-6-cross-database-link-map)
 - [Part 7: NCBI usage policies](#part-7-ncbi-usage-policies)
 
----
-
 ## Provenance
 
-All data in this document was obtained from live API calls on April 2, 2026. No web-scraped or secondary sources.
+All data in this document was obtained from live API calls on April 2, 2026, with a full re-verification pass on April 20, 2026. Record counts shift daily; see the re-verification note below for items that drifted materially. No web-scraped or secondary sources.
 
 | Section | Source | How verified |
 |---|---|---|
@@ -29,14 +27,20 @@ All data in this document was obtained from live API calls on April 2, 2026. No 
 | Part 5: PubTator3 API | `pubtator3-api/publications/export/biocjson?pmids=32942285` | Live API call, response structure from actual JSON |
 | Part 5: LitVar2 API | `litvar2-api/variant/autocomplete/?query=rs328` and `variant/get/litvar@rs328##` | Live API calls, response fields from actual JSON |
 | Part 5: LitSense API | `litsense-api/api?query=covid+vaccine+efficacy&limit=5` | Live API call, response structure from actual JSON |
-| Part 5: ClinicalTrials.gov API | `clinicaltrials.gov/api/v2/studies?query.term=cancer&pageSize=1`, `studies/NCT04368728`, `stats/size` | Live API calls, 578,873 total studies confirmed |
+| Part 5: ClinicalTrials.gov API | `clinicaltrials.gov/api/v2/studies?query.term=cancer&pageSize=1`, `studies/NCT04368728`, `stats/size` | Live API calls, 581,326 total studies confirmed (re-verified 2026-04-20) |
 | Part 5: BLAST, PubChem PUG REST | NCBI documentation (not live-tested in this session) | Documented from official NCBI API docs |
 | Part 6: cross-database link map | Derived from EInfo link data across all 39 databases | Aggregated from Part 2 data |
 | Part 7: usage policies | NCBI E-utilities documentation | Standard published policies |
 
 NCBI API key used: stored in project `.env` file. Rate limits: 10 req/sec with key vs 3 req/sec without.
 
----
+### Re-verification notes (April 20, 2026)
+
+- ClinVar record count decreased from 4,489,534 to 4,269,379 (about 220K net drop in three weeks). Likely a curation cleanup. Every other database grew.
+- EGQuery (`egquery.fcgi`) returns HTTP 301 to an internal NCBI host (`ext-http-eutils.linkerd.ncbi.nlm.nih.gov`) that does not resolve for external callers. Treat EGQuery as currently unreliable. See Part 3.
+- LitSense endpoint now requires a trailing slash before the query string. See Part 5.
+- PubTator3 JSON wraps documents in a `PubTator3` list, and annotations use `infons.normalized_id` (not `infons.identifier`). See Part 5.
+- Several field counts drifted by 1 to 4 because NCBI added or removed searchable attributes: ClinVar 44 to 47, BioProject 35 to 31, Assembly 50 to 51, PubMed link types 47 to 48. Numbers in Part 2 reflect the April 20 values.
 
 ## How to use this document
 
@@ -48,59 +52,59 @@ This is a reference for building agentic search tools. Each database entry shows
 
 The cross-database links are critical for agentic search: they define the graph of connections between databases.
 
----
-
 ## Part 1: all 39 Entrez databases (live from API)
 
 ### Summary table
 
 | db parameter | Display name | Description | Record count | Last updated |
 |---|---|---|---|---|
-| `pubmed` | PubMed | PubMed bibliographic record | 40,345,671 | 2026/04/02 |
-| `pmc` | PMC | PubMed Central full-text archive | 12,097,327 | 2026/04/02 |
-| `books` | Books | Biomedical books, reports, databases | 1,313,805 | 2026/04/02 |
-| `nlmcatalog` | NLM Catalog | Bibliographic data for NLM resources | 1,656,997 | 2026/03/27 |
-| `mesh` | MeSH | Controlled vocabulary thesaurus | 355,733 | 2026/04/02 |
-| `gene` | Gene | Gene-specific records | 94,350,249 | 2026/04/02 |
+| `pubmed` | PubMed | PubMed bibliographic record | 40,421,164 | 2026/04/20 |
+| `pmc` | PMC | PubMed Central full-text archive | 12,122,941 | 2026/04/20 |
+| `books` | Books | Biomedical books, reports, databases | 1,315,848 | 2026/04/20 |
+| `nlmcatalog` | NLM Catalog | Bibliographic data for NLM resources | 1,659,096 | 2026/04/20 |
+| `mesh` | MeSH | Controlled vocabulary thesaurus | 355,735 | 2026/04/20 |
+| `gene` | Gene | Gene-specific records | 95,048,437 | 2026/04/18 |
 | `genome` | Genome | Genomic sequences, contigs, and maps | 88,333 | 2025/07/08 |
-| `assembly` | Assembly | Genome assembly database | 3,530,774 | 2026/04/01 |
-| `nuccore` | Nucleotide | Core nucleotide sequences (GenBank, RefSeq, TPA) | 711,555,121 | 2026/04/01 |
+| `assembly` | Assembly | Genome assembly database | 3,559,553 | 2026/04/19 |
+| `nuccore` | Nucleotide | Core nucleotide sequences (GenBank, RefSeq, TPA) | 716,855,219 | 2026/04/19 |
 | `nucleotide` | Nucleotide | Alias for nuccore | (same as nuccore) | - |
-| `protein` | Protein | Protein sequence records | 1,571,802,241 | 2026/04/01 |
-| `ipg` | Identical Protein Groups | Consolidated identical protein records | 1,078,358,353 | 2026/03/31 |
+| `protein` | Protein | Protein sequence records | 1,580,427,028 | 2026/04/19 |
+| `ipg` | Identical Protein Groups | Consolidated identical protein records | 1,085,330,120 | 2026/04/18 |
 | `proteinclusters` | Protein Clusters | Related protein sequences from complete genomes | 1,137,329 | 2017/12/04 |
-| `protfam` | Protein Family Models | Homologous protein models (HMM, BlastRule, Sparcle) | 177,652 | 2026/03/31 |
+| `protfam` | Protein Family Models | Homologous protein models (HMM, BlastRule, Sparcle) | 178,194 | 2026/04/17 |
 | `cdd` | Conserved Domains | Protein domain alignments and profiles | 67,160 | 2025/07/02 |
-| `structure` | Structure | 3D molecular structures (from PDB) | 251,427 | 2026/04/01 |
-| `sra` | SRA | Sequence Read Archive (NGS raw data) | 43,553,382 | 2026/04/02 |
-| `bioproject` | BioProject | Compilation of biological studies | 1,033,674 | 2026/04/02 |
-| `biosample` | BioSample | Biological sample descriptions | 53,489,004 | 2026/04/02 |
+| `structure` | Structure | 3D molecular structures (from PDB) | 252,096 | 2026/04/15 |
+| `sra` | SRA | Sequence Read Archive (NGS raw data) | 43,867,976 | 2026/04/20 |
+| `bioproject` | BioProject | Compilation of biological studies | 1,038,422 | 2026/04/20 |
+| `biosample` | BioSample | Biological sample descriptions | 53,893,950 | 2026/04/20 |
 | `snp` | SNP | Single nucleotide polymorphisms (dbSNP) | 1,197,210,835 | 2025/03/11 |
-| `clinvar` | ClinVar | Variant-disease relationships with evidence | 4,489,534 | 2026/03/29 |
+| `clinvar` | ClinVar | Variant-disease relationships with evidence | 4,269,379 | 2026/04/17 |
 | `dbvar` | dbVar | Large-scale structural variants | 8,669,169 | 2025/08/27 |
 | `gap` | dbGaP | Genotype-phenotype interaction studies | 363,717 | 2024/09/20 |
-| `medgen` | MedGen | Medical genetics concepts and terms | 233,563 | 2026/04/01 |
-| `omim` | OMIM | Online Mendelian Inheritance in Man | 29,529 | 2026/04/02 |
-| `gtr` | GTR | Genetic Testing Registry | 64,392 | 2026/04/02 |
-| `gds` | GEO DataSets | Gene Expression Omnibus datasets | 8,719,068 | 2026/04/01 |
+| `medgen` | MedGen | Medical genetics concepts and terms | 234,106 | 2026/04/19 |
+| `omim` | OMIM | Online Mendelian Inheritance in Man | 29,541 | 2026/04/20 |
+| `gtr` | GTR | Genetic Testing Registry | 64,384 | 2026/04/20 |
+| `gds` | GEO DataSets | Gene Expression Omnibus datasets | 8,757,098 | 2026/04/12 |
 | `geoprofiles` | GEO Profiles | Individual gene expression profiles | 128,414,055 | 2024/02/20 |
-| `pccompound` | PubChem Compound | Validated unique chemical structures | 123,812,247 | 2026/04/02 |
-| `pcsubstance` | PubChem Substance | Chemical substances as deposited | 344,614,675 | 2026/04/02 |
-| `pcassay` | PubChem BioAssay | Bioactivity screening data | 1,769,824 | 2026/04/01 |
-| `taxonomy` | Taxonomy | Organism names and phylogenetic lineages | 2,869,904 | 2026/04/02 |
+| `pccompound` | PubChem Compound | Validated unique chemical structures | 123,857,833 | 2026/04/20 |
+| `pcsubstance` | PubChem Substance | Chemical substances as deposited | 347,175,842 | 2026/04/20 |
+| `pcassay` | PubChem BioAssay | Bioactivity screening data | 1,769,950 | 2026/04/16 |
+| `taxonomy` | Taxonomy | Organism names and phylogenetic lineages | 2,872,642 | 2026/04/20 |
 | `popset` | PopSet | Population study DNA sequences | (API error: deprecated?) | - |
 | `homologene` | HomoloGene | Automated homolog detection | (API error: deprecated?) | - |
 | `biocollections` | Biocollections | Biological collection metadata | 8,497 | 2024/05/15 |
-| `annotinfo` | AnnotInfo | Genome annotation pipeline info | 2,524 | 2026/04/01 |
-| `blastdbinfo` | BlastdbInfo | BLAST database metadata | 3,424,842 | 2026/04/02 |
+| `annotinfo` | AnnotInfo | Genome annotation pipeline info | 2,534 | 2026/04/20 |
+| `blastdbinfo` | BlastdbInfo | BLAST database metadata | 3,447,791 | 2026/04/20 |
 | `gapplus` | GaPPlus | Internal genotypes and phenotypes | 136,796 | 2017/09/29 |
 | `grasp` | GRASP | GWAS results (SNP-phenotype associations) | 7,862,970 | 2015/01/26 |
-| `orgtrack` | Orgtrack | Organizations providing genetic tests | 9,189 | 2026/04/02 |
-| `seqannot` | SeqAnnot | Sequence annotation tracks | 514,180 | 2026/04/02 |
+| `orgtrack` | Orgtrack | Organizations providing genetic tests | 9,208 | 2026/04/20 |
+| `seqannot` | SeqAnnot | Sequence annotation tracks | 515,044 | 2026/04/20 |
 
 Total records across all databases: approximately 4.4 billion.
 
----
+### Reconciliation with KGX pipelines
+
+The record counts above come from the Entrez search index, which is intentionally broader than any individual bulk FTP flat file. When a pipeline in `system-01-data-pipelines/` ingests from NCBI FTP, it typically sees a smaller number because the flat file contains only the live (non-retired) slice of the database. For a per-pipeline reconciliation table (Gene 67.5M vs Entrez 95.0M, MedGen 199K vs Entrez 234K, Taxonomy 2.74M vs Entrez 2.87M, etc.) and the root cause + decision for each gap, see [data_inventory.md, "Pipeline output vs live Entrez counts"](data_inventory.md#pipeline-output-vs-live-entrez-counts).
 
 ## Part 2: database details (searchable fields and cross-links)
 
@@ -147,7 +151,7 @@ Searchable fields (48):
 | COIS | Conflict of Interest | Conflict of interest statements |
 | WORD | Text Word | Free text associated with publication |
 
-Cross-database links (47 connections): PubMed links to Assembly, BioProject, BioSample, Books, CDD, ClinVar, dbGaP, dbVar, GEO DataSets, Gene, Genome, GEO Profiles, MedGen, Nucleotide, OMIM, PubChem BioAssay, PubChem Compound, PubChem Substance, PMC, Protein, Protein Clusters, Protein Family Models, SNP, SRA, Structure, and itself (similar articles, frequently viewed together, references).
+Cross-database links (48 connections): PubMed links to Assembly, BioProject, BioSample, Books, CDD, ClinVar, dbGaP, dbVar, GEO DataSets, Gene, Genome, GEO Profiles, MedGen, Nucleotide, OMIM, PubChem BioAssay, PubChem Compound, PubChem Substance, PMC, Protein, Protein Clusters, Protein Family Models, SNP, SRA, Structure, and itself (similar articles, frequently viewed together, references).
 
 Key link types:
 - `pubmed_gene` - genes mentioned in the paper
@@ -157,8 +161,6 @@ Key link types:
 - `pubmed_pubmed` - similar articles (text + MeSH matching)
 - `pubmed_snp` - SNP records cited
 - `pubmed_pccompound` - chemical compounds discussed
-
----
 
 ### PubMed Central (`pmc`) - 12.1M records
 
@@ -179,9 +181,7 @@ Searchable fields (45): all PubMed fields plus:
 
 Cross-database links (18): BioProject, Books, CDD, ClinVar, dbGaP, GEO DataSets, Gene, GEO Profiles, MedGen, OMIM, PubChem BioAssay/Compound/Substance, PubMed, SNP, SRA.
 
----
-
-### Gene (`gene`) - 94.4M records
+### Gene (`gene`) - 95.0M records
 
 Gene-specific records with annotation, nomenclature, RefSeqs, maps, pathways, phenotypes, and interactions.
 
@@ -210,9 +210,7 @@ Searchable fields (36):
 
 Cross-database links (33): Books, CDD, ClinVar, dbVar, dbGaP, Genome, GEO Profiles, GTR, MedGen, Nucleotide (RefSeqGene, RefSeq RNA), OMIM, PubChem BioAssay/Compound/Substance, PMC, Protein (RefSeq), Protein Clusters, Protein Family Models, PubMed (including GeneRIF and OMIM-derived), SNP, Structure, Taxonomy.
 
----
-
-### Nucleotide (`nuccore`) - 711.6M records
+### Nucleotide (`nuccore`) - 716.9M records
 
 Core nucleotide sequence database containing GenBank, RefSeq, and third-party annotation sequences.
 
@@ -237,9 +235,7 @@ Searchable fields (34):
 
 Cross-database links (37): Assembly, BioCollections, BioProject, BioSample, CCDS, dbVar, Gene, Genome, GEO Profiles, OMIM, PubChem Compound/Substance, Protein (multiple: coding region, mature peptides, WGS, TSA), Protein Clusters, PubMed, SNP, SRA, Structure, Taxonomy. Also self-links: GenBank-RefSeq mappings, same-species links, RNA annotations, small genome segments.
 
----
-
-### Protein (`protein`) - 1.57B records
+### Protein (`protein`) - 1.58B records
 
 Protein sequence records from GenPept, RefSeq, Swiss-Prot, PIR, PRF, and PDB.
 
@@ -252,8 +248,6 @@ Searchable fields (33): similar to Nucleotide, plus:
 | SLEN | Sequence Length | Sequence length |
 
 Cross-database links (38): BioCollections, BioProject, CCDS, CDD (conserved domains, concise domains, domain summary), Gene, Genome, Nucleotide (coding region, mRNA, WGS, TSA), OMIM, PubChem BioAssay/Compound/Substance, Protein Clusters, Protein Family Models, PubMed, SNP, Structure (identical, direct, related), Taxonomy. Also self-links: RefSeq-UniProt mappings, autonomous proteins, CDART (domain architecture).
-
----
 
 ### SNP (`snp`) - 1.2B records
 
@@ -283,13 +277,11 @@ Searchable fields (29):
 
 Cross-database links (14): BioProject, BioSample, ClinVar, dbVar, dbGaP, Gene, Nucleotide, PMC, Protein, PubMed, Structure, Taxonomy. Also: somatic SNPs (self-link).
 
----
-
-### ClinVar (`clinvar`) - 4.5M records
+### ClinVar (`clinvar`) - 4.3M records
 
 Reported relationships between human genetic variants and health conditions, with supporting clinical evidence and review status.
 
-Searchable fields (44):
+Searchable fields (47):
 
 | Field code | Name | What you can search |
 |---|---|---|
@@ -313,10 +305,18 @@ Searchable fields (44):
 | VLEN | Variant Length | Length of variant |
 | MIM | MIM | OMIM number |
 | HGNC | HGNC identifier | HUGO gene nomenclature ID |
+| VID | Variation ID | Internal ClinVar variation identifier |
+| VRNM | Variant name | Variant name as submitted |
+| CYT | Cytogenetic band | Cytogenetic band location |
+| GTRT | GTR test accession | Accession for a registered GTR test |
+| PMID | PubMed ID | Citations supporting the assertion |
+| CDAT | Creation Date | Record creation date |
+| IMOD | Last interpreted | Date the interpretation was last evaluated |
+| COMMONNAME | Common Name | Organism common name |
+
+The full field list (via `einfo.fcgi?db=clinvar`) also includes `UID`, `FILT`, `TRID`, `GID`, `SID`, `STNM`, `CMPL`, `VACC`, `RPLD`, `COMB`.
 
 Cross-database links (11): dbVar, Gene, GTR, MedGen, OMIM, Orgtrack, PMC, PubMed, dbSNP.
-
----
 
 ### SRA (`sra`) - 43.6M records
 
@@ -342,13 +342,11 @@ Searchable fields (22):
 
 Cross-database links (9): Assembly, BioProject, BioSample, dbGaP, GEO DataSets, Nucleotide WGS, PMC, PubMed, Taxonomy.
 
----
-
 ### Assembly (`assembly`) - 3.5M records
 
 Genome assembly metadata with quality statistics, links to sequences, and submission details.
 
-Searchable fields (50):
+Searchable fields (51):
 
 | Field code | Name | What you can search |
 |---|---|---|
@@ -370,17 +368,13 @@ Searchable fields (50):
 
 Cross-database links (10): BioProject, BioSample, Genome, Nucleotide (INSDC, RefSeq, WGS master), PubMed, SRA, Taxonomy. Also: linked diploid assembly.
 
----
-
 ### BioProject (`bioproject`) - 1.0M records
 
 Compilation of biological studies with links to resulting datasets across NCBI.
 
-Searchable fields (35): Organism, Project Accession, Project Type/Subtype, Title, Submitter Organization, Replicon info, Description, Keyword, Data Type, Grant ID, Funding Agency, PMID, DOI, Assembly info, Attributes.
+Searchable fields (31): Organism, Project Accession, Project Type/Subtype, Title, Submitter Organization, Replicon info, Description, Keyword, Data Type, Grant ID, Funding Agency, PMID, DOI, Assembly info, Attributes.
 
 Cross-database links (26): Assembly, BioProject (umbrella/data relationships), BioSample, dbVar, dbGaP, GEO DataSets, Genome, Nucleotide (multiple types: genomic DNA/RNA, map records, RefSeq, representative, transcript, TSA, WGS), PMC, Protein, PubMed, SNP, SRA, Taxonomy.
-
----
 
 ### BioSample (`biosample`) - 53.5M records
 
@@ -389,8 +383,6 @@ Descriptions of biological materials used in experimental assays, with structure
 Searchable fields (14): Accession, Title, Organism, Author, Publication/Modification Date, Attribute Name, Attribute, Submitter Organization, Properties.
 
 Cross-database links (12): Assembly, BioCollections, BioProject, dbVar, dbGaP, GEO DataSets, Nucleotide, OMIM, PubMed, SNP, SRA, Taxonomy.
-
----
 
 ### Taxonomy (`taxonomy`) - 2.9M records
 
@@ -412,8 +404,6 @@ Searchable fields (21):
 
 Cross-database links (20): Assembly, BioProject, BioSample, Books, CDD, dbVar, GEO DataSets, Gene, Genome, GEO Profiles, PubChem BioAssay/Compound/Substance, Protein, Protein Clusters, PubMed, SNP, SRA, Structure.
 
----
-
 ### GEO DataSets (`gds`) - 8.7M records
 
 Curated gene expression and molecular abundance datasets from the Gene Expression Omnibus.
@@ -422,21 +412,15 @@ Searchable fields (31): Organism, GEO Accession (GDS/GPL/GSM/GSE), Title, Descri
 
 Cross-database links (10): BioProject, BioSample, dbVar, GEO Profiles, PMC, PubMed, SRA, Taxonomy. Also: related datasets, similar studies (self-links).
 
----
-
 ### GEO Profiles (`geoprofiles`) - 128.4M records
 
 Individual gene expression profiles from GEO experiments.
 
 Searchable fields (26): Organism, GEO Accession, Gene Symbol, Gene Description, Spot/Probe ID, Expression statistics (ranked std dev, max, min), Gene Ontology, Chromosome, Dataset Type, Annotation Type.
 
----
-
 ### ClinicalTrials (not in Entrez)
 
 ClinicalTrials.gov is a separate system not accessible via E-utilities. It has its own API at `https://clinicaltrials.gov/api/v2/`.
-
----
 
 ### PubChem Compound (`pccompound`) - 123.8M records
 
@@ -466,23 +450,17 @@ Searchable fields (41):
 
 Cross-database links (28): Gene, MeSH, Nucleotide, OMIM, BioAssays (all/active/inactive/probe, activity concentration thresholds), Mixture/Parent/Same-connectivity compounds, PMC, Protein, PubMed, Structure, Taxonomy, PubChem Substance.
 
----
-
 ### PubChem Substance (`pcsubstance`) - 344.6M records
 
 Chemical substance information as deposited by data sources (before standardization to Compound).
 
 Searchable fields (21): SubstanceID, SourceName, SourceID, SourceCategory, DepositDate, Synonym, CompoundID (standardized CID), AssaySourceName, StructureID.
 
----
-
 ### PubChem BioAssay (`pcassay`) - 1.8M records
 
 Bioactivity screening data and descriptions of biological assays.
 
 Searchable fields (41): Assay ID/Name/Description/Protocol, Activity Outcome Method, Source Name, Deposit/Modify Date, Journal, Active/Total SID counts, Protein Target Name/GI, Gene Symbol, RNA Target, Taxonomy, Cell Line, GenBank/UniProt Accession, Detection Method, Organism.
-
----
 
 ### MedGen (`medgen`) - 233.6K records
 
@@ -492,8 +470,6 @@ Searchable fields (24): Accession (CUI), Title, Definition, Vocabulary, Source I
 
 Cross-database links (15): Books, ClinVar, dbGaP, Gene, GTR (clinical + research tests), MeSH, OMIM (including OMIM genes), PMC, PubMed (including Bookshelf-cited and GeneReviews).
 
----
-
 ### OMIM (`omim`) - 29.5K records
 
 Online Mendelian Inheritance in Man: catalog of human genes and genetic disorders with detailed clinical descriptions.
@@ -501,8 +477,6 @@ Online Mendelian Inheritance in Man: catalog of human genes and genetic disorder
 Searchable fields (22): MIM ID, Title, Clinical Synopsis, Allelic Variant, Gene Map, Gene Name, Chromosome, Publication Date, Editor, Properties.
 
 Cross-database links (17): BioSample, Books, ClinVar, dbVar, Gene, GEO Profiles, GTR, MedGen (including gene-related), Nucleotide, OMIM (related entries), PubChem BioAssay/Compound/Substance, PMC, Protein, PubMed, Structure.
-
----
 
 ### GTR (`gtr`) - 64.4K records
 
@@ -512,8 +486,6 @@ Searchable fields (60+): Test accession/name, Organization details (name, city, 
 
 Cross-database links (4): Gene, MedGen, OMIM, Orgtrack.
 
----
-
 ### dbGaP (`gap`) - 363.7K records
 
 Genotype and phenotype interaction studies with controlled-access data.
@@ -522,15 +494,11 @@ Searchable fields (43): Study ID/Name, Disease, Project, Genotype Platform, Vari
 
 Cross-database links (12): BioProject, BioSample, dbVar, GEO DataSets, Gene, MedGen, MeSH, Nucleotide, PMC, PubMed, SNP, SRA.
 
----
-
 ### dbVar (`dbvar`) - 8.7M records
 
 Large-scale genomic structural variants (insertions, deletions, duplications, inversions, translocations).
 
 Searchable fields (42): Accession, Assembly, Chromosome/Position, Variant Type/Size, Clinical Interpretation, Disease/Phenotype, Gene Name, Method Type, Population allele frequencies (Global, African, American, East Asian, European, South Asian, Other), Allele Origin, Zygosity, Sex, Age, Study Type, OMIM, PubMed ID, MeSH.
-
----
 
 ### Conserved Domains (`cdd`) - 67.2K records
 
@@ -538,15 +506,11 @@ Protein domain models from multiple source databases (Pfam, SMART, COG, etc.).
 
 Searchable fields (16): Accession, Database source, Title, Subtitle, Description, Organism, PSSM Length, Functional Sites count/description, Alternative Accession, Structure Representative.
 
----
-
 ### Structure (`structure`) - 251.4K records
 
 3D macromolecular structures derived from the Protein Data Bank.
 
 Searchable fields (52): PDB Accession, Resolution, Experimental Method, Title/Abstract, Author, PDB Class/Source/Description, Chemical Ligand codes/names/synonyms, Organism, Taxonomy ID, Molecule counts (protein/DNA/RNA/chemical per biological unit and ASU), Molecular Weight, Conserved Domain fields, Gene Name/Description.
-
----
 
 ### Bookshelf (`books`) - 1.3M records
 
@@ -554,15 +518,11 @@ Collection of biomedical books, reports, and databases, including GeneReviews.
 
 Searchable fields (33): Author, Title, Full Text, Book ID, PMID, Publisher, ISBN, MeSH Terms, Disease Name, Gene Name, Protein Name, Grant Number, Publication Type, Resource Type.
 
----
-
 ### NLM Catalog (`nlmcatalog`) - 1.7M records
 
 Bibliographic data for resources cataloged by NLM.
 
 Searchable fields (42): Author, Title, Journal, Language, Resource Type, MeSH Terms, Country, ISSN, NLM Title Abbreviation, Publication Start/End Year, Authority Information.
-
----
 
 ### MeSH (`mesh`) - 355.7K records
 
@@ -572,37 +532,31 @@ Searchable fields (14): Tree Number, MeSH Terms, Substance Name, Scope Note, Reg
 
 Cross-database links (3): dbGaP, MedGen, PubChem Compound.
 
----
-
 ### Identical Protein Groups (`ipg`) - 1.08B records
 
 Consolidated records of identical protein sequences across GenBank, RefSeq, SwissProt, and PDB.
 
 Searchable fields (20): Accession (protein + nucleotide), Title, Organism, Protein Name, Sequence Length, Molecular Weight, Protein Count (in group), Organism Count, BioProject, Assembly, Division.
 
----
-
 ### Remaining databases
 
-**Protein Clusters (`proteinclusters`)** - 1.1M records: Related protein sequences from complete prokaryotic and organelle genomes. 32 searchable fields including COG, KO, HAMAP, Domains, Paralogs, SwissProt Accession. Last updated 2017.
+Protein Clusters (`proteinclusters`) - 1.1M records: Related protein sequences from complete prokaryotic and organelle genomes. 32 searchable fields including COG, KO, HAMAP, Domains, Paralogs, SwissProt Accession. Last updated 2017.
 
-**Protein Family Models (`protfam`)** - 177.7K records: HMM and BlastRule protein family models with Sparcle architectures. 23 searchable fields including EC Number, Gene Symbol, GO terms, CDD references, Review Level.
+Protein Family Models (`protfam`) - 177.7K records: HMM and BlastRule protein family models with Sparcle architectures. 23 searchable fields including EC Number, Gene Symbol, GO terms, CDD references, Review Level.
 
-**Biocollections (`biocollections`)** - 8.5K records: Biological collection metadata (museums, culture collections). 16 fields including Institution/Collection codes, Country.
+Biocollections (`biocollections`) - 8.5K records: Biological collection metadata (museums, culture collections). 16 fields including Institution/Collection codes, Country.
 
-**AnnotInfo (`annotinfo`)** - 2.5K records: Genome annotation pipeline metadata. 14 fields including Assembly Accession, Annotation Release ID, Milestones, Build Status.
+AnnotInfo (`annotinfo`) - 2.5K records: Genome annotation pipeline metadata. 14 fields including Assembly Accession, Annotation Release ID, Milestones, Build Status.
 
-**BlastdbInfo (`blastdbinfo`)** - 3.4M records: BLAST database metadata. 15 fields including Database Name/Title, Organism Taxid, Sequence Type/Strategy.
+BlastdbInfo (`blastdbinfo`) - 3.4M records: BLAST database metadata. 15 fields including Database Name/Title, Organism Taxid, Sequence Type/Strategy.
 
-**GaPPlus (`gapplus`)** - 136.8K records: Internal genotypes and phenotypes database. 16 fields including Study/Analysis ID, Marker RS, PValue, Trait, Chromosome, Gene. Last updated 2017.
+GaPPlus (`gapplus`) - 136.8K records: Internal genotypes and phenotypes database. 16 fields including Study/Analysis ID, Marker RS, PValue, Trait, Chromosome, Gene. Last updated 2017.
 
-**GRASP (`grasp`)** - 7.9M records: Genome-wide association study results (SNP-phenotype associations). 20 fields including RS ID, Chromosome, Gene, P-value, Phenotype, Population. Last updated 2015.
+GRASP (`grasp`) - 7.9M records: Genome-wide association study results (SNP-phenotype associations). 20 fields including RS ID, Chromosome, Gene, P-value, Phenotype, Population. Last updated 2015.
 
-**Orgtrack (`orgtrack`)** - 9.2K records: Organizations providing genetic tests (labs and clinics). 36 fields including Organization details, Test methods, Certifications, Disease/Gene associations.
+Orgtrack (`orgtrack`) - 9.2K records: Organizations providing genetic tests (labs and clinics). 36 fields including Organization details, Test methods, Certifications, Disease/Gene associations.
 
-**SeqAnnot (`seqannot`)** - 514.2K records: Sequence annotation tracks. 14 fields including Accession, Organism, Target Assembly, Annotation Type.
-
----
+SeqAnnot (`seqannot`) - 514.2K records: Sequence annotation tracks. 14 fields including Accession, Organism, Target Assembly, Annotation Type.
 
 ## Part 3: E-utilities API reference
 
@@ -697,10 +651,12 @@ Returns: WebEnv + QueryKey for use in subsequent calls. Use for batch operations
 #### EGQuery - global search
 
 ```
-egquery.fcgi?term={query}&retmode=json
+egquery.fcgi?term={query}
 ```
 
 Returns: count of results in every Entrez database for a given query. Good for discovering which databases have relevant data.
+
+Status (verified 2026-04-20): the endpoint currently returns HTTP 301 redirecting to an internal NCBI host (`ext-http-eutils.linkerd.ncbi.nlm.nih.gov`) that does not resolve for external callers, so requests effectively fail. Only XML is accepted; `retmode=json` is rewritten to XML on the redirect. Treat EGQuery as unreliable and fall back to multiple `esearch.fcgi?rettype=count` calls (one per database) for cross-database discovery.
 
 #### ESpell - spelling suggestions
 
@@ -720,25 +676,23 @@ Returns: PubMed ID for a citation specified by journal, year, volume, page, and 
 
 ### Common API workflows
 
-**Search and fetch (most common):**
+Search and fetch (most common):
 1. ESearch to get UIDs matching a query
 2. EFetch or ESummary to get the records
 
-**Cross-database discovery:**
+Cross-database discovery:
 1. ESearch in one database
 2. ELink to find related records in another database
 3. EFetch to get the linked records
 
-**Batch operations (large datasets):**
+Batch operations (large datasets):
 1. EPost to upload a list of UIDs to the history server
 2. EFetch with WebEnv + QueryKey, paginating with retstart/retmax
 
-**Global discovery:**
-1. EGQuery to see which databases have hits for a term
+Global discovery:
+1. EGQuery to see which databases have hits for a term (currently unreliable, see note in the EGQuery section above). Fallback: fan out parallel `esearch.fcgi?rettype=count` calls across the databases of interest.
 2. ESearch in the most relevant databases
 3. ELink to find cross-database connections
-
----
 
 ## Part 4: NCBI Datasets API (v2)
 
@@ -824,8 +778,6 @@ submitter, blast_url
 
 No API key required. No documented rate limits.
 
----
-
 ## Part 5: other NCBI APIs
 
 ### BLAST URL API
@@ -869,12 +821,17 @@ Endpoints (verified live):
 | `publications/export/biocxml?pmids={pmid_list}` | GET | Export in BioC XML format |
 
 Response structure (BioC JSON):
+
+The top-level response is `{"PubTator3": [ {document1}, {document2}, ... ]}`. Each document in the list has:
+
 - `pmid`, `pmcid`, `journal`, `date`, `authors` - publication metadata
 - `passages[]` - article sections (title, abstract, body)
   - `annotations[]` - extracted entities with:
     - `text` - entity mention
     - `infons.type` - entity type (Gene, Disease, Chemical, Species, CellLine, Mutation)
-    - `infons.identifier` - normalized ID (e.g. MESH:D001943 for breast cancer, NCBI Gene ID for genes)
+    - `infons.normalized_id` - normalized ID (e.g. MESH:D001943 for breast cancer, NCBI Gene ID for genes). May be `null` when PubTator3 could not resolve the mention to a concept ID.
+    - `infons.valid` - boolean flag set by the normalizer
+    - `infons.biotype` - coarse category (e.g. `gene`, `disease`, `chemical`)
     - `locations[]` - offset and length in text
   - `relations[]` - entity-entity relationships with:
     - `type` - relationship type (Association, Bind, etc.)
@@ -926,7 +883,7 @@ Endpoints (verified live):
 
 | Endpoint | Method | What it does |
 |---|---|---|
-| `api?query={text}&limit={n}` | GET | Search for sentences matching a query |
+| `api/?query={text}&limit={n}` | GET | Search for sentences matching a query (trailing slash before the query string is required; without it the server responds with HTTP 301) |
 
 Response fields:
 - `text` - the matched sentence
@@ -938,7 +895,7 @@ Response fields:
 
 No API key required. No documented rate limits.
 
-### ClinicalTrials.gov API (v2) - 578,873 studies
+### ClinicalTrials.gov API (v2) - 581,326 studies
 
 Base URL: `https://clinicaltrials.gov/api/v2/`
 
@@ -1001,8 +958,6 @@ Converts between PMID, PMCID, and DOI. No API key required.
 
 NCBI provides command-line tools (`esearch`, `efetch`, `elink`, `efilter`, `xtract`) that wrap E-utilities with Unix pipe-friendly syntax. Useful for scripting complex multi-step queries.
 
----
-
 ## Part 6: cross-database link map
 
 This is the graph of how databases connect to each other. Critical for agentic search: an agent that starts in PubMed and follows links can reach Gene, ClinVar, SNP, Protein, Structure, and more.
@@ -1059,8 +1014,6 @@ These databases appear as link targets from almost every other database:
 - Taxonomy (organism classification links from all sequence databases)
 - Protein (protein links from gene, structure, domain databases)
 
----
-
 ## Part 7: NCBI usage policies
 
 - Always include an API key for production use (10 req/sec vs 3 req/sec)
@@ -1080,6 +1033,4 @@ Key FTP paths:
 - Assembly: `ftp://ftp.ncbi.nlm.nih.gov/genomes/`
 - GEO: `ftp://ftp.ncbi.nlm.nih.gov/geo/`
 
----
-
-*All data sourced from live NCBI API calls on April 2, 2026. Record counts are point-in-time snapshots and grow continuously. See Provenance table at the top of this document for exact endpoints and verification methods used for each section.*
+*Data sourced from live NCBI API calls on April 2, 2026, with a full re-verification pass on April 20, 2026. Record counts are point-in-time snapshots and grow (or occasionally shrink, as with ClinVar) continuously. See Provenance table at the top of this document for exact endpoints and verification methods used for each section.*
