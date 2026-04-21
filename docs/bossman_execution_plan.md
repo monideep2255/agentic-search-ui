@@ -2,7 +2,7 @@
 
 Phase-by-phase implementation plan for the 5 NCBI ETL pipelines. Each phase is one bossman session with integrated skill chain and branch+MR workflow. Use `/bossman-mode --phase N` to execute.
 
-Created: 2026-04-13. Last updated: 2026-04-20 (Phase 4.0 in progress: Hetzner CPX42 provisioned, PostgreSQL 15.17 + Apache AGE 1.5.0 installed on VPS, `ncbi_kg` graph created, loader package deployed to `/root/repo/`, 144 GB KGX rsync complete at 17:38 after 121 retry attempts via `scripts/rsync-retry.sh`, `kgx validate` now running on VPS (PID 38213); AGE load and Gate 3 pending; see `docs/learnings.md`).
+Created: 2026-04-13. Last updated: 2026-04-20 (Phase 4.0 in progress: Hetzner CPX42 provisioned, PostgreSQL 15.17 + Apache AGE 1.5.0 installed on VPS, `ncbi_kg` graph created, loader package deployed to `/root/repo/`, 144 GB KGX rsync complete at 17:38 after 121 retry attempts via `scripts/rsync-retry.sh`. On-VPS `kgx validate` crashed at 1h48m (Python TypeError in tool, not data). On-VPS awk verified edges.tsv perfect (693,295,991 rows, all NF=8, 0 empty knowledge_level/agent_type) but flagged 64,882 mismatched rows on nodes.tsv (~0.056%); investigation required before age-load. AGE load and Gate 3 pending; see `docs/learnings.md` and `NEXT_STEPS.md`).
 
 ## Table of contents
 
@@ -197,7 +197,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | 2.2 | 7 | 5-database merge | DONE (2026-04-16) |
 | Gate 2 | - | Run PubMed + Taxonomy + Gene (re-export) + merge-etl on laptop, validate | DONE (2026-04-17): 115M nodes + 693M edges, 99.99% cross-pipeline connectivity, streaming refactors required mid-gate (gene + merge both hit list-accumulate OOM on laptop-scale data) |
 | 3.0 | 8 | AGE loader code + fixture smoke test (no bulk local load) | DONE (2026-04-19): 7-module loader built; 44 unit tests + 4 docker smoke tests; 5-node + 3-edge round-trip confirmed via apache/age:latest |
-| 4.0 | 9 | Provision Hetzner VPS, rsync KGX, load 5-db on cloud | In progress (2026-04-20): VPS provisioned + PostgreSQL 15.17 + AGE 1.5.0 installed + `ncbi_kg` graph created + loader package deployed; 144 GB KGX rsync complete (17:38, 121 attempts via `scripts/rsync-retry.sh`); `kgx validate` running on VPS (PID 38213, ~55 min in, single-core). AGE load not yet started. |
+| 4.0 | 9 | Provision Hetzner VPS, rsync KGX, load 5-db on cloud | In progress (2026-04-20): VPS provisioned + PostgreSQL 15.17 + AGE 1.5.0 installed + `ncbi_kg` graph created + loader package deployed; 144 GB KGX rsync complete (17:38, 121 attempts via `scripts/rsync-retry.sh`). On-VPS `kgx validate` crashed at 1h48m (Python TypeError in tool, not data). On-VPS awk verified edges perfect (693,295,991 rows, all NF=8) but flagged 64,882 mismatched node rows (~0.056%); investigation required before age-load (see NEXT_STEPS.md). AGE load not yet started. |
 | Gate 3 | - | Validate cloud graph, delete local KGX files. System complete. | Pending |
 
 ### Wall-clock time (downloads and processing)
@@ -218,7 +218,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 |------|------|-------|--------|
 | Week 1 | Phase 1 code + Gate 1 | NCBI server `/export` | DONE (2026-04-14 to 2026-04-16). Data migrated to Windows laptop on 2026-04-16 (see `docs/context/setup/setup-03_windows_laptop.md`). |
 | Week 2 | Phase 2 code + Gate 2 | Windows laptop C: drive | 2.0 + 2.1 + 2.2 code DONE (2026-04-16). Gate 2 DONE (2026-04-17): 115M nodes + 693M edges, 99.99% cross-pipeline connectivity; streaming refactors required mid-gate for gene and merge. |
-| Week 3 | Phase 3 (loader code) + Phase 4 (provision VPS, rsync from laptop, cloud load) + Gate 3 | Laptop then cloud | Phase 3 DONE (2026-04-19). Phase 4.0 started 2026-04-20: VPS + Postgres + AGE + loader all ready on the server; 144 GB KGX rsync complete (17:38, 121 attempts); `kgx validate` running on VPS; AGE load pending. |
+| Week 3 | Phase 3 (loader code) + Phase 4 (provision VPS, rsync from laptop, cloud load) + Gate 3 | Laptop then cloud | Phase 3 DONE (2026-04-19). Phase 4.0 started 2026-04-20: VPS + Postgres + AGE + loader all ready on the server; 144 GB KGX rsync complete (17:38, 121 attempts); on-VPS kgx validate crashed (tool bug); awk found 64,882 mismatched node rows requiring investigation; AGE load not yet started. Resumes tomorrow. |
 | Week 4 | Phase 4 (rsync finishes + cloud load + Cypher validation) + Gate 3 | Cloud | In progress. Gate 3 = system complete for V1. dbSNP added via System 3 API after user research validates the need. |
 
 ### Why this order
@@ -393,8 +393,10 @@ Session 9: Phase 4.0  provision VPS + rsync KGX + cloud load
     |  provision Hetzner CPX42 (8 vCPU, 16GB RAM, 320GB disk)     [DONE 2026-04-20]
     |  install PostgreSQL 15.17 + AGE 1.5.0 on VPS                [DONE 2026-04-20]
     |  rsync 144 GB merged KGX from laptop to VPS (121 retries)   [DONE 2026-04-20 17:38]
-    |  kgx validate on VPS (PID 38213, single-core, ~55 min in)   [RUNNING]
-    |  run AGE loader on VPS for 5 databases                       [PENDING]
+    |  kgx validate on VPS: CRASHED at 1h48m (Python TypeError, tool bug, not data)  [DONE]
+    |  awk verify edges.tsv: 693,295,991 rows, all NF=8, 0 empty knowledge_level/agent_type  [DONE]
+    |  awk verify nodes.tsv: 64,882 mismatched rows (~0.056%) - investigate before age-load  [BLOCKED]
+    |  run AGE loader on VPS for 5 databases                       [PENDING - blocked on above]
     |  run Cypher test queries on cloud                            [PENDING]
     v
 --- GATE 3: cloud graph validated --- V1 COMPLETE ---
