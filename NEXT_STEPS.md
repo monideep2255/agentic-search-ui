@@ -1,126 +1,116 @@
-# Next steps for Phase 4.0 (handoff for tomorrow)
+# Next steps for Phase 4.0 (handoff)
 
-Temporary working doc. Captures state as of 2026-04-20 ~20:15 ET, the open question that surfaced during VPS awk verification, and the action plan to close Gate 3.
+Temporary working doc. Captures state as of 2026-04-21 ~18:40 ET, what's running unattended on the VPS, and the resume plan.
 
 Delete this file after Gate 3 closes and the canonical docs (bossman_execution_plan.md, learnings.md, DECISIONS.md, data_inventory.md) are updated.
 
-## Current state
+## Current state at 2026-04-21 ~18:40 ET
 
-Done today:
-- Hetzner CPX42 provisioned at 46.225.128.133
-- PostgreSQL 15.17 + Apache AGE 1.5.0 built from source on VPS
-- `ncbi_kg` database + `ncbi_kg` graph created (graphid 16969)
-- Loader package deployed at `/root/repo/` with venv, psycopg2-binary, kgx, click, age-load CLI
-- 144 GB merged KGX rsynced from laptop to VPS (`/root/data/kgx/merged/`); rsync completed 17:38 after 121 retry attempts
-- All 3 files have Apr 17 timestamps (preserved from source): edges.tsv 92 GB, nodes.tsv 44 GB, merge_report.md 1.6 KB
-- Phase 4.0 checkpoint commit shipped as `7c06457` on branch `phase/4.0-cloud-deploy`, pushed to GitHub
+Complete:
+- Hetzner CPX42 provisioned at 46.225.128.133, Postgres 15.17 + AGE 1.5.0 installed
+- 144 GB merged KGX rsynced to VPS (complete 2026-04-20 17:38)
+- Data verified structurally: Python csv module reports 0 mismatches on both nodes.tsv (115,406,761 rows) and edges.tsv (693,295,991 rows). Awk had flagged 64,882 node "mismatches" but those were PubMed abstracts with embedded newlines inside quoted TSV fields; csv parses them correctly. Investigation closed, data is clean.
+- kgx validate on VPS was attempted but crashed with a Python TypeError (tool bug, not data). Skipped. Four independent proofs of BioLink compliance already exist from Gate 2.
+- age-load attempt 1 failed with pg_hba auth error. Fixed by adding trust for postgres on localhost. pg_hba.conf updated.
+- age-load attempt 2 failed with `UndefinedTable: ncbi_kg.NamedThing`. Fixed by adding NamedThing to VERTEX_LABELS in loader/schema.py and scp'ing to VPS.
+- age-load attempt 3 OOM-killed after Step 5 (curie_to_id dict exceeded 16 GB RAM). Fixed by adding 16 GB swap file, persistent via fstab.
+- Phase 4.0 checkpoint commit shipped as 7c06457 on branch phase/4.0-cloud-deploy, pushed to GitHub. Mid-phase updates shipped as 90adb07.
 
-Started but did NOT complete today:
-- On-VPS `kgx validate -i tsv` crashed at 1h48m elapsed with `unhashable type: 'list'` (Python TypeError inside the kgx tool, not a data issue)
-- On-VPS awk verification (in progress as of writing): nodes.tsv done, edges.tsv still streaming
-- AGE load: NOT started
-- 3 Cypher test queries: NOT run
-- Gate 3: NOT closed
+Running unattended on the VPS as of 2026-04-21 ~18:40 ET:
+- age-load attempt 4 (PID 78503 started at 19:11 UTC = 15:11 ET)
+- Step 5 (node load): DONE, 115,406,761 nodes in 41 min
+- Step 6 (curie_to_id dict build): DONE, 115,406,761 entries in 48 min under swap pressure
+- Step 7 (edge load): IN PROGRESS, 89M of 693M edges loaded as of 17:44 ET at ~23,000 edges/sec, swap stable around 13 GB
+- Step 8 (index build): NOT YET STARTED, runs after edge load completes
 
-## The open finding from awk verification
+Expected overnight trajectory:
+- Edge load finishes around 22:00-01:00 ET
+- Step 8 index build runs 10-30 min after edges done
+- Full load should be complete by morning
 
-Awk on nodes.tsv reported:
-- Header columns: 18
-- Total data rows: 115,464,386
-- Matching header NF=18: 115,399,504
-- **Mismatched: 64,882 (~0.056%)**
+## How to resume tomorrow
 
-This is a non-zero structural mismatch rate. Edges.tsv awk result still pending as of writing, but the same investigation pattern will apply to whatever it shows.
+First command in the chat: say "check age-load" and I will ssh to the VPS and report state.
 
-## What to investigate first thing tomorrow
+Three possible states to find:
 
-The mismatched rows are most likely caused by tab characters embedded in node `name` or `description` fields, which split a single logical row into two TSV rows from awk's perspective. This is a TSV serialization issue, not a BioLink compliance issue. age-load uses the Python csv module with proper TSV dialect handling, so it MAY parse these rows correctly even though awk does not.
+State 1, full load COMPLETE (edges + indexes all done). Log ends with a "pipeline done" line and a total rows/edges summary. Proceed to Cypher test queries.
 
-Investigation steps:
+State 2, edges done but Step 8 index build still running. Log shows `Step 7 load_edges: ... in Xs` but no `Step 8 indexes` line yet. Wait for index build to finish, then Cypher.
 
-```bash
-# 1. Pull a sample of mismatched rows on the VPS (before age-load)
-ssh root@46.225.128.133 'cd /root/data/kgx/merged && \
-  awk -F"\t" "NR==1 {n=NF; next} NF != n {print NR\":\"NF\"|\"\$0}" nodes.tsv | head -20 > /tmp/sample-bad-nodes.txt && \
-  cat /tmp/sample-bad-nodes.txt'
+State 3, age-load died overnight. PID gone, log ends with a traceback or mid-progress. Check `free -h` for swap state, `dmesg | grep -i oom` for OOM signatures. If OOM again, either (a) accept the partial state and investigate or (b) upgrade to CPX52 and relaunch with --drop-existing. User decides.
 
-# 2. Group mismatches by their NF count to see the distribution
-ssh root@46.225.128.133 'cd /root/data/kgx/merged && \
-  awk -F"\t" "NR==1 {n=NF; next} NF != n {counts[NF]++} END {for (k in counts) print \"NF=\"k\": \"counts[k]\" rows\"}" nodes.tsv'
+## Cypher test queries (after full load complete)
 
-# 3. If rows are mostly NF=17 or NF=19 (off-by-one), confirms embedded tabs
-# If rows are wildly varying NF, suggests a different bug
+Three queries to validate the graph works end to end:
 
-# 4. Check whether the rows can be re-parsed by Python csv module:
-ssh root@46.225.128.133 'cd /root/repo && source .venv/bin/activate && python3 -c "
-import csv
-mismatched = 0
-total = 0
-with open(\"/root/data/kgx/merged/nodes.tsv\", newline=\"\") as f:
-    reader = csv.reader(f, delimiter=\"\t\", quoting=csv.QUOTE_NONE)
-    header = next(reader)
-    print(f\"header NF={len(header)}\")
-    for row in reader:
-        total += 1
-        if len(row) != len(header):
-            mismatched += 1
-print(f\"csv module sees: total={total}, mismatched={mismatched}\")
-"'
+```cypher
+-- Q1: Gene to variant traversal
+SELECT * FROM cypher('ncbi_kg', $$
+    MATCH (g:Gene {id: 'NCBIGene:672'})-[r]-(v:SequenceVariant)
+    WHERE v.clinical_significance CONTAINS 'Pathogenic'
+    RETURN g.name, v.id, v.clinical_significance
+    LIMIT 20
+$$) as (gene agtype, variant_id agtype, clinsig agtype);
+
+-- Q2: Disease to gene traversal (phenylketonuria to PAH)
+SELECT * FROM cypher('ncbi_kg', $$
+    MATCH (d:Disease)-[:gene_associated_with_condition]-(g:Gene)
+    WHERE d.name =~ '(?i).*phenylketonuria.*' OR d.id = 'MONDO:0009861'
+    RETURN d.id, d.name, g.id, g.name
+$$) as (disease_id agtype, disease_name agtype, gene_id agtype, gene_name agtype);
+
+-- Q3: Human genes involved in glucose metabolism
+SELECT * FROM cypher('ncbi_kg', $$
+    MATCH (g:Gene)-[:participates_in]->(p:BiologicalProcess)
+    WHERE p.name =~ '(?i).*glucose metabolism.*'
+    RETURN g.name, p.name LIMIT 50
+$$) as (gene agtype, process agtype);
 ```
 
-Three outcomes from the investigation:
+Run on VPS via `sudo -u postgres psql -d ncbi_kg` or through the loader's venv.
 
-1. **csv module also reports mismatches**: real serialization bug. Fix in System 1 by quoting the offending fields in `kgx_exporter.py`, regenerate the affected pipelines from FTP cache, re-merge, re-rsync. Cost: a few hours of pipeline work.
-2. **csv module reports 0 mismatches**: awk was confused by an edge case (e.g., quoted fields with embedded tabs that csv handles correctly). Safe to proceed with age-load. Document the discrepancy.
-3. **age-load itself fails on the bad rows**: fall back to option 1.
+If all 3 return expected-looking results, Gate 3 passes.
 
-Quick sanity check before deep investigation: spot-check 2 or 3 of the bad rows visually. If they show obvious tab-in-name issues like `... \t\tname with a tab\t...`, the cause is settled and the fix is the csv module check above.
+## Gate 3 close-out tasks (after Cypher passes)
 
-## After the investigation
-
-If the data is determined safe (csv module clean, OR investigation completes with a fix in place):
-
-1. Launch age-load on the VPS as nohup background:
-   ```bash
-   ssh root@46.225.128.133 "nohup bash -c 'cd /root/repo && source .venv/bin/activate && AGE_DSN=\"host=localhost dbname=ncbi_kg user=postgres\" age-load --kgx-dir /root/data/kgx/merged --graph-name ncbi_kg --drop-existing' > /root/age-load.log 2>&1 & echo \"PID: \$!\""
-   ```
-2. Wait 2-4 hours for age-load to finish (runs unattended; laptop can sleep)
-3. Run the 3 Cypher test queries against the loaded graph:
-   - BRCA1 → pathogenic variants traversal
-   - Phenylketonuria → PAH gene traversal
-   - Human genes involved in glucose metabolism (Taxonomy + Gene + GO)
-4. If all 3 return expected results, **Gate 3 passes** and V1 is complete
-
-## Gate 3 close-out tasks
-
-Once Cypher queries pass:
-
-1. Update the four canonical docs to mark Phase 4.0 + Gate 3 DONE:
-   - `docs/bossman_execution_plan.md` (Coding time table, Realistic calendar, Plan overview Mermaid diagram)
-   - `docs/learnings.md` (add Gate 3 outcome notes)
-   - `docs/data_inventory.md` (final node/edge counts in the AGE graph)
-   - `DECISIONS.md` (close-out row if any new decisions surfaced)
-2. Tier 1 mirrors: `CLAUDE.md`, `AGENTS.md`, `README.md` updated to reflect V1 complete
-3. Run qa-gate (pytest, doc compliance, eval-harness)
-4. Commit on `phase/4.0-cloud-deploy`, push, open PR for merge to main
+1. Update canonical docs to mark Phase 4.0 + Gate 3 DONE:
+   - docs/bossman_execution_plan.md (Phase 4.0 row, Realistic calendar, Plan overview Mermaid)
+   - docs/learnings.md (Gate 3 outcome)
+   - docs/data_inventory.md (final counts in AGE graph)
+   - DECISIONS.md (close-out row)
+2. Tier 1 mirrors: CLAUDE.md, AGENTS.md, README.md to V1 complete
+3. qa-gate (pytest, doc compliance, eval-harness)
+4. Commit on phase/4.0-cloud-deploy, push, open PR to main
 5. After PR merged:
-   - Delete `/root/data/kgx/merged/` on VPS (frees ~135 GB)
-   - Delete `data/kgx/merged/` on laptop (frees ~135 GB; FTP cache stays for regeneration)
+   - Delete /root/data/kgx/merged/ on VPS (frees ~135 GB)
+   - Delete data/kgx/merged/ on laptop (frees ~135 GB; FTP cache stays)
    - Hetzner snapshot via console (~$1-2/mo)
-   - Downgrade VPS CPX42 → CPX32 (saves ~$10/mo, ~$24/mo steady state)
+   - Downgrade VPS CPX42 to CPX32 (saves ~$10/mo, ~$24/mo steady state)
+
+## Billing worry, addressed
+
+Independently verified with Perplexity on 2026-04-21 ~18:40 ET. Confirmed:
+
+1. Hetzner Cloud is flat monthly billing (prorated hourly), not per-CPU-usage
+2. 100% CPU vs idle on a CPX42 costs the same per hour
+3. CPX42 rate is roughly $0.05/hour, capped ~$34/month
+4. Large bills come from volumes, many instances, bandwidth overages, or forgotten resources - NOT from a long-running load
+5. On a single CPX42 with no extra volumes or unusual bandwidth, one night of 100% CPU cannot generate a bill in the hundreds of dollars
+
+Worst case overnight is about $0.75 added to the VPS's steady monthly cost. Not $500. Not $50. Not $5.
 
 ## Open items NOT blocking Gate 3
 
-These can wait until after V1 ships:
-
-- The kgx Python TypeError (`unhashable type: 'list'`) is a tool bug worth filing upstream. Not blocking us because Gate 2 already validated the same KGX on the laptop.
-- The CPU-bound nature of kgx validate at this scale (1h48m for ~57% of 144 GB on a single core) is a future-pipeline concern. If we ever rerun validate at this scale, parallelize per file or chunk.
+- kgx Python TypeError "unhashable type: list" is a tool bug worth filing upstream, not a data issue
+- Loader's in-memory curie_to_id dict design is brittle at >100M node scale; a future refactor could use SQLite or LMDB to avoid the swap dependency
+- When we add Protein, SmallMolecule, or any other BioLink category in a future pipeline, the loader's VERTEX_LABELS constant will need updating or should be made data-driven
 
 ## References
 
-- `docs/bossman_execution_plan.md` — Phase 4.0 section + decision rows 18, 25, 67
-- `docs/learnings.md` — Phase 4.0 execution section, Problems 3 through 7 + Understanding subsections (retry loop, append, streaming pattern, awk vs kgx)
-- `DECISIONS.md` — rows 64-67 capture all of today's mid-phase decisions
-- `scripts/rsync-retry.sh` — the retry wrapper that survived the 121 reconnects
+- docs/bossman_execution_plan.md - Phase 4.0 section
+- docs/learnings.md - Phase 4.0 execution section, Problems 1 through 9 + Understanding subsections (retry loop, --append, streaming pattern, awk vs kgx, drop-existing, time vs money)
+- DECISIONS.md - rows 67 through 73 capture all Phase 4.0 decisions
+- scripts/rsync-retry.sh - the retry wrapper that survived the 121 reconnects
 
-Last updated: 2026-04-20 ~20:15 ET
+Last updated: 2026-04-21 ~18:40 ET

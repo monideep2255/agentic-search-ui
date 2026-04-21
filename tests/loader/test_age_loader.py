@@ -186,8 +186,8 @@ class TestCreateVertexLabels:
         assert len(executed) == len(labels)
 
     def test_all_vertex_labels_constant_covered(self) -> None:
-        """VERTEX_LABELS has exactly 10 entries."""
-        assert len(VERTEX_LABELS) == 10
+        """VERTEX_LABELS has exactly 11 entries (10 BioLink categories plus NamedThing for stub endpoints)."""
+        assert len(VERTEX_LABELS) == 11
 
     def test_vertex_labels_are_strings(self) -> None:
         """Every entry in VERTEX_LABELS is a non-empty string."""

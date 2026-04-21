@@ -389,6 +389,253 @@ Safe phrasing for the innovation proposal or any external communication: "The me
 
 Lesson: when a verification tool crashes, the recovery path is to enumerate what other independent checks already passed and decide whether their union is sufficient. Do not conflate structural integrity with semantic compliance. They are different bars and only the right tool can certify each one.
 
+### Problem 7b: age-load first attempt failed in 0.02s with `fe_sendauth: no password supplied`
+
+Literally the first age-load launch on 2026-04-21 at 15:40 UTC died in 20 milliseconds with:
+
+```
+psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: fe_sendauth: no password supplied
+```
+
+Root cause. When we set up PostgreSQL on the VPS, the default `pg_hba.conf` config was used. That default uses `peer` auth for UNIX socket connections (matching OS user to DB role) and `scram-sha-256` (password) auth for any TCP connection to localhost including `127.0.0.1` and `::1`. We run age-load as root, not as the `postgres` OS user, so `peer` via the UNIX socket does not apply. The DSN `host=localhost dbname=ncbi_kg user=postgres` resolves to `::1`, which triggers the scram-sha-256 rule and demands a password the loader does not supply.
+
+Fix. Add two trust rules for the postgres user on localhost only, keeping scram-sha-256 as the default for everyone else. Port 5432 is not exposed beyond the VPS so trust on localhost is safe.
+
+```bash
+# Insert specific postgres trust rules above the generic scram-sha-256 rules
+sed -i '/^host    all             all             127.0.0.1\/32/i host    all             postgres        127.0.0.1/32            trust' /etc/postgresql/15/main/pg_hba.conf
+sed -i '/^host    all             all             ::1\/128/i host    all             postgres        ::1/128                 trust' /etc/postgresql/15/main/pg_hba.conf
+systemctl reload postgresql
+```
+
+Final `pg_hba.conf` state:
+
+```
+local   all             postgres                                peer
+local   all             all                                     peer
+host    all             postgres        127.0.0.1/32            trust
+host    all             all             127.0.0.1/32            scram-sha-256
+host    all             postgres        ::1/128                 trust
+host    all             all             ::1/128                 scram-sha-256
+```
+
+Lesson. When provisioning a fresh VPS for an app that connects to Postgres as postgres on localhost, either pre-configure pg_hba.conf as part of the install step, or put the password in a secret file and pass it in the DSN. The default scram-sha-256 for localhost is the safe production default but it trips up apps that assume trust-by-position.
+
+### Problem 8: age-load crashed at 115M nodes because `NamedThing` vertex label was not pre-created
+
+First age-load attempt crashed on 2026-04-21 at 16:22 after loading 114,997,000 nodes (about 99.6% through the node phase) with:
+
+```
+AGE load failed: relation "ncbi_kg.NamedThing" does not exist
+INSERT INTO "ncbi_kg"."NamedThing" (properties) VALUES ('{"id": "..."}')
+```
+
+Root cause. The AGE loader's `schema.py` pre-created 10 vertex labels matching the BioLink categories our pipelines emit for real NCBI data: Gene, SequenceVariant, Disease, PhenotypicFeature, Article, OntologyClass, OrganismTaxon, BiologicalProcess, MolecularActivity, CellularComponent. But our merged KGX also contains stub nodes with category `biolink:NamedThing`. These stubs are injected by `shared/merger.py` when the merge step encounters a dangling endpoint whose CURIE prefix is not in the `_PREFIX_TO_CATEGORY` map. At Gate 2 the stub injection logged 81,125 such rows; the OMIM finding in the earlier learnings section confirmed that at least 10,580 of those were `NamedThing` by design. The loader never created the table, so the first INSERT into it failed with `UndefinedTable`.
+
+Why it took so long to surface. The loader streams nodes from the TSV and routes each to the matching label table by stripping the `biolink:` prefix from the category column. The first 99.6% of rows mapped to one of the 10 pre-created labels and loaded successfully. Only the stub rows mapped to `NamedThing`, and those happened to appear late in the sort order, so the loader made it to 115M rows before hitting the first one. A smaller fixture or a shuffled input would have caught this in seconds.
+
+Fix, three small changes:
+
+1. `system-02-knowledge-graph/loader/schema.py`: added `"NamedThing"` to `VERTEX_LABELS` so the loader creates the table during schema setup.
+2. `tests/loader/test_age_loader.py`: updated the length assertion from `len(VERTEX_LABELS) == 10` to `len(VERTEX_LABELS) == 11`, with a docstring explaining the 11th is for stub endpoints.
+3. scp'd the updated `schema.py` to the VPS at `/root/repo/system-02-knowledge-graph/loader/schema.py` and relaunched age-load with `--drop-existing` to drop the half-loaded graph and rebuild from scratch.
+
+All 44 loader unit tests still pass after the change.
+
+Cost of the crash. ~30 min of node-load wall clock lost because the half-loaded graph had to be dropped and rebuilt. The data on disk was untouched, so no re-transfer from the laptop was needed.
+
+Lesson. A loader schema that enumerates labels from a static constant is brittle against stub nodes that use categories the main pipelines never emit. Two better patterns going forward:
+
+1. Derive the label set dynamically from the input file. Run a first pass over `nodes.tsv` to collect the set of unique categories, then create a vertex label per unique value. Slower by one file scan, but the loader becomes data-driven instead of config-driven.
+2. Ensure the `_PREFIX_TO_CATEGORY` map in `shared/merger.py` covers every prefix present in the cross-pipeline graph, so `NamedThing` is never used as a fallback. This pushes the fix upstream but requires auditing every new pipeline addition against the map.
+
+For now the fix is option zero: just list `NamedThing` in the loader constant and move on. Option 1 is the right long-term design; deferring to a future refactor unless a similar bug surfaces again.
+
+Pre-empt for the future. If a pipeline ever emits a category like `biolink:Protein` or `biolink:SmallMolecule`, the same crash will happen. The test file now at least documents the expected count; if the count changes, the test forces an update.
+
+### Problem 9: age-load OOM killed after node phase finished because the curie_to_id dict exceeded 16 GB RAM
+
+Second age-load attempt (post NamedThing fix) completed Step 5 "load_nodes" cleanly on 2026-04-21 at 18:52 UTC, finishing all 115,406,761 nodes in 2481 seconds (~41 min). The log ends with "Step 5 load_nodes: 115406761 nodes in 2481.06s" and then falls silent. PID 77392 is gone from `ps`. No error, no traceback, just a dead process.
+
+Root cause. Linux OOM killer terminated the Python process. Kernel log confirms:
+
+```
+Out of memory: Killed process 77392 (age-load)
+total-vm:16254808kB, anon-rss:15404800kB
+```
+
+The Python process's resident memory reached ~15 GB on a 16 GB VPS, collided with Postgres and the kernel, and the OOM killer picked it off. This happened between Step 5 (node load) and Step 6 (build curie_to_id dict). The dict build was almost certainly the OOM trigger.
+
+Why the dict is so big. The loader builds an in-memory Python dict mapping every CURIE string to its AGE-assigned integer graphid. At 115.4M entries, a Python dict uses roughly:
+
+- String key: average ~40-60 bytes for CURIE strings like `NCBIGene:7157` (includes Python object header, hash, length, interned content)
+- Integer value: ~28 bytes for a Python int object
+- Dict bucket slot: ~48 bytes per entry (pointer to key, pointer to value, hash cache, quadratic-probe padding)
+
+Per entry overhead: roughly 120-140 bytes. For 115M entries: ~14-16 GB. Matches the observed 15 GB exactly.
+
+The earlier "Understanding: what age-load is and why it takes 2-4 hours" section estimated this at 8 GB. That estimate was too optimistic by a factor of 2. Python dict overhead on small strings is heavier than the raw string bytes would suggest.
+
+Three fixes available:
+
+1. Add a 16 GB swap file to the VPS. Zero cost (disk space we already pay for). Python will page the dict to disk when memory pressure rises. Slower but does not OOM. 30 seconds to apply via ssh.
+2. Upgrade VPS from CPX42 (16 GB) to CPX52 (32 GB) for the load window, downgrade immediately after. Hetzner prorates hourly; extra cost is roughly $0.06/hr × 3-4 hours = about $0.20-0.25 total. Requires console action from the account owner.
+3. Rewrite the loader to use a disk-backed key-value store (SQLite with an integer-indexed table, or LMDB). Clean engineering fix but requires code changes, tests, and redeploy. Defers the fix by several hours.
+
+Trade-off captured for future design. The in-memory curie_to_id dict was a deliberate choice in the Phase 3.0 loader design (DECISIONS row 60) to avoid O(log N) per-edge SELECT lookups during the 693M-edge insert phase. At 115M nodes that dict is right at the edge of what a 16 GB box can hold. At 500M nodes it would be unfeasible without swap or a disk-backed store. This is a future concern if we ever revisit dbSNP pre-ingestion or add another large pipeline.
+
+Lesson. When in-memory data structures scale with input size, calibrate the estimate on real data, not on back-of-envelope byte counts. Python dict overhead on 100M+ entries is 2-3x the naive string-byte estimate. For any future loader on similar scale, run a synthetic RAM benchmark before committing to an in-memory design.
+
+Recovery executed 2026-04-21 at 19:11 UTC. Option 1 applied:
+
+```bash
+# On the VPS as root:
+fallocate -l 16G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+```
+
+Result: 16 GB of swap became active on top of the 15 GiB RAM. `free -h` confirmed:
+
+```
+              total        used        free      available
+Mem:          15Gi        651Mi       14Gi       14Gi
+Swap:         15Gi        0B          15Gi
+```
+
+Swap persists across reboots via fstab. Zero billing impact; swap uses disk space on the already-paid 320 GB volume. Attempt 3 relaunched with `--drop-existing`; node phase restarts from zero and costs another ~40 min, then Step 6 builds the curie_to_id dict with swap available if it exceeds RAM, then edge phase proceeds.
+
+What to watch for. During Step 6 the dict build will page to swap if it grows past ~13 GB resident. `vmstat 5` on the VPS will show si/so (swap-in/swap-out) non-zero when paging is active. Expected slowdown on Step 6 of maybe 2-5x (building a dict while half of it lives on disk). Edge load in Step 7 is read-heavy on the dict and fairly cache-friendly, so slowdown should be milder. If swap usage stays under ~4 GB throughout, we paid almost no performance tax. If it hits 10+ GB, plan to upgrade to CPX52 for future reloads.
+
+Escalation protocol added mid-attempt-3 on 2026-04-21. When swap usage exceeded 10 GB and the dict build had not completed, the temptation was to kill and auto-upgrade to CPX52. Decision (captured in DECISIONS row 73): do NOT auto-escalate. The human in the loop owns hardware changes because they cost real money and require Hetzner console action. The agent waits for the next scheduled check. Two outcomes:
+
+1. Step 6 completes and Step 7 (edges) starts: keep running on CPX42 with swap, no upgrade needed
+2. Process crashes (OOM despite swap): agent cleans up leftover state on the VPS (stops any orphaned processes, confirms graph is in drop-safe state), then reports to the user and asks whether to upgrade. User decides.
+
+The rule generalizes: "paid infra changes require user confirmation" extends the bossman-mode rule about external data downloads. Any action that changes the billing profile is gated on explicit user approval, no exceptions.
+
+### Understanding: time cost vs money cost on a flat-rate VPS
+
+Captured 2026-04-21 after a moment of billing anxiety during the attempt 3 swap pressure. The instinct to equate "this is taking longer than planned" with "this will cost more than planned" is common but wrong on Hetzner's pricing model. The two costs are decoupled.
+
+Hetzner Cloud bills are flat monthly rates, prorated to the hour. A CPX42 costs $34 per month of uptime, regardless of how hard the machine is working. Running at 100% CPU for 6 hours costs the same as sitting idle for 6 hours: roughly $0.047 per hour in either case. Swap paging to disk costs nothing extra. RAM pressure costs nothing extra. Disk I/O costs nothing extra. The only pricing levers that matter are the plan tier (CPX42 vs CPX52, etc.) and whether extra volumes are attached.
+
+Why this matters for our situation. The age-load curie_to_id dict exceeded 16 GB RAM on attempt 2 (OOM killed). Three recovery options:
+
+1. Swap file: zero cost, runs slower because half the dict pages to disk
+2. Upgrade to CPX52 (32 GB RAM): ~$0.06/hour more, prorated to the exact minutes the upgraded tier is active
+3. Rewrite loader for disk-backed KV: zero infra cost, costs engineering days
+
+We picked 1. Slower wall clock, zero extra billing. The 5-6 hour edge phase instead of 2-3 hour edge phase is time we pay for, not money.
+
+What a $500 bill would actually require. None of these apply to this project's current configuration:
+
+1. Provisioning a large block volume (e.g., 10 TB at $0.04/GB/month = $400/month)
+2. Running 10+ VPSes simultaneously without deprovisioning
+3. Exceeding the 20 TB monthly egress cap by 40+ TB (would require serving tens of thousands of full-graph dumps)
+4. Leaving a CPX52 upgrade active for a full month instead of downgrading back ($70/month vs $34)
+
+Worst realistic drift on the current setup. Forgetting to downgrade CPX42 to CPX32 after Gate 3 closes costs ~$10/month more than planned. Over a year that is ~$120. Not nothing, but nowhere near $500, and reversible in one click the moment someone notices.
+
+Lesson for anyone else anxious about running a long-running job on a flat-rate VPS. Slow is not expensive on this pricing model. A 6-hour load and a 2-hour load on the same VPS cost the same. The cost conversation is about plan tier and active subscriptions, not duty cycle. Aggressive use of the resources you already pay for is free.
+
+Two corollaries worth naming explicitly:
+
+1. On per-second cloud pricing (AWS, GCP, spot instances), the opposite is true: slow IS expensive. Do not apply the Hetzner intuition to other clouds without checking the pricing model first.
+2. On any flat-rate VPS, the economically rational default is to run the machine hard. Idle time is paid time wasted. When this load completes and the graph is queryable, the VPS should serve as much traffic as the hardware allows before scaling up, because marginal load on an already-paid machine is free.
+
+### Understanding: why `--drop-existing` on age-load does NOT accumulate disk across retries
+
+Natural worry after three age-load attempts: are we piling up 115M nodes worth of table data each time we retry? The answer is no. `--drop-existing` is the specific flag that prevents accumulation.
+
+What it does. Before any schema setup, the loader calls `drop_graph('ncbi_kg', true)` in AGE, which cascades a DROP SCHEMA on the graph's namespace. Every vertex label table, every edge label table, every index, every sequence associated with the previous load is deleted in one transaction. The disk storage those tables occupied is reclaimed by Postgres's autovacuum on the next pass (usually within seconds for recently-dropped objects).
+
+What it means operationally. Every retry starts from a truly empty graph. The only things persistent across retries are:
+
+1. The KGX TSV files on disk (~135 GB at `/root/data/kgx/merged/`) — the source input, never touched by the loader
+2. The Postgres installation itself (~50 MB of system files)
+3. The Postgres write-ahead log (WAL) from the failed attempt — auto-recycled at checkpoint, max ~1 GB held
+4. The swap file (17 GB) if present — persistent across reboots
+
+What it does NOT accumulate:
+
+1. Graph table storage (dropped and recreated each attempt)
+2. Indexes (dropped)
+3. The curie_to_id dict (lived in process memory, freed when process died or exited)
+4. Partial KGX files (we never modify the input)
+
+Verified after three attempts on 2026-04-21 at 19:20 UTC, during attempt 3's node-load phase:
+
+```
+/dev/sda1       301G  162G  127G  57% /
+```
+
+162 GB used = 135 GB KGX + 17 GB swap + 7.7 GB of in-flight attempt-3 Postgres data + ~2 GB OS and other. No ghost storage from the two failed attempts. The only "cost" of the failed attempts was wall-clock time (about 70 min combined), not disk.
+
+Lesson. When designing a loader for large batch pipelines, make `--drop-existing` the default for iterative development. It trades one DROP TABLE at startup for infinite safety in retry-heavy scenarios. The alternative (resume from a partial load) is complex to implement correctly and usually ends up dropping and rebuilding anyway after any schema change.
+
+### Investigation 2026-04-21: the 64K mismatched node rows were PubMed abstracts with newlines, not a data bug
+
+Resumed on 2026-04-21 morning to close out the awk finding from the previous night. The investigation took about 20 minutes end-to-end and confirmed the data is clean. No changes needed on our side.
+
+Three pieces of evidence, in order of discovery.
+
+Piece 1: sample of 20 mismatched rows. Pulled directly from the VPS with awk:
+
+```
+72497843:NF=8|PMID:317259  biolink:Article  [Keratomalacia in children with malnutrition].  PubMed  ...  "Twenty-nine malnourished preschoolers in third grade, with a history of glo
+72497844:NF=0|
+72497845:NF=1|Fifteen patients had keratomalacia with superficial corneal ulceration and fourteen had severe complications...
+72497846:NF=0|
+72497847:NF=11|The pathophysiological alterations caused by vitamin A deficiency in ocular structures...
+```
+
+The pattern is unmistakable. The real PubMed article row starts with `NF=8` (correct) and contains an open double-quote before the abstract text. The abstract itself has embedded newlines (paragraph breaks). Awk treats every `\n` as a row separator, so one real multi-line quoted TSV row gets fragmented into 5-10 awk "rows" with NF=0 (empty lines between paragraphs), NF=1 (continuation text with no tabs), and occasional higher NF values when the fragment happens to contain tab characters. The `PMID:2141811` and `PMID:3044702` rows in the sample are both "RETRACTED" articles with long editorial notices, which is why they fragment even more than a normal abstract.
+
+Piece 2: NF distribution of all 64,882 mismatched rows:
+
+| awk-fragment NF | Row count | What it represents |
+|-----------------|-----------|---------------------|
+| NF=0 | 3,573 | Empty lines between paragraphs inside a quoted field |
+| NF=1 | 46,223 | Continuation text with no embedded tabs (the bulk of the abstract body) |
+| NF=2 | 3 | Minor fragments |
+| NF=3 | 743 | Fragments with a few tabs |
+| NF=6 | 569 | Fragments with more tabs |
+| NF=8 | 6,514 | Mid-row fragments where NF matches header by coincidence |
+| NF=11 | 7,082 | Similar mid-row fragments |
+| NF=12 | 1 | Trivial |
+| NF=16 | 174 | Trivial |
+| Total | 64,882 | Matches the original awk mismatch count exactly |
+
+The shape is exactly what you expect from multi-line quoted-TSV abstracts. A heavy long tail at NF=0 and NF=1 is the fingerprint of paragraph-break newlines inside quoted fields.
+
+Piece 3: Python csv module re-parse test. Same file, same delimiter, but using Python's csv.reader which is RFC 4180-aware and handles quoted multi-line fields correctly:
+
+```
+nodes.tsv: header NF=18
+nodes.tsv: total=115,406,761, mismatched=0
+```
+
+Zero mismatches. All 115,406,761 rows parse cleanly with the expected 18 columns. The csv row count (115.4M) is lower than the awk count (115.5M) by 57,625, which is exactly the number of extra lines awk created by splitting multi-line fields. The csv count also matches the Gate 2 merge report node count of 115,406,761 precisely, confirming no data was gained or lost during the rsync transfer.
+
+Root cause stated cleanly. Our TSV uses standard RFC 4180 quoting: fields containing tabs, newlines, or double quotes are wrapped in double quotes, with any internal double quotes doubled. This is valid TSV and is what Python's csv.writer produces by default. Awk does not understand CSV quoting at all. Awk sees the TSV as a newline-delimited file of tab-separated records, with no concept of "a field can contain a newline if it is inside quotes." So awk fragments every multi-line abstract into many "rows" and then correctly reports that those rows do not have the expected column count.
+
+The fix. Zero changes on our side. The fix would be to use the right tool:
+
+1. For structural validation: use csv.reader with delimiter=tab, not awk. Add this to the Gate 2 validation checklist.
+2. For schema validation: use kgx validate, which also handles quoted multi-line fields correctly.
+3. For downstream consumers: age-load already uses csv.DictReader internally, so it parses correctly regardless.
+
+What this means for age-load. age-load will see the same 115,406,761 rows that the csv test saw, not the 115,464,386 rows that awk saw. This matches the Gate 2 merge report exactly, so all node endpoint lookups during edge load will resolve correctly. No dangling edges, no orphan PMID references. Safe to proceed.
+
+Lesson. When a validator flags a mismatch, test with a second tool that implements the same contract at a higher level. Awk is the wrong tool for validating TSV with quoted multi-line fields; the right tool is a CSV-aware parser. The original awk check was useful for catching gross corruption (truncated rows, binary garbage), but it gives false positives on valid-but-complex TSV. Gate 2 used awk the same way and got the same false positives; nobody noticed because kgx validate ran successfully on the laptop and gave the definitive pass.
+
+New rule for future gate validations: structural checks use a CSV-aware parser, not awk. Keep awk for byte-count sanity only. If the CSV-aware parser reports mismatches, investigate. If it reports zero, accept.
+
+Update at ~11:00 on 2026-04-21: nodes.tsv csv re-parse complete with 0 mismatches. edges.tsv csv test still streaming (will take ~15 more min); edges awk already passed clean overnight so this is formality. When the edges csv result comes back clean, we proceed directly to age-load.
+
 ### Problem 6: script edits do not propagate to the running bash retry loop
 
 Happened 2026-04-20 during the Phase 4.0 transfer. After adding `--append` to `scripts/rsync-retry.sh` to cut the per-attempt delta-resume overhead, the log continued showing the default resume pattern for 40+ minutes, suggesting the new flag was not taking effect.
