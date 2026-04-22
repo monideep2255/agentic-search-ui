@@ -101,6 +101,7 @@ python system-01-data-pipelines/gene/pipeline.py
 
 | Doc | What it covers |
 |-----|---------------|
+| [Project overview A to Z](docs/Project_overview_A_to_Z.md) | Single-source-of-truth navigation hub for everything in this repo |
 | [Execution plan](docs/bossman_execution_plan.md) | Phase-by-phase build plan with status, gates, validation checklist, disk budget |
 | [Three-layer architecture](docs/architecture/Three_layer_data_architecture.md) | Layer 1 (graph), Layer 2 (on-demand API), Layer 3 (enrichment), cost breakdown |
 | [Merge logic explained](docs/architecture/Merge_logic_explained.md) | First-principles walkthrough of the 5-database streaming merge, dedup strategy, stub injection |
@@ -111,9 +112,17 @@ python system-01-data-pipelines/gene/pipeline.py
 | [Decisions](DECISIONS.md) | Architecture and implementation decisions with rationale |
 | [Local setup](docs/context/setup/setup-03_windows_laptop.md) | One-time migration guide for Windows laptop (repo clone, symlinks, venv, data rsync, verification) |
 | [Live graph reference](docs/Knowledge_graph_on_server_reference.md) | A-Z operations guide for the live V1 graph: SSH access, Cypher queries, index listing, node/edge counts, cost breakdown, snapshot procedure |
+| [Data mapping and ontology explained](docs/architecture/Data_mapping_and_ontology_explained.md) | A-Z walkthrough of how raw NCBI data becomes a BioLink graph: CURIEs, per-pipeline mapping rules, merge logic, BioLink 4.x compliance |
+| [Technical reference: data engineering](docs/architecture/Technical_reference_data_engineering.md) | End-to-end technical walkthrough of the V1 system: architecture, schema, indexing, Cypher patterns, performance baselines, lessons |
+| [Architecture diagrams](docs/visualizations/Architecture_diagram.md) | Mermaid diagrams: end-to-end system, ETL pattern, streaming merger, AGE loader, deployment topology |
+| [Schema visualizations](docs/visualizations/Schema_visualization.md) | BioLink schema with all 11 vertex labels, 14 edge predicates, sample CURIEs, edge directionality, cross-database connectivity |
 
 ---
 
 ## License
 
 Apache 2.0. See [LICENSE](LICENSE).
+
+---
+
+Last updated: 2026-04-22

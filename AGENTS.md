@@ -48,6 +48,10 @@ This repo builds Layer 1 (fully ingested knowledge graph) of a three-layer data 
 | `context/setup/setup-04_hetzner_vps.md` | End-to-end Hetzner CPX42 provisioning: SSH keys from personal computer and work laptop, rsync install, PostgreSQL + AGE install, pre-Phase-4.0 verification | Before Phase 4.0 cloud deploy work |
 | `context/setup/setup-05_rsync_windows.md` | First-principles rsync on a locked-down Windows laptop: Scoop + cwRsync install, cygdrive path format, cwRsync vs Windows OpenSSH pipe incompatibility, HOME env var fix, exact working command, transfer time estimate | Before running Phase 4.0 rsync from the work laptop |
 | `Knowledge_graph_on_server_reference.md` | A-Z operations reference for the live V1 graph on Hetzner CPX42: SSH access, Cypher query examples, index listing, node/edge counts, cost breakdown, snapshot procedure | Before querying or maintaining the live graph |
+| `Project_overview_A_to_Z.md` | Single-source-of-truth navigation hub with pointers into every other doc | First doc to read for project orientation |
+| `architecture/Data_mapping_and_ontology_explained.md` | A-Z walkthrough of how raw NCBI data becomes a BioLink graph: CURIEs, per-pipeline mapping rules, merge logic, BioLink 4.x compliance | Before writing any new pipeline or auditing existing mapping |
+| `architecture/Technical_reference_data_engineering.md` | End-to-end technical walkthrough of the V1 system: architecture, schema, indexing, Cypher patterns, performance baselines, lessons | Engineering deep-dive on what was built and why |
+| `visualizations/Architecture_diagram.md` + `visualizations/Schema_visualization.md` | Mermaid diagrams of system architecture, ETL flow, deployment, and BioLink schema with sample CURIEs | When orienting visually, in slides, or onboarding others |
 
 ## Canonical reference pipeline
 
