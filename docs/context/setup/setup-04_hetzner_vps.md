@@ -25,6 +25,7 @@ Related reading before you start:
 - [Part C: install rsync on the work computer](#part-c-install-rsync-on-the-work-computer)
 - [Part D: install PostgreSQL 15 + AGE on the server](#part-d-install-postgresql-15--age-on-the-server)
 - [Part E: end-to-end verification](#part-e-end-to-end-verification)
+- [Part F: PostgreSQL tuning for the loaded graph](#part-f-postgresql-tuning-for-the-loaded-graph)
 - [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
@@ -350,6 +351,41 @@ Expect `nodes.tsv` and `edges.tsv` files, totalling 75-95GB.
 
 All five passing = ready to run `/bossman-mode --phase 4.0` on the work computer.
 
+## Part F: PostgreSQL tuning for the loaded graph
+
+PostgreSQL's factory defaults are conservative: they assume the server may be running other services and that the database will be small. On a 16 GB box dedicated to a 115 M-node + 693 M-edge AGE graph, the defaults leave most RAM unused and produce planner estimates that are orders of magnitude off. Apply these eight settings once, then restart Postgres.
+
+```sql
+ALTER SYSTEM SET shared_buffers = '4GB';
+ALTER SYSTEM SET work_mem = '64MB';
+ALTER SYSTEM SET effective_cache_size = '12GB';
+ALTER SYSTEM SET maintenance_work_mem = '1GB';
+ALTER SYSTEM SET random_page_cost = 1.1;
+ALTER SYSTEM SET effective_io_concurrency = 200;
+ALTER SYSTEM SET max_parallel_workers_per_gather = 4;
+ALTER SYSTEM SET default_statistics_target = 200;
+SELECT pg_reload_conf();
+```
+
+`shared_buffers` requires a full restart, not just a reload:
+
+```bash
+systemctl restart postgresql
+```
+
+What each setting does:
+
+- `shared_buffers = '4GB'`: gives Postgres a 4 GB shared page cache (default is 128 MB). For a 16 GB box, 25% of RAM is the standard starting point.
+- `work_mem = '64MB'`: memory per sort/hash operation per query (default is 4 MB). AGE Cypher queries can involve many sort steps; raising this avoids disk spills.
+- `effective_cache_size = '12GB'`: tells the planner how much memory the OS page cache plus shared_buffers effectively provides. Does not allocate RAM, only influences index-vs-seqscan decisions.
+- `maintenance_work_mem = '1GB'`: memory for VACUUM and CREATE INDEX. Speeds up the post-load ANALYZE and index builds.
+- `random_page_cost = 1.1`: default is 4.0, which assumes spinning disks. Local SSD (Hetzner CPX42 uses local NVMe) has near-sequential read cost. Lower value makes the planner prefer index scans over seq scans.
+- `effective_io_concurrency = 200`: SSD can handle many parallel I/O requests (default is 1 for spinning disk). Used by bitmap heap scans.
+- `max_parallel_workers_per_gather = 4`: allows the planner to use up to 4 CPUs for a single aggregate or seq scan (CPX42 has 8 vCPU).
+- `default_statistics_target = 200`: more histogram buckets per column. Default 100 is too coarse for the skewed ID distributions in a 100 M+ row AGE table.
+
+After the restart, run `ANALYZE` on all vertex and edge tables if you have not already (see learnings.md Problem 13 for why bulk-loaded tables need manual ANALYZE).
+
 ## Troubleshooting
 
 ### "Permission denied (publickey)" from a machine that should work
@@ -398,4 +434,4 @@ Unlikely on 320GB, but possible if the graph grows faster than estimated. Option
 2. Resize the CPX42 in place (Hetzner console → server → Rescale). No rebuild.
 3. Attach a block volume temporarily.
 
-Last updated: 2026-04-19
+Last updated: 2026-04-22

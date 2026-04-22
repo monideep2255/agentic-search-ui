@@ -1,0 +1,112 @@
+could not change directory to "/root": Permission denied
+=== 1. ALL indexes per table (look for missing GIN, missing graphid PK) ===
+           tablename            | index_count |                        indexes                        
+--------------------------------+-------------+-------------------------------------------------------
+ Article                        |           2 | idx_article_id, idx_article_pk
+ BiologicalProcess              |           3 | idx_bioproc_id, idx_bioproc_pk, idx_bioproc_props_gin
+ CellularComponent              |           2 | idx_cellcomp_id, idx_cellcomp_pk
+ Disease                        |           3 | idx_disease_id, idx_disease_pk, idx_disease_props_gin
+ Gene                           |           3 | idx_gene_id, idx_gene_pk, idx_gene_props_gin
+ MolecularActivity              |           2 | idx_molact_id, idx_molact_pk
+ NamedThing                     |           2 | idx_namedthing_id, idx_namedthing_pk
+ OntologyClass                  |           2 | idx_ontology_id, idx_ontology_pk
+ OrganismTaxon                  |           2 | idx_taxon_id, idx_taxon_pk
+ PhenotypicFeature              |           2 | idx_phenotype_id, idx_phenotype_pk
+ SequenceVariant                |           3 | idx_seqvar_id, idx_seqvar_pk, idx_seqvar_props_gin
+ _ag_label_edge                 |           1 | _ag_label_edge_pkey
+ _ag_label_vertex               |           1 | _ag_label_vertex_pkey
+ actively_involved_in           |           2 | idx_actinv_end, idx_actinv_start
+ cited_in                       |           2 | idx_citin_end, idx_citin_start
+ close_match                    |           2 | idx_close_end, idx_close_start
+ exact_match                    |           2 | idx_exact_end, idx_exact_start
+ gene_associated_with_condition |           2 | idx_gawc_end, idx_gawc_start
+ has_mesh_annotation            |           2 | idx_hasmesh_end, idx_hasmesh_start
+ has_phenotype                  |           2 | idx_haspheno_end, idx_haspheno_start
+ in_taxon                       |           2 | idx_intax_end, idx_intax_start
+ is_sequence_variant_of         |           2 | idx_isv_end, idx_isv_start
+ located_in                     |           2 | idx_locin_end, idx_locin_start
+ mentioned_in                   |           2 | idx_mentin_end, idx_mentin_start
+ orthologous_to                 |           2 | idx_orth_end, idx_orth_start
+ participates_in                |           2 | idx_pi_end, idx_pi_start
+ subclass_of                    |           2 | idx_subcl_end, idx_subcl_start
+(27 rows)
+
+=== 2. Primary key / unique constraints per table ===
+          table           |        conname        | contype 
+--------------------------+-----------------------+---------
+ ncbi_kg._ag_label_edge   | _ag_label_edge_pkey   | p
+ ncbi_kg._ag_label_vertex | _ag_label_vertex_pkey | p
+(2 rows)
+
+=== 3. Foreign keys (expect zero - AGE does not enforce graph integrity) ===
+ table | conname 
+-------+---------
+(0 rows)
+
+=== 4. Stats freshness per table ===
+            relname             | n_live_tup | n_dead_tup |         last_analyze          |       last_autoanalyze        
+--------------------------------+------------+------------+-------------------------------+-------------------------------
+ has_mesh_annotation            |  349158174 |          0 | 2026-04-22 16:37:10.42498+00  | 2026-04-22 06:54:55.388456+00
+ mentioned_in                   |  124030414 |          0 | 2026-04-22 16:37:09.218375+00 | 2026-04-22 01:38:50.185675+00
+ in_taxon                       |   67536107 |          0 | 2026-04-22 16:37:12.856237+00 | 2026-04-21 21:27:45.39762+00
+ Gene                           |   67521209 |          0 | 2026-04-22 17:09:51.973169+00 | 2026-04-21 19:31:42.373471+00
+ actively_involved_in           |   44833169 |          0 | 2026-04-22 16:37:06.817634+00 | 2026-04-21 22:47:46.387261+00
+ participates_in                |   40767948 |          0 | 2026-04-22 16:37:05.625629+00 | 2026-04-21 22:55:46.009611+00
+ Article                        |   40385313 |          0 | 2026-04-22 16:36:59.271254+00 | 2026-04-21 19:50:43.614305+00
+ located_in                     |   31889473 |          0 | 2026-04-22 16:37:08.035584+00 | 2026-04-21 22:49:46.455904+00
+ orthologous_to                 |   17421049 |          0 | 2026-04-22 16:37:15.57314+00  | 2026-04-22 00:21:47.954961+00
+ has_phenotype                  |    6076735 |          0 | 2026-04-22 16:37:04.342437+00 | 2026-04-22 00:31:58.196246+00
+ SequenceVariant                |    4468333 |          0 | 2026-04-22 17:09:53.772407+00 | 2026-04-21 19:35:07.150575+00
+ is_sequence_variant_of         |    4407159 |          0 | 2026-04-22 16:37:03.061309+00 | 2026-04-22 00:28:47.657834+00
+ cited_in                       |    3924895 |          0 | 2026-04-22 16:37:11.688336+00 | 2026-04-22 00:35:54.374374+00
+ subclass_of                    |    2832411 |          0 | 2026-04-22 16:37:14.299002+00 | 2026-04-22 07:07:54.366127+00
+ OrganismTaxon                  |    2736685 |          0 | 2026-04-22 16:37:00.285671+00 | 2026-04-21 19:53:30.800512+00
+ close_match                    |     410000 |          0 | 2026-04-22 16:37:16.405075+00 | 2026-04-22 01:52:51.768566+00
+ Disease                        |     200845 |          0 | 2026-04-22 17:09:54.3161+00   | 2026-04-21 19:35:09.007888+00
+ OntologyClass                  |      30790 |          0 | 2026-04-22 17:09:52.005934+00 | 2026-04-21 19:52:40.96514+00
+ BiologicalProcess              |      16901 |          0 | 2026-04-22 16:37:00.392413+00 | 2026-04-21 19:33:54.888749+00
+ NamedThing                     |      10580 |          0 | 2026-04-22 16:37:01.664179+00 | 2026-04-21 19:53:40.450177+00
+ PhenotypicFeature              |       9881 |          0 | 2026-04-22 17:09:54.32845+00  | 2026-04-21 19:53:40.412707+00
+ gene_associated_with_condition |       7644 |          0 | 2026-04-22 16:37:01.762384+00 | 2026-04-22 00:23:45.306248+00
+ MolecularActivity              |       6978 |          0 | 2026-04-22 16:37:01.640765+00 | 2026-04-21 19:33:54.983468+00
+ CellularComponent              |       2712 |          0 | 2026-04-22 16:37:01.654608+00 | 2026-04-21 19:33:55.014524+00
+ _ag_label_edge                 |          0 |          0 | 2026-04-22 16:37:00.393076+00 | 
+ exact_match                    |          0 |          0 | 2026-04-22 16:37:15.573716+00 | 
+ _ag_label_vertex               |          0 |          0 | 2026-04-22 17:09:52.006736+00 | 
+(27 rows)
+
+=== 5. Postgres tuning (defaults are too low for 16GB box) ===
+              name               | setting | unit 
+---------------------------------+---------+------
+ default_statistics_target       | 100     | 
+ effective_cache_size            | 524288  | 8kB
+ effective_io_concurrency        | 1       | 
+ jit                             | on      | 
+ jit_above_cost                  | 100000  | 
+ maintenance_work_mem            | 65536   | kB
+ max_parallel_workers_per_gather | 2       | 
+ random_page_cost                | 4       | 
+ shared_buffers                  | 16384   | 8kB
+ work_mem                        | 4096    | kB
+(10 rows)
+
+=== 6. Disk usage per table ===
+        relname         |  total  | indexes 
+------------------------+---------+---------
+ has_mesh_annotation    | 85 GB   | 15 GB
+ Gene                   | 36 GB   | 20 GB
+ mentioned_in           | 31 GB   | 5320 MB
+ in_taxon               | 17 GB   | 2895 MB
+ Article                | 14 GB   | 2080 MB
+ actively_involved_in   | 11 GB   | 1923 MB
+ participates_in        | 10 GB   | 1748 MB
+ located_in             | 8101 MB | 1368 MB
+ orthologous_to         | 4632 MB | 747 MB
+ SequenceVariant        | 2812 MB | 1644 MB
+ has_phenotype          | 1617 MB | 261 MB
+ is_sequence_variant_of | 1173 MB | 189 MB
+ cited_in               | 1045 MB | 168 MB
+ OrganismTaxon          | 904 MB  | 164 MB
+ subclass_of            | 790 MB  | 121 MB
+(15 rows)
+

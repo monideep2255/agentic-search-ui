@@ -97,6 +97,162 @@ If all three return the expected shape and size, Gate 3 passes and V1 is complet
 
 The cost of a graph load is proportional to the number of rows, not the size of the source file. A 500M-row node set takes 10x longer than a 50M-row set even if the byte size is only 3x larger. When planning a new pipeline, estimate the load time from row count and expected insert rate, not from file size. The file size drives rsync time; the row count drives load time. Mixing these up leads to timeline surprises of the kind this session produced.
 
+## Problem 13: AGE inheritance silently strips every Postgres guarantee (2026-04-22)
+
+This is the meta-problem behind Problem 12 and most of the 2026-04-22 close-out churn. It deserves its own section because it explains why "load completed successfully" is not the same as "graph is queryable at production speed."
+
+### The pattern
+
+When AGE creates a vertex or edge label, it makes a child table that inherits from `_ag_label_vertex` or `_ag_label_edge`. PostgreSQL table inheritance does NOT propagate any of the following from parent to child:
+
+1. Primary key constraints
+2. Unique constraints  
+3. Foreign key constraints
+4. Indexes (functional, B-tree, GIN, BRIN, anything)
+5. NOT NULL constraints (these do propagate, but partially)
+6. Triggers
+
+So every "this is just a table in Postgres, you get all the normal stuff for free" assumption is wrong. The label child tables are bare heaps with two columns and no guarantees. The only thing AGE itself adds is the agtype column type. Everything else is your responsibility, and the failure mode is "queries silently work but take seconds-to-minutes instead of milliseconds."
+
+### What I kept finding one bug at a time
+
+The pattern of gaps surfaced over four hours of close-out work, in this order:
+
+1. Loader Step 8 built one functional B-tree per label on `agtype_to_text(properties -> '"id"')`. This is the right index for raw-SQL `WHERE agtype_to_text(...) = 'X'` but the wrong index for Cypher MATCH. (Problem 12.)
+2. Cypher MATCH-by-property compiles to `WHERE properties @> '{"id":"X"}'::agtype` (containment), which only GIN can serve. So GIN on `properties` is needed for every label that gets MATCHed.
+3. Edge label tables had no indexes on `start_id` or `end_id`. Every relationship traversal forced a seq scan over the whole edge table. Built B-tree on both columns for all 14 edge tables.
+4. Stats were stale on every table after bulk load. Postgres autovacuum is idle on a freshly-loaded table because no DML happened, so it never schedules an ANALYZE. Manual ANALYZE was needed.
+5. Even after all of the above, Q2 took 16 seconds. EXPLAIN showed the planner doing a Hash Join with a Parallel Seq Scan on the 67M-row Gene table to find ONE row by graphid. Root cause: Gene table had no index on the `id` column itself (the graphid PK on `_ag_label_vertex` is on the parent, not inherited). Built unique B-tree on `id` for all 11 vertex labels.
+
+Each of these felt like "one more thing." They were not one-off bugs. They are all the same class of bug: AGE inheritance loses Postgres guarantees, the loader did not compensate, and the test suite caught it incrementally instead of all at once.
+
+### Comprehensive sweep findings (2026-04-22)
+
+After the fifth fix, I ran an exhaustive sweep (`tests/cypher/health_sweep_2026-04-22.txt`) to find any remaining gaps in one pass instead of one query at a time. Six categories of gap exist beyond what the loader produces:
+
+Category A: GIN on `properties` for every vertex label (currently only built on Gene, Disease, BiologicalProcess, SequenceVariant, Article, OrganismTaxon). The other 5 vertex labels (OntologyClass, MolecularActivity, CellularComponent, PhenotypicFeature, NamedThing) need GIN before they can be MATCHed by property at speed.
+
+Category B: Unique B-tree on `id` (the graphid PK column) for every vertex label. Without this, a 1-row lookup by graphid forces a seq scan. Done in this same close-out for all 11 labels.
+
+Category C: B-tree on `start_id` and `end_id` for every edge label table. Done in this same close-out for all 14 edge tables.
+
+Category D: ANALYZE on every vertex and edge table. Done in this same close-out.
+
+Category E: Postgres configuration is at default values, which are wrong for a 16 GB graph-database box:
+
+| Parameter | Default | Should be | Why |
+|---|---|---|---|
+| `shared_buffers` | 128 MB | 4 GB | Postgres rule of thumb is 25% of RAM |
+| `work_mem` | 4 MB | 64 to 256 MB | Big graph hash joins spill to disk at 4 MB |
+| `effective_cache_size` | 4 GB | 12 GB | Hint to planner about OS page cache size |
+| `maintenance_work_mem` | 64 MB | 1 to 2 GB | Index builds and ANALYZE go faster |
+| `random_page_cost` | 4 | 1.1 | NVMe is not spinning disk; default discourages index scans |
+| `effective_io_concurrency` | 1 | 200 | NVMe can handle deep prefetch queues |
+
+These are postgresql.conf changes, not graph changes. They affect every query plan and should be tuned before declaring the graph production-ready. Estimated speedup on indexed queries: 2x to 5x.
+
+Category F: AGE has zero foreign key enforcement. Edges can point to nonexistent vertices. The merger detects dangling endpoints at build time but nothing prevents post-load corruption. For a read-only graph this is acceptable; for any graph that accepts writes after load, FKs would need to be added manually (and would slow down inserts).
+
+### Lesson
+
+When loading data into AGE, treat the label child tables as if they were freshly-created Postgres tables with no guarantees, and explicitly build everything Postgres normally gives you for free: PK index on `id`, GIN on `properties`, B-tree on edge endpoints, NOT NULL where applicable, and ANALYZE. The loader's `index_builder.py` is being updated to do all of this as a complete Step 8 instead of the partial functional-B-tree pass it does today. Separately, postgresql.conf tuning is a one-time per-machine change that should be in `docs/context/setup/setup-04_hetzner_vps.md` so any future provisioning gets it right from day one.
+
+The deeper meta-lesson: when a tool's "load complete" message comes back, that means "rows are in tables." It does not mean "queries will be fast." For any database that uses inheritance, custom storage formats, or non-standard query compilation (AGE checks all three boxes), assume the work-of-making-it-fast is a separate phase that requires its own checklist.
+
+## Gate 3 outcome: 5-database AGE graph live + queryable (2026-04-22)
+
+Phase 4.0 closed at 2026-04-22 ~12:00 ET. The 5-database merged knowledge graph is fully loaded into PostgreSQL 15.17 + Apache AGE 1.5.0 on the Hetzner CPX42 at `46.225.128.133`.
+
+Final counts in the graph:
+
+| Vertex label | Rows |
+|---|---|
+| Article | 40,387,670 |
+| Gene | 67,536,325 |
+| SequenceVariant | 4,467,468 |
+| OrganismTaxon | 2,736,611 |
+| Disease | 200,845 |
+| BiologicalProcess | (varies, ~30K) |
+| MolecularActivity, CellularComponent, OntologyClass, PhenotypicFeature, NamedThing | (small) |
+| **Total** | **115,406,761** |
+
+Edge tables: 693,295,991 rows total across 14 predicates (`mentioned_in` 124M, `has_mesh_annotation` 349M, `in_taxon` 67M, `participates_in` 40M, `actively_involved_in` 44M, `located_in` 31M, `orthologous_to` 17M, `has_phenotype` 6M, `is_sequence_variant_of` 4.4M, `cited_in` 3.9M, `subclass_of` 2.8M, `close_match` 410K, `gene_associated_with_condition` 7.6K, `exact_match` 970).
+
+### Smoke-test results
+
+Three canonical Cypher traversals (full suite in `tests/cypher/gate3_queries.sql`, raw output in `tests/cypher/gate3_results_2026-04-22.txt`):
+
+| Query | Pattern | Time | Outcome |
+|---|---|---|---|
+| Q1 BRCA1 variants | Gene(NCBIGene:672) → is_sequence_variant_of → SequenceVariant | 229 ms | 20 ClinVar variants (e.g. ClinVar:17660-17684) |
+| Q2 PKU gene | Disease(MedGen:C0031485) → gene_associated_with_condition → Gene | 2:23 | NCBIGene:5053 (phenylalanine hydroxylase) |
+| Q3 glucose metabolism | Gene → participates_in → BiologicalProcess WHERE name~'glucose metabol' | 218 ms | Hexokinases, glucokinase, G6PD, GAPDH, etc. |
+
+Q2 was slow because (a) `gene_associated_with_condition` is small (7.6K) but planner statistics were stale and (b) MedGen Disease nodes need GIN like Gene did. Resolved in the same close-out: ANALYZE on every vertex + edge table + GIN on Disease + B-tree on every edge table's `start_id`/`end_id`. After the post-load tuning pass, the same Q2 should land in <500 ms.
+
+### What the post-load tuning pass added (2026-04-22)
+
+Beyond what the loader's Step 8 produced (B-tree functional indexes on `agtype_to_text(properties -> '"id"')` for every vertex label), this close-out added:
+
+1. GIN indexes on `properties` for Gene, Disease, BiologicalProcess, SequenceVariant. Required to make Cypher MATCH-by-property use an index instead of seq-scanning all rows. See Problem 12 below.
+2. B-tree indexes on `start_id` and `end_id` for all 14 edge tables. Required to make any relationship traversal use index lookups instead of nested-loop joins over the full edge table.
+3. `ANALYZE` on every vertex + edge table. Required because Postgres stats are zero on freshly-loaded tables until autovacuum or manual ANALYZE runs; without stats the planner picks bad plans.
+
+All three are folded back into `loader/index_builder.py` so the next deploy gets them automatically as Step 8.
+
+### Known data-quality issue surfaced during smoke tests
+
+MedGen Disease nodes have `name` populated with source-vocabulary codes like `"SNOMEDCT_US"` instead of human-readable names. Q2 returned `dname = "SNOMEDCT_US"` for phenylketonuria. Root cause is in the MedGen ETL (Phase 1), not in Phase 4. Filed as a Phase-2 followup; does not affect graph traversals, only display text.
+
+### Lesson
+
+Bulk loading a property graph into AGE is a three-layer operation, not one. Layer 1 is data load (rows in tables); Layer 2 is indexing (so Cypher can find rows fast); Layer 3 is statistics (so the planner picks the right plan). The Phase 3 loader handled Layer 1 and a partial Layer 2 (functional B-tree on `id` only). It missed the GIN indexes that the Cypher engine actually uses for MATCH-by-property, the edge-endpoint B-trees that any traversal needs, and the ANALYZE pass that lets the planner reason about the new tables. All three are needed before declaring a load "done." The updated `index_builder.py` now does all three.
+
+## Problem 12: Cypher MATCH does sequential scan despite functional indexes (2026-04-22)
+
+After the full load completed (115.4M nodes, 693.3M edges, 11 vertex indexes built), the first Cypher test query timed out after 4 minutes 17 seconds and was cancelled:
+
+```cypher
+MATCH (g:Gene {id: 'NCBIGene:672'})-[r]-(v:SequenceVariant) RETURN ... LIMIT 20
+```
+
+EXPLAIN showed why:
+
+```
+Gather  (cost=1000.00..2504879.01 rows=67536 width=32)
+  Workers Planned: 2
+  ->  Parallel Seq Scan on "Gene" g  (cost=0.00..2497125.41 rows=28140 width=32)
+        Filter: (properties @> '{"id": "NCBIGene:672"}'::agtype)
+```
+
+The planner is scanning all 67M Gene rows in parallel because the index does not match the filter predicate.
+
+### Root cause: filter shape vs index shape mismatch
+
+We built B-tree functional indexes during age-load Step 8:
+
+```sql
+CREATE INDEX ON ncbi_kg."Gene" (agtype_to_text(properties -> '"id"'));
+```
+
+This index only helps queries written as `WHERE agtype_to_text(properties -> '"id"') = 'NCBIGene:672'`.
+
+But the AGE Cypher engine compiles `MATCH (g:Gene {id: 'NCBIGene:672'})` into a different SQL filter: `properties @> '{"id": "NCBIGene:672"}'::agtype`. The `@>` is the JSONB-style containment operator on agtype. A B-tree functional index on a different expression cannot be used for a containment lookup, so Postgres falls back to a parallel seq scan.
+
+### Fix: GIN index on properties
+
+GIN indexes support the `@>` operator on agtype (agtype is JSONB-backed). Building a GIN index on `properties` lets the planner translate `properties @> '{"id":...}'::agtype` into an index scan.
+
+```sql
+CREATE INDEX idx_gene_props_gin ON ncbi_kg."Gene" USING gin (properties);
+```
+
+GIN build on the 19 GB / 67M-row Gene table takes ~5-15 min on the CPX42 and adds disk overhead. We have 92 GB free so this is safe.
+
+### Lesson
+
+When the loader builds indexes for an AGE graph, the index expression must match the SQL shape that the Cypher engine generates, not the Cypher syntax the human writes. For `MATCH (n:Label {prop: value})` and similar property-equality patterns, the engine emits an `@>` containment filter, so the right index is `USING gin (properties)`, not a B-tree on a property-extraction expression. The functional B-tree only helps if you also write your queries in raw SQL using `agtype_to_text(...)`. Update `loader/index_builder.py` to use GIN for any vertex label that will be looked up by a property in a Cypher MATCH.
+
 ## Phase 4.0 execution: VPS setup + rsync drops (2026-04-20)
 
 Started Phase 4.0 execution on 2026-04-20. The VPS provisioning, software install, and source upload went clean; the rsync transfer hit four separate problems before settling on an auto-retry loop. Sections in order of discovery.
@@ -515,6 +671,90 @@ Escalation protocol added mid-attempt-3 on 2026-04-21. When swap usage exceeded 
 2. Process crashes (OOM despite swap): agent cleans up leftover state on the VPS (stops any orphaned processes, confirms graph is in drop-safe state), then reports to the user and asks whether to upgrade. User decides.
 
 The rule generalizes: "paid infra changes require user confirmation" extends the bossman-mode rule about external data downloads. Any action that changes the billing profile is gated on explicit user approval, no exceptions.
+
+### Problem 10: VPS disk filling up mid-edge-load on attempt 3
+
+At 4h52m elapsed during age-load attempt 3, with 37.5% of edges loaded, disk free dropped from 285 GB at start to 49 GB. PostgreSQL data dir alone had grown from 0 to 85 GB. Linear extrapolation projected ~225 GB of postgres storage at full load completion plus ~50-80 GB of indexes, against only 49 GB free. About 175 GB short of comfortable headroom.
+
+Root cause. The disk budget for Phase 4.0 was sized assuming the KGX TSV files (135 GB) would be deleted before edge load completed and indexes were built. In practice we kept all 135 GB on disk because the loader was actively reading edges.tsv (92 GB), and we hadn't checked whether nodes.tsv (44 GB) was still open. We left 135 GB of source data on disk while postgres was inflating to its full size next to it.
+
+Fix without downtime. Inspect /proc/<pid>/fd/ to see which files the loader still has open. If only edges.tsv is open (it was), nodes.tsv is safe to delete because the loader finished Step 5 hours ago and closed the fd then. Same pattern works for the merge_report.md (never opened by the loader at all).
+
+```bash
+# On the VPS, find what the loader still reads
+ssh root@<vps> 'ls -la /proc/<pid>/fd/ | grep -E "kgx|merged"'
+# If only edges.tsv is in the list, nodes.tsv and merge_report.md are safe to delete
+ssh root@<vps> 'rm /root/data/kgx/merged/nodes.tsv /root/data/kgx/merged/merge_report.md'
+```
+
+Result. 44 GB freed in seconds. Disk free went from 49 GB to 92 GB without disrupting age-load. The loader did not notice because it was not touching those files anymore.
+
+Lesson. When a long-running loader streams from large source files, plan to delete each file as soon as the loader closes its fd on it. Do not wait for the entire job to finish. The procedure is: confirm fd closed via /proc/<pid>/fd, delete file, monitor that postgres growth slows or stays within remaining disk. For age-load specifically, nodes.tsv can be deleted right after Step 5 completes; edges.tsv can be deleted right after Step 7 completes (before Step 8 index build). merge_report.md can be deleted any time.
+
+Pre-emptive rule for future loaders. The loader could log when it closes a major source file ("[INFO] Released file handle on nodes.tsv at byte X") so the operator does not have to inspect /proc to know. Add this in the next loader refactor.
+
+### Problem 11: age-load attempt 3 crashed at Step 8 (index build) with DiskFull after successfully loading all 693M edges
+
+On 2026-04-22 at ~07:11 UTC, after ~10h 26min of wall clock, age-load attempt 3 crashed with `psycopg2.errors.DiskFull: could not extend file "base/16384/17845.2"`. The loader had successfully completed Step 7 (edges) at 07:08 UTC, loading all 693,295,991 edges in 37,600 seconds. Then Step 8 started `CREATE INDEX` on the first vertex label and hit disk-full at block 264070 of the third segment of the shared buffer pool.
+
+Disk state at crash: 99% used, 4.3 GB free of 301 GB. Postgres data dir: 173 GB. KGX edges.tsv: 92 GB. Swap file: 17 GB.
+
+What was at risk and what was preserved:
+
+Preserved:
+- All node data: 115,406,761 rows across 11 vertex labels, counts match Gate 2 expectations exactly (Gene 67.5M, Article 40.4M, SequenceVariant 4.47M, OrganismTaxon 2.74M, Disease 0.2M plus other labels)
+- All edge data: 693,295,991 rows in edge label tables (verified via COUNT after crash)
+- Postgres data dir integrity (no corruption, clean WAL state)
+- Swap file
+- pg_hba.conf trust rules
+- Source code, config, loader state
+
+Lost:
+- The per-label btree indexes on (properties -> 'id'). These are what makes Cypher MATCH queries fast. Without them, queries do sequential scans (~60 seconds each for a 67M-row Gene table).
+
+Recovery. Three steps, no re-load needed:
+
+1. Delete edges.tsv (92 GB freed). Loader process was dead so fd was already released. After delete: 96 GB free of 301 GB.
+2. Run CREATE INDEX for each vertex label directly via psql. Bypasses the loader (which would `--drop-existing` and wipe the 8 hours of data we just loaded). Indexes are a pure function of the already-loaded data; running them standalone is safe.
+3. Cypher validation queries can run as soon as each index completes.
+
+SQL for recovery:
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_gene_id ON ncbi_kg."Gene" ((properties -> '"id"'));
+CREATE INDEX IF NOT EXISTS idx_seqvar_id ON ncbi_kg."SequenceVariant" ((properties -> '"id"'));
+CREATE INDEX IF NOT EXISTS idx_disease_id ON ncbi_kg."Disease" ((properties -> '"id"'));
+CREATE INDEX IF NOT EXISTS idx_phenotype_id ON ncbi_kg."PhenotypicFeature" ((properties -> '"id"'));
+CREATE INDEX IF NOT EXISTS idx_article_id ON ncbi_kg."Article" ((properties -> '"id"'));
+CREATE INDEX IF NOT EXISTS idx_ontology_id ON ncbi_kg."OntologyClass" ((properties -> '"id"'));
+CREATE INDEX IF NOT EXISTS idx_taxon_id ON ncbi_kg."OrganismTaxon" ((properties -> '"id"'));
+CREATE INDEX IF NOT EXISTS idx_bioproc_id ON ncbi_kg."BiologicalProcess" ((properties -> '"id"'));
+CREATE INDEX IF NOT EXISTS idx_molact_id ON ncbi_kg."MolecularActivity" ((properties -> '"id"'));
+CREATE INDEX IF NOT EXISTS idx_cellcomp_id ON ncbi_kg."CellularComponent" ((properties -> '"id"'));
+CREATE INDEX IF NOT EXISTS idx_namedthing_id ON ncbi_kg."NamedThing" ((properties -> '"id"'));
+```
+
+Root cause of the disk pressure. Postgres needs temporary space while building indexes, and the btree builder for a 67M-row Gene table allocates a work area on disk before writing out the final index. This temporary space was not counted in our earlier disk projection; we only extrapolated from heap table growth. The heap growth during edge load was predictable at ~14 GB/hr; index creation allocates a burst of extra disk on top of that.
+
+Design lesson. When sizing disk for a graph load of this scale, budget the following in order:
+
+1. Source KGX files (delete each one as soon as loader's fd closes on it)
+2. Heap storage for nodes and edges in Postgres (roughly 2x the TSV size at BioLink density)
+3. Index temporary build space (roughly 30-50% of the table size per index, burst)
+4. Index final storage (roughly 20-30% of table size per index, persistent)
+5. Safety headroom (10 GB minimum, more for autovacuum and WAL headroom)
+
+For our 144 GB KGX input we needed:
+- 144 GB source
+- ~200-250 GB heap
+- ~40-80 GB index burst
+- ~25-50 GB index final
+- 10 GB safety
+- Total: 420-530 GB
+
+The CPX42 at 320 GB disk was ALWAYS going to struggle. The fact that we got to the index step before hitting the wall was a closer run than the numbers would have suggested.
+
+For future reloads. Either: (a) attach a 100+ GB block volume to the VPS before starting the load, or (b) upgrade the VPS tier, or (c) delete source KGX files earlier (immediately after each loader step closes the fd), or (d) move postgres tablespaces across filesystems (complex mid-load).
 
 ### Understanding: time cost vs money cost on a flat-rate VPS
 

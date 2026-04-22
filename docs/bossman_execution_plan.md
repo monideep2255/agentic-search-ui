@@ -90,6 +90,12 @@ graph TD
     style G2R fill:#2d6a2d,color:#fff
     style G2V fill:#2d6a2d,color:#fff
     style P30 fill:#2d6a2d,color:#fff
+    style P40 fill:#2d6a2d,color:#fff
+    style P40R fill:#2d6a2d,color:#fff
+    style P40L fill:#2d6a2d,color:#fff
+    style P40Q fill:#2d6a2d,color:#fff
+    style G3D fill:#2d6a2d,color:#fff
+    style G4V fill:#2d6a2d,color:#fff
 ```
 
 Legend: green = done, yellow = in progress, default = pending.
@@ -181,7 +187,7 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 |------|-----------|------|-------|--------|
 | Gate 1 | Phase 1.5 | Run medgen/gene/clinvar-etl, validate KGX | NCBI server `/export` (data migrated to laptop 2026-04-16) | DONE (2026-04-16) |
 | Gate 2 | Phase 2.2 | Run pubmed/taxonomy-etl + merge-etl, validate KGX | Windows laptop C: drive | DONE (2026-04-17) |
-| Gate 3 | Phase 4.0 | Load 5-db into AGE on cloud, Cypher queries pass, delete local KGX | Hetzner VPS | Pending |
+| Gate 3 | Phase 4.0 | Load 5-db into AGE on cloud, Cypher queries pass, delete local KGX | Hetzner VPS | PASSED (2026-04-22) |
 
 ### Coding time (bossman sessions)
 
@@ -197,8 +203,8 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 | 2.2 | 7 | 5-database merge | DONE (2026-04-16) |
 | Gate 2 | - | Run PubMed + Taxonomy + Gene (re-export) + merge-etl on laptop, validate | DONE (2026-04-17): 115M nodes + 693M edges, 99.99% cross-pipeline connectivity, streaming refactors required mid-gate (gene + merge both hit list-accumulate OOM on laptop-scale data) |
 | 3.0 | 8 | AGE loader code + fixture smoke test (no bulk local load) | DONE (2026-04-19): 7-module loader built; 44 unit tests + 4 docker smoke tests; 5-node + 3-edge round-trip confirmed via apache/age:latest |
-| 4.0 | 9 | Provision Hetzner VPS, rsync KGX, load 5-db on cloud | In progress (2026-04-21): VPS provisioned + PostgreSQL 15.17 + AGE 1.5.0 installed + `ncbi_kg` graph created + loader package deployed; 144 GB KGX rsync complete (17:38, 121 attempts via `scripts/rsync-retry.sh`). On-VPS `kgx validate` crashed (tool bug, not data). Awk node mismatches confirmed as quoted multi-line PubMed abstracts, not a data bug. age-load attempt 1 crashed (NamedThing table missing; fixed). Attempt 2 OOM-killed (16 GB RAM exhausted by curie_to_id dict; 16 GB swap added). Attempt 3 running overnight: Step 7 edges in progress, 89M of 693M loaded. Cypher test queries ready. Resume tomorrow per NEXT_STEPS.md. |
-| Gate 3 | - | Validate cloud graph, delete local KGX files. System complete. | Pending |
+| 4.0 | 9 | Provision Hetzner VPS, rsync KGX, load 5-db on cloud | DONE (2026-04-22): VPS provisioned + PostgreSQL 15.17 + AGE 1.5.0 installed + `ncbi_kg` graph created + loader package deployed; 144 GB KGX rsync complete (17:38, 121 attempts via `scripts/rsync-retry.sh`). kgx validate crashed (tool bug). Awk confirmed node mismatches were quoted multi-line PubMed abstracts, not a data bug. age-load attempt 1 crashed (NamedThing table missing; fixed). Attempt 2 OOM-killed (curie_to_id dict; 16 GB swap added). Attempt 3 succeeded overnight 2026-04-21 to 2026-04-22. Post-load tuning pass required (not in original plan): GIN indexes on 4 vertex labels, B-tree on start_id/end_id for all 14 edge tables, ANALYZE on all tables, and postgresql.conf tuning (8 ALTER SYSTEM settings). index_builder.py updated to run all four index passes + ANALYZE automatically in Steps 7-8 so future deploys do not need the manual pass. All 7 smoke queries passed. |
+| Gate 3 | - | Validate cloud graph, delete local KGX files. System complete. | PASSED (2026-04-22): 7 Cypher smoke queries passed (Q1 224ms, Q2 6ms, Q3 28ms, Q4 26s TP53, Q5 14ms, Q6 16s, Q7 24ms). V1 complete. |
 
 ### Wall-clock time (downloads and processing)
 
@@ -218,8 +224,8 @@ Every gate runs the same validation checklist on each pipeline's KGX output befo
 |------|------|-------|--------|
 | Week 1 | Phase 1 code + Gate 1 | NCBI server `/export` | DONE (2026-04-14 to 2026-04-16). Data migrated to Windows laptop on 2026-04-16 (see `docs/context/setup/setup-03_windows_laptop.md`). |
 | Week 2 | Phase 2 code + Gate 2 | Windows laptop C: drive | 2.0 + 2.1 + 2.2 code DONE (2026-04-16). Gate 2 DONE (2026-04-17): 115M nodes + 693M edges, 99.99% cross-pipeline connectivity; streaming refactors required mid-gate for gene and merge. |
-| Week 3 | Phase 3 (loader code) + Phase 4 (provision VPS, rsync from laptop, cloud load) + Gate 3 | Laptop then cloud | Phase 3 DONE (2026-04-19). Phase 4.0 started 2026-04-20: VPS + Postgres + AGE + loader all ready; 144 GB KGX rsync complete; kgx validate crashed (tool bug); awk node mismatches confirmed as quoted multi-line PubMed abstracts (not a data bug). age-load attempt 1 (2026-04-21): NamedThing crash, fixed. Attempt 2: OOM-killed, 16 GB swap added. Attempt 3: Step 7 edges running overnight (89M/693M). Resumes 2026-04-22. |
-| Week 4 | Phase 4 (rsync finishes + cloud load + Cypher validation) + Gate 3 | Cloud | In progress. Gate 3 = system complete for V1. dbSNP added via System 3 API after user research validates the need. |
+| Week 3 | Phase 3 (loader code) + Phase 4 (provision VPS, rsync from laptop, cloud load) + Gate 3 | Laptop then cloud | Phase 3 DONE (2026-04-19). Phase 4.0 started 2026-04-20: VPS + Postgres + AGE + loader all ready; 144 GB KGX rsync complete; kgx validate crashed (tool bug); awk node mismatches confirmed as quoted multi-line PubMed abstracts (not a data bug). age-load attempt 1 (2026-04-21): NamedThing crash, fixed. Attempt 2: OOM-killed, 16 GB swap added. Attempt 3: succeeded overnight 2026-04-21 to 2026-04-22. Post-load tuning (GIN + edge-endpoint B-tree + ANALYZE + postgresql.conf) required 2026-04-22. Gate 3 passed 2026-04-22. |
+| Week 4 | Phase 4 complete + Gate 3 passed | Cloud | DONE (2026-04-22). 115,406,761 nodes + 693,295,991 edges in AGE. All 7 smoke queries passed. V1 complete. dbSNP added via System 3 API after user research validates the need. |
 
 ### Why this order
 
@@ -398,10 +404,12 @@ Session 9: Phase 4.0  provision VPS + rsync KGX + cloud load
     |  awk verify nodes.tsv: 64,882 mismatched rows = quoted multi-line PubMed abstracts, NOT a data bug  [DONE 2026-04-21]
     |  age-load attempt 1: crashed (NamedThing vertex table missing) - fixed in schema.py  [DONE 2026-04-21]
     |  age-load attempt 2: OOM-killed (curie_to_id dict 15.4 GB RSS) - fixed with 16 GB swap  [DONE 2026-04-21]
-    |  age-load attempt 3: Step 7 edges running overnight (89M/693M loaded at last check)  [IN PROGRESS]
-    |  run Cypher test queries on cloud (3 queries ready)          [PENDING]
+    |  age-load attempt 3: completed overnight 2026-04-21 to 2026-04-22                [DONE 2026-04-22]
+    |  post-load tuning: GIN indexes + edge-endpoint B-tree + ANALYZE + postgresql.conf [DONE 2026-04-22]
+    |  index_builder.py updated to emit all four index passes + ANALYZE automatically   [DONE 2026-04-22]
+    |  7 Cypher smoke queries passed (gate3_results_2026-04-22.txt)                    [DONE 2026-04-22]
     v
---- GATE 3: cloud graph validated --- V1 COMPLETE ---
+--- GATE 3: cloud graph validated --- V1 COMPLETE --- (2026-04-22)
     |  delete laptop KGX intermediates
     |  handoff to System 3
     |  system complete

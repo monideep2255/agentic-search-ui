@@ -4,6 +4,7 @@ Tracks all data downloaded from NCBI FTP, with source URLs, file sizes, row coun
 
 ## Table of contents
 
+- [AGE graph (loaded 2026-04-22, Gate 3)](#age-graph-loaded-2026-04-22-gate-3)
 - [Storage location](#storage-location)
 - [Pipeline output vs live Entrez counts](#pipeline-output-vs-live-entrez-counts)
 - [Taxonomy (downloaded 2026-04-16, Gate 2)](#taxonomy-downloaded-2026-04-16-gate-2)
@@ -45,6 +46,72 @@ graph LR
     K5 --> M
     M --> AGE["PostgreSQL + AGE"]
 ```
+
+## AGE graph (loaded 2026-04-22, Gate 3)
+
+The merged KGX was loaded into PostgreSQL 15.17 + Apache AGE 1.5.0 on the Hetzner CPX42 at `46.225.128.133`. Database: `ncbi_kg`. AGE schema: `ncbi_kg`.
+
+Live reference: `docs/Knowledge_graph_on_server_reference.md` (A-Z operations guide, index listing, query examples).
+
+### Final vertex counts (Q6 result, 2026-04-22)
+
+| Label | Count |
+|-------|-------|
+| Gene | 67,536,325 |
+| Article | 40,387,670 |
+| SequenceVariant | 4,467,468 |
+| OrganismTaxon | 2,736,611 |
+| Disease | 200,845 |
+| OntologyClass | 30,790 |
+| BiologicalProcess | 16,901 |
+| NamedThing | 10,580 |
+| PhenotypicFeature | 9,881 |
+| MolecularActivity | 6,978 |
+| CellularComponent | 2,712 |
+| Total | 115,406,761 |
+
+### Final edge counts (Q7 result, 2026-04-22)
+
+| Edge label | Count |
+|------------|-------|
+| has_mesh_annotation | 349,158,787 |
+| mentioned_in | 124,032,423 |
+| in_taxon | 67,536,046 |
+| actively_involved_in | 44,832,765 |
+| participates_in | 40,767,507 |
+| located_in | 31,889,215 |
+| orthologous_to | 17,421,811 |
+| has_phenotype | 6,076,764 |
+| is_sequence_variant_of | 4,407,168 |
+| cited_in | 3,924,820 |
+| subclass_of | 2,832,676 |
+| close_match | 410,000 |
+| gene_associated_with_condition | 7,644 |
+| exact_match | 0 |
+| Total | 693,295,991 |
+
+### Indexes (post-load tuning pass, 2026-04-22)
+
+The loader's index_builder.py was updated after Gate 3 to emit all four passes automatically (Steps 7-8 going forward). For this load the following indexes were applied manually:
+
+- B-tree functional index on `agtype_to_text(properties -> '"id"')` for all 11 vertex labels (built by original Step 8)
+- GIN index on `properties` for Gene, Disease, BiologicalProcess, SequenceVariant (required for Cypher MATCH-by-property, see learnings.md Problem 12)
+- B-tree on `start_id` and `end_id` for all 14 edge tables (required for relationship traversal)
+- `ANALYZE` on all vertex + edge tables (required after bulk load; autovacuum does not run on freshly-loaded tables)
+
+### Smoke test results (Gate 3, 2026-04-22)
+
+| Query | Shape | Time | Result |
+|-------|-------|------|--------|
+| Q1 BRCA1 variants | Gene to SequenceVariant | 224 ms | 10 of 20 ClinVar variants (LIMIT 10) |
+| Q2 PKU gene | Disease to Gene | 6 ms | PAH (NCBIGene:5053) |
+| Q3 glucose metabolism | Gene to BiologicalProcess | 28 ms | 10 genes |
+| Q4 TP53 articles | Gene to Article | 26 s | most-cited gene, no edge index on mentioned_in at test time |
+| Q5 human genes | Taxon to Gene | 14 ms | 10 human genes |
+| Q6 node counts | - | 16 s | 11 labels, 115.4M total |
+| Q7 edge counts | - | 24 ms | 14 labels, 693.3M total |
+
+Results saved at `tests/cypher/gate3_results_2026-04-22.txt`. Canonical query suite at `tests/cypher/gate3_queries.sql`.
 
 ## Storage location
 
