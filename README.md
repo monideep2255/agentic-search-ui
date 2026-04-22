@@ -10,13 +10,13 @@ Downloads bulk data from NCBI FTP, parses it, maps it to the BioLink model, vali
 
 ## Status
 
-Phase 3 complete: AGE loader built and smoke-tested (2026-04-19). Phase 4.0 in progress (2026-04-21): Hetzner VPS provisioned, 144 GB KGX rsynced. kgx validate crashed (tool bug, not data). Awk node mismatches confirmed as quoted multi-line PubMed abstracts, not a data bug. age-load attempt 3 running overnight: Step 7 edges in progress (89M of 693M loaded). Gate 3 pending.
+V1 COMPLETE (2026-04-22). Phase 4.0 + Gate 3 PASSED. The 5-database AGE graph is live on Hetzner CPX42 (46.225.128.133), holding 115,406,761 nodes + 693,295,991 edges. All 7 Cypher smoke queries return correct results in milliseconds to seconds. See `docs/Knowledge_graph_on_server_reference.md` for the live-graph A-Z reference.
 
 | System | Status |
 |--------|--------|
-| System 1: data pipelines | Phase 4.0 in progress (2026-04-21). VPS provisioned, KGX rsynced (144 GB). kgx validate crashed (tool bug). Awk node mismatches confirmed as quoted multi-line abstracts (not a data bug). age-load attempt 3 running overnight (Step 7 edges, 89M/693M). Gate 3 pending. |
-| System 2: knowledge graph | AGE loader module built (system-02-knowledge-graph/loader/). Full load in Phase 4. |
-| System 3: search agent | Not started |
+| System 1: data pipelines | V1 complete (2026-04-22). All 5 ETL pipelines built, validated against real NCBI data, and merged into a single BioLink-compliant KGX. |
+| System 2: knowledge graph | Live on cloud VPS. 115.4M nodes + 693.3M edges loaded into PostgreSQL 15 + Apache AGE 1.5.0. Queryable via openCypher. |
+| System 3: search agent | Lives in a separate repository. Connects to this graph as a client. |
 
 ---
 

@@ -12,8 +12,8 @@ Stack: Python 3.11+, LinkML, BioLink 4.x, KGX, PostgreSQL 15 + Apache AGE.
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | System 1: data pipelines | Phase 1 and Gate 1 complete (67.5M Gene, 4.4M ClinVar, 198K MedGen nodes produced on real data). Phase 2 complete: Gate 2 done (2026-04-17), 5-database merge validated on real data. Phase 3 complete: AGE loader done (2026-04-19), 5-node + 3-edge round-trip smoke test passed via Docker Desktop. Phase 4.0 in progress (2026-04-21): Hetzner VPS provisioned, PostgreSQL 15.17 + AGE 1.5.0 installed, 144 GB KGX rsynced to VPS. kgx validate crashed (tool bug, not data). awk found 64,882 mismatched node rows; root cause confirmed as quoted multi-line PubMed abstracts, not a data bug. age-load attempt 1 crashed (missing NamedThing table, fixed in schema.py). Attempt 2 OOM-killed (curie_to_id dict exceeded 16 GB RAM; fixed by adding 16 GB swap). Attempt 3 running overnight (2026-04-21): Step 7 edges in progress, 89M of 693M loaded at last check. Cypher test queries ready. Gate 3 pending. See NEXT_STEPS.md at repo root. |
-| 2 | System 2: knowledge graph | AGE loader module built (system-02-knowledge-graph/loader/). Full load deferred to Phase 4 on cloud VPS. |
+| 1 | System 1: data pipelines | V1 COMPLETE (2026-04-22). Phase 4.0 + Gate 3 PASSED. 5-database AGE graph live on Hetzner CPX42 (46.225.128.133): 115,406,761 nodes + 693,295,991 edges across 11 vertex labels and 14 edge labels. All 7 Cypher smoke queries pass (Q1 BRCA1 224ms, Q2 PKU 6ms, Q3 glucose 28ms, Q4 TP53 26s most-cited gene, Q5 taxon 14ms, Q6 16s full count, Q7 24ms). Loader's `index_builder.py` updated to do all four index passes (functional B-tree + graphid PK + GIN + edge-endpoint B-tree) plus ANALYZE automatically as Steps 7-8. Postgres tuned for 16 GB box. See `docs/Knowledge_graph_on_server_reference.md` for the live-graph A-Z reference. |
+| 2 | System 2: knowledge graph | AGE graph live on cloud VPS, 115.4M nodes + 693.3M edges loaded 2026-04-22, queryable via openCypher. See `docs/Knowledge_graph_on_server_reference.md`. |
 | 3 | System 3: search agent | Lives in a separate repository. Do not build here. |
 
 ---
@@ -77,7 +77,7 @@ Phase 1 first: Gene + ClinVar + MedGen. These three form the core triangle and s
 Phase 1 (weeks 1-2):  Gene ETL -> ClinVar ETL -> MedGen ETL -> first merge test  [DONE 2026-04-14]
 Phase 2 (weeks 3-4):  PubMed ETL -> Taxonomy ETL -> five-database merge  [DONE 2026-04-17]
 Phase 3 (weeks 5-6):  AGE loader code -> Cypher validation (loader code only; no local load)  [DONE 2026-04-19]
-Phase 4 (week 7):     Cloud deploy: provision Hetzner VPS -> rsync KGX from laptop -> load into AGE on cloud -> Gate 3 = V1 complete  [IN PROGRESS 2026-04-21: rsync done, kgx validate crashed (tool bug), awk node mismatches confirmed as quoted multi-line abstracts (not a bug), age-load attempt 3 running overnight (Step 7 edges, 89M/693M loaded). Gate 3 pending; resume tomorrow per NEXT_STEPS.md]
+Phase 4 (week 7):     Cloud deploy: provision Hetzner VPS -> rsync KGX from laptop -> load into AGE on cloud -> Gate 3 = V1 complete  [DONE 2026-04-22: V1 complete, 7 Cypher smoke queries passed, post-load tuning (GIN + edge B-tree + ANALYZE + postgres.conf) folded back into loader's index_builder.py]
 ```
 
 System 3 (search agent, FastAPI, LangGraph, UI) is tracked in the separate repository. Do not build here.
