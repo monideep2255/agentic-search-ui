@@ -10,7 +10,10 @@ Downloads bulk data from NCBI FTP, parses it, maps it to the BioLink model, vali
 
 ## Status
 
-V1 COMPLETE (2026-04-22). Phase 4.0 + Gate 3 PASSED. The 5-database AGE graph is live on Hetzner CPX42 (46.225.128.133), holding 115,406,761 nodes + 693,295,991 edges. All 7 Cypher smoke queries return correct results in milliseconds to seconds. See `docs/Knowledge_graph_on_server_reference.md` for the live-graph A-Z reference.
+- V1 COMPLETE (2026-04-22)
+- Phase 4.0 + Gate 3 PASSED. The 5-database AGE graph is live on Hetzner CPX42 (46.225.128.133), holding 115,406,761 nodes + 693,295,991 edges. 
+- All 7 Cypher smoke queries return correct results in milliseconds to seconds.
+- See `docs/Knowledge_graph_on_server_reference.md` for the live-graph A-Z reference.
 
 | System | Status |
 |--------|--------|

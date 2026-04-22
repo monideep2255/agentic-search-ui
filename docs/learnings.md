@@ -97,6 +97,41 @@ If all three return the expected shape and size, Gate 3 passes and V1 is complet
 
 The cost of a graph load is proportional to the number of rows, not the size of the source file. A 500M-row node set takes 10x longer than a 50M-row set even if the byte size is only 3x larger. When planning a new pipeline, estimate the load time from row count and expected insert rate, not from file size. The file size drives rsync time; the row count drives load time. Mixing these up leads to timeline surprises of the kind this session produced.
 
+## Problem 14: Hetzner does not allow disk shrink on rescale (2026-04-22)
+
+Tried to follow the planned post-V1 downgrade from CPX42 (320 GB NVMe) to CPX32 (160 GB NVMe) by clicking Rescale in the Hetzner console. CPX32 was greyed out. Only CPX52, CPX62, etc. were available.
+
+### Root cause
+
+Hetzner's Rescale operation can only grow the local disk, never shrink it. Once a server is provisioned with 320 GB, no in-place rescale will ever land it on a smaller-disk SKU. The constraint is technical: the local NVMe partition is allocated and formatted at provisioning, and shrinking it would risk data loss if the filesystem has data in the upper extents.
+
+This is not documented prominently in the Hetzner pricing pages. The "Rescale" button in the console silently filters the picker to "same disk size or larger" SKUs without explaining why.
+
+### The actual downsize path
+
+The way to land on CPX32 is a fresh-server-from-snapshot flow:
+
+1. Take a snapshot of the current CPX42 (Section N of Knowledge_graph_on_server_reference.md).
+2. Create a new server in the console; pick CPX32; in the Image picker switch to the Snapshots tab and pick the snapshot.
+3. New server boots with the snapshot data restored. Note its new IP.
+4. SSH to the new server, run the smoke suite, confirm everything works.
+5. Delete the old CPX42 in the console (billing stops immediately).
+6. Update the IP address in CLAUDE.md, AGENTS.md, README.md, Knowledge_graph_on_server_reference.md, and any other doc that hardcodes the IP.
+
+Brief overlap during step 3 to step 5 (both servers running for the verification window) costs roughly $0.10.
+
+### Also: CPX32 disk size was misdocumented
+
+Earlier docs (DECISIONS row 67, Knowledge_graph_on_server_reference Section P, bossman_execution_plan Section P) said CPX32 has 240 GB NVMe. Actual is 160 GB. The 240 GB figure was a planning-time guess that was never verified against Hetzner's pricing page. Corrected in the Section P + the box-and-software-versions table on 2026-04-22.
+
+Implication: 100 GB graph + 60 GB headroom on CPX32. Tight. Adequate for a read-only steady state but does not leave room for a second copy of the data, an experimental new load, or much swap. A future data refresh requires temporarily upgrading back to CPX42 (or larger) for the load window, snapshotting, then restoring to a new CPX32.
+
+### Lesson
+
+Cloud provider pricing pages list specs but rarely list operational constraints. Before planning a downsize as a single button-click, verify it actually exists with the provider's docs, support, or a test-account experiment. The cost of a 5-minute lookup is far lower than the cost of mid-procedure surprise. For Hetzner specifically: rescale grows only; downsize is snapshot-and-restore.
+
+Decision: stay on CPX42 for the first month post-V1 (+$10/mo over CPX32) until there is observed System 3 traffic to size against. See DECISIONS row 80.
+
 ## Problem 13: AGE inheritance silently strips every Postgres guarantee (2026-04-22)
 
 This is the meta-problem behind Problem 12 and most of the 2026-04-22 close-out churn. It deserves its own section because it explains why "load completed successfully" is not the same as "graph is queryable at production speed."

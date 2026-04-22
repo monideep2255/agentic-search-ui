@@ -33,7 +33,7 @@ The graph is the production target for System 3, which is a separate repository.
 
 | Component | Version | Notes |
 |---|---|---|
-| Hetzner cloud server | CPX42 | 8 vCPU, 16 GB RAM, 320 GB NVMe |
+| Hetzner cloud server | CPX42 (8 vCPU, 16 GB RAM, 320 GB NVMe) for the load; planned downsize to CPX32 (8 vCPU, 16 GB RAM, 160 GB NVMe) for steady state | Disk shrink requires snapshot-restore-to-new-server, see Section P |
 | Operating system | Ubuntu 22.04 LTS | |
 | Swap | 16 GB file-backed at `/swapfile`, persistent via fstab | Added during age-load to absorb the curie_to_id dict spike |
 | PostgreSQL | 15.17 | Default Ubuntu apt package |
@@ -240,7 +240,16 @@ A small number of dangling endpoints (~81K) are filled with `NamedThing` stub no
 
 The graph is read-mostly. There is no autovacuum bloat concern under normal use because nothing writes to it after the bulk load. The only maintenance items are:
 
-Snapshot via the Hetzner console after any major change. Costs about $1 to $2 per month per snapshot. This is the disaster-recovery backup; restoring takes about 10 to 20 minutes.
+Snapshot via the Hetzner console after any major change. This is the disaster-recovery backup; restoring takes about 10 to 20 minutes.
+
+Snapshot cost in practice: Hetzner snapshots are stored compressed (zstd or lz4 under the hood), and Postgres + AGE data compresses extremely well. Empirical: the 2026-04-22 V1 snapshot showed roughly 3.5x compression. Live disk used was ~100 GB; the snapshot billed for only 28 GB. At Hetzner's €0.0119/GB/mo rate, that is about €0.33/month (~$0.36). Why the data compresses so well:
+
+- AGE/Postgres on-disk format mixes binary tuples with JSONB-style agtype payloads. JSONB is verbose with repeated property keys (`"id"`, `"name"`, `"source"`, `"source_url"` repeat 115M times in the nodes table). zstd squashes the repetition aggressively.
+- Index data (B-tree, GIN) has heavy structural repetition.
+- Empty pages inside tablespace files compress to almost nothing.
+- Free space on the NVMe is zeroed by the filesystem and zstd compresses zeros to a few bytes.
+
+A 3-5x compression ratio on a Postgres data directory is typical. Budget about $0.40-$1.00/month per snapshot; multiple snapshots over time bill independently and old ones can be deleted to roll forward.
 
 Re-run `ANALYZE` if you ever bulk-insert new edges or vertices, for example a future data refresh. The standard one-liner:
 
@@ -270,16 +279,36 @@ A full refresh is rerunning Phase 1 (ETL all 5 databases from FTP), Phase 2 (mer
 
 ## P. Cost and downgrade plan
 
-Steady state after Gate 3 close-out is approximately $24 per month on Hetzner CPX32 (8 vCPU, 16 GB RAM, 240 GB disk). The CPX42 we provisioned for the load is roughly $34 per month and will be downgraded after the snapshot is taken. Bandwidth on Hetzner is metered but the included quota (20 TB per month) is far above anything System 3 will ever use.
+Verified pricing as of 2026-04-22 (post-April-1-2026 Hetzner adjustment, which raised cloud prices ~30-37% across the board):
+
+| Item | EUR/month | USD/month (at €1≈$1.08) |
+|---|---|---|
+| Hetzner CPX42 in Nuremberg (8 vCPU, 16 GB RAM, 320 GB NVMe) | €25.99 | ~$28.07 |
+| Primary IPv4 address | included | $0 |
+| Snapshot `ncbi_kg_v1_2026-04-22` (28 GB compressed × €0.0143/GB/mo) | €0.40 | ~$0.43 |
+| Bandwidth (20 TB/month included for EU; expected use under 1 GB) | €0 | $0 |
+| **Total all-in** | **€26.39** | **~$28.50** |
+
+Round to $30/month for FX volatility headroom. The earlier $34/month estimate was stale; it predates the April 1, 2026 pricing publication and assumed USD-zone Hetzner pricing rather than EU. Sources: hetzner.com/cloud/regular-performance, docs.hetzner.com/general/infrastructure-and-availability/price-adjustment, docs.hetzner.com/general/infrastructure-and-availability/ipv4-pricing.
+
+Steady-state alternative if you ever downsize: CPX32 (8 vCPU, 16 GB RAM, 160 GB NVMe) at €19.99/mo ≈ $21.60/mo. Saves about €6/mo (~$6.50). With the snapshot, all-in would be roughly €20.39/mo ≈ ~$22/mo.
+
+Important: Hetzner does NOT allow disk shrink on rescale. The "Rescale" action shows CPX52, CPX62, etc. but greys out CPX32 because the local disk cannot be reduced below the current allocation. The actual downgrade path is a snapshot-restore-to-new-server flow.
+
+Important: Hetzner does NOT allow disk shrink on rescale. The "Rescale" action shows CPX52, CPX62, etc. but greys out CPX32 because the local disk cannot be reduced below the current allocation. The actual downgrade path is a snapshot-restore-to-new-server flow.
 
 Downgrade procedure (only after a verified snapshot):
 
-1. Stop Postgres: `sudo systemctl stop postgresql`
-2. Hetzner console: rescale CPX42 to CPX32. Disk shrinks from 320 GB to 240 GB.
-3. Wait for reboot, start Postgres: `sudo systemctl start postgresql`
-4. Run the smoke-test suite to confirm everything still works.
+1. Take and verify the snapshot of the CPX42 (Section N).
+2. Hetzner console: Servers, Add Server, choose CPX32, then in the Image picker select the Snapshots tab and pick the snapshot from step 1. Same datacenter, same SSH key. Create.
+3. Wait for the new CPX32 to boot. Note its new IP address.
+4. SSH into the new server and run the smoke-test suite (`tests/cypher/gate3_queries.sql`) to confirm every Cypher query still passes at the new size.
+5. Only after the new server is verified: delete the old CPX42 in the Hetzner console. Billing on the old server stops immediately.
+6. Update the IP address in `CLAUDE.md`, `AGENTS.md`, `README.md`, `docs/Knowledge_graph_on_server_reference.md`, and any other file that hardcodes `46.225.128.133`.
 
-The graph data on disk is roughly 95 to 150 GB steady state, so 240 GB is comfortable.
+The graph data on disk is roughly 100 GB steady state, so 160 GB on CPX32 leaves about 60 GB of headroom. Tight but workable for a read-only graph. A full refresh (rerun all pipelines) would not fit on CPX32 because it needs ~250-300 GB peak during the load window; for a refresh, temporarily upgrade back to CPX42 (or larger), do the load, snapshot, restore-to-CPX32, delete the temporary CPX42. Same procedure as the initial downgrade.
+
+Brief overlap during the snapshot-restore flow: both servers run for the few hours it takes to verify the new one. Cost is roughly $0.10 for the overlap window.
 
 ## Q. What is NOT in scope for this graph
 
