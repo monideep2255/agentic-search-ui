@@ -264,7 +264,7 @@ Local (current, post 2026-04-16 migration): all data on the Windows laptop C: dr
 
 Prior arrangement (retired 2026-04-16): data was symlinked from the repo to `/export/home/chakrabortim2/data/` on the NCBI server. `/export` is a 4.3TB LVM volume shared across ~925 machine users with no quota protection, which made the 51GB footprint a good-citizen concern and exposed the pipeline to silent disk contention. Migrated to laptop to eliminate both risks.
 
-Cloud: PostgreSQL + AGE database on Hetzner VPS (Nuremberg datacenter). This is the production instance that System 3 connects to. Cost: ~$34/month (CPX42: 8 vCPU, 16GB RAM, 320GB local disk + IPv4 address). No separate volume needed.
+Cloud: PostgreSQL + AGE database on Hetzner VPS (Nuremberg datacenter). This is the production instance that System 3 connects to. Cost: ~€26.39/mo all-in (~$30/mo) (CPX42: 8 vCPU, 16GB RAM, 320GB local disk + IPv4 address + snapshot). No separate volume needed. See DECISIONS.md row 80 for verified post-April-1-2026 Hetzner pricing and the CPX32-downsize deferral rationale.
 
 ## Skill chain (every phase follows this)
 
@@ -594,7 +594,7 @@ Rationale: laptop C: drive has 355GB free, but holding the 5-database KGX (~140G
 
 Branch: `phase/4.0-cloud-deploy`
 
-Provision Hetzner CPX42 (8 vCPU, 16GB RAM, 320GB disk, Nuremberg datacenter, ~$34/month with IPv4). Install PostgreSQL + AGE. rsync merged KGX from the Windows laptop C: drive to the VPS. Run the AGE loader from Phase 3.0 on the VPS to load all 5 databases. Verify Cypher queries work remotely. After cloud validation passes, delete laptop KGX intermediates.
+Provision Hetzner CPX42 (8 vCPU, 16GB RAM, 320GB disk, Nuremberg datacenter, ~€25.99/mo all-in ~$28.50/mo post-April-1-2026 pricing). Install PostgreSQL + AGE. rsync merged KGX from the Windows laptop C: drive to the VPS. Run the AGE loader from Phase 3.0 on the VPS to load all 5 databases. Verify Cypher queries work remotely. After cloud validation passes, delete laptop KGX intermediates.
 
 Actual merged KGX size (verified 2026-04-19 post-Gate-2): 144 GB total (nodes.tsv 46.5 GB + edges.tsv 97.8 GB + merge_report.md). The earlier 75-95 GB estimate was low. Over typical home Wi-Fi upload (20-50 Mbps), wall-clock transfer is 6 to 12 hours with `--compress` enabled.
 
@@ -636,15 +636,15 @@ Pre-load validation (before running AGE loader on cloud):
 
 Gate 3 passes when cloud Cypher queries return the expected results.
 
-Post-Gate 3 steps:
+Post-Gate 3 steps (actual, 2026-04-22):
 
-1. Delete KGX files on the VPS (~75-95GB freed)
-2. Delete KGX files on the laptop (~75-95GB freed)
-3. Snapshot the server via Hetzner console (~$1-2/month at $0.01/GB)
-4. Downgrade from CPX42 (320GB, ~$34/month) to CPX32 (240GB, ~$24-26/month)
-5. Steady-state: database serves Cypher queries to System 3, no writes, ~$24-26/month
+1. Delete KGX files on the VPS (~144GB freed) - DONE
+2. Delete KGX files on the laptop (~144GB freed) - DONE
+3. Snapshot the server via Hetzner console (28 GB compressed, ~€0.40/mo) - DONE
+4. Stay on CPX42 for first month post-V1 (deferred CPX32 downsize; see DECISIONS.md row 80). Revisit 2026-05-22.
+5. Steady-state: database serves Cypher queries to System 3, no writes, ~€26.39/mo all-in (~$30/mo with FX headroom).
 
-When data refresh is needed (re-run pipelines with newer NCBI dumps): temporarily upgrade back to CPX42 for the load window, then downgrade again.
+When data refresh is needed (re-run pipelines with newer NCBI dumps): re-run pipelines on the laptop, rsync fresh KGX to VPS, reload. Temporarily upgrade to CPX52 if curie_to_id dict RAM pressure recurs.
 
 ## Post-V1: user research and feedback loop
 

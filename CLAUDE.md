@@ -47,6 +47,7 @@ This repo builds Layer 1 (fully ingested knowledge graph) of a three-layer data 
 | `context/setup/setup-03_windows_laptop.md` | One-time setup guide for Windows laptop (repo clone, symlinks, venv, data rsync) | When setting up a new local dev environment |
 | `context/setup/setup-04_hetzner_vps.md` | End-to-end Hetzner CPX42 provisioning: SSH keys from personal computer and work laptop, rsync install, PostgreSQL + AGE install, pre-Phase-4.0 verification | Before Phase 4.0 cloud deploy work |
 | `context/setup/setup-05_rsync_windows.md` | First-principles rsync on a locked-down Windows laptop: Scoop + cwRsync install, cygdrive path format, cwRsync vs Windows OpenSSH pipe incompatibility, HOME env var fix, exact working command, transfer time estimate | Before running Phase 4.0 rsync from the work laptop |
+| `Knowledge_graph_on_server_reference.md` | A-Z operations reference for the live V1 graph on Hetzner CPX42: SSH access, Cypher query examples, index listing, node/edge counts, cost breakdown, snapshot procedure | Before querying or maintaining the live graph |
 
 ## Canonical reference pipeline
 
@@ -155,4 +156,4 @@ All rules are in `.claude/rules/` and loaded automatically. No need to duplicate
 
 ---
 
-Last updated: 2026-04-21
+Last updated: 2026-04-22

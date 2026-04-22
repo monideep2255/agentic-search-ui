@@ -21,6 +21,20 @@ Downloads bulk data from NCBI FTP, parses it, maps it to the BioLink model, vali
 | System 2: knowledge graph | Live on cloud VPS. 115.4M nodes + 693.3M edges loaded into PostgreSQL 15 + Apache AGE 1.5.0. Queryable via openCypher. |
 | System 3: search agent | Lives in a separate repository. Connects to this graph as a client. |
 
+### Monthly cost
+
+Verified post-April-1-2026 Hetzner pricing for the steady-state V1 graph:
+
+| Item | EUR/month | USD/month (at €1≈$1.08) |
+|---|---|---|
+| Hetzner CPX42 in Nuremberg (8 vCPU, 16 GB RAM, 320 GB NVMe) | €25.99 | ~$28.07 |
+| Primary IPv4 address | included | $0 |
+| Snapshot `ncbi_kg_v1_2026-04-22` (28 GB compressed × €0.0143/GB/mo) | €0.40 | ~$0.43 |
+| Bandwidth (20 TB included; expected use under 1 GB) | €0 | $0 |
+| **Total all-in** | **€26.39** | **~$28.50** |
+
+Round to **$30/month** for FX volatility headroom. CPX42 was kept (instead of downsizing to CPX32 at ~$22/mo) for the first month post-V1 to leave headroom while observing System 3 traffic. See `docs/Knowledge_graph_on_server_reference.md` Section P and `DECISIONS.md` row 80.
+
 ---
 
 ## Architecture
@@ -96,6 +110,7 @@ python system-01-data-pipelines/gene/pipeline.py
 | [BioLink schema](schema/biolink_ncbi.yaml) | LinkML schema with 10 node types, 14 predicates |
 | [Decisions](DECISIONS.md) | Architecture and implementation decisions with rationale |
 | [Local setup](docs/context/setup/setup-03_windows_laptop.md) | One-time migration guide for Windows laptop (repo clone, symlinks, venv, data rsync, verification) |
+| [Live graph reference](docs/Knowledge_graph_on_server_reference.md) | A-Z operations guide for the live V1 graph: SSH access, Cypher queries, index listing, node/edge counts, cost breakdown, snapshot procedure |
 
 ---
 

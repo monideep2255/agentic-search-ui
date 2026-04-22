@@ -11,7 +11,7 @@ Architecture and implementation decisions made during this project. Append-only 
 - 2026-04-17: Gate 2 mid-gate streaming refactors (merger, gene) + post-merge per-db KGX deletion - rows 37-39
 - 2026-04-19: AGE loader direct INSERT + curie_to_id map + docker marker + drop dbSNP from Layer 1 + post-Gate 3 cost optimization - rows 40-44
 - 2026-04-20: Phase 4.0 rsync auto-retry loop + `--append` flag added after attempt-24 hang - rows 45-47
-- 2026-04-20: Skip on-VPS kgx revalidation after tool crash, proceed straight to age-load - row 67 (NOTE: subsequent on-VPS awk surfaced 64,882 mismatched node rows, ~0.056%, requires investigation before age-load is launched tomorrow; see NEXT_STEPS.md)
+- 2026-04-20: Skip on-VPS kgx revalidation after tool crash, proceed straight to age-load - row 67 (NOTE: subsequent on-VPS awk surfaced 64,882 mismatched node rows, ~0.056%; root cause confirmed as quoted multi-line PubMed abstracts, not a data bug; age-load succeeded on attempt 3)
 - 2026-04-21: Add NamedThing vertex label to loader schema after attempt-1 crash - row 68
 - 2026-04-21: Add 16 GB swap on VPS to let curie_to_id dict exceed 16 GB RAM - row 69
 - 2026-04-21: Mid-load disk rescue (delete nodes.tsv) + autonomous overnight monitor authorization - rows 74-75
