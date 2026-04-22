@@ -2,7 +2,7 @@
 
 Phase-by-phase implementation plan for the 5 NCBI ETL pipelines. Each phase is one bossman session with integrated skill chain and branch+MR workflow. Use `/bossman-mode --phase N` to execute.
 
-Created: 2026-04-13. Last updated: 2026-04-21 (Phase 4.0 in progress: Hetzner CPX42 provisioned, PostgreSQL 15.17 + Apache AGE 1.5.0 installed on VPS, `ncbi_kg` graph created, loader package deployed to `/root/repo/`, 144 GB KGX rsync complete at 17:38 after 121 retry attempts via `scripts/rsync-retry.sh`. On-VPS `kgx validate` crashed at 1h48m (Python TypeError in tool, not data). On-VPS awk found 64,882 mismatched node rows; root cause confirmed as quoted multi-line PubMed abstracts, not a data bug. age-load attempt 1 crashed (missing NamedThing vertex table; fixed in schema.py + test). Attempt 2 OOM-killed (curie_to_id dict hit 15.4 GB RSS; fixed by adding 16 GB swap). Attempt 3 launched 2026-04-21 evening; Step 7 edges running overnight (89M of 693M loaded at last check). Gate 3 pending; see `docs/learnings.md` and `NEXT_STEPS.md`).
+Created: 2026-04-13. Last updated: 2026-04-22 (Phase 4.0 + Gate 3 PASSED. 5-database AGE graph live on Hetzner CPX42: 115,406,761 nodes + 693,295,991 edges. All 7 Cypher smoke queries return correct results in milliseconds to seconds. Post-load tuning pass added on top of the loader's original Step 8: GIN indexes on properties, unique B-tree on the graphid id column, B-tree on start_id and end_id for every edge label, ANALYZE on every table, and postgresql.conf tuned for the 16 GB box. Loader's `index_builder.py` updated so future deploys do all four index passes + ANALYZE automatically. V1 complete. Merged to main as commit `de43914` 2026-04-22).
 
 ## Table of contents
 
@@ -60,7 +60,7 @@ graph TD
         G2V --> P30
     end
 
-    subgraph "Phase 4: cloud provision + load"
+    subgraph "Phase 4: cloud provision + load [DONE]"
         P40[4.0 Provision Hetzner VPS]
         P40R[rsync KGX to VPS]
         P40L[Load 5 databases into AGE on cloud]
@@ -68,12 +68,12 @@ graph TD
         P30 --> P40 --> P40R --> P40L --> P40Q
     end
 
-    subgraph "Gate 3: cloud graph validated"
+    subgraph "Gate 3: cloud graph validated [PASSED]"
         G3D[Delete local KGX files]
         P40Q --> G3D
     end
 
-    subgraph "Gate 3: complete"
+    subgraph "V1 complete [DONE]"
         G4V[Full 5-db graph validation]
         G3D --> G4V
     end
