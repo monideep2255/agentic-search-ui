@@ -2,32 +2,31 @@
 
 End-to-end setup for the Hetzner Cloud VPS that hosts the production PostgreSQL + Apache AGE knowledge graph. Covers provisioning the server, getting SSH access from both the personal computer and the work laptop, installing rsync, and preparing the server for the Phase 4.0 load.
 
+Status as of 2026-04-20: Parts A, B, C are done and the server is live. Part D was run as part of `/bossman-mode --phase 4.0`: PostgreSQL 15.17 + Apache AGE 1.5.0 are installed, the `ncbi_kg` database exists, the `ncbi_kg` graph was created (graphid 16969), and the loader + Python venv are set up at `/root/repo/`. The rsync transfer is the final pending step (see `docs/learnings.md` Phase 4.0 execution notes for the session-drop retry loop).
+
 Sits alongside the existing setup docs:
 
-- `setup-01.md` — original project onboarding
-- `setup-02.md` — retired AlmaLinux work-computer setup
-- `setup-03_windows_laptop.md` — Windows laptop setup (Phase 1-3 local dev)
-- `setup-04_hetzner_vps.md` — this doc (Phase 4.0 cloud deploy)
+- `setup-01.md`: original project onboarding
+- `setup-02.md`: retired AlmaLinux work-computer setup
+- `setup-03_windows_laptop.md`: Windows laptop setup (Phase 1-3 local dev)
+- `setup-04_hetzner_vps.md`: this doc (Phase 4.0 cloud deploy)
 
 Related reading before you start:
 
-- `docs/architecture/AGE_loader_explained.md` — why PostgreSQL + AGE, hosting comparison, performance expectations
-- `docs/bossman_execution_plan.md` Phase 4.0 section — what the phase does end-to-end
-- `DECISIONS.md` 2026-04-18 entry — Hetzner CPX42 Nuremberg, ~$34/month rationale
-
----
+- `docs/architecture/AGE_loader_explained.md`: why PostgreSQL + AGE, hosting comparison, performance expectations
+- `docs/bossman_execution_plan.md` Phase 4.0 section: what the phase does end-to-end
+- `DECISIONS.md` 2026-04-18 entry: Hetzner CPX42 Nuremberg, ~$34/month rationale
 
 ## Table of contents
 
 - [Prerequisites](#prerequisites)
-- [Part A: Provision the Hetzner CPX42](#part-a-provision-the-hetzner-cpx42)
+- [Part A: provision the Hetzner CPX42](#part-a-provision-the-hetzner-cpx42)
 - [Part B: SSH access from both computers](#part-b-ssh-access-from-both-computers)
-- [Part C: Install rsync on the work computer](#part-c-install-rsync-on-the-work-computer)
-- [Part D: Install PostgreSQL 15 + AGE on the server](#part-d-install-postgresql-15--age-on-the-server)
-- [Part E: End-to-end verification](#part-e-end-to-end-verification)
+- [Part C: install rsync on the work computer](#part-c-install-rsync-on-the-work-computer)
+- [Part D: install PostgreSQL 15 + AGE on the server](#part-d-install-postgresql-15--age-on-the-server)
+- [Part E: end-to-end verification](#part-e-end-to-end-verification)
+- [Part F: PostgreSQL tuning for the loaded graph](#part-f-postgresql-tuning-for-the-loaded-graph)
 - [Troubleshooting](#troubleshooting)
-
----
 
 ## Prerequisites
 
@@ -39,16 +38,14 @@ Before you start, you need:
 - Git Bash or PowerShell available on the work computer (OpenSSH client ships built-in on Windows 11)
 - The repo cloned and venv active on the work computer, `pytest -q` passes (232 tests)
 
----
-
-## Part A: Provision the Hetzner CPX42
+## Part A: provision the Hetzner CPX42
 
 The target spec comes from DECISIONS.md: CPX42, Nuremberg, no separate volume.
 
-### Step A1 — Create the server
+### Step A1: create the server
 
 1. Log in to https://console.hetzner.com
-2. Click **New server** (or **Add server** in your project view)
+2. Click "New server" (or "Add server" in your project view)
 3. Pick the following options:
 
 | Option | Value |
@@ -59,22 +56,20 @@ The target spec comes from DECISIONS.md: CPX42, Nuremberg, no separate volume.
 | Networking | IPv4 + IPv6 (default) |
 | SSH keys | Upload your personal computer's public key here OR leave blank if you'll use the root password |
 | Firewalls | None for now (add later if needed) |
-| Volumes | None — the 320GB local disk is enough for V1 (no dbSNP) |
+| Volumes | None, the 320GB local disk is enough for V1 (no dbSNP) |
 | Backups | Optional, ~$7/month |
 | Name | `agentic-search-vps` (or any name) |
 
-4. Click **Create & Buy Now**. Server provisioning takes ~30 seconds.
+4. Click "Create & Buy Now". Server provisioning takes ~30 seconds.
 
-### Step A2 — Grab the public IP
+### Step A2: grab the public IP
 
-Once the server is running, Hetzner shows the public IPv4 on the server page. You will need this for every subsequent step. Example: `46.225.128.133`.
+Once the server is running, Hetzner shows the public IPv4 on the server page. You will need this for every subsequent step. The actual IP for this deployment is `46.225.128.133` (captured 2026-04-19; substitute your own if you are redoing this from scratch).
 
-### Step A3 — Note the root credentials
+### Step A3: note the root credentials
 
 - If you uploaded an SSH key during provisioning, password login is disabled. You log in with the key.
 - If you did not upload a key, Hetzner emails you the root password. Subject: "Your new Cloud Server at Hetzner". Use this password for the first login, then immediately add an SSH key and disable password auth (covered in Part B).
-
----
 
 ## Part B: SSH access from both computers
 
@@ -96,7 +91,7 @@ flowchart LR
     WL -->|ssh + rsync| S
 ```
 
-### Step B1 — Add the personal computer's key (if not done at provisioning)
+### Step B1: add the personal computer's key (if not done at provisioning)
 
 On the personal computer:
 
@@ -110,7 +105,7 @@ If you added it during provisioning, skip ahead to Step B3.
 
 If not, paste it into the server via the Hetzner web console:
 
-1. Dashboard → click your server → click **Console** (top right)
+1. Dashboard, click your server, then click "Console" (top right)
 2. Log in as root with the emailed password
 3. Run:
 
@@ -121,9 +116,9 @@ echo 'PASTE-PERSONAL-COMPUTER-PUBKEY-HERE' >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 ```
 
-Note the **single quotes** around the key — they prevent shell interpretation of any special characters.
+Note the single quotes around the key: they prevent shell interpretation of any special characters.
 
-### Step B2 — Test SSH from the personal computer
+### Step B2: test SSH from the personal computer
 
 ```bash
 ssh root@<server-ip>
@@ -131,7 +126,7 @@ ssh root@<server-ip>
 
 Should log in with no password. If you get "Permission denied (publickey)", the key is not in authorized_keys; go back and re-check.
 
-### Step B3 — Add the work computer's key
+### Step B3: add the work computer's key
 
 On the work computer (Git Bash or PowerShell), check if a key already exists:
 
@@ -146,7 +141,7 @@ ls ~/.ssh/
 ssh-keygen -t ed25519 -C "work-laptop"
 ```
 
-Press Enter three times (default path, no passphrase — acceptable for a personal dev machine).
+Press Enter three times (default path, no passphrase, acceptable for a personal dev machine).
 
 Show the public key:
 
@@ -170,7 +165,7 @@ cat ~/.ssh/authorized_keys
 
 The `cat` at the end should show two lines. Exit with `exit`.
 
-### Step B4 — Test SSH from the work computer
+### Step B4: test SSH from the work computer
 
 On the work computer:
 
@@ -182,7 +177,7 @@ First-time prompt: "The authenticity of host ... can't be established. Are you s
 
 You should land on `root@<hostname>:~#` with no password prompt. Type `exit` to disconnect.
 
-### Step B5 — Lock down password authentication (optional but recommended)
+### Step B5: lock down password authentication (optional but recommended)
 
 Once both machines can log in via keys, disable password auth entirely. On the server:
 
@@ -193,9 +188,7 @@ systemctl reload sshd
 
 Closes the password-guessing attack surface. Key-based login still works.
 
----
-
-## Part C: Install rsync on the work computer
+## Part C: install rsync on the work computer
 
 Windows does not ship with rsync. You need it to push the 75-95GB merged KGX to the server with resumable transfer. `scp` is not resumable, which matters over home Wi-Fi.
 
@@ -253,13 +246,11 @@ rsync --dry-run -avP /mnt/c/Users/<you>/agentic-search-data-engineering/data/kgx
 
 The `--dry-run` flag skips the actual transfer. If you see a list of files, rsync is working. Remove `--dry-run` when ready for the real thing during Phase 4.0.
 
----
-
-## Part D: Install PostgreSQL 15 + AGE on the server
+## Part D: install PostgreSQL 15 + AGE on the server
 
 This step is typically handled by `/bossman-mode --phase 4.0` as part of the phase. The commands below are documented here for reference and for manual setup if needed.
 
-### Step D1 — Install PostgreSQL 15
+### Step D1: install PostgreSQL 15
 
 On the server:
 
@@ -270,7 +261,7 @@ apt install -y postgresql-common
 apt install -y postgresql-15 postgresql-server-dev-15 build-essential git bison flex
 ```
 
-### Step D2 — Build and install Apache AGE
+### Step D2: build and install Apache AGE
 
 AGE ships as source. Build against the Postgres 15 dev headers:
 
@@ -283,7 +274,7 @@ make PG_CONFIG=/usr/lib/postgresql/15/bin/pg_config
 make install PG_CONFIG=/usr/lib/postgresql/15/bin/pg_config
 ```
 
-### Step D3 — Create database and enable AGE
+### Step D3: create database and enable AGE
 
 ```bash
 sudo -u postgres psql -c "CREATE DATABASE ncbi_kg;"
@@ -292,11 +283,11 @@ sudo -u postgres psql -d ncbi_kg -c "LOAD 'age';"
 sudo -u postgres psql -d ncbi_kg -c "SET search_path = ag_catalog, \"\$user\", public;"
 ```
 
-### Step D4 — Configure connections
+### Step D4: configure connections
 
 By default, PostgreSQL only accepts local connections. If Phase 4.0 runs the loader from the server itself (via SSH + psql), no change needed. If you want to connect from the work laptop via psql, edit `/etc/postgresql/15/main/pg_hba.conf` to allow your IP and open port 5432 in the firewall. Most workflows do not need this.
 
-### Step D5 — Create the graph
+### Step D5: create the graph
 
 The AGE loader creates the graph on first run, so this is optional. If you want to pre-create it:
 
@@ -304,9 +295,7 @@ The AGE loader creates the graph on first run, so this is optional. If you want 
 sudo -u postgres psql -d ncbi_kg -c "SELECT create_graph('ncbi_kg');"
 ```
 
----
-
-## Part E: End-to-end verification
+## Part E: end-to-end verification
 
 Before kicking off `/bossman-mode --phase 4.0`, confirm every link in the chain works.
 
@@ -322,19 +311,19 @@ flowchart LR
 
 Five checks, in order:
 
-1. **SSH from work computer works without password:**
+1. SSH from work computer works without password:
 
 ```bash
 ssh root@<server-ip> "hostname && uptime"
 ```
 
-2. **Rsync can reach the server:**
+2. Rsync can reach the server:
 
 ```bash
 rsync --dry-run -avP /mnt/c/Users/<you>/agentic-search-data-engineering/data/kgx/merged/ root@<server-ip>:/tmp/test/
 ```
 
-3. **Server has Postgres + AGE:**
+3. Server has Postgres + AGE:
 
 ```bash
 ssh root@<server-ip> "sudo -u postgres psql -d ncbi_kg -c \"SELECT * FROM ag_catalog.ag_graph;\""
@@ -342,15 +331,17 @@ ssh root@<server-ip> "sudo -u postgres psql -d ncbi_kg -c \"SELECT * FROM ag_cat
 
 Output should include a graph row (if pre-created) or return zero rows cleanly.
 
-4. **Disk headroom on the server:**
+4. Disk headroom on the server:
 
 ```bash
 ssh root@<server-ip> "df -h /"
 ```
 
-Expect ~280GB+ free on the root filesystem. Phase 4.0 uploads ~95GB of KGX and builds an ~80-120GB graph, so you want at least 200GB free before starting.
+Expect ~280GB+ free on the root filesystem. Phase 4.0 uploads ~144GB of KGX (revised up from the original 95GB estimate after Gate 2 measured actual sizes) and builds an ~80-120GB graph, so you want at least 200GB free before starting.
 
-5. **Local KGX is where you think it is:**
+Note on the "320 GB" spec: Hetzner markets the disk in decimal GB (10^9 bytes). Linux `df -h` reports in binary GiB (2^30 bytes). 320 × 10^9 ÷ 2^30 ≈ 298 GiB. Ext4 also reserves 5% for root by default. Net usable is ~285 GiB on a fresh CPX42. This is expected, not missing disk.
+
+5. Local KGX is where you think it is:
 
 ```bash
 ls -la /mnt/c/Users/<you>/agentic-search-data-engineering/data/kgx/merged/
@@ -360,7 +351,40 @@ Expect `nodes.tsv` and `edges.tsv` files, totalling 75-95GB.
 
 All five passing = ready to run `/bossman-mode --phase 4.0` on the work computer.
 
----
+## Part F: PostgreSQL tuning for the loaded graph
+
+PostgreSQL's factory defaults are conservative: they assume the server may be running other services and that the database will be small. On a 16 GB box dedicated to a 115 M-node + 693 M-edge AGE graph, the defaults leave most RAM unused and produce planner estimates that are orders of magnitude off. Apply these eight settings once, then restart Postgres.
+
+```sql
+ALTER SYSTEM SET shared_buffers = '4GB';
+ALTER SYSTEM SET work_mem = '64MB';
+ALTER SYSTEM SET effective_cache_size = '12GB';
+ALTER SYSTEM SET maintenance_work_mem = '1GB';
+ALTER SYSTEM SET random_page_cost = 1.1;
+ALTER SYSTEM SET effective_io_concurrency = 200;
+ALTER SYSTEM SET max_parallel_workers_per_gather = 4;
+ALTER SYSTEM SET default_statistics_target = 200;
+SELECT pg_reload_conf();
+```
+
+`shared_buffers` requires a full restart, not just a reload:
+
+```bash
+systemctl restart postgresql
+```
+
+What each setting does:
+
+- `shared_buffers = '4GB'`: gives Postgres a 4 GB shared page cache (default is 128 MB). For a 16 GB box, 25% of RAM is the standard starting point.
+- `work_mem = '64MB'`: memory per sort/hash operation per query (default is 4 MB). AGE Cypher queries can involve many sort steps; raising this avoids disk spills.
+- `effective_cache_size = '12GB'`: tells the planner how much memory the OS page cache plus shared_buffers effectively provides. Does not allocate RAM, only influences index-vs-seqscan decisions.
+- `maintenance_work_mem = '1GB'`: memory for VACUUM and CREATE INDEX. Speeds up the post-load ANALYZE and index builds.
+- `random_page_cost = 1.1`: default is 4.0, which assumes spinning disks. Local SSD (Hetzner CPX42 uses local NVMe) has near-sequential read cost. Lower value makes the planner prefer index scans over seq scans.
+- `effective_io_concurrency = 200`: SSD can handle many parallel I/O requests (default is 1 for spinning disk). Used by bitmap heap scans.
+- `max_parallel_workers_per_gather = 4`: allows the planner to use up to 4 CPUs for a single aggregate or seq scan (CPX42 has 8 vCPU).
+- `default_statistics_target = 200`: more histogram buckets per column. Default 100 is too coarse for the skewed ID distributions in a 100 M+ row AGE table.
+
+After the restart, run `ANALYZE` on all vertex and edge tables if you have not already (see learnings.md Problem 13 for why bulk-loaded tables need manual ANALYZE).
 
 ## Troubleshooting
 
@@ -406,10 +430,8 @@ If you see weird "chmod" or "failed: Operation not permitted" errors, Windows li
 
 Unlikely on 320GB, but possible if the graph grows faster than estimated. Options:
 
-1. Delete the uploaded KGX after the load — the graph is the source of truth now.
+1. Delete the uploaded KGX after the load, since the graph is the source of truth now.
 2. Resize the CPX42 in place (Hetzner console → server → Rescale). No rebuild.
 3. Attach a block volume temporarily.
 
----
-
-Last updated: 2026-04-19
+Last updated: 2026-04-22

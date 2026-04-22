@@ -46,6 +46,7 @@ VERTEX_LABELS: list[str] = [
     "BiologicalProcess",
     "MolecularActivity",
     "CellularComponent",
+    "NamedThing",
 ]
 
 EDGE_LABELS: list[str] = [

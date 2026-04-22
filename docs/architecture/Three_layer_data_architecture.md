@@ -14,9 +14,8 @@ How data flows from NCBI sources to user answers. Three layers, each with a diff
 - [Why this repo is the foundation](#why-this-repo-is-the-foundation)
 - [What this repo does and does not do](#what-this-repo-does-and-does-not-do)
 - [Handoff point](#handoff-point)
+- [How System 3 connects to Layer 1](#how-system-3-connects-to-layer-1)
 - [Will Layer 2/3 API calls work?](#will-layer-23-api-calls-work)
-
----
 
 ## Layer 1: knowledge graph (System 1 + 2, this repo)
 
@@ -57,8 +56,6 @@ Excluded entirely (not in any layer):
 | dbGaP | Controlled-access. Requires individual Data Access Request with IRB approval. |
 | PubChem | Community-submitted with varying curation. Breaks the provenance trust moat. |
 
----
-
 ## Why these 5 databases for Layer 1?
 
 Three criteria drove the selection.
@@ -85,8 +82,6 @@ Layer 1 databases form the graph skeleton: the connections between genes, diseas
 
 dbSNP is the clearest example. ClinVar nodes in the graph carry rs# identifiers. When a user asks about allele frequency for a variant, System 3 reads the rs# from the ClinVar node and calls the NCBI dbSNP REST API. One API call, 100-300ms, correct answer. No 1.2B node pre-ingestion needed.
 
----
-
 ## Why PostgreSQL + Apache AGE
 
 PostgreSQL + AGE stores graph data on disk. We chose it over Neo4j because:
@@ -95,8 +90,6 @@ PostgreSQL + AGE stores graph data on disk. We chose it over Neo4j because:
 - AGE is disk-based. It handles 115M+ nodes on 16GB RAM because it uses PostgreSQL's disk-backed storage engine.
 - AGE supports openCypher, so the query language is the same as Neo4j.
 - Cost: ~$30/month on a Hetzner CPX42 vs $200-500/month for Neo4j-grade hardware.
-
----
 
 ## Layer 2: NCBI on-demand APIs (System 3)
 
@@ -121,8 +114,6 @@ Latency: 100-500ms per API call. Budget: max 20 calls per user query. Responses 
 
 Built by: System 3 (search agent) in a separate repo.
 
----
-
 ## Layer 3: enrichment and external APIs (System 3)
 
 Not NCBI databases. Specialized APIs that augment answers with deeper evidence or data from outside NCBI. Called after initial results are found from Layer 1 and Layer 2.
@@ -140,8 +131,6 @@ Latency: 200ms-2s per call. Called selectively, not on every query.
 
 Built by: System 3 (search agent) in a separate repo.
 
----
-
 ## How they connect
 
 System 3 queries all three layers at query time and combines the results into one cited answer. Layer 1 is a database query against the hosted graph. Layers 2 and 3 are live API calls to external services. All happen in parallel, orchestrated by the search agent.
@@ -149,22 +138,26 @@ System 3 queries all three layers at query time and combines the results into on
 ```mermaid
 flowchart TD
     UQ["User query"]
-    S3["System 3: search agent\n(separate repo)"]
-    L1["Layer 1: AGE graph\nGene, ClinVar, MedGen,\nPubMed, Taxonomy"]
-    L2["Layer 2: NCBI APIs\ndbSNP, Protein, PMC,\nOMIM, GTR, GEO"]
-    L3["Layer 3: enrichment APIs\nPubTator3, LitVar2,\nClinicalTrials.gov"]
+    S3["System 3 search agent"]
+    L1["Layer 1 AGE graph"]
+    L1D["Gene, ClinVar, MedGen, PubMed, Taxonomy"]
+    L2["Layer 2 NCBI APIs"]
+    L2D["dbSNP, Protein, PMC, OMIM, GTR, GEO"]
+    L3["Layer 3 enrichment APIs"]
+    L3D["PubTator3, LitVar2, ClinicalTrials"]
     ANS["Cited multi-database answer"]
 
     UQ --> S3
     S3 --> L1
+    L1 --> L1D
     S3 --> L2
+    L2 --> L2D
     S3 --> L3
-    L1 -- "<10ms\nHetzner CPX42" --> ANS
-    L2 -- "100-500ms\nfree NCBI APIs" --> ANS
-    L3 -- "200ms-2s\nfree public APIs" --> ANS
+    L3 --> L3D
+    L1 -- "<10ms, Hetzner CPX42" --> ANS
+    L2 -- "100-500ms, free NCBI" --> ANS
+    L3 -- "200ms-2s, free public" --> ANS
 ```
-
----
 
 ## Estimated monthly cost
 
@@ -177,8 +170,6 @@ flowchart TD
 | Total | | ~$44-64/month |
 
 Post-Gate 3 optimization: after the graph is validated, delete KGX files and downgrade Layer 1 from CPX42 (~$34) to CPX32 (~$24-26). Drops total to ~$34-56/month steady state.
-
----
 
 ## Why this repo is the foundation
 
@@ -203,8 +194,6 @@ System 3 handles:
 
 The 115M-node graph with provenance on every record is the hard part that makes everything downstream tractable.
 
----
-
 ## What this repo does and does not do
 
 Does:
@@ -220,8 +209,6 @@ Does not:
 - Build the search agent (that is System 3, separate repo)
 - Pre-ingest dbSNP, Protein, PMC, or any other Layer 2 database
 - Serve a UI or API endpoint (that is System 3)
-
----
 
 ## Handoff point
 
@@ -240,7 +227,91 @@ System 3 does not need:
 - The ETL pipeline code (System 3 talks to the database, not the pipelines)
 - This repo checked out (just the running database)
 
----
+## How System 3 connects to Layer 1
+
+The connection is a normal PostgreSQL client session. Apache AGE is a Postgres extension, so any language that speaks Postgres can query the graph. The AGE-specific part is wrapping each Cypher query in a `SELECT * FROM cypher('ncbi_kg', $$ ... $$) as (...)` call.
+
+### Minimal connection example
+
+```python
+import psycopg2
+
+conn = psycopg2.connect(
+    host="46.225.128.133",
+    dbname="ncbi_kg",
+    user="kg_reader",
+    password="...",
+    sslmode="require",
+)
+cur = conn.cursor()
+
+# Enable AGE for this session
+cur.execute("LOAD 'age';")
+cur.execute("SET search_path = ag_catalog, public;")
+
+# Any Cypher query goes inside cypher('graph_name', $$ ... $$)
+cur.execute("""
+    SELECT * FROM cypher('ncbi_kg', $$
+        MATCH (g:Gene {id: 'NCBIGene:672'})-[:gene_associated_with_condition]->(d:Disease)
+        RETURN g.name, d.name
+        LIMIT 10
+    $$) as (gene agtype, disease agtype);
+""")
+for row in cur.fetchall():
+    print(row)
+```
+
+That is the entire API surface between System 3 and Layer 1. Every openCypher query the agent composes flows through this pattern.
+
+### Three architectural options for System 3
+
+| Option | Pattern | When to pick |
+|--------|---------|--------------|
+| A. Direct Postgres connection | System 3 -> psycopg2 -> VPS port 5432 | V1 default. Simplest. One LangGraph tool node per Cypher query. |
+| B. Thin FastAPI wrapper on VPS | System 3 -> HTTPS -> FastAPI on VPS -> Postgres on localhost | When you need versioned query endpoints, server-side caching, rate limits, or to hide Cypher from the client. |
+| C. SSH tunnel | `ssh -L 5432:localhost:5432` -> psycopg2 -> localhost | Dev / debug only. Not for production multi-user. |
+
+V1 recommendation: Option A. It is the lowest-friction path and matches how the AGE loader in System 2 already talks to the same database. Revisit Option B only when one of its trigger conditions is real (third-party access, caching need, rate limiting across users).
+
+### One-time VPS prep before System 3 connects
+
+All five steps run on the Hetzner VPS after Gate 3 completes. These are part of the Gate 3 handoff, not separate work.
+
+1. Create a read-only role for System 3:
+   ```sql
+   CREATE USER kg_reader WITH PASSWORD '...';
+   GRANT CONNECT ON DATABASE ncbi_kg TO kg_reader;
+   GRANT USAGE ON SCHEMA ag_catalog, ncbi_kg TO kg_reader;
+   GRANT SELECT ON ALL TABLES IN SCHEMA ncbi_kg TO kg_reader;
+   GRANT SELECT ON ALL TABLES IN SCHEMA ag_catalog TO kg_reader;
+   ```
+2. Edit `/etc/postgresql/15/main/pg_hba.conf` to allow `kg_reader` from System 3's egress IP over SSL:
+   ```
+   hostssl  ncbi_kg  kg_reader  <system3-ip>/32  scram-sha-256
+   ```
+3. Edit `/etc/postgresql/15/main/postgresql.conf`:
+   ```
+   listen_addresses = '*'
+   ssl = on
+   ```
+4. Restart Postgres: `systemctl restart postgresql`.
+5. Open port 5432 on the Hetzner Cloud firewall to System 3's egress IP only, never `0.0.0.0/0`. If System 3 is a cloud service with a rotating IP, put it behind a NAT gateway with a fixed egress IP or use a private network.
+
+Put the password in a secret manager on the System 3 side (AWS Secrets Manager, GCP Secret Manager, Railway variables, etc.). Do not commit credentials.
+
+### What System 3 should NOT do on the connection
+
+- Do not issue write Cypher (CREATE, MERGE, DELETE) against the shared graph. System 3 is read-only by contract. Writes happen from System 1 / 2 re-ingestion only.
+- Do not open a new psycopg2 connection per query. Use a connection pool (SQLAlchemy `create_engine` with `pool_size=10`, or `psycopg2.pool.ThreadedConnectionPool`). Each Postgres connection is a server process; one-per-query exhausts the VPS.
+- Do not cache at the row level on System 3 unless you are willing to invalidate when the graph is re-ingested. Prefer query-level caching in Redis keyed by the Cypher string.
+
+### Why not MCP / a query service abstraction?
+
+An MCP server or REST wrapper on the VPS feels tidy but adds a component to operate, a new failure mode, and ~10-30ms of hop latency per query. For V1 where the agent runs one Cypher per question, direct Postgres is cheaper and faster. Re-evaluate if:
+
+- Multiple agent systems need the graph and you want one access point
+- You want to metric per-caller rate limits in one place
+- You want to precompile frequent queries as stored procedures
 
 ## Will Layer 2/3 API calls work?
 

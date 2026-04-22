@@ -30,8 +30,6 @@ What we are building, why, and how. Crystallized from the April 2 brainstorming 
 - [Architecture diagram checklist](#architecture-diagram-checklist)
 - [Decisions made during April 5 architecture review](#decisions-made-during-april-5-architecture-review)
 
----
-
 ## The problem
 
 NCBI has 39 databases containing 4.4 billion records. A researcher investigating a single question (e.g. "what variants in HNF1A cause MODY?") must manually visit 4-6 databases, copy identifiers between them, and mentally assemble the connections. The bottleneck is not finding data, it is connecting findings across databases.
@@ -52,8 +50,6 @@ System 2 boundary:
   Input:  KGX files from System 1
   Output: Merged knowledge graph in PostgreSQL + Apache AGE, queryable via openCypher
 ```
-
----
 
 ## Architecture overview
 
@@ -103,8 +99,6 @@ System 2 boundary:
               +------------------------------------------+
 ```
 
----
-
 ## The three-layer data architecture
 
 Not all data lives in the same place. Three layers, each with a different purpose:
@@ -146,8 +140,6 @@ Not databases. These are specialized APIs that augment answers with deeper evide
 | LitVar2 | Variant-specific literature links | After variants identified |
 | LitSense | Sentence-level evidence from full text | After key publications identified |
 | ClinicalTrials.gov | Active clinical trials for diseases/genes | After diseases identified |
-
----
 
 ## Why these 5 databases (evidence)
 
@@ -208,8 +200,6 @@ Literature:       PubMed -> Gene (via gene2pubmed) -> ClinVar -> MedGen
 ```
 
 All 5 Layer 1 databases appear in these paths. SNP traversals are handled by the NCBI dbSNP REST API in System 3. The remaining databases (Protein, Structure, GTR) are reachable via Layer 2 ELink calls.
-
----
 
 ## What data we need (FTP downloads)
 
@@ -275,8 +265,6 @@ FTP path: `ftp.ncbi.nlm.nih.gov/pub/taxonomy/`
 
 dbSNP (1.2B variants) is deferred from pre-ingestion. Population frequency and variant annotation queries are handled by the NCBI dbSNP REST API at query time in System 3. ClinVar nodes carry rs# identifiers as cross-references, so variant-to-SNP lookups remain possible without pre-ingesting dbSNP. Revisit if user research shows API latency is unacceptable.
 
----
-
 ## KGX output size estimates
 
 Estimated output sizes after each pipeline completes. These drive disk planning and merge time expectations.
@@ -291,8 +279,6 @@ Estimated output sizes after each pipeline completes. These drive disk planning 
 | Taxonomy | ~2.9M organisms | ~2.9M (parent edges) | ~1-2GB |
 
 Total across all 5 pipelines (all organisms): ~115M nodes, ~693M edges, ~75-95GB KGX TSV.
-
----
 
 ## Pipeline architecture (per database)
 
@@ -346,8 +332,6 @@ Step 5: Export KGX
   One KGX file pair per database (Gene KGX, ClinVar KGX, etc.)
 ```
 
----
-
 ## Provenance: first-class requirement
 
 Every node and every edge carries its source. This is not optional. Trust is the moat.
@@ -379,8 +363,6 @@ supporting_publications: [PMID:12345678, PMID:23456789]
 ### Why this matters
 
 If the answer says "BRCA1 has 744 pathogenic variants," the user can click through to every single one. Every fact is verifiable. Every connection is traceable. This is what separates a knowledge graph from a search engine.
-
----
 
 ## Schema: where it lives
 
@@ -438,8 +420,6 @@ Coverage estimates:
 | ClinVar -> Gene ID | ~95%+ | Rare unmapped variants stay as orphan nodes |
 | ClinVar -> MedGen CUI | ~90%+ | Variants without condition still connect to Gene |
 
----
-
 ## Build order
 
 ### Phase 1: the core triangle (Gene + ClinVar + MedGen)
@@ -482,8 +462,6 @@ dbSNP (1.2B variants) is deferred from pre-ingestion. Population frequency queri
 
 Phase 3 instead covers the AGE loader: loading the 5-database merged KGX into PostgreSQL + Apache AGE.
 
----
-
 ## What "done" looks like for System 1
 
 - [ ] 5 ETL pipelines producing valid KGX files
@@ -501,15 +479,11 @@ Phase 3 instead covers the AGE loader: loading the 5-database merged KGX into Po
 - Does not handle user queries (that's System 3)
 - Does not call live APIs (Layer 2/3 are query-time concerns in System 3)
 
----
-
 ## Repo structure decision
 
 System 1 can be its own repo. The output is KGX files. System 2 consumes those files. Clean boundary.
 
 You could also have System 2 in the same repo under a different folder (the repo structure in the Personal_build_plan.md already does this with `data-pipelines/` and `knowledge-graph/`). Up to you whether it's one monorepo or separate repos. For a portfolio project, one repo is simpler.
-
----
 
 ## How System 2 connects
 
@@ -521,8 +495,6 @@ System 2 responsibilities:
 - Cat-Merge (deduplicate nodes, concatenate edges)
 - Graph database loader (KGX to graph database)
 - Cypher query tests (CQ test skeletons that validate the graph)
-
----
 
 ## Graph database options
 
@@ -572,8 +544,6 @@ Production runs on the Hetzner CPX42 (~$34/month). The code and KGX files are po
 
 For portfolio/open source sharing: the code (pipelines, schema, agents) lives in a public GitHub repo regardless of where the data runs. The graph database with 115M nodes is too large to share as a download. The portfolio is the code and architecture, not the running instance.
 
----
-
 ## Validation: how to know System 1 is working
 
 Three levels of validation, each catches different problems:
@@ -604,8 +574,6 @@ MATCH (g:Gene)-[:PARTICIPATES_IN]->(bp:BiologicalProcess) WHERE bp.name CONTAINS
 
 If those return sensible results, System 1 is working. If they return 0 or garbage, something in the pipeline or merge is broken.
 
----
-
 ## Prerequisites (before writing the first pipeline)
 
 - [ ] NCBI API key in .env (already have it)
@@ -613,8 +581,6 @@ If those return sensible results, System 1 is working. If they return 0 or garba
 - [ ] Graph database installed locally (PostgreSQL + Apache AGE)
 - [ ] Clone/init the repo structure
 - [ ] LinkML installed (`pip install linkml`) for schema validation
-
----
 
 ## Update schedules (how often FTP sources refresh)
 
@@ -631,8 +597,6 @@ Each pipeline needs a scheduled run to keep the graph current:
 
 For alpha: run all pipelines manually. Automate scheduling after the first successful full merge.
 
----
-
 ## Shared utilities (reusable across all pipelines)
 
 Every pipeline repeats the same download-parse-map-validate-export pattern. Extract the common parts:
@@ -645,8 +609,6 @@ Every pipeline repeats the same download-parse-map-validate-export pattern. Extr
 | `shared/validator.py` | Runs BioLink/LinkML validation on records, logs rejections with reason | All 5 pipelines |
 
 Build these shared utilities during the first pipeline (Gene), then reuse for all subsequent pipelines.
-
----
 
 ## Risk signals and fallback plans
 
@@ -661,8 +623,6 @@ Build these shared utilities during the first pipeline (Gene), then reuse for al
 | Disk space exhaustion | Raw FTP + KGX output + AGE data directory exceed 355GB | Process pipelines sequentially: download, parse, load into AGE, delete intermediate KGX files. Keep raw FTP cached for re-runs. |
 | AGE openCypher gaps | Cypher queries fail or produce wrong results in AGE | AGE implements a subset of openCypher. Known gaps: no MERGE (use CREATE + manual dedup), no CALL procedures, limited path pattern support. All queries require wrapping in `SELECT * FROM cypher('graph_name', $$ ... $$)`. Test every query pattern against AGE early, not after building all pipelines. |
 
----
-
 ## Wall-clock time (things that take real time regardless of coding speed)
 
 | Task | Estimated time | Why it can't be compressed |
@@ -676,8 +636,6 @@ Build these shared utilities during the first pipeline (Gene), then reuse for al
 | Agent prompt tuning (System 3) | Days, not hours | Requires human judgment loops |
 
 Plan around these. PubMed baseline download is the longest single operation. Run it overnight.
-
----
 
 ## Lessons from Anne's glucose metabolism KG pipeline
 
@@ -715,8 +673,6 @@ Anne built a working BioLink-compliant KG pipeline for glucose metabolism (82,51
 | Mapping audit | No explicit mapping provenance | SSSOM files for every cross-database mapping |
 | Export formats | TSV, JSON-LD, Neo4j CSV | KGX (standard for merge), then AGE load in System 2 |
 
----
-
 ## Architecture diagram checklist
 
 Required diagrams for the complete architecture documentation. Each diagram should be present as a Mermaid diagram in the appropriate doc.
@@ -735,8 +691,6 @@ Required diagrams for the complete architecture documentation. Each diagram shou
 | Ontology mapping process | How BioLink categories and predicates are assigned per database | Biolink_repos_explained.md + handling ontology gaps (this file) | done |
 | Phase dependency graph | Bossman phases, gates, dependencies | bossman_execution_plan.md | done |
 
----
-
 ## Decisions made during April 5 architecture review
 
 | Decision | Alternatives considered | Why |
@@ -752,7 +706,5 @@ Required diagrams for the complete architecture documentation. Each diagram shou
 | PostgreSQL + AGE over Neo4j | Neo4j Community, DuckDB, KuzuDB (abandoned by Apple) | Disk-based (115M nodes on 16GB RAM), free, openCypher support, ~$34/month vs $200+/month for Neo4j at this scale. Same queries, cheaper hardware. |
 | dbSNP deferred from V1 (SUPERSEDED: was "full dbSNP 1.2B records") | Pre-ingest full dbSNP; clinical subset only | Population frequency queries answered by NCBI dbSNP REST API at query time in System 3. ClinVar nodes carry rs# identifiers. Pre-ingesting 1.2B nodes for queries an API call answers is waste. Revisit if user research shows API latency is unacceptable. |
 | Hetzner CPX42 (Nuremberg, 320GB disk, ~$34/month) as production VPS | Work computer only ($0); larger VPS with 500GB volume | 320GB handles 5-database AGE graph (~80-120GB) with headroom. No 500GB volume needed after dbSNP deferral. Laptop is development only; production is on the VPS. |
-
----
 
 *Created: April 5, 2026. Based on Agentic_search_architecture_QA.md (April 2 brainstorming) refined through April 5 architecture review. Updated April 6, 2026: added graph database options (PostgreSQL + AGE vs Neo4j) and infrastructure decisions. Updated April 13, 2026: fixed stale Neo4j references, clarified schema ownership as shared artifact, added KGX output size estimates, simplified Taxonomy to model organisms for Phase 1, upgraded to full PubMed baseline (no subset), upgraded SNP to full dbSNP (1.2B records), updated risk and wall-clock tables for new scope. Updated April 19, 2026: dbSNP deferred from V1 pre-ingestion. Population frequency queries served by NCBI dbSNP REST API at query time in System 3. Graph is now 5 databases (~115M nodes, ~693M edges).*

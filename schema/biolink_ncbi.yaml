@@ -8,6 +8,12 @@
 # Depends on:
 #   - linkml:types (LinkML built-in types)
 #   - BioLink model 4.x category and predicate vocabulary
+#
+# Prefix map note: the prefixes declared below are contract, not invention.
+# Every prefix traces to the W3C CURIE standard, the Bioregistry, or the
+# BioLink Model. If two pipelines disagree on what prefix to use for the
+# same database, edges between them dangle. See docs/learnings.md
+# "Understanding: CURIE and how KGX uses it" for the per-database rationale.
 
 id: https://w3id.org/ncbi-kg/biolink-ncbi
 name: biolink_ncbi

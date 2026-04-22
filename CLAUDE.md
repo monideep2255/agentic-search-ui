@@ -12,7 +12,7 @@ Stack: Python 3.11+, LinkML, BioLink 4.x, KGX, PostgreSQL 15 + Apache AGE.
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | System 1: data pipelines | Phase 1 and Gate 1 complete (67.5M Gene, 4.4M ClinVar, 198K MedGen nodes produced on real data). Phase 2 complete: Gate 2 done (2026-04-17), 5-database merge validated on real data. Phase 3 complete: AGE loader done (2026-04-19), 5-node + 3-edge round-trip smoke test passed via Docker Desktop. Phase 4 next: provision Hetzner VPS, rsync KGX, cloud load. |
+| 1 | System 1: data pipelines | Phase 1 and Gate 1 complete (67.5M Gene, 4.4M ClinVar, 198K MedGen nodes produced on real data). Phase 2 complete: Gate 2 done (2026-04-17), 5-database merge validated on real data. Phase 3 complete: AGE loader done (2026-04-19), 5-node + 3-edge round-trip smoke test passed via Docker Desktop. Phase 4.0 in progress (2026-04-21): Hetzner VPS provisioned, PostgreSQL 15.17 + AGE 1.5.0 installed, 144 GB KGX rsynced to VPS. kgx validate crashed (tool bug, not data). awk found 64,882 mismatched node rows; root cause confirmed as quoted multi-line PubMed abstracts, not a data bug. age-load attempt 1 crashed (missing NamedThing table, fixed in schema.py). Attempt 2 OOM-killed (curie_to_id dict exceeded 16 GB RAM; fixed by adding 16 GB swap). Attempt 3 running overnight (2026-04-21): Step 7 edges in progress, 89M of 693M loaded at last check. Cypher test queries ready. Gate 3 pending. See NEXT_STEPS.md at repo root. |
 | 2 | System 2: knowledge graph | AGE loader module built (system-02-knowledge-graph/loader/). Full load deferred to Phase 4 on cloud VPS. |
 | 3 | System 3: search agent | Lives in a separate repository. Do not build here. |
 
@@ -77,7 +77,7 @@ Phase 1 first: Gene + ClinVar + MedGen. These three form the core triangle and s
 Phase 1 (weeks 1-2):  Gene ETL -> ClinVar ETL -> MedGen ETL -> first merge test  [DONE 2026-04-14]
 Phase 2 (weeks 3-4):  PubMed ETL -> Taxonomy ETL -> five-database merge  [DONE 2026-04-17]
 Phase 3 (weeks 5-6):  AGE loader code -> Cypher validation (loader code only; no local load)  [DONE 2026-04-19]
-Phase 4 (week 7):     Cloud deploy: provision Hetzner VPS -> rsync KGX from laptop -> load into AGE on cloud -> Gate 3 = V1 complete
+Phase 4 (week 7):     Cloud deploy: provision Hetzner VPS -> rsync KGX from laptop -> load into AGE on cloud -> Gate 3 = V1 complete  [IN PROGRESS 2026-04-21: rsync done, kgx validate crashed (tool bug), awk node mismatches confirmed as quoted multi-line abstracts (not a bug), age-load attempt 3 running overnight (Step 7 edges, 89M/693M loaded). Gate 3 pending; resume tomorrow per NEXT_STEPS.md]
 ```
 
 System 3 (search agent, FastAPI, LangGraph, UI) is tracked in the separate repository. Do not build here.
@@ -155,4 +155,4 @@ All rules are in `.claude/rules/` and loaded automatically. No need to duplicate
 
 ---
 
-Last updated: 2026-04-19
+Last updated: 2026-04-21

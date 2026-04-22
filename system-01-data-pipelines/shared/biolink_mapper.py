@@ -3,6 +3,15 @@
 Maps raw parsed records into BioLink-compliant node and edge dicts that
 match the schema defined in schema/biolink_ncbi.yaml.
 
+This module is the canonical CURIE assembly point for the entire System 1
+pipeline. Every node and edge that lands in the merged KGX flows through
+map_node or map_edge here. NCBI gives us bare numeric IDs (e.g. GeneID
+7157, taxonomy ID 9606); we prepend the standard prefix from the schema
+to produce CURIEs (NCBIGene:7157, NCBITaxon:9606). We did not invent any
+prefixes; every one traces to the W3C CURIE standard, the Bioregistry,
+or the BioLink Model. See docs/learnings.md "Understanding: CURIE and
+how KGX uses it" for the full rationale and per-database breakdown.
+
 Depends on:
     - schema/biolink_ncbi.yaml (canonical category and predicate definitions)
 

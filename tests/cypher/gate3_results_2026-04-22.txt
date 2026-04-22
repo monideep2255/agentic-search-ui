@@ -1,0 +1,112 @@
+could not change directory to "/root": Permission denied
+LOAD
+SET
+Timing is on.
+=== Q1: BRCA1 gene to variants (typed edge, GIN on Gene) ===
+             gene              |   variant_id    
+-------------------------------+-----------------
+ "BRCA1 DNA repair associated" | "ClinVar:17660"
+ "BRCA1 DNA repair associated" | "ClinVar:17661"
+ "BRCA1 DNA repair associated" | "ClinVar:17662"
+ "BRCA1 DNA repair associated" | "ClinVar:17665"
+ "BRCA1 DNA repair associated" | "ClinVar:17666"
+ "BRCA1 DNA repair associated" | "ClinVar:17667"
+ "BRCA1 DNA repair associated" | "ClinVar:17669"
+ "BRCA1 DNA repair associated" | "ClinVar:17670"
+ "BRCA1 DNA repair associated" | "ClinVar:17671"
+ "BRCA1 DNA repair associated" | "ClinVar:17672"
+(10 rows)
+
+Time: 224.421 ms
+=== Q2: Phenylketonuria (MedGen CURIE) to associated gene (directed: Gene -> Disease) ===
+        did        |     dname     |       gid       |            gname            
+-------------------+---------------+-----------------+-----------------------------
+ "MedGen:C0031485" | "SNOMEDCT_US" | "NCBIGene:5053" | "phenylalanine hydroxylase"
+(1 row)
+
+Time: 6.274 ms
+=== Q3: Genes participating in glucose metabolism (regex on BioProcess name) ===
+                               gene                               |                 process                 
+------------------------------------------------------------------+-----------------------------------------
+ "uncharacterized LOC102623935"                                   | "glucose metabolic process"
+ "glyceraldehyde-3-phosphate dehydrogenase GAPC1, cytosolic"      | "glucose metabolic process"
+ "glucose-6-phosphate 1-dehydrogenase, chloroplastic"             | "glucose metabolic process"
+ "uncharacterized LOC102625637"                                   | "glucose metabolic process"
+ "uncharacterized LOC102625926"                                   | "glucose metabolic process"
+ "uncharacterized LOC102626660"                                   | "glucose metabolic process"
+ "glyceraldehyde-3-phosphate dehydrogenase GAPB, chloroplastic"   | "glucose metabolic process"
+ "inactive glucose-6-phosphate 1-dehydrogenase 4, chloroplastic"  | "glucose metabolic process"
+ "UTP--glucose-1-phosphate uridylyltransferase-like"              | "UDP-alpha-D-glucose metabolic process"
+ "glyceraldehyde-3-phosphate dehydrogenase GAPCP1, chloroplastic" | "glucose metabolic process"
+(10 rows)
+
+Time: 27.695 ms
+=== Q4: TP53 mentioned in articles (directed: Gene -> Article) ===
+        gene         |    article     
+---------------------+----------------
+ "tumor protein p53" | "PMID:1088347"
+ "tumor protein p53" | "PMID:1303181"
+ "tumor protein p53" | "PMID:1321290"
+ "tumor protein p53" | "PMID:1327751"
+ "tumor protein p53" | "PMID:1349102"
+ "tumor protein p53" | "PMID:1349175"
+ "tumor protein p53" | "PMID:1394225"
+ "tumor protein p53" | "PMID:1437144"
+ "tumor protein p53" | "PMID:1454855"
+ "tumor protein p53" | "PMID:1459726"
+(10 rows)
+
+Time: 26061.087 ms (00:26.061)
+=== Q5: Human taxon -> genes located in humans (directed: Gene -> Taxon) ===
+       tid        |      gid      |                   gname                   
+------------------+---------------+-------------------------------------------
+ "NCBITaxon:9606" | "NCBIGene:1"  | "alpha-1-B glycoprotein"
+ "NCBITaxon:9606" | "NCBIGene:2"  | "alpha-2-macroglobulin"
+ "NCBITaxon:9606" | "NCBIGene:9"  | "N-acetyltransferase 1"
+ "NCBITaxon:9606" | "NCBIGene:10" | "N-acetyltransferase 2"
+ "NCBITaxon:9606" | "NCBIGene:11" | "N-acetyltransferase pseudogene"
+ "NCBITaxon:9606" | "NCBIGene:12" | "serpin family A member 3"
+ "NCBITaxon:9606" | "NCBIGene:13" | "arylacetamide deacetylase"
+ "NCBITaxon:9606" | "NCBIGene:14" | "angio associated migratory cell protein"
+ "NCBITaxon:9606" | "NCBIGene:15" | "aralkylamine N-acetyltransferase"
+ "NCBITaxon:9606" | "NCBIGene:16" | "alanyl-tRNA synthetase 1"
+(10 rows)
+
+Time: 13.790 ms
+=== Q6: Node count per vertex label (sanity) ===
+       label       |  count   
+-------------------+----------
+ Gene              | 67536325
+ Article           | 40387670
+ SequenceVariant   |  4467468
+ OrganismTaxon     |  2736611
+ Disease           |   200845
+ OntologyClass     |    30790
+ BiologicalProcess |    16901
+ NamedThing        |    10580
+ PhenotypicFeature |     9881
+ MolecularActivity |     6978
+ CellularComponent |     2712
+(11 rows)
+
+Time: 16495.821 ms (00:16.496)
+=== Q7: Edge count per edge label (sanity) ===
+           edge_label           |   rows    
+--------------------------------+-----------
+ has_mesh_annotation            | 349158787
+ mentioned_in                   | 124032423
+ in_taxon                       |  67536046
+ actively_involved_in           |  44832765
+ participates_in                |  40767507
+ located_in                     |  31889215
+ orthologous_to                 |  17421811
+ has_phenotype                  |   6076764
+ is_sequence_variant_of         |   4407168
+ cited_in                       |   3924820
+ subclass_of                    |   2832676
+ close_match                    |    410000
+ gene_associated_with_condition |      7644
+ exact_match                    |         0
+(14 rows)
+
+Time: 23.565 ms

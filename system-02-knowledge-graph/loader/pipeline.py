@@ -48,7 +48,7 @@ import psycopg2
 
 from .connection import connect_age
 from .edge_loader import _build_curie_id_map, load_edges
-from .index_builder import create_indexes
+from .index_builder import analyze_tables, create_indexes, discover_edge_labels
 from .node_loader import load_nodes
 from .schema import EDGE_LABELS, VERTEX_LABELS, create_edge_label, create_graph, create_vertex_labels
 
@@ -163,10 +163,19 @@ def run_age_load(
         "Step 6 load_edges: %d edges in %.2fs", edge_count, time.monotonic() - t0
     )
 
-    # Step 7: create indexes
+    # Step 7: create indexes (4 passes: functional B-tree, graphid PK, GIN, edge endpoints)
     t0 = time.monotonic()
-    create_indexes(cur, graph_name, VERTEX_LABELS)
-    logger.info("Step 7 create_indexes: %.2fs", time.monotonic() - t0)
+    edge_labels = discover_edge_labels(cur, graph_name)
+    create_indexes(cur, graph_name, VERTEX_LABELS, edge_labels=edge_labels)
+    logger.info(
+        "Step 7 create_indexes: %d edge labels indexed in %.2fs",
+        len(edge_labels), time.monotonic() - t0,
+    )
+
+    # Step 8: ANALYZE so the planner has fresh stats before any query lands
+    t0 = time.monotonic()
+    analyze_tables(cur, graph_name, VERTEX_LABELS, edge_labels=edge_labels)
+    logger.info("Step 8 analyze_tables: %.2fs", time.monotonic() - t0)
 
     cur.close()
     conn.close()

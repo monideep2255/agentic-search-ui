@@ -8,8 +8,6 @@ Related artifacts:
 - `docs/architecture/Three_layer_data_architecture.md` (where the graph sits in the wider system)
 - DECISIONS.md rows dated 2026-04-06 and 2026-04-13 (the PostgreSQL + AGE choice)
 
----
-
 ## Table of contents
 
 - [Axioms](#axioms)
@@ -24,8 +22,6 @@ Related artifacts:
 - [Phase 3.0 vs Phase 4.0: code now, load later](#phase-30-vs-phase-40-code-now-load-later)
 - [What this means for you](#what-this-means-for-you)
 
----
-
 ## Axioms
 
 Before reasoning about the loader, name the things you are treating as solid. If any of these turn out false, the whole design shifts.
@@ -38,8 +34,6 @@ Before reasoning about the loader, name the things you are treating as solid. If
 6. Your working queries are mostly point lookups and 1-3 hop traversals. They are not 7-hop shortest-path searches over the whole graph.
 
 Everything that follows builds on these six.
-
----
 
 ## What is the AGE loader
 
@@ -70,8 +64,6 @@ The loader is idempotent. Re-run it on a fresh graph: full rebuild. Re-run it on
 
 What this means for you: when you run the loader on the VPS in Phase 4.0, you can kill it and restart it without worrying about corruption. That is the only way to sleep through a 6-hour load.
 
----
-
 ## Why does it exist
 
 The pipelines in Phases 1 and 2 end in TSV files. That is useful as a transport format. It is useless as a query target.
@@ -98,8 +90,6 @@ flowchart LR
 ```
 
 The loader is the bridge between "data we produced" and "data we can interrogate".
-
----
 
 ## What is PostgreSQL + Apache AGE
 
@@ -131,8 +121,6 @@ flowchart TB
 ```
 
 You get a graph query language on top of a relational storage engine. That sounds like a compromise. It is. The compromise buys you something important: you run the whole thing on a cheap box, because Postgres is disk-based, and it has been tuned for disk-based workloads for three decades.
-
----
 
 ## Our knowledge graph structure
 
@@ -193,8 +181,6 @@ Every edge also carries two BioLink 4.x provenance slots: `knowledge_level` and 
 
 What this means for you: when you write the AGE loader, the schema is already fixed. You are not designing labels or predicates. You are translating the ten categories and fourteen predicates that already exist into AGE vertex and edge labels, one-for-one.
 
----
-
 ## Why AGE over Neo4j
 
 The axiom that drives this: RAM is the expensive component, storage is cheap, and our queries fit the AGE strength zone.
@@ -222,8 +208,6 @@ Three more reasons the choice is comfortable:
 3. KGX is vendor-neutral. If AGE ever becomes the bottleneck, regenerate the KGX intermediates from the FTP cache and load into any other BioLink-aware graph store. The choice of graph database is reversible.
 
 What this means for you: you are not trading down. You are trading a marginal performance loss on deep traversals (queries we do not ask) for a 20x cost reduction on the queries we do ask.
-
----
 
 ## Performance: what to expect
 
@@ -256,8 +240,6 @@ Mitigations you apply at load time (Phase 4.0):
 3. Tune Postgres. Set `shared_buffers` to 25-40% of RAM, `effective_cache_size` to 60-70%.
 4. Cluster the most-queried tables on `id` to reduce random IO.
 5. If latency on a hot query shape disappoints, pre-compute a materialised view for it. Do not blame the database first.
-
----
 
 ## Hosting: is Hetzner the right floor
 
@@ -350,8 +332,6 @@ What this means for you:
 - If you want to save $15/month and can tolerate a benchmark-then-confirm step, try Netcup RS 2000 G11 first. Run the AGE loader, run Gate 3 queries, measure. If steal time is low and IO stays above 200 MB/s, stay. If not, move to Hetzner. The rsync and loader scripts are portable.
 - If Gate 3 misses latency targets on Hetzner CX41, do not switch databases. Upsize to AX41-NVMe (local NVMe, 64GB RAM, ~$40/mo). That almost certainly fixes the IO constraint without touching code.
 
----
-
 ## Phase 3.0 vs Phase 4.0: code now, load later
 
 The work is split across two phases on purpose. Phase 3.0 is cheap; Phase 4.0 is the expensive one, and you only want to do the expensive part once.
@@ -379,8 +359,6 @@ flowchart LR
 
 Phase 3.0 proves correctness on a representative shape. Phase 4.0 applies that exact same code at scale, once, on the host where the graph will live. You do not do the full load locally. The laptop does not have the headroom, and doing the work twice buys you nothing.
 
----
-
 ## What this means for you
 
 - The AGE loader is the bridge between KGX files and a queryable graph. Five jobs: create graph, create labels, bulk insert nodes, bulk insert edges, create indexes.
@@ -390,7 +368,5 @@ Phase 3.0 proves correctness on a representative shape. Phase 4.0 applies that e
 - Phase 3.0 builds the loader and proves it on a small fixture. Phase 4.0 runs it once, on the cloud, on the full merged graph. Do not do the full load locally.
 
 Axioms named, reasoning shown. If any axiom turns out false (for example: a compliance rule forces a specific hosting region, or the queries actually do need 7-hop shortest-path), revisit the decision. Otherwise, proceed.
-
----
 
 Last updated: 2026-04-19

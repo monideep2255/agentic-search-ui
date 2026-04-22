@@ -4,7 +4,9 @@ Tracks all data downloaded from NCBI FTP, with source URLs, file sizes, row coun
 
 ## Table of contents
 
+- [AGE graph (loaded 2026-04-22, Gate 3)](#age-graph-loaded-2026-04-22-gate-3)
 - [Storage location](#storage-location)
+- [Pipeline output vs live Entrez counts](#pipeline-output-vs-live-entrez-counts)
 - [Taxonomy (downloaded 2026-04-16, Gate 2)](#taxonomy-downloaded-2026-04-16-gate-2)
 - [PubMed (downloaded + parsed 2026-04-16 to 2026-04-17, Gate 2)](#pubmed-downloaded--parsed-2026-04-16-to-2026-04-17-gate-2)
 - [Gene (re-exported 2026-04-17, Gate 2 streaming refactor)](#gene-re-exported-2026-04-17-gate-2-streaming-refactor)
@@ -45,6 +47,72 @@ graph LR
     M --> AGE["PostgreSQL + AGE"]
 ```
 
+## AGE graph (loaded 2026-04-22, Gate 3)
+
+The merged KGX was loaded into PostgreSQL 15.17 + Apache AGE 1.5.0 on the Hetzner CPX42 at `46.225.128.133`. Database: `ncbi_kg`. AGE schema: `ncbi_kg`.
+
+Live reference: `docs/Knowledge_graph_on_server_reference.md` (A-Z operations guide, index listing, query examples).
+
+### Final vertex counts (Q6 result, 2026-04-22)
+
+| Label | Count |
+|-------|-------|
+| Gene | 67,536,325 |
+| Article | 40,387,670 |
+| SequenceVariant | 4,467,468 |
+| OrganismTaxon | 2,736,611 |
+| Disease | 200,845 |
+| OntologyClass | 30,790 |
+| BiologicalProcess | 16,901 |
+| NamedThing | 10,580 |
+| PhenotypicFeature | 9,881 |
+| MolecularActivity | 6,978 |
+| CellularComponent | 2,712 |
+| Total | 115,406,761 |
+
+### Final edge counts (Q7 result, 2026-04-22)
+
+| Edge label | Count |
+|------------|-------|
+| has_mesh_annotation | 349,158,787 |
+| mentioned_in | 124,032,423 |
+| in_taxon | 67,536,046 |
+| actively_involved_in | 44,832,765 |
+| participates_in | 40,767,507 |
+| located_in | 31,889,215 |
+| orthologous_to | 17,421,811 |
+| has_phenotype | 6,076,764 |
+| is_sequence_variant_of | 4,407,168 |
+| cited_in | 3,924,820 |
+| subclass_of | 2,832,676 |
+| close_match | 410,000 |
+| gene_associated_with_condition | 7,644 |
+| exact_match | 0 |
+| Total | 693,295,991 |
+
+### Indexes (post-load tuning pass, 2026-04-22)
+
+The loader's index_builder.py was updated after Gate 3 to emit all four passes automatically (Steps 7-8 going forward). For this load the following indexes were applied manually:
+
+- B-tree functional index on `agtype_to_text(properties -> '"id"')` for all 11 vertex labels (built by original Step 8)
+- GIN index on `properties` for Gene, Disease, BiologicalProcess, SequenceVariant (required for Cypher MATCH-by-property, see learnings.md Problem 12)
+- B-tree on `start_id` and `end_id` for all 14 edge tables (required for relationship traversal)
+- `ANALYZE` on all vertex + edge tables (required after bulk load; autovacuum does not run on freshly-loaded tables)
+
+### Smoke test results (Gate 3, 2026-04-22)
+
+| Query | Shape | Time | Result |
+|-------|-------|------|--------|
+| Q1 BRCA1 variants | Gene to SequenceVariant | 224 ms | 10 of 20 ClinVar variants (LIMIT 10) |
+| Q2 PKU gene | Disease to Gene | 6 ms | PAH (NCBIGene:5053) |
+| Q3 glucose metabolism | Gene to BiologicalProcess | 28 ms | 10 genes |
+| Q4 TP53 articles | Gene to Article | 26 s | most-cited gene, no edge index on mentioned_in at test time |
+| Q5 human genes | Taxon to Gene | 14 ms | 10 human genes |
+| Q6 node counts | - | 16 s | 11 labels, 115.4M total |
+| Q7 edge counts | - | 24 ms | 14 labels, 693.3M total |
+
+Results saved at `tests/cypher/gate3_results_2026-04-22.txt`. Canonical query suite at `tests/cypher/gate3_queries.sql`.
+
 ## Storage location
 
 All current local data is stored under the repo-local `data/` directory on the Windows laptop C: drive:
@@ -53,6 +121,24 @@ All current local data is stored under the repo-local `data/` directory on the W
 - `raw/`: intermediate parsed data (currently unused)
 
 Gate 1 entries below show `/export/home/chakrabortim2/data/...` paths because the Gate 1 runs happened on the NCBI server before the 2026-04-16 migration. The data has since been rsync'd to `C:\Users\chakrabortim2\Desktop\agentic-search-data-engineering\data\` on the laptop. Gate 2 entries use the laptop paths.
+
+## Pipeline output vs live Entrez counts
+
+Cross-reference of our KGX node output against the live NCBI Entrez record count on 2026-04-20. Each pipeline ingests from NCBI bulk FTP (a single flat file or a tar bundle), which is a narrower view than the Entrez search index. Gaps are expected; the question is whether the gap reflects intent.
+
+| Pipeline | Our nodes | Entrez records | Gap | Root cause | Decision |
+|---|---:|---:|---:|---|---|
+| Gene | 67,536,236 | 95,048,437 | -27.5M (-29%) | `gene_info.gz` is the live-genes flat file. Entrez also indexes 25,894,790 discontinued/replaced records (tracked in `gene_history.gz`), plus ~1M secondary records. | Keep as-is for V1. If System 3 ever needs to resolve old GeneIDs cited in legacy papers, add `gene_history.gz` as a second source and emit `replaced_by` edges. |
+| PubMed (per-pipeline) | 41,305,514 | 40,421,164 | +0.9M | Baseline (1,334 files) and updatefiles (82 files) overlap: updatefiles re-emit PMIDs already present in baseline with revised metadata. Streaming parser writes every row. | Correct by design: merge step dedups to 40,387,670 `biolink:Article` nodes, which matches Entrez within 33K (new PMIDs indexed after our 2026-04-17 snapshot). |
+| PubMed (post-merge) | 40,387,670 | 40,421,164 | -33K (-0.08%) | Snapshot date drift: PubMed indexes new articles continuously; our baseline+updatefiles were pulled 2026-04-16 to 2026-04-17. | Acceptable. V1 locks PubMed at baseline release 2026; refresh at V2. |
+| ClinVar | 4,426,035 | 4,269,379 | +157K (+3.7%) | Snapshot 2026-04-14 vs live 2026-04-17. ClinVar dropped ~220K records during a curation cleanup in that window (see `NCBI_databases_and_APIs_reference.md` Provenance note). Our snapshot is pre-cleanup. | PoC: ship as-is. 3.7% curation drift does not change KG structure, edge predicates, or traversal paths. Refresh at V2 when the content cutoff actually matters. |
+| MedGen | 198,813 | 234,106 | -35K (-15%) | We use `MedGenIDMappings.txt.gz` as the node source (198,813 CUIs with cross-references to OMIM, MeSH, Orphanet, SNOMED, or HPO). `NAMES.RRF.gz` has 236,920 CUIs, including ~38K "bare" MedGen concepts that only carry a name and no xref. | Keep as-is for V1: a MedGen concept with no xref cannot be linked to anything else in the KG, so it adds no traversal value. If System 3 needs those for free-text concept search, ingest `NAMES.RRF` as a secondary MedGen-only node source with a flag `has_xrefs=false`. |
+| Taxonomy | 2,736,607 | 2,872,642 | -136K (-5%) | `nodes.dmp` in taxdump contains 2,736,607 live taxa. Entrez additionally indexes `merged.dmp` (97,892 old taxids merged into live ones) plus ~38K newer taxa added since our 2026-04-16 snapshot. `delnodes.dmp` has another 863,584 deleted taxids that Entrez does not surface. | Keep as-is for V1. `merged.dmp` matters only if downstream callers hand us obsolete taxids and expect to be redirected. If that happens, add a small `OldTaxon -> LiveTaxon replaced_by` edge set from `merged.dmp` (98K edges, trivial). |
+| dbSNP | 0 | 1,197,210,835 | -1.2B | Deferred to System 3 as a query-time API lookup (see bossman execution plan). Loading 1.2B nodes into AGE is out of scope for V1. | Planned deferral. System 3 will hit `esummary.fcgi?db=snp` on demand. |
+
+Pattern: Entrez record counts are the **searchable index** (includes live + retired + merged records for lookup) whereas bulk FTP flat files contain the **live slice** only. A 5% to 30% gap is normal. Flag as a bug only when we are below the live slice (which has not happened on any pipeline so far).
+
+See `docs/learnings.md` section "Entrez indexes vs bulk FTP flat files" for the generalized lesson.
 
 ## Taxonomy (downloaded 2026-04-16, Gate 2)
 
@@ -258,11 +344,11 @@ Original Gate 1 KGX (dated 2026-04-14) was overwritten by the streaming re-expor
 |--------|-------|-------------|
 | ClinVar | 43,770 | ClinVar variant IDs referenced by other pipelines but not in our ClinVar snapshot |
 | PMID | 14,769 | Newer PMIDs in gene2pubmed not yet in our PubMed baseline |
-| OMIM | 10,580 | OMIM IDs referenced by mim2gene_medgen — prefix not in _PREFIX_TO_CATEGORY, became NamedThing (follow-up: add OMIM to the table) |
+| OMIM | 10,580 | OMIM IDs referenced by mim2gene_medgen, prefix not in _PREFIX_TO_CATEGORY, became NamedThing (follow-up: add OMIM to the table) |
 | HP | 9,881 | HPO terms referenced by medgen but not in medgen KGX |
 | MedGen | 2,032 | MedGen concepts referenced but not present |
 | NCBIGene | 89 | Gene IDs in clinvar not in gene snapshot |
-| NCBITaxon | 4 | Taxonomy refs not in taxdump — negligible |
+| NCBITaxon | 4 | Taxonomy refs not in taxdump, negligible |
 
 ### Validation
 
@@ -272,7 +358,7 @@ Original Gate 1 KGX (dated 2026-04-14) was overwritten by the streaming re-expor
 | Total edges | 693,295,991 matches sum of per-db inputs minus no dedup (edge dedup skipped per streaming design) |
 | Cross-pipeline connectivity | 99.99 % - 100 % for all 4 key paths |
 | Dangling edges after stubs | 0 (by construction) |
-| validation.passed | `False` (noise — stubs carry empty source_url, count as missing provenance; intentional, matches inject_stubs behavior) |
+| validation.passed | `False` (noise: stubs carry empty source_url, count as missing provenance; intentional, matches inject_stubs behavior) |
 | Awk 7-column check on merged/edges.tsv | PASS - all 693,295,991 edges NF=8, 0 empty knowledge_level, 0 empty agent_type |
 
 ### Wall-clock time

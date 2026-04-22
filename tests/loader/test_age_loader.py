@@ -186,8 +186,8 @@ class TestCreateVertexLabels:
         assert len(executed) == len(labels)
 
     def test_all_vertex_labels_constant_covered(self) -> None:
-        """VERTEX_LABELS has exactly 10 entries."""
-        assert len(VERTEX_LABELS) == 10
+        """VERTEX_LABELS has exactly 11 entries (10 BioLink categories plus NamedThing for stub endpoints)."""
+        assert len(VERTEX_LABELS) == 11
 
     def test_vertex_labels_are_strings(self) -> None:
         """Every entry in VERTEX_LABELS is a non-empty string."""
@@ -435,38 +435,68 @@ class TestBuildCurieIdMap:
 
 
 class TestCreateIndexes:
-    """Tests for create_indexes in index_builder.py."""
+    """Tests for create_indexes in index_builder.py.
 
-    def test_calls_create_index_for_each_label(self) -> None:
-        """create_indexes calls cur.execute once per vertex label."""
+    Each vertex label gets 3 indexes (functional B-tree, graphid PK, GIN).
+    Each edge label gets 2 indexes (start_id, end_id).
+    """
+
+    def test_three_passes_per_vertex_label(self) -> None:
+        """create_indexes calls cur.execute 3 times per vertex label when no edges."""
         mock_cur = MagicMock()
         labels = ["Gene", "Disease"]
         create_indexes(mock_cur, "test_graph", labels)
-        assert mock_cur.execute.call_count == len(labels)
+        assert mock_cur.execute.call_count == 3 * len(labels)
 
-    def test_sql_contains_create_index_if_not_exists(self) -> None:
-        """Each create_indexes call uses CREATE INDEX IF NOT EXISTS."""
+    def test_two_endpoint_indexes_per_edge_label(self) -> None:
+        """Each edge label adds 2 indexes (start_id, end_id) on top of vertex passes."""
+        mock_cur = MagicMock()
+        create_indexes(
+            mock_cur, "test_graph",
+            vertex_labels=["Gene"],
+            edge_labels=["mentioned_in", "in_taxon"],
+        )
+        # 3 vertex passes for Gene + 2 endpoint passes per edge label.
+        assert mock_cur.execute.call_count == 3 + 2 * 2
+
+    def test_all_sql_uses_if_not_exists(self) -> None:
+        """Every CREATE INDEX call uses IF NOT EXISTS for idempotency."""
+        mock_cur = MagicMock()
+        create_indexes(mock_cur, "test_graph", ["Gene"], edge_labels=["mentioned_in"])
+        for call in mock_cur.execute.call_args_list:
+            sql = call[0][0]
+            assert "CREATE INDEX IF NOT EXISTS" in sql or "CREATE UNIQUE INDEX IF NOT EXISTS" in sql
+
+    def test_vertex_passes_emit_btree_pk_and_gin(self) -> None:
+        """The 3 vertex passes are: functional B-tree, unique B-tree on id, GIN on properties."""
         mock_cur = MagicMock()
         create_indexes(mock_cur, "test_graph", ["Gene"])
-        sql = mock_cur.execute.call_args[0][0]
-        assert "CREATE INDEX IF NOT EXISTS" in sql
+        sqls = [call[0][0] for call in mock_cur.execute.call_args_list]
+        joined = " | ".join(sqls)
+        assert "agtype_to_text(properties" in joined  # pass 1
+        assert "UNIQUE INDEX" in joined and "(id);" in joined  # pass 2
+        assert "USING gin (properties)" in joined  # pass 3
 
-    def test_sql_references_vertex_label_table(self) -> None:
-        """The index DDL targets the correct per-label table."""
+    def test_edge_passes_emit_start_id_and_end_id(self) -> None:
+        """Edge passes create btree on start_id and end_id."""
         mock_cur = MagicMock()
-        create_indexes(mock_cur, "test_graph", ["Gene"])
-        sql = mock_cur.execute.call_args[0][0]
-        assert '"test_graph"' in sql
-        assert '"Gene"' in sql
+        create_indexes(
+            mock_cur, "test_graph", vertex_labels=[], edge_labels=["mentioned_in"]
+        )
+        sqls = [call[0][0] for call in mock_cur.execute.call_args_list]
+        joined = " | ".join(sqls)
+        assert "(start_id);" in joined
+        assert "(end_id);" in joined
+        assert '"mentioned_in"' in joined
 
     def test_index_name_includes_graph_and_label(self) -> None:
         """Index name contains both sanitized graph name and label."""
         mock_cur = MagicMock()
         create_indexes(mock_cur, "my_graph", ["MyLabel"])
-        sql = mock_cur.execute.call_args[0][0]
-        # Index name should contain 'my_graph' and 'mylabel' (lowercased)
-        assert "my_graph" in sql.lower()
-        assert "mylabel" in sql.lower()
+        sqls = [call[0][0] for call in mock_cur.execute.call_args_list]
+        joined = " | ".join(sqls).lower()
+        assert "my_graph" in joined
+        assert "mylabel" in joined
 
 
 # ---------------------------------------------------------------------------
