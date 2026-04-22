@@ -43,6 +43,8 @@ neo4j/import/
 # IDE
 .vscode/
 .idea/
+.claude/
+.codex/
 *.swp
 *.swo
 .DS_Store
