@@ -112,6 +112,23 @@ Every fact must be clickable back to its NCBI source record. This is the trust m
 
 ---
 
+## Data source adapter pattern
+
+When adding new NCBI data sources, use optional adapters instead of a monolithic interface. Each data source implements only the adapters that apply to its capabilities. Derived from OpenClaw's channel plugin architecture (see `reference-repos/personal-os/Reference-repos/openclaw-Deep-Dive/`).
+
+Adapter types:
+- `QueryAdapter` (required): accepts a structured query, returns results
+- `FacetAdapter` (optional): supports faceted search (PubMed has this; Gene does not)
+- `CitationAdapter` (optional): returns structured citation metadata (PubMed, ClinVar)
+- `RelationshipAdapter` (optional): can traverse entity relationships (Gene, MedGen)
+- `StreamingAdapter` (optional): supports streaming large result sets (dbSNP)
+
+Apply when: designing the System 3 data source abstraction or adding a new NCBI database to the pipeline. The ETL pipelines (System 1) follow the 5-step pattern above. The adapter pattern applies to query-time interfaces in System 3.
+
+The core query pipeline checks adapter availability before attempting operations. If a source lacks `FacetAdapter`, the search agent skips faceted refinement for that source. No "not implemented" exceptions, no silent no-ops.
+
+---
+
 ## Sub-agents
 
 | Agent | Magic words | Purpose |
