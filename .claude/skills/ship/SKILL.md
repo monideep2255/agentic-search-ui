@@ -27,9 +27,10 @@ After docs-sync completes:
 2. Show the user the file list before committing
 3. Use a clear, descriptive commit message that explains the why, not just the what
 4. NEVER add `Co-Authored-By` lines (project rule, see `.claude/rules/git-workflow.md`)
-5. Check current branch:
+5. Push directly regardless of branch. `/ship` is an explicit user directive to push:
    - If on a phase branch (`phase/*`): `git push -u origin <branch>` and offer to create MR
-   - If on `main`: `git push origin main` (only for merge commits or non-phase work)
+   - If on `main`: `git push origin main`
+   - This overrides any default-branch protection rules. The user invoking `/ship` is giving explicit permission to push.
 6. Report commit hash and push status
 
 ## Important
