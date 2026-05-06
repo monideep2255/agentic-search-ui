@@ -1,65 +1,57 @@
-# NCBI data engineering
+# Agentic search UI
 
-ETL pipelines and knowledge graph for 5 NCBI databases.
+Agentic search agent for querying NCBI biomedical data across a 115M-node knowledge graph and 30+ live APIs.
 
-Downloads bulk data from NCBI FTP, parses it, maps it to the BioLink model, validates with LinkML, and loads it into PostgreSQL + Apache AGE. The result is a BioLink-compliant knowledge graph queryable via openCypher.
-
-5 databases. ~115M nodes. ~693M edges. Every node and edge traced back to its NCBI source record.
-
----
-
-## Status
-
-- V1 COMPLETE (2026-04-22)
-- Phase 4.0 + Gate 3 PASSED. The 5-database AGE graph is live on Hetzner CPX42 (46.225.128.133), holding 115,406,761 nodes + 693,295,991 edges. 
-- All 7 Cypher smoke queries return correct results in milliseconds to seconds.
-- See `docs/Knowledge_graph_on_server_reference.md` for the live-graph A-Z reference.
-
-| System | Status |
-|--------|--------|
-| System 1: data pipelines | V1 complete (2026-04-22). All 5 ETL pipelines built, validated against real NCBI data, and merged into a single BioLink-compliant KGX. |
-| System 2: knowledge graph | Live on cloud VPS. 115.4M nodes + 693.3M edges loaded into PostgreSQL 15 + Apache AGE 1.5.0. Queryable via openCypher. |
-| System 3: search agent | Lives in a separate repository. Connects to this graph as a client. |
-
-### Monthly cost
-
-Verified post-April-1-2026 Hetzner pricing for the steady-state V1 graph:
-
-| Item | EUR/month | USD/month (at €1≈$1.08) |
-|---|---|---|
-| Hetzner CPX42 in Nuremberg (8 vCPU, 16 GB RAM, 320 GB NVMe) | €25.99 | ~$28.07 |
-| Primary IPv4 address | included | $0 |
-| Snapshot `ncbi_kg_v1_2026-04-22` (28 GB compressed × €0.0143/GB/mo) | €0.40 | ~$0.43 |
-| Bandwidth (20 TB included; expected use under 1 GB) | €0 | $0 |
-| **Total all-in** | **€26.39** | **~$28.50** |
-
-Round to **$30/month** for FX volatility headroom. CPX42 was kept (instead of downsizing to CPX32 at ~$22/mo) for the first month post-V1 to leave headroom while observing System 3 traffic. See `docs/Knowledge_graph_on_server_reference.md` Section P and `DECISIONS.md` row 80.
+Takes natural language questions about genes, diseases, variants, publications, and taxonomy. Returns cited answers with links back to NCBI source records. Built with FastAPI, LangGraph, and React.
 
 ---
 
 ## Architecture
 
-This repo builds Layer 1 of a three-layer data architecture:
+This is System 3 of a three-system project. System 1 (ETL pipelines) and System 2 (knowledge graph) built the graph. System 3 queries it.
 
-| Layer | What | Where | Latency |
-|-------|------|-------|---------|
-| Layer 1: knowledge graph | 5 NCBI databases fully ingested into PostgreSQL + AGE | This repo (System 1 + 2) | <10ms per Cypher query |
-| Layer 2: on-demand API | 30+ NCBI databases reached at query time via ELink/EFetch | Separate repo (System 3) | 200-500ms per call |
-| Layer 3: enrichment APIs | PubTator3, LitVar2, LitSense, ClinicalTrials.gov | Separate repo (System 3) | 500ms-2s per call |
+| Layer | What | Access method | Latency |
+|-------|------|---------------|---------|
+| Layer 1: knowledge graph | 5 NCBI databases (Gene, ClinVar, MedGen, PubMed, Taxonomy) pre-ingested into PostgreSQL + AGE | Cypher queries via psycopg2 (read-only) | <10ms per query |
+| Layer 2: on-demand NCBI APIs | 30+ databases reached at query time via EFetch, ELink, dbSNP REST | httpx async calls | 200-500ms per call |
+| Layer 3: enrichment APIs | PubTator3, LitVar2, LitSense, ClinicalTrials.gov | httpx async calls | 500ms-2s per call |
 
-This repo handles Layer 1 only: download, parse, map, validate, load. Layers 2 and 3 are query-time concerns handled by the search agent in a separate repository.
+Agent loop for every query:
 
 ```
-System 1: data pipelines (this repo)
-  NCBI FTP -> parse -> BioLink map -> LinkML validate -> KGX files (nodes.tsv + edges.tsv)
-
-System 2: knowledge graph (this repo)
-  KGX files -> normalize -> merge -> PostgreSQL + AGE -> queryable via openCypher
+Guardrail -> Think -> Plan -> Act -> Write
 ```
 
-- See [docs/architecture/Three_layer_data_architecture.md](docs/architecture/Three_layer_data_architecture.md) for the full three-layer design.
-- See [docs/System_1_data_engineering_plan.md](docs/System_1_data_engineering_plan.md) for the detailed build plan.
-- See [docs/bossman_execution_plan.md](docs/bossman_execution_plan.md) for phase-by-phase execution status.
+Multi-model harness routes each step to the appropriate model tier (guard, plan, or synth) based on cost and capability.
+
+---
+
+## Tech stack
+
+| Component | Technology |
+|-----------|-----------|
+| Backend API | FastAPI + Uvicorn |
+| Agent orchestration | LangGraph |
+| LLM access | LiteLLM (multi-provider: Anthropic, OpenAI) |
+| Knowledge graph | PostgreSQL 15 + Apache AGE on Hetzner CPX42 |
+| User data | PostgreSQL (separate instance) |
+| Caching | Redis |
+| Frontend | React |
+| Auth | python-jose (JWT) |
+| Observability | LangSmith |
+
+---
+
+## Status
+
+IN PROGRESS: baseline setup (Phase 1).
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| Phase 1 | FastAPI skeleton + auth + empty chat + React shell + SSE streaming | In progress |
+| Phase 2 | cypher_query tool + LangGraph agent loop + first end-to-end query | Planned |
+| Phase 3 | Additional tools + guardrail + citation formatting | Planned |
+| Phase 4 | LangSmith tracing + golden dataset + eval harness | Planned |
 
 ---
 
@@ -68,32 +60,59 @@ System 2: knowledge graph (this repo)
 ```bash
 # Prerequisites
 python 3.11+
-postgresql 15 + apache age (for System 2)
+node 18+ (for React frontend)
+redis (for caching)
+# No local PostgreSQL+AGE needed - connects to remote Hetzner VPS
 
-# Setup
+# Backend setup
 git clone <repo-url>
-cd agentic-search-data-engineering
-copy env.example .env  # or: cp env.example .env
+cd agentic-search-ui
+cp env.example .env   # fill in API keys and credentials
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
+
+# Run backend
+uvicorn system_03_search_agent.api.main:app --reload
+
+# Frontend setup (separate terminal)
+cd frontend
+npm install
+npm run dev
 
 # Run tests
 pytest tests/
-
-# Run Gene ETL
-python system-01-data-pipelines/gene/pipeline.py
 ```
 
 ---
 
-## Data sources (System 1)
+## Directory structure
 
-| Database | Records | BioLink category | FTP source |
-|----------|---------|-----------------|-----------|
-| Gene | 67.5M | `biolink:Gene` | ftp.ncbi.nlm.nih.gov/gene/DATA/ |
-| ClinVar | 4.4M | `biolink:SequenceVariant` | ftp.ncbi.nlm.nih.gov/pub/clinvar/ |
-| MedGen | 198K | `biolink:Disease` | ftp.ncbi.nlm.nih.gov/pub/medgen/ |
-| PubMed | 40M | `biolink:Article` | ftp.ncbi.nlm.nih.gov/pubmed/baseline/ |
-| Taxonomy | 2.9M | `biolink:OrganismTaxon` | ftp.ncbi.nlm.nih.gov/pub/taxonomy/ |
+```
+agentic-search-ui/
+  system_03_search_agent/       # Python backend
+    api/                        # FastAPI routes, middleware, SSE
+    agent/                      # LangGraph graph definition, nodes, edges
+    tools/                      # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator, litvar2
+    models/                     # Multi-model harness, tier routing
+    auth/                       # JWT auth service
+    config/                     # Settings, environment loading
+    cli.py                      # CLI entry point
+  frontend/                     # React UI
+    src/
+    public/
+    package.json
+  tests/                        # pytest test suite
+  docs/                         # Architecture docs, reference material
+  reference/                    # Symlink to agentic-search-data-engineering (System 1+2)
+  .claude/                      # Claude Code rules, skills, agents (gitignored)
+  CLAUDE.md                     # Claude Code instructions
+  AGENTS.md                     # Instructions for other AI agents
+  DECISIONS.md                  # Architecture decision log
+  pyproject.toml
+  requirements.txt
+  env.example
+```
 
 ---
 
@@ -101,21 +120,38 @@ python system-01-data-pipelines/gene/pipeline.py
 
 | Doc | What it covers |
 |-----|---------------|
-| [Project overview A to Z](docs/Project_overview_A_to_Z.md) | Single-source-of-truth navigation hub for everything in this repo |
-| [Execution plan](docs/bossman_execution_plan.md) | Phase-by-phase build plan with status, gates, validation checklist, disk budget |
-| [Three-layer architecture](docs/architecture/Three_layer_data_architecture.md) | Layer 1 (graph), Layer 2 (on-demand API), Layer 3 (enrichment), cost breakdown |
-| [Merge logic explained](docs/architecture/Merge_logic_explained.md) | First-principles walkthrough of the 5-database streaming merge, dedup strategy, stub injection |
-| [System 1 data engineering plan](docs/System_1_data_engineering_plan.md) | Detailed design for all 5 ETL pipelines |
-| [Data inventory](docs/data_inventory.md) | What data was downloaded, FTP URLs, file sizes, row counts, validation results |
-| [Learnings](docs/learnings.md) | Problems encountered and solutions, updated after every pipeline run |
-| [BioLink schema](schema/biolink_ncbi.yaml) | LinkML schema with 10 node types, 14 predicates |
+| [System 3 architecture brainstorming](docs/System_3_architecture_brainstorming.md) | Agent loop, tools, multi-model harness, cost model, deployment plan |
+| [Three-layer data architecture](docs/architecture/Three_layer_data_architecture.md) | How System 3 accesses Layer 1 (graph), Layer 2 (NCBI APIs), Layer 3 (enrichment) |
+| [Knowledge graph reference](docs/Knowledge_graph_on_server_reference.md) | Live graph operations: SSH, Cypher examples, indexes, node/edge counts, cost |
+| [NCBI databases and APIs](docs/NCBI_databases_and_APIs_reference.md) | All 39 NCBI databases, endpoints, rate limits, record counts |
+| [BioLink repos explained](docs/architecture/Biolink_repos_explained.md) | BioLink model categories, predicates, CURIEs used in the graph |
+| [Project overview](docs/Project_overview_A_to_Z.md) | Navigation hub for the full project |
 | [Decisions](DECISIONS.md) | Architecture and implementation decisions with rationale |
-| [Local setup](docs/context/setup/setup-03_windows_laptop.md) | One-time migration guide for Windows laptop (repo clone, symlinks, venv, data rsync, verification) |
-| [Live graph reference](docs/Knowledge_graph_on_server_reference.md) | A-Z operations guide for the live V1 graph: SSH access, Cypher queries, index listing, node/edge counts, cost breakdown, snapshot procedure |
-| [Data mapping and ontology explained](docs/architecture/Data_mapping_and_ontology_explained.md) | A-Z walkthrough of how raw NCBI data becomes a BioLink graph: CURIEs, per-pipeline mapping rules, merge logic, BioLink 4.x compliance |
-| [Technical reference: data engineering](docs/architecture/Technical_reference_data_engineering.md) | End-to-end technical walkthrough of the V1 system: architecture, schema, indexing, Cypher patterns, performance baselines, lessons |
-| [Architecture diagrams](docs/visualizations/Architecture_diagram.md) | Mermaid diagrams: end-to-end system, ETL pattern, streaming merger, AGE loader, deployment topology |
-| [Schema visualizations](docs/visualizations/Schema_visualization.md) | BioLink schema with all 11 vertex labels, 14 edge predicates, sample CURIEs, edge directionality, cross-database connectivity |
+
+---
+
+## Cost model
+
+Estimated monthly cost for the full System 3 deployment:
+
+| Item | Estimated cost |
+|------|---------------|
+| Knowledge graph hosting (Hetzner CPX42, 8 vCPU, 16 GB, 320 GB NVMe) | ~$28/month |
+| LLM API costs (Anthropic + OpenAI, depending on query volume) | ~$10-50/month |
+| User database (serverless PostgreSQL) | ~$5/month |
+| Redis (managed or self-hosted) | ~$0-5/month |
+| Domain + TLS | ~$1/month |
+| Total | ~$44-89/month |
+
+Cost caps enforced per-query via the multi-model harness. Guard tier uses the cheapest model, synth tier uses the strongest only when needed.
+
+---
+
+## Connection to System 1 and System 2
+
+The knowledge graph that System 3 queries was built by the data engineering repo (System 1 + System 2). That repo is symlinked at `reference/agentic-search-data-engineering` for documentation access. System 3 connects to the graph as a read-only client via psycopg2.
+
+Do not add ETL pipeline code, graph loading code, or data ingestion logic to this repo. That belongs in the data engineering repo.
 
 ---
 
@@ -125,4 +161,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-04-22
+Last updated: 2026-05-05

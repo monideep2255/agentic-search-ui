@@ -1,72 +1,37 @@
-# Data (symlink to /export, never commit)
-data/
-*.gz
-*.tar.gz
-*.xml.gz
-*.zip
-
-# Environment
-.env
-.env.*
-!.env.example
-
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-build/
-dist/
 *.egg-info/
-.eggs/
+dist/
+build/
 venv/
-env/
 .venv/
-*.pyc
 
-# Node
+# Environment
+.env
+
+# Node/React
 node_modules/
-npm-debug.log*
-.npm
-
-# Runtime logs (Chrome crashpad, ad-hoc debug files, scheduled-task state)
-debug.log
-*.log.tmp
-.claude/scheduled_tasks.lock
-
-# Neo4j
-neo4j/data/
-neo4j/logs/
-neo4j/import/
+.next/
+dist/
+build/
 
 # IDE
 .vscode/
 .idea/
-.claude/
-.codex/
-*.swp
-*.swo
+
+# OS
 .DS_Store
+Thumbs.db
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
+# Data and cache
+*.sqlite
+redis-data/
 
-# LangSmith / observability
-.langchain/
+# Claude Code local config
+.claude/
+.codex
 
-# Core dumps
-core.*
-core
-
-# Temporary
-tmp/
-temp/
-scratch/
-
-# Reference symlinks (local only, not committed)
-reference/
-reference-repos/
-
+# Reference repos (symlinks, don't track)
+reference/agentic-search-data-engineering

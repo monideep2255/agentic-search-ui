@@ -1,7 +1,0 @@
-#curie_map:
-#  ClinVar: https://www.ncbi.nlm.nih.gov/clinvar/variation/
-#  MedGen: https://www.ncbi.nlm.nih.gov/medgen/
-#  MONDO: http://purl.obolibrary.org/obo/MONDO_
-#mapping_set_id: clinvar_mondo_mapping
-#mapping_set_description: ClinVar variant phenotype edges mapped through MedGen to MONDO
-subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification
