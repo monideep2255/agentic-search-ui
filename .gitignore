@@ -29,9 +29,5 @@ Thumbs.db
 *.sqlite
 redis-data/
 
-# Claude Code local config
-.claude/
+# Codex local config
 .codex
-
-# Reference repos (symlinks to local repos, don't track)
-reference/

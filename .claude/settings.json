@@ -1,0 +1,44 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pytest:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python -m system_01_data_pipelines:*)",
+      "Bash(python -c:*)",
+      "Bash(python:*)",
+      "Bash(linkml:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(pip:*)",
+      "Bash(which:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(chmod:*)",
+      "Bash(tar:*)",
+      "Bash(curl:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(sort:*)",
+      "Bash(ssh:*)",
+      "Bash(kill:*)",
+      "Bash(export:*)",
+      "Bash(source:*)",
+      "Bash(type:*)",
+      "Bash(echo:*)",
+      "Bash(tmux:*)",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "Agent"
+    ]
+  }
+}
