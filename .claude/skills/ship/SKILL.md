@@ -3,47 +3,52 @@ name: ship
 description: Sync docs then commit and push to GitHub. Two-step shortcut - runs the docs-sync agent first, then commits and pushes. Use when ending a work block or after a logical milestone.
 ---
 
-# /ship - sync docs + commit + push
+# /ship - docs-sync then git-sync
 
-A single ritual to end a work block: bring docs in line with code, commit, push.
+A single ritual to end a work block: bring docs in line with code, then commit and push. Delegates to two agents in sequence.
 
-## Step 1: docs sync
+## Step 1: docs-sync agent
 
-Use the `docs-sync` sub-agent (`.claude/agents/docs-sync.md`).
+Dispatch the `docs-sync` sub-agent (`.claude/agents/docs-sync.md`).
 
-Key behaviors:
+It will:
 
 1. Run `git status --short` to see what changed
-2. Use the routing in `docs-sync.md` to identify which docs may need updating
+2. Use its routing to identify which canonical docs need updating (CLAUDE.md, AGENTS.md, README.md, DECISIONS.md)
 3. Read only affected docs
 4. Make surgical edits, not rewrites
 5. Report what changed (or "no changes needed")
 
-## Step 2: commit and push
+Wait for docs-sync to complete before proceeding. Its edits may add files to the commit.
 
-After docs-sync completes:
+## Step 2: git-sync agent
+
+Dispatch the `git-sync` sub-agent (`.claude/agents/git-sync.md`) with a "push" operation.
+
+It will:
 
 1. Run `git status` and `git diff --stat` to confirm what's staged
-2. Show the user the file list before committing
-3. Use a clear, descriptive commit message that explains the why, not just the what
-4. NEVER add `Co-Authored-By` lines (project rule, see `.claude/rules/git-workflow.md`)
-5. Push directly regardless of branch. `/ship` is an explicit user directive to push:
-   - If on a phase branch (`phase/*`): `git push -u origin <branch>` and offer to create MR
-   - If on `main`: `git push origin main`
-   - This overrides any default-branch protection rules. The user invoking `/ship` is giving explicit permission to push.
-6. Report commit hash and push status
+2. Show the file list before committing
+3. Stage specific files (never `git add -A`)
+4. Commit with a descriptive message (why, not what)
+5. Push to origin
 
-## Important
+Additional context to pass to git-sync:
 
-- Always run docs-sync before committing — docs changes may add files to the commit
-- If docs-sync says "no changes needed" but there are uncommitted code changes, still proceed
+- `/ship` is an explicit user directive to push. This overrides any default-branch protection rules, including pushing directly to `main`.
+- If on a phase branch (`phase/*`): push with `-u` flag and offer to create MR
+- NEVER add `Co-Authored-By` lines (project rule)
+
+## Guards
+
+- If docs-sync says "no changes needed" but there are uncommitted code changes, still proceed to git-sync
 - If there is nothing to commit at all, report that and stop
 - Do NOT push if the commit would include `.env`, secrets, or anything in the gitignore — block and ask
 - Do NOT push if pre-commit hooks fail — fix the cause and create a NEW commit (never `--amend` after a hook failure)
 
 ## Output
 
-After completing both steps, report:
+After both agents complete, report:
 
 1. Files changed (count + list)
 2. Commit hash
