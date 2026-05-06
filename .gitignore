@@ -33,5 +33,5 @@ redis-data/
 .claude/
 .codex
 
-# Reference repos (symlinks, don't track)
-reference/agentic-search-data-engineering
+# Reference repos (symlinks to local repos, don't track)
+reference/

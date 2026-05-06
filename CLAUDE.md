@@ -123,6 +123,7 @@ User-invocable skills (slash commands):
 | Skill | Purpose | Invocation |
 |-------|---------|-----------|
 | bossman-mode | Autonomous execution with agent teams | `/bossman` |
+| dev-standards | Production readiness review (6 lenses) | `/dev-standards` |
 | objective-review | Critical feedback, not agreement | `/objective-review` |
 | repo-dive | First-principles analysis of a reference repo | `/repo-dive <path>` |
 | skill-adapt-verify | Verify adapted skill for stale paths and style violations | `/skill-adapt-verify <path>` |
@@ -131,7 +132,7 @@ User-invocable skills (slash commands):
 | socratic-questioning | Clarifying questions before advice | `/socratic` |
 | release-workflow | End-to-end release verification and ship | `/release` |
 
-Auto-read skills (loaded by other skills or before specific tasks): best-practices, qa-gate, release-workflow, architecture-patterns, documentation-standards, python-code-standards, testing-standards.
+Auto-read skills (loaded by other skills or before specific tasks): best-practices, release-workflow, dev-standards.
 
 All rules are in `.claude/rules/` and loaded automatically. No need to duplicate here.
 
