@@ -4,7 +4,7 @@ From background research to working product. This document defines every step be
 
 Kick-off: 2026-05-06. Phase 0 completed in the kick-off session. All background material collected, vision aligned, plan agreed.
 
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 ## Table of contents
 
@@ -64,9 +64,19 @@ Output: `requirements/Background_requirements.md` (24 sources indexed, all paths
 
 ## Phase 1: source review and architecture decisions
 
-Status: NOT STARTED
+Status: IN PROGRESS (Steps 1.1 and 1.2 complete as of 2026-05-07)
 
 Goal: go through every source in `Background_requirements.md`, debate what to use, what to skip, and what needs adaptation. Lock the architecture decisions before writing the PRD.
+
+### Phase 1 output structure
+
+Phase 1 produces three types of output that together feed Phase 2:
+
+1. Session notes (`requirements/phase_1/Session_*.md`): chronological record of what we discussed, debated, and why. One file per session. These are the raw record and also serve as a personal learning log.
+2. Decision log (`DECISIONS.md`): every confirmed choice in a flat, searchable table with rationale. Append-only.
+3. Phase 1 synthesis document (`requirements/phase_1/Phase_1_synthesis.md`): written after all 10 steps complete. Organizes all decisions and discussion outcomes by topic into a single narrative. This becomes the primary input for Phase 2 (competency questions) and Phase 3 (PRD).
+
+The synthesis document fills the gap between chronological session notes and a flat decision table. Session notes answer "what did we discuss and when?" DECISIONS.md answers "what did we choose?" The synthesis answers "what does it all mean together, organized by topic, ready for downstream phases?"
 
 ### Step 1.1: review strategic foundation (3 sources)
 
@@ -74,7 +84,7 @@ Goal: go through every source in `Background_requirements.md`, debate what to us
 | --- | --- | --- |
 | Innovation proposal | Which scope elements apply to our build vs. the official NCBI track? | Discuss together |
 | NCBI strategic alignment (FY26, Gold Standard, AI Action Plan) | Which constraints are real requirements vs. nice-to-have alignment? | Discuss together |
-| Two-track plan + personal build plan | Confirm: we are building Track 1 (personal, 2 months, ~$300-500). What from Track 2 do we borrow? | Monideep decides |
+| Two-track plan + personal build plan | Confirm: we are building Track 1 (personal, 2 months, ~$100). What from Track 2 do we borrow? | Monideep decides |
 
 ### Step 1.2: review architecture design (4 sources)
 
@@ -137,11 +147,11 @@ Topics that cut across multiple sources and need explicit architecture decisions
 | --- | --- | --- |
 | Security and threat model | Prompt injection defense, forbidden query types, PII handling, audit logging. Use "Agents of Chaos" red-teaming findings (section 8 of Background_requirements.md) as the threat catalog. What does the NCBI KG reference implementation do? What does the NIH context require? | Discuss together |
 | Data freshness and conflict resolution | Graph is a periodic snapshot; APIs are live. When they disagree, which wins? What staleness is acceptable? | Discuss together |
-| Rate limiting strategy | NCBI APIs cap at 3-10 req/sec. With concurrent users, who gets throttled? Queue? Prioritize? Fail fast? | Discuss together |
+| Rate limiting strategy | NCBI E-utilities at 100 req/sec (upgraded), Variation Services at 1 req/sec (separate). With concurrent users, who gets throttled? Queue? Prioritize? Fail fast? | Discuss together |
 | UI patterns and user experience | Review reference implementation React components. What interaction patterns to adopt (streaming, citations, error states)? What to redesign? | Claude reviews, Monideep approves |
 | Accessibility and compliance | Section 508 is not optional for NIH-adjacent work. What level of compliance for v1? | Discuss together |
 
-Phase 1 output: a decision log (appended to DECISIONS.md) with every choice made during this review.
+Phase 1 output: session notes, decision log (DECISIONS.md), and Phase 1 synthesis document (see output structure above).
 
 ---
 
@@ -150,6 +160,8 @@ Phase 1 output: a decision log (appended to DECISIONS.md) with every choice made
 Status: NOT STARTED
 
 Goal: finalize the competency questions that define what System 3 must answer. These feed directly into the PRD as acceptance criteria and into the orchestrator as routing intelligence.
+
+Prerequisites: Phase 1 synthesis document complete (`requirements/phase_1/Phase_1_synthesis.md`). The synthesis organizes all architecture decisions, tool mappings, and design patterns by topic, providing the foundation for evaluating which competency questions the system can answer and how.
 
 ### Step 2.1: review existing competency questions
 
@@ -379,10 +391,12 @@ This cycle repeats. The system evolves.
 | --- | --- | --- | --- |
 | Background_requirements.md | Phase 0 (done) | `requirements/` | Index of all source material |
 | Plan.md | Phase 0 (done) | `requirements/` | This document. Roadmap from research to product. |
+| Phase 1 session notes | Phase 1 (in progress) | `requirements/phase_1/Session_*.md` | Chronological discussion record per session. Also serves as personal learning log. |
+| Phase 1 decisions | Phase 1 (in progress) | `DECISIONS.md` (append) | Architecture choices from source review |
+| Phase 1 synthesis | Phase 1 (end) | `requirements/phase_1/Phase_1_synthesis.md` | All decisions organized by topic into a single narrative. Primary input for Phase 2 and Phase 3. |
 | Competency_questions.md | Phase 2 | `requirements/` | Final CQ set with tiers, personas, rubric |
 | PRD.md | Phase 3 | `requirements/` | Product requirements. Single source of truth. |
 | Technical_specification.md | Phase 4 | `requirements/` | Implementation blueprint. |
-| Phase 1 decisions | Phase 1 | `DECISIONS.md` (append) | Architecture choices from source review |
 | Updated skills/agents | Phase 5 | `.claude/skills/`, `.claude/agents/` | Aligned with PRD and tech spec |
 | Reference docs (as needed) | Phase 5 | `docs/` | Fill gaps identified during tech spec |
 

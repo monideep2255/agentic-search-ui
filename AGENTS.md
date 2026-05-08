@@ -139,4 +139,4 @@ All rules are in `.claude/rules/` and loaded automatically. No need to duplicate
 
 ---
 
-Last updated: 2026-05-05
+Last updated: 2026-05-07
