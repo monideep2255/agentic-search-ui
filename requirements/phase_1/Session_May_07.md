@@ -401,8 +401,290 @@ Layer 3: AUGMENTATION (evidence, context, enrichment)
 - Auth provider for day one (deferred to Step 1.8)
 - Fork reference repo or cherry-pick (deferred to Phase 5/6)
 
+---
+
+## Step 1.3: reference implementations (2 sources)
+
+### Source 1: NCBI KG repo (ncbi-kg branch)
+
+The reference repo (`reference/ncbi_ai_agents-ncbi-kg/`) was built as a 2-day prototype. It contains a 7-stage NL-to-Cypher pipeline, React frontend, LangSmith tracing, 4-layer guardrails, and 234 tests. The pipeline architecture itself is not worth copying (monolithic, tightly coupled), but the surrounding infrastructure is a strong starting template.
+
+Decision: use the repo as an infrastructure template, not an architecture blueprint.
+
+**Patterns to adopt directly:**
+
+1. React component structure: ChatMode with AbortController for cancellation, 10-entry message history, react-markdown + GFM table rendering. Solid chat shell boilerplate.
+2. Feedback buttons: thumbs up/down linked to LangSmith run_id. Simple and already wired to observability.
+3. QueryPipeline timing visualization: shows the user how long each pipeline stage took. Transparency UX pattern.
+4. Guardrail disclaimers: "This is a testing website" banner, relevance pre-filter before any LLM call. Cheap first layer of safety.
+5. LangSmith tracing wiring: traces tied to run_ids, feedback loops back to traces. Adopt the integration pattern.
+6. MCP server with 5 tools: query, cypher, get_stats, get_schema, get_neighbors. Subset may apply to our MCP delivery format.
+7. Test organization: tests organized by domain (admin, API, MCP, NL-to-Cypher, observability). Good structural pattern for our test suite.
+
+**Patterns to skip or adapt:**
+
+- NL-to-Cypher pipeline: 7-stage monolithic pipeline is not our architecture. Our 5-step agent loop (Guard, Think, Plan, Act, Write) distributes this work across typed LangGraph nodes and self-contained tools.
+- Hardcoded few-shot examples (20 examples in the pipeline): we will use competency question-based routing instead, selected via the Plan step.
+- 3-tier LLM fallback in Cypher generation: our multi-model harness handles tier routing at the orchestrator level, not inside individual tools.
+- Neo4j-specific schema introspection: we use AGE via psycopg2, so schema context will be hand-authored or queried differently.
+
+**Combining with NCBI screenshots:**
+
+The UI will be grounded in two inputs: (1) the reference repo's React component patterns as code boilerplate, and (2) NCBI interface screenshots (to be provided) for visual design conventions. This gives us both a working codebase to start from and real NCBI design language to match.
+
+### Source 2: contractor 8-layer architecture
+
+The contractor's architecture (`reference/personal-os-work/NIH/KG/Contractor/`) defines an 8-layer system: Entry, Guarded Planning, Context Retrieval, Public Surface (GraphQL), Backend Compilation, Knowledge Modules, Provenance Response, Governance. This was assessed as too intense for V1. Instead of adopting the architecture, we extracted individual ideas worth using.
+
+**Ideas extracted and adopted (simplified):**
+
+1. Query classification before execution: their `cqClass` concept (lookup, single-hop, multi-hop, aggregate, exploratory) maps to our model tier routing and latency budgets. We adopt this as a lightweight output from the Plan step: query class + target entities + tool list. Not a full typed IR with joins, constraints, and resultShape.
+
+2. Schema slicing: the context-pack builder sends only the relevant portion of the graph schema to the LLM, not the entire schema. With 14 edge types and many node properties in our AGE graph, this matters for prompt efficiency. Adopted as a lightweight function, not the full context-pack builder.
+
+3. Provenance as first-class type: every result carries source, source_id, source_url, layer. Already decided in our system design patterns. The contractor formalized it with `provenanceRequired: true` on query plans, which confirms our direction.
+
+4. NFR baseline cherry-picking: their 39 non-functional requirements across 10 categories, 23 tagged for POC. We will review and cherry-pick the ones applicable to our V1 (latency targets, audit logging, rate limiting) in Step 1.7 when we review contractor documents in detail.
+
+**Ideas explicitly skipped:**
+
+- Full typed query-plan IR (JSON schema with cqClass, focusEntities, joins, constraints, modules, resultShape, provenanceRequired): too heavy for V1. Our Plan step produces a simpler structured output.
+- GraphQL as the only public surface: already decided hybrid REST+SSE for chat + GraphQL for programmatic access.
+- 8-layer separation: our 5-step agent loop covers equivalent functionality with less ceremony.
+- Federation scope: not V1.
+- Full context-pack builder: hand-author schema context for V1, formalize into a builder when query complexity demands it.
+
+**Key learning from contractor: separation principle.**
+
+The contractor's architecture enforces that natural language never directly generates Cypher. There is always an intermediate representation between the user's question and the database query. In our architecture, this maps to the Plan step producing a structured output (query class, target entities, tool calls) that the cypher_query tool then compiles into actual Cypher. The LLM in the Plan step reasons about what to query; the tool handles how to query it.
+
+### Step 1.3 decisions logged
+
+5 decisions logged to DECISIONS.md from Step 1.3 (see table).
+
+---
+
+## Step 1.4: data handoff (2 sources)
+
+### Source 1: System 1+2 data engineering repo (verified)
+
+Verified the data handoff contract across three files: LinkML schema (`biolink_ncbi.yaml`, 513 lines), Knowledge graph server reference (`Knowledge_graph_on_server_reference.md`), and Background_requirements.md Section 6. All three agree. No conflicts.
+
+What System 3 inherits:
+
+- 10 node types: Gene (67.5M), Article (40M), SequenceVariant (4.5M), OrganismTaxon (2.7M), Disease (200K), BiologicalProcess, MolecularActivity, CellularComponent, OntologyClass, PhenotypicFeature
+- Plus ~81K NamedThing stubs (dangling endpoint fill from merger, 0.07% of total nodes)
+- 14 edge predicates: gene_associated_with_condition, is_sequence_variant_of, has_phenotype, participates_in, actively_involved_in, located_in, mentioned_in, has_mesh_annotation, in_taxon, subclass_of, close_match, exact_match, orthologous_to, cited_in
+- 9 CURIE prefixes: NCBIGene, ClinVar, MedGen, PMID, NCBITaxon, GO, MeSH, HP, MONDO (most diseases use MedGen prefix, not MONDO)
+- Connection: `postgresql://kg_reader@46.225.128.133:5432/ncbi_kg` with AGE prelude (`LOAD 'age'; SET search_path = ag_catalog, "$user", public;`)
+- Provenance: every node/edge has `source` + `source_url` (required in schema). BioLink 4.x compliant with knowledge_level and agent_type on edges.
+- Indexes: GIN on 4 largest vertex labels (Gene, Disease, BiologicalProcess, SequenceVariant); B-tree on start_id/end_id for all 14 edge tables
+- Three Cypher performance rules: always specify edge labels (never untyped `[r]`), match by `id` property, keep regex narrow on large labels
+
+Known data quality issues on current graph:
+
+1. MedGen Disease nodes have corrupted `name` field (shows vocabulary codes like "SNOMEDCT_US" instead of actual disease names). IDs and edges are correct.
+2. ~81K NamedThing stubs from merger dangling endpoints. IDs are correct, category is wrong.
+
+### Source 2: V1 shoring-up recommendations
+
+Reviewed `V1_shoring_up_recommendations.md` (6 items across 3 priority tiers).
+
+Key finding: none of the 6 items are System 3 blockers. All are data pipeline fixes (merger, loader, health check) that affect the next graph reload, not the current query path. The graph is already loaded and running. System 3 connects read-only and queries the graph as-is.
+
+The 6 items:
+
+Tier 1 (fix before next graph reload):
+
+1. Extend PREFIX_TO_CATEGORY map (10 entries, missing prefixes default to NamedThing). Small effort.
+2. Add connection recovery to loader (no retry during 2-4 hour loads). Medium effort.
+3. Automated graph health check (7 smoke queries post-reload). Small effort.
+
+Tier 2 (fix before portfolio):
+
+- Parser unit tests (15+ parsers have no tests). Medium effort.
+- End-to-end smoke test (nothing tests the whole pipeline chain). Medium effort.
+- SQL identifier validation (code smell in loader, not a vulnerability). Trivial effort.
+
+### Resilience principle (emerged from discussion)
+
+The discussion surfaced a key architectural principle: the three-layer architecture is not just a data access pattern, it's a resilience strategy.
+
+- Layer 1 (graph) is a periodic snapshot. Snapshots can have stale data, corrupted fields, wrong categories, missing nodes.
+- Layer 2 (live NCBI APIs) is always current and always authoritative.
+- Layer 3 (enrichment) adds context on top of whatever the other two produced.
+
+Principle: Layer 1 for speed, Layer 2 for correction, Layer 3 for enrichment.
+
+How System 3 handles each known issue:
+
+1. NamedThing stubs: cypher_query tool infers real type from CURIE prefix, or filters stub from results.
+2. MedGen name corruption: agent detects vocabulary code in name field, fetches actual display name from MedGen API (Layer 2).
+3. Connection handling: System 3 has its own connection pooling with retry logic (separate from loader).
+4. Graph health on startup: lightweight check (verify expected vertex labels exist and have non-zero counts).
+
+UX requirement: the user must never see nothing. If Layer 1 has bad data, fall back to Layer 2/3. If an API fails, synthesize from whatever did respond. A degraded answer with an explanation is always better than a blank screen.
+
+### Step 1.4 decisions logged
+
+3 decisions logged to DECISIONS.md from Step 1.4 (see table).
+
+---
+
+## Step 1.5: agent and harness research (22 sources)
+
+### Overview
+
+Reviewed all 22 research documents in `reference/personal-os-work/NIH/Agentic-Search/Reference/system/`. Two passes: first pass extracted surface-level ideas, second deep dive focused on harness engineering architecture (tools, memory/SOUL, MCPs, API patterns, middleware) after Monideep pushed for deeper introspection.
+
+### Core philosophy (from discussion)
+
+Monideep's framing: "LLMs are just a brain. The harness makes it deterministic and financially viable."
+
+Three principles that drive the architecture:
+
+1. Harness is the product. The LLM is just a brain. The harness (tools, memory, orchestration, verification, safety) is what makes the system work.
+2. Deterministic as possible. The more logic lives in code (not LLM judgment), the more reliable and cheaper the system is. But not so deterministic it gives wrong answers. Balance: LLM has narrative flexibility, harness handles everything else.
+3. Citations and provenance must be perfect. Not "usually right." Always right. This is the trust moat.
+
+### The 11 harness components (from Agent_harness_engineering.md)
+
+The primary harness engineering doc defines 11 components of a production harness. Mapped against our architecture:
+
+| # | Component | Our mapping | V1 status |
+|---|-----------|-------------|-----------|
+| 1 | Orchestration loop | LangGraph 5-step loop (Guard, Think, Plan, Act, Write) | Covered |
+| 2 | Tools | cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup | Covered |
+| 3 | Memory (short + long-term) | SOUL.md behavioral directives + session context | New for V1 |
+| 4 | Context management | Result compression + schema slicing | Covered |
+| 5 | Prompt construction | Hierarchical: system + tools + schema slice + history + query | Needs design |
+| 6 | Output parsing | Structured JSON from Write step | New for V1 |
+| 7 | State management | LangGraph typed state + checkpointing | Covered |
+| 8 | Error handling | Graceful degradation + error classification | Partial |
+| 9 | Guardrails and safety | Guard step + security (Step 1.10) | Planned |
+| 10 | Verification loops | Rules-based checks on output before user sees it | New for V1 |
+| 11 | Subagent orchestration | Not needed for V1 (single orchestrator) | Deferred |
+
+### LLM as narrative controller (key architectural decision)
+
+The LLM's job is single-responsibility: write the narrative text that explains the data to the user. It receives pre-assembled, cited data from the harness and writes a natural language summary with placeholder markers ([1], [2]).
+
+The harness (deterministic code) handles everything else:
+
+- Tool execution and result collection
+- Citation assembly from structured tool outputs (source_url from graph nodes, API record URLs, PubTator section references)
+- Provenance formatting and validation (every CURIE resolves, every URL is real)
+- Mapping narrative markers to verified sources
+- Stripping any marker that doesn't match a real tool result
+- Cost control and latency budgets
+- Error handling and graceful degradation
+
+Why this split matters for cost: if the synth tier only writes narrative from pre-assembled data, it doesn't need frontier-level reasoning. A mid-range open-source model handles this job. The harness absorbs the complexity so the model can be cheaper. Determinism = financial viability.
+
+### Tool design philosophy
+
+From the research (Harness_engineering_CLI_source_analysis.md, Agent_harness_engineering.md):
+
+Tools must be narrow, strongly typed, CLI-style contract surfaces. Not raw API access. The agent proposes a tool call with validated arguments, the harness executes in a controlled environment, and returns formatted results. The model never sees raw API responses.
+
+Design principles:
+
+- Each tool has a JSON schema (name, description, parameters)
+- Harness validates arguments before execution
+- Parallel reads, serial writes for safety
+- Deterministic tool ordering (alphabetical) for stable KV cache hits
+- Fewer tools per step improves LLM performance (tool scoping)
+
+Decision: tools are direct Python functions inside the FastAPI app for V1. The MCP delivery format (one of our 5 formats) wraps the same functions behind MCP protocol as a separate layer. This avoids inter-process communication overhead while keeping the same tool code for both the web UI agent and programmatic MCP access.
+
+### Memory and SOUL.md pattern
+
+From the research (OpenClaw_adapter_plugin_and_agent_memory_patterns.md), expanded with Monideep's personalization vision:
+
+The SOUL.md pattern defines behavioral directives that constrain how the LLM operates. For our search agent:
+
+- SOUL.md: domain rules ("prioritize peer-reviewed sources," "always include clinical significance," "never state causation without evidence type," "cite every claim"). Loaded into the prompt every session.
+
+MEMORY.md and user personalization (Monideep's vision for the full system):
+
+The system should feel like a personalized research companion, not a chatbot. The flow:
+
+1. User logs in (ideally through NCBI network, but any auth for V1). Provides name, profession, research focus.
+2. This profile gets fed into every query as context. The agent knows who it's talking to.
+3. As the user runs queries, the system tracks query types, themes, and research patterns.
+4. On return visits: "Hi Monideep, welcome back. Want to continue your research on [topic]?" Feels personal.
+5. Each answer leads to the next question — the system maintains state and suggests follow-up directions, like a research conversation that builds on itself.
+
+Why this matters (connects to hook model, Step 1.6): when someone invests time into building something (IKEA effect), they're much more willing to keep using it. The memory creates investment. The personalization creates the internal trigger ("I have a question, let me ask my system"). The follow-up suggestions create variable reward ("what will it find next?").
+
+SOUL.md = behavioral directives (domain rules, loaded every session, same for all users).
+MEMORY.md = per-user learned context (query history, research themes, preferences, built over time).
+USER.md = user profile (name, profession, research focus, set at login).
+
+For V1: SOUL.md (behavioral directives) is required. USER.md (basic profile from login) is required if auth is in V1 (deferred to Step 1.8). MEMORY.md (learned patterns over time) is V1.1 — it needs enough query volume to be meaningful.
+
+### Verification loops
+
+From the research (Agent_harness_engineering.md):
+
+After the Write step produces output but before the user sees it, a verification pass runs:
+
+1. Rules-based checks (cheap, deterministic): every citation marker maps to a real tool result, CURIEs resolve, source_urls are valid
+2. Structural checks: answer addresses the original query intent, required fields present in structured output
+3. LLM-as-judge (expensive, edge cases only): check if the narrative actually reflects the data it claims to cite
+
+Rules-based checks run on every response. LLM-as-judge is reserved for the eval harness (Phase 4), not the live query path.
+
+### Actionable ideas extracted (beyond what's already decided)
+
+From the 22 documents, after filtering out ideas that confirm existing decisions:
+
+1. Structured JSON output from Write step: summary, genes[], citations[{pmid, source_url}], confidence. Enables machine verification. (Small effort)
+2. Six-metric agent evaluation (DeepEval): PlanQuality, PlanAdherence, TaskCompletion, StepEfficiency, ToolCorrectness, ArgumentCorrectness. Feeds Phase 4 eval harness. (Small effort)
+3. Encode quality as tests, not prompts: "every citation must include PMID or DOI," "results should cluster by mechanism." Run after Write step. (Small effort)
+4. Deterministic tool ordering: alphabetical presentation to LLM for KV cache stability. (Trivial effort)
+5. Prompt caching: system prompt + schema context reused across session. Meaningful cost reduction. (Small effort)
+6. Spec-driven harness: agent behavior as versioned specs in git, not monolithic prompts. (Medium effort)
+7. Session memory (V1.1): track query history, domain focus, preferred sources. (Medium effort, deferred)
+
+### Ideas confirmed (already decided, research validates)
+
+- Data source adapter pattern (Decision #5)
+- Single orchestrator, not multi-agent (Decision #26)
+- Model selection deferred to Phase 6 ablation (Decision #27)
+- Open-source LLMs preferred (Decision #23)
+- Result compression before context injection (Decision #31)
+
+### Step 1.5 decisions logged
+
+4 decisions logged to DECISIONS.md from Step 1.5 (see table).
+
+---
+
+## Objective review of Steps 1.1-1.5
+
+After completing Steps 1.1-1.5, an objective review of all accumulated decisions was conducted to identify gaps, feasibility concerns, and areas where pushback was warranted.
+
+### Concerns raised and resolutions
+
+1. Cypher generation gap (critical): the NL-to-Cypher separation was decided but HOW Cypher gets generated wasn't. Resolved: the cypher_query tool makes its own LLM call (plan-tier model, cheap) to generate Cypher from structured intent, constrained by schema slice + few-shot examples + edge label rules. Generated Cypher is validated before execution (syntax, forbidden keywords, edge labels, row limit). One retry on validation failure, then fail gracefully. The main agent never sees or generates Cypher.
+
+2. Five delivery formats: initially flagged as too much scope. Resolved: the reference repo already has working examples of most formats (MCP, API, KGX), built in 2 days. The boilerplate exists. Scope is manageable.
+
+3. Budget: clarified as ~$100/month (relative marker, not hard cap), not $100 total. This is comfortable for development and testing.
+
+4. User data storage: needs a separate database for user profiles, query history, session state. Options: Neo4j, Railway-hosted PostgreSQL, SQLite. Decision deferred to Step 1.8 (tools and infrastructure).
+
+5. Concurrent users: not an immediate concern at V1 launch volume. Design for it (connection pooling, session isolation) but don't over-engineer.
+
+6. Verification loop: confirmed as in-memory checks only. No HTTP calls for URL validation on the live path. Format validation, marker-to-result matching, CURIE format checks. Fast and deterministic.
+
+Monideep's philosophy on feasibility: "Once we have the PRD and everything set up, it should take us at most two to three weeks to build. That is why I'm putting in so much effort up front so that our building effort becomes easier."
+
+### Decisions logged from objective review
+
+2 decisions logged to DECISIONS.md (Cypher generation strategy, budget clarification).
+
 ## What's next
 
-Steps 1.1 and 1.2 complete. Move to Step 1.3 (reference implementations, 2 sources):
-1. NCBI KG repo, ncbi-kg branch (`reference/ncbi_ai_agents-ncbi-kg/`)
-2. Contractor 8-layer architecture (`reference/personal-os-work/NIH/KG/Contractor/`)
+Steps 1.1 through 1.5 complete. Resume with Step 1.6 (user psychology and product design, 4 sources).

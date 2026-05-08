@@ -64,7 +64,7 @@ Output: `requirements/Background_requirements.md` (24 sources indexed, all paths
 
 ## Phase 1: source review and architecture decisions
 
-Status: IN PROGRESS (Steps 1.1 and 1.2 complete as of 2026-05-07)
+Status: IN PROGRESS (Steps 1.1 through 1.5 complete as of 2026-05-07)
 
 Goal: go through every source in `Background_requirements.md`, debate what to use, what to skip, and what needs adaptation. Lock the architecture decisions before writing the PRD.
 
