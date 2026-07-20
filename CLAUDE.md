@@ -12,7 +12,7 @@ Stack: Python 3.11+, FastAPI, LangGraph, React, PostgreSQL (user data), psycopg2
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | System 3: search agent baseline | IN PROGRESS. Infrastructure setup, auth, empty chat shell, first tool integration. Knowledge graph available on Hetzner CPX42 (46.225.128.133): 115M nodes + 693M edges queryable via openCypher over psycopg2. |
+| 1 | System 3: planning (Phase 1) | IN PROGRESS. Source review and architecture decisions per requirements/Plan.md (Steps 1.1-1.5 done, 1.6 next). No application code yet; build execution begins at Plan.md Phase 6. Knowledge graph available on Hetzner CPX42 (46.225.128.133): 115M nodes + 693M edges queryable via openCypher over psycopg2. |
 | 2 | System 3: tool integration | PLANNED. cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup. |
 | 3 | System 3: eval and tracing | PLANNED. LangSmith tracing, golden dataset, automated eval harness. |
 
@@ -139,6 +139,8 @@ Auto-read skills (loaded by other skills or before specific tasks): best-practic
 
 All rules are in `.claude/rules/` and loaded automatically. No need to duplicate here.
 
+Security hooks in `.claude/hooks/` (wired in `.claude/settings.json`) run on PreToolUse (secret scan on Bash commands, secret scan on config writes, deletion block) and SessionStart (context-injection scan, session context).
+
 ---
 
-Last updated: 2026-05-07
+Last updated: 2026-07-20

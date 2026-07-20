@@ -105,7 +105,7 @@ agentic-search-ui/
   tests/                        # pytest test suite
   docs/                         # Architecture docs, reference material
   reference/                    # Symlink to agentic-search-data-engineering (System 1+2)
-  .claude/                      # Claude Code rules, skills, agents (gitignored)
+  .claude/                      # Claude Code rules, skills, agents, hooks (tracked)
   CLAUDE.md                     # Claude Code instructions
   AGENTS.md                     # Instructions for other AI agents
   DECISIONS.md                  # Architecture decision log
