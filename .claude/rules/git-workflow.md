@@ -11,22 +11,24 @@ alwaysApply: true
 Work on phase branches, not directly on `main`. One branch per bossman phase.
 
 Branch naming: `phase/N.M-short-description`
-- `phase/1.0-schema-scaffolding`
-- `phase/1.1-shared-utilities`
-- `phase/1.2-gene-etl`
-- `phase/1.3-clinvar-etl`
-- `phase/1.4-medgen-etl`
-- `phase/1.5-merge-validation`
+
+- `phase/1.0-fastapi-skeleton`
+- `phase/1.1-auth-service`
+- `phase/2.0-langgraph-agent-loop`
+- `phase/2.1-cypher-tool`
+- `phase/3.0-guardrail-node`
+
+Non-phase work uses a type prefix and short description, e.g. `chore/short-description`, `fix/short-description`.
 
 Create the branch at phase start: `git checkout -b phase/N.M-description`
 
 ### Merge requests
 
-One MR per phase. Create the MR when the phase is complete and qa-gate passes.
+One MR per phase. Create the MR when the phase is complete and release-workflow passes.
 
 MR flow:
 1. Push the phase branch: `git push -u origin phase/N.M-description`
-2. Create PR/MR with deliverables checklist from `docs/bossman_execution_plan.md`
+2. Create PR/MR with deliverables checklist from `requirements/Plan.md`
 3. User reviews and approves
 4. Merge into `main` (no squash, preserve commit history)
 5. Delete the phase branch after merge
@@ -43,4 +45,4 @@ Never `git push --force`. Never amend a published commit. Never `git add -A` bli
 
 ### Gitignored paths
 
-`data/raw/`, `data/ftp_cache/`, `.env`, `*.gz`, `*.xml.gz`, `node_modules/`, `__pycache__/`, `venv/`
+`node_modules/`, `__pycache__/`, `venv/`, `.env`, `.pytest_cache/`, `frontend/build/` or `frontend/dist/`

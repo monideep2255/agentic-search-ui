@@ -28,5 +28,5 @@ Rules for all documentation, Confluence pages, and external-facing content.
 ### Branding and attribution
 - Never mention specific LLM vendors or products (e.g. no brand names, no CLI tool names)
 - Use generic terms: "LLM", "LLM via CLI tooling", "LLM-assisted"
-- When AI disclosure is needed, use the step-by-step workflow table format (see git-history-analysis.md for an example)
+- When AI disclosure is needed, use a step-by-step workflow table format
 

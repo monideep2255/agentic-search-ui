@@ -79,6 +79,26 @@ AI answer grounding gate:
 - Deterministic accept or reject: a citation-grounding or quote-match check decides accept or reject by deterministic rule (exact or substring match after normalization), never by a fuzzy similarity threshold, because a fuzzy accept silently passes a hallucinated quote. Fuzzy scoring may rank repair suggestions only; it never gates acceptance.
 - Grade this with the `eval-harness` skill: add cite-or-refuse and citation-coverage as pass/fail acceptance criteria, measured with pass@k against the Phase 4 golden dataset (50 queries) before any answer-generation feature ships.
 
+### Three-state permissions
+
+Allow:
+- Writing code that follows every gate in this rule without asking
+- Flagging a gate violation in existing or generated code during any review
+- Running `pip-audit`, `npm audit`, and the existing test suite to check a gate before calling code production-ready
+
+Ask:
+- Before merging code that fails a gate in this rule for a documented, time-boxed exception
+- Before adding a new dependency, endpoint, tool, or subagent that introduces a new schema, migration, or secrets surface
+- Before lowering a threshold, count, or gate this rule defines. See `goal-contracts` on weakening a verify surface
+
+Deny:
+- Never call code production-ready when a security, testing, quality, hardening, supply-chain, secrets, multi-agent schema, or AI answer grounding gate in this rule fails
+- Never ship an endpoint, tool, or subagent without input validation, schema validation, and tests for valid, invalid, and null input
+- Never ship an answer-generation feature without a passing cite-or-refuse test and a tested zero-retrieval-hits refusal path
+- Never weaken, delete, or skip a gate to make a change appear production-ready
+
+See `ai-security-standards` for the agent-behavior layer (prompt injection, least privilege, human approval) and `supply-chain-security` for dependency and MCP server checks.
+
 ### When to invoke the full skill
 
 For a complete production readiness review (6-lens checklist covering security, testing, code quality, PR readiness, deployment, and production hardening), invoke the `/dev-standards` skill. This rule covers the critical-path non-negotiables only.

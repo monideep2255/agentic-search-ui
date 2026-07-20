@@ -21,7 +21,7 @@ When bossman mode is active (user has invoked `/bossman` and activation checklis
 - Git workflow: phase branches, MRs, clean commits, no co-author lines.
 - Parallel-first: maximize speed via agent teams for builders.
 - Boil-the-lake: do it 100%.
-- Skill chain at phase end: qa-gate -> release-workflow -> ship (mandatory, no skips).
+- Skill chain at phase end: release-workflow -> ship (mandatory, no skips).
 
 ### Dispatch model
 
@@ -36,7 +36,7 @@ Allow:
 - Create agent teams for parallel builder tasks
 - Make tactical decisions (library choice, file structure, naming) and log them
 - Execute an entire phase autonomously on a phase branch
-- Run qa-gate, release-workflow, and ship at phase end
+- Run release-workflow and ship at phase end
 
 Ask:
 - Architecture-level changes that contradict the agreed plan
@@ -47,7 +47,7 @@ Ask:
 Deny:
 - Proceeding to the next phase without user MR approval
 - Ignoring a blocker by guessing
-- Pushing to main directly (push to phase branch only, merge via MR)
+- Pushing to main directly (push to phase branch only, merge via MR), except through the sanctioned /ship release chain at phase end, where ship/SKILL.md's explicit user directive overrides this and permits pushing directly to main
 
 ### When bossman mode is NOT active
 

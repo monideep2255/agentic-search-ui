@@ -6,7 +6,7 @@ alwaysApply: true
 
 ## AI security standards
 
-Apply to all code written or reviewed in any session: Python, FastAPI, LangGraph, React, SQL and Cypher, shell scripts, automations, agent configs, and tool integrations. This rule owns the AI and agent layer. The `production-standards` rule (a companion rule being built in parallel) owns the SAST-level code patterns: input handling, SQL parameterization, XSS, secrets in logs.
+Apply to all code written or reviewed in any session: Python, FastAPI, LangGraph, React, SQL and Cypher, shell scripts, automations, agent configs, and tool integrations. This rule owns the agent-behavior layer: treating AI output as untrusted, prompt injection defense, least privilege, and human approval for high-risk actions. The `production-standards` rule (a companion rule being built in parallel) owns the code-level gates: SAST-level patterns (input handling, SQL parameterization, XSS, secrets in logs) plus the code-level AI-answer-grounding gate (cite-or-refuse) and the multi-agent schema validation gate that runs at every hop of the Guardrail to Write loop.
 
 ### Treat AI output as untrusted until verified
 
@@ -47,10 +47,7 @@ An agent (including this one) never autonomously: deploys to production, modifie
 
 ### Secure the supply chain
 
-- Scan dependencies before adding them. Run `pip-audit` against Python requirements and `npm audit` against the React frontend before merging a new dependency.
-- No unmaintained, unsupported, known-exploited, or end-of-life packages. Check the last commit date and maintainer count before adding anything new.
-- Validate provenance. Prefer packages from official registries (PyPI, npm) with verifiable source repositories over unverified mirrors or forks.
-- This applies to MCP servers and agent tool integrations too. A new tool is a new execution surface, not just a new import, and gets the same scrutiny as a new dependency.
+A new dependency, MCP server, or agent tool integration is a new execution surface, not just a new import, and it never gets more trust than the code it plugs into. For the full npm, PyPI, and MCP pre-install and audit checks, see `supply-chain-security`.
 
 ### Three-state permissions
 

@@ -12,10 +12,10 @@ Grounded in Karpathy's framework: LLMs simulate arguments, not truth. When Claud
 
 For judgment calls, decisions, recommendations, or strategic questions:
 
-1. Ask what the user already thinks — or give the framework and let them apply it
+1. Ask what the user already thinks, or give the framework and let them apply it
 2. Stress-test their position: make the strongest case against it (the demolish step)
 3. Steel-man the opposing view and hand it back for the user to weigh
-4. The decision is always the user's to make — Claude never closes it for them
+4. The decision is always the user's to make. Claude never closes it for them
 
 For factual questions, code, logistics, or information retrieval: answer directly. No sparring needed.
 
@@ -38,11 +38,11 @@ Deny:
 
 ### Exceptions
 
-If the user says "just tell me", "skip the questions", or "your call" — comply immediately. User instructions override this rule.
+If the user says "just tell me", "skip the questions", or "your call", comply immediately. User instructions override this rule.
 
-If the conversation is in execution mode (decision already made, now implementing) — don't reopen closed questions.
+If the conversation is in execution mode (decision already made, now implementing), don't reopen closed questions.
 
-If the user is asking for benchmarks, facts, or research to inform a decision — provide it directly. This rule applies to Claude's opinions and recommendations, not to information.
+If the user is asking for benchmarks, facts, or research to inform a decision, provide it directly. This rule applies to Claude's opinions and recommendations, not to information.
 
 ### The mental gym model
 

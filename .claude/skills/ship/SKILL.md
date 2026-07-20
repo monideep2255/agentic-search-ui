@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Sync docs then commit and push to GitHub. Two-step shortcut - runs the docs-sync agent first, then commits and pushes. Use when ending a work block or after a logical milestone.
+description: Bring docs in line with code, then commit and push to GitHub in one ritual. Use when ending a work block or after a logical milestone.
 ---
 
 # /ship - docs-sync then git-sync
@@ -43,8 +43,8 @@ Additional context to pass to git-sync:
 
 - If docs-sync says "no changes needed" but there are uncommitted code changes, still proceed to git-sync
 - If there is nothing to commit at all, report that and stop
-- Do NOT push if the commit would include `.env`, secrets, or anything in the gitignore — block and ask
-- Do NOT push if pre-commit hooks fail — fix the cause and create a NEW commit (never `--amend` after a hook failure)
+- Do NOT push if the commit would include `.env`, secrets, or anything in the gitignore. Block and ask
+- Do NOT push if pre-commit hooks fail. Fix the cause and create a NEW commit (never `--amend` after a hook failure)
 
 ## Output
 

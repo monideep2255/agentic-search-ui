@@ -1,23 +1,23 @@
 ---
 name: repo-dive
-description: Deep dive an external repo (typically symlinked into reference-repos/) and produce a first-principles analysis. Adapted from personal-os-work for the data-engineering context. TRIGGER when user says "deep dive this repo", "what can we learn from X", or "analyze the reference at Y". DO NOT TRIGGER for normal code reading.
+description: Deep dive an external repo (typically symlinked into reference/) and produce a first-principles analysis. Adapted from personal-os-work for the System 3 search-agent context. TRIGGER when user says "deep dive this repo", "what can we learn from X", or "analyze the reference at Y". DO NOT TRIGGER for normal code reading.
 ---
 
 # repo-dive: external repo first-principles analysis
 
-For this repo, "external" means anything in `reference-repos/`. The reference symlinks are read-only context. The job of this skill is to extract the parts that apply to System 1 + System 2 work and ignore the rest.
+For this repo, "external" means anything in `reference/`. The reference symlinks are read-only context. The job of this skill is to extract the parts that apply to System 3 (search agent, API, UI) work and ignore the rest.
 
 ## When to use
 
-- User shares a path under `reference-repos/` and says "what can we learn from this"
+- User shares a path under `reference/` and says "what can we learn from this"
 - New reference repo is symlinked and needs an analysis pass
-- Designing a new module and looking for prior art in `reference-repos/ncbi_ai_agents/`
+- Designing a new tool or agent node and looking for prior art in `reference/ncbi_ai_agents-ncbi-kg/`
 
 ## When not to use
 
 - Looking up a single file or function (use Read or Grep)
 - Already-analyzed reference that has a deep-dive doc
-- Anything in `system-01-data-pipelines/`, `system-02-knowledge-graph/`, `docs/` (that's our own code, not external)
+- Anything in `src/system_03_search_agent/`, `docs/` (that's our own code, not external)
 
 ## Process
 
@@ -29,16 +29,13 @@ Read in this order:
 2. The repo's own `CLAUDE.md` (if present)
 3. Top-level folder structure (one-level `ls`)
 4. `pyproject.toml` or `package.json` (versions, dependencies)
-5. The entry-point file (`__main__.py`, `cli.py`, `pipeline.py`)
+5. The entry-point file (`__main__.py`, `cli.py`, `main.py`, `app.py`)
 
 ### Step 2: identify the relevant subset
 
-For this repo, "relevant" means: ETL, BioLink, KGX, PostgreSQL/AGE, NCBI APIs, validation, schema definition. Skip:
+For this repo, "relevant" means: search-agent patterns, tool integrations (Layer 1/2/3 data access), agent-loop and guardrail design, FastAPI, LangGraph, React, MCP patterns, API design, eval and citation patterns. De-prioritize:
 
-- Frontend code, React, Tailwind, Mermaid renderers
-- Search agent code, LangGraph, LangChain, FastAPI, MCP
-- Deploy automation (Railway, Docker, GitHub Actions)
-- Observability dashboards (PostHog, LangSmith, Grafana)
+- ETL parsers, KGX exporters, AGE bulk loaders, BioLink schema mapping, and other System 1/2 internals. That work lives in the separate `agentic-search-data-engineering` repo, not here.
 
 ### Step 3: produce the analysis
 
@@ -51,7 +48,7 @@ Write to `docs/reference_analysis/<repo-name>_deep_dive.md` (create the folder i
 One paragraph. What the repo does, who built it, last updated.
 
 ## What we can use
-A bulleted list of files, functions, or patterns that apply directly to System 1 or System 2.
+A bulleted list of files, functions, or patterns that apply directly to System 3.
 For each: file path with line numbers, what it does, how to adapt it.
 
 ## What to skip
@@ -66,7 +63,7 @@ Anything where the reference made a decision we should explicitly accept or over
 
 ### Step 4: do not vendor files
 
-The reference symlinks are documentation. Never copy a file from `reference-repos/` into `system-01-data-pipelines/` or `system-02-knowledge-graph/`. Always rewrite from first principles, informed by the reference. This is a project-level rule (see CLAUDE.md "Canonical reference pipeline" section and the user's stated preference).
+The reference symlinks are documentation. Never copy a file from `reference/` into `src/system_03_search_agent/`. Always rewrite from first principles, informed by the reference. This is a project-level rule (see `.claude/rules/file-protection.md`) and the user's stated preference.
 
 ## Style rules
 
@@ -78,9 +75,9 @@ The reference symlinks are documentation. Never copy a file from `reference-repo
 
 ## Anti-patterns
 
-- "Everything in this repo is relevant" — almost never true
+- "Everything in this repo is relevant": almost never true
 - Copying file contents into the analysis doc instead of linking
-- Vague "consider adopting this" — always specify the exact target file in our repo
+- Vague "consider adopting this": always specify the exact target file in our repo
 - Sections that just restate the README
 
 ## Output

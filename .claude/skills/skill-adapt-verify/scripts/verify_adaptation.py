@@ -37,6 +37,8 @@ STALE_PATHS = [
     "GROWTH_SYSTEM.md",
     "EXTENSIONS.md",
     "DEPENDENCIES.md",
+    "reference-repos",
+    "personal-os",
 ]
 
 WRONG_REPO_TERMS = [
@@ -198,6 +200,20 @@ def check_headings(text: str, report: Report) -> None:
             )
 
 
+# Words near a slash-command that indicate it is genuinely meant as a skill
+# invocation (as opposed to, say, an API route like `/health` quoted inline).
+INVOCATION_CONTEXT_RE = re.compile(r"\b(say|invoke|invocation|trigger|exit)\b", re.IGNORECASE)
+
+
+def _line_at(text: str, pos: int) -> str:
+    """Return the full source line containing offset `pos`."""
+    start = text.rfind("\n", 0, pos) + 1
+    end = text.find("\n", pos)
+    if end == -1:
+        end = len(text)
+    return text[start:end]
+
+
 def check_pointers(text: str, target: Path, report: Report) -> None:
     """Flag references to .claude/agents/<x> or .claude/skills/<x> that do not exist."""
     claude_dir = REPO_ROOT / ".claude"
@@ -205,15 +221,29 @@ def check_pointers(text: str, target: Path, report: Report) -> None:
         return
     existing_agents = {p.stem for p in (claude_dir / "agents").glob("*.md")}
     existing_skills = {p.name for p in (claude_dir / "skills").iterdir() if p.is_dir()}
+    existing_rules = (
+        {p.stem for p in (claude_dir / "rules").glob("*.md")}
+        if (claude_dir / "rules").exists()
+        else set()
+    )
 
     # look for backtick-wrapped slash-commands and table-row agent/skill names
     slash_cmds = re.finditer(r"`/([a-z][a-z0-9-]*)`", text)
     for m in slash_cmds:
         name = m.group(1)
-        if name in existing_skills:
+        if name in existing_skills or name in existing_rules:
             continue
         # allow common built-ins and self-reference
         if name in {"bossman", "objective-review", "ship", "repo-dive", "skill-adapt-verify"}:
+            continue
+        line = _line_at(text, m.start())
+        is_table_row = line.strip().startswith("|")
+        # Only treat this as a broken skill pointer if the surrounding line
+        # actually reads like an invocation (e.g. "Say `/x`", "TRIGGER ...",
+        # a skill-index table row). Otherwise it is more likely something
+        # unrelated quoted in backticks, such as an API route (`/health`),
+        # and should be ignored rather than reported as a dead skill pointer.
+        if not is_table_row and not INVOCATION_CONTEXT_RE.search(line):
             continue
         line_no = text[: m.start()].count("\n") + 1
         report.add(
@@ -234,7 +264,11 @@ def check_pointers(text: str, target: Path, report: Report) -> None:
             continue
         # only flag if it looks like a kebab-case identifier
         if re.fullmatch(r"[a-z][a-z0-9-]*", first_col):
-            if first_col not in existing_agents and first_col not in existing_skills:
+            if (
+                first_col not in existing_agents
+                and first_col not in existing_skills
+                and first_col not in existing_rules
+            ):
                 # self-reference is OK
                 if first_col == target.stem:
                     continue
@@ -242,7 +276,7 @@ def check_pointers(text: str, target: Path, report: Report) -> None:
                     "broken-pointer",
                     i,
                     line,
-                    f"'{first_col}' is not an existing agent or skill",
+                    f"'{first_col}' is not an existing agent, skill, or rule",
                 )
 
 

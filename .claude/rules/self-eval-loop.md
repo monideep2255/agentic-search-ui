@@ -22,7 +22,7 @@ This is the maker/checker split: the model that produced the output must never b
 - Docs, proposals, or architecture writeups with 3+ sections
 - Multi-file system changes (new tools, agent-loop changes, rule rewrites)
 - Any output that will be reviewed by someone else
-- The bossman-mode judge step (see `bossman-mode.md`), which already uses this pattern
+- The bossman-mode judge step (see `.claude/skills/bossman-mode/SKILL.md`), which already uses this pattern
 
 ### When NOT to apply
 

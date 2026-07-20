@@ -73,6 +73,11 @@ for file in "$REPO_DIR"/.claude/skills/*/SKILL.md; do
   [ -f "$file" ] && scan_file "$file"
 done
 
+# Scan agent definitions (injected as context when a sub-agent is dispatched)
+for file in "$REPO_DIR"/.claude/agents/*.md; do
+  [ -f "$file" ] && scan_file "$file"
+done
+
 # Scan root context files
 for file in "$REPO_DIR"/CLAUDE.md "$REPO_DIR"/AGENTS.md; do
   [ -f "$file" ] && scan_file "$file"

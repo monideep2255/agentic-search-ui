@@ -39,6 +39,17 @@
       "Glob",
       "Grep",
       "Agent"
+    ],
+    "deny": [
+      "Bash(rm:*)",
+      "Bash(rmdir:*)",
+      "Bash(sudo:*)",
+      "Bash(dd:*)",
+      "Bash(mkfs:*)",
+      "Bash(shutdown:*)",
+      "Bash(reboot:*)",
+      "Bash(diskutil:*)",
+      "Bash(eval:*)"
     ]
   },
   "hooks": {
@@ -53,6 +64,15 @@
         ]
       },
       {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-sensitive-read.sh\""
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {
@@ -62,6 +82,10 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/scan-secrets.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-sensitive-read.sh\""
           }
         ]
       }

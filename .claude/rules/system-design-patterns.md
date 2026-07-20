@@ -58,3 +58,26 @@ All user-facing responses stream via SSE. Design for:
 ### 7. Output truncation for large results
 
 When a tool returns more data than useful for synthesis (e.g., 500+ Cypher rows, large API responses), truncate to the first N relevant results and include a count of total available. Never inline large result sets into the agent's context - it causes hallucination of the remaining data.
+
+### 8. Specialize by tool access, not just prompt
+
+The strongest constraint on an agent is removing the ability, not asking it not to use one. A prompt instruction is a request the model can misread, drift from, or get talked out of by a crafted input. A missing tool is not available to call at all, regardless of what the prompt says or what a retrieved document tries to induce.
+
+When designing an agent, restrict its tools list first, then write the prompt for what remains:
+
+- The repo's read-only reviewer agents (`objective-review`, `first-principles`, `socratic`) get Read, Grep, and Glob only, never Write. They cannot modify a file even if a prompt injection in a reviewed document tried to talk them into it.
+- Untrusted-source readers, any tool that ingests a Layer 3 enrichment fetch, a scraped abstract, or an NCBI record body, get Read access and the relevant API tool only, never Write and never the ability to call other tools directly (see the multi-agent pipeline gate in `production-standards`).
+- Layer 1 graph access is read-only by design at the connection level, not only by instruction. The credential itself cannot write, so no prompt, injected or otherwise, can talk the agent into a graph mutation.
+
+If an agent should never do X, the first question is whether X can be removed from its tool list, not whether the prompt says not to do X.
+
+### 9. The description is a routing contract, not a summary
+
+A skill or agent description is the only thing the router sees before deciding whether to load it. The body, the step list, the examples, is invisible at routing time. A description that summarizes the body instead of specifying when to trigger produces a router that either never loads the right component or loads the wrong one.
+
+Write a description with three parts: what the component does, when to use it (literal trigger phrases the user might actually type), and a differentiator versus related components that could otherwise match.
+
+- `eval-harness`'s description names the pass@k and pass^k metrics it owns and explicitly distinguishes itself from `dev-standards`: this is the evaluation and metrics skill, answering whether a component's output is correct and honest, not whether the code is safe to ship. Without that differentiator, a query like "is this ready" could route to either skill.
+- `bossman-mode`'s description states literal trigger phrases ("bossman mode", "let's execute", "go build this") and an explicit negative trigger ("DO NOT TRIGGER during architecture/planning discussions"). The negative trigger does as much work as the positive ones: it stops the skill from loading during a planning conversation that merely mentions execution.
+
+Never write a description as a table of contents for the body. If the description says what the skill covers instead of when to load it, the router runs on a degraded signal. It never sees the body it would need to make the same judgment call.
