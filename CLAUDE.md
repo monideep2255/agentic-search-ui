@@ -132,6 +132,8 @@ User-invocable skills (slash commands):
 | first-principles | Explain concepts from fundamentals | `/first-principles` |
 | socratic-questioning | Clarifying questions before advice | `/socratic` |
 | release-workflow | End-to-end release verification and ship | `/release` |
+| eval-harness | Evaluation framework: pass@k, pass/fail/abstain, acceptance criteria for agent components | `/eval-harness` |
+| verify | Pre-commit checks: Python compile, tests, lint, git status | `/verify` |
 
 Auto-read skills (loaded by other skills or before specific tasks): best-practices, release-workflow, dev-standards.
 
