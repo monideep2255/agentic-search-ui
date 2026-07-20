@@ -4,7 +4,7 @@ From background research to working product. This document defines every step be
 
 Kick-off: 2026-05-06. Phase 0 completed in the kick-off session. All background material collected, vision aligned, plan agreed.
 
-Last updated: 2026-05-07
+Last updated: 2026-07-20 (extended from 2026-05-07). Steps 1.1 to 1.5 are locked and unchanged. This revision adds new Phase 1 sources (Steps 1.11 and 1.12), turns the Phase 2 output into a living evaluation playbook, adds a strategic memo deliverable, and restructures Phase 6 to build the prototype from the docs first, then reconcile, then build v1.
 
 ## Table of contents
 
@@ -74,7 +74,7 @@ Phase 1 produces three types of output that together feed Phase 2:
 
 1. Session notes (`requirements/phase_1/Session_*.md`): chronological record of what we discussed, debated, and why. One file per session. These are the raw record and also serve as a personal learning log.
 2. Decision log (`DECISIONS.md`): every confirmed choice in a flat, searchable table with rationale. Append-only.
-3. Phase 1 synthesis document (`requirements/phase_1/Phase_1_synthesis.md`): written after all 10 steps complete. Organizes all decisions and discussion outcomes by topic into a single narrative. This becomes the primary input for Phase 2 (competency questions) and Phase 3 (PRD).
+3. Phase 1 synthesis document (`requirements/phase_1/Phase_1_synthesis.md`): written after all Phase 1 steps complete. Organizes all decisions and discussion outcomes by topic into a single narrative. This becomes the primary input for Phase 2 (competency questions) and Phase 3 (PRD).
 
 The synthesis document fills the gap between chronological session notes and a flat decision table. Session notes answer "what did we discuss and when?" DECISIONS.md answers "what did we choose?" The synthesis answers "what does it all mean together, organized by topic, ready for downstream phases?"
 
@@ -128,6 +128,8 @@ The synthesis document fills the gap between chronological session notes and a f
 | NFR baseline (10 categories) | Which NFRs apply to our POC? Tag each as must-have or defer. | Discuss together |
 | NLQ approach (6 ranked options) | Confirm: we are building toward rank 1 (typed IR) while operating like rank 2 (CQ templates + slot filling) for POC | Discuss together |
 | Meeting decisions (D1-D5) | Federation scope: how much for v1? Template vs. NL: confirm NL from day 1. | Monideep decides |
+| Contractor's latest documents | What changed since the last handoff? Which updates affect our architecture or the PRD? | Discuss together |
+| Anne's evaluation playbook | Which outcome definitions and evaluation criteria become requirements? Which stakeholders does each outcome serve? | Discuss together |
 
 ### Step 1.8: review tools and infrastructure
 
@@ -150,6 +152,27 @@ Topics that cut across multiple sources and need explicit architecture decisions
 | Rate limiting strategy | NCBI E-utilities at 100 req/sec (upgraded), Variation Services at 1 req/sec (separate). With concurrent users, who gets throttled? Queue? Prioritize? Fail fast? | Discuss together |
 | UI patterns and user experience | Review reference implementation React components. What interaction patterns to adopt (streaming, citations, error states)? What to redesign? | Claude reviews, Monideep approves |
 | Accessibility and compliance | Section 508 is not optional for NIH-adjacent work. What level of compliance for v1? | Discuss together |
+
+### Step 1.11: review new intake research (30 sources)
+
+Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/new-intake/` (harnesses, model routing, KV cache, OpenRouter fusion, prototype to production).
+
+| What to decide | Owner |
+| --- | --- |
+| Orchestration style: strong model plans and thinks, cheaper models fetch where the task is bounded. Which tiers, which boundaries? | Discuss together |
+| Model providers: OpenRouter and open-source models, with cost as a first-class constraint. Which models per tier? | Discuss together |
+| model-bench as the model-selection method (blind generation, judge plus human scoring, open and closed leaderboard). Adopt it for tier selection? | Discuss together |
+| Caching: KV cache and prompt caching in the architecture. Where does it apply, what does it save? | Discuss together |
+| Value is in how you wrap the model (UX, retrieval, memory, tools). Which wrapping investments become requirements? | Discuss together |
+| Harness and prototype-to-production patterns: which become architecture requirements, which stay reference only? | Claude reviews all, presents top picks |
+
+### Step 1.12: review conference learnings (3 sources)
+
+Source: `reference/personal-os-work/NIH/Conference-notes/` (ISMB-2026, KGC-2026, Nodes-AI).
+
+| What to decide | Owner |
+| --- | --- |
+| Which learnings from each conference must feed the PRD? Which are reference only for v2? | Claude reviews, Monideep confirms |
 
 Phase 1 output: session notes, decision log (DECISIONS.md), and Phase 1 synthesis document (see output structure above).
 
@@ -185,9 +208,13 @@ Combine the existing CQ set with real user data. Identify:
 
 Task (Discuss together): finalize the CQ set. Lock tier 1 (must-answer for v1), tier 2 (should-answer), tier 3 (stretch/future).
 
-### Step 2.4: define evaluation rubric
+Decision to make here (discuss): cap the v1 competency-question set to a small, testable number even though we have far more candidates. Start small, prove the loop, then expand. Lock the cap before finalizing tiers.
+
+### Step 2.4: define the offline evaluation gate
 
 Confirm or update the 8-point scoring rubric from `02_Tier1_eval_spec.md`. Does the rubric match our architecture?
+
+The competency-question set is the offline eval set. Score the agent against it with the `eval-harness` skill (pass@k, pass^k, and the pass/fail/abstain outcome model). This is the baseline gate: it runs before any answer-generation feature ships. model-bench sits alongside for model selection (which model or tier is good enough for a step, at what cost), a separate target from answer quality.
 
 ### Step 2.5: design the feedback loop mechanism
 
@@ -199,7 +226,9 @@ The vision says user interactions become competency questions that improve routi
 
 Task (Discuss together): design the feedback pipeline. This feeds into the tech spec.
 
-Phase 2 output: final competency question set with tiers, personas, evaluation rubric, and feedback loop design. This becomes a standalone document in `requirements/`.
+This is the online feedback loop, the second half of the evaluation approach. Offline gate first (Step 2.4) for a baseline, online loop second, once the system is live. Design it here, but mark it to discuss and lock before the PRD is finalized.
+
+Phase 2 output: the evaluation playbook, a standalone living document in `requirements/`. It holds the final competency-question set with tiers and personas, the CQ count cap, the offline evaluation gate (rubric plus eval-harness metrics), the model-selection method (model-bench), and the online feedback-loop design. The tech spec references this playbook rather than restating it. It is updated as the evaluation approach evolves.
 
 ---
 
@@ -213,14 +242,16 @@ Prerequisites: Phase 1 decisions locked. Phase 2 competency questions finalized.
 
 ### Step 3.1: outline the PRD
 
-Use the template from `reference/personal-os-work/NIH/Agentic-Search/Specs/` as starting structure. Adapt to our scope.
+Use the template from `reference/personal-os-work/NIH/Agentic-Search/Specs/` as starting structure. Adapt to our scope. The PRD is outcome-focused: every section ties back to an outcome a named stakeholder needs, not to features for their own sake.
 
 Sections (expected):
 - Problem statement
+- Outcomes and stakeholders (the outcome each user segment needs, and the named stakeholders each serves, e.g. Anne)
 - Users and personas (from CQ analysis)
 - Core user flows
 - UI experience (end-to-end user flow, error states, streaming UX, citation interaction, loading/empty states, what happens when guardrails fire)
 - Cost control UX (what the user sees when caps are hit, usage visibility)
+- Edge cases and failure states (empty results, partial-layer failures, ambiguous queries, guardrail rejections, timeouts)
 - Competency questions as acceptance criteria (tier 1 = must-pass, tier 2 = should-pass)
 - Guardrails (hard constraints, non-negotiable)
 - Security requirements (threat model, forbidden queries, audit logging)
@@ -255,13 +286,16 @@ Prerequisites: PRD locked.
 
 Sections (expected):
 - System architecture (agent loop, three-layer data, multi-model harness)
+- Model orchestration and routing (tiers, strong model plans and cheaper models fetch where bounded, OpenRouter and open-source models, cost per tier)
+- Caching (KV cache and prompt caching: where applied, what it saves)
 - API design (endpoints, request/response schemas, streaming)
-- Data access patterns (Cypher queries, API calls, caching)
+- Data access patterns (Cypher queries, API calls, response caching)
 - Data freshness and conflict resolution (staleness thresholds, layer priority when graph and live API disagree)
 - Tool specifications (one section per tool: cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup)
 - Guardrail implementation (input validation, read-only enforcement, rate limits, cost caps)
 - Security implementation (prompt injection defense, PII handling, forbidden query types, audit trail)
 - Frontend architecture (React components, state management, streaming UX, error states, citation chips, loading/empty states)
+- Edge cases and failure states (empty results, partial-layer failures, ambiguous queries, guardrail rejections, timeouts, retry safety)
 - Auth and user data model
 - Observability (tracing, analytics, audit logging)
 - Cost control (per-query caps, per-user daily caps, system-wide caps, UX when caps are hit)
@@ -272,16 +306,22 @@ Sections (expected):
 - Competency question routing (few-shot now, upgrade path later)
 - Feedback loop pipeline (interaction capture, CQ generation, routing updates)
 
+The tech spec stays traditional (the build blueprint). It references the evaluation playbook (Phase 2 output) and the `eval-harness` and `dev-standards` skills for the evaluation and production-readiness detail, rather than restating them.
+
 ### Step 4.2: draft the tech spec
 
-Task (Claude): write the first draft. Reference the PRD for every requirement traced.
+Task (Claude): write the first draft. Reference the PRD for every requirement, traced back to the outcome it serves.
 Task (Monideep): review, challenge, refine.
 
 ### Step 4.3: lock the tech spec
 
 Both agree. This is the build blueprint.
 
-Phase 4 output: `requirements/Technical_specification.md`
+### Step 4.4: draft the strategic memo
+
+Write the 1 to 2 page strategic memo, distilled from the locked PRD and tech spec. It is the executive-facing summary: the problem, the approach, the outcomes, the cost, and what v1 delivers. It lets a stakeholder who needs the decision, not the detail, skip the full PRD and tech spec. It gets updated after the prototype runs (see Phase 6).
+
+Phase 4 output: `requirements/Technical_specification.md` and `requirements/Strategic_memo.md`.
 
 ---
 
@@ -306,6 +346,8 @@ Evaluate whether we need new skills for System 3 development:
 - React component skill?
 - Tool testing skill?
 - Cypher query development skill?
+
+Pull in beneficial rules and skills from the personal-os reference (the Tier 1 and Tier 2 SDLC hardening is already done). Review the patterns surfaced in Step 1.11 (new intake) for anything that should become a rule or skill. Adopt only what serves System 3.
 
 Only create what is actually needed. Do not over-engineer.
 
@@ -333,6 +375,16 @@ Status: NOT STARTED
 Goal: build System 3 using bossman-mode. Agent teams execute, I orchestrate.
 
 Prerequisites: PRD locked, tech spec locked, bossman-mode updated.
+
+### Step 6.1: build the prototype
+
+Build a running prototype from the locked PRD and tech spec. Goal: something you can see and feel end to end, one real query through the agent loop with a real answer and citations. Decide here: a Claude-designed look and feel for the UI, or a fast standard setup. Optimize for learning, not polish.
+
+### Step 6.2: reconcile the documents
+
+Once the prototype runs, update the PRD, tech spec, and strategic memo wherever the prototype changed our thinking. This is the one planned spec update before v1 locks (see the Phase 7 carve-out). Log any decision that changed.
+
+### Step 6.3: build v1
 
 Execution follows the build order from the tech spec. Each phase:
 1. Create feature branch
@@ -372,6 +424,8 @@ We do NOT update the PRD or tech spec mid-build. v1 ships based on what we locke
 
 Exception: if new information reveals a fundamental flaw (security vulnerability, wrong architectural assumption), we pause the build, discuss, and update.
 
+Prototype carve-out: the Step 6.2 reconciliation is the one planned exception. The prototype is built from the docs specifically to test them, so updating the PRD, tech spec, and memo from what the prototype teaches is expected, not a violation. Once v1 locks after that reconciliation, the hard stop applies as written.
+
 ### Post-v1 iteration cycle
 
 After v1 ships:
@@ -394,9 +448,10 @@ This cycle repeats. The system evolves.
 | Phase 1 session notes | Phase 1 (in progress) | `requirements/phase_1/Session_*.md` | Chronological discussion record per session. Also serves as personal learning log. |
 | Phase 1 decisions | Phase 1 (in progress) | `DECISIONS.md` (append) | Architecture choices from source review |
 | Phase 1 synthesis | Phase 1 (end) | `requirements/phase_1/Phase_1_synthesis.md` | All decisions organized by topic into a single narrative. Primary input for Phase 2 and Phase 3. |
-| Competency_questions.md | Phase 2 | `requirements/` | Final CQ set with tiers, personas, rubric |
-| PRD.md | Phase 3 | `requirements/` | Product requirements. Single source of truth. |
-| Technical_specification.md | Phase 4 | `requirements/` | Implementation blueprint. |
+| Evaluation_playbook.md | Phase 2 | `requirements/` | Living doc: CQ set with tiers and personas, CQ count cap, offline eval gate (rubric plus eval-harness metrics), model-selection method (model-bench), online feedback-loop design. Referenced by the tech spec. |
+| PRD.md | Phase 3 | `requirements/` | Product requirements. Single source of truth. Outcome-focused. |
+| Technical_specification.md | Phase 4 | `requirements/` | Implementation blueprint. References the evaluation playbook and skills. |
+| Strategic_memo.md | Phase 4 | `requirements/` | 1 to 2 page distillation of the PRD and tech spec. Updated after the prototype. |
 | Updated skills/agents | Phase 5 | `.claude/skills/`, `.claude/agents/` | Aligned with PRD and tech spec |
 | Reference docs (as needed) | Phase 5 | `docs/` | Fill gaps identified during tech spec |
 
@@ -430,6 +485,6 @@ This keeps the build stable while allowing continuous learning.
 
 ## Summary of what happens next
 
-Phase 1 is next. We go through the 24 sources in `Background_requirements.md` one section at a time. We debate. We decide. We log decisions. Once all sources are reviewed, we move to competency questions (Phase 2), then PRD (Phase 3), then tech spec (Phase 4), then we update our tools (Phase 5), then we build (Phase 6).
+Phase 1 is next. Steps 1.1 to 1.5 are done. We resume at Step 1.6 and work through the sources in `Background_requirements.md` plus the added sources (new intake in Step 1.11, conference notes in Step 1.12), one section at a time. We debate. We decide. We log decisions. Once all sources are reviewed, we move to competency questions and the evaluation playbook (Phase 2), then the PRD (Phase 3), then the tech spec and strategic memo (Phase 4), then we update our tools (Phase 5), then we build the prototype and v1 (Phase 6).
 
 One phase at a time. No skipping.
