@@ -100,6 +100,24 @@ Concretely: enabling a plugin or extension should load its skills and prompts bu
 
 Pair the two-phase gate with exact-version or commit-SHA pinning, whichever the install method uses, so a trusted server is also a pinned one. This is the same least-privilege discipline `ai-security-standards` requires for every agent and tool integration, applied at the moment an executable extension gets wired in.
 
+### Three-state permissions
+
+Allow:
+- Running `npm view`, `npm pack --dry-run`, `pip download --no-deps`, `pip show`, and audit commands to inspect a package or MCP server before installing, without asking
+- Installing a dependency or wiring up a tool integration once it has passed every check in this rule: no compromise reports, no unexplained postinstall or setup.py script, a passing audit, and verified provenance
+- Reading an MCP server's or tool's source, config, and permissions before deciding whether to trust it
+
+Ask:
+- Before installing any new npm or PyPI package with a postinstall or setup.py script, or any unfamiliar package with a low maintainer count or a recent, unusual version bump
+- Before treating an enabled MCP server or executable extension as trusted. Enabling and trusting are separate steps: source review, credential scoping, and version pinning happen before the extension is allowed to run, even if it is already loaded
+- Before upgrading a pinned MCP server or tool integration off an exact version or commit-SHA pin, or replacing a pin with `@latest`
+
+Deny:
+- Never install a package that has an active compromise report or an unexplained postinstall or setup.py script
+- Never let an MCP server, hook, or executable extension run before it has passed the enable-versus-trust gate, regardless of whether it is enabled or loaded
+- Never wire a new MCP server or tool integration to a full-access credential when a scoped, read-only, or single-purpose credential will do
+- Never log, commit, or share an MCP or tool config file with its env block unredacted
+
 ### Periodic audit
 
 Periodically inventory every configured MCP server and every tool invoked via `npx` or `uvx`. Compare against your expected list. Flag anything you do not recognize.

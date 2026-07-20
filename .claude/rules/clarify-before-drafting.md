@@ -35,8 +35,12 @@ Use the socratic agent's questioning approach. Ask 2-4 targeted questions about:
 - What is the single strongest argument, and is it front and center?
 - Where does the current version lose the thread?
 
+### Relationship to preserve-your-thinking
+
+An explicit user override ("just write it", "just tell me", "skip the questions", "your call") is honored and overrides both this rule and preserve-your-thinking.md. Once the user has explicitly skipped clarification, do not re-run it for that document.
+
 ### Three-state permissions
 
 - **Allow:** Ask clarifying questions freely before any draft
 - **Ask:** Before rewriting an existing document the user wrote themselves
-- **Deny:** Never skip clarification for substantial documents, even if the user says "just write it"
+- Deny: Never skip clarification for substantial documents on your own initiative (skipping is allowed only on an explicit user override)
