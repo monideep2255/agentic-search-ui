@@ -1,6 +1,6 @@
 ---
 name: dev-standards
-description: "Apply production coding standards to the agentic search system. Reviews code against 6 lenses (security, testing, quality, PR readiness, deployment, production hardening), generates readiness checklists, and guides prototype-to-production quality."
+description: "Apply production coding standards to the agentic search system. Reviews code against 6 lenses (security, testing, quality, PR readiness, deployment, production hardening), generates readiness checklists, and guides prototype-to-production quality. Distinct from objective-review, which is for general, documentation, or plan review rather than production-code readiness."
 scope: project
 depends_on:
   - .claude/rules/system-design-patterns.md
@@ -219,7 +219,7 @@ Issues to fix before production:
 
 ## Reference
 
-Source standards: NWS production coding standards (adapted from `reference/personal-os-work/NIH/NWS/Technical-development-workflow/NWS_dev_workflow_standards.md`)
+Source standards: adapted from NWS-style production coding standards
 
 Deployment pipeline: LOCAL (Docker Compose) -> Staging -> Production
 Security tools: bandit (SAST), safety/pip-audit (dependency audit), semgrep (patterns)
