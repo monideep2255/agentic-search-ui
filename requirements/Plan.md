@@ -4,7 +4,7 @@ From background research to working product. This document defines every step be
 
 Kick-off: 2026-05-06. Phase 0 completed in the kick-off session. All background material collected, vision aligned, plan agreed.
 
-Last updated: 2026-07-21 (extended from 2026-05-07). Steps 1.1 to 1.5 are locked and unchanged. The 2026-07-20 revision added new Phase 1 sources (Steps 1.11 and 1.12), turned the Phase 2 output into a living evaluation playbook, added a strategic memo deliverable, and restructured Phase 6 to build the prototype from the docs first, then reconcile, then build v1. The 2026-07-21 revision adds Step 1.13 (LLM legal and compliance obligations).
+Last updated: 2026-07-21 (extended from 2026-05-07). Steps 1.1 to 1.5 are locked and unchanged. The 2026-07-20 revision added new Phase 1 sources (Steps 1.11 and 1.12), turned the Phase 2 output into a living evaluation playbook, added a strategic memo deliverable, and restructured Phase 6 to build the prototype from the docs first, then reconcile, then build v1. The 2026-07-21 revision adds Step 1.13 (LLM legal and compliance obligations) and a competency-question selection-criteria discussion topic in Step 2.3.
 
 ## Table of contents
 
@@ -224,6 +224,16 @@ Task (Discuss together): finalize the CQ set. Lock tier 1 (must-answer for v1), 
 
 Decision to make here (discuss): cap the v1 competency-question set to a small, testable number even though we have far more candidates. Start small, prove the loop, then expand. Lock the cap before finalizing tiers.
 
+Discussion topic (discuss): what makes a competency question worth including, the moat test. Beyond persona coverage and real-usage frequency, discuss a sharper bar for selecting and tiering competency questions: prioritize questions a user cannot answer well with a general search engine or a general AI tool. Compare and contrast each candidate question against that bar along five dimensions:
+
+1. Cannot just Google: the answer needs synthesis across the knowledge graph and the NCBI or enrichment APIs, not a single web result. If a general search engine or AI tool already answers it directly, it is weak differentiation for System 3.
+2. Is deterministic: the same question returns the same verifiable answer every time, not a plausible generation that varies run to run.
+3. Provenance: every claim links back to its source record, per the citations-non-negotiable rule. A question whose answer cannot be cited fails the bar.
+4. Learn from the system: the answer surfaces something the system is uniquely positioned to show, such as cross-database relationships or structured evidence, so the user gets insight a generic summary cannot give. To discuss: does this mean the user learns from the system, the system learns from usage, or both?
+5. Loop human behavior: the question, and how users follow up on it, feeds the interaction-to-competency-question loop (Step 2.5), so real human behavior sharpens the CQ set over time.
+
+Task (Discuss together): decide whether these five become explicit selection or tiering criteria for the CQ set, how to weigh them against persona coverage and real-usage frequency, and test the idea by scoring a few concrete tier 1 candidates against all five.
+
 ### Step 2.4: define the offline evaluation gate
 
 Confirm or update the 8-point scoring rubric from `02_Tier1_eval_spec.md`. Does the rubric match our architecture?
@@ -352,6 +362,7 @@ Review `.claude/skills/bossman-mode/SKILL.md` against the tech spec build order.
 - Team composition per phase
 - Skill chain and quality gates
 - Any new agent roles needed
+- Worktree isolation for concurrent file-mutating builders (per the 2026-07-21 decision in DECISIONS.md), torn down after merge; read-only agents (reviewers, researchers, judges) stay in the shared checkout
 
 ### Step 5.2: update or create skills
 
