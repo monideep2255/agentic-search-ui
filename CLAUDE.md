@@ -12,7 +12,7 @@ Stack: Python 3.11+, FastAPI, LangGraph, React, PostgreSQL (user data), psycopg2
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | System 3: planning (Phase 1) | IN PROGRESS. Source review and architecture decisions per requirements/Plan.md (Steps 1.1-1.6 done, 1.7 next). No application code yet; build execution begins at Plan.md Phase 6. Knowledge graph available on Hetzner CPX42 (46.225.128.133): 115M nodes + 693M edges queryable via openCypher over psycopg2. |
+| 1 | System 3: planning (Phase 2) | PHASE 1 COMPLETE (all 13 steps, 75 decisions in DECISIONS.md, synthesis in requirements/phase_1/Phase_1_synthesis.md). Phase 2 next per requirements/Plan.md: competency questions and the evaluation playbook. No application code yet; build execution begins at Plan.md Phase 6. Knowledge graph available on Hetzner CPX42 (46.225.128.133): 115M nodes + 693M edges queryable via openCypher over psycopg2. |
 | 2 | System 3: tool integration | PLANNED. cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup. |
 | 3 | System 3: eval and tracing | PLANNED. LangSmith tracing, golden dataset, automated eval harness. |
 
@@ -46,10 +46,11 @@ Multi-model harness with three tiers:
 | `System_3_architecture_brainstorming.md` | Architecture design for the search agent: agent loop, tools, multi-model harness, cost model, deployment | Before writing any System 3 code |
 | `architecture/Three_layer_data_architecture.md` | Layer 1 (graph), Layer 2 (on-demand API), Layer 3 (enrichment). How System 3 accesses each layer. | Understanding data access patterns |
 | `architecture/Biolink_repos_explained.md` | BioLink model reference: categories, predicates, CURIEs | Understanding the graph schema when writing Cypher |
-| `Knowledge_graph_on_server_reference.md` | A-Z operations reference for the live graph on Hetzner CPX42: SSH access, Cypher query examples, index listing, node/edge counts, cost breakdown | Before writing cypher_query tool or debugging graph access |
+| `data-engineering/Knowledge_graph_on_server_reference.md` | A-Z operations reference for the live graph on Hetzner CPX42: SSH access, Cypher query examples, index listing, node/edge counts, cost breakdown | Before writing cypher_query tool or debugging graph access |
 | `NCBI_databases_and_APIs_reference.md` | All 39 NCBI databases, API endpoints, rate limits, record counts | Before implementing Layer 2 tools (ncbi_efetch, ncbi_dbsnp) |
 | `NCBI_repos_deep_dive.md` | Analysis of 13 NCBI GitHub repos: code to reuse, architecture decisions informed, patterns to adopt, what not to build locally | Before implementing any Layer 2 or Layer 3 tool; before making architecture decisions about entity resolution or data access |
-| `Project_overview_A_to_Z.md` | Navigation hub with pointers into every doc in the project | First doc to read for project orientation |
+| `data-engineering/Project_overview_A_to_Z.md` | Navigation hub with pointers into every doc in the project | First doc to read for project orientation |
+| `Agent_teams_tmux_quickstart.md` | tmux launch guide so bossman-mode parallel builders show in live panes | Before running `/bossman` with 2 or more builder tasks |
 
 ---
 

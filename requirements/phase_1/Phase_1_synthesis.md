@@ -2,9 +2,9 @@
 
 The topic-organized narrative of every Phase 1 decision. Session notes answer "what did we discuss and when." DECISIONS.md answers "what did we choose." This document answers "what does it all mean together, by topic, ready for the PRD."
 
-This is a living document. It currently folds in Steps 1.1 through 1.6. Steps 1.7 through 1.13 are added as they complete. Point the PRD, tech spec, and strategic memo commands at this file, not at the individual session logs.
+This document folds in all of Phase 1, Steps 1.1 through 1.13. Phase 1 is complete. Point the PRD, tech spec, and strategic memo commands at this file, not at the individual session logs.
 
-Status: covers Phase 1 Steps 1.1 through 1.6 (as of 2026-07-21). Steps 1.7 through 1.13 pending.
+Status: covers all of Phase 1 (Steps 1.1 through 1.13), complete as of 2026-07-21.
 
 ## Table of contents
 
@@ -20,9 +20,15 @@ Status: covers Phase 1 Steps 1.1 through 1.6 (as of 2026-07-21). Steps 1.7 throu
 - [NCBI and enrichment API strategy](#ncbi-and-enrichment-api-strategy)
 - [Data and graph handoff](#data-and-graph-handoff)
 - [User psychology and product design](#user-psychology-and-product-design)
+- [Contractor package boundary and non-functional requirements](#contractor-package-boundary-and-non-functional-requirements)
 - [Evaluation approach](#evaluation-approach)
 - [SDLC, process, and build sequence](#sdlc-process-and-build-sequence)
-- [Open threads carried into later Phase 1 steps](#open-threads-carried-into-later-phase-1-steps)
+- [Tools and infrastructure](#tools-and-infrastructure)
+- [Cross-cutting concerns](#cross-cutting-concerns)
+- [New-intake adopt batch](#new-intake-adopt-batch)
+- [Conference learnings](#conference-learnings)
+- [Legal and compliance (Track 1 versus production)](#legal-and-compliance-track-1-versus-production)
+- [Threads carried into Phase 2 and Phase 3](#threads-carried-into-phase-2-and-phase-3)
 
 ## How this document is used
 
@@ -70,6 +76,8 @@ Specific model selection is deferred to the build phase (Phase 6) and decided by
 
 Budget target: roughly $100 per month (a relative marker, not a hard cap). Hetzner is the main fixed cost; Railway and LangSmith free tiers cover the rest; inference on open-source models runs to single digits per month.
 
+Step 1.9 (open question 4) confirmed the cost lever: tiered orchestration, where a strong model plans and thinks and cheaper or smaller models execute bounded subtasks, is the v1 mechanism for controlling cost at scale. Model distillation proper (fine-tuning a smaller student model to match a stronger one) is a v2 optimization, deferred until query logs stabilize. Which model fills each tier is decided in Step 1.11 (routing, model-bench) and gated by Step 1.13 (legal).
+
 ## Agent architecture and the five-step loop
 
 A single orchestrator agent with three-tier model routing, not a multi-agent system. V1 competency questions need three to five tool calls per query, which one agent handles trivially. Sub-query decomposition (a LangGraph subgraph, not a separate agent) is the planned upgrade for deep-research queries needing many sequential tool calls; the trigger is a failure rate above 20 percent on that query class in the golden dataset.
@@ -87,6 +95,8 @@ flowchart LR
 ```
 
 The contractor's eight-layer architecture was reviewed and not adopted. The five-step loop covers the same concerns with fewer abstraction boundaries: Guard maps to Entry plus governance, Think plus Plan map to Guarded Planning plus Context Retrieval, Act maps to Backend Compilation plus Knowledge Modules, Write maps to Provenance Response.
+
+Step 1.9 (open question 7) decided agent naming: scientific names after great historical biomedical scientists, surfaced and streamed to the user to build connection. The single orchestrator carries the lead name and persona; sub-query decomposition later can carry named sub-steps. The persona stays subtle and serious to protect the provenance-forward positioning (a UI guardrail carried into Step 1.10).
 
 ## Three-layer data access
 
@@ -119,6 +129,8 @@ The natural-language-to-Cypher separation is a firm principle: the LLM never gen
 Schema slicing sends only the relevant graph-schema portion to the LLM per query, not the full schema (14 edge types, dozens of properties). Hand-authored for v1.
 
 Cypher generation happens inside the cypher_query tool via its own plan-tier LLM call, constrained by the schema slice, few-shot examples, and edge-label enforcement, then validated (syntax, forbidden keywords, edge labels required, row limit) before execution. One retry on validation failure, then graceful failure. Cypher queries always specify edge labels explicitly; untyped edges force AGE into a UNION over all edge tables and turn milliseconds into minutes.
+
+Step 1.7 refined this into a confidence-layered hybrid and a backend-agnostic principle. The POC prototype leads with the schema-aware generation path above (the AI writes the query, the validator checks it), which proves the plain-language differentiator and harvests real questions. Verified query templates are then layered on for the roughly ten tier-1 must-pass competency questions while hardening to v1, so determinism lands exactly where the system is graded. Generated queries that keep proving correct are promoted into the verified-template library over time, which is the Phase 2.5 feedback loop. Underneath both paths, the query language is sealed inside the tool: the agent produces a database-neutral structured plan and never sees Cypher, so swapping the graph store (AGE, Neo4j, ArangoDB, or an RDF store) is a contained change to one tool. This reconciles the simplified-classification decision with the contractor's typed-IR recommendation and corrects the earlier "operate like rank 2" framing.
 
 ## Citations, provenance, and verification
 
@@ -166,11 +178,27 @@ The differentiation anchor: the moat is cited, deterministic, cross-database syn
 
 Source routing: the NLM-lessons doc's unclaimed items (entity grounding as a ground_entities tool, few-shot from the golden dataset, structured query-intent logging, the overengineering rubric) route into the tool and architecture set (Steps 1.3 and 1.7); the board session notes route to Phase 2 user research.
 
+## Contractor package boundary and non-functional requirements
+
+Step 1.7 reviewed the seven contractor documents and set the boundary between our build and the official NLM track.
+
+The lens: the whole contractor package (NFR baseline, NLQ approach, April 21 meeting decisions, July 07 K3 review package, Anne's playbook) describes Track 2, an RDF plus SPARQL system with a GraphQL public surface, four federated modular graphs, glucose-metabolism scope, still at design-review with no running graph. We mine it for patterns, NFRs, and evaluation criteria, but do not inherit its architecture. Two borrowable patterns: the competency question baked into the data as an auditable key, and the rule that zero result rows means unsupported-in-scope, not absent-in-biology. One place we are ahead: the identifier reconciliation that blocks the contractor is already solved in our normalized CURIE graph.
+
+Non-functional requirements: the contractor's 10-category NFR baseline is filtered through three buckets rather than its own POC and MVP tags. Bucket A (graph construction and curation) is System 1/2, out of scope. Bucket B, the POC must-haves, is the query-and-answer surface: provenance and citation integrity (DATA-01A, REP-01A, AUD-03), query and answer UX (UX-01, UX-02, UX-04, PERF-03), performance and reliability (PERF-01, REL-01, REL-02), and evaluation and test gates (OPS-01, OPS-03, PERF-04, REP-01). Bucket C defers production hardening.
+
+Security posture: trust is the product, so trust-guardrails stay in the POC (read-only enforcement, provenance integrity, cost caps, prompt-injection defense) while enterprise security defers (IAM roles, session expiry, access review). Basic user auth returns for v1 because the investment loop needs accounts.
+
+Federation: v1 federation scope is exactly the three data layers (Layer 1 graph, Layer 2 NCBI APIs, Layer 3 enrichment), which already delivers the value of federation, synthesis across live sources. External non-NCBI knowledge-graph federation defers to v2. Natural language from day one is confirmed as the POC interface.
+
 ## Evaluation approach
 
 Evaluation is sequenced and elevated into a living evaluation playbook (the Phase 2 output the tech spec references): the offline competency-question gate first for a baseline before any answer-generation feature ships, the online feedback loop second once live. The competency-question set is the offline eval set, scored with the eval-harness skill (pass@k, pass^k, pass/fail/abstain). model-bench sits alongside for model selection, a separate target from answer quality.
 
 The v1 competency-question set is capped at a small, testable number, then expanded once the loop is proven. A sharper selection bar (the moat test) is discussed in Phase 2 Step 2.3: prioritize questions a user cannot answer well with a general search engine or AI tool, scored on cannot-just-Google, deterministic, provenance, learn-from-the-system, and loop-human-behavior.
+
+Step 1.7 adopted Anne's milestone ladder as the structure of evaluation, at two altitudes. The framework is four climbing gates, each a go/no-go serving a named stakeholder: G1 (each tool works alone) and G2 (sources join across the three layers) are objective and machine-checkable and serve the build team; G3 (cited, SME-credible scientific answers) is human-judged and serves the researcher and SME reviewer; G4 (reuse-ready delivery formats) is external and serves external adopters and NCBI leadership. Bart's leadership-explainability test is a fifth success test served by the strategic memo, not a code gate.
+
+The altitude split governs where the ladder lives. The framework (the four gates plus the stakeholder mapping) is a hard PRD requirement in the success-metrics and acceptance-criteria sections, because it is a stable success definition. The operational numbers (thresholds, per-competency-question gate mapping, SME scoring rubric) live in the Phase 2 evaluation playbook, so the locked PRD does not reopen to tune a metric. The eval harness runs the gates. Because evaluation is a process, PRD success metrics are stakeholder-segmented rather than one blended number. The logic model is not a separate artifact: the PRD outcomes-and-stakeholders section is our logic model.
 
 ## SDLC, process, and build sequence
 
@@ -180,12 +208,67 @@ The deliverable sequence: Plan.md discussions produce the PRD, then the tech spe
 
 bossman-mode uses git worktree isolation for concurrent file-mutating builders, with phase-branch plus MR as the integration model layered on top; read-only agents (reviewers, researchers, judges) stay in the shared checkout. Applied when bossman-mode is updated in Phase 5.
 
-## Open threads carried into later Phase 1 steps
+## Tools and infrastructure
 
-- Step 1.7: NFR baseline (which apply to the POC), the NLQ approach (build toward the typed IR while operating like CQ templates for the POC), federation scope for v1, Anne's evaluation outcomes as requirements.
-- Step 1.8: tools and infrastructure (Railway, PostHog, Arize versus LangSmith, Linear, GraphQL versus REST).
-- Step 1.9: the ten open questions, each to a decision or an explicit defer-to-tech-spec.
-- Step 1.10: cross-cutting concerns (security and threat model, data freshness and conflict resolution, rate limiting under concurrency, UI patterns, accessibility and Section 508).
-- Step 1.11: new intake research (model routing tiers, providers, model-bench, caching, wrapping investments).
-- Step 1.12: conference learnings (ISMB, KGC, Nodes AI).
-- Step 1.13: LLM legal and compliance obligations (country-of-origin restrictions, licensing, federal authorization, data-handling contracts, Track 1 versus production line).
+Step 1.8 locked the stack, building on infrastructure that already works.
+
+Hosting strategy: build the Track 1 PoC on our own proven stack first, then migrate to NCBI/OCCS infrastructure after the PoC. Building on NCBI infrastructure from day one would make Track 2 migration free but couples the PoC to access approvals, ATO and FISMA constraints (Step 1.13), and slower iteration. Migration later is bounded work, the same logic as FastAPI-to-Django. Runtime hosting and collaboration and data tools are separated: host on our own stack, but use NCBI MCP access (Confluence, Jira, GitLab) now to pull real user-research data for Phase 2 Step 2.2.
+
+The stack, taken from the NCBI KG reference repo that already runs it: Railway for runtime hosting, PostHog for product analytics, LangSmith for LLM tracing and eval (over Arize). The public API reaffirms the hybrid surface (REST plus SSE for chat, GraphQL via Strawberry for programmatic), which resolves the GraphQL-versus-REST open question.
+
+Issue and task tracking: a self-maintained in-repo markdown tracker (a table, stood up when the build starts in Phase 6, migrated to NCBI Jira after the PoC). Linear is dropped because access ends 2026-07-29. During Phase 1 planning, Plan.md and the continuation prompt already track progress.
+
+## Cross-cutting concerns
+
+Step 1.10 settled five topics that cut across the system.
+
+Security and threat model: the forbidden-output boundary is locked. The system reports cited evidence and clinical significance from source records and never gives personal medical advice, diagnosis, or treatment. Off-topic or non-biomedical queries are refused and redirected; jailbreak and prompt-injection attempts are rejected by the guardrail. The "Agents of Chaos" six failure categories map onto defenses already held (read-only connection, cost caps and timeouts, cite-or-refuse and the verification loop, least privilege and no-PHI-to-LLM, single orchestrator with schema-validated tool I/O). From the reference build we adopt the zero-cost pre-LLM guardrail (biomedical allowlist, medical-advice block, off-topic block) and read-only enforcement done twice independently (Cypher validator plus database-client layer).
+
+Data freshness and conflict resolution: Layer 2 is the authoritative fallback when Layer 1 is suspect (Decision 21), with graceful degradation always (Decision 22). The acceptable-staleness threshold defers to the tech spec.
+
+Rate limiting under concurrency: the 100 rps admin limit relaxed the binding constraint and cost caps hold the line; the queue-versus-prioritize-versus-fail-fast strategy defers to the tech spec.
+
+UI patterns: one orchestrator plus parallel tools is the mechanism, with the named-scientist team as a presentation-and-streaming layer on top, not autonomous subagents; a bounded LangGraph sub-query subgraph is the deep-research upgrade path. The persona list is the top 100 biomedical scientists by contribution (curated in Phase 6). Streaming is the curated named-step narrative by default, with a stop button throughout and an optional show-full-reasoning expander. The reference frontend has no streaming, so this is net-new; its QueryPipeline stepper, ChatMode shell, results table, feedback buttons, and session-gated medical-disclaimer modal are the components to adapt.
+
+Accessibility and Section 508: full 508 and WCAG 2.1 AA conformance moves to the production and v1 track; the PoC does reasonable-effort accessibility (semantic HTML, keyboard navigation) with no formal audit.
+
+## New-intake adopt batch
+
+Step 1.11 surveyed 45 new-intake documents (four parallel Sonnet 5 sub-agents) and turned the cutting-edge findings into requirements. Nothing forced a reversal.
+
+Orchestration and caching: coordinator/worker is the cost mechanism, the strong tier plans and writes while the cheap tier does bounded reads and returns findings plus citations, never raw passages, which makes cite-or-refuse an architectural boundary (the Synth tier never sees a raw record). The Think step routes by query shape (single-hop to Layer 2, multi-hop to Layer 1, dynamic to the full loop) and defaults to exact ID/CURIE retrieval, with fuzzy matching only to resolve free text to a CURIE. Provider-side prompt caching is adopted now: every prompt is a stable prefix (system instructions, tool schemas, graph/BioLink schema) then a dynamic suffix, tools do not change mid-session, models do not switch mid-query, and cache efficiency is a first-class metric. KV-cache reuse stays reference-only unless a Guard-tier model is self-hosted later.
+
+Model-bench and providers: a System-3-specific model-bench of frozen per-tier tasks, scored deterministically for correctness and GeneBench-Pro style for biomedical judgment, taste-weighted only for tone. The open-source candidate set (DeepSeek-V4, Kimi K2.6/K2.7, GLM-5.2, Qwen3-Max, Gemma 4) is benchmarked in Phase 6, with resilience and capacity as selection criteria alongside cost.
+
+Tools, memory, and harness: opinionated narrow tool adapters with full descriptions (VirBench evidence: 16.9% to over 90% accuracy once a deterministic tool owns execution); the v1 investment-loop memory is provenance-tagged and promotion-gated; the harness is treated as production software (fail-fast, freeze-model-iterate-harness); safety and cost caps live in the runtime layer; tool execution is decoupled from orchestration so the NCBI migration is a re-point; and the Phase 4 eval checks query decomposition, not only citations.
+
+Cost caps and open calls: cost-cap starter values are per-query $0.10, per-user 100/day, system-wide $10/day, timeouts inheriting the latency budgets (tunable in Phase 4). Fusion/ensemble panels are deferred to v2 as a triggered escalation lever, no separate router step is added (routing folds into Guard plus Think's classification), and the risk-tier classification pass is deferred to Phase 3.
+
+## Conference learnings
+
+Step 1.12 surveyed three conferences (ISMB, KGC, Nodes-AI, about 182,000 words) via three parallel Sonnet 5 sub-agents. The three converged independently, which is the strong signal.
+
+Query understanding and NL-to-Cypher discipline (AbbVie, Bayer, Adobe converge): resolve free-text terms to CURIEs first and ask a targeted clarifying question on ambiguity before generating a query; inject only the query-relevant subgraph schema, never the full schema; restrict the model to the real schema so the validator catches nonexistent labels; add a human-readable glossary onto opaque BioLink terms; split validation from result-summarization; and cache the full sliced schema upfront rather than progressively.
+
+Provenance and grounding: the provenance type gains four first-class fields (evidence-kind, assertion-confidence of asserted vs hedged vs contested, population and ancestry context, and license), plus a user-facing trust signal with an answer/flag/ask gate. Cite-or-refuse gains a citation-substantiation check (the cited passage must support the specific claim, since 39% of published citations do not) and a cross-source triangulation gate for higher-stakes mechanistic claims.
+
+Evaluation, tools, and memory: the Phase 4 eval-harness is contamination-resistant, concept-scored with ontology-synonym expansion, human-baseline graded, with inductive held-out splits and a separate regression suite. Every tool documents its inputs, outputs, and failure modes (documentation alone drove BioNeMo from 57% to 100% task completion). A cheap non-LLM classifier pre-filters at the Guardrail. Every Layer 2/3 access is logged with authorization. The v1 investment-loop memory is a hydrate-reason-act-write-back loop, and temporal recency becomes a query shape.
+
+Open calls: vector/semantic retrieval is supplied by Layer 3's existing LitSense combined with graph and NCBI keyword search (tri-modal, no bespoke index for the PoC); the single orchestrator holds for v1 with a written v2 graduation trigger; and the competency-question moat test is kept but paired with a separate coverage metric, because a 100% pass rate can hide 86% concept incompleteness.
+
+Doc-hygiene: the upstream Innovation proposal 2026 and vision-of-success source docs still describe System 3 as 8 specialized agents, stale relative to the single-orchestrator decision; reconcile in a future docs-sync so it does not leak into the PRD.
+
+## Legal and compliance (Track 1 versus production)
+
+Step 1.13, the last Phase 1 step, split the legal obligations into two lanes, because legal obligations are a separate gate that binds the federal production path, not a personal Track 1 prototype on public data.
+
+Track 1, the personal prototype, applies now: permissive model licenses (MIT, Apache 2.0) are the default and cover most candidates; use-restricted terms are allowed only with obligations tracked into any fine-tune; research-only and non-commercial licenses are barred for the running system. There is no PHI, so no BAA is a v1 must-have (user-account PII is handled per ai-security-standards, never sent to an external LLM); zero-retention and no-training-on-inputs inference terms are a should-have now. OpenRouter is a Track 1 hosting choice. Country-of-origin (Option A): Track 1 uses the strongest benched models now, including Chinese-origin (DeepSeek, Kimi, GLM, Qwen), because it is a personal prototype on public data, with compliant US or allied-origin alternatives (Devstral 2, Nemotron 3, Gemma 4, Llama) benched in parallel and model choice kept a config swap.
+
+Production and Track 2, deferred but designed toward: US or allied-origin models only (foreign-adversary origin barred); federal authorization (FedRAMP, FISMA, ATO, OMB M-25-21 and M-26-04); BAA if PHI ever enters, SOC 2, and data residency or GovCloud. Promotion stays a config and provider swap because of the LiteLLM plus OpenRouter abstraction and the control-plane/data-plane decoupling.
+
+## Threads carried into Phase 2 and Phase 3
+
+- Phase 2: finalize the competency-question set (tiers, personas, and the v1 cap), apply the moat test and the added coverage metric, scrape real user data (Confluence, Jira, app logs), design the interaction-to-competency-question feedback loop, and produce the evaluation playbook.
+- Phase 3 (PRD): run the risk-tier classification pass; fold in the Step 1.12 conference PRD requirements (NL-to-Cypher discipline, provenance schema expansion, grounding gates) and the milestone-ladder success framework.
+- Doc-hygiene: reconcile the stale "8 agents" framing in the upstream Innovation proposal and vision-of-success source docs.
+

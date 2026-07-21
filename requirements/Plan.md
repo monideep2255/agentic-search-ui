@@ -4,7 +4,7 @@ From background research to working product. This document defines every step be
 
 Kick-off: 2026-05-06. Phase 0 completed in the kick-off session. All background material collected, vision aligned, plan agreed.
 
-Last updated: 2026-07-21 (extended from 2026-05-07). Steps 1.1 to 1.5 are locked and unchanged. The 2026-07-20 revision added new Phase 1 sources (Steps 1.11 and 1.12), turned the Phase 2 output into a living evaluation playbook, added a strategic memo deliverable, and restructured Phase 6 to build the prototype from the docs first, then reconcile, then build v1. The 2026-07-21 revision adds Step 1.13 (LLM legal and compliance obligations) and a competency-question selection-criteria discussion topic in Step 2.3.
+Last updated: 2026-07-21 (extended from 2026-05-07). Steps 1.1 to 1.5 are locked and unchanged. The 2026-07-20 revision added new Phase 1 sources (Steps 1.11 and 1.12), turned the Phase 2 output into a living evaluation playbook, added a strategic memo deliverable, and restructured Phase 6 to build the prototype from the docs first, then reconcile, then build v1. The 2026-07-21 revision adds Step 1.13 (LLM legal and compliance obligations) and a competency-question selection-criteria discussion topic in Step 2.3. Step 1.7 was completed and closed out on 2026-07-21: the contractor package is tagged as Track 2, the NFR baseline is bucketed, the NLQ approach is a generation-first hybrid with verified templates for the tier-1 CQs, v1 federation is scoped to the three data layers, and Anne's milestone ladder is adopted as a PRD success requirement. Step 1.8 was completed the same day: the tool stack is Railway, PostHog, and LangSmith, with a self-maintained in-repo tracker, and the hosting strategy is build-individually-first then migrate to NCBI/OCCS after the PoC. Step 1.9 dispositioned the ten open questions: six confirmed, model distillation and cost-cap values deferred with homes named (Steps 1.11 and 1.13), and agent naming decided (scientific names, streamed persona). Step 1.10 settled the five cross-cutting concerns: forbidden-output security boundary locked, data freshness and rate limiting confirmed or deferred, the UI architecture set (orchestrator plus tools, named-scientist streaming layer, curated streaming with a stop button), and accessibility deferred to v1. A read-only survey of the NCBI KG reference repo produced the adopt/adapt/skip list for Phase 6. Step 1.11 surveyed 45 new-intake documents via four parallel Sonnet 5 sub-agents and locked an adopt batch (coordinator/worker cost mechanism, prompt caching, a System-3 model-bench, opinionated tools, provenance-gated memory) plus four open calls (cost caps set, fusion deferred to v2, no separate router step, risk-tier pass deferred to Phase 3). Step 1.12 surveyed three conferences (ISMB, KGC, Nodes-AI) via three parallel Sonnet 5 sub-agents and locked a must-feed-the-PRD batch (NL-to-Cypher discipline, provenance schema expansion, substantiation and triangulation grounding gates, eval-harness redesign) plus three open calls (Layer 3 LitSense as the vector mode, single orchestrator with a v2 graduation trigger, a separate coverage metric alongside the moat test). Step 1.13 completed Phase 1: LLM legal and compliance obligations split into a two-lane Track 1 versus production framework, with country-of-origin Option A (Track 1 uses the strongest models now including Chinese-origin, with a benched compliant substitute and a config-swap migration path). All 13 Phase 1 steps are done, 75 decisions logged; the Phase 1 synthesis feeds Phase 2 and Phase 3.
 
 ## Table of contents
 
@@ -64,7 +64,7 @@ Output: `requirements/context/Background_requirements.md` (24 sources indexed, a
 
 ## Phase 1: source review and architecture decisions
 
-Status: IN PROGRESS (Steps 1.1 through 1.5 complete as of 2026-05-07)
+Status: COMPLETE (all 13 steps done as of 2026-07-21)
 
 Goal: go through every source in `Background_requirements.md`, debate what to use, what to skip, and what needs adaptation. Lock the architecture decisions before writing the PRD.
 
@@ -121,27 +121,27 @@ The synthesis document fills the gap between chronological session notes and a f
 | --- | --- | --- |
 | Hook model, adoption gap, build-to-learn, NLM lessons | Which psychological design principles make it into the PRD as requirements? | Discuss together |
 
-### Step 1.7: review contractor documents (7 sources)
+### Step 1.7: review contractor documents (7 sources) - COMPLETE (2026-07-21)
 
 | Source | What to decide | Owner |
 | --- | --- | --- |
 | NFR baseline (10 categories) | Which NFRs apply to our POC? Tag each as must-have or defer. | Discuss together |
-| NLQ approach (6 ranked options) | Confirm: we are building toward rank 1 (typed IR) while operating like rank 2 (CQ templates + slot filling) for POC | Discuss together |
+| NLQ approach (6 ranked options) | DECIDED (2026-07-21): confidence-layered hybrid. POC leads with schema-aware Cypher generation plus a validate-and-repair pipeline; verified templates layered on for the ~10 tier-1 must-pass CQs while hardening to v1 (not rigid rank-2 templates). Query language sealed inside the tool for backend agnosticism | Done, see DECISIONS.md |
 | Meeting decisions (D1-D5) | Federation scope: how much for v1? Template vs. NL: confirm NL from day 1. | Monideep decides |
 | Contractor's latest documents | What changed since the last handoff? Which updates affect our architecture or the PRD? | Discuss together |
 | Anne's evaluation playbook | Which outcome definitions and evaluation criteria become requirements? Which stakeholders does each outcome serve? | Discuss together |
 
-### Step 1.8: review tools and infrastructure
+### Step 1.8: review tools and infrastructure - COMPLETE (2026-07-21)
 
 | Source | What to decide | Owner |
 | --- | --- | --- |
-| Tools list (section 10 of background) | Lock: Railway? PostHog? Arize vs LangSmith? Linear? GraphQL vs REST? | Discuss together |
+| Tools list (section 10 of background) | DECIDED (2026-07-21): Railway (hosting), PostHog (analytics), LangSmith over Arize (tracing), self-maintained in-repo tracker over Linear, REST+SSE+GraphQL (Decision 4). Build on our own stack first, migrate to NCBI/OCCS after the PoC | Done, see DECISIONS.md |
 
-### Step 1.9: resolve open questions
+### Step 1.9: resolve open questions - COMPLETE (2026-07-21)
 
 The 10 open questions from section 12 of `Background_requirements.md` must each get a decision or an explicit "defer to tech spec" tag.
 
-### Step 1.10: review cross-cutting concerns
+### Step 1.10: review cross-cutting concerns - COMPLETE (2026-07-21)
 
 Topics that cut across multiple sources and need explicit architecture decisions before the PRD.
 
@@ -150,10 +150,10 @@ Topics that cut across multiple sources and need explicit architecture decisions
 | Security and threat model | Prompt injection defense, forbidden query types, PII handling, audit logging. Use "Agents of Chaos" red-teaming findings (section 8 of Background_requirements.md) as the threat catalog. What does the NCBI KG reference implementation do? What does the NIH context require? | Discuss together |
 | Data freshness and conflict resolution | Graph is a periodic snapshot; APIs are live. When they disagree, which wins? What staleness is acceptable? | Discuss together |
 | Rate limiting strategy | NCBI E-utilities at 100 req/sec (upgraded), Variation Services at 1 req/sec (separate). With concurrent users, who gets throttled? Queue? Prioritize? Fail fast? | Discuss together |
-| UI patterns and user experience | Review reference implementation React components. What interaction patterns to adopt (streaming, citations, error states)? What to redesign? | Claude reviews, Monideep approves |
+| UI patterns and user experience | Review reference implementation React components. What interaction patterns to adopt (streaming, citations, error states)? What to redesign? Parked (2026-07-21): stream the agent's Think and Plan reasoning in real time with a stop button, so the user can abort a query heading the wrong way. Extends Decision 11 (streaming plus stop-button); the open sub-decision is how much to surface, raw chain-of-thought versus a curated plan-step narrative. Also (parked 2026-07-21): the named scientist persona (Step 1.9) surfaces here, streamed to the user; keep it subtle and serious, not a gimmick, so it does not undercut the provenance-forward positioning. | Claude reviews, Monideep approves |
 | Accessibility and compliance | Section 508 is not optional for NIH-adjacent work. What level of compliance for v1? | Discuss together |
 
-### Step 1.11: review new intake research (30 sources)
+### Step 1.11: review new intake research (30 sources) - COMPLETE (2026-07-21)
 
 Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/new-intake/` (harnesses, model routing, KV cache, OpenRouter fusion, prototype to production).
 
@@ -166,7 +166,7 @@ Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/new-intake/` (h
 | Value is in how you wrap the model (UX, retrieval, memory, tools). Which wrapping investments become requirements? | Discuss together |
 | Harness and prototype-to-production patterns: which become architecture requirements, which stay reference only? | Claude reviews all, presents top picks |
 
-### Step 1.12: review conference learnings (3 sources)
+### Step 1.12: review conference learnings (3 sources) - COMPLETE (2026-07-21)
 
 Source: `reference/personal-os-work/NIH/Conference-notes/` (ISMB-2026, KGC-2026, Nodes-AI).
 
@@ -174,7 +174,7 @@ Source: `reference/personal-os-work/NIH/Conference-notes/` (ISMB-2026, KGC-2026,
 | --- | --- |
 | Which learnings from each conference must feed the PRD? Which are reference only for v2? | Claude reviews, Monideep confirms |
 
-### Step 1.13: review LLM legal and compliance obligations
+### Step 1.13: review LLM legal and compliance obligations - COMPLETE (2026-07-21)
 
 Source: `requirements/context/ncbi_ai_models_control_first_summary.md` (control-first hosting analysis, extended with a legal and compliance section). The strongest open coding models today are Chinese-origin (GLM, MiniMax, DeepSeek, Kimi, Qwen), which is exactly what US federal policy is moving to restrict. Legal obligations are a separate gate from the control-first ranking: a hosting path can be highly controlled and still involve a model or provider that federal policy bars.
 
@@ -510,6 +510,6 @@ This keeps the build stable while allowing continuous learning.
 
 ## Summary of what happens next
 
-Phase 1 is next. Steps 1.1 to 1.5 are done. We resume at Step 1.6 and work through the sources in `Background_requirements.md` plus the added sources (new intake in Step 1.11, conference notes in Step 1.12, LLM legal and compliance obligations in Step 1.13), one section at a time. We debate. We decide. We log decisions. Once all sources are reviewed, we move to competency questions and the evaluation playbook (Phase 2), then the PRD (Phase 3), then the tech spec and strategic memo (Phase 4), then we update our tools (Phase 5), then we build the prototype and v1 (Phase 6).
+Phase 1 is complete. All 13 steps (1.1 through 1.13) are done, with 75 decisions logged and the Phase 1 synthesis written. Next is Phase 2 (competency questions and the evaluation playbook), then Phase 3, the PRD. We debate. We decide. We log decisions. Once all sources are reviewed, we move to competency questions and the evaluation playbook (Phase 2), then the PRD (Phase 3), then the tech spec and strategic memo (Phase 4), then we update our tools (Phase 5), then we build the prototype and v1 (Phase 6).
 
 One phase at a time. No skipping.

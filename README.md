@@ -122,11 +122,12 @@ agentic-search-ui/
 |-----|---------------|
 | [System 3 architecture brainstorming](docs/System_3_architecture_brainstorming.md) | Agent loop, tools, multi-model harness, cost model, deployment plan |
 | [Three-layer data architecture](docs/architecture/Three_layer_data_architecture.md) | How System 3 accesses Layer 1 (graph), Layer 2 (NCBI APIs), Layer 3 (enrichment) |
-| [Knowledge graph reference](docs/Knowledge_graph_on_server_reference.md) | Live graph operations: SSH, Cypher examples, indexes, node/edge counts, cost |
+| [Knowledge graph reference](docs/data-engineering/Knowledge_graph_on_server_reference.md) | Live graph operations: SSH, Cypher examples, indexes, node/edge counts, cost |
 | [NCBI databases and APIs](docs/NCBI_databases_and_APIs_reference.md) | All 39 NCBI databases, endpoints, rate limits, record counts |
 | [NCBI repos deep dive](docs/NCBI_repos_deep_dive.md) | Analysis of 13 NCBI GitHub repos: code to reuse, patterns to adopt, what not to build locally |
 | [BioLink repos explained](docs/architecture/Biolink_repos_explained.md) | BioLink model categories, predicates, CURIEs used in the graph |
-| [Project overview](docs/Project_overview_A_to_Z.md) | Navigation hub for the full project |
+| [Project overview](docs/data-engineering/Project_overview_A_to_Z.md) | Navigation hub for the full project |
+| [Agent teams tmux quickstart](docs/Agent_teams_tmux_quickstart.md) | tmux launch guide for bossman-mode parallel builders |
 | [Decisions](DECISIONS.md) | Architecture and implementation decisions with rationale |
 
 ---
