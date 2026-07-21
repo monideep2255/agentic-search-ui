@@ -10,22 +10,23 @@ Paste the following into your new chat:
 
 We are in Phase 1 of System 3 planning (source review and architecture decisions). Read these files to get up to speed:
 
-1. `requirements/Plan.md` - overall roadmap, Phase 1 structure with all 10 steps
-2. `requirements/phase_1/Session_May_07.md` - complete record of Steps 1.1 through 1.5 discussions
-3. `DECISIONS.md` - all decisions logged so far (7 from May 5, 31 from May 7)
+1. `requirements/Plan.md` - overall roadmap, Phase 1 structure with all steps (1.1 through 1.13)
+2. `requirements/phase_1/Session_May_07.md` (Steps 1.1 through 1.5) and `requirements/phase_1/Session_July_21.md` (Step 1.6) - complete discussion records
+3. `DECISIONS.md` - all decisions logged so far (49 as of 2026-07-21)
 4. `requirements/context/Background_requirements.md` - index of all 24 source materials
 
-Steps 1.1 through 1.5 are complete. 38 total decisions in DECISIONS.md.
+Steps 1.1 through 1.6 are complete. 49 total decisions in DECISIONS.md.
 
-Resume with Step 1.6: review user psychology and product design (4 sources).
+Resume with Step 1.7: review contractor documents (7 sources).
 
 Sources:
-1. Hook model for adoption (`Reference/user-side/Hook_model_and_belief_design_Nir_Eyal.md`)
-2. AI adoption gap (`Reference/user-side/Bridging_the_AI_adoption_gap_enterprise.md`)
-3. Build to learn vs. build to earn (`Reference/user-side/Build_to_learn_vs_build_to_earn.md`)
-4. Board session notes (`Reference/thoughts/`)
+1. NFR baseline (10 categories)
+2. NLQ approach (6 ranked options)
+3. Meeting decisions (D1 through D5)
+4. Contractor's latest documents
+5. Anne's evaluation playbook
 
-Decide: which psychological design principles make it into the PRD as requirements?
+Decide: which NFRs apply to the POC (tag each must-have or defer), confirm the NLQ approach (build toward rank 1 typed IR while operating like rank 2 CQ templates for the POC), federation scope for v1, and which evaluation outcomes become requirements.
 
 Rules:
 - Append to `requirements/phase_1/Session_May_07.md` (or create a new session file if this is a different day). Never delete existing content.
@@ -46,7 +47,7 @@ After Step 1.6, continue through Steps 1.7-1.10 as defined in Plan.md.
 | 1.3 reference implementations (2 sources) | COMPLETE | Session_May_07.md |
 | 1.4 data handoff (2 sources) | COMPLETE | Session_May_07.md |
 | 1.5 agent and harness research (22 sources) | COMPLETE | Session_May_07.md |
-| 1.6 user psychology and product design (4 sources) | NOT STARTED | - |
+| 1.6 user psychology and product design (3 sources) | COMPLETE | Session_July_21.md |
 | 1.7 contractor documents (7 sources) | NOT STARTED | - |
 | 1.8 tools and infrastructure | NOT STARTED | - |
 | 1.9 open questions (10 items) | NOT STARTED | - |
