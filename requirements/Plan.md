@@ -58,7 +58,7 @@ What we did:
 - Agreed on starting with few-shot routing (not classification layer, not fine-tuned model) for competency question-based orchestrator improvement
 - Collected all background material into a single reference index
 
-Output: `requirements/Background_requirements.md` (24 sources indexed, all paths verified)
+Output: `requirements/context/Background_requirements.md` (24 sources indexed, all paths verified)
 
 ---
 
@@ -427,7 +427,7 @@ I am attending KGC and Nodes AI conferences. I will encounter new ideas about:
 
 New information flow:
 1. Collect: save reference material to `reference/personal-os-work/NIH/Agentic-Search/Reference/`
-2. Index: add to `requirements/Background_requirements.md` (new section or append to existing)
+2. Index: add to `requirements/context/Background_requirements.md` (new section or append to existing)
 3. Evaluate: does this change anything in the PRD or tech spec?
 4. If yes: update the PRD/tech spec, tag the change, rebuild affected components
 5. If no: keep as future reference
@@ -457,7 +457,7 @@ This cycle repeats. The system evolves.
 
 | Document | Created in | Location | Purpose |
 | --- | --- | --- | --- |
-| Background_requirements.md | Phase 0 (done) | `requirements/` | Index of all source material |
+| Background_requirements.md | Phase 0 (done) | `requirements/context/` | Index of all source material |
 | Plan.md | Phase 0 (done) | `requirements/` | This document. Roadmap from research to product. |
 | Phase 1 session notes | Phase 1 (in progress) | `requirements/phase_1/Session_*.md` | Chronological discussion record per session. Also serves as personal learning log. |
 | Phase 1 decisions | Phase 1 (in progress) | `DECISIONS.md` (append) | Architecture choices from source review |
@@ -480,7 +480,7 @@ Conference / research / new tool
 Save to reference/personal-os-work/NIH/Agentic-Search/Reference/
         |
         v
-Add entry to requirements/Background_requirements.md
+Add entry to requirements/context/Background_requirements.md
         |
         v
 Is the build in progress?

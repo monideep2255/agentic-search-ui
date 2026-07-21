@@ -13,7 +13,7 @@ We are in Phase 1 of System 3 planning (source review and architecture decisions
 1. `requirements/Plan.md` - overall roadmap, Phase 1 structure with all 10 steps
 2. `requirements/phase_1/Session_May_07.md` - complete record of Steps 1.1 through 1.5 discussions
 3. `DECISIONS.md` - all decisions logged so far (7 from May 5, 31 from May 7)
-4. `requirements/Background_requirements.md` - index of all 24 source materials
+4. `requirements/context/Background_requirements.md` - index of all 24 source materials
 
 Steps 1.1 through 1.5 are complete. 38 total decisions in DECISIONS.md.
 
