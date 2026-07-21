@@ -110,7 +110,31 @@ Decision rule: if the phase has 2+ independent builder tasks, use agent teams. I
 
 ### Agent teams setup
 
-Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `.claude/settings.json` (already configured).
+One-time setup (per machine):
+
+1. Install tmux: `brew install tmux`
+2. Confirm two keys in `~/.claude/settings.json`: `"env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" }` and `"teammateMode": "tmux"`.
+
+Both settings keys are already configured. Installing tmux is the only per-machine step.
+
+Launch requirement: teammate panes only appear when Claude Code is running inside a tmux session. Start tmux first, then launch Claude inside it, then activate bossman:
+
+```
+tmux        # start a tmux session
+claude      # launch Claude Code inside it
+/bossman    # activate bossman from inside that session
+```
+
+Navigate panes with `Ctrl-b` then an arrow key.
+
+Preflight (run this at Step 1, before dispatching any team):
+
+```
+command -v tmux >/dev/null && echo "tmux: ok" || echo "tmux: MISSING"
+echo "inside tmux: ${TMUX:+yes}${TMUX:-no}"
+```
+
+If tmux is missing or the session is not inside tmux, print the setup steps to the user and let them fix it before builders dispatch. Do not silently fall back to invisible background sessions: without tmux, builders still run in parallel, but the user loses the live pane view that is the whole point of agent teams.
 
 Display: tmux split panes. Each teammate gets its own pane. The orchestrator (lead) stays in the main pane and monitors progress via the shared task list.
 
@@ -268,8 +292,9 @@ When 3+ builder teammates run in parallel (agent teams or worktrees), these conv
 ### Step 1: session start + branch creation
 
 1. Run `best-practices` session checklist (venv, API keys configured, dev server runs, CLAUDE.md, git status)
-2. Read the phase definition from the plan document
-3. Create the feature branch: `git checkout main && git pull origin main && git checkout -b feature/description`
+2. Agent teams preflight: run the tmux check from "Agent teams setup". If tmux is missing or the session is not inside tmux, print the setup steps and let the user fix it before any builder dispatch.
+3. Read the phase definition from the plan document
+4. Create the feature branch: `git checkout main && git pull origin main && git checkout -b feature/description`
 
 ### Step 2: confirm entry and show team
 
