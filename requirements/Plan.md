@@ -4,7 +4,7 @@ From background research to working product. This document defines every step be
 
 Kick-off: 2026-05-06. Phase 0 completed in the kick-off session. All background material collected, vision aligned, plan agreed.
 
-Last updated: 2026-07-20 (extended from 2026-05-07). Steps 1.1 to 1.5 are locked and unchanged. This revision adds new Phase 1 sources (Steps 1.11 and 1.12), turns the Phase 2 output into a living evaluation playbook, adds a strategic memo deliverable, and restructures Phase 6 to build the prototype from the docs first, then reconcile, then build v1.
+Last updated: 2026-07-21 (extended from 2026-05-07). Steps 1.1 to 1.5 are locked and unchanged. The 2026-07-20 revision added new Phase 1 sources (Steps 1.11 and 1.12), turned the Phase 2 output into a living evaluation playbook, added a strategic memo deliverable, and restructured Phase 6 to build the prototype from the docs first, then reconcile, then build v1. The 2026-07-21 revision adds Step 1.13 (LLM legal and compliance obligations).
 
 ## Table of contents
 
@@ -173,6 +173,20 @@ Source: `reference/personal-os-work/NIH/Conference-notes/` (ISMB-2026, KGC-2026,
 | What to decide | Owner |
 | --- | --- |
 | Which learnings from each conference must feed the PRD? Which are reference only for v2? | Claude reviews, Monideep confirms |
+
+### Step 1.13: review LLM legal and compliance obligations
+
+Source: `requirements/context/ncbi_ai_models_control_first_summary.md` (control-first hosting analysis, extended with a legal and compliance section). The strongest open coding models today are Chinese-origin (GLM, MiniMax, DeepSeek, Kimi, Qwen), which is exactly what US federal policy is moving to restrict. Legal obligations are a separate gate from the control-first ranking: a hosting path can be highly controlled and still involve a model or provider that federal policy bars.
+
+| What to decide | Owner |
+| --- | --- |
+| Country-of-origin restrictions: which models are usable for the Track 1 prototype, and which are barred from the production track? DeepSeek is already blocked at NASA, the Pentagon, Commerce, and the Navy; the No Adversarial AI Act would extend this. | Discuss together |
+| Model licensing: permissive (MIT, Apache 2.0) versus use-restricted versus research-only versus capped commercial (Llama 700M MAU). Which license classes do we allow, and how do we track obligations that flow into fine-tunes? | Discuss together |
+| Federal authorization: FedRAMP, FISMA, ATO, OMB M-25-21 and M-26-04. Which bind the production path, and what do we design the prototype toward so it does not build on a barred model or provider? | Discuss together |
+| Data-handling contracts: HIPAA and BAA, zero data retention, SOC 2 Type II, data residency. Which are must-haves for v1 and which defer? | Discuss together |
+| Track 1 versus production line: decide explicitly which legal constraints apply to the personal prototype now and which defer to the official NCBI track. | Monideep decides |
+
+This composes with Step 1.10 (security and compliance cross-cutting concerns) and Step 1.11 (model routing and providers). Keep the legal decisions here so model choice and hosting are not locked before their legal constraints are cleared.
 
 Phase 1 output: session notes, decision log (DECISIONS.md), and Phase 1 synthesis document (see output structure above).
 
@@ -485,6 +499,6 @@ This keeps the build stable while allowing continuous learning.
 
 ## Summary of what happens next
 
-Phase 1 is next. Steps 1.1 to 1.5 are done. We resume at Step 1.6 and work through the sources in `Background_requirements.md` plus the added sources (new intake in Step 1.11, conference notes in Step 1.12), one section at a time. We debate. We decide. We log decisions. Once all sources are reviewed, we move to competency questions and the evaluation playbook (Phase 2), then the PRD (Phase 3), then the tech spec and strategic memo (Phase 4), then we update our tools (Phase 5), then we build the prototype and v1 (Phase 6).
+Phase 1 is next. Steps 1.1 to 1.5 are done. We resume at Step 1.6 and work through the sources in `Background_requirements.md` plus the added sources (new intake in Step 1.11, conference notes in Step 1.12, LLM legal and compliance obligations in Step 1.13), one section at a time. We debate. We decide. We log decisions. Once all sources are reviewed, we move to competency questions and the evaluation playbook (Phase 2), then the PRD (Phase 3), then the tech spec and strategic memo (Phase 4), then we update our tools (Phase 5), then we build the prototype and v1 (Phase 6).
 
 One phase at a time. No skipping.
