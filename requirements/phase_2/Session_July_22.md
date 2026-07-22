@@ -174,3 +174,192 @@ Q1 carries a coordinate-range feasibility flag; if the dbVar and ClinVar by-regi
 Fast-follow set (added after the loop works, with pinned fixtures): Q2 (VCF), Q7 (SRA similarity), Q9 (BLAST).
 
 Logged to DECISIONS.md.
+
+### Decision: Q1 coordinate-range feasibility resolved, cap holds at seven
+
+Ran the lightweight feasibility check the previous decision flagged: can our data-access paths answer Q1's coordinate-range query for the CNV chr6:24545637-24548192 (GRCh37)? Broke Q1 into its five named evidence sources and checked each against the three layers, using the reference docs only (no live query; the live API deep dive is Phase 4 Step 4.0).
+
+Source by source:
+
+- dbVar by region: feasible via Layer 2. dbVar indexes Chromosome/Position (42 searchable fields), and ESearch's `term` supports numeric ranges. A `chr6 AND 24545637:24548192[position]` query is constructable.
+- ClinVar by region: feasible and cleaner. ClinVar stores an explicit GRCh37 position field (`C37`) plus variant length (`VLEN`), so Q1's GRCh37 coordinate queries directly, no liftover.
+- Overlapping genes plus OMIM phenotypes: feasible. Resolve genes in the region, then link OMIM by gene.
+- Variation Viewer: feasible as a citation link, not a data pull. It is a genome-browser view, so it is a graphical-context link-out that fits assemble-and-cite.
+- Segmental duplications: not reachable. Segmental dups are a UCSC genome-browser track (genomicSuperDups), not an NCBI E-utilities database. None of the three layers returns them. This is the one real gap.
+
+Layer 1 note: the knowledge graph has no genomic-coordinate node properties, so Q1 rides Layer 2, not the graph. Q1 is an API-driven question, not a graph traversal.
+
+Net finding: Q1 is not binary infeasible. It is feasible minus segmental duplications, with an overlap-completeness caveat. So the decision was not "seven or six" but how to handle the segmental-dup gap.
+
+Chosen (Option A): keep Q1 at seven. Re-scope Q1's v1 required evidence to the four reachable sources plus the Variation Viewer link. Move segmental duplications to the fast-follow set, added later with a UCSC integration. Cap holds at seven.
+
+Rationale: Q1 still clears the moat bar (provenance pass, deterministic at a fixed data state, cannot-just-Google high) and still covers the coordinate-keyed gene-variant-literature wedge. Four of five evidence sources are reachable and citable now; one unreachable sub-source should not sink an otherwise-strong must-pass. This matches the assemble-the-reachable-cited-evidence principle and v1 minimalism (no new non-NCBI source in the PoC build).
+
+Two items flagged for Phase 4 Step 4.0 verification, not resolved here:
+
+1. Interval-overlap semantics: ESearch range-filters by an anchor position, which can miss a large SV that spans the query window (starts before, ends after). True interval overlap is not a documented native operator. Region filtering works; completeness for large SVs needs empirical confirmation.
+2. UCSC segmental-duplication source design (the fast-follow integration).
+
+Considered and rejected: drop Q1 whole to fast-follow and lock v1 at six (segmental dups are diagnostically load-bearing for CNV interpretation, but four reachable sources already make Q1 a strong assembled-evidence answer); add a UCSC genomicSuperDups source now (expands v1 build scope beyond the NCBI three-layer set, against v1 minimalism).
+
+Logged to DECISIONS.md.
+
+### Decision: the coverage metric (PoC, diagnostic only)
+
+Defined the coverage metric that pairs with the moat test. It answers the orthogonal question: of the graph's concept and predicate space, how much does our eval actually exercise? The moat test measures depth on chosen questions; coverage measures breadth against what exists. This is the Step 1.12 guard: a 100 percent CQ pass rate can hide large concept incompleteness (one cited study passed 100 percent while touching only 14 percent of a domain's concepts).
+
+First design choice: role. Chosen (Monideep, PoC-appropriate): a pure diagnostic. It reports blind spots but never blocks shipping. Rejected: a soft gate with a coverage floor that triggers review. Reason: the moat set is engineered to be narrow and cross-database-biased, so by construction it scores low on breadth; gating a deliberately narrow set on breadth contradicts its own design and would pressure us to pad the set with questions that dilute the wedge.
+
+Definition:
+
+- Denominator: the deployed graph's enumerable schema. 11 vertex labels and 14 edge labels, per section D and E of the knowledge-graph reference. Drop `NamedThing` from the concept denominator (it is dangling-endpoint merger cruft, not a real concept), giving 10 concepts and 14 predicates.
+- Numerator: distinct concepts and predicates the CQ set exercises. Static hand-mapping now; replaced by dynamic instrumentation once the agent runs and its Cypher is observable.
+- Two ratios reported separately: concept coverage and predicate coverage.
+- Secondary, qualitative: a Layer 2 API-reach checklist (which NCBI databases beyond the graph the set touches), reported as a list, not a ratio, because the API universe is not cleanly enumerable.
+
+First-pass hand-mapping of the locked seven (confirmed with Monideep):
+
+| Graph concept | Touched by |
+|---|---|
+| Gene | Q1, Q3, Q4 |
+| SequenceVariant | Q1, Q3, Q4 |
+| Disease | Q1, Q3, Q4 |
+| Article | Q3, Q4, Q8 |
+| OrganismTaxon | Q5, Q6 (entity resolution only) |
+| PhenotypicFeature | Q4, if it surfaces phenotypes (uncertain) |
+
+| Graph predicate | Touched by |
+|---|---|
+| is_sequence_variant_of | Q1, Q3, Q4 |
+| gene_associated_with_condition | Q1, Q3, Q4 |
+| mentioned_in | Q3, Q4, Q8 |
+| has_phenotype | Q4 (uncertain) |
+
+Result: concept coverage about 5 of 10 (~50%), predicate coverage about 3 of 14 (~21%). Untouched predicates: `has_mesh_annotation`, `in_taxon`, `actively_involved_in`, `participates_in`, `located_in`, `orthologous_to`, `cited_in`, `subclass_of`, `close_match`, `exact_match`. That is the GO-annotation, taxonomy, orthology, MeSH, citation, and ontology-structure capability of the graph, exercised by zero of the seven. The metric reproduces the Step 1.12 warning concretely.
+
+Reframe (important): low graph coverage here is by design, not a defect. Four of the seven (Q5, Q6, Q8, Q10) are Layer 2 dominant and barely touch the graph; the moat set's real breadth is cross-database reach into roughly 9 API databases outside the graph (dbVar, OMIM, GTR, Pathogen Detection, SRA, BioProject, GEO, Assembly, PubChem). So the metric's job is not to gate v1. It guides set growth: as the set expands past the seven, coverage shows whether new questions broaden into untouched capabilities or just pile onto the same three predicates.
+
+Logged to DECISIONS.md.
+
+### Discussion: does a seven-question set limit what the system answers?
+
+Monideep pushed on the obvious worry: if v1 has seven competency questions, does the system only answer seven things?
+
+Clarified, because it is the crux: the seven are the eval gate, not the menu. They are the seven things we test to decide v1 is good enough to ship, not the seven things the system can answer. The system is a general agent: any question runs through Guardrail, Think, Plan, Act, Write and is answered by whatever the three layers support. It does not pattern-match against seven templates and refuse the rest. This restates the already-locked distinction (moat set versus full query set).
+
+Analogy: the seven are a driving test, not a list of roads you are allowed to drive. Pass a few hard maneuvers and we trust you to drive anywhere.
+
+Why only seven for the eval: real evaluation is expensive (each question needs a known-good answer, pinned fixtures, provenance checks, pass/fail criteria), so you pick the hardest, most differentiating set. If the seven hardest cross-database questions pass, the easy single-source long tail is covered by construction.
+
+The honest risk, named: seven is a deliberately narrow eval. Passing it proves the wedge on documented cases, not general robustness. Two things protect everything outside the seven:
+
+1. Cite-or-refuse at runtime, on every answer. An untested query cannot silently hallucinate: the agent grounds the answer in a real cited record or returns "I could not find information on this" and stops. The long tail is protected by the same gate as the seven.
+2. The feedback loop (Step 2.5). Seven is the start, not the ceiling. Real interactions generate new competency questions that grow the eval set toward what people actually ask.
+
+This framing is also why the old Tier 2 and Tier 3 are an expansion pool, not discards, and it directly settles the disposition depth (below).
+
+### Decision: Tier 2/3 disposition rule now, full re-score deferred
+
+Chosen (Monideep): define the disposition rule at the band level now, defer the full per-question re-score to set-expansion time.
+
+Rule:
+
+- Old Tier 2 (28): the expansion candidate pool. Each is scored against the moat bar (the two gates plus the empirical cannot-just-Google test) when the set grows past the moat seven. High joins Tier 1, partial becomes the Tier 2 should-pass set, none is handled but outside the moat eval set.
+- Old Tier 3 (27): split by why it was parked.
+  - Compute-tool questions (BLAST, VCF, similarity): fast-follow set (already Q2, Q7, Q9, plus the seg-dup enrichment for Q1).
+  - Clinical-verdict questions (ACMG classification, prioritization, diagnosis, treatment): fail the assemble-not-classify boundary. Either reframed to evidence-assembly (as Q1 and Q2 were) or they stay out.
+  - Single-source fetches (score none on cannot-just-Google): handled but outside the moat eval set.
+
+Rejected: re-score all 55 individually now. cannot-just-Google needs an empirical external test per question, not cheaply runnable at planning scale, and Tier 2/3 do not gate v1. Attack the constraint: lock the rule now, run the full per-question re-score when the set actually expands.
+
+Logged to DECISIONS.md. Step 2.3 is now complete.
+
+## Step 2.4: the offline eval gate
+
+Working mode note: to finish Phase 2 and push into Phase 3 in one day, we shifted to a faster drafting mode. Claude drives the drafting, batches the small calls, and surfaces only genuine forks. Monideep reviews in chunks.
+
+### Decision: the offline eval gate
+
+The 8-point rubric from `02_Tier1_eval_spec.md` holds and matches the locked architecture. It already encodes assemble-not-classify (rendering a classification when it only assembled evidence is a listed fail) and graceful degradation (hit all required databases or explain the unavailable ones). It needed abstain-scoring added and wiring to the eval-harness outcome model.
+
+Design (confirmed with Monideep):
+
+- Two scoring layers compose, they do not compete. The rubric grades a single run into one outcome: pass (score >= 13 of 16, no hard-fail), fail (any hard-fail, or score < 13), or abstain (returned the refusal string). eval-harness then aggregates those per-run outcomes across k samples with pass@k and pass^k. The rubric is how one run is judged; pass@k and pass^k are how many runs must pass.
+- Hard-fails are absolute, checked on every run: provenance = 0 (an uncited claim), safety/limits = 0 on a clinical or pathogenicity question (rendered a verdict), or missing assembly/version context on a coordinate or sequence question. Cite-or-refuse lives here: zero retrieval plus a correct refusal scores as pass, not fail.
+- Targets for a must-pass moat question (two levels): the hard-fails must hold on every run (pass^k = 100%, no fabrication and no verdict ever); the 13/16 quality score uses pass@3 as the floor (it can produce the cited answer within 3 tries) and pass^3 >= 90% as the reliability target (it does so consistently). A fabrication is never acceptable; quality is high but not required to be perfect. This matches a biomedical setting where a confident wrong answer is worse than no answer.
+- Determinism via pinned fixtures, with a freshness-window allowance for the live-API questions.
+- The moat seven are the initial offline eval set; the Phase 4 golden 50 is the expansion.
+
+Eval-spec open decisions, resolved by what we already locked:
+
+- ACMG classification in scope? No, evidence assembly only.
+- Live BLAST/SRA sequence search in scope? No, fast-follow with fixtures.
+- dbGaP controlled-access flows in Tier 1? No, the seven are public-data.
+- Determinism source? Pinned fixtures plus a freshness window.
+- Who signs off the expected answers for clinical questions? A real gap: the golden fixtures for the moat seven need a domain sign-off. Flagged as a Phase 4 process item, not closable in planning.
+
+Logged to DECISIONS.md.
+
+## Step 2.5: the online feedback loop
+
+### Decision: the five-stage loop and v1 scope
+
+The loop turns real usage into better routing. Phase 0 already fixed the promotion mechanism (few-shot routing examples, not a classifier and not fine-tuning), so the loop's output is new few-shot examples and new eval cases, nothing heavier.
+
+Five stages:
+
+1. Capture. Every interaction is traced and analytics-logged: the query, the agent's route and plan, tools called, the answer, its citations, the rubric outcome, any abstain or cite-or-refuse miss, the coverage instrumentation (which concepts and predicates the run hit), and explicit user feedback.
+2. Mine and cluster. Periodically cluster captured queries by intent and surface three signals: queries the routing handled poorly (low score, wrong route, or abstained when a source existed), queries hitting untouched coverage areas, and moat wins worth reinforcing.
+3. Review, semi-automated. An automated pass proposes deduped candidate CQs; a human approves before anything is promoted, because changing routing is a behavior change and the security rules require a human gate.
+4. Trigger rule. A cluster that recurs above a frequency threshold, passes the moat bar, and is not already covered becomes a candidate new CQ. A cluster matching an existing CQ with new phrasings reinforces it (a few-shot variant or a re-rank signal). This is where the deferred moat signals, learn-from-the-system and loop-human-behavior, re-enter as re-ranking inputs.
+5. Promote. An approved CQ becomes a few-shot routing example in the orchestrator and a new eval case in the offline set, human-approved and provenance-gated.
+
+The loop closes: the offline gate (2.4) sets the bar, the online loop (2.5) grows the CQ set from real usage, and new CQs re-enter both the offline eval set and the orchestrator routing. This is the start-small-at-seven, prove-the-loop, expand mechanism made concrete.
+
+v1 scope (chosen): ship stages 1, 3, and 5 with a human in the loop (capture everything, a lightweight manual review ritual, hand-promotion). Defer stage 2 (automated mining, clustering, auto-proposal) to a fast-follow, built once enough data is captured to cluster. Capture is cheap and is the raw material; a human turns the loop immediately; the expensive automation waits for data.
+
+### Decision: data storage and where the LLM-judge sits
+
+Two design questions Monideep raised.
+
+Storage, split by what each store is good at:
+
+- PostgreSQL (already in the stack for user data): the loop's durable system-of-record. An `interactions` table (query, normalized entities, route, rubric outcome, citations, coverage tags, user feedback, `trace_id`) and a `cq_candidates` table (proposed and promoted CQs with few-shot examples and provenance). The human review reads from here; promoted CQs live here.
+- LangSmith: the raw per-run traces (hop-by-hop, tool returns, tier outputs), linked to a Postgres row by `trace_id` and consumed by the graders.
+- PostHog: behavioral analytics aggregates (volume, feedback clicks, abstain rate, follow-up funnel), feeding the frequency threshold and the loop-human-behavior signal.
+
+Postgres is the owned source of truth, not LangSmith, so the promotion pipeline does not depend on a third-party tracing tool's API or retention. Privacy, detail in Phase 4: PII minimization, scoped access, a retention policy, and provenance on every promoted CQ. Never store secrets. Biomedical queries can carry sensitive context (Q2 is a suspected-patient scenario).
+
+Where the LLM-judge sits, relative to the human: always a filter upstream of the human, never the final say after. The human is the terminal gate on any promotion, because promotion changes routing and the security rule requires a human to approve behavior changes. Three appearances:
+
+1. Offline eval grader (v1): code graders first (deterministic), then the LLM-judge (semantic), then a human only on flagged edge cases.
+2. Online candidate pre-screen (deferred to the fast-follow): drafts candidate CQs with a rationale for the human to approve.
+3. Model-bench scorer for tier selection: a separate use of the same technique.
+
+In v1 the online loop has no LLM-judge (stage 2 is deferred, so review is manual); the offline gate does have one, as a grader before the human.
+
+Logged to DECISIONS.md. Step 2.5 is complete, and all Phase 2 design steps (2.1 to 2.5) are done. Next: assemble the evaluation playbook.
+
+## Phase 2 deliverable: the evaluation playbook
+
+Assembled `requirements/Evaluation_playbook.md`, the Phase 2 output. It consolidates everything decided in Phase 2 into a standing, living reference: the moat test, the full competency-question set (the v1 seven with wedge types and personas, the fast-follow set, the expansion pool and its disposition rule), the coverage metric, the offline evaluation gate, model selection, and the online feedback loop, with two mermaid diagrams (the moat bar and the closing loop) and a Phase 4 open-items list.
+
+Graded by a fresh-context agent against a decision-fidelity, CQ-accuracy, completeness, coherence, and writing-style checklist. Result: 5 of 5 criteria pass. Two minor polish issues were fixed: the predicate-coverage arithmetic now names `has_phenotype` as the borderline fourteenth predicate so the count closes, and the online loop's stage 3 now states explicitly that v1 review is manual because the stage 2 auto-proposal is deferred.
+
+The playbook is the Phase 2 synthesis and deliverable. It, plus this session doc and DECISIONS.md, is the input to Phase 3 (the PRD); no separate Phase 2 synthesis document is created, since the playbook already organizes the decisions by topic for the downstream phase.
+
+### Refinement: the moat bar's general-tool test (raised after the playbook draft)
+
+Monideep flagged that the moat's ranking criterion should test against modern LLMs and answer engines (Claude, GPT, Gemini, Perplexity), not just Google, and asked whether we had considered them.
+
+Answer: the written criterion nominally said "a general search engine or AI tool," so LLMs were in scope in principle. But two real gaps: the name undersold it, and the test rigor was underspecified.
+
+Refined (confirmed with Monideep):
+
+- Renamed the dimension from "cannot just Google" to "no general-tool equivalent."
+- The empirical test runs each candidate against a panel of the strongest general tools: a frontier chat LLM (Claude, GPT, or Gemini), an answer engine with retrieval (Perplexity), and plain web search. The question passes only if none produces the correct answer with verifiable citations across the required databases.
+- The pass condition is grounding, not fluency: a fluent, uncited, or hallucinated-citation answer does not count as the general tool producing it. General LLMs hallucinate citations and cannot ground across NCBI databases with resolvable source records, which is exactly System 3's differentiation.
+
+Why it matters: frontier LLMs and answer engines are far stronger than a Google search page. Testing only against Google would falsely pass questions a strong LLM already handles and inflate the moat. Testing against the strongest tools, scored on verifiable grounding, keeps the bar honest against 2026 tools. The seven still pass. The playbook was updated and the refinement logged to DECISIONS.md.
+
+Phase 2 is complete. Next is Phase 3, the PRD.
