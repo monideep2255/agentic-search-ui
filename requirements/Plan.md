@@ -306,6 +306,10 @@ Goal: write the tech spec. Translates PRD requirements into implementation decis
 
 Prerequisites: PRD locked.
 
+### Step 4.0: NCBI and enrichment API current-state deep dive
+
+System 3 depends heavily on the NCBI E-utilities, the Datasets API v2, Variation Services, and the Layer 3 enrichment APIs (PubTator3, LitVar2, LitSense, ClinicalTrials.gov). Before writing the tool specifications, deep dive the current state of each: live endpoints, request and response schemas, the exact fields each competency question needs, rate limits, auth, and empty-result and error behavior, plus any drift since the Phase 1 survey in `docs/NCBI_databases_and_APIs_reference.md`. Output: a per-API capability sheet that every tool specification in Step 4.1 is written against. This converts the lightweight Phase 2 feasibility notes (the "can we answer this today" checks taken during CQ tiering) into verified API behavior. Discuss and confirm scope before drafting.
+
 ### Step 4.1: outline the tech spec
 
 Sections (expected):

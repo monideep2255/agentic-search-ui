@@ -12,7 +12,7 @@ Stack: Python 3.11+, FastAPI, LangGraph, React, PostgreSQL (user data), psycopg2
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | System 3: planning (Phase 2) | PHASE 1 COMPLETE (all 13 steps, 75 decisions in DECISIONS.md, synthesis in requirements/phase_1/Phase_1_synthesis.md). Phase 2 next per requirements/Plan.md: competency questions and the evaluation playbook. No application code yet; build execution begins at Plan.md Phase 6. Knowledge graph available on Hetzner CPX42 (46.225.128.133): 115M nodes + 693M edges queryable via openCypher over psycopg2. |
+| 1 | System 3: planning (Phase 2) | PHASE 1 COMPLETE (all 13 steps, 83 decisions in DECISIONS.md, synthesis in requirements/phase_1/Phase_1_synthesis.md). Phase 2 in progress per requirements/Plan.md: competency questions and the evaluation playbook, Step 2.3 core done. No application code yet; build execution begins at Plan.md Phase 6. Knowledge graph available on Hetzner CPX42 (46.225.128.133): 115M nodes + 693M edges queryable via openCypher over psycopg2. |
 | 2 | System 3: tool integration | PLANNED. cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup. |
 | 3 | System 3: eval and tracing | PLANNED. LangSmith tracing, golden dataset, automated eval harness. |
 
@@ -135,6 +135,7 @@ User-invocable skills (slash commands):
 | release-workflow | End-to-end release verification and ship | `/release` |
 | eval-harness | Evaluation framework: pass@k, pass/fail/abstain, acceptance criteria for agent components | `/eval-harness` |
 | verify | Pre-commit checks: Python compile, tests, lint, git status | `/verify` |
+| phase-checkpoint | Sync planning docs at a phase or sub-phase boundary (decisions, session doc, meeting note, continuation prompt, and at phase end the synthesis and Plan status). Runs before `/ship`, never touches git | `/phase-checkpoint` |
 
 Auto-read skills (loaded by other skills or before specific tasks): best-practices, release-workflow, dev-standards.
 
@@ -144,4 +145,4 @@ Security hooks in `.claude/hooks/` (wired in `.claude/settings.json`) run on Pre
 
 ---
 
-Last updated: 2026-07-21
+Last updated: 2026-07-22
