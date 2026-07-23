@@ -51,6 +51,7 @@ Multi-model harness with three tiers:
 | `NCBI_repos_deep_dive.md` | Analysis of 13 NCBI GitHub repos: code to reuse, architecture decisions informed, patterns to adopt, what not to build locally | Before implementing any Layer 2 or Layer 3 tool; before making architecture decisions about entity resolution or data access |
 | `data-engineering/Project_overview_A_to_Z.md` | Navigation hub with pointers into every doc in the project | First doc to read for project orientation |
 | `Agent_teams_tmux_quickstart.md` | tmux launch guide so bossman-mode parallel builders show in live panes | Before running `/bossman` with 2 or more builder tasks |
+| `Claude_security_plugin_usage.md` | Reference for the on-demand `claude-security` scan plugin: how to run a scan, apply patches, and how it complements the always-on `security-guidance` plugin | Before the release-workflow Step 3 security scan gate, or before opening a pull request |
 
 ---
 
@@ -145,4 +146,4 @@ Security hooks in `.claude/hooks/` (wired in `.claude/settings.json`) run on Pre
 
 ---
 
-Last updated: 2026-07-22
+Last updated: 2026-07-23

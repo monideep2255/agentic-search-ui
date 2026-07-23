@@ -16,6 +16,7 @@ Branch: `phase/N.M-description`
 - [ ] Phase 4: schema and dependency tracking updated
 - [ ] Phase 5: documentation sync (CLAUDE.md, DECISIONS.md, plan doc)
 - [ ] Phase 6: verdict checklist all green
+- [ ] Security gate: ran `/claude-security` on the branch, reviewed findings, applied or accepted each (see `docs/Claude_security_plugin_usage.md`)
 
 ### Decisions made
 

@@ -1,6 +1,6 @@
 ---
 name: release-workflow
-description: End-to-end release workflow for System 3 changes. Verifies locally, then ships. No BioLink gates, no KGX validation.
+description: End-to-end release workflow for System 3 changes. Verifies locally, runs a security scan gate, then ships. No BioLink gates, no KGX validation.
 ---
 
 # Release workflow
@@ -32,7 +32,17 @@ The point is to prove the code path works, not just unit tests.
 
 Run `pytest -q`. All tests must pass. If tests are missing for the change, write them first.
 
-## Step 3: ship
+## Step 3: security scan (milestone gate)
+
+Before shipping a release or opening a pull request, run a deep security scan on the branch. The always-on security-guidance layer already reviews each change as it lands, so this gate is the full audit that a release milestone earns, not a repeat of the per-change check.
+
+1. Run `/claude-security` and pick Scan codebase, or say "scan my branch".
+2. Review the findings. For anything real, run `/claude-security` again, pick Suggest patches, review each patch, then apply with `git apply CLAUDE-SECURITY-<timestamp>/patches/F1.patch`.
+3. Do not ship with an unreviewed High or Critical finding. Triage every finding to fixed or explicitly accepted before Step 4.
+
+Full usage: `docs/Claude_security_plugin_usage.md`.
+
+## Step 4: ship
 
 Invoke `.claude/skills/ship/SKILL.md`:
 
@@ -42,7 +52,7 @@ Invoke `.claude/skills/ship/SKILL.md`:
 4. Push the feature branch: `git push -u origin feature/description`
 5. Create a pull request with a description of what changed and why.
 
-## Step 4: post-release sanity
+## Step 5: post-release sanity
 
 After the commit:
 

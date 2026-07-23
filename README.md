@@ -128,6 +128,7 @@ agentic-search-ui/
 | [BioLink repos explained](docs/architecture/Biolink_repos_explained.md) | BioLink model categories, predicates, CURIEs used in the graph |
 | [Project overview](docs/data-engineering/Project_overview_A_to_Z.md) | Navigation hub for the full project |
 | [Agent teams tmux quickstart](docs/Agent_teams_tmux_quickstart.md) | tmux launch guide for bossman-mode parallel builders |
+| [Claude security plugin usage](docs/Claude_security_plugin_usage.md) | How to run the on-demand `claude-security` scan, apply patches, and how it complements the always-on `security-guidance` plugin |
 | [Decisions](DECISIONS.md) | Architecture and implementation decisions with rationale |
 
 ---
