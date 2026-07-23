@@ -172,6 +172,35 @@ Each teammate receives its task via the shared task list. The lead monitors prog
 6. Thin orchestrator. The lead's job is routing and monitoring, not reading full file contents. Delegate reads to the agent that needs the information.
 7. Fresh context per agent. Every teammate starts with a clean context window. Pre-inject only what it needs via the task description.
 
+### Model tiering (build-time cost lever)
+
+This is the model choice for the build TEAM, set when you dispatch each agent. It is separate from the product's Guard, Plan, and Synth runtime harness in CLAUDE.md, which routes models per query at serve time. Do not conflate the two: this table tiers the agents that write System 3, not the tiers System 3 uses to answer a user.
+
+Assign a model tier per role, not one model for the whole team. Keep the lead thin (routing and monitoring, not reading full files), so its model choice barely matters, then push the strongest model to where judgment is hard and a cheaper model to where the work is well-scoped or bulk.
+
+| Role | Model tier | Effort | Why |
+|------|-----------|--------|-----|
+| Lead (main session) | User's session model | n/a | Fixed by the user. Keep it thin. |
+| Researcher / reader | Cheap or mid | low | Bulk document and API reading. The cost is the input, not the reasoning. |
+| Builder (teammate) | Sonnet | medium | Well-scoped construction against a clear task. Reserve high effort for genuinely hard builds. |
+| Judge | Strongest | high or xhigh | Single quality gate. A missed defect here is the most expensive, so pay for the reasoning. |
+| Sub-planner | Strongest | high | Decomposition errors cascade into every downstream builder. |
+
+Pass the model and effort choice when you dispatch each sub-agent, and set the teammate model when you create the agent team (the team creation step already says to use Sonnet for each teammate). A tool-less coordinator that delegates heavy reading to cheap scoped workers measured 2.5x cheaper and roughly 3x faster than one frontier model doing everything, with about 84 percent of input tokens billed at the cheap worker rate (the plan-big-execute-small pattern from the claude-cookbooks dive, in the personal-os Reference-repos set). Delegation has a fixed setup cost, so do not shard a phase into many tiny tasks just to parallelize. Each dispatched agent should carry a task worth its overhead.
+
+### The judge produces evidence, not a verdict
+
+A judge that reports "looks good, all checks pass" without showing its work is the maker-checker failure `self-eval-loop.md` warns about: a grader that knows the rubric drifts toward approving everything. Force the judge to produce evidence, and default it to fail when evidence is absent.
+
+For every claim, the judge's report must:
+- Cite the exact `file:line` for a code finding, not "the agent loop looks fine".
+- Paste the actual command output for a functional or test claim (the `pytest -q` result line, the lint output), not "tests pass".
+- Quote the specific offending line for a security or quality finding, not "no security issues found". Grade against the `production-standards` and `ai-security-standards` gates: parameterized Cypher and SQL, schema validation at every agent-loop hop, cite-or-refuse on generated answers, no secrets in logs.
+
+If the judge cannot produce evidence for a check, that check fails. "I could not verify X" is a fail, never a pass.
+
+Verify the premise, not only the leaves. The judge's default instinct is to check each artifact against its assigned task: did builder 3 produce the file it was told to. That is leaf verification, and it passes even when the decomposition itself was wrong. Add one level up: does the set of completed tasks actually satisfy the phase done-when from the goal contract? A phase where every builder succeeded at its own task but the tasks together miss the phase's stated outcome is a failed phase, not a passed one (the plan-big-execute-small park-list failure, `goal-contracts.md`, "rigor about the wrong layer").
+
 ### Team dispatch order
 
 ```
@@ -354,7 +383,7 @@ For phases with 1 builder task: use a sub-agent instead.
 
 Once all builders complete:
 
-1. Dispatch judge sub-agent to review ALL builder output (functional correctness, code quality, plan adherence, security)
+1. Dispatch judge sub-agent to review ALL builder output (functional correctness, code quality, plan adherence, security). Give it the strongest model at high effort. It must produce cited evidence for every claim and verify the phase premise, not just each artifact (see "The judge produces evidence, not a verdict")
 2. Dispatch test writer sub-agent (can run in parallel with judge if test targets are clear)
 3. Dispatch integrator sub-agent ONLY if builders produced isolated components that need wiring
 4. If judge fails: minor issues = dispatch a fix sub-agent. Major issues = escalate to user.
