@@ -2,12 +2,26 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Phase 0 completed in the kick-off session. All background material collected, vision aligned, plan agreed.
+Kick-off: 2026-05-06. Last updated: 2026-07-22.
 
-Last updated: 2026-07-22 (extended from 2026-05-07). Steps 1.1 to 1.5 are locked and unchanged. The 2026-07-20 revision added new Phase 1 sources (Steps 1.11 and 1.12), turned the Phase 2 output into a living evaluation playbook, added a strategic memo deliverable, and restructured Phase 6 to build the prototype from the docs first, then reconcile, then build v1. The 2026-07-21 revision adds Step 1.13 (LLM legal and compliance obligations) and a competency-question selection-criteria discussion topic in Step 2.3. Step 1.7 was completed and closed out on 2026-07-21: the contractor package is tagged as Track 2, the NFR baseline is bucketed, the NLQ approach is a generation-first hybrid with verified templates for the tier-1 CQs, v1 federation is scoped to the three data layers, and Anne's milestone ladder is adopted as a PRD success requirement. Step 1.8 was completed the same day: the tool stack is Railway, PostHog, and LangSmith, with a self-maintained in-repo tracker, and the hosting strategy is build-individually-first then migrate to NCBI/OCCS after the PoC. Step 1.9 dispositioned the ten open questions: six confirmed, model distillation and cost-cap values deferred with homes named (Steps 1.11 and 1.13), and agent naming decided (scientific names, streamed persona). Step 1.10 settled the five cross-cutting concerns: forbidden-output security boundary locked, data freshness and rate limiting confirmed or deferred, the UI architecture set (orchestrator plus tools, named-scientist streaming layer, curated streaming with a stop button), and accessibility deferred to v1. A read-only survey of the NCBI KG reference repo produced the adopt/adapt/skip list for Phase 6. Step 1.11 surveyed 45 new-intake documents via four parallel Sonnet 5 sub-agents and locked an adopt batch (coordinator/worker cost mechanism, prompt caching, a System-3 model-bench, opinionated tools, provenance-gated memory) plus four open calls (cost caps set, fusion deferred to v2, no separate router step, risk-tier pass deferred to Phase 3). Step 1.12 surveyed three conferences (ISMB, KGC, Nodes-AI) via three parallel Sonnet 5 sub-agents and locked a must-feed-the-PRD batch (NL-to-Cypher discipline, provenance schema expansion, substantiation and triangulation grounding gates, eval-harness redesign) plus three open calls (Layer 3 LitSense as the vector mode, single orchestrator with a v2 graduation trigger, a separate coverage metric alongside the moat test). Step 1.13 completed Phase 1: LLM legal and compliance obligations split into a two-lane Track 1 versus production framework, with country-of-origin Option A (Track 1 uses the strongest models now including Chinese-origin, with a benched compliant substitute and a config-swap migration path). All 13 Phase 1 steps are done, 75 decisions logged; the Phase 1 synthesis feeds Phase 2 and Phase 3. The 2026-07-22 session completed Phase 2 (all five steps 2.1 to 2.5), producing requirements/Evaluation_playbook.md: the moat test with the renamed no-general-tool-equivalent bar, the locked seven-question v1 must-pass set plus the fast-follow and expansion pool, the coverage metric, the offline eval gate, model selection, and the online feedback loop. 90 decisions logged. Phase 3, the PRD, is next.
+## Status at a glance
+
+| Phase | Status |
+|-------|--------|
+| Phase 0: foundation | Complete (2026-05-06) |
+| Phase 1: source review and architecture decisions | Complete, all 13 steps (2026-07-21) |
+| Phase 2: competency questions and evaluation playbook | Complete, all 5 steps (2026-07-22) |
+| Phase 3: PRD | Complete, PRD locked (2026-07-22) |
+| Phase 4: technical specification | Not started |
+| Phase 5: system and tooling updates | Not started |
+| Phase 6: build (bossman execution) | Not started |
+| Phase 7: iteration and new information | Not started |
+
+Decisions logged: 91 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, and the PRD (locked). The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
+- [Status at a glance](#status-at-a-glance)
 - [Goal](#goal)
 - [How we work](#how-we-work)
 - [Phase 0: foundation (complete)](#phase-0-foundation-complete)
@@ -20,6 +34,8 @@ Last updated: 2026-07-22 (extended from 2026-05-07). Steps 1.1 to 1.5 are locked
 - [Phase 7: iteration and new information](#phase-7-iteration-and-new-information)
 - [Documents we will create](#documents-we-will-create)
 - [How new information gets incorporated](#how-new-information-gets-incorporated)
+- [Summary of what happens next](#summary-of-what-happens-next)
+- [Revision history](#revision-history)
 
 ---
 
@@ -258,7 +274,7 @@ Phase 2 output: the evaluation playbook, a standalone living document in `requir
 
 ## Phase 3: PRD creation
 
-Status: NOT STARTED
+Status: COMPLETE (PRD locked 2026-07-22; deliverable requirements/PRD.md)
 
 Goal: write the PRD. Single source of truth for what System 3 does, for whom, and how we measure success.
 
@@ -411,7 +427,12 @@ Build a running prototype from the locked PRD and tech spec. Goal: something you
 
 ### Step 6.2: reconcile the documents
 
-Once the prototype runs, update the PRD, tech spec, and strategic memo wherever the prototype changed our thinking. This is the one planned spec update before those three lock at v1 (see the Phase 7 carve-out). The evaluation playbook is reconciled here too, but it differs: it is a living document, not frozen at v1, since the online feedback loop keeps updating the competency-question set and the evaluation approach keeps evolving. So Phase 6.2 is one notable update point for the playbook, not its last. Log any decision that changed. The input to this reconciliation is the running LEARNINGS.md (captured throughout the Phase 6 build): it collects what each build step taught us, so these documents get updated from a captured record rather than memory.
+Once the prototype runs, reconcile the docs with what it taught us:
+
+- Update the PRD, tech spec, and strategic memo wherever the prototype changed our thinking. This is the one planned spec update before those three lock at v1 (see the Phase 7 carve-out).
+- Reconcile the evaluation playbook here too, but note it differs: it is a living document, not frozen at v1, since the online feedback loop keeps updating the competency-question set and the evaluation approach keeps evolving. Phase 6.2 is one notable update point for the playbook, not its last.
+- Feed the reconciliation from the running LEARNINGS.md (captured throughout the Phase 6 build): it collects what each build step taught us, so these documents get updated from a captured record rather than memory.
+- Log any decision that changed.
 
 ### Step 6.3: build v1
 
@@ -474,8 +495,8 @@ This cycle repeats. The system evolves.
 | --- | --- | --- | --- |
 | Background_requirements.md | Phase 0 (done) | `requirements/context/` | Index of all source material |
 | Plan.md | Phase 0 (done) | `requirements/` | This document. Roadmap from research to product. |
-| Phase 1 session notes | Phase 1 (in progress) | `requirements/phase_1/Session_*.md` | Chronological discussion record per session. Also serves as personal learning log. |
-| Phase 1 decisions | Phase 1 (in progress) | `DECISIONS.md` (append) | Architecture choices from source review |
+| Phase 1 session notes | Phase 1 (done) | `requirements/phase_1/Session_*.md` | Chronological discussion record per session. Also serves as personal learning log. |
+| Phase 1 decisions | Phase 1 (done) | `DECISIONS.md` (append) | Architecture choices from source review |
 | Phase 1 synthesis | Phase 1 (end) | `requirements/phase_1/Phase_1_synthesis.md` | All decisions organized by topic into a single narrative. Primary input for Phase 2 and Phase 3. |
 | Evaluation_playbook.md | Phase 2 | `requirements/` | Living doc: CQ set with tiers and personas, CQ count cap, offline eval gate (rubric plus eval-harness metrics), model-selection method (model-bench), online feedback-loop design. Referenced by the tech spec. |
 | PRD.md | Phase 3 | `requirements/` | Product requirements. Single source of truth. Outcome-focused. |
@@ -515,6 +536,21 @@ This keeps the build stable while allowing continuous learning.
 
 ## Summary of what happens next
 
-Phase 1 is complete. All 13 steps (1.1 through 1.13) are done, with 75 decisions logged and the Phase 1 synthesis written. Next is Phase 2 (competency questions and the evaluation playbook), then Phase 3, the PRD. We debate. We decide. We log decisions. Once all sources are reviewed, we move to competency questions and the evaluation playbook (Phase 2), then the PRD (Phase 3), then the tech spec and strategic memo (Phase 4), then we update our tools (Phase 5), then we build the prototype and v1 (Phase 6).
+Phase 1, Phase 2, and Phase 3 are complete, with 90 decisions logged, the Phase 1 synthesis and the evaluation playbook written, and the PRD locked. Next is the tech spec and strategic memo (Phase 4), then updating our tools (Phase 5), then building the prototype and v1 (Phase 6). We debate. We decide. We log decisions.
 
 One phase at a time. No skipping.
+
+## Revision history
+
+- 2026-07-22: Completed Phase 2 (Steps 2.1 to 2.5) and produced the evaluation playbook (the moat test with the no-general-tool-equivalent bar, the seven-question v1 must-pass set plus the fast-follow and expansion pool, the coverage metric, the offline eval gate, model selection, and the online feedback loop). Completed Phase 3: drafted and locked the PRD. 90 decisions logged.
+- 2026-07-21: Completed Phase 1 (Steps 1.7 to 1.13) and wrote the Phase 1 synthesis.
+  - Step 1.7: tagged the contractor package as Track 2, bucketed the NFR baseline, set a generation-first NLQ hybrid with verified templates for the tier-1 competency questions, scoped v1 federation to the three data layers, and adopted Anne's milestone ladder as a PRD success requirement.
+  - Step 1.8: locked the stack (Railway, PostHog, LangSmith, and a self-maintained in-repo tracker) and the build-first-then-migrate hosting strategy.
+  - Step 1.9: dispositioned the ten open questions.
+  - Step 1.10: settled the five cross-cutting concerns (forbidden-output boundary, data freshness, rate limiting, UI architecture, accessibility).
+  - Step 1.11: surveyed 45 new-intake documents and locked the adopt batch (coordinator/worker cost mechanism, prompt caching, model-bench, opinionated tools, provenance-gated memory) plus the cost-cap starter values and the deferral calls.
+  - Step 1.12: surveyed three conferences (ISMB, KGC, Nodes-AI) and locked the PRD-feeding batch (NL-to-Cypher discipline, provenance schema expansion, grounding gates, eval-harness redesign).
+  - Step 1.13: split the LLM legal obligations into the Track 1 versus production framework (country-of-origin Option A).
+- 2026-07-20: Added new Phase 1 sources (Steps 1.11 and 1.12), turned the Phase 2 output into a living evaluation playbook, added the strategic memo deliverable, and restructured Phase 6 to build the prototype from the docs first, then reconcile, then build v1.
+- 2026-05-07: Extended the plan beyond the kick-off outline. Steps 1.1 to 1.5 locked.
+- 2026-05-06: Kick-off. Phase 0 completed: all background material collected, vision aligned, and plan agreed.

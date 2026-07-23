@@ -12,7 +12,7 @@ Stack: Python 3.11+, FastAPI, LangGraph, React, PostgreSQL (user data), psycopg2
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | System 3: planning (Phase 3) | PHASE 1 COMPLETE (all 13 steps, synthesis in requirements/phase_1/Phase_1_synthesis.md). PHASE 2 COMPLETE per requirements/Plan.md: competency questions and the evaluation playbook, deliverable requirements/Evaluation_playbook.md. 90 decisions in DECISIONS.md. No application code yet; build execution begins at Plan.md Phase 6. Knowledge graph available on Hetzner CPX42 (46.225.128.133): 115M nodes + 693M edges queryable via openCypher over psycopg2. |
+| 1 | System 3: planning (Phase 4) | PHASE 1 COMPLETE (all 13 steps, synthesis in requirements/phase_1/Phase_1_synthesis.md). PHASE 2 COMPLETE per requirements/Plan.md: competency questions and the evaluation playbook, deliverable requirements/Evaluation_playbook.md. PHASE 3 COMPLETE: PRD drafted, graded, and locked, deliverable requirements/PRD.md (locked 2026-07-22). PHASE 4 (technical specification) next. 91 decisions in DECISIONS.md. No application code yet; build execution begins at Plan.md Phase 6. Knowledge graph available on Hetzner CPX42 (46.225.128.133): 115M nodes + 693M edges queryable via openCypher over psycopg2. |
 | 2 | System 3: tool integration | PLANNED. cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup. |
 | 3 | System 3: eval and tracing | PLANNED. LangSmith tracing, golden dataset, automated eval harness. |
 

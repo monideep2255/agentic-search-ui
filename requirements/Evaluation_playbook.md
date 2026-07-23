@@ -42,7 +42,7 @@ Gates, binary, must pass to qualify at all:
 
 Ranking, one design-time dimension:
 
-- No general-tool equivalent: scored by an external empirical test against a panel of the strongest general tools, namely a frontier chat LLM (such as Claude, GPT, or Gemini), an answer engine with retrieval (such as Perplexity), and plain web search. The question passes only if none of them produces the correct answer with verifiable citations across the required databases. The pass condition is grounding, not fluency: a general tool routinely produces a fluent answer to a biomedical question, but not one backed by real, resolvable NCBI source records, because general LLMs hallucinate citations. A fluent, uncited, or hallucinated-citation answer does not count as the general tool producing it. Testing against the strongest tools, and scoring on verifiable grounding, keeps the bar honest against 2026 tools. The judgment moves from us to an observation, and it needs no app and no users.
+- No general-tool equivalent: scored by an external empirical test. Run the candidate against a panel of the strongest general tools (a frontier chat LLM such as Claude, GPT, or Gemini; an answer engine with retrieval such as Perplexity; and plain web search). The question passes only if none produces the correct answer with verifiable citations across the required databases. The pass condition is grounding, not fluency: a general tool routinely produces a fluent answer, but not one backed by real, resolvable NCBI source records, because general LLMs hallucinate citations. A fluent, uncited, or hallucinated-citation answer does not count. Testing against the strongest tools, scored on verifiable grounding, keeps the bar honest against 2026 tools, and it moves the judgment from us to an observation that needs no app and no users.
 
 Deferred to the online loop as re-ranking signals:
 
@@ -127,7 +127,13 @@ Definition:
 - Two ratios reported separately: concept coverage and predicate coverage.
 - Secondary, qualitative: a Layer 2 API-reach checklist (which NCBI databases beyond the graph the set touches), because the API universe is not cleanly enumerable.
 
-First pass on the seven: concept coverage about 5 of 10 (roughly 50 percent), predicate coverage about 3 of 14 (roughly 21 percent). Three predicates are clearly exercised (`is_sequence_variant_of`, `gene_associated_with_condition`, `mentioned_in`), and `has_phenotype` is borderline, exercised only if Q4 surfaces phenotypes. The remaining 10 are untouched: the GO-annotation, taxonomy, orthology, MeSH, citation, and ontology-structure edges (`has_mesh_annotation`, `in_taxon`, `actively_involved_in`, `participates_in`, `located_in`, `orthologous_to`, `cited_in`, `subclass_of`, `close_match`, `exact_match`). These numbers are a hand-mapped first pass, replaced by dynamic instrumentation once the agent runs.
+First pass on the seven: concept coverage about 5 of 10 (roughly 50 percent), predicate coverage about 3 of 14 (roughly 21 percent). The predicate breakdown:
+
+- Exercised (3): `is_sequence_variant_of`, `gene_associated_with_condition`, `mentioned_in`.
+- Borderline (1): `has_phenotype`, exercised only if Q4 surfaces phenotypes.
+- Untouched (10): the GO-annotation, taxonomy, orthology, MeSH, citation, and ontology-structure edges (`has_mesh_annotation`, `in_taxon`, `actively_involved_in`, `participates_in`, `located_in`, `orthologous_to`, `cited_in`, `subclass_of`, `close_match`, `exact_match`).
+
+These numbers are a hand-mapped first pass, replaced by dynamic instrumentation once the agent runs.
 
 Read this correctly: low graph coverage is by design. Four of the seven (Q5, Q6, Q8, Q10) are Layer 2 dominant and barely touch the graph. The moat set's real breadth is cross-database reach into roughly 9 API databases outside the graph (dbVar, OMIM, GTR, Pathogen Detection, SRA, BioProject, GEO, Assembly, PubChem). So the metric guides set growth: as the set expands, coverage shows whether new questions broaden into untouched capabilities or pile onto the same three predicates.
 

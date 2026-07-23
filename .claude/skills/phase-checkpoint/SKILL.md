@@ -58,10 +58,19 @@ Confirm two things before writing. Ask if either is unclear from context:
 - Extend or write `requirements/phase_N/Phase_N_synthesis.md`: the topic-organized narrative of the phase's decisions, ready for the downstream phase.
 - Update `requirements/Plan.md`: bump the phase status, update the last-updated line and the top-of-file status paragraph, and note the threads carried forward.
 
+### Step 6: structural hygiene pass
+
+Before the exit checklist, verify the structure of every document this checkpoint created or updated, per writing-style.md. This step exists because a status block was once crammed into a single run-on paragraph, and a table of contents lagged the body as sections were appended.
+
+- No walls of text: any passage that enumerates three or more items (decisions, steps, sources, dispositions) is a bulleted list or a table, not a run-on paragraph chained by semicolons or commas. A status is a table; a changelog is a dated bullet list, newest first.
+- Table of contents current: every `##` section added this checkpoint has a matching ToC entry, and the ToC lists all sections, not just the early ones.
+- Status and counts current: the continuation prompt, the Plan.md status table, and any progress table name the correct current phase and the correct DECISIONS.md count. No finished phase is labeled "next".
+- Titles and filenames current: a session doc or meeting note whose title or filename names fewer steps than it now covers is retitled, and the file renamed with `mv` (never `rm`) if the step span in the name is wrong.
+
 ## Constraints
 
 - Append-only for DECISIONS.md and session docs. Never delete or rewrite existing content.
-- Follow writing-style.md (no em dashes, sentence case headings, no bold) and file-naming.md.
+- Follow writing-style.md (no em dashes, sentence case headings, no bold, no walls of text, ToC and status kept current) and file-naming.md.
 - Do not commit or push. Hand off to `/ship` for that.
 - If a required input is missing (which phase, or sub-phase versus phase-end), ask before writing.
 
@@ -75,6 +84,8 @@ Before declaring the checkpoint done, verify:
 - [ ] The continuation prompt's progress tracker, decisions list, and next-up reflect current state.
 - [ ] (phase-end) The phase synthesis and Plan.md status are updated.
 - [ ] No existing content was deleted or rewritten.
+- [ ] No wall of text: every enumerated passage in a touched doc is a list or a table, not a run-on paragraph (writing-style.md).
+- [ ] Every touched doc's table of contents, status, counts, titles, and filenames are current: no missing ToC entry, no finished phase labeled "next", no stale count, no title or filename naming fewer steps than the file covers.
 
 ## Output
 

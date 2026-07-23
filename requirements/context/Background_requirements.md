@@ -4,6 +4,8 @@ All source material, reference implementations, personal notes, and strategic co
 
 This document is a reference index. Each section links to source files and summarizes what they contribute. Read the linked documents for full detail.
 
+Frozen intake index. The counts, tool choices, and open questions below reflect the project start (2026-05-06) and are not maintained. For the current architecture and decisions, see `requirements/phase_1/Phase_1_synthesis.md`, `requirements/PRD.md`, and `DECISIONS.md`.
+
 Last updated: 2026-05-06
 
 ## Table of contents

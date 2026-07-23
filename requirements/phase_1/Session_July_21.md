@@ -5,6 +5,35 @@ Attendees: Monideep, Claude (agent teammate)
 Type: source review and architecture decisions
 Context: resumed Phase 1 after a gap. Steps 1.1 through 1.5 were locked on 2026-05-07. This session covers Step 1.6.
 
+## Table of contents
+
+- [Steps covered](#steps-covered)
+- [Sources reviewed](#sources-reviewed)
+- [The frame: habit is the goal, trust is the engine](#the-frame-habit-is-the-goal-trust-is-the-engine)
+- [The metric: default first stop, not daily-active](#the-metric-default-first-stop-not-daily-active)
+- [The tension: lowest-friction input versus "not a chatbot"](#the-tension-lowest-friction-input-versus-not-a-chatbot)
+- [What Step 1.6 puts into the PRD](#what-step-16-puts-into-the-prd)
+- [The investment loop decision and its conflict with the SOUL.md decision](#the-investment-loop-decision-and-its-conflict-with-the-soulmd-decision)
+- [Clarification: what actually differentiates System 3](#clarification-what-actually-differentiates-system-3)
+- [Source routing](#source-routing)
+- [Decisions logged to DECISIONS.md](#decisions-logged-to-decisionsmd)
+- [What is next](#what-is-next)
+- [Step 1.7: contractor documents (7 sources)](#step-17-contractor-documents-7-sources)
+- [What is next (after Step 1.7)](#what-is-next-after-step-17)
+- [Step 1.8: tools and infrastructure](#step-18-tools-and-infrastructure)
+- [What is next (after Step 1.8)](#what-is-next-after-step-18)
+- [Step 1.9: open questions (ten from Background section 13)](#step-19-open-questions-ten-from-background-section-13)
+- [What is next (after Step 1.9)](#what-is-next-after-step-19)
+- [Step 1.10: cross-cutting concerns (five topics)](#step-110-cross-cutting-concerns-five-topics)
+- [What is next (after Step 1.10)](#what-is-next-after-step-110)
+- [Step 1.11: new intake research (45 sources)](#step-111-new-intake-research-45-sources)
+- [What is next (after Step 1.11)](#what-is-next-after-step-111)
+- [Step 1.12: conference learnings (ISMB, KGC, Nodes-AI)](#step-112-conference-learnings-ismb-kgc-nodes-ai)
+- [What is next (after Step 1.12)](#what-is-next-after-step-112)
+- [Step 1.13: LLM legal and compliance obligations](#step-113-llm-legal-and-compliance-obligations)
+- [Phase 1 complete](#phase-1-complete)
+- [What is next](#what-is-next-1)
+
 ## Steps covered
 
 - Step 1.6: user psychology and product design - COMPLETE
@@ -318,11 +347,28 @@ Approach: dispatched four Sonnet 5 sub-agents in parallel (harness and agent loo
 
 ### Adopt batch (logged to DECISIONS.md as three rows)
 
-Orchestration and caching: coordinator/worker as the cost mechanism (strong tier plans and writes, cheap tier fetches and returns findings plus citations, never raw passages, making cite-or-refuse an architectural boundary); route by query shape (single-hop to Layer 2, multi-hop to Layer 1, dynamic to the full loop) with exact ID/CURIE retrieval as the default and fuzzy matching only to resolve free text to a CURIE; prompt caching now via OpenRouter (stable prefix, no mid-query model switch, cache efficiency tracked as a metric), with KV-cache reuse reference-only. Measured support: ~2.5x cheaper and 3x faster for coordinator/worker, up to 81% cost reduction from prompt caching.
+Orchestration and caching:
 
-Model-bench and providers: a System-3-specific bench of frozen per-tier tasks (Cypher generation, tool-schema adherence, citation synthesis, guardrail classification), deterministic scoring for correctness and GeneBench-Pro style for biomedical judgment, taste-weighted only for tone; the open-source candidate set to benchmark in Phase 6 (DeepSeek-V4, Kimi K2.6/K2.7, GLM-5.2, Qwen3-Max, Gemma 4); resilience and capacity as selection criteria. Sobering data point: the best model scored 28.7% on genomics-judgment GeneBench-Pro.
+- Coordinator/worker as the cost mechanism (strong tier plans and writes, cheap tier fetches and returns findings plus citations, never raw passages, making cite-or-refuse an architectural boundary).
+- Route by query shape (single-hop to Layer 2, multi-hop to Layer 1, dynamic to the full loop) with exact ID/CURIE retrieval as the default and fuzzy matching only to resolve free text to a CURIE.
+- Prompt caching now via OpenRouter (stable prefix, no mid-query model switch, cache efficiency tracked as a metric), with KV-cache reuse reference-only.
+- Measured support: ~2.5x cheaper and 3x faster for coordinator/worker, up to 81% cost reduction from prompt caching.
 
-Tools, memory, and harness/production: opinionated narrow tools with full descriptions (VirBench: 16.9% to over 90% accuracy once a deterministic tool owns execution); provenance-gated, promotion-gated investment-loop memory; fail-fast harness and freeze-the-model-iterate-the-harness; safety and caps in the runtime layer not prompts; control-plane/data-plane decoupling for the NCBI migration; and extending the Phase 4 eval to check query decomposition, not only citations.
+Model-bench and providers:
+
+- A System-3-specific bench of frozen per-tier tasks (Cypher generation, tool-schema adherence, citation synthesis, guardrail classification), deterministic scoring for correctness and GeneBench-Pro style for biomedical judgment, taste-weighted only for tone.
+- The open-source candidate set to benchmark in Phase 6 (DeepSeek-V4, Kimi K2.6/K2.7, GLM-5.2, Qwen3-Max, Gemma 4).
+- Resilience and capacity as selection criteria.
+- Sobering data point: the best model scored 28.7% on genomics-judgment GeneBench-Pro.
+
+Tools, memory, and harness/production:
+
+- Opinionated narrow tools with full descriptions (VirBench: 16.9% to over 90% accuracy once a deterministic tool owns execution).
+- Provenance-gated, promotion-gated investment-loop memory.
+- Fail-fast harness and freeze-the-model-iterate-the-harness.
+- Safety and caps in the runtime layer not prompts.
+- Control-plane/data-plane decoupling for the NCBI migration.
+- Extending the Phase 4 eval to check query decomposition, not only citations.
 
 ### Rejected or reference-only
 
@@ -346,7 +392,14 @@ Approach: three Sonnet 5 sub-agents surveyed the three conference folders in par
 
 ### Must feed the PRD
 
-Query understanding and NL-to-Cypher discipline (AbbVie, Bayer, Adobe, Verspoor converge): resolve free-text terms to CURIEs first and ask a targeted clarifying question on ambiguity before generating a query; inject only the query-relevant subgraph schema, never the full schema; restrict the model to the real schema so the validator catches nonexistent labels; add a human-readable glossary onto opaque BioLink terms; split validation from result-summarization; cache the full sliced schema upfront, not progressively.
+Query understanding and NL-to-Cypher discipline (AbbVie, Bayer, Adobe, Verspoor converge):
+
+- Resolve free-text terms to CURIEs first and ask a targeted clarifying question on ambiguity before generating a query.
+- Inject only the query-relevant subgraph schema, never the full schema.
+- Restrict the model to the real schema so the validator catches nonexistent labels.
+- Add a human-readable glossary onto opaque BioLink terms.
+- Split validation from result-summarization.
+- Cache the full sliced schema upfront, not progressively.
 
 Provenance schema expansion: add evidence-kind, assertion-confidence (asserted vs hedged vs contested), population/ancestry context, and license as first-class fields alongside source, source_id, source_url, layer; surface a trust signal to the user with an answer/flag/ask gate.
 
@@ -354,7 +407,13 @@ Grounding gates beyond presence: a citation-substantiation check (the cited pass
 
 Eval-harness redesign (Phase 4): contamination-resistant, concept-scored with ontology-synonym expansion, human-baseline graded, with inductive held-out splits that exclude whole entities, plus a separate regression suite re-run on every model or prompt change.
 
-Tools, memory, and access: document every tool's inputs, outputs, and failure modes as a first-class deliverable (BioNeMo 57% to 100% from documentation alone); a cheap non-LLM classifier as a Guardrail pre-filter; log every Layer 2/3 access with authorization; implement the investment-loop memory as a hydrate-reason-act-write-back loop; add temporal recency as a query shape.
+Tools, memory, and access:
+
+- Document every tool's inputs, outputs, and failure modes as a first-class deliverable (BioNeMo 57% to 100% from documentation alone).
+- A cheap non-LLM classifier as a Guardrail pre-filter.
+- Log every Layer 2/3 access with authorization.
+- Implement the investment-loop memory as a hydrate-reason-act-write-back loop.
+- Add temporal recency as a query shape.
 
 ### Three open calls decided
 
@@ -368,7 +427,17 @@ The upstream Innovation proposal 2026 and vision-of-success source docs still de
 
 ### Reference-only (v2)
 
-Shared graph memory across multiple agents, a graph-backed MCP tool registry (only past ~10-15 tools), world-model edge statistics, council-of-models cross-validation (cost tension with the caps), enterprise governance-as-graph, automated KG construction (System 1/2, out of scope here), graph-native prediction methods, DataLog/SHACL write-action gating (no write path), DPROD data products, spatial-web and holonic models, and multi-vendor agent-interoperability protocols.
+- Shared graph memory across multiple agents.
+- A graph-backed MCP tool registry (only past ~10-15 tools).
+- World-model edge statistics.
+- Council-of-models cross-validation (cost tension with the caps).
+- Enterprise governance-as-graph.
+- Automated KG construction (System 1/2, out of scope here).
+- Graph-native prediction methods.
+- DataLog/SHACL write-action gating (no write path).
+- DPROD data products.
+- Spatial-web and holonic models.
+- Multi-vendor agent-interoperability protocols.
 
 ## What is next (after Step 1.12)
 

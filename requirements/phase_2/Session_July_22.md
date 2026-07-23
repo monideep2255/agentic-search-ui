@@ -9,6 +9,9 @@ This file is both the project record and a personal learning log. It captures th
 - [Where we are](#where-we-are)
 - [Step 2.1: the collected competency-question set](#step-21-the-collected-competency-question-set)
 - [Step 2.3: refining the set](#step-23-refining-the-set)
+- [Step 2.4: the offline eval gate](#step-24-the-offline-eval-gate)
+- [Step 2.5: the online feedback loop](#step-25-the-online-feedback-loop)
+- [Phase 2 deliverable: the evaluation playbook](#phase-2-deliverable-the-evaluation-playbook)
 
 ## Where we are
 

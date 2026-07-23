@@ -1,5 +1,19 @@
 # Phase 1 session: May 7, 2026
 
+## Table of contents
+
+- [Steps covered](#steps-covered)
+- [Sources reviewed](#sources-reviewed)
+- [Decisions made](#decisions-made-all-logged-to-decisionsmd)
+- [Discussion record](#discussion-record)
+- [Step 1.2: architecture design review](#step-12-architecture-design-review)
+- [Open questions remaining](#open-questions-remaining)
+- [Step 1.3: reference implementations](#step-13-reference-implementations-2-sources)
+- [Step 1.4: data handoff](#step-14-data-handoff-2-sources)
+- [Step 1.5: agent and harness research](#step-15-agent-and-harness-research-22-sources)
+- [Objective review of Steps 1.1-1.5](#objective-review-of-steps-11-15)
+- [What's next](#whats-next)
+
 ## Steps covered
 
 - Step 1.1: strategic foundation review (3 sources) - COMPLETE
