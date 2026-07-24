@@ -41,6 +41,18 @@ The second agent must start with a clean context window. Do not pass the first a
 
 This isolation is what makes the pattern work. A self-reviewer that inherits the author's context inherits the author's blind spots.
 
+### Two verification modes: scripted checker and unscripted adversary
+
+The grading agent above is a scripted checker. It runs the output against a fixed pass/fail checklist and owns the accept or reject call. That is the right default, and it has a blind spot: it only tests what the checklist names, so a failure nobody wrote a criterion for slips through. A fluent-but-wrong answer, a bad-input crash, an odd-sequence corruption, all pass a green checklist.
+
+The second mode is an unscripted adversary. Instead of grading against known criteria, it uses the running output in hostile ways the checklist never imagined: malformed and boundary input, out-of-order operations, edge cases, and for a question-answering system, queries engineered to draw a confident wrong answer. It over-reports on purpose, because a false alarm is cheap and a missed defect is not. Critically, the finder is never the closer: the adversary files findings, it does not fix, triage, or close them. A separate role verifies and closes, the same maker-cannot-sign-off split that governs the scripted checker.
+
+When each applies:
+- Always run the scripted checker for substantial output. It is the accept or reject gate.
+- Add an adversary when the output is runnable and a plausible-but-wrong result is worse than an obvious failure. Agentic search is the clear case: a confident wrong answer is more dangerous than a crash, so the cite-or-refuse gate needs an adversary throwing hostile queries at it before it is trusted.
+
+Adversary findings land in a shared-ledger file, not scattered across agent outputs. Each state has a single writer, judgment states carry a reason, and every transition appends a history line, so the finder-is-not-closer rule holds by construction. The full convention is the "Shared-ledger coordination" subsection in `.claude/skills/bossman-mode/SKILL.md`. Source: the Personal Space autonomous build harness, analyzed in the personal-os Reference-repos set, which pairs a scripted qa role with a separate unscripted adversary.
+
 ### Relationship to goal-contracts and objective-review
 
 This rule is the verify surface `goal-contracts.md` points to whenever the check is "a second-agent grade" rather than a test or a grep: the contract names it, this rule defines how to run it. The two compose on any substantial autonomous output: write the done-when and pass/fail criteria first, then grade against them with a fresh-context agent.

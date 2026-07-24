@@ -159,6 +159,7 @@ Each teammate receives its task via the shared task list. The lead monitors prog
 | Planner | 0-N | Sub-agent | Sub-planners for complex areas. Recursive decomposition. | When complexity warrants |
 | Builder | 2-N | Agent team (teammates) | Execute independent build tasks in parallel. Each builder owns one task in the shared task list. Runs in its own tmux pane. | After research/planning |
 | Judge | 1 | Sub-agent | Single quality gate. Reviews ALL builder output: functional, quality, plan adherence, security. | After all builders complete |
+| Adversary | 0-1 | Sub-agent | Use the running artifact in hostile, unscripted ways to find what scripted checks miss. Over-reports on purpose. Files findings to a shared ledger only, never fixes, triages, or closes them. | After the judge, on any phase with a runnable artifact |
 | Test writer | 1 | Sub-agent | Write tests for what was built. Unit, integration, smoke tests. | After or alongside judge |
 | Integrator | 0-1 | Sub-agent | Wire independently-built components together. Only when builders produced isolated pieces. | Only when components need wiring |
 
@@ -201,6 +202,14 @@ If the judge cannot produce evidence for a check, that check fails. "I could not
 
 Verify the premise, not only the leaves. The judge's default instinct is to check each artifact against its assigned task: did builder 3 produce the file it was told to. That is leaf verification, and it passes even when the decomposition itself was wrong. Add one level up: does the set of completed tasks actually satisfy the phase done-when from the goal contract? A phase where every builder succeeded at its own task but the tasks together miss the phase's stated outcome is a failed phase, not a passed one (the plan-big-execute-small park-list failure, `goal-contracts.md`, "rigor about the wrong layer").
 
+### The adversary attacks what the judge certifies
+
+The judge is scripted verification. It checks the artifact against the plan, the tests, and the `production-standards` and `ai-security-standards` gates, so it catches the failures someone thought to specify. It is blind to the failure nobody wrote a check for. For System 3 that blind spot is the dangerous one: the failure mode here is a fluent wrong answer, not a failed assertion, and a green judge verdict does not touch it.
+
+The adversary is the unscripted half. It uses the running system in hostile ways the spec never imagined: malformed and boundary input, out-of-order operations, edge cases, and above all queries engineered to draw a confident wrong answer, especially queries where the graph returns nothing and the system should refuse rather than answer from priors. It is the pressure the cite-or-refuse gate needs before it is trusted: does the system actually refuse, or does it fabricate a fluent, uncited, biomedically plausible answer? It over-reports on purpose, because for a biomedical user a false alarm is cheap and a missed wrong answer is not. It files every finding to a shared ledger and stops there. It never fixes, triages, or closes its own findings; the judge or a fix agent triages them, and only the ledger's designated closer closes them. This is the maker-cannot-sign-off split of `self-eval-loop.md` applied to verification itself: the finder is never the closer.
+
+Run the adversary after the judge, only on a phase that produced a runnable artifact. A green judge verdict is necessary but not sufficient; the adversary is what decides whether the answer path is actually trustworthy. Source: the Personal Space autonomous build harness, analyzed in the personal-os Reference-repos set, which pairs a scripted qa role with a separate unscripted adversary.
+
 ### Team dispatch order
 
 ```
@@ -217,6 +226,7 @@ Phase start
   |-- [all builders complete, team disbanded]
   |
   |-- Judge (sub-agent) --- single quality gate (pass/fail + details)
+  |-- Adversary (sub-agent, only on a runnable artifact) --- hostile unscripted use, files to the ledger
   |-- Test writer (sub-agent, parallel with judge if targets clear)
   |-- Integrator (sub-agent, only if components need wiring)
   |
@@ -314,6 +324,15 @@ When 3+ builder teammates run in parallel (agent teams or worktrees), these conv
 - If a commit or push was already requested, auto-stage formatting-only follow-ups in the same commit or a tiny follow-up commit. No extra confirmation needed.
 - Only ask the user when changes are semantic (logic, data, behavior).
 
+### Shared-ledger coordination
+
+When parallel agents share findings, defects, or task state, they coordinate through one shared markdown ledger, not by each writing wherever they like. Without a convention, two agents writing status to the same file overwrite each other, and an agent that raised an item can quietly close it. A single-writer-per-state ledger removes both races by construction and leaves an auditable trail. This is where adversary findings for System 3 would land. The Personal Space harness, analyzed in the personal-os Reference-repos set, runs its defect and adversarial-review ledgers this way. Four rules:
+
+- Single writer per state: each state in the ledger has exactly one role authorized to set it. The adversary files findings, the judge or a fix agent triages, only the designated closer closes. No state has two writers.
+- Mandatory reason on judgment states: any state that reflects a judgment call (accepted, rejected, closed, disputed) carries a one-line reason. A bare status change with no reason is invalid.
+- Append-only history line per transition: every transition appends a who-what-why line to the item's history. History is never rewritten, only extended, so the trail reconstructs the full life of the item.
+- The raiser never closes: the party that raised an item is never the party that closes it. The finder reports, a different role verifies and closes. This is the same finder-is-not-closer rule the adversary follows.
+
 ---
 
 ## Execution protocol
@@ -343,6 +362,7 @@ Team:
 - Sub-planners: [N, or "none - phase is straightforward"]
 - Builders: [N] teammates via agent team in tmux panes [task list]
 - Judge: 1 sub-agent (post-build)
+- Adversary: [1 sub-agent if the phase produces a runnable artifact, or "not needed"]
 - Test writer: 1 sub-agent (post-build)
 - Integrator: [1 if components need wiring, or "not needed"]
 
@@ -384,9 +404,10 @@ For phases with 1 builder task: use a sub-agent instead.
 Once all builders complete:
 
 1. Dispatch judge sub-agent to review ALL builder output (functional correctness, code quality, plan adherence, security). Give it the strongest model at high effort. It must produce cited evidence for every claim and verify the phase premise, not just each artifact (see "The judge produces evidence, not a verdict")
-2. Dispatch test writer sub-agent (can run in parallel with judge if test targets are clear)
-3. Dispatch integrator sub-agent ONLY if builders produced isolated components that need wiring
-4. If judge fails: minor issues = dispatch a fix sub-agent. Major issues = escalate to user.
+2. On any phase that produced a runnable artifact, dispatch an adversary sub-agent (see the adversary role and "The adversary attacks what the judge certifies"). It throws hostile, unscripted queries at the running system, over-reports on purpose, and files every finding to a shared-ledger file. It targets the cite-or-refuse gate: queries where the graph returns nothing and the system must refuse rather than fabricate. It never fixes, triages, or closes its own findings; the judge or a fix agent triages them, and only the ledger's designated closer closes them.
+3. Dispatch test writer sub-agent (can run in parallel with judge if test targets are clear)
+4. Dispatch integrator sub-agent ONLY if builders produced isolated components that need wiring
+5. If judge fails or the adversary files findings: minor issues = dispatch a fix sub-agent. Major issues = escalate to user.
 
 ### Step 7: skill chain (release-workflow -> ship)
 
@@ -417,6 +438,7 @@ Team activity:
 - Researchers: [N] sub-agents dispatched, [summary of findings]
 - Builders: [N] teammates in agent team, [N] succeeded, [N] needed retry
 - Judge result: [pass/fail with details]
+- Adversary findings: [N filed to ledger, or "not run - no runnable artifact"]
 - Tests written: [count and location]
 - Integration: [done/not needed]
 
