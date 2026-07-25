@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-07-22.
+Kick-off: 2026-05-06. Last updated: 2026-07-24.
 
 ## Status at a glance
 
@@ -12,12 +12,12 @@ Kick-off: 2026-05-06. Last updated: 2026-07-22.
 | Phase 1: source review and architecture decisions | Complete, all 13 steps (2026-07-21) |
 | Phase 2: competency questions and evaluation playbook | Complete, all 5 steps (2026-07-22) |
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
-| Phase 4: technical specification | Not started |
+| Phase 4: technical specification | In progress (opened 2026-07-24, Step 4.0 next) |
 | Phase 5: system and tooling updates | Not started |
 | Phase 6: build (bossman execution) | Not started |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 91 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, and the PRD (locked). The dated change log is in Revision history at the end of this document.
+Decisions logged: 94 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, and the PRD (locked). The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -316,7 +316,7 @@ Phase 3 output: `requirements/PRD.md`
 
 ## Phase 4: technical specification
 
-Status: NOT STARTED
+Status: IN PROGRESS (opened 2026-07-24; Step 4.0 next)
 
 Goal: write the tech spec. Translates PRD requirements into implementation decisions: what to build, how, in what order.
 
@@ -432,6 +432,7 @@ Once the prototype runs, reconcile the docs with what it taught us:
 - Update the PRD, tech spec, and strategic memo wherever the prototype changed our thinking. This is the one planned spec update before those three lock at v1 (see the Phase 7 carve-out).
 - Reconcile the evaluation playbook here too, but note it differs: it is a living document, not frozen at v1, since the online feedback loop keeps updating the competency-question set and the evaluation approach keeps evolving. Phase 6.2 is one notable update point for the playbook, not its last.
 - Feed the reconciliation from the running LEARNINGS.md (captured throughout the Phase 6 build): it collects what each build step taught us, so these documents get updated from a captured record rather than memory.
+- Sweep the accumulated new-intake folder here too (`reference/personal-os-work/NIH/Agentic-Search/Reference/new-intake/`). This is the one scheduled point during the build to review everything that landed there since Phase 4 locked. Triage each note: architecture or product material feeds this reconciliation, harness or process material routes to the skills and rules. Then clear the inbox. Between Phase 4 lock and here the folder is parked and unreviewed, so no one has to watch it in the meantime.
 - Log any decision that changed.
 
 ### Step 6.3: build v1
@@ -530,18 +531,19 @@ Is the build in progress?
   post-v1.
 ```
 
-This keeps the build stable while allowing continuous learning.
+This keeps the build stable while allowing continuous learning. Parked does not mean untouched until v1: Step 6.2 is the single scheduled mid-build sweep where accumulated new-intake and LEARNINGS.md fold into the one planned reconciliation, and everything after that waits for the post-v1 cycle.
 
 ---
 
 ## Summary of what happens next
 
-Phase 1, Phase 2, and Phase 3 are complete, with 90 decisions logged, the Phase 1 synthesis and the evaluation playbook written, and the PRD locked. Next is the tech spec and strategic memo (Phase 4), then updating our tools (Phase 5), then building the prototype and v1 (Phase 6). We debate. We decide. We log decisions.
+Phase 1, Phase 2, and Phase 3 are complete, with 94 decisions logged, the Phase 1 synthesis and the evaluation playbook written, and the PRD locked. Phase 4 (the tech spec and strategic memo) is now open, starting with Step 4.0, then updating our tools (Phase 5), then building the prototype and v1 (Phase 6). We debate. We decide. We log decisions.
 
 One phase at a time. No skipping.
 
 ## Revision history
 
+- 2026-07-24: Opened Phase 4 (technical specification), Step 4.0 next. Set the build-phase doc-review cadence: the PRD, tech spec, and strategic memo freeze after Phase 4 and update only at the Step 6.2 reconciliation, and new-intake is swept once at Step 6.2 rather than continuously (Step 6.2 and the how-new-information-gets-incorporated section updated). Declined three third-party NCBI MCP servers as inbound dependencies, kept as reference only. 94 decisions logged.
 - 2026-07-22: Completed Phase 2 (Steps 2.1 to 2.5) and produced the evaluation playbook (the moat test with the no-general-tool-equivalent bar, the seven-question v1 must-pass set plus the fast-follow and expansion pool, the coverage metric, the offline eval gate, model selection, and the online feedback loop). Completed Phase 3: drafted and locked the PRD. 90 decisions logged.
 - 2026-07-21: Completed Phase 1 (Steps 1.7 to 1.13) and wrote the Phase 1 synthesis.
   - Step 1.7: tagged the contractor package as Track 2, bucketed the NFR baseline, set a generation-first NLQ hybrid with verified templates for the tier-1 competency questions, scoped v1 federation to the three data layers, and adopted Anne's milestone ladder as a PRD success requirement.
