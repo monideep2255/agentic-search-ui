@@ -29,12 +29,17 @@ Thumbs.db
 *.sqlite
 redis-data/
 
-# Local agent OS: kept on disk but not shipped with the repo. .codex is a
-# symlink to .claude. Both are deliberately untracked (via git rm --cached) so
-# the personal tooling stays local. Note: this also un-ships the security hooks
-# and settings.json under .claude/ -- a fresh clone and CI will not have them.
-.claude/
-.codex
+# Local agent OS: tracked again as of 2026-07-26, reversing the 2026-07-25
+# untracking, for the duration of v1 development. Phase 5 rewrote most of the
+# build harness inside .claude/, and while it was ignored none of that work
+# could be reviewed in a pull request, reached CI, or survived a fresh clone.
+# .codex is a git-tracked symlink to .claude (mode 120000), so it cannot drift.
+# Revisit after v1 ships if the tooling should go back to being local-only.
+#
+# settings.local.json stays ignored: it is per-machine override state, holding
+# absolute paths under a single user's home directory and an accumulated list
+# of one-off command approvals that mean nothing on another machine.
+.claude/settings.local.json
 
 # Claude Security scan output (reports and working dirs, never committed)
 CLAUDE-SECURITY-*/
