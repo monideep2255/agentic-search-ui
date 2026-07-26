@@ -2,7 +2,7 @@
 
 The build blueprint for System 3. It translates the locked PRD and the Phase 4 core-architecture decisions into implementation decisions and a build order.
 
-Status: Step 4.2 reconciled, pending Step 4.3 lock sign-off. Each section was drafted to implementation level by a parallel drafting pass, then Step 4.3 reconciled the open items: the citation, cost, and error event schemas are now unified against the canonical Section 2 and Section 9 definitions, the tool roster is complete at seven tools, and the delivery surfaces match the locked PRD. The five confirmed decisions are applied throughout: the Layer 1 staleness threshold (Section 7), the provenance type's four added fields (Section 9), the online A/B mechanism (Section 18), the concurrency queue strategy (Section 21), and the Pathogen Detection and ClinicalTrials.gov tool-roster resolution, each its own named tool rather than an ncbi_efetch action (Section 6). Locking the spec is the user's own sign-off, not made here. It references the evaluation playbook (requirements/Evaluation_playbook.md) and the eval-harness and dev-standards skills rather than restating them.
+Status: locked (2026-07-25). Each section was drafted to implementation level by a parallel drafting pass, then Step 4.3 reconciled the open items: the citation, cost, and error event schemas are now unified against the canonical Section 2 and Section 9 definitions, the tool roster is complete at seven tools, and the delivery surfaces match the locked PRD. The five confirmed decisions are applied throughout: the Layer 1 staleness threshold (Section 7), the provenance type's four added fields (Section 9), the online A/B mechanism (Section 18), the concurrency queue strategy (Section 21), and the Pathogen Detection and ClinicalTrials.gov tool-roster resolution, each its own named tool rather than an ncbi_efetch action (Section 6). This is the user's own sign-off, given 2026-07-25. It references the evaluation playbook (requirements/Evaluation_playbook.md) and the eval-harness and dev-standards skills rather than restating them.
 
 Traceability: every section traces back to a PRD outcome and to the core-architecture decisions in DECISIONS.md (Decisions A, C, D, E, F, G, and the cost amendment, all 2026-07-25) and to the verified API capability sheet (requirements/phase_4/API_capability_sheet.md).
 
@@ -3316,4 +3316,4 @@ The four threads carried into Phase 4 are decided (confirmed 2026-07-25) in thes
 | Concurrency queue strategy | Section 21 |
 | Provenance type's four added fields | Section 9 |
 
-Last updated: 2026-07-25. This is Step 4.2 reconciled; Step 4.3 lock sign-off is pending the user's confirmation.
+Last updated: 2026-07-25. The spec is locked (2026-07-25) and freezes through the build, edited only at the Step 6.2 reconciliation.

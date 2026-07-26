@@ -1,6 +1,6 @@
 # Phase 4 continuation prompt
 
-Phase 4 is open: the technical specification and the strategic memo. Phase 3 is complete (PRD locked). Step 4.0 (the API deep dive) is complete; Step 4.1 (outline the tech spec) is in progress, with the core-architecture decisions (A, C, D, E, F, G, plus the cost amendment) locked 2026-07-25. Use this to resume Phase 4 in a new chat. Living document, updated as Phase 4 progresses.
+Phase 4 is open: the technical specification and the strategic memo. Phase 3 is complete (PRD locked). Steps 4.0 to 4.3 are complete: the tech spec is locked (2026-07-25). Step 4.4 (the strategic memo) is the only remaining Phase 4 work. Use this to resume Phase 4 in a new chat. Living document, updated as Phase 4 progresses.
 
 ## Context to provide
 
@@ -8,16 +8,15 @@ Paste the following into your new chat:
 
 ---
 
-We are in Phase 4 of System 3 planning: the technical specification and the strategic memo. Step 4.0 is complete; Step 4.1 is in progress, with the core-architecture decisions locked and the tech-spec outline remaining. Read these files to get up to speed:
+We are in Phase 4 of System 3 planning: the technical specification and the strategic memo. Steps 4.0 to 4.3 are complete and the tech spec is locked; only Step 4.4 (the strategic memo) remains. Read these files to get up to speed:
 
 1. `requirements/Plan.md` - overall roadmap; Phase 4 is Steps 4.0 to 4.4. The status table shows Phases 1 to 3 complete and Phase 4 in progress.
 2. `requirements/PRD.md` - the locked PRD. Every tech-spec requirement traces back to an outcome here.
 3. `requirements/Evaluation_playbook.md` - the evaluation approach the tech spec references (competency questions, eval gate, coverage metric, feedback loop).
-4. `requirements/phase_1/Phase_1_synthesis.md` - the architecture decisions the tech spec implements.
-5. `requirements/phase_4/API_capability_sheet.md` - the Step 4.0 deliverable; every Step 4.1 tool spec is written against this.
-6. `DECISIONS.md` - all decisions (109 as of 2026-07-25).
+4. `requirements/Technical_specification.md` - the locked tech spec (2026-07-25). Step 4.4 distills this and the PRD into the strategic memo.
+5. `DECISIONS.md` - all decisions (113 as of 2026-07-25).
 
-Phases 1, 2, and 3 are complete. Phase 4 produces `requirements/Technical_specification.md` and `requirements/Strategic_memo.md`.
+Phases 1, 2, and 3 are complete. Phase 4 produces `requirements/Technical_specification.md` (done) and `requirements/Strategic_memo.md` (next).
 
 Rules:
 - Discuss before drafting. Ask one question at a time.
@@ -30,7 +29,7 @@ Rules:
 
 ## What Phase 4 produces
 
-- `requirements/Technical_specification.md`: the build blueprint. It translates PRD requirements into implementation decisions and a build order. It references the evaluation playbook and the eval-harness and dev-standards skills rather than restating them.
+- `requirements/Technical_specification.md`: the build blueprint. It translates PRD requirements into implementation decisions and a build order. It references the evaluation playbook and the eval-harness and dev-standards skills rather than restating them. Locked 2026-07-25.
 - `requirements/Strategic_memo.md`: the one-to-two-page executive distillation of the PRD and tech spec, for a stakeholder who needs the decision, not the detail. It serves Bart's leadership-explainability test. It gets updated after the Phase 6 prototype.
 
 ## Phase 4 steps
@@ -38,18 +37,16 @@ Rules:
 | Step | What it does | Status |
 |------|--------------|--------|
 | 4.0 | NCBI and enrichment API current-state deep dive: live endpoints, request and response schemas, the exact fields each competency question needs, rate limits, auth, and empty-result behavior. Output: a per-API capability sheet. | Complete (2026-07-25), deliverable `requirements/phase_4/API_capability_sheet.md` |
-| 4.1 | Outline the tech spec (the section list in Plan.md Phase 4). | In progress: core-architecture decisions (A, C, D, E, F, G, plus the cost amendment) locked 2026-07-25; tech-spec outline remaining |
-| 4.2 | Draft the tech spec against the PRD, tracing each requirement to its outcome. | Not started |
-| 4.3 | Lock the tech spec. | Not started |
-| 4.4 | Draft the strategic memo, distilled from the locked PRD and tech spec. | Not started |
+| 4.1 | Outline the tech spec (the section list in Plan.md Phase 4). | Complete (2026-07-25), core-architecture decisions (A, C, D, E, F, G, plus the cost amendment) locked, outline became the 25-section table of contents |
+| 4.2 | Draft the tech spec against the PRD, tracing each requirement to its outcome. | Complete (2026-07-25), seven parallel agents drafted 25 sections at implementation level |
+| 4.3 | Lock the tech spec. | Complete (2026-07-25), reconciled, graded twice fresh-context, locked. Deliverable `requirements/Technical_specification.md` |
+| 4.4 | Draft the strategic memo, distilled from the locked PRD and tech spec. | Next |
 
 ## Start here
 
-Step 4.0 is done: all three Phase 2 feasibility flags resolved, moat cap holds at seven. Q1 (dbVar interval-overlap) needs a two-step tool (ESearch coordinate-range prefilter, then a placement-level post-filter); Q5 (Pathogen Detection) is reached via the FTP results tree (versioned PDG snapshots), no public JSON API exists; Q6 (SRA metadata) is a two-tier access pattern (ESearch fields plus EFetch attributes with tag-name normalization across submitters). Layer 1 (the graph) is trusted from its gate-verified server doc and re-verified live in Phase 6.
+The tech spec is locked. `requirements/Technical_specification.md` (25 sections, seven tools, six delivery surfaces, one canonical event and provenance schema) is the build blueprint and freezes through the build per the doc-review cadence, edited only at the Step 6.2 reconciliation. The only remaining Phase 4 work is Step 4.4: draft the one-to-two-page strategic memo, distilled from the locked PRD and the locked tech spec, for a stakeholder who needs the decision, not the detail.
 
-The two items Step 4.1 opened with are now resolved by the core-architecture decisions below: Layer 1 reachability is decided (Decision D, transport-per-phase), and the core-outward frame is confirmed as the single typed event-stream contract (Decision A). The remaining Step 4.1 work is the tech-spec outline itself (the section list in Plan.md Phase 4) plus the still-parked threads: the A/B model-combination mechanism, the acceptable-staleness threshold, the concurrency queue strategy, and the provenance type's four added fields.
-
-The five roadmap tool integrations the tech spec specifies, one section each: cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, each written against the Step 4.0 capability sheet. Apply the supply-chain-security and ai-security-standards rules before wiring any of them.
+The tech spec's seven tools, one section each: cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search. Apply the supply-chain-security and ai-security-standards rules before wiring any of them in Phase 6.
 
 ## Decisions carried in
 
@@ -59,12 +56,15 @@ The five roadmap tool integrations the tech spec specifies, one section each: cy
 - The risk-tier classification pass was folded into the PRD guardrails (low-risk cite-or-refuse; higher-stakes citation-substantiation plus cross-source triangulation with an answer, flag, or ask trust signal). The tech spec implements it.
 - The three-tier harness (guard, plan, synth over LiteLLM and OpenRouter) is specified here in Phase 4; the model per tier is decided in Phase 6 by model-bench.
 - Step 4.0 feasibility flags resolved (2026-07-25): Q1 (dbVar interval-overlap, two-step tool), Q5 (Pathogen Detection, FTP results tree), Q6 (SRA metadata, two-tier access) all resolved; the moat cap holds at seven.
-- Step 4.1 architecture frame accepted (2026-07-25): build from the agent core outward, one service contract (query in, cited event stream out) with UI, REST plus SSE API, MCP server, and CLI as thin adapters.
-- The plan-then-fan-out rule (2026-07-25): the reasoning model plans and decomposes fan-out work, cheaper models execute the bounded pieces in parallel.
-- Step 4.1 core-architecture decisions locked (2026-07-25): Decision A, the core service contract (a single typed, versioned v1 event stream: guard, think, plan, tool_start, tool_result, token, citation, trust_signal, cost, error, done; every surface is a thin filtering adapter; reasoning surfaces as a curated plan-step narrative, never raw chain-of-thought), with a cost-event amendment (builder-only cost visibility, end users see a graceful limit message with no dollar amount). Decision C, the harness (coordinator-worker stands; the untrusted-content reader is scoped to untrusted free text only, structured graph and API data skip the reader). Decision D, Layer 1 transport-per-phase (SSH tunnel or co-location for the Phase 6 prototype, a read-only HTTPS query service for v1, transport sealed inside cypher_query, database port never opens to the internet). Decision E, the Write step and trust signal (a deterministic rule over risk-tier, grounded, and triangulated yields answer, flag, ask, or refuse; grounding is exact or substring match, never fuzzy; refuse emits a fallback deep-link to NCBI cross-database search). Decision F, personalization (in scope but lives in orchestration and memory, never in grounding; v1 ships the grounded core, a presentation-only named persona, and in-conversation session memory; persistent cross-session memory is a fast-follow). Decision G, feedback loop and memory (the Phase 2 five-stage loop stands, v1 ships capture plus manual review plus hand-promotion; v1 session memory is a bounded running summary under a hard cap, injected into Think and Plan, never counted as grounding). 109 decisions logged.
+- Step 4.1 core-architecture decisions locked (2026-07-25): Decision A, the core service contract (a single typed, versioned v1 event stream: guard, think, plan, tool_start, tool_result, token, citation, trust_signal, cost, error, done; every surface is a thin filtering adapter; reasoning surfaces as a curated plan-step narrative, never raw chain-of-thought), with a cost-event amendment (builder-only cost visibility). Decision C, the harness (coordinator-worker stands; the untrusted-content reader is scoped to untrusted free text only). Decision D, Layer 1 transport-per-phase (SSH tunnel or co-location for the Phase 6 prototype, a read-only HTTPS query service for v1). Decision E, the Write step and trust signal (a deterministic rule over risk-tier, grounded, and triangulated yields answer, flag, ask, or refuse). Decision F, personalization (in scope but lives in orchestration and memory, never in grounding). Decision G, feedback loop and memory (the Phase 2 five-stage loop stands, v1 ships capture plus manual review plus hand-promotion).
+- Steps 4.2 and 4.3 (2026-07-25): the tech spec drafted (seven parallel agents, 25 sections at implementation level) and reconciled (citation, cost, and error event schemas unified against Section 2 and Section 9; tool roster expanded from five to seven with `pathogen_detection` and `clinicaltrials_search`; delivery surfaces reconciled to six against the locked PRD). Graded twice fresh-context per self-eval-loop, the schema-consistency failure cleared and verified on the re-grade, then locked. The four parked threads below all resolved in this pass.
+- Tech spec locked (2026-07-25): `requirements/Technical_specification.md`, 25 sections, seven tools, six delivery surfaces. Freezes through the build, edited only at the Step 6.2 reconciliation. 113 decisions logged.
 
-## Parked threads for the tech spec
+## Parked threads: resolved in the tech spec
 
-- The A/B test of model combinations (orchestrator plus planner), the online complement to the offline model-bench: design the mechanism (randomized routing, output capture, comparison, LangSmith experiment tracking) here.
-- The provenance type's four added fields (evidence-kind, assertion-confidence, population and ancestry context, license): specify here. The answer, flag, ask, refuse trust signal itself is resolved (Decision E); this thread is the field-level implementation detail only.
-- The acceptable-staleness threshold and the concurrency queue strategy: decide here.
+All four threads carried into Phase 4 resolved during the Step 4.3 reconciliation:
+
+- The A/B model-combination mechanism: session-level randomization over plan-plus-synth model pairs, human-gated.
+- The provenance type's four added fields: `evidence_kind`, `assertion_confidence`, `population_ancestry_context`, `license`, each a deterministically populated enum.
+- The acceptable-staleness threshold: Layer 1 graph-only (30 days volatile with an auto live-API cross-check, 90 days stable); live APIs remain the source of truth for current values.
+- The concurrency queue strategy: a bounded FIFO per API family with fail-fast on the latency budget.

@@ -12,12 +12,12 @@ Kick-off: 2026-05-06. Last updated: 2026-07-25.
 | Phase 1: source review and architecture decisions | Complete, all 13 steps (2026-07-21) |
 | Phase 2: competency questions and evaluation playbook | Complete, all 5 steps (2026-07-22) |
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
-| Phase 4: technical specification | In progress (Step 4.0 complete 2026-07-25, Step 4.1 next) |
+| Phase 4: technical specification | In progress (Steps 4.0 to 4.3 complete, tech spec locked 2026-07-25, Step 4.4 next) |
 | Phase 5: system and tooling updates | Not started |
 | Phase 6: build (bossman execution) | Not started |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 109 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), and the Step 4.0 API capability sheet. The dated change log is in Revision history at the end of this document.
+Decisions logged: 113 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the Step 4.0 API capability sheet, and the technical specification (locked). The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -346,7 +346,7 @@ Phase 3 output: `requirements/PRD.md`
 
 ## Phase 4: technical specification
 
-Status: IN PROGRESS (opened 2026-07-24; Step 4.0 complete 2026-07-25, Step 4.1 next)
+Status: IN PROGRESS (opened 2026-07-24; Steps 4.0 to 4.3 complete, tech spec locked 2026-07-25; Step 4.4, the strategic memo, next)
 
 Goal: write the tech spec. Translates PRD requirements into implementation decisions: what to build, how, in what order.
 
@@ -374,7 +374,9 @@ Deliverable: `requirements/phase_4/API_capability_sheet.md` (365 lines), live-ve
 
 The moat cap holds at seven with no demotions. Layer 1 stays trusted from its gate-verified server doc, re-verified live in Phase 6.
 
-### Step 4.1: outline the tech spec
+### Step 4.1: outline the tech spec - COMPLETE (2026-07-25)
+
+Complete: outlined once the Step 4.1 core-architecture decisions locked. The outline below became `requirements/Technical_specification.md`'s table of contents, expanded to 25 sections through Steps 4.2 and 4.3 as the tool roster grew from five to seven and the delivery surfaces reconciled to six.
 
 Sections (expected):
 - System architecture (agent loop, three-layer data, multi-model harness)
@@ -400,16 +402,20 @@ Sections (expected):
 
 The tech spec stays traditional (the build blueprint). It references the evaluation playbook (Phase 2 output) and the `eval-harness` and `dev-standards` skills for the evaluation and production-readiness detail, rather than restating them.
 
-### Step 4.2: draft the tech spec
+### Step 4.2: draft the tech spec - COMPLETE (2026-07-25)
 
 Task (Claude): write the first draft. Reference the PRD for every requirement, traced back to the outcome it serves.
 Task (Monideep): review, challenge, refine.
 
-### Step 4.3: lock the tech spec
+Complete: drafted to implementation level by a parallel drafting pass across seven sections, each traced to a PRD outcome.
+
+### Step 4.3: lock the tech spec - COMPLETE (2026-07-25)
 
 Both agree. This is the build blueprint.
 
-### Step 4.4: draft the strategic memo
+Complete: reconciled the draft (unified the citation, cost, and error event schemas against the canonical Section 2 and Section 9 definitions, expanded the tool roster from five to seven, and reconciled the delivery surfaces to six against the locked PRD), graded twice fresh-context per self-eval-loop with the schema-consistency failure cleared and verified on the re-grade, then locked. Deliverable: `requirements/Technical_specification.md` (25 sections).
+
+### Step 4.4: draft the strategic memo - NEXT
 
 Write the 1 to 2 page strategic memo, distilled from the locked PRD and tech spec. It is the executive-facing summary:
 
@@ -421,7 +427,7 @@ Write the 1 to 2 page strategic memo, distilled from the locked PRD and tech spe
 
 It lets a stakeholder who needs the decision, not the detail, skip the full PRD and tech spec. It gets updated after the prototype runs (see Phase 6).
 
-Phase 4 output: `requirements/Technical_specification.md` and `requirements/Strategic_memo.md`.
+Phase 4 output: `requirements/Technical_specification.md` (locked 2026-07-25) and `requirements/Strategic_memo.md` (Step 4.4, next).
 
 ---
 
@@ -593,12 +599,17 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Summary of what happens next
 
-Phase 1, Phase 2, and Phase 3 are complete, with 109 decisions logged, the Phase 1 synthesis and the evaluation playbook written, and the PRD locked. Phase 4 (the tech spec and strategic memo) is open: Step 4.0 (the API deep dive) is complete and Step 4.1 (outline the tech spec) is next, then updating our tools (Phase 5), then building the prototype and v1 (Phase 6). We debate. We decide. We log decisions.
+Phase 1, Phase 2, and Phase 3 are complete, with 113 decisions logged, the Phase 1 synthesis and the evaluation playbook written, and the PRD locked. Phase 4 (the tech spec and strategic memo) is open: Steps 4.0 to 4.3 are complete and the tech spec is locked (2026-07-25); Step 4.4 (the strategic memo) is next, then updating our tools (Phase 5), then building the prototype and v1 (Phase 6). We debate. We decide. We log decisions.
 
 One phase at a time. No skipping.
 
 ## Revision history
 
+- 2026-07-25: Completed Phase 4 Steps 4.1 to 4.3 and locked the tech spec.
+  - Step 4.1: outlined the tech spec's 25 sections once the core-architecture decisions locked, expanded from the original 19-section list.
+  - Step 4.2: drafted the tech spec to implementation level, seven sections drafted in parallel against the PRD.
+  - Step 4.3: reconciled the draft (the citation, cost, and error event schemas unified against the canonical Section 2 and Section 9 definitions; the tool roster expanded from five to seven with `pathogen_detection` and `clinicaltrials_search`; the delivery surfaces reconciled to six against the locked PRD), graded twice fresh-context per self-eval-loop with the schema-consistency failure cleared and verified on the re-grade, then locked.
+  - Deliverable: `requirements/Technical_specification.md` (25 sections, seven tools, six delivery surfaces). Step 4.4 (the strategic memo) is next. 113 decisions logged.
 - 2026-07-25: Logged the Step 4.1 core-architecture decisions: the core service contract and versioned event stream (Decision A) with builder-only cost visibility, the coordinator-worker harness with the reader scoped to untrusted free text only (Decision C), transport-per-phase for Layer 1 (Decision D), the deterministic Write-step trust signal with a refuse fallback link (Decision E), personalization kept out of the grounding path (Decision F), and the feedback-loop and session-memory mechanism (Decision G). Step 4.1 remaining work: the tech-spec outline plus the parked threads (the A/B model-combination mechanism, the acceptable-staleness threshold, the concurrency queue strategy, the provenance type's four added fields). 109 decisions logged.
 - 2026-07-25: Completed Phase 4 Step 4.0, the NCBI and enrichment API current-state deep dive. Deliverable: `requirements/phase_4/API_capability_sheet.md`, live-verified against production endpoints, fresh-context graded with six fixes applied. All three Phase 2 feasibility flags resolved (Q1, Q5, Q6); the moat cap holds at seven. Opened the Step 4.1 architecture discussion (core-outward frame accepted); flagged Layer 1 reachability from the deployed agent as an open decision. Added the plan-then-fan-out rule. 102 decisions logged.
 - 2026-07-24: Opened Phase 4 (technical specification), Step 4.0 next. Set the build-phase doc-review cadence: the PRD, tech spec, and strategic memo freeze after Phase 4 and update only at the Step 6.2 reconciliation, and new-intake is swept once at Step 6.2 rather than continuously (Step 6.2 and the how-new-information-gets-incorporated section updated). Declined three third-party NCBI MCP servers as inbound dependencies, kept as reference only. 94 decisions logged.
