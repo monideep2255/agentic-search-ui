@@ -67,7 +67,7 @@ Week-by-week execution plan for the personal build track.
 
 ### System 3 architecture brainstorming (primary)
 
-Source: `docs/System_3_architecture_brainstorming.md`
+Source: `docs/architecture/System_3_architecture_brainstorming.md`
 
 First-principles walkthrough from 2026-04-20. Covers:
 - Agent loop: 5 steps (guardrail, think, plan, act, write)
@@ -438,9 +438,9 @@ Coordination meeting with an NCBI coordination contact.
 
 | Document | What it covers | PRD/tech spec section |
 | --- | --- | --- |
-| `docs/System_3_architecture_brainstorming.md` | Agent loop, multi-tier LLM, cost model, UI, deployment | Agent architecture, cost model |
-| `docs/NCBI_repos_deep_dive.md` | 13 NCBI repos analyzed; code to reuse, what not to build | Tool design, entity resolution |
-| `docs/NCBI_databases_and_APIs_reference.md` | All 39 NCBI databases, APIs, rate limits | Layer 2 tool specifications |
+| `docs/architecture/System_3_architecture_brainstorming.md` | Agent loop, multi-tier LLM, cost model, UI, deployment | Agent architecture, cost model |
+| `docs/ncbi/NCBI_repos_deep_dive.md` | 13 NCBI repos analyzed; code to reuse, what not to build | Tool design, entity resolution |
+| `docs/ncbi/NCBI_databases_and_APIs_reference.md` | All 39 NCBI databases, APIs, rate limits | Layer 2 tool specifications |
 | `docs/architecture/Three_layer_data_architecture.md` | Three-layer query strategy, costs, connection code | Data architecture blueprint |
 | `docs/architecture/Biolink_repos_explained.md` | BioLink categories, predicates, CURIEs | Graph schema, Cypher patterns |
 | `docs/data-engineering/Knowledge_graph_on_server_reference.md` | Live graph operations: SSH, Cypher, indexes, performance | Database connection, query optimization |

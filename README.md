@@ -44,14 +44,11 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 
 ## Status
 
-IN PROGRESS: baseline setup (Phase 1).
-
-| Phase | Scope | Status |
-|-------|-------|--------|
-| Phase 1 | FastAPI skeleton + auth + empty chat + React shell + SSE streaming | In progress |
-| Phase 2 | cypher_query tool + LangGraph agent loop + first end-to-end query | Planned |
-| Phase 3 | Additional tools + guardrail + citation formatting | Planned |
-| Phase 4 | LangSmith tracing + golden dataset + eval harness | Planned |
+| Track | Status |
+|-------|--------|
+| Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
+| Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
+| Build (Phases 6-7) | Not started. No application code exists yet. Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
 
 ---
 
@@ -93,7 +90,7 @@ agentic-search-ui/
   system_03_search_agent/       # Python backend
     api/                        # FastAPI routes, middleware, SSE
     agent/                      # LangGraph graph definition, nodes, edges
-    tools/                      # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator, litvar2
+    tools/                      # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search
     models/                     # Multi-model harness, tier routing
     auth/                       # JWT auth service
     config/                     # Settings, environment loading
@@ -105,10 +102,14 @@ agentic-search-ui/
   tests/                        # pytest test suite
   docs/                         # Architecture docs, reference material
   reference/                    # Symlink to agentic-search-data-engineering (System 1+2)
-  .claude/                      # Claude Code rules, skills, agents, hooks (tracked)
+  requirements/                 # Planning docs: Plan.md, PRD.md, Technical_specification.md, Strategic_memo.md, Evaluation_playbook.md
+  tracker/                      # In-repo build board: BOARD.md, phase tickets, render_board.py, board.html
+  .claude/                      # Claude Code rules, skills, agents, hooks (tracked in git for v1 development)
   CLAUDE.md                     # Claude Code instructions
   AGENTS.md                     # Instructions for other AI agents
-  DECISIONS.md                  # Architecture decision log
+  DECISIONS.md                  # Architecture decision log (124 rows)
+  LEARNINGS.md                  # What broke during the build and what fixed it
+  CHANGELOG.md                  # Keep a Changelog format, all entries currently Unreleased
   pyproject.toml
   requirements.txt
   env.example
@@ -116,19 +117,34 @@ agentic-search-ui/
 
 ---
 
+## Planning documents
+
+| Doc | Status |
+|-----|--------|
+| [Plan](requirements/Plan.md) | Master phase tracker |
+| [PRD](requirements/PRD.md) | Locked 2026-07-22 |
+| [Technical specification](requirements/Technical_specification.md) | Locked. 25 sections, seven tools, six delivery surfaces (web UI, REST plus SSE API, GraphQL API, MCP server, KGX export, CLI), Section 25 build order |
+| [Strategic memo](requirements/Strategic_memo.md) | Phase 4 deliverable |
+| [Evaluation playbook](requirements/Evaluation_playbook.md) | Living |
+
+---
+
 ## Documentation
 
 | Doc | What it covers |
 |-----|---------------|
-| [System 3 architecture brainstorming](docs/System_3_architecture_brainstorming.md) | Agent loop, tools, multi-model harness, cost model, deployment plan |
+| [System 3 architecture brainstorming](docs/architecture/System_3_architecture_brainstorming.md) | Agent loop, tools, multi-model harness, cost model, deployment plan |
 | [Three-layer data architecture](docs/architecture/Three_layer_data_architecture.md) | How System 3 accesses Layer 1 (graph), Layer 2 (NCBI APIs), Layer 3 (enrichment) |
 | [Knowledge graph reference](docs/data-engineering/Knowledge_graph_on_server_reference.md) | Live graph operations: SSH, Cypher examples, indexes, node/edge counts, cost |
-| [NCBI databases and APIs](docs/NCBI_databases_and_APIs_reference.md) | All 39 NCBI databases, endpoints, rate limits, record counts |
-| [NCBI repos deep dive](docs/NCBI_repos_deep_dive.md) | Analysis of 13 NCBI GitHub repos: code to reuse, patterns to adopt, what not to build locally |
+| [NCBI databases and APIs](docs/ncbi/NCBI_databases_and_APIs_reference.md) | All 39 NCBI databases, endpoints, rate limits, record counts |
+| [NCBI repos deep dive](docs/ncbi/NCBI_repos_deep_dive.md) | Analysis of 13 NCBI GitHub repos: code to reuse, patterns to adopt, what not to build locally |
 | [BioLink repos explained](docs/architecture/Biolink_repos_explained.md) | BioLink model categories, predicates, CURIEs used in the graph |
 | [Project overview](docs/data-engineering/Project_overview_A_to_Z.md) | Navigation hub for the full project |
-| [Agent teams tmux quickstart](docs/Agent_teams_tmux_quickstart.md) | tmux launch guide for bossman-mode parallel builders |
+| [Agent teams tmux quickstart](docs/build/Agent_teams_tmux_quickstart.md) | tmux launch guide for bossman-mode parallel builders |
 | [Claude security plugin usage](docs/Claude_security_plugin_usage.md) | How to run the on-demand `claude-security` scan, apply patches, and how it complements the always-on `security-guidance` plugin |
+| [Tool implementation mechanics](docs/ncbi/Tool_implementation_mechanics.md) | Per-tool API traps from tech spec section 6: edge-label enforcement, ELink target db, the `global_mafs` array, sequential dbSNP calls, snapshot pinning |
+| [Build workflow cadence](docs/build/Build_workflow_cadence.md) | The quick reference for how a build phase runs: the eleven stages, who acts at each, the model and effort per stage |
+| [Phase 6 execution flow](docs/build/Phase_6_execution_flow.html) | The build cadence as a visual page, also published as a Claude artifact |
 | [Decisions](DECISIONS.md) | Architecture and implementation decisions with rationale |
 
 ---
@@ -164,4 +180,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-05-07
+Last updated: 2026-07-26

@@ -124,7 +124,7 @@ The full plan, status per phase, and gate criteria live in [docs/bossman_executi
 - [docs/learnings.md](learnings.md): Numbered problems and solutions log.
 - [docs/data_inventory.md](data_inventory.md): What was downloaded, FTP URLs, sizes, row counts, validation outcomes.
 - [docs/System_1_data_engineering_plan.md](System_1_data_engineering_plan.md): Detailed ETL design for all 5 pipelines.
-- [docs/System_3_architecture_brainstorming.md](System_3_architecture_brainstorming.md): Notes on the downstream search agent (separate repo).
+- [docs/architecture/System_3_architecture_brainstorming.md](System_3_architecture_brainstorming.md): Notes on the downstream search agent (separate repo).
 - [DECISIONS.md](../DECISIONS.md): Append-only decision log.
 - [CLAUDE.md](../CLAUDE.md) / [AGENTS.md](../AGENTS.md) / [README.md](../README.md): Agent instructions, agent index, public-facing repo overview.
 - [schema/biolink_ncbi.yaml](../schema/biolink_ncbi.yaml): LinkML schema with 10 node types and 14 predicates.

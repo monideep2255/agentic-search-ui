@@ -375,7 +375,7 @@ Drift found live versus the 2026-04-20 reference doc:
 
 Open items carried to Step 4.1 and beyond:
 
-- The reference-copy NCBI doc (Data/reference, dated April 2) is stale; docs/NCBI_databases_and_APIs_reference.md (April 20) is authoritative.
+- The reference-copy NCBI doc (Data/reference, dated April 2) is stale; docs/ncbi/NCBI_databases_and_APIs_reference.md (April 20) is authoritative.
 - No numeric NCBI rate-limit figures exist in the proposal subtree; use the verified 3 and 10 per second for E-utilities and about 1/second for Variation Services.
 - OMIM full narrative content needs api.omim.org (key-gated); Entrez supplies the MIM number and title only, which is enough for a cited link.
 - The UCSC segmental-duplication source for the Q1 seg-dup fast-follow still needs a design (deferred, not v1).
