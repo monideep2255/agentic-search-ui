@@ -180,7 +180,13 @@ The three tiers, with example task assignments:
 | Plan | Multi-step planning, Cypher generation, tool coordination across two or three steps | 70 billion parameter open-source model | Roughly $0.20 to $0.90 |
 | Synth | Final answer synthesis across retrieved evidence, citation assembly, hard disambiguation | 70 to 400 billion parameter open-source model, or a closed frontier model as last-resort fallback | Roughly $0.50 to $5.00 |
 
-A typical query routes something like Guard for the guardrail step (one call), Plan for the two or three planning turns, Synth for the final synthesis (one call). That distribution keeps roughly 70 to 80 percent of token volume on the cheap tier.
+A typical query routes across tiers like this:
+
+- Guard: the guardrail step (one call)
+- Plan: the two or three planning turns
+- Synth: the final synthesis (one call)
+
+That distribution keeps roughly 70 to 80 percent of token volume on the cheap tier.
 
 Cost control levers the harness must implement. These are hard requirements, not nice-to-haves. At the scale of a personally-funded project, losing control for one hour can burn a month of budget.
 
@@ -212,7 +218,13 @@ The quality ablation that proves the harness-first thesis. Once the multi-tier h
 | Small OSS | Medium OSS | Closed frontier | Roughly 91 percent | Roughly $0.045 |
 | Closed frontier all the way | Roughly 93 percent | Roughly $0.080 |
 
-Numbers are illustrative until measured. The point is structural: the harness lets you pick the point on this curve and even pick different points per user tier. Free users get the cheap combo, paying or trusted users get the hybrid, hard questions force-promote to the larger tier. Without the harness, this experiment is not possible because the model choice is hardwired into every call.
+Numbers are illustrative until measured. The point is structural: the harness lets you pick the point on this curve and even pick different points per user tier:
+
+- Free users get the cheap combo
+- Paying or trusted users get the hybrid
+- Hard questions force-promote to the larger tier
+
+Without the harness, this experiment is not possible because the model choice is hardwired into every call.
 
 ## Query classification and effort allocation
 
@@ -354,9 +366,19 @@ Cost breakdown for this one query:
 | Layer 2 dbSNP API calls | Free with a key | No per-query charge |
 | Layer 3 LitVar2 API call | Free | No per-query charge |
 
-On a frontier closed-source model the total LLM cost for this query sits around $0.06. On a two-tier routing (small model for Turns 1 and 2, large model for Turn 3) the same query lands around $0.02. On an all-small-model setup the cost drops to roughly $0.002 at the cost of some synthesis quality.
+Total LLM cost for this one query, by configuration:
 
-At 50 users asking 5 questions per day: 250 queries per day, 7,500 per month. The all-frontier path lands near $450 per month. The two-tier path lands near $150 per month. The all-small path lands near $15 per month. Cache hits on repeated questions shave another 30 to 40 percent.
+- Frontier closed-source model: around $0.06
+- Two-tier routing (small model for Turns 1 and 2, large model for Turn 3): around $0.02
+- All-small-model setup: roughly $0.002, at the cost of some synthesis quality
+
+At 50 users asking 5 questions per day: 250 queries per day, 7,500 per month.
+
+- All-frontier path: near $450 per month
+- Two-tier path: near $150 per month
+- All-small path: near $15 per month
+
+Cache hits on repeated questions shave another 30 to 40 percent.
 
 ## Feedback loop and observability
 

@@ -44,7 +44,17 @@ Verified live 2026-07-25 against https://eutils.ncbi.nlm.nih.gov/entrez/eutils/.
 
 ### E-utilities mechanics
 
-Base URL: `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/`. Nine endpoints: EInfo (db metadata and field lists), ESearch (text query to UID list), EFetch (UID to full record), ESummary (UID to document summary), ELink (cross-database links), EPost (upload UIDs to the history server), EGQuery (global count across all dbs), ESpell (spelling suggestions), ECitMatch (citation string to PMID).
+Base URL: `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/`. Nine endpoints:
+
+- EInfo: db metadata and field lists
+- ESearch: text query to UID list
+- EFetch: UID to full record
+- ESummary: UID to document summary
+- ELink: cross-database links
+- EPost: upload UIDs to the history server
+- EGQuery: global count across all dbs
+- ESpell: spelling suggestions
+- ECitMatch: citation string to PMID
 
 Standard workflows:
 
@@ -263,7 +273,11 @@ Anchors Q8 (a paper linked to a PubChem compound: resolve the CID, then link to 
 
 Verified live 2026-07-25. These feed the pubtator_annotate and litvar2_lookup tools plus the clinical-trials path.
 
-Security note (applies to all four, per ai-security-standards and production-standards): every field these APIs return is untrusted external content (abstract text, annotation labels, trial descriptions). It is data for the Write step to cite, never an instruction the agent executes. The tool that ingests each of these gets Read plus that one API only, never Write and never the ability to call other tools directly. Every string field carries a `maxLength` and every array a `maxItems` in the tool's output schema, and injected context fragments carry a hard character cap before they reach a model prompt.
+Security note (applies to all four, per ai-security-standards and production-standards): every field these APIs return is untrusted external content (abstract text, annotation labels, trial descriptions). It is data for the Write step to cite, never an instruction the agent executes.
+
+- The tool that ingests each of these gets Read plus that one API only, never Write and never the ability to call other tools directly.
+- Every string field carries a `maxLength` and every array a `maxItems` in the tool's output schema.
+- Injected context fragments carry a hard character cap before they reach a model prompt.
 
 ### PubTator3 (base https://www.ncbi.nlm.nih.gov/research/pubtator3-api)
 
@@ -342,7 +356,12 @@ Each moat question maps to the APIs and tools that answer it. This is the covera
 | Q8 | PMID to linked data | ELink (direct, inferred, absent), SRA, BioProject, GEO, Assembly, PubChem | ncbi_efetch (elink path) |
 | Q10 | BioProject to data bundle | BioProject to BioSample to SRA (ELink), Assembly (Datasets v2) | ncbi_efetch, Datasets |
 
-Cross-cutting output requirements for every tool (from the reference mining and the citations-non-negotiable rule): provenance and source_url on every returned record, an explicit not-found signal rather than silence, assembly and version context on any coordinate or sequence answer, and deterministic IDs and a clear schema for the AI and MCP consumer persona.
+Cross-cutting output requirements for every tool (from the reference mining and the citations-non-negotiable rule):
+
+- Provenance and source_url on every returned record
+- An explicit not-found signal rather than silence
+- Assembly and version context on any coordinate or sequence answer
+- Deterministic IDs and a clear schema for the AI and MCP consumer persona
 
 ## Open items and drift flags
 

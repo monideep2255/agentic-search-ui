@@ -1,6 +1,15 @@
 # Evaluation playbook
 
-The standing reference for how System 3 is evaluated. It holds the competency-question set with tiers and personas, the moat test that selects and tiers them, the coverage metric that pairs with it, the offline evaluation gate, the model-selection method, and the online feedback loop. This is a living document: it is updated as the evaluation approach evolves. It is reconciled against prototype learnings at Phase 6.2 and updated continuously by the online feedback loop; unlike the PRD and technical specification, it is not frozen at v1. The technical specification references this playbook rather than restating it.
+The standing reference for how System 3 is evaluated. It holds:
+
+- The competency-question set with tiers and personas
+- The moat test that selects and tiers them
+- The coverage metric that pairs with it
+- The offline evaluation gate
+- The model-selection method
+- The online feedback loop
+
+This is a living document: it is updated as the evaluation approach evolves. It is reconciled against prototype learnings at Phase 6.2 and updated continuously by the online feedback loop; unlike the PRD and technical specification, it is not frozen at v1. The technical specification references this playbook rather than restating it.
 
 Phase 2 output. Last updated: 2026-07-22.
 
@@ -72,7 +81,19 @@ Persona coverage and usage frequency act as intra-band tiebreakers and a coverag
 
 The set has three parts: the v1 must-pass moat set, the fast-follow set, and the expansion pool. Persona numbers reference the legend below.
 
-Persona legend: 1 literature researchers, 2 sequence data users, 3 geneticists, 4 bioinformaticians, 5 structural biologists, 6 epidemiologists and public health, 7 drug discovery and pharma, 8 clinicians, 9 educators and students, 10 cross-database journey users, 11 AI agents and MCP and LLM consumers.
+Persona legend:
+
+- 1: literature researchers
+- 2: sequence data users
+- 3: geneticists
+- 4: bioinformaticians
+- 5: structural biologists
+- 6: epidemiologists and public health
+- 7: drug discovery and pharma
+- 8: clinicians
+- 9: educators and students
+- 10: cross-database journey users
+- 11: AI agents and MCP and LLM consumers
 
 ### The v1 must-pass moat set (seven)
 
@@ -238,7 +259,14 @@ Split by what each store is good at:
 
 Postgres is the owned source of truth, not LangSmith, so the promotion pipeline does not depend on a third-party tracing tool's API or retention.
 
-Privacy (detail in Phase 4): PII minimization, scoped access, a retention policy, and provenance on every promoted question. Never store secrets. Biomedical queries can carry sensitive context.
+Privacy (detail in Phase 4):
+
+- PII minimization
+- Scoped access
+- A retention policy
+- Provenance on every promoted question
+
+Never store secrets. Biomedical queries can carry sensitive context.
 
 ### Where the LLM-judge sits
 

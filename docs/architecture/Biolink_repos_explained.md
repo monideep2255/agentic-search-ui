@@ -38,9 +38,13 @@ It defines two things: what things exist (genes, diseases, variants, drugs) and 
 
 ### Why does it exist?
 
-Before Biolink, every database used different words for the same thing.
+Before Biolink, every database used different words for the same thing:
 
-ClinVar said a variant "causes" a disease. Another database said it was "associated with." A third said "pathogenic for." These mean roughly the same thing, but a computer can't know that unless someone writes it down.
+- ClinVar said a variant "causes" a disease
+- Another database said it was "associated with"
+- A third said "pathogenic for"
+
+These mean roughly the same thing, but a computer can't know that unless someone writes it down.
 
 Biolink is that definition list. It says: "From now on, use `biolink:genetic_association` for all of these. Here is what it means. Here is how to use it."
 
@@ -97,7 +101,13 @@ It was built by the NCATS Biomedical Data Translator team, the same team that ru
 
 Knowing the Biolink vocabulary isn't enough. You also need to actually convert your raw database rows into Biolink nodes and edges.
 
-Every data source has its own format. ClinVar gives you a VCF file. NCBI Gene gives you tabular data. MedGen gives you UMLS mappings. A team has to write code that reads each one and outputs standardized Biolink nodes (genes, variants, diseases) and edges (associations).
+Every data source has its own format:
+
+- ClinVar gives you a VCF file
+- NCBI Gene gives you tabular data
+- MedGen gives you UMLS mappings
+
+A team has to write code that reads each one and outputs standardized Biolink nodes (genes, variants, diseases) and edges (associations).
 
 `translator-ingests` provides the pattern, the tooling, and working examples for doing that conversion.
 

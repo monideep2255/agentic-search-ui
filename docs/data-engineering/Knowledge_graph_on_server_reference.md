@@ -1,6 +1,16 @@
 # Knowledge graph on the server: A to Z reference
 
-This doc is the single source of truth for the live PostgreSQL + AGE knowledge graph that runs on the Hetzner CPX42 VPS at `46.225.128.133`. It covers what is in the database, how it is laid out, how to connect, how to query without hitting the slow paths, what is indexed, what is not, how to maintain it, and what to do when something breaks. Read it before opening psql against the production graph for the first time.
+This doc is the single source of truth for the live PostgreSQL + AGE knowledge graph that runs on the Hetzner CPX42 VPS at `46.225.128.133`. It covers:
+
+- What is in the database
+- How it is laid out
+- How to connect
+- How to query without hitting the slow paths
+- What is indexed, what is not
+- How to maintain it
+- What to do when something breaks
+
+Read it before opening psql against the production graph for the first time.
 
 ## Table of contents
 
@@ -269,7 +279,13 @@ A `pg_dump` of this graph is roughly 60 to 100 GB. It is not part of the regular
 
 ## O. Refreshing the graph (full reload)
 
-A full refresh is rerunning Phase 1 (ETL all 5 databases from FTP), Phase 2 (merge to a single KGX), and Phase 4 (rsync + age-load). It is a multi-day operation. Before starting:
+A full refresh reruns:
+
+- Phase 1: ETL all 5 databases from FTP
+- Phase 2: merge to a single KGX
+- Phase 4: rsync + age-load
+
+It is a multi-day operation. Before starting:
 
 1. Take a Hetzner snapshot of the current state, in case the new load is broken and you need to roll back.
 2. Temporarily upgrade the VPS from CPX32 (steady state) to CPX42 (load window) for the duration of age-load; downgrade back after.
@@ -306,7 +322,15 @@ Downgrade procedure (only after a verified snapshot):
 5. Only after the new server is verified: delete the old CPX42 in the Hetzner console. Billing on the old server stops immediately.
 6. Update the IP address in `CLAUDE.md`, `AGENTS.md`, `README.md`, `docs/Knowledge_graph_on_server_reference.md`, and any other file that hardcodes `46.225.128.133`.
 
-The graph data on disk is roughly 100 GB steady state, so 160 GB on CPX32 leaves about 60 GB of headroom. Tight but workable for a read-only graph. A full refresh (rerun all pipelines) would not fit on CPX32 because it needs ~250-300 GB peak during the load window; for a refresh, temporarily upgrade back to CPX42 (or larger), do the load, snapshot, restore-to-CPX32, delete the temporary CPX42. Same procedure as the initial downgrade.
+The graph data on disk is roughly 100 GB steady state, so 160 GB on CPX32 leaves about 60 GB of headroom. Tight but workable for a read-only graph. A full refresh (rerun all pipelines) would not fit on CPX32 because it needs ~250-300 GB peak during the load window. For a refresh:
+
+1. Temporarily upgrade back to CPX42 (or larger)
+2. Do the load
+3. Snapshot
+4. Restore to CPX32
+5. Delete the temporary CPX42
+
+Same procedure as the initial downgrade.
 
 Brief overlap during the snapshot-restore flow: both servers run for the few hours it takes to verify the new one. Cost is roughly $0.10 for the overlap window.
 
@@ -316,7 +340,13 @@ Several things are deliberately not in this graph. Avoid the temptation to add t
 
 dbSNP is excluded. The 1.2B variant records would not fit, and the use case (allele frequency lookup by rs#) is better served by the live NCBI dbSNP REST API at query time, which is what System 3 will do. See DECISIONS row 66.
 
-PubChem, SRA, dbGaP are excluded. SRA is raw sequencing reads (analysis pipelines, not search). dbGaP is controlled-access (IRB approval). PubChem is community-submitted with variable curation. See DECISIONS row 18.
+PubChem, SRA, and dbGaP are excluded:
+
+- SRA: raw sequencing reads (analysis pipelines, not search)
+- dbGaP: controlled-access (IRB approval)
+- PubChem: community-submitted with variable curation
+
+See DECISIONS row 18.
 
 Layer 2 enrichment data (variant annotations from third-party tools, expression data, drug bindings, etc.) is excluded. That data is meant to be fetched on demand by System 3 and joined at query time, not pre-ingested. See [docs/architecture/Three_layer_data_architecture.md](docs/architecture/Three_layer_data_architecture.md).
 
@@ -324,7 +354,11 @@ System 3 components (FastAPI, LangGraph, UI, MCP servers, channel integrations) 
 
 ## R. Troubleshooting playbook
 
-A query takes more than 30 seconds: kill it with `pg_terminate_backend(pid)`, then run `EXPLAIN` on the SQL form. Check for `Seq Scan` on a label table (missing GIN), `Append` over all edge tables (untyped edge), or a regex on a large label.
+A query takes more than 30 seconds: kill it with `pg_terminate_backend(pid)`, then run `EXPLAIN` on the SQL form. Check for:
+
+- `Seq Scan` on a label table (missing GIN)
+- `Append` over all edge tables (untyped edge)
+- A regex on a large label
 
 A connection hangs at the pg_hba prompt: confirm you are SSHed as root and that you used `sudo -u postgres psql`. The trust rules only apply to the `postgres` user on localhost.
 

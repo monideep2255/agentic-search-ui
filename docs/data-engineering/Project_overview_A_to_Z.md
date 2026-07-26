@@ -56,11 +56,31 @@ For full operational details (SSH, queries, indices, snapshot procedure), see [K
 
 ## D. How the data was built
 
-Every pipeline follows a 5-step pattern: download from NCBI FTP (idempotent), parse, map to BioLink categories and predicates, validate against the LinkML schema, and export as KGX TSV with provenance on every row. The 5 per-database KGX outputs are then streamed through a merger that dedupes nodes by canonical CURIE, injects stubs for dangling edges, and produces a single unified KGX bundle. For the BioLink mapping conventions and ontology choices, see [Data mapping and ontology explained](architecture/Data_mapping_and_ontology_explained.md). For the merge algorithm, see [Merge logic explained](architecture/Merge_logic_explained.md).
+Every pipeline follows a 5-step pattern:
+
+1. Download from NCBI FTP (idempotent)
+2. Parse
+3. Map to BioLink categories and predicates
+4. Validate against the LinkML schema
+5. Export as KGX TSV with provenance on every row
+
+The 5 per-database KGX outputs are then streamed through a merger, which:
+
+- Dedupes nodes by canonical CURIE
+- Injects stubs for dangling edges
+- Produces a single unified KGX bundle
+
+For the BioLink mapping conventions and ontology choices, see [Data mapping and ontology explained](architecture/Data_mapping_and_ontology_explained.md). For the merge algorithm, see [Merge logic explained](architecture/Merge_logic_explained.md).
 
 ## E. How the data was loaded
 
-The AGE loader (`system-02-knowledge-graph/loader/`) reads the merged KGX bundle, builds a `curie_to_id` mapping, and bulk-loads nodes then edges into AGE using `COPY` for throughput. Indices on `id`, `category`, and edge endpoints are created after load. RAM tuning, swap, and memory bounds matter at this scale. For first-principles design and tuning, see [AGE loader explained](architecture/AGE_loader_explained.md). For the actual problems hit during cloud load (missing NamedThing table, OOM at 16 GB, quoted multi-line abstract mismatches), see [Learnings](learnings.md) Problems 12 to 14.
+The AGE loader (`system-02-knowledge-graph/loader/`):
+
+- Reads the merged KGX bundle
+- Builds a `curie_to_id` mapping
+- Bulk-loads nodes then edges into AGE using `COPY` for throughput
+
+Indices on `id`, `category`, and edge endpoints are created after load. RAM tuning, swap, and memory bounds matter at this scale. For first-principles design and tuning, see [AGE loader explained](architecture/AGE_loader_explained.md). For the actual problems hit during cloud load (missing NamedThing table, OOM at 16 GB, quoted multi-line abstract mismatches), see [Learnings](learnings.md) Problems 12 to 14.
 
 ## F. How to query the live graph
 
@@ -80,7 +100,15 @@ Every problem hit during a pipeline or load run, plus its root cause and fix, ge
 
 ## J. How the project was executed phase-by-phase
 
-The build was sequenced into phases (1.0 schema, 1.x ETL pipelines, 2.x merge, 3.0 AGE loader code, 4.0 cloud deploy) with a gate at each phase boundary. The full plan, status per phase, and gate criteria live in [docs/bossman_execution_plan.md](bossman_execution_plan.md).
+The build was sequenced into phases, with a gate at each phase boundary:
+
+- 1.0: schema
+- 1.x: ETL pipelines
+- 2.x: merge
+- 3.0: AGE loader code
+- 4.0: cloud deploy
+
+The full plan, status per phase, and gate criteria live in [docs/bossman_execution_plan.md](bossman_execution_plan.md).
 
 ## K. Documentation map
 

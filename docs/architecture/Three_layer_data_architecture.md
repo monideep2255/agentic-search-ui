@@ -110,7 +110,9 @@ All of these use the NCBI API key (10 req/sec, free). Register at `www.ncbi.nlm.
 | dbVar | ELink (`dbfrom=clinvar&db=dbvar`) | Structural variants associated with a gene or disease | After variant region identified |
 | Assembly | EFetch (`db=assembly`) | Genome assembly details | After organism identified |
 
-Latency: 100-500ms per API call. Budget: max 20 calls per user query. Responses cached in Redis (System 3).
+Latency: 100-500ms per API call.
+Budget: max 20 calls per user query.
+Responses cached in Redis (System 3).
 
 Built by: System 3 (search agent) in a separate repo.
 

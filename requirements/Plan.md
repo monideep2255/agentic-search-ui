@@ -56,9 +56,23 @@ We are a team. Not a vending machine. Every phase follows this pattern:
 3. Build: execute with agent teams (bossman-mode) once decisions are locked
 4. Review: check what we built against what we agreed on
 
-My tasks (Monideep): competency question research, Confluence/Jira data scraping, stakeholder input, architecture sign-off, PR reviews, new reference material collection (KGC, Nodes AI, red teaming)
+My tasks (Monideep):
 
-Agent tasks (Claude): document analysis, technical drafting, code implementation, testing, sub-agent coordination, execution via bossman-mode
+- Competency question research
+- Confluence/Jira data scraping
+- Stakeholder input
+- Architecture sign-off
+- PR reviews
+- New reference material collection (KGC, Nodes AI, red teaming)
+
+Agent tasks (Claude):
+
+- Document analysis
+- Technical drafting
+- Code implementation
+- Testing
+- Sub-agent coordination
+- Execution via bossman-mode
 
 We discuss before we draft. We draft before we build. We build one phase at a time.
 
@@ -92,7 +106,11 @@ Phase 1 produces three types of output that together feed Phase 2:
 2. Decision log (`DECISIONS.md`): every confirmed choice in a flat, searchable table with rationale. Append-only.
 3. Phase 1 synthesis document (`requirements/phase_1/Phase_1_synthesis.md`): written after all Phase 1 steps complete. Organizes all decisions and discussion outcomes by topic into a single narrative. This becomes the primary input for Phase 2 (competency questions) and Phase 3 (PRD).
 
-The synthesis document fills the gap between chronological session notes and a flat decision table. Session notes answer "what did we discuss and when?" DECISIONS.md answers "what did we choose?" The synthesis answers "what does it all mean together, organized by topic, ready for downstream phases?"
+The synthesis document fills the gap between chronological session notes and a flat decision table.
+
+- Session notes answer: "what did we discuss and when?"
+- DECISIONS.md answers: "what did we choose?"
+- The synthesis answers: "what does it all mean together, organized by topic, ready for downstream phases?"
 
 ### Step 1.1: review strategic foundation (3 sources)
 
@@ -236,7 +254,11 @@ Combine the existing CQ set with real user data. Identify:
 - CQ questions that nobody actually asks (remove or deprioritize)
 - New tier 1 candidates from real usage
 
-Task (Discuss together): finalize the CQ set. Lock tier 1 (must-answer for v1), tier 2 (should-answer), tier 3 (stretch/future).
+Task (Discuss together): finalize the CQ set. Lock the tiers:
+
+- Tier 1: must-answer for v1
+- Tier 2: should-answer
+- Tier 3: stretch/future
 
 Decision to make here (discuss): cap the v1 competency-question set to a small, testable number even though we have far more candidates. Start small, prove the loop, then expand. Lock the cap before finalizing tiers.
 
@@ -268,7 +290,15 @@ Task (Discuss together): design the feedback pipeline. This feeds into the tech 
 
 This is the online feedback loop, the second half of the evaluation approach. Offline gate first (Step 2.4) for a baseline, online loop second, once the system is live. Design it here, but mark it to discuss and lock before the PRD is finalized.
 
-Phase 2 output: the evaluation playbook, a standalone living document in `requirements/`. It holds the final competency-question set with tiers and personas, the CQ count cap, the offline evaluation gate (rubric plus eval-harness metrics), the model-selection method (model-bench), and the online feedback-loop design. The tech spec references this playbook rather than restating it. It is updated as the evaluation approach evolves.
+Phase 2 output: the evaluation playbook, a standalone living document in `requirements/`. It holds:
+
+- The final competency-question set with tiers and personas
+- The CQ count cap
+- The offline evaluation gate (rubric plus eval-harness metrics)
+- The model-selection method (model-bench)
+- The online feedback-loop design
+
+The tech spec references this playbook rather than restating it. It is updated as the evaluation approach evolves.
 
 ---
 
@@ -324,9 +354,25 @@ Prerequisites: PRD locked.
 
 ### Step 4.0: NCBI and enrichment API current-state deep dive - COMPLETE (2026-07-25)
 
-System 3 depends heavily on the NCBI E-utilities, the Datasets API v2, Variation Services, and the Layer 3 enrichment APIs (PubTator3, LitVar2, LitSense, ClinicalTrials.gov). Before writing the tool specifications, deep dive the current state of each: live endpoints, request and response schemas, the exact fields each competency question needs, rate limits, auth, and empty-result and error behavior, plus any drift since the Phase 1 survey in `docs/NCBI_databases_and_APIs_reference.md`. Output: a per-API capability sheet that every tool specification in Step 4.1 is written against. This converts the lightweight Phase 2 feasibility notes (the "can we answer this today" checks taken during CQ tiering) into verified API behavior. Discuss and confirm scope before drafting.
+System 3 depends heavily on the NCBI E-utilities, the Datasets API v2, Variation Services, and the Layer 3 enrichment APIs (PubTator3, LitVar2, LitSense, ClinicalTrials.gov). Before writing the tool specifications, deep dive the current state of each:
 
-Deliverable: `requirements/phase_4/API_capability_sheet.md` (365 lines), live-verified 2026-07-25 against production NCBI and enrichment endpoints, fresh-context graded per self-eval-loop with six grade fixes applied. All three Phase 2 feasibility flags resolved (Q1 dbVar interval-overlap via a two-step tool, Q5 Pathogen Detection via the FTP results tree, Q6 SRA metadata via two-tier access); the moat cap holds at seven with no demotions. Layer 1 stays trusted from its gate-verified server doc, re-verified live in Phase 6.
+- Live endpoints
+- Request and response schemas
+- The exact fields each competency question needs
+- Rate limits
+- Auth
+- Empty-result and error behavior
+- Any drift since the Phase 1 survey in `docs/NCBI_databases_and_APIs_reference.md`
+
+Output: a per-API capability sheet that every tool specification in Step 4.1 is written against. This converts the lightweight Phase 2 feasibility notes (the "can we answer this today" checks taken during CQ tiering) into verified API behavior. Discuss and confirm scope before drafting.
+
+Deliverable: `requirements/phase_4/API_capability_sheet.md` (365 lines), live-verified 2026-07-25 against production NCBI and enrichment endpoints, fresh-context graded per self-eval-loop with six grade fixes applied. All three Phase 2 feasibility flags resolved:
+
+- Q1: dbVar interval-overlap via a two-step tool
+- Q5: Pathogen Detection via the FTP results tree
+- Q6: SRA metadata via two-tier access
+
+The moat cap holds at seven with no demotions. Layer 1 stays trusted from its gate-verified server doc, re-verified live in Phase 6.
 
 ### Step 4.1: outline the tech spec
 
@@ -365,7 +411,15 @@ Both agree. This is the build blueprint.
 
 ### Step 4.4: draft the strategic memo
 
-Write the 1 to 2 page strategic memo, distilled from the locked PRD and tech spec. It is the executive-facing summary: the problem, the approach, the outcomes, the cost, and what v1 delivers. It lets a stakeholder who needs the decision, not the detail, skip the full PRD and tech spec. It gets updated after the prototype runs (see Phase 6).
+Write the 1 to 2 page strategic memo, distilled from the locked PRD and tech spec. It is the executive-facing summary:
+
+- The problem
+- The approach
+- The outcomes
+- The cost
+- What v1 delivers
+
+It lets a stakeholder who needs the decision, not the detail, skip the full PRD and tech spec. It gets updated after the prototype runs (see Phase 6).
 
 Phase 4 output: `requirements/Technical_specification.md` and `requirements/Strategic_memo.md`.
 
