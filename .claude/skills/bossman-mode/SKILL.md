@@ -185,13 +185,19 @@ This is the model choice for the build TEAM, set when you dispatch each agent. I
 
 Assign a model tier per role, not one model for the whole team. Keep the lead thin (routing and monitoring, not reading full files), so its model choice barely matters, then push the strongest model to where judgment is hard and a cheaper model to where the work is well-scoped or bulk.
 
-| Role | Model tier | Effort | Why |
-|------|-----------|--------|-----|
+Tiers are named by capability, never by product, so this table survives a change of provider. The mapping from tier to a concrete model is in `docs/build/Build_workflow_cadence.md` under "Provider mapping", and it is the only place a product name appears.
+
+| Role | Tier | Effort | Why |
+|------|------|--------|-----|
 | Lead (main session) | User's session model | n/a | Fixed by the user. Keep it thin. |
-| Researcher / reader | Cheap or mid | low | Bulk document and API reading. The cost is the input, not the reasoning. |
-| Builder (teammate) | Sonnet | medium | Well-scoped construction against a clear task. Reserve high effort for genuinely hard builds. |
-| Judge | Strongest | high or xhigh | Single quality gate. A missed defect here is the most expensive, so pay for the reasoning. |
-| Sub-planner | Strongest | high | Decomposition errors cascade into every downstream builder. |
+| Researcher / reader | Speed | low | Bulk document and API reading. The cost is the input, not the reasoning. |
+| Builder (teammate) | Balance | medium | Well-scoped construction against a clear task. Reserve high effort for genuinely hard builds. |
+| Test writer | Balance | medium | Bounded work against a finished artifact. |
+| Judge | Depth | high or xhigh | Single quality gate. A missed defect here is the most expensive, so pay for the reasoning. |
+| Adversary | Depth | high | Finding a fluent, plausible, wrong answer needs real adversarial reasoning. A cheaper tier will not find what the judge missed. |
+| Sub-planner | Depth | high | Decomposition errors cascade into every downstream builder. |
+
+The three tiers: Speed for lookups, extraction, classification, and repetitive work. Balance for normal development. Depth for architecture, hard debugging, and long messy agentic work. The effort ladder runs low, medium, high, extra high, max, and rises with the difficulty of the task rather than its importance.
 
 Pass the model and effort choice when you dispatch each sub-agent, and set the teammate model when you create the agent team (the team creation step already says to use Sonnet for each teammate). A tool-less coordinator that delegates heavy reading to cheap scoped workers measured 2.5x cheaper and roughly 3x faster than one frontier model doing everything, with about 84 percent of input tokens billed at the cheap worker rate (the plan-big-execute-small pattern from the claude-cookbooks dive, in the personal-os Reference-repos set). Delegation has a fixed setup cost, so do not shard a phase into many tiny tasks just to parallelize. Each dispatched agent should carry a task worth its overhead.
 

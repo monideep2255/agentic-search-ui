@@ -11,6 +11,7 @@ Last updated: 2026-07-26.
 - [The one-paragraph version](#the-one-paragraph-version)
 - [The eleven stages](#the-eleven-stages)
 - [Model assignment](#model-assignment)
+- [Provider mapping](#provider-mapping)
 - [Where everything is written](#where-everything-is-written)
 - [The two verification halves](#the-two-verification-halves)
 - [Known weak points](#known-weak-points)
@@ -21,41 +22,55 @@ It runs like a normal engineering team. Tickets get read, picked up, worked, and
 
 ## The eleven stages
 
-| # | Stage | Who | Model | Effort |
-|---|-------|-----|-------|--------|
-| 1 | Open the phase: read section 25, verify dependencies merged | Lead | Opus 5 | high |
-| 2 | Read `LEARNINGS.md` filtered to this phase | Lead | Opus 5 | low |
-| 3 | Decompose into tickets with acceptance criteria and file scopes | Lead | Opus 5 | high |
-| 4 | Cut the branch, dispatch researchers | Lead, researchers | Opus 5 lead, Haiku 4.5 research | low |
-| 5 | Builders work tickets in parallel | Builders | Sonnet 5 | medium |
+| # | Stage | Who | Tier | Effort |
+|---|-------|-----|------|--------|
+| 1 | Open the phase: read section 25, verify dependencies merged | Lead | depth | high |
+| 2 | Read `LEARNINGS.md` filtered to this phase | Lead | depth | low |
+| 3 | Decompose into tickets with acceptance criteria and file scopes | Lead | depth | high |
+| 4 | Cut the branch, dispatch researchers | Lead, researchers | depth lead, speed research | low |
+| 5 | Builders work tickets in parallel | Builders | balance | medium |
 | 6 | Record what broke, at the moment it breaks | Whoever hit it | inherits its own | n/a |
-| 7 | Judge grades with cited evidence, closes tickets | Judge | Opus 5 | high |
-| 8 | Adversary attacks what the judge certified | Adversary | Opus 5 | high |
-| 9 | Gates: verify, eval-harness, dev-standards, release-workflow | Lead, test writer | Opus 5 lead, Sonnet 5 tests | medium |
-| 10 | Close the board, render, republish, open the pull request | Lead | Opus 5 | low |
+| 7 | Judge grades with cited evidence, closes tickets | Judge | depth | high or extra high |
+| 8 | Adversary attacks what the judge certified | Adversary | depth | high |
+| 9 | Gates: verify, eval-harness, dev-standards, release-workflow | Lead, test writer | depth lead, balance tests | medium |
+| 10 | Close the board, render, republish, open the pull request | Lead | depth | low |
 | 11 | Review and merge | Product owner | human | n/a |
 
 ## Model assignment
 
 The rule: spend reasoning where a mistake is expensive and cascades, spend cheaply where the task is bounded and the instructions are clear.
 
-| Role | Model | Effort | Why this tier |
-|------|-------|--------|---------------|
-| Lead, planning and decomposition | Opus 5 | high | A bad split cascades into every builder downstream. This is the most expensive place to be wrong |
-| Lead, mechanical steps | Opus 5 | low | Same session, but branch cutting and board closing need no reasoning. Keep the lead thin |
-| Researcher, bulk reading | Haiku 4.5 | low | The cost is input tokens, not reasoning. Reading an API doc does not need a frontier model |
-| Researcher, analysis | Sonnet 5 | medium | When the research needs a judgment, not just a summary |
-| Builder | Sonnet 5 | medium | Well-scoped construction against clear acceptance criteria. Reserve high effort for genuinely hard builds |
-| Sub-planner | Opus 5 | high | Same cascade risk as the lead's own decomposition |
-| Judge | Opus 5 | high or xhigh | A missed defect here is the most expensive thing in the loop, because it ships |
-| Adversary | Opus 5 | high | Finding a fluent, plausible, wrong answer needs real adversarial reasoning. A cheap model will not find what the judge missed |
-| Test writer | Sonnet 5 | medium | Bounded work against a finished artifact |
-| Integrator | Sonnet 5 | medium | Wiring, only dispatched when builders produced isolated pieces |
+| Role | Tier | Effort | Why this tier |
+|------|------|--------|---------------|
+| Lead, planning and decomposition | depth | high | A bad split cascades into every builder downstream. This is the most expensive place to be wrong |
+| Lead, mechanical steps | depth | low | Same session, but branch cutting and board closing need no reasoning. Keep the lead thin |
+| Researcher, bulk reading | speed | low | The cost is input tokens, not reasoning. Reading an API doc does not need a frontier model |
+| Researcher, analysis | balance | medium | When the research needs a judgment, not just a summary |
+| Builder | balance | medium | Well-scoped construction against clear acceptance criteria. Reserve high effort for genuinely hard builds |
+| Sub-planner | depth | high | Same cascade risk as the lead's own decomposition |
+| Judge | depth | high or extra high | A missed defect here is the most expensive thing in the loop, because it ships |
+| Adversary | depth | high | Finding a fluent, plausible, wrong answer needs real adversarial reasoning. A cheap tier will not find what the judge missed |
+| Test writer | balance | medium | Bounded work against a finished artifact |
+| Integrator | balance | medium | Wiring, only dispatched when builders produced isolated pieces |
 
 Two notes on this table:
 
-- These are build-time models, the agents that write System 3. They are a separate concern from the product's own guard, plan, and synth runtime tiers, which route models per user query at serve time and are chosen by model-bench at build phase 7.0. Do not conflate the two.
+- These are build-time capability tiers, assigned to the agents that write System 3 itself. They are a separate concept from the product's own guard, plan, and synth runtime tiers, which route models per user query at serve time and are chosen by model-bench at build phase 7.0. Both are called tiers, but they name different things: one sizes the agent doing the building, the other picks the model that answers a live query. Do not conflate the two.
 - Delegation has a fixed setup cost, so do not shard a phase into many tiny tasks just to parallelize. Each dispatched agent should carry a task worth its overhead.
+
+## Provider mapping
+
+Two providers, three capability bands each, and an identical five-rung effort ladder. This table is the only place a provider name appears in this document. Every tier reference elsewhere, in the stage table and in the model assignment table above, points back to a row here.
+
+| Tier | What it is for | Claude | Codex |
+|------|-----------------|--------|-------|
+| Depth | Architecture, hard debugging, long messy agentic work with many tradeoffs | Opus | Sol |
+| Balance | Normal development work, bounded construction, careful checking | Sonnet | Terra |
+| Speed | Quick lookups, extraction, classification, repetitive work | Haiku | Luna |
+
+Effort ladder, identical on both providers: low, medium, high, extra high, max. Raise the rung as the task gets harder, low for quick and bounded work, max for the one hardest problem where maximum depth matters most.
+
+Switching the harness to a different provider means editing this one table and nothing else. Nothing in the stage table, the model assignment table, or `Phase_6_execution_flow.html` names a product directly, so a provider swap is a single edit here, not a search-and-replace across every planning document. That indirection is the property that makes the harness portable.
 
 ## Where everything is written
 
