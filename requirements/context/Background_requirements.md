@@ -422,13 +422,13 @@ Framework for deciding when a build is for learning vs. production.
 Source: `reference/personal-os-work/NIH/Agentic-Search/Reference/thoughts/`
 
 - `Board_session_collaboration_April_23.md`: collaboration patterns
-- `Board_session_Rana_emotional_clarity_April_25.md`: emotional clarity in decision-making
+- `Board_session_collaborator_emotional_clarity_April_25.md`: emotional clarity in decision-making
 
 ### Meeting notes
 
-Source: `reference/personal-os-work/NIH/Agentic-Search/Meetings/Victor Cid/1_April_30.md`
+Source: `reference/personal-os-work/NIH/Agentic-Search/Meetings/NCBI-coordination-contact/1_April_30.md`
 
-Coordination meeting with Victor Cid.
+Coordination meeting with an NCBI coordination contact.
 
 ---
 
@@ -566,7 +566,7 @@ NCBI search project as playground with latest tools (Codex, Cursor, Droid, Claud
 
 Where does AI fit in end-to-end product development (discovery to execution)? Apply auto-research (Karpathy) to work. Add context tracing for agents when building. Can a self-improving loop be created?
 
-### Discussion with Carl
+### Discussion with a collaborator
 
 Search must match current GQuery (keyword matching) + add dialogue/conversation. Harness engineering is the differentiator.
 

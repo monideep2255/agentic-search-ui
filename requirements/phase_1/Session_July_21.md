@@ -138,7 +138,7 @@ Logged as a decision (2026-07-21).
 Earlier planning disagreed on the fourth source for Step 1.6. Plan.md listed "NLM lessons," the continuation prompt listed "board session notes." Both were reviewed and routed out of 1.6:
 
 - NLM lessons (`Lessons_from_NLM_KG_contractor_for_System_3.md`): a technical-borrowings doc, not product psychology. Some of its six recommendations are already decided (schema slicing matches the Plan-step schema-slicing decision; the validation gate matches the Cypher validation pipeline decision). The unclaimed items are routed into the tool and architecture decision set for Steps 1.3 and 1.7: entity grounding as a `ground_entities` tool called before Cypher generation, few-shot examples drawn from the golden dataset, structured query-intent logging on the planner output, and the overengineering rubric as a periodic self-check.
-- Board session notes (`thoughts/Board_session_*.md`): organizational and stakeholder dynamics (the Rana collaboration and the stakeholder-engagement split). These feed Phase 2 user research, not PRD psychology requirements. Parked for Phase 2.
+- Board session notes (`thoughts/Board_session_*.md`): organizational and stakeholder dynamics (an outside collaboration and the stakeholder-engagement split). These feed Phase 2 user research, not PRD psychology requirements. Parked for Phase 2.
 
 ## Decisions logged to DECISIONS.md
 
@@ -152,12 +152,12 @@ Five rows appended (2026-07-21):
 
 ## What is next
 
-Step 1.7: review contractor documents (7 sources): the NFR baseline, the NLQ approach, meeting decisions D1 through D5, the contractor's latest documents, and Anne's evaluation playbook.
+Step 1.7: review contractor documents (7 sources): the NFR baseline, the NLQ approach, meeting decisions D1 through D5, the contractor's latest documents, and the evaluation playbook.
 
 ## Step 1.7: contractor documents (7 sources)
 
 Date: 2026-07-21 (same session, continued)
-Sources: NFR baseline (10 categories), NLQ approach (6 ranked options), April 21 KG-Tech WG meeting notes (D1 through D5), July 07 K3 US1/US2 review package (17 competency questions), Anne's evaluation playbook.
+Sources: NFR baseline (10 categories), NLQ approach (6 ranked options), April 21 KG-Tech WG meeting notes (D1 through D5), July 07 K3 US1/US2 review package (17 competency questions), the evaluation playbook.
 
 ### The lens: the contractor package is Track 2
 
@@ -206,9 +206,9 @@ D1 (infra planning early), D3 (6-month POC then MVP), and D5 (coordination) are 
 
 D2, federation, is the real decision. The contractor's federation means querying external RDF knowledge graphs in place. We already deliver the value of federation through the three-layer data architecture (Layer 1 graph plus Layer 2 NCBI APIs plus Layer 3 enrichment, combined at query time), which is our moat. Decision: v1 federation scope is exactly the three data layers, all NCBI or NCBI-adjacent; external non-NCBI knowledge-graph federation defers to v2.
 
-### Anne's evaluation playbook: the milestone ladder at two altitudes
+### The evaluation playbook: the milestone ladder at two altitudes
 
-The strongest thing to adopt is Anne's milestone ladder. She decomposes trustworthiness into a climb from mechanical to scientific to external, each gate a go/no-go with its own metric. Mapped to System 3, it also answers the stakeholder question:
+The strongest thing to adopt is the milestone ladder. It decomposes trustworthiness into a climb from mechanical to scientific to external, each gate a go/no-go with its own metric. Mapped to System 3, it also answers the stakeholder question:
 
 | Gate | What it checks in System 3 | Test type | Stakeholder served |
 |---|---|---|---|
@@ -217,11 +217,11 @@ The strongest thing to adopt is Anne's milestone ladder. She decomposes trustwor
 | G3 | cited, SME-credible scientific answers | subjective, human or LLM-judge | researcher plus SME reviewer |
 | G4 | reuse-ready delivery formats | external adoption | external adopters plus NCBI leadership |
 
-Bart's leadership-explainability test (can Richard and Steve talk about it at the ICD meeting) is a fifth success test, served by the strategic memo, not a code gate.
+The leadership-explainability test (can NCBI leadership talk about it at the ICD meeting) is a fifth success test, served by the strategic memo, not a code gate.
 
-Where does it live: the altitude split. The milestone ladder framework (the four gates plus the stakeholder mapping) becomes a hard PRD requirement in the success-metrics and acceptance-criteria sections (the constitution, stable). The operational numbers (thresholds, per-competency-question mapping, SME scoring rubric, feedback loop) live in the Phase 2 evaluation playbook (the laws, tuned as we learn), so the locked PRD does not reopen to change a metric. The eval harness is the courtroom that runs the gates. This is the same pattern the Plan already uses (the tech spec references the playbook rather than restating it) and Anne's own two-views-of-one-thing. Evaluation is a process, so PRD success metrics are stakeholder-segmented, not one blended number.
+Where does it live: the altitude split. The milestone ladder framework (the four gates plus the stakeholder mapping) becomes a hard PRD requirement in the success-metrics and acceptance-criteria sections (the constitution, stable). The operational numbers (thresholds, per-competency-question mapping, SME scoring rubric, feedback loop) live in the Phase 2 evaluation playbook (the laws, tuned as we learn), so the locked PRD does not reopen to change a metric. The eval harness is the courtroom that runs the gates. This is the same pattern the Plan already uses (the tech spec references the playbook rather than restating it) and the two-views-of-one-thing framing. Evaluation is a process, so PRD success metrics are stakeholder-segmented, not one blended number.
 
-Reinforcements of existing decisions (noted, not new): the competency-question fixed eval set with the moat test (can a bare model or Google already answer it), and the derived-versus-cited provenance rule (REP-01A). Reference only: the logic model is not a separate artifact, because our PRD outcomes-and-stakeholders section is our logic model; and Anne's honest limit (AI got to the data but not the working graph) does not bite us the same way because our graph already exists.
+Reinforcements of existing decisions (noted, not new): the competency-question fixed eval set with the moat test (can a bare model or Google already answer it), and the derived-versus-cited provenance rule (REP-01A). Reference only: the logic model is not a separate artifact, because our PRD outcomes-and-stakeholders section is our logic model; and the honest limit (AI got to the data but not the working graph) does not bite us the same way because our graph already exists.
 
 ### Decisions logged to DECISIONS.md (2026-07-21)
 

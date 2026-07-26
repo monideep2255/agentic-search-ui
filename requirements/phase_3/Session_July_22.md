@@ -13,11 +13,11 @@ Phase 3 of System 3 planning: the PRD. Completed in one working session on 2026-
 
 Phase 2 finished the evaluation playbook. Phase 3 turns the locked Phase 1 synthesis and the Phase 2 playbook into the PRD, the single source of truth for what System 3 does, for whom, and how success is measured.
 
-Framing question settled first: who is the primary reader? Confirmed the primary reader is Anne and the NCBI stakeholders who decide whether the wedge is real and worth backing, with the build team as the secondary reader who inherits the PRD as the build contract. So the PRD leans on outcomes, the wedge, and success criteria up front.
+Framing question settled first: who is the primary reader? Confirmed the primary reader is the NCBI stakeholders who decide whether the wedge is real and worth backing, with the build team as the secondary reader who inherits the PRD as the build contract. So the PRD leans on outcomes, the wedge, and success criteria up front.
 
 ## Step 3.1: outline
 
-Pulled the spec template (`reference/personal-os-work/NIH/Agentic-Search/Specs/_templates/PRODUCT.md`) and the milestone-ladder spine from the synthesis. Key structural decision, already made in Phase 1: the outcomes-and-stakeholders section is the logic model, built on Anne's four gates (G1 tools work alone and G2 cross-layer join serve the build team; G3 cited SME-credible answers serves the researcher and SME reviewer; G4 reuse-ready formats serves external adopters and NCBI leadership; Bart's leadership-explainability test is served by the strategic memo, not a code gate).
+Pulled the spec template (`reference/personal-os-work/NIH/Agentic-Search/Specs/_templates/PRODUCT.md`) and the milestone-ladder spine from the synthesis. Key structural decision, already made in Phase 1: the outcomes-and-stakeholders section is the logic model, built on the four gates (G1 tools work alone and G2 cross-layer join serve the build team; G3 cited SME-credible answers serves the researcher and SME reviewer; G4 reuse-ready formats serves external adopters and NCBI leadership; the leadership-explainability test is served by the strategic memo, not a code gate).
 
 Confirmed the 15-section outline, ordered for the stakeholder reader: the case first (problem and wedge, outcomes, success, personas, acceptance criteria), then the build contract (flows, UI, cost UX, edge cases, guardrails, security, accessibility, delivery formats), then the boundaries (out of scope, open items).
 

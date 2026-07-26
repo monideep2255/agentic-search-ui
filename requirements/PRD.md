@@ -42,7 +42,7 @@ The NCBI strategic directives are fixed constraints on this product, not positio
 
 ## Outcomes and stakeholders
 
-This section is the logic model. System 3's success is defined by Anne's milestone ladder: four climbing gates, each a go/no-go that serves a named stakeholder. A gate does not open until the one below it holds.
+This section is the logic model. System 3's success is defined by the milestone ladder: four climbing gates, each a go/no-go that serves a named stakeholder. A gate does not open until the one below it holds.
 
 ```mermaid
 flowchart TD
@@ -60,7 +60,7 @@ flowchart TD
 - G3, cited, SME-credible scientific answers: a subject-matter expert reads the assembled answer and finds it credible, cited, and free of overclaim. Human-judged. Serves the researcher and the SME reviewer. This is the gate the wedge lives or dies on.
 - G4, reuse-ready delivery formats: the same answer is reachable and reusable through the delivery formats (web, API, MCP), so others can build on it. External. Serves external adopters and NCBI leadership.
 
-A fifth success test sits beside the ladder: Bart's leadership-explainability test, whether a leader can understand what the system does and why to trust it. It is served by the strategic memo, not by a code gate, so it is a PRD-adjacent outcome, not an acceptance criterion here.
+A fifth success test sits beside the ladder: the leadership-explainability test, whether a leader can understand what the system does and why to trust it. It is served by the strategic memo, not by a code gate, so it is a PRD-adjacent outcome, not an acceptance criterion here.
 
 The adoption outcome that ties these together: System 3 becomes the researcher's default first stop for a biomedical question. Habit is the goal, and trust is the engine that forms it, since every question returns a verifiably cited answer faster than navigating five databases by hand.
 

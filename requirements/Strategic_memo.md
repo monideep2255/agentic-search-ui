@@ -55,7 +55,7 @@ flowchart LR
 - The moat test selects the questions: a candidate qualifies only if no strong general tool answers it with real, resolvable citations. That keeps the bar honest against 2026 tools.
 - An offline eval gate runs before any answer feature ships: an 8-point rubric with cite-or-refuse enforced, scored for reliability, not a single lucky pass.
 - An online feedback loop grows the question set from real usage, turning what people actually ask into better routing.
-- Anne's milestone ladder frames success as four climbing gates: each tool works alone, sources join across the layers, answers are cited and credible to a subject-matter expert, and the result is reusable through every delivery format.
+- The milestone ladder frames success as four climbing gates: each tool works alone, sources join across the layers, answers are cited and credible to a subject-matter expert, and the result is reusable through every delivery format.
 
 ## Where it goes
 

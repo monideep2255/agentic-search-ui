@@ -24,7 +24,7 @@
 ### Step 1.1
 
 1. Innovation proposal (`Proposals/Innovation_proposal_2026.md`)
-2. NCBI strategic alignment (`NCBI strategy/` - 5 documents: FY26 guiding principles, Gold Standard Science, AI Action Plan, Kim Pruitt email, first-principles breakdown)
+2. NCBI strategic alignment (`NCBI strategy/` - 5 documents: FY26 guiding principles, Gold Standard Science, AI Action Plan, the Acting Director's email, first-principles breakdown)
 3. Two-track plan (`Plan/Two_track_plan.md`)
 
 ---
@@ -97,7 +97,7 @@ Architecture:
 
 Three directives treated as requirements that constrain system behavior, not aspirational positioning:
 
-FY26 guiding principles (Kim Pruitt, Acting Director):
+FY26 guiding principles (from NCBI's Acting Director):
 - Simplify content discovery for users
 - Eliminate the need for users to understand NCBI's internal architecture
 - Optimize content and metadata for AI and machine consumption

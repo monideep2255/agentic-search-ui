@@ -31,7 +31,7 @@ Rules:
 ## What Phase 4 produces
 
 - `requirements/Technical_specification.md`: the build blueprint. It translates PRD requirements into implementation decisions and a build order. It references the evaluation playbook and the eval-harness and dev-standards skills rather than restating them. Locked 2026-07-25.
-- `requirements/Strategic_memo.md`: the one-to-two-page executive distillation of the PRD and tech spec, for a stakeholder who needs the decision, not the detail. It serves Bart's leadership-explainability test. It gets updated after the Phase 6 prototype.
+- `requirements/Strategic_memo.md`: the one-to-two-page executive distillation of the PRD and tech spec, for a stakeholder who needs the decision, not the detail. It serves the leadership-explainability test. It gets updated after the Phase 6 prototype.
 
 ## Phase 4 steps
 

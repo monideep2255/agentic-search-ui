@@ -163,7 +163,7 @@ The synthesis document fills the gap between chronological session notes and a f
 | NLQ approach (6 ranked options) | DECIDED (2026-07-21): confidence-layered hybrid. POC leads with schema-aware Cypher generation plus a validate-and-repair pipeline; verified templates layered on for the ~10 tier-1 must-pass CQs while hardening to v1 (not rigid rank-2 templates). Query language sealed inside the tool for backend agnosticism | Done, see DECISIONS.md |
 | Meeting decisions (D1-D5) | Federation scope: how much for v1? Template vs. NL: confirm NL from day 1. | Monideep decides |
 | Contractor's latest documents | What changed since the last handoff? Which updates affect our architecture or the PRD? | Discuss together |
-| Anne's evaluation playbook | Which outcome definitions and evaluation criteria become requirements? Which stakeholders does each outcome serve? | Discuss together |
+| The evaluation playbook | Which outcome definitions and evaluation criteria become requirements? Which stakeholders does each outcome serve? | Discuss together |
 
 ### Step 1.8: review tools and infrastructure - COMPLETE (2026-07-21)
 
@@ -316,7 +316,7 @@ Use the template from `reference/personal-os-work/NIH/Agentic-Search/Specs/` as 
 
 Sections (expected):
 - Problem statement
-- Outcomes and stakeholders (the outcome each user segment needs, and the named stakeholders each serves, e.g. Anne)
+- Outcomes and stakeholders (the outcome each user segment needs, and the named stakeholders each serves, e.g. the evaluation stakeholder)
 - Users and personas (from CQ analysis)
 - Core user flows
 - UI experience (end-to-end user flow, error states, streaming UX, citation interaction, loading/empty states, what happens when guardrails fire)
@@ -618,7 +618,7 @@ One phase at a time. No skipping.
 - 2026-07-24: Opened Phase 4 (technical specification), Step 4.0 next. Set the build-phase doc-review cadence: the PRD, tech spec, and strategic memo freeze after Phase 4 and update only at the Step 6.2 reconciliation, and new-intake is swept once at Step 6.2 rather than continuously (Step 6.2 and the how-new-information-gets-incorporated section updated). Declined three third-party NCBI MCP servers as inbound dependencies, kept as reference only. 94 decisions logged.
 - 2026-07-22: Completed Phase 2 (Steps 2.1 to 2.5) and produced the evaluation playbook (the moat test with the no-general-tool-equivalent bar, the seven-question v1 must-pass set plus the fast-follow and expansion pool, the coverage metric, the offline eval gate, model selection, and the online feedback loop). Completed Phase 3: drafted and locked the PRD. 90 decisions logged.
 - 2026-07-21: Completed Phase 1 (Steps 1.7 to 1.13) and wrote the Phase 1 synthesis.
-  - Step 1.7: tagged the contractor package as Track 2, bucketed the NFR baseline, set a generation-first NLQ hybrid with verified templates for the tier-1 competency questions, scoped v1 federation to the three data layers, and adopted Anne's milestone ladder as a PRD success requirement.
+  - Step 1.7: tagged the contractor package as Track 2, bucketed the NFR baseline, set a generation-first NLQ hybrid with verified templates for the tier-1 competency questions, scoped v1 federation to the three data layers, and adopted the milestone ladder as a PRD success requirement.
   - Step 1.8: locked the stack (Railway, PostHog, LangSmith, and a self-maintained in-repo tracker) and the build-first-then-migrate hosting strategy.
   - Step 1.9: dispositioned the ten open questions.
   - Step 1.10: settled the five cross-cutting concerns (forbidden-output boundary, data freshness, rate limiting, UI architecture, accessibility).
