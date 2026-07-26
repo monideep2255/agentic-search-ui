@@ -1,0 +1,1042 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System 3 planning overview</title>
+<style>
+  /* ---- Tokens: light (chosen cool neutrals, teal accent, ochre provenance) ---- */
+  :root {
+    --font-serif: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, "Times New Roman", serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+    --bg: #f5f7f7;
+    --fg: #16201f;
+    --muted: #566462;
+    --border: #dce4e3;
+    --card-bg: #ffffff;
+    --accent: #0c6e78;
+    --accent-strong: #084c54;
+    --accent-soft: #e2f0f0;
+    --provenance: #94610a;
+    --provenance-strong: #6f4906;
+    --provenance-soft: #f4ecd9;
+    --code-bg: #eef2f2;
+    --table-head-bg: #eaf0ef;
+    --table-row-alt: #f7f9f9;
+    --shadow: rgba(14, 32, 31, 0.07);
+    --l1: #0c6e78;  --l1-bg: #e2f0f0;
+    --l2: #33517f;  --l2-bg: #e7edf5;
+    --l3: #8a5a12;  --l3-bg: #f4ecd9;
+    --danger: #a4262c;  --danger-bg: #f8e9e8;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10161a;
+      --fg: #e4ecea;
+      --muted: #93a3a0;
+      --border: #263038;
+      --card-bg: #171f24;
+      --accent: #43c6bd;
+      --accent-strong: #79ded6;
+      --accent-soft: #123230;
+      --provenance: #d59b4a;
+      --provenance-strong: #e6b878;
+      --provenance-soft: #33280f;
+      --code-bg: #1e272d;
+      --table-head-bg: #1f272f;
+      --table-row-alt: #1a2127;
+      --shadow: rgba(0, 0, 0, 0.42);
+      --l1: #43c6bd;  --l1-bg: #123230;
+      --l2: #8fb0e0;  --l2-bg: #1b2740;
+      --l3: #d59b4a;  --l3-bg: #33280f;
+      --danger: #f18f8f;  --danger-bg: #3a1d1d;
+    }
+  }
+
+  :root[data-theme="light"] {
+    --bg: #f5f7f7;
+    --fg: #16201f;
+    --muted: #566462;
+    --border: #dce4e3;
+    --card-bg: #ffffff;
+    --accent: #0c6e78;
+    --accent-strong: #084c54;
+    --accent-soft: #e2f0f0;
+    --provenance: #94610a;
+    --provenance-strong: #6f4906;
+    --provenance-soft: #f4ecd9;
+    --code-bg: #eef2f2;
+    --table-head-bg: #eaf0ef;
+    --table-row-alt: #f7f9f9;
+    --shadow: rgba(14, 32, 31, 0.07);
+    --l1: #0c6e78;  --l1-bg: #e2f0f0;
+    --l2: #33517f;  --l2-bg: #e7edf5;
+    --l3: #8a5a12;  --l3-bg: #f4ecd9;
+    --danger: #a4262c;  --danger-bg: #f8e9e8;
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #10161a;
+    --fg: #e4ecea;
+    --muted: #93a3a0;
+    --border: #263038;
+    --card-bg: #171f24;
+    --accent: #43c6bd;
+    --accent-strong: #79ded6;
+    --accent-soft: #123230;
+    --provenance: #d59b4a;
+    --provenance-strong: #e6b878;
+    --provenance-soft: #33280f;
+    --code-bg: #1e272d;
+    --table-head-bg: #1f272f;
+    --table-row-alt: #1a2127;
+    --shadow: rgba(0, 0, 0, 0.42);
+    --l1: #43c6bd;  --l1-bg: #123230;
+    --l2: #8fb0e0;  --l2-bg: #1b2740;
+    --l3: #d59b4a;  --l3-bg: #33280f;
+    --danger: #f18f8f;  --danger-bg: #3a1d1d;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+
+  * { box-sizing: border-box; }
+
+  body, .page-shell {
+    background: var(--bg);
+    color: var(--fg);
+  }
+
+  .page-shell {
+    font-family: var(--font-sans);
+    line-height: 1.65;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100vh;
+  }
+
+  code, .mono {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    background: var(--code-bg);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    word-break: break-word;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1px;
+  }
+  a:hover { color: var(--accent-strong); }
+  a:focus-visible,
+  .topnav a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* ---- Headings: serif for document structure, sans for operational detail ---- */
+  h1, h2, h3 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  /* ---- Hero ---- */
+  .hero {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 3.6rem 1.5rem 2.4rem;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 0.9rem;
+  }
+
+  .hero h1 {
+    font-size: 2.9rem;
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.7rem;
+  }
+
+  .hero .tagline {
+    font-size: 1.18rem;
+    line-height: 1.55;
+    color: var(--muted);
+    max-width: 60ch;
+    margin: 0 0 1.4rem;
+  }
+
+  /* ---- Hero stat strip: the real numbers, front-loaded ---- */
+  .stat-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.4rem 2.4rem;
+    margin: 1.6rem 0;
+    padding: 1.1rem 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .stat { display: flex; flex-direction: column; gap: 0.12rem; }
+  .stat-num {
+    font-family: var(--font-serif);
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label {
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+
+  .failure-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  @media (max-width: 640px) {
+    .failure-grid { grid-template-columns: 1fr; }
+  }
+
+  .failure-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.1rem 1.3rem;
+    box-shadow: 0 1px 3px var(--shadow);
+  }
+
+  .failure-card .label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
+    color: var(--fg);
+  }
+
+  .failure-card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+  /* The moat is provenance: mark it in the provenance (ochre) accent, not teal */
+  .moat-banner {
+    margin-top: 1.3rem;
+    background: var(--provenance-soft);
+    border: 1px solid var(--provenance);
+    border-radius: 8px;
+    padding: 1rem 1.3rem;
+    font-size: 0.98rem;
+  }
+
+  .moat-banner .label {
+    font-weight: 600;
+    color: var(--provenance-strong);
+    display: block;
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.01em;
+  }
+
+  .status-line {
+    margin-top: 1.6rem;
+    font-size: 0.88rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Sticky section nav ---- */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .topnav-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0.7rem 1.5rem;
+    display: flex;
+    gap: 1.4rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .topnav-brand {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 1.02rem;
+    color: var(--fg);
+    text-decoration: none;
+    margin-right: 0.3rem;
+  }
+
+  .topnav a.navlink {
+    font-size: 0.9rem;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 0.3rem 0;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .topnav a.navlink:hover,
+  .topnav a.navlink.active {
+    color: var(--fg);
+    border-bottom-color: var(--accent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .topnav a.navlink { transition: none; }
+  }
+
+  /* ---- Main content ---- */
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+  }
+
+  section.doc-section {
+    padding-top: 3rem;
+    scroll-margin-top: 4.5rem;
+  }
+
+  section.doc-section:first-of-type { padding-top: 2.5rem; }
+
+  .section-kicker {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  h2 {
+    font-size: 1.9rem;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.5rem;
+  }
+
+  .section-intro {
+    color: var(--muted);
+    font-size: 1.02rem;
+    max-width: 68ch;
+    margin: 0 0 1.8rem;
+  }
+
+  h3 {
+    font-size: 1.32rem;
+    margin: 2.1rem 0 0.7rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--border);
+  }
+
+  section.doc-section > h3:first-of-type,
+  .no-rule { border-top: none; padding-top: 0; }
+
+  h4 {
+    font-family: var(--font-sans);
+    font-size: 1.02rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin: 1.4rem 0 0.5rem;
+    color: var(--fg);
+  }
+
+  p { margin: 0 0 1rem; max-width: 72ch; }
+
+  ul, ol { margin: 0 0 1.1rem; padding-left: 1.4rem; max-width: 72ch; }
+  li { margin-bottom: 0.4rem; }
+  li:last-child { margin-bottom: 0; }
+
+  .tight li { margin-bottom: 0.2rem; }
+
+  /* ---- Tables ---- */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 0 0 1.4rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.9rem;
+    min-width: 480px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  th {
+    background: var(--table-head-bg);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  tbody tr:nth-child(even) { background: var(--table-row-alt); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* ---- Layer tags: a quiet, harmonious triad ---- */
+  .tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .tag-l1 { background: var(--l1-bg); color: var(--l1); }
+  .tag-l2 { background: var(--l2-bg); color: var(--l2); }
+  .tag-l3 { background: var(--l3-bg); color: var(--l3); }
+
+  /* ---- Callout cards ---- */
+  .callout-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 0 0 1.4rem;
+  }
+
+  @media (max-width: 640px) {
+    .callout-grid { grid-template-columns: 1fr; }
+  }
+
+  .callout {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+  }
+
+  .callout .callout-title {
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    font-size: 0.98rem;
+  }
+
+  .callout p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+  .callout.provenance { border-left-color: var(--provenance); }
+  .callout.danger { border-left-color: var(--danger); }
+
+  /* ---- Mermaid figures ---- */
+  pre.mermaid {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem;
+    margin: 0 0 1.5rem;
+    overflow-x: auto;
+    text-align: center;
+  }
+
+  .diagram-caption {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: -0.9rem 0 1.5rem;
+    text-align: center;
+  }
+
+  /* ---- In-section jump list ---- */
+  .subnav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.8rem 1.1rem;
+    margin: 0 0 1.8rem;
+    font-size: 0.86rem;
+  }
+
+  .subnav a { text-decoration: none; }
+  .subnav a:hover { text-decoration: underline; }
+  .subnav .subnav-label { color: var(--muted); margin-right: 0.3rem; font-weight: 600; }
+
+  hr.divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.6rem 0;
+  }
+
+  footer {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 3rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+  }
+
+  footer p { margin: 0 0 0.5rem; max-width: none; }
+
+  .back-to-top { font-size: 0.85rem; }
+
+  /* ---- Self-contained flow diagrams (no external mermaid engine) ---- */
+  .flowchart { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 1.4rem 1.1rem; margin: 0 0 1.5rem; overflow-x: auto; }
+  .flow-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.45rem; }
+  .flow-col { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+  .flow-group { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+  .flow-node { display: inline-flex; align-items: center; text-align: center; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.8rem; font-size: 0.88rem; font-weight: 600; line-height: 1.25; }
+  .flow-node.sm { font-size: 0.8rem; font-weight: 500; padding: 0.35rem 0.65rem; }
+  .flow-node.accent { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-soft); }
+  .flow-node.gate { border-style: dashed; }
+  .flow-arrow { color: var(--muted); font-weight: 700; }
+  .flow-arrow.v { display: block; }
+  .flow-note { font-size: 0.78rem; color: var(--muted); font-weight: 400; }
+  .flow-label { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+  .flow-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; justify-content: center; }
+  .flow-branch { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.45rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed var(--border); }
+</style>
+</head>
+<body>
+
+<div class="page-shell">
+
+  <header class="hero" id="hero">
+    <span class="eyebrow">System 3 planning overview</span>
+    <h1>System 3</h1>
+    <p class="tagline">A biomedical research partner. Ask a plain-language question and it returns a cited, cross-database answer where every claim links back to a real, resolvable NCBI source record.</p>
+
+    <div class="stat-strip">
+      <div class="stat"><span class="stat-num">115M</span><span class="stat-label">graph nodes</span></div>
+      <div class="stat"><span class="stat-num">693M</span><span class="stat-label">graph edges</span></div>
+      <div class="stat"><span class="stat-num">3</span><span class="stat-label">data layers</span></div>
+      <div class="stat"><span class="stat-num">7</span><span class="stat-label">agent tools</span></div>
+      <div class="stat"><span class="stat-num">6</span><span class="stat-label">delivery surfaces</span></div>
+    </div>
+
+    <div class="failure-grid">
+      <div class="failure-card">
+        <div class="label">Failure 1: manual database-hopping</div>
+        <p>A researcher crosses Gene, then ClinVar, then PubMed, then dbVar, then MedGen by hand, copying identifiers between them. Slow, easy to miss a link, never assembled in one place.</p>
+      </div>
+      <div class="failure-card">
+        <div class="label">Failure 2: confident-but-wrong AI</div>
+        <p>A general tool answers instantly but from training priors, with citations that are often invented. For biomedical work a confident wrong answer is more dangerous than no answer.</p>
+      </div>
+    </div>
+
+    <div class="moat-banner">
+      <span class="label">The moat</span>
+      Data plus provenance: cited, deterministic, cross-database synthesis over the NCBI graph and APIs. That is the one thing a general tool cannot copy.
+    </div>
+
+    <div class="status-line">
+      PRD locked 2026-07-22. Technical specification locked 2026-07-25. The build is next.
+    </div>
+  </header>
+
+  <nav class="topnav" aria-label="Section navigation">
+    <div class="topnav-inner">
+      <a class="topnav-brand" href="#hero">System 3</a>
+      <a class="navlink" href="#overview">Overview</a>
+      <a class="navlink" href="#prd">PRD</a>
+      <a class="navlink" href="#tech-spec">Technical specification</a>
+      <a class="navlink" href="#eval">Evaluation playbook</a>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ============ SECTION 1: OVERVIEW ============ -->
+    <section class="doc-section" id="overview">
+      <div class="section-kicker">Orientation</div>
+      <h2>Overview</h2>
+      <p class="section-intro">A one-read orientation to System 3: what it is, why it is different, and what v1 builds. Distilled from the locked PRD and the locked technical specification. Strategic memo, last updated 2026-07-25.</p>
+
+      <h3 class="no-rule">What it is</h3>
+      <p>System 3 is a biomedical research partner. You ask a plain-language question, and it returns a cited, cross-database answer where every claim links back to a real, resolvable NCBI source record. It reaches across the NCBI knowledge graph and the live NCBI and enrichment APIs, through hard guardrails, and assembles what a researcher would otherwise gather by hand. It delivers cited, cross-database synthesis that a general AI tool cannot produce or cite.</p>
+
+      <h3>Why it exists</h3>
+      <p>It sits between the two failures above. The moat is data plus provenance: cited, deterministic, cross-database synthesis over the NCBI graph and APIs. That is the one thing a general tool cannot copy.</p>
+
+      <h3>How it works</h3>
+      <p>Every query runs one five-step agent loop and reaches three data layers.</p>
+
+      <figure class="flowchart" aria-label="The five-step agent loop">
+        <div class="flow-row">
+          <span class="flow-node">Guardrail</span><span class="flow-arrow">&rarr;</span>
+          <span class="flow-node">Think</span><span class="flow-arrow">&rarr;</span>
+          <span class="flow-node">Plan</span><span class="flow-arrow">&rarr;</span>
+          <span class="flow-node accent">Act</span><span class="flow-arrow">&rarr;</span>
+          <span class="flow-node">Write</span>
+        </div>
+        <div class="flow-branch">
+          <span class="flow-label">Act reaches</span><span class="flow-arrow">&rarr;</span>
+          <span class="tag tag-l1">Layer 1 graph</span>
+          <span class="tag tag-l2">Layer 2 NCBI APIs</span>
+          <span class="tag tag-l3">Layer 3 enrichment</span>
+        </div>
+      </figure>
+      <p class="diagram-caption">The five-step agent loop, with Act reaching all three data layers.</p>
+
+      <ul>
+        <li>The agent loop: Guardrail validates and blocks unsafe input, Think classifies the query, Plan decomposes it into tool calls, Act runs them, Write synthesizes a cited answer.</li>
+        <li>The three layers: Layer 1 is the knowledge graph (115M nodes, 693M edges), the fast connected map across databases. Layer 2 is the live NCBI APIs, the source of truth for current values. Layer 3 is the enrichment APIs (PubTator3, LitVar2, ClinicalTrials.gov).</li>
+        <li>One core, many surfaces: a single agent core emits one typed event stream, and six thin adapters render it (Web UI, REST plus SSE, GraphQL, MCP server, KGX export, CLI).</li>
+        <li>Cost and safety by construction: strong models plan and write while cheap models fetch and read, and the model never sees a raw untrusted payload. Every claim is cite-or-refuse: it ties to a real source, or the system says it could not find the answer and stops.</li>
+      </ul>
+
+      <h3>What v1 delivers</h3>
+      <ul>
+        <li>Seven flagship questions: the moat-seven competency questions v1 must answer, from a CNV region to cited ACMG-relevant evidence, to a Salmonella isolate to its outbreak cluster and resistance genes, to a paper to all of its linked data.</li>
+        <li>Seven tools: <code>cypher_query</code> for the graph, <code>ncbi_efetch</code> and <code>ncbi_dbsnp</code> for NCBI records and variants, <code>pubtator_annotate</code> and <code>litvar2_lookup</code> for literature enrichment, and <code>pathogen_detection</code> and <code>clinicaltrials_search</code> for the outbreak and clinical-trial paths.</li>
+        <li>Two hard guarantees: cite-or-refuse, so no claim ships uncited, and assemble the evidence never the verdict, so the system cites clinical evidence but never diagnoses, classifies pathogenicity, or prioritizes a variant. A human decides.</li>
+      </ul>
+
+      <h3>How we know it works</h3>
+      <ul>
+        <li>The moat test selects the questions: a candidate qualifies only if no strong general tool answers it with real, resolvable citations. That keeps the bar honest against 2026 tools.</li>
+        <li>An offline eval gate runs before any answer feature ships: an 8-point rubric with cite-or-refuse enforced, scored for reliability, not a single lucky pass.</li>
+        <li>An online feedback loop grows the question set from real usage, turning what people actually ask into better routing.</li>
+        <li>The milestone ladder frames success as four climbing gates: each tool works alone, sources join across the layers, answers are cited and credible to a subject-matter expert, and the result is reusable through every delivery format.</li>
+      </ul>
+
+      <h3>Where it goes</h3>
+      <p>The end state is a research partner, not a chatbot. The work that once took a researcher 500 sources over weeks becomes a 30-minute cited conversation that feeds the next experiment and drops into a paper with its references already attached. Session memory holds the research arc, and per-user context compounds the moat, while the cited data underneath stays the real differentiator.</p>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ============ SECTION 2: PRD ============ -->
+    <section class="doc-section" id="prd">
+      <div class="section-kicker">What and for whom</div>
+      <h2>PRD</h2>
+      <p class="section-intro">Condensed from <code>requirements/PRD.md</code>, the single source of truth for what System 3 does, for whom, and how success is measured. Status: locked 2026-07-22.</p>
+
+      <h3 class="no-rule">Problem statement and the wedge</h3>
+      <p>A biomedical researcher with a real question, such as what is known about a variant, an isolate, or a paper's linked data, has to cross several NCBI databases by hand: Gene, then ClinVar, then PubMed, then dbVar, then MedGen, copying identifiers between them. It is slow, it is easy to miss a link, and the result is not assembled anywhere.</p>
+      <p>A general AI tool answers instantly, but it answers from training priors. For biomedical work that is worse than slow, it is untrustworthy: the tool produces a fluent answer with citations that are often wrong or invented, and the researcher cannot tell which. A confident wrong answer is more dangerous than no answer.</p>
+      <p>System 3 is the wedge between those two failures. A user asks one plain-language question. The agent queries across three data layers (the knowledge graph, live NCBI APIs, and enrichment APIs) through hard guardrails, and returns a cited answer where every claim links to a real, resolvable source record.</p>
+      <p>The differentiation anchor is data plus provenance: cited, deterministic, cross-database synthesis over the NCBI graph and APIs. Per-user personalization compounds the moat because it fuses with that data and the user's own cited research history, but personalization alone is copyable and is not the differentiator.</p>
+
+      <h3>The moat-seven competency questions</h3>
+      <p>The seven v1 must-pass competency questions are the acceptance criteria for the wedge and the offline eval set. All pass the moat bar (provenance and determinism gates, plus the no-general-tool-equivalent ranking dimension) and run without compute tools.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Acceptance question (short)</th><th>Wedge type</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Q1</td><td>CNV region to cited ACMG-relevant evidence (dbVar, ClinVar, genes, OMIM, Variation Viewer). Assembles evidence, no classification.</td><td>gene-variant-literature</td></tr>
+            <tr><td>Q3</td><td>BRCA1 to Gene, PubMed, ClinVar, GTR, MedGen in one answer.</td><td>gene-variant-literature</td></tr>
+            <tr><td>Q4</td><td>Disease phrase to routed cross-database queries.</td><td>gene-variant-literature</td></tr>
+            <tr><td>Q5</td><td>Salmonella isolate to SNP cluster, AMR genes, BioSample, neighbors within 5 SNPs.</td><td>pathogen-sequence-outbreak</td></tr>
+            <tr><td>Q6</td><td>Natural-language SRA metadata search with match rationale.</td><td>pathogen-sequence-outbreak</td></tr>
+            <tr><td>Q8</td><td>PMID to linked SRA, BioProject, GEO, assembly, PubChem, marking direct, inferred, or absent.</td><td>paper-data-tool</td></tr>
+            <tr><td>Q10</td><td>BioProject to BioSamples, SRA runs, assembly bundle with retrieval path.</td><td>paper-data-tool</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Tier 1 is a must-pass gate for v1: an answer-generation feature ships only when the seven meet their playbook targets. The seven are the eval gate, not the menu; the system is a general agent that answers far more, and cite-or-refuse protects everything outside the seven at runtime. Q1 carries a feasibility flag: if the Phase 4 coordinate-range check fails, Q1 moves to the fast-follow set and the v1 must-pass set is six.</p>
+
+      <h3>Two hard guarantees</h3>
+      <div class="callout-grid">
+        <div class="callout provenance">
+          <div class="callout-title">Cite-or-refuse</div>
+          <p>Every claim ties to a specific retrieved source, or the system refuses and stops. No claim ships uncited.</p>
+        </div>
+        <div class="callout">
+          <div class="callout-title">Assemble the evidence, never the verdict</div>
+          <p>The system reports cited evidence and clinical significance from source records. It never gives personal medical advice, diagnosis, treatment, a pathogenicity classification, or a variant prioritization. A human decides; the system assembles and cites.</p>
+        </div>
+      </div>
+
+      <h3>v1 scope</h3>
+      <p>The input stays chat-simple for every persona: one plain-language question, no forms, no query syntax, no database picking. Eleven personas were identified; the wedge-strong ones drive v1.</p>
+      <ul class="tight">
+        <li>Literature researchers, sequence data users, geneticists, bioinformaticians</li>
+        <li>Epidemiologists and public health, the strongest wedge persona in the roadmap usage evidence</li>
+        <li>Cross-database journey users</li>
+        <li>AI agents and MCP and LLM consumers, an emerging 2025 to 2026 signal</li>
+        <li>Served with a clinical-safety boundary: clinicians and genetic counselors. The system assembles cited evidence for them and never renders a verdict.</li>
+      </ul>
+
+      <p>Every query follows the same five-step agent loop shown in the overview above. Guardrail validates and blocks; Think classifies the query and resolves free-text terms to CURIEs; Plan decomposes into tool calls; Act executes them, graph-first with API correction; Write synthesizes a cited research brief with placeholder markers the harness verifies.</p>
+
+      <h4>UI experience</h4>
+      <p>The surface is a workspace home, not a bare chat box: a plain-language input, saved queries, and suggested competency questions. The answer is a structured, provenance-forward research brief. Streaming is the default (time-to-first-token under one second), a stop button works throughout the loop, citation chips render inline and link to resolvable source records, and an optional expander reveals the curated reasoning narrative.</p>
+
+      <h4>Cost-control UX</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Cap</th><th>Starter value</th><th>What the user sees</th></tr></thead>
+          <tbody>
+            <tr><td>Per-query cap</td><td>$0.10</td><td>A partial cited result plus a note the query hit its budget</td></tr>
+            <tr><td>Per-user daily cap</td><td>100 queries per day</td><td>New queries declined for the day, with a reset time</td></tr>
+            <tr><td>System-wide daily cap</td><td>$10 per day</td><td>The system pauses accepting new queries and says so</td></tr>
+            <tr><td>Per-step timeout</td><td>5s lookup, 10s single-hop, 30s multi-hop, 2 min deep research</td><td>Synthesis from partial results, with an explanation of what timed out</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>No dollar figure ever reaches an end user. Cap values are tunable in Phase 4; changing one requires explicit approval.</p>
+
+      <h4>Delivery formats</h4>
+      <p>Five formats are in scope so the same cited answer is reusable, the G4 outcome on the milestone ladder: Web UI (the primary surface), a GraphQL API for structured programmatic access, an MCP server so other agents can consume System 3, a KGX export scoped to the existing graph, and a CLI agent. The REST plus SSE surface carries the chat streaming; GraphQL carries structured access; both share one auth and one tool set.</p>
+
+      <h4>Out of scope for v1</h4>
+      <ul class="tight">
+        <li>Compute tools: no BLAST, no sequence-similarity search, no VCF ingestion (the fast-follow set, Q2, Q7, Q9)</li>
+        <li>Segmental-duplication overlap for Q1, deferred to the fast-follow with a UCSC source</li>
+        <li>External non-NCBI knowledge-graph federation; v1 federation is exactly the three data layers</li>
+        <li>Model distillation and fusion or ensemble model panels, both v2 optimizations</li>
+        <li>The automated mining half of the online feedback loop; v1 ships capture plus manual review plus hand-promotion</li>
+        <li>Full Section 508 and WCAG audit, and enterprise security (IAM, session expiry, access review), both the production track</li>
+        <li>Sub-query decomposition for deep research, triggered later by a failure rate above 20 percent on that query class</li>
+      </ul>
+
+      <h3>The moat test</h3>
+      <p>The moat test selects and tiers competency questions, and it outranks persona coverage and raw usage frequency. A candidate qualifies only if it passes two binary gates, provenance (every claim links to a source record) and determinism (the answer is reproducible given the data state at query time), and then scores high on a ranking dimension: no general-tool equivalent. The candidate is run against a panel of the strongest general tools, a frontier chat LLM, a retrieval-backed answer engine, and plain web search. It passes only if none of them produces the correct answer with verifiable, resolvable citations. Full mechanics, the tier mapping, and the coverage metric that pairs with it are in the evaluation playbook below.</p>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ============ SECTION 3: TECHNICAL SPECIFICATION ============ -->
+    <section class="doc-section" id="tech-spec">
+      <div class="section-kicker">How it is built</div>
+      <h2>Technical specification</h2>
+      <p class="section-intro">Condensed from <code>requirements/Technical_specification.md</code> (25 sections). Status: locked 2026-07-25. This condenses the architecture a reader needs; it does not restate every section. Every part traces back to a PRD outcome and to the core-architecture decisions in DECISIONS.md.</p>
+
+      <div class="subnav">
+        <span class="subnav-label">Jump to:</span>
+        <a href="#ts-surfaces">One core, six surfaces</a>
+        <a href="#ts-loop">The agent loop</a>
+        <a href="#ts-layers">Three data layers</a>
+        <a href="#ts-harness">The harness and tiers</a>
+        <a href="#ts-tools">The seven tools</a>
+        <a href="#ts-schema">Event and provenance schema</a>
+        <a href="#ts-gates">Key safety gates</a>
+      </div>
+
+      <h3 class="no-rule" id="ts-surfaces">The one-core, six-surface model</h3>
+      <p>System 3 is one agent core wrapped in thin, surface-specific adapters. The core owns the five-step loop, the three-layer retrieval model, and a single typed event contract. Every delivery surface subscribes to that contract; none re-implement agent logic.</p>
+
+      <figure class="flowchart" aria-label="One core, six surfaces">
+        <div class="flow-group">
+          <span class="flow-label">Six delivery surfaces</span>
+          <div class="flow-chips">
+            <span class="flow-node sm">Web UI</span><span class="flow-node sm">REST + SSE</span><span class="flow-node sm">GraphQL</span>
+            <span class="flow-node sm">MCP server</span><span class="flow-node sm">KGX export</span><span class="flow-node sm">CLI</span>
+          </div>
+          <span class="flow-arrow v">&darr;</span>
+          <span class="flow-node accent">One agent core and shared tool layer</span>
+          <span class="flow-arrow v">&darr;</span>
+          <span class="flow-label">Three data layers</span>
+          <div class="flow-chips">
+            <span class="tag tag-l1">Layer 1 graph</span><span class="tag tag-l2">Layer 2 NCBI APIs</span><span class="tag tag-l3">Layer 3 enrichment</span>
+          </div>
+        </div>
+      </figure>
+      <p class="diagram-caption">Four streaming adapters subscribe to the live event stream (Web UI, REST plus SSE, MCP, CLI). GraphQL and KGX export reuse the same tools and layers in a request or response and batch shape instead.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Surface</th><th>Shape</th><th>Consumer</th></tr></thead>
+          <tbody>
+            <tr><td>Web UI</td><td>Live streaming, full curated event stream</td><td>The primary workspace</td></tr>
+            <tr><td>REST plus SSE API</td><td>Live streaming, shared backend for the UI and CLI</td><td>Programmatic and browser callers</td></tr>
+            <tr><td>GraphQL API</td><td>Structured request or response</td><td>Nested biomedical data access</td></tr>
+            <tr><td>MCP server</td><td>Request or response, folded stream</td><td>AI agents and MCP or LLM consumers</td></tr>
+            <tr><td>KGX export</td><td>Batch export</td><td>Scoped to the existing graph, Layer 1 only</td></tr>
+            <tr><td>CLI</td><td>Live streaming, thin client</td><td><code>s3 ask</code>, a thin HTTP client over REST plus SSE</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="ts-loop">The agent loop</h3>
+      <p>Each step has exactly one job. No step reaches past its neighbor.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Step</th><th>Job</th></tr></thead>
+          <tbody>
+            <tr><td>Guardrail</td><td>Validate input, reject prompt injection and off-topic or medical-advice requests, check rate and cost pre-caps. A cheap non-LLM pre-filter runs before any model call.</td></tr>
+            <tr><td>Think</td><td>Classify query shape (lookup, single-hop, multi-hop, aggregate, exploratory), resolve free-text terms to CURIEs, ask one clarifying question on ambiguity.</td></tr>
+            <tr><td>Plan</td><td>Decompose into tool calls, select the model tier per step, produce a structured database-neutral plan. Never writes Cypher.</td></tr>
+            <tr><td>Act</td><td>Execute tool calls, independent ones in parallel. <code>cypher_query</code> generates and validates its own Cypher internally.</td></tr>
+            <tr><td>Write</td><td>Synthesize a cited research brief from structured findings only, never a raw retrieved document.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="ts-layers">Three data layers</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Layer</th><th>Contents</th><th>Latency</th><th>Freshness</th></tr></thead>
+          <tbody>
+            <tr><td><span class="tag tag-l1">Layer 1</span></td><td>AGE knowledge graph on Hetzner: 115M nodes, 693M edges, 10 concept labels, 14 edge predicates, from 5 NCBI databases</td><td>Sub-10ms typed queries</td><td>Periodic snapshot</td></tr>
+            <tr><td><span class="tag tag-l2">Layer 2</span></td><td>Live NCBI APIs: E-utilities, Datasets API v2, Variation Services, PubChem</td><td>100 to 500ms</td><td>Always current</td></tr>
+            <tr><td><span class="tag tag-l3">Layer 3</span></td><td>Enrichment APIs: PubTator3, LitVar2, LitSense, ClinicalTrials.gov</td><td>200ms to 2s</td><td>Always current</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>One-tool-one-layer discipline: no tool call spans two layers. A question needing both graph context and a live record is two tool calls in the Plan step's list, never one tool that internally hops layers. On disagreement between a graph result and a live API result, the live value wins for currency, the graph value stays for traversal breadth, and both are cited with their own <code>layer</code> tag rather than one silently overwriting the other.</p>
+
+      <h3 id="ts-harness">The harness and model tiers</h3>
+      <p>The harness is an in-process module (v1) that owns tier resolution, cost accounting, timeout enforcement, and the coordinator-worker split. A strong-enough tier plans and writes; a cheap tier does bounded reads; the split is drawn at the untrusted-content boundary, not at every tool result.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tier</th><th>Purpose</th><th>Runs which step</th></tr></thead>
+          <tbody>
+            <tr><td>Guard</td><td>Fast, cheap input validation and classification</td><td>Guardrail, Think, and the Act coordinator-worker reader pass</td></tr>
+            <tr><td>Plan</td><td>Mid-range query decomposition and tool selection</td><td>Plan, and <code>cypher_query</code>'s internal Cypher-generation call</td></tr>
+            <tr><td>Synth</td><td>Strongest model, final synthesis and citation assembly only</td><td>Write, once per query</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Structured data (a Cypher row, a Datasets API field) passes straight from Act to Write with no reader pass. Free text (a PubMed abstract, an annotation span, a record description) routes through an isolated Guard-tier reader first, scoped to Read plus the one API that produced the payload, never Write, never able to call another tool. Synth never sees a raw record, only the reader's structured findings or pass-through structured fields. Model identity per tier is a config value resolved at Phase 6 by model-bench, a config change, never a code change.</p>
+
+      <h3 id="ts-tools">The seven tools</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tool</th><th>Layer</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>cypher_query</code></td><td><span class="tag tag-l1">Layer 1</span></td><td>The only path to the graph. Generates and validates its own Cypher internally; the main agent never writes or sees raw Cypher.</td></tr>
+            <tr><td><code>ncbi_efetch</code></td><td><span class="tag tag-l2">Layer 2</span></td><td>The general Entrez client: search, fetch, summary, link, and coordinate-overlap across 14 NCBI databases, plus Datasets API v2 and PubChem.</td></tr>
+            <tr><td><code>ncbi_dbsnp</code></td><td><span class="tag tag-l2">Layer 2</span></td><td>Variant normalization and dbSNP record retrieval via NCBI Variation Services plus dbSNP ESummary.</td></tr>
+            <tr><td><code>pubtator_annotate</code></td><td><span class="tag tag-l3">Layer 3</span></td><td>Entity normalization and literature annotation via PubTator3.</td></tr>
+            <tr><td><code>litvar2_lookup</code></td><td><span class="tag tag-l3">Layer 3</span></td><td>Variant-to-literature evidence via LitVar2.</td></tr>
+            <tr><td><code>pathogen_detection</code></td><td><span class="tag tag-l2">Layer 2</span></td><td>Bulk outbreak cluster, AMR genotype, and SNP-distance lookups from the Pathogen Detection PDG snapshot tree.</td></tr>
+            <tr><td><code>clinicaltrials_search</code></td><td><span class="tag tag-l3">Layer 3</span></td><td>Disease-to-clinical-trials search via ClinicalTrials.gov API v2.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Every tool is a read-plus-one-source untrusted-source reader: it can call its own source and nothing else, never another tool, never a write path. Every schema carries <code>maxLength</code> on strings, <code>maxItems</code> on arrays, and a host-pinned <code>source_url</code> regex, per the multi-agent pipeline gate.</p>
+
+      <h3 id="ts-schema">Event and provenance schema</h3>
+      <p>The spine is one agent core that exposes a single typed event stream, versioned <code>v1</code>. Every event shares one envelope: <code>type</code>, <code>version</code>, <code>trace_id</code>, a monotonic <code>seq</code>, a timestamp, and a <code>payload</code>. The surface never sees a raw tool payload, a raw LLM completion, or raw chain-of-thought; it only ever consumes this stream.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Event type</th><th>Emitted by</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>guard</code></td><td>Guardrail</td><td>Pass or reject the query before any further step runs</td></tr>
+            <tr><td><code>think</code> / <code>plan</code></td><td>Think, Plan</td><td>Curated narrative, never raw chain-of-thought</td></tr>
+            <tr><td><code>tool_start</code> / <code>tool_result</code></td><td>Act</td><td>A tool call dispatched, then returned as structured findings</td></tr>
+            <tr><td><code>token</code></td><td>Write</td><td>A streamed narrative token, may carry inline citation markers</td></tr>
+            <tr><td><code>citation</code></td><td>Write</td><td>A verified citation binding, the provenance type</td></tr>
+            <tr><td><code>trust_signal</code></td><td>Write</td><td>The deterministic answer, flag, ask, or refuse outcome</td></tr>
+            <tr><td><code>cost</code></td><td>Harness</td><td>Running per-query cost, builder-only, filtered from every end-user surface</td></tr>
+            <tr><td><code>error</code></td><td>Any step</td><td>A recoverable or terminal failure</td></tr>
+            <tr><td><code>done</code></td><td>Core</td><td>Terminal event: totals, elapsed time, trust outcome</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>The provenance type</h4>
+      <p>Every citation, whether it lands in the UI as a chip, in the SSE stream, in an MCP response, or in a paper-facing export, carries the same one type.</p>
+      <ul class="tight">
+        <li><code>source</code>, <code>source_id</code>, <code>source_url</code>, <code>layer</code>: the base fields locked by CLAUDE.md's citations section.</li>
+        <li><code>field</code>, <code>claim_text</code>: which record field the claim rests on and the exact text it grounds.</li>
+        <li><code>evidence_kind</code>: primary assertion, derived summary, literature mention, or external annotation.</li>
+        <li><code>assertion_confidence</code>: asserted, hedged, or contested, populated by a fixed lookup table or hedge lexicon, never model judgment.</li>
+        <li><code>population_ancestry_context</code>: nullable population or ancestry data, rendered as "not specified" rather than guessed when absent.</li>
+        <li><code>license</code>: public domain US government, publisher-copyright abstract-only, or unspecified.</li>
+      </ul>
+      <p>Every <code>source_url</code> is validated against a host-pinned regex before it is attached to a citation, for example <code>^https://(www\.|pubmed\.)?ncbi\.nlm\.nih\.gov/</code>. A citation always resolves to the human-facing record page, never the raw <code>eutils.</code> or <code>api.</code> fetch host the tool actually called.</p>
+
+      <h4>Cite-or-refuse grounding</h4>
+      <p>After Write returns narrative text and before any token reaches a surface, the harness parses each inline marker, resolves it against the findings list Synth was given, and accepts a claim as grounded only by exact or substring match after normalization, lowercase, whitespace-collapsed, punctuation-stripped. No embedding similarity, no LLM-judged closeness. Any clause that fails is stripped, marker included; if stripping removes the query's core ask entirely, the whole answer is discarded and the refuse path returns instead.</p>
+
+      <h4>The trust signal</h4>
+      <p>A deterministic decision table over risk tier, whether a claim is grounded, and (for high-risk claims) whether independent sources triangulate, yields one of four outcomes.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Risk tier</th><th>Grounded</th><th>Triangulation</th><th>Outcome</th></tr></thead>
+          <tbody>
+            <tr><td>Low or high</td><td>False</td><td>n/a</td><td>Refuse</td></tr>
+            <tr><td>Low</td><td>True</td><td>Not evaluated</td><td>Answer</td></tr>
+            <tr><td>High</td><td>True</td><td>Concordant</td><td>Answer</td></tr>
+            <tr><td>High</td><td>True</td><td>Discordant</td><td>Flag</td></tr>
+            <tr><td>High</td><td>True</td><td>Insufficient (fewer than 2 independent sources)</td><td>Ask</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>High risk covers ClinVar clinical-significance and review-status fields, OMIM mechanistic mappings, cause or treat relationships extracted from literature, and AMR-to-clinical-outcome fields. A refuse outcome always emits a validated NCBI cross-database fallback link rather than a dead end, and is treated as an intentional content-safety outcome, not a system failure.</p>
+
+      <h3 id="ts-gates">Key safety gates</h3>
+      <div class="callout-grid">
+        <div class="callout">
+          <div class="callout-title">Read-only, enforced three times</div>
+          <p>The Guardrail rejects write-seeking requests outright, the <code>cypher_query</code> validator rejects any write-shaped clause before execution, and the database connection uses a <code>kg_reader</code> role with no write grant. No single layer carries the whole guarantee.</p>
+        </div>
+        <div class="callout provenance">
+          <div class="callout-title">Prompt-injection defense</div>
+          <p>Retrieved content is never formatted into a system or developer-role message. Only the isolated reader ever sees untrusted free text, has no tool-calling ability, and its own output is schema-validated before Synth sees it.</p>
+        </div>
+        <div class="callout">
+          <div class="callout-title">Cost caps, safety-critical by construction</div>
+          <p>Per-query ($0.10), per-user-daily (100 queries), system-wide-daily ($10), and per-step timeouts. The harness is the sole enforcement point; no tool or surface enforces its own cap.</p>
+        </div>
+        <div class="callout danger">
+          <div class="callout-title">Secrets in env only</div>
+          <p>The Hetzner connection string, NCBI API key, OpenRouter key, and every other credential live in environment variables or a secrets manager, never in code, prompts, logs, or generated docs.</p>
+        </div>
+      </div>
+      <p>Every Layer 2 and Layer 3 access is logged with what was queried and under what authorization: an append-only audit log, full LangSmith traces linked by <code>trace_id</code>, and the PostgreSQL interactions table, each serving a different audience.</p>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ============ SECTION 4: EVALUATION PLAYBOOK ============ -->
+    <section class="doc-section" id="eval">
+      <div class="section-kicker">How we know it works</div>
+      <h2>Evaluation playbook</h2>
+      <p class="section-intro">Condensed from <code>requirements/Evaluation_playbook.md</code>, the standing reference for how System 3 is evaluated. Phase 2 output, last updated 2026-07-22. This is a living document, reconciled at Phase 6.2 and updated continuously by the online feedback loop.</p>
+
+      <h3 class="no-rule">The 8-point scoring rubric</h3>
+      <p>The offline evaluation gate runs before any answer-generation feature ships. Each criterion scores 0, 1, or 2.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Criterion</th><th>0</th><th>1</th><th>2</th></tr></thead>
+          <tbody>
+            <tr><td>Intent understanding</td><td>Misreads the task</td><td>Mostly right, misses constraints</td><td>Restates task and constraints</td></tr>
+            <tr><td>Entity normalization</td><td>No stable entities</td><td>Some normalized</td><td>All key entities normalized with IDs</td></tr>
+            <tr><td>Database routing</td><td>Wrong or shallow</td><td>Hits some databases</td><td>Hits all required or explains unavailable</td></tr>
+            <tr><td>Evidence quality</td><td>Unsupported claims</td><td>Partial citations</td><td>Claims tied to source records and IDs</td></tr>
+            <tr><td>Cross-database synthesis</td><td>Lists records only</td><td>Some synthesis</td><td>Explains how records connect</td></tr>
+            <tr><td>Freshness and versioning</td><td>No dates or versions</td><td>Partial context</td><td>Clear date, version, assembly context</td></tr>
+            <tr><td>Safety and limits</td><td>Overclaims</td><td>Some caveats</td><td>Separates evidence, inference, and limits</td></tr>
+            <tr><td>Output usability</td><td>Hard to reuse</td><td>Human-readable only</td><td>Human-readable plus structured IDs</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Pass threshold: 13 of 16. Any single run hits a hard-fail, and fails the gate regardless of total score, on: provenance scored 0 (a claim with no source), safety and limits scored 0 on a clinical or pathogenicity question (a rendered verdict), or missing assembly or version context on a coordinate or sequence question. Cite-or-refuse lives here too: zero retrieval plus a correct refusal scores as pass, not fail. Abstain-as-pass is an explicit rubric outcome.</p>
+
+      <h3>Pass metrics: pass@k and pass/fail/abstain</h3>
+      <p>The rubric grades one run into one outcome: pass (at least 13 of 16, no hard-fail), fail (any hard-fail, or under 13), or abstain (returned the refusal string). The eval-harness <code>pass@k</code> and <code>pass^k</code> metrics aggregate those per-run outcomes across k samples. They compose, they do not compete.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Target</th><th>Level</th><th>Bar</th></tr></thead>
+          <tbody>
+            <tr><td>Hard-fails</td><td>Every run, no exceptions</td><td><code>pass^k</code> = 100 percent (no fabrication and no verdict, ever)</td></tr>
+            <tr><td>Quality (13 of 16)</td><td>Can it produce the answer at all</td><td><code>pass@3</code> as the floor</td></tr>
+            <tr><td>Quality (13 of 16)</td><td>Does it do so consistently</td><td><code>pass^3</code> at least 90 percent</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>A fabrication is never acceptable; quality is high but not required to be perfect. This matches a biomedical setting where a confident wrong answer is worse than no answer. Determinism runs against pinned fixtures, with a freshness-window allowance for live-API questions.</p>
+
+      <h3>The milestone ladder</h3>
+      <p>Success is framed as four climbing gates. Each gate does not open until the one below it holds, and each serves a named stakeholder.</p>
+
+      <figure class="flowchart" aria-label="The milestone ladder">
+        <div class="flow-col">
+          <span class="flow-node">G1 each tool works alone</span><span class="flow-arrow v">&darr;</span>
+          <span class="flow-node">G2 sources join across layers</span><span class="flow-arrow v">&darr;</span>
+          <span class="flow-node">G3 cited, SME credible</span><span class="flow-arrow v">&darr;</span>
+          <span class="flow-node accent">G4 reuse-ready formats</span>
+        </div>
+      </figure>
+      <p class="diagram-caption">The milestone ladder: four climbing gates, each a go or no-go.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Gate</th><th>What it proves</th><th>Judged by</th><th>Serves</th></tr></thead>
+          <tbody>
+            <tr><td>G1</td><td>Every tool returns correct, typed, cited results on its own</td><td>Objective, machine-checkable</td><td>Build team</td></tr>
+            <tr><td>G2</td><td>The agent joins all three layers into one answer, preserving identifiers</td><td>Objective, machine-checkable</td><td>Build team</td></tr>
+            <tr><td>G3</td><td>A subject-matter expert finds the assembled answer credible, cited, and free of overclaim</td><td>Human-judged</td><td>Researcher and SME reviewer, the gate the wedge lives or dies on</td></tr>
+            <tr><td>G4</td><td>The same answer is reachable and reusable through every delivery format</td><td>External</td><td>External adopters and NCBI leadership</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>How tool and layer combinations are judged</h3>
+      <p>The moat test is the primary bar for selecting and tiering competency questions, ahead of persona coverage and usage frequency. It runs two binary gates and one ranking dimension.</p>
+
+      <figure class="flowchart" aria-label="The moat test">
+        <div class="flow-col">
+          <span class="flow-node">Candidate question</span><span class="flow-arrow v">&darr;</span>
+          <span class="flow-node gate">Provenance gate</span>
+          <span class="flow-arrow v">&darr; pass <span class="flow-note">(fail &rarr; disqualified)</span></span>
+          <span class="flow-node gate">Deterministic gate</span>
+          <span class="flow-arrow v">&darr; pass <span class="flow-note">(fail &rarr; disqualified)</span></span>
+          <span class="flow-node gate">No general-tool match?</span>
+          <span class="flow-arrow v">&darr;</span>
+          <div class="flow-chips">
+            <span class="flow-node sm accent">high &rarr; Tier 1 must-pass</span>
+            <span class="flow-node sm">partial &rarr; Tier 2 should</span>
+            <span class="flow-node sm">none &rarr; outside moat</span>
+          </div>
+        </div>
+      </figure>
+      <p class="diagram-caption">The moat test: two binary gates, then a ranking dimension that tiers the survivors.</p>
+
+      <ul class="tight">
+        <li>Provenance: every claim links to a source record, or the question is disqualified, not low-scored.</li>
+        <li>Deterministic: the answer is reproducible given the data state at query time.</li>
+        <li>No general-tool equivalent: the candidate runs against a panel of the strongest general tools (a frontier chat LLM, a retrieval-backed answer engine, plain web search) and passes only if none produces the answer with verifiable, resolvable citations.</li>
+      </ul>
+
+      <p>A second, orthogonal instrument, the coverage metric, answers a different question: of the graph's concept and predicate space, how much does the eval set actually exercise. It is a diagnostic, never a gate, because the moat set is deliberately narrow and cross-database-biased. On the first pass, the seven touch roughly 5 of 10 concept labels and 3 of 14 edge predicates in the graph, but reach across roughly 9 API databases outside the graph (dbVar, OMIM, GTR, Pathogen Detection, SRA, BioProject, GEO, Assembly, PubChem), since four of the seven questions are Layer 2 dominant and barely touch Layer 1.</p>
+
+      <h3>The golden-dataset approach</h3>
+      <p>The moat seven are the initial offline eval set. The Phase 4 golden dataset of 50 queries is the expansion; every acceptance-criteria table measures against that fixed set. Beyond the seven, an online feedback loop grows the question set from real usage: capture every interaction, mine and cluster periodically, review with a human gate, apply a trigger rule (a recurring, moat-passing, not-yet-covered cluster becomes a candidate question), and promote an approved question as a new few-shot routing example plus a new eval case. In v1, capture, review, and promotion ship with a human in the loop; automated mining is a fast-follow once enough data is captured to cluster. The LLM-judge, where used, is always a filter upstream of the human, never the final say: promotion always needs a human approval, because it changes routing.</p>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Condensed reference page. Source documents: <code>requirements/Strategic_memo.md</code>, <code>requirements/PRD.md</code>, <code>requirements/Technical_specification.md</code>, <code>requirements/Evaluation_playbook.md</code>, all in the <code>agentic-search-ui</code> repository. This page summarizes; the source documents remain the locked, authoritative record.</p>
+    <p class="back-to-top"><a href="#hero">Back to top</a></p>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll(".topnav a.navlink"));
+    if (!links.length || !("IntersectionObserver" in window)) return;
+    var map = {};
+    var sections = [];
+    links.forEach(function (l) {
+      var id = l.getAttribute("href").slice(1);
+      var el = document.getElementById(id);
+      if (el) { map[id] = l; sections.push(el); }
+    });
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          links.forEach(function (l) { l.classList.remove("active"); });
+          if (map[entry.target.id]) map[entry.target.id].classList.add("active");
+        }
+      });
+    }, { rootMargin: "-45% 0px -50% 0px", threshold: 0 });
+    sections.forEach(function (s) { observer.observe(s); });
+  })();
+</script>
+</body>
+</html>
