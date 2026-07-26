@@ -16,6 +16,7 @@ Step 4.0 of Phase 4 closes here: the NCBI and enrichment API current-state deep 
 - [Step 4.1 core-architecture decisions](#step-41-core-architecture-decisions)
 - [Step 4.2 seven-agent draft](#step-42-seven-agent-draft)
 - [Step 4.3 reconciliation and lock](#step-43-reconciliation-and-lock)
+- [Step 4.4: the strategic memo and Phase 4 close](#step-44-the-strategic-memo-and-phase-4-close)
 
 ## Where we started
 
@@ -90,3 +91,9 @@ Drafting in parallel left seams: the citation, cost, and error event schemas wer
 The reconciled draft went through two fresh-context grading passes per self-eval-loop. The first grading pass (`grade-techspec`) found a schema-consistency failure: residual event and field definitions in a few sections still disagreed with the newly canonical Section 2 and Section 9 definitions. Those leftovers were fixed (commit `4ba8ddc`). A second, independent fresh-context pass (`regrade-techspec`) re-graded the corrected spec and verified the schema-consistency failure cleared, with no new failures surfaced.
 
 With both grading passes clean, the user reviewed the reconciled spec and gave the Step 4.3 lock sign-off. `requirements/Technical_specification.md` is locked (2026-07-25): 25 sections, seven tools, six delivery surfaces, one canonical event and provenance schema. Per the build-phase doc-review cadence, it now freezes through the build and is edited only at the Step 6.2 reconciliation, then re-locked at v1. Step 4.4, the strategic memo, is next.
+
+## Step 4.4: the strategic memo and Phase 4 close
+
+Step 4.4 closes Phase 4. Wrote `requirements/Strategic_memo.md`, the one-to-two-page executive distillation of the locked PRD and the locked technical specification: what System 3 is, why it exists, how the five-step agent loop and three data layers work, what the seven flagship questions and seven tools deliver in v1, how the moat test and eval gate keep it honest, and where the system goes after v1. The audience is a future collaborator, or future-me, who needs to hold the whole system in their head at a glance without reading the full PRD and tech spec. It updates once, after the Phase 6 prototype, per the build-phase doc-review cadence.
+
+With Step 4.4 done, Phase 4 is COMPLETE: the verified API capability sheet, the locked technical specification, and the strategic memo. These three deliverables together serve as the phase synthesis; unlike Phase 1, no separate synthesis document is produced. Phase 5 (system and tooling updates) is next.

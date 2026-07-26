@@ -1,6 +1,6 @@
 # Phase 4 continuation prompt
 
-Phase 4 is open: the technical specification and the strategic memo. Phase 3 is complete (PRD locked). Steps 4.0 to 4.3 are complete: the tech spec is locked (2026-07-25). Step 4.4 (the strategic memo) is the only remaining Phase 4 work. Use this to resume Phase 4 in a new chat. Living document, updated as Phase 4 progresses.
+Phase 4 is COMPLETE (closed 2026-07-25): the technical specification and the strategic memo are both done, all of Steps 4.0 to 4.4 complete. There is no remaining Phase 4 work. The next phase is Phase 5 (system and tooling updates); see `requirements/Plan.md` for its scope. This file is kept as the Phase 4 record.
 
 ## Context to provide
 
@@ -8,15 +8,16 @@ Paste the following into your new chat:
 
 ---
 
-We are in Phase 4 of System 3 planning: the technical specification and the strategic memo. Steps 4.0 to 4.3 are complete and the tech spec is locked; only Step 4.4 (the strategic memo) remains. Read these files to get up to speed:
+Phase 4 of System 3 planning is complete: the technical specification and the strategic memo are both done (Steps 4.0 to 4.4). Read these files to get up to speed:
 
-1. `requirements/Plan.md` - overall roadmap; Phase 4 is Steps 4.0 to 4.4. The status table shows Phases 1 to 3 complete and Phase 4 in progress.
+1. `requirements/Plan.md` - overall roadmap; the status table shows Phases 1 to 4 complete and Phase 5 next.
 2. `requirements/PRD.md` - the locked PRD. Every tech-spec requirement traces back to an outcome here.
 3. `requirements/Evaluation_playbook.md` - the evaluation approach the tech spec references (competency questions, eval gate, coverage metric, feedback loop).
-4. `requirements/Technical_specification.md` - the locked tech spec (2026-07-25). Step 4.4 distills this and the PRD into the strategic memo.
-5. `DECISIONS.md` - all decisions (113 as of 2026-07-25).
+4. `requirements/Technical_specification.md` - the locked tech spec (2026-07-25).
+5. `requirements/Strategic_memo.md` - the executive distillation of the PRD and tech spec (2026-07-25).
+6. `DECISIONS.md` - all decisions (113 as of 2026-07-25).
 
-Phases 1, 2, and 3 are complete. Phase 4 produces `requirements/Technical_specification.md` (done) and `requirements/Strategic_memo.md` (next).
+Phases 1, 2, 3, and 4 are complete. Phase 4 produced `requirements/Technical_specification.md` (locked) and `requirements/Strategic_memo.md` (done). Phase 5 (system and tooling updates) is next.
 
 Rules:
 - Discuss before drafting. Ask one question at a time.
@@ -40,11 +41,11 @@ Rules:
 | 4.1 | Outline the tech spec (the section list in Plan.md Phase 4). | Complete (2026-07-25), core-architecture decisions (A, C, D, E, F, G, plus the cost amendment) locked, outline became the 25-section table of contents |
 | 4.2 | Draft the tech spec against the PRD, tracing each requirement to its outcome. | Complete (2026-07-25), seven parallel agents drafted 25 sections at implementation level |
 | 4.3 | Lock the tech spec. | Complete (2026-07-25), reconciled, graded twice fresh-context, locked. Deliverable `requirements/Technical_specification.md` |
-| 4.4 | Draft the strategic memo, distilled from the locked PRD and tech spec. | Next |
+| 4.4 | Draft the strategic memo, distilled from the locked PRD and tech spec. | Complete (2026-07-25), deliverable `requirements/Strategic_memo.md` |
 
 ## Start here
 
-The tech spec is locked. `requirements/Technical_specification.md` (25 sections, seven tools, six delivery surfaces, one canonical event and provenance schema) is the build blueprint and freezes through the build per the doc-review cadence, edited only at the Step 6.2 reconciliation. The only remaining Phase 4 work is Step 4.4: draft the one-to-two-page strategic memo, distilled from the locked PRD and the locked tech spec, for a stakeholder who needs the decision, not the detail.
+Phase 4 is complete. `requirements/Technical_specification.md` (25 sections, seven tools, six delivery surfaces, one canonical event and provenance schema) is the build blueprint and freezes through the build per the doc-review cadence, edited only at the Step 6.2 reconciliation. `requirements/Strategic_memo.md` is the executive distillation for a stakeholder who needs the decision, not the detail. There is no remaining Phase 4 work. Next: Phase 5 (system and tooling updates), see `requirements/Plan.md`.
 
 The tech spec's seven tools, one section each: cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search. Apply the supply-chain-security and ai-security-standards rules before wiring any of them in Phase 6.
 
