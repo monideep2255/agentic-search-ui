@@ -29,8 +29,12 @@ Thumbs.db
 *.sqlite
 redis-data/
 
-# .codex is a tracked symlink to .claude (git mode 120000). Deliberately NOT
-# ignored: ignoring it would let a fresh clone lose the symlink silently.
+# Local agent OS: kept on disk but not shipped with the repo. .codex is a
+# symlink to .claude. Both are deliberately untracked (via git rm --cached) so
+# the personal tooling stays local. Note: this also un-ships the security hooks
+# and settings.json under .claude/ -- a fresh clone and CI will not have them.
+.claude/
+.codex
 
 # Claude Security scan output (reports and working dirs, never committed)
 CLAUDE-SECURITY-*/
