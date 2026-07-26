@@ -165,7 +165,7 @@ The OpenRouter + LiteLLM decision enables this: each agent or tier can use a dif
 
 ### Sources reviewed
 
-1. System 3 architecture brainstorming (`docs/System_3_architecture_brainstorming.md`) - 544 lines, first-principles design from April 20
+1. System 3 architecture brainstorming (`docs/architecture/System_3_architecture_brainstorming.md`) - 544 lines, first-principles design from April 20
 2. Three-layer data architecture (`docs/architecture/Three_layer_data_architecture.md`) - layer boundaries, costs, connection patterns
 3. Architecture QA (`reference/personal-os-work/NIH/Agentic-Search/Data/Agentic_search_architecture_QA.md`) - 10 Q&As: database selection, BioLink, ontology, build order
 4. CQ planning (`reference/personal-os-work/NIH/Agentic-Search/Reference/system-3-brainstorming/00_Plan_and_discussion.md`) - competency question framework, persona mapping
@@ -248,8 +248,8 @@ Note: Variation Services API (`api.ncbi.nlm.nih.gov/variation/v0/`) has its own 
 
 ### Additional sources reviewed for API and tool mapping
 
-5. NCBI databases and APIs reference (`docs/NCBI_databases_and_APIs_reference.md`) - all 39 Entrez databases, API endpoints, searchable fields, cross-database link map, rate limits, research APIs
-6. NCBI repos deep dive (`docs/NCBI_repos_deep_dive.md`) - 13 NCBI GitHub repos analyzed for code reuse, architecture decisions, patterns to adopt, what NOT to build
+5. NCBI databases and APIs reference (`docs/ncbi/NCBI_databases_and_APIs_reference.md`) - all 39 Entrez databases, API endpoints, searchable fields, cross-database link map, rate limits, research APIs
+6. NCBI repos deep dive (`docs/ncbi/NCBI_repos_deep_dive.md`) - 13 NCBI GitHub repos analyzed for code reuse, architecture decisions, patterns to adopt, what NOT to build
 
 ### How every API fits into the three-layer architecture
 

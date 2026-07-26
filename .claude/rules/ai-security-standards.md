@@ -72,5 +72,5 @@ Deny:
 
 - Full production readiness review: invoke `/dev-standards` (six-lens audit)
 - SAST-level code patterns (SQL injection, XSS, secrets in logs): `production-standards` rule
-- Agent loop and tool architecture: `docs/System_3_architecture_brainstorming.md`
+- Agent loop and tool architecture: `docs/architecture/System_3_architecture_brainstorming.md`
 - Data access layers and what is trusted versus untrusted at each layer: `docs/architecture/Three_layer_data_architecture.md`

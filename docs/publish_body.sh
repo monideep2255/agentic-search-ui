@@ -15,17 +15,20 @@
 # script strips exactly those, plus the standalone-only theme toggle.
 #
 # Usage:
-#   docs/publish_body.sh docs/Phase_6_execution_flow.html
+#   docs/publish_body.sh docs/build/Phase_6_execution_flow.html
 #     -> writes docs/Phase_6_execution_flow.body.html, then publish that file.
 set -euo pipefail
 
 SRC="${1:-}"
 if [ -z "$SRC" ] || [ ! -f "$SRC" ]; then
-  echo "usage: $0 <standalone.html>" >&2
+  echo "usage: $0 <standalone.html> [output-path]" >&2
   exit 2
 fi
 
-OUT="${SRC%.html}.body.html"
+# The fragment is a transient input to the publisher, not an artifact. It goes to
+# a temp path by default so the repo never carries two near-identical HTML files
+# side by side, which is exactly the clutter that prompted this change.
+OUT="${2:-${TMPDIR:-/tmp}/$(basename "${SRC%.html}").body.html}"
 
 # Take everything between the standalone wrapper's <body> open and its closing
 # script block. awk keeps this a single pass with no temp files.

@@ -80,7 +80,7 @@ Also fixed: the pull request template still gated on BioLink and KGX validation 
 
 ## Step 5.4: reference documentation
 
-`docs/Tool_implementation_mechanics.md`, 19 per-tool API traps drawn from tech spec Section 6. Six were identified during the coverage map; the worker found 13 more reading the section in full. The document holds API facts; the rules hold policy, and the file says so explicitly so the boundary survives future edits.
+`docs/ncbi/Tool_implementation_mechanics.md`, 19 per-tool API traps drawn from tech spec Section 6. Six were identified during the coverage map; the worker found 13 more reading the section in full. The document holds API facts; the rules hold policy, and the file says so explicitly so the boundary survives future edits.
 
 ## The software team vision
 

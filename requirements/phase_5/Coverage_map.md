@@ -556,7 +556,7 @@ Now folded into .claude/rules/system-design-patterns.md. 9 rows.
 
 ### Per-tool API mechanics
 
-Now documented in docs/Tool_implementation_mechanics.md. 5 rows.
+Now documented in docs/ncbi/Tool_implementation_mechanics.md. 5 rows.
 
 | ID | Source | Obligation | Line |
 |---|---|---|---|

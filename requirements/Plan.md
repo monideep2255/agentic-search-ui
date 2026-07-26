@@ -362,7 +362,7 @@ System 3 depends heavily on the NCBI E-utilities, the Datasets API v2, Variation
 - Rate limits
 - Auth
 - Empty-result and error behavior
-- Any drift since the Phase 1 survey in `docs/NCBI_databases_and_APIs_reference.md`
+- Any drift since the Phase 1 survey in `docs/ncbi/NCBI_databases_and_APIs_reference.md`
 
 Output: a per-API capability sheet that every tool specification in Step 4.1 is written against. This converts the lightweight Phase 2 feasibility notes (the "can we answer this today" checks taken during CQ tiering) into verified API behavior. Discuss and confirm scope before drafting.
 
@@ -485,9 +485,9 @@ Rules: added `tool-call-budgets` and `v1-scope-boundary`, adopted `prompt-cache-
 
 ### Step 5.4: create any new reference docs - COMPLETE (2026-07-26)
 
-`docs/Tool_implementation_mechanics.md`: 19 per-tool API traps from tech spec Section 6, six identified during the coverage map and 13 more found reading the section in full. The document holds API facts; the rules hold policy, and it says so explicitly so the boundary survives future edits.
+`docs/ncbi/Tool_implementation_mechanics.md`: 19 per-tool API traps from tech spec Section 6, six identified during the coverage map and 13 more found reading the section in full. The document holds API facts; the rules hold policy, and it says so explicitly so the boundary survives future edits.
 
-Phase 5 output: all project infrastructure aligned with the PRD and tech spec. Deliverables are `requirements/phase_5/Coverage_map.md` (the 303-obligation gate list), `requirements/phase_5/Phase_5_synthesis.md`, the rewritten harness under `.claude/`, `docs/Tool_implementation_mechanics.md`, and `LEARNINGS.md`.
+Phase 5 output: all project infrastructure aligned with the PRD and tech spec. Deliverables are `requirements/phase_5/Coverage_map.md` (the 303-obligation gate list), `requirements/phase_5/Phase_5_synthesis.md`, the rewritten harness under `.claude/`, `docs/ncbi/Tool_implementation_mechanics.md`, and `LEARNINGS.md`.
 
 ---
 
@@ -628,7 +628,7 @@ One phase at a time. No skipping.
   - Step 5.1: overhauled bossman-mode. Fixed the branch-naming defect (both executing skills created `feature/description` against the `phase/N.M-description` convention every rule states, which also silently disabled ship's MR step). Made tech spec Section 25 the source of truth for the 26 build phases. Made worktree isolation the default for concurrent file-mutating builders with read-only agents in the shared checkout. Added the product owner role, per-phase product-owner-required marking, a scope check, and a Playwright gate for UI phases. Wired `verify`, `eval-harness`, and `dev-standards` into the phase-end chain, none of which the skill had ever invoked.
   - Step 5.2: added two skills, `task-tracker` and `learnings`. Rewrote `eval-harness`, which never referenced the evaluation playbook and was missing 13 of its 17 demands. Added rules `tool-call-budgets` and `v1-scope-boundary`, adopted `prompt-cache-discipline` from the personal-os reference, extended `production-standards` and `system-design-patterns`, and narrowed `dependency-tracking` to hooks only. Zero of the four skills this document originally floated were built, because the coverage map showed the gaps were rules and docs.
   - Step 5.3: corrected 19 stale statements across the root documents, rewrote the pull request template off the inherited BioLink and KGX gates, and fixed three documented slash commands that did not resolve.
-  - Step 5.4: added `docs/Tool_implementation_mechanics.md`, 19 per-tool API traps taken from tech spec Section 6.
+  - Step 5.4: added `docs/ncbi/Tool_implementation_mechanics.md`, 19 per-tool API traps taken from tech spec Section 6.
   - Deferred by the product owner: unattended overnight execution. The standing deny on proceeding past a phase without approval holds. 121 decisions logged.
 - 2026-07-25: Completed Phase 4 Step 4.4, the strategic memo, and closed Phase 4. Deliverable: `requirements/Strategic_memo.md`, a one-to-two-page executive distillation of the locked PRD and the locked technical specification, written for a future collaborator or future-me. Phase 4 is now COMPLETE: the verified API capability sheet, the locked technical specification, and the strategic memo are the phase's three deliverables, which together serve as the phase synthesis (no separate synthesis document, unlike Phase 1). Phase 5 (system and tooling updates) is next. 113 decisions logged.
 - 2026-07-25: Completed Phase 4 Steps 4.1 to 4.3 and locked the tech spec.

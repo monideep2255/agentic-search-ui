@@ -31,7 +31,7 @@ Append to the table in `LEARNINGS.md`, newest last:
 
 | Date | Applies to | What broke | What was tried | What fixed it |
 |------|-----------|------------|----------------|---------------|
-| 2026-07-26 | `cypher_query`, Layer 1 | Example: query returned rows for a gene that does not exist | Widened the WHERE clause, checked the index | Untyped relationship pattern matched across edge types. Explicit edge label required, see `docs/Tool_implementation_mechanics.md` |
+| 2026-07-26 | `cypher_query`, Layer 1 | Example: query returned rows for a gene that does not exist | Widened the WHERE clause, checked the index | Untyped relationship pattern matched across edge types. Explicit edge label required, see `docs/ncbi/Tool_implementation_mechanics.md` |
 
 Applies to: the tool, layer, build phase, or subsystem, so a future reader can filter. Tag generously; a missed tag is a missed recall.
 

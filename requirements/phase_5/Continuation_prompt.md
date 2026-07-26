@@ -42,7 +42,7 @@ Rules:
 | `.claude/rules/tool-call-budgets.md` | Per-tool timeouts, rate limits, queue depth, fail-fast. 13 obligations |
 | `.claude/rules/v1-scope-boundary.md` | The PRD out-of-scope list and the fast-follow table as a hard boundary. Binds hardest during autonomous runs |
 | `.claude/rules/prompt-cache-discipline.md` | Adapted from personal-os. Stable prefix immutability, sorted tool schemas, load-once few-shot pool |
-| `docs/Tool_implementation_mechanics.md` | 19 per-tool API traps from tech spec Section 6. Facts, not policy |
+| `docs/ncbi/Tool_implementation_mechanics.md` | 19 per-tool API traps from tech spec Section 6. Facts, not policy |
 | `requirements/phase_5/Coverage_map.md` | The 303-obligation gate list with owners |
 | `LEARNINGS.md` | Started, with the first two entries from this session |
 

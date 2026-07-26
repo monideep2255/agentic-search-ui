@@ -8,8 +8,12 @@ Depends on:
     - tracker/BOARD.md (parsed; the nine-column build table and the planning table)
 
 Writes:
-    - tracker/board.html      standalone page, opens in a browser with no server
-    - tracker/board.body.html fragment for publishing as an artifact
+    - tracker/board.html  standalone page, opens in a browser with no server
+
+The publishable fragment is NOT written here. It is a transient input to the
+publisher, not an artifact worth committing, so docs/publish_body.sh derives it
+into a temp path at publish time. Keeping it in the repo put two near-identical
+HTML files side by side and made the folder unreadable.
 
 Usage:
     python3 tracker/render_board.py            render both views
@@ -486,11 +490,10 @@ def main(argv: list[str]) -> int:
         print(f"ok: {summary}")
         return 0
 
-    OUT_BODY.write_text(body, encoding="utf-8")
     OUT_PAGE.write_text(STANDALONE_HEAD + body + STANDALONE_FOOT, encoding="utf-8")
     print(f"rendered: {summary}")
     print(f"  {OUT_PAGE.relative_to(ROOT.parent)}")
-    print(f"  {OUT_BODY.relative_to(ROOT.parent)}  (publish this one as the artifact)")
+    print("  to publish: docs/publish_body.sh tracker/board.html")
     return 0
 
 

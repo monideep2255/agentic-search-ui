@@ -2,60 +2,72 @@
 
 Reference material for System 3. Start here to find the right document without opening six.
 
-Planning documents live in `requirements/`, not here. This folder holds reference and how-to material: architecture explanations, API facts, and the workflow the build runs on. The distinction that matters: `requirements/` says what we are building and why, `docs/` says how things actually work.
+Planning documents live in `requirements/`, not here. This folder holds reference and how-to material. The distinction that matters: `requirements/` says what we are building and why, `docs/` says how things actually work.
 
 Last updated: 2026-07-26.
 
 ## Table of contents
 
 - [Start here, by what you are doing](#start-here-by-what-you-are-doing)
-- [Everything in this folder](#everything-in-this-folder)
+- [The folders](#the-folders)
 - [What is not here](#what-is-not-here)
-- [Why the folder is flat](#why-the-folder-is-flat)
+- [Two things to know about this folder](#two-things-to-know-about-this-folder)
+- [Moved paths](#moved-paths)
 
 ## Start here, by what you are doing
 
 | I want to | Read |
 |-----------|------|
 | Understand the project from zero | `data-engineering/Project_overview_A_to_Z.md`, the navigation hub |
-| Understand the search agent's design | `System_3_architecture_brainstorming.md` |
+| Understand the search agent's design | `architecture/System_3_architecture_brainstorming.md` |
 | Know how the agent reaches data | `architecture/Three_layer_data_architecture.md` |
 | Write a Cypher query against the graph | `architecture/Biolink_repos_explained.md`, then `data-engineering/Knowledge_graph_on_server_reference.md` |
-| Wire up one of the seven tools | `Tool_implementation_mechanics.md` first, then the tool's section in the tech spec |
-| Find an NCBI endpoint, rate limit, or record count | `NCBI_databases_and_APIs_reference.md` |
-| Decide whether to build or reuse something NCBI already published | `NCBI_repos_deep_dive.md` |
-| Run a build phase | `Build_workflow_cadence.md`, or `Phase_6_execution_flow.html` for the visual |
-| Watch parallel builders in live panes | `Agent_teams_tmux_quickstart.md` |
+| Wire up one of the seven tools | `ncbi/Tool_implementation_mechanics.md` first, then that tool's section in the tech spec |
+| Find an NCBI endpoint, rate limit, or record count | `ncbi/NCBI_databases_and_APIs_reference.md` |
+| Decide whether to build or reuse something NCBI published | `ncbi/NCBI_repos_deep_dive.md` |
+| Run a build phase | `build/Build_workflow_cadence.md`, or `build/Phase_6_execution_flow.html` for the visual |
+| Watch parallel builders in live panes | `build/Agent_teams_tmux_quickstart.md` |
 | Run the security scan before a pull request | `Claude_security_plugin_usage.md` |
 
-## Everything in this folder
+## The folders
 
-### The build workflow
-
-| Doc | What it is |
-|-----|-----------|
-| `Build_workflow_cadence.md` | The quick reference for how one build phase runs: eleven stages, who acts at each, the model and effort per stage, and where every file gets written |
-| `Phase_6_execution_flow.html` | The same cadence as a visual page. Opens in a browser with no server. Also published as a Claude artifact |
-| `Agent_teams_tmux_quickstart.md` | tmux launch guide so parallel builders appear in live panes rather than invisible background sessions |
-| `Claude_security_plugin_usage.md` | How to run the on-demand security scan, apply patches, and how it complements the always-on guidance plugin. See the note below, this one is a symlink |
-
-### Architecture
+### `architecture/` how the system is designed
 
 | Doc | What it is |
 |-----|-----------|
 | `System_3_architecture_brainstorming.md` | The search agent's design: agent loop, tools, multi-model harness, cost model, deployment |
-| `architecture/Three_layer_data_architecture.md` | Layer 1 the graph, Layer 2 on-demand NCBI APIs, Layer 3 enrichment, and how the agent uses each |
-| `architecture/Biolink_repos_explained.md` | The BioLink model: categories, predicates, CURIEs. Needed to read the graph schema |
+| `Three_layer_data_architecture.md` | Layer 1 the graph, Layer 2 on-demand NCBI APIs, Layer 3 enrichment, and how the agent uses each |
+| `Biolink_repos_explained.md` | The BioLink model: categories, predicates, CURIEs. Needed to read the graph schema |
 
-### Data and APIs
+### `build/` how the work gets done
 
 | Doc | What it is |
 |-----|-----------|
-| `Tool_implementation_mechanics.md` | Nineteen per-tool API traps taken from tech spec section 6. Facts a builder needs before wiring a tool. The policy versions of these live in the rules; this file holds only the facts |
+| `Build_workflow_cadence.md` | The quick reference for one build phase: eleven stages, who acts at each, the model and effort per stage, where every file gets written |
+| `Phase_6_execution_flow.html` | The same cadence as a visual page. Opens in a browser with no server. Also published as a Claude artifact |
+| `Agent_teams_tmux_quickstart.md` | tmux launch guide so parallel builders appear in live panes rather than invisible background sessions |
+
+### `ncbi/` the data sources and their traps
+
+| Doc | What it is |
+|-----|-----------|
+| `Tool_implementation_mechanics.md` | Nineteen per-tool API traps from tech spec section 6. Facts a builder needs before wiring a tool. The policy versions live in the rules; this holds only the facts |
 | `NCBI_databases_and_APIs_reference.md` | All 39 NCBI databases: endpoints, rate limits, record counts |
 | `NCBI_repos_deep_dive.md` | Thirteen NCBI GitHub repos analyzed: what to reuse, what to adapt, what not to build locally |
-| `data-engineering/Knowledge_graph_on_server_reference.md` | Operating the live graph on the Hetzner box: SSH access, Cypher examples, indexes, node and edge counts, cost |
-| `data-engineering/Project_overview_A_to_Z.md` | The navigation hub with pointers into every doc across the whole project, including the data engineering repo |
+
+### `data-engineering/` the graph System 3 queries
+
+| Doc | What it is |
+|-----|-----------|
+| `Knowledge_graph_on_server_reference.md` | Operating the live graph: SSH access, Cypher examples, indexes, node and edge counts, cost |
+| `Project_overview_A_to_Z.md` | The navigation hub with pointers into every doc across the whole project, including the data engineering repo |
+
+### At the root
+
+| File | What it is |
+|------|-----------|
+| `Claude_security_plugin_usage.md` | How to run the on-demand security scan and apply patches. Pinned here, see below |
+| `publish_body.sh` | Derives the publishable fragment from a standalone HTML page in this repo |
 
 ## What is not here
 
@@ -69,13 +81,22 @@ Last updated: 2026-07-26.
 | Current build status | `tracker/BOARD.md`, or `tracker/board.html` for the kanban view |
 | Pipeline, parser, and graph-loading docs | The System 1 and 2 repo, symlinked at `reference/agentic-search-data-engineering` |
 
-One caveat on `Claude_security_plugin_usage.md`: it is a symlink into `personal-os-work`, not a file in this repo. It resolves on the machine where that repo is checked out beside this one, and will dangle in a fresh clone or in CI. Everything else in this folder is a real file.
+## Two things to know about this folder
 
-## Why the folder is flat
+`Claude_security_plugin_usage.md` cannot move. The locked technical specification references it at this exact path, and that spec is frozen until the Plan.md step 6.2 reconciliation. It is also a symlink into `personal-os-work` rather than a real file here, so it resolves only on a machine with that repo checked out alongside this one, and will dangle in a fresh clone or in CI. `data-engineering/` is pinned for the same reason.
 
-Grouping these into subfolders by topic was considered and rejected, because four of the eleven documents are pinned in place by files that cannot be edited to follow them:
+HTML pages here are the source, not a copy. The file in this folder is what gets edited and version controlled. Publishing derives a fragment from it with `publish_body.sh`, into a temp path rather than into the repo. Never edit a published page and expect the repo to follow; the dependency runs one way.
 
-- `DECISIONS.md` is append-only by rule, and its rows reference `Agent_teams_tmux_quickstart.md`, `Claude_security_plugin_usage.md`, and `Tool_implementation_mechanics.md`. Moving those would leave permanently wrong paths in the decision history.
-- `requirements/Technical_specification.md` is locked until the Plan.md step 6.2 reconciliation, and it references `data-engineering/Knowledge_graph_on_server_reference.md` and `Claude_security_plugin_usage.md`.
+## Moved paths
 
-Moving only the unpinned seven would produce a half-organized folder, which is harder to navigate than a flat one. So this index does the organizing instead, and the paths stay stable. Revisit at step 6.2, when the spec unfreezes and the whole set can move together.
+Files were regrouped into folders on 2026-07-26. Every reference in an editable file was updated. `DECISIONS.md` is append-only by rule, so three of its historical rows still cite the old flat paths. Those rows are a record of what was decided and when, not a live index, and they are correct about the decision even where the path has since changed. Use this table to translate:
+
+| Old path | Now at |
+|----------|--------|
+| `docs/System_3_architecture_brainstorming.md` | `docs/architecture/System_3_architecture_brainstorming.md` |
+| `docs/Agent_teams_tmux_quickstart.md` | `docs/build/Agent_teams_tmux_quickstart.md` |
+| `docs/Build_workflow_cadence.md` | `docs/build/Build_workflow_cadence.md` |
+| `docs/Phase_6_execution_flow.html` | `docs/build/Phase_6_execution_flow.html` |
+| `docs/NCBI_databases_and_APIs_reference.md` | `docs/ncbi/NCBI_databases_and_APIs_reference.md` |
+| `docs/NCBI_repos_deep_dive.md` | `docs/ncbi/NCBI_repos_deep_dive.md` |
+| `docs/Tool_implementation_mechanics.md` | `docs/ncbi/Tool_implementation_mechanics.md` |

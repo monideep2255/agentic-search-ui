@@ -48,7 +48,7 @@ Before Phase 5, 57 obligations in the locked specification had nothing enforcing
 | The v1 out-of-scope and fast-follow boundary | `.claude/rules/v1-scope-boundary.md` |
 | Cross-layer authority, staleness, audit logging, graceful degradation | `.claude/rules/production-standards.md`, extended |
 | Contract versioning, one tool per access path, model identity | `.claude/rules/system-design-patterns.md`, extended |
-| Per-tool API traps | `docs/Tool_implementation_mechanics.md` |
+| Per-tool API traps | `docs/ncbi/Tool_implementation_mechanics.md` |
 
 Two ownership problems were subtler than absence.
 

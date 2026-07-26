@@ -311,7 +311,7 @@ Every phase reads from these. They are locked and frozen through the build, edit
 | `requirements/Technical_specification.md` | The build blueprint. 25 sections, seven tools, six delivery surfaces. Section 25 defines the 26 build phases | Lead always, builders for their own tool or surface section |
 | `requirements/PRD.md` | The product contract. Every requirement traces to an outcome here, and its out-of-scope list is a hard boundary | Lead, judge |
 | `requirements/Evaluation_playbook.md` | The living evaluation contract. Competency questions, the rubric, the coverage metric, the feedback loop | Lead, `eval-harness`, test writer |
-| `docs/Tool_implementation_mechanics.md` | Per-tool API traps that are expensive to discover late | Any builder wiring a tool |
+| `docs/ncbi/Tool_implementation_mechanics.md` | Per-tool API traps that are expensive to discover late | Any builder wiring a tool |
 | `LEARNINGS.md` | What already broke here and what fixed it | Lead at phase start, any builder retrying a failure |
 
 ### Reference repos
