@@ -47,7 +47,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | Track | Status |
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
-| Planning (Phase 5) | In progress (opened 2026-07-26): system and tooling updates |
+| Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
 | Build (Phases 6-7) | Not started. No application code exists yet. Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
 
 ---
@@ -103,10 +103,13 @@ agentic-search-ui/
   docs/                         # Architecture docs, reference material
   reference/                    # Symlink to agentic-search-data-engineering (System 1+2)
   requirements/                 # Planning docs: Plan.md, PRD.md, Technical_specification.md, Strategic_memo.md, Evaluation_playbook.md
-  .claude/                      # Claude Code rules, skills, agents, hooks (kept on disk, untracked since 2026-07-25)
+  tracker/                      # In-repo build board: BOARD.md, phase tickets, render_board.py, board.html
+  .claude/                      # Claude Code rules, skills, agents, hooks (tracked in git for v1 development)
   CLAUDE.md                     # Claude Code instructions
   AGENTS.md                     # Instructions for other AI agents
-  DECISIONS.md                  # Architecture decision log (114 rows)
+  DECISIONS.md                  # Architecture decision log (123 rows)
+  LEARNINGS.md                  # What broke during the build and what fixed it
+  CHANGELOG.md                  # Keep a Changelog format, all entries currently Unreleased
   pyproject.toml
   requirements.txt
   env.example
@@ -139,6 +142,9 @@ agentic-search-ui/
 | [Project overview](docs/data-engineering/Project_overview_A_to_Z.md) | Navigation hub for the full project |
 | [Agent teams tmux quickstart](docs/build/Agent_teams_tmux_quickstart.md) | tmux launch guide for bossman-mode parallel builders |
 | [Claude security plugin usage](docs/Claude_security_plugin_usage.md) | How to run the on-demand `claude-security` scan, apply patches, and how it complements the always-on `security-guidance` plugin |
+| [Tool implementation mechanics](docs/ncbi/Tool_implementation_mechanics.md) | Per-tool API traps from tech spec section 6: edge-label enforcement, ELink target db, the `global_mafs` array, sequential dbSNP calls, snapshot pinning |
+| [Build workflow cadence](docs/build/Build_workflow_cadence.md) | The quick reference for how a build phase runs: the eleven stages, who acts at each, the model and effort per stage |
+| [Phase 6 execution flow](docs/build/Phase_6_execution_flow.html) | The build cadence as a visual page, also published as a Claude artifact |
 | [Decisions](DECISIONS.md) | Architecture and implementation decisions with rationale |
 
 ---

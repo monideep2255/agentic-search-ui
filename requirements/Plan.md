@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-07-26.
 | Phase 6: build (bossman execution) | Not started |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 121 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 123 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -618,7 +618,7 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Summary of what happens next
 
-Phases 1 through 4 are complete, with the Phase 1 synthesis, the evaluation playbook, the locked PRD, the verified API capability sheet, the locked technical specification, and the strategic memo all written. Phase 5 (system and tooling updates) opened 2026-07-26 and its four steps are done: the build harness, skills, rules, root documents, and reference docs are now consistent with the locked specification. 121 decisions logged. Next: Phase 6, building the prototype and then v1. We debate. We decide. We log decisions.
+Phases 1 through 4 are complete, with the Phase 1 synthesis, the evaluation playbook, the locked PRD, the verified API capability sheet, the locked technical specification, and the strategic memo all written. Phase 5 (system and tooling updates) opened 2026-07-26 and its four steps are done: the build harness, skills, rules, root documents, and reference docs are now consistent with the locked specification. 123 decisions logged. Next: Phase 6, building the prototype and then v1. We debate. We decide. We log decisions.
 
 One phase at a time. No skipping.
 
@@ -629,7 +629,7 @@ One phase at a time. No skipping.
   - Step 5.2: added two skills, `task-tracker` and `learnings`. Rewrote `eval-harness`, which never referenced the evaluation playbook and was missing 13 of its 17 demands. Added rules `tool-call-budgets` and `v1-scope-boundary`, adopted `prompt-cache-discipline` from the personal-os reference, extended `production-standards` and `system-design-patterns`, and narrowed `dependency-tracking` to hooks only. Zero of the four skills this document originally floated were built, because the coverage map showed the gaps were rules and docs.
   - Step 5.3: corrected 19 stale statements across the root documents, rewrote the pull request template off the inherited BioLink and KGX gates, and fixed three documented slash commands that did not resolve.
   - Step 5.4: added `docs/ncbi/Tool_implementation_mechanics.md`, 19 per-tool API traps taken from tech spec Section 6.
-  - Deferred by the product owner: unattended overnight execution. The standing deny on proceeding past a phase without approval holds. 121 decisions logged.
+  - Deferred by the product owner: unattended overnight execution. The standing deny on proceeding past a phase without approval holds. 123 decisions logged.
 - 2026-07-25: Completed Phase 4 Step 4.4, the strategic memo, and closed Phase 4. Deliverable: `requirements/Strategic_memo.md`, a one-to-two-page executive distillation of the locked PRD and the locked technical specification, written for a future collaborator or future-me. Phase 4 is now COMPLETE: the verified API capability sheet, the locked technical specification, and the strategic memo are the phase's three deliverables, which together serve as the phase synthesis (no separate synthesis document, unlike Phase 1). Phase 5 (system and tooling updates) is next. 113 decisions logged.
 - 2026-07-25: Completed Phase 4 Steps 4.1 to 4.3 and locked the tech spec.
   - Step 4.1: outlined the tech spec's 25 sections once the core-architecture decisions locked, expanded from the original 19-section list.
