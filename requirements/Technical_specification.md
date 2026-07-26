@@ -918,7 +918,7 @@ Output schema (one shape for every action; per-action content is documented in t
           "source_url": {
             "type": "string",
             "maxLength": 300,
-            "pattern": "^https://((www\\.|pubmed\\.)?ncbi\\.nlm\\.nih\\.gov|(www\\.)?omim\\.org|(www\\.)?clinicaltrials\\.gov)/"
+            "pattern": "^https://((www\\.|pubmed\\.)?ncbi\\.nlm\\.nih\\.gov|(www\\.)?omim\\.org)/"
           }
         }
       }
@@ -1439,7 +1439,7 @@ Per-call timeout: 15 seconds, the standard interactive-HTTPS budget. No document
 | Tool | maxLength on strings | maxItems on arrays | Host-pinned source_url | Read plus one source only |
 |------|------------------------|----------------------|---------------------------|------------------------------|
 | cypher_query | yes | yes | yes, `NCBI_RECORD_HOST` | yes, graph transport only |
-| ncbi_efetch | yes | yes | yes, `NCBI_RECORD_HOST`, `omim.org`, `CLINICALTRIALS_HOST` | yes, Entrez/Datasets/PubChem only |
+| ncbi_efetch | yes | yes | yes, `NCBI_RECORD_HOST`, `omim.org` | yes, Entrez/Datasets/PubChem only |
 | ncbi_dbsnp | yes | yes | yes, `NCBI_RECORD_HOST` scoped to `/snp/` | yes, Variation Services plus dbSNP ESummary only |
 | pubtator_annotate | yes | yes | yes, `NCBI_RECORD_HOST` scoped to `pubmed.` | yes, PubTator3 only |
 | litvar2_lookup | yes | yes | yes, `NCBI_RECORD_HOST` | yes, LitVar2 only |
@@ -1512,11 +1512,11 @@ A detected conflict routes into the trust signal's `flag` outcome (Decision E, s
 
 ### 7.3 Freshness and version context on every citation
 
-Every citation carries an as-of marker whose shape depends on the layer, not a single generic "last updated" string:
+Every citation carries an as-of marker whose shape depends on the layer, not a single generic "last updated" string. This marker is a separate structure attached to a citation by shared `citation_id`, the same separate-structure pattern used for `trust_signal`, not a field on the canonical CitationV1 payload in Section 9.1:
 
 ```json
 {
-  "layer": "layer_1",
+  "layer": "layer_1_graph",
   "graph_snapshot_version": "2026-06-15",
   "assembly": null
 }
@@ -1524,7 +1524,7 @@ Every citation carries an as-of marker whose shape depends on the layer, not a s
 
 ```json
 {
-  "layer": "layer_2",
+  "layer": "layer_2_api",
   "fetched_at": "2026-07-25T14:03:00Z",
   "assembly": "GRCh38"
 }
@@ -1732,10 +1732,10 @@ evidence_kind: type string enum, four values.
 
 | Value | Meaning | How populated |
 |---|---|---|
-| primary_assertion | The source record states the fact directly (a database field, not a computed or mined value) | Default for cypher_query graph properties and for ncbi_efetch and ncbi_dbsnp record fields that are stored as-is |
+| primary_assertion | The source record states the fact directly (a database field, not a computed or mined value) | Default for cypher_query graph properties, ncbi_efetch and ncbi_dbsnp record fields stored as-is, and pathogen_detection isolate, cluster-membership, and AMR fields copied from the PDG snapshot |
 | derived_summary | A tool-computed aggregation over multiple records (a count, a rollup) | Set by the tool code itself when it emits a field it computed rather than copied, for example "47 pathogenic variants across 8 genes" |
 | literature_mention | An entity or relationship mined from free text by a text-mining tool, not asserted by a database curator | Default for every pubtator_annotate and litvar2_lookup finding, since both are text-mining outputs over PubMed abstracts |
-| external_annotation | An enrichment fact from a non-NCBI federal source | Default for a ClinicalTrials.gov finding, if and when that source gets a dedicated tool |
+| external_annotation | An enrichment fact from a non-NCBI-database federal source | Default for a clinicaltrials_search finding (ClinicalTrials.gov v2) |
 
 Population is a static, per-tool default table maintained in code, not a per-call model judgment. A tool may override its default for a specific field it knows is computed (marking a field derived_summary even though the tool is otherwise primary_assertion), but the override is itself a fixed rule in that tool's code, not a runtime inference.
 
@@ -1763,7 +1763,7 @@ license: type string enum, three values.
 
 | Value | Meaning |
 |---|---|
-| public_domain_us_gov | A work of the US federal government, not subject to copyright under 17 U.S.C. 105. Default for NCBI-native records: Gene, ClinVar, dbSNP, OMIM metadata, PubTator3 and LitVar2 annotations, and Datasets API records |
+| public_domain_us_gov | A work of the US federal government, not subject to copyright under 17 U.S.C. 105. Default for NCBI-native records (Gene, ClinVar, dbSNP, OMIM metadata, PubTator3 and LitVar2 annotations, Datasets API records) and for pathogen_detection PDG-snapshot data and clinicaltrials_search (ClinicalTrials.gov) records, all US federal sources |
 | publisher_copyright_abstract_only | The underlying full-text article carries publisher copyright even though its PubMed metadata and abstract are indexed by NLM | Applied to PubMed and PMC-linked findings where the tool exposes only metadata and abstract, never full text |
 | unspecified | The tool has not yet been mapped to a license value | Placeholder only, must not ship in v1 without a confirmed mapping per source |
 
