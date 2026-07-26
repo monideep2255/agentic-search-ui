@@ -14,7 +14,7 @@ Kick-off: 2026-05-06. Last updated: 2026-07-26.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | Not started |
+| Phase 6: build (bossman execution) | Not started, next up. Kickoff prompt in `requirements/phase_6/Continuation_prompt.md` |
 | Phase 7: iteration and new information | Not started |
 
 Decisions logged: 124 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
@@ -493,7 +493,7 @@ Phase 5 output: all project infrastructure aligned with the PRD and tech spec. D
 
 ## Phase 6: build (bossman execution)
 
-Status: NOT STARTED
+Status: NOT STARTED, next up. Kickoff prompt at `requirements/phase_6/Continuation_prompt.md`
 
 Goal: build System 3 using bossman-mode. Agent teams execute, I orchestrate.
 
@@ -587,6 +587,7 @@ This cycle repeats. The system evolves.
 | Reference docs (as needed) | Phase 5 (done) | `docs/` | `Tool_implementation_mechanics.md`, 19 per-tool API traps from tech spec Section 6 |
 | tracker/ | Phase 5 (created), populated in Phase 6 | repo root | The in-repo build board. `BOARD.md` indexes the phases, `phase_N.M.md` holds each phase's tickets with acceptance criteria, evidence, and append-only history. Maintained by the `task-tracker` skill |
 | LEARNINGS.md | Phase 5 (started), running through Phase 6 | repo root | Running capture of build-time learnings during prototype and v1 execution. Maintained by the `learnings` skill: written at the moment of failure, read before every build phase opens. Started in Phase 5 with the first two entries from that session. The input to the Step 6.2 reconciliation: it collects what each build step taught us so the PRD, tech spec, strategic memo, and the living evaluation playbook get updated from a captured record, not memory. Also seeds Phase 7 iteration. |
+| Phase 6 continuation prompt | Phase 6 (kickoff prep, 2026-07-26) | `requirements/phase_6/Continuation_prompt.md` | The paste-in kickoff prompt for the first Phase 6 build session: what to read first, the rules that bind the build, the build phase 1.0 detail, and the open items to resolve during the build |
 
 ---
 
