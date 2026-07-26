@@ -53,6 +53,7 @@ Non-negotiables to apply before calling code production-ready. When multiple gap
 - No database or graph schema migration without a rollback plan and backward-compatibility verification (expand-contract pattern).
 - No production claim without CI evidence (all merge-blocking gates pass).
 - No architecture decision without a DECISIONS.md entry or equivalent note when it affects future work.
+- No endpoint ships on an unverified capability: the PubTator3 relations endpoint does not ship until its path and fields are live-verified (tech spec Section 6.4).
 
 Retry-safety gate, for any code the agent loop may run more than once:
 - Writes must be idempotent or repeat-safe. The Act step retries, so a tool that creates, appends, or mutates must produce the same end state whether it runs once or three times. Use upserts, check-then-write, or natural-key dedup, not blind inserts.
@@ -64,6 +65,11 @@ Supply chain gate:
 Secrets gate:
 - Secrets in env vars or a secrets manager only. No secrets in code, logs, or images. Dev and prod credentials are separate.
 
+Observability and audit gate:
+- The tool-call audit log is append-only. Never mutate a written entry, and give each logging process exactly one writer (tech spec Section 20.3).
+- `trace_id` is minted at the Guardrail step and threads through every event, every LiteLLM call, and every tool call. It is the single join key across LangSmith, the interactions table, and the audit log (tech spec Section 20.1).
+- Every Layer 2 and Layer 3 access is logged together with its authorization: which credential or role was used, by identifier, never by value (PRD).
+
 Multi-agent pipeline gate:
 - Every tool and subagent in the agent loop must declare an output schema (JSONSchema). Validation runs at every hop, Guardrail to Think to Plan to Act to Write. An unvalidated payload flowing from one step to the next is how prompt injection moves laterally.
 - `maxLength` on every string field and `maxItems` on every array are required, not optional. They cap the blast radius if a single upstream document, abstract, or API response goes hostile.
@@ -71,6 +77,12 @@ Multi-agent pipeline gate:
 - URL fields use a host-pinned regex, for example `^https://([A-Za-z0-9-]+\.)*ncbi\.nlm\.nih\.gov/`, not just `^https://`. This applies directly to `source_url` on every citation: a citation URL that only checks for `https://` can be spoofed to point anywhere.
 - Untrusted-source readers, any tool that ingests external documents (a Layer 3 enrichment fetch, a scraped abstract, an NCBI record body), get Read access and the relevant API tool only. Never Write, never the ability to call other tools directly. The orchestrator and the Write step never see a raw untrusted document unmediated; they only see what the reading tool returned through its schema.
 - A malformed-but-parseable payload flowing downstream unchecked is a documented real-world failure mode in biomedical MCP servers: LLM output passed across pipeline stages with only `json.loads` and a couple of key checks, no JSONSchema, no `maxLength`, no `maxItems`. Treat that as the negative example to design against.
+
+Layer authority, freshness, and degradation gate:
+- Live wins for currency: when both a graph value and a live Layer 2 or Layer 3 value were fetched for the same answer, state the live value as current, never the graph value (tech spec Section 7.1).
+- Auto cross-verify stale snapshots: once a Layer 1 graph snapshot exceeds its staleness threshold, 30 days for a volatile field class and 90 days for a stable one, cross-verify that field against a live Layer 2 call before citing it as current (tech spec Section 7.4).
+- Suspect graph data falls back to Layer 2: Layer 2 is authoritative on suspect Layer 1 data, and the answer is corrected. Surface the correction to the user only when it also leaves the answer incomplete (tech spec Section 22.1).
+- Partial-layer failure degrades gracefully: synthesize from whatever layers responded and explain the gap in the answer text. Graceful degradation is mandatory; a blank failure is not acceptable (PRD).
 
 AI answer grounding gate:
 - Cite-or-refuse: every answer the agent generates from sources must be tied to a specific retrieved passage, node, edge, or API result, or the agent must explicitly return "I could not find information on this" and stop. No answering from model priors when retrieval returns nothing. This is the direct implementation of CLAUDE.md's "Citations: non-negotiable" rule, and it is the single highest-leverage correctness gate for a biomedical search system, where a confident wrong answer is worse than no answer.
@@ -92,9 +104,11 @@ Ask:
 - Before lowering a threshold, count, or gate this rule defines. See `goal-contracts` on weakening a verify surface
 
 Deny:
-- Never call code production-ready when a security, testing, quality, hardening, supply-chain, secrets, multi-agent schema, or AI answer grounding gate in this rule fails
+- Never call code production-ready when a security, testing, quality, hardening, supply-chain, secrets, observability, multi-agent schema, layer authority, or AI answer grounding gate in this rule fails
 - Never ship an endpoint, tool, or subagent without input validation, schema validation, and tests for valid, invalid, and null input
 - Never ship an answer-generation feature without a passing cite-or-refuse test and a tested zero-retrieval-hits refusal path
+- Never state a Layer 1 graph value as current when a live Layer 2 or Layer 3 value for the same field was also fetched for the answer
+- Never mutate or delete a written entry in the tool-call audit log
 - Never weaken, delete, or skip a gate to make a change appear production-ready
 
 See `ai-security-standards` for the agent-behavior layer (prompt injection, least privilege, human approval) and `supply-chain-security` for dependency and MCP server checks.
@@ -103,4 +117,4 @@ See `ai-security-standards` for the agent-behavior layer (prompt injection, leas
 
 For a complete production readiness review (6-lens checklist covering security, testing, code quality, PR readiness, deployment, and production hardening), invoke the `/dev-standards` skill. This rule covers the critical-path non-negotiables only.
 
-The test: did I apply every security, supply-chain, secrets, multi-agent schema, and AI answer grounding gate before calling System 3 code production-ready?
+The test: did I apply every security, supply-chain, secrets, observability, multi-agent schema, layer authority, and AI answer grounding gate before calling System 3 code production-ready?

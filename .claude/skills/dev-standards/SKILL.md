@@ -9,7 +9,6 @@ depends_on:
 depended_by:
   - CLAUDE.md
   - AGENTS.md
-  - .claude/skills/bossman-mode/SKILL.md
   - .claude/skills/release-workflow/SKILL.md
 ---
 

@@ -12,9 +12,9 @@ Stack: Python 3.11+, FastAPI, LangGraph, React, PostgreSQL (user data), psycopg2
 
 | Priority | System | Status |
 |----------|--------|--------|
-| 1 | System 3: planning (Phase 5) | PHASE 1 COMPLETE (all 13 steps, synthesis in requirements/phase_1/Phase_1_synthesis.md). PHASE 2 COMPLETE per requirements/Plan.md: competency questions and the evaluation playbook, deliverable requirements/Evaluation_playbook.md. PHASE 3 COMPLETE: PRD drafted, graded, and locked, deliverable requirements/PRD.md (locked 2026-07-22). PHASE 4 COMPLETE (opened 2026-07-24, closed 2026-07-25): the verified API capability sheet (requirements/phase_4/API_capability_sheet.md), the locked technical specification (requirements/Technical_specification.md, 25 sections, seven tools, six delivery surfaces), and the strategic memo (requirements/Strategic_memo.md). These three deliverables serve as the phase synthesis. requirements/System_3_overview.html combines the four Phase 4 planning docs (Strategic_memo.md, PRD.md, Technical_specification.md, Evaluation_playbook.md) into one navigable overview, also published as a Claude artifact. PHASE 5 (system and tooling updates) NEXT. 114 decisions in DECISIONS.md. No application code yet; build execution begins at Plan.md Phase 6. Knowledge graph available on Hetzner CPX42 (46.225.128.133): 115M nodes + 693M edges queryable via openCypher over psycopg2. |
-| 2 | System 3: tool integration | PLANNED. cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup. |
-| 3 | System 3: eval and tracing | PLANNED. LangSmith tracing, golden dataset, automated eval harness. |
+| 1 | System 3: planning (Phase 5) | PHASE 1 COMPLETE (all 13 steps, synthesis in requirements/phase_1/Phase_1_synthesis.md). PHASE 2 COMPLETE per requirements/Plan.md: competency questions and the evaluation playbook, deliverable requirements/Evaluation_playbook.md. PHASE 3 COMPLETE: PRD drafted, graded, and locked, deliverable requirements/PRD.md (locked 2026-07-22). PHASE 4 COMPLETE (opened 2026-07-24, closed 2026-07-25): the verified API capability sheet (requirements/phase_4/API_capability_sheet.md), the locked technical specification (requirements/Technical_specification.md, 25 sections, seven tools, six delivery surfaces), and the strategic memo (requirements/Strategic_memo.md). These three deliverables serve as the phase synthesis. requirements/System_3_overview.html combines the four Phase 4 planning docs (Strategic_memo.md, PRD.md, Technical_specification.md, Evaluation_playbook.md) into one navigable overview, also published as a Claude artifact. PHASE 5 COMPLETE (opened and closed 2026-07-26, all steps 5.1 to 5.4, branch phase/5.0-system-tooling-updates). Scope was set by a coverage map of 303 obligations extracted from the three locked docs, of which 57 had no owner; deliverables are requirements/phase_5/Coverage_map.md and requirements/phase_5/Phase_5_synthesis.md. Delivered: the bossman-mode overhaul (phase branches, tech spec Section 25 as the phase source of truth, worktree isolation by default, the full gate chain), two new skills (task-tracker, learnings), four new or adopted rules (tool-call-budgets, v1-scope-boundary, prompt-cache-discipline, plus extensions to production-standards and system-design-patterns), dependency-tracking narrowed to hooks, and docs/Tool_implementation_mechanics.md. 121 decisions in DECISIONS.md. No application code yet; build execution begins at Plan.md Phase 6. Knowledge graph available on Hetzner CPX42 (46.225.128.133): 115M nodes + 693M edges queryable via openCypher over psycopg2. |
+| 2 | System 3: tool integration | PLANNED, seven tools. cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search. Build phases 2.1 and 3.1 to 3.5. |
+| 3 | System 3: eval and tracing | PLANNED. LangSmith tracing, PostHog, the 50-query golden dataset, the eval harness against the playbook. Build phases 5.0 and 5.1. |
 
 ---
 
@@ -50,19 +50,29 @@ Multi-model harness with three tiers:
 | `NCBI_databases_and_APIs_reference.md` | All 39 NCBI databases, API endpoints, rate limits, record counts | Before implementing Layer 2 tools (ncbi_efetch, ncbi_dbsnp) |
 | `NCBI_repos_deep_dive.md` | Analysis of 13 NCBI GitHub repos: code to reuse, architecture decisions informed, patterns to adopt, what not to build locally | Before implementing any Layer 2 or Layer 3 tool; before making architecture decisions about entity resolution or data access |
 | `data-engineering/Project_overview_A_to_Z.md` | Navigation hub with pointers into every doc in the project | First doc to read for project orientation |
-| `Agent_teams_tmux_quickstart.md` | tmux launch guide so bossman-mode parallel builders show in live panes | Before running `/bossman` with 2 or more builder tasks |
+| `Agent_teams_tmux_quickstart.md` | tmux launch guide so bossman-mode parallel builders show in live panes | Before running `/bossman-mode` with 2 or more builder tasks |
 | `Claude_security_plugin_usage.md` | Reference for the on-demand `claude-security` scan plugin: how to run a scan, apply patches, and how it complements the always-on `security-guidance` plugin | Before the release-workflow Step 3 security scan gate, or before opening a pull request |
+| `Tool_implementation_mechanics.md` | Per-tool API traps taken from tech spec Section 6: edge-label enforcement, ELink target db, the `global_mafs` array, sequential dbSNP calls, snapshot pinning | Before wiring any of the seven tools. Facts, not policy; the policy lives in the rules |
 
 ---
 
 ## Build order (System 3)
 
-```
-Phase 1 (week 1):   FastAPI skeleton + auth service + empty chat endpoint + React shell + streaming SSE
-Phase 2 (week 2):   cypher_query tool + LangGraph agent loop + first end-to-end query
-Phase 3 (week 3):   ncbi_efetch + ncbi_dbsnp + pubtator_annotate + litvar2_lookup + guardrail node + citation formatting
-Phase 4 (week 4):   LangSmith tracing + golden dataset (50 queries) + eval harness + cost tracking
-```
+The authoritative build order is `requirements/Technical_specification.md` Section 25: 26 numbered build phases from 1.0 to 7.1, each with its branch name, what it delivers, what it depends on, and a dependency graph. Read that section, not a summary. The four-week table that used to live here is superseded.
+
+Shape of the sequence:
+
+| Group | Delivers | Maps to Plan.md |
+|-------|----------|-----------------|
+| 1.0 to 1.2 | FastAPI skeleton with the typed event contract, auth and the user-data schema, React shell with SSE | Step 6.1, the prototype |
+| 2.0 to 2.2 | LangGraph loop and the three-tier harness, `cypher_query` over Layer 1, deterministic cite-or-refuse | Step 6.1, the prototype |
+| 3.0 to 3.5 | Full guardrail, the six remaining tools, provenance and the two-tier trust gate | Step 6.3, v1 |
+| 4.0 to 4.7 | The six delivery surfaces, personalization and memory, feedback capture, competency-question routing | Step 6.3, v1 |
+| 5.0 to 5.1 | LangSmith tracing, PostHog, the 50-query golden dataset and eval harness | Step 6.3, v1 |
+| 6.0 to 6.1 | Rate limiting and concurrency, the full `dev-standards` pass and release hardening | Step 6.3, v1 |
+| 7.0 to 7.1 | model-bench per tier, the A/B routing mechanism | Step 6.3, v1 |
+
+Step 6.2, the one reconciliation pause, sits between the prototype and v1.
 
 ---
 
@@ -123,18 +133,22 @@ The agent checks adapter availability before attempting operations. If a source 
 
 User-invocable skills (slash commands):
 
+The invocation is always the skill's exact name. A shortened alias does not resolve.
+
 | Skill | Purpose | Invocation |
 |-------|---------|-----------|
-| bossman-mode | Autonomous execution with agent teams | `/bossman` |
+| bossman-mode | Autonomous execution with agent teams | `/bossman-mode` |
+| task-tracker | The in-repo build board: tickets, acceptance criteria, status, evidence, append-only history | `/task-tracker` |
+| learnings | Capture what broke and what fixed it in LEARNINGS.md, and recall it before a phase | `/learnings` |
 | dev-standards | Production readiness review (6 lenses) | `/dev-standards` |
 | objective-review | Critical feedback, not agreement | `/objective-review` |
 | repo-dive | First-principles analysis of a reference repo | `/repo-dive <path>` |
 | skill-adapt-verify | Verify adapted skill for stale paths and style violations | `/skill-adapt-verify <path>` |
 | ship | Sync docs, commit, push phase branch | `/ship` |
 | first-principles | Explain concepts from fundamentals | `/first-principles` |
-| socratic-questioning | Clarifying questions before advice | `/socratic` |
-| release-workflow | End-to-end release verification and ship | `/release` |
-| eval-harness | Evaluation framework: pass@k, pass/fail/abstain, acceptance criteria for agent components | `/eval-harness` |
+| socratic-questioning | Clarifying questions before advice | `/socratic-questioning` |
+| release-workflow | End-to-end release verification and ship | `/release-workflow` |
+| eval-harness | The offline evaluation gate, operationalizing the evaluation playbook: 8-point rubric, hard-fails, coverage metric, must-pass set | `/eval-harness` |
 | verify | Pre-commit checks: Python compile, tests, lint, git status | `/verify` |
 | phase-checkpoint | Sync planning docs at a phase or sub-phase boundary (decisions, session doc, meeting note, continuation prompt, and at phase end the synthesis and Plan status). Runs before `/ship`, never touches git | `/phase-checkpoint` |
 
@@ -146,4 +160,4 @@ Security hooks in `.claude/hooks/` (wired in `.claude/settings.json`) run on Pre
 
 ---
 
-Last updated: 2026-07-25
+Last updated: 2026-07-26

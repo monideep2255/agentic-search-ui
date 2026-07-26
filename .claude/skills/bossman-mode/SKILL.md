@@ -48,9 +48,14 @@ These rules remain active:
 | `file-protection` | Never delete without informing, even in execution mode. |
 | `dependency-tracking` | Track what you build. |
 | `parallel-first` | Maximize execution speed. |
+| `plan-then-fan-out` | The lead plans and decomposes, cheaper models execute the bounded pieces. |
 | `boil-the-lake` | Do it 100%. No half-measures. |
 | `writing-style` | Output quality stays high. |
-| `git-workflow` | Clean commits. |
+| `git-workflow` | Clean commits, phase branches. |
+| `v1-scope-boundary` | Autonomy is exactly when scope creep happens. This binds hardest here, not least. |
+| `tool-call-budgets` | A tool without its declared timeout is not finished. |
+| `production-standards` | Every security, schema, and grounding gate holds. Speed is never a reason to skip one. |
+| `ai-security-standards` | Least privilege, prompt-injection defense, no secrets in logs. |
 
 ---
 
@@ -154,7 +159,8 @@ Each teammate receives its task via the shared task list. The lead monitors prog
 
 | Role | Count | Dispatch mode | Responsibility | When dispatched |
 |------|-------|---------------|---------------|-----------------|
-| Orchestrator (lead) | 1 (main session) | Always active | Decompose phase, create team, track tasks, coordinate. Never builds directly when 2+ tasks exist. | Always |
+| Product owner | 1 (human) | Not dispatched | Approves the PR, decides scope, judges whether a UI actually feels right. Coordinates only with the lead, never with a builder. | At phase boundaries, and during any phase marked product owner required |
+| Orchestrator (lead) | 1 (main session) | Always active | Decompose phase, create team, track tasks, coordinate, own the board. Never builds directly when 2+ tasks exist. | Always |
 | Researcher | 1-N | Sub-agent | Fetch docs, read APIs, find examples, explore codebases BEFORE builders start. | Pre-build |
 | Planner | 0-N | Sub-agent | Sub-planners for complex areas. Recursive decomposition. | When complexity warrants |
 | Builder | 2-N | Agent team (teammates) | Execute independent build tasks in parallel. Each builder owns one task in the shared task list. Runs in its own tmux pane. | After research/planning |
@@ -239,19 +245,28 @@ Phase start
 
 ### Skill chain (every phase, no exceptions)
 
+At phase start:
+
+- `learnings --brief N.M`: read what already broke in this territory, before scoping anything
+- `task-tracker --open N.M`: decompose the phase into tickets with acceptance criteria
+- `best-practices`: session checklist (venv, API keys configured, dev server runs, CLAUDE.md, git status)
+
+During development, enforced by builders:
+
+- `best-practices`: scope discipline, code safety
+- `decision-logging`: log choices to DECISIONS.md as they happen
+- `learnings`: append the moment something breaks, never batched to the end
+
 After all team members complete, before the phase checkpoint:
 
-1. `release-workflow` (local verification, tests, ship)
-2. `ship` (docs-sync agent, commit, push feature branch, create PR)
+1. `verify`: compile check, tests, lint, git status. The pre-commit gate.
+2. `eval-harness`: required on any phase that touches answer generation, grounding, citations, or the trust signal. It grades cite-or-refuse and citation coverage against the playbook. A phase that changes how answers are produced does not ship without it.
+3. `dev-standards`: the six-lens production readiness pass. Required on any phase that shipped application code, skippable for docs-only or config-only changes.
+4. `release-workflow`: local end-to-end verification and the security scan gate.
+5. `ship`: docs-sync, commit, push the phase branch, create the PR.
+6. `task-tracker --close`: record judge evidence on each ticket and close the phase board.
 
-Skills active during development (enforced by builders):
-
-- `best-practices`: session checklist, scope discipline, code safety
-- `decision-logging`: log choices to DECISIONS.md as they happen
-
-Skills active at phase start:
-
-- `best-practices`: session checklist (venv, API keys configured, dev server runs, CLAUDE.md, git status)
+Steps 1 through 3 are the gates the locked spec actually requires and that this skill previously never invoked. Do not treat them as optional because the judge already passed. The judge grades the work; these grade whether the work is allowed to ship.
 
 ### Agent prompt template
 
@@ -285,6 +300,18 @@ When done: mark task complete in the task list.
 
 Orchestrator rule: when a sub-agent returns or a teammate marks a task complete, capture a one-line summary of what it produced and which files it touched. Do not inline the full result into your context.
 
+### The documents a phase builds against
+
+Every phase reads from these. They are locked and frozen through the build, edited only at the Plan.md Step 6.2 reconciliation. A builder that thinks one of them is wrong reports it; it does not work around it.
+
+| Document | What it is | Who reads it |
+|----------|-----------|--------------|
+| `requirements/Technical_specification.md` | The build blueprint. 25 sections, seven tools, six delivery surfaces. Section 25 defines the 26 build phases | Lead always, builders for their own tool or surface section |
+| `requirements/PRD.md` | The product contract. Every requirement traces to an outcome here, and its out-of-scope list is a hard boundary | Lead, judge |
+| `requirements/Evaluation_playbook.md` | The living evaluation contract. Competency questions, the rubric, the coverage metric, the feedback loop | Lead, `eval-harness`, test writer |
+| `docs/Tool_implementation_mechanics.md` | Per-tool API traps that are expensive to discover late | Any builder wiring a tool |
+| `LEARNINGS.md` | What already broke here and what fixed it | Lead at phase start, any builder retrying a failure |
+
 ### Reference repos
 
 Read the reference repo's CLAUDE.md before dispatching agents to explore it.
@@ -305,11 +332,25 @@ When 3+ builder teammates run in parallel (agent teams or worktrees), these conv
 - Stage files by name: `git add path/to/file1.py path/to/file2.py`.
 - When the user says "commit all," the lead groups changes into logical commits, not one giant commit.
 
+### Worktree isolation, the default for file-mutating builders
+
+Per the 2026-07-21 decision in DECISIONS.md, concurrent file-mutating builders run in their own git worktree. This is the default policy, not a fallback after a collision.
+
+| Agent kind | Isolation | Why |
+|------------|-----------|-----|
+| Builder that creates or modifies files, running concurrently with another builder | `isolation: "worktree"` | Two agents writing the same tree corrupt each other. Isolation is cheaper than reconstructing what happened |
+| Sole builder in a phase, no concurrency | Shared checkout | Nothing to collide with, and a worktree costs setup time and disk for no benefit |
+| Read-only agents: researchers, judge, adversary, reviewers | Shared checkout, always | They write nothing, so they cannot collide. A worktree for a reader is pure overhead |
+
+Teardown: a worktree is removed after its work merges back. A worktree left standing after a phase closes is leaked state. The lead removes it as part of the phase checkpoint, and an unchanged worktree is auto-removed.
+
+Partition first, isolate second. Worktrees make concurrent writes safe, they do not make an overlapping decomposition correct. Each ticket still names the exact files it may touch, so two builders should not have been aiming at the same file in the first place.
+
 ### File conflict handling
 
 - When a teammate encounters files it did not create or modify, it notes them and continues. It does not clean them up, reformat them, or include them in its commit.
-- If two teammates need to modify the same file, use `isolation: "worktree"` for both. The integrator agent wires the results together afterward.
 - If a teammate sees unexpected diffs in `git status`, it reports them in its completion summary but does not resolve them.
+- The integrator agent wires results together after isolated builders finish.
 
 ### Git state protection
 
@@ -341,8 +382,11 @@ When parallel agents share findings, defects, or task state, they coordinate thr
 
 1. Run `best-practices` session checklist (venv, API keys configured, dev server runs, CLAUDE.md, git status)
 2. Agent teams preflight: run the tmux check from "Agent teams setup". If tmux is missing or the session is not inside tmux, print the setup steps and let the user fix it before any builder dispatch.
-3. Read the phase definition from the plan document
-4. Create the feature branch: `git checkout main && git pull origin main && git checkout -b feature/description`
+3. Read the phase definition from `requirements/Technical_specification.md` Section 25. That section is the single source of truth for the 26 numbered build phases: what each delivers, what it depends on, and its branch name. Never invent a phase or reorder the sequence.
+4. Verify every dependency phase in Section 25's dependency graph is already merged. If one is not, stop and report. Do not build on an unmerged dependency.
+5. Read `LEARNINGS.md` filtered to this phase, its tools, and its layers (`learnings --brief N.M`). Past dead ends are cheaper to read than to rediscover.
+6. Open the phase board with `task-tracker --open N.M`. Decompose the phase into tickets with acceptance criteria traced to spec sections before dispatching anyone.
+7. Create the phase branch, using the exact branch name from Section 25's table: `git checkout main && git pull origin main && git checkout -b phase/N.M-description`
 
 ### Step 2: confirm entry and show team
 
@@ -351,23 +395,28 @@ Print:
 ```
 Bossman mode: ON
 Plan: [plan name or summary]
-Phase: [N.M] - [phase title]
-Branch: feature/description
+Phase: [N.M] - [phase title]  (tech spec Section 25)
+Branch: phase/N.M-description
+Board: tracker/phase_N.M.md  ([N] tickets)
 Deliverables: [list what this phase produces]
 Estimated scope: [files to create/modify]
+Product owner required: [yes, and why / no]
+
+Learnings read: [N] entries tagged to this phase, or "none recorded yet"
 
 Team:
 - Lead (orchestrator): main session
 - Researchers: [N] sub-agents for [what needs lookup]
 - Sub-planners: [N, or "none - phase is straightforward"]
 - Builders: [N] teammates via agent team in tmux panes [task list]
+- Worktree isolation: [which builders, or "none - no overlapping writes"]
 - Judge: 1 sub-agent (post-build)
 - Adversary: [1 sub-agent if the phase produces a runnable artifact, or "not needed"]
 - Test writer: 1 sub-agent (post-build)
 - Integrator: [1 if components need wiring, or "not needed"]
 
-Skills active: best-practices, decision-logging
-Skills at phase end: release-workflow -> ship
+Skills active: best-practices, decision-logging, learnings
+Skills at phase end: verify -> [eval-harness] -> [dev-standards] -> release-workflow -> ship -> task-tracker
 
 Dispatching now. Next check-in at phase completion.
 ```
@@ -391,13 +440,15 @@ For phases with 2+ parallel builder tasks:
 
 1. Create an agent team with one teammate per builder task
 2. Each teammate appears in its own tmux pane
-3. Define tasks in the shared task list with: deliverable, context, reference files, constraints, test files to write
-4. Teammates claim tasks and execute independently
-5. Lead monitors the task list and messages stuck teammates
-6. If a teammate is stuck: message it with a clearer prompt or ask it to start fresh
-7. When all tasks are marked complete, disband the team
+3. Give every concurrent file-mutating builder `isolation: "worktree"`, per the worktree policy above
+4. Define tasks from the phase board tickets: deliverable, acceptance criteria, context, reference files, constraints, the exact files it may touch, test files to write
+5. Teammates claim tickets and execute independently, setting their own ticket to `in-progress`
+6. Lead monitors the board and messages stuck teammates
+7. If a teammate is stuck: message it with a clearer prompt or ask it to start fresh
+8. A builder that finishes sets its ticket to `in-review`, never to `done`
+9. When all tickets are `in-review`, disband the team and tear down the worktrees
 
-For phases with 1 builder task: use a sub-agent instead.
+For phases with 1 builder task: use a sub-agent in the shared checkout instead.
 
 ### Step 6: judge + tests + integration
 
@@ -407,7 +458,9 @@ Once all builders complete:
 2. On any phase that produced a runnable artifact, dispatch an adversary sub-agent (see the adversary role and "The adversary attacks what the judge certifies"). It throws hostile, unscripted queries at the running system, over-reports on purpose, and files every finding to a shared-ledger file. It targets the cite-or-refuse gate: queries where the graph returns nothing and the system must refuse rather than fabricate. It never fixes, triages, or closes its own findings; the judge or a fix agent triages them, and only the ledger's designated closer closes them.
 3. Dispatch test writer sub-agent (can run in parallel with judge if test targets are clear)
 4. Dispatch integrator sub-agent ONLY if builders produced isolated components that need wiring
-5. If judge fails or the adversary files findings: minor issues = dispatch a fix sub-agent. Major issues = escalate to user.
+5. Scope check: verify nothing built in this phase crosses the v1 boundary in `.claude/rules/v1-scope-boundary.md`. A capability the PRD declared out of scope does not become in scope because a builder found it easy. This check matters most when no human watched the phase.
+6. UI phases: a phase that ships user-facing interface does not pass on a judge's code review alone. It needs a Playwright run proving the flow works in a browser, and it is marked product owner required so a human decides whether it actually feels right. An agent can verify a button exists. It cannot verify the thing is good.
+7. If judge fails or the adversary files findings: minor issues = dispatch a fix sub-agent. Major issues = escalate to the product owner.
 
 ### Step 7: skill chain (release-workflow -> ship)
 
@@ -416,7 +469,7 @@ After judge passes and tests are written:
 1. Run `release-workflow`:
    - Local verification (run the affected code path end-to-end)
    - Run `pytest -q` (all tests pass)
-   - Run `ship` (docs-sync, commit, push feature branch, create PR)
+   - Run `ship` (docs-sync, commit, push the phase branch, create PR)
 2. If release-workflow fails: fix root cause, restart from step 1 of release-workflow
 
 ### Step 8: phase checkpoint
@@ -426,8 +479,9 @@ When the phase is complete (all agents done, judge passed, PR created), print:
 ```
 Phase [N.M] complete.
 
-Branch: feature/description
+Branch: phase/N.M-description
 PR: [URL or "created, awaiting review"]
+Board: [N] tickets done, [N] deferred with reason
 
 What was done:
 - [deliverable 1]
@@ -441,6 +495,14 @@ Team activity:
 - Adversary findings: [N filed to ledger, or "not run - no runnable artifact"]
 - Tests written: [count and location]
 - Integration: [done/not needed]
+
+Gates:
+- verify: [pass/fail, paste the result line]
+- eval-harness: [pass/fail with the metric, or "not applicable - phase does not touch answer generation"]
+- dev-standards: [pass/fail, or "not applicable - no application code"]
+- Scope check: [no v1-scope-boundary violations, or list them]
+
+Learnings logged this phase: [N entries, or "none - nothing broke"]
 
 Decisions made (without asking):
 - [decision 1]: chose X over Y because [reason]
@@ -499,11 +561,13 @@ Blockers: [none or list]
 
 ## Growth path
 
-Level 1 (now): Single-phase execution with agent teams for builders, sub-agents for other roles. Manual PR approval between phases. Skill chain enforced at phase end (release-workflow -> ship). Branch-per-feature git workflow.
+Level 1 (now): Single-phase execution with agent teams for builders, sub-agents for other roles. Manual PR approval between phases. Full skill chain enforced at phase end. Phase-branch git workflow with worktree isolation for concurrent writers.
 
-Level 2 (trust building): Judge sub-agent gates phase transitions instead of user PR approval for non-architectural phases. Sub-planners handle recursive decomposition of complex phases. Auto-merge PRs when tests pass and no architecture changes detected.
+Level 2 (unattended overnight, deferred): the product owner deferred this on 2026-07-26 until we know whether it is actually needed. Do not enable it by inference from a general "keep going". It requires an explicit, itemized grant, because it overrides this skill's own Step 9 and the `bossman-mode` rule's standing deny on proceeding without approval.
 
-Level 3 (Cursor-scale): Full autonomous multi-phase execution. Checkpoint files at phase boundaries. Morning summary of everything built, tested, and judged while user was away. Fresh-start pattern: stuck teammates get messaged with clearer prompts rather than debugged in-place.
+When it is enabled, the shape is decided: fan out where Section 25's dependency graph allows, stack only where phase N literally needs phase N-1's code. Independent phases each get their own branch off main and their own PR, so a morning review is parallel rather than a chain, and rejecting one does not contaminate the others. Nothing merges to main unreviewed. Merging overnight buys no throughput anyway, since a dependent phase builds on the previous branch either way, so autonomy would only remove the review gate, not speed anything up.
+
+Level 3 (Cursor-scale): Full autonomous multi-phase execution. Checkpoint files at phase boundaries. Morning summary of everything built, tested, and judged while the product owner was away. Fresh-start pattern: stuck teammates get messaged with clearer prompts rather than debugged in-place.
 
 Level 4 (multi-team): Multiple independent agent teams for separate subsystems (e.g. one team for API routes, one for agent tools, one for UI components running simultaneously). Each team has its own lead running its own research/build/judge cycle. A meta-orchestrator coordinates between teams at phase boundaries.
 

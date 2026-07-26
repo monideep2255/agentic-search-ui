@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-07-25.
+Kick-off: 2026-05-06. Last updated: 2026-07-26.
 
 ## Status at a glance
 
@@ -13,11 +13,11 @@ Kick-off: 2026-05-06. Last updated: 2026-07-25.
 | Phase 2: competency questions and evaluation playbook | Complete, all 5 steps (2026-07-22) |
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
-| Phase 5: system and tooling updates | Not started, next up |
+| Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
 | Phase 6: build (bossman execution) | Not started |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 113 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 121 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -435,45 +435,59 @@ Phase 4 output: `requirements/phase_4/API_capability_sheet.md` (Step 4.0), `requ
 
 ## Phase 5: system and tooling updates
 
-Status: NOT STARTED (next up)
+Status: COMPLETE (opened and closed 2026-07-26, branch phase/5.0-system-tooling-updates; all steps 5.1 to 5.4 done)
 
 Goal: update all project infrastructure to reflect the locked PRD and tech spec. Every skill, agent, rule, and root document should be consistent with what we decided.
 
-### Step 5.1: update bossman-mode skill
+### Method: the coverage map
 
-Review `.claude/skills/bossman-mode/SKILL.md` against the tech spec build order. Update:
-- Phase definitions to match the tech spec phases
-- Team composition per phase
-- Skill chain and quality gates
-- Any new agent roles needed
-- Worktree isolation for concurrent file-mutating builders (per the 2026-07-21 decision in DECISIONS.md), torn down after merge; read-only agents (reviewers, researchers, judges) stay in the shared checkout
+Phase 5 scope was set by evidence rather than by the candidate list this document originally carried. Ten parallel agents extracted every enforceable obligation from the three locked documents and mapped each to the rule or skill that already owns it:
 
-### Step 5.2: update or create skills
+| Source | Obligations extracted | Unowned |
+|--------|----------------------|---------|
+| Technical_specification.md | 226 | 35 |
+| PRD.md | 45 | 8 |
+| Evaluation_playbook.md | 32 | 14 |
+| Total | 303 | 57 |
 
-Evaluate whether we need new skills for System 3 development:
-- API development skill?
-- React component skill?
-- Tool testing skill?
-- Cypher query development skill?
+Three findings shaped the work:
 
-Pull in beneficial rules and skills from the personal-os reference (the Tier 1 and Tier 2 SDLC hardening is already done). Review the patterns surfaced in Step 1.11 (new intake) for anything that should become a rule or skill. Adopt only what serves System 3.
+- The unowned 57 wanted rules and documentation, not skills. Rules load automatically every session; a skill has to be remembered and invoked. A tool-build skill, the strongest of the four candidates below, would have been roughly 70 percent restatement of rules that already load.
+- The real defects were wiring, not absence. Skills that existed were never invoked at the moment they were needed, and the two skills that actually execute a build phase created branches named against the convention every rule states.
+- One existing skill had drifted badly against a locked document. `eval-harness` never referenced `Evaluation_playbook.md` and was missing 13 of its 17 demands, while being the gate that decides whether an answer-generation feature may ship.
 
-Only create what is actually needed. Do not over-engineer.
+### Step 5.1: update bossman-mode skill - COMPLETE (2026-07-26)
 
-### Step 5.3: update root documents
+Reviewed `.claude/skills/bossman-mode/SKILL.md` against the tech spec build order. Delivered:
 
-| Document | What changes |
-| --- | --- |
-| CLAUDE.md | Update build order, current focus, add any new reference docs |
-| AGENTS.md | Update for any new tools, patterns, or adapter specs from tech spec |
-| DECISIONS.md | Should already be current from Phase 1. Verify. |
-| README.md | Update project status, add link to requirements/ folder |
+- A live defect fixed: the skill created `feature/description` branches against the `phase/N.M-description` convention that `git-workflow.md`, the `bossman-mode` rule, and tech spec Section 25 all state. `release-workflow` had the same bug. The cascade mattered more than the names: `ship` only offers the MR when the branch matches `phase/*`, so a real run would have created the wrong branch and then silently skipped the pull request.
+- Phase definitions now read tech spec Section 25's 26 numbered build phases, with dependency verification before a phase opens.
+- Worktree isolation promoted from a post-collision fallback to the default for concurrent file-mutating builders, with read-only agents in the shared checkout and teardown at phase close (per the 2026-07-21 decision).
+- A product owner role, per-phase product-owner-required marking, a v1 scope check, and a Playwright gate for UI phases.
+- The phase-end chain grew from two skills to six: `verify`, `eval-harness`, `dev-standards`, `release-workflow`, `ship`, `task-tracker`. The first three had never been invoked by anything, despite the spec requiring all three.
 
-### Step 5.4: create any new reference docs
+### Step 5.2: update or create skills - COMPLETE (2026-07-26)
 
-If the tech spec identified gaps in documentation (e.g., a deployment guide, a Cypher patterns reference), create those in `docs/`.
+The four candidates this document originally floated (API development, React component, tool testing, Cypher query development) were written in Phase 0 as open questions before the spec existed. None was built. The coverage map showed the gaps were rules and documentation, not workflows.
 
-Phase 5 output: all project infrastructure aligned with PRD and tech spec.
+Built instead, from the team operating model rather than the product spec:
+
+- `task-tracker`: the in-repo board at `tracker/`, giving bossman-mode's already-specified ledger state machine a file to write to.
+- `learnings`: `LEARNINGS.md`, written at the moment of failure and read before every phase, adopted from the personal-os per-skill memory pattern.
+
+Rewritten: `eval-harness`, which had never referenced `Evaluation_playbook.md` and was missing 13 of its 17 demands.
+
+Rules: added `tool-call-budgets` and `v1-scope-boundary`, adopted `prompt-cache-discipline` from personal-os, extended `production-standards` and `system-design-patterns`, narrowed `dependency-tracking` to hooks only.
+
+### Step 5.3: update root documents - COMPLETE (2026-07-26)
+
+19 stale statements corrected. CLAUDE.md's four-week build order replaced with a pointer to tech spec Section 25, the tool roster corrected from five to seven, and three documented slash commands fixed that did not match their skills' names and would not have resolved. README.md's claim that a build phase was in progress removed, since no application code exists, along with its stale `.claude/` tracking claim, plus a new link to the planning documents. AGENTS.md regenerates from CLAUDE.md via the sync hook. `.github/pull_request_template.md` rewritten off the BioLink and KGX gates inherited from the System 1 and 2 template repo.
+
+### Step 5.4: create any new reference docs - COMPLETE (2026-07-26)
+
+`docs/Tool_implementation_mechanics.md`: 19 per-tool API traps from tech spec Section 6, six identified during the coverage map and 13 more found reading the section in full. The document holds API facts; the rules hold policy, and it says so explicitly so the boundary survives future edits.
+
+Phase 5 output: all project infrastructure aligned with the PRD and tech spec. Deliverables are `requirements/phase_5/Coverage_map.md` (the 303-obligation gate list), `requirements/phase_5/Phase_5_synthesis.md`, the rewritten harness under `.claude/`, `docs/Tool_implementation_mechanics.md`, and `LEARNINGS.md`.
 
 ---
 
@@ -567,9 +581,12 @@ This cycle repeats. The system evolves.
 | PRD.md | Phase 3 | `requirements/` | Product requirements. Single source of truth. Outcome-focused. |
 | Technical_specification.md | Phase 4 | `requirements/` | Implementation blueprint. References the evaluation playbook and skills. |
 | Strategic_memo.md | Phase 4 | `requirements/` | 1 to 2 page distillation of the PRD and tech spec. Updated after the prototype. |
-| Updated skills/agents | Phase 5 | `.claude/skills/`, `.claude/agents/` | Aligned with PRD and tech spec |
-| Reference docs (as needed) | Phase 5 | `docs/` | Fill gaps identified during tech spec |
-| LEARNINGS.md | Phase 6 | repo root | Running capture of build-time learnings during prototype and v1 execution. The input to the Step 6.2 reconciliation: it collects what each build step taught us so the PRD, tech spec, strategic memo, and the living evaluation playbook get updated from a captured record, not memory. Also seeds Phase 7 iteration. |
+| Updated skills/agents | Phase 5 (done) | `.claude/skills/`, `.claude/rules/` | Aligned with PRD and tech spec. bossman-mode rewritten, task-tracker and learnings added, eval-harness rewritten against the playbook, three rules added or adopted, two extended, one narrowed |
+| Coverage_map.md | Phase 5 (done) | `requirements/phase_5/` | 303 obligations extracted from the three locked docs, each mapped to the rule or skill that enforces it. The gate list Phase 6 builds against |
+| Phase 5 synthesis | Phase 5 (done) | `requirements/phase_5/Phase_5_synthesis.md` | What the harness now guarantees, organized by topic, ready for Phase 6 |
+| Reference docs (as needed) | Phase 5 (done) | `docs/` | `Tool_implementation_mechanics.md`, 19 per-tool API traps from tech spec Section 6 |
+| tracker/ | Phase 5 (created), populated in Phase 6 | repo root | The in-repo build board. `BOARD.md` indexes the phases, `phase_N.M.md` holds each phase's tickets with acceptance criteria, evidence, and append-only history. Maintained by the `task-tracker` skill |
+| LEARNINGS.md | Phase 5 (started), running through Phase 6 | repo root | Running capture of build-time learnings during prototype and v1 execution. Maintained by the `learnings` skill: written at the moment of failure, read before every build phase opens. Started in Phase 5 with the first two entries from that session. The input to the Step 6.2 reconciliation: it collects what each build step taught us so the PRD, tech spec, strategic memo, and the living evaluation playbook get updated from a captured record, not memory. Also seeds Phase 7 iteration. |
 
 ---
 
@@ -601,12 +618,18 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Summary of what happens next
 
-Phase 1, Phase 2, Phase 3, and Phase 4 are complete, with 113 decisions logged, the Phase 1 synthesis, the evaluation playbook, the locked PRD, the verified API capability sheet, the locked technical specification, and the strategic memo all written. Phase 5 (system and tooling updates) is next, then building the prototype and v1 (Phase 6). We debate. We decide. We log decisions.
+Phases 1 through 4 are complete, with the Phase 1 synthesis, the evaluation playbook, the locked PRD, the verified API capability sheet, the locked technical specification, and the strategic memo all written. Phase 5 (system and tooling updates) opened 2026-07-26 and its four steps are done: the build harness, skills, rules, root documents, and reference docs are now consistent with the locked specification. 121 decisions logged. Next: Phase 6, building the prototype and then v1. We debate. We decide. We log decisions.
 
 One phase at a time. No skipping.
 
 ## Revision history
 
+- 2026-07-26: Opened Phase 5 on branch phase/5.0-system-tooling-updates and completed Steps 5.1 to 5.4. Scope was set by a coverage map: 303 obligations extracted from the three locked documents by ten parallel agents, 57 of which had no owner.
+  - Step 5.1: overhauled bossman-mode. Fixed the branch-naming defect (both executing skills created `feature/description` against the `phase/N.M-description` convention every rule states, which also silently disabled ship's MR step). Made tech spec Section 25 the source of truth for the 26 build phases. Made worktree isolation the default for concurrent file-mutating builders with read-only agents in the shared checkout. Added the product owner role, per-phase product-owner-required marking, a scope check, and a Playwright gate for UI phases. Wired `verify`, `eval-harness`, and `dev-standards` into the phase-end chain, none of which the skill had ever invoked.
+  - Step 5.2: added two skills, `task-tracker` and `learnings`. Rewrote `eval-harness`, which never referenced the evaluation playbook and was missing 13 of its 17 demands. Added rules `tool-call-budgets` and `v1-scope-boundary`, adopted `prompt-cache-discipline` from the personal-os reference, extended `production-standards` and `system-design-patterns`, and narrowed `dependency-tracking` to hooks only. Zero of the four skills this document originally floated were built, because the coverage map showed the gaps were rules and docs.
+  - Step 5.3: corrected 19 stale statements across the root documents, rewrote the pull request template off the inherited BioLink and KGX gates, and fixed three documented slash commands that did not resolve.
+  - Step 5.4: added `docs/Tool_implementation_mechanics.md`, 19 per-tool API traps taken from tech spec Section 6.
+  - Deferred by the product owner: unattended overnight execution. The standing deny on proceeding past a phase without approval holds. 121 decisions logged.
 - 2026-07-25: Completed Phase 4 Step 4.4, the strategic memo, and closed Phase 4. Deliverable: `requirements/Strategic_memo.md`, a one-to-two-page executive distillation of the locked PRD and the locked technical specification, written for a future collaborator or future-me. Phase 4 is now COMPLETE: the verified API capability sheet, the locked technical specification, and the strategic memo are the phase's three deliverables, which together serve as the phase synthesis (no separate synthesis document, unlike Phase 1). Phase 5 (system and tooling updates) is next. 113 decisions logged.
 - 2026-07-25: Completed Phase 4 Steps 4.1 to 4.3 and locked the tech spec.
   - Step 4.1: outlined the tech spec's 25 sections once the core-architecture decisions locked, expanded from the original 19-section list.

@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System 3 build board</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  h1, h2, p, table { margin: 0; }
+  button { font: inherit; }
+  .theme-toggle {
+    position: fixed; top: 16px; right: 16px; z-index: 10;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    padding: 7px 13px; border-radius: 999px; cursor: pointer;
+    background: var(--surface); color: var(--muted); border: 1px solid var(--line);
+  }
+  .theme-toggle:hover { color: var(--ink); }
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="themeToggle" type="button">Theme</button>
+
+<style>
+  :root {
+    --ground: #F4F6F7;
+    --surface: #FFFFFF;
+    --surface-2: #EAEFF2;
+    --ink: #16202A;
+    --muted: #5C6B78;
+    --line: #D6DFE4;
+    --accent: #1C6E8C;
+    --done: #3F7D58;
+    --active: #C77D2E;
+    --blocked: #A63D40;
+    --todo: #8A96A0;
+    --shadow: 0 1px 2px rgba(22, 32, 42, .06), 0 4px 12px rgba(22, 32, 42, .04);
+
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0E1519;
+      --surface: #16202A;
+      --surface-2: #1D2A35;
+      --ink: #E4EAEE;
+      --muted: #93A3AF;
+      --line: #273743;
+      --accent: #4FA8C7;
+      --done: #6FB58A;
+      --active: #E0A155;
+      --blocked: #D2726F;
+      --todo: #7E8D99;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .25);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0E1519;
+    --surface: #16202A;
+    --surface-2: #1D2A35;
+    --ink: #E4EAEE;
+    --muted: #93A3AF;
+    --line: #273743;
+    --accent: #4FA8C7;
+    --done: #6FB58A;
+    --active: #E0A155;
+    --blocked: #D2726F;
+    --todo: #7E8D99;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .25);
+  }
+
+  :root[data-theme="light"] {
+    --ground: #F4F6F7;
+    --surface: #FFFFFF;
+    --surface-2: #EAEFF2;
+    --ink: #16202A;
+    --muted: #5C6B78;
+    --line: #D6DFE4;
+    --accent: #1C6E8C;
+    --done: #3F7D58;
+    --active: #C77D2E;
+    --blocked: #A63D40;
+    --todo: #8A96A0;
+    --shadow: 0 1px 2px rgba(22, 32, 42, .06), 0 4px 12px rgba(22, 32, 42, .04);
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 40px 24px 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  /* ---- masthead ---- */
+
+  .masthead { display: flex; flex-direction: column; gap: 10px; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  h1 {
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.1;
+    letter-spacing: -.022em;
+    text-wrap: balance;
+    font-weight: 640;
+    margin: 0;
+  }
+
+  .standfirst {
+    color: var(--muted);
+    max-width: 64ch;
+    font-size: 15px;
+  }
+
+  .stamp {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    padding-top: 4px;
+  }
+
+  /* ---- summary ---- */
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .stat {
+    background: var(--surface);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 27px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: -.02em;
+  }
+
+  .stat-note { font-size: 12px; color: var(--muted); }
+
+  .stat[data-tone="done"] .stat-value { color: var(--done); }
+  .stat[data-tone="active"] .stat-value { color: var(--active); }
+  .stat[data-tone="blocked"] .stat-value { color: var(--blocked); }
+  .stat[data-tone="todo"] .stat-value { color: var(--todo); }
+
+  /* ---- meters ---- */
+
+  .meters { display: flex; flex-direction: column; gap: 14px; }
+
+  .meter-row { display: flex; flex-direction: column; gap: 7px; }
+
+  .meter-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .meter-head b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  .meter-track {
+    height: 7px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .meter-fill { height: 100%; border-radius: 999px; }
+
+  /* ---- controls ---- */
+
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  .filter {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 15px;
+    cursor: pointer;
+    transition: color .14s ease, border-color .14s ease, background .14s ease;
+  }
+
+  .filter:hover { color: var(--ink); border-color: var(--muted); }
+
+  .filter[aria-pressed="true"] {
+    color: var(--surface);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .filter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .toolbar { display: flex; flex-direction: column; gap: 14px; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .legend i { font-style: normal; }
+
+  /* ---- kanban ---- */
+
+  .board-scroll { overflow-x: auto; padding-bottom: 6px; }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(268px, 1fr));
+    gap: 16px;
+    min-width: 1120px;
+  }
+
+  .col { display: flex; flex-direction: column; gap: 10px; }
+
+  .col-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding-bottom: 9px;
+    border-bottom: 2px solid var(--col-tone, var(--line));
+  }
+
+  .col-title {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .col-count {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--col-tone, var(--todo)); flex: none; }
+
+  .cards { display: flex; flex-direction: column; gap: 9px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--card-tone, var(--todo));
+    border-radius: 3px;
+    padding: 13px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: var(--shadow);
+  }
+
+  .card-top { display: flex; align-items: baseline; gap: 9px; }
+
+  .phase-id {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--card-tone, var(--ink));
+    letter-spacing: -.01em;
+  }
+
+  .group-tag {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 1px 5px;
+    margin-left: auto;
+  }
+
+  .card-title { font-size: 13.5px; font-weight: 560; line-height: 1.35; }
+
+  .card-body { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+  .chip {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .04em;
+    padding: 2px 6px;
+    border-radius: 2px;
+    background: var(--surface-2);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .chip.dep::before { content: "\2190\00a0"; opacity: .65; }
+
+  .chip.flag {
+    background: transparent;
+    border: 1px solid var(--blocked);
+    color: var(--blocked);
+  }
+
+  .chip.gate {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+
+  .chip.po {
+    background: transparent;
+    border: 1px solid var(--active);
+    color: var(--active);
+  }
+  .chip.po::before { content: "\25C6\00a0"; font-size: 8px; vertical-align: 1px; }
+
+  .empty {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    border: 1px dashed var(--line);
+    border-radius: 3px;
+    padding: 22px 14px;
+    text-align: center;
+  }
+
+  /* ---- flags ---- */
+
+  h2 {
+    font-size: 17px;
+    font-weight: 620;
+    letter-spacing: -.012em;
+    margin: 0 0 12px;
+  }
+
+  .table-scroll { overflow-x: auto; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 560px; }
+
+  th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    padding: 0 14px 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  td { padding: 11px 14px 11px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.when { font-family: var(--mono); font-size: 12px; color: var(--accent); white-space: nowrap; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    font-size: 12.5px;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: .92em;
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">System 3 &middot; agentic search</div>
+    <h1>Build board</h1>
+    <p class="standfirst">Every phase between a locked specification and a running biomedical search agent. Planning is finished; the build has not started. Phases and dependencies come from the technical specification, section 25.</p>
+    <div class="stamp">
+      <span>Updated 2026-07-26</span>
+      <span>Source: tracker/BOARD.md</span>
+      <span>121 decisions logged</span>
+    </div>
+  </header>
+
+  <section class="summary" aria-label="Status counts">
+    <div class="stat" data-tone="done">
+      <span class="stat-label">Done</span>
+      <span class="stat-value">5</span>
+      <span class="stat-note">planning phases</span>
+    </div>
+    <div class="stat" data-tone="active">
+      <span class="stat-label">In progress</span>
+      <span class="stat-value">0</span>
+      <span class="stat-note">nothing in flight</span>
+    </div>
+    <div class="stat" data-tone="blocked">
+      <span class="stat-label">Blocked</span>
+      <span class="stat-value">0</span>
+      <span class="stat-note">no hard blockers</span>
+    </div>
+    <div class="stat" data-tone="todo">
+      <span class="stat-label">To do</span>
+      <span class="stat-value">26</span>
+      <span class="stat-note">build phases</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Open flags</span>
+      <span class="stat-value">3</span>
+      <span class="stat-note">need resolving before their phase</span>
+    </div>
+  </section>
+
+  <section class="meters" aria-label="Progress">
+    <div class="meter-row">
+      <div class="meter-head"><span>Planning</span><span><b>5</b> of <b>5</b> phases</span></div>
+      <div class="meter-track"><div class="meter-fill" style="width:100%;background:var(--done)"></div></div>
+    </div>
+    <div class="meter-row">
+      <div class="meter-head"><span>Prototype &middot; step 6.1</span><span><b>0</b> of <b>6</b> phases</span></div>
+      <div class="meter-track"><div class="meter-fill" style="width:0%;background:var(--active)"></div></div>
+    </div>
+    <div class="meter-row">
+      <div class="meter-head"><span>v1 &middot; step 6.3</span><span><b>0</b> of <b>20</b> phases</span></div>
+      <div class="meter-track"><div class="meter-fill" style="width:0%;background:var(--accent)"></div></div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+  <div class="controls" role="group" aria-label="Filter phases">
+    <button class="filter" data-filter="all" aria-pressed="true">All phases</button>
+    <button class="filter" data-filter="planning" aria-pressed="false">Planning</button>
+    <button class="filter" data-filter="prototype" aria-pressed="false">Prototype</button>
+    <button class="filter" data-filter="v1" aria-pressed="false">v1</button>
+    <button class="filter" data-filter="flagged" aria-pressed="false">Open flags only</button>
+    <button class="filter" data-filter="po" aria-pressed="false">Needs you</button>
+  </div>
+
+  <div class="legend">
+    <span><i class="chip dep">1.0</i> depends on</span>
+    <span><i class="chip gate">gate</i> must pass before ship</span>
+    <span><i class="chip po">product owner</i> a human decides, not an agent</span>
+    <span><i class="chip flag">flag</i> unresolved, blocks that phase</span>
+  </div>
+  </div>
+
+  <div class="board-scroll">
+    <div class="board" id="board"></div>
+  </div>
+
+  <section>
+    <h2>Open flags</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Flag</th><th>Why it matters</th><th>Resolve before</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Golden fixture domain sign-off</td>
+            <td>Nobody is named to verify the clinical and human-variation expected answers. A wrong expected answer makes a wrong agent pass, which is exactly the failure the gate exists to catch.</td>
+            <td class="when">phase 5.1</td>
+          </tr>
+          <tr>
+            <td>PubTator3 relations endpoint</td>
+            <td>Path and response fields are not live-verified, so the tool cannot ship against them yet.</td>
+            <td class="when">phase 3.3</td>
+          </tr>
+          <tr>
+            <td>Playwright not installed</td>
+            <td>The UI verification gate has no tool behind it, and it must clear the supply-chain checks before it lands.</td>
+            <td class="when">phase 1.2</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <span>Generated from <code>tracker/BOARD.md</code> by <code>/task-tracker --publish</code>. The markdown is the source of truth; this page is a view and is never hand-edited.</span>
+    <span>Statuses follow the board's single-writer rule: a builder may set in progress, blocked, or in review, and only the judge sets done.</span>
+  </footer>
+
+</div>
+
+<script>
+  var PHASES = [
+    { id: "P1", group: "planning", status: "done", title: "Source review and architecture decisions", body: "Thirteen steps across every background source, ending in the Phase 1 synthesis.", deps: [], flags: [], gates: [] },
+    { id: "P2", group: "planning", status: "done", title: "Competency questions and evaluation playbook", body: "The moat test, the seven must-pass questions, the offline gate, the online feedback loop.", deps: ["P1"], flags: [], gates: [] },
+    { id: "P3", group: "planning", status: "done", title: "The PRD", body: "Locked 2026-07-22. Every downstream requirement traces to an outcome here.", deps: ["P2"], flags: [], gates: [] },
+    { id: "P4", group: "planning", status: "done", title: "Technical specification and strategic memo", body: "Twenty-five sections, seven tools, six delivery surfaces. Locked 2026-07-25.", deps: ["P3"], flags: [], gates: [] },
+    { id: "P5", group: "planning", status: "done", title: "System and tooling updates", body: "The build harness rebuilt against a 303-obligation coverage map. Closed 2026-07-26.", deps: ["P4"], flags: [], gates: [] },
+
+    { id: "1.0", group: "prototype", status: "todo", title: "FastAPI skeleton", body: "App skeleton, health endpoint, the run() contract stub with the v1 event taxonomy typed, Pydantic boundary validation.", deps: [], flags: [], gates: [] },
+    { id: "1.1", group: "prototype", status: "todo", title: "Auth service", body: "Minimal v1 auth and the PostgreSQL user-data schema, stood up early even though the feedback loop does not fill it until 4.6.", deps: ["1.0"], flags: [], gates: [] },
+    { id: "1.2", group: "prototype", status: "todo", title: "React shell and SSE", body: "React shell, SSE consumption of the event stream, empty chat endpoint wired end to end, the stop button.", deps: ["1.0"], po: true, flags: ["playwright not installed"], gates: ["playwright"] },
+    { id: "2.0", group: "prototype", status: "todo", title: "LangGraph agent loop", body: "Guardrail, Think, Plan, Act, Write as stub nodes. Three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps enforced from day one.", deps: ["1.0"], flags: [], gates: [] },
+    { id: "2.1", group: "prototype", status: "todo", title: "Cypher query tool", body: "cypher_query over Layer 1, schema slicing, the validate-then-execute generation pipeline, edge-label enforcement.", deps: ["2.0"], flags: [], gates: [] },
+    { id: "2.2", group: "prototype", status: "todo", title: "Write step and grounding", body: "Deterministic cite-or-refuse, provenance wired for Layer 1 citations, the first trust signal, the two required tests.", deps: ["2.1"], flags: [], gates: ["eval-harness"] },
+
+    { id: "3.0", group: "v1", status: "todo", title: "Guardrail node", body: "Replaces the stub. Pydantic validation, prompt-injection rejection, forbidden query types, rate and cost pre-checks.", deps: ["2.0"], flags: [], gates: [] },
+    { id: "3.1", group: "v1", status: "todo", title: "NCBI EFetch tool", body: "E-utilities for PubMed, ClinVar, OMIM, plus Datasets API v2 for Gene, Genome, Orthologs, Taxonomy.", deps: ["2.0", "3.0"], flags: [], gates: [] },
+    { id: "3.2", group: "v1", status: "todo", title: "dbSNP tool", body: "Variation Services, plus the dbVar two-step coordinate-overlap sub-tool with a placement post-filter.", deps: ["3.1"], flags: [], gates: [] },
+    { id: "3.3", group: "v1", status: "todo", title: "Enrichment tools", body: "pubtator_annotate and litvar2_lookup, each with untrusted-source-reader separation: read plus one API, no write, no other tools.", deps: ["3.1"], flags: ["relations endpoint unverified"], gates: [] },
+    { id: "3.5", group: "v1", status: "todo", title: "Pathogen and trials tools", body: "pathogen_detection over the FTP results tree and clinicaltrials_search, completing the seven-tool roster.", deps: ["3.1"], flags: [], gates: [] },
+    { id: "3.4", group: "v1", status: "todo", title: "Citations and trust, full", body: "Provenance extended to Layers 2 and 3, the two-tier risk gate, data freshness and conflict resolution.", deps: ["2.2", "3.1", "3.2", "3.3", "3.5"], flags: [], gates: ["eval-harness"] },
+
+    { id: "4.0", group: "v1", status: "todo", title: "REST and SSE hardening", body: "The REST plus SSE adapter finalized as the public API surface.", deps: ["2.2"], flags: [], gates: [] },
+    { id: "4.1", group: "v1", status: "todo", title: "MCP server", body: "Outbound-only, wrapping the same tool functions the agent calls directly.", deps: ["3.4"], flags: [], gates: [] },
+    { id: "4.2", group: "v1", status: "todo", title: "CLI adapter", body: "Thin CLI client over the REST API.", deps: ["4.0"], flags: [], gates: [] },
+    { id: "4.3", group: "v1", status: "todo", title: "GraphQL API", body: "Strawberry surface sharing auth and tools with REST.", deps: ["4.0"], flags: [], gates: [] },
+    { id: "4.4", group: "v1", status: "todo", title: "KGX export", body: "A batch export over the existing graph. No in-repo dependency, so it can land any time.", deps: [], flags: [], gates: [] },
+    { id: "4.5", group: "v1", status: "todo", title: "Personalization and memory", body: "Bounded session memory, audience-level depth control, the stable named scientist persona. Never touches grounding.", deps: ["1.2", "2.2"], po: true, flags: [], gates: ["playwright"] },
+    { id: "4.6", group: "v1", status: "todo", title: "Feedback capture", body: "Real interaction capture, the manual review ritual, hand-promotion into few-shot examples.", deps: ["1.1", "3.4"], flags: [], gates: [] },
+    { id: "4.7", group: "v1", status: "todo", title: "Competency question routing", body: "Few-shot routing seeded with the seven must-pass questions, plus query-shape routing.", deps: ["3.4"], flags: [], gates: [] },
+
+    { id: "5.0", group: "v1", status: "todo", title: "Observability", body: "LangSmith per-run tracing joined on trace_id, PostHog analytics, the append-only tool-call audit log.", deps: ["2.0"], flags: [], gates: [] },
+    { id: "5.1", group: "v1", status: "todo", title: "Golden dataset and eval", body: "The 50-query golden dataset, eval-harness grading wired to trace output, the cost dashboard.", deps: ["3.4", "5.0"], flags: ["needs domain sign-off owner"], gates: ["eval-harness"] },
+
+    { id: "6.0", group: "v1", status: "todo", title: "Rate limiting and concurrency", body: "Per-layer throttling, the bounded FIFO queue per API family, the twenty-calls-per-query budget.", deps: ["3.1", "3.2", "3.3", "3.5"], flags: [], gates: [] },
+    { id: "6.1", group: "v1", status: "todo", title: "Hardening and release", body: "The full dev-standards six-lens pass, CI and CD gates, the security scan milestone, the accessibility pass.", deps: ["everything"], flags: [], gates: ["dev-standards"] },
+
+    { id: "7.0", group: "v1", status: "todo", title: "Model bench", body: "Benchmark the candidate models per tier against the golden dataset and pick the winners.", deps: ["5.1"], flags: [], gates: [] },
+    { id: "7.1", group: "v1", status: "todo", title: "A and B mechanism", body: "Online randomized routing across orchestrator and planner combinations, human-gated.", deps: ["7.0", "5.0"], flags: [], gates: [] }
+  ];
+
+  var COLUMNS = [
+    { key: "done", label: "Done", tone: "var(--done)" },
+    { key: "in-progress", label: "In progress", tone: "var(--active)" },
+    { key: "blocked", label: "Blocked", tone: "var(--blocked)" },
+    { key: "todo", label: "To do", tone: "var(--todo)" }
+  ];
+
+  var activeFilter = "all";
+
+  function matches(p) {
+    if (activeFilter === "all") return true;
+    if (activeFilter === "flagged") return p.flags.length > 0;
+    if (activeFilter === "po") return p.po === true;
+    return p.group === activeFilter;
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  function makeCard(p, tone) {
+    var card = el("article", "card");
+    card.style.setProperty("--card-tone", tone);
+
+    var top = el("div", "card-top");
+    top.appendChild(el("span", "phase-id", p.id));
+    top.appendChild(el("span", "group-tag", p.group));
+    card.appendChild(top);
+
+    card.appendChild(el("div", "card-title", p.title));
+    card.appendChild(el("p", "card-body", p.body));
+
+    var chips = el("div", "chips");
+    p.deps.forEach(function (d) { chips.appendChild(el("span", "chip dep", d)); });
+    if (p.po) chips.appendChild(el("span", "chip po", "product owner"));
+    p.gates.forEach(function (g) { chips.appendChild(el("span", "chip gate", g)); });
+    p.flags.forEach(function (f) { chips.appendChild(el("span", "chip flag", f)); });
+    if (chips.children.length) card.appendChild(chips);
+
+    return card;
+  }
+
+  function render() {
+    var board = document.getElementById("board");
+    board.textContent = "";
+
+    COLUMNS.forEach(function (col) {
+      var items = PHASES.filter(function (p) { return p.status === col.key && matches(p); });
+
+      var wrap = el("section", "col");
+      wrap.style.setProperty("--col-tone", col.tone);
+
+      var head = el("div", "col-head");
+      head.appendChild(el("span", "dot"));
+      head.appendChild(el("h2", "col-title", col.label));
+      head.appendChild(el("span", "col-count", String(items.length)));
+      wrap.appendChild(head);
+
+      var cards = el("div", "cards");
+      if (items.length === 0) {
+        cards.appendChild(el("div", "empty", "Nothing here"));
+      } else {
+        items.forEach(function (p) { cards.appendChild(makeCard(p, col.tone)); });
+      }
+      wrap.appendChild(cards);
+      board.appendChild(wrap);
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll(".filter"), function (btn) {
+    btn.addEventListener("click", function () {
+      activeFilter = btn.dataset.filter;
+      Array.prototype.forEach.call(document.querySelectorAll(".filter"), function (b) {
+        b.setAttribute("aria-pressed", String(b === btn));
+      });
+      render();
+    });
+  });
+
+  render();
+</script>
+<script>
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById("themeToggle");
+    btn.addEventListener("click", function () {
+      var now = root.getAttribute("data-theme");
+      if (!now) {
+        now = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      root.setAttribute("data-theme", now === "dark" ? "light" : "dark");
+    });
+  })();
+</script>
+</body>
+</html>

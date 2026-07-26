@@ -26,11 +26,13 @@ Run the affected code path end-to-end locally:
 - For UI changes: verify the component renders and interacts correctly
 - For tool changes: verify the tool returns expected results against the live graph or mock
 
-The point is to prove the code path works, not just unit tests.
+The point is to prove the code path works, not just unit tests. This is a manual, end-to-end proof that the automated checks in Step 2 cannot cover, so it stays a separate step.
 
-## Step 2: tests
+## Step 2: automated verification
 
-Run `pytest -q`. All tests must pass. If tests are missing for the change, write them first.
+Invoke `.claude/skills/verify/SKILL.md` (say `/verify`). It runs the Python compile check, the test suite, lint, git status, and the frontend check in one pass. All checks must come back READY before continuing to Step 3.
+
+If tests are missing for the change, write them first, then re-run verify. Verify itself has no check for this: it reports missing tests as a pass with a note ("no tests collected"), not a blocker, so this instruction stays here.
 
 ## Step 3: security scan (milestone gate)
 
@@ -42,17 +44,23 @@ Before shipping a release or opening a pull request, run a deep security scan on
 
 Full usage: `docs/Claude_security_plugin_usage.md`.
 
-## Step 4: ship
+## Step 4: dev-standards gate
+
+Required for any phase that shipped application code: FastAPI endpoints, agent nodes, tools, or React components. Invoke `.claude/skills/dev-standards/SKILL.md` (say `/dev-standards`) and run the six-lens production readiness review. Do not continue to Step 5 with an Overall: NOT READY verdict. Fix the issue behind the named constraint, then re-run the review.
+
+Skip this gate for a docs-only or config-only change where no application code shipped. The six lenses have nothing to grade in that case.
+
+## Step 5: ship
 
 Invoke `.claude/skills/ship/SKILL.md`:
 
 1. Run `docs-sync` if any architecture, schema, or agent behavior changed.
 2. `git add` only the files you intend to ship (no `git add -A`).
 3. `git commit` with a short, sentence-case message describing the why, not the what. Never add `Co-Authored-By` lines.
-4. Push the feature branch: `git push -u origin feature/description`
+4. Push the branch: `git push -u origin phase/N.M-description`, or a type-prefixed branch such as `chore/description` for non-phase work, per `git-workflow.md`.
 5. Create a pull request with a description of what changed and why.
 
-## Step 5: post-release sanity
+## Step 6: post-release sanity
 
 After the commit:
 

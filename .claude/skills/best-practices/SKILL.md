@@ -55,7 +55,7 @@ Every answer must trace back to specific records in NCBI databases. Functions th
 
 ## 4. Commit hygiene
 
-- Work on feature branches. One PR per feature/phase, merged into `main` after review.
+- Work on phase branches, never directly on `main`. Build phases use `phase/N.M-description` from tech spec Section 25, other work uses a type prefix such as `chore/short-description`. One PR per phase, merged into `main` after review.
 - Commit messages in sentence case, descriptive, no emoji.
 - One logical change per commit.
 - Never add `Co-Authored-By` lines. Project rule.
@@ -89,5 +89,5 @@ Deny:
 
 - Edit anything inside `reference/`.
 - Write to the knowledge graph (all connections are read-only).
-- Push to a remote branch other than the current feature branch.
+- Push to a remote branch other than the current phase branch.
 - Add System 1/2 dependencies (linkml, kgx, biopython bulk processing).

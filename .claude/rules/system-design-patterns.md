@@ -31,6 +31,8 @@ System 3 queries data across three layers. Each has different latency, cost, and
 
 Design tool calls to specify which layer they hit. Cache Layer 2/3 responses (24h TTL for stable fields). Never mix layers in a single tool - one tool, one layer.
 
+The same discipline holds within a layer: one tool per access path, not just one tool per layer. Pathogen Detection and ClinicalTrials.gov are never folded into `ncbi_efetch` as extra actions, because bulk FTP retrieval and a non-NCBI host are genuinely different access paths (tech spec Section 6).
+
 ### 4. Cost control is safety-critical
 
 LLM cost can spike unpredictably. The harness enforces hard caps:
@@ -81,3 +83,17 @@ Write a description with three parts: what the component does, when to use it (l
 - `bossman-mode`'s description states literal trigger phrases ("bossman mode", "let's execute", "go build this") and an explicit negative trigger ("DO NOT TRIGGER during architecture/planning discussions"). The negative trigger does as much work as the positive ones: it stops the skill from loading during a planning conversation that merely mentions execution.
 
 Never write a description as a table of contents for the body. If the description says what the skill covers instead of when to load it, the router runs on a degraded signal. It never sees the body it would need to make the same judgment call.
+
+### 10. Contract versioning discipline
+
+The event contract is versioned (`v1` on every envelope). Two rules govern its evolution for the life of a major version:
+
+- Within v1, service contract changes are additive only: a new optional field, a new enum value. A breaking change, removing a field or changing a field's meaning, requires a v2 contract (tech spec Section 2.6).
+- A tool-registry change, adding or removing a tool, is coordinated with a contract-version bump. Never silent (tech spec Section 2.6).
+
+### 11. The harness owns model identity
+
+Pattern 2 already draws the line that model choice is a harness decision, not an agent decision. That line holds at the code level too, not just at the design level:
+
+- `resolve_model()` never hardcodes a model id. Model identity resolves only from environment-configured tier values (tech spec Section 3.3).
+- On a recurring failure, iterate the harness first and try a model swap second: freeze the model, iterate the harness (tech spec Section 3.5).
