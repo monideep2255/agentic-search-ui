@@ -1,26 +1,3 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>System 3 build board</title>
-<style>
-  *, *::before, *::after { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
-  h1, h2, p, table { margin: 0; }
-  button { font: inherit; }
-  .theme-toggle {
-    position: fixed; top: 16px; right: 16px; z-index: 10;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
-    padding: 7px 13px; border-radius: 999px; cursor: pointer;
-    background: var(--surface); color: var(--muted); border: 1px solid var(--line);
-  }
-  .theme-toggle:hover { color: var(--ink); }
-</style>
-</head>
-<body>
-<button class="theme-toggle" id="themeToggle" type="button">Theme</button>
 <title>System 3 build board</title>
 
 <style>
@@ -667,18 +644,3 @@
 
   render();
 </script>
-<script>
-  (function () {
-    var root = document.documentElement;
-    var btn = document.getElementById("themeToggle");
-    btn.addEventListener("click", function () {
-      var now = root.getAttribute("data-theme");
-      if (!now) {
-        now = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      }
-      root.setAttribute("data-theme", now === "dark" ? "light" : "dark");
-    });
-  })();
-</script>
-</body>
-</html>

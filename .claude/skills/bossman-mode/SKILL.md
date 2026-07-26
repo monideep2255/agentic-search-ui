@@ -264,7 +264,9 @@ After all team members complete, before the phase checkpoint:
 3. `dev-standards`: the six-lens production readiness pass. Required on any phase that shipped application code, skippable for docs-only or config-only changes.
 4. `release-workflow`: local end-to-end verification and the security scan gate.
 5. `ship`: docs-sync, commit, push the phase branch, create the PR.
-6. `task-tracker --close`: record judge evidence on each ticket and close the phase board.
+6. `task-tracker --close`: record judge evidence on each ticket, close the phase board, then run `python3 tracker/render_board.py` explicitly and republish the artifact.
+
+The explicit render at step 6 is a backstop, not a duplicate. `.claude/hooks/sync-board.sh` already regenerates the page on every Edit to a board file, but PostToolUse hooks fire on the Edit and Write tools only, so any change made through Bash slips past it. Re-rendering at phase close catches a bypassed hook inside the phase instead of leaving the product owner reading a stale board. The renderer is idempotent, so running it when nothing changed costs nothing.
 
 Steps 1 through 3 are the gates the locked spec actually requires and that this skill previously never invoked. Do not treat them as optional because the judge already passed. The judge grades the work; these grade whether the work is allowed to ship.
 
@@ -367,7 +369,9 @@ Partition first, isolate second. Worktrees make concurrent writes safe, they do 
 
 ### Shared-ledger coordination
 
-When parallel agents share findings, defects, or task state, they coordinate through one shared markdown ledger, not by each writing wherever they like. Without a convention, two agents writing status to the same file overwrite each other, and an agent that raised an item can quietly close it. A single-writer-per-state ledger removes both races by construction and leaves an auditable trail. This is where adversary findings for System 3 would land. The Personal Space harness, analyzed in the personal-os Reference-repos set, runs its defect and adversarial-review ledgers this way. Four rules:
+When parallel agents share findings, defects, or task state, they coordinate through one shared markdown ledger, not by each writing wherever they like. Without a convention, two agents writing status to the same file overwrite each other, and an agent that raised an item can quietly close it. A single-writer-per-state ledger removes both races by construction and leaves an auditable trail. The Personal Space harness, analyzed in the personal-os Reference-repos set, runs its defect and adversarial-review ledgers this way.
+
+The ledger is a real file, not an abstraction: `tracker/phase_N.M.md`, the same phase file the tickets live in, under its Findings section. Adversary findings and builder defects both land there. Keeping findings beside tickets in one file is deliberate, since a confirmed finding usually becomes a fix ticket, and that transition should not cross a file boundary. The `task-tracker` skill owns the format. Four rules:
 
 - Single writer per state: each state in the ledger has exactly one role authorized to set it. The adversary files findings, the judge or a fix agent triages, only the designated closer closes. No state has two writers.
 - Mandatory reason on judgment states: any state that reflects a judgment call (accepted, rejected, closed, disputed) carries a one-line reason. A bare status change with no reason is invalid.
@@ -442,7 +446,7 @@ For phases with 2+ parallel builder tasks:
 2. Each teammate appears in its own tmux pane
 3. Give every concurrent file-mutating builder `isolation: "worktree"`, per the worktree policy above
 4. Define tasks from the phase board tickets: deliverable, acceptance criteria, context, reference files, constraints, the exact files it may touch, test files to write
-5. Teammates claim tickets and execute independently, setting their own ticket to `in-progress`
+5. Teammates claim tickets and execute independently, setting their own ticket to `in-progress` the moment they pick it up, not when they finish. The board is the team's shared reference, so a ticket that is being worked and still reads `todo` is a lie about the state of the phase. Use the Edit tool for board changes, never `sed`, or the page will not re-render
 6. Lead monitors the board and messages stuck teammates
 7. If a teammate is stuck: message it with a clearer prompt or ask it to start fresh
 8. A builder that finishes sets its ticket to `in-review`, never to `done`
@@ -460,7 +464,9 @@ Once all builders complete:
 4. Dispatch integrator sub-agent ONLY if builders produced isolated components that need wiring
 5. Scope check: verify nothing built in this phase crosses the v1 boundary in `.claude/rules/v1-scope-boundary.md`. A capability the PRD declared out of scope does not become in scope because a builder found it easy. This check matters most when no human watched the phase.
 6. UI phases: a phase that ships user-facing interface does not pass on a judge's code review alone. It needs a Playwright run proving the flow works in a browser, and it is marked product owner required so a human decides whether it actually feels right. An agent can verify a button exists. It cannot verify the thing is good.
-7. If judge fails or the adversary files findings: minor issues = dispatch a fix sub-agent. Major issues = escalate to the product owner.
+7. The judge closes the board. It is the only role allowed to move a ticket from `in-review` to `done`, and the only one allowed to set `rejected`, each with a one-line reason and its evidence pasted into the ticket. A builder never closes its own ticket. If the judge does not touch the board, the phase does not close, because nothing else is permitted to write that state.
+8. If judge fails or the adversary files findings: minor issues = dispatch a fix sub-agent. Major issues = escalate to the product owner.
+9. Anything that cost real time to diagnose gets a `LEARNINGS.md` entry before the phase closes: what broke, what was tried and did not work, and what actually fixed it. A confirmed adversary finding always qualifies. This is the one place a phase is allowed to end without a learning, and only when genuinely nothing broke.
 
 ### Step 7: skill chain (release-workflow -> ship)
 
