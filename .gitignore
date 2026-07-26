@@ -4,7 +4,9 @@ __pycache__/
 *$py.class
 *.egg-info/
 dist/
-build/
+# Anchored to the repo root. A bare build/ also matches docs/build/, which
+# silently blocked committing the build workflow docs on 2026-07-26.
+/build/
 venv/
 .venv/
 
@@ -15,7 +17,7 @@ venv/
 node_modules/
 .next/
 dist/
-build/
+frontend/build/
 
 # IDE
 .vscode/
