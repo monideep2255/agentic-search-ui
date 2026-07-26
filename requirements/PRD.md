@@ -2,7 +2,7 @@
 
 The single source of truth for what System 3 does, for whom, and how we measure success. Written for NCBI stakeholders who decide whether the wedge is real and worth backing, and inherited by the build team as the build contract.
 
-Status: locked (2026-07-22). Inputs: the Phase 1 synthesis (`requirements/phase_1/Phase_1_synthesis.md`) and the Phase 2 evaluation playbook (`requirements/Evaluation_playbook.md`). Last updated: 2026-07-22.
+Status: locked (2026-07-22). Inputs: the Phase 1 synthesis (`requirements/phase_1/Phase_1_synthesis.md`) and the Phase 2 evaluation playbook (`requirements/Evaluation_playbook.md`). Last updated: 2026-07-22 (a formatting-only no-prose-walls pass ran 2026-07-25 with no content change).
 
 ## Table of contents
 
@@ -34,7 +34,11 @@ The one belief this document has to earn: System 3 delivers cited, cross-databas
 
 The differentiation anchor is data plus provenance: cited, deterministic, cross-database synthesis over the NCBI graph and APIs. Per-user personalization compounds the moat because it fuses with that data and the user's own cited research history, but personalization alone is copyable and is not the differentiator.
 
-The NCBI strategic directives (the FY26 guiding principles, Gold Standard Science, and the AI Action Plan) are fixed constraints on this product, not positioning: simplify discovery, reproducibility and transparency, and AI-ready datasets.
+The NCBI strategic directives are fixed constraints on this product, not positioning:
+
+- FY26 guiding principles: simplify discovery.
+- Gold Standard Science: reproducibility and transparency.
+- AI Action Plan: AI-ready datasets.
 
 ## Outcomes and stakeholders
 
