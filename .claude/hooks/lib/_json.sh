@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scope: project
 # depends_on: []
-# depended_by: [.claude/hooks/scan-secrets.sh, .claude/hooks/scan-write-secrets.sh, .claude/hooks/block-bash-delete.sh]
+# depended_by: [.claude/hooks/scan-secrets.sh, .claude/hooks/scan-write-secrets.sh, .claude/hooks/block-bash-delete.sh, .claude/hooks/sync-agents-md.sh]
 # Portable JSON helpers for Claude Code hooks. No jq, no python3-by-name dependency.
 #
 # Why this exists: on Windows/Git Bash, `jq` is often absent and `python3` resolves

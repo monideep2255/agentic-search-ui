@@ -90,6 +90,17 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/sync-agents-md.sh\""
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "matcher": "",
