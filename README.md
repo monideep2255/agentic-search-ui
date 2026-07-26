@@ -107,7 +107,7 @@ agentic-search-ui/
   .claude/                      # Claude Code rules, skills, agents, hooks (tracked in git for v1 development)
   CLAUDE.md                     # Claude Code instructions
   AGENTS.md                     # Instructions for other AI agents
-  DECISIONS.md                  # Architecture decision log (123 rows)
+  DECISIONS.md                  # Architecture decision log (124 rows)
   LEARNINGS.md                  # What broke during the build and what fixed it
   CHANGELOG.md                  # Keep a Changelog format, all entries currently Unreleased
   pyproject.toml

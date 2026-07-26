@@ -6,9 +6,22 @@ alwaysApply: true
 
 ## Git workflow
 
+### Which work gets a branch
+
+Not everything does. Decided 2026-07-26, after four planning phases went straight to `main` while this rule said otherwise. The rule now matches the practice instead of contradicting it.
+
+| Work | Branch and MR | Why |
+|------|---------------|-----|
+| Build phases, Plan.md Phase 6 onward | Required | Real code, where review catches things the product owner cannot see from the conversation |
+| Planning phases, Plan.md Phases 1 to 5 | Not required, direct to `main` is fine | The product owner was in the conversation as the documents were written, so a PR re-reviews something already reviewed |
+| Anything touching `.claude/`, hooks, or settings | Required regardless of phase | The security layer, and the one place a silent change is most expensive |
+| A change the product owner asks to see before it lands | Required, on request | Their call overrides the table |
+
+Phase 5 itself shipped as a branch and an MR because it rewrote the harness and re-tracked `.claude/`, which puts it in the third row.
+
 ### Branch model
 
-Work on phase branches, not directly on `main`. One branch per bossman phase.
+For work that gets a branch, work on it rather than directly on `main`. One branch per bossman phase.
 
 Branch naming: `phase/N.M-short-description`
 
@@ -24,7 +37,7 @@ Create the branch at phase start: `git checkout -b phase/N.M-description`
 
 ### Merge requests
 
-One MR per phase. Create the MR when the phase is complete and release-workflow passes.
+One MR per phase, for the work that needs one per the table above. Create the MR when the phase is complete and release-workflow passes.
 
 MR flow:
 1. Push the phase branch: `git push -u origin phase/N.M-description`
