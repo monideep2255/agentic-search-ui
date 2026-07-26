@@ -2,7 +2,7 @@
 
 The build blueprint for System 3. It translates the locked PRD and the Phase 4 core-architecture decisions into implementation decisions and a build order.
 
-Status: Step 4.2 draft, drafted 2026-07-25. Each section is drafted to implementation level by a parallel drafting pass. Step 4.3 reconciles the open items (the four parked-thread proposals and the cross-doc reconciliation items flagged in the sections and the build-order table) and locks the spec. It references the evaluation playbook (requirements/Evaluation_playbook.md) and the eval-harness and dev-standards skills rather than restating them.
+Status: Step 4.2 reconciled, pending Step 4.3 lock sign-off. Each section was drafted to implementation level by a parallel drafting pass, then Step 4.3 reconciled the open items: the citation, cost, and error event schemas are now unified against the canonical Section 2 and Section 9 definitions, the tool roster is complete at seven tools, and the delivery surfaces match the locked PRD. The five confirmed decisions are applied throughout: the Layer 1 staleness threshold (Section 7), the provenance type's four added fields (Section 9), the online A/B mechanism (Section 18), the concurrency queue strategy (Section 21), and the Pathogen Detection and ClinicalTrials.gov tool-roster resolution, each its own named tool rather than an ncbi_efetch action (Section 6). Locking the spec is the user's own sign-off, not made here. It references the evaluation playbook (requirements/Evaluation_playbook.md) and the eval-harness and dev-standards skills rather than restating them.
 
 Traceability: every section traces back to a PRD outcome and to the core-architecture decisions in DECISIONS.md (Decisions A, C, D, E, F, G, and the cost amendment, all 2026-07-25) and to the verified API capability sheet (requirements/phase_4/API_capability_sheet.md).
 
@@ -38,7 +38,7 @@ Traceability: every section traces back to a PRD outcome and to the core-archite
 
 ## How to read this
 
-The spine is one agent core that exposes a single typed event stream, with four delivery surfaces (UI, REST plus SSE API, MCP server, CLI) as thin adapters over that stream. Retrieval feeds structured results into the core, the Write step synthesizes and grounds them, and the stream carries the cited result out to whichever surface asked.
+The spine is one agent core that exposes a single typed event stream. Six delivery surfaces sit over that core, per the locked PRD: four subscribe to the stream directly (web UI, REST plus SSE API, MCP server, CLI), and two more (GraphQL API, KGX export) reuse the same tools and data layers through a request/response or batch shape instead, since a typed query or a static export is a different shape of access than a query-time cited event stream. Retrieval feeds structured results into the core, the Write step synthesizes and grounds them, and the stream carries the cited result out to whichever streaming surface asked.
 
 The sections group into six parts:
 
@@ -53,21 +53,21 @@ The sections group into six parts:
 
 System 3 is one agent core wrapped in thin, surface-specific adapters. The core owns the five-step loop, the three-layer retrieval model, and the single typed contract described in Section 2. Every delivery surface subscribes to that contract; none of them re-implement agent logic. This is Decision A (2026-07-25, the core service contract) and the Step 4.1 architecture frame decision (2026-07-25): build from the agent core outward, not from a specific surface inward.
 
-### 1.1 The one-core, four-adapter model
+### 1.1 The one-core, six-surface model
 
 | Component | Role | Owned by |
 |-----------|------|----------|
 | Agent core | The Guardrail, Think, Plan, Act, Write loop. Exposes `run(query, context)`, Section 2. | `core/` |
 | Harness | Cross-cutting: model tier resolution, cost accounting, per-step timeouts, the coordinator-worker split, cache hookup. | `harness/`, Section 3 |
-| Tool layer | The five tools (`cypher_query`, `ncbi_efetch`, `ncbi_dbsnp`, `pubtator_annotate`, `litvar2_lookup`), each a data source adapter. | `tools/`, Section 6 |
+| Tool layer | The seven tools (`cypher_query`, `ncbi_efetch`, `ncbi_dbsnp`, `pubtator_annotate`, `litvar2_lookup`, `pathogen_detection`, `clinicaltrials_search`), each a data source adapter. | `tools/`, Section 6 |
 | Three data layers | Layer 1 graph, Layer 2 NCBI APIs, Layer 3 enrichment APIs. | Section 5 |
-| Delivery surfaces | Four thin adapters over the event stream: web UI, REST plus SSE API, MCP server, CLI. | Sections 12 to 13 |
-| Structured surfaces | GraphQL (nested biomedical data access) and KGX export (graph-only bulk export). These reuse the same tools and data layers but do not consume the streaming `run()` contract, because a typed query or a static export is a different shape of access than a query-time cited event stream. | PRD delivery formats section |
+| Delivery surfaces, streaming | Four adapters that subscribe to the event stream directly: web UI, REST plus SSE API, MCP server, CLI. | Sections 12 to 13 |
+| Delivery surfaces, structured | Two more surfaces the locked PRD requires, reusing the same tools and data layers without subscribing to the live stream: GraphQL API (nested biomedical data access) and KGX export (graph-only bulk export). A typed query or a static export is a different shape of access than a query-time cited event stream. | Section 1.1 below, Section 24, Section 25 |
 | User data store | PostgreSQL: auth, the `interactions` table, `cq_candidates`. Separate from the read-only graph. | Section 15 |
 | Cache | Redis for Layer 2 and Layer 3 responses; provider-side prompt caching for LLM calls. | Section 4 |
 | Observability | LangSmith (per-run traces), PostHog (behavioral analytics). | Section 20 |
 
-The four streaming adapters (web UI, REST plus SSE, MCP, CLI) are the "four delivery surfaces" this document's introduction refers to. GraphQL and KGX export are additional, non-streaming surfaces built on the same underlying tools and layers; Decision 4 (2026-05-07) describes GraphQL explicitly as "structured programmatic access to nested biomedical data," a request/response shape, not a cited-event-stream shape.
+The locked PRD's five v1 delivery formats plus the REST-plus-SSE transport give six named surfaces in total: web UI, REST plus SSE API, GraphQL API, MCP server, KGX export, and CLI (Decision A's core-service-contract decision and the 2026-05-07 all-five-formats decision, read together). Four of the six (web UI, REST plus SSE, MCP, CLI) are the streaming adapters this document's introduction refers to. GraphQL and KGX export are the two structured, non-streaming surfaces built on the same underlying tools and layers; Decision 4 (2026-05-07) describes GraphQL explicitly as "structured programmatic access to nested biomedical data," a request/response shape, not a cited-event-stream shape, and KGX export is a batch job against Layer 1, not a live adapter at all. The operator cost view (Section 13.4) is a role-gated mode of the REST plus SSE adapter, not a seventh surface.
 
 ```mermaid
 flowchart TD
@@ -92,7 +92,7 @@ flowchart TD
     end
 
     Core --> Harness[Harness: tiers, cost caps, cache, coordinator-worker]
-    Act --> Tools[Tool layer: 5 tools]
+    Act --> Tools[Tool layer: 7 tools]
     Tools --> L1[Layer 1: AGE graph]
     Tools --> L2[Layer 2: NCBI APIs]
     Tools --> L3[Layer 3: enrichment APIs]
@@ -199,7 +199,7 @@ src/system_03_search_agent/
     core/            # LangGraph graph: the 5-step loop, run() entrypoint
     contracts/        # Pydantic event models and JSONSchemas (Section 2)
     harness/          # Tiers, cost caps, timeouts, coordinator-worker, cache hooks (Section 3, 4)
-    tools/            # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup
+    tools/            # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search
     adapters/
         web_sse/       # FastAPI + SSE (Section 12, 13)
         graphql/       # Strawberry schema over the same tools
@@ -287,7 +287,7 @@ Every item the stream yields is one envelope. `type` discriminates the payload s
 | error | Any step | A recoverable or terminal failure (Section 22 owns the taxonomy) |
 | done | Core | Terminal event: totals, elapsed time, trust outcome |
 
-Payload shapes:
+Payload shapes. This is the canonical definition for every event type. Sections 6, 8, 9, 12, 13, 19, and 22 elaborate on individual events but never restate a diverging shape; where one of those sections needs a richer walkthrough of a field, it cross-references the shape fixed here.
 
 ```json
 // guard
@@ -308,49 +308,67 @@ Payload shapes:
 {
   "narrative": "Querying Gene, PubMed, ClinVar, GTR, MedGen",  // maxLength 500
   "tool_calls": [
-    { "tool": "cypher_query", "call_id": "c1", "layer": 1 },
-    { "tool": "ncbi_efetch", "call_id": "c2", "layer": 2 }
-  ]                                                      // maxItems 20, tool enum pinned to the 5 registered tools
+    { "tool": "cypher_query", "call_id": "c1", "layer": "layer_1_graph" },
+    { "tool": "ncbi_efetch", "call_id": "c2", "layer": "layer_2_api" }
+  ]                                                      // maxItems 20, tool enum pinned to the 7 registered tools
 }
 
 // tool_start / tool_result
-{ "call_id": "c2", "tool": "ncbi_efetch", "layer": 2, "status": "ok" }
+{ "call_id": "c2", "tool": "ncbi_efetch", "layer": "layer_2_api", "status": "ok" }
 // tool_result adds: "summary" (maxLength 1000), "result_count", "truncated"
 // status enum: ok, empty, error (ties to the cite-or-refuse empty signal, Section 8)
 
 // token
 { "text": "BRCA1 is a tumor suppressor gene", "marker_ids": ["c_1"] }
 
-// citation
+// citation, the canonical provenance type (full field-by-field rationale: Section 9.1)
 {
   "citation_id": "c_1",
+  "display_index": 1,
   "source": "NCBI Gene",
   "source_id": "672",
   "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
-  "layer": 1,
-  "evidence_kind": "asserted",
+  "layer": "layer_1_graph",
+  "field": "description",
+  "claim_text": "BRCA1 is a tumor suppressor gene",
+  "evidence_kind": "primary_assertion",
   "assertion_confidence": "asserted",
-  "population_context": null,
-  "license": "public-domain"
+  "population_ancestry_context": null,
+  "license": "public_domain_us_gov"
 }
-// full field definitions and the host-pinned source_url regex: Section 9
+// layer enum: layer_1_graph | layer_2_api | layer_3_enrichment, used everywhere a layer field appears
+// trust_signal is never a citation field. It is always its own separate event, below.
+// host-pinned source_url regex: Section 9.3
 
 // trust_signal
 { "outcome": "answer", "risk_tier": "low", "grounded": true, "triangulated": null }
 // outcome enum: answer, flag, ask, refuse (Section 8's deterministic rule)
 
-// cost
-{ "running_cost_usd": 0.014, "step": "act" }
+// cost (harness-emitted, builder-only, filtered from every end-user surface per Section 2.7)
+{
+  "query_cost_usd": 0.0234,
+  "query_cap_usd": 0.10,
+  "cap_fraction": 0.234,
+  "model_tier": "guard"     // guard | plan | synth, maxLength 16
+}
+// query_cost_usd and cap_fraction are running totals for the active query, not deltas; full accounting rules: Section 19.3
 
-// error
-{ "code": "layer2_timeout", "message": "ncbi_efetch timed out after 15s", "recoverable": true, "next_action": "retry_with_backoff" }
-// taxonomy (transient, recoverable, unexpected): Section 22
+// error, the canonical error shape (full taxonomy: Section 22.3)
+{
+  "fatal": false,
+  "scope": "tool",                  // tool | step | run, maxLength 16
+  "source": "ncbi_efetch",           // tool or layer name, maxLength 64
+  "error_class": "transient",        // transient | recoverable | unexpected, maxLength 16
+  "message": "ncbi_efetch timed out after 15s, retry with backoff",  // actionable text, maxLength 256
+  "retry_after_s": 2
+}
+// a surface closes its stream on a fatal error, never on error_class alone: fatal is the one field every consumer branches on to decide whether the run has ended
 
 // done
 { "total_cost_usd": 0.021, "total_tool_calls": 4, "elapsed_ms": 6200, "trust_outcome": "answer" }
 ```
 
-Every string field carries `maxLength` and every array `maxItems`, per production-standards' multi-agent pipeline gate. `tool` fields are enums pinned to the five registered tools, never a free string, so a malformed upstream payload cannot inject an unregistered tool name into the plan.
+Every string field carries `maxLength` and every array `maxItems`, per production-standards' multi-agent pipeline gate. `tool` fields are enums pinned to the seven registered tools, never a free string, so a malformed upstream payload cannot inject an unregistered tool name into the plan. `layer` fields, wherever they appear (`plan.tool_calls[].layer`, `tool_start.layer`, `tool_result.layer`, `citation.layer`), use the same three-value string enum, never an integer, so a consumer never has to branch on two different representations of the same three layers.
 
 ### 2.4 Inline citation binding
 
@@ -364,7 +382,9 @@ A `token` event's `marker_ids` array names zero or more citation ids that this t
 
 `think` and `plan` events carry only a `narrative` field: a short, human-readable, persona-voiced description of what the step is doing (Section 14 owns the persona). Decision A (2026-07-25) is explicit: reasoning is a curated plan-step narrative, never raw chain-of-thought, so no event in this taxonomy carries a raw token-level reasoning trace.
 
-Gap to flag: PRD "UI experience" and the 2026-07-21 Step 1.10 UI-patterns decision both describe an optional "show-full-reasoning expander" that reveals the model's raw chain-of-thought. Decision A, dated later (2026-07-25) and explicitly the core-architecture decision this contract implements, states the opposite: never raw chain-of-thought. This tech spec implements Decision A as written, since Section 2's own "Draws from" line names Decision A as authoritative for the event taxonomy. If a full-reasoning expander is still wanted, it can only ever expand the curated narrative to a more detailed curated form (for example, a longer `narrative` or a `detail` sub-field), never literal chain-of-thought tokens. This is a genuine PRD-versus-Decision-A tension, not resolved here; it is carried forward as a reconciliation item for the next planning-doc sweep rather than invented away.
+Gap to flag: PRD "UI experience" and the 2026-07-21 Step 1.10 UI-patterns decision both describe an optional "show-full-reasoning expander" that reveals the model's raw chain-of-thought. Decision A, dated later (2026-07-25) and explicitly the core-architecture decision this contract implements, states the opposite: never raw chain-of-thought. This tech spec implements Decision A as written, since Section 2's own "Draws from" line names Decision A as authoritative for the event taxonomy. If a full-reasoning expander is still wanted, it can only ever expand the curated narrative to a more detailed curated form (for example, a longer `narrative` or a `detail` sub-field), never literal chain-of-thought tokens.
+
+Step 4.3 resolution: Decision A supersedes the PRD's show-full-reasoning wording, since it is later and is the controlling core-architecture decision for this exact contract. The PRD's own text is not edited here, that is a documentation change, not a schema change, and this tech spec is not the PRD's editor. It is logged here for the Step 6.2 prototype reconciliation (the scheduled doc-review sweep, DECISIONS.md 2026-07-24) to update the PRD's wording to match Decision A.
 
 ### 2.6 Versioning
 
@@ -553,7 +573,7 @@ The 2026-07-21 Step 1.11 decision adopts provider-side prompt caching: structure
 Prefix structure for the main agent's LLM calls (Think, Plan, Write):
 
 1. System instructions and SOUL.md behavioral directives (static across every query).
-2. Tool schemas for the five registered tools, frozen and deterministically sorted by tool name (`cypher_query`, `litvar2_lookup`, `ncbi_dbsnp`, `ncbi_efetch`, `pubtator_annotate`). Sorting is alphabetic and fixed in code, never re-ordered at runtime, because a reorder busts the cache exactly like a schema edit.
+2. Tool schemas for the seven registered tools, frozen and deterministically sorted by tool name (`clinicaltrials_search`, `cypher_query`, `litvar2_lookup`, `ncbi_dbsnp`, `ncbi_efetch`, `pathogen_detection`, `pubtator_annotate`). Sorting is alphabetic and fixed in code, never re-ordered at runtime, because a reorder busts the cache exactly like a schema edit.
 3. The static graph and BioLink schema: the 10 concept labels and 14 edge predicates at the concept level, not the per-query slice. This is small and genuinely invariant across queries, which is what makes it eligible for the stable prefix.
 4. Dynamic suffix: the current query, resolved entities, session-memory tail (Section 14), and the structured plan.
 
@@ -583,10 +603,10 @@ TTL buckets. Three values are directly verified in the Phase 4.0 capability shee
 | PubMed ESummary and EFetch, MeSH | Publication | 1 day | Verified (capability sheet) | `ncbi_efetch` |
 | PubTator3 annotations, LitVar2, LitSense | Publication | 1 day | Extrapolated: literature-linked enrichment shares PubMed's volatility class | `pubtator_annotate`, `litvar2_lookup` |
 | OMIM, MedGen, GTR concept records | Gene | 7 days | Extrapolated: low-churn reference records, nearest to the gene bucket | `ncbi_efetch` |
-| ClinicalTrials.gov studies | Publication | 1 day | Extrapolated: status fields (recruiting, completed) change often enough to warrant the shorter bucket | ClinicalTrials path |
+| ClinicalTrials.gov studies | Publication | 1 day | Extrapolated: status fields (recruiting, completed) change often enough to warrant the shorter bucket | `clinicaltrials_search` |
 | PubChem compound records | Gene | 7 days | Extrapolated: stable reference data, nearest to the gene bucket | Datasets and PubChem path |
 | SRA, BioProject, BioSample, GEO, Assembly ESummary | Gene | 7 days | Extrapolated: structural project metadata, low churn | `ncbi_efetch` |
-| Pathogen Detection FTP snapshots | Snapshot-pinned, not TTL-bucketed | Cached until a newer complete PDG snapshot is pinned; re-checked daily | Verified caveat (capability sheet: "cache aggressively, the snapshot changes on NCBI's build cadence, not per query") | Pathogen tool |
+| Pathogen Detection FTP snapshots | Snapshot-pinned, not TTL-bucketed | Cached until a newer complete PDG snapshot is pinned; re-checked daily | Verified caveat (capability sheet: "cache aggressively, the snapshot changes on NCBI's build cadence, not per query") | `pathogen_detection` |
 
 Flag for Phase 6 confirmation: the six extrapolated rows are this tech spec's best-fit mapping onto the capability sheet's three verified buckets, not independently verified TTLs. They should be re-checked against real drift observations once the tools are live.
 
@@ -659,19 +679,21 @@ No tool call spans two layers (system-design-patterns rule 3). A question that n
 | cypher_query | Layer 1 | SSH tunnel or co-location (Phase 6), HTTPS query service (v1) |
 | ncbi_efetch | Layer 2 | HTTPS, E-utilities, Datasets API v2, PubChem PUG REST |
 | ncbi_dbsnp | Layer 2 | HTTPS, NCBI Variation Services plus dbSNP ESummary |
+| pathogen_detection | Layer 2 | HTTPS, the Pathogen Detection FTP results tree |
 | pubtator_annotate | Layer 3 | HTTPS, PubTator3 |
 | litvar2_lookup | Layer 3 | HTTPS, LitVar2 |
+| clinicaltrials_search | Layer 3 | HTTPS, ClinicalTrials.gov API v2 |
 
 ```mermaid
 flowchart TD
     ACT["Act step: tool call list"]
     T1["cypher_query"]
-    T2["ncbi_efetch, ncbi_dbsnp"]
-    T3["pubtator_annotate, litvar2_lookup"]
+    T2["ncbi_efetch, ncbi_dbsnp, pathogen_detection"]
+    T3["pubtator_annotate, litvar2_lookup, clinicaltrials_search"]
     P6["Phase 6: SSH tunnel"]
     V1["v1: HTTPS query service"]
     AGE["AGE graph, kg_reader role"]
-    NCBI["NCBI Layer 2 APIs"]
+    NCBI["NCBI Layer 2 APIs and FTP"]
     ENR["Layer 3 enrichment APIs"]
 
     ACT --> T1
@@ -690,6 +712,8 @@ All three layers converge back into the same shape by the time the Write step se
 ## 6. Tool specifications
 
 One subsection per tool, drawn directly from the capability sheet (`requirements/phase_4/API_capability_sheet.md`), the only verified source for endpoints, fields, and error and empty behavior. Every schema below applies the production-standards multi-agent pipeline gate: `maxLength` on every string, `maxItems` on every array, a host-pinned `source_url` regex, and no `additionalProperties`. Every tool is a Read-plus-one-source untrusted-source reader in the sense of system-design-patterns rule 8: it can call its own source and nothing else, never another tool, never a write path.
+
+Every `source_url` pattern below is Section 9.3's strict host-pinned regex (`NCBI_RECORD_HOST`, `CLINICALTRIALS_HOST`), never the looser any-subdomain form. A citation always resolves to the human-facing record page (`www.ncbi.nlm.nih.gov/...`, `pubmed.ncbi.nlm.nih.gov/...`), never the `eutils.` or `api.` fetch host the tool actually called to retrieve the data. This is the concrete enforcement point for Section 9.3's rule; a tool schema that used the looser pattern would let a fetch host leak into a citation, defeating the rule Section 9.3 states.
 
 The per-competency-question required IDs and fields (`reference/personal-os-work/NIH/Agentic-Search/Reference/system-3-brainstorming/02_Tier1_eval_spec.md`) are the input-output contract each schema below is checked against: VCV/RCV accessions for ClinVar, nstd/nsv/esv for dbVar, MIM IDs for OMIM, CUIs for MedGen, NCT IDs for ClinicalTrials.gov, rsIDs and SPDI for variants. Every field that spec names as required for a Tier 1 answer appears in at least one schema below.
 
@@ -752,7 +776,7 @@ Output schema:
           "source_url": {
             "type": "string",
             "maxLength": 300,
-            "pattern": "^https://([A-Za-z0-9-]+\\.)*ncbi\\.nlm\\.nih\\.gov/"
+            "pattern": "^https://(www\\.|pubmed\\.)?ncbi\\.nlm\\.nih\\.gov/"
           },
           "graph_snapshot_version": {"type": "string", "maxLength": 40}
         }
@@ -781,6 +805,8 @@ Per-call timeout: 30 seconds, carried forward from the capability sheet's refere
 ### 6.2 ncbi_efetch
 
 Purpose: the general Layer 2 client. Covers Entrez E-utilities search, fetch, summary, and link across every Layer 2 database (PubMed, Gene, ClinVar, dbVar, OMIM, MedGen, GTR, SRA, BioProject, BioSample, Assembly, GEO, Taxonomy, MeSH), the NCBI Datasets API v2 gene and genome reports, and PubChem PUG REST. One tool, seven actions, discriminated by the `action` field.
+
+Datasets API v2 (base `https://api.ncbi.nlm.nih.gov/datasets/v2/`) is the `dataset_report` action below: `GET gene/id/{gene_id}`, `GET gene/symbol/{symbol}/taxon/{taxon}`, and `GET genome/accession/{accession}/dataset_report`, each returning structured JSON with proper HTTP status codes, unlike the E-utilities 200-with-body-error pattern. This is the one-tool-per-access-path rule applied inside the tool: eutils and Datasets v2 are two action families on the same `ncbi_efetch` tool, not two tools, because both ultimately serve the same job, Layer 2 gene, genome, and record retrieval, discriminated by `action`.
 
 Input schema:
 
@@ -892,7 +918,7 @@ Output schema (one shape for every action; per-action content is documented in t
           "source_url": {
             "type": "string",
             "maxLength": 300,
-            "pattern": "^https://([A-Za-z0-9-]+\\.)*(ncbi\\.nlm\\.nih\\.gov|omim\\.org|clinicaltrials\\.gov)/"
+            "pattern": "^https://((www\\.|pubmed\\.)?ncbi\\.nlm\\.nih\\.gov|(www\\.)?omim\\.org|(www\\.)?clinicaltrials\\.gov)/"
           }
         }
       }
@@ -914,7 +940,7 @@ Endpoints and fields used, by action:
 | summary | ESummary `db=<db>&id=<ids>&retmode=json` | the verified per-db field set, see table below |
 | link | ELink `dbfrom=<dbfrom>&db=<db>&id=<ids>` | `linksets[0].linksetdbs[].links[]`, keyed by `linkname` |
 | coordinate_overlap | ESearch coordinate prefilter then ESummary placement fetch | dbVar `dbvarplacementlist` or ClinVar `C37`/`CPOS`/`VLEN` |
-| dataset_report | Datasets v2 `/gene/id/{id}` or `/genome/accession/{accession}/dataset_report` | see the Datasets field list below |
+| dataset_report | Datasets API v2 (base `https://api.ncbi.nlm.nih.gov/datasets/v2/`): `GET gene/id/{gene_id}`, `GET gene/symbol/{symbol}/taxon/{taxon}`, or `GET genome/accession/{accession}/dataset_report` | see the Datasets field list below |
 | pubchem_property | PUG REST `/compound/cid/{cid}/property/{list}/JSON` or `/compound/name/{name}/cids/JSON` | `CID`, `MolecularFormula`, `MolecularWeight`, `ConnectivitySMILES`, `IUPACName` |
 
 Verified ESummary fields by database (the load-bearing subset the tool extracts into `fields`):
@@ -959,7 +985,7 @@ Per-call timeout: 15 seconds with one backoff retry on a transient failure, for 
 
 Rate limits: E-utilities is 3 requests/second unauthenticated, 10/second with an API key passed as `&api_key=` (key in an env var only, never in code or logs). Datasets v2 and PubChem require no key; PubChem is roughly 5 requests/second and 400/minute. All four pools are subject to the shared per-user and per-query budget in section 21.
 
-Open gap, flagged per the goal contract rather than silently resolved: Pathogen Detection (the FTP results tree of versioned PDG snapshots, anchoring Q5) does not fit this tool's action set. It is bulk TSV and tar.gz retrieval with snapshot pinning and aggressive caching, not a parameterized Entrez, Datasets, or PubChem call, and the capability sheet's own moat map lists it as a distinct "pathogen tool (FTP)" outside the five named roadmap tools. This needs a Step 4.3 or Phase 6 decision: a sixth action on ncbi_efetch with its own 60-second-plus timeout and snapshot-cache semantics, or a sixth named tool. ClinicalTrials.gov v2 (anchoring Q4) is folded into ncbi_efetch above as the `clinical_trials_search` action in principle, but is not yet in the `oneOf` list; it is a simple GET/JSON call like PubChem, but it is NLM-hosted at a non-`ncbi.nlm.nih.gov` domain, which is why its host (`clinicaltrials.gov`) already appears in the output schema's `source_url` pattern even though the action itself is still open. Flagged for the same Step 4.3 decision as Pathogen Detection: fold in cleanly now, or give it its own tool name.
+Step 4.3 resolution (the fifth confirmed decision, alongside the four parked threads): Pathogen Detection (the FTP results tree of versioned PDG snapshots, anchoring Q5) and ClinicalTrials.gov v2 (anchoring Q4) each get their own named tool, `pathogen_detection` (Section 6.6) and `clinicaltrials_search` (Section 6.7), rather than a sixth and seventh action folded into `ncbi_efetch`. Neither fits this tool's action set cleanly: Pathogen Detection is bulk TSV and tar.gz retrieval with snapshot pinning and its own 60-second-plus timeout, not a parameterized Entrez, Datasets, or PubChem call, and the capability sheet's own moat map already lists it as a distinct tool outside the five original roadmap tools. ClinicalTrials.gov v2, while a simple GET/JSON call like PubChem, is NLM-hosted at a non-`ncbi.nlm.nih.gov` domain that `ncbi_efetch`'s namesake E-utilities family should not absorb. The roster is seven tools, not five plus two folded actions.
 
 ### 6.3 ncbi_dbsnp
 
@@ -1026,7 +1052,7 @@ Output schema:
     "source_url": {
       "type": "string",
       "maxLength": 200,
-      "pattern": "^https://([A-Za-z0-9-]+\\.)*ncbi\\.nlm\\.nih\\.gov/snp/"
+      "pattern": "^https://(www\\.|pubmed\\.)?ncbi\\.nlm\\.nih\\.gov/snp/"
     },
     "error": {"type": "string", "maxLength": 500}
   }
@@ -1213,7 +1239,7 @@ Output schema:
     },
     "pmids": {"type": "array", "maxItems": 50, "items": {"type": "string", "maxLength": 15}},
     "total_pmids": {"type": "integer"},
-    "source_url": {"type": "string", "maxLength": 200, "pattern": "^https://([A-Za-z0-9-]+\\.)*ncbi\\.nlm\\.nih\\.gov/"},
+    "source_url": {"type": "string", "maxLength": 200, "pattern": "^https://(www\\.|pubmed\\.)?ncbi\\.nlm\\.nih\\.gov/"},
     "error": {"type": "string", "maxLength": 500}
   }
 }
@@ -1230,15 +1256,195 @@ Truncation: `pmids` is capped at `maxItems: 50` with `total_pmids` carrying the 
 
 Per-call timeout: 15 seconds. No API key, no documented rate limit; subject to the shared per-query call budget in section 21.
 
+### 6.6 pathogen_detection
+
+Purpose: Layer 2, bulk access to the NCBI Pathogen Detection PDG snapshot tree, anchoring Q5 (a Salmonella isolate to its outbreak cluster, AMR genotype, and SNP-distance neighbors). This does not fit `ncbi_efetch`'s action set: it is versioned bulk TSV and tar.gz retrieval with snapshot pinning, not a parameterized Entrez, Datasets, or PubChem call (Section 6.2's Step 4.3 resolution note).
+
+Input schema:
+
+```json
+{
+  "$id": "pathogen_detection.input",
+  "type": "object",
+  "required": ["mode", "taxon"],
+  "oneOf": [
+    {
+      "required": ["mode", "taxon", "biosample_acc"],
+      "properties": {
+        "mode": {"const": "isolate_lookup"},
+        "taxon": {"type": "string", "maxLength": 50, "description": "FTP taxon folder, e.g. Salmonella"},
+        "biosample_acc": {"type": "string", "maxLength": 30}
+      }
+    },
+    {
+      "required": ["mode", "taxon", "pds_cluster"],
+      "properties": {
+        "mode": {"const": "cluster_snp_neighbors"},
+        "taxon": {"type": "string", "maxLength": 50},
+        "pds_cluster": {"type": "string", "maxLength": 30},
+        "max_snp_distance": {"type": "integer", "minimum": 1, "maximum": 50, "default": 5}
+      }
+    }
+  ]
+}
+```
+
+Output schema:
+
+```json
+{
+  "$id": "pathogen_detection.output",
+  "type": "object",
+  "required": ["status", "mode", "isolates", "isolate_count", "truncated"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {"type": "string", "enum": ["ok", "empty", "error"]},
+    "mode": {"type": "string", "maxLength": 25},
+    "pdg_snapshot": {"type": "string", "maxLength": 30, "description": "the pinned complete snapshot this result came from, e.g. PDG000000002.4157"},
+    "isolates": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "biosample_acc": {"type": "string", "maxLength": 30},
+          "run_sra": {"type": "string", "maxLength": 30},
+          "strain": {"type": "string", "maxLength": 100},
+          "serovar": {"type": "string", "maxLength": 60},
+          "geo_loc_name": {"type": "string", "maxLength": 150},
+          "collection_date": {"type": "string", "maxLength": 30},
+          "pds_cluster": {"type": "string", "maxLength": 30},
+          "amr_genotypes": {"type": "array", "maxItems": 30, "items": {"type": "string", "maxLength": 40}},
+          "ast_phenotypes": {"type": "array", "maxItems": 30, "items": {"type": "string", "maxLength": 60}},
+          "snp_distance": {"type": ["integer", "null"], "description": "distance from the queried isolate or cluster, cluster_snp_neighbors mode only"},
+          "source_url": {
+            "type": "string",
+            "maxLength": 300,
+            "pattern": "^https://(www\\.)?ncbi\\.nlm\\.nih\\.gov/pathogens/"
+          }
+        }
+      }
+    },
+    "isolate_count": {"type": "integer"},
+    "total_available": {"type": "integer"},
+    "truncated": {"type": "boolean"},
+    "error": {"type": "string", "maxLength": 500}
+  }
+}
+```
+
+Endpoints and fields used, by source file within the pinned snapshot (base `https://ftp.ncbi.nlm.nih.gov/pathogen/Results/<Taxon>/PDG*/`):
+
+| Source | Path | Fields extracted |
+|--------|------|--------------------|
+| Metadata | `Metadata/PDG*.metadata.tsv` | `biosample_acc`, `Run` (SRA), `strain`, `serovar`, `geo_loc_name`, `collection_date`, `AMR_genotypes`, `AST_phenotypes`, `minsame`, `mindiff` |
+| Cluster membership | `Clusters/PDG*.reference_target.cluster_list.tsv` | isolate to PDS SNP-cluster membership |
+| SNP distances | `Clusters/PDG*.reference_target.SNP_distances.tsv` | pairwise SNP distances, the within-`max_snp_distance` neighbor set |
+| AMR detail | `AMR/PDG*.amr.metadata.tsv` | AMRFinderPlus gene and phenotype detail |
+
+Procedure:
+
+1. Resolve the latest COMPLETE versioned PDG snapshot for `taxon`: pin to the newest snapshot whose Metadata, Clusters, and AMR directories are all present, never a mid-build snapshot that carries only `Metadata/`.
+2. `isolate_lookup`: read the isolate's Metadata row, its `cluster_list.tsv` membership, its `amr.metadata.tsv` rows, and its `SNP_distances.tsv` row set filtered to `max_snp_distance` (default 5).
+3. `cluster_snp_neighbors`: read `cluster_list.tsv` for every isolate in `pds_cluster`, then `SNP_distances.tsv` filtered to pairs within `max_snp_distance` of any member.
+
+Error and empty behavior:
+
+- `biosample_acc` or `pds_cluster` not found in the pinned snapshot: `status: "empty"`, a structured empty and the Layer 2 cite-or-refuse trigger for this tool, since a bulk file read carries no HTTP-status success signal the way Entrez does.
+- The snapshot directory is unreachable or incomplete for `taxon`: `status: "error"`, message names the taxon and the snapshot version it could not resolve.
+- A newer complete snapshot appearing since the last check is never surfaced as an error: Section 4.3 already fixes the caching rule (cached until a newer complete PDG snapshot is pinned, re-checked daily), so the tool silently re-pins on its next daily check.
+
+Per-call timeout: 60 seconds or more, per the capability sheet's bulk-file caveat, well above the 15-second interactive-API budget every other Layer 2 or 3 tool uses; the harness's per-step latency budget for the query's overall class (Section 19) still bounds the whole Act step. No rate-limit pool: this is a bulk FTP file read, not a per-request API, so the binding constraint is transfer time and snapshot pinning, not requests per second (Section 21.1).
+
+Truncation: the tool never streams or loads a full TSV into agent context. It indexes and reads only the matched rows, per system-design-patterns rule 7, and reports `total_available` whenever `isolates` is truncated.
+
+### 6.7 clinicaltrials_search
+
+Purpose: Layer 3, the disease-to-trials path anchoring Q4, via ClinicalTrials.gov API v2 (`https://clinicaltrials.gov/api/v2/studies`, no API key). This does not fit `ncbi_efetch`'s action set either, since the host is NLM-hosted at a non-`ncbi.nlm.nih.gov` domain (Section 6.2's Step 4.3 resolution note).
+
+Input schema:
+
+```json
+{
+  "$id": "clinicaltrials_search.input",
+  "type": "object",
+  "required": ["query_cond"],
+  "additionalProperties": false,
+  "properties": {
+    "query_cond": {"type": "string", "maxLength": 200, "description": "condition or disease phrase, maps to query.cond"},
+    "query_term": {"type": "string", "maxLength": 200, "description": "free text, maps to query.term"},
+    "query_intr": {"type": "string", "maxLength": 200, "description": "intervention, maps to query.intr"},
+    "overall_status": {"type": "string", "enum": ["RECRUITING", "COMPLETED", "TERMINATED", "ACTIVE_NOT_RECRUITING", "NOT_YET_RECRUITING", "UNKNOWN"]},
+    "page_size": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20},
+    "page_token": {"type": "string", "maxLength": 200}
+  }
+}
+```
+
+Output schema:
+
+```json
+{
+  "$id": "clinicaltrials_search.output",
+  "type": "object",
+  "required": ["status", "studies", "study_count", "total_count", "truncated"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {"type": "string", "enum": ["ok", "empty", "error"]},
+    "studies": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "nct_id": {"type": "string", "maxLength": 15},
+          "brief_title": {"type": "string", "maxLength": 300},
+          "overall_status": {"type": "string", "maxLength": 30},
+          "conditions": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 100}},
+          "phase": {"type": "string", "maxLength": 30},
+          "eligibility_summary": {"type": "string", "maxLength": 500},
+          "source_url": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^https://(www\\.)?clinicaltrials\\.gov/study/"
+          }
+        }
+      }
+    },
+    "study_count": {"type": "integer"},
+    "total_count": {"type": "integer"},
+    "next_page_token": {"type": ["string", "null"], "maxLength": 200},
+    "truncated": {"type": "boolean"},
+    "error": {"type": "string", "maxLength": 500}
+  }
+}
+```
+
+Endpoints and fields used:
+
+| Endpoint | Params | Fields extracted |
+|----------|--------|--------------------|
+| `GET /studies` | `query.cond`, `query.term`, `query.intr`, `filter.overallStatus`, `pageSize`, `pageToken` | `protocolSection.identificationModule` (`nctId`, `briefTitle`), `statusModule` (`overallStatus`), `conditionsModule`, `designModule` (phase), `eligibilityModule` (a bounded criteria summary), plus top-level `totalCount` and `nextPageToken` |
+
+Error and empty behavior: a query with no matches returns `studies: []` with `totalCount: 0`, HTTP 200, mapped to `status: "empty"`, the Layer 3 cite-or-refuse trigger verified in the capability sheet.
+
+Untrusted content: `brief_title`, `eligibility_summary`, and every free-text module field are untrusted external content submitted by a trial sponsor, never an instruction the agent executes. Per Decision C, these fields get the isolated reader pass before Synth ever sees them, the same untrusted-source reader gate that governs every other Layer 2 or 3 free-text field.
+
+Per-call timeout: 15 seconds, the standard interactive-HTTPS budget. No documented rate limit; subject to the shared per-query call budget in Section 21, provisionally throttled at about 5 requests per second per Section 21.1's conservative default for an undocumented API.
+
 ### Multi-agent pipeline gate compliance
 
 | Tool | maxLength on strings | maxItems on arrays | Host-pinned source_url | Read plus one source only |
 |------|------------------------|----------------------|---------------------------|------------------------------|
-| cypher_query | yes | yes | yes, `ncbi.nlm.nih.gov` | yes, graph transport only |
-| ncbi_efetch | yes | yes | yes, `ncbi.nlm.nih.gov`, `omim.org`, `clinicaltrials.gov` | yes, Entrez/Datasets/PubChem only |
-| ncbi_dbsnp | yes | yes | yes, `ncbi.nlm.nih.gov/snp/` | yes, Variation Services plus dbSNP ESummary only |
-| pubtator_annotate | yes | yes | yes, `pubmed.ncbi.nlm.nih.gov` | yes, PubTator3 only |
-| litvar2_lookup | yes | yes | yes, `ncbi.nlm.nih.gov` | yes, LitVar2 only |
+| cypher_query | yes | yes | yes, `NCBI_RECORD_HOST` | yes, graph transport only |
+| ncbi_efetch | yes | yes | yes, `NCBI_RECORD_HOST`, `omim.org`, `CLINICALTRIALS_HOST` | yes, Entrez/Datasets/PubChem only |
+| ncbi_dbsnp | yes | yes | yes, `NCBI_RECORD_HOST` scoped to `/snp/` | yes, Variation Services plus dbSNP ESummary only |
+| pubtator_annotate | yes | yes | yes, `NCBI_RECORD_HOST` scoped to `pubmed.` | yes, PubTator3 only |
+| litvar2_lookup | yes | yes | yes, `NCBI_RECORD_HOST` | yes, LitVar2 only |
+| pathogen_detection | yes | yes | yes, `NCBI_RECORD_HOST` scoped to `/pathogens/` | yes, Pathogen Detection FTP only |
+| clinicaltrials_search | yes | yes | yes, `CLINICALTRIALS_HOST` | yes, ClinicalTrials.gov v2 only |
 
 ### Per-call timeout and rate-limit summary
 
@@ -1249,17 +1455,21 @@ Per-call timeout: 15 seconds. No API key, no documented rate limit; subject to t
 | ncbi_dbsnp | 15s per call, up to 30s per tool invocation (sequential) | Variation Services ~1/s, separate pool |
 | pubtator_annotate | 15s | none documented |
 | litvar2_lookup | 15s | none documented |
+| pathogen_detection | 60s or more (bulk FTP) | n/a, transfer-time and snapshot-pinning bound, not requests per second |
+| clinicaltrials_search | 15s | none documented, provisional 5/s throttle (Section 21.1) |
 
-### Open gaps carried to Step 4.3
+### Open items remaining after Step 4.3
 
-- Pathogen Detection FTP access (Q5) does not fit any of the five tools as specified. Needs a sixth action or a sixth tool.
-- ClinicalTrials.gov v2 access (Q4, Tier 1 must-pass) is drafted as an ncbi_efetch action in principle but not yet added to the `oneOf` list, since its host does not match the tool's namesake E-utilities family. Needs the same sixth-tool-or-sixth-action decision as Pathogen Detection.
+The tool-roster gap (Pathogen Detection and ClinicalTrials.gov having no tool home) is resolved above by adding `pathogen_detection` (6.6) and `clinicaltrials_search` (6.7) as named tools six and seven. Two smaller items stay open, both scoped to verification, not architecture:
+
 - Variation Services error behavior on invalid input (ncbi_dbsnp) was not live-verified in the capability sheet. The defensive handling specified above must be confirmed live before Phase 6 ships the tool.
 - The PubTator3 relations endpoint (entity-pair relations) was noted as existing but not live-verified; its schema is deferred to a fast-follow addition.
 
 ## 7. Data freshness and conflict resolution
 
-Layer 1 is a periodic snapshot. Layer 2 and Layer 3 are live at call time. That asymmetry is a feature (Layer 1 is fast because it is stale by construction) and a risk (a snapshot can go out of date under it). This section fixes how the agent resolves a disagreement between the two, how it surfaces freshness and version context to the user, and proposes the acceptable-staleness threshold the parked thread left open.
+Layer 1 is a periodic snapshot. Layer 2 and Layer 3 are live at call time. That asymmetry is a feature (Layer 1 is fast because it is stale by construction) and a risk (a snapshot can go out of date under it). This section fixes how the agent resolves a disagreement between the two, how it surfaces freshness and version context to the user, and locks the acceptable-staleness threshold the parked thread left open.
+
+Staleness, as a concept, applies to Layer 1 only. A live Layer 2 or Layer 3 API call is current by definition at the moment it runs, so there is no staleness threshold for Layer 2 or Layer 3 data itself. What Section 4's Layer 2 and 3 cache TTLs bound is a Redis cache-cost lever, how long a cached response is served before the next call goes live again, never a claim that the underlying data is stale. Section 7.4 makes this split explicit in its table.
 
 ### 7.1 Layer priority on disagreement
 
@@ -1328,17 +1538,17 @@ The Write step refuses to state a coordinate or sequence claim with `assembly: n
 
 ### 7.4 Acceptable-staleness threshold
 
-Proposed (pending confirmation). This is the parked thread this section resolves; the value and policy below are a starting proposal for the user to confirm, not a locked decision.
+Decided (confirmed 2026-07-25). This is the parked thread this section resolves; the value and policy below are locked, not a proposal awaiting confirmation.
 
-Staleness means something different at each layer, so one number cannot cover all three:
+Staleness means something different at each layer, so one number cannot cover all three. The 30-day and 90-day thresholds below apply to Layer 1, the graph snapshot, only. Layer 2 and Layer 3 have no staleness threshold at all: a live API call is always current by definition the moment it runs, and their TTL rows exist purely as a Redis cache-cost lever (how long a cached response is served before the next call goes live), never as a statement that the underlying NCBI or enrichment data is stale.
 
-| Layer | What staleness means | Proposed threshold | Action when exceeded |
+| Layer | What staleness means | Threshold | Action when exceeded |
 |-------|-------------------------|------------------------|---------------------------|
-| Layer 1 (graph) | Age of the current snapshot for a volatile field class | 30 days for volatile classes (ClinVar classification and review status, GTR test status), 90 days for stable classes (Gene coordinates, Taxonomy) | Auto-cross-verify the volatile field against a live Layer 2 call before citing it as current, per the 7.1 priority rule |
-| Layer 2 (NCBI APIs) | Age of a cached response, not API currency (a live call is current by definition) | Section 4's verified cache TTLs: gene 1 week, variant 1 week, publication 1 day | Cache entry expires, next call is live and repopulates the cache |
-| Layer 3 (enrichment) | Age of a cached response | Publication-tied sources (PubTator3) inherit the 1-day publication TTL; variant-tied sources (LitVar2) inherit the 1-week variant TTL; ClinicalTrials.gov listings get a proposed 1-day TTL, since trial status (recruiting, completed, terminated) is operationally load-bearing and changes faster than a publication record | Cache entry expires, next call is live |
+| Layer 1 (graph) | Age of the current snapshot for a volatile field class. The only layer staleness applies to. | 30 days for volatile classes (ClinVar classification and review status, GTR test status), 90 days for stable classes (Gene coordinates, Taxonomy) | Auto-cross-verify the volatile field against a live Layer 2 call before citing it as current, per the 7.1 priority rule |
+| Layer 2 (NCBI APIs) | Not staleness. A live call is current by definition; the number below is a cache-cost window, not a data-age check | Section 4's verified cache TTLs: gene 1 week, variant 1 week, publication 1 day | Cache entry expires, next call is live and repopulates the cache |
+| Layer 3 (enrichment) | Not staleness, same distinction as Layer 2; the number below is a cache-cost window | Publication-tied sources (PubTator3) inherit the 1-day publication TTL; variant-tied sources (LitVar2) inherit the 1-week variant TTL; ClinicalTrials.gov listings get a 1-day TTL, since trial status (recruiting, completed, terminated) is operationally load-bearing and changes faster than a publication record | Cache entry expires, next call is live |
 
-Rationale for the Layer 1 split: the graph is not re-ingested on a fixed schedule today (Phase 4 has not set a cadence), so a hard age-based check is the mechanism that catches a snapshot going stale between re-ingestions, not a claim about how often re-ingestion actually runs. Thirty days for volatile fields matches how quickly ClinVar classifications and GTR test listings can move relative to a slower-moving structural fact like a gene's chromosome location. Both numbers are a starting proposal, not a measured value; they should be revisited once real re-ingestion cadence data exists.
+Rationale for the Layer 1 split: the graph is not re-ingested on a fixed schedule today (Phase 4 has not set a cadence), so a hard age-based check is the mechanism that catches a snapshot going stale between re-ingestions, not a claim about how often re-ingestion actually runs. Thirty days for volatile fields matches how quickly ClinVar classifications and GTR test listings can move relative to a slower-moving structural fact like a gene's chromosome location. Both numbers are starter values in the same sense the cost caps are starter values (DECISIONS.md, 2026-07-21): locked for build, tunable in Phase 4 once real re-ingestion cadence data exists, and any change to the value needs the same explicit approval a cap change needs.
 
 This threshold is distinct from the `assembly`/version-context requirement in 7.3: staleness is about how old the data is, version context is about which build or snapshot it came from. A coordinate answer can be simultaneously fresh (Layer 2, fetched seconds ago) and clearly labeled (`assembly: GRCh38`); both properties are required, and neither substitutes for the other.
 
@@ -1504,18 +1714,19 @@ The base fields are locked by Decision A and CLAUDE.md's citations section: `sou
     "evidence_kind": {"type": "string", "enum": ["primary_assertion", "derived_summary", "literature_mention", "external_annotation"]},
     "assertion_confidence": {"type": "string", "enum": ["asserted", "hedged", "contested"]},
     "population_ancestry_context": {"type": ["string", "null"], "maxLength": 256},
-    "license": {"type": "string", "enum": ["public_domain_us_gov", "publisher_copyright_abstract_only", "unspecified"]},
-    "trust_signal": {"type": "string", "enum": ["answer", "flag", "ask"]}
+    "license": {"type": "string", "enum": ["public_domain_us_gov", "publisher_copyright_abstract_only", "unspecified"]}
   },
-  "required": ["citation_id", "display_index", "source", "source_id", "source_url", "layer", "field", "claim_text", "evidence_kind", "assertion_confidence", "license", "trust_signal"]
+  "required": ["citation_id", "display_index", "source", "source_id", "source_url", "layer", "field", "claim_text", "evidence_kind", "assertion_confidence", "license"]
 }
 ```
 
 `population_ancestry_context` is nullable and not required to be non-null: most findings carry no population data at all, and that is a normal, honest state, not a missing field.
 
-### 9.2 The four added fields (proposed, pending confirmation)
+`trust_signal` is never a field on the citation payload. It is its own event, `trust_signal` (Section 2.3, Section 8), computed per claim and attached to a citation by shared `citation_id` at render time, not embedded in the citation object itself. Folding it into the citation type would let a single event carry two different concerns, provenance and a grounding verdict, that the harness computes at different points in the pipeline (citation assignment happens in Act and Write; the trust signal happens after grounding, Section 8.2 to 8.3). Keeping them separate events, joined by `citation_id`, is what lets Section 8.3.4's per-claim signal and answer-level banner both work off the same join key without a citation ever needing to be re-emitted to update its verdict.
 
-Step 1.12 (2026-07-21) named these four fields as a provenance expansion but did not fix their type, allowed values, or population mechanism. This is a parked thread this section resolves. The specification below is a concrete draft, consistent with everything already locked, but it has not itself been through a decision round and is marked proposed until confirmed.
+### 9.2 The four added fields (decided, confirmed 2026-07-25)
+
+Step 1.12 (2026-07-21) named these four fields as a provenance expansion but did not fix their type, allowed values, or population mechanism. This is a parked thread this section resolves. The specification below is locked, consistent with everything already decided.
 
 evidence_kind: type string enum, four values.
 
@@ -1570,11 +1781,12 @@ CLINICALTRIALS_HOST = r"^https://(www\.)?clinicaltrials\.gov/"
 | Tool | Layer | Allowed host pattern | Example source_url |
 |---|---|---|---|
 | cypher_query | Layer 1 graph | NCBI_RECORD_HOST | `https://www.ncbi.nlm.nih.gov/gene/6927` |
-| ncbi_efetch | Layer 2 API | NCBI_RECORD_HOST | `https://www.ncbi.nlm.nih.gov/clinvar/variation/12345/` |
+| ncbi_efetch | Layer 2 API | NCBI_RECORD_HOST (plus `omim.org` for OMIM findings) | `https://www.ncbi.nlm.nih.gov/clinvar/variation/12345/` |
 | ncbi_dbsnp | Layer 2 API | NCBI_RECORD_HOST | `https://www.ncbi.nlm.nih.gov/snp/rs334` |
+| pathogen_detection | Layer 2 API | NCBI_RECORD_HOST scoped to `/pathogens/` | `https://www.ncbi.nlm.nih.gov/pathogens/isolates/#/search/<accession>` |
 | pubtator_annotate | Layer 3 enrichment | NCBI_RECORD_HOST | `https://pubmed.ncbi.nlm.nih.gov/32942285/` |
 | litvar2_lookup | Layer 3 enrichment | NCBI_RECORD_HOST | `https://pubmed.ncbi.nlm.nih.gov/... ` (the underlying literature record, not the LitVar2 API host) |
-| A future ClinicalTrials.gov tool, if added | Layer 3 enrichment | CLINICALTRIALS_HOST | `https://clinicaltrials.gov/study/NCT04368728` |
+| clinicaltrials_search | Layer 3 enrichment | CLINICALTRIALS_HOST | `https://clinicaltrials.gov/study/NCT04368728` |
 
 Two rules keep this tight:
 
@@ -1586,7 +1798,7 @@ Two rules keep this tight:
 Synth writes positional markers, `[1]`, `[2]`, matching the `ref_index` values in the findings list it was given (8.1). Binding runs in two stages:
 
 1. Prompt-time numbering: the harness numbers findings 1 through N in the order it hands them to Synth. Synth's only obligation is to cite an existing number next to the clause it supports.
-2. Post-grounding renumbering: after the grounding pass (8.2) strips any hallucinated or ungrounded markers, the harness renumbers the surviving citations sequentially by order of first appearance, 1 through M, with no gaps. This renumbered value becomes `display_index` on the citation event and the marker text actually streamed to the user. The internal `citation_id` (a stable, opaque key assigned when the finding was first recorded from a tool_result) never changes and is what the audit trail (11.5) and the eval harness key on.
+2. Post-grounding renumbering: after the grounding pass (8.2) strips any hallucinated or ungrounded markers, the harness renumbers the surviving citations sequentially by order of first appearance, 1 through M, with no gaps. This renumbered value becomes `display_index` on the citation event, the number a surface renders as the visible marker glyph (`[1]`, `[2]`). It is a rendering field, never a binding key: the wire-level marker never changes representation. A `token` event's `marker_ids` array (Section 2.4) always carries `citation_id` values, both before and after renumbering, so a surface binds a token to its citation by the stable opaque key, then looks up that citation's `display_index` only to decide which number to print. The internal `citation_id` itself (assigned when the finding was first recorded from a tool_result) never changes and is what the audit trail (11.5) and the eval harness key on.
 
 The UI adapter renders `display_index` as a clickable chip. Clicking or hovering surfaces the full provenance object for that `citation_id`, including `trust_signal`, `evidence_kind`, and `assertion_confidence`, so a flagged or single-source claim is visibly distinct from a fully concordant one at the point of citation, not just in a banner.
 
@@ -1604,7 +1816,7 @@ Export is requested per interaction (or per selected citation set) with a format
 
 A non-literature citation (a Gene or ClinVar record, not a PubMed article) exports in a record-citation shape rather than a Vancouver article citation, for example: "NCBI Gene. HNF1A [Internet]. Bethesda (MD): National Library of Medicine. Gene ID: 6927. Available from: https://www.ncbi.nlm.nih.gov/gene/6927." Vancouver format is the default because it is the convention biomedical journals already expect; bibtex and json exist for the two other concrete consumers (a reference manager, a downstream program) rather than as speculative options.
 
-Draws from: Decision A citation event, Decision F paper-facing export, the provenance decision (Step 1.12, 2026-07-21), CLAUDE.md's citations-non-negotiable section, the multi-agent pipeline gate's URL host-pinning requirement in production-standards. Resolves the parked four-provenance-fields thread; the field specification in 9.2 is proposed pending confirmation, not yet locked.
+Draws from: Decision A citation event, Decision F paper-facing export, the provenance decision (Step 1.12, 2026-07-21), CLAUDE.md's citations-non-negotiable section, the multi-agent pipeline gate's URL host-pinning requirement in production-standards. Resolves the parked four-provenance-fields thread; the field specification in 9.2 is decided (confirmed 2026-07-25).
 
 ## 10. Guardrail implementation
 
@@ -1801,24 +2013,30 @@ A query has two steps. First, `POST /v1/query` (Section 13.1) creates the run an
 `lib/events.ts` mirrors the payload shapes in Section 2.3 exactly:
 
 ```typescript
+type Layer = "layer_1_graph" | "layer_2_api" | "layer_3_enrichment";
+
 type AgentEvent =
   | { type: "guard"; payload: { passed: boolean; category: string; reason: string | null } }
   | { type: "think"; payload: { narrative: string; query_class: string;
         resolved_entities: { text: string; curie: string; confidence: number }[];
         clarifying_question: string | null } }
   | { type: "plan"; payload: { narrative: string;
-        tool_calls: { tool: string; call_id: string; layer: 1 | 2 | 3 }[] } }
-  | { type: "tool_start"; payload: { call_id: string; tool: string; layer: 1 | 2 | 3; status: string } }
-  | { type: "tool_result"; payload: { call_id: string; tool: string; layer: 1 | 2 | 3;
+        tool_calls: { tool: string; call_id: string; layer: Layer }[] } }
+  | { type: "tool_start"; payload: { call_id: string; tool: string; layer: Layer; status: string } }
+  | { type: "tool_result"; payload: { call_id: string; tool: string; layer: Layer;
         status: "ok" | "empty" | "error"; summary: string; result_count: number; truncated: boolean } }
   | { type: "token"; payload: { text: string; marker_ids: string[] } }
-  | { type: "citation"; payload: { citation_id: string; source: string; source_id: string;
-        source_url: string; layer: 1 | 2 | 3; evidence_kind: string;
-        assertion_confidence: string; population_context: string | null; license: string } }
+  | { type: "citation"; payload: { citation_id: string; display_index: number; source: string;
+        source_id: string; source_url: string; layer: Layer; field: string; claim_text: string;
+        evidence_kind: string; assertion_confidence: string;
+        population_ancestry_context: string | null; license: string } }
   | { type: "trust_signal"; payload: { outcome: "answer" | "flag" | "ask" | "refuse";
         risk_tier: string; grounded: boolean; triangulated: boolean | null } }
-  | { type: "error"; payload: { code: string; message: string; recoverable: boolean; next_action: string } }
+  | { type: "error"; payload: { fatal: boolean; scope: string; source: string;
+        error_class: string; message: string; retry_after_s: number | null } }
   | { type: "done"; payload: { total_tool_calls: number; elapsed_ms: number; trust_outcome: string } };
+  // Both "citation" and "error" mirror Section 2.3's canonical payload shapes exactly,
+  // field for field, per Section 9.1 (citation) and Section 22.3 (error).
   // "cost" has no variant in this union. The end-user UI never declares a shape for it
   // (cost amendment, 2026-07-25). done's total_cost_usd field is stripped server-side
   // before it reaches this client (Section 13.1), so it never appears here either.
@@ -1836,7 +2054,7 @@ function useAgentRun(runId: string) {
     knownTypes.forEach((type) => {
       source.addEventListener(type, (e: MessageEvent) => {
         setEvents((prev) => [...prev, { type, payload: JSON.parse(e.data) } as AgentEvent]);
-        if (type === "done" || (type === "error" && !JSON.parse(e.data).recoverable)) source.close();
+        if (type === "done" || (type === "error" && JSON.parse(e.data).fatal)) source.close();
       });
     });
     return () => source.close();
@@ -1844,6 +2062,8 @@ function useAgentRun(runId: string) {
   return events;
 }
 ```
+
+The dispatcher's closing logic branches only on `fatal`, the one field the canonical error shape (Section 2.3, Section 22.3) defines for exactly this purpose. It never reads a `code` or `recoverable` field, since neither exists on the canonical shape; `error_class` (`transient | recoverable | unexpected`) is available for retry-policy decisions elsewhere in the UI, but stream-closing is `fatal`'s job alone.
 
 No listener is ever registered for `cost`. An SSE event name with no registered handler is inert in the browser: it is received and discarded by the connection, never dispatched. This is defense in depth only. The primary enforcement is server-side, in the REST plus SSE adapter's role check (Section 13.1), which never writes a `cost` event onto a non-operator connection in the first place. Losing either layer still leaves the other holding the line.
 
@@ -1868,7 +2088,7 @@ Clicking a chip opens `CitationPanel` with the full provenance: `source`, `sourc
 | Home, no active query | User has not submitted a query this visit | `EmptyState`: example questions drawn from the golden dataset, plus the user's saved queries (Decision F personalization) |
 | Streaming | `guard` passed through `trust_signal` | `QueryPipelineStepper` plus `AnswerStream`, live |
 | Refused | `trust_signal.outcome === "refuse"` | The refusal narrative plus the NCBI cross-database fallback link (Section 8), never a blank pane |
-| Terminal error | `error` with `recoverable: false` | An error state built from `error.message`, actionable text only, never a raw stack trace or internal code as the sole content |
+| Terminal error | `error` with `fatal: true` | An error state built from `error.message`, actionable text only, never a raw stack trace or internal code as the sole content |
 
 ### 12.6 Guardrail and cap messages, no dollar figures
 
@@ -1882,7 +2102,7 @@ Clicking a chip opens `CitationPanel` with the full provenance: `source`, `sourc
 | rate_limited | You have reached today's question limit. Try again after (reset time). |
 | cost_capped | The system is at capacity right now. Please try again shortly. |
 
-`CapMessage` covers the mid-stream case: an `error` event whose `code` reflects a cap hit after the loop was already running (for example the per-query budget). Its copy stays partial-result-plus-explanation, per the PRD's edge-cases section: the answer built so far stays visible, with a line such as "This answer stopped early because it reached its processing budget." No copy path in `GuardrailBanner` or `CapMessage` ever renders a dollar amount, a token count, or a cost figure. That is the cost amendment's boundary, enforced here at the copy layer as well as at the event-filtering layer (12.2, Section 13.1): even if a future event carried a number, this component's templates have no dollar-figure interpolation slot to put it in.
+`CapMessage` covers the mid-stream case: a non-fatal `error` event (`fatal: false`, `source` naming the cap, for example `per_query_cost_cap`) fired after the loop was already running. Its copy stays partial-result-plus-explanation, per the PRD's edge-cases section: the answer built so far stays visible, with a line such as "This answer stopped early because it reached its processing budget." No copy path in `GuardrailBanner` or `CapMessage` ever renders a dollar amount, a token count, or a cost figure. That is the cost amendment's boundary, enforced here at the copy layer as well as at the event-filtering layer (12.2, Section 13.1): even if a future event carried a number, this component's templates have no dollar-figure interpolation slot to put it in.
 
 ### 12.7 The named scientist persona
 
@@ -1894,7 +2114,9 @@ Design note for Section 2 or 13 alignment: Section 2's `think` event payload doe
 
 `ReasoningExpander`, when opened, shows the full, unabridged narrative and structured summary from every `think`, `plan`, `tool_start`, and `tool_result` event received so far, not only the current step the collapsed stepper highlights. It never shows a raw, token-level chain-of-thought trace, because no event in Section 2's taxonomy carries one.
 
-This resolves the same tension Section 2.5 already flags: the PRD's UI-experience section and the 2026-07-21 Step 1.10 decision both describe a "show-full-reasoning expander" revealing the model's raw chain of thought, while Decision A (2026-07-25, later and the controlling core-architecture decision) states reasoning is a curated plan-step narrative, never raw chain-of-thought. This component implements Decision A as written: expanding depth means expanding how much of the curated narrative is shown, never switching to an uncurated source. The PRD-versus-Decision-A wording gap itself is not resolved here; it is a planning-doc reconciliation item, not a frontend implementation choice.
+This resolves the same tension Section 2.5 already flags: the PRD's UI-experience section and the 2026-07-21 Step 1.10 decision both describe a "show-full-reasoning expander" revealing the model's raw chain of thought, while Decision A (2026-07-25, later and the controlling core-architecture decision) states reasoning is a curated plan-step narrative, never raw chain-of-thought. This component implements Decision A as written: expanding depth means expanding how much of the curated narrative is shown, never switching to an uncurated source.
+
+Step 4.3 resolution: the PRD's show-full-reasoning wording is superseded by Decision A here too, for the same reason Section 2.5 gives. The PRD's own text is not edited from this tech spec; the supersession is logged for the Step 6.2 prototype reconciliation (DECISIONS.md, 2026-07-24's build-phase doc-review cadence) to update the PRD's wording, not a frontend implementation choice to make here.
 
 ### 12.9 Audience-level depth control
 
@@ -1920,7 +2142,9 @@ Testing in v1: an automated `axe-core` check in CI as a baseline, plus a manual 
 
 ## 13. Delivery surfaces
 
-The other three streaming adapters over Section 2's `run(query, context)` contract, plus the operator view, which is a role-gated mode of one of them rather than a fifth surface. Each adapter's whole job is: construct a `Query` and a `RequestContext`, call `run()`, and render or fold Section 2's event stream into the shape its own consumer expects. None of them contain retrieval, grounding, or cost logic. That all stays in the agent core and the harness (Section 1.5's boundary table, Decision A).
+The other three streaming adapters over Section 2's `run(query, context)` contract (REST plus SSE, MCP, CLI; Section 12 already covers the web UI), plus the operator view, which is a role-gated mode of the REST plus SSE adapter rather than a separate surface. Each streaming adapter's whole job is: construct a `Query` and a `RequestContext`, call `run()`, and render or fold Section 2's event stream into the shape its own consumer expects. None of them contain retrieval, grounding, or cost logic. That all stays in the agent core and the harness (Section 1.5's boundary table, Decision A).
+
+GraphQL API and KGX export are the two additional, non-streaming delivery surfaces the locked PRD requires (Section 1.1's six-surface model). They reuse this section's tools and auth but do not subscribe to the event stream, so their design lives with Section 24's deployment topology (GraphQL, a router mounted in the same FastAPI process) and Section 25's build order (build phases 4.3, 4.4), not restated here.
 
 Draws from: Decision A, Decision 24 (MCP outbound-only), the cost amendment, Section 1.6's `adapters/` layout, Section 2.7's per-surface event table.
 
@@ -2002,7 +2226,7 @@ Tool schema, v1 ships exactly one tool, per the fewer-tools-beats-more-tools pri
 }
 ```
 
-`CitationV1` mirrors Section 9's provenance type exactly, so an MCP consumer and the web UI's `CitationPanel` (Section 12.4) read the identical shape. This is a design choice worth stating plainly: the MCP surface wraps the one core's contract, the same guardrail, grounding, and trust-signal logic every other surface gets, rather than exposing the five internal tools (`cypher_query`, `ncbi_efetch`, `ncbi_dbsnp`, `pubtator_annotate`, `litvar2_lookup`) directly as separate MCP tools. A raw per-tool passthrough would let an external agent bypass cite-or-refuse and the cost caps entirely, which is exactly the control the one-core, adapters-filter model (Decision A) exists to hold. The PRD's delivery-formats section describes MCP as wrapping "the same Python tools," which this section reads as wrapping them through the one core, not around it, since Decision A postdates and supersedes any looser reading.
+`CitationV1` is Section 9.1's provenance type, field for field, minus nothing: same required fields, same `layer` string enum, same `population_ancestry_context` name. An MCP consumer and the web UI's `CitationPanel` (Section 12.4) read the identical shape, which is now literally true rather than an aspiration, since Section 9.1 is the one place the shape is defined and every other section references it. This is a design choice worth stating plainly: the MCP surface wraps the one core's contract, the same guardrail, grounding, and trust-signal logic every other surface gets, rather than exposing the seven internal tools (`cypher_query`, `ncbi_efetch`, `ncbi_dbsnp`, `pubtator_annotate`, `litvar2_lookup`, `pathogen_detection`, `clinicaltrials_search`) directly as separate MCP tools. A raw per-tool passthrough would let an external agent bypass cite-or-refuse and the cost caps entirely, which is exactly the control the one-core, adapters-filter model (Decision A) exists to hold. The PRD's delivery-formats section describes MCP as wrapping "the same Python tools," which this section reads as wrapping them through the one core, not around it, since Decision A postdates and supersedes any looser reading.
 
 Auth and least privilege: each MCP client authenticates with its own scoped API key, never the web UI's session credential, and gets its own cost-cap and rate-limit bucket tracked the same way as any REST API key (Section 19, 21). It can only ever call `ask_biomedical_question`, which internally exercises only the read-only tool layer. No MCP tool exposes a raw Cypher passthrough or a raw NCBI API passthrough (system-design-patterns rule 8: restrict the tool list first, then write the prompt for what remains).
 
@@ -2026,7 +2250,7 @@ Rendering rules:
 - `token`: printed to stdout as the growing answer body.
 - `citation`: appended as `[n]` markers matching each token's `marker_ids`, with a references block printed after the answer listing `source` and `source_url` per marker.
 - `trust_signal`: a one-line prefix on the answer body, `[answer]`, `[flag]`, `[ask]`, or `[refuse]`.
-- `error`: printed to stderr, exits nonzero unless `recoverable` is true and the CLI's own retry policy resolves it.
+- `error`: printed to stderr, exits nonzero unless `fatal` is false and `error_class` is `transient` or `recoverable`, in which case the CLI's own retry policy gets a chance to resolve it first.
 - `done`: process exits 0 after the references block prints. Cost fields are never printed for a non-operator credential, because 13.1 already stripped them before the CLI ever received them, so there is nothing left for the CLI itself to filter, the same defense-in-depth relationship as Section 12.2's UI dispatcher.
 - Ctrl-C: sends `s3 stop <run_id>` before the process exits, so an interrupted CLI session cleanly halts the server-side loop instead of leaving it running unseen (system-design-patterns rule 6).
 
@@ -2264,7 +2488,7 @@ Column-to-decision mapping:
 | Normalized entities | `normalized_entities` | JSONB array, one entry per resolved entity: `{surface_form, curie, entity_type, resolution_confidence}` |
 | Route | `route`, `query_class` | JSONB: `{layers, tools, model_tiers}`, produced by Think and Plan (section 17) |
 | Rubric outcome | `rubric_outcome`, `rubric_score` | `rubric_outcome` is deterministic and populated on every row at zero LLM cost (the trust signal plus the hard-fail checks); `rubric_score` (0 to 16) is populated only when the full graded rubric runs, which in v1 means offline golden-dataset replay, not every live query |
-| Citations | `citations` | JSONB array, one entry per citation, shaped per the provenance type in section 9: `{source, source_id, source_url, layer, evidence_kind, assertion_confidence, population_context, license}` |
+| Citations | `citations` | JSONB array, one entry per citation, shaped exactly per the canonical provenance type in Section 9.1: `{citation_id, display_index, source, source_id, source_url, layer, field, claim_text, evidence_kind, assertion_confidence, population_ancestry_context, license}` |
 | Coverage tags | `coverage_tags` | `concept:<Label>` and `predicate:<edge_type>` strings, feeding the coverage metric's planned move from hand-mapping to dynamic instrumentation |
 | Feedback | `user_feedback` | JSONB: `{rating, comment, flagged_reason}`, null until the user acts |
 | trace_id | `trace_id` | Joins to the LangSmith run holding the raw trace (section 20) |
@@ -2486,7 +2710,7 @@ Think classifies every query into one of five shapes (the 2026-05-07 simplified-
 | Single-hop | Layer 2 | One to two Layer 2 tools, optionally corrected against Layer 1 | 10s | "What is dbSNP rs334?" |
 | Multi-hop | Layer 1 | `cypher_query`, with Layer 2 correction on suspect fields | 30s | "What conditions link to BRCA1 pathogenic variants?" |
 | Aggregate | Layer 1, sometimes Layer 2 | `cypher_query` plus a count or group step | 30s | "How many pathogenic ClinVar variants exist for BRCA1?" |
-| Dynamic multi-source or exploratory | All three layers, the full loop | Any of the five tools, dispatched in parallel where independent | 2 min | Q3: "what's known about BRCA1" |
+| Dynamic multi-source or exploratory | All three layers, the full loop | Any of the seven tools, dispatched in parallel where independent | 2 min | Q3: "what's known about BRCA1" |
 
 This is the concrete form of the Step 1.11 routing decision: single-hop questions go to Layer 2 because a graph round trip adds nothing a direct API call does not already give faster; multi-hop questions go to Layer 1 because graph traversal is what the AGE store is for; dynamic multi-source questions run the full loop because no single layer covers them. The few-shot pool above biases this classification toward the proven pattern whenever the incoming query resembles a seed example, but Think still makes this call, via the Plan-tier model, on every query; there is no shortcut that skips the call.
 
@@ -2510,7 +2734,7 @@ model-bench is the primary tier-selection method and is deferred to Phase 6, run
 
 ### The parked thread: an online A/B mechanism
 
-Proposed (pending confirmation). Everything below resolves the evaluation playbook's parked A/B model-combination thread with a concrete design. It has not been reviewed or locked the way the rest of this tech spec has; every parameter (traffic split, sample sizes, thresholds) is a starter value in the same sense the cost caps are starter values, tunable once the mechanism runs against real traffic.
+Decided (confirmed 2026-07-25). Everything below resolves the evaluation playbook's parked A/B model-combination thread with a locked design. Every parameter (traffic split, sample sizes, thresholds) is a starter value in the same sense the cost caps are starter values: locked for build, tunable once the mechanism runs against real traffic, with any change needing the same explicit approval a cap change needs.
 
 The idea: model-bench alone cannot tell you how a tier choice performs on real usage patterns, because its frozen tasks are a sample, not the live query distribution. The A/B mechanism is the online complement: it randomly assigns live or golden-set traffic across model combinations and compares outcomes, the way the feedback loop in section 16 compares routing outcomes.
 
@@ -2596,19 +2820,7 @@ Scope distinction: these four caps bound LLM inference dollars and step latency.
 
 ### 19.3 The cost event on the contract
 
-Part of the section 2 event taxonomy (Decision A, amended by the 2026-07-25 cost-visibility decision). Fires after every metered model call.
-
-```json
-{
-  "type": "cost",
-  "trace_id": "uuid, maxLength 64",
-  "query_cost_usd": 0.0234,
-  "query_cap_usd": 0.10,
-  "cap_fraction": 0.234,
-  "model_tier": "guard | plan | synth, maxLength 16",
-  "timestamp": "iso8601"
-}
-```
+Part of the section 2 event taxonomy (Decision A, amended by the 2026-07-25 cost-visibility decision). Fires after every metered model call, using the canonical payload shape defined once in Section 2.3 (`query_cost_usd`, `query_cap_usd`, `cap_fraction`, `model_tier`), wrapped in the standard envelope (`type`, `version`, `trace_id`, `seq`, `ts`, Section 2.2). This section adds no new fields, only the accounting rules below.
 
 `query_cost_usd` and `cap_fraction` are running totals for the active query, not deltas, so any subscriber can render a live meter without reconstructing history from prior events. The `done` event carries the final `query_cost_usd` as its terminal value, so a subscriber that misses intermediate cost events still gets the total.
 
@@ -2647,7 +2859,7 @@ Three complementary systems, plus a tool-call audit log distinct from all three.
 ### 20.3 The tool-call audit log
 
 - A separate, durable, append-only log from LangSmith, because the audit requirement (every Layer 2 and Layer 3 access logged with its authorization, Step 1.12 decision) must survive a LangSmith outage or a free-tier retention limit.
-- One line per tool call, whether cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, or litvar2_lookup: `trace_id`, tool name, endpoint or database called, redacted params (no API keys, production-standards secrets gate), returned record ids, HTTP status or the body-level error and empty signal for E-utilities calls, latency in milliseconds, and timestamp.
+- One line per tool call, whether cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, or clinicaltrials_search: `trace_id`, tool name, endpoint or database called, redacted params (no API keys, production-standards secrets gate), returned record ids, HTTP status or the body-level error and empty signal for E-utilities calls, latency in milliseconds, and timestamp.
 - Written as JSONL to a dedicated audit sink (`logs/tool_audit.jsonl` in v1, the equivalent managed log target once deployed on Railway), append-only, never mutated after write, one writer per process so lines never interleave.
 - Doubles as the fail-fast diagnostic (Step 1.11 decision): when a query underperforms, the audit log is the first place to check whether the cause was model-caused (a bad Plan decomposition, a malformed structured output) or harness-caused (a rate-limit block, an API error). That split decides whether the fix is a prompt change or a harness change.
 
@@ -2686,9 +2898,9 @@ The Datasets API v2 and the four enrichment APIs have no documented numeric rate
 - The Plan step drafts a tool-call list against this ceiling up front. The Act step enforces it as a hard stop regardless of what Plan estimated: if a 21st call would fire, from a retry, a wider-than-expected fan-out, or an ELink traversal that returns more targets than planned, the harness refuses it and the loop moves to Write with whatever tool_results already exist.
 - This composes with the parallel tool-execution decision (2026-05-07): independent calls within the 20-call ceiling still dispatch through asyncio.gather. The ceiling limits total call count, not concurrency within that count.
 
-### 21.4 The concurrency queue strategy (proposed, pending confirmation)
+### 21.4 The concurrency queue strategy (decided, confirmed 2026-07-25)
 
-This is the parked thread this section resolves. The design below is a concrete proposal, not yet locked. It needs sign-off before the Phase 6 build.
+This is the parked thread this section resolves. The design below is locked for the Phase 6 build.
 
 - Bounded queue per family: each API family's token bucket has a bounded FIFO wait queue behind it. A tool call that arrives when the bucket is empty waits in that family's queue rather than firing immediately or failing outright.
 - Queue depth cap: each family's queue holds at most a few seconds of backlog, a small multiple of its per-second rate, for example roughly 15 to 30 queued calls for a 3 to 10 requests/second family. A call that would exceed the queue depth fails fast immediately with an actionable `rate_limited` error rather than joining an unbounded queue.
@@ -2759,21 +2971,20 @@ The system never shows nothing (PRD). Every case below resolves to a cited parti
 - The one write path outside retrieval, capturing the interaction to the interactions table (section 15, section 16), is not automatically idempotent the same way and needs its own natural-key upsert on `trace_id`, so a retried capture write never double-logs the same query.
 - Every error event carries an actionable message, not just a failure label: what layer or tool failed, whether the error class is transient, recoverable, or unexpected (the capability sheet's taxonomy), and, where known, a `retry_after` estimate. "Rate limited by E-utilities, retry after 2 seconds" is the shape. A bare "Error 500" never ships, since the agent loop reads this message to decide its own next action, not only a human reading a log.
 
-Error event shape referenced above:
+Error event payload shape, defined once in Section 2.3 and reproduced here for this section's taxonomy discussion; the envelope (`type`, `version`, `trace_id`, `seq`, `ts`, Section 2.2) wraps it exactly as it wraps every other event, so `trace_id` and a timestamp are never duplicated inside the payload itself:
 
 ```json
 {
-  "type": "error",
-  "trace_id": "uuid, maxLength 64",
   "fatal": false,
   "scope": "tool | step | run, maxLength 16",
   "source": "tool or layer name, maxLength 64",
   "error_class": "transient | recoverable | unexpected, maxLength 16",
   "message": "actionable text, maxLength 256",
-  "retry_after_s": 2,
-  "timestamp": "iso8601"
+  "retry_after_s": 2
 }
 ```
+
+`fatal` is the one field every consumer branches on to decide whether the run has ended (Section 12.2's dispatcher, Section 13.3's CLI exit code); `scope` and `error_class` inform retry policy and logging, never stream-closing.
 
 ## 23. Testing strategy
 
@@ -2786,9 +2997,9 @@ This section references the `eval-harness` skill and `requirements/Evaluation_pl
 | Layer | What it tests | Test type | Network dependency | Gate |
 |-------|---------------|-----------|---------------------|------|
 | Guardrail | Pydantic boundary validation, prompt-injection rejection, forbidden query types, rate and cost pre-checks | Unit | None, fully mocked | Merge-blocking |
-| Tool logic | Cypher generation and validation rules, response parsing for each of the five tools, schema slicing | Unit | None, fixture-based | Merge-blocking |
+| Tool logic | Cypher generation and validation rules, response parsing for each of the seven tools, schema slicing | Unit | None, fixture-based | Merge-blocking |
 | Layer 1 access | `cypher_query` against the real AGE graph | Integration | Real graph, SSH tunnel or co-location in the prototype, the read-only HTTPS query service in v1 (Section 24) | Merge-blocking, network-gated job |
-| Layer 2 and Layer 3 access | `ncbi_efetch`, `ncbi_dbsnp`, `pubtator_annotate`, `litvar2_lookup` against live public endpoints | Integration | Real live HTTPS APIs | Merge-blocking, network-gated job |
+| Layer 2 and Layer 3 access | `ncbi_efetch`, `ncbi_dbsnp`, `pubtator_annotate`, `litvar2_lookup`, `pathogen_detection`, `clinicaltrials_search` against live public endpoints | Integration | Real live HTTPS APIs | Merge-blocking, network-gated job |
 | Write step grounding | Cite-or-refuse, zero-retrieval refusal | Unit, deterministic | None, fixture `tool_result` payloads | Merge-blocking, required path (see below) |
 | FastAPI endpoints | Valid, invalid, and null input | Unit and integration, `httpx` plus `pytest` | None | Merge-blocking |
 | React UI | Render, interaction, WCAG 2.1 AA accessibility check | Component test | None | Merge-blocking on UI-touching changes |
@@ -2895,7 +3106,7 @@ Every group in `env.example` maps to a Railway variable set on `search-agent-api
 
 | Group | Vars | Deploy-time source | Notes |
 |-------|------|---------------------|-------|
-| Layer 1 graph | `GRAPH_PG_HOST`, `GRAPH_PG_PORT`, `GRAPH_PG_USER`, `GRAPH_PG_PASSWORD`, `GRAPH_PG_DBNAME`, `GRAPH_QUERY_URL` | Railway service variable | Prototype (build phase 2.1) sets the `GRAPH_PG_*` block over an SSH tunnel or co-location. v1 clears `GRAPH_PG_*` and sets `GRAPH_QUERY_URL` to the Hetzner HTTPS service, per Decision D's two-way door |
+| Layer 1 graph | `GRAPH_PG_HOST`, `GRAPH_PG_PORT`, `GRAPH_PG_USER`, `GRAPH_PG_PASSWORD`, `GRAPH_PG_DBNAME`, `GRAPH_QUERY_URL`, `GRAPH_QUERY_TOKEN` | Railway service variable | Prototype (build phase 2.1) sets the `GRAPH_PG_*` block over an SSH tunnel or co-location. v1 clears `GRAPH_PG_*` and sets `GRAPH_QUERY_URL` plus `GRAPH_QUERY_TOKEN` (the bearer credential for the HTTPS query service) to the Hetzner HTTPS service, per Decision D's two-way door |
 | LLM harness | `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GUARD_MODEL`, `PLAN_MODEL`, `SYNTH_MODEL` | Railway service variable | The three model-id vars stay empty until build phase 7.0 (model-bench) picks the tier winners, then become a config change, not a code change |
 | Layer 2 | `NCBI_API_KEY`, `NCBI_EMAIL` | Railway service variable | Raises E-utilities from 3 to 10 requests per second on the free key tier; the admin-access 100 requests per second key (Decisions log, 2026-05-07) is the production value |
 | Layer 3 | none | n/a | No credentials required for PubTator3, LitVar2, LitSense, or ClinicalTrials.gov v2 |
@@ -2939,7 +3150,7 @@ This is the v1 Layer 1 transport named in Decision D. It replaces the prototype'
 - Surface: a single endpoint that accepts an already-validated, already-parameterized Cypher payload (the same payload the `cypher_query` tool's validate-then-execute pipeline produces), never free-form Cypher text over the wire.
 - Defense in depth: the service re-runs the same forbidden-keyword and edge-label checks the tool already ran, on the server side, so a bug in the client-side validator is not the only thing standing between a request and the database.
 - Credential: the existing `kg_reader` read-only role (already the connection-level enforcement per the 2026-05-05 decision), so a validator bug still cannot produce a write, because the role itself cannot write.
-- Auth on the HTTPS hop: a bearer token or API key header, because Railway does not guarantee a static egress IP on every plan, so an IP allowlist alone is not sufficient. This needs a new credential, `GRAPH_QUERY_TOKEN` or equivalent, which does not yet exist in `env.example` (flagged below).
+- Auth on the HTTPS hop: a bearer token or API key header, because Railway does not guarantee a static egress IP on every plan, so an IP allowlist alone is not sufficient. This credential is `GRAPH_QUERY_TOKEN`, declared in `env.example`'s Layer 1 block (Step 4.3); its real value is populated when the service is built, per the migration path below.
 - Limits: a hard row limit and a per-call timeout matching the tool's own budget, plus a rate limit per caller, so a runaway query on either side is bounded twice.
 - Transport: TLS via an automatic-HTTPS reverse proxy (for example Caddy) in front of the service; the database port itself never opens to the internet, closing the standing exposure Decision D explicitly rejected.
 - Runtime: a systemd service or a small container on the Hetzner box, stateless, logging every call (what was queried, when, and the caller) per the audit-trail requirement in `ai-security-standards.md`.
@@ -2949,10 +3160,10 @@ This is the v1 Layer 1 transport named in Decision D. It replaces the prototype'
 
 | Gap | Where it surfaced | Disposition |
 |-----|---------------------|-------------|
-| `GRAPH_QUERY_TOKEN` (or equivalent bearer credential) is not yet in `env.example` | Designing the HTTPS query service's auth above | Add when the service is built (Section 25 build order); not added here, `env.example` is not in this section's edit scope |
+| `GRAPH_QUERY_TOKEN` (or equivalent bearer credential) is not yet in `env.example` | Designing the HTTPS query service's auth above | Resolved in Step 4.3: declared in `env.example`'s Layer 1 block. Its real value is populated when the service is built (Section 25 build order), per Section 24's migration path |
 | No Railway config file (`railway.toml` or a Nixpacks config) exists yet | Repo inventory during this draft | A Phase 6 build task, stood up alongside build phase 1.0 |
-| The current `.github/pull_request_template.md` still lists BioLink and KGX validation gates inherited from the System 1 and System 2 template repo | Repo inventory during this draft | Stale for System 3; `release-workflow.md`'s own footer already says it does not run BioLink or KGX checks. Replace the template's QA gate list with the Section 24 gate list above in Phase 5 Step 5.3 (root document updates) |
-| The PRD locks five v1 delivery formats (web UI, GraphQL API, MCP server, KGX export, CLI), but this tech spec's core-and-adapters framing (the "How to read this" section and Section 13) names four adapters and does not mention GraphQL or KGX export | Cross-checking the PRD against the tech-spec outline while writing this section and Section 25 | Not resolved here, since Sections 1 and 13 belong to a different part of this draft. This section's topology treats GraphQL as an additional router mounted in the same FastAPI process (near-zero marginal deployment cost, shares auth and tools with the REST surface per the PRD) and KGX export as a batch job against Layer 1, not a live adapter over the event stream, so neither contradicts the four-adapter architecture technically. Flagged for an explicit reconciliation between the PRD and Sections 1 and 13 before Step 4.3 locks the spec |
+| The current `.github/pull_request_template.md` still lists BioLink and KGX validation gates inherited from the System 1 and System 2 template repo | Repo inventory during this draft | Still open. Stale for System 3; `release-workflow.md`'s own footer already says it does not run BioLink or KGX checks. Replace the template's QA gate list with the Section 24 gate list above in Phase 5 Step 5.3 (root document updates) |
+| The PRD locks five v1 delivery formats (web UI, GraphQL API, MCP server, KGX export, CLI); this tech spec's core-and-adapters framing previously named only four adapters | Cross-checking the PRD against the tech-spec outline while writing this section and Section 25 | Resolved in Step 4.3: Section 1.1 now names all six delivery surfaces (four streaming adapters plus GraphQL API and KGX export as two structured surfaces). This section's topology already treats GraphQL as a router mounted in the same FastAPI process and KGX export as a batch job against Layer 1, so no topology change was needed here, only the naming in Section 1.1 |
 
 ## 25. Build order
 
@@ -2974,18 +3185,19 @@ This section refines that table into `git-workflow.md`'s `phase/N.M-description`
 | 3.1 | `phase/3.1-ncbi-efetch` | `ncbi_efetch` (E-utilities for PubMed, ClinVar, OMIM; Datasets API v2 for Gene, Genome, Orthologs, Taxonomy) | 2.0, 3.0 | v1 |
 | 3.2 | `phase/3.2-ncbi-dbsnp` | `ncbi_dbsnp` over Variation Services, plus the Q1 dbVar two-step coordinate-overlap sub-tool (ESearch prefilter, placement post-filter) | 3.1 | v1 |
 | 3.3 | `phase/3.3-enrichment-tools` | `pubtator_annotate` and `litvar2_lookup`, each with the untrusted-source-reader tier separation (read plus one API, no write, no other tools) | 3.1 | v1 |
-| 3.4 | `phase/3.4-citation-trust-full` | Provenance extended to Layer 2 and 3 (the four added fields), the two-tier risk gate (standard cite-or-refuse versus the higher-stakes substantiation-and-triangulation gate), data freshness and conflict resolution | 2.2, 3.1, 3.2, 3.3 | v1 |
+| 3.5 | `phase/3.5-pathogen-clinicaltrials-tools` | `pathogen_detection` (Pathogen Detection FTP, Q5) and `clinicaltrials_search` (ClinicalTrials.gov v2, Q4), each with its own timeout and snapshot or cache semantics, completing the seven-tool roster | 3.1 | v1 |
+| 3.4 | `phase/3.4-citation-trust-full` | Provenance extended to Layer 2 and 3 (the four added fields), the two-tier risk gate (standard cite-or-refuse versus the higher-stakes substantiation-and-triangulation gate), data freshness and conflict resolution | 2.2, 3.1, 3.2, 3.3, 3.5 | v1 |
 | 4.0 | `phase/4.0-rest-sse-hardening` | The REST plus SSE adapter finalized as the public API surface | 2.2 | v1 |
 | 4.1 | `phase/4.1-mcp-server` | Outbound-only MCP server wrapping the same tool functions (Decision 24, persona 11) | 3.4 | v1 |
 | 4.2 | `phase/4.2-cli-adapter` | Thin CLI client over the REST API | 4.0 | v1 |
-| 4.3 | `phase/4.3-graphql-api` | GraphQL surface via Strawberry, sharing auth and tools with the REST surface | 4.0 | v1 per the locked PRD, flagged (Section 24) pending reconciliation with Sections 1 and 13's four-adapter framing |
-| 4.4 | `phase/4.4-kgx-export` | Export utility scoped to the existing Hetzner graph, a batch job, not a live adapter | Layer 1 access already exists | v1 per the locked PRD, same flag as 4.3 |
+| 4.3 | `phase/4.3-graphql-api` | GraphQL surface via Strawberry, sharing auth and tools with the REST surface | 4.0 | v1 per the locked PRD and Section 1.1's six-surface framing |
+| 4.4 | `phase/4.4-kgx-export` | Export utility scoped to the existing Hetzner graph, a batch job, not a live adapter | Layer 1 access already exists | v1 per the locked PRD and Section 1.1's six-surface framing |
 | 4.5 | `phase/4.5-personalization-memory` | Bounded session memory (Decision F and G), audience-level depth control, the stable named scientist persona | 1.2, 2.2 | v1 |
 | 4.6 | `phase/4.6-feedback-capture` | Real interaction capture into `interactions` (query, route, rubric outcome, citations, coverage tags, feedback, `trace_id`), the manual review ritual, hand-promotion into few-shot examples | 1.1, 3.4 | v1 |
 | 4.7 | `phase/4.7-cq-routing` | Few-shot routing seeded with the seven must-pass competency questions; query-shape routing (single-hop, multi-hop, dynamic multi-source) | 3.4 | v1 |
 | 5.0 | `phase/5.0-observability` | LangSmith per-run tracing linked by `trace_id`, PostHog analytics, the tool-call audit log | 2.0 | v1 |
 | 5.1 | `phase/5.1-golden-dataset-eval` | The 50-query golden dataset (expanding the seven-question moat set per the playbook), eval-harness grading wired against LangSmith trace output, the cost tracking dashboard | 3.4, 5.0 | v1 |
-| 6.0 | `phase/6.0-rate-limit-concurrency` | Per-layer throttling, the concurrency queue strategy, the at-most-20-calls-per-query budget | 3.1, 3.2, 3.3 | v1 |
+| 6.0 | `phase/6.0-rate-limit-concurrency` | Per-layer throttling, the concurrency queue strategy, the at-most-20-calls-per-query budget | 3.1, 3.2, 3.3, 3.5 | v1 |
 | 6.1 | `phase/6.1-hardening-release` | The full `dev-standards` six-lens pass, the CI and CD gates from Section 24 finalized, the security-scan milestone before first ship, the accessibility reasonable-effort pass | everything above | v1 |
 | 7.0 | `phase/7.0-model-bench` | Benchmark the candidate models per tier against the golden dataset, pick the tier winners | 5.1 | v1, needed before a real ship, not before the prototype |
 | 7.1 | `phase/7.1-ab-mechanism` | The online A and B randomized-routing mechanism across orchestrator-plus-planner combinations (Section 18) | 7.0, 5.0 | v1 mechanism design, but its live operation is the online complement that follows model-bench |
@@ -3023,6 +3235,7 @@ graph TD
         P31[3.1 ncbi-efetch]
         P32[3.2 ncbi-dbsnp]
         P33[3.3 enrichment-tools]
+        P35[3.5 pathogen-clinicaltrials-tools]
         P34[3.4 citation-trust-full]
         P40[4.0 rest-sse-hardening]
         P41[4.1 mcp-server]
@@ -3049,10 +3262,12 @@ graph TD
     P30 --> P31
     P31 --> P32
     P31 --> P33
+    P31 --> P35
     P22 --> P34
     P31 --> P34
     P32 --> P34
     P33 --> P34
+    P35 --> P34
     P22 --> P40
     P34 --> P41
     P40 --> P42
@@ -3068,6 +3283,7 @@ graph TD
     P31 --> P60
     P32 --> P60
     P33 --> P60
+    P35 --> P60
     P51 --> P61
     P61 --> P70
     P70 --> P71
@@ -3080,16 +3296,18 @@ graph TD
 
 | Flag | Detail | Where it resolves |
 |------|--------|---------------------|
-| GraphQL and KGX export versus the four-adapter framing | The PRD locks five v1 delivery formats; this tech spec's core-and-adapters framing names four and omits GraphQL and KGX export | Needs an explicit reconciliation between the PRD and Sections 1 and 13 before Step 4.3 locks the spec; build phases 4.3 and 4.4 above are staged to proceed either way |
-| Domain sign-off for the golden fixtures | The playbook flags this as a real gap on clinical and human-variation questions, tagged a Phase 4 process item | Needs a named owner before build phase 5.1 ships the 50-query golden dataset |
-| `GRAPH_QUERY_TOKEN` credential gap | The read-only HTTPS query service (Section 24) needs a bearer credential not yet in `env.example` | Add when the service is built, staged inside build phases 3.x or 4.x per Section 24's migration path |
-| Stale pull request template | `.github/pull_request_template.md` still lists BioLink and KGX validation gates from the System 1 and System 2 template repo | Phase 5 Step 5.3 (root document updates), out of this build order's scope |
+| GraphQL and KGX export versus the four-adapter framing | The PRD locks five v1 delivery formats; this tech spec's core-and-adapters framing previously named four and omitted GraphQL and KGX export | Resolved in Step 4.3: Section 1.1 now names all six delivery surfaces (four streaming adapters plus GraphQL API and KGX export as two structured surfaces). Build phases 4.3 and 4.4 proceed as scheduled |
+| Tool roster: Pathogen Detection and ClinicalTrials.gov had no tool home | Section 6.2 flagged both as not fitting the `ncbi_efetch` action set | Resolved in Step 4.3: added as named tools `pathogen_detection` (6.6) and `clinicaltrials_search` (6.7), scheduled in build phase 3.5 above |
+| Raw chain-of-thought: PRD versus Decision A | The PRD's show-full-reasoning expander describes raw chain-of-thought; Decision A (later, controlling) says never raw chain-of-thought | Resolved in Step 4.3: Decision A supersedes the PRD's wording (Sections 2.5, 12.8). The PRD's own text is updated at the Step 6.2 prototype reconciliation, not by this tech spec |
+| `GRAPH_QUERY_TOKEN` credential gap | The read-only HTTPS query service (Section 24) needs a bearer credential | Resolved in Step 4.3: declared in `env.example`'s Layer 1 block. Its real value is populated when the service is built, staged inside build phases 3.x or 4.x per Section 24's migration path |
+| Domain sign-off for the golden fixtures | The playbook flags this as a real gap on clinical and human-variation questions, tagged a Phase 4 process item | Still open. Needs a named owner before build phase 5.1 ships the 50-query golden dataset |
+| Stale pull request template | `.github/pull_request_template.md` still lists BioLink and KGX validation gates from the System 1 and System 2 template repo | Still open. Phase 5 Step 5.3 (root document updates), out of this build order's scope |
 
 Once this section locks, Plan.md's Phase 5 Step 5.1 (updating `bossman-mode`) and Step 5.3 (updating CLAUDE.md's build-order table) both read from this section as their source of truth, not from the original four-week table.
 
 ## Parked-thread resolution index
 
-The four threads carried into Phase 4 are drafted as proposed resolutions (pending confirmation) in these sections:
+The four threads carried into Phase 4 are decided (confirmed 2026-07-25) in these sections:
 
 | Parked thread | Resolved in |
 |---------------|-------------|
@@ -3098,4 +3316,4 @@ The four threads carried into Phase 4 are drafted as proposed resolutions (pendi
 | Concurrency queue strategy | Section 21 |
 | Provenance type's four added fields | Section 9 |
 
-Last updated: 2026-07-25. This is the Step 4.2 draft; Step 4.3 reconciles the open items above and locks the spec.
+Last updated: 2026-07-25. This is Step 4.2 reconciled; Step 4.3 lock sign-off is pending the user's confirmation.
