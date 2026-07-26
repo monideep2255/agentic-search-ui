@@ -10,6 +10,7 @@
     --active: #C77D2E;
     --blocked: #A63D40;
     --todo: #8A96A0;
+    --you: #7B4B8A;
     --shadow: 0 1px 2px rgba(22, 32, 42, .06), 0 4px 12px rgba(22, 32, 42, .04);
 
     --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
@@ -29,6 +30,7 @@
       --active: #E0A155;
       --blocked: #D2726F;
       --todo: #7E8D99;
+      --you: #B98FC7;
       --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .25);
     }
   }
@@ -45,6 +47,7 @@
     --active: #E0A155;
     --blocked: #D2726F;
     --todo: #7E8D99;
+      --you: #B98FC7;
     --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 12px rgba(0, 0, 0, .25);
   }
 
@@ -60,6 +63,7 @@
     --active: #C77D2E;
     --blocked: #A63D40;
     --todo: #8A96A0;
+    --you: #7B4B8A;
     --shadow: 0 1px 2px rgba(22, 32, 42, .06), 0 4px 12px rgba(22, 32, 42, .04);
   }
 
@@ -435,3 +439,9 @@
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
   }
+
+  .chip.refine { background: transparent; border: 1px dashed var(--refine-tone, var(--muted));
+                 color: var(--refine-tone, var(--muted)); }
+  .chip.refine.tech_refine    { --refine-tone: var(--muted); }
+  .chip.refine.product_refine { --refine-tone: var(--you); }
+  .chip.refine.team_refine    { --refine-tone: var(--accent); }

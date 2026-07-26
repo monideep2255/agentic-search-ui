@@ -5,7 +5,7 @@ BOARD.md is the source of truth. This script is the only thing that writes
 board.html, so the two can never drift by hand.
 
 Depends on:
-    - tracker/BOARD.md (parsed; the nine-column build table and the planning table)
+    - tracker/BOARD.md (parsed; the ten-column build table and the planning table)
 
 Writes:
     - tracker/board.html  standalone page, opens in a browser with no server
@@ -16,7 +16,7 @@ into a temp path at publish time. Keeping it in the repo put two near-identical
 HTML files side by side and made the folder unreadable.
 
 Usage:
-    python3 tracker/render_board.py            render both views
+    python3 tracker/render_board.py            render the standalone page
     python3 tracker/render_board.py --check    parse and report, write nothing
 
 Exits non-zero on a malformed board, because a board that silently drops a
@@ -35,7 +35,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 BOARD_MD = ROOT / "BOARD.md"
 OUT_PAGE = ROOT / "board.html"
-OUT_BODY = ROOT / "board.body.html"
 
 # Flow order. Left to right is the direction work travels. "rejected" is
 # deliberately absent: it is transient and routes straight back to in-progress.
@@ -47,6 +46,17 @@ COLUMNS = [
     ("done", "Done", "var(--done)"),
 ]
 KNOWN_STATUSES = {key for key, _, _ in COLUMNS} | {"rejected"}
+
+# Refinement labels, per the NWS practice the product owner brought in. Every
+# ticket carries one so nothing is lost in the backlog, and only "refined" work
+# may start. "refined" is the terminal state, added so a label can be advanced
+# rather than deleted, which would lose the trail.
+REFINEMENT = {
+    "tech_refine": ("tech refine", "var(--muted)"),
+    "product_refine": ("product refine", "var(--you)"),
+    "team_refine": ("team refine", "var(--accent)"),
+    "refined": ("refined", "var(--done)"),
+}
 
 
 @dataclass
@@ -60,6 +70,7 @@ class Phase:
     gates: list[str] = field(default_factory=list)
     flags: list[str] = field(default_factory=list)
     po: bool = False
+    refinement: str = "refined"
 
 
 class BoardError(Exception):
@@ -122,16 +133,26 @@ def parse_board(md: str) -> dict:
         ))
 
     for cells in find_table(lines, "## Build phases"):
-        if len(cells) != 9:
+        if len(cells) != 10:
             raise BoardError(
-                f"build row needs 9 columns, got {len(cells)}. "
+                f"build row needs 10 columns, got {len(cells)}. "
                 f"Keep the column order documented in BOARD.md. Row: {cells[:2]}"
             )
-        pid, branch, delivers, deps, group, status, owner, gates, flags = cells
+        pid, branch, delivers, deps, group, status, refinement, owner, gates, flags = cells
         if status not in KNOWN_STATUSES:
             raise BoardError(f"unknown status {status!r} on phase {pid}")
         if group not in {"prototype", "v1"}:
             raise BoardError(f"unknown group {group!r} on phase {pid}")
+        if refinement not in REFINEMENT:
+            raise BoardError(
+                f"phase {pid} has refinement {refinement!r}. Every phase carries one of "
+                f"{sorted(REFINEMENT)}, or it gets lost in the backlog."
+            )
+        if status != "todo" and refinement != "refined":
+            raise BoardError(
+                f"phase {pid} is {status} but only {refinement}. Work does not start "
+                f"until refinement is complete."
+            )
         title = branch.split("-", 1)[1].replace("-", " ") if "-" in branch else branch
         phases.append(Phase(
             id=pid, group=group, status=status,
@@ -141,6 +162,7 @@ def parse_board(md: str) -> dict:
             gates=csv_cell(gates),
             flags=csv_cell(flags),
             po=owner.strip().lower() == "product owner",
+            refinement=refinement,
         ))
 
     seen: set[str] = set()
@@ -172,6 +194,7 @@ def counts(phases: list[Phase]) -> dict:
         "v1_total": sum(1 for p in phases if p.group == "v1"),
         "flagged": sum(len(p.flags) for p in phases),
         "po": sum(1 for p in phases if p.po),
+        "product_refine": sum(1 for p in phases if p.refinement == "product_refine"),
     }
 
 
@@ -239,6 +262,7 @@ def render_body(data: dict) -> str:
         flag_rows=flag_rows,
         payload=payload,
         cols=cols,
+        refine_labels=json.dumps({k: v[0] for k, v in REFINEMENT.items()}),
     )
 
 
@@ -277,11 +301,13 @@ TEMPLATE = """<title>System 3 build board</title>
       <button class="filter" data-filter="prototype" aria-pressed="false">Prototype</button>
       <button class="filter" data-filter="v1" aria-pressed="false">v1</button>
       <button class="filter" data-filter="flagged" aria-pressed="false">Open flags only</button>
-      <button class="filter" data-filter="po" aria-pressed="false">Needs you</button>
+      <button class="filter" data-filter="po" aria-pressed="false">Needs you at build</button>
+      <button class="filter" data-filter="product_refine" aria-pressed="false">Needs you to refine</button>
     </div>
     <div class="legend">
       <span><i class="chip dep">1.0</i> depends on</span>
       <span><i class="chip gate">gate</i> must pass before ship</span>
+      <span><i class="chip refine product_refine">product refine</i> blocked on your input before it can be refined</span>
       <span><i class="chip po">product owner</i> a human decides, not an agent</span>
       <span><i class="chip flag">flag</i> unresolved, blocks that phase</span>
     </div>
@@ -325,12 +351,14 @@ TEMPLATE = """<title>System 3 build board</title>
 <script>
   var PHASES = {payload};
   var COLUMNS = {cols};
+  var REFINE = {refine_labels};
   var activeFilter = "all";
 
   function matches(p) {{
     if (activeFilter === "all") return true;
     if (activeFilter === "flagged") return p.flags.length > 0;
     if (activeFilter === "po") return p.po === true;
+    if (activeFilter === "product_refine") return p.refinement === "product_refine";
     return p.group === activeFilter;
   }}
 
@@ -352,6 +380,9 @@ TEMPLATE = """<title>System 3 build board</title>
     card.appendChild(el("p", "card-body", p.body));
     var chips = el("div", "chips");
     p.deps.forEach(function (d) {{ chips.appendChild(el("span", "chip dep", d)); }});
+    if (p.refinement && p.refinement !== "refined") {{
+      chips.appendChild(el("span", "chip refine " + p.refinement, REFINE[p.refinement] || p.refinement));
+    }}
     if (p.po) chips.appendChild(el("span", "chip po", "product owner"));
     p.gates.forEach(function (g) {{ chips.appendChild(el("span", "chip gate", g)); }});
     p.flags.forEach(function (f) {{ chips.appendChild(el("span", "chip flag", f)); }});

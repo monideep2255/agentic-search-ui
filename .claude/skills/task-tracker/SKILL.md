@@ -15,10 +15,12 @@ Decision from Step 1.8 chose a self-maintained in-repo tracker over Linear. This
 - [Where the board lives](#where-the-board-lives)
 - [Ticket format](#ticket-format)
 - [Status states and who may set them](#status-states-and-who-may-set-them)
+- [Refinement labels](#refinement-labels)
 - [Findings](#findings)
 - [The four ledger rules](#the-four-ledger-rules)
 - [Operations](#operations)
 - [What a ticket must carry before work starts](#what-a-ticket-must-carry-before-work-starts)
+- [Acceptance criteria wording](#acceptance-criteria-wording)
 - [Three-state permissions](#three-state-permissions)
 
 ## Where the board lives
@@ -44,6 +46,7 @@ Each ticket in a phase file:
 ### T-2.1-03: Cypher validate-then-execute pipeline
 
 Status: in-progress
+Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: T-2.1-01, T-2.1-02
 Spec: Technical_specification.md Section 6.1
@@ -86,6 +89,23 @@ One writer per state. This is the rule that keeps parallel agents from corruptin
 The builder that did the work never marks it done. That is the maker-cannot-sign-off split from `self-eval-loop.md`, applied to the board.
 
 `rejected` is transient and deliberately has no column. The judge sets it with a reason, files the defect in Findings, and the ticket returns to `in-progress` in the same move. Work flows backward on a rejection, it does not park. A ticket sitting in `rejected` at the end of a session means someone stopped halfway through the transition.
+
+## Refinement labels
+
+Every ticket carries exactly one refinement label from the moment it is created. Without one it gets lost in the backlog: there is no way to tell whether anyone has looked at it, so it sits in `todo` alongside tickets that are actually ready. A ticket with no refinement label is invalid, the same way a judgment state with no reason is invalid.
+
+| Label | Meaning | Who sets it |
+|-------|---------|-------------|
+| `tech_refine` | Still being refined, not yet discussed in the tech refinement meeting | Lead, at ticket creation |
+| `product_refine` | Needs the product owner's input before it can proceed | Lead, when a question surfaces that only the product owner can answer. Only the product owner's answer moves it forward |
+| `team_refine` | Ready for the team to review | Lead, once tech refinement and any product question are resolved |
+| `refined` | Passed refinement, ready to be worked | Lead, once the team's review raises no blocking feedback |
+
+`refined` is not one of the product owner's three labels. It is added here to complete the lifecycle: without a positive "done refining" state, a ticket that finished refinement would have to lose its label rather than advance one, and that loses the trail of how it got there. Every other label describes a ticket still moving through refinement. `refined` is the one state that says refinement is over.
+
+A ticket moves through the labels in order: `tech_refine`, then either `product_refine` if it needs product input or straight to `team_refine`, then `refined`. Each move appends a history line the same as any other ticket change.
+
+Refinement gate: a ticket cannot move from `todo` to `in-progress` unless its refinement label is `refined`. This is the whole point of the labels, so it is a rule, not a suggestion. A builder claiming a ticket checks the label first. A ticket still marked `tech_refine`, `product_refine`, or `team_refine` stays in `todo` no matter how ready the work looks otherwise.
 
 ## Findings
 
@@ -190,10 +210,28 @@ Form carries state, not just number, so what needs attention reads at a glance:
 
 A ticket dispatched without these is under-specified, and an under-specified ticket is how autonomous work drifts:
 
-- Acceptance criteria that are checkable, not aspirational. "Returns cited results" is not checkable. "Every returned claim carries source, source_id, source_url, and layer" is.
+- Acceptance criteria that are checkable, not aspirational, worded per Acceptance criteria wording below.
 - The spec section it traces to. A ticket with no spec anchor is either scope creep or a missing spec section, and both need the lead, not a builder.
 - Its dependencies by ticket ID.
 - The exact files it may create or modify, so two builders never collide.
+- A refinement label of `refined`. See Refinement labels above: the gate on `todo` to `in-progress` means work never starts on a ticket that has not cleared it.
+
+## Acceptance criteria wording
+
+Acceptance criteria are written as testable statements of a finished condition, never as tasks. "The button is blue" is a criterion. "Make this button blue" is a task.
+
+The difference is not stylistic. A task tells you what someone intended to do. A criterion tells you how to decide the ticket is done. Only the second can be checked by someone who did not write it, which is the judge closing the ticket per the maker-cannot-sign-off split. "Add a timeout to cypher_query" is satisfied by any timeout at all, five seconds or five minutes, and by code that raises an exception but leaves the underlying connection open. "cypher_query returns a timeout error after 30 seconds and does not hang" is a testable statement: run it, wait 30 seconds, check the response and check the connection, done or not done, nothing to argue about.
+
+| Task-shaped (bad) | Criterion-shaped (good) |
+|--------------------|--------------------------|
+| Add a timeout to cypher_query | cypher_query returns a timeout error after 30 seconds and does not hang |
+| Make the guardrail catch prompt injection | The guardrail rejects a query containing an embedded instruction to ignore prior instructions, before the query reaches Think |
+| Make sure answers have citations | Every claim in a synthesized answer carries source, source_id, source_url, and layer, or the agent returns the refusal string with no partial answer |
+| Show users where an answer's information comes from | Every citation chip in the UI links to a live NCBI, PubTator3, or LitVar2 record page, not a truncated or dead URL |
+| Handle rate limits in ncbi_dbsnp | ncbi_dbsnp retries once after a 429 response and returns a structured rate-limit error to the caller if the retry also fails |
+| Make the Plan step choose tools correctly | For a query about a gene-disease relationship already in the graph, the Plan step selects cypher_query and does not call ncbi_efetch for the same fact |
+
+Each right-hand column names a state that either holds or does not, with no reference to who did what. That is what makes it checkable by the judge instead of only by the builder who wrote it.
 
 ## Three-state permissions
 
@@ -205,6 +243,7 @@ Allow:
 Ask:
 - Before creating a ticket that does not trace to a spec section, since that is either scope creep or a spec gap
 - Before deferring a ticket at phase close
+- Before moving a ticket out of `product_refine`, since that is the product owner's call
 
 Deny:
 - Never let a builder set its own ticket to `done`
@@ -214,5 +253,7 @@ Deny:
 - Never open a phase whose dependency phases are not `done`
 - Never invent a build phase that Section 25 does not define
 - Never hand-edit `tracker/board.html` or the published artifact. They are generated from `BOARD.md` and the next regeneration discards the edit
+- Never create a ticket with no refinement label
+- Never move a ticket from `todo` to `in-progress` unless its refinement label is `refined`
 
 The test: can the product owner read `tracker/BOARD.md` and know exactly what is done, what is in flight, what is blocked and why, without reading a single diff?
