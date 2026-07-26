@@ -22,3 +22,4 @@ Phase 5 infrastructure is not in git. The 2026-07-25 decision untracked `.claude
 - There is no backup other than this working copy.
 
 Tracked artifacts that survive: `LEARNINGS.md`, `tracker/`, `docs/`, `CLAUDE.md`, `AGENTS.md`, `README.md`, `DECISIONS.md`, `requirements/`, and `.github/`.
+| 2026-07-26 | HTML artifacts, Phase 5 | The published artifact was being treated as the primary copy and the local file as a byproduct, when the product owner reads the local file. The source also lived in a session scratchpad, so it would have vanished at session end leaving only the derived copy | Kept regenerating the local file from the scratchpad after each change, which worked but left the real source outside version control | Inverted the dependency. The repo file is the source of truth, and `docs/publish_body.sh` derives the publishable fragment from it. Rule: whatever the human opens is the source; anything hosted is downstream of it |

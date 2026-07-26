@@ -1,0 +1,388 @@
+<title>Phase 6 execution flow</title>
+
+<style>
+  :root {
+    --ground: #F4F6F7; --surface: #FFFFFF; --surface-2: #EAEFF2;
+    --ink: #16202A; --muted: #5C6B78; --line: #D6DFE4;
+    --accent: #1C6E8C; --done: #3F7D58; --active: #C77D2E;
+    --blocked: #A63D40; --todo: #8A96A0;
+    --you: #7B4B8A;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0E1519; --surface: #16202A; --surface-2: #1D2A35;
+      --ink: #E4EAEE; --muted: #93A3AF; --line: #273743;
+      --accent: #4FA8C7; --done: #6FB58A; --active: #E0A155;
+      --blocked: #D2726F; --todo: #7E8D99; --you: #B98FC7;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1519; --surface: #16202A; --surface-2: #1D2A35;
+    --ink: #E4EAEE; --muted: #93A3AF; --line: #273743;
+    --accent: #4FA8C7; --done: #6FB58A; --active: #E0A155;
+    --blocked: #D2726F; --todo: #7E8D99; --you: #B98FC7;
+  }
+  :root[data-theme="light"] {
+    --ground: #F4F6F7; --surface: #FFFFFF; --surface-2: #EAEFF2;
+    --ink: #16202A; --muted: #5C6B78; --line: #D6DFE4;
+    --accent: #1C6E8C; --done: #3F7D58; --active: #C77D2E;
+    --blocked: #A63D40; --todo: #8A96A0; --you: #7B4B8A;
+  }
+
+  body { background: var(--ground); color: var(--ink); font-family: var(--sans);
+         line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 72px;
+          display: flex; flex-direction: column; gap: 36px; }
+
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .13em;
+             text-transform: uppercase; color: var(--accent); }
+  h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.1; letter-spacing: -.022em;
+       text-wrap: balance; font-weight: 640; margin: 0; }
+  h2 { font-size: 19px; font-weight: 620; letter-spacing: -.014em; margin: 0 0 14px; }
+  .masthead { display: flex; flex-direction: column; gap: 10px; }
+  .standfirst { color: var(--muted); max-width: 66ch; font-size: 15px; }
+
+  /* who does what */
+  .cast { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+          gap: 1px; background: var(--line); border: 1px solid var(--line);
+          border-radius: 3px; overflow: hidden; }
+  .role { background: var(--surface); padding: 15px 16px; display: flex;
+          flex-direction: column; gap: 5px; border-top: 3px solid var(--role-tone, var(--muted)); }
+  .role-name { font-family: var(--mono); font-size: 11px; letter-spacing: .09em;
+               text-transform: uppercase; color: var(--role-tone, var(--ink)); }
+  .role-who { font-size: 13.5px; font-weight: 560; }
+  .role-note { font-size: 12.5px; color: var(--muted); }
+
+  /* the rail */
+  .rail { display: flex; flex-direction: column; gap: 0; }
+  .stage { display: grid; grid-template-columns: 44px 1fr; gap: 16px; }
+  .spine { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .marker { width: 30px; height: 30px; border-radius: 50%; flex: none;
+            display: grid; place-items: center; font-family: var(--mono);
+            font-size: 11.5px; font-weight: 600; color: var(--surface);
+            background: var(--stage-tone, var(--accent)); }
+  .thread { flex: 1; width: 2px; background: var(--line); min-height: 12px; }
+  .stage:last-child .thread { background: transparent; }
+  .stage-body { padding-bottom: 22px; display: flex; flex-direction: column; gap: 9px; }
+  .stage-title { font-size: 15px; font-weight: 600; letter-spacing: -.008em; }
+  .stage-title .actor { font-family: var(--mono); font-size: 10.5px; font-weight: 500;
+                        letter-spacing: .08em; text-transform: uppercase;
+                        color: var(--stage-tone, var(--accent)); margin-left: 9px; }
+  .stage-title .model { font-family: var(--mono); font-size: 10px; font-weight: 500;
+                       letter-spacing: .05em; color: var(--muted); margin-left: 8px;
+                       border: 1px solid var(--line); border-radius: 2px; padding: 2px 6px; }
+  .stage-text { font-size: 13.5px; color: var(--muted); max-width: 70ch; }
+
+  .io { display: flex; flex-wrap: wrap; gap: 6px; }
+  .io span { font-family: var(--mono); font-size: 10.5px; padding: 3px 8px;
+             border-radius: 2px; background: var(--surface-2); color: var(--muted); }
+  .io span.w { border: 1px solid var(--active); background: transparent; color: var(--active); }
+  .io span.r::before { content: "read  "; opacity: .55; }
+  .io span.w::before { content: "write  "; opacity: .7; }
+
+  /* tables */
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 580px; }
+  th { text-align: left; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em;
+       text-transform: uppercase; color: var(--muted); font-weight: 500;
+       padding: 0 14px 8px 0; border-bottom: 1px solid var(--line); }
+  td { padding: 10px 14px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.f { font-family: var(--mono); font-size: 12px; color: var(--accent); white-space: nowrap; }
+
+  .callout { border-left: 3px solid var(--blocked); background: var(--surface);
+             border-radius: 0 3px 3px 0; padding: 14px 16px; display: flex;
+             flex-direction: column; gap: 7px; }
+  .callout h3 { margin: 0; font-size: 14px; font-weight: 620; }
+  .callout p { margin: 0; font-size: 13px; color: var(--muted); }
+
+  .you-note { border-left: 3px solid var(--you); background: var(--surface);
+              border-radius: 0 3px 3px 0; padding: 14px 16px; }
+  .you-note p { margin: 0; font-size: 13.5px; }
+
+  footer { border-top: 1px solid var(--line); padding-top: 18px; font-size: 12.5px;
+           color: var(--muted); }
+  code { font-family: var(--mono); font-size: .92em; background: var(--surface-2);
+         padding: 1px 5px; border-radius: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">System 3 &middot; Phase 6</div>
+    <h1>How one build phase runs</h1>
+    <p class="standfirst">The loop that repeats 26 times, once per phase in section 25 of the
+      technical specification. This is the sync check: if any step here is not what you pictured,
+      that is the thing to change before we start building.</p>
+  </header>
+
+  <section>
+    <h2>Who is in the room</h2>
+    <div class="cast">
+      <div class="role" style="--role-tone: var(--you)">
+        <span class="role-name">Product owner</span>
+        <span class="role-who">You</span>
+        <span class="role-note">Approve the PR, decide scope, judge whether a UI feels right. You talk only to the lead.</span>
+      </div>
+      <div class="role" style="--role-tone: var(--accent)">
+        <span class="role-name">Lead engineer</span>
+        <span class="role-who">Me, reasoning model</span>
+        <span class="role-note">Decompose, dispatch, coordinate, own the board. Never builds when there are two or more tasks.</span>
+      </div>
+      <div class="role" style="--role-tone: var(--active)">
+        <span class="role-name">Builders</span>
+        <span class="role-who">Sonnet, 2 to N</span>
+        <span class="role-note">One ticket each, in parallel, each in its own worktree when they write concurrently.</span>
+      </div>
+      <div class="role" style="--role-tone: var(--done)">
+        <span class="role-name">Judge</span>
+        <span class="role-who">Strongest model, 1</span>
+        <span class="role-note">The quality gate. Produces cited evidence, never a verdict. The only role that may set done.</span>
+      </div>
+      <div class="role" style="--role-tone: var(--blocked)">
+        <span class="role-name">Adversary</span>
+        <span class="role-who">Strongest model, 0 or 1</span>
+        <span class="role-note">Attacks what the judge certified. Files findings, never closes them.</span>
+      </div>
+      <div class="role" style="--role-tone: var(--muted)">
+        <span class="role-name">Support</span>
+        <span class="role-who">Researcher, test writer</span>
+        <span class="role-note">Cheap and scoped. Read-only agents stay in the shared checkout.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The phase loop</h2>
+    <div class="rail">
+
+      <div class="stage" style="--stage-tone: var(--accent)">
+        <div class="spine"><div class="marker">1</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">Open the phase<span class="actor">lead</span><span class="model">Opus 5 &middot; high</span></div>
+          <p class="stage-text">Read the phase's row in section 25: what it delivers, what it
+            depends on, its branch name. Verify every dependency phase is merged. If one is not,
+            stop and report rather than building on unmerged work.</p>
+          <div class="io">
+            <span class="r">Technical_specification.md &sect;25</span>
+            <span class="r">tracker/BOARD.md</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--accent)">
+        <div class="spine"><div class="marker">2</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">Read what already broke<span class="actor">lead</span><span class="model">Opus 5 &middot; low</span></div>
+          <p class="stage-text">Filter the learnings log to this phase, its tools, and its layers
+            before scoping anything. Past dead ends are cheaper to read than to rediscover. This is
+            the step that stops the same wall being hit twice.</p>
+          <div class="io"><span class="r">LEARNINGS.md, filtered</span></div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--accent)">
+        <div class="spine"><div class="marker">3</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">Decompose into tickets<span class="actor">lead</span><span class="model">Opus 5 &middot; high</span></div>
+          <p class="stage-text">Split the phase into non-overlapping tickets. Each carries checkable
+            acceptance criteria, the spec section it traces to, its dependencies, and the exact files
+            it may touch, so two builders can never aim at the same file. A ticket with no spec
+            anchor is either scope creep or a spec gap, and both come back to you.</p>
+          <div class="io">
+            <span class="w">tracker/phase_N.M.md</span>
+            <span class="w">tracker/board.html, auto</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--accent)">
+        <div class="spine"><div class="marker">4</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">Branch and brief<span class="actor">lead</span><span class="model">Opus 5 + Haiku 4.5 &middot; low</span></div>
+          <p class="stage-text">Cut <code>phase/N.M-description</code> from main. Dispatch
+            researchers first if an API is unfamiliar, so builders never start blind. Sub-planners
+            only when a phase is genuinely complex.</p>
+          <div class="io"><span class="w">git branch</span></div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--active)">
+        <div class="spine"><div class="marker">5</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">Builders work in parallel<span class="actor">builders</span><span class="model">Sonnet 5 &middot; medium</span></div>
+          <p class="stage-text">Each claims a ticket and sets it to in progress the moment it picks
+            it up, not when it finishes. Concurrent writers each get their own worktree; readers stay
+            in the shared checkout. A builder that finishes sets in review, never done.</p>
+          <div class="io">
+            <span class="r">tech spec, its own tool section</span>
+            <span class="r">Tool_implementation_mechanics.md</span>
+            <span class="w">source and tests</span>
+            <span class="w">tracker/phase_N.M.md, own ticket only</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--active)">
+        <div class="spine"><div class="marker">6</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">Something breaks<span class="actor">whoever hit it</span><span class="model">inherits its own</span></div>
+          <p class="stage-text">Written the moment it happens, not reconstructed at phase end: what
+            broke, what was tried and did not work, what actually fixed it. The dead ends are half
+            the value, because they are what the next agent would otherwise try first.</p>
+          <div class="io"><span class="w">LEARNINGS.md</span></div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--done)">
+        <div class="spine"><div class="marker">7</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">The judge grades<span class="actor">judge</span><span class="model">Opus 5 &middot; high</span></div>
+          <p class="stage-text">Cites file and line for every code claim and pastes real command
+            output for every test claim. If it cannot produce evidence, that check fails. It also
+            checks one level up: do the finished tickets actually satisfy the phase, or did every
+            builder succeed at a task while the decomposition missed the point. Then it closes
+            tickets, which no other role may do.</p>
+          <div class="io">
+            <span class="r">the diff, the tests</span>
+            <span class="w">tracker/phase_N.M.md, done or rejected</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--blocked)">
+        <div class="spine"><div class="marker">8</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">The adversary attacks<span class="actor">adversary</span><span class="model">Opus 5 &middot; high</span></div>
+          <p class="stage-text">Only on a phase that produced something runnable. It throws hostile,
+            unscripted queries at the system, especially ones where the graph returns nothing and the
+            agent must refuse rather than invent. A green judge is necessary and not sufficient: the
+            judge tests what someone thought to specify, and a fluent wrong answer is not on that
+            list. It over-reports on purpose and never closes its own findings.</p>
+          <div class="io"><span class="w">tracker/phase_N.M.md, Findings</span></div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--accent)">
+        <div class="spine"><div class="marker">9</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">Gates, in order<span class="actor">lead</span><span class="model">Opus 5 + Sonnet 5 &middot; medium</span></div>
+          <p class="stage-text">verify, then eval-harness when answer generation was touched, then
+            dev-standards when code shipped, then release-workflow with its security scan. These are
+            not optional because the judge passed. The judge grades the work; these decide whether it
+            is allowed to ship.</p>
+          <div class="io">
+            <span class="r">Evaluation_playbook.md</span>
+            <span class="w">test and scan output</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--accent)">
+        <div class="spine"><div class="marker">10</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">Close the board and ship<span class="actor">lead</span><span class="model">Opus 5 &middot; low</span></div>
+          <p class="stage-text">Evidence recorded on every ticket, board closed, renderer re-run as a
+            backstop in case a hook was bypassed, artifact republished. Then docs sync, commit, push,
+            and open the pull request.</p>
+          <div class="io">
+            <span class="w">tracker/BOARD.md</span>
+            <span class="w">tracker/board.html</span>
+            <span class="w">the published board</span>
+            <span class="w">DECISIONS.md</span>
+            <span class="w">pull request</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--you)">
+        <div class="spine"><div class="marker">11</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">You review<span class="actor">product owner</span><span class="model">human</span></div>
+          <p class="stage-text">You get a checkpoint naming what was built, the judge result, the
+            adversary findings, every gate outcome, and what was decided without asking. You read the
+            PR, not the diff of 59 config files. Nothing proceeds to the next phase until you merge
+            and say go.</p>
+          <div class="io"><span class="r">the pull request</span><span class="r">the board</span></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>Where everything is written</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>File</th><th>Holds</th><th>Written by</th><th>When</th></tr></thead>
+        <tbody>
+          <tr><td class="f">tracker/BOARD.md</td><td>Phase index and status</td><td>Lead</td><td>Phase open and close</td></tr>
+          <tr><td class="f">tracker/phase_N.M.md</td><td>Tickets and adversary findings</td><td>Lead, builders, judge, each on its own states</td><td>Continuously</td></tr>
+          <tr><td class="f">tracker/board.html</td><td>The page you read</td><td>The renderer, via hook</td><td>Automatically, on every board edit</td></tr>
+          <tr><td class="f">LEARNINGS.md</td><td>What broke and what fixed it</td><td>Whoever hit the problem</td><td>At the moment of failure</td></tr>
+          <tr><td class="f">DECISIONS.md</td><td>Choices between alternatives</td><td>Lead</td><td>When a choice is made</td></tr>
+          <tr><td class="f">source and tests</td><td>The actual product</td><td>Builders</td><td>During the phase</td></tr>
+          <tr><td class="f">the locked specs</td><td>PRD, tech spec, memo</td><td>Nobody</td><td>Frozen until step 6.2</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Which model runs where</h2>
+    <p class="stage-text" style="margin-bottom:14px">These are build-time models, the agents that
+      write System 3. They are separate from the product's own guard, plan, and synth runtime tiers,
+      which route models per user query at serve time and get chosen by model-bench at build phase
+      7.0. The rule: spend reasoning where a mistake is expensive and cascades, spend cheaply where
+      the task is bounded and the instructions are clear.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Role</th><th>Model</th><th>Effort</th><th>Why this tier</th></tr></thead>
+        <tbody>
+          <tr><td>Lead, planning and decomposition</td><td class="f">Opus 5</td><td>high</td><td>A bad split cascades into every builder downstream. The most expensive place to be wrong.</td></tr>
+          <tr><td>Lead, mechanical steps</td><td class="f">Opus 5</td><td>low</td><td>Same session, but cutting a branch and closing a board need no reasoning. Keep the lead thin.</td></tr>
+          <tr><td>Researcher, bulk reading</td><td class="f">Haiku 4.5</td><td>low</td><td>The cost is input tokens, not reasoning. Reading an API doc does not need a frontier model.</td></tr>
+          <tr><td>Researcher, analysis</td><td class="f">Sonnet 5</td><td>medium</td><td>When the research needs a judgment rather than a summary.</td></tr>
+          <tr><td>Builder</td><td class="f">Sonnet 5</td><td>medium</td><td>Well-scoped construction against clear acceptance criteria.</td></tr>
+          <tr><td>Sub-planner</td><td class="f">Opus 5</td><td>high</td><td>The same cascade risk as the lead's own decomposition.</td></tr>
+          <tr><td>Judge</td><td class="f">Opus 5</td><td>high or xhigh</td><td>A missed defect here is the most expensive thing in the loop, because it ships.</td></tr>
+          <tr><td>Adversary</td><td class="f">Opus 5</td><td>high</td><td>Finding a fluent, plausible, wrong answer needs real adversarial reasoning. A cheap model will not find what the judge missed.</td></tr>
+          <tr><td>Test writer</td><td class="f">Sonnet 5</td><td>medium</td><td>Bounded work against a finished artifact.</td></tr>
+          <tr><td>Integrator</td><td class="f">Sonnet 5</td><td>medium</td><td>Wiring only, and only when builders produced isolated pieces.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Where this can still go wrong</h2>
+    <div class="callout">
+      <h3>Three known weak points, stated rather than hidden</h3>
+      <p>A board edit made through a shell command instead of the Edit tool bypasses the sync hook
+        and leaves your page stale. Mitigated by re-rendering at phase close, not eliminated.</p>
+      <p>The golden fixtures at phase 5.1 have no named domain sign-off owner. If an expected answer
+        is wrong, a wrong agent passes the gate, which is the exact failure the gate exists to catch.</p>
+      <p>Playwright is not installed. Until it is, the UI gate on phases 1.2 and 4.5 has nothing
+        behind it.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>What this costs you</h2>
+    <div class="you-note">
+      <p>Two touchpoints per phase: a checkpoint to read, and a pull request to merge. More on
+        phases 1.2 and 4.5, where you judge whether the interface actually feels right, which no
+        agent can do for you. Between those, nothing needs you unless something blocks, and a
+        blocked stop is a clean end state rather than a failure to hide.</p>
+    </div>
+  </section>
+
+  <footer>
+    Generated 2026-07-26 from the Phase 5 harness. The loop repeats 26 times, once per build phase
+    in section 25. Step 6.2, the one reconciliation pause, sits between phase 2.2 and phase 3.0.
+  </footer>
+
+</div>
