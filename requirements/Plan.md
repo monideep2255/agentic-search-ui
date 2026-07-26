@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-07-25.
 | Phase 6: build (bossman execution) | Not started |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 102 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), and the Step 4.0 API capability sheet. The dated change log is in Revision history at the end of this document.
+Decisions logged: 109 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), and the Step 4.0 API capability sheet. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -539,12 +539,13 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Summary of what happens next
 
-Phase 1, Phase 2, and Phase 3 are complete, with 102 decisions logged, the Phase 1 synthesis and the evaluation playbook written, and the PRD locked. Phase 4 (the tech spec and strategic memo) is open: Step 4.0 (the API deep dive) is complete and Step 4.1 (outline the tech spec) is next, then updating our tools (Phase 5), then building the prototype and v1 (Phase 6). We debate. We decide. We log decisions.
+Phase 1, Phase 2, and Phase 3 are complete, with 109 decisions logged, the Phase 1 synthesis and the evaluation playbook written, and the PRD locked. Phase 4 (the tech spec and strategic memo) is open: Step 4.0 (the API deep dive) is complete and Step 4.1 (outline the tech spec) is next, then updating our tools (Phase 5), then building the prototype and v1 (Phase 6). We debate. We decide. We log decisions.
 
 One phase at a time. No skipping.
 
 ## Revision history
 
+- 2026-07-25: Logged the Step 4.1 core-architecture decisions: the core service contract and versioned event stream (Decision A) with builder-only cost visibility, the coordinator-worker harness with the reader scoped to untrusted free text only (Decision C), transport-per-phase for Layer 1 (Decision D), the deterministic Write-step trust signal with a refuse fallback link (Decision E), personalization kept out of the grounding path (Decision F), and the feedback-loop and session-memory mechanism (Decision G). Step 4.1 remaining work: the tech-spec outline plus the parked threads (the A/B model-combination mechanism, the acceptable-staleness threshold, the concurrency queue strategy, the provenance type's four added fields). 109 decisions logged.
 - 2026-07-25: Completed Phase 4 Step 4.0, the NCBI and enrichment API current-state deep dive. Deliverable: `requirements/phase_4/API_capability_sheet.md`, live-verified against production endpoints, fresh-context graded with six fixes applied. All three Phase 2 feasibility flags resolved (Q1, Q5, Q6); the moat cap holds at seven. Opened the Step 4.1 architecture discussion (core-outward frame accepted); flagged Layer 1 reachability from the deployed agent as an open decision. Added the plan-then-fan-out rule. 102 decisions logged.
 - 2026-07-24: Opened Phase 4 (technical specification), Step 4.0 next. Set the build-phase doc-review cadence: the PRD, tech spec, and strategic memo freeze after Phase 4 and update only at the Step 6.2 reconciliation, and new-intake is swept once at Step 6.2 rather than continuously (Step 6.2 and the how-new-information-gets-incorporated section updated). Declined three third-party NCBI MCP servers as inbound dependencies, kept as reference only. 94 decisions logged.
 - 2026-07-22: Completed Phase 2 (Steps 2.1 to 2.5) and produced the evaluation playbook (the moat test with the no-general-tool-equivalent bar, the seven-question v1 must-pass set plus the fast-follow and expansion pool, the coverage metric, the offline eval gate, model selection, and the online feedback loop). Completed Phase 3: drafted and locked the PRD. 90 decisions logged.
