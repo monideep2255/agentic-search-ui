@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-07-24.
+Kick-off: 2026-05-06. Last updated: 2026-07-25.
 
 ## Status at a glance
 
@@ -12,12 +12,12 @@ Kick-off: 2026-05-06. Last updated: 2026-07-24.
 | Phase 1: source review and architecture decisions | Complete, all 13 steps (2026-07-21) |
 | Phase 2: competency questions and evaluation playbook | Complete, all 5 steps (2026-07-22) |
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
-| Phase 4: technical specification | In progress (opened 2026-07-24, Step 4.0 next) |
+| Phase 4: technical specification | In progress (Step 4.0 complete 2026-07-25, Step 4.1 next) |
 | Phase 5: system and tooling updates | Not started |
 | Phase 6: build (bossman execution) | Not started |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 94 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, and the PRD (locked). The dated change log is in Revision history at the end of this document.
+Decisions logged: 102 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), and the Step 4.0 API capability sheet. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -316,15 +316,17 @@ Phase 3 output: `requirements/PRD.md`
 
 ## Phase 4: technical specification
 
-Status: IN PROGRESS (opened 2026-07-24; Step 4.0 next)
+Status: IN PROGRESS (opened 2026-07-24; Step 4.0 complete 2026-07-25, Step 4.1 next)
 
 Goal: write the tech spec. Translates PRD requirements into implementation decisions: what to build, how, in what order.
 
 Prerequisites: PRD locked.
 
-### Step 4.0: NCBI and enrichment API current-state deep dive
+### Step 4.0: NCBI and enrichment API current-state deep dive - COMPLETE (2026-07-25)
 
 System 3 depends heavily on the NCBI E-utilities, the Datasets API v2, Variation Services, and the Layer 3 enrichment APIs (PubTator3, LitVar2, LitSense, ClinicalTrials.gov). Before writing the tool specifications, deep dive the current state of each: live endpoints, request and response schemas, the exact fields each competency question needs, rate limits, auth, and empty-result and error behavior, plus any drift since the Phase 1 survey in `docs/NCBI_databases_and_APIs_reference.md`. Output: a per-API capability sheet that every tool specification in Step 4.1 is written against. This converts the lightweight Phase 2 feasibility notes (the "can we answer this today" checks taken during CQ tiering) into verified API behavior. Discuss and confirm scope before drafting.
+
+Deliverable: `requirements/phase_4/API_capability_sheet.md` (365 lines), live-verified 2026-07-25 against production NCBI and enrichment endpoints, fresh-context graded per self-eval-loop with six grade fixes applied. All three Phase 2 feasibility flags resolved (Q1 dbVar interval-overlap via a two-step tool, Q5 Pathogen Detection via the FTP results tree, Q6 SRA metadata via two-tier access); the moat cap holds at seven with no demotions. Layer 1 stays trusted from its gate-verified server doc, re-verified live in Phase 6.
 
 ### Step 4.1: outline the tech spec
 
@@ -537,12 +539,13 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Summary of what happens next
 
-Phase 1, Phase 2, and Phase 3 are complete, with 94 decisions logged, the Phase 1 synthesis and the evaluation playbook written, and the PRD locked. Phase 4 (the tech spec and strategic memo) is now open, starting with Step 4.0, then updating our tools (Phase 5), then building the prototype and v1 (Phase 6). We debate. We decide. We log decisions.
+Phase 1, Phase 2, and Phase 3 are complete, with 102 decisions logged, the Phase 1 synthesis and the evaluation playbook written, and the PRD locked. Phase 4 (the tech spec and strategic memo) is open: Step 4.0 (the API deep dive) is complete and Step 4.1 (outline the tech spec) is next, then updating our tools (Phase 5), then building the prototype and v1 (Phase 6). We debate. We decide. We log decisions.
 
 One phase at a time. No skipping.
 
 ## Revision history
 
+- 2026-07-25: Completed Phase 4 Step 4.0, the NCBI and enrichment API current-state deep dive. Deliverable: `requirements/phase_4/API_capability_sheet.md`, live-verified against production endpoints, fresh-context graded with six fixes applied. All three Phase 2 feasibility flags resolved (Q1, Q5, Q6); the moat cap holds at seven. Opened the Step 4.1 architecture discussion (core-outward frame accepted); flagged Layer 1 reachability from the deployed agent as an open decision. Added the plan-then-fan-out rule. 102 decisions logged.
 - 2026-07-24: Opened Phase 4 (technical specification), Step 4.0 next. Set the build-phase doc-review cadence: the PRD, tech spec, and strategic memo freeze after Phase 4 and update only at the Step 6.2 reconciliation, and new-intake is swept once at Step 6.2 rather than continuously (Step 6.2 and the how-new-information-gets-incorporated section updated). Declined three third-party NCBI MCP servers as inbound dependencies, kept as reference only. 94 decisions logged.
 - 2026-07-22: Completed Phase 2 (Steps 2.1 to 2.5) and produced the evaluation playbook (the moat test with the no-general-tool-equivalent bar, the seven-question v1 must-pass set plus the fast-follow and expansion pool, the coverage metric, the offline eval gate, model selection, and the online feedback loop). Completed Phase 3: drafted and locked the PRD. 90 decisions logged.
 - 2026-07-21: Completed Phase 1 (Steps 1.7 to 1.13) and wrote the Phase 1 synthesis.
