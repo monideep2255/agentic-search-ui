@@ -8,12 +8,17 @@ Last updated: 2026-07-26.
 
 ## Status counts
 
-| Status | Count |
-|--------|-------|
-| Done | 5 |
-| In progress | 0 |
-| Blocked | 0 |
-| To do | 26 |
+Listed in flow order. Work moves left to right on the board, from `todo` to `done`.
+
+| Status | Count | Who may set it |
+|--------|-------|----------------|
+| To do | 26 | Lead |
+| In progress | 0 | The builder that claimed it |
+| Blocked | 0 | The builder that hit the block, reason required |
+| In review | 0 | The builder that finished |
+| Done | 5 | Judge only, never the builder |
+
+`blocked` sits mid-flow rather than on the way to done, because it is where work stalls, not a step toward finishing.
 
 ## Planning phases
 

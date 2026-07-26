@@ -183,6 +183,7 @@
   .stat[data-tone="done"] .stat-value { color: var(--done); }
   .stat[data-tone="active"] .stat-value { color: var(--active); }
   .stat[data-tone="blocked"] .stat-value { color: var(--blocked); }
+  .stat[data-tone="review"] .stat-value { color: var(--accent); }
   .stat[data-tone="todo"] .stat-value { color: var(--todo); }
 
   /* ---- meters ---- */
@@ -257,13 +258,34 @@
 
   /* ---- kanban ---- */
 
+  .board-section { display: flex; flex-direction: column; gap: 12px; }
+
+  .flow-note {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .flow-rule {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--line), var(--accent));
+  }
+
+  .flow-arrow { color: var(--accent); font-size: 13px; line-height: 1; }
+
   .board-scroll { overflow-x: auto; padding-bottom: 6px; }
 
   .board {
     display: grid;
-    grid-template-columns: repeat(4, minmax(268px, 1fr));
-    gap: 16px;
-    min-width: 1120px;
+    grid-template-columns: repeat(5, minmax(244px, 1fr));
+    gap: 14px;
+    min-width: 1264px;
   }
 
   .col { display: flex; flex-direction: column; gap: 10px; }
@@ -445,10 +467,10 @@
   </header>
 
   <section class="summary" aria-label="Status counts">
-    <div class="stat" data-tone="done">
-      <span class="stat-label">Done</span>
-      <span class="stat-value">5</span>
-      <span class="stat-note">planning phases</span>
+    <div class="stat" data-tone="todo">
+      <span class="stat-label">To do</span>
+      <span class="stat-value">26</span>
+      <span class="stat-note">build phases</span>
     </div>
     <div class="stat" data-tone="active">
       <span class="stat-label">In progress</span>
@@ -460,15 +482,20 @@
       <span class="stat-value">0</span>
       <span class="stat-note">no hard blockers</span>
     </div>
-    <div class="stat" data-tone="todo">
-      <span class="stat-label">To do</span>
-      <span class="stat-value">26</span>
-      <span class="stat-note">build phases</span>
+    <div class="stat" data-tone="review">
+      <span class="stat-label">In review</span>
+      <span class="stat-value">0</span>
+      <span class="stat-note">awaiting the judge</span>
+    </div>
+    <div class="stat" data-tone="done">
+      <span class="stat-label">Done</span>
+      <span class="stat-value">5</span>
+      <span class="stat-note">planning phases</span>
     </div>
     <div class="stat">
       <span class="stat-label">Open flags</span>
       <span class="stat-value">3</span>
-      <span class="stat-note">need resolving before their phase</span>
+      <span class="stat-note">resolve before their phase</span>
     </div>
   </section>
 
@@ -505,8 +532,16 @@
   </div>
   </div>
 
-  <div class="board-scroll">
-    <div class="board" id="board"></div>
+  <div class="board-section">
+    <div class="flow-note">
+      <span>Work moves left to right</span>
+      <span class="flow-rule" aria-hidden="true"></span>
+      <span class="flow-arrow" aria-hidden="true">&#9656;</span>
+    </div>
+
+    <div class="board-scroll">
+      <div class="board" id="board"></div>
+    </div>
   </div>
 
   <section>
@@ -585,11 +620,14 @@
     { id: "7.1", group: "v1", status: "todo", title: "A and B mechanism", body: "Online randomized routing across orchestrator and planner combinations, human-gated.", deps: ["7.0", "5.0"], flags: [], gates: [] }
   ];
 
+  // Left to right is the direction work travels. Blocked sits where work
+  // stalls, which is mid-progress, not on the way to done.
   var COLUMNS = [
-    { key: "done", label: "Done", tone: "var(--done)" },
+    { key: "todo", label: "To do", tone: "var(--todo)" },
     { key: "in-progress", label: "In progress", tone: "var(--active)" },
     { key: "blocked", label: "Blocked", tone: "var(--blocked)" },
-    { key: "todo", label: "To do", tone: "var(--todo)" }
+    { key: "in-review", label: "In review", tone: "var(--accent)" },
+    { key: "done", label: "Done", tone: "var(--done)" }
   ];
 
   var activeFilter = "all";
