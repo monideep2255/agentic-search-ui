@@ -84,7 +84,7 @@ History:
 
 ### T-1.0-03: run() contract stub wired to the FastAPI boundary
 
-Status: in-progress
+Status: in-review
 Refine: refined
 Branch: phase/1.0-fastapi-skeleton
 Depends on: T-1.0-01, T-1.0-02
@@ -115,6 +115,8 @@ Evidence:
 History:
 - 2026-07-27 lead: created, scoped from Section 2.1 and Section 1.4-1.5, phase 1.0 open, depends on T-1.0-01 and T-1.0-02
 - 2026-07-27 lead: reviewed with product owner, stub scope (guard + done only, not all eleven event types) confirmed as-is, no blocking feedback, refined
+- 2026-07-27 builder-run-stub: claimed, built directly on phase branch (sole active builder, no worktree needed)
+- 2026-07-27 builder-run-stub: finished, 173 passed (full suite), clean compile, ruff clean, commit cf630a9, in-review, awaiting judge
 
 ## Findings
 
