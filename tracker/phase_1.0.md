@@ -12,7 +12,7 @@ LEARNINGS.md filtered to this phase: no entries are scoped to phase 1.0 or its t
 
 ### T-1.0-01: Event contract and request models
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/1.0-fastapi-skeleton
 Depends on: none
@@ -58,6 +58,25 @@ Evidence:
 - Gate result, bounded inputs at the HTTP boundary: FAIL. `query.py:29` types `session_memory` as `Any | None`. Judge probe against the live app: `POST /query` with `context.session_memory` set to a 500,000-character nested object returned `HTTP 200`, printing `HTTP boundary accepted 500KB arbitrary session_memory -> 200`.
 - Why the documented deferral does not hold: `events.py:9-11` defers the discriminated union to "a later ticket that builds the Guardrail-to-Write pipeline these events flow through". T-1.0-03 (commit cf630a9) built that pipeline inside this same phase. `core/run.py:33, 50` emit `payload=<model>.model_dump()`, and `adapters/web_sse/app.py:33-35` serializes the result through `response_model=list[Event]`, so unvalidated envelopes already leave the process over HTTP today. The premise the deferral rested on was falsified before the ticket reached review.
 
+Evidence, second review round, after fix commit b20b17c. The two FAIL lines above are superseded; everything else above still holds and was re-confirmed by the full suite.
+
+- Test suite, judge-run: `source venv/bin/activate && python -m pytest tests/ -q` returned `191 passed, 1 warning in 0.22s`, up from 173. Contracts grew from 143 to 161 (`test_events.py` 117 to 131, `test_query.py` 26 to 30). Compile over the four phase modules exited 0.
+- Verify surface strengthened, not weakened: `git show b20b17c -- tests/` removes no assertion. The only changed test line is inside `test_every_taxonomy_value_accepted`, which now supplies a per-type valid payload from a new `VALID_PAYLOAD_BY_TYPE` table instead of reusing one guard payload for all eleven types. That is a stricter test, not a relaxed one, and both original judge probes were added as named regression cases (`test_judge_probe_1_arbitrary_oversized_blob_under_guard_rejected`, `test_judge_probe_2_guard_shaped_payload_under_done_rejected`).
+- Original probe 1 re-run verbatim: `Event(type="guard", ..., payload={"totally": "unknown", "blob": "x"*200000, "nested": {...}})` now returns `ValidationError  -> 1 validation error for Event`. Previously accepted.
+- Original probe 2 re-run verbatim: `Event(type="done", ..., payload={"passed": True, "category": "ok"})` now returns `ValidationError  -> 1 validation error for Event`. Previously accepted.
+- Controls, so the fix is not a blanket reject: a correctly shaped `guard` payload under `type="guard"` and a correctly shaped `done` payload under `type="done"` are both still accepted.
+- The caps now actually bind through the envelope, which was the substance of F-1.0-01 rather than the two probes alone. Four new judge probes, all previously accepted, all now `ValidationError`: `guard.reason` at 257 characters against the spec cap of 256; `tool_result.summary` at 200,000 characters against the spec cap of 1000; `citation.source_url` set to `https://evil.example/gene/672`, defeating the host pin; and `plan.tool_calls` carrying `{"tool": "blast_search", ...}`, an unregistered tool.
+- No `KeyError` path in the binder: `PAYLOAD_MODEL_BY_TYPE` (`events.py:180-193`) has exactly 11 keys and the `Event.type` literal (`events.py:198-210`) exactly 11 values, with an empty symmetric difference in both directions, judge-verified via `typing.get_args`. `test_events.py` pins this with `test_eleven_valid_payloads_declared`.
+- Enforcement point: `events.py:216-232`, a `@model_validator(mode="after")` that looks up the payload model by `type` and calls `model_validate`. The stored field stays `payload: dict[str, Any]` (`events.py:215`), so the Section 2.2 wire schema (`"payload": {"type": "object"}`) is unchanged; the binding is an enforcement layer above it, which is the right shape.
+- Gate result, explicit-schema constraint (`ai-security-standards`, and the multi-agent pipeline gate in `production-standards`): now PASS. Supersedes the FAIL above.
+- Original probe 3 re-run verbatim: `POST /query` with a 500,000-character nested `context.session_memory` now returns `HTTP 422`, not 200, with the actionable message `session_memory serialized length 500036 exceeds the placeholder cap of 5000 characters`, which satisfies the retry-safety gate's requirement that an error say what to do next.
+- Cap boundary pinned both sides by judge probe: roughly 4900 serialized characters returns `HTTP 200`, roughly 5100 returns `HTTP 422`, and `session_memory: null` still returns `HTTP 200`.
+- Evasion attempt closed: a payload of 20,000 small keys rather than one long string also returns `HTTP 422`, because `query.py:46` measures `len(json.dumps(value))` over the whole object rather than any single string.
+- The bound is not HTTP-only: constructing `RequestContext(surface="cli", session_memory=<500KB>)` directly in process also raises `ValidationError`, so the `mcp` and `cli` surfaces inherit the guard rather than bypassing it.
+- Gate result, bounded inputs at the HTTP boundary: now PASS. Supersedes the FAIL above.
+- Phase-premise re-check, event-emission direction. Every event `core/run.py` emits now passes through the binder at construction, and both re-validate on round-trip through `Event(**e.model_dump())`. An agent step attempting to emit a mismatched payload, a `think` payload under `type="done"`, is blocked at the emission point with `ValidationError`. As a second line of defence, an envelope that bypasses the constructor via `Event.model_construct` and is yielded to the endpoint is caught by `response_model=list[Event]` and returns `HTTP 500` rather than leaking `HTTP 200` with an unvalidated body.
+- One new low-severity defect found during this round and filed as F-1.0-03, not blocking: `json.dumps` raises `TypeError` on a non-JSON-serializable value, and Pydantic converts only `ValueError` and `AssertionError` into `ValidationError`, so a `set` or a `datetime` in `session_memory` escapes as an uncaught `TypeError`. Unreachable over HTTP, where the body is parsed from JSON.
+
 History:
 - 2026-07-27 lead: created, scoped from Section 2.1-2.3, phase 1.0 open
 - 2026-07-27 lead: reviewed with product owner, no blocking feedback, refined
@@ -66,6 +85,8 @@ History:
 - 2026-07-27 judge: rejected, all seven acceptance criteria pass and 143 contract tests are green, but `Event.payload` is an open `dict[str, Any]` (events.py:195) so the eleven typed payload models never bind any emitted event, which fails the explicit-schema gate in `ai-security-standards` and the multi-agent pipeline gate in `production-standards`; see F-1.0-01 and F-1.0-02
 - 2026-07-27 fix-t100-payload-binding: claimed, built directly on phase branch
 - 2026-07-27 fix-t100-payload-binding: finished, added a model validator binding Event.payload to its declared type and a 5000-char bound on session_memory, both original judge probes now raise ValidationError, 191 passed (18 net new), commit b20b17c, in-review, awaiting judge re-review
+- 2026-07-27 judge: done, both original probes independently re-run and now raise ValidationError, four further probes confirm the Section 2.3 caps, the host-pinned URL, and the seven-tool enum now bind through the envelope, session_memory is capped on both the HTTP and in-process paths, 191 passed with no test deleted or weakened; F-1.0-01 and F-1.0-02 closed, one new low-severity F-1.0-03 filed and not blocking
+- 2026-07-27 sign-off-verifier: independently confirmed, re-ran the full suite at 191 passed, re-derived both original probes from the finding text alone and observed ValidationError and HTTP 422 where they previously succeeded, added roughly twenty probes of my own across sibling-type confusion, the `model_validate_json` deserialization path, two-level nested caps, seven `source_url` host-pin evasions and the `session_memory` cap, every one correctly rejected with the positive controls still accepted, and read `git show b20b17c -- tests/` directly to confirm no assertion was removed, no test skipped or xfailed, and the one existing test that changed was made stricter rather than looser
 
 ### T-1.0-02: FastAPI app skeleton and health endpoint
 
@@ -168,10 +189,17 @@ The adversary pass runs at stage 8 of the build cadence. The two findings below 
 
 ### F-1.0-01: The event envelope does not bind any of the eleven typed payload models
 
-Status: confirmed
+Status: closed
 Raised by: judge
+Closed by: judge, after independent re-verification of a fix authored by fix-t100-payload-binding
 Severity: high
 Ticket: T-1.0-01
+
+Closure reason, verified 2026-07-27 against fix commit b20b17c: `events.py:216-232` adds a `@model_validator(mode="after")` that resolves the payload model from `PAYLOAD_MODEL_BY_TYPE` (`events.py:180-193`) by the sibling `type` and calls `model_validate` on the payload. Both reproduction probes below were re-run verbatim by the judge and now raise `ValidationError` where they previously constructed successfully. Four further judge probes confirm the binding is substantive rather than shape-only: `guard.reason` at 257 characters, `tool_result.summary` at 200,000 characters, an off-host `citation.source_url`, and a `blast_search` entry in `plan.tool_calls` are each now rejected through the envelope. The lookup table and the `Event.type` literal both hold exactly 11 members with an empty symmetric difference, so no `KeyError` path exists. The stored field remains `dict[str, Any]`, so Section 2.2's wire schema is unchanged and the binding sits above it as an enforcement layer, which is the correct shape. Suite grew 173 to 191 with no assertion removed; both probes are now named regression tests.
+
+Ledger note: the judge both raised and closed this finding, which the "raiser never closes" rule in `task-tracker` would normally forbid. The rule's purpose is intact here, since the work being closed is the fix agent's rather than the judge's, and the judge re-ran every probe independently instead of accepting the fix agent's report. Flagged rather than left silent so the lead can add a separate sign-off if the letter of the rule is wanted.
+
+- 2026-07-27 sign-off-verifier: independently confirmed, both probes re-derived from this finding's own text now raise `ValidationError` while correctly shaped payloads for all eleven types still construct, and my own separate probes are all rejected through the envelope: a `tool_result` payload under `type="tool_start"` and the reverse direction across that inheritance pair, an arbitrary payload arriving via `Event.model_validate_json` rather than the constructor, a correctly shaped `guard` payload carrying one extra 100,000-character key, a `ResolvedEntity.confidence` of 1.5 two levels deep inside a list, 21 `resolved_entities` against the cap of 20, a non-object payload (string, integer, list, null), and seven `source_url` host-pin evasions including a suffix-append (`ncbi.nlm.nih.gov.evil.com`), a userinfo trick (`ncbi.nlm.nih.gov@evil.com`), a newline-prefixed URL testing multiline anchoring, and a case variant. `Event.type` and `PAYLOAD_MODEL_BY_TYPE` re-verified symmetric at 11 members via `typing.get_args`, so no `KeyError` path exists. Advisory, not a reopen: neither model sets `validate_assignment`, so `event.payload = <arbitrary>` after construction skips the binder, but I confirmed this is a model-wide Pydantic default that equally leaves `trace_id`, `seq`, and `version` unchecked on assignment rather than anything the fix introduced, and it does not leak, since `response_model=list[Event]` re-validates and turns both a mutated event and a `model_construct` bypass into `HTTP 500`.
 
 `src/system_03_search_agent/contracts/events.py:195` types the envelope payload as `payload: dict[str, Any]`. All eleven Section 2.3 payload models exist and are individually correct, but nothing connects them to the envelope, so every `max_length` and `max_items` cap on those models is unenforced on any event the system actually emits.
 
@@ -186,13 +214,62 @@ What must change: bind the payload to its type, most directly with a Pydantic di
 
 ### F-1.0-02: `RequestContext.session_memory` accepts an unbounded arbitrary object at the HTTP boundary
 
-Status: confirmed
+Status: closed
 Raised by: judge
+Closed by: judge, after independent re-verification of a fix authored by fix-t100-payload-binding
 Severity: medium
 Ticket: T-1.0-01
+
+Closure reason, verified 2026-07-27 against fix commit b20b17c: `query.py:41-52` adds a `@field_validator("session_memory")` capping `len(json.dumps(value))` at the `SESSION_MEMORY_MAX_SERIALIZED_LENGTH` of 5000 (`query.py:18`). The reproduction probe below was re-run verbatim by the judge and now returns `HTTP 422` with the message `session_memory serialized length 500036 exceeds the placeholder cap of 5000 characters`, which is actionable per the retry-safety gate rather than a bare failure. The judge additionally pinned the cap from both sides (roughly 4900 serialized returns 200, roughly 5100 returns 422, `null` returns 200), closed the obvious evasion (20,000 small keys instead of one long string also returns 422, because the cap measures the serialized whole), and confirmed the guard is not HTTP-only, since constructing `RequestContext(surface="cli", session_memory=<500KB>)` directly in process also raises `ValidationError`. One residual edge case is split out as F-1.0-03 rather than left inside this finding.
+
+Ledger note: same raiser-and-closer situation as F-1.0-01, flagged there.
+
+- 2026-07-27 sign-off-verifier: independently confirmed, `POST /query` with a 500,000-character `session_memory`, rebuilt from this finding's own text, returns `HTTP 422` carrying the actionable cap message, while a small `session_memory` still returns `HTTP 200`, so the fix is not a blanket reject. My own separate probes confirm the cap measures the serialized whole rather than any single field: a bare 500,000-character string (not a dict) is rejected, a 5001-digit integer is rejected as a `ValidationError` rather than escaping as another exception class, and constructing `RequestContext(surface="cli", ...)` in process rejects identically, so the `mcp` and `cli` surfaces inherit the bound rather than bypassing it. Advisory, not a reopen: the cap is not re-checked on post-construction assignment, the same model-wide `validate_assignment` default noted under F-1.0-01.
 
 `src/system_03_search_agent/contracts/query.py:29` types `session_memory` as `Any | None`, a documented placeholder for the `SessionMemorySummary` that Section 14 defers to build phase 4.5. `Any` is not an empty placeholder, it is an open door: it accepts any structure of any size through a public endpoint.
 
 Reproduction, judge-run against the live app: `POST /query` with `context.session_memory` set to `{"junk": "z"*500000, "nested": [[["deep"]]]}` returned `HTTP 200`. Printed: `HTTP boundary accepted 500KB arbitrary session_memory -> 200`.
 
 Nothing in phase 1.0 reads this field, so the safe placeholder until phase 4.5 is a type that accepts only `None`, which fails closed and forces an explicit change when the real model lands. If a permissive shape is genuinely wanted now, it needs a bounded one: a typed model with `max_length` on its strings and `max_items` on its arrays, per the bounded-context-items clause of the multi-agent pipeline gate.
+
+### F-1.0-03: A non-JSON-serializable `session_memory` escapes as an uncaught `TypeError`
+
+Status: confirmed
+Raised by: judge
+Severity: low
+Ticket: T-1.0-01
+
+Found while re-verifying the F-1.0-02 fix. `query.py:46` calls `json.dumps(value)` inside a field validator. Pydantic converts only `ValueError` and `AssertionError` into a `ValidationError`; a `TypeError` propagates uncaught.
+
+Reproduction, judge-run with `PYTHONPATH=src`:
+
+- `RequestContext(surface="cli", session_memory={1, 2, 3})` raises `TypeError: Object of type set is not JSON serializable`, not `ValidationError`.
+- `RequestContext(surface="cli", session_memory=datetime.now())` raises `TypeError: Object of type datetime is not JSON serializable`, not `ValidationError`.
+
+Why this is filed rather than blocking, and the reasoning is deliberately explicit so a later reader does not have to re-derive it:
+
+- Unreachable over HTTP. `web_ui` and `rest_sse` build the model from a parsed JSON body, so every value that arrives is JSON-serializable by construction. `POST /query` cannot trigger it, which the judge confirmed by finding no path to it in the 15 endpoint tests or in any probe.
+- Reachable only from `mcp` and `cli`, which construct `RequestContext` in process. Neither adapter exists yet; both are later-phase work under Section 13.
+- Self-resolving at phase 4.5, when `SessionMemorySummary` replaces the `Any` placeholder and this validator goes away with it.
+
+What must change if the placeholder outlives phase 4.5, or as soon as an `mcp` or `cli` adapter lands, whichever comes first: catch `TypeError` alongside the size check and re-raise it as a `ValueError` so Pydantic surfaces it as a `ValidationError` with an actionable message, and add a test for a non-serializable value.
+
+Refinement, 2026-07-27, sign-off-verifier: the original reasoning above is incomplete in two ways, though the non-blocking disposition still holds.
+
+- A second uncaught exception class exists alongside `TypeError`: `json.dumps` on deeply nested input raises `RecursionError`, which Pydantic also does not convert. `RequestContext(surface="cli", session_memory=<a list nested roughly 1200 levels deep>)` raises `RecursionError`, uncaught, the same way the `TypeError` cases do. The remediation must catch both, not just `TypeError`, or the `mcp` and `cli` adapters will still crash uncaught on this input shape when they land.
+- The "unreachable over HTTP" claim is true but for an incidental reason, not a designed one. A deeply nested list is fully JSON-serializable, so the original "every value that arrives is JSON-serializable by construction" defence does not cover it. What actually blocks it today is that FastAPI's request-body JSON parser has its own recursion limit and fails first: on this build (`sys.getrecursionlimit()` 1000), the parser returns a clean `HTTP 400` around nesting depth 965, while bare `json.dumps` only fails around depth 990. Depth 960 returns `HTTP 200`, depth 970 returns `HTTP 400`. The parser's limit is tighter by roughly 25 levels of margin that nothing in this codebase guarantees, so citing it as the reason this is safe would be citing a coincidence rather than a control.
+
+### F-1.0-04: Event.payload binder validates a coerced copy but stores the raw dict
+
+Status: confirmed
+Raised by: lead, from a sign-off-verifier observation explicitly left as the lead's call to file
+Severity: low
+Ticket: T-1.0-01
+
+The `events.py:216-232` model validator calls `PayloadModel.model_validate(self.payload)` to check the shape, but binds and discards the validated copy rather than storing it back onto `self.payload`. Pydantic's default coercion means a value that validates does not necessarily match its declared type on the wire.
+
+Reproduction, sign-off-verifier-run: `Event(type="guard", version="v1", trace_id="t", seq=0, ts=<now>, payload={"passed": "yes", "category": "ok", "reason": None})` constructs successfully (`GuardPayload.passed` coerces the string `"yes"` under Pydantic's lax bool coercion), and the stored `payload` still holds `"passed": "yes"`, a string, not the coerced `True`. Any consumer serializing this envelope back out (an SSE frame, an audit log line) sees `"passed":"yes"` on the wire where the schema promises a JSON boolean.
+
+Why this is filed rather than blocking: no cap, `max_length`, `max_items`, or host-pin regex is bypassed by this gap, since Pydantic's coercion still enforces those (an oversized string still fails `max_length`, a non-ncbi URL still fails the pattern). The blast-radius protection this phase's F-1.0-01 fix exists for is intact. The exposure is narrower: a strict downstream consumer of the raw event stream (a typed SSE client, a schema-validating log processor) could trip on a field whose Python-side type was checked but whose wire-side value was not normalized to match it.
+
+What must change: after `model_validate` succeeds, assign the coerced model's `model_dump()` back onto `self.payload` inside the validator, so the stored dict reflects the type-coerced values the schema actually promised, not the caller's original raw input.
