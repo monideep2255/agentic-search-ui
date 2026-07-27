@@ -84,7 +84,7 @@ History:
 
 ### T-1.0-03: run() contract stub wired to the FastAPI boundary
 
-Status: todo
+Status: in-progress
 Refine: refined
 Branch: phase/1.0-fastapi-skeleton
 Depends on: T-1.0-01, T-1.0-02
