@@ -36,6 +36,7 @@ search-agent = "system_03_search_agent.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 markers = [
     "integration: marks tests that hit the network or require external services",
 ]

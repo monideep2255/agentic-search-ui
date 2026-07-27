@@ -1,0 +1,275 @@
+# Phase 1.0: FastAPI skeleton
+
+Branch: `phase/1.0-fastapi-skeleton`
+Depends on: none
+Delivers (Technical_specification.md Section 25): FastAPI app skeleton, health endpoint, the core `run(query, context)` contract stub with the v1 event taxonomy typed (Decision A), Pydantic boundary validation.
+
+Dependency check at open: no dependency phases exist for 1.0, so this phase can start immediately. Confirmed against Section 25's build order table (line 3178) and the dependency graph (lines 3223 to 3291), where `1.0` has no incoming edge.
+
+LEARNINGS.md filtered to this phase: no entries are scoped to phase 1.0 or its tools specifically. Standing lessons that still apply while working this phase: use the Edit tool for structured files, never `sed` or a heredoc, since PostToolUse hooks (including `sync-board.sh` for this file) only fire on Edit and Write; verify `.claude/` tracked status with `git check-ignore -v` rather than trusting `git status` if anything looks silently unwritten; keep bulk edits away from `DECISIONS.md`.
+
+## Tickets
+
+### T-1.0-01: Event contract and request models
+
+Status: done
+Refine: refined
+Branch: phase/1.0-fastapi-skeleton
+Depends on: none
+Spec: Technical_specification.md Section 2.1 (lines 217-248), Section 2.2 (lines 250-272), Section 2.3 (lines 274-371)
+
+Files this ticket may create or modify:
+- `src/system_03_search_agent/contracts/__init__.py`
+- `src/system_03_search_agent/contracts/query.py`
+- `src/system_03_search_agent/contracts/events.py`
+- `tests/system_03_search_agent/contracts/test_query.py`
+- `tests/system_03_search_agent/contracts/test_events.py`
+
+Acceptance criteria:
+- [x] `Query(text=...)` rejects a `text` value over 2000 characters, a `session_id` or `trace_id` over 64 characters, and a `user_id` over 64 characters, each with a validation error, never a silent truncation
+- [x] Constructing a `Query` with no `text` field raises a validation error; constructing one with only `text`, `session_id`, and `trace_id` succeeds with `user_id` defaulting to `None` and `audience_depth` defaulting to `"researcher"`
+- [x] `RequestContext.surface` accepts only `web_ui`, `rest_sse`, `mcp`, or `cli` and rejects any other string
+- [x] The `Event` envelope model requires `type`, `version`, `trace_id`, `seq`, `ts`, and `payload`; omitting any one of these raises a validation error
+- [x] `Event.type` accepts only the eleven taxonomy values (`guard`, `think`, `plan`, `tool_start`, `tool_result`, `token`, `citation`, `trust_signal`, `cost`, `error`, `done`) and rejects any other string
+- [x] `Event.version` is fixed to the literal `"v1"` and rejects any other value
+- [x] Every payload model declares `max_length` on its string fields and `max_items` on its array fields matching Section 2.3's values (`think.narrative` 500, `think.resolved_entities` 20, `plan.narrative` 500, `plan.tool_calls` 20 with `tool` an enum pinned to the seven registered tool names, `tool_result.summary` 1000, `error.scope` 16, `error.source` 64, `error.error_class` 16, `error.message` 256)
+
+Breakdown:
+- [x] `Query` and `RequestContext` models
+- [x] `Event` envelope model
+- [x] Per-type payload models (guard, think, plan, tool_start, tool_result, token, citation, trust_signal, cost, error, done)
+- [x] Tests: valid input, invalid input, missing/null input for each model above
+
+Evidence:
+- Test suite, judge-run, not builder-reported: `source venv/bin/activate && python -m pytest tests/ -q` returned `173 passed, 1 warning in 0.26s`. Contracts subset `python -m pytest tests/system_03_search_agent/contracts -q` returned `143 passed in 0.07s` (117 in `test_events.py`, 26 in `test_query.py`).
+- Compile: `python -m py_compile src/system_03_search_agent/contracts/query.py src/system_03_search_agent/contracts/events.py src/system_03_search_agent/adapters/web_sse/app.py src/system_03_search_agent/core/run.py` exited 0.
+- AC1: `query.py:15-18` declares `max_length` 2000 on `text`, 64 on `session_id`, `trace_id`, and `user_id`. `test_query.py:43-45, 51-53, 59-61, 68-70` assert `ValidationError` one character over each; `test_query.py:72-75` asserts a 2500-character `text` raises rather than truncating.
+- AC2: `query.py:15-21`, all three ids required, `user_id` defaults `None`, `audience_depth` defaults `"researcher"`. `test_query.py:20-22` (missing `text` raises), `test_query.py:32-35` (minimal construction, both defaults asserted).
+- AC3: `query.py:27` is `Literal["web_ui", "rest_sse", "mcp", "cli"]`. `test_query.py:98-105` parametrizes all four and asserts `desktop_app` rejected.
+- AC4: `events.py:178-195` declares all six fields, none optional. `test_events.py:54-61` parametrizes deletion of each of the six and asserts `ValidationError`.
+- AC5: `events.py:178-190` is a `Literal` of exactly the eleven values. `test_events.py:70-77` parametrizes all eleven plus an unknown-value rejection; `test_events.py:79-80` pins the count at 11.
+- AC6: `events.py:191` is `Literal["v1"]`. `test_events.py:83-90` asserts `v1` accepted, `v2` rejected.
+- AC7: all eleven payload models verified field by field against Section 2.3. Spec-numbered values match exactly: `ThinkPayload.narrative` 500 (`events.py:71`), `resolved_entities` 20 (`events.py:75`), `PlanPayload.narrative` 500 (`events.py:90`), `tool_calls` 20 (`events.py:91`), `ToolCall.tool` pinned to the seven-name `ToolName` literal (`events.py:27-35, 82`), `ToolResultPayload.summary` 1000 (`events.py:104`), `ErrorPayload.scope` 16, `source` 64, `error_class` 16, `message` 256 (`events.py:157-162`). Unnumbered string fields carry conservative caps per the multi-agent gate. `CitationPayload.source_url` is host-pinned at `events.py:47, 123-125`, proven by `test_events.py:394-405`.
+- Gate result, type hints: pass. Every field on all fifteen models in `query.py` and `events.py` is annotated.
+- Gate result, snake_case: pass. No camelCase field or argument in either module.
+- Gate result, secrets: pass. `grep -rniE "(api[_-]?key|secret|password|token|dsn|connection[_-]?string)\s*=\s*[\"']" src tests` returned no matches.
+- Gate result, v1 scope boundary: pass. The only `blast` occurrence in the branch is `test_events.py:253`, a negative test asserting `ToolCall(tool="blast_search", ...)` is rejected by the seven-tool enum. That enforces the boundary rather than crossing it.
+- Gate result, explicit-schema constraint (`ai-security-standards`, and the multi-agent pipeline gate in `production-standards`): FAIL. `events.py:195` types the envelope's payload as `payload: dict[str, Any]`, an open dict. Judge probe, `PYTHONPATH=src python`: `Event(type="guard", version="v1", trace_id="t", seq=0, ts=..., payload={"totally": "unknown", "blob": "x"*200000, "nested": {...}})` was accepted, printing `PROBE1 open-dict payload accepted, keys= ['totally', 'blob', 'nested'] blob_len= 200000`. A second probe accepted `type="done"` carrying a `guard` payload: `PROBE2 type=done carrying a guard payload accepted: done {'passed': True, 'category': 'ok'}`. The eleven typed payload models are therefore never enforced on any event the system actually emits, and the `max_length` and `max_items` caps verified under AC7 do not bind the blast radius of a real payload.
+- Gate result, bounded inputs at the HTTP boundary: FAIL. `query.py:29` types `session_memory` as `Any | None`. Judge probe against the live app: `POST /query` with `context.session_memory` set to a 500,000-character nested object returned `HTTP 200`, printing `HTTP boundary accepted 500KB arbitrary session_memory -> 200`.
+- Why the documented deferral does not hold: `events.py:9-11` defers the discriminated union to "a later ticket that builds the Guardrail-to-Write pipeline these events flow through". T-1.0-03 (commit cf630a9) built that pipeline inside this same phase. `core/run.py:33, 50` emit `payload=<model>.model_dump()`, and `adapters/web_sse/app.py:33-35` serializes the result through `response_model=list[Event]`, so unvalidated envelopes already leave the process over HTTP today. The premise the deferral rested on was falsified before the ticket reached review.
+
+Evidence, second review round, after fix commit b20b17c. The two FAIL lines above are superseded; everything else above still holds and was re-confirmed by the full suite.
+
+- Test suite, judge-run: `source venv/bin/activate && python -m pytest tests/ -q` returned `191 passed, 1 warning in 0.22s`, up from 173. Contracts grew from 143 to 161 (`test_events.py` 117 to 131, `test_query.py` 26 to 30). Compile over the four phase modules exited 0.
+- Verify surface strengthened, not weakened: `git show b20b17c -- tests/` removes no assertion. The only changed test line is inside `test_every_taxonomy_value_accepted`, which now supplies a per-type valid payload from a new `VALID_PAYLOAD_BY_TYPE` table instead of reusing one guard payload for all eleven types. That is a stricter test, not a relaxed one, and both original judge probes were added as named regression cases (`test_judge_probe_1_arbitrary_oversized_blob_under_guard_rejected`, `test_judge_probe_2_guard_shaped_payload_under_done_rejected`).
+- Original probe 1 re-run verbatim: `Event(type="guard", ..., payload={"totally": "unknown", "blob": "x"*200000, "nested": {...}})` now returns `ValidationError  -> 1 validation error for Event`. Previously accepted.
+- Original probe 2 re-run verbatim: `Event(type="done", ..., payload={"passed": True, "category": "ok"})` now returns `ValidationError  -> 1 validation error for Event`. Previously accepted.
+- Controls, so the fix is not a blanket reject: a correctly shaped `guard` payload under `type="guard"` and a correctly shaped `done` payload under `type="done"` are both still accepted.
+- The caps now actually bind through the envelope, which was the substance of F-1.0-01 rather than the two probes alone. Four new judge probes, all previously accepted, all now `ValidationError`: `guard.reason` at 257 characters against the spec cap of 256; `tool_result.summary` at 200,000 characters against the spec cap of 1000; `citation.source_url` set to `https://evil.example/gene/672`, defeating the host pin; and `plan.tool_calls` carrying `{"tool": "blast_search", ...}`, an unregistered tool.
+- No `KeyError` path in the binder: `PAYLOAD_MODEL_BY_TYPE` (`events.py:180-193`) has exactly 11 keys and the `Event.type` literal (`events.py:198-210`) exactly 11 values, with an empty symmetric difference in both directions, judge-verified via `typing.get_args`. `test_events.py` pins this with `test_eleven_valid_payloads_declared`.
+- Enforcement point: `events.py:216-232`, a `@model_validator(mode="after")` that looks up the payload model by `type` and calls `model_validate`. The stored field stays `payload: dict[str, Any]` (`events.py:215`), so the Section 2.2 wire schema (`"payload": {"type": "object"}`) is unchanged; the binding is an enforcement layer above it, which is the right shape.
+- Gate result, explicit-schema constraint (`ai-security-standards`, and the multi-agent pipeline gate in `production-standards`): now PASS. Supersedes the FAIL above.
+- Original probe 3 re-run verbatim: `POST /query` with a 500,000-character nested `context.session_memory` now returns `HTTP 422`, not 200, with the actionable message `session_memory serialized length 500036 exceeds the placeholder cap of 5000 characters`, which satisfies the retry-safety gate's requirement that an error say what to do next.
+- Cap boundary pinned both sides by judge probe: roughly 4900 serialized characters returns `HTTP 200`, roughly 5100 returns `HTTP 422`, and `session_memory: null` still returns `HTTP 200`.
+- Evasion attempt closed: a payload of 20,000 small keys rather than one long string also returns `HTTP 422`, because `query.py:46` measures `len(json.dumps(value))` over the whole object rather than any single string.
+- The bound is not HTTP-only: constructing `RequestContext(surface="cli", session_memory=<500KB>)` directly in process also raises `ValidationError`, so the `mcp` and `cli` surfaces inherit the guard rather than bypassing it.
+- Gate result, bounded inputs at the HTTP boundary: now PASS. Supersedes the FAIL above.
+- Phase-premise re-check, event-emission direction. Every event `core/run.py` emits now passes through the binder at construction, and both re-validate on round-trip through `Event(**e.model_dump())`. An agent step attempting to emit a mismatched payload, a `think` payload under `type="done"`, is blocked at the emission point with `ValidationError`. As a second line of defence, an envelope that bypasses the constructor via `Event.model_construct` and is yielded to the endpoint is caught by `response_model=list[Event]` and returns `HTTP 500` rather than leaking `HTTP 200` with an unvalidated body.
+- One new low-severity defect found during this round and filed as F-1.0-03, not blocking: `json.dumps` raises `TypeError` on a non-JSON-serializable value, and Pydantic converts only `ValueError` and `AssertionError` into `ValidationError`, so a `set` or a `datetime` in `session_memory` escapes as an uncaught `TypeError`. Unreachable over HTTP, where the body is parsed from JSON.
+
+History:
+- 2026-07-27 lead: created, scoped from Section 2.1-2.3, phase 1.0 open
+- 2026-07-27 lead: reviewed with product owner, no blocking feedback, refined
+- 2026-07-27 builder-events-models: claimed, built in worktree agent-a97ddd816d5a2984b
+- 2026-07-27 builder-events-models: finished, 143 passed, clean compile, commit 5c6bfd5, merged into phase branch, in-review, awaiting judge
+- 2026-07-27 judge: rejected, all seven acceptance criteria pass and 143 contract tests are green, but `Event.payload` is an open `dict[str, Any]` (events.py:195) so the eleven typed payload models never bind any emitted event, which fails the explicit-schema gate in `ai-security-standards` and the multi-agent pipeline gate in `production-standards`; see F-1.0-01 and F-1.0-02
+- 2026-07-27 fix-t100-payload-binding: claimed, built directly on phase branch
+- 2026-07-27 fix-t100-payload-binding: finished, added a model validator binding Event.payload to its declared type and a 5000-char bound on session_memory, both original judge probes now raise ValidationError, 191 passed (18 net new), commit b20b17c, in-review, awaiting judge re-review
+- 2026-07-27 judge: done, both original probes independently re-run and now raise ValidationError, four further probes confirm the Section 2.3 caps, the host-pinned URL, and the seven-tool enum now bind through the envelope, session_memory is capped on both the HTTP and in-process paths, 191 passed with no test deleted or weakened; F-1.0-01 and F-1.0-02 closed, one new low-severity F-1.0-03 filed and not blocking
+- 2026-07-27 sign-off-verifier: independently confirmed, re-ran the full suite at 191 passed, re-derived both original probes from the finding text alone and observed ValidationError and HTTP 422 where they previously succeeded, added roughly twenty probes of my own across sibling-type confusion, the `model_validate_json` deserialization path, two-level nested caps, seven `source_url` host-pin evasions and the `session_memory` cap, every one correctly rejected with the positive controls still accepted, and read `git show b20b17c -- tests/` directly to confirm no assertion was removed, no test skipped or xfailed, and the one existing test that changed was made stricter rather than looser
+
+### T-1.0-02: FastAPI app skeleton and health endpoint
+
+Status: done
+Refine: refined
+Branch: phase/1.0-fastapi-skeleton
+Depends on: none
+Spec: Technical_specification.md Section 25 row 1.0 (line 3178), Section 1.6 (lines 193-209)
+
+Files this ticket may create or modify:
+- `src/system_03_search_agent/adapters/__init__.py`
+- `src/system_03_search_agent/adapters/web_sse/__init__.py`
+- `src/system_03_search_agent/adapters/web_sse/app.py`
+- `tests/system_03_search_agent/adapters/web_sse/test_health.py`
+
+Acceptance criteria:
+- [x] `GET /health` returns HTTP 200 with a JSON body when the app is running, and requires no authentication
+- [x] The FastAPI app imports and boots cleanly under uvicorn with zero import errors, verified by a successful test-client startup
+- [x] The app lives under `adapters/web_sse/` per Section 1.6's target module layout, not mixed into `core/` or `contracts/`
+
+Breakdown:
+- [x] FastAPI app instance and router wiring
+- [x] `/health` endpoint
+- [x] Test-client startup test
+
+Evidence:
+- Test suite, judge-run: `source venv/bin/activate && python -m pytest tests/ -q` returned `173 passed, 1 warning in 0.26s`. Adapter subset `python -m pytest tests/system_03_search_agent/adapters -q` returned `18 passed, 1 warning in 0.12s` (3 in `test_health.py`, 15 in `test_query_endpoint.py`).
+- Compile: `python -m py_compile` over the four phase modules exited 0.
+- AC1: `app.py:17-19` declares `@app.get("/health", response_model=HealthResponse)` returning `HealthResponse(status="ok")`, with no dependency, no security scheme, and no auth middleware anywhere in the module. `test_health.py:8-11` asserts HTTP 200, `test_health.py:14-17` asserts the JSON body is exactly `{"status": "ok"}`, `test_health.py:20-23` asserts the status code is neither 401 nor 403.
+- AC2: every one of the 18 adapter tests constructs `TestClient(app)` and issues a request, which exercises the full import and app-startup path. All 18 pass, so the module imports and the ASGI app instantiates with zero import errors.
+- AC3: the file is at `src/system_03_search_agent/adapters/web_sse/app.py`, matching Section 1.6's `adapters/web_sse/  # FastAPI + SSE` line (Technical_specification.md:204). `git diff --stat main..HEAD` confirms nothing was added under `core/` or `contracts/` by this ticket's commit a971d42.
+- Gate result, type hints: pass. `app.py:18` is `def get_health() -> HealthResponse`, fully annotated, and `HealthResponse.status: str` is annotated at `app.py:14`.
+- Gate result, snake_case: pass.
+- Gate result, endpoint tests for valid, invalid, and missing input: pass with one not-applicable. `/health` is a `GET` with no path parameter, no query parameter, and no body, so it has no invalid-input or missing-input surface to exercise. The three valid-path tests are the complete testable set for this endpoint.
+- Gate result, secrets: pass. No credential literal added; the `grep` over `src` and `tests` returned no matches.
+- Gate result, v1 scope boundary: pass. A health endpoint and an app instance only, no compute tool and nothing on the PRD out-of-scope list.
+- Advisory, not blocking: `HealthResponse.status` is a bare `str` with no `max_length` (`app.py:14`). It is server-authored and outbound-only, never populated from untrusted input, so the multi-agent gate's blast-radius rationale does not bite. `Literal["ok"]` would be the tighter declaration.
+
+History:
+- 2026-07-27 lead: created, scoped from Section 25 row 1.0 and Section 1.6, phase 1.0 open
+- 2026-07-27 lead: reviewed with product owner, health-endpoint scope (bare liveness check, not a dependency check) confirmed as-is, no blocking feedback, refined
+- 2026-07-27 builder-fastapi-skeleton: claimed, built in worktree agent-a900df30addfbeecd
+- 2026-07-27 builder-fastapi-skeleton: correctly flagged a broken shared venv (its diagnosis held up under lead re-verification) and a repo-wide pytest sys.path gap; finished after both were fixed, 3 passed, clean compile, commit a971d428, merged into phase branch, in-review, awaiting judge
+- 2026-07-27 judge: done, all three acceptance criteria verified with cited file:line and re-run test output (18 adapter tests green), every applicable gate passes, no defect found
+
+### T-1.0-03: run() contract stub wired to the FastAPI boundary
+
+Status: done
+Refine: refined
+Branch: phase/1.0-fastapi-skeleton
+Depends on: T-1.0-01, T-1.0-02
+Spec: Technical_specification.md Section 2.1 (lines 217-230), Section 1.4-1.5 (lines 179-191)
+
+Files this ticket may create or modify:
+- `src/system_03_search_agent/core/__init__.py`
+- `src/system_03_search_agent/core/run.py`
+- `src/system_03_search_agent/adapters/web_sse/app.py` (wiring only, endpoint added)
+- `tests/system_03_search_agent/core/test_run.py`
+- `tests/system_03_search_agent/adapters/web_sse/test_query_endpoint.py`
+
+Acceptance criteria:
+- [x] `run(query: Query, context: RequestContext)` is declared as `AsyncIterator[Event]`, and every item it yields is an instance of the `Event` model from T-1.0-01, never a bare string or dict
+- [x] Calling `run()` with a valid stub `Query` yields at least one `guard` event and terminates with exactly one `done` event, both schema-valid against the `Event` envelope
+- [x] The FastAPI query endpoint validates every request against the `Query` and `RequestContext` Pydantic models at the boundary; posting a body missing a required `Query` field returns HTTP 422, never a 500 or a silent default
+- [x] Posting a `Query.text` value over 2000 characters to the endpoint returns a validation error response and never reaches `run()`
+- [x] The stub `run()` makes no direct LLM call and no direct tool call; it is a typed scaffold only, deferring the real Guardrail-Think-Plan-Act-Write loop to build phase 2.0
+
+Breakdown:
+- [x] `run()` stub implementation
+- [x] Query endpoint wiring in `app.py`
+- [x] Tests: valid input, invalid input, missing/null input on the query endpoint; stub-yield shape test on `run()`
+
+Evidence:
+- Test suite, judge-run: `source venv/bin/activate && python -m pytest tests/ -q` returned `173 passed, 1 warning in 0.26s`. Core subset `python -m pytest tests/system_03_search_agent/core -q` returned `12 passed in 0.02s`; the endpoint file `test_query_endpoint.py` contributes 15 of the 18 adapter tests.
+- Compile: `python -m py_compile` over the four phase modules exited 0.
+- AC1: `run.py:17` is `async def run(query: Query, context: RequestContext) -> AsyncIterator[Event]`, with `AsyncIterator` imported from `collections.abc` at `run.py:10`. `test_run.py:36-37` asserts `inspect.isasyncgenfunction(run)`; `test_run.py:39-42` asserts the return annotation names both `AsyncIterator` and `Event`; `test_run.py:47-51` asserts every yielded item is an `Event` instance, which rules out a bare string or dict.
+- AC2: `run.py:27-34` yields the `guard` event, `run.py:44-51` yields the `done` event, both constructed through the `Event` model so envelope validation runs on every yield. `test_run.py:54-57` (at least one `guard`), `test_run.py:74-78` (exactly one `done`, and it is last), `test_run.py:60-65` and `test_run.py:81-88` (each payload re-parsed through `GuardPayload` and `DonePayload` respectively). `test_run.py:98-103` additionally asserts `seq` starts at 0, is monotonic, and has no repeats, and `test_run.py:106-109` asserts `ts` is timezone-aware.
+- AC3: `app.py:22-26` declares `QueryRequest` with `model_config = ConfigDict(extra="forbid")` wrapping the `Query` and `RequestContext` models, and `app.py:34` types the path function parameter as `request: QueryRequest`, so FastAPI validates the body before the function body runs. `test_query_endpoint.py:66-71` deletes `query.text` and asserts 422; `:87-92` deletes the whole `query` object and asserts 422; `:94-99` deletes `context` and asserts 422; `:128-131` posts `{}` and asserts 422 explicitly rather than 500; `:101-106` and `:108-113` assert 422 on an out-of-enum `surface` and `audience_depth`; `:115-119` and `:121-126` assert 422 on an unknown field at both the top level and inside `query`, proving `extra="forbid"` reaches the wire.
+- AC4: `test_query_endpoint.py:73-78` posts a 2001-character `text` and asserts 422, and `:80-85` posts exactly 2000 and asserts 200, pinning the boundary rather than only the failure side. The "never reaches `run()`" half is dispositive from the status code: FastAPI returns 422 only from `RequestValidationError`, which is raised during request-body validation before the path operation function is entered, so a 422 is proof the endpoint body never ran. Had `run()` been reached the response would have been 200.
+- AC5: `run.py` imports only `time`, `collections.abc.AsyncIterator`, `datetime`, and the two contracts modules (`run.py:9-14`). No LiteLLM, provider SDK, tools, or harness import exists. `test_run.py:112-123` asserts the module source contains none of `litellm`, `anthropic`, `openai`, `system_03_search_agent.tools`, or `system_03_search_agent.harness`.
+- Gate result, type hints: pass. `run.py:17` and `app.py:18, 34` all carry parameter and return annotations; every test helper is annotated too.
+- Gate result, snake_case: pass.
+- Gate result, endpoint tests for valid, invalid, and missing input: pass. 5 valid-path tests (`test_query_endpoint.py:27-62`) and 10 invalid or missing-input tests (`:65-131`).
+- Gate result, explicit-schema constraint on the request direction: pass. `QueryRequest`, `Query`, and `RequestContext` all set `extra="forbid"`, proven over HTTP by `test_query_endpoint.py:115-126`.
+- Gate result, secrets: pass. No credential literal added.
+- Gate result, v1 scope boundary: pass. The stub emits two events and calls nothing; no compute tool, no BLAST, no sequence-similarity search, no VCF ingestion anywhere in the branch diff.
+- Inherited weakness, tracked against T-1.0-01 not this ticket: `app.py:33` declares `response_model=list[Event]`, which is a validation no-op on payload contents because `Event.payload` is an open `dict[str, Any]`. `core/run.py:33, 50` pass `payload=<model>.model_dump()`, so the typed payload is flattened to an unvalidated dict on the way out. The fix belongs in `contracts/events.py`, which is T-1.0-01's file, not a file this ticket may modify. Filed as F-1.0-01.
+- Not reproduced: the builder's "ruff clean" claim could not be re-run by the judge. `python -m ruff check src tests` returned `No module named ruff` in the shared venv, so this judge neither confirms nor disputes it. Ruff is declared in `pyproject.toml:31` under the `dev` extra but is not installed. Lint is not one of this ticket's acceptance criteria, so it does not gate the close.
+
+History:
+- 2026-07-27 lead: created, scoped from Section 2.1 and Section 1.4-1.5, phase 1.0 open, depends on T-1.0-01 and T-1.0-02
+- 2026-07-27 lead: reviewed with product owner, stub scope (guard + done only, not all eleven event types) confirmed as-is, no blocking feedback, refined
+- 2026-07-27 builder-run-stub: claimed, built directly on phase branch (sole active builder, no worktree needed)
+- 2026-07-27 builder-run-stub: finished, 173 passed (full suite), clean compile, ruff clean, commit cf630a9, in-review, awaiting judge
+- 2026-07-27 judge: done, all five acceptance criteria verified with cited file:line and re-run test output, every applicable gate passes; the open-payload weakness it inherits is F-1.0-01 against T-1.0-01, not a defect in this ticket's own files
+
+## Findings
+
+The adversary pass runs at stage 8 of the build cadence. The two findings below were raised earlier, by the judge at stage 7, because they are the basis of the T-1.0-01 rejection.
+
+### F-1.0-01: The event envelope does not bind any of the eleven typed payload models
+
+Status: closed
+Raised by: judge
+Closed by: judge, after independent re-verification of a fix authored by fix-t100-payload-binding
+Severity: high
+Ticket: T-1.0-01
+
+Closure reason, verified 2026-07-27 against fix commit b20b17c: `events.py:216-232` adds a `@model_validator(mode="after")` that resolves the payload model from `PAYLOAD_MODEL_BY_TYPE` (`events.py:180-193`) by the sibling `type` and calls `model_validate` on the payload. Both reproduction probes below were re-run verbatim by the judge and now raise `ValidationError` where they previously constructed successfully. Four further judge probes confirm the binding is substantive rather than shape-only: `guard.reason` at 257 characters, `tool_result.summary` at 200,000 characters, an off-host `citation.source_url`, and a `blast_search` entry in `plan.tool_calls` are each now rejected through the envelope. The lookup table and the `Event.type` literal both hold exactly 11 members with an empty symmetric difference, so no `KeyError` path exists. The stored field remains `dict[str, Any]`, so Section 2.2's wire schema is unchanged and the binding sits above it as an enforcement layer, which is the correct shape. Suite grew 173 to 191 with no assertion removed; both probes are now named regression tests.
+
+Ledger note: the judge both raised and closed this finding, which the "raiser never closes" rule in `task-tracker` would normally forbid. The rule's purpose is intact here, since the work being closed is the fix agent's rather than the judge's, and the judge re-ran every probe independently instead of accepting the fix agent's report. Flagged rather than left silent so the lead can add a separate sign-off if the letter of the rule is wanted.
+
+- 2026-07-27 sign-off-verifier: independently confirmed, both probes re-derived from this finding's own text now raise `ValidationError` while correctly shaped payloads for all eleven types still construct, and my own separate probes are all rejected through the envelope: a `tool_result` payload under `type="tool_start"` and the reverse direction across that inheritance pair, an arbitrary payload arriving via `Event.model_validate_json` rather than the constructor, a correctly shaped `guard` payload carrying one extra 100,000-character key, a `ResolvedEntity.confidence` of 1.5 two levels deep inside a list, 21 `resolved_entities` against the cap of 20, a non-object payload (string, integer, list, null), and seven `source_url` host-pin evasions including a suffix-append (`ncbi.nlm.nih.gov.evil.com`), a userinfo trick (`ncbi.nlm.nih.gov@evil.com`), a newline-prefixed URL testing multiline anchoring, and a case variant. `Event.type` and `PAYLOAD_MODEL_BY_TYPE` re-verified symmetric at 11 members via `typing.get_args`, so no `KeyError` path exists. Advisory, not a reopen: neither model sets `validate_assignment`, so `event.payload = <arbitrary>` after construction skips the binder, but I confirmed this is a model-wide Pydantic default that equally leaves `trace_id`, `seq`, and `version` unchecked on assignment rather than anything the fix introduced, and it does not leak, since `response_model=list[Event]` re-validates and turns both a mutated event and a `model_construct` bypass into `HTTP 500`.
+
+`src/system_03_search_agent/contracts/events.py:195` types the envelope payload as `payload: dict[str, Any]`. All eleven Section 2.3 payload models exist and are individually correct, but nothing connects them to the envelope, so every `max_length` and `max_items` cap on those models is unenforced on any event the system actually emits.
+
+Reproduction, judge-run with `PYTHONPATH=src`:
+
+- `Event(type="guard", version="v1", trace_id="t", seq=0, ts=<now>, payload={"totally": "unknown", "blob": "x"*200000, "nested": {"a": [1,2,3]}})` is accepted. Printed: `PROBE1 open-dict payload accepted, keys= ['totally', 'blob', 'nested'] blob_len= 200000`.
+- `Event(type="done", version="v1", trace_id="t", seq=1, ts=<now>, payload={"passed": True, "category": "ok"})` is accepted, so `type` does not in fact discriminate the payload. Printed: `PROBE2 type=done carrying a guard payload accepted: done {'passed': True, 'category': 'ok'}`.
+
+Why this is not a deferrable v1.1 concern: `core/run.py:33` and `run.py:50` already emit `payload=<model>.model_dump()`, and `adapters/web_sse/app.py:33-35` already serializes those envelopes out of the process through `response_model=list[Event]`. Unvalidated envelopes cross a process boundary today, not in a later phase. Section 2.3 states plainly that "`type` discriminates the payload shape", and `production-standards`' multi-agent pipeline gate requires validation at every hop with `maxLength` and `maxItems` binding, precisely to cap blast radius when an upstream payload goes hostile.
+
+What must change: bind the payload to its type, most directly with a Pydantic discriminated union keyed on `type`, so `Event` rejects both an unknown-keyed payload and a payload whose shape does not match its declared `type`. Add a test asserting each mismatch is rejected, including the two probes above as regression cases. Section 2.2's `"payload": {"type": "object"}` describes the wire schema and does not forbid a tighter in-process model; the JSON that model serializes to still satisfies it.
+
+### F-1.0-02: `RequestContext.session_memory` accepts an unbounded arbitrary object at the HTTP boundary
+
+Status: closed
+Raised by: judge
+Closed by: judge, after independent re-verification of a fix authored by fix-t100-payload-binding
+Severity: medium
+Ticket: T-1.0-01
+
+Closure reason, verified 2026-07-27 against fix commit b20b17c: `query.py:41-52` adds a `@field_validator("session_memory")` capping `len(json.dumps(value))` at the `SESSION_MEMORY_MAX_SERIALIZED_LENGTH` of 5000 (`query.py:18`). The reproduction probe below was re-run verbatim by the judge and now returns `HTTP 422` with the message `session_memory serialized length 500036 exceeds the placeholder cap of 5000 characters`, which is actionable per the retry-safety gate rather than a bare failure. The judge additionally pinned the cap from both sides (roughly 4900 serialized returns 200, roughly 5100 returns 422, `null` returns 200), closed the obvious evasion (20,000 small keys instead of one long string also returns 422, because the cap measures the serialized whole), and confirmed the guard is not HTTP-only, since constructing `RequestContext(surface="cli", session_memory=<500KB>)` directly in process also raises `ValidationError`. One residual edge case is split out as F-1.0-03 rather than left inside this finding.
+
+Ledger note: same raiser-and-closer situation as F-1.0-01, flagged there.
+
+- 2026-07-27 sign-off-verifier: independently confirmed, `POST /query` with a 500,000-character `session_memory`, rebuilt from this finding's own text, returns `HTTP 422` carrying the actionable cap message, while a small `session_memory` still returns `HTTP 200`, so the fix is not a blanket reject. My own separate probes confirm the cap measures the serialized whole rather than any single field: a bare 500,000-character string (not a dict) is rejected, a 5001-digit integer is rejected as a `ValidationError` rather than escaping as another exception class, and constructing `RequestContext(surface="cli", ...)` in process rejects identically, so the `mcp` and `cli` surfaces inherit the bound rather than bypassing it. Advisory, not a reopen: the cap is not re-checked on post-construction assignment, the same model-wide `validate_assignment` default noted under F-1.0-01.
+
+`src/system_03_search_agent/contracts/query.py:29` types `session_memory` as `Any | None`, a documented placeholder for the `SessionMemorySummary` that Section 14 defers to build phase 4.5. `Any` is not an empty placeholder, it is an open door: it accepts any structure of any size through a public endpoint.
+
+Reproduction, judge-run against the live app: `POST /query` with `context.session_memory` set to `{"junk": "z"*500000, "nested": [[["deep"]]]}` returned `HTTP 200`. Printed: `HTTP boundary accepted 500KB arbitrary session_memory -> 200`.
+
+Nothing in phase 1.0 reads this field, so the safe placeholder until phase 4.5 is a type that accepts only `None`, which fails closed and forces an explicit change when the real model lands. If a permissive shape is genuinely wanted now, it needs a bounded one: a typed model with `max_length` on its strings and `max_items` on its arrays, per the bounded-context-items clause of the multi-agent pipeline gate.
+
+### F-1.0-03: A non-JSON-serializable `session_memory` escapes as an uncaught `TypeError`
+
+Status: confirmed
+Raised by: judge
+Severity: low
+Ticket: T-1.0-01
+
+Found while re-verifying the F-1.0-02 fix. `query.py:46` calls `json.dumps(value)` inside a field validator. Pydantic converts only `ValueError` and `AssertionError` into a `ValidationError`; a `TypeError` propagates uncaught.
+
+Reproduction, judge-run with `PYTHONPATH=src`:
+
+- `RequestContext(surface="cli", session_memory={1, 2, 3})` raises `TypeError: Object of type set is not JSON serializable`, not `ValidationError`.
+- `RequestContext(surface="cli", session_memory=datetime.now())` raises `TypeError: Object of type datetime is not JSON serializable`, not `ValidationError`.
+
+Why this is filed rather than blocking, and the reasoning is deliberately explicit so a later reader does not have to re-derive it:
+
+- Unreachable over HTTP. `web_ui` and `rest_sse` build the model from a parsed JSON body, so every value that arrives is JSON-serializable by construction. `POST /query` cannot trigger it, which the judge confirmed by finding no path to it in the 15 endpoint tests or in any probe.
+- Reachable only from `mcp` and `cli`, which construct `RequestContext` in process. Neither adapter exists yet; both are later-phase work under Section 13.
+- Self-resolving at phase 4.5, when `SessionMemorySummary` replaces the `Any` placeholder and this validator goes away with it.
+
+What must change if the placeholder outlives phase 4.5, or as soon as an `mcp` or `cli` adapter lands, whichever comes first: catch `TypeError` alongside the size check and re-raise it as a `ValueError` so Pydantic surfaces it as a `ValidationError` with an actionable message, and add a test for a non-serializable value.
+
+Refinement, 2026-07-27, sign-off-verifier: the original reasoning above is incomplete in two ways, though the non-blocking disposition still holds.
+
+- A second uncaught exception class exists alongside `TypeError`: `json.dumps` on deeply nested input raises `RecursionError`, which Pydantic also does not convert. `RequestContext(surface="cli", session_memory=<a list nested roughly 1200 levels deep>)` raises `RecursionError`, uncaught, the same way the `TypeError` cases do. The remediation must catch both, not just `TypeError`, or the `mcp` and `cli` adapters will still crash uncaught on this input shape when they land.
+- The "unreachable over HTTP" claim is true but for an incidental reason, not a designed one. A deeply nested list is fully JSON-serializable, so the original "every value that arrives is JSON-serializable by construction" defence does not cover it. What actually blocks it today is that FastAPI's request-body JSON parser has its own recursion limit and fails first: on this build (`sys.getrecursionlimit()` 1000), the parser returns a clean `HTTP 400` around nesting depth 965, while bare `json.dumps` only fails around depth 990. Depth 960 returns `HTTP 200`, depth 970 returns `HTTP 400`. The parser's limit is tighter by roughly 25 levels of margin that nothing in this codebase guarantees, so citing it as the reason this is safe would be citing a coincidence rather than a control.
+
+### F-1.0-04: Event.payload binder validates a coerced copy but stores the raw dict
+
+Status: confirmed
+Raised by: lead, from a sign-off-verifier observation explicitly left as the lead's call to file
+Severity: low
+Ticket: T-1.0-01
+
+The `events.py:216-232` model validator calls `PayloadModel.model_validate(self.payload)` to check the shape, but binds and discards the validated copy rather than storing it back onto `self.payload`. Pydantic's default coercion means a value that validates does not necessarily match its declared type on the wire.
+
+Reproduction, sign-off-verifier-run: `Event(type="guard", version="v1", trace_id="t", seq=0, ts=<now>, payload={"passed": "yes", "category": "ok", "reason": None})` constructs successfully (`GuardPayload.passed` coerces the string `"yes"` under Pydantic's lax bool coercion), and the stored `payload` still holds `"passed": "yes"`, a string, not the coerced `True`. Any consumer serializing this envelope back out (an SSE frame, an audit log line) sees `"passed":"yes"` on the wire where the schema promises a JSON boolean.
+
+Why this is filed rather than blocking: no cap, `max_length`, `max_items`, or host-pin regex is bypassed by this gap, since Pydantic's coercion still enforces those (an oversized string still fails `max_length`, a non-ncbi URL still fails the pattern). The blast-radius protection this phase's F-1.0-01 fix exists for is intact. The exposure is narrower: a strict downstream consumer of the raw event stream (a typed SSE client, a schema-validating log processor) could trip on a field whose Python-side type was checked but whose wire-side value was not normalized to match it.
+
+What must change: after `model_validate` succeeds, assign the coerced model's `model_dump()` back onto `self.payload` inside the validator, so the stored dict reflects the type-coerced values the schema actually promised, not the caller's original raw input.

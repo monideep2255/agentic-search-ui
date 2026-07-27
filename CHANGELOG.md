@@ -44,6 +44,7 @@ Scope note: entries start at commit f90b203 (2026-05-05, "Strip System 1+2 code,
 - tracker/BOARD.md and render_board.py: a real board generator that parses BOARD.md and refuses to write when the board is malformed, plus the sync-board.sh hook that regenerates the views on every edit to a tracker markdown file (76c570d, 0f2048d).
 - Phase_6_execution_flow.html visual and Build_workflow_cadence.md, naming the model and effort for every stage of the build loop (2c2dd80, b4c5616).
 - docs/README.md as an index and organizing layer for the docs folder (f30250b, 1f2ffd0).
+- Build phase 1.0: the FastAPI app skeleton and health endpoint (a971d42), the Pydantic event contract (`Query`, `RequestContext`, the `Event` envelope, and all eleven Section 2.3 payload types) (f2b3614), and the `run()` stub wired to a query endpoint (cf630a9).
 
 ### Changed
 
@@ -69,6 +70,10 @@ Scope note: entries start at commit f90b203 (2026-05-05, "Strip System 1+2 code,
 - Dead paths in skill-adapt-verify, a dead citation in dev-standards, a dead reference in writing-style, and a stale self-eval-loop judge pointer (7ce14ff, 9f0e4b6).
 - Remaining references to the nonexistent qa-gate skill removed from bossman-mode and git-workflow (9f0e4b6).
 - Shell-allowlist-bypass example in production-examples corrected: the permission engine evaluates per shell segment, so the real residual risk is a destructive command smuggled inside a quoted subcommand argument, not a visibly chained command (9f0e4b6).
+- `pytest` could not import `system_03_search_agent` from `src/` with no `PYTHONPATH` set; added `pythonpath = ["src"]` to `pyproject.toml` (d300b2d).
+- `Event.payload` was an open `dict[str, Any]` with nothing binding it to its declared type, and `RequestContext.session_memory` accepted an unbounded arbitrary payload; both fixed with a model validator and a serialized-size cap, independently re-verified (b20b17c).
+- Three ruff findings (import sort order, a deprecated `datetime.timezone.utc` pattern) in `test_events.py` (472df34).
+- `agentic-search-ui`'s own `venv/` had been a wholesale copy of the sibling `agentic-search-data-engineering` repo's venv, with every generated script (`activate`, `pip`) hardcoded to the sibling's path; rebuilt clean, LEARNINGS.md 2026-07-27.
 
 ### Removed
 
@@ -81,3 +86,6 @@ Scope note: entries start at commit f90b203 (2026-05-05, "Strip System 1+2 code,
 - ai-security-standards.md and supply-chain-security.md rules added, covering prompt-injection defense for Layer 2 and Layer 3 retrieved data, least-privilege tools, and pre-install checks for npm, PyPI, and MCP server integrations (d26002e, f243831).
 - Security hooks hardened: `block-bash-delete` extended to catch destructive commands smuggled inside quoted execution-wrapper arguments, `scan-write-secrets` broadened to source files, `block-sensitive-read.sh` added to block reads of `.ssh`, `.aws`, `.gnupg`, `.netrc`, and private-key files (2d3ad66).
 - Security scan milestone gate wired into release-workflow as Step 3, between tests and ship, with a matching pull request template checkbox (87729d4).
+- `setuptools` upgraded to 83.0.0, clearing three known CVEs (a path traversal in `PackageIndex`, an RCE in the download functions, a Unicode-normalization bypass in `MANIFEST.in` exclusions).
+- Accepted `ecdsa` 0.19.2's known CVE (PYSEC-2026-1325, no upstream fix) as a risk for build phase 1.1 to resolve when it implements JWT signing, since nothing in phase 1.0 invokes it; see DECISIONS.md 2026-07-27.
+- Deferred the full `claude-security` multi-agent scan for phase 1.0, since no auth, database, LLM, or external-API surface exists yet; relied on the judge's gate review, two independent adversarial-probe passes, and the always-on `security-guidance` layer instead; see DECISIONS.md 2026-07-27.

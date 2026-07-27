@@ -48,7 +48,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | Not started. No application code exists yet. Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
+| Build (Phases 6-7) | Phase 1.0 complete (FastAPI app skeleton, health endpoint, the Pydantic event contract, a typed run() stub wired to the query endpoint), on branch phase/1.0-fastapi-skeleton pending merge to main. No LangGraph loop, no tools, and no real agent behavior yet. Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
 
 ---
 
@@ -70,7 +70,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Run backend
-uvicorn system_03_search_agent.api.main:app --reload
+uvicorn system_03_search_agent.adapters.web_sse.app:app --reload
 
 # Frontend setup (separate terminal)
 cd frontend
@@ -87,14 +87,18 @@ pytest tests/
 
 ```
 agentic-search-ui/
-  system_03_search_agent/       # Python backend
-    api/                        # FastAPI routes, middleware, SSE
-    agent/                      # LangGraph graph definition, nodes, edges
-    tools/                      # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search
-    models/                     # Multi-model harness, tier routing
-    auth/                       # JWT auth service
-    config/                     # Settings, environment loading
-    cli.py                      # CLI entry point
+  src/
+    system_03_search_agent/     # Python backend (build phase 1.0: core, contracts, adapters/web_sse live)
+      core/                     # LangGraph graph: the 5-step loop, run() entrypoint
+      contracts/                # Pydantic event models and JSONSchemas
+      harness/                  # Tiers, cost caps, timeouts, coordinator-worker, cache hooks
+      tools/                    # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search
+      adapters/
+        web_sse/                # FastAPI + SSE
+        graphql/                # Strawberry schema over the same tools
+        mcp/                    # MCP server, outbound-only
+        cli/                    # Thin REST client
+      data/                     # Postgres models: auth, interactions, cq_candidates
   frontend/                     # React UI
     src/
     public/
@@ -107,7 +111,7 @@ agentic-search-ui/
   .claude/                      # Claude Code rules, skills, agents, hooks (tracked in git for v1 development)
   CLAUDE.md                     # Claude Code instructions
   AGENTS.md                     # Instructions for other AI agents
-  DECISIONS.md                  # Architecture decision log (124 rows)
+  DECISIONS.md                  # Architecture decision log (126 rows)
   LEARNINGS.md                  # What broke during the build and what fixed it
   CHANGELOG.md                  # Keep a Changelog format, all entries currently Unreleased
   pyproject.toml
@@ -180,4 +184,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-07-26
+Last updated: 2026-07-27
