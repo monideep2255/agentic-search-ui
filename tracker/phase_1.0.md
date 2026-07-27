@@ -12,7 +12,7 @@ LEARNINGS.md filtered to this phase: no entries are scoped to phase 1.0 or its t
 
 ### T-1.0-01: Event contract and request models
 
-Status: in-progress
+Status: in-review
 Refine: refined
 Branch: phase/1.0-fastapi-skeleton
 Depends on: none
@@ -46,6 +46,8 @@ Evidence:
 History:
 - 2026-07-27 lead: created, scoped from Section 2.1-2.3, phase 1.0 open
 - 2026-07-27 lead: reviewed with product owner, no blocking feedback, refined
+- 2026-07-27 builder-events-models: claimed, built in worktree agent-a97ddd816d5a2984b
+- 2026-07-27 builder-events-models: finished, 143 passed, clean compile, commit 5c6bfd5, merged into phase branch, in-review, awaiting judge
 
 ### T-1.0-02: FastAPI app skeleton and health endpoint
 
