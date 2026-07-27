@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-07-26.
+Kick-off: 2026-05-06. Last updated: 2026-07-27.
 
 ## Status at a glance
 
@@ -14,10 +14,10 @@ Kick-off: 2026-05-06. Last updated: 2026-07-26.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | Not started, next up. Kickoff prompt in `requirements/phase_6/Continuation_prompt.md` |
+| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) underway: build phase 1.0 (FastAPI skeleton, health endpoint, the event contract, the run() stub) done and merged (PR #5, 2026-07-27). Next up: build phase 1.1 |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 124 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 126 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -619,12 +619,13 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Summary of what happens next
 
-Phases 1 through 4 are complete, with the Phase 1 synthesis, the evaluation playbook, the locked PRD, the verified API capability sheet, the locked technical specification, and the strategic memo all written. Phase 5 (system and tooling updates) opened 2026-07-26 and its four steps are done: the build harness, skills, rules, root documents, and reference docs are now consistent with the locked specification. 124 decisions logged. Next: Phase 6, building the prototype and then v1. We debate. We decide. We log decisions.
+Phases 1 through 4 are complete, with the Phase 1 synthesis, the evaluation playbook, the locked PRD, the verified API capability sheet, the locked technical specification, and the strategic memo all written. Phase 5 (system and tooling updates) opened 2026-07-26 and its four steps are done: the build harness, skills, rules, root documents, and reference docs are now consistent with the locked specification. Phase 6 (build) opened 2026-07-27: build phase 1.0 (the FastAPI skeleton and typed event contract) is done and merged into main, judge-reviewed with one rejection-and-fix round and an independent sign-off verification. 126 decisions logged. Next: build phase 1.1, then the rest of Step 6.1's prototype. We debate. We decide. We log decisions.
 
 One phase at a time. No skipping.
 
 ## Revision history
 
+- 2026-07-27: Opened Phase 6 (build) and shipped build phase 1.0 on branch phase/1.0-fastapi-skeleton, merged as PR #5: the FastAPI app skeleton, the health endpoint, the Pydantic event contract (Query, RequestContext, the Event envelope, all eleven Section 2.3 payload types), and a typed run() stub wired to a query endpoint. Judge rejected once (an open-dict payload not bound to its declared type, an unbounded session_memory field), both fixed and independently re-verified by a separate agent per task-tracker's raiser-never-closes rule. 191 tests passing. Two supply-chain items resolved: setuptools upgraded to clear three CVEs, ecdsa's unfixable CVE accepted as a risk deferred to phase 1.1. The full multi-agent security scan was deliberately skipped for this phase (no auth, database, LLM, or external-API surface yet), relying on the judge's gates and two independent adversarial-probe passes instead.
 - 2026-07-26: Opened Phase 5 on branch phase/5.0-system-tooling-updates and completed Steps 5.1 to 5.4. Scope was set by a coverage map: 303 obligations extracted from the three locked documents by ten parallel agents, 57 of which had no owner.
   - Step 5.1: overhauled bossman-mode. Fixed the branch-naming defect (both executing skills created `feature/description` against the `phase/N.M-description` convention every rule states, which also silently disabled ship's MR step). Made tech spec Section 25 the source of truth for the 26 build phases. Made worktree isolation the default for concurrent file-mutating builders with read-only agents in the shared checkout. Added the product owner role, per-phase product-owner-required marking, a scope check, and a Playwright gate for UI phases. Wired `verify`, `eval-harness`, and `dev-standards` into the phase-end chain, none of which the skill had ever invoked.
   - Step 5.2: added two skills, `task-tracker` and `learnings`. Rewrote `eval-harness`, which never referenced the evaluation playbook and was missing 13 of its 17 demands. Added rules `tool-call-budgets` and `v1-scope-boundary`, adopted `prompt-cache-discipline` from the personal-os reference, extended `production-standards` and `system-design-patterns`, and narrowed `dependency-tracking` to hooks only. Zero of the four skills this document originally floated were built, because the coverage map showed the gaps were rules and docs.
