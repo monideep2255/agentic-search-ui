@@ -1,9 +1,15 @@
 """Tests for the Query and RequestContext models (Section 2.1)."""
 
+import json
+
 import pytest
 from pydantic import ValidationError
 
-from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.contracts.query import (
+    SESSION_MEMORY_MAX_SERIALIZED_LENGTH,
+    Query,
+    RequestContext,
+)
 
 
 def _query_kwargs(**overrides: object) -> dict[str, object]:
@@ -118,3 +124,48 @@ class TestRequestContextSurface:
         # session_memory is typed Any | None as a placeholder.
         context = RequestContext(surface="web_ui", session_memory={"turns": []})
         assert context.session_memory == {"turns": []}
+
+
+class TestRequestContextSessionMemoryBound:
+    """F-1.0-02: session_memory is a placeholder type, not an unbounded one.
+
+    Regression coverage for the judge's probe (a 500,000-character nested
+    payload posted to context.session_memory, previously accepted with
+    HTTP 200) plus a check that a reasonably-sized summary still succeeds.
+    """
+
+    def test_oversized_session_memory_rejected(self) -> None:
+        # Reproduces the judge's probe shape: a large nested payload well
+        # past the placeholder cap.
+        oversized = {"notes": "n" * 500_000, "turns": [{"role": "user"}] * 100}
+        assert len(json.dumps(oversized)) > SESSION_MEMORY_MAX_SERIALIZED_LENGTH
+        with pytest.raises(ValidationError):
+            RequestContext(surface="web_ui", session_memory=oversized)
+
+    def test_session_memory_at_cap_accepted(self) -> None:
+        # Pad a string value so the serialized payload lands exactly at the
+        # cap, proving the boundary is inclusive.
+        payload = {"summary": ""}
+        overhead = len(json.dumps(payload))
+        padded = {"summary": "s" * (SESSION_MEMORY_MAX_SERIALIZED_LENGTH - overhead)}
+        assert len(json.dumps(padded)) == SESSION_MEMORY_MAX_SERIALIZED_LENGTH
+        context = RequestContext(surface="web_ui", session_memory=padded)
+        assert context.session_memory == padded
+
+    def test_session_memory_over_cap_by_one_rejected(self) -> None:
+        payload = {"summary": ""}
+        overhead = len(json.dumps(payload))
+        padded = {
+            "summary": "s" * (SESSION_MEMORY_MAX_SERIALIZED_LENGTH - overhead + 1)
+        }
+        assert len(json.dumps(padded)) == SESSION_MEMORY_MAX_SERIALIZED_LENGTH + 1
+        with pytest.raises(ValidationError):
+            RequestContext(surface="web_ui", session_memory=padded)
+
+    def test_reasonably_sized_session_memory_accepted(self) -> None:
+        reasonable = {
+            "turns": [{"role": "user", "text": "What gene is BRCA1?"}],
+            "resolved_entities": ["NCBIGene:672"],
+        }
+        context = RequestContext(surface="web_ui", session_memory=reasonable)
+        assert context.session_memory == reasonable

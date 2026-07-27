@@ -4,11 +4,13 @@ Sections 2.2 (envelope) and 2.3 (payload shapes), Technical_specification.md.
 
 `Event.payload` is typed as a plain JSON object (`dict[str, Any]`), matching
 the envelope schema in Section 2.2 literally (`"payload": {"type": "object"}`).
-The per-type payload models below (GuardPayload, ThinkPayload, ...) are the
-typed, field-constrained shapes from Section 2.3 and are validated on their
-own; wiring them into a discriminated union keyed off the sibling `type`
-field is left to a later ticket that builds the Guardrail-to-Write pipeline
-these events flow through.
+The field's stored type stays a plain object for that reason. The per-type
+payload models below (GuardPayload, ThinkPayload, ...) are the typed,
+field-constrained shapes from Section 2.3, and `Event` enforces at
+construction time that `payload` actually conforms to the model matching the
+sibling `type` field (see `PAYLOAD_MODEL_BY_TYPE` and the model validator on
+`Event`). This is an enforcement layer on top of the stored `dict[str, Any]`
+field, not a change to the field's wire-level type.
 
 Every string field declares `max_length`. Where Section 2.3 gives an
 explicit number, that number is used. Where a field has no explicit number
@@ -22,7 +24,7 @@ enumerates a number.
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 ToolName = Literal[
     "cypher_query",
@@ -172,6 +174,24 @@ class DonePayload(BaseModel):
     trust_outcome: TrustOutcome
 
 
+# Binds each envelope `type` value to the Section 2.3 payload model that
+# `payload` must conform to. Keyed by the same eleven-member taxonomy as
+# `Event.type` below; keep the two in sync if the taxonomy ever grows.
+PAYLOAD_MODEL_BY_TYPE: dict[str, type[BaseModel]] = {
+    "guard": GuardPayload,
+    "think": ThinkPayload,
+    "plan": PlanPayload,
+    "tool_start": ToolStartPayload,
+    "tool_result": ToolResultPayload,
+    "token": TokenPayload,
+    "citation": CitationPayload,
+    "trust_signal": TrustSignalPayload,
+    "cost": CostPayload,
+    "error": ErrorPayload,
+    "done": DonePayload,
+}
+
+
 class Event(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -193,3 +213,23 @@ class Event(BaseModel):
     seq: int = Field(..., ge=0)
     ts: datetime
     payload: dict[str, Any]
+
+    @model_validator(mode="after")
+    def _payload_matches_declared_type(self) -> "Event":
+        """Bind `payload` to the Section 2.3 model matching `type`.
+
+        `payload` stays typed as `dict[str, Any]` on the field itself (the
+        wire-level schema in Section 2.2 specifies a generic object), but an
+        arbitrary or mismatched-shape dict must never pass construction: it
+        would defeat every `max_length`/`max_items` cap the multi-agent
+        schema gate (`production-standards.md`) requires.
+        """
+        payload_model = PAYLOAD_MODEL_BY_TYPE[self.type]
+        try:
+            payload_model.model_validate(self.payload)
+        except ValidationError as exc:
+            raise ValueError(
+                f"payload does not match the {self.type!r} event schema "
+                f"(expected shape of {payload_model.__name__}): {exc}"
+            ) from exc
+        return self

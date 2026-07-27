@@ -50,6 +50,79 @@ def _envelope_kwargs(**overrides: object) -> dict[str, object]:
     return base
 
 
+# One known-valid payload per taxonomy member. Since Event.payload is now
+# bound to the model matching Event.type (F-1.0-01), any test that builds an
+# Event for a given type must pass a payload actually shaped for that type;
+# an arbitrary or mismatched payload (as several pre-fix tests below used to
+# assume was fine) now correctly raises ValidationError.
+VALID_PAYLOAD_BY_TYPE: dict[str, dict[str, object]] = {
+    "guard": {"passed": True, "category": "ok", "reason": None},
+    "think": {
+        "narrative": "Resolving BRCA1 to its Gene CURIE",
+        "query_class": "lookup",
+        "resolved_entities": [],
+        "clarifying_question": None,
+    },
+    "plan": {"narrative": "Querying Gene", "tool_calls": []},
+    "tool_start": {
+        "call_id": "c1",
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+    },
+    "tool_result": {
+        "call_id": "c1",
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "summary": "ok",
+        "result_count": 1,
+        "truncated": False,
+    },
+    "token": {"text": "BRCA1 is a tumor suppressor gene", "marker_ids": []},
+    "citation": {
+        "citation_id": "c_1",
+        "display_index": 1,
+        "source": "NCBI Gene",
+        "source_id": "672",
+        "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+        "layer": "layer_1_graph",
+        "field": "description",
+        "claim_text": "BRCA1 is a tumor suppressor gene",
+        "evidence_kind": "primary_assertion",
+        "assertion_confidence": "asserted",
+        "population_ancestry_context": None,
+        "license": "public_domain_us_gov",
+    },
+    "trust_signal": {
+        "outcome": "answer",
+        "risk_tier": "low",
+        "grounded": True,
+        "triangulated": None,
+    },
+    "cost": {
+        "query_cost_usd": 0.0234,
+        "query_cap_usd": 0.10,
+        "cap_fraction": 0.234,
+        "model_tier": "guard",
+    },
+    "error": {
+        "fatal": False,
+        "scope": "tool",
+        "source": "ncbi_efetch",
+        "error_class": "transient",
+        "message": "ncbi_efetch timed out after 15s, retry with backoff",
+        "retry_after_s": 2,
+    },
+    "done": {
+        "total_cost_usd": 0.021,
+        "total_tool_calls": 4,
+        "elapsed_ms": 6200,
+        "trust_outcome": "answer",
+    },
+}
+
+
 class TestEventEnvelopeRequiredFields:
     @pytest.mark.parametrize(
         "missing_field", ["type", "version", "trace_id", "seq", "ts", "payload"]
@@ -69,7 +142,13 @@ class TestEventEnvelopeRequiredFields:
 class TestEventType:
     @pytest.mark.parametrize("event_type", EVENT_TYPES)
     def test_every_taxonomy_value_accepted(self, event_type: str) -> None:
-        event = Event(**_envelope_kwargs(type=event_type))
+        # payload must be shaped for event_type now that Event binds payload
+        # to its declared type (F-1.0-01); see TestEventPayloadBoundToDeclaredType.
+        event = Event(
+            **_envelope_kwargs(
+                type=event_type, payload=VALID_PAYLOAD_BY_TYPE[event_type]
+            )
+        )
         assert event.type == event_type
 
     def test_unknown_type_rejected(self) -> None:
@@ -619,4 +698,52 @@ class TestDonePayload:
                 total_tool_calls=0,
                 elapsed_ms=-1,
                 trust_outcome="answer",
+            )
+
+
+class TestEventPayloadBoundToDeclaredType:
+    """F-1.0-01: Event.payload must conform to the model matching Event.type.
+
+    Regression coverage for the judge's two rejecting probes on ticket
+    T-1.0-01, plus a positive check that a correctly-shaped payload for
+    every one of the eleven taxonomy members still validates.
+    """
+
+    def test_eleven_valid_payloads_declared(self) -> None:
+        assert set(VALID_PAYLOAD_BY_TYPE) == set(EVENT_TYPES)
+
+    @pytest.mark.parametrize("event_type", EVENT_TYPES)
+    def test_correctly_shaped_payload_still_validates(self, event_type: str) -> None:
+        event = Event(
+            **_envelope_kwargs(
+                type=event_type, payload=VALID_PAYLOAD_BY_TYPE[event_type]
+            )
+        )
+        assert event.type == event_type
+
+    def test_judge_probe_1_arbitrary_oversized_blob_under_guard_rejected(self) -> None:
+        # Original judge probe: an arbitrary, oversized, unrelated blob with
+        # none of GuardPayload's required fields, passed as a guard payload.
+        # Previously ACCEPTED; must now raise ValidationError.
+        with pytest.raises(ValidationError):
+            Event(
+                **_envelope_kwargs(
+                    type="guard",
+                    payload={
+                        "totally": "unknown",
+                        "blob": "x" * 200000,
+                        "nested": {"deep": {"deeper": "value"}},
+                    },
+                )
+            )
+
+    def test_judge_probe_2_guard_shaped_payload_under_done_rejected(self) -> None:
+        # Original judge probe: a guard-shaped payload ({"passed": ...,
+        # "category": ...}) accepted under type="done". Previously ACCEPTED;
+        # must now raise ValidationError since it doesn't match DonePayload.
+        with pytest.raises(ValidationError):
+            Event(
+                **_envelope_kwargs(
+                    type="done", payload={"passed": True, "category": "ok"}
+                )
             )
