@@ -44,7 +44,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 
 | Phase | Branch | Delivers | Depends on | Group | Status | Refinement | Owner | Gates | Flags |
 |-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
-| 1.0 | `phase/1.0-fastapi-skeleton` | FastAPI skeleton, health endpoint, the run() contract stub with the v1 event taxonomy typed, Pydantic boundary validation | | prototype | in-progress | refined | | | |
+| 1.0 | `phase/1.0-fastapi-skeleton` | FastAPI skeleton, health endpoint, the run() contract stub with the v1 event taxonomy typed, Pydantic boundary validation | | prototype | in-review | refined | | | |
 | 1.1 | `phase/1.1-auth-service` | Minimal v1 auth, the PostgreSQL user-data schema | 1.0 | prototype | todo | tech_refine | | | ecdsa CVE |
 | 1.2 | `phase/1.2-react-shell-sse` | React shell, SSE consumption of the event stream, empty chat endpoint wired end to end, the stop button | 1.0 | prototype | todo | product_refine | product owner | playwright | playwright not installed |
 | 2.0 | `phase/2.0-langgraph-agent-loop` | LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one | 1.0 | prototype | todo | tech_refine | | | |
