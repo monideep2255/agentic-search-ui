@@ -12,7 +12,7 @@ LEARNINGS.md filtered to this phase: no entries are scoped to phase 1.0 or its t
 
 ### T-1.0-01: Event contract and request models
 
-Status: rejected
+Status: in-review
 Refine: refined
 Branch: phase/1.0-fastapi-skeleton
 Depends on: none
@@ -64,6 +64,8 @@ History:
 - 2026-07-27 builder-events-models: claimed, built in worktree agent-a97ddd816d5a2984b
 - 2026-07-27 builder-events-models: finished, 143 passed, clean compile, commit 5c6bfd5, merged into phase branch, in-review, awaiting judge
 - 2026-07-27 judge: rejected, all seven acceptance criteria pass and 143 contract tests are green, but `Event.payload` is an open `dict[str, Any]` (events.py:195) so the eleven typed payload models never bind any emitted event, which fails the explicit-schema gate in `ai-security-standards` and the multi-agent pipeline gate in `production-standards`; see F-1.0-01 and F-1.0-02
+- 2026-07-27 fix-t100-payload-binding: claimed, built directly on phase branch
+- 2026-07-27 fix-t100-payload-binding: finished, added a model validator binding Event.payload to its declared type and a 5000-char bound on session_memory, both original judge probes now raise ValidationError, 191 passed (18 net new), commit b20b17c, in-review, awaiting judge re-review
 
 ### T-1.0-02: FastAPI app skeleton and health endpoint
 
