@@ -51,7 +51,7 @@ History:
 
 ### T-1.0-02: FastAPI app skeleton and health endpoint
 
-Status: in-progress
+Status: in-review
 Refine: refined
 Branch: phase/1.0-fastapi-skeleton
 Depends on: none
@@ -79,6 +79,8 @@ Evidence:
 History:
 - 2026-07-27 lead: created, scoped from Section 25 row 1.0 and Section 1.6, phase 1.0 open
 - 2026-07-27 lead: reviewed with product owner, health-endpoint scope (bare liveness check, not a dependency check) confirmed as-is, no blocking feedback, refined
+- 2026-07-27 builder-fastapi-skeleton: claimed, built in worktree agent-a900df30addfbeecd
+- 2026-07-27 builder-fastapi-skeleton: correctly flagged a broken shared venv (its diagnosis held up under lead re-verification) and a repo-wide pytest sys.path gap; finished after both were fixed, 3 passed, clean compile, commit a971d428, merged into phase branch, in-review, awaiting judge
 
 ### T-1.0-03: run() contract stub wired to the FastAPI boundary
 
