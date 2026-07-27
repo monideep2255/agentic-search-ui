@@ -1,6 +1,6 @@
 """Tests for the Event envelope and the Section 2.3 payload taxonomy."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -15,10 +15,10 @@ from system_03_search_agent.contracts.events import (
     PlanPayload,
     ResolvedEntity,
     ThinkPayload,
+    TokenPayload,
     ToolCall,
     ToolResultPayload,
     ToolStartPayload,
-    TokenPayload,
     TrustSignalPayload,
 )
 
@@ -43,7 +43,7 @@ def _envelope_kwargs(**overrides: object) -> dict[str, object]:
         "version": "v1",
         "trace_id": "trace-1",
         "seq": 0,
-        "ts": datetime.now(timezone.utc),
+        "ts": datetime.now(UTC),
         "payload": {"passed": True, "category": "ok", "reason": None},
     }
     base.update(overrides)
