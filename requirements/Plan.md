@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-07-27.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) underway: build phase 1.0 (FastAPI skeleton, health endpoint, the event contract, the run() stub) done and merged (PR #5, 2026-07-27). Next up: build phase 1.1 |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 126 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 127 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -493,7 +493,7 @@ Phase 5 output: all project infrastructure aligned with the PRD and tech spec. D
 
 ## Phase 6: build (bossman execution)
 
-Status: NOT STARTED, next up. Kickoff prompt at `requirements/phase_6/Continuation_prompt.md`
+Status: IN PROGRESS. Build phase 1.0 done and merged (PR #5, 2026-07-27). Next up: build phase 1.1. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
 
 Goal: build System 3 using bossman-mode. Agent teams execute, I orchestrate.
 
@@ -619,7 +619,7 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Summary of what happens next
 
-Phases 1 through 4 are complete, with the Phase 1 synthesis, the evaluation playbook, the locked PRD, the verified API capability sheet, the locked technical specification, and the strategic memo all written. Phase 5 (system and tooling updates) opened 2026-07-26 and its four steps are done: the build harness, skills, rules, root documents, and reference docs are now consistent with the locked specification. Phase 6 (build) opened 2026-07-27: build phase 1.0 (the FastAPI skeleton and typed event contract) is done and merged into main, judge-reviewed with one rejection-and-fix round and an independent sign-off verification. 126 decisions logged. Next: build phase 1.1, then the rest of Step 6.1's prototype. We debate. We decide. We log decisions.
+Phases 1 through 4 are complete, with the Phase 1 synthesis, the evaluation playbook, the locked PRD, the verified API capability sheet, the locked technical specification, and the strategic memo all written. Phase 5 (system and tooling updates) opened 2026-07-26 and its four steps are done: the build harness, skills, rules, root documents, and reference docs are now consistent with the locked specification. Phase 6 (build) opened 2026-07-27: build phase 1.0 (the FastAPI skeleton and typed event contract) is done and merged into main, judge-reviewed with one rejection-and-fix round and an independent sign-off verification. 127 decisions logged. Next: build phase 1.1, then the rest of Step 6.1's prototype. We debate. We decide. We log decisions.
 
 One phase at a time. No skipping.
 

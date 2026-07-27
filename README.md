@@ -48,7 +48,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | Phase 1.0 complete (FastAPI app skeleton, health endpoint, the Pydantic event contract, a typed run() stub wired to the query endpoint), on branch phase/1.0-fastapi-skeleton pending merge to main. No LangGraph loop, no tools, and no real agent behavior yet. Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
+| Build (Phases 6-7) | Phase 1.0 complete (FastAPI app skeleton, health endpoint, the Pydantic event contract, a typed run() stub wired to the query endpoint), merged into main (PR #5, 2026-07-27). No LangGraph loop, no tools, and no real agent behavior yet. Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
 
 ---
 
@@ -111,7 +111,7 @@ agentic-search-ui/
   .claude/                      # Claude Code rules, skills, agents, hooks (tracked in git for v1 development)
   CLAUDE.md                     # Claude Code instructions
   AGENTS.md                     # Instructions for other AI agents
-  DECISIONS.md                  # Architecture decision log (126 rows)
+  DECISIONS.md                  # Architecture decision log (127 rows)
   LEARNINGS.md                  # What broke during the build and what fixed it
   CHANGELOG.md                  # Keep a Changelog format, all entries currently Unreleased
   pyproject.toml
