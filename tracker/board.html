@@ -471,6 +471,101 @@
   .chip.refine.tech_refine    { --refine-tone: var(--muted); }
   .chip.refine.product_refine { --refine-tone: var(--you); }
   .chip.refine.team_refine    { --refine-tone: var(--accent); }
+
+  /* ---- ticket detail (per phase card) ---- */
+
+  .ticket-toggle {
+    align-self: flex-start;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 11px;
+    cursor: pointer;
+    transition: border-color .14s ease, background .14s ease;
+  }
+
+  .ticket-toggle::after { content: "\00a0\25BE"; }
+  .ticket-toggle[aria-expanded="true"]::after { content: "\00a0\25B4"; }
+  .ticket-toggle:hover { border-color: var(--accent); background: var(--surface-2); }
+  .ticket-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .ticket-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 4px;
+    border-top: 1px solid var(--line);
+  }
+  .ticket-panel[hidden] { display: none; }
+
+  .ticket {
+    border-left: 2px solid var(--ticket-tone, var(--todo));
+    padding-left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .ticket-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 7px;
+  }
+
+  .ticket-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ticket-tone, var(--ink));
+  }
+
+  .ticket-title { font-size: 12.5px; font-weight: 540; }
+
+  .chip.ticket-status {
+    text-transform: uppercase;
+    color: var(--ticket-tone, var(--muted));
+    border: 1px solid var(--ticket-tone, var(--line));
+    background: transparent;
+  }
+
+  .ac-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .ac-item {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--muted);
+    padding-left: 20px;
+    position: relative;
+  }
+
+  .ac-item::before {
+    content: "\2610";
+    position: absolute;
+    left: 0;
+    font-family: var(--mono);
+  }
+
+  .ac-item.checked {
+    color: var(--ink);
+  }
+
+  .ac-item.checked::before {
+    content: "\2611";
+    color: var(--done);
+  }
 </style>
 
 <div class="wrap">
@@ -594,7 +689,7 @@
 </div>
 
 <script>
-  var PHASES = [{"id":"P1","group":"planning","status":"done","title":"Source review and architecture decisions","body":"Source review and architecture decisions, 13 steps. Closed 2026-07-21.","deps":[],"gates":[],"flags":[],"po":false,"refinement":"refined"},{"id":"P2","group":"planning","status":"done","title":"Competency questions and the evaluation playbook","body":"Competency questions and the evaluation playbook. Closed 2026-07-22.","deps":[],"gates":[],"flags":[],"po":false,"refinement":"refined"},{"id":"P3","group":"planning","status":"done","title":"The PRD","body":"The PRD, locked. Closed 2026-07-22.","deps":[],"gates":[],"flags":[],"po":false,"refinement":"refined"},{"id":"P4","group":"planning","status":"done","title":"The technical specification and strategic memo","body":"The technical specification and strategic memo, locked. Closed 2026-07-25.","deps":[],"gates":[],"flags":[],"po":false,"refinement":"refined"},{"id":"P5","group":"planning","status":"done","title":"System and tooling updates","body":"System and tooling updates, the build harness. Closed 2026-07-26.","deps":[],"gates":[],"flags":[],"po":false,"refinement":"refined"},{"id":"1.0","group":"prototype","status":"done","title":"Fastapi skeleton","body":"FastAPI skeleton, health endpoint, the run() contract stub with the v1 event taxonomy typed, Pydantic boundary validation","deps":[],"gates":[],"flags":[],"po":false,"refinement":"refined"},{"id":"1.1","group":"prototype","status":"todo","title":"Auth service","body":"Minimal v1 auth, the PostgreSQL user-data schema","deps":["1.0"],"gates":[],"flags":["ecdsa CVE"],"po":false,"refinement":"tech_refine"},{"id":"1.2","group":"prototype","status":"todo","title":"React shell sse","body":"React shell, SSE consumption of the event stream, empty chat endpoint wired end to end, the stop button","deps":["1.0"],"gates":["playwright"],"flags":["playwright not installed"],"po":true,"refinement":"product_refine"},{"id":"2.0","group":"prototype","status":"todo","title":"Langgraph agent loop","body":"LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one","deps":["1.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"2.1","group":"prototype","status":"todo","title":"Cypher tool","body":"cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement","deps":["2.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"2.2","group":"prototype","status":"todo","title":"Write step grounding","body":"Deterministic cite-or-refuse, provenance for Layer 1 citations, the first trust signal, the two required tests","deps":["2.1"],"gates":["eval-harness"],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"3.0","group":"v1","status":"todo","title":"Guardrail node","body":"Full guardrail replacing the stub: validation, prompt-injection rejection, forbidden types, rate and cost pre-checks","deps":["2.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"3.1","group":"v1","status":"todo","title":"Ncbi efetch","body":"ncbi_efetch over E-utilities and Datasets API v2","deps":["2.0","3.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"3.2","group":"v1","status":"todo","title":"Ncbi dbsnp","body":"ncbi_dbsnp over Variation Services, plus the dbVar two-step coordinate-overlap sub-tool","deps":["3.1"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"3.3","group":"v1","status":"todo","title":"Enrichment tools","body":"pubtator_annotate and litvar2_lookup, each with untrusted-source-reader separation","deps":["3.1"],"gates":[],"flags":["relations endpoint unverified"],"po":false,"refinement":"tech_refine"},{"id":"3.5","group":"v1","status":"todo","title":"Pathogen clinicaltrials tools","body":"pathogen_detection and clinicaltrials_search, completing the seven-tool roster","deps":["3.1"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"3.4","group":"v1","status":"todo","title":"Citation trust full","body":"Provenance extended to Layers 2 and 3, the two-tier risk gate, freshness and conflict resolution","deps":["2.2","3.1","3.2","3.3","3.5"],"gates":["eval-harness"],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"4.0","group":"v1","status":"todo","title":"Rest sse hardening","body":"The REST plus SSE adapter finalized as the public API surface","deps":["2.2"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"4.1","group":"v1","status":"todo","title":"Mcp server","body":"Outbound-only MCP server wrapping the same tool functions","deps":["3.4"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"4.2","group":"v1","status":"todo","title":"Cli adapter","body":"Thin CLI client over the REST API","deps":["4.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"4.3","group":"v1","status":"todo","title":"Graphql api","body":"GraphQL surface via Strawberry, sharing auth and tools with REST","deps":["4.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"4.4","group":"v1","status":"todo","title":"Kgx export","body":"KGX export utility, a batch job over the existing graph. No in-repo dependency, so it can land any time","deps":[],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"4.5","group":"v1","status":"todo","title":"Personalization memory","body":"Bounded session memory, audience-level depth control, the named scientist persona. Never touches grounding","deps":["1.2","2.2"],"gates":["playwright"],"flags":[],"po":true,"refinement":"product_refine"},{"id":"4.6","group":"v1","status":"todo","title":"Feedback capture","body":"Interaction capture, the manual review ritual, hand-promotion into few-shot examples","deps":["1.1","3.4"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"4.7","group":"v1","status":"todo","title":"Cq routing","body":"Few-shot routing seeded with the seven must-pass questions, query-shape routing","deps":["3.4"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"5.0","group":"v1","status":"todo","title":"Observability","body":"LangSmith per-run tracing on trace_id, PostHog analytics, the append-only tool-call audit log","deps":["2.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"5.1","group":"v1","status":"todo","title":"Golden dataset eval","body":"The 50-query golden dataset, eval-harness grading, the cost dashboard","deps":["3.4","5.0"],"gates":["eval-harness"],"flags":["needs domain sign-off owner"],"po":false,"refinement":"product_refine"},{"id":"6.0","group":"v1","status":"todo","title":"Rate limit concurrency","body":"Per-layer throttling, the bounded queue per API family, the 20-calls-per-query budget","deps":["3.1","3.2","3.3","3.5"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"6.1","group":"v1","status":"todo","title":"Hardening release","body":"The full dev-standards six-lens pass, CI and CD gates, the security scan, accessibility","deps":["everything"],"gates":["dev-standards"],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"7.0","group":"v1","status":"todo","title":"Model bench","body":"Benchmark candidate models per tier against the golden dataset, pick the winners","deps":["5.1"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"},{"id":"7.1","group":"v1","status":"todo","title":"Ab mechanism","body":"The online A and B randomized-routing mechanism, human-gated","deps":["7.0","5.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine"}];
+  var PHASES = [{"id":"P1","group":"planning","status":"done","title":"Source review and architecture decisions","body":"Source review and architecture decisions, 13 steps. Closed 2026-07-21.","deps":[],"gates":[],"flags":[],"po":false,"refinement":"refined","tickets":[]},{"id":"P2","group":"planning","status":"done","title":"Competency questions and the evaluation playbook","body":"Competency questions and the evaluation playbook. Closed 2026-07-22.","deps":[],"gates":[],"flags":[],"po":false,"refinement":"refined","tickets":[]},{"id":"P3","group":"planning","status":"done","title":"The PRD","body":"The PRD, locked. Closed 2026-07-22.","deps":[],"gates":[],"flags":[],"po":false,"refinement":"refined","tickets":[]},{"id":"P4","group":"planning","status":"done","title":"The technical specification and strategic memo","body":"The technical specification and strategic memo, locked. Closed 2026-07-25.","deps":[],"gates":[],"flags":[],"po":false,"refinement":"refined","tickets":[]},{"id":"P5","group":"planning","status":"done","title":"System and tooling updates","body":"System and tooling updates, the build harness. Closed 2026-07-26.","deps":[],"gates":[],"flags":[],"po":false,"refinement":"refined","tickets":[]},{"id":"1.0","group":"prototype","status":"done","title":"Fastapi skeleton","body":"FastAPI skeleton, health endpoint, the run() contract stub with the v1 event taxonomy typed, Pydantic boundary validation","deps":[],"gates":[],"flags":[],"po":false,"refinement":"refined","tickets":[{"id":"T-1.0-01","title":"Event contract and request models","status":"done","refinement":"refined","depends_on":[],"acceptance_criteria":[{"text":"`Query(text=...)` rejects a `text` value over 2000 characters, a `session_id` or `trace_id` over 64 characters, and a `user_id` over 64 characters, each with a validation error, never a silent truncation","checked":true},{"text":"Constructing a `Query` with no `text` field raises a validation error; constructing one with only `text`, `session_id`, and `trace_id` succeeds with `user_id` defaulting to `None` and `audience_depth` defaulting to `\"researcher\"`","checked":true},{"text":"`RequestContext.surface` accepts only `web_ui`, `rest_sse`, `mcp`, or `cli` and rejects any other string","checked":true},{"text":"The `Event` envelope model requires `type`, `version`, `trace_id`, `seq`, `ts`, and `payload`; omitting any one of these raises a validation error","checked":true},{"text":"`Event.type` accepts only the eleven taxonomy values (`guard`, `think`, `plan`, `tool_start`, `tool_result`, `token`, `citation`, `trust_signal`, `cost`, `error`, `done`) and rejects any other string","checked":true},{"text":"`Event.version` is fixed to the literal `\"v1\"` and rejects any other value","checked":true},{"text":"Every payload model declares `max_length` on its string fields and `max_items` on its array fields matching Section 2.3's values (`think.narrative` 500, `think.resolved_entities` 20, `plan.narrative` 500, `plan.tool_calls` 20 with `tool` an enum pinned to the seven registered tool names, `tool_result.summary` 1000, `error.scope` 16, `error.source` 64, `error.error_class` 16, `error.message` 256)","checked":true}]},{"id":"T-1.0-02","title":"FastAPI app skeleton and health endpoint","status":"done","refinement":"refined","depends_on":[],"acceptance_criteria":[{"text":"`GET /health` returns HTTP 200 with a JSON body when the app is running, and requires no authentication","checked":true},{"text":"The FastAPI app imports and boots cleanly under uvicorn with zero import errors, verified by a successful test-client startup","checked":true},{"text":"The app lives under `adapters/web_sse/` per Section 1.6's target module layout, not mixed into `core/` or `contracts/`","checked":true}]},{"id":"T-1.0-03","title":"run() contract stub wired to the FastAPI boundary","status":"done","refinement":"refined","depends_on":["T-1.0-01","T-1.0-02"],"acceptance_criteria":[{"text":"`run(query: Query, context: RequestContext)` is declared as `AsyncIterator[Event]`, and every item it yields is an instance of the `Event` model from T-1.0-01, never a bare string or dict","checked":true},{"text":"Calling `run()` with a valid stub `Query` yields at least one `guard` event and terminates with exactly one `done` event, both schema-valid against the `Event` envelope","checked":true},{"text":"The FastAPI query endpoint validates every request against the `Query` and `RequestContext` Pydantic models at the boundary; posting a body missing a required `Query` field returns HTTP 422, never a 500 or a silent default","checked":true},{"text":"Posting a `Query.text` value over 2000 characters to the endpoint returns a validation error response and never reaches `run()`","checked":true},{"text":"The stub `run()` makes no direct LLM call and no direct tool call; it is a typed scaffold only, deferring the real Guardrail-Think-Plan-Act-Write loop to build phase 2.0","checked":true}]}]},{"id":"1.1","group":"prototype","status":"todo","title":"Auth service","body":"Minimal v1 auth, the PostgreSQL user-data schema","deps":["1.0"],"gates":[],"flags":["ecdsa CVE"],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"1.2","group":"prototype","status":"todo","title":"React shell sse","body":"React shell, SSE consumption of the event stream, empty chat endpoint wired end to end, the stop button","deps":["1.0"],"gates":["playwright"],"flags":["playwright not installed"],"po":true,"refinement":"product_refine","tickets":[]},{"id":"2.0","group":"prototype","status":"todo","title":"Langgraph agent loop","body":"LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one","deps":["1.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"2.1","group":"prototype","status":"todo","title":"Cypher tool","body":"cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement","deps":["2.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"2.2","group":"prototype","status":"todo","title":"Write step grounding","body":"Deterministic cite-or-refuse, provenance for Layer 1 citations, the first trust signal, the two required tests","deps":["2.1"],"gates":["eval-harness"],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"3.0","group":"v1","status":"todo","title":"Guardrail node","body":"Full guardrail replacing the stub: validation, prompt-injection rejection, forbidden types, rate and cost pre-checks","deps":["2.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"3.1","group":"v1","status":"todo","title":"Ncbi efetch","body":"ncbi_efetch over E-utilities and Datasets API v2","deps":["2.0","3.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"3.2","group":"v1","status":"todo","title":"Ncbi dbsnp","body":"ncbi_dbsnp over Variation Services, plus the dbVar two-step coordinate-overlap sub-tool","deps":["3.1"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"3.3","group":"v1","status":"todo","title":"Enrichment tools","body":"pubtator_annotate and litvar2_lookup, each with untrusted-source-reader separation","deps":["3.1"],"gates":[],"flags":["relations endpoint unverified"],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"3.5","group":"v1","status":"todo","title":"Pathogen clinicaltrials tools","body":"pathogen_detection and clinicaltrials_search, completing the seven-tool roster","deps":["3.1"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"3.4","group":"v1","status":"todo","title":"Citation trust full","body":"Provenance extended to Layers 2 and 3, the two-tier risk gate, freshness and conflict resolution","deps":["2.2","3.1","3.2","3.3","3.5"],"gates":["eval-harness"],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"4.0","group":"v1","status":"todo","title":"Rest sse hardening","body":"The REST plus SSE adapter finalized as the public API surface","deps":["2.2"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"4.1","group":"v1","status":"todo","title":"Mcp server","body":"Outbound-only MCP server wrapping the same tool functions","deps":["3.4"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"4.2","group":"v1","status":"todo","title":"Cli adapter","body":"Thin CLI client over the REST API","deps":["4.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"4.3","group":"v1","status":"todo","title":"Graphql api","body":"GraphQL surface via Strawberry, sharing auth and tools with REST","deps":["4.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"4.4","group":"v1","status":"todo","title":"Kgx export","body":"KGX export utility, a batch job over the existing graph. No in-repo dependency, so it can land any time","deps":[],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"4.5","group":"v1","status":"todo","title":"Personalization memory","body":"Bounded session memory, audience-level depth control, the named scientist persona. Never touches grounding","deps":["1.2","2.2"],"gates":["playwright"],"flags":[],"po":true,"refinement":"product_refine","tickets":[]},{"id":"4.6","group":"v1","status":"todo","title":"Feedback capture","body":"Interaction capture, the manual review ritual, hand-promotion into few-shot examples","deps":["1.1","3.4"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"4.7","group":"v1","status":"todo","title":"Cq routing","body":"Few-shot routing seeded with the seven must-pass questions, query-shape routing","deps":["3.4"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"5.0","group":"v1","status":"todo","title":"Observability","body":"LangSmith per-run tracing on trace_id, PostHog analytics, the append-only tool-call audit log","deps":["2.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"5.1","group":"v1","status":"todo","title":"Golden dataset eval","body":"The 50-query golden dataset, eval-harness grading, the cost dashboard","deps":["3.4","5.0"],"gates":["eval-harness"],"flags":["needs domain sign-off owner"],"po":false,"refinement":"product_refine","tickets":[]},{"id":"6.0","group":"v1","status":"todo","title":"Rate limit concurrency","body":"Per-layer throttling, the bounded queue per API family, the 20-calls-per-query budget","deps":["3.1","3.2","3.3","3.5"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"6.1","group":"v1","status":"todo","title":"Hardening release","body":"The full dev-standards six-lens pass, CI and CD gates, the security scan, accessibility","deps":["everything"],"gates":["dev-standards"],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"7.0","group":"v1","status":"todo","title":"Model bench","body":"Benchmark candidate models per tier against the golden dataset, pick the winners","deps":["5.1"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]},{"id":"7.1","group":"v1","status":"todo","title":"Ab mechanism","body":"The online A and B randomized-routing mechanism, human-gated","deps":["7.0","5.0"],"gates":[],"flags":[],"po":false,"refinement":"tech_refine","tickets":[]}];
   var COLUMNS = [{"key": "todo", "label": "To do", "tone": "var(--todo)"}, {"key": "in-progress", "label": "In progress", "tone": "var(--active)"}, {"key": "blocked", "label": "Blocked", "tone": "var(--blocked)"}, {"key": "in-review", "label": "In review", "tone": "var(--accent)"}, {"key": "done", "label": "Done", "tone": "var(--done)"}];
   var REFINE = {"tech_refine": "tech refine", "product_refine": "product refine", "team_refine": "team refine", "refined": "refined"};
   var activeFilter = "all";
@@ -612,6 +707,39 @@
     if (cls) n.className = cls;
     if (text !== undefined) n.textContent = text;
     return n;
+  }
+
+  function statusTone(status) {
+    for (var i = 0; i < COLUMNS.length; i++) {
+      if (COLUMNS[i].key === status) return COLUMNS[i].tone;
+    }
+    return status === "rejected" ? "var(--blocked)" : "var(--todo)";
+  }
+
+  function makeTicketRow(t) {
+    var row = el("div", "ticket");
+    row.style.setProperty("--ticket-tone", statusTone(t.status));
+    var head = el("div", "ticket-head");
+    head.appendChild(el("span", "ticket-id", t.id));
+    head.appendChild(el("span", "ticket-title", t.title));
+    head.appendChild(el("span", "chip ticket-status", t.status));
+    if (t.refinement && t.refinement !== "refined") {
+      head.appendChild(el("span", "chip refine " + t.refinement, REFINE[t.refinement] || t.refinement));
+    }
+    row.appendChild(head);
+    t.depends_on.forEach(function (d) {
+      var dep = el("span", "chip dep", d);
+      row.appendChild(dep);
+    });
+    if (t.acceptance_criteria.length) {
+      var list = el("ul", "ac-list");
+      t.acceptance_criteria.forEach(function (ac) {
+        var item = el("li", "ac-item" + (ac.checked ? " checked" : ""), ac.text);
+        list.appendChild(item);
+      });
+      row.appendChild(list);
+    }
+    return row;
   }
 
   function makeCard(p, tone) {
@@ -632,6 +760,26 @@
     p.gates.forEach(function (g) { chips.appendChild(el("span", "chip gate", g)); });
     p.flags.forEach(function (f) { chips.appendChild(el("span", "chip flag", f)); });
     if (chips.children.length) card.appendChild(chips);
+
+    if (p.tickets && p.tickets.length) {
+      var panelId = "tickets-" + p.id.replace(/[^A-Za-z0-9_-]/g, "-");
+      var toggle = el("button", "ticket-toggle", p.tickets.length + " ticket" + (p.tickets.length === 1 ? "" : "s"));
+      toggle.type = "button";
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.setAttribute("aria-controls", panelId);
+      var panel = el("div", "ticket-panel");
+      panel.id = panelId;
+      panel.hidden = true;
+      p.tickets.forEach(function (t) { panel.appendChild(makeTicketRow(t)); });
+      toggle.addEventListener("click", function () {
+        var open = panel.hidden === false;
+        panel.hidden = open;
+        toggle.setAttribute("aria-expanded", String(!open));
+      });
+      card.appendChild(toggle);
+      card.appendChild(panel);
+    }
+
     return card;
   }
 

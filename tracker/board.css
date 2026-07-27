@@ -445,3 +445,98 @@
   .chip.refine.tech_refine    { --refine-tone: var(--muted); }
   .chip.refine.product_refine { --refine-tone: var(--you); }
   .chip.refine.team_refine    { --refine-tone: var(--accent); }
+
+  /* ---- ticket detail (per phase card) ---- */
+
+  .ticket-toggle {
+    align-self: flex-start;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 11px;
+    cursor: pointer;
+    transition: border-color .14s ease, background .14s ease;
+  }
+
+  .ticket-toggle::after { content: "\00a0\25BE"; }
+  .ticket-toggle[aria-expanded="true"]::after { content: "\00a0\25B4"; }
+  .ticket-toggle:hover { border-color: var(--accent); background: var(--surface-2); }
+  .ticket-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .ticket-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 4px;
+    border-top: 1px solid var(--line);
+  }
+  .ticket-panel[hidden] { display: none; }
+
+  .ticket {
+    border-left: 2px solid var(--ticket-tone, var(--todo));
+    padding-left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .ticket-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 7px;
+  }
+
+  .ticket-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ticket-tone, var(--ink));
+  }
+
+  .ticket-title { font-size: 12.5px; font-weight: 540; }
+
+  .chip.ticket-status {
+    text-transform: uppercase;
+    color: var(--ticket-tone, var(--muted));
+    border: 1px solid var(--ticket-tone, var(--line));
+    background: transparent;
+  }
+
+  .ac-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .ac-item {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--muted);
+    padding-left: 20px;
+    position: relative;
+  }
+
+  .ac-item::before {
+    content: "\2610";
+    position: absolute;
+    left: 0;
+    font-family: var(--mono);
+  }
+
+  .ac-item.checked {
+    color: var(--ink);
+  }
+
+  .ac-item.checked::before {
+    content: "\2611";
+    color: var(--done);
+  }

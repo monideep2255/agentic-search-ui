@@ -60,6 +60,22 @@ REFINEMENT = {
 
 
 @dataclass
+class AcceptanceCriterion:
+    text: str
+    checked: bool
+
+
+@dataclass
+class Ticket:
+    id: str
+    title: str
+    status: str
+    refinement: str
+    depends_on: list[str] = field(default_factory=list)
+    acceptance_criteria: list[AcceptanceCriterion] = field(default_factory=list)
+
+
+@dataclass
 class Phase:
     id: str
     group: str
@@ -71,6 +87,7 @@ class Phase:
     flags: list[str] = field(default_factory=list)
     po: bool = False
     refinement: str = "refined"
+    tickets: list[Ticket] = field(default_factory=list)
 
 
 class BoardError(Exception):
@@ -113,6 +130,83 @@ def find_table(lines: list[str], heading: str) -> list[list[str]]:
     if not rows:
         raise BoardError(f"no table rows under {heading}")
     return rows[1:]  # drop the header row
+
+
+TICKET_HEADING_RE = re.compile(r"^### (T-\S+): (.+)$")
+NEXT_HEADING_RE = re.compile(r"^#{2,3} ")
+AC_BLOCK_RE = re.compile(r"^Acceptance criteria:\s*\n((?:- \[.\].*\n?)+)", re.MULTILINE)
+AC_ITEM_RE = re.compile(r"^- \[([ xX])\]\s*(.+)$")
+
+
+def split_ticket_blocks(text: str) -> list[tuple[str, str, str]]:
+    """Return (ticket_id, title, body) for each top-level `### T-...` block.
+
+    Stops naturally at the next `##` or `###` heading, so a trailing `##
+    Findings` section never gets mistaken for ticket content.
+    """
+    lines = text.splitlines()
+    blocks: list[tuple[str, str, str]] = []
+    i = 0
+    while i < len(lines):
+        m = TICKET_HEADING_RE.match(lines[i])
+        if not m:
+            i += 1
+            continue
+        ticket_id, title = m.group(1), m.group(2)
+        j = i + 1
+        while j < len(lines) and not NEXT_HEADING_RE.match(lines[j]):
+            j += 1
+        blocks.append((ticket_id, title, "\n".join(lines[i + 1:j])))
+        i = j
+    return blocks
+
+
+def parse_field(body: str, name: str) -> str:
+    m = re.search(rf"^{re.escape(name)}:\s*(.+)$", body, re.MULTILINE)
+    return m.group(1).strip() if m else ""
+
+
+def parse_acceptance_criteria(body: str) -> list[AcceptanceCriterion]:
+    m = AC_BLOCK_RE.search(body)
+    if not m:
+        return []
+    items = []
+    for line in m.group(1).splitlines():
+        im = AC_ITEM_RE.match(line.strip())
+        if im:
+            items.append(AcceptanceCriterion(
+                text=im.group(2).strip(),
+                checked=im.group(1).lower() == "x",
+            ))
+    return items
+
+
+def parse_ticket_file(phase_id: str) -> list[Ticket]:
+    """Read tracker/phase_<id>.md for its tickets, or [] if it doesn't exist yet.
+
+    A missing file is the normal case for any phase that hasn't opened: only a
+    phase actually worked has a ticket file, so this is not an error.
+    """
+    path = ROOT / f"phase_{phase_id}.md"
+    if not path.exists():
+        return []
+    text = path.read_text(encoding="utf-8")
+    tickets = []
+    for ticket_id, title, body in split_ticket_blocks(text):
+        depends_raw = parse_field(body, "Depends on")
+        depends_on = (
+            [] if depends_raw.lower() in ("", "none")
+            else [d.strip() for d in depends_raw.split(",") if d.strip()]
+        )
+        tickets.append(Ticket(
+            id=ticket_id,
+            title=title,
+            status=parse_field(body, "Status") or "todo",
+            refinement=parse_field(body, "Refine") or "refined",
+            depends_on=depends_on,
+            acceptance_criteria=parse_acceptance_criteria(body),
+        ))
+    return tickets
 
 
 def parse_board(md: str) -> dict:
@@ -163,6 +257,7 @@ def parse_board(md: str) -> dict:
             flags=csv_cell(flags),
             po=owner.strip().lower() == "product owner",
             refinement=refinement,
+            tickets=parse_ticket_file(pid),
         ))
 
     seen: set[str] = set()
@@ -369,6 +464,39 @@ TEMPLATE = """<title>System 3 build board</title>
     return n;
   }}
 
+  function statusTone(status) {{
+    for (var i = 0; i < COLUMNS.length; i++) {{
+      if (COLUMNS[i].key === status) return COLUMNS[i].tone;
+    }}
+    return status === "rejected" ? "var(--blocked)" : "var(--todo)";
+  }}
+
+  function makeTicketRow(t) {{
+    var row = el("div", "ticket");
+    row.style.setProperty("--ticket-tone", statusTone(t.status));
+    var head = el("div", "ticket-head");
+    head.appendChild(el("span", "ticket-id", t.id));
+    head.appendChild(el("span", "ticket-title", t.title));
+    head.appendChild(el("span", "chip ticket-status", t.status));
+    if (t.refinement && t.refinement !== "refined") {{
+      head.appendChild(el("span", "chip refine " + t.refinement, REFINE[t.refinement] || t.refinement));
+    }}
+    row.appendChild(head);
+    t.depends_on.forEach(function (d) {{
+      var dep = el("span", "chip dep", d);
+      row.appendChild(dep);
+    }});
+    if (t.acceptance_criteria.length) {{
+      var list = el("ul", "ac-list");
+      t.acceptance_criteria.forEach(function (ac) {{
+        var item = el("li", "ac-item" + (ac.checked ? " checked" : ""), ac.text);
+        list.appendChild(item);
+      }});
+      row.appendChild(list);
+    }}
+    return row;
+  }}
+
   function makeCard(p, tone) {{
     var card = el("article", "card");
     card.style.setProperty("--card-tone", tone);
@@ -387,6 +515,26 @@ TEMPLATE = """<title>System 3 build board</title>
     p.gates.forEach(function (g) {{ chips.appendChild(el("span", "chip gate", g)); }});
     p.flags.forEach(function (f) {{ chips.appendChild(el("span", "chip flag", f)); }});
     if (chips.children.length) card.appendChild(chips);
+
+    if (p.tickets && p.tickets.length) {{
+      var panelId = "tickets-" + p.id.replace(/[^A-Za-z0-9_-]/g, "-");
+      var toggle = el("button", "ticket-toggle", p.tickets.length + " ticket" + (p.tickets.length === 1 ? "" : "s"));
+      toggle.type = "button";
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.setAttribute("aria-controls", panelId);
+      var panel = el("div", "ticket-panel");
+      panel.id = panelId;
+      panel.hidden = true;
+      p.tickets.forEach(function (t) {{ panel.appendChild(makeTicketRow(t)); }});
+      toggle.addEventListener("click", function () {{
+        var open = panel.hidden === false;
+        panel.hidden = open;
+        toggle.setAttribute("aria-expanded", String(!open));
+      }});
+      card.appendChild(toggle);
+      card.appendChild(panel);
+    }}
+
     return card;
   }}
 
