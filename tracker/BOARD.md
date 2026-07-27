@@ -45,7 +45,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | Phase | Branch | Delivers | Depends on | Group | Status | Refinement | Owner | Gates | Flags |
 |-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
 | 1.0 | `phase/1.0-fastapi-skeleton` | FastAPI skeleton, health endpoint, the run() contract stub with the v1 event taxonomy typed, Pydantic boundary validation | | prototype | in-progress | refined | | | |
-| 1.1 | `phase/1.1-auth-service` | Minimal v1 auth, the PostgreSQL user-data schema | 1.0 | prototype | todo | tech_refine | | | |
+| 1.1 | `phase/1.1-auth-service` | Minimal v1 auth, the PostgreSQL user-data schema | 1.0 | prototype | todo | tech_refine | | | ecdsa CVE |
 | 1.2 | `phase/1.2-react-shell-sse` | React shell, SSE consumption of the event stream, empty chat endpoint wired end to end, the stop button | 1.0 | prototype | todo | product_refine | product owner | playwright | playwright not installed |
 | 2.0 | `phase/2.0-langgraph-agent-loop` | LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one | 1.0 | prototype | todo | tech_refine | | | |
 | 2.1 | `phase/2.1-cypher-tool` | cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement | 2.0 | prototype | todo | tech_refine | | | |
@@ -78,6 +78,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | Golden fixture domain sign-off | Nobody is named to verify the clinical and human-variation expected answers. A wrong expected answer makes a wrong agent pass, which is the failure the gate exists to catch | Build phase 5.1 |
 | PubTator3 relations endpoint | Path and fields not live-verified | Build phase 3.3 ship |
 | Playwright not installed | The UI gate has no tool behind it yet, and it must clear `supply-chain-security` first | Build phase 1.2 |
+| ecdsa CVE | `ecdsa` 0.19.2 carries PYSEC-2026-1325 (a Minerva timing side-channel, no planned upstream fix), pulled in transitively by `python-jose[cryptography]`. Accepted as a known risk during phase 1.0 since nothing in that phase invokes it; see DECISIONS.md 2026-07-27 | Build phase 1.1 |
 
 ## Visualizing this board
 
