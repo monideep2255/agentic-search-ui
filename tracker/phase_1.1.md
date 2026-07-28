@@ -220,7 +220,7 @@ One narrow Section 15 gap surfaced that no ticket covered, filed below as F-1.1-
 | ID | Severity | Ticket | Status | Summary |
 |----|----------|--------|--------|---------|
 | F-1.1-01 | High | T-1.1-01 | closed | The migration test destroys every row in the database `USER_DB_URL` names |
-| F-1.1-02 | Low | T-1.1-03 | filed | The 30-day refresh-token TTL is recorded only in a code comment |
+| F-1.1-02 | Low | T-1.1-03 | closed | The 30-day refresh-token TTL is recorded only in a code comment. Closed: `DECISIONS.md:143` correction row verified against router.py, both judge reasons discharged |
 | F-1.1-03 | Low | T-1.1-03 | filed | Rotating `AUTH_SECRET` silently orphans every stored `ip_hash` |
 | F-1.1-04 | Low | T-1.1-03 | filed | `users.profile` has no read or write path on any endpoint |
 | F-1.1-05 | Medium | T-1.1-03 | filed | No rate limit on `/auth/login`, an argon2id CPU cost per unauthenticated request |
@@ -262,9 +262,29 @@ The same run also destroyed the ten rows the judge's own HTTP probe had created 
 
 ### F-1.1-02: the 30-day refresh-token TTL is undocumented, ruling on judgment call 2
 
-Severity: low. Ticket: T-1.1-03. Status: filed. Blocks the ticket: no. Blocks phase close: yes, as a one-line documentation edit.
+Severity: low. Ticket: T-1.1-03. Status: closed 2026-07-28 by an independent third-party closer, verified against code, not against the row's own assertions. Blocks the ticket: no. Blocks phase close: no longer.
+
+Status update, 2026-07-28, judge re-verification of the lead's DECISIONS.md edit: NOT discharged. Still `filed`, still blocking, and still a one-line documentation edit. Detail below.
+
+The row exists at `DECISIONS.md:142` and does what the original ruling literally asked: it names the 30-day value, the alternatives (7 and 90 days), and a reason. Two problems, both created by commit `8313d82` landing after the ruling was written, so this is not a moved goalpost but the same defect recurring against a changed codebase.
+
+- The row's rationale is now factually wrong on the security-relevant point. It argues the long window is acceptable because "rotation already bounds the damage of a stolen token to a single use (build phase 1.1 implements this as a single atomic UPDATE, so a concurrent replay cannot also succeed)". The atomic UPDATE prevents a concurrent double-spend; it never bounded damage to one use, which is precisely what F-1.1-07 proved and what `8313d82` had to add family revocation to make true. A future reader tuning this exposure would take a disproven claim as the justification.
+- The 90-day absolute ceiling is recorded only in a code comment, which is the exact defect this finding names, now recurring for a new constant. `_REFRESH_TOKEN_ABSOLUTE_TTL = timedelta(days=90)` at router.py:117 carries a fifteen-line comment justifying itself, the same evidence-of-a-real-decision test that got the 30-day value filed here. `grep -ni "absolute ceiling|90-day|reuse detect" DECISIONS.md` returns two hits: one unrelated 2026-07-25 row about graph staleness, and this row, where "90 days" appears only as a rejected alternative for the idle TTL. So DECISIONS.md currently reads as though 90 days was considered and rejected, while 90 days in fact ships as the outer bound of every session. That is worse than silence.
+
+The effective lifetime story did change, and the row is not yet the accurate account of it. Before `8313d82` the answer was "30 days, sliding, renewed on every rotation, therefore unbounded for an active holder". After it, the answer is two numbers: a 30-day idle window plus a 90-day hard ceiling carried forward unchanged across a chain, judge-verified against the database. The row states the first number and the pre-fix reasoning for it.
+
+What discharges this: one edit to the same row, or a second row, stating both constants and replacing the atomic-UPDATE rationale with the shipped one (rotation plus reuse-detection family revocation plus the 90-day ceiling). No code change is needed and no finding needs reopening.
+
+Ledger tension, flagged the same way as F-1.1-01 rather than glossed. The judge raised F-1.1-02 and is now ruling on the remedy, so the raiser is judging the closure. What keeps the substance intact is that the work being judged is the lead's, not the judge's, and the ruling here is "not discharged", which is the direction that cannot be self-serving. If the lead wants the letter as well, have another agent confirm the corrected row before `/ship`.
+
+Original ruling, unchanged, recorded below.
 
 Ruling: 30 days is an acceptable value for v1 and the builder did not violate the specification, since Section 15 declares the `expires_at` column and deliberately pins no number, and 30 days is the ordinary self-hosted default. But it must be recorded before the phase closes, and a code comment is not the right home for it. `.claude/rules/decision-logging.md` calls for a DECISIONS.md row on "any choice where reverting later would cost real work" and any choice debated for more than two minutes; the builder wrote a five-line comment justifying this one (router.py:84-89), which is itself the evidence that it was a real decision rather than an obvious default. It is also security-relevant: a refresh TTL is the outer bound on how long a stolen refresh token stays useful, and a number that exists only in a comment will not be found by anyone later tuning that exposure. Action for the lead: append a DECISIONS.md row dated 2026-07-28 naming the 30-day value, the alternatives, and the reasoning, before `/ship`.
+
+History:
+- 2026-07-28 judge: confirmed, low, blocks phase close as a one-line documentation edit
+- 2026-07-28 judge: re-verified the lead's `DECISIONS.md:142` row. NOT discharged, still blocking. The row names the value, the alternatives, and a reason as asked, but its rationale rests on the atomic-UPDATE claim F-1.1-07 disproved, and the 90-day `_REFRESH_TOKEN_ABSOLUTE_TTL` that commit `8313d82` introduced is recorded only in a code comment, which is this finding's own defect recurring for a new constant. "90 days" currently appears in DECISIONS.md only as a rejected alternative while it ships as the outer bound of every session. One edit to the same row discharges it; no code change and no reopened finding
+- 2026-07-28 closer-f1102: closed, independently, with no stake in either the finding or the remedy. Verified against code, not against the row's own claims: `grep -n "_REFRESH_TOKEN_TTL\|_REFRESH_TOKEN_ABSOLUTE_TTL" router.py` plus a read of `_issue_session` (router.py:165-196) and the `/refresh` handler (router.py:340-370) confirm both characterizations in `DECISIONS.md:143` exactly: `_REFRESH_TOKEN_TTL` (30 days) is written fresh into `expires_at` on every call to `_issue_session`, i.e. every rotation, making it a sliding idle bound; `_REFRESH_TOKEN_ABSOLUTE_TTL` (90 days) is only computed fresh on an initial login (`absolute_expires_at or (now + _REFRESH_TOKEN_ABSOLUTE_TTL)` with no prior value), and the `/refresh` handler explicitly carries the existing chain's `absolute_expires_at` forward unchanged on every rotation (router.py:362-367), so it never renews. Row 143 also addresses both of the judge's stated reasons: it drops the disproven atomic-UPDATE-bounds-to-one-use rationale and replaces it with the true one (rotation plus reuse-detection family revocation, true only as of `8313d82`), and it states 90 days as the shipped absolute ceiling rather than a rejected alternative. On append-versus-edit: the append was correct, not merely tolerated. `.claude/rules/decision-logging.md` denies editing or deleting an existing entry under its own three-state permissions ("never delete or modify existing decision entries, they're a historical record"), so an edit to row 142 would have violated a rule with no carve-out for judge instruction; the judge's own finding text at the time (F-1.1-02 body, "one edit to the same row, or a second row") already named a second row as an equally valid discharge path, so the lead's choice is not a departure from the judge's ask, it is the option the judge's own text authorized. `git log -p --follow -2 -- DECISIONS.md` confirms the append is a pure addition: the diff for commit `3e37a63` adds one line (143) and touches zero characters of the existing row 142, so the superseded row is preserved intact, exactly as claimed. Ruling: F-1.1-02 closed
 
 ### F-1.1-03: `AUTH_SECRET` reuse for `ip_hash`, ruling on judgment call 1
 
@@ -725,6 +745,37 @@ Ten confirmed, two rejected on scope. Two severities revised, in opposite direct
 Ticket status deliberately left alone. The two blocking findings, F-1.1-07 and F-1.1-08, both sit on T-1.1-03, which is `done`. Under the `task-tracker` convention the judge does not reopen a ticket on the strength of its own triage, so T-1.1-03's status is untouched and the reopen decision is referred to the lead. F-1.1-12 sits on T-1.1-01 and does not block, so nothing is pending there.
 
 Adversary quality, recorded because it is the input the next phase's dispatch depends on: twelve filed, ten confirmed, two rejected on scope and none on accuracy. The over-reporting showed up as scope reach (F-1.1-15, F-1.1-17) rather than as unreproducible claims, and the finding texts consistently stated their own limits (F-1.1-09's honest severity scoping, F-1.1-13's "none of these is exploitable inside phase 1.1", F-1.1-17's "this is correct for phase 1.0") rather than overclaiming. Two of its own severity ratings were off, one high and one low. That is a healthy adversary.
+
+## Phase close ruling, 2026-07-28, judge
+
+Nothing blocks close as of the 2026-07-28 independent closer ruling: F-1.1-02, the last item, closed on `DECISIONS.md:143`, verified against code by a third party with no stake in the finding or its remedy. Everything else is closed, rejected, or deferred to a named later phase. All 18 findings are walked below; nothing is left implicit.
+
+| ID | Status | Blocks close | Owner if deferred |
+|----|--------|--------------|-------------------|
+| F-1.1-01 | closed | No | Fixed in `20d4d7a`, judge re-verified |
+| F-1.1-02 | closed | No | Closed 2026-07-28 by an independent closer against `DECISIONS.md:143`, verified against router.py |
+| F-1.1-03 | filed | No | Whoever builds refresh-reuse anomaly detection. Re-checked today: `_revoke_family_on_reuse` writes no `ip_hash` and reads none, so the column still has no consumer and the original non-blocking rationale holds unchanged |
+| F-1.1-04 | filed | No | Build phase 4.x, `users.profile` read/write path with the personalization mechanics |
+| F-1.1-05 | filed | No | Build phase 6.0, rate limiting and concurrency, per Section 25 |
+| F-1.1-06 | filed | No | Test-hygiene cleanup in `test_router.py`, carryable. Unchanged by `8313d82` |
+| F-1.1-07 | closed | No | Fixed and judge-verified, both halves including the absolute ceiling |
+| F-1.1-08 | closed | No | Fixed and judge-verified at the database level |
+| F-1.1-09 | closed | No | Fixed and judge-verified |
+| F-1.1-10 | filed | No | Build phase 1.2, with the other email-boundary work |
+| F-1.1-11 | filed | No | Build phase 1.2, now narrowed to the `User-Agent` header path only; the email half closed as a side effect of F-1.1-13 |
+| F-1.1-12 | closed | No | Fixed and judge-verified |
+| F-1.1-13 | closed | No | Fixed and judge-verified |
+| F-1.1-14 | closed | No | Fixed and judge-verified |
+| F-1.1-15 | rejected | No | Out of scope, production track |
+| F-1.1-16 | closed | No | Fixed and judge-verified |
+| F-1.1-17 | rejected | No | Converted to a build phase 2.0 ticket, server-derive `user_id` on `/query` |
+| F-1.1-18 | filed | No | Build phase 1.2, bundled with the claim-discipline work |
+
+Tickets: T-1.1-01, T-1.1-02, and T-1.1-03 are all `done` and none needs reopening. The two findings that blocked earlier, F-1.1-07 and F-1.1-08, both sat on T-1.1-03 and are now closed against verified evidence, so the reopen question the judge referred to the lead is moot.
+
+Suite state at this ruling: `314 passed`. Migration `0002_auth_hardening` proven to upgrade and downgrade cleanly against a throwaway database with no data loss, and `0001_user_data_schema` unedited.
+
+Once the `DECISIONS.md` row is corrected, nothing blocks phase 1.1 from closing and the release chain can run.
 
 ## Fix re-verification, 2026-07-28, judge
 
