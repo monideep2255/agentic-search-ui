@@ -33,11 +33,21 @@ and are NOT implemented here:
     - `resolve_model` -- already implemented in `tiers.py` (T-2.0-01).
       This class does not re-implement tier resolution; `call_tier` calls
       it indirectly through one `TierContext` instance held per `Harness`.
-    - `enforce_timeout` -- T-2.0-04's ticket. When T-2.0-04 lands, it
-      extends this same class; no stub for it exists in this file, so
-      there is nothing for that ticket to remove first.
+    - `enforce_timeout` -- implemented below by T-2.0-04
+      (Technical_specification.md Section 19.1 lines 2800-2811, Section
+      3.5 lines 508-540; tracker/phase_2.0.md T-2.0-04), which also adds
+      the `query_class` to `budget_s` mapping table
+      (`_QUERY_CLASS_BUDGET_S`/`budget_for_query_class`), decided and
+      logged in DECISIONS.md 2026-07-28. Nothing in T-2.0-02's own code
+      above was changed to add it.
     - `coordinator_worker_execute` -- T-2.0-05's ticket, a separate module
       (`coordinator_worker.py`). Not present on this class either.
+
+`QueryClass` (used only by the T-2.0-04 addition below) mirrors
+`contracts.events.ThinkPayload.query_class`'s five-value Literal. It is
+declared locally rather than imported, since `events.py` does not export a
+standalone name for it; keep the two in sync by hand if that Literal ever
+changes.
 
 `cache_prefix` placeholder (T-2.0-06, Section 4.2, prompt-cache-discipline
 obligation 1): `call_tier` accepts a `cache_prefix` parameter and, when
@@ -53,9 +63,10 @@ it defaults to `None` so this ticket does not block on an unbuilt module.
 
 from __future__ import annotations
 
+import asyncio
 import threading
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Awaitable, Literal
 
 import litellm
 
@@ -67,6 +78,9 @@ from system_03_search_agent.harness.tiers import Tier, TierContext
 Message = dict[str, str]
 
 ErrorClass = Literal["transient", "recoverable", "unexpected"]
+
+# Mirrors contracts.events.ThinkPayload.query_class (see module docstring).
+QueryClass = Literal["lookup", "single_hop", "multi_hop", "aggregate", "exploratory"]
 
 
 class HarnessCallError(RuntimeError):
@@ -198,6 +212,42 @@ def _price_per_token(model_id: str) -> tuple[float, float]:
         error_class="unexpected",
         source="harness.harness._price_per_token",
     )
+
+
+# T-2.0-04 / Section 19.1's per-step timeout budgets, in seconds, keyed by
+# Think's emitted query_class. Section 19.1's table names four classes
+# (lookup, single-hop, multi-hop, deep research); ThinkPayload.query_class
+# ships five. Mapping decided and logged in DECISIONS.md 2026-07-28:
+# `aggregate` reads as multi-hop-shaped work (combining several
+# already-resolved facts), so it takes the multi-hop budget; `exploratory`
+# reads as the deep-research class Section 19.1 already budgets for at 2
+# minutes. Do not re-derive this mapping; it is a settled decision.
+_QUERY_CLASS_BUDGET_S: dict[QueryClass, float] = {
+    "lookup": 5.0,
+    "single_hop": 10.0,
+    "aggregate": 30.0,
+    "multi_hop": 30.0,
+    "exploratory": 120.0,
+}
+
+
+def budget_for_query_class(query_class: QueryClass) -> float:
+    """Return the per-step timeout budget, in seconds, for `query_class`.
+
+    Raises:
+        ValueError: if `query_class` is not one of the five values
+            `contracts.events.ThinkPayload.query_class` can emit. Think's
+            own Pydantic validation (`extra="forbid"`, a Literal field)
+            should make this unreachable in practice; this is a defensive
+            guard against a caller passing a plain, unvalidated string.
+    """
+    try:
+        return _QUERY_CLASS_BUDGET_S[query_class]
+    except KeyError:
+        raise ValueError(
+            f"no per-step timeout budget mapped for query_class {query_class!r}; "
+            f"expected one of {sorted(_QUERY_CLASS_BUDGET_S)}"
+        ) from None
 
 
 def _with_cache_prefix(messages: list[Message], cache_prefix: str | None) -> list[Message]:
@@ -342,3 +392,75 @@ class Harness:
         """
         with self._cost_lock:
             return self._query_cost_usd.get(trace_id, 0.0)
+
+    async def enforce_timeout(self, step: str, coro: Awaitable[Any], budget_s: float) -> Any:
+        """Abort `coro` if it has not completed within `budget_s` seconds
+        (Section 3.5's `enforce_timeout`, Section 19.1's per-step timeout
+        cap).
+
+        `asyncio.wait_for` wraps `coro` in a Task (if it is not one
+        already) and, on timeout, cancels that Task and awaits its
+        cancellation before raising `asyncio.TimeoutError`. That await is
+        what keeps this method from leaving an unbounded background task:
+        by the time `enforce_timeout` raises, the original coroutine has
+        already been cancelled and has finished unwinding, not merely
+        "asked" to stop. A test in `test_harness.py` proves this
+        end-to-end with a real (short) `asyncio.sleep`, not a mock: a flag
+        the coroutine sets only after its sleep completes is asserted to
+        never be set once the timeout has fired, even after waiting past
+        the sleep's original duration.
+
+        On success, returns `coro`'s real result unchanged. A step that
+        completes just under `budget_s` is not falsely aborted, since
+        `asyncio.wait_for` only cancels after the full timeout elapses;
+        this is covered by a fast-completing-coroutine test using a real,
+        short sleep rather than a mocked clock.
+
+        On timeout, raises `HarnessCallError` (never a sentinel, `None`,
+        or a swallowed exception), so a genuinely failed step is never
+        mistaken for a zero-result success further down the loop:
+
+        - `error_class="transient"`: Section 3.5 calls a timeout
+          harness-caused, not model-caused, the same class as a rate limit
+          or a dropped connection in `call_tier`, and distinct from
+          `call_tier`'s "recoverable" class for a bad request the model
+          itself could not have satisfied differently no matter how long
+          it ran.
+        - `source=f"harness.enforce_timeout:{step}"`: naming the step that
+          timed out, so a timeout on "act" is distinguishable from one on
+          "think", and from any `call_tier` failure in that same step
+          (which keeps `source="harness.call_tier"`). This is also what
+          makes a timeout distinguishable from a step that failed for a
+          non-timeout reason: a non-timeout failure inside `coro`
+          propagates unchanged (its own type and its own `source`, if any),
+          since `asyncio.wait_for` re-raises an inner exception as-is and
+          only wraps the `TimeoutError` case.
+
+        This ticket's file scope (`harness.py`, `test_harness.py`; see the
+        module docstring) does not itself construct or emit an
+        `ErrorPayload` (Section 2.3) or drive a partial-synthesis handoff
+        to Write: the Guardrail-to-Write loop nodes that will call
+        `enforce_timeout` per step are not built yet (T-2.0-05 onward).
+        The `scope="step"` half of that future event is implied by this
+        method's own per-step framing and by the step name threaded into
+        `source` above; the loop node that eventually builds the
+        `ErrorPayload` and proceeds to synthesize from partial results
+        needs no further classification logic to fill it in, only to
+        catch this exception instead of letting it crash the run.
+
+        Raises:
+            HarnessCallError: error_class="transient", if `coro` does not
+                complete within `budget_s` seconds.
+        """
+        try:
+            return await asyncio.wait_for(coro, timeout=budget_s)
+        except asyncio.TimeoutError as exc:
+            raise HarnessCallError(
+                f"step {step!r} exceeded its {budget_s}s budget and was "
+                "aborted; the loop should proceed to Write and synthesize "
+                "from whatever partial tool results already exist for this "
+                "step (Section 19.1), not retry this same call_tier or "
+                "tool invocation blindly",
+                error_class="transient",
+                source=f"harness.enforce_timeout:{step}",
+            ) from exc
