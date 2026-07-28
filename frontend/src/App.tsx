@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AuthGate } from "./components/auth/AuthGate";
 import { HomePage } from "./pages/HomePage";
 import { ChatPage } from "./pages/ChatPage";
 
@@ -15,12 +16,25 @@ import { ChatPage } from "./pages/ChatPage";
 export type Route = { name: "home" } | { name: "chat"; query: string };
 
 function App() {
+  // T-1.2-08: held above the two-page switch so both pages can read a
+  // real token without each page owning its own auth state. `null` means
+  // "not authenticated yet"; `AuthGate` is the only thing rendered until
+  // it resolves to a real token. In-memory only (React state), never
+  // `localStorage`/`sessionStorage`/a cookie: `production-standards.md`'s
+  // secrets discipline, and this ticket does not own a reviewed
+  // token-persistence decision, only acquisition.
+  const [token, setToken] = useState<string | null>(null);
   const [route, setRoute] = useState<Route>({ name: "home" });
+
+  if (token === null) {
+    return <AuthGate onAuthenticated={setToken} />;
+  }
 
   if (route.name === "chat") {
     return (
       <ChatPage
         initialQuery={route.query}
+        token={token}
         onExit={() => setRoute({ name: "home" })}
       />
     );

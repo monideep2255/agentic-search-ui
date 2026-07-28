@@ -1,14 +1,19 @@
 /**
  * Typed `fetch()` wrappers for the streaming-run REST surface (Section
  * 13.1's minimal subset: create, events, stop; see this ticket's scope
- * note in `tracker/phase_1.2.md`).
+ * note in `tracker/phase_1.2.md`) and, added in T-1.2-08, the two `/auth`
+ * endpoints a minimal real login needs (`signup`, `login`).
  *
- * Every call here carries a real `Authorization: Bearer <token>` header.
- * `src/system_03_search_agent/auth/dependencies.py`'s `get_current_user`
- * requires it on every one of these routes, including the SSE events
- * route; there is no cookie-based session for this backend to fall back
- * on (see `lib/events.ts` and `hooks/useAgentRun.ts` for why the events
- * route cannot use the native `EventSource` API as a result).
+ * Every streaming-run call here carries a real `Authorization: Bearer
+ * <token>` header. `src/system_03_search_agent/auth/dependencies.py`'s
+ * `get_current_user` requires it on every one of those routes, including
+ * the SSE events route; there is no cookie-based session for this backend
+ * to fall back on (see `lib/events.ts` and `hooks/useAgentRun.ts` for why
+ * the events route cannot use the native `EventSource` API as a result).
+ * `signup` and `login` are the one exception: they carry no
+ * `Authorization` header at all, since they are how a caller obtains a
+ * token in the first place (`src/system_03_search_agent/auth/router.py`'s
+ * `signup` and `login` endpoints require no bearer token).
  */
 
 export type AudienceDepth = "clinical_brief" | "researcher" | "deep_technical";
@@ -153,4 +158,80 @@ export async function openEventStream(
   });
   await throwIfNotOk(response, "openEventStream");
   return response;
+}
+
+// ---------------------------------------------------------------------------
+// Auth (T-1.2-08). Mirrors `src/system_03_search_agent/auth/schemas.py`'s
+// `SignupRequest`/`SignupResponse`/`LoginRequest`/`TokenResponse` field for
+// field. Both request bodies use `email`/`password` string fields; the
+// backend normalizes and validates the email server-side (NFKC, strip,
+// lowercase, then a conservative address grammar), so this client sends
+// the value as typed with no client-side reformatting.
+// ---------------------------------------------------------------------------
+
+export interface SignupRequestBody {
+  email: string;
+  password: string;
+}
+
+export interface SignupResponse {
+  id: string;
+  email: string;
+}
+
+export interface LoginRequestBody {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+}
+
+/**
+ * `POST /auth/signup`: registers a new account. Returns only the created
+ * user's `id` and `email`, never a token (`SignupResponse` in
+ * `schemas.py` carries no token field); a caller that wants a token after
+ * signing up must follow with `login` using the same credentials.
+ */
+export async function signup(
+  body: SignupRequestBody,
+  options: ApiCallOptions = {},
+): Promise<SignupResponse> {
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const response = await fetch(`${baseUrl}/auth/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: options.signal,
+  });
+  await throwIfNotOk(response, "signup");
+  return (await response.json()) as SignupResponse;
+}
+
+/**
+ * `POST /auth/login`: exchanges an email and password for a bearer token
+ * pair. `router.py`'s `login` returns the identical 401 status and the
+ * identical "invalid email or password" detail string for an unknown
+ * email and for a known email with the wrong password, by design, so a
+ * caller of this function cannot and must not try to distinguish "no such
+ * account" from "wrong password" from the rejection alone (see
+ * `components/auth/AuthGate.tsx`'s docstring for what this means for the
+ * auth UI built on top of this function).
+ */
+export async function login(
+  body: LoginRequestBody,
+  options: ApiCallOptions = {},
+): Promise<LoginResponse> {
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const response = await fetch(`${baseUrl}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: options.signal,
+  });
+  await throwIfNotOk(response, "login");
+  return (await response.json()) as LoginResponse;
 }
