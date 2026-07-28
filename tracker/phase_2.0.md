@@ -228,8 +228,10 @@ Files this ticket may create or modify:
 - `src/system_03_search_agent/core/graph.py`
 - `src/system_03_search_agent/core/state.py`
 - `src/system_03_search_agent/core/run.py`
+- `src/system_03_search_agent/adapters/web_sse/app.py` (added at integration time: this is the one point Section 19.4's builder-only cost-event filter, already built as `cost_control.filter_events_for_end_user` in T-2.0-03, needs to be applied now that `run()` can emit a real `cost` event; T-2.0-03 explicitly deferred this wiring here since no real loop existed when it was built)
 - `tests/system_03_search_agent/core/test_graph.py`
 - `tests/system_03_search_agent/core/test_run.py` (extends the existing phase 1.0 test)
+- `tests/system_03_search_agent/adapters/web_sse/test_query_endpoint.py` (extend only, for the cost-event-filter assertion)
 
 Acceptance criteria:
 - [ ] `run(query, context)` is backed by a real LangGraph `StateGraph` with five nodes named `guardrail`, `think`, `plan`, `act`, `write`, compiled and invoked in that fixed sequence for every query
@@ -238,12 +240,14 @@ Acceptance criteria:
 - [ ] The graph still emits only Section 2.3 typed `Event` instances end to end: the existing guard-then-done round trip from the phase 1.0 test suite still passes unmodified, and the suite is extended to assert intermediate `think`, `plan`, and `cost` events also validate against their Section 2.3 payload models
 - [ ] Each stub node produces a schema-valid payload without performing real classification, tool selection, or synthesis logic; no stub node fabricates a citation or a `trust_signal` outcome that a later phase has not yet earned (real Act tool logic lands in phase 2.1+, guardrail's real validation in phase 3.0, write's real grounding in phase 2.2)
 - [ ] The per-query cap's trigger behavior (T-2.0-03) is reachable through the real graph: a test that forces the cap to be hit mid-loop asserts the graph moves to `write` early with partial results rather than continuing to `act`
+- [ ] `POST /query`'s response never includes a `cost`-type event, now that `run()` can actually emit one: `cost_control.filter_events_for_end_user` is applied to the event list before it reaches the client
 
 Breakdown:
 - [ ] `core/state.py` graph state type
 - [ ] `core/graph.py` StateGraph definition and compilation, five stub nodes
 - [ ] `core/run.py` rewritten to build and invoke the compiled graph instead of the phase 1.0 linear scaffold
-- [ ] Tests: node sequence, per-node tier assignment, event schema validation on every emitted type, stub-node non-fabrication check, cap-triggered early exit to write
+- [ ] `adapters/web_sse/app.py` wired to `filter_events_for_end_user`
+- [ ] Tests: node sequence, per-node tier assignment, event schema validation on every emitted type, stub-node non-fabrication check, cap-triggered early exit to write, adapter cost-event filter
 
 Evidence:
 - (filled at close)
