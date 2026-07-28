@@ -61,7 +61,7 @@ History:
 
 ### T-1.1-02: Auth primitives and the ecdsa CVE resolution
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/1.1-auth-service
 Depends on: none
@@ -89,11 +89,11 @@ Acceptance criteria:
 - [ ] With `AUTH_SECRET` unset in the environment, minting or verifying a token raises an error rather than falling back to a default, empty, or hardcoded secret
 
 Breakdown:
-- [ ] Swap `python-jose[cryptography]` for the chosen JWT library in `requirements.txt` and `pyproject.toml`, reinstall, confirm `ecdsa` is gone
-- [ ] argon2id password hash and verify
-- [ ] HS256 access-token mint and verify, with expiry and algorithm pinning
-- [ ] Opaque refresh-token generation and SHA-256 hashing
-- [ ] Tests: valid, invalid, expired, tampered, wrong-secret, wrong-algorithm, and missing-secret paths for each primitive
+- [x] Swap `python-jose[cryptography]` for the chosen JWT library in `requirements.txt` and `pyproject.toml`, reinstall, confirm `ecdsa` is gone
+- [x] argon2id password hash and verify
+- [x] HS256 access-token mint and verify, with expiry and algorithm pinning
+- [x] Opaque refresh-token generation and SHA-256 hashing
+- [x] Tests: valid, invalid, expired, tampered, wrong-secret, wrong-algorithm, and missing-secret paths for each primitive
 
 Evidence:
 - (filled at close by the judge)
@@ -101,6 +101,7 @@ Evidence:
 History:
 - 2026-07-28 lead: created, scoped from Section 15's token model, phase 1.1 open
 - 2026-07-28 lead: tech refinement complete, researcher established that `ecdsa` is a core (not extra-gated) requirement of `python-jose` so it cannot be excluded in place, library swap authorized as a tactical decision under bossman mode and logged to DECISIONS.md, refined
+- 2026-07-28 builder-auth-primitives: implemented all three primitives (argon2id password hashing in `auth/passwords.py`, HS256 access tokens and opaque SHA-256-hashed refresh tokens in `auth/tokens.py`), swapped `python-jose[cryptography]` for `PyJWT` plus `argon2-cffi` in `requirements.txt` and `pyproject.toml`, uninstalled `ecdsa`/`python-jose` from the shared venv and reinstalled the new pair. All nine acceptance criteria proven by 38 new tests (10 in `test_passwords.py`, 28 in `test_tokens.py`); full suite is 229 passed (191 prior plus 38 new), `pip show ecdsa` reports not found, `pip-audit` reports no known vulnerabilities. Commit `465291e`. Status set to in-review, not done, per instruction that only the judge sets done
 
 ### T-1.1-03: Auth router and app wiring
 
