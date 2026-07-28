@@ -16,7 +16,7 @@ LEARNINGS.md filtered to this phase: one entry applies, and it is the corrected 
 
 ### T-1.1-01: PostgreSQL user-data schema and migration
 
-Status: rejected
+Status: done
 Refine: refined
 Branch: phase/1.1-auth-service
 Depends on: none
@@ -68,11 +68,24 @@ Evidence:
 - Tests: 29 passed in `tests/system_03_search_agent/data`, re-run by the judge.
 - BLOCKING DEFECT, F-1.1-01, high. `tests/system_03_search_agent/data/test_migration.py:26` targets the shared dev database named by `USER_DB_URL` (defaulting to the real `search_agent_users`) and downgrades it to base, which drops every table and therefore destroys every row. The `migrated_head` fixture restores the schema but cannot restore the data. Proven with a canary: planted a row, `11 users before`, ran `pytest tests/system_03_search_agent/data/test_migration.py -q` giving `5 passed in 0.53s`, then `0 users after` and `0 canary rows surviving`. This also silently deleted the ten rows the judge's own HTTP probe had created minutes earlier. Every acceptance criterion above genuinely passes; this ticket is rejected on the destructive test alone.
 
+Evidence, round 2 (2026-07-28 judge re-verification of commit `20d4d7a`, authored by `fix-f1101-destructive-test`):
+
+- Scope of the change, read from `git show 20d4d7a --name-only` rather than from the fix agent's report: exactly one file, `tests/system_03_search_agent/data/test_migration.py`, 87 insertions and 17 deletions. No source file, no migration, no model, no `conftest.py`, no CI config was touched, so the fix cannot have changed the behavior it was being measured against.
+- Verify surface NOT weakened, the critical check under `.claude/rules/goal-contracts.md`. Test-function inventory is identical before and after: `git show 20d4d7a^:...test_migration.py | grep -c '^def test_'` gives `5`, the post-fix file gives `5`, and the five names match one for one (`test_upgrade_creates_all_six_tables`, `test_extensions_enabled_and_gen_random_uuid_resolves`, `test_interactions_indexes_exist`, `test_cq_candidates_status_index_exists`, `test_downgrade_base_removes_every_table_index_and_extension`). Every removed line in the diff is a docstring line, a comment, or a signature that was immediately re-added in changed form; no `assert` was deleted. `grep -nE 'skip|xfail'` over the post-fix file returns only the pre-existing module-level `pytest.skip` for an unreachable server at line 61, which existed before the fix and is a skip-when-no-database guard, not a skip of the rollback test. PASS.
+- The rollback path is still genuinely exercised against real PostgreSQL. `test_downgrade_base_removes_every_table_index_and_extension` at `tests/system_03_search_agent/data/test_migration.py:230-256` still calls `command.downgrade(cfg, "base")` at line 232, still asserts `ALL_TABLES.isdisjoint(tables)` against a live `inspect(engine)`, and still asserts `remaining_extensions == set()` from a live `pg_extension` query. The only diff inside this function's body is a three-line trailing comment. The alembic runner confirmed it ran for real: `INFO [alembic.runtime.migration] Running downgrade 0001_user_data_schema -> , User-data schema: users, auth_sessions, ...`. PASS.
+- Canary, re-derived from F-1.1-01's own text and run against the FULL suite, not just the migration module. Planted `judge-round2-b16e152f-...@canary.test` into `users`. Before: `users_total=23`, `canary_rows=1`, `public_tables=7`. Ran `python -m pytest tests/ -q` giving `284 passed, 1 warning in 2.58s`. After: `canary_rows=1`, `public_tables=7`. The canary survived and the schema was never torn down. Under the round-1 code this same probe returned `0`. PASS.
+- No scratch database leaks on the happy path. `SELECT datname FROM pg_database` before and after the full suite both return exactly `ncbi_kg postgres search_agent_users template0 template1`. `SELECT count(*) FROM pg_database WHERE datname LIKE 'migration_scratch%'` returns `0`. PASS.
+- No scratch database leaks after a FAILING test, probed two ways with a pytest plugin loaded from `/tmp` so no repo file was modified (`git status --short` after the whole re-verification shows only the three files already modified at session start). Probe A, the worst case, forced an exception immediately after `command.downgrade(cfg, "base")` had already run, using a `hookwrapper` on `pytest_runtest_call` with `outcome.force_exception(...)`: result `1 failed, 4 passed in 0.70s`, and teardown still ran (`Running upgrade -> 0001_user_data_schema` appears in the captured teardown stderr), leaving `LEAKED_COUNT=0`, `canary_rows=1`, `real_db_tables=7`. Probe B, early abort, failed a mid-module test under `-x` so the remaining tests never ran: `1 failed, 2 passed`, `stopping after 1 failures`, and again `LEAKED_COUNT=0`, `canary_rows=1`, `real_db_tables=7`. The `finally` block in the `scratch_db_url` fixture (`test_migration.py:113-127`) holds under both. PASS.
+- SUB-CHECK UNVERIFIED, stated rather than claimed: a hard-kill (SIGKILL) mid-run probe could not be executed, because neither `timeout` nor `gtimeout` is present on this macOS host, so the command produced no test run and therefore no evidence. Noted as a known limitation rather than a pass: a `finally` block cannot run after SIGKILL by construction, so an orphaned `migration_scratch_<hex>` database is possible after a hard kill or a power loss. This is inherent to the approach, not a defect introduced by this fix, and it is bounded: the name is uniquely prefixed and trivially greppable in `psql -l`.
+- The fix agent's claim about the other two modules, checked directly rather than taken on their word. `grep -rnE 'downgrade|DROP |TRUNCATE|drop_all|CREATE DATABASE|DROP DATABASE' tests/` matches inside `test_migration.py` only; `test_models.py` and `test_router.py` produce zero matches. `test_models.py` additionally cleans up after itself: its `db_session` fixture at lines 123-128 ends in `finally: session.rollback(); session.close()`, so nothing it inserts is committed. Its `_schema_at_head` fixture runs `command.upgrade(cfg, "head")` only, never a downgrade. `test_router.py` never downgrades and holds no destructive SQL. Claim CONFIRMED. PASS.
+
 History:
 - 2026-07-28 lead: created, scoped from Section 15, phase 1.1 open
 - 2026-07-28 lead: tech refinement complete, six-table scope decided and recorded above, environment pre-verified, no product-owner question outstanding, refined
 - 2026-07-28 judge: rejected. All nine acceptance criteria independently verified and passing against the live database, but the migration test destroys every row in the database `USER_DB_URL` names (F-1.1-01, high, canary-proven: 11 users before, 0 after). Fix the test's target database and resubmit; no schema or migration change is needed
 - 2026-07-28 builder-user-data-schema: built the six SQLAlchemy models (base.py, models.py, session.py) and the hand-written 0001_user_data_schema Alembic migration; created the search_agent_users database; verified upgrade head and downgrade base against real local PostgreSQL; 220 tests passing (191 prior plus 29 new); ruff and pip-audit clean on new code; commit fcd3db0; status set to in-review for judge sign-off
+- 2026-07-28 fix-f1101-destructive-test: fixed F-1.1-01. `test_migration.py` now creates a uniquely named scratch database (`migration_scratch_<uuid4 hex>`) before this module's tests run and drops it afterward, even on failure; the `migrated_head` fixture points Alembic at the scratch database via `monkeypatch.setenv("USER_DB_URL", ...)` for the duration of each test, so `alembic upgrade`/`downgrade` never targets the database `USER_DB_URL` names outside tests. The downgrade-base test is unchanged in substance and still genuinely exercises the rollback path against real PostgreSQL, just against scratch. Checked `test_models.py` and `test_router.py` for the same defect: neither downgrades, drops, or truncates anything; both only insert/delete rows they create themselves. Canary proof: 1 user before, `pytest tests/system_03_search_agent/data/test_migration.py -q` gives `5 passed in 0.81s`, 1 user after, 1 canary row surviving, no scratch database left behind (`psql -l` shows only `ncbi_kg`, `postgres`, `search_agent_users`, `template0`, `template1`). Full suite: `284 passed`. Commit 20d4d7a. Status set to in-review for judge re-verification; F-1.1-01 itself is left filed for the judge to close
+- 2026-07-28 judge: done. Re-verified commit `20d4d7a` (the fix agent's work, not the judge's) with probes re-derived from F-1.1-01's own text, not from the fix agent's report. The verify surface was not weakened: 5 test functions before and after with identical names, no assertion removed, no skip or xfail added, and `test_downgrade_base_removes_every_table_index_and_extension` still calls `command.downgrade(cfg, "base")` against real PostgreSQL at line 232. Judge canary survived the FULL suite (`284 passed`), scratch database dropped cleanly on the happy path and after two independently induced failures. Round-1 evidence for the nine acceptance criteria stands unchanged; the sole blocking defect is closed, so the ticket passes
 
 ### T-1.1-02: Auth primitives and the ecdsa CVE resolution
 
@@ -205,15 +218,20 @@ One narrow Section 15 gap surfaced that no ticket covered, filed below as F-1.1-
 
 | ID | Severity | Ticket | Status | Summary |
 |----|----------|--------|--------|---------|
-| F-1.1-01 | High | T-1.1-01 | filed | The migration test destroys every row in the database `USER_DB_URL` names |
+| F-1.1-01 | High | T-1.1-01 | closed | The migration test destroys every row in the database `USER_DB_URL` names |
 | F-1.1-02 | Low | T-1.1-03 | filed | The 30-day refresh-token TTL is recorded only in a code comment |
 | F-1.1-03 | Low | T-1.1-03 | filed | Rotating `AUTH_SECRET` silently orphans every stored `ip_hash` |
 | F-1.1-04 | Low | T-1.1-03 | filed | `users.profile` has no read or write path on any endpoint |
 | F-1.1-05 | Medium | T-1.1-03 | filed | No rate limit on `/auth/login`, an argon2id CPU cost per unauthenticated request |
+| F-1.1-06 | Low | T-1.1-03 | filed | The router tests commit rows they never clean up, so the dev database grows by 10 users and 7 auth_sessions per full-suite run |
 
 ### F-1.1-01: the migration test destroys all data in the shared user database
 
-Severity: high. Ticket: T-1.1-01. Status: filed. Blocks: yes, this is why T-1.1-01 is rejected.
+Severity: high. Ticket: T-1.1-01. Status: closed 2026-07-28 by the judge. Blocked: yes, this was why T-1.1-01 was rejected; the block is lifted.
+
+Closure reason: commit `20d4d7a` moves the upgrade/downgrade round trip onto a uniquely named throwaway database (`migration_scratch_<uuid4 hex>`), created by a module-scoped `scratch_db_url` fixture and dropped in a `finally` block, with `migrated_head` repointing `USER_DB_URL` via `monkeypatch.setenv` for the duration of each test. The database `USER_DB_URL` names is now only ever a read-only reachability probe target, never a migration target. Closed on re-verification evidence, not on the fix agent's report: the judge re-derived the canary from this finding's own text and ran it against the full suite (`284 passed`), with `canary_rows=1` and `public_tables=7` afterward where round 1 gave `0`. The full round-2 evidence, including the verify-surface check and the two induced-failure teardown probes, is in T-1.1-01's "Evidence, round 2" block above.
+
+Ledger tension, flagged deliberately rather than glossed. The `task-tracker` convention is that the agent who raises a finding never closes it, and here the same judge does both. Stated plainly: the work being closed is the fix agent's (`fix-f1101-destructive-test`, commit `20d4d7a`), not the judge's, so the maker-checker split that the rule exists to protect is intact at the level that matters, and every probe behind this closure was re-run independently from this finding's own text rather than read off the fix agent's report. What is not satisfied is the letter of the rule, since the raiser is also the closer. This is the same tension the phase 1.0 judge recorded. If the lead wants the letter as well as the substance, add a separate sign-off from another agent before phase close.
 
 `tests/system_03_search_agent/data/test_migration.py:26` resolves its target as `os.environ.get("USER_DB_URL", "postgresql://localhost:5432/search_agent_users")`, the developer's real user-data database, and one of its tests runs `alembic downgrade base` against it. Downgrade drops all six tables, so every row is destroyed. The `migrated_head` fixture (lines 64-79) restores the schema in its teardown and is explicit that it does so "so other tickets that depend on this schema are never left looking at a torn-down database", but restoring the schema does not restore the data, and nothing warns that the data is gone. Anyone who runs `pytest tests/` against a populated database silently loses every user, auth session, chat session, interaction, candidate, and saved query.
 
@@ -258,3 +276,33 @@ Section 15 describes `GET /auth/me` as returning "the caller's profile from the 
 Severity: medium. Ticket: T-1.1-03. Status: filed. Blocks this phase: no, it is owned by build phase 6.0.
 
 `production-standards` requires rate-limiting consideration on every endpoint. `/auth/login` runs a full argon2id verification on every request, including for an unknown email, because the enumeration defence at router.py:198 deliberately hashes against a dummy value rather than short-circuiting. That closes the timing channel, correctly, and in exchange makes every unauthenticated request cost real CPU, so the endpoint is both a credential-stuffing surface and a cheap CPU-exhaustion surface. Reproduction: `POST /auth/login` can be issued without limit; nothing in `router.py` or `app.py` throttles it. Filed rather than dismissed so it is not lost, but it does not block phase 1.1: Section 25 places rate limiting and concurrency at build phase 6.0, so the consideration is deferred to a named phase rather than absent.
+
+### F-1.1-06: the router tests leave committed rows behind on every run
+
+Severity: low. Ticket: T-1.1-03. Status: filed. Blocks phase close: no.
+
+Raised by the lead's observation and ruled on by the judge. It is a real defect in test hygiene, not acceptable-as-is, but it is low severity and does not block.
+
+Measured, two consecutive full-suite runs, not inferred:
+
+```
+run 1: users 23 -> 33 (delta 10), auth_sessions 21 -> 28 (delta 7)   # 284 passed in 2.58s
+run 2: users 33 -> 43 (delta 10), auth_sessions 21 -> 28 (delta 7)   # 284 passed in 2.61s
+```
+
+The growth is deterministic and unbounded across runs. `sessions`, `interactions`, `cq_candidates`, and `saved_queries` all stay at `0`, so the residue is confined to the two tables the auth endpoints write.
+
+The source is `tests/system_03_search_agent/auth/test_router.py`, which is not the module the judge cleared under F-1.1-01. It drives the real `/auth/signup` and `/auth/login` endpoints through `TestClient`, so every row those endpoints write is committed by the application's own session, outside any test-owned transaction. `grep -cE 'session.delete|DELETE FROM|rollback'` over that file returns `0`: it has no cleanup fixture of any kind. The contrast is `tests/system_03_search_agent/data/test_models.py:123-128`, whose `db_session` fixture ends in `finally: session.rollback()`, which is why that module leaves nothing behind. The router module needs the equivalent, most simply a fixture that records the emails it creates and deletes those `users` rows in teardown, letting the existing `ON DELETE CASCADE` clear the matching `auth_sessions` rows.
+
+Why it is a defect and not merely untidy:
+
+- Unbounded growth. Nothing ever prunes these rows, so a developer running the suite in a loop accumulates them indefinitely in the database that phase 4.6's feedback loop will later read. Real data and test residue become indistinguishable, since the residue rows are ordinary valid `users` rows.
+- It already masked something once. Under round 1, the migration test's `downgrade base` silently deleted this residue along with everything else, which is part of why the destructive behavior went unnoticed until a canary was planted. Residue that disappears without complaint is exactly the condition that hides a data-destroying bug.
+- Each residue row carries a real argon2id hash, so the cost is CPU at write time, not just disk.
+
+Why it does not block phase close, checked rather than assumed:
+
+- No test asserts on a global row count today, so nothing is order-dependent or flaky as residue accumulates. The only count in the suite is `_count_users_with_email` at `test_router.py:90-95`, which is scoped by `where(User.email == email)`, and every test email is a fresh `uuid.uuid4()` from `_unique_email()` at line 66. Collisions are not possible at any residue level, and the assertions stay correct no matter how many rows precede them.
+- The residue is confined to a local developer database. Nothing in CI or production is affected.
+
+Action for the lead: add a teardown fixture to `test_router.py` in this phase if the budget allows, otherwise carry it as a known item. The rule it sits under is `production-standards`, "integration tests hit a real database or graph connection where feasible", which is satisfied; what is missing is the cleanup that makes a real-database integration test repeatable. Judge did not fix it, per the report-do-not-fix instruction.
