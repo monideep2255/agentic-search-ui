@@ -106,7 +106,7 @@ History:
 
 ### T-1.1-03: Auth router and app wiring
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/1.1-auth-service
 Depends on: T-1.1-01, T-1.1-02
@@ -120,23 +120,23 @@ Files this ticket may create or modify:
 - `tests/system_03_search_agent/auth/test_router.py`
 
 Acceptance criteria:
-- [ ] `POST /auth/signup` with an unused email returns a success status and creates exactly one `users` row; the same email again returns 409 and creates no second row
-- [ ] `POST /auth/login` with correct credentials returns both an access token and a refresh token and updates `users.last_login_at`
-- [ ] `POST /auth/login` with a wrong password returns 401 with no token in the body, and its response is indistinguishable between an unknown email and a known email with a wrong password, so the endpoint does not disclose which emails are registered
-- [ ] `POST /auth/refresh` with a valid refresh token returns a new access token and a new refresh token, and replaying the presented refresh token afterwards returns 401, so rotation actually invalidates the old one
-- [ ] `POST /auth/logout` sets `revoked_at` on the caller's `auth_sessions` row, and a refresh with that token afterwards returns 401
-- [ ] `GET /auth/me` returns the caller's profile for a valid access token, and returns 401 for a missing, malformed, or expired token
-- [ ] Every request body is validated through a Pydantic model with `extra="forbid"`, so an unknown field returns 422 rather than being silently ignored
-- [ ] No response body from any `/auth` endpoint contains `password_hash`, `refresh_token_hash`, or any other user's data
-- [ ] `auth_sessions.ip_hash` holds a salted hash, and the raw client IP address appears in no column and no log line
-- [ ] Mounting the auth router leaves `GET /health` and `POST /query` behaving exactly as they did at the close of phase 1.0, verified by the phase 1.0 tests still passing unchanged
+- [x] `POST /auth/signup` with an unused email returns a success status and creates exactly one `users` row; the same email again returns 409 and creates no second row
+- [x] `POST /auth/login` with correct credentials returns both an access token and a refresh token and updates `users.last_login_at`
+- [x] `POST /auth/login` with a wrong password returns 401 with no token in the body, and its response is indistinguishable between an unknown email and a known email with a wrong password, so the endpoint does not disclose which emails are registered
+- [x] `POST /auth/refresh` with a valid refresh token returns a new access token and a new refresh token, and replaying the presented refresh token afterwards returns 401, so rotation actually invalidates the old one
+- [x] `POST /auth/logout` sets `revoked_at` on the caller's `auth_sessions` row, and a refresh with that token afterwards returns 401
+- [x] `GET /auth/me` returns the caller's profile for a valid access token, and returns 401 for a missing, malformed, or expired token
+- [x] Every request body is validated through a Pydantic model with `extra="forbid"`, so an unknown field returns 422 rather than being silently ignored
+- [x] No response body from any `/auth` endpoint contains `password_hash`, `refresh_token_hash`, or any other user's data
+- [x] `auth_sessions.ip_hash` holds a salted hash, and the raw client IP address appears in no column and no log line
+- [x] Mounting the auth router leaves `GET /health` and `POST /query` behaving exactly as they did at the close of phase 1.0, verified by the phase 1.0 tests still passing unchanged
 
 Breakdown:
-- [ ] Pydantic request and response schemas with `extra="forbid"`
-- [ ] The five endpoints wired to the models from T-1.1-01 and the primitives from T-1.1-02
-- [ ] Access-token dependency for authenticated routes
-- [ ] Router mounted at `/auth` in `app.py`
-- [ ] Tests: valid, invalid, missing, and null input on all five endpoints, plus the rotation, revocation, and enumeration-resistance paths
+- [x] Pydantic request and response schemas with `extra="forbid"`
+- [x] The five endpoints wired to the models from T-1.1-01 and the primitives from T-1.1-02
+- [x] Access-token dependency for authenticated routes
+- [x] Router mounted at `/auth` in `app.py`
+- [x] Tests: valid, invalid, missing, and null input on all five endpoints, plus the rotation, revocation, and enumeration-resistance paths
 
 Evidence:
 - (filled at close by the judge)
@@ -144,6 +144,7 @@ Evidence:
 History:
 - 2026-07-28 lead: created, scoped from Section 15's endpoint list, phase 1.1 open, depends on T-1.1-01 and T-1.1-02
 - 2026-07-28 lead: tech refinement complete, no product-owner question outstanding, refined
+- 2026-07-28 builder-auth-router: implemented the five `/auth` endpoints (`router.py`), Pydantic schemas with `extra="forbid"` (`schemas.py`), and the Bearer-token `get_current_user` dependency (`dependencies.py`), mounted at `/auth` in `app.py` with no other change to the phase 1.0 endpoints. Login is enumeration-resistant (a fixed dummy argon2 hash keeps the unknown-email and wrong-password branches doing equal work with byte-identical 401 bodies). Refresh and logout revoke via a single atomic `UPDATE ... WHERE revoked_at IS NULL AND expires_at > now`, not a select-then-mutate, so a concurrent replay of the same refresh token cannot also succeed. `ip_hash` is a keyed HMAC-SHA256 of the client IP using the existing `AUTH_SECRET` (no new env var added; no file in this ticket's scope includes `env.example`). 26 new tests in `test_router.py`, all skip cleanly if PostgreSQL is unreachable; full suite is 284 passed (258 prior plus 26 new); `ruff check` clean on all five touched files. Commit `ff797d2`. Status set to in-review, not done, per instruction that only the judge sets done
 
 ## Findings
 
