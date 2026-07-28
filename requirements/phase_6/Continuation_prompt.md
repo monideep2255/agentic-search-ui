@@ -1,8 +1,14 @@
 # Phase 6 continuation prompt
 
-Phase 6 is the build. It is underway. Build phase 1.0 (the FastAPI skeleton and typed event contract) and build phase 1.1 (the auth service and the PostgreSQL user-data schema) are both done, judge-reviewed, adversary-tested, and merged into `main` as PR #5 and PR #6. Build phase 2.0 (the LangGraph agent loop) is the recommended next, with 1.2 (the React shell) also unblocked.
+Phase 6 is the build. It is underway. Build phase 1.0 (the FastAPI skeleton and typed event contract) and build phase 1.1 (the auth service and the PostgreSQL user-data schema) are both done, judge-reviewed, adversary-tested, and merged into `main` as PR #5 and PR #6.
 
 This is the file to open at the start of the next build session.
+
+Three decisions are waiting on the product owner before or as the next phase opens. All three are in the open items table below, with the reasoning behind each. Do not assume them.
+
+- Which phase runs next, 2.0 or 1.2. The lead recommends 2.0 and this file is written assuming it, but that is a recommendation, not a settled call.
+- What the `product_refine` question on build phase 1.2 actually is. The board records that one exists and never recorded the question.
+- Whether `security/` stays gitignored, which decides whether the Step 6.2 scan results are ever committed.
 
 ## Table of contents
 
@@ -29,7 +35,9 @@ Phases 1 through 5 of System 3 are complete and merged. Phase 6 (build) is under
 6. `tracker/phase_1.1.md`. The full record of what phase 1.1 built, including 18 findings with their dispositions. Read this before opening any phase that touches auth, the user-data database, or a security property stated in the spec.
 7. `requirements/PRD.md` and `requirements/Evaluation_playbook.md` as needed. The PRD is locked. The playbook is living.
 
-Then start the next build phase:
+Then confirm with the product owner which phase runs next, 2.0 or 1.2. Both are unblocked by dependency, the lead recommends 2.0, and the reasoning for each is in the open items table below. Do not start either on your own reading of the recommendation.
+
+Once confirmed, open it:
 
 ```
 /task-tracker --open 2.0
@@ -103,6 +111,8 @@ It carries two blockers that 2.0 does not. It is marked `product_refine`, so the
 | Name a domain sign-off owner for the clinical and human-variation golden fixtures | Build phase 5.1 | Product owner |
 | Install Playwright and wire it as the UI gate. Re-verify the version at install time | Build phase 1.2 | Lead |
 | Settle the `product_refine` question on build phase 1.2. The board records that one exists but not what it is | Build phase 1.2 opens | Product owner |
+| Confirm which build phase runs next, 2.0 or 1.2. Both depend only on 1.0 and both are unblocked by dependency. The lead recommends 2.0 and this file is written assuming it, but the choice has not been confirmed. The case for 2.0: it is unblocked today, it is the spine the rest hangs off, and it gives 1.2 a real event stream to consume instead of a stub. The case for 1.2: it is the only phase producing something visible, and it clears three queued findings. The case against 1.2 first: it is blocked on both the `product_refine` question above and a Playwright install that needs a `supply-chain-security` precheck | The next phase opens | Product owner |
+| Decide whether `security/` should stay gitignored. It is ignored at `.gitignore:48` and nothing under it is tracked, so the Step 6.2 whole-repository scan results would not be committed: not reviewable in a pull request, not diffable against a later scan, and gone on a fresh clone. For the single security gate of the entire prototype that is likely the wrong default. Either un-ignore it, or decide deliberately that findings get transcribed into `tracker/` instead and the raw output stays local. Cheaper to settle before the scan runs than after | The Step 6.2 scan runs | Product owner |
 | Decide whether unattended overnight runs are wanted | Whenever it becomes obvious | Product owner |
 | Live-verify the PubTator3 relations endpoint path and fields | Build phase 3.3 ships | Lead |
 | Add auth-path logging. The RFC 6819 family revocation currently fires silently, so the one security event most worth alerting on leaves no record | Build phase 1.2 | Lead |
