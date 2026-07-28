@@ -225,16 +225,16 @@ One narrow Section 15 gap surfaced that no ticket covered, filed below as F-1.1-
 | F-1.1-04 | Low | T-1.1-03 | filed | `users.profile` has no read or write path on any endpoint |
 | F-1.1-05 | Medium | T-1.1-03 | filed | No rate limit on `/auth/login`, an argon2id CPU cost per unauthenticated request |
 | F-1.1-06 | Low | T-1.1-03 | filed | The router tests commit rows they never clean up, so the dev database grows by 10 users and 7 auth_sessions per full-suite run |
-| F-1.1-07 | Medium (was High) | T-1.1-03 | confirmed | Refresh rotation has no reuse detection, so a stolen refresh token grants unlimited access, not the one use Section 15 promises |
-| F-1.1-08 | Medium | T-1.1-03 | confirmed | Email is matched case-sensitively, so `USER@example.com` opens a second account instead of returning 409 |
-| F-1.1-09 | Low (was Medium) | T-1.1-02 | confirmed | An access token carrying no `exp` claim is accepted and never expires |
+| F-1.1-07 | Medium (was High) | T-1.1-03 | closed | Refresh rotation has no reuse detection, so a stolen refresh token grants unlimited access, not the one use Section 15 promises |
+| F-1.1-08 | Medium | T-1.1-03 | closed | Email is matched case-sensitively, so `USER@example.com` opens a second account instead of returning 409 |
+| F-1.1-09 | Low (was Medium) | T-1.1-02 | closed | An access token carrying no `exp` claim is accepted and never expires |
 | F-1.1-10 | Medium | T-1.1-03 | confirmed | `/auth/signup` is an unauthenticated account-enumeration oracle, by status code and by a 22.8x timing gap |
 | F-1.1-11 | Medium | T-1.1-03 | confirmed | A NUL byte in `email` or in the `User-Agent` header returns an unhandled HTTP 500 |
-| F-1.1-12 | Medium | T-1.1-01 | confirmed | `auth_sessions.refresh_token_hash` has neither a unique constraint nor an index, giving a 500 path and a sequential scan on every auth call |
-| F-1.1-13 | Low | T-1.1-03 | confirmed | `email` gets no format validation at all, so `@`, `not-an-email`, and a CRLF-bearing address all create accounts |
-| F-1.1-14 | Low | T-1.1-03 | confirmed | Token responses carry no `Cache-Control: no-store`, against RFC 6749 Section 5.1 |
+| F-1.1-12 | Medium | T-1.1-01 | closed | `auth_sessions.refresh_token_hash` has neither a unique constraint nor an index, giving a 500 path and a sequential scan on every auth call |
+| F-1.1-13 | Low | T-1.1-03 | closed | `email` gets no format validation at all, so `@`, `not-an-email`, and a CRLF-bearing address all create accounts |
+| F-1.1-14 | Low | T-1.1-03 | closed | Token responses carry no `Cache-Control: no-store`, against RFC 6749 Section 5.1 |
 | F-1.1-15 | Low | T-1.1-03 | rejected | No password policy: out of scope, Section 15 scopes this to basic auth and the PRD puts enterprise security on the production track |
-| F-1.1-16 | Low | T-1.1-03 | confirmed | `auth_sessions.user_agent` is stored unbounded, 60,000 characters written from one login |
+| F-1.1-16 | Low | T-1.1-03 | closed | `auth_sessions.user_agent` is stored unbounded, 60,000 characters written from one login |
 | F-1.1-17 | Low | T-1.1-03 | rejected | `/query` unauthenticated: correct for the shipped build order, not a phase 1.1 defect; becomes a phase 2.0 ticket |
 | F-1.1-18 | Low | T-1.1-02 | confirmed | The `user_id` claim accepts five non-canonical UUID spellings, so one account has many valid subject strings |
 
@@ -379,6 +379,7 @@ This is the standard OAuth refresh-token-rotation reuse-detection rule (RFC 6819
 
 History:
 - 2026-07-28 judge: confirmed, severity revised to medium. Reproduction re-run independently and matched the adversary's exactly (seven unimpeded rotations after the reuse event, victim's second device still 200). Ruled on the spec's purpose clause rather than its mechanism clause; the mechanism ships correctly and the stated property does not. Blocks phase close
+- 2026-07-28 judge: closed on re-verification of commit `8313d82` (the fix agent's work, not the judge's). The adversary's own reproduction now inverts at every step: attacker rotates R1 `200`, victim replays R1 `401`, attacker's chain `[401, 401, 401]`, victim's second device `401`, and re-login `200`, so both holders are forced back to the password exactly as the spec's "bounded to one use" requires. The absolute ceiling was verified separately rather than read: `absolute_expires_at` is byte-identical across four consecutive rotations (`2026-10-26 10:26:17.537995-04:00` four times) while `expires_at` produced 5 distinct values, proving the sliding window still slides and the ceiling does not renew; forcing the ceiling into the past on a live row returns `401` even though `expires_at` is still 30 days out. The lead's fallback (report the lifetime half as open rather than half-do it) was not needed, since the fix took the clean route of a new nullable column plus a NULL-tolerant predicate. Nothing of F-1.1-07 remains open
 
 ### F-1.1-08: email is matched case-sensitively, so case variants open separate accounts
 
@@ -410,6 +411,7 @@ The whitespace and homoglyph cases matter most: a support agent, an allowlist, o
 
 History:
 - 2026-07-28 judge: confirmed at medium, no severity revision. Independently reproduced all four variants. Blocks phase close, because normalization is a schema-level decision this phase owns and deferring it converts a boundary fix into a backfill plus a collision policy
+- 2026-07-28 judge: closed on re-verification of commit `8313d82`. Every variant that returned 201 now returns 409: `UPDATE` spelling, domain-case, and leading/trailing whitespace, and `login` with the uppercase spelling returns `200`, which closes the user-facing half the finding cared about most. The zero-width-space variant returns `422`, caught by the F-1.1-13 format check. Enforcement is at the DATABASE level and was proven there, not inferred from the application code: against a scratch database, a raw `psql` INSERT of `KEEP@example.com` alongside an existing `keep@example.com` is rejected with `ERROR: duplicate key value violates unique constraint "ux_users_email_lower"`, a functional unique index on `lower(email)`, so a second code path cannot reintroduce the gap
 
 ### F-1.1-09: an access token with no `exp` claim is accepted and never expires
 
@@ -444,6 +446,7 @@ Honest scoping of the severity. Forging any of these requires `AUTH_SECRET`, so 
 
 History:
 - 2026-07-28 judge: confirmed as a real defect, severity revised medium to low. All three variants independently reproduced. Ruled that the verifying path does owe an independent contract, but that a gap conferring no incremental capability on an attacker who already holds `AUTH_SECRET` is low. Non-blocking, bundle with F-1.1-18 into a phase 1.2 claim-discipline ticket
+- 2026-07-28 judge: closed on re-verification of commit `8313d82`. All three filed variants now `401` (no `exp` at all, `exp` in year 3000, `exp` as a JSON string), and two further probes the judge added beyond the finding also `401`: an `exp` 24 hours out, which exercises the new 15-minute policy ceiling rather than mere presence, and a token with no `user_id`. The verifying path now enforces the contract independently of the minter, which was the ruling's requirement. Regression checked in both directions: a hand-forged valid 15-minute token and a genuinely minted token both still return `200`, so the tightening did not overshoot into rejecting legitimate tokens
 
 ### F-1.1-10: `/auth/signup` is an unauthenticated account-enumeration oracle
 
@@ -545,6 +548,7 @@ A sequential scan on every auth call. `/auth/login`, `/auth/refresh`, and `/auth
 
 History:
 - 2026-07-28 judge: confirmed at medium, no severity revision. Index absence read from `pg_indexes` on the live database (only `auth_sessions_pkey`), and the duplicate-hash 500 independently reproduced. Non-blocking, since neither consequence is reachable through the HTTP surface today, but recommended for this phase because the migration is already in hand and this is the last phase that owns the schema
+- 2026-07-28 judge: closed on re-verification of commit `8313d82`. Both halves fixed with one index. The finding's own reproduction can no longer even be set up: the duplicate-row INSERT that previously succeeded and produced the 500 is now rejected at the database with `IntegrityError: duplicate key value violates unique constraint "ux_auth_sessions_refresh_token_hash"`, and the subsequent `/auth/refresh` returns `200` rather than `500`. That single unique index closes the latent 500 and the sequential scan together, as the finding said it would
 
 ### F-1.1-13: `email` gets no format validation at all
 
@@ -570,6 +574,7 @@ None of these is exploitable inside phase 1.1, and that should be stated rather 
 
 History:
 - 2026-07-28 judge: confirmed at low, no severity revision. All five payloads independently reproduced as 201. Non-blocking on its own, but fix it in the same edit as F-1.1-08, which does block and touches the same field at the same boundary
+- 2026-07-28 judge: closed on re-verification of commit `8313d82`. All five filed payloads now `422` instead of 201 (`not-an-email`, `@`, the `<script>` address, the SQL-suffixed address, and the CRLF address), and a legitimate address still returns `201`, so the check is not simply refusing everything. Closed without a new dependency, as the commit claims. Side effect worth recording: a NUL-bearing email is now `422` too, which closes the email half of F-1.1-11 (its `User-Agent` half is untouched, see that finding)
 
 ### F-1.1-14: token responses carry no `Cache-Control: no-store`
 
@@ -596,6 +601,7 @@ Checked and correct, recorded so the header posture is not read as uniformly bad
 
 History:
 - 2026-07-28 judge: confirmed at low, no severity revision. Header set independently captured and matched. The RFC 6749 citation is loose (this is not an OAuth server) but the underlying reason holds, so confirmed on the principle. Non-blocking, and the cheapest fix in the set
+- 2026-07-28 judge: closed on re-verification of commit `8313d82`. Both token-bearing responses now carry `{'cache-control': 'no-store', 'pragma': 'no-cache'}`, captured from live responses on `POST /auth/login` and `POST /auth/refresh`. `GET /auth/me` carries neither, which is correct rather than a gap: it returns a profile and no token, so it is outside what this finding and the RFC principle cover. The other headers the finding listed in passing (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) remain absent and were never part of this finding's ask
 
 ### F-1.1-15: no password policy
 
@@ -640,6 +646,7 @@ Non-blocking: it needs valid credentials, the write volume is bounded by the cal
 
 History:
 - 2026-07-28 judge: confirmed at low, no severity revision. A 60,000-character `User-Agent` login independently returned 200, and the live `max(length(user_agent))` of 100000 confirms the finding's larger case persisted in full. Non-blocking, one-line truncation at router.py:130
+- 2026-07-28 judge: closed on re-verification of commit `8313d82`. The same 60,000-character `User-Agent` login still returns `200`, correctly, since an oversized header is not an error, but `SELECT max(length(user_agent))` scoped to the rows that login wrote now returns `512` rather than 60000. Truncation happens before the value is persisted, at the bound the finding asked for
 
 ### F-1.1-17: `/query` is unauthenticated and trusts a client-supplied `user_id`
 
@@ -718,6 +725,31 @@ Ten confirmed, two rejected on scope. Two severities revised, in opposite direct
 Ticket status deliberately left alone. The two blocking findings, F-1.1-07 and F-1.1-08, both sit on T-1.1-03, which is `done`. Under the `task-tracker` convention the judge does not reopen a ticket on the strength of its own triage, so T-1.1-03's status is untouched and the reopen decision is referred to the lead. F-1.1-12 sits on T-1.1-01 and does not block, so nothing is pending there.
 
 Adversary quality, recorded because it is the input the next phase's dispatch depends on: twelve filed, ten confirmed, two rejected on scope and none on accuracy. The over-reporting showed up as scope reach (F-1.1-15, F-1.1-17) rather than as unreproducible claims, and the finding texts consistently stated their own limits (F-1.1-09's honest severity scoping, F-1.1-13's "none of these is exploitable inside phase 1.1", F-1.1-17's "this is correct for phase 1.0") rather than overclaiming. Two of its own severity ratings were off, one high and one low. That is a healthy adversary.
+
+## Fix re-verification, 2026-07-28, judge
+
+Verifying commit `8313d82` by `fix-security-findings`, seven findings. This is the fix agent's work, not the judge's, and the adversary raised every one of these findings, so the finder-is-never-the-closer rule holds by construction here in a way it did not for F-1.1-01. Every reproduction below was re-derived from the finding's own text and re-run against the live system; no fix was read and agreed with. All seven closed.
+
+Verify surface, checked before any behavior was measured, since a fix that weakens its own test makes every later result meaningless.
+
+- Test inventory grew and nothing was lost. `test_router.py` went 26 to 37 test functions, and `comm -23` over the sorted before-and-after `def test_` name lists returns empty, so not one pre-existing test was renamed or dropped. Full suite 284 to 314, all passing.
+- No skip, no xfail. `git show 8313d82 -- tests/ | grep -E "^\+.*(skip|xfail)"` returns nothing.
+- Assertion delta: 1 removed, 51 added. The single removed line is the relocated `assert replay.status_code == 401` the lead asked about, and it is re-added at the end of the same function.
+- Ruling on the relocation: legitimate, not a weakening. In `test_refresh_rotates_and_old_token_401s_after_use` the replay assertion now sits after the "rotated token still works" assertion instead of before it. Under the fix a replay revokes the family by design, so the original ordering would have required the rotated chain to survive a reuse event, which is now precisely the defect rather than the property. Every assertion the test originally made is still made, on the same objects, in an order that no longer asserts the cascade is absent. The cascade itself did not quietly lose coverage: it gained a dedicated regression test, `test_refresh_reuse_of_a_rotated_token_revokes_the_whole_family`, built from the adversary's own two-device scenario.
+- `0001_user_data_schema` was not edited. `git show 8313d82 --name-only | grep -c 0001_user_data_schema` returns `0`, so the schema F-1.1-01 was fought over is untouched and all changes ship as a new revision.
+
+The `0002_auth_hardening` migration, run by the judge against a throwaway database (`judge_0002_<hex>`, created and dropped by the harness), never the shared one, with conflicting rows planted deliberately first: two case-variant emails plus one whitespace variant of the same address, and two `auth_sessions` rows sharing a hash.
+
+- Nothing was deleted. `users` 4 before and 4 after, `auth_sessions` 2 before and 2 after. This was the lead's specific concern and it is the strongest single result here.
+- Losers are quarantined and reversible, not dropped. The earliest row keeps `keep@example.com`; the two collisions become `dup2+keep@example.com` and `dup3+keep@example.com`, each keeping its row, its password hash, and its sessions, with the original spelling preserved in `profile.pre_0002_email`.
+- One-step `alembic downgrade 0001_user_data_schema` restored all three original spellings byte-exactly, including the surrounding whitespace of `" Keep@Example.com "`, and left `profile` back at `{}` with the temporary key removed. Post-downgrade indexes on both tables are exactly the pre-0002 set (`users_pkey`, `users_email_key`, `auth_sessions_pkey`), and `absolute_expires_at` is gone (`0` matching columns). Re-upgrade succeeded.
+- The shared `search_agent_users` database was untouched throughout: 346 users before the run and 346 after. F-1.1-01's failure mode did not recur.
+- One asymmetry, called out rather than glossed, because it is a deliberate design choice and not an oversight: the quarantined duplicate refresh-token hash is deliberately not restored on downgrade, unlike the emails. The migration docstring states the reason (restoring a duplicate hash would recreate the exact ambiguity F-1.1-12 exists to remove) and the affected row is revoked in the same statement, so nothing usable is lost. The judge agrees with the tradeoff; it is recorded here so a future reader does not mistake it for an incomplete rollback.
+
+Per-finding results are in each finding's own history line above. Two things the lead should know that are not closures.
+
+- F-1.1-11 partially closed as a side effect and is deliberately left `confirmed`. The email half now returns `422` because of the F-1.1-13 format check, but the `User-Agent` half still returns `500`, independently re-tested: a valid login carrying a NUL byte in the header is still an unhandled 500. Note that F-1.1-16's truncation to 512 characters did not close it, because truncating a string does not remove a NUL inside the first 512 characters. F-1.1-11 remains open and phase 1.2 still owns it, now with a narrower scope: the header path only.
+- Nothing of F-1.1-07 remains open. The lead's instruction was that if bounding a family's total lifetime needed a new schema column, the fix should do reuse detection cleanly and report the lifetime half as still open. The fix agent did not take that fallback; it added the column (`auth_sessions.absolute_expires_at`, a 90-day ceiling) and the judge verified the ceiling behaves as claimed rather than merely existing. Both halves of the finding are delivered.
 
 ### Adversary not-broken set
 
