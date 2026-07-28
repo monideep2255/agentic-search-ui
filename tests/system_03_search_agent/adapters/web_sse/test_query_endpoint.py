@@ -409,10 +409,16 @@ class TestPostQueryFiltersCostEvents:
 
 class TestPostQueryOperatorMode:
     """`RequestContext.operator_mode` (a phase 1.0 contract field, unwired
-    until now): when true, /query skips filter_events_for_end_user
-    entirely, so cost events and the real done.total_cost_usd both reach
-    the response. This is the lightweight way to see cost and token usage
-    today, ahead of a real operator dashboard (phase 5.0/13)."""
+    until now): when true AND the caller is on the OPERATOR_USER_IDS
+    allowlist, /query skips filter_events_for_end_user entirely, so cost
+    events and the real done.total_cost_usd both reach the response.
+    This is the lightweight way to see cost and token usage today, ahead
+    of a real operator dashboard (phase 5.0/13).
+
+    A security review of the first version of this endpoint flagged that
+    honoring `operator_mode: true` purely on the client's say-so, with no
+    server-side authorization check, is an authorization bypass. Every
+    test below exercises the allowlist gate, not just the flag."""
 
     def test_operator_mode_false_still_redacts_cost_by_default(
         self, client: TestClient
@@ -427,10 +433,28 @@ class TestPostQueryOperatorMode:
         done_event = next(event for event in events if event["type"] == "done")
         assert done_event["payload"]["total_cost_usd"] == 0.0
 
-    def test_operator_mode_true_exposes_cost_events_and_the_real_total(
+    def test_operator_mode_true_but_not_on_the_allowlist_still_redacts(
         self, client: TestClient
     ) -> None:
+        """The authorization-bypass regression test: operator_mode alone,
+        with no matching OPERATOR_USER_IDS entry, must never expose cost
+        data. OPERATOR_USER_IDS is left unset (the default, fail-closed
+        per env.example), so no caller is on the allowlist."""
         _user_id, headers = _auth_headers(client)
+        body = _valid_body()
+        body["context"]["operator_mode"] = True
+        response = client.post("/query", json=body, headers=headers)
+        assert response.status_code == 200
+        events = response.json()
+        assert all(event["type"] != "cost" for event in events)
+        done_event = next(event for event in events if event["type"] == "done")
+        assert done_event["payload"]["total_cost_usd"] == 0.0
+
+    def test_operator_mode_true_and_on_the_allowlist_exposes_real_data(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        user_id, headers = _auth_headers(client)
+        monkeypatch.setenv("OPERATOR_USER_IDS", user_id)
         body = _valid_body()
         body["context"]["operator_mode"] = True
         response = client.post("/query", json=body, headers=headers)
@@ -439,3 +463,24 @@ class TestPostQueryOperatorMode:
         assert any(event["type"] == "cost" for event in events)
         done_event = next(event for event in events if event["type"] == "done")
         assert done_event["payload"]["total_cost_usd"] > 0.0
+
+    def test_allowlist_is_per_user_not_all_or_nothing(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Two different authenticated users, only one on the allowlist:
+        the other still gets the redacted response even with
+        operator_mode: true, proving the check is per-caller."""
+        operator_user_id, operator_headers = _auth_headers(client)
+        monkeypatch.setenv("OPERATOR_USER_IDS", operator_user_id)
+        _other_user_id, other_headers = _auth_headers(client)
+
+        body = _valid_body()
+        body["context"]["operator_mode"] = True
+
+        operator_response = client.post("/query", json=body, headers=operator_headers)
+        other_response = client.post("/query", json=body, headers=other_headers)
+
+        operator_events = operator_response.json()
+        other_events = other_response.json()
+        assert any(event["type"] == "cost" for event in operator_events)
+        assert all(event["type"] != "cost" for event in other_events)
