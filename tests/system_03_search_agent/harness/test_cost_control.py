@@ -111,6 +111,50 @@ def test_system_daily_cap_usd_missing_raises(monkeypatch: pytest.MonkeyPatch) ->
 
 
 # ---------------------------------------------------------------------------
+# F-2.0-09 (adversary, confirmed high, 2026-07-28): a cap env var set to
+# "inf"/"nan"/a non-positive number must be rejected at read time, never
+# silently accepted. "inf" disables the cap outright (nothing is ever
+# greater than infinity) while still reporting cap_fraction=0.0 forever;
+# "nan" makes every comparison against it False, so the cap silently
+# never fires.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("value", ["inf", "-inf", "nan", "1e400", "0", "-1", "-0.5"])
+def test_per_query_cost_cap_usd_rejects_non_finite_and_non_positive(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", value)
+    with pytest.raises(RuntimeError, match="PER_QUERY_COST_CAP_USD"):
+        per_query_cost_cap_usd()
+
+
+@pytest.mark.parametrize("value", ["inf", "-inf", "nan", "0"])
+def test_system_daily_cap_usd_rejects_non_finite_and_non_positive(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    monkeypatch.setenv("SYSTEM_DAILY_CAP_USD", value)
+    with pytest.raises(RuntimeError, match="SYSTEM_DAILY_CAP_USD"):
+        system_daily_cap_usd()
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "-100"])
+def test_per_user_daily_query_cap_rejects_non_positive(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    monkeypatch.setenv("PER_USER_DAILY_QUERY_CAP", value)
+    with pytest.raises(RuntimeError, match="PER_USER_DAILY_QUERY_CAP"):
+        per_user_daily_query_cap()
+
+
+def test_per_query_cost_cap_usd_still_accepts_a_normal_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "0.10")
+    assert per_query_cost_cap_usd() == pytest.approx(0.10)
+
+
+# ---------------------------------------------------------------------------
 # estimate_call_cost_usd: a positive, tier-differentiated, invalid-tier-raises estimate.
 # ---------------------------------------------------------------------------
 

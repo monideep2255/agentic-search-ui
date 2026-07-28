@@ -241,3 +241,34 @@ class TestRunEmitsTheFullFiveNodeLoop:
         types = {event.type for event in events}
         assert "citation" not in types
         assert "trust_signal" not in types
+
+
+@pytest.mark.asyncio
+async def test_an_otherwise_uncaught_graph_exception_yields_error_then_done_not_a_crash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-2.0-11 (adversary, confirmed medium, 2026-07-28).
+
+    Before this fix, any exception `compiled_graph.ainvoke` did not
+    itself handle (an unreachable database, or any bug in a node this
+    phase's stub logic did not anticipate) propagated out of `run()`
+    raw, with zero typed events yielded: a blank failure,
+    production-standards.md's graceful-degradation gate forbids exactly
+    this. `run()` must never raise; it must always yield at least an
+    `error` then a `done` event.
+    """
+    import system_03_search_agent.core.run as run_module
+
+    async def _boom(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("simulated unreachable database or unhandled node bug")
+
+    monkeypatch.setattr(run_module.compiled_graph, "ainvoke", _boom)
+
+    events = [event async for event in run(_valid_query(), _valid_context())]
+
+    assert [event.type for event in events] == ["error", "done"]
+    assert events[0].payload["scope"] == "run"
+    assert events[0].payload["error_class"] == "unexpected"
+    assert events[-1].payload["trust_outcome"] == "refuse"
+    for event in events:
+        PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)

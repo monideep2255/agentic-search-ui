@@ -414,8 +414,359 @@ Severity: low. Status: open. Owner: unassigned.
 
 Section 19.2: "A retried model call ... is a new billable event ... so its estimated cost is checked against the remaining per-query budget before it is allowed to fire." `check_per_query_cap` runs once in `graph.py:191`, before `call_tier` is entered; the retry at `harness.py:332-333` fires inside `call_tier` with no fresh check. Benign in the current design, because a failed first attempt records zero cost, so the retry's projection is identical to the one already approved. It stops being benign the moment a partially-billed failure mode exists (a streamed response that errors mid-completion, for example). Worth closing when retry policy is next touched.
 
+Filed by the adversary at phase close, 2026-07-28, after the judge's scripted pass came back clean. Unscripted hostile use of the running system, not a re-run of the acceptance criteria. Every entry below was reproduced with a real script against the real code (real `run()`, real graph, real `Harness`, real local PostgreSQL, real FastAPI app via `TestClient`), with only `litellm.acompletion` and `litellm.get_model_info` monkeypatched, the same way the repo's own tests do it. The output pasted in each entry is the actual output, not a description of it. The adversary files, the adversary does not fix, triage, or close: every entry below was left at `Status: filed` deliberately, for the judge to triage and the lead or a fix agent to dispose of. All eight were triaged by the judge on 2026-07-28 and now carry a `confirmed` status with a reason; see the "Findings triage summary" at the end of this section.
+
+Probed and found genuinely clean, recorded so nobody re-spends the effort: the `/query` auth surface (13 malformed `Authorization` variants, including `alg=none`, a wrong-secret HS256 token, a tampered signature, a bare token with no scheme, case-varied schemes, a doubled token, a CRLF header-injection attempt, and a token for a user deleted between mint and use, all 401, valid token 200); the `Query`/`RequestContext` validation boundary (`text` at 2000 and 2001 characters, 2000 astral-plane characters, `audience_depth` bogus/null/int, `trace_id` at 65 characters, an extra field, `session_memory` at 4999 and 5001 serialized characters, all correctly 200 or 422 with nothing silently coerced); the prompt-cache stable prefix (8 model calls across two back-to-back real queries with differing `text`, `session_id`, `trace_id` and `audience_depth` produced exactly one distinct leading-message SHA-256, byte-equal to `build_stable_prefix()`, with no query text reaching the prefix); cross-user isolation (two authenticated users, 15 interleaved concurrent `POST /query` requests each from separate threads, deliberately colliding on one client-chosen `trace_id`, zero errors and zero cross-contamination of the derived `user_id`); the two daily-cap decline messages (no email fragment, no user uuid, no currency symbol, no dollar figure, no table name, no model id); and SQL-injection-shaped input at the account boundary (rejected by email validation before it reaches any query, and every counter query is parameterized against a typed uuid regardless).
+
+### F-2.0-07: the per-query cap's pre-flight estimate is decoupled from the price of the model that actually answers
+
+Severity: medium (the adversary's call, unchanged). Status: confirmed 2026-07-28 by the judge -- the estimate really is one hardcoded scalar shared by all three tiers, with no access to the per-model price the metering path already resolves. LATENT, not live today; trigger is any expensive model configured on a tier (build phase 7.0's model-bench, or an operator edit to `GUARD_MODEL`/`PLAN_MODEL`/`SYNTH_MODEL`). Owner: unassigned.
+
+`cost_control._CONSERVATIVE_PRICE_PER_TOKEN_USD = 5e-6` (`cost_control.py:169`) is a single hardcoded blended price that `estimate_call_cost_usd` applies to every tier, while the real metering in `harness._price_per_token` looks up the actual OpenRouter price for the exact model that answered. Nothing keeps the two in agreement. The comment calls 5e-6 "roughly the upper end of a frontier model's blended input/output OpenRouter price", which is not true of frontier pricing: $15 per million input and $75 per million output is 1.5e-5 and 7.5e-5, three to fifteen times higher.
+
+Reproduced with `Harness`, `check_per_query_cap` and `call_tier` on their real code paths, changing nothing but the price `get_model_info` returns, and using each tier's own `_TYPICAL_TOKEN_PROFILE` numbers so nothing here is an inflated straw man:
+
+```
+tier   estimate   real     ratio
+guard   0.00300  0.01500   5.00x
+plan    0.01250  0.06750   5.40x
+synth   0.02500  0.13500   5.40x
+
+A) pre-flight ADMITTED a synth call with 0.0 spent so far.
+   that one admitted call actually cost 0.13500 against a whole-query cap of 0.10
+   -> 1.35x the cap, from a single call, with no cap event ever fired.
+
+B) full run event types: ['guard', 'cost', 'think', 'cost', 'plan', 'cost', 'token', 'done']
+   done.total_cost_usd = 0.09750 vs cap 0.10 -> 0.97x
+   cost: {'query_cost_usd': 0.0975, 'query_cap_usd': 0.1, 'cap_fraction': 0.975, 'model_tier': 'plan'}
+```
+
+Scenario A is the load-bearing one: with zero spent, the pre-flight check admits one synth call, and that single admitted call costs 1.35 times the entire per-query cap. Section 19.1 makes the per-query cap safety-critical and Section 19.2 requires the harness to refuse "a call that would certainly exceed the per-query cap"; here the cap can be exceeded by 35 percent in one call the check explicitly approved. Scenario B shows an end-to-end run staying at 0.97x only because the write call happened to be refused, which is luck, not enforcement.
+
+Latent today, not live: `tiers.py:53-57`'s placeholder defaults are cheap open-weight models for which 5e-6 is plausible. It becomes live the moment `GUARD_MODEL`/`PLAN_MODEL`/`SYNTH_MODEL` name a frontier model, which is exactly what build phase 7.0's model-bench exists to decide. The structural point stands regardless of today's configured models: `system-design-patterns.md` pattern 11 says the harness owns model identity and never hardcodes a model id, and this hardcodes a model's *price* instead, which buys the same coupling by a different route. `_price_per_token(self._tier_context.resolve(tier))` is already written and already called on the metering path, so the estimate has a real per-model price available to it and does not use it.
+
+Judge verification, 2026-07-28, re-derived independently rather than read off the paste above. The constant is real and is a single scalar: `cost_control._CONSERVATIVE_PRICE_PER_TOKEN_USD = 5e-06` (`cost_control.py:169`), applied unchanged to all three tiers by `estimate_call_cost_usd`, whose signature the judge printed is `(tier: 'Tier') -> 'float'`, with no model or price parameter, and `check_per_query_cap(harness, trace_id, tier, *, query_cap_usd=None)` likewise never passes one. The judge re-ran the arithmetic from the real `_TYPICAL_TOKEN_PROFILE` values and reproduced the adversary's table exactly (guard 0.00300 vs 0.01500, 5.00x; plan 0.01250 vs 0.06750, 5.40x; synth 0.02500 vs 0.13500, 5.40x at $15/M input and $75/M output). Scenario A was re-run on the real `Harness` and the real `call_tier`, with only `get_model_info` and `acompletion` monkeypatched: `spent before = 0.00000, cap = 0.1` -> `pre-flight ADMITTED the synth call` -> `that ONE admitted call actually cost 0.13500` -> `1.35x the WHOLE cap`. The 1.35x figure is exact, not exaggerated, and the order of magnitude is right.
+
+One thing the adversary did not measure that the judge did, and it is what settles live-versus-latent: at the shipped `tiers.py` defaults (cheap open-weight models, generously priced at $0.60/M in and $2.40/M out) the estimate over-states the real cost by roughly 5x in the other direction (guard estimate 0.00300 vs real 0.00054, ratio 0.180x; plan 0.192x; synth 0.192x). Today the decoupling therefore fails SAFE: the cap fires earlier than it needs to, never later. That is why this is latent rather than live, and it is the correct reading of the adversary's own "latent today, not live" line. The structural criticism stands regardless of direction, since a control whose correctness depends on which model happens to be configured is not a control. The judge also confirmed the escape hatch the finding names is genuinely available: `harness.harness._price_per_token` is a module-level callable, `cost_control` already imports `Harness`, and `check_per_query_cap` already receives the `Harness` instance, so a per-model estimate needs no new plumbing.
+
+### F-2.0-08: the Act step's coordinator-worker reader calls bypass the per-query cap check and the per-step timeout entirely
+
+Severity: medium (the adversary's call, unchanged). Status: confirmed 2026-07-28 by the judge -- `_reader_pass` really does call `harness.call_tier` with no cap check and no timeout wrapper, and `act_node` is genuinely the one model-adjacent node outside `_dispatch_tier_call`. LATENT, not live today, and more firmly latent than the adversary stated (see the scope correction below); trigger is build phase 2.1, the first phase that supplies real tool calls. Owner: unassigned.
+
+`_reader_pass` (`coordinator_worker.py:222-232`) calls `harness.call_tier("guard", messages)` directly. It is a real guard-tier model call, it is metered by `track_cost`, and it counts against `query_cost_usd`, but nothing calls `cost_control.check_per_query_cap` before it and nothing wraps it in `harness.enforce_timeout`. `act_node` (`graph.py:400-411`) is the one model-adjacent node that does not go through `_dispatch_tier_call`, so the whole Act step sits outside both controls. Every other node's calls go through `_dispatch_tier_call` and are correctly guarded.
+
+Reproduced by putting a query already massively over its cap and then running the real `coordinator_worker_execute` with eight untrusted free-text results:
+
+```
+running query cost before Act = 999.0  (cap 0.1)
+  pre-flight check, called directly, correctly REFUSES a further guard call.
+
+coordinator_worker_execute fired 8 model calls (['openrouter/adv/guard', 'openrouter/adv/guard'] ...)
+  query cost 999.0  ->  999.7200000000003   (+0.7200 USD spent while ALREADY 9990x over the per-query cap)
+  findings returned: 8, no QueryCapExceededError raised anywhere.
+
+Now a reader call that hangs. Query class 'lookup' budget is 5.0s.
+  Act step returned after 8.00s. lookup per-step budget = 5.0s.
+  No timeout fired: the Act step has no enforce_timeout wrapper at all.
+```
+
+The check called directly on the same `Harness` refuses correctly, which isolates the cause to the missing call site rather than to `check_per_query_cap` itself.
+
+Two spec lines this crosses. Section 19.1 scopes the per-query cap to "one query's total LLM inference spend across guard, plan, and synth tiers", and a reader pass is a guard-tier call. Section 19.1's per-step timeout row names its scope as "one Think, Plan, **Act**, or Write step within one query", so Act is explicitly in scope for the timeout and has none. T-2.0-03 acceptance criterion 1 is worded "a cap check runs before a model call fires", with no carve-out for this class of model call.
+
+Not exploitable this phase, because `plan_node`'s stub always emits `tool_calls=[]`, so `coordinator_worker_execute(harness, [], [])` never reaches `_reader_pass`. It becomes live at build phase 2.1, the first phase that supplies real tool calls, and it is worse there than a single missing check: `coordinator_worker_execute` fans out through `asyncio.gather`, so N reader calls fire concurrently with no check between them, which is the unbounded-concurrent-spend shape rather than a one-call overshoot. Recorded now, while it is still cheap to wire, rather than after 2.1 makes it reachable.
+
+Secondary observation in the same code path, recorded here rather than as its own entry: the reader call also passes no `cache_prefix`, so it is the one model call in the system that does not carry `_STABLE_PREFIX`. Verified at runtime, leading message is the reader system prompt, not the stable prefix. Arguably correct, since the reader is a deliberately isolated agent whose prefix is legitimately a different one, but it should be a stated decision rather than an omission, because `prompt-cache-discipline.md` treats prefix membership as a design contract.
+
+Judge verification, 2026-07-28, from the judge's own static and runtime probes. Static, by `inspect.getsource` over the real functions rather than by reading the file: `act_node` contains `_dispatch_tier_call` False, `check_per_query_cap` False, `enforce_timeout` False; `_reader_pass` contains `check_per_query_cap` False, `enforce_timeout` False, `call_tier` True; and `coordinator_worker.py` does not import `cost_control` at all, so the module has no way to run the check even if it wanted to. Runtime, on the real `Harness` and the real `coordinator_worker_execute`: with the query already at `999.0` against a `0.1` cap, `check_per_query_cap` called directly on that same `Harness` correctly refuses a further guard call, and then `coordinator_worker_execute` with eight untrusted free-text results returned 8 findings, raised nothing, and moved the running cost from `999.0` to `999.0024`, i.e. it billed eight more model calls while already 9990x over the cap. The direct-check contrast isolates the cause to the missing call site, not to `check_per_query_cap`. Timeout half, with a reader call made to hang: the Act-equivalent path returned after `2.00s` against a `lookup` per-step budget of `5.0s` with no timeout wrapper present at all (a longer hang is bounded only by the network, not by the budget). Secondary observation also confirmed: the reader's leading message is `'You are a read-only extraction reader. You have no ability t'`, not `_STABLE_PREFIX`.
+
+Scope correction, and it makes the finding MORE firmly deferred rather than less. The adversary's reason for "not exploitable this phase" is that `plan_node`'s stub emits `tool_calls=[]`. That is true but incomplete: `act_node` does not read `state["tool_calls"]` at all, it hardcodes `coordinator_worker_execute(harness, [], [])` (the judge printed the literal line). So two independent changes are required before this becomes reachable, populating the plan AND wiring `act_node` to consume it, not one. Severity stays medium and the finding stays open: build phase 2.1 must make both changes to do its job, so the gap closes into a live defect in the very next phase unless the cap check and the timeout are wired in the same edit. The `asyncio.gather` fan-out point is the reason this deserves fixing at 2.1 rather than later: N reader calls fire concurrently with no check between them, which is an unbounded-concurrent-spend shape, not a single-call overshoot.
+
+### F-2.0-09: `inf` and `nan` cap values are accepted and silently disable the caps they configure
+
+Severity: high (revised up from the adversary's medium; see the judge's reasoning below). Status: closed 2026-07-28 by the lead. `_read_float_env` and `_read_int_env` (`cost_control.py`) now reject non-finite (`inf`, `-inf`, `nan`, and `1e400`-shaped overflow-to-`inf`) and non-positive values at read time, with a `RuntimeError` naming the offending env var, its parsed value, and why every one of those classes is rejected. 15 new tests added (`test_cost_control.py`) covering every value the judge's reproduction printed. Verified live: `PER_QUERY_COST_CAP_USD=inf`/`nan`/`0`/`-1` all now raise before any cap check runs. Full suite 481 passed, `ruff check` clean.
+
+`cost_control._read_float_env` (`cost_control.py:81-91`) validates only that `float()` succeeds. `float()` accepts `"inf"`, `"nan"`, `"1e400"` (which overflows to `inf`) and any negative number. Every comparison in the module is then written so that an `inf` or `nan` cap can never fire: `projected > cap` and `total >= cap` are both False against `inf` and both False against `nan`.
+
+Per-query cap, driven through a real `run()`:
+
+```
+  PER_QUERY_COST_CAP_USD='-1'            -> ['token', 'done']  cap_fraction=[]
+  PER_QUERY_COST_CAP_USD='0'             -> ['token', 'done']  cap_fraction=[]
+  PER_QUERY_COST_CAP_USD='nan'           -> UNCAUGHT ValidationError: 1 validation error for CostPayload
+query_cap_usd
+  Input should be greater than or equal to 0 [type=greater_th
+  PER_QUERY_COST_CAP_USD='inf'           -> ['guard', 'cost', 'think', 'cost', 'plan', 'cost', 'cost', 'done']  cap_fraction=[0.0, 0.0, 0.0, 0.0]
+  PER_QUERY_COST_CAP_USD='1e400'         -> ['guard', 'cost', 'think', 'cost', 'plan', 'cost', 'cost', 'done']  cap_fraction=[0.0, 0.0, 0.0, 0.0]
+  PER_QUERY_COST_CAP_USD='not-a-number'  -> UNCAUGHT RuntimeError: PER_QUERY_COST_CAP_USD is set to 'not-a-number', which is not a valid number
+  PER_QUERY_COST_CAP_USD=''              -> UNCAUGHT RuntimeError: PER_QUERY_COST_CAP_USD is not set. Set it in the environment before enforcing cost caps (see env.example).
+```
+
+System-wide daily cap, checked against a real DB session with a real nonzero live total:
+
+```
+  SYSTEM_DAILY_CAP_USD='10'     resolved=10.0     live_total=1.6 -> ADMITS the query (cap does NOT fire)
+  SYSTEM_DAILY_CAP_USD='0'      resolved=0.0      live_total=1.6 -> declines (cap fires)
+  SYSTEM_DAILY_CAP_USD='-1'     resolved=-1.0     live_total=1.6 -> declines (cap fires)
+  SYSTEM_DAILY_CAP_USD='inf'    resolved=inf      live_total=1.6 -> ADMITS the query (cap does NOT fire)
+  SYSTEM_DAILY_CAP_USD='nan'    resolved=nan      live_total=1.6 -> ADMITS the query (cap does NOT fire)
+  SYSTEM_DAILY_CAP_USD='1e400'  resolved=inf      live_total=1.6 -> ADMITS the query (cap does NOT fire)
+```
+
+Three distinct behaviors, only one of which is safe:
+
+- Fail-closed, correct: `-1`, `0`, `""`, `not-a-number`. A misconfigured cap stops the system. That is the posture the module docstring says it intends ("a missing cap is a configuration gap to surface at the point it is needed").
+- Fail-open, the defect: `inf` and `1e400` disable the cap completely and run happily, reporting `cap_fraction=0.0` on every cost event so the operator dashboard shows a meter pinned at zero. Nothing anywhere reports that a safety-critical cap has been turned off.
+- Fail-open then crash: `nan` disables the cap, lets every model call fire and bill, and only afterwards raises an uncaught `ValidationError` out of `run()` when `CostPayload`'s own `ge=0` constraint rejects `query_cap_usd=nan`. The money is spent before the error surfaces, and the error is a 500 rather than a config diagnostic naming the env var.
+
+`env.example` ships `PER_QUERY_COST_CAP_USD=` and `SYSTEM_DAILY_CAP_USD=` empty, so operators set these by hand, which is where a typo like `1e400` or a copied `inf` comes from. Section 19.1 states "changing a value is a decision that requires explicit approval, not a silent config edit"; silently accepting a value that means "no cap" is the same outcome as an unapproved change to infinity.
+
+Related minor point in the same function family, recorded here rather than separately: `PER_USER_DAILY_QUERY_CAP=0` fails closed correctly but produces the message `You've reached 0 queries today. New queries will be available again at 00:00 UTC.`, which is a nonsense sentence to show a user.
+
+Judge verification, 2026-07-28, from the judge's own throwaway script against the real `cost_control` and a real `run()`, with only LiteLLM monkeypatched. What `_read_float_env` actually accepts, printed directly:
+
+```
+  'inf'           -> accepted, resolved = inf
+  '-inf'          -> accepted, resolved = -inf
+  'nan'           -> accepted, resolved = nan
+  '1e400'         -> accepted, resolved = inf
+  '-1'            -> accepted, resolved = -1.0
+  '0'             -> accepted, resolved = 0.0
+  'not-a-number'  -> RuntimeError: PER_QUERY_COST_CAP_USD is set to 'not-a-number', which is not a valid
+  ''              -> RuntimeError: PER_QUERY_COST_CAP_USD is not set. Set it in the environment before en
+```
+
+Whether the comparison can ever fire, with 1e9 already spent:
+
+```
+  cap=inf      with 1e9 already spent -> ADMITS (cap cannot fire)
+  cap=nan      with 1e9 already spent -> ADMITS (cap cannot fire)
+  cap=0.1      with 1e9 already spent -> refuses (cap fires)
+```
+
+And through a real `run()`, which reproduces all three of the adversary's behavior classes exactly:
+
+```
+  PER_QUERY_COST_CAP_USD='0.10'   -> [guard, cost, think, cost, plan, cost, cost, done]  cap_fraction=[0.003, 0.006, 0.009, 0.012]
+  PER_QUERY_COST_CAP_USD='inf'    -> [guard, cost, think, cost, plan, cost, cost, done]  cap_fraction=[0.0, 0.0, 0.0, 0.0]
+  PER_QUERY_COST_CAP_USD='1e400'  -> [guard, cost, think, cost, plan, cost, cost, done]  cap_fraction=[0.0, 0.0, 0.0, 0.0]
+  PER_QUERY_COST_CAP_USD='nan'    -> UNCAUGHT ValidationError: 1 validation error for CostPayload query_cap_usd
+  PER_QUERY_COST_CAP_USD='-1'     -> [token, done]  cap_fraction=[]
+  PER_QUERY_COST_CAP_USD='0'      -> [token, done]  cap_fraction=[]
+```
+
+The `cap_fraction=[0.0, 0.0, 0.0, 0.0]` line is the part that earns the severity revision. It is not merely that the cap is off; it is that every emitted `cost` event reports a meter pinned at zero, so the one signal an operator would use to notice is itself falsified by the same defect. A safety-critical control that fails open, silently, and simultaneously disables its own indicator is a high, not a medium, and unlike the other seven findings it needs no future phase to become reachable: `env.example` ships `PER_QUERY_COST_CAP_USD=` and `SYSTEM_DAILY_CAP_USD=` blank, so hand-entry is the only supported path and a typo is the expected failure. The `nan` case is worse than the `inf` case for the reason the adversary gives, and the judge confirmed the ordering: the money is spent first, the `ValidationError` surfaces afterward, and it names `CostPayload.query_cap_usd` rather than the env var an operator would need to fix.
+
+Two small additions from the judge's own probe, neither worth its own entry. `_read_int_env` is narrower than `_read_float_env` and correctly rejects `'inf'`, but it accepts `'-5'` (a negative query cap) and `'1_000'` (Python's underscore literal, which is almost certainly not what an operator meant to type). And the nonsense zero-count message the adversary noted is confirmed verbatim: `"You've reached 0 queries today. New queries will be available again at 00:00 UTC."`.
+
+### F-2.0-10: `trace_id` is client-supplied and trusted verbatim, and `interactions.trace_id` is UNIQUE
+
+Severity: medium (the adversary's call, unchanged). Status: confirmed 2026-07-28 by the judge -- `trace_id` really is required in the request body, really is never overwritten server-side, and `interactions.trace_id` really is UNIQUE in the live schema. Two halves with different timing: the Section 20.1 violation is LIVE TODAY; the daily-cap evasion and the trace_id-squat are LATENT and gated on the interactions-writing ticket F-2.0-04 names (build phase 4.6). Owner: unassigned.
+
+Section 20.1: "A `trace_id` is minted at the Guardrail step and threads through every event in the section 2 stream, every LiteLLM call, and every tool call. It is the single join key across LangSmith, the Postgres interactions table (section 15), and the tool-call audit log." Today `Query.trace_id` (`contracts/query.py:26`) arrives in the request body, `app.py:60` overwrites only `user_id` and leaves `trace_id` alone, and `run()` passes it straight into `Harness(trace_id=query.trace_id)` and every emitted `Event`. The one field the spec says the server mints is the one field the client fully controls.
+
+Verified against the real app: two separately authenticated users, 15 concurrent requests each, both deliberately sending `trace_id="shared-trace-id"`.
+
+```
+  errors: [] (0 total)
+  trace_ids observed per user thread: {1: {'shared-trace-id'}, 0: {'shared-trace-id'}}
+```
+
+Both users' entire event streams are stamped with the same join key, accepted without complaint. No cross-user data leaked (the derived `user_id` stayed correct for each thread, verified separately), so this is not a confidentiality bug today. It is a correctness and integrity bug in the one identifier three subsystems join on.
+
+What makes it more than cosmetic is the `interactions` schema. Verified against the live database:
+
+```
+  unique constraint: CREATE UNIQUE INDEX interactions_trace_id_key ON public.interactions USING btree (trace_id)
+  re-insert of an existing trace_id: IntegrityError -> a second query sent with the SAME client-chosen trace_id can never be counted
+```
+
+`get_user_daily_query_count` is `SELECT COUNT(*) FROM interactions WHERE user_id = ... AND created_at >= day_start`. Once a later ticket starts writing an `Interaction` per completed query (the gap F-2.0-04 already records), a client that sends the same `trace_id` on every request produces at most one row per day, so its count never passes 1 and the 100-queries-per-day cap in Section 19.1 never fires. That is a one-line client change to defeat a cap the spec calls safety-critical. The same constraint also lets one user squat on another user's `trace_id` and block that user's row from ever being written.
+
+The fix direction is not the adversary's call, but note that the constraint interacts with the fix: minting `trace_id` server-side at Guardrail satisfies Section 20.1 and removes the cap-evasion path in one move, while leaving the field on the wire as a client-supplied correlation id would not.
+
+Judge verification, 2026-07-28. The precise claim the lead asked to be checked, that T-2.0-08 overwrote `user_id` and not `trace_id`, holds exactly: the judge printed the one relevant line from `app.post_query`, `authenticated_query = request.query.model_copy(update={"user_id": str(current_user.id)})`, and `user_id` is the only key in that update dict. `contracts/query.py:26` declares `trace_id: str = Field(..., max_length=64)`, required, with no default and no `default_factory`, so a client must supply it and nothing can substitute one. `core/run.py:75` is `harness = Harness(trace_id=query.trace_id)`. A repo-wide `grep -rn "uuid4" src/ | grep -i trace` finds nothing, so no server-side mint exists anywhere. The docstrings at `harness.py:274` and `cost_control.py:32` both assert the trace id is "minted at the Guardrail step"; that assertion is false against the code, which is its own small documentation defect. Runtime, through the real `run()`: two different `user_id` values both sent `trace_id="shared-trace-id"`, both completed with 8 events and no error, and `trace_ids stamped on events = {'shared-trace-id'}` for both. The live schema check is confirmed independently via `psql`: `CREATE UNIQUE INDEX interactions_trace_id_key ON public.interactions USING btree (trace_id)`, and `grep -rn "Interaction(" src/` still matches only `data/models.py:154`.
+
+On the lead's question of whether the "100-query cap trivially evadable" claim is real given F-2.0-04: it COMPOUNDS with F-2.0-04, it is not independent, and the compounding is the reason to fix both together rather than either alone. Today the daily cap is already inert for F-2.0-04's reason, so trace_id reuse adds no live evasion; that half of this finding buys nothing until interactions are written. The danger is the intermediate state. Fixing F-2.0-04 alone, without server-minting `trace_id`, produces a cap that reads as enforced on the dashboard and in the code review but is defeated by a client sending one constant string, and that is strictly worse than today, where the cap is visibly inert and F-2.0-04 records it as such. The trace_id-squat denial of service (user A pins a trace_id, user B's row can never be inserted) is gated the same way. Whoever picks up F-2.0-04 must therefore take this finding with it.
+
+The half that needs no compounding, and is live now: Section 20.1 names `trace_id` as the single join key across LangSmith, the interactions table, and the tool-call audit log, and says the server mints it. Today the client fully controls it, so the join key is neither unique nor server-authoritative, and any tracing or audit work built on it before this is fixed inherits a corrupted key. That is why the finding stays at medium rather than dropping to low on the strength of "the cap is inert anyway".
+
+### F-2.0-11: an unreachable database at Guardrail crashes `run()` with zero typed events, and any uncaught exception discards every event already produced
+
+Severity: medium (the adversary's call, unchanged). Status: closed 2026-07-28 by the lead, fixing the general defect the judge identified (the buffered-event shape), not just the database trigger. `run()` (`core/run.py`) now wraps `compiled_graph.ainvoke(...)` in `try`/`except Exception` and yields a synthetic `error` (`scope="run"`, `error_class="unexpected"`) plus `done` (`trust_outcome="refuse"`) pair on any otherwise-uncaught failure, so a caller always receives a schema-valid sequence, never zero events and a raw exception. Documented explicitly as a floor fix, not full recovery: it cannot resurrect whatever events a crashed invocation had already produced, since `ainvoke` gives no access to in-flight state on failure; the complete fix is switching to `compiled_graph.astream()` for incremental per-node yielding, left to whichever phase builds real SSE streaming (1.2/4.0). New test `test_an_otherwise_uncaught_graph_exception_yields_error_then_done_not_a_crash` (`test_run.py`) forces `ainvoke` to raise and asserts the exact fallback sequence. Full suite 481 passed.
+
+`guardrail_node` (`graph.py:253-263`) opens a real `session_scope()` on every query and catches exactly two exception types, `UserDailyQueryCapExceededError` and `SystemDailyCostCapExceededError`. A connection failure is neither. Reproduced in a fresh process with `USER_DB_URL` pointed at a closed port:
+
+```
+UNCAUGHT OperationalError
+(psycopg2.OperationalError) connection to server at "localhost" (127.0.0.1), port 1 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (::1), port 1 failed: Connection refused
+```
+
+No `error` event, no `done` event, nothing. `production-standards.md`'s layer authority and degradation gate is explicit that "graceful degradation is mandatory; a blank failure is not acceptable", and the PRD says the same. This is the blank failure.
+
+Two things compound it.
+
+First, the check that takes the system down provably cannot fire. F-2.0-04 already establishes that nothing in `src/` ever writes an `Interaction` row, so `get_user_daily_query_count` and `get_system_daily_cost_usd` return 0 and 0.0 in production no matter what. A hard dependency on the user database on the critical path of every query currently buys zero enforcement.
+
+Second, the blast radius is the whole event stream, not just the failing node. `run()` (`core/run.py:84-87`) does `final_state = await compiled_graph.ainvoke(...)` and only then iterates `final_state["events"]`. Every event is buffered until the graph completes, so any exception escaping any node discards every event the earlier nodes already produced rather than shipping a partial stream plus an error. That amplifies this finding and any future uncaught exception in any node into a total loss of output. Phase 1.2 owns real SSE streaming and will have to change this shape anyway; recorded here because the graceful-degradation consequence exists now, independent of streaming.
+
+Judge verification, 2026-07-28, reproduced in a fresh process with `USER_DB_URL=postgresql://localhost:1/deadport` and a real `run()`:
+
+```
+  events yielded before/at failure: 0  types=[]
+  UNCAUGHT sqlalchemy.exc.OperationalError
+  (psycopg2.OperationalError) connection to server at "localhost" (127.0.0.1), port 1 failed: Connection refused
+```
+
+Zero events, no `error` event, no `done` event, exactly as filed. The judge added one case the adversary did not run: the same probe with `user_id=None`, which skips the per-user check and leaves only the system-wide cap check touching the database, also produced `events=0 types=[] exc=OperationalError`. So the hard database dependency on the critical path is unconditional, not a property of authenticated queries only. `run()`'s shape was confirmed by reading `core/run.py:84-87`: `final_state = await compiled_graph.ainvoke(...)` completes before the `for event in final_state["events"]: yield event` loop is entered, so nothing can be emitted before the graph finishes.
+
+Scope correction, which the lead should weigh when dispatching this. The adversary's framing leads with the database and treats the buffering as a compounding factor. The judge reads it the other way round and the finding is more valuable stated in that order: the general defect is that `guardrail_node` catches exactly two exception types and `run()` buffers, so ANY uncaught exception in ANY node produces a total loss of output with no typed event at all. The unreachable database is today's easiest trigger of that general defect, not the defect itself, and fixing only the database case would leave the shape intact for every future node that can raise something unexpected.
+
+A second correction, this one reducing the practical blast radius on the surface that exists today. On `POST /query`, `get_current_user` depends on `get_session` and touches the same database before the handler body runs, so a database outage fails at authentication and returns before `run()` is ever reached. The zero-event blank failure is therefore reachable today through a direct `run()` call, which is how the judge reproduced it, and not through the one shipped adapter. That does not downgrade the finding, because `run()` is the documented single internal interface every surface calls and the buffered-loss shape is surface-independent, but it does mean this is not an active outage-path defect on `/query` specifically. Severity stays medium.
+
+### F-2.0-12: the resolved model id reaches the end-user-visible `error` event
+
+Severity: low (the adversary's call, unchanged). Status: closed 2026-07-28 by the lead. `_step_error_kwargs` (`graph.py`) no longer forwards `str(exc)` (which deliberately includes the model id, useful once real logging lands) into the end-user-visible `ErrorPayload.message`. It now maps `exc.error_class` to one of three fixed, generic, actionable strings (`_STEP_ERROR_END_USER_MESSAGES`) that name what a caller can do next without naming any internal model, and `source` is now the node name (`guardrail`/`think`/`plan`/`write`) rather than the harness-internal call path. New assertion in `test_step_failure_on_think_routes_to_write_as_a_refusal` (`test_graph.py`) confirms the configured guard-tier model id never appears in the resulting error event's `message` or `source`. Full suite 481 passed.
+
+`call_tier`'s failure message (`harness.py:335-340`) interpolates `model_id`. `_step_error_kwargs` (`graph.py:233`) copies `str(exc)[:256]` into `ErrorPayload.message`, and `filter_events_for_end_user` drops only `cost`, so `error` events reach the client unmodified. Reproduced against the real FastAPI app with a real authenticated user, forcing a `BadRequestError` on the guard tier:
+
+```
+=== 3. model id / internal symbol disclosure in the client-visible error event ===
+  status 200
+  CLIENT SEES error.message = "call_tier failed for tier 'guard' (model 'secret-provider/internal-guard-model-v3') after 1 attempt(s): recoverable error (BadRequestError)"
+  CLIENT SEES error.source  = "harness.call_tier"
+```
+
+An end user can enumerate the exact model configured behind each of the three tiers by forcing one failure per tier. Confirmed reachable at all three: the same probe run against guard, plan and synth returned each tier's own configured model id, and in every case the graph still degraded correctly (`trust_outcome="refuse"`, no crash), so the routing is right and only the message content is at issue.
+
+Not a credential leak. `GUARD_MODEL`/`PLAN_MODEL`/`SYNTH_MODEL` are configuration, not secrets, and `production-standards.md`'s secrets gate is about keys and tokens, which this correctly does not expose. It is still internal configuration crossing to an untrusted surface for no user benefit: the model id tells the user nothing actionable about a failure, and it hands away the output of the phase 7.0 model-bench. The error class, the tier and the step name are the parts a user or a support engineer can act on.
+
+`error.source` carrying an internal symbol name (`harness.call_tier`, and `cost_control.check_user_daily_query_cap` on the daily-cap decline path) is not filed as a defect: `source` is a Section 2.3 contract field that exists to carry exactly that. Only the model id inside the free-text `message` is at issue.
+
+Judge verification, 2026-07-28, with distinctive placeholder model ids set per tier so a leak is unambiguous, forcing a real `BadRequestError` on one tier at a time and then applying the real `filter_events_for_end_user` to the resulting event list:
+
+```
+  tier=guard CLIENT-VISIBLE error.message = "call_tier failed for tier 'guard' (model 'secretprov/internal-guard-model-v3') after 1 attempt(s): recoverable error (BadRequestError)"
+  tier=plan  CLIENT-VISIBLE error.message = "call_tier failed for tier 'plan' (model 'secretprov/internal-plan-model-v7') after 1 attempt(s): recoverable error (BadRequestError)"
+  tier=synth CLIENT-VISIBLE error.message = "call_tier failed for tier 'synth' (model 'secretprov/internal-synth-model-v9') after 1 attempt(s): recoverable error (BadRequestError)"
+```
+
+`contains the configured model id? True` at every tier, and the run still degraded correctly in every case (terminal event `done`, no exception out of `run()`), so the adversary is right that only the message content is at issue and the routing is sound. The filter is confirmed to be the reason it survives: `_BUILDER_ONLY_EVENT_TYPES` is `frozenset({'cost'})`, so `error` is passed through untouched, and `app.py:62` applies exactly this filter to what `/query` returns.
+
+Correction to the adversary's scope claim, which overreaches. The write-up asserts "an end user can enumerate the exact model configured behind each of the three tiers by forcing one failure per tier". The judge produced per-tier failures by monkeypatching `litellm.acompletion` to raise on a chosen target, which is not a capability an end user has. Nothing in the probe demonstrates that a client can choose WHICH tier fails, and the three tiers are called on a fixed sequence with no client-controllable selector. The accurate statement is narrower: whenever any tier call fails, that tier's configured model id is disclosed to the client, so disclosure is opportunistic rather than enumerable on demand. That does not change the disposition, since the leak is real and the fix is the same one-line message change, and low remains the right severity for configuration (not credential) disclosure. It is recorded because a finding that overstates the attacker's control is one a fix agent can be talked out of.
+
+### F-2.0-13: `run()` raises an uncaught `ValueError` for any `user_id` that is not a UUID
+
+Severity: low (the adversary's call, unchanged). Status: closed 2026-07-28 by the lead, fixed now rather than left for whichever future adapter tripped over it, per the judge's own framing ("cheapest to fix now while there is exactly one caller"). `guardrail_node` (`graph.py`) now validates `query.user_id` with a guarded `uuid.UUID(...)` call before it ever reaches `check_user_daily_query_cap`; a malformed value declines gracefully (`error` then `done`, `trust_outcome="refuse"`) via the same `_decline_for_daily_cap` helper the two daily caps already use (its docstring updated to name this second caller), rather than propagating a raw `ValueError`. New test `test_malformed_user_id_declines_gracefully_instead_of_crashing` (`test_graph.py`) exercises `user_id="not-a-well-formed-uuid"` and asserts a clean decline with zero model calls made. This closes the contract gap independent of F-2.0-11's general safety net, since a caller now gets an actionable, specific message rather than falling through to the generic run-level catch-all. Full suite 481 passed.
+
+`Query.user_id` is `str | None` with `max_length=64` and no format constraint (`contracts/query.py:33`). `guardrail_node` does `uuid.UUID(query.user_id)` (`graph.py:256`) inside a `try` that catches only the two daily-cap errors. Reproduced through the real `run()` on the `cli` surface:
+
+```
+=== A: run() with a non-UUID user_id on a non-web surface ===
+  user_id='alice'                    -> UNCAUGHT ValueError: badly formed hexadecimal UUID string
+  user_id='1; DROP TABLE users--'    -> UNCAUGHT ValueError: badly formed hexadecimal UUID string
+  user_id='../../etc/passwd'         -> UNCAUGHT ValueError: badly formed hexadecimal UUID string
+  user_id='0000000000000000000000000000000000000000000000000000000000000000' -> UNCAUGHT ValueError: badly formed hexadecimal UUID string
+```
+
+Not reachable through `POST /query` today, and T-2.0-08 is why: `app.py:60` unconditionally overwrites `user_id` with `str(current_user.id)`, which is always a real UUID, and the probe confirmed that an attacker-chosen `user_id` in the body is ignored (`user_id non-uuid -> 200`). The gap is at the contract, not the web adapter. Section 2.1 defines `Query` as "the single request shape every surface (web_ui, rest_sse, mcp, cli) builds before calling `run()`", and three of those four surfaces are not built yet. Whichever one lands first inherits a field whose declared type accepts a value the graph cannot process, and the failure mode is an uncaught exception rather than a validation error naming the field. The type says `str`; the only value the code accepts is a UUID.
+
+Note the SQL-shaped strings above never reach a query: `uuid.UUID()` rejects them first, and `get_user_daily_query_count` is parameterized against a typed uuid column regardless. This is a robustness and contract-honesty finding, not an injection one.
+
+Judge verification, 2026-07-28, through the real `run()` on `surface="cli"`:
+
+```
+  user_id='alice'                          -> UNCAUGHT ValueError: badly formed hexadecimal UUID string
+  user_id='1; DROP TABLE users--'          -> UNCAUGHT ValueError: badly formed hexadecimal UUID string
+  user_id='../../etc/passwd'               -> UNCAUGHT ValueError: badly formed hexadecimal UUID string
+  user_id='11111111-1111-1111-1111-111111111111' -> ok, 8 events
+```
+
+The contract half is confirmed by printing the field's own metadata rather than reading the source: `Query.user_id` resolves to `{'annotation': Union[str, NoneType], 'required': False, 'default': None, 'metadata': [MaxLen(max_length=64)]}`, so `max_length=64` is the only constraint and no format validator exists. The crash site is `cost_control.check_user_daily_query_cap(session, uuid.UUID(query.user_id))` inside `guardrail_node`'s two-exception `try`.
+
+Unreachability through the web surface is confirmed, not assumed: `app.py` contains `model_copy(update={"user_id": str(current_user.id)})`, and `current_user.id` is a `UUID` column, so the value passed to `run()` is always a well-formed UUID string regardless of the body. The judge also checked that no other caller exists: `src/system_03_search_agent/adapters/` contains only `web_sse`, so `POST /query` is currently the sole production entry point into `run()`. Low severity and latent status are both correct as filed. The right framing for the lead is that this is a contract defect rather than a bug: the declared type accepts values the implementation cannot process, and the cost of fixing it is one validator on the field, paid now while there is exactly one caller, versus paid later by whichever adapter trips over it first.
+
+### F-2.0-14: the coordinator-worker structured pass-through path applies no size cap of any kind
+
+Severity: medium (revised up from the adversary's low; see the judge's reasoning below). Status: confirmed 2026-07-28 by the judge -- `_structured_pass_through` really does copy `structured_fields` through with no cap of any kind, against a `production-standards.md` gate that states the caps are required, not optional. LATENT until build phase 2.1 supplies a real tool adapter, the same gate as F-2.0-08. Owner: unassigned.
+
+`_structured_pass_through` (`coordinator_worker.py:235-246`) does `dict(result.structured_fields or {})` and copies it onto the `Finding` unchanged. No `maxLength`, no `maxItems`, no truncation. The reader path in the same module caps everything it produces (`_MAX_ENTITIES=25`, `_MAX_NORMALIZED_IDS=25`, `_MAX_EVIDENCE_SUMMARY_CHARS=500`, `_MAX_ENTITY_CHARS=200`), which makes the asymmetry a gap rather than a deliberate design:
+
+```
+=== A: structured pass-through, no maxLength / maxItems anywhere ===
+  reader calls made: 0  (0 == the reader gate was skipped entirely)
+  Finding.source = 'structured_pass_through'
+  Finding.structured_fields['abstract'] length = 10,000,000 chars  (input was 10,000,000)
+  Finding.structured_fields['rows'] length     = 100,000 items
+  reader-path caps for comparison: _MAX_ENTITIES=25, _MAX_EVIDENCE_SUMMARY_CHARS=500
+  injection payload survived verbatim into the Finding? True
+```
+
+`production-standards.md`'s multi-agent pipeline gate requires "`maxLength` on every string field and `maxItems` on every array ... not optional", and its bounded-context-items rule requires "a hard token or character cap enforced before injection". A `Finding` is what Write consumes, so an uncapped 10 MB string on a `Finding` is precisely the unbounded context fragment that rule names. `contains_untrusted_free_text` is a plain unvalidated bool on a dataclass, and the branch it selects is the difference between "capped, read by an isolated reader" and "copied through verbatim, unbounded", so a tool adapter in phase 2.1 that returns an API's JSON body as `structured_fields` gets the second path by default. Layer 2 and Layer 3 JSON is external content too, not just the free-text fields inside it.
+
+Secondary observation in the same module, folded in here rather than filed separately because it is the same class of defect (a cap applied at the wrong place): `_parse_reader_response` (`coordinator_worker.py:196-202`) materializes the reader's complete `entities` and `normalized_ids` arrays and maps `str(...)[:200]` over every element before slicing to 25, so `_MAX_ENTITIES` bounds the output but not the work.
+
+```
+=== B: _MAX_ENTITIES caps the OUTPUT, not the WORK ===
+  hostile reader response size: 608,000,061 chars
+  parse took 3.58s, peak traced allocation 1,246 MB
+  Finding.extracted_entities length = 25 (capped correctly on OUTPUT)
+```
+
+Deliberately over-reported: this half is mostly theoretical while the only producer of that string is a model response already bounded by its own max output tokens. It matters if anything other than a live model call ever feeds `_parse_reader_response` (a replayed fixture, a cached response, a future non-model extractor). Slicing before mapping costs nothing and removes the question.
+
+Judge verification, 2026-07-28. `_structured_pass_through` was printed in full from the live module and its entire body is `structured_fields=dict(result.structured_fields or {})` with no slice, no length check, and no truncation, against reader-path caps the judge read off the same module as `{'_MAX_ENTITIES': 25, '_MAX_NORMALIZED_IDS': 25, '_MAX_EVIDENCE_SUMMARY_CHARS': 500, '_MAX_ENTITY_CHARS': 200}`. The asymmetry is real. Reproduced through the real `coordinator_worker_execute`:
+
+```
+  reader calls made: 0   Finding.source='structured_pass_through'
+  Finding.structured_fields['abstract'] len = 10,000,000 (input 10,000,000)
+  Finding.structured_fields['rows'] len     = 100,000
+  injection payload verbatim in the Finding? True
+```
+
+The secondary half also reproduces, at a smaller input than the adversary used and scaling the same way: a hostile reader response of 200,600,039 characters took 0.55s to parse at a peak traced allocation of 264 MB, with `extracted_entities` correctly capped at 25. The judge agrees with the adversary's own deprecation of this half; it is a real parse-before-slice inefficiency and not currently a risk, since the only producer of that string is a model response bounded by its own output limit.
+
+Severity revised up from low to medium, for three reasons the adversary's own text supports but its severity call does not reflect. First, `production-standards.md`'s multi-agent pipeline gate is worded as an absolute (`maxLength` on every string field and `maxItems` on every array are "required, not optional"), and this path meets none of it, so this is an unmet mandatory gate rather than a nice-to-have. Second, and this is the load-bearing point, the uncapped branch is the DEFAULT: `contains_untrusted_free_text=False` selects it, so every phase-2.1 tool adapter that returns an API's JSON body as `structured_fields` gets the unbounded path unless its author opts into the reader. Layer 2 and Layer 3 JSON is external content, so the default is backwards. Third, a `Finding` is what Write consumes, which makes an uncapped 10 MB string exactly the unbounded context fragment the bounded-context-items rule names. Low undersells a gate violation sitting on the default path of the next phase's primary deliverable.
+
+## Findings triage summary
+
+Judge triage of the adversary's eight findings, 2026-07-28. The judge re-derived every verdict from the real code and its own reproductions rather than from the adversary's pasted output; per-finding evidence is in each entry above.
+
+Counts: 8 confirmed, 0 rejected. No finding was fabricated, and every pasted reproduction that the judge re-ran reproduced. Two severities were revised (F-2.0-09 up to high, F-2.0-14 up to medium), and three scope or framing claims were corrected without changing a disposition (F-2.0-08's reachability reason, F-2.0-11's ordering of its two halves plus the web-surface shadowing, F-2.0-12's "enumerable on demand" overreach).
+
+Severity after triage:
+
+| Finding | Adversary | Judge | Reachability |
+|---------|-----------|-------|--------------|
+| F-2.0-09 inf/nan caps fail open | medium | high (revised up) | live today |
+| F-2.0-07 pre-flight estimate decoupled from real price | medium | medium | latent, phase 7.0 or any expensive model configured |
+| F-2.0-08 Act bypasses cap and timeout | medium | medium | latent, phase 2.1 |
+| F-2.0-10 client-supplied `trace_id` | medium | medium | Section 20.1 violation live today; cap evasion latent, gated on F-2.0-04 |
+| F-2.0-11 blank failure, buffered event loss | medium | medium | live today at the `run()` boundary |
+| F-2.0-14 uncapped structured pass-through | low | medium (revised up) | latent, phase 2.1 |
+| F-2.0-12 model id in the client-visible error | low | low | live today |
+| F-2.0-13 non-UUID `user_id` crashes `run()` | low | low | latent, first non-web adapter |
+
+Live today, and the judge's recommendation is that these are fixed before the phase ships:
+
+- F-2.0-09, high. The only high, and the only one needing no future phase. A blank `env.example` value plus one operator typo silently disables a cap Section 19.1 calls safety-critical, and the same defect pins `cap_fraction` to 0.0 on every `cost` event, so the indicator an operator would use to notice is falsified by the same bug. The `nan` case bills the query first and raises an uncaught `ValidationError` naming `CostPayload` rather than the env var. Section 25 states this phase delivers "cost caps and the cost event enforced from day one"; a cap that an env value can silently switch off does not meet that.
+- F-2.0-12, low, and cheap. One message change in `harness.py`, no contract or behavior impact, and the run already degrades correctly.
+- F-2.0-11, medium. The judge's view is that the buffered-event shape is the part worth fixing here rather than the database case, since phase 1.2 has to change the shape for real SSE anyway. A defensible alternative is to fix only the narrow case now (catch and degrade in `guardrail_node`) and take the shape at 1.2. The lead's call, but "defer entirely" is the one option the judge would argue against, because the current shape converts any future uncaught node exception into total output loss.
+
+Correctly deferred, with a named trigger, and the judge would not block the phase on any of them:
+
+- F-2.0-08 and F-2.0-14, both triggered by build phase 2.1. These two must be dispatched together with 2.1 itself, not merely logged: 2.1 is the very next phase, and both gaps sit on the default path of what 2.1 builds. F-2.0-08 needs the cap check and the timeout wired at the moment `act_node` starts consuming real tool calls, and F-2.0-14 needs a cap on `structured_fields` before the first tool adapter returns an API body through it.
+- F-2.0-10's cap-evasion half, gated on F-2.0-04's interactions-writing ticket (build phase 4.6). This one compounds: fixing F-2.0-04 alone, without server-minting `trace_id`, produces a daily cap that reads as enforced and is defeated by a constant string, which is worse than today's visibly inert cap. Whoever picks up F-2.0-04 takes F-2.0-10 with it. The Section 20.1 half is live now and can be fixed independently at any time.
+- F-2.0-07, triggered by build phase 7.0's model-bench or any operator edit naming an expensive model on a tier. Today the decoupling fails safe (the estimate over-states real cost by roughly 5x at the shipped defaults), which is why it is deferrable at all.
+
+Lead's dispositions, 2026-07-28, following the judge's recommendation exactly: fixed F-2.0-09, F-2.0-11, and F-2.0-12 (see each entry's closure note above). Also fixed F-2.0-13 now rather than deferred, since the judge's own framing ("cheapest to fix now while there is exactly one caller") argued for it and the fix was a few lines against `guardrail_node`'s existing `try` block. F-2.0-07, F-2.0-08, F-2.0-10, and F-2.0-14 remain open, deferred with the named triggers above; none is fixed in this phase. F-2.0-10's Section 20.1 half (server-minting `trace_id`) is deliberately NOT fixed now despite being live today: `Query.trace_id` is a phase 1.0 contract field threading through every `Event`, every test fixture, and the auth/adapter layers, so making it server-derived is a `contracts/query.py` shape change, not a contained fix, and belongs with F-2.0-04's ticket (build phase 4.6) rather than expanding this fix pass's scope. Recorded in `tracker/BOARD.md`'s Open flags table and in `DECISIONS.md` so it is not lost between phases.
+- F-2.0-13, triggered by the first non-web adapter (MCP or CLI). Cheapest to fix now, while `web_sse` is the only caller of `run()`, but nothing breaks if it waits.
+
 ## History
 
 - 2026-07-28 lead: phase opened, dependency verified against Section 25 and `tracker/BOARD.md`, LEARNINGS.md read filtered to this phase, decomposed into 8 tickets (T-2.0-01 through T-2.0-08), all refined at creation
 - 2026-07-28 judge: reviewed all 8 tickets with fresh context against the real code and real test runs, not the builders' self-reports. All 8 pass; every one moved to `done`. Full suite `python3 -m pytest tests/ -q` -> 463 passed, against a 314-passed baseline on `main`. Phase-level premise verified separately from the per-ticket check, per `goal-contracts.md` and the bossman-mode judge section: the judge wrote and ran its own integration harness that imports `core.run.run`, mocks only LiteLLM, and drives a real query to completion. Section 25 row 2.0's four named deliverables are all present and genuinely wired together, not merely unit-tested in isolation. Six findings filed (F-2.0-01 through F-2.0-06), none blocking, all for the lead to dispatch. One false evidence claim corrected in T-2.0-07's Evidence block
 - 2026-07-28 lead: closed F-2.0-01 (lint), F-2.0-02 (stale docstring), and F-2.0-03 (`build_stable_prefix` unwired), each with evidence in its own Findings entry above. Left F-2.0-04 and F-2.0-06 open as documented, correctly-scoped boundaries (no code change due). Left F-2.0-05 open, surfaced to the product owner as a genuine Section 19.3/19.5 spec conflict needing a Step 6.2 call, not a unilateral code fix. Full suite after fixes: 464 passed (463 plus one new test proving the F-2.0-03 fix), `ruff check src/system_03_search_agent/ tests/system_03_search_agent/` clean
+- 2026-07-28 judge: triaged the adversary's eight findings (F-2.0-07 through F-2.0-14), re-deriving every verdict from the real code and the judge's own reproductions rather than from the adversary's pasted output. All 8 confirmed, 0 rejected. Two severities revised (F-2.0-09 medium to high, F-2.0-14 low to medium) and three scope claims corrected without changing a disposition (F-2.0-08's reachability reason, F-2.0-11's framing and web-surface shadowing, F-2.0-12's "enumerable on demand" overreach). Live-today versus phase-deferred recorded per finding and summarized under "Findings triage summary" above, for the lead to dispatch. The judge triages, the judge does not fix or close. F-2.0-01 through F-2.0-06 untouched

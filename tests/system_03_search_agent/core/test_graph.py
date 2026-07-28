@@ -451,6 +451,12 @@ async def test_step_failure_on_think_routes_to_write_as_a_refusal(
     done_event = events[-1]
     assert done_event.payload["trust_outcome"] == "refuse"
 
+    # F-2.0-12 (adversary, confirmed low, 2026-07-28): the resolved model
+    # id must never reach the end-user-visible error event, even though
+    # HarnessCallError's own internal message deliberately includes it.
+    assert _GUARD_MODEL not in error_event.payload["message"]
+    assert _GUARD_MODEL not in error_event.payload["source"]
+
 
 # ---------------------------------------------------------------------------
 # Daily caps: declined before any per-query model call fires at all.
@@ -515,3 +521,26 @@ async def test_none_user_id_skips_the_per_user_check_but_still_runs_system_check
     assert user_check_called["value"] is False
     assert system_check_called["value"] is True
     assert events[0].type == "guard"  # the graph proceeded normally
+
+
+@pytest.mark.asyncio
+async def test_malformed_user_id_declines_gracefully_instead_of_crashing(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """F-2.0-13 (adversary, confirmed low, 2026-07-28).
+
+    A non-UUID user_id used to reach `uuid.UUID(query.user_id)` unguarded
+    and raise an uncaught ValueError out of the graph. Not reachable via
+    POST /query today (T-2.0-08 always supplies a real UUID), but Query
+    is the shared contract other surfaces will build on, so this must not
+    crash regardless of which surface constructs the Query.
+    """
+    query = _valid_query(user_id="not-a-well-formed-uuid")
+    events = await _run_graph(query, _valid_context())
+
+    assert _mock_litellm.call_count == 0  # declined before any model call
+    types = [event.type for event in events]
+    assert types == ["error", "done"]
+    assert events[0].payload["error_class"] == "recoverable"
+    assert "uuid" in events[0].payload["message"].lower()
+    assert events[-1].payload["trust_outcome"] == "refuse"

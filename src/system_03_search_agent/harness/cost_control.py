@@ -57,6 +57,7 @@ simpler to reason about, test, and explain to an end user ("resets at
 
 from __future__ import annotations
 
+import math
 import os
 import uuid
 from collections.abc import Iterable
@@ -79,6 +80,20 @@ from system_03_search_agent.harness.tiers import Tier, UnknownTierError
 
 
 def _read_float_env(name: str) -> float:
+    """Read `name` as a finite, positive float.
+
+    F-2.0-09 (adversary, confirmed high, 2026-07-28): `float()` happily
+    parses `"inf"`, `"-inf"`, `"nan"`, and out-of-range literals like
+    `"1e400"` (which Python's float parser silently rounds to `inf`).
+    `inf` disables a cap outright (nothing is ever `> inf`) while
+    `cap_fraction` in the `cost` event reports `0.0` forever, so the one
+    signal an operator would use to notice the cap is disabled is itself
+    falsified. `nan` is worse: every comparison against `nan` is `False`,
+    so the cap silently never fires, and a downstream consumer computing
+    `cap_fraction` on real data eventually hits a `nan`-tainted value.
+    Reject both classes explicitly, at read time, before either is used
+    to gate a cost decision.
+    """
     raw = os.environ.get(name)
     if not raw:
         raise RuntimeError(
@@ -86,12 +101,22 @@ def _read_float_env(name: str) -> float:
             "cost caps (see env.example)."
         )
     try:
-        return float(raw)
+        value = float(raw)
     except ValueError as exc:
         raise RuntimeError(f"{name} is set to {raw!r}, which is not a valid number") from exc
+    if not math.isfinite(value) or value <= 0:
+        raise RuntimeError(
+            f"{name} is set to {raw!r}, which parses to {value!r}; a cost cap "
+            "must be a finite, positive number (inf, -inf, nan, and "
+            "non-positive values are all rejected, since any of them "
+            "silently disables the cap it is supposed to enforce)"
+        )
+    return value
 
 
 def _read_int_env(name: str) -> int:
+    """Read `name` as a positive integer. See `_read_float_env` for why
+    non-positive values are rejected rather than silently accepted."""
     raw = os.environ.get(name)
     if not raw:
         raise RuntimeError(
@@ -99,9 +124,15 @@ def _read_int_env(name: str) -> int:
             "cost caps (see env.example)."
         )
     try:
-        return int(raw)
+        value = int(raw)
     except ValueError as exc:
         raise RuntimeError(f"{name} is set to {raw!r}, which is not a valid integer") from exc
+    if value <= 0:
+        raise RuntimeError(
+            f"{name} is set to {raw!r}; a query-count cap must be a positive "
+            "integer, since zero or negative values are not a meaningful cap"
+        )
+    return value
 
 
 def per_query_cost_cap_usd() -> float:

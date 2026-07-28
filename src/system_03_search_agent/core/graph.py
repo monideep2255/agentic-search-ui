@@ -213,6 +213,26 @@ async def _dispatch_tier_call(
     )
 
 
+# F-2.0-12 (adversary, confirmed low, 2026-07-28): HarnessCallError's own
+# message deliberately includes the resolved model id (harness.py's
+# call_tier and _price_per_token both build it that way, on purpose, so
+# an operator reading a log or trace can see exactly which model
+# answered). That message reaches the end user unmodified today, since
+# `error` events are not in cost_control's builder-only filter set,
+# letting a client enumerate the guard/plan/synth tier-to-model mapping
+# by forcing one failure per tier. The fix is at the boundary where an
+# internal exception becomes a client-visible payload, not in the
+# exception itself: keep HarnessCallError's message exactly as built
+# (still useful once real logging/tracing lands, Section 20), and build
+# a separate, generic, actionable end-user message here instead of
+# forwarding `str(exc)` verbatim.
+_STEP_ERROR_END_USER_MESSAGES: dict[str, str] = {
+    "transient": "A step in this query hit a temporary error. Retrying the query may succeed.",
+    "recoverable": "A step in this query could not complete as requested.",
+    "unexpected": "A step in this query failed unexpectedly.",
+}
+
+
 def _step_error_kwargs(step: str, exc: HarnessCallError) -> dict[str, Any]:
     """Build the `ErrorPayload` constructor kwargs for a step's `HarnessCallError`.
 
@@ -224,13 +244,16 @@ def _step_error_kwargs(step: str, exc: HarnessCallError) -> dict[str, Any]:
     ticket's stub scope (no real backoff schedule exists yet beyond
     `call_tier`'s own single internal retry), so 0 documents "no wait
     recommended" rather than fabricating a number.
+
+    `message` is deliberately NOT `str(exc)`: see the module-level note on
+    `_STEP_ERROR_END_USER_MESSAGES` above (F-2.0-12).
     """
     return {
         "fatal": True,
         "scope": "step",
-        "source": exc.source,
+        "source": step,
         "error_class": exc.error_class,
-        "message": str(exc)[:256],
+        "message": _STEP_ERROR_END_USER_MESSAGES[exc.error_class],
         "retry_after_s": 0,
     }
 
@@ -253,7 +276,25 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     with session_scope() as session:
         try:
             if query.user_id is not None:
-                cost_control.check_user_daily_query_cap(session, uuid.UUID(query.user_id))
+                try:
+                    parsed_user_id = uuid.UUID(query.user_id)
+                except ValueError:
+                    # F-2.0-13 (adversary, confirmed low, 2026-07-28): a
+                    # malformed user_id (not a well-formed UUID) used to
+                    # crash run() with an uncaught ValueError. Not
+                    # reachable via POST /query today, since T-2.0-08
+                    # always overwrites user_id with the authenticated
+                    # user's real UUID, but Query is the shared contract
+                    # every future surface (MCP, CLI) also constructs, so
+                    # validate it here rather than trust every future
+                    # caller to supply a well-formed one.
+                    return _decline_for_daily_cap(
+                        state,
+                        sink,
+                        "core.graph.guardrail_node",
+                        "user_id must be a well-formed UUID or omitted entirely",
+                    )
+                cost_control.check_user_daily_query_cap(session, parsed_user_id)
             cost_control.check_system_daily_cost_cap(session)
         except cost_control.UserDailyQueryCapExceededError as exc:
             source = "cost_control.check_user_daily_query_cap"
@@ -289,7 +330,15 @@ def _decline_for_daily_cap(
     state: GraphState, sink: _EventSink, source: str, message: str
 ) -> dict[str, Any]:
     """Section 19.1's decline path for the two daily caps: an `error` event
-    plus a `done` event, then stop -- the graph never reaches `write`."""
+    plus a `done` event, then stop -- the graph never reaches `write`.
+
+    Also reused for `guardrail`'s malformed-`user_id` short-circuit
+    (F-2.0-13): the shape needed is identical (stop immediately, emit
+    `error` then `done`, never reach `write`), even though a bad
+    `user_id` is a contract-validation failure, not a cap decline. The
+    `daily_cap_declined` flag this sets is what `_route_after_guardrail`
+    reads to route straight to `END` in both cases.
+    """
     sink.emit(
         "error",
         ErrorPayload(
