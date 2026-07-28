@@ -46,3 +46,6 @@ redis-data/
 # Claude Security scan output (reports and working dirs, never committed)
 CLAUDE-SECURITY-*/
 security/
+
+# Agent worktrees (transient, created by bossman-mode builders)
+.claude/worktrees/
