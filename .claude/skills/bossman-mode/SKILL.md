@@ -268,13 +268,14 @@ After all team members complete, before the phase checkpoint:
 1. `verify`: compile check, tests, lint, git status. The pre-commit gate.
 2. `eval-harness`: required on any phase that touches answer generation, grounding, citations, or the trust signal. It grades cite-or-refuse and citation coverage against the playbook. A phase that changes how answers are produced does not ship without it.
 3. `dev-standards`: the six-lens production readiness pass. Required on any phase that shipped application code, skippable for docs-only or config-only changes.
-4. `release-workflow`: local end-to-end verification and the security scan gate.
-5. `ship`: docs-sync, commit, push the phase branch, create the PR.
-6. `task-tracker --close`: record judge evidence on each ticket, close the phase board, then run `python3 tracker/render_board.py` explicitly and republish the artifact.
+4. `python3 tracker/check_learnings_coverage.py N.M`: fails the phase close if any finding in `tracker/phase_N.M.md` reached `confirmed` or `closed` and `LEARNINGS.md` has no row mentioning this phase. This is the mechanical backstop for item 9 below: "write to LEARNINGS.md the moment something breaks" was a standing instruction with no check behind it, and build phase 2.0 shipped with real, judge-and-adversary-confirmed findings and zero LEARNINGS.md entries until the gap was noticed after the fact. A `FAIL` here means write the missing entry now and re-run the check; it does not mean skip it.
+5. `release-workflow`: local end-to-end verification and the security scan gate.
+6. `ship`: docs-sync, commit, push the phase branch, create the PR.
+7. `task-tracker --close`: record judge evidence on each ticket, close the phase board, then run `python3 tracker/render_board.py` explicitly and republish the artifact.
 
-The explicit render at step 6 is a backstop, not a duplicate. `.claude/hooks/sync-board.sh` already regenerates the page on every Edit to a board file, but PostToolUse hooks fire on the Edit and Write tools only, so any change made through Bash slips past it. Re-rendering at phase close catches a bypassed hook inside the phase instead of leaving the product owner reading a stale board. The renderer is idempotent, so running it when nothing changed costs nothing.
+The explicit render at step 7 is a backstop, not a duplicate. `.claude/hooks/sync-board.sh` already regenerates the page on every Edit to a board file, but PostToolUse hooks fire on the Edit and Write tools only, so any change made through Bash slips past it. Re-rendering at phase close catches a bypassed hook inside the phase instead of leaving the product owner reading a stale board. The renderer is idempotent, so running it when nothing changed costs nothing.
 
-Steps 1 through 3 are the gates the locked spec actually requires and that this skill previously never invoked. Do not treat them as optional because the judge already passed. The judge grades the work; these grade whether the work is allowed to ship.
+Steps 1 through 4 are the gates the locked spec actually requires and that this skill previously never invoked (or, for step 4, never mechanically enforced). Do not treat them as optional because the judge already passed. The judge grades the work; these grade whether the work is allowed to ship.
 
 ### Agent prompt template
 
@@ -472,7 +473,7 @@ Once all builders complete:
 6. UI phases: a phase that ships user-facing interface does not pass on a judge's code review alone. It needs a Playwright run proving the flow works in a browser, and it is marked product owner required so a human decides whether it actually feels right. An agent can verify a button exists. It cannot verify the thing is good.
 7. The judge closes the board. It is the only role allowed to move a ticket from `in-review` to `done`, and the only one allowed to set `rejected`, each with a one-line reason and its evidence pasted into the ticket. A builder never closes its own ticket. If the judge does not touch the board, the phase does not close, because nothing else is permitted to write that state.
 8. If judge fails or the adversary files findings: minor issues = dispatch a fix sub-agent. Major issues = escalate to the product owner.
-9. Anything that cost real time to diagnose gets a `LEARNINGS.md` entry before the phase closes: what broke, what was tried and did not work, and what actually fixed it. A confirmed adversary finding always qualifies. This is the one place a phase is allowed to end without a learning, and only when genuinely nothing broke.
+9. Anything that cost real time to diagnose gets a `LEARNINGS.md` entry before the phase closes: what broke, what was tried and did not work, and what actually fixed it. A confirmed adversary finding always qualifies. This is the one place a phase is allowed to end without a learning, and only when genuinely nothing broke. Step 7's `check_learnings_coverage.py` is the mechanical check that this actually happened; do not treat this item as satisfied just because it was read, run the check.
 
 ### Step 7: skill chain (release-workflow -> ship)
 
