@@ -224,6 +224,18 @@ One narrow Section 15 gap surfaced that no ticket covered, filed below as F-1.1-
 | F-1.1-04 | Low | T-1.1-03 | filed | `users.profile` has no read or write path on any endpoint |
 | F-1.1-05 | Medium | T-1.1-03 | filed | No rate limit on `/auth/login`, an argon2id CPU cost per unauthenticated request |
 | F-1.1-06 | Low | T-1.1-03 | filed | The router tests commit rows they never clean up, so the dev database grows by 10 users and 7 auth_sessions per full-suite run |
+| F-1.1-07 | High | T-1.1-03 | filed | Refresh rotation has no reuse detection, so a stolen refresh token grants unlimited access, not the one use Section 15 promises |
+| F-1.1-08 | Medium | T-1.1-03 | filed | Email is matched case-sensitively, so `USER@example.com` opens a second account instead of returning 409 |
+| F-1.1-09 | Medium | T-1.1-02 | filed | An access token carrying no `exp` claim is accepted and never expires |
+| F-1.1-10 | Medium | T-1.1-03 | filed | `/auth/signup` is an unauthenticated account-enumeration oracle, by status code and by a 22.8x timing gap |
+| F-1.1-11 | Medium | T-1.1-03 | filed | A NUL byte in `email` or in the `User-Agent` header returns an unhandled HTTP 500 |
+| F-1.1-12 | Medium | T-1.1-01 | filed | `auth_sessions.refresh_token_hash` has neither a unique constraint nor an index, giving a 500 path and a sequential scan on every auth call |
+| F-1.1-13 | Low | T-1.1-03 | filed | `email` gets no format validation at all, so `@`, `not-an-email`, and a CRLF-bearing address all create accounts |
+| F-1.1-14 | Low | T-1.1-03 | filed | Token responses carry no `Cache-Control: no-store`, against RFC 6749 Section 5.1 |
+| F-1.1-15 | Low | T-1.1-03 | filed | No password policy: a single character or a whitespace-only password is accepted |
+| F-1.1-16 | Low | T-1.1-03 | filed | `auth_sessions.user_agent` is stored unbounded, 60,000 characters written from one login |
+| F-1.1-17 | Low | T-1.1-03 | filed | `/query` is unauthenticated and trusts a client-supplied `user_id`, so the auth service phase 1.1 built protects nothing yet |
+| F-1.1-18 | Low | T-1.1-02 | filed | The `user_id` claim accepts five non-canonical UUID spellings, so one account has many valid subject strings |
 
 ### F-1.1-01: the migration test destroys all data in the shared user database
 
@@ -306,3 +318,299 @@ Why it does not block phase close, checked rather than assumed:
 - The residue is confined to a local developer database. Nothing in CI or production is affected.
 
 Action for the lead: add a teardown fixture to `test_router.py` in this phase if the budget allows, otherwise carry it as a known item. The rule it sits under is `production-standards`, "integration tests hit a real database or graph connection where feasible", which is satisfied; what is missing is the cleanup that makes a real-database integration test repeatable. Judge did not fix it, per the report-do-not-fix instruction.
+
+### F-1.1-07: refresh rotation has no reuse detection, so a stolen token is not bounded to one use
+
+Severity: high. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+
+Section 15 states the refresh token is "rotated on every use (the old row is invalidated, a new one issued), which bounds the damage of a stolen refresh token to one use". Rotation is implemented correctly, but the security property the spec claims from it is not delivered, because nothing acts on the replay it detects. `_revoke_active_auth_session` (router.py:138-164) returns `None` when a presented token is already revoked, and `/auth/refresh` (router.py:219-221) turns that into a bare 401. A revoked-token presentation is the canonical signal that a refresh token was stolen, since only one of the two holders can have rotated it. The code discards that signal: it never revokes the rest of the user's `auth_sessions` rows, never records the event, and never surfaces it.
+
+The consequence is that whichever holder rotates first keeps the account, and the other is locked out of that session with no explanation. If the thief rotates first, the thief keeps rotating indefinitely and the victim's 401 looks like an ordinary expired session. The damage is not bounded to one use; it is unbounded.
+
+Two aggravating facts found in the same probe:
+
+- No absolute session lifetime. Every rotation writes a fresh `expires_at = now + 30 days` (router.py:129), so a continuously rotating holder never expires. The 30-day TTL bounds an idle token, not a used one.
+- No cascade. The victim's other devices keep working after a reuse event, so nothing anywhere in the system changes state when a stolen token is detected.
+
+Reproduction, run against `uvicorn ... --workers 4` on `127.0.0.1:8731` with a real `search_agent_users` connection:
+
+```
+POST /auth/signup {"email":"adv7-9e763a89-victim@example.com","password":"<pw>"}   -> 201
+POST /auth/login  (device 1)                                                       -> 200, refresh_token R1
+POST /auth/login  (device 2)                                                       -> 200, refresh_token R2
+# attacker steals R1 and rotates first
+POST /auth/refresh {"refresh_token": R1}                                           -> 200, new token R1'
+# victim replays R1, the token it still believes is current
+POST /auth/refresh {"refresh_token": R1}                                           -> 401   <-- reuse observed here
+# attacker keeps going from R1'
+POST /auth/refresh x7, each with the previous response's token                     -> 200, 200, 200, 200, 200, 200, 200
+POST /auth/refresh {"refresh_token": R2}   (victim's other device)                 -> 200
+SELECT count(*), min(expires_at), max(expires_at) FROM auth_sessions ... -> 10 rows,
+    2026-08-27 09:52:29.598 .. 2026-08-27 09:52:29.703   (every row a fresh 30-day window)
+```
+
+Observed: the attacker rotated seven more times unimpeded after the reuse was visible to the server, and the victim's second device was untouched. Expected, if the spec's "bounded to one use" claim is to hold: the 401 at the reuse step revokes every `auth_sessions` row for that `user_id`, so both holders are forced back to `/auth/login` and the password becomes the control point again.
+
+This is the standard OAuth refresh-token-rotation reuse-detection rule (RFC 6819 Section 5.2.2.3), and it is a handful of lines: in the `auth_session is None` branch of `/auth/refresh`, look up the presented hash without the `revoked_at IS NULL` predicate, and if a revoked row matches, revoke that user's whole family before returning the 401. Filed rather than fixed, per the finder-is-never-the-closer rule. Flagged as the most serious thing this adversary found, because it is the one place where the shipped behavior contradicts a security property the locked specification states in words.
+
+### F-1.1-08: email is matched case-sensitively, so case variants open separate accounts
+
+Severity: medium. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+
+`signup` compares with `User.email == body.email` (router.py:172) and the uniqueness guarantee is the plain `UNIQUE` constraint on `users.email`, which in PostgreSQL is byte-exact on `TEXT`. Email local parts are case-sensitive in the RFC only in theory; every real mail provider treats them case-insensitively, and every user believes the same. The result is that one mailbox can hold several accounts, and `login` will only ever find the one whose bytes match exactly.
+
+Reproduction, `TestClient` against the real database:
+
+```
+POST /auth/signup {"email":"adv2-5a1d21f6@example.com", ...}   -> 201  id 8470e658-...
+POST /auth/signup {"email":"ADV2-5A1D21F6@EXAMPLE.COM", ...}   -> 201  id 6110b627-...   expected 409
+POST /auth/signup {"email":"adv2-5a1d21f6@EXAMPLE.COM", ...}   -> 201  id f068c42e-...   expected 409
+POST /auth/signup {"email":"adv2-5a1d21f6@example.com", ...}   -> 409                    (exact match only)
+```
+
+Three accounts, one mailbox, three distinct user ids. Adjacent variants that also produced a 201 rather than a 409, filed here rather than separately because they share one root cause, no normalization before the uniqueness check:
+
+- `" adv2-5a1d21f6@example.com"` with a leading space, and the same with a trailing space.
+- `"adv2-5a1d21f6@example.com."` with a trailing-dot domain.
+- `"adv2-5a1d21f6​@example.com"` with a zero-width space in the local part, visually identical to the original in every client.
+- `"adv2-5a1d21f6@examрle.com"` with a Cyrillic homoglyph in the domain, and `"ａadv2-...@example.com"` with a fullwidth Latin `a`.
+
+The whitespace and homoglyph cases matter most: a support agent, an allowlist, or a log reader cannot distinguish them from the real address by eye. Expected: normalize before both the existence check and the insert (at minimum casefold plus strip, ideally NFKC), and enforce it in the database with a unique index on the normalized form rather than only in application code, so a second code path cannot reintroduce the gap. Note that the domain-case and whitespace variants are unambiguous defects, while the plus-alias case (`adv2-...+alias@example.com`, also 201) is arguably correct behavior and is listed only for completeness.
+
+### F-1.1-09: an access token with no `exp` claim is accepted and never expires
+
+Severity: medium. Ticket: T-1.1-02. Status: filed. Raised by: adversary.
+
+`decode_access_token` (tokens.py:109) calls `jwt.decode(token, secret, algorithms=["HS256"])` with no `options={"require": [...]}`. PyJWT's `verify_exp` only checks an `exp` that is present; a token with the claim absent passes verification unconditionally. The module docstring and Section 15 both describe the access token as short-lived and 15 minutes, and `mint_access_token` always sets `exp`, so the invariant holds for tokens this service issues, but it is enforced by the minting path alone and not by the verifying path. The judge's probe covered an expired token and `alg: none`; neither reaches this case.
+
+Reproduction, signed with the service's real `AUTH_SECRET`, so this tests claim validation and not the signature:
+
+```python
+jwt.encode({"user_id": UID}, SECRET, algorithm="HS256")                    # no exp at all
+GET /auth/me  Authorization: Bearer <that token>                          -> 200, full profile
+jwt.encode({"user_id": UID, "iat": now, "exp": 32503680000}, ...)          # exp in year 3000
+GET /auth/me                                                              -> 200
+jwt.encode({"user_id": UID, "iat": now, "exp": str(now+900)}, ...)         # exp as a JSON string
+GET /auth/me                                                              -> 200
+```
+
+Expected: 401 on the first, since the service's own contract says every access token expires in 15 minutes. The second and third are lower-grade instances of the same missing claim discipline, an unbounded lifetime and a loosely typed `exp`, and are recorded here rather than as separate findings.
+
+Honest scoping of the severity. Forging any of these requires `AUTH_SECRET`, so this is not exploitable on its own; it is a defense-in-depth failure that removes the time bound exactly when the secret has leaked, which is the one moment the time bound is the only thing left. The fix is one argument: `options={"require": ["exp", "user_id"], "verify_exp": True}`, plus a check that `exp - iat` does not exceed the 15-minute policy. Adjacent claim checks that did behave correctly are listed in the adversary's not-broken set.
+
+### F-1.1-10: `/auth/signup` is an unauthenticated account-enumeration oracle
+
+Severity: medium. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+
+`login` was hardened against enumeration and the defense holds under measurement (see the not-broken set). `signup` was not, and it answers the same question more directly and more cheaply. `POST /auth/signup` returns `409 {"detail":"email already registered"}` for a registered address and `201` for an unregistered one, so any unauthenticated caller can test an arbitrary address for membership with a single request. The dummy-hash work done in `login` (router.py:198) buys nothing while this endpoint stands next to it.
+
+Reproduction:
+
+```
+POST /auth/signup {"email":"adv2-5a1d21f6@example.com","password":"x"}                 -> 409 {"detail":"email already registered"}
+POST /auth/signup {"email":"adv2-5a1d21f6-never-registered@example.com","password":"x"} -> 201 {"id":"bb697476-...","email":"..."}
+```
+
+There is a second, independent channel on the same endpoint. The 409 branch returns before `hash_password` is ever called (router.py:172-176), so the registered-email path skips argon2id entirely while the unregistered path pays for it. Measured over 60 samples per arm against `uvicorn`:
+
+```
+409 existing-email median =  2.661 ms
+201 new-email     median = 60.553 ms      ratio 22.8x
+```
+
+That gap is an order of magnitude wider than any measurement noise on this host and would survive real network jitter, so even a variant of this endpoint that returned a uniform status code would still leak through timing unless the argon2 work is made unconditional the way `login` already makes it.
+
+Blast radius, stated plainly rather than inflated: this is an information disclosure, not an account compromise, and it costs the attacker one throwaway account per negative probe. It matters because the PRD's user base is researchers whose institutional addresses are guessable, and because the phase already paid the cost of a timing defense on `login` that this endpoint hands back for free. Expected: return an identical response for both branches and complete account creation out of band, or accept the disclosure explicitly as a v1 tradeoff and record it, rather than leaving `login` hardened and `signup` open with no note anywhere that the pair is inconsistent.
+
+### F-1.1-11: a NUL byte in `email` or in `User-Agent` returns an unhandled HTTP 500
+
+Severity: medium. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+
+`email` is typed `str` with only a length bound (schemas.py:28), so a `U+0000` passes Pydantic and reaches psycopg2, which rejects it at the driver layer with `ValueError: A string literal cannot contain NUL (0x00) characters.` Nothing catches it, so FastAPI returns a bare 500. The same happens through `auth_sessions.user_agent`, which is written straight from the request header (router.py:130) with no sanitization, meaning an unauthenticated caller can trigger a 500 on a fully valid login purely by choosing a header value.
+
+Reproduction, with `NUL = chr(0)`:
+
+```
+POST /auth/signup {"email": "adv3-...-a\x00b@example.com", "password": "<pw>"}   -> 500 "Internal Server Error"
+POST /auth/login  {"email": "<valid>", "password": "<valid pw>"}
+     with header User-Agent: "A\x00B"                                            -> 500 "Internal Server Error"
+```
+
+Expected: 422 from the request boundary, per `production-standards` ("validate and type-coerce every input at the FastAPI boundary"), and a `User-Agent` sanitized or dropped rather than written verbatim into a column.
+
+What was checked and is not a problem, recorded so this finding is not read as worse than it is:
+
+- The 500 body is a bare `"Internal Server Error"` with no traceback, and the traceback that reaches the server log contains no connection string, no database name, no `AUTH_SECRET`, and no secret value. Checked by string search over the captured traceback for `postgresql+psycopg2`, `search_agent_users`, `AUTH_SECRET`, and the secret's literal value: all absent.
+- The failure does not poison the connection pool or the next request. A normal signup and a normal login immediately after a NUL-triggered 500 both returned 201 and 200.
+
+So this is an availability and hygiene defect, not a disclosure one. It matters mostly because it is a 500 an unauthenticated caller controls, and because the login variant costs a full argon2id verification before it fails, which composes badly with the missing rate limit already filed as F-1.1-05.
+
+### F-1.1-12: `auth_sessions.refresh_token_hash` has no unique constraint and no index
+
+Severity: medium. Ticket: T-1.1-01. Status: filed. Raised by: adversary.
+
+`\d auth_sessions` on the live database shows exactly one index, `auth_sessions_pkey` on `id`. The column every auth operation filters by, `refresh_token_hash`, has neither an index nor a unique constraint. Section 15's SQL for this table declares neither, so the migration faithfully reproduces the specification; the gap is in the schema as designed, which is why this is filed against T-1.1-01 rather than treated as a migration error.
+
+Two distinct consequences.
+
+A latent 500. `_revoke_active_auth_session` (router.py:162-164) follows its atomic `UPDATE` with `select(AuthSession).where(AuthSession.refresh_token_hash == token_hash)).scalar_one()`. That `scalar_one()` raises `MultipleResultsFound` if two rows ever carry the same hash, and nothing in the schema prevents it. Reproduced by inserting one already-revoked duplicate row directly, which leaves the `UPDATE`'s `rowcount` at 1 so the guard above it passes, while the follow-up `SELECT` matches two:
+
+```sql
+INSERT INTO auth_sessions (user_id, refresh_token_hash, expires_at, revoked_at)
+VALUES (:uid, :hash_of_a_live_token, now() + interval '30 days', now());
+```
+```
+POST /auth/refresh {"refresh_token": "<the live token>"}  -> 500 "Internal Server Error"
+```
+
+A natural collision on a 256-bit SHA-256 will not happen, so this is not attacker-reachable through the HTTP surface today. It is reachable by any future code path that writes an `auth_sessions` row, by a restore that replays rows, or by a migration that copies them. The `.scalar_one()` should be `.scalar_one_or_none()` with the `None` case handled, and the column should carry a `UNIQUE` constraint so the invariant the code already assumes is actually enforced.
+
+A sequential scan on every auth call. `/auth/login`, `/auth/refresh`, and `/auth/logout` all filter `auth_sessions` by `refresh_token_hash`. With no index, each is a full table scan over a table that grows by one row per login and one per rotation and is never pruned (nothing deletes expired or revoked rows). This is invisible at the 131 rows currently present and will not stay invisible.
+
+### F-1.1-13: `email` gets no format validation at all
+
+Severity: low. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+
+`SignupRequest.email` is `str` with `min_length=1, max_length=320` and no format check (schemas.py:28). Pydantic ships `EmailStr` and it is not used. Every one of the following created a real `users` row with a 201:
+
+```
+POST /auth/signup {"email":"not-an-email", ...}                      -> 201  id 4010d8e1-...
+POST /auth/signup {"email":"@", ...}                                 -> 201  id 2bd1b5d9-...
+POST /auth/signup {"email":"<script>alert(1)</script>@x.com", ...}   -> 201  id a9e2fb06-...
+POST /auth/signup {"email":"' OR 1=1 --@x.com", ...}                 -> 201  id beb98c51-...
+POST /auth/signup {"email":"x@x.com\n\rInjected: yes", ...}          -> 201  id 1312537d-...
+```
+
+Only the length bounds fire: `""` gives 422 `string_too_short` and a 400-character address gives 422 `string_too_long`, both correct.
+
+None of these is exploitable inside phase 1.1, and that should be stated rather than implied. The SQL payload is fully parameterized and inert (see the not-broken set). The script payload comes back out of `/auth/signup` and `/auth/me` as JSON through a Pydantic response model, and React escapes it by default, so it is not XSS today. The value of filing it is what happens next: the CRLF address is a header-injection payload the moment anything sends mail to it, the `<script>` address becomes live the moment any surface renders an email outside JSX or into a non-HTML context, and `production-standards` asks for validation at the boundary rather than for downstream layers to keep saving it. One field type change closes all of them.
+
+### F-1.1-14: token responses carry no `Cache-Control: no-store`
+
+Severity: low. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+
+`POST /auth/login` and `POST /auth/refresh` return a bearer access token and a refresh token in the response body. The full set of response headers on a successful login, captured verbatim:
+
+```
+date: Tue, 28 Jul 2026 13:52:29 GMT
+server: uvicorn
+content-length: 296
+content-type: application/json
+```
+
+No `Cache-Control`, no `Pragma`. RFC 6749 Section 5.1 requires `Cache-Control: no-store` and `Pragma: no-cache` on any response carrying tokens, precisely so an intermediary, a browser disk cache, or a debugging proxy does not persist them. Also absent, and worth one line rather than a finding each: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and `Strict-Transport-Security`. The last belongs to the deployment layer rather than to this router.
+
+Checked and correct, recorded so the header posture is not read as uniformly bad: no CORS middleware is configured, so a cross-origin preflight from `https://evil.example` returns 405 with no `Access-Control-Allow-Origin`. Secure by default rather than permissive by default is the right starting point.
+
+### F-1.1-15: no password policy
+
+Severity: low. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+
+`SignupRequest.password` bounds length to 1..1024 and checks nothing else (schemas.py:29). A one-character password and a whitespace-only password both create accounts:
+
+```
+POST /auth/signup {"email":"adv2-...-one@example.com","password":"a"}     -> 201
+POST /auth/signup {"email":"adv2-...-ws@example.com","password":"   "}    -> 201
+POST /auth/signup {"email":"adv2-...-empty@example.com","password":""}    -> 422  (only the length floor fires)
+```
+
+Section 15 scopes this as basic auth and names no policy, so this is a gap rather than a violation, and it is filed at low severity for that reason. It composes with F-1.1-05, the missing login rate limit: a one-character password plus an unthrottled login endpoint is a guessable account, where either alone is not.
+
+Checked and correct in the same probe, and worth recording because it was a stated question: argon2id does not truncate the way bcrypt does at 72 bytes. A user registered with a 1024-character password authenticates with the full 1024 characters (200) and fails with the first 1023 (401), and a password containing a NUL byte does not authenticate against its pre-NUL prefix (401). The 1025-character case is a clean 422.
+
+### F-1.1-16: `auth_sessions.user_agent` is stored unbounded
+
+Severity: low. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+
+`_issue_session` writes `request.headers.get("user-agent")` straight into a `TEXT` column with no cap (router.py:130). One login with a 60,000-character `User-Agent` stored all 60,000 characters, confirmed with `SELECT max(length(user_agent))`. A 100,000-character header also returned 200. Every login and every rotation writes another row, and nothing prunes them, so an unauthenticated caller with valid credentials can write arbitrary volume into the user-data database at will.
+
+`production-standards` requires `maxLength` on every string field in the multi-agent pipeline gate for exactly this reason, to cap the blast radius of one hostile input. The header is not a schema field, so the letter of that gate does not reach it, but the principle does: this is the one place in the auth service where an attacker-chosen string of arbitrary length is persisted. Expected: truncate to a sane bound, on the order of 512 characters, at write time.
+
+### F-1.1-17: `/query` is unauthenticated and trusts a client-supplied `user_id`
+
+Severity: low. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+
+Phase 1.1 built an auth service. Nothing consumes it. `POST /query` (app.py:35-37) declares no `Depends(get_current_user)`, and `Query.user_id` is an ordinary client-supplied string field the caller sets to whatever it likes:
+
+```
+curl -X POST http://127.0.0.1:8731/query -H 'Content-Type: application/json' \
+  -d '{"query":{"text":"BRCA1 variants","session_id":"s1","trace_id":"adv-trace-1","user_id":"any-user-i-choose"},
+       "context":{"surface":"rest_sse"}}'
+-> 200, full event stream, no Authorization header sent
+```
+
+This is correct for phase 1.0, which built the route before any auth existed, and Section 25 places the surfaces that consume auth later. It is filed anyway because the risk is a silent inheritance: once the agent loop lands at build phase 2.0 and starts writing `interactions` rows, `user_id` will be attacker-chosen unless someone remembers to derive it from the access token instead. Expected direction, for phase 1.2 or 2.0 rather than for this phase: make `user_id` a server-derived value from `get_current_user` and remove it from the request contract, or state explicitly that `/query` is anonymous by design and that the field is advisory.
+
+### F-1.1-18: the `user_id` claim accepts five non-canonical UUID spellings
+
+Severity: low, informational. Ticket: T-1.1-02. Status: filed. Raised by: adversary.
+
+`get_current_user` resolves the subject with `uuid.UUID(claims["user_id"])` (dependencies.py:57). Python's `uuid.UUID` is a lenient parser, so one account has many distinct valid subject strings. All five below, signed with the real secret, returned 200 and the same profile:
+
+```
+"e1a98394-5fc9-470d-811b-0b86455e2b21"        canonical      -> 200
+"e1a983945fc9470d811b0b86455e2b21"            no dashes      -> 200
+"{e1a98394-5fc9-470d-811b-0b86455e2b21}"      braced         -> 200
+"urn:uuid:e1a98394-5fc9-470d-811b-0b86455e2b21"  URN form    -> 200
+"E1A98394-5FC9-470D-811B-0B86455E2B21"        uppercase      -> 200
+```
+
+Not a vulnerability: minting any of them needs `AUTH_SECRET`, and every one resolves to the same real user, so no cross-user access is possible. It is filed because a subject identifier with five spellings is a correlation hazard for anything downstream that keys on the raw claim string rather than on the resolved `User.id`, which is exactly what the audit log, the `interactions` table, and the `trace_id` join in Section 20 will do. Expected: reject a subject that is not the canonical lowercase hyphenated form, so the string in the token and the string in the log are always the same string.
+
+Adjacent cases in the same probe that correctly returned 401 are in the not-broken set: a subject that is not a UUID, one that is `null`, a list, a dict, an integer, a UUID with surrounding whitespace, a UUID carrying an appended SQL payload, a valid UUID for no existing user, and a token with no `user_id` claim at all.
+
+### Adversary not-broken set
+
+Attacks that were run and did not break anything. Recorded because evidence of strength is worth as much as a finding, and because the next person to touch this code should know which properties are already proven rather than re-deriving them. Every line below is a measured result, not an inspection of the source.
+
+Signature and algorithm handling, 12 cases, all 401:
+
+- `alg` set to `none`, `NONE`, `nOnE`, `None`, the empty string, `HS256 ` with a trailing space, and lowercase `hs256`, each with an empty signature.
+- `alg` header absent entirely.
+- An HS256 token forged with a PEM public key used as the HMAC secret, hand-assembled because PyJWT refuses to encode it.
+- A genuine RS256 token signed with a freshly generated 2048-bit key.
+- A hostile `kid` (`../../../etc/passwd`), `jku`, and `x5u` in the header of an otherwise valid token: accepted as expected because the signature is valid, and the headers are ignored rather than dereferenced, which is the correct behavior.
+
+Token structure, 8 cases, all 401: signature stripped to two segments, an empty signature segment, a signature grafted from a different valid token, four segments, one segment, a whitespace-only token, a 1 MB token, and a token with an appended NUL byte.
+
+`Authorization` header parsing, 8 cases: lowercase `bearer`, uppercase `BEARER`, no scheme, `Basic`, a tab separator, two comma-joined `Bearer` values, trailing junk after the token, and no header at all, all 401. Only a double space after `Bearer` is accepted, which is correct, since `.removeprefix("Bearer ").strip()` handles it.
+
+Claim validation, 12 cases correctly rejected with 401 despite a valid signature: `exp` of zero, negative `exp`, `nbf` in the future, `iat` in the future, `user_id` that is not a UUID, `null`, a list, a dict, an integer, a UUID with surrounding whitespace, a UUID with an appended SQL payload, a valid UUID for a user that does not exist, and a token with no `user_id` claim. Extra claims such as `admin: true`, `role: superuser`, and `scope: "*"` are accepted into the token and correctly ignored, since nothing reads them.
+
+Concurrency, the property the builder claimed and the judge did not test with real parallel requests. Run against `uvicorn --workers 4`, four separate processes, so this is genuine parallelism and not thread interleaving:
+
+```
+12 rounds x 8 simultaneous replays of the same refresh token, released from a thread barrier
+  -> every round: {200: 1, 401: 7}, exactly one distinct new token issued
+  -> rounds where more than one replay succeeded: 0/12   (96 concurrent replays total)
+8 simultaneous signups on one email  -> {201: 1, 409: 7}
+20 rounds of simultaneous logout + refresh on one token -> both succeeded in 0/20
+```
+
+The single atomic `UPDATE ... WHERE revoked_at IS NULL AND expires_at > now` holds under READ COMMITTED exactly as the builder's docstring claims.
+
+Login enumeration by timing, measured properly rather than asserted. 400 samples per arm, randomly interleaved, same client, loopback, after a 40-request warmup:
+
+```
+known email + wrong password: median 44.240 ms  mean 50.808  p10 39.590  p90 63.818
+unknown email:                median 45.332 ms  mean 50.154  p10 39.760  p90 66.454
+median difference -1.092 ms = 0.039 pooled stdevs
+Mann-Whitney U = 75305, z = -1.437   -> not distinguishable at p < 0.05
+single-sample classifier accuracy at the midpoint threshold: 53.4% (50% = no signal)
+```
+
+The fixed dummy-hash defense at router.py:198 works. The small negative sign means the known-email arm was, if anything, marginally faster, which is the opposite of the exploitable direction and is within noise either way.
+
+Injection, 12 payloads across `/auth/login`, `/auth/refresh`, and `/auth/logout` (`' OR '1'='1`, `'; DROP TABLE users; --`, `\'; SELECT pg_sleep(3); --`, `x' UNION SELECT password_hash FROM users --`): all 401, no delay, no error, no leak. The ORM parameterizes as required, confirmed by the absence of any `pg_sleep` delay on the payload designed to produce one. `users` was still present and populated afterward.
+
+Request-body handling, 12 malformed bodies: an array where an object is expected, `email` as an object, an array, an integer, and `null`, `password` as a list, an unknown extra field, a 2000-deep nested array, truncated JSON, an empty body, and a bare string, all 422 or 400 with no 500. Four `Content-Type` mismatches all 422. A 5 MB body is rejected by the `max_length` bound rather than buffered into the handler. One case worth noting without filing it: duplicate JSON keys resolve last-wins silently, standard library behavior, relevant only if a proxy ever inspects the first occurrence.
+
+Session and state, 10 cases all behaving correctly: replaying a refresh token after logout (401), double logout (401), a refresh token whose `expires_at` was backdated in the database (401), a second login's token surviving the first session's rotation (200, independent sessions as intended), rotation returning an access token for the correct user and never another (verified by reading `/auth/me` back), an access token rejected at `/auth/refresh` and at `/auth/logout` (401), a refresh token rejected at `/auth/me` (401), and both `/auth/me` and `/auth/refresh` returning 401 after the `users` row is deleted mid-session. That last one answers the question directly: deleting a user does invalidate the still-valid access token immediately, because `get_current_user` resolves the row on every request, so there is no 15-minute window. Revoking a session via `/auth/logout` does leave that session's access token usable for up to 15 minutes, which is the ordinary stateless-JWT tradeoff and is not filed.
+
+Secret and connection-string disclosure: no response body, error body, or traceback contained `AUTH_SECRET`, its literal value, `postgresql+psycopg2`, the database host, or `search_agent_users`. Checked by string search over a captured 500 traceback and over every error body produced during this run. With `AUTH_SECRET` unset, `/auth/me` and `/auth/login` return a bare 500 with no explanation of what is misconfigured, which is the correct disclosure posture even though it is unhelpful operationally.
+
+`ip_hash`: no raw address is stored. The value in `auth_sessions.ip_hash` for a known client reproduced exactly as `HMAC-SHA256(AUTH_SECRET, b"ip_hash:" + ip)`, and `SELECT count(*) FROM auth_sessions WHERE ip_hash ~ '^[0-9]{1,3}(\.[0-9]{1,3}){3}$'` returned 0 across all 131 rows.
+
+Response bodies: `password_hash` and `refresh_token_hash` appear in no response from any of the five endpoints. Method probing on `/auth/*` returns 405 or 404 with no route disclosure beyond what `/openapi.json` already publishes. `/docs` and `/openapi.json` are served unauthenticated, which is FastAPI's default and appropriate for a prototype; noted here rather than filed.
+
+Adversary run scope: roughly 170 distinct attack cases and about 1,300 HTTP requests, against `TestClient` in-process and `uvicorn --workers 4`, both bound to the real `search_agent_users` database. Rows left behind: 152 `users` and 131 `auth_sessions` (the database went from 42 users to 194). No row this adversary did not create was deleted, no table was truncated, and the `ncbi_kg` database was never opened. Two rows were mutated deliberately as part of a reproduction and are named in their findings: one `auth_sessions.expires_at` backdated for the expired-token probe (F-1.1-07's neighbourhood) and one duplicate `auth_sessions` row inserted for F-1.1-12. One user created by this adversary was deleted by this adversary, as the deleted-user probe required it.
