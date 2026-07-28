@@ -167,7 +167,7 @@ History:
 
 ### T-1.2-05: The streaming stepper and answer rendering
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: T-1.2-04
@@ -182,29 +182,34 @@ Files this ticket may create or modify:
 - Corresponding `.test.tsx` files (new)
 
 Acceptance criteria:
-- [ ] `QueryPipelineStepper` renders `guard`, `think`, `plan`, `tool_start`, `tool_result` events as an ordered list of steps, each moving through pending, active, done/error states as events arrive; no `citation`-dependent rendering (out of scope this phase, per this file's Scope note)
-- [ ] `AnswerStream` renders each `token.payload.text` in arrival order; it does NOT attempt to render `CitationChip` markers this phase (no real citation data exists yet), but does not crash or drop text if a token carries `marker_ids` it cannot yet resolve — it renders the marker text plainly, deferring chip rendering to whichever phase builds `CitationChip` (2.2/3.4)
-- [ ] `GuardrailBanner` renders when `guard.passed` is `false`, choosing copy by `guard.category`, matching Section 12.6's table; no dollar figure, token count, or cost figure appears in any copy path (checked by grep, not just by reading the template, since the template has no interpolation slot for one)
-- [ ] `CapMessage` renders on a non-fatal cap-shaped `error` event (`fatal: false`), showing the partial-result-plus-explanation copy from Section 12.6, again with no dollar figure anywhere reachable
-- [ ] The streaming narrative region uses `aria-live="polite"`; `GuardrailBanner` and `CapMessage` use `role="alert"` (Section 12.10, success criterion 4.1.3)
-- [ ] `LoadingSkeleton` renders during the cold-start and guard-pending states (Section 12.5), never a blank pane
+- [x] `QueryPipelineStepper` renders `guard`, `think`, `plan`, `tool_start`, `tool_result` events as an ordered list of steps, each moving through pending, active, done/error states as events arrive; no `citation`-dependent rendering (out of scope this phase, per this file's Scope note)
+- [x] `AnswerStream` renders each `token.payload.text` in arrival order; it does NOT attempt to render `CitationChip` markers this phase (no real citation data exists yet), but does not crash or drop text if a token carries `marker_ids` it cannot yet resolve — it renders the marker text plainly, deferring chip rendering to whichever phase builds `CitationChip` (2.2/3.4)
+- [x] `GuardrailBanner` renders when `guard.passed` is `false`, choosing copy by `guard.category`, matching Section 12.6's table; no dollar figure, token count, or cost figure appears in any copy path (checked by grep, not just by reading the template, since the template has no interpolation slot for one)
+- [x] `CapMessage` renders on a non-fatal cap-shaped `error` event (`fatal: false`), showing the partial-result-plus-explanation copy from Section 12.6, again with no dollar figure anywhere reachable
+- [x] The streaming narrative region uses `aria-live="polite"`; `GuardrailBanner` and `CapMessage` use `role="alert"` (Section 12.10, success criterion 4.1.3)
+- [x] `LoadingSkeleton` renders during the cold-start and guard-pending states (Section 12.5), never a blank pane
 
 Breakdown:
-- [ ] `QueryPipelineStepper` with per-step pending/active/done/error states
-- [ ] `AnswerStream`, plain-text token rendering, no citation dependency
-- [ ] `GuardrailBanner`, `CapMessage`, both no-dollar-figure verified
-- [ ] `LoadingSkeleton`, cold-start and guard-pending states
-- [ ] Tests: step state transitions, token ordering, guardrail category copy, cap message copy, no-dollar-figure grep, aria-live/role=alert presence
+- [x] `QueryPipelineStepper` with per-step pending/active/done/error states
+- [x] `AnswerStream`, plain-text token rendering, no citation dependency
+- [x] `GuardrailBanner`, `CapMessage`, both no-dollar-figure verified
+- [x] `LoadingSkeleton`, cold-start and guard-pending states
+- [x] Tests: step state transitions, token ordering, guardrail category copy, cap message copy, no-dollar-figure grep, aria-live/role=alert presence
 
 Evidence:
-- (filled at close)
+- `npm run test -- --run` (independently re-run in `frontend/` after merge, not just the builder's own worktree report): 13 test files, 87 tests, all passing
+- `npx tsc --noEmit` (independently re-run after merge): clean, no output
+- Documented judgment call in `CapMessage.tsx`: the cap-shaped `error` trigger is `payload.fatal === false && /cap/i.test(payload.source)`, a substring match rather than a hardcoded `per_query_cost_cap` string, since Section 12.6 gives only one worked example and `system-design-patterns.md` pattern 4 names four distinct cap sources
+- Commit df5a2a8 on `phase/1.2-react-shell-sse`, fast-forward merge from `worktree-agent-aab3a9b87327c122b`, no conflicts
 
 History:
 - 2026-07-28 lead: created, scoped from Section 12.3/12.5/12.6/12.10
+- 2026-07-28 builder-aab3a9b: claimed, built all 5 components plus tests, reported done with self-verified evidence (87 tests passing, tsc clean)
+- 2026-07-28 lead: merged into phase/1.2-react-shell-sse, independently re-ran test suite and tsc in the target checkout (both clean), set in-review pending judge close
 
 ### T-1.2-06: The stop button, wired end to end
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: T-1.2-02, T-1.2-04, T-1.2-05
@@ -215,29 +220,71 @@ Files this ticket may create or modify:
 - `frontend/src/components/chat/StopButton.test.tsx` (new)
 
 Acceptance criteria:
-- [ ] `StopButton` is enabled from the moment a `guard` event with `passed: true` arrives until `trust_signal`, `done`, or a fatal `error` arrives; disabled otherwise
-- [ ] Clicking it calls `POST /v1/query/{run_id}/stop` AND closes the local `EventSource` immediately, not waiting on the network round trip (Section 12.3's "feels instantly responsive" requirement) — a test with an artificially slow stop-endpoint response still shows the UI as stopped immediately
-- [ ] Clicking stop on an already-finished run is a no-op, matching the backend's idempotent 200 (no error toast, no crash)
-- [ ] Keyboard-operable: reachable by Tab, activatable by Enter and Space (Section 12.10, success criterion 2.1.1)
-- [ ] An end-to-end test (can be the Playwright test from T-1.2-07, cross-referenced here rather than duplicated) proves stopping a real, running query actually halts the server-side loop, not just the client-side UI state
+- [x] `StopButton` is enabled from the moment a `guard` event with `passed: true` arrives until `trust_signal`, `done`, or a fatal `error` arrives; disabled otherwise
+- [x] Clicking it calls `POST /v1/query/{run_id}/stop` AND closes the local `EventSource` immediately, not waiting on the network round trip (Section 12.3's "feels instantly responsive" requirement) — a test with an artificially slow stop-endpoint response still shows the UI as stopped immediately
+- [x] Clicking stop on an already-finished run is a no-op, matching the backend's idempotent 200 (no error toast, no crash)
+- [x] Keyboard-operable: reachable by Tab, activatable by Enter and Space (Section 12.10, success criterion 2.1.1)
+- [ ] An end-to-end test (can be the Playwright test from T-1.2-07, cross-referenced here rather than duplicated) proves stopping a real, running query actually halts the server-side loop, not just the client-side UI state — deferred to T-1.2-07, not yet built
 
 Breakdown:
-- [ ] `StopButton` enabled/disabled state logic
-- [ ] Click handler: stop call plus immediate local `EventSource` close
-- [ ] Tests: enabled-window logic, immediate-UI-response under a slow backend, idempotent double-stop, keyboard operability
+- [x] `StopButton` enabled/disabled state logic
+- [x] Click handler: stop call plus immediate local `EventSource` close
+- [x] Tests: enabled-window logic, immediate-UI-response under a slow backend, idempotent double-stop, keyboard operability
+
+Evidence:
+- `npm run test -- --run` (independently re-run in `frontend/` after merge): 14 test files, 106 tests, all passing (19 in `StopButton.test.tsx`)
+- `npx tsc --noEmit` (independently re-run after merge): clean, no output
+- `deriveStopEnabled` (`StopButton.tsx:48-60`): pure derivation from event existence, not array position, documented as correct because the agent loop can never emit a terminal event before guard passes
+- Local `hasStopped` state (`StopButton.tsx:73`, reset on `runId` change) added because the events-only derivation could stay stuck enabled after a click, since this client stops listening the moment `stop()` runs; documented inline and logged to `DECISIONS.md`
+- `stopRun` is called unawaited in the click handler (`StopButton.tsx:88-100`) so a slow backend never delays the local stopped state; failures are caught and `console.warn`'d with `runId` only, never `token`
+- Commit b635bc1 on `phase/1.2-react-shell-sse`, fast-forward merge from `worktree-agent-t1206`, no conflicts
+
+History:
+- 2026-07-28 lead: created, scoped from Section 12.3
+- 2026-07-28 builder-t1206: claimed, built `StopButton` and its tests, reported done with self-verified evidence (106 tests passing, tsc clean)
+- 2026-07-28 lead: merged into phase/1.2-react-shell-sse, independently re-ran test suite and tsc in the target checkout (both clean), set in-review pending judge close; acceptance criterion 5 (real E2E stop) left unchecked, deferred to T-1.2-07
+
+### T-1.2-08: Wire ChatPage end to end, with minimal real auth
+
+Status: todo
+Refine: refined
+Branch: phase/1.2-react-shell-sse
+Depends on: T-1.2-02, T-1.2-04, T-1.2-05, T-1.2-06
+Spec: Technical_specification.md Section 12.1 (component architecture, `ChatPage.tsx`: "Active or completed query view"), Section 25 line 3180 ("an empty chat endpoint wired end to end")
+
+Added mid-phase, not part of the original 7-ticket decomposition. Gap found while scoping T-1.2-07: `ChatPage.tsx` is still T-1.2-03's placeholder (`git log`: "Streaming answer pipeline not wired up yet"), never calling `useAgentRun`/`createRun` and never rendering `QueryPipelineStepper`, `AnswerStream`, `GuardrailBanner`, `CapMessage`, `LoadingSkeleton`, or `StopButton`. No ticket among T-1.2-01 through T-1.2-07 named this wiring as its deliverable, even though the phase's own Section 25 line requires "an empty chat endpoint wired end to end" and `QueryPipelineStepper.tsx`'s own docstring (T-1.2-05) anticipated it explicitly: "so ChatPage (a later ticket's wiring) can pass one array to all of them." Separately, Section 12.2's `EventSource(url, { withCredentials: true })` snippet assumes cookie session auth; T-1.2-04 already documented why that does not hold for this Bearer-token backend, but nothing since has built any way for the frontend to acquire a token in the first place. No login/auth UI component is named anywhere in Section 12.1's component table, so this ticket's auth step has no spec name to adopt; it is scoped as the minimal real mechanism needed to make "wired end to end" true, not a finished auth UX.
+
+Files this ticket may create or modify:
+- `frontend/src/pages/ChatPage.tsx` (replace the placeholder body)
+- `frontend/src/components/chat/ChatShell.tsx` (if it needs to hold run/token state, check its current shape first)
+- A new minimal auth entry point, exact file left to the builder (e.g. `frontend/src/pages/HomePage.tsx` extended, or a small new `frontend/src/components/auth/AuthGate.tsx`), documented inline with the reasoning above
+- `frontend/src/lib/api.ts` (if `/auth/login`/`/auth/signup` typed wrappers do not already exist; check before adding, this file already has `createRun`/`stopRun`/`openEventStream`)
+- Corresponding `.test.tsx` files (new)
+
+Acceptance criteria:
+- [ ] Submitting a query on `HomePage` leads to a `ChatPage` that actually calls `POST /v1/query` (via `lib/api.ts`'s `createRun`) and mounts `useAgentRun` against the returned `run_id`
+- [ ] `ChatPage` renders `LoadingSkeleton`, `QueryPipelineStepper`, `AnswerStream`, `GuardrailBanner`, `CapMessage`, and `StopButton` together, each driven by the same `events: AgentEvent[]` array from `useAgentRun`, matching the shared prop-shape convention `QueryPipelineStepper.tsx`'s docstring documents
+- [ ] A real bearer token is acquired through a real call to the existing `/auth/login` (and `/auth/signup` when no account exists yet) endpoints from build phase 1.1, not a hardcoded or fake string; held in memory only (component state), never written to `localStorage`/`sessionStorage`/a cookie, since this ticket does not own a token-persistence security decision
+- [ ] The full path is exercised by an integration-style test: render `App`, complete the minimal auth step, submit a query, and assert `createRun`/`openEventStream` were actually invoked with the acquired token (mocking `lib/api.ts` at the network boundary, matching this codebase's established test-mocking convention, not mocking `useAgentRun` itself)
+- [ ] No behavior from T-1.2-05 or T-1.2-06's already-merged components is altered, only wired in; their own test suites still pass unmodified
+
+Breakdown:
+- [ ] Minimal real auth step: login (and signup-if-needed) against the real backend, in-memory token only
+- [ ] `ChatPage` wiring: `createRun` on submit, `useAgentRun` mount, all six components rendered from one shared `events` array
+- [ ] Tests: end-to-end render-and-submit integration test, auth step unit tests
 
 Evidence:
 - (filled at close)
 
 History:
-- 2026-07-28 lead: created, scoped from Section 12.3
+- 2026-07-28 lead: created mid-phase during T-1.2-07 dispatch prep, closing a decomposition gap in the original 7-ticket scoping (see the note above); logged to DECISIONS.md
 
 ### T-1.2-07: Playwright install and the first real E2E test
 
 Status: todo
 Refine: refined
 Branch: phase/1.2-react-shell-sse
-Depends on: T-1.2-01, T-1.2-02, T-1.2-03, T-1.2-04, T-1.2-05, T-1.2-06
+Depends on: T-1.2-01, T-1.2-02, T-1.2-03, T-1.2-04, T-1.2-05, T-1.2-06, T-1.2-08
 Spec: Technical_specification.md Section 23 (testing strategy, browser-driven E2E); `tracker/BOARD.md`'s "Playwright not installed" flag; `.claude/rules/supply-chain-security.md`
 
 Files this ticket may create or modify:
