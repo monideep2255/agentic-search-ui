@@ -16,7 +16,7 @@ LEARNINGS.md filtered to this phase: one entry applies, and it is the corrected 
 
 ### T-1.1-01: PostgreSQL user-data schema and migration
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/1.1-auth-service
 Depends on: none
@@ -36,21 +36,21 @@ Files this ticket may create or modify:
 - `tests/system_03_search_agent/data/test_migration.py`
 
 Acceptance criteria:
-- [ ] After `alembic upgrade head` against an empty database, all six Section 15 tables exist (`users`, `auth_sessions`, `sessions`, `interactions`, `cq_candidates`, `saved_queries`) with the exact column names, types, nullability, and defaults Section 15 declares
-- [ ] The `pgcrypto` and `pg_trgm` extensions are enabled by the migration, and `gen_random_uuid()` resolves as the column default for every UUID primary key
-- [ ] All five `interactions` indexes from Section 15 exist after migration, including the GIN index on `coverage_tags` and the `gin_trgm_ops` index on `query_text`, and `idx_cq_candidates_status` exists on `cq_candidates`
-- [ ] `alembic downgrade base` removes every table, index, and extension the upgrade created, and exits without error, so the migration has a working rollback path
-- [ ] Inserting a row that violates any Section 15 CHECK constraint raises a database integrity error rather than being accepted: `interactions.query_class` outside the five allowed values, `interactions.trust_signal` outside four, `interactions.rubric_outcome` outside three, `interactions.rubric_score` outside 0 to 16, and `cq_candidates.status`, `wedge_type`, `moat_rank`, and `review_decision` outside their declared sets
-- [ ] A duplicate `users.email` and a duplicate `interactions.trace_id` are each rejected by a unique constraint
-- [ ] Deleting a `users` row cascades to its `auth_sessions` and `saved_queries` rows, and sets `interactions.user_id` and `sessions.user_id` to NULL while leaving those rows in place
-- [ ] No module under `src/system_03_search_agent/data/` imports, references, or constructs a connection to the AGE graph, the `kg_reader` role, or the `ncbi_kg` database; the engine is built only from `USER_DB_URL`
-- [ ] The connection URL is read from the `USER_DB_URL` environment variable and never appears in a log record, an exception string, or a test fixture as a literal with credentials
+- [x] After `alembic upgrade head` against an empty database, all six Section 15 tables exist (`users`, `auth_sessions`, `sessions`, `interactions`, `cq_candidates`, `saved_queries`) with the exact column names, types, nullability, and defaults Section 15 declares
+- [x] The `pgcrypto` and `pg_trgm` extensions are enabled by the migration, and `gen_random_uuid()` resolves as the column default for every UUID primary key
+- [x] All five `interactions` indexes from Section 15 exist after migration, including the GIN index on `coverage_tags` and the `gin_trgm_ops` index on `query_text`, and `idx_cq_candidates_status` exists on `cq_candidates`
+- [x] `alembic downgrade base` removes every table, index, and extension the upgrade created, and exits without error, so the migration has a working rollback path
+- [x] Inserting a row that violates any Section 15 CHECK constraint raises a database integrity error rather than being accepted: `interactions.query_class` outside the five allowed values, `interactions.trust_signal` outside four, `interactions.rubric_outcome` outside three, `interactions.rubric_score` outside 0 to 16, and `cq_candidates.status`, `wedge_type`, `moat_rank`, and `review_decision` outside their declared sets
+- [x] A duplicate `users.email` and a duplicate `interactions.trace_id` are each rejected by a unique constraint
+- [x] Deleting a `users` row cascades to its `auth_sessions` and `saved_queries` rows, and sets `interactions.user_id` and `sessions.user_id` to NULL while leaving those rows in place
+- [x] No module under `src/system_03_search_agent/data/` imports, references, or constructs a connection to the AGE graph, the `kg_reader` role, or the `ncbi_kg` database; the engine is built only from `USER_DB_URL`
+- [x] The connection URL is read from the `USER_DB_URL` environment variable and never appears in a log record, an exception string, or a test fixture as a literal with credentials
 
 Breakdown:
-- [ ] SQLAlchemy declarative base and engine or session factory bound to `USER_DB_URL`
-- [ ] Models for all six tables with CHECK constraints and indexes declared
-- [ ] Alembic scaffolding and the `0001_user_data_schema` revision, upgrade and downgrade
-- [ ] Tests: schema shape, every CHECK constraint, both unique constraints, all four delete behaviors, upgrade and downgrade round trip
+- [x] SQLAlchemy declarative base and engine or session factory bound to `USER_DB_URL`
+- [x] Models for all six tables with CHECK constraints and indexes declared
+- [x] Alembic scaffolding and the `0001_user_data_schema` revision, upgrade and downgrade
+- [x] Tests: schema shape, every CHECK constraint, both unique constraints, all four delete behaviors, upgrade and downgrade round trip
 
 Evidence:
 - (filled at close by the judge)
@@ -58,6 +58,7 @@ Evidence:
 History:
 - 2026-07-28 lead: created, scoped from Section 15, phase 1.1 open
 - 2026-07-28 lead: tech refinement complete, six-table scope decided and recorded above, environment pre-verified, no product-owner question outstanding, refined
+- 2026-07-28 builder-user-data-schema: built the six SQLAlchemy models (base.py, models.py, session.py) and the hand-written 0001_user_data_schema Alembic migration; created the search_agent_users database; verified upgrade head and downgrade base against real local PostgreSQL; 220 tests passing (191 prior plus 29 new); ruff and pip-audit clean on new code; commit fcd3db0; status set to in-review for judge sign-off
 
 ### T-1.1-02: Auth primitives and the ecdsa CVE resolution
 
