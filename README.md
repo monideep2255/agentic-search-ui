@@ -78,7 +78,7 @@ alembic upgrade head
 # Run backend
 uvicorn system_03_search_agent.adapters.web_sse.app:app --reload
 
-# Frontend setup (separate terminal)
+# Frontend setup (separate terminal, build phase 1.2, not yet built)
 cd frontend
 npm install
 npm run dev
@@ -106,7 +106,7 @@ agentic-search-ui/
         cli/                    # Thin REST client
       auth/                     # Signup, login, refresh, logout, me endpoints (build phase 1.1)
       data/                     # Postgres models: auth, interactions, cq_candidates
-  frontend/                     # React UI
+  frontend/                     # React UI (build phase 1.2, not yet built)
     src/
     public/
     package.json

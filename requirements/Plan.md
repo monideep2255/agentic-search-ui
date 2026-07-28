@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-07-28.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) underway. Build phase 1.0 (FastAPI skeleton, health endpoint, the event contract, the run() stub) done and merged (PR #5, 2026-07-27). Build phase 1.1 (auth service, the six-table PostgreSQL user-data schema) done and merged (PR #6, 2026-07-28), closing the ecdsa CVE carried forward from 1.0. Next up: build phase 2.0 or 1.2, both unblocked since each depends only on 1.0 |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 127 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 135 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -493,7 +493,7 @@ Phase 5 output: all project infrastructure aligned with the PRD and tech spec. D
 
 ## Phase 6: build (bossman execution)
 
-Status: IN PROGRESS. Build phases 1.0 (PR #5, 2026-07-27) and 1.1 (PR #6, 2026-07-28) done and merged. Next up: build phase 2.0, with 1.2 also unblocked. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
+Status: IN PROGRESS. Build phases 1.0 (PR #5, 2026-07-27) and 1.1 (PR #6, 2026-07-28) done and merged. Next up: build phase 2.0 or 1.2, both unblocked since each depends only on 1.0. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
 
 Goal: build System 3 using bossman-mode. Agent teams execute, I orchestrate.
 
