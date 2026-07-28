@@ -15,6 +15,20 @@ unreachable.
 Every test uses a freshly generated email (uuid4-based) so reruns never
 collide with rows a prior run left behind, the same convention
 test_router.py already uses for this database.
+
+T-2.0-07: `run()` is now backed by the real five-node LangGraph loop
+instead of the phase 1.0 no-model-call scaffold, so every test in this
+file that actually invokes `POST /query` now goes through a real (mocked)
+`Harness.call_tier` for guardrail/think/plan/write. `_mock_litellm` (an
+autouse fixture below) monkeypatches `litellm.acompletion`/
+`get_model_info` on `harness_module` the same way `test_run.py` and
+`test_graph.py` do, so this file's pre-existing tests, none of which
+anticipated a real model call, keep passing unchanged. The daily-cap DB
+checks are NOT mocked here (unlike test_run.py/test_graph.py): every
+request in this file authenticates as a real, freshly-signed-up `User`
+row, so `check_user_daily_query_cap`/`check_system_daily_cost_cap`
+running for real against the already-required `search_agent_users`
+database is exactly the integration-test value this file exists for.
 """
 
 from __future__ import annotations
@@ -22,6 +36,8 @@ from __future__ import annotations
 import os
 import uuid
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 import sqlalchemy as sa
@@ -54,8 +70,42 @@ from system_03_search_agent.adapters.web_sse.app import app  # noqa: E402
 from system_03_search_agent.contracts.events import Event  # noqa: E402
 from system_03_search_agent.contracts.query import Query, RequestContext  # noqa: E402
 from system_03_search_agent.core.run import run as real_run  # noqa: E402
+from system_03_search_agent.harness import harness as harness_module  # noqa: E402
 
 _TEST_AUTH_SECRET = "test-only-auth-secret-for-query-endpoint-tests-do-not-reuse"
+
+
+def _fake_response(content: str = "ok", prompt_tokens: int = 10, completion_tokens: int = 5):
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content=content))],
+        usage=SimpleNamespace(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens),
+    )
+
+
+@pytest.fixture(autouse=True)
+def _harness_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """T-2.0-07: run() now drives real Harness.call_tier invocations
+    through the five-node graph; pin every tier's model and cap so this
+    file's pre-existing tests, none of which anticipated a real model
+    call, keep passing unchanged."""
+    monkeypatch.setenv("GUARD_MODEL", "test-provider/guard-model")
+    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
+    monkeypatch.setenv("SYNTH_MODEL", "test-provider/synth-model")
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "1.0")
+    monkeypatch.setenv("PER_USER_DAILY_QUERY_CAP", "100")
+    monkeypatch.setenv("SYSTEM_DAILY_CAP_USD", "1000000")
+
+
+@pytest.fixture(autouse=True)
+def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    mock_acompletion = AsyncMock(return_value=_fake_response())
+    monkeypatch.setattr(harness_module.litellm, "acompletion", mock_acompletion)
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
+    )
+    return mock_acompletion
 
 
 @pytest.fixture(autouse=True)
@@ -318,3 +368,40 @@ class TestPostQueryAuth:
         second_response = client.post("/query", json=_valid_body(), headers=second_headers)
         assert second_response.status_code == 200
         assert captured["user_id"] == second_user_id
+
+
+class TestPostQueryFiltersCostEvents:
+    """T-2.0-07 (Section 19.4): now that run() is the real five-node graph
+    and genuinely emits a `cost` event after every metered model call, the
+    response `POST /query` returns must never include one, even though the
+    harness's internal state (and `_spy_on_run`'s capture of the real,
+    unfiltered event stream) does see it."""
+
+    def test_response_body_never_contains_a_cost_event(self, client: TestClient) -> None:
+        _user_id, headers = _auth_headers(client)
+        response = client.post("/query", json=_valid_body(), headers=headers)
+        assert response.status_code == 200
+        events = response.json()
+        assert all(event["type"] != "cost" for event in events)
+
+    def test_the_real_unfiltered_run_did_emit_a_cost_event(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Proves the filter is doing real work, not passing vacuously
+        because run() never produced a cost event in the first place."""
+        _user_id, headers = _auth_headers(client)
+        captured_events: list[Event] = []
+
+        async def _capturing_run(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+            async for event in real_run(query, context):
+                captured_events.append(event)
+                yield event
+
+        monkeypatch.setattr(app_module, "run", _capturing_run)
+
+        response = client.post("/query", json=_valid_body(), headers=headers)
+
+        assert response.status_code == 200
+        assert any(event.type == "cost" for event in captured_events)
+        response_types = [event["type"] for event in response.json()]
+        assert "cost" not in response_types

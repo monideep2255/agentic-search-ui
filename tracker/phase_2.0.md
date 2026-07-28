@@ -218,7 +218,7 @@ History:
 
 ### T-2.0-07: LangGraph five-node loop, stub nodes
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/2.0-langgraph-agent-loop
 Depends on: T-2.0-01, T-2.0-02, T-2.0-03, T-2.0-04, T-2.0-05, T-2.0-06
@@ -234,26 +234,36 @@ Files this ticket may create or modify:
 - `tests/system_03_search_agent/adapters/web_sse/test_query_endpoint.py` (extend only, for the cost-event-filter assertion)
 
 Acceptance criteria:
-- [ ] `run(query, context)` is backed by a real LangGraph `StateGraph` with five nodes named `guardrail`, `think`, `plan`, `act`, `write`, compiled and invoked in that fixed sequence for every query
-- [ ] The `guardrail` and `think` nodes call `Harness.call_tier` with `tier="guard"`; the `plan` node calls with `tier="plan"`; the `write` node calls with `tier="synth"`, matching Section 3.2's step-to-tier table exactly
-- [ ] Every node's model call passes through `enforce_timeout` with the budget resolved per T-2.0-04's mapping, and every node's cost is tracked through T-2.0-03's cost control before the node returns
-- [ ] The graph still emits only Section 2.3 typed `Event` instances end to end: the existing guard-then-done round trip from the phase 1.0 test suite still passes unmodified, and the suite is extended to assert intermediate `think`, `plan`, and `cost` events also validate against their Section 2.3 payload models
-- [ ] Each stub node produces a schema-valid payload without performing real classification, tool selection, or synthesis logic; no stub node fabricates a citation or a `trust_signal` outcome that a later phase has not yet earned (real Act tool logic lands in phase 2.1+, guardrail's real validation in phase 3.0, write's real grounding in phase 2.2)
-- [ ] The per-query cap's trigger behavior (T-2.0-03) is reachable through the real graph: a test that forces the cap to be hit mid-loop asserts the graph moves to `write` early with partial results rather than continuing to `act`
-- [ ] `POST /query`'s response never includes a `cost`-type event, now that `run()` can actually emit one: `cost_control.filter_events_for_end_user` is applied to the event list before it reaches the client
+- [x] `run(query, context)` is backed by a real LangGraph `StateGraph` with five nodes named `guardrail`, `think`, `plan`, `act`, `write`, compiled and invoked in that fixed sequence for every query
+- [x] The `guardrail` and `think` nodes call `Harness.call_tier` with `tier="guard"`; the `plan` node calls with `tier="plan"`; the `write` node calls with `tier="synth"`, matching Section 3.2's step-to-tier table exactly
+- [x] Every node's model call passes through `enforce_timeout` with the budget resolved per T-2.0-04's mapping, and every node's cost is tracked through T-2.0-03's cost control before the node returns
+- [x] The graph still emits only Section 2.3 typed `Event` instances end to end: the intermediate `think`, `plan`, and `cost` events all validate against their Section 2.3 payload models. Builder's note on this criterion's second clause: the phase 1.0 guard-then-done test scenario (guard event emitted, done terminal, schema-valid, trace_id/seq/ts hold) still passes, but the literal test FILE is not byte-unmodified, since the ticket's own file list marks `test_run.py` "extends the existing phase 1.0 test" and the build prompt explicitly required updating it to assert the real (now longer) event sequence rather than weakening it to "doesn't crash". Treated the file-list note as authoritative over this bullet's stricter wording; flagging the tension rather than silently resolving it
+- [x] Each stub node produces a schema-valid payload without performing real classification, tool selection, or synthesis logic; no stub node fabricates a citation or a `trust_signal` outcome that a later phase has not yet earned (real Act tool logic lands in phase 2.1+, guardrail's real validation in phase 3.0, write's real grounding in phase 2.2)
+- [x] The per-query cap's trigger behavior (T-2.0-03) is reachable through the real graph: a test that forces the cap to be hit mid-loop asserts the graph moves to `write` early with partial results rather than continuing to `act`
+- [x] `POST /query`'s response never includes a `cost`-type event, now that `run()` can actually emit one: `cost_control.filter_events_for_end_user` is applied to the event list before it reaches the client
 
 Breakdown:
-- [ ] `core/state.py` graph state type
-- [ ] `core/graph.py` StateGraph definition and compilation, five stub nodes
-- [ ] `core/run.py` rewritten to build and invoke the compiled graph instead of the phase 1.0 linear scaffold
-- [ ] `adapters/web_sse/app.py` wired to `filter_events_for_end_user`
-- [ ] Tests: node sequence, per-node tier assignment, event schema validation on every emitted type, stub-node non-fabrication check, cap-triggered early exit to write, adapter cost-event filter
+- [x] `core/state.py` graph state type
+- [x] `core/graph.py` StateGraph definition and compilation, five stub nodes
+- [x] `core/run.py` rewritten to build and invoke the compiled graph instead of the phase 1.0 linear scaffold
+- [x] `adapters/web_sse/app.py` wired to `filter_events_for_end_user`
+- [x] Tests: node sequence, per-node tier assignment, event schema validation on every emitted type, stub-node non-fabrication check, cap-triggered early exit to write, adapter cost-event filter
 
 Evidence:
-- (filled at close)
+- `src/system_03_search_agent/core/state.py`: `GraphState` TypedDict (94 lines), `events` field uses `Annotated[list[Event], add]` as a reducer so each node returns only the events it added; every other field is plain last-write-wins.
+- `src/system_03_search_agent/core/graph.py` (~400 lines): five nodes (`guardrail_node`, `think_node`, `plan_node`, `act_node`, `write_node`), `_EventSink` per-node event/seq bookkeeping, `_dispatch_tier_call` (the shared check-cap-then-enforce-timeout-then-call_tier sequence), conditional routing (`_route_after_guardrail/_think/_plan`) sending a per-query cap hit or a step `HarnessCallError` straight to `write`, and the two daily caps checked once in `guardrail_node` via a real `session_scope()` DB session, routing straight to `END` on a decline. `compiled_graph` is compiled once at module import time (documented rationale in the module docstring: the graph structure is static, every per-query value lives in `GraphState`).
+- `src/system_03_search_agent/core/run.py`: rewritten to build one `Harness`, assemble the initial `GraphState`, and `await compiled_graph.ainvoke(...)` inside `langsmith.run_helpers.tracing_context(enabled=False)` (see the tracing-scope note below), yielding the accumulated `events` list. Still `async def` with a `yield`, so `inspect.isasyncgenfunction(run)` still holds.
+- `src/system_03_search_agent/adapters/web_sse/app.py`: `POST /query` now applies `filter_events_for_end_user` to the collected event list before returning it.
+- Tests: `tests/system_03_search_agent/core/test_graph.py` (new, 21 tests): five-node structure, the full happy-path event-type sequence (`guard, cost, think, cost, plan, cost, cost, done`), per-node tier assignment (guardrail+think call the guard-tier model twice, plan calls plan-tier once, write calls synth-tier once), schema validation on every emitted event, no fabricated `citation`/`trust_signal`, the `act` node's `coordinator_worker_execute([], [])` integration point, a per-query-cap hit forced on `plan` short-circuiting to `write` without reaching `act` (asserted via a spy on `coordinator_worker_execute`), the same cap hit discovered at `write` itself, a non-cap `HarnessCallError` (an unexpected model failure) routing to `write` as a refusal, and all three daily-cap paths (system-cap decline, user-cap decline, `user_id=None` skipping only the per-user check).
+- `tests/system_03_search_agent/core/test_run.py` (rewritten, 16 tests, was 12): kept every phase-1.0-shaped assertion that still holds (Event instances, guard event schema-valid, exactly one terminal `done`, trace_id propagation, monotonic no-repeat `seq`, tz-aware `ts`); updated `test_done_event_payload_is_schema_valid` since `total_cost_usd` is now a real positive metered total, not the scaffold's hardcoded `0.0`; removed `TestRunMakesNoDirectLlmOrToolCall` (asserted `core/run.py`'s source contained no `litellm`/`harness` imports, which is now false by design, the ticket's entire point); added `TestRunEmitsTheFullFiveNodeLoop` (4 new tests: `think`/`plan`/`cost` events present and schema-valid, no fabricated `citation`/`trust_signal`).
+- `tests/system_03_search_agent/adapters/web_sse/test_query_endpoint.py` (extended, +2 tests, 24 total, was 22): added `_harness_env`/`_mock_litellm` autouse fixtures (needed for every pre-existing test in this file to keep passing now that `run()` drives real `Harness.call_tier` calls) and `TestPostQueryFiltersCostEvents`, which asserts the HTTP response never contains a `cost`-type event AND that the real, unfiltered `run()` output did produce one (proving the filter does real work, not passing vacuously).
+- Tracing scope note (logged in DECISIONS.md, 2026-07-28): this repo's `.env` sets `LANGCHAIN_TRACING_V2=true` with no `LANGSMITH_API_KEY`, staged ahead of the phase 5.0/5.1 tracing deliverable. `run()` is the first code path to actually invoke a compiled LangGraph graph; without disabling tracing, every call made a real, failing outbound HTTPS call to `api.smith.langchain.com`. `run()` wraps its one `ainvoke()` in `langsmith.run_helpers.tracing_context(enabled=False)` (scoped to that call, not a process-wide env override) until phase 5.0/5.1 replaces it with a real tracer.
+- `python3 -m pytest tests/ -q`: 463 passed (baseline before this ticket: 436; net +27, matching the three files' own before/after counts). `ruff check` clean on every file this ticket touched (two pre-existing, unrelated findings confirmed via `git show HEAD:...` diff: `app.py`'s `Depends()`-in-default-arg B008, and `test_query_endpoint.py`'s already-present RUF100 unused-`noqa` findings on its module-level, post-`pytest.skip`, `# noqa: E402` imports).
+- Left uncommitted per instructions, on `phase/2.0-langgraph-agent-loop`, for lead review.
 
 History:
 - 2026-07-28 lead: created, scoped from Section 3.2/25; integrates T-2.0-01 through T-2.0-06
+- 2026-07-28 builder: implemented `core/state.py`, `core/graph.py`, rewrote `core/run.py`, wired `adapters/web_sse/app.py` to `filter_events_for_end_user`; added `test_graph.py` (21 tests), rewrote `test_run.py` (16 tests, was 12), extended `test_query_endpoint.py` (+2 tests, 24 total); full suite 463 passed (up from 436), no regressions; logged the LangSmith `tracing_context(enabled=False)` scope decision to DECISIONS.md; left uncommitted for lead review, status set to in-review (not done) per instructions
 
 ### T-2.0-08: Server-derive `user_id` on `/query`
 
