@@ -52,6 +52,20 @@ class QueryRequest(BaseModel):
 # (harness/cost_control.py) owns that filtering logic; this is the one
 # point T-2.0-03 deferred wiring it into, since no real event loop existed
 # yet when that ticket was built.
+#
+# `RequestContext.operator_mode` (phase 1.0's contract, never wired to
+# any behavior until now) is the lever: Section 19.4 says only the
+# operator dashboard adapter sees the unfiltered stream, and no separate
+# operator adapter or dashboard exists yet (that is phase 5.0/13's job).
+# Setting `operator_mode: true` on a request is the smallest way to get
+# real cost and token-usage data today, ahead of that dashboard, without
+# building one early: the filter is skipped outright, so `cost` events
+# and the real `done.total_cost_usd` both pass through unredacted. No
+# role or permission system exists yet (Section 15's auth model has no
+# admin/operator role), so this is caller-asserted, not access-controlled:
+# any authenticated user can set it for their own query today. Restricting
+# it to a real operator role is future hardening once one exists, not a
+# phase 2.0 concern.
 @app.post("/query", response_model=list[Event])
 async def post_query(
     request: QueryRequest,
@@ -59,4 +73,6 @@ async def post_query(
 ) -> list[Event]:
     authenticated_query = request.query.model_copy(update={"user_id": str(current_user.id)})
     events = [event async for event in run(authenticated_query, request.context)]
+    if request.context.operator_mode:
+        return events
     return filter_events_for_end_user(events)

@@ -405,3 +405,37 @@ class TestPostQueryFiltersCostEvents:
         assert any(event.type == "cost" for event in captured_events)
         response_types = [event["type"] for event in response.json()]
         assert "cost" not in response_types
+
+
+class TestPostQueryOperatorMode:
+    """`RequestContext.operator_mode` (a phase 1.0 contract field, unwired
+    until now): when true, /query skips filter_events_for_end_user
+    entirely, so cost events and the real done.total_cost_usd both reach
+    the response. This is the lightweight way to see cost and token usage
+    today, ahead of a real operator dashboard (phase 5.0/13)."""
+
+    def test_operator_mode_false_still_redacts_cost_by_default(
+        self, client: TestClient
+    ) -> None:
+        _user_id, headers = _auth_headers(client)
+        body = _valid_body()
+        body["context"]["operator_mode"] = False
+        response = client.post("/query", json=body, headers=headers)
+        assert response.status_code == 200
+        events = response.json()
+        assert all(event["type"] != "cost" for event in events)
+        done_event = next(event for event in events if event["type"] == "done")
+        assert done_event["payload"]["total_cost_usd"] == 0.0
+
+    def test_operator_mode_true_exposes_cost_events_and_the_real_total(
+        self, client: TestClient
+    ) -> None:
+        _user_id, headers = _auth_headers(client)
+        body = _valid_body()
+        body["context"]["operator_mode"] = True
+        response = client.post("/query", json=body, headers=headers)
+        assert response.status_code == 200
+        events = response.json()
+        assert any(event["type"] == "cost" for event in events)
+        done_event = next(event for event in events if event["type"] == "done")
+        assert done_event["payload"]["total_cost_usd"] > 0.0
