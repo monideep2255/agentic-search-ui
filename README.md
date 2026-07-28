@@ -37,7 +37,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | User data | PostgreSQL (separate instance) |
 | Caching | Redis |
 | Frontend | React |
-| Auth | python-jose (JWT) |
+| Auth | PyJWT (HS256 access tokens), argon2-cffi (argon2id password hashing) |
 | Observability | LangSmith |
 
 ---
@@ -48,7 +48,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | Phase 1.0 complete (FastAPI app skeleton, health endpoint, the Pydantic event contract, a typed run() stub wired to the query endpoint), merged into main (PR #5, 2026-07-27). No LangGraph loop, no tools, and no real agent behavior yet. Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
+| Build (Phases 6-7) | Phase 1.0 complete (FastAPI app skeleton, health endpoint, the Pydantic event contract, a typed run() stub wired to the query endpoint), merged into main (PR #5, 2026-07-27). Phase 1.1 complete on branch phase/1.1-auth-service: minimal v1 auth and the PostgreSQL user-data schema (six tables). No LangGraph loop, no tools, and no real agent behavior yet. Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
 
 ---
 
@@ -59,7 +59,8 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 python 3.11+
 node 18+ (for React frontend)
 redis (for caching)
-# No local PostgreSQL+AGE needed - connects to remote Hetzner VPS
+postgresql 15+ (local, for the user-data database: auth, sessions, interactions)
+# No local AGE knowledge graph needed - Layer 1 connects to the remote Hetzner VPS
 
 # Backend setup
 git clone <repo-url>
@@ -68,6 +69,11 @@ cp env.example .env   # fill in API keys and credentials
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+
+# User-data database (auth, sessions, interactions). Create it once, then migrate.
+# USER_DB_URL in .env names the target; the default is the local database below.
+createdb search_agent_users
+alembic upgrade head
 
 # Run backend
 uvicorn system_03_search_agent.adapters.web_sse.app:app --reload
@@ -184,4 +190,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-07-27
+Last updated: 2026-07-28

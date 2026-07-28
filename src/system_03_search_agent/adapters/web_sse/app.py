@@ -3,11 +3,13 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict
 
+from system_03_search_agent.auth.router import router as auth_router
 from system_03_search_agent.contracts.events import Event
 from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core.run import run
 
 app = FastAPI()
+app.include_router(auth_router)
 
 
 class HealthResponse(BaseModel):
