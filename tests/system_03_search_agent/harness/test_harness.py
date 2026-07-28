@@ -53,7 +53,7 @@ def _fake_response(content: str, prompt_tokens: int, completion_tokens: int) -> 
 def _patch_price(monkeypatch: pytest.MonkeyPatch, *, raises: bool = False) -> None:
     def _get_model_info(model: str) -> dict[str, Any]:
         if raises:
-            raise Exception(f"model {model!r} not in litellm's price map")
+            raise RuntimeError(f"model {model!r} not in litellm's price map")
         return {"input_cost_per_token": _INPUT_PRICE, "output_cost_per_token": _OUTPUT_PRICE}
 
     monkeypatch.setattr(harness_module.litellm, "get_model_info", _get_model_info)

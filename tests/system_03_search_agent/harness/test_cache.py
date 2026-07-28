@@ -9,21 +9,18 @@ Depends on:
 
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from system_03_search_agent.harness.cache import (
-    SYSTEM_INSTRUCTIONS,
     _BIOLINK_CONCEPT_SCHEMA,
     _GRAPH_SCHEMA_END,
     _GRAPH_SCHEMA_START,
     _TOOL_SCHEMAS_END,
     _TOOL_SCHEMAS_START,
+    SYSTEM_INSTRUCTIONS,
     build_stable_prefix,
     prefix_sha256,
 )
-
 
 # ---------------------------------------------------------------------------
 # Acceptance criterion 1: assembly order.

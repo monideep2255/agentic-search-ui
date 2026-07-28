@@ -55,7 +55,7 @@ class QueryRequest(BaseModel):
 @app.post("/query", response_model=list[Event])
 async def post_query(
     request: QueryRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),  # noqa: B008 - idiomatic FastAPI dependency injection
 ) -> list[Event]:
     authenticated_query = request.query.model_copy(update={"user_id": str(current_user.id)})
     events = [event async for event in run(authenticated_query, request.context)]

@@ -249,6 +249,25 @@ async def test_write_calls_the_synth_tier_model(_mock_litellm: AsyncMock) -> Non
 
 
 @pytest.mark.asyncio
+async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """F-2.0-03 fix: build_stable_prefix() has a real caller, not zero.
+
+    Every guardrail/think/plan/write call reaches litellm.acompletion with
+    graph_module._STABLE_PREFIX prepended as a leading system-role
+    message, proving the prompt-cache scaffold T-2.0-06 built is actually
+    wired into the loop, not merely unit-tested in isolation.
+    """
+    await _run_graph(_valid_query(), _valid_context())
+    assert _mock_litellm.call_count == 4
+    for call in _mock_litellm.call_args_list:
+        leading_message = call.kwargs["messages"][0]
+        assert leading_message["role"] == "system"
+        assert leading_message["content"] == graph_module._STABLE_PREFIX
+
+
+@pytest.mark.asyncio
 async def test_exactly_four_model_calls_fire_on_the_happy_path(
     _mock_litellm: AsyncMock,
 ) -> None:

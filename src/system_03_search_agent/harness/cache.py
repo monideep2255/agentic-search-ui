@@ -192,9 +192,7 @@ def build_stable_prefix(tool_schemas: list[dict] | None = None) -> str:
         id) in scope at the call site.
     """
     tool_schema_section = _build_tool_schema_section(tool_schemas)
-    return "\n\n".join(
-        (SYSTEM_INSTRUCTIONS, tool_schema_section, _BIOLINK_CONCEPT_SCHEMA)
-    )
+    return f"{SYSTEM_INSTRUCTIONS}\n\n{tool_schema_section}\n\n{_BIOLINK_CONCEPT_SCHEMA}"
 
 
 def prefix_sha256(prefix: str) -> str:

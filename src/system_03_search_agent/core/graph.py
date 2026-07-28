@@ -24,6 +24,11 @@ Depends on:
       always empty this phase.
     - system_03_search_agent.harness.harness (Harness, HarnessCallError,
       QueryClass, budget_for_query_class)
+    - system_03_search_agent.harness.cache (build_stable_prefix): called
+      once at import time (`_STABLE_PREFIX`, module-level below) and
+      passed as every model call's `cache_prefix`, closing the gap the
+      phase 2.0 judge review flagged (F-2.0-03): T-2.0-06 built the
+      prefix-assembly scaffold but nothing called it until this fix.
 
 Reads:
     - Nothing at import time beyond the modules above. USER_DB_URL and the
@@ -126,6 +131,7 @@ from system_03_search_agent.contracts.events import (
 from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.data.session import session_scope
 from system_03_search_agent.harness import cost_control
+from system_03_search_agent.harness.cache import build_stable_prefix
 from system_03_search_agent.harness.coordinator_worker import coordinator_worker_execute
 from system_03_search_agent.harness.harness import (
     Harness,
@@ -135,6 +141,17 @@ from system_03_search_agent.harness.harness import (
 )
 
 Message = dict[str, str]
+
+# Built once at import time, matching `compiled_graph` below: the stable
+# prefix is a deterministic function of `tool_schemas` alone (prompt-
+# cache-discipline.md), and no tool exists yet to pass one (phase 2.1+
+# is the first to register a real tool schema), so this is the same
+# prefix for every guardrail/think/plan/write call this phase makes.
+# Rebuilding it per call would cost nothing functionally, since it is
+# byte-identical every time, but computing it once removes any chance of
+# it silently drifting between calls within a session, which is exactly
+# what `prompt-cache-discipline.md` requires the harness to guarantee.
+_STABLE_PREFIX = build_stable_prefix()
 
 
 class _EventSink:
@@ -190,7 +207,9 @@ async def _dispatch_tier_call(
     """
     cost_control.check_per_query_cap(harness, trace_id, tier)  # type: ignore[arg-type]
     return await harness.enforce_timeout(
-        step, harness.call_tier(tier, messages), budget_s  # type: ignore[arg-type]
+        step,
+        harness.call_tier(tier, messages, cache_prefix=_STABLE_PREFIX),  # type: ignore[arg-type]
+        budget_s,
     )
 
 

@@ -65,8 +65,9 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from collections.abc import Awaitable
 from dataclasses import dataclass
-from typing import Any, Awaitable, Literal
+from typing import Any, Literal
 
 import litellm
 
@@ -198,7 +199,7 @@ def _price_per_token(model_id: str) -> tuple[float, float]:
         output_price = info.get("output_cost_per_token")
         if input_price is not None and output_price is not None:
             return float(input_price), float(output_price)
-    except Exception:  # noqa: BLE001 - fall through to the local table below
+    except Exception:  # noqa: BLE001, S110 - fall through to the local table below; no data is lost, the fallback path is exercised next
         pass
 
     if model_id in _FALLBACK_PRICES_USD_PER_TOKEN:
@@ -327,7 +328,7 @@ class Harness:
         for attempt in range(1, max_attempts + 1):
             try:
                 response: Any = await litellm.acompletion(model=target, messages=final_messages)
-            except Exception as exc:  # noqa: BLE001 - classified immediately below
+            except Exception as exc:
                 error_class = _classify_exception(exc)
                 if error_class == "transient" and attempt < max_attempts:
                     continue
@@ -454,7 +455,7 @@ class Harness:
         """
         try:
             return await asyncio.wait_for(coro, timeout=budget_s)
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             raise HarnessCallError(
                 f"step {step!r} exceeded its {budget_s}s budget and was "
                 "aborted; the loop should proceed to Write and synthesize "

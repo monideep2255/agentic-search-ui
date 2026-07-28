@@ -65,12 +65,12 @@ if not _can_connect():
         allow_module_level=True,
     )
 
-import system_03_search_agent.adapters.web_sse.app as app_module  # noqa: E402
-from system_03_search_agent.adapters.web_sse.app import app  # noqa: E402
-from system_03_search_agent.contracts.events import Event  # noqa: E402
-from system_03_search_agent.contracts.query import Query, RequestContext  # noqa: E402
-from system_03_search_agent.core.run import run as real_run  # noqa: E402
-from system_03_search_agent.harness import harness as harness_module  # noqa: E402
+import system_03_search_agent.adapters.web_sse.app as app_module
+from system_03_search_agent.adapters.web_sse.app import app
+from system_03_search_agent.contracts.events import Event
+from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.core.run import run as real_run
+from system_03_search_agent.harness import harness as harness_module
 
 _TEST_AUTH_SECRET = "test-only-auth-secret-for-query-endpoint-tests-do-not-reuse"
 
