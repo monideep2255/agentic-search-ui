@@ -179,7 +179,7 @@ Portable content, Claude-Code-coupled invocation:
 
 Does not port, and this is the blocker:
 
-- The four security hooks (`scan-secrets.sh`, `scan-write-secrets.sh`, `block-bash-delete.sh`, `block-sensitive-read.sh`) are wired to Claude Code's PreToolUse and PostToolUse contract. They are the only structural enforcement in this repo; every other control is an instruction a model chooses to obey. Under another harness they simply do not run, and nothing reports that they did not.
+- The four security hooks (`scan-secrets.sh`, `scan-write-secrets.sh`, `block-bash-delete.sh`, `block-sensitive-read.sh`) are wired to Claude Code's PreToolUse and PostToolUse contract, and a fifth, `scan-duplicate-copies.sh`, is wired to SessionStart. These five are the only structural enforcement in this repo; every other control is an instruction a model chooses to obey. `scan-duplicate-copies.sh` is also the one hook that mutates the filesystem unattended (moving verified byte-identical duplicate-copy artifacts to Trash, never `rm`), since a SessionStart hook's internal commands are not gated by `block-bash-delete.sh`, which only fires on Bash calls Claude itself issues. Under another harness none of the five run, and nothing reports that they did not.
 - `sync-agents-md.sh` and `sync-board.sh`, the same way. Their absence is quieter but leaves stale generated files.
 - Agent teams and the tmux pane display. Parallel execution would need whatever the other agent provides instead.
 
@@ -191,7 +191,7 @@ Before any non-Claude-Code agent runs a build phase, in this order:
 
 The rule of thumb the audit confirmed: anything expressed as a file is portable, anything expressed as a mechanism is not. That is why the board, the learnings log, and the renderer were built as files.
 
-Security hooks in `.claude/hooks/` (wired in `.claude/settings.json`) run on PreToolUse (secret scan on Bash commands, secret scan on config writes, deletion block) and SessionStart (context-injection scan, session context).
+Security hooks in `.claude/hooks/` (wired in `.claude/settings.json`) run on PreToolUse (secret scan on Bash commands, secret scan on config writes, deletion block) and SessionStart (context-injection scan, session context, duplicate-copy scan and auto-clear).
 
 ---
 
