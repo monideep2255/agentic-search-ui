@@ -49,3 +49,21 @@ security/
 
 # Agent worktrees (transient, created by bossman-mode builders)
 .claude/worktrees/
+
+# macOS Finder/Archive Utility duplicate-copy artifacts (e.g. "env 2.py").
+# These appear when a file is copied into a directory that already has a
+# same-named file: Finder "Keep Both", or a zip extracted on top of an
+# existing folder. Never a legitimate filename in this repo (verified
+# 2026-07-28: no tracked file matches this shape). Root cause is moving files
+# between a bossman-mode worktree and main via Finder/archive instead of git;
+# this entry is the safety net, not the fix.
+* [0-9].py
+* [0-9].md
+* [0-9].mako
+* [0-9].json
+* [0-9].ts
+* [0-9].tsx
+* [0-9].js
+* [0-9].jsx
+* [0-9][0-9].py
+* [0-9][0-9].md
