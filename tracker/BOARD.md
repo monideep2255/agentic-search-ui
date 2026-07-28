@@ -13,10 +13,10 @@ Listed in flow order. Work moves left to right on the board, from `todo` to `don
 | Status | Count | Who may set it |
 |--------|-------|----------------|
 | To do | 24 | Lead |
-| In progress | 1 | The builder that claimed it |
+| In progress | 0 | The builder that claimed it |
 | Blocked | 0 | The builder that hit the block, reason required |
 | In review | 0 | The builder that finished |
-| Done | 6 | Judge only, never the builder |
+| Done | 7 | Judge only, never the builder |
 
 `blocked` sits mid-flow rather than on the way to done, because it is where work stalls, not a step toward finishing.
 
@@ -45,11 +45,11 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | Phase | Branch | Delivers | Depends on | Group | Status | Refinement | Owner | Gates | Flags |
 |-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
 | 1.0 | `phase/1.0-fastapi-skeleton` | FastAPI skeleton, health endpoint, the run() contract stub with the v1 event taxonomy typed, Pydantic boundary validation | | prototype | done | refined | | | |
-| 1.1 | `phase/1.1-auth-service` | Minimal v1 auth, the PostgreSQL user-data schema | 1.0 | prototype | in-progress | refined | | | ecdsa CVE |
+| 1.1 | `phase/1.1-auth-service` | Minimal v1 auth, the PostgreSQL user-data schema | 1.0 | prototype | done | refined | | | |
 | 1.2 | `phase/1.2-react-shell-sse` | React shell, SSE consumption of the event stream, empty chat endpoint wired end to end, the stop button | 1.0 | prototype | todo | product_refine | product owner | playwright | playwright not installed |
 | 2.0 | `phase/2.0-langgraph-agent-loop` | LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one | 1.0 | prototype | todo | tech_refine | | | |
 | 2.1 | `phase/2.1-cypher-tool` | cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement | 2.0 | prototype | todo | tech_refine | | | |
-| 2.2 | `phase/2.2-write-step-grounding` | Deterministic cite-or-refuse, provenance for Layer 1 citations, the first trust signal, the two required tests | 2.1 | prototype | todo | tech_refine | | eval-harness | |
+| 2.2 | `phase/2.2-write-step-grounding` | Deterministic cite-or-refuse, provenance for Layer 1 citations, the first trust signal, the two required tests | 2.1 | prototype | todo | tech_refine | | eval-harness | whole-repo security scan not yet run |
 | 3.0 | `phase/3.0-guardrail-node` | Full guardrail replacing the stub: validation, prompt-injection rejection, forbidden types, rate and cost pre-checks | 2.0 | v1 | todo | tech_refine | | | |
 | 3.1 | `phase/3.1-ncbi-efetch` | ncbi_efetch over E-utilities and Datasets API v2 | 2.0, 3.0 | v1 | todo | tech_refine | | | |
 | 3.2 | `phase/3.2-ncbi-dbsnp` | ncbi_dbsnp over Variation Services, plus the dbVar two-step coordinate-overlap sub-tool | 3.1 | v1 | todo | tech_refine | | | |
@@ -78,7 +78,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | Golden fixture domain sign-off | Nobody is named to verify the clinical and human-variation expected answers. A wrong expected answer makes a wrong agent pass, which is the failure the gate exists to catch | Build phase 5.1 |
 | PubTator3 relations endpoint | Path and fields not live-verified | Build phase 3.3 ship |
 | Playwright not installed | The UI gate has no tool behind it yet, and it must clear `supply-chain-security` first | Build phase 1.2 |
-| ecdsa CVE | `ecdsa` 0.19.2 carries PYSEC-2026-1325 (a Minerva timing side-channel, no planned upstream fix), pulled in transitively by `python-jose[cryptography]`. Accepted as a known risk during phase 1.0 since nothing in that phase invokes it; see DECISIONS.md 2026-07-27 | Build phase 1.1 |
+| Whole-repo security scan not yet run | No build-phase code has ever been security scanned. The only run in `security/` is dated 2026-07-25 and predates phase 1.0. Deferred twice by product-owner decision (2026-07-27, 2026-07-28) on the reasoning that the Step 6.1 prototype is throwaway and the scan earns its cost once the code is meant to survive. The agreed shape is ONE deep dive over the ENTIRE repository, not a commit range, so there is no baseline SHA to carry forward and nothing to forget to widen | The Step 6.2 reconciliation, after build phase 2.2 closes and before any Step 6.3 v1 work starts |
 
 ## Visualizing this board
 
