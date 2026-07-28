@@ -574,7 +574,12 @@ def test_health_unaffected_by_auth_router(client):
 
 
 def test_auth_router_does_not_shadow_query_route(client):
-    # A malformed /query body should still 422 from the phase 1.0 contract,
-    # not 404, proving the auth router mount left routing intact.
-    response = client.post("/query", json={})
+    # A malformed, authenticated /query body should still 422 from the
+    # typed-event contract, not 404, proving the auth router mount left
+    # routing intact. Build phase 2.0 (T-2.0-08) added an auth dependency
+    # to /query, so an unauthenticated request now 401s before body
+    # validation runs; authenticate first to isolate the routing check.
+    _, _, tokens = _signup_and_login(client)
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    response = client.post("/query", json={}, headers=headers)
     assert response.status_code == 422
