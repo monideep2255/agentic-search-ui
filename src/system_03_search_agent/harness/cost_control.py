@@ -66,7 +66,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from system_03_search_agent.contracts.events import CostPayload, Event
+from system_03_search_agent.contracts.events import CostPayload, DonePayload, Event
 from system_03_search_agent.data.models import Interaction
 from system_03_search_agent.harness.harness import Harness
 from system_03_search_agent.harness.tiers import Tier, UnknownTierError
@@ -476,7 +476,7 @@ def build_cost_event_payload(
 # the React UI, the public REST and SSE route, the MCP server, and the CLI
 # never forward it. Only the operator dashboard adapter subscribes to it."
 #
-# This module owns the filtering *logic* (this set and the two functions
+# This module owns the filtering *logic* (this set and the functions
 # below); wiring it into a specific adapter's response path (the web_sse
 # `/query` route, once T-2.0-07 replaces `core/run.py`'s scaffold with the
 # real LangGraph loop that can actually emit a `cost` event) is out of this
@@ -491,11 +491,52 @@ def is_end_user_visible_event_type(event_type: str) -> bool:
     return event_type not in _BUILDER_ONLY_EVENT_TYPES
 
 
-def filter_events_for_end_user(events: Iterable[Event]) -> list[Event]:
-    """Drop builder-only events (currently just `cost`) from an event sequence.
+# F-2.0-05 (judge, filed 2026-07-28; resolved by explicit product-owner
+# decision the same day: "cost is for internal. I want to see the cost,
+# the token usage"). Section 19.3 and Section 19.5 read as contradictory
+# in isolation: 19.3 wants `done.total_cost_usd` to carry the query's
+# final cost so a subscriber that missed every intermediate `cost` event
+# still gets the total, while 19.5 states no dollar figure ever reaches
+# an end-user surface. The product owner's resolution: cost and token
+# usage are internal-only data. `done.total_cost_usd` keeps its real
+# value on the internal event list (what an operator surface, or a test,
+# or `Harness.get_query_cost_usd` sees), and is redacted to 0.0 only on
+# the copy that reaches an end-user-facing adapter, the same "computed
+# internally, stripped only at the end-user boundary" treatment this
+# module already gives the `cost` event itself. `total_cost_usd` cannot
+# simply be dropped the way a whole `cost` event is: it is a required
+# field on the locked `DonePayload` contract (Section 2.3), so removing
+# it would be a breaking wire-contract change, not a redaction.
+def _redact_done_event_for_end_user(event: Event) -> Event:
+    """Return `event` with `total_cost_usd` zeroed out if `event` is a `done`
+    event; return `event` unchanged for every other type.
 
-    Every end-user-facing adapter (the React UI, the public REST/SSE
-    route, the MCP server, the CLI) applies this before forwarding events;
-    only the operator dashboard adapter sees the unfiltered stream.
+    Constructs a new `Event`, since `Event` and its payload are immutable
+    Pydantic models; the original `event` (and its real cost) is never
+    mutated, so an internal caller holding the same object still sees the
+    true value.
     """
-    return [event for event in events if is_end_user_visible_event_type(event.type)]
+    if event.type != "done":
+        return event
+    redacted_payload = DonePayload.model_validate(event.payload).model_copy(
+        update={"total_cost_usd": 0.0}
+    )
+    return event.model_copy(update={"payload": redacted_payload.model_dump()})
+
+
+def filter_events_for_end_user(events: Iterable[Event]) -> list[Event]:
+    """Sanitize an event sequence for an end-user-facing adapter (Section 19.4, 19.5).
+
+    Drops builder-only events (currently just `cost`) entirely, and
+    redacts `total_cost_usd` out of any `done` event to 0.0 (F-2.0-05),
+    so no dollar figure of any kind reaches an end-user surface. Every
+    end-user-facing adapter (the React UI, the public REST/SSE route,
+    the MCP server, the CLI) applies this before forwarding events; only
+    the operator dashboard adapter sees the unfiltered stream with real
+    cost data intact.
+    """
+    return [
+        _redact_done_event_for_end_user(event)
+        for event in events
+        if is_end_user_visible_event_type(event.type)
+    ]

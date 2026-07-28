@@ -570,3 +570,52 @@ def test_filter_events_for_end_user_drops_only_cost_events() -> None:
     assert len(filtered) == 1
     assert filtered[0].type == "done"
     assert all(event.type != "cost" for event in filtered)
+
+
+# ---------------------------------------------------------------------------
+# F-2.0-05 (judge, filed 2026-07-28; resolved by product-owner decision the
+# same day: cost and token usage are internal-only data). filter_events_for_
+# end_user must redact done.total_cost_usd to 0.0, never merely pass a real
+# dollar figure through to an end-user-facing adapter.
+# ---------------------------------------------------------------------------
+
+
+def test_filter_events_for_end_user_redacts_done_total_cost_usd() -> None:
+    done_payload = DonePayload(
+        total_cost_usd=0.0512, total_tool_calls=2, elapsed_ms=340, trust_outcome="answer"
+    )
+    original = Event(
+        type="done", version="v1", trace_id="t", seq=0, ts=datetime.now(UTC),
+        payload=done_payload.model_dump(),
+    )
+
+    filtered = filter_events_for_end_user([original])
+
+    assert len(filtered) == 1
+    redacted = filtered[0]
+    assert redacted.payload["total_cost_usd"] == 0.0
+    # Every other done field survives untouched.
+    assert redacted.payload["total_tool_calls"] == 2
+    assert redacted.payload["elapsed_ms"] == 340
+    assert redacted.payload["trust_outcome"] == "answer"
+    # The original Event, e.g. still held by an internal/operator caller,
+    # is never mutated: Event and DonePayload are immutable Pydantic
+    # models, so this also holds by construction, not just by convention.
+    assert original.payload["total_cost_usd"] == 0.0512
+
+
+def test_filter_events_for_end_user_redaction_produces_a_schema_valid_done_event() -> None:
+    done_payload = DonePayload(
+        total_cost_usd=1.23, total_tool_calls=0, elapsed_ms=1, trust_outcome="refuse"
+    )
+    original = Event(
+        type="done", version="v1", trace_id="t", seq=0, ts=datetime.now(UTC),
+        payload=done_payload.model_dump(),
+    )
+
+    redacted = filter_events_for_end_user([original])[0]
+
+    # Constructing a fresh Event from the redacted payload must not raise:
+    # the redaction produces a payload that still validates against
+    # DonePayload, it does not merely delete or null out a required field.
+    DonePayload.model_validate(redacted.payload)
