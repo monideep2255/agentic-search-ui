@@ -35,7 +35,9 @@ documents: their own DB-backed behavior has a full test suite in
 
 from __future__ import annotations
 
+import asyncio
 import inspect
+import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -48,7 +50,7 @@ from system_03_search_agent.contracts.events import (
     GuardPayload,
 )
 from system_03_search_agent.contracts.query import Query, RequestContext
-from system_03_search_agent.core.run import run
+from system_03_search_agent.core.run import run, run_streaming
 from system_03_search_agent.harness import cost_control
 from system_03_search_agent.harness import harness as harness_module
 
@@ -270,5 +272,208 @@ async def test_an_otherwise_uncaught_graph_exception_yields_error_then_done_not_
     assert events[0].payload["scope"] == "run"
     assert events[0].payload["error_class"] == "unexpected"
     assert events[-1].payload["trust_outcome"] == "refuse"
+    for event in events:
+        PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)
+
+
+class TestRunStreamingSignature:
+    """T-1.2-01: `run_streaming()` is the incremental sibling of `run()`,
+    same event taxonomy and never-raises guarantee, added alongside
+    `run()` without changing it (every `TestRun*` class above is
+    untouched, still asserting `run()`'s own unchanged behavior)."""
+
+    def test_run_streaming_is_an_async_generator_function(self) -> None:
+        assert inspect.isasyncgenfunction(run_streaming)
+
+    def test_run_streaming_return_annotation_names_async_iterator_of_event(self) -> None:
+        annotation = str(inspect.signature(run_streaming).return_annotation)
+        assert "AsyncIterator" in annotation
+        assert "Event" in annotation
+
+
+class TestRunStreamingMirrorsRunsEventContract:
+    """The happy-path event stream `run_streaming()` produces must match
+    `run()`'s own contract exactly, since it drives the same graph
+    through the same nodes; only the delivery timing differs (proven
+    separately in TestRunStreamingIsGenuinelyIncremental below)."""
+
+    @pytest.mark.asyncio
+    async def test_every_yielded_item_is_an_event_instance(self) -> None:
+        events = [event async for event in run_streaming(_valid_query(), _valid_context())]
+        assert len(events) > 0
+        for event in events:
+            assert isinstance(event, Event)
+
+    @pytest.mark.asyncio
+    async def test_every_event_is_schema_valid(self) -> None:
+        events = [event async for event in run_streaming(_valid_query(), _valid_context())]
+        for event in events:
+            PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)
+
+    @pytest.mark.asyncio
+    async def test_terminates_with_exactly_one_done_event(self) -> None:
+        events = [event async for event in run_streaming(_valid_query(), _valid_context())]
+        done_events = [event for event in events if event.type == "done"]
+        assert len(done_events) == 1
+        assert events[-1].type == "done"
+
+    @pytest.mark.asyncio
+    async def test_done_event_reflects_real_metered_cost(self) -> None:
+        events = [event async for event in run_streaming(_valid_query(), _valid_context())]
+        done_event = next(event for event in events if event.type == "done")
+        payload = DonePayload(**done_event.payload)
+        assert payload.trust_outcome == "answer"
+        assert payload.total_cost_usd > 0.0
+
+    @pytest.mark.asyncio
+    async def test_seq_is_monotonic_starting_at_zero_with_no_repeats(self) -> None:
+        events = [event async for event in run_streaming(_valid_query(), _valid_context())]
+        seqs = [event.seq for event in events]
+        assert seqs[0] == 0
+        assert seqs == sorted(seqs)
+        assert len(seqs) == len(set(seqs))
+
+    @pytest.mark.asyncio
+    async def test_trace_id_propagates_to_every_event(self) -> None:
+        query = _valid_query(trace_id="trace-streaming-xyz")
+        events = [event async for event in run_streaming(query, _valid_context())]
+        for event in events:
+            assert event.trace_id == "trace-streaming-xyz"
+
+    @pytest.mark.asyncio
+    async def test_yields_the_same_event_type_sequence_as_the_buffered_run(self) -> None:
+        """Not a timing claim (that is the next test class); this only
+        proves `run_streaming()` drives the identical five-node loop and
+        produces the identical event-type sequence `run()` does, so it is
+        a genuine incremental sibling, not a different code path that
+        happens to also emit events."""
+        query = _valid_query(trace_id="trace-parity")
+        buffered_types = [event.type async for event in run(query, _valid_context())]
+        streamed_types = [
+            event.type async for event in run_streaming(query, _valid_context())
+        ]
+        assert streamed_types == buffered_types
+
+
+class TestRunStreamingIsGenuinelyIncremental:
+    """T-1.2-01's core acceptance criterion: events from nodes before a
+    deliberately-delayed node must be observable by the caller BEFORE the
+    delayed node's own event arrives, proven with real wall-clock timing
+    (no mocked clock). A buffered implementation (like `run()`) could
+    never pass this test: it yields nothing until the entire graph
+    finishes, so every event would arrive at nearly the same instant
+    regardless of which node was internally delayed."""
+
+    @pytest.mark.asyncio
+    async def test_earlier_events_arrive_before_a_delayed_nodes_event_by_a_real_measurable_gap(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The graph fires exactly four sequential model calls for one
+        # query, in this fixed order: guardrail (guard tier), think
+        # (guard tier), plan (plan tier), write (synth tier). Delaying the
+        # third call delays exactly the `plan` node's own emitted events
+        # (its `plan` and `cost` events), while `guardrail`'s `guard`/
+        # `cost` events and `think`'s `think`/`cost` events were already
+        # produced (and, under real streaming, already yielded to the
+        # caller) before that delay even begins.
+        delay_s = 0.25
+        call_count = 0
+
+        async def _acompletion(*args: object, **kwargs: object):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 3:  # the plan node's call_tier call
+                await asyncio.sleep(delay_s)
+            return _fake_response()
+
+        monkeypatch.setattr(harness_module.litellm, "acompletion", _acompletion)
+
+        arrival_time_by_type: dict[str, float] = {}
+        async for event in run_streaming(_valid_query(), _valid_context()):
+            arrival_time_by_type.setdefault(event.type, time.monotonic())
+
+        assert "think" in arrival_time_by_type
+        assert "plan" in arrival_time_by_type
+        gap_s = arrival_time_by_type["plan"] - arrival_time_by_type["think"]
+        # A generous margin below the real delay (not the full delay_s),
+        # so ordinary scheduling jitter cannot make a genuinely-streaming
+        # implementation fail this assertion; a buffered implementation
+        # would show a gap near 0, far below this margin, regardless of
+        # jitter.
+        assert gap_s >= delay_s * 0.6, (
+            f"expected the 'plan' event to arrive at least "
+            f"{delay_s * 0.6:.3f}s after 'think' (proving the delayed "
+            f"node's own call_tier sleep was actually awaited before its "
+            f"event reached the caller), observed only {gap_s:.3f}s"
+        )
+
+
+@pytest.mark.asyncio
+async def test_run_streaming_yields_error_then_done_on_an_otherwise_uncaught_exception(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The streaming sibling of the F-2.0-11 crash-fallback test above:
+    the same graceful-degradation guarantee must hold for
+    `compiled_graph.astream()` as it already does for
+    `compiled_graph.ainvoke()`. Here the exception is raised on the very
+    first `astream` iteration (mirroring the buffered test's own "crash
+    before anything is produced" scenario), so the assertions are
+    identical: exactly `error` then `done`, nothing else.
+    """
+    import system_03_search_agent.core.run as run_module
+
+    async def _boom_astream(*args: object, **kwargs: object):
+        raise RuntimeError("simulated unreachable database or unhandled node bug")
+        yield  # pragma: no cover - unreachable; makes this an async generator function
+
+    monkeypatch.setattr(run_module.compiled_graph, "astream", _boom_astream)
+
+    events = [event async for event in run_streaming(_valid_query(), _valid_context())]
+
+    assert [event.type for event in events] == ["error", "done"]
+    assert events[0].payload["scope"] == "run"
+    assert events[0].payload["error_class"] == "unexpected"
+    assert events[0].seq == 0
+    assert events[1].seq == 1
+    assert events[-1].payload["trust_outcome"] == "refuse"
+    for event in events:
+        PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)
+
+
+@pytest.mark.asyncio
+async def test_run_streaming_crash_mid_stream_keeps_seq_monotonic_with_real_events_first(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A crash that happens AFTER some real node events were already
+    yielded (unlike the "crash before anything is produced" test above)
+    must still surface those real events to the caller (the whole point
+    of switching to `astream`, per F-2.0-11's closure note) and the
+    synthetic error/done pair appended after them must continue the same
+    `seq` sequence, never restart at 0 and collide with an already-issued
+    seq value.
+    """
+    import system_03_search_agent.core.run as run_module
+
+    real_astream = run_module.compiled_graph.astream
+
+    async def _astream_then_boom(*args: object, **kwargs: object):
+        count = 0
+        async for update in real_astream(*args, **kwargs):
+            yield update
+            count += 1
+            if count == 2:  # after guardrail and think have both completed
+                raise RuntimeError("simulated crash partway through the graph run")
+
+    monkeypatch.setattr(run_module.compiled_graph, "astream", _astream_then_boom)
+
+    events = [event async for event in run_streaming(_valid_query(), _valid_context())]
+
+    # Real events from guardrail and think (guard, cost, think, cost)
+    # precede the synthetic error/done pair.
+    assert [event.type for event in events[:4]] == ["guard", "cost", "think", "cost"]
+    assert [event.type for event in events[-2:]] == ["error", "done"]
+    seqs = [event.seq for event in events]
+    assert seqs == sorted(seqs)
+    assert len(seqs) == len(set(seqs))
     for event in events:
         PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)
