@@ -8,6 +8,7 @@ langchain-core>=0.3
 # LLM providers
 anthropic>=0.34
 litellm>=1.40
+langsmith>=0.10
 
 # Database
 psycopg2-binary>=2.9
