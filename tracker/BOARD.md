@@ -12,11 +12,11 @@ Listed in flow order. Work moves left to right on the board, from `todo` to `don
 
 | Status | Count | Who may set it |
 |--------|-------|----------------|
-| To do | 24 | Lead |
+| To do | 23 | Lead |
 | In progress | 0 | The builder that claimed it |
 | Blocked | 0 | The builder that hit the block, reason required |
 | In review | 0 | The builder that finished |
-| Done | 7 | Judge only, never the builder |
+| Done | 8 | Judge only, never the builder |
 
 `blocked` sits mid-flow rather than on the way to done, because it is where work stalls, not a step toward finishing.
 
@@ -47,8 +47,8 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 1.0 | `phase/1.0-fastapi-skeleton` | FastAPI skeleton, health endpoint, the run() contract stub with the v1 event taxonomy typed, Pydantic boundary validation | | prototype | done | refined | | | |
 | 1.1 | `phase/1.1-auth-service` | Minimal v1 auth, the PostgreSQL user-data schema | 1.0 | prototype | done | refined | | | |
 | 1.2 | `phase/1.2-react-shell-sse` | React shell, SSE consumption of the event stream, empty chat endpoint wired end to end, the stop button | 1.0 | prototype | todo | product_refine | product owner | playwright | playwright not installed |
-| 2.0 | `phase/2.0-langgraph-agent-loop` | LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one | 1.0 | prototype | todo | tech_refine | | | |
-| 2.1 | `phase/2.1-cypher-tool` | cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement | 2.0 | prototype | todo | tech_refine | | | |
+| 2.0 | `phase/2.0-langgraph-agent-loop` | LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one | 1.0 | prototype | done | refined | | | |
+| 2.1 | `phase/2.1-cypher-tool` | cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement | 2.0 | prototype | todo | tech_refine | | | F-2.0-08, F-2.0-14 |
 | 2.2 | `phase/2.2-write-step-grounding` | Deterministic cite-or-refuse, provenance for Layer 1 citations, the first trust signal, the two required tests | 2.1 | prototype | todo | tech_refine | | eval-harness | whole-repo security scan not yet run |
 | 3.0 | `phase/3.0-guardrail-node` | Full guardrail replacing the stub: validation, prompt-injection rejection, forbidden types, rate and cost pre-checks | 2.0 | v1 | todo | tech_refine | | | |
 | 3.1 | `phase/3.1-ncbi-efetch` | ncbi_efetch over E-utilities and Datasets API v2 | 2.0, 3.0 | v1 | todo | tech_refine | | | |
@@ -62,7 +62,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 4.3 | `phase/4.3-graphql-api` | GraphQL surface via Strawberry, sharing auth and tools with REST | 4.0 | v1 | todo | tech_refine | | | |
 | 4.4 | `phase/4.4-kgx-export` | KGX export utility, a batch job over the existing graph. No in-repo dependency, so it can land any time | | v1 | todo | tech_refine | | | |
 | 4.5 | `phase/4.5-personalization-memory` | Bounded session memory, audience-level depth control, the named scientist persona. Never touches grounding | 1.2, 2.2 | v1 | todo | product_refine | product owner | playwright | |
-| 4.6 | `phase/4.6-feedback-capture` | Interaction capture, the manual review ritual, hand-promotion into few-shot examples | 1.1, 3.4 | v1 | todo | tech_refine | | | |
+| 4.6 | `phase/4.6-feedback-capture` | Interaction capture, the manual review ritual, hand-promotion into few-shot examples | 1.1, 3.4 | v1 | todo | tech_refine | | | F-2.0-04, F-2.0-10 |
 | 4.7 | `phase/4.7-cq-routing` | Few-shot routing seeded with the seven must-pass questions, query-shape routing | 3.4 | v1 | todo | tech_refine | | | |
 | 5.0 | `phase/5.0-observability` | LangSmith per-run tracing on trace_id, PostHog analytics, the append-only tool-call audit log | 2.0 | v1 | todo | tech_refine | | | |
 | 5.1 | `phase/5.1-golden-dataset-eval` | The 50-query golden dataset, eval-harness grading, the cost dashboard | 3.4, 5.0 | v1 | todo | product_refine | | eval-harness | needs domain sign-off owner |
@@ -79,6 +79,10 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | PubTator3 relations endpoint | Path and fields not live-verified | Build phase 3.3 ship |
 | Playwright not installed | The UI gate has no tool behind it yet, and it must clear `supply-chain-security` first | Build phase 1.2 |
 | Whole-repo security scan not yet run | No build-phase code has ever been security scanned. The only run in `security/` is dated 2026-07-25 and predates phase 1.0. Deferred twice by product-owner decision (2026-07-27, 2026-07-28) on the reasoning that the Step 6.1 prototype is throwaway and the scan earns its cost once the code is meant to survive. The agreed shape is ONE deep dive over the ENTIRE repository, not a commit range, so there is no baseline SHA to carry forward and nothing to forget to widen | The Step 6.2 reconciliation, after build phase 2.2 closes and before any Step 6.3 v1 work starts |
+| F-2.0-08 | The Act step's coordinator-worker reader calls bypass the per-query cost cap and the per-step timeout entirely. Latent today, since `plan`'s stub always produces an empty `tool_calls` list; becomes live the moment 2.1 makes `act_node` consume real tool calls | Build phase 2.1, wired in alongside `act_node`'s first real tool call |
+| F-2.0-14 | The coordinator-worker structured pass-through path applies no `maxLength`/`maxItems` of any kind, the default branch every tool adapter hits unless it opts into the reader. A `production-standards.md` gate stated as "required, not optional" | Build phase 2.1, before the first tool adapter returns real API JSON as `structured_fields` |
+| F-2.0-04 | Nothing in `src/` writes an `Interaction` row, so `get_user_daily_query_count` and `get_system_daily_cost_usd` read live but always return zero; the per-user and system-wide daily caps cannot fire in production today | Build phase 4.6, feedback capture, the first ticket that writes `interactions` rows |
+| F-2.0-10 | `Query.trace_id` is client-supplied and never server-overwritten (Section 20.1 says it should be minted at Guardrail). Live today as a spec-conformance gap; compounds with F-2.0-04 once caps read from `interactions`, since a client that reuses one `trace_id` writes at most one row/day and evades the 100-query cap. Deliberately not fixed alongside F-2.0-09/11/12/13 in phase 2.0, since `trace_id` is a phase 1.0 contract field threading through every `Event`, not a contained fix | Build phase 4.6, taken together with F-2.0-04 so the daily cap is not shipped silently defeatable |
 
 ## Visualizing this board
 

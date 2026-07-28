@@ -1,13 +1,100 @@
-"""Tests for the stub run() entry point (Section 2.1)."""
+"""Tests for run() (Section 2.1), now backed by the real five-node
+LangGraph loop (T-2.0-07).
+
+T-2.0-07 replaced the phase 1.0 scaffold (a fixed guard-then-done round
+trip with no real model call) with `core.graph.compiled_graph`. This file
+is updated accordingly:
+
+    - The phase 1.0 assertions that only depended on the typed-event
+      envelope mechanism (Event instances, trace_id propagation, seq
+      monotonicity, timezone-aware timestamps, exactly one terminal
+      `done` event) still hold unchanged, since the envelope contract
+      itself did not change.
+    - `TestRunMakesNoDirectLlmOrToolCall`, which asserted `core/run.py`'s
+      source contained no `litellm`/`harness` imports, is removed rather
+      than kept and weakened: that assertion encoded the phase 1.0
+      scaffold's defining property (no real model call anywhere), and
+      this ticket's entire point is wiring a real `Harness` and a real
+      LiteLLM-backed model call into every node. Keeping a test that
+      asserts the opposite of what the ticket requires would not be a
+      weakened verify surface, it would be a verify surface for a
+      property this ticket is required to remove.
+    - New assertions cover the previously-scaffolded properties this
+      ticket makes real: intermediate `think`, `plan`, and `cost` events
+      are now actually emitted and schema-valid, and the `done` event's
+      `total_cost_usd` now reflects real (mocked) metered cost instead of
+      a hardcoded `0.0`.
+
+No real network call is made anywhere in this file: `litellm.acompletion`
+and `litellm.get_model_info` are monkeypatched on `harness_module`, the
+same pattern `test_harness.py` and `test_graph.py` use. The two daily-cap
+DB checks are monkeypatched to no-ops for the same reason `test_graph.py`
+documents: their own DB-backed behavior has a full test suite in
+`test_cost_control.py`, and this file is not re-proving that.
+"""
+
+from __future__ import annotations
 
 import inspect
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
-from system_03_search_agent.contracts.events import DonePayload, Event, GuardPayload
+from system_03_search_agent.contracts.events import (
+    PAYLOAD_MODEL_BY_TYPE,
+    DonePayload,
+    Event,
+    GuardPayload,
+)
 from system_03_search_agent.contracts.query import Query, RequestContext
-from system_03_search_agent.core import run as run_module
 from system_03_search_agent.core.run import run
+from system_03_search_agent.harness import cost_control
+from system_03_search_agent.harness import harness as harness_module
+
+
+def _fake_response(content: str = "ok", prompt_tokens: int = 10, completion_tokens: int = 5):
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content=content))],
+        usage=SimpleNamespace(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens),
+    )
+
+
+@pytest.fixture(autouse=True)
+def _env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GUARD_MODEL", "test-provider/guard-model")
+    monkeypatch.setenv("PLAN_MODEL", "test-provider/plan-model")
+    monkeypatch.setenv("SYNTH_MODEL", "test-provider/synth-model")
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "1.0")
+    monkeypatch.setenv("PER_USER_DAILY_QUERY_CAP", "100")
+    monkeypatch.setenv("SYSTEM_DAILY_CAP_USD", "1000000")
+    monkeypatch.setenv("USER_DB_URL", "postgresql://localhost:5432/search_agent_users")
+
+
+@pytest.fixture(autouse=True)
+def _no_op_daily_caps(monkeypatch: pytest.MonkeyPatch) -> None:
+    """See test_graph.py's identical fixture docstring for the rationale."""
+
+    def _user_check(session, user_id, **kwargs):
+        return None
+
+    def _system_check(session, **kwargs):
+        return None
+
+    monkeypatch.setattr(cost_control, "check_user_daily_query_cap", _user_check)
+    monkeypatch.setattr(cost_control, "check_system_daily_cost_cap", _system_check)
+
+
+@pytest.fixture(autouse=True)
+def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    mock_acompletion = AsyncMock(return_value=_fake_response())
+    monkeypatch.setattr(harness_module.litellm, "acompletion", mock_acompletion)
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
+    )
+    return mock_acompletion
 
 
 def _valid_query(**overrides: object) -> Query:
@@ -84,7 +171,10 @@ class TestRunYieldsEvents:
         payload = DonePayload(**done_event.payload)
         assert payload.trust_outcome == "answer"
         assert payload.total_tool_calls == 0
-        assert payload.total_cost_usd == 0.0
+        # T-2.0-07: unlike the phase 1.0 scaffold's hardcoded 0.0, this is
+        # now the harness's real (mocked) metered running total, positive
+        # since four tier calls fired (guardrail, think, plan, write).
+        assert payload.total_cost_usd > 0.0
         assert payload.elapsed_ms >= 0
 
     @pytest.mark.asyncio
@@ -109,15 +199,76 @@ class TestRunYieldsEvents:
             assert event.ts.tzinfo is not None
 
 
-class TestRunMakesNoDirectLlmOrToolCall:
-    def test_run_module_source_has_no_llm_or_tool_imports(self) -> None:
-        source = inspect.getsource(run_module)
-        forbidden_substrings = [
-            "litellm",
-            "anthropic",
-            "openai",
-            "system_03_search_agent.tools",
-            "system_03_search_agent.harness",
-        ]
-        for forbidden in forbidden_substrings:
-            assert forbidden not in source
+class TestRunEmitsTheFullFiveNodeLoop:
+    """T-2.0-07: run() is no longer a two-event scaffold. It now emits
+    every intermediate event the real guardrail/think/plan/act/write loop
+    produces, each schema-valid against its Section 2.3 payload model."""
+
+    @pytest.mark.asyncio
+    async def test_yields_a_think_event_and_it_is_schema_valid(self) -> None:
+        events = [event async for event in run(_valid_query(), _valid_context())]
+        think_event = next(event for event in events if event.type == "think")
+        payload_model = PAYLOAD_MODEL_BY_TYPE["think"]
+        payload_model.model_validate(think_event.payload)
+        assert think_event.payload["query_class"] == "lookup"
+
+    @pytest.mark.asyncio
+    async def test_yields_a_plan_event_and_it_is_schema_valid(self) -> None:
+        events = [event async for event in run(_valid_query(), _valid_context())]
+        plan_event = next(event for event in events if event.type == "plan")
+        payload_model = PAYLOAD_MODEL_BY_TYPE["plan"]
+        payload_model.model_validate(plan_event.payload)
+        assert plan_event.payload["tool_calls"] == []
+
+    @pytest.mark.asyncio
+    async def test_yields_cost_events_and_they_are_schema_valid(self) -> None:
+        events = [event async for event in run(_valid_query(), _valid_context())]
+        cost_events = [event for event in events if event.type == "cost"]
+        payload_model = PAYLOAD_MODEL_BY_TYPE["cost"]
+        assert len(cost_events) == 4  # guardrail, think, plan, write
+        for event in cost_events:
+            payload_model.model_validate(event.payload)
+
+    @pytest.mark.asyncio
+    async def test_every_event_in_the_full_run_is_schema_valid(self) -> None:
+        events = [event async for event in run(_valid_query(), _valid_context())]
+        for event in events:
+            PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)
+
+    @pytest.mark.asyncio
+    async def test_no_citation_or_trust_signal_event_is_fabricated(self) -> None:
+        events = [event async for event in run(_valid_query(), _valid_context())]
+        types = {event.type for event in events}
+        assert "citation" not in types
+        assert "trust_signal" not in types
+
+
+@pytest.mark.asyncio
+async def test_an_otherwise_uncaught_graph_exception_yields_error_then_done_not_a_crash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-2.0-11 (adversary, confirmed medium, 2026-07-28).
+
+    Before this fix, any exception `compiled_graph.ainvoke` did not
+    itself handle (an unreachable database, or any bug in a node this
+    phase's stub logic did not anticipate) propagated out of `run()`
+    raw, with zero typed events yielded: a blank failure,
+    production-standards.md's graceful-degradation gate forbids exactly
+    this. `run()` must never raise; it must always yield at least an
+    `error` then a `done` event.
+    """
+    import system_03_search_agent.core.run as run_module
+
+    async def _boom(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("simulated unreachable database or unhandled node bug")
+
+    monkeypatch.setattr(run_module.compiled_graph, "ainvoke", _boom)
+
+    events = [event async for event in run(_valid_query(), _valid_context())]
+
+    assert [event.type for event in events] == ["error", "done"]
+    assert events[0].payload["scope"] == "run"
+    assert events[0].payload["error_class"] == "unexpected"
+    assert events[-1].payload["trust_outcome"] == "refuse"
+    for event in events:
+        PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)
