@@ -36,6 +36,13 @@ _ACCESS_TOKEN_ALGORITHM = "HS256"
 _ACCESS_TOKEN_TTL_SECONDS = 15 * 60
 _REFRESH_TOKEN_ENTROPY_BYTES = 32
 
+# Tolerance for clock skew between the minting host and the verifying host
+# when checking that a token's `exp` is not further out than the 15-minute
+# policy allows (F-1.1-09). Small enough that it cannot be used to stretch
+# a token's life meaningfully, large enough that ordinary NTP drift does
+# not reject a legitimately minted token.
+_MAX_EXP_SKEW_SECONDS = 60
+
 
 def _get_auth_secret() -> str:
     """Read AUTH_SECRET from the environment at call time.
@@ -88,6 +95,15 @@ def decode_access_token(token: str) -> dict[str, str]:
     presented with `alg: none` or signed with any other algorithm is
     rejected rather than accepted, regardless of its claimed header.
 
+    The verifier enforces the token contract independently of the minter
+    (F-1.1-09): `exp` and `user_id` are required rather than merely
+    validated when present, `exp` must be a real number rather than a
+    string PyJWT would coerce, and an `exp` further out than the 15-minute
+    policy allows is rejected. A verifier that trusts the minting path has
+    no contract of its own, and any second minting path (a test helper, a
+    migration script, an admin tool) would silently inherit an unbounded
+    token.
+
     Args:
         token: The encoded JWT to verify.
 
@@ -97,7 +113,9 @@ def decode_access_token(token: str) -> dict[str, str]:
     Raises:
         TypeError: If token is not a string.
         ValueError: If token is empty, expired, tampered, signed with the
-            wrong secret, or signed with any algorithm other than HS256.
+            wrong secret, signed with any algorithm other than HS256,
+            missing `exp` or `user_id`, or carrying an `exp` that is not a
+            number or that exceeds the 15-minute access-token policy.
         RuntimeError: If AUTH_SECRET is unset.
     """
     if not isinstance(token, str):
@@ -106,11 +124,30 @@ def decode_access_token(token: str) -> dict[str, str]:
         raise ValueError("token must not be empty")
     secret = _get_auth_secret()
     try:
-        payload = jwt.decode(token, secret, algorithms=[_ACCESS_TOKEN_ALGORITHM])
+        payload = jwt.decode(
+            token,
+            secret,
+            algorithms=[_ACCESS_TOKEN_ALGORITHM],
+            options={"require": ["exp", "user_id"], "verify_exp": True},
+        )
     except jwt.ExpiredSignatureError:
         raise ValueError("access token has expired") from None
     except jwt.PyJWTError:
         raise ValueError("access token is invalid") from None
+
+    expires_at = payload.get("exp")
+    # bool is a subclass of int, and PyJWT coerces a numeric string, so
+    # both are excluded explicitly rather than left to duck typing.
+    if isinstance(expires_at, bool) or not isinstance(expires_at, (int, float)):
+        # The TRY004 suppression below is deliberate. A wrongly typed claim
+        # inside an attacker-supplied token is an invalid token, not a
+        # caller type error: this function reserves TypeError for `token`
+        # itself being the wrong type, per the contract documented above.
+        raise ValueError("access token is invalid")  # noqa: TRY004
+    ceiling = datetime.now(UTC).timestamp() + _ACCESS_TOKEN_TTL_SECONDS + _MAX_EXP_SKEW_SECONDS
+    if expires_at > ceiling:
+        raise ValueError("access token is invalid")
+
     if "user_id" not in payload:
         raise ValueError("access token is invalid")
     return {"user_id": payload["user_id"]}

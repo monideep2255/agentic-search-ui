@@ -101,6 +101,53 @@ def test_decode_access_token_invalid_input_expired_raises() -> None:
         decode_access_token(expired_token)
 
 
+def test_decode_access_token_invalid_input_no_exp_claim_raises() -> None:
+    """F-1.1-09 regression: a token minted with no `exp` never expires."""
+    no_exp_token = jwt.encode({"user_id": "user-123"}, _TEST_SECRET, algorithm="HS256")
+    with pytest.raises(ValueError):
+        decode_access_token(no_exp_token)
+
+
+def test_decode_access_token_invalid_input_exp_beyond_policy_raises() -> None:
+    """F-1.1-09 regression: the adversary's year-3000 `exp`."""
+    now = int(time.time())
+    far_future_token = jwt.encode(
+        {"user_id": "user-123", "iat": now, "exp": 32503680000},
+        _TEST_SECRET,
+        algorithm="HS256",
+    )
+    with pytest.raises(ValueError):
+        decode_access_token(far_future_token)
+
+
+def test_decode_access_token_invalid_input_exp_as_string_raises() -> None:
+    """F-1.1-09 regression: `exp` as a JSON string, which PyJWT coerces."""
+    now = int(time.time())
+    string_exp_token = jwt.encode(
+        {"user_id": "user-123", "iat": now, "exp": str(now + 900)},
+        _TEST_SECRET,
+        algorithm="HS256",
+    )
+    with pytest.raises(ValueError):
+        decode_access_token(string_exp_token)
+
+
+def test_decode_access_token_invalid_input_no_user_id_claim_raises() -> None:
+    """F-1.1-09 regression: `user_id` is required by the verifier, not assumed."""
+    now = int(time.time())
+    no_subject_token = jwt.encode(
+        {"iat": now, "exp": now + 900}, _TEST_SECRET, algorithm="HS256"
+    )
+    with pytest.raises(ValueError):
+        decode_access_token(no_subject_token)
+
+
+def test_decode_access_token_valid_input_exp_at_the_policy_ceiling_is_accepted() -> None:
+    """The F-1.1-09 ceiling must not reject a legitimately minted token."""
+    token = mint_access_token("user-123")
+    assert decode_access_token(token) == {"user_id": "user-123"}
+
+
 def test_decode_access_token_invalid_input_wrong_secret_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

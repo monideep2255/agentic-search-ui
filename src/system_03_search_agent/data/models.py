@@ -71,6 +71,16 @@ class User(Base):
         JSONB, nullable=False, server_default=text("'{}'::jsonb")
     )
 
+    __table_args__ = (
+        # F-1.1-08: the plain UNIQUE on `email` above is byte-exact, so
+        # `USER@example.com` and `user@example.com` are two accounts. The
+        # case-insensitive guarantee is this functional unique index on
+        # `lower(email)`, added in alembic revision 0002, which holds even
+        # for a code path that skips the schema-level normalization in
+        # auth/schemas.py.
+        Index("ux_users_email_lower", text("lower(email)"), unique=True),
+    )
+
 
 class AuthSession(Base):
     """The `auth_sessions` table: login state and refresh tokens (Section 15).
@@ -93,9 +103,26 @@ class AuthSession(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # F-1.1-07: the ceiling a whole rotation chain may never outlive,
+    # carried forward unchanged from the login that started the chain,
+    # unlike `expires_at`, which every rotation renews. Nullable because
+    # revision 0002 adds it to a table that already holds rows; a NULL
+    # means a row written before that revision, and the router treats it
+    # as capped at `created_at + the absolute TTL`.
+    absolute_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
     ip_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (
+        # F-1.1-12: every auth call filters this column, and nothing
+        # prevented two rows from sharing a hash. A unique index is both
+        # halves of that finding at once, the uniqueness the code already
+        # assumed and the index the lookups always needed.
+        Index("ux_auth_sessions_refresh_token_hash", "refresh_token_hash", unique=True),
+    )
 
 
 class ChatSession(Base):

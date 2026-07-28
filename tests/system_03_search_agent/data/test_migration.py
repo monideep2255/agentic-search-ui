@@ -227,6 +227,108 @@ def test_cq_candidates_status_index_exists(migrated_head):
         engine.dispose()
 
 
+def test_auth_sessions_refresh_token_hash_is_unique_and_indexed(migrated_head):
+    """F-1.1-12 regression: the column every auth call filters by."""
+    engine = _fresh_engine()
+    try:
+        with engine.connect() as conn:
+            indexdef = conn.execute(
+                text(
+                    "SELECT indexdef FROM pg_indexes "
+                    "WHERE tablename = 'auth_sessions' "
+                    "AND indexname = 'ux_auth_sessions_refresh_token_hash'"
+                )
+            ).scalar_one()
+            assert "UNIQUE INDEX" in indexdef
+            assert "refresh_token_hash" in indexdef
+
+            # And the uniqueness is real, not just declared: a second row
+            # carrying the same hash is rejected by the database.
+            user_id = conn.execute(
+                text(
+                    "INSERT INTO users (email, password_hash) "
+                    "VALUES (:email, 'not-a-real-hash') RETURNING id"
+                ),
+                {"email": f"{uuid.uuid4()}@example.com"},
+            ).scalar_one()
+            insert_session = text(
+                "INSERT INTO auth_sessions (user_id, refresh_token_hash, expires_at) "
+                "VALUES (:user_id, :token_hash, now() + interval '30 days')"
+            )
+            params = {"user_id": user_id, "token_hash": "a" * 64}
+            conn.execute(insert_session, params)
+            with pytest.raises(sa.exc.IntegrityError):
+                conn.execute(insert_session, params)
+            conn.rollback()
+    finally:
+        engine.dispose()
+
+
+def test_users_email_is_unique_case_insensitively(migrated_head):
+    """F-1.1-08 regression: the guarantee holds in the database, not only in Pydantic."""
+    engine = _fresh_engine()
+    try:
+        with engine.connect() as conn:
+            indexdef = conn.execute(
+                text(
+                    "SELECT indexdef FROM pg_indexes "
+                    "WHERE tablename = 'users' AND indexname = 'ux_users_email_lower'"
+                )
+            ).scalar_one()
+            assert "UNIQUE INDEX" in indexdef
+            assert "lower(email" in indexdef
+
+            local_part = uuid.uuid4().hex
+            insert_user = text(
+                "INSERT INTO users (email, password_hash) VALUES (:email, 'not-a-real-hash')"
+            )
+            conn.execute(insert_user, {"email": f"{local_part}@example.com"})
+            with pytest.raises(sa.exc.IntegrityError):
+                conn.execute(insert_user, {"email": f"{local_part.upper()}@EXAMPLE.COM"})
+            conn.rollback()
+    finally:
+        engine.dispose()
+
+
+def test_auth_sessions_has_the_absolute_expiry_column(migrated_head):
+    """F-1.1-07 regression: the ceiling a rotation chain cannot outlive."""
+    engine = _fresh_engine()
+    try:
+        columns = {column["name"]: column for column in inspect(engine).get_columns("auth_sessions")}
+        assert "absolute_expires_at" in columns
+        assert columns["absolute_expires_at"]["nullable"] is True
+    finally:
+        engine.dispose()
+
+
+def test_downgrade_one_step_reverses_the_0002_schema_changes(migrated_head):
+    """The 0002 rollback path, proven rather than asserted."""
+    cfg = migrated_head
+    command.downgrade(cfg, "-1")
+
+    engine = _fresh_engine()
+    try:
+        columns = {column["name"] for column in inspect(engine).get_columns("auth_sessions")}
+        assert "absolute_expires_at" not in columns
+        with engine.connect() as conn:
+            names = {
+                row[0]
+                for row in conn.execute(
+                    text(
+                        "SELECT indexname FROM pg_indexes "
+                        "WHERE tablename IN ('users', 'auth_sessions')"
+                    )
+                )
+            }
+            assert "ux_auth_sessions_refresh_token_hash" not in names
+            assert "ux_users_email_lower" not in names
+            # The 0001 tables themselves survive a one-step downgrade.
+            assert {"users_pkey", "auth_sessions_pkey"}.issubset(names)
+    finally:
+        engine.dispose()
+    # The migrated_head fixture re-runs `upgrade head` in its teardown.
+
+
 def test_downgrade_base_removes_every_table_index_and_extension(migrated_head):
     cfg = migrated_head
     command.downgrade(cfg, "base")
