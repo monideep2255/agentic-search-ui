@@ -4,7 +4,7 @@ The index of every phase. Maintained by the `task-tracker` skill. Per-phase tick
 
 Build phases and their dependencies come from `requirements/Technical_specification.md` Section 25, which is the source of truth. This board never invents a phase.
 
-Last updated: 2026-07-26.
+Last updated: 2026-07-28.
 
 ## Status counts
 
@@ -12,11 +12,11 @@ Listed in flow order. Work moves left to right on the board, from `todo` to `don
 
 | Status | Count | Who may set it |
 |--------|-------|----------------|
-| To do | 26 | Lead |
-| In progress | 0 | The builder that claimed it |
+| To do | 24 | Lead |
+| In progress | 1 | The builder that claimed it |
 | Blocked | 0 | The builder that hit the block, reason required |
 | In review | 0 | The builder that finished |
-| Done | 5 | Judge only, never the builder |
+| Done | 6 | Judge only, never the builder |
 
 `blocked` sits mid-flow rather than on the way to done, because it is where work stalls, not a step toward finishing.
 
@@ -45,7 +45,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | Phase | Branch | Delivers | Depends on | Group | Status | Refinement | Owner | Gates | Flags |
 |-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
 | 1.0 | `phase/1.0-fastapi-skeleton` | FastAPI skeleton, health endpoint, the run() contract stub with the v1 event taxonomy typed, Pydantic boundary validation | | prototype | done | refined | | | |
-| 1.1 | `phase/1.1-auth-service` | Minimal v1 auth, the PostgreSQL user-data schema | 1.0 | prototype | todo | tech_refine | | | ecdsa CVE |
+| 1.1 | `phase/1.1-auth-service` | Minimal v1 auth, the PostgreSQL user-data schema | 1.0 | prototype | in-progress | refined | | | ecdsa CVE |
 | 1.2 | `phase/1.2-react-shell-sse` | React shell, SSE consumption of the event stream, empty chat endpoint wired end to end, the stop button | 1.0 | prototype | todo | product_refine | product owner | playwright | playwright not installed |
 | 2.0 | `phase/2.0-langgraph-agent-loop` | LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one | 1.0 | prototype | todo | tech_refine | | | |
 | 2.1 | `phase/2.1-cypher-tool` | cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement | 2.0 | prototype | todo | tech_refine | | | |
