@@ -224,18 +224,18 @@ One narrow Section 15 gap surfaced that no ticket covered, filed below as F-1.1-
 | F-1.1-04 | Low | T-1.1-03 | filed | `users.profile` has no read or write path on any endpoint |
 | F-1.1-05 | Medium | T-1.1-03 | filed | No rate limit on `/auth/login`, an argon2id CPU cost per unauthenticated request |
 | F-1.1-06 | Low | T-1.1-03 | filed | The router tests commit rows they never clean up, so the dev database grows by 10 users and 7 auth_sessions per full-suite run |
-| F-1.1-07 | High | T-1.1-03 | filed | Refresh rotation has no reuse detection, so a stolen refresh token grants unlimited access, not the one use Section 15 promises |
-| F-1.1-08 | Medium | T-1.1-03 | filed | Email is matched case-sensitively, so `USER@example.com` opens a second account instead of returning 409 |
-| F-1.1-09 | Medium | T-1.1-02 | filed | An access token carrying no `exp` claim is accepted and never expires |
-| F-1.1-10 | Medium | T-1.1-03 | filed | `/auth/signup` is an unauthenticated account-enumeration oracle, by status code and by a 22.8x timing gap |
-| F-1.1-11 | Medium | T-1.1-03 | filed | A NUL byte in `email` or in the `User-Agent` header returns an unhandled HTTP 500 |
-| F-1.1-12 | Medium | T-1.1-01 | filed | `auth_sessions.refresh_token_hash` has neither a unique constraint nor an index, giving a 500 path and a sequential scan on every auth call |
-| F-1.1-13 | Low | T-1.1-03 | filed | `email` gets no format validation at all, so `@`, `not-an-email`, and a CRLF-bearing address all create accounts |
-| F-1.1-14 | Low | T-1.1-03 | filed | Token responses carry no `Cache-Control: no-store`, against RFC 6749 Section 5.1 |
-| F-1.1-15 | Low | T-1.1-03 | filed | No password policy: a single character or a whitespace-only password is accepted |
-| F-1.1-16 | Low | T-1.1-03 | filed | `auth_sessions.user_agent` is stored unbounded, 60,000 characters written from one login |
-| F-1.1-17 | Low | T-1.1-03 | filed | `/query` is unauthenticated and trusts a client-supplied `user_id`, so the auth service phase 1.1 built protects nothing yet |
-| F-1.1-18 | Low | T-1.1-02 | filed | The `user_id` claim accepts five non-canonical UUID spellings, so one account has many valid subject strings |
+| F-1.1-07 | Medium (was High) | T-1.1-03 | confirmed | Refresh rotation has no reuse detection, so a stolen refresh token grants unlimited access, not the one use Section 15 promises |
+| F-1.1-08 | Medium | T-1.1-03 | confirmed | Email is matched case-sensitively, so `USER@example.com` opens a second account instead of returning 409 |
+| F-1.1-09 | Low (was Medium) | T-1.1-02 | confirmed | An access token carrying no `exp` claim is accepted and never expires |
+| F-1.1-10 | Medium | T-1.1-03 | confirmed | `/auth/signup` is an unauthenticated account-enumeration oracle, by status code and by a 22.8x timing gap |
+| F-1.1-11 | Medium | T-1.1-03 | confirmed | A NUL byte in `email` or in the `User-Agent` header returns an unhandled HTTP 500 |
+| F-1.1-12 | Medium | T-1.1-01 | confirmed | `auth_sessions.refresh_token_hash` has neither a unique constraint nor an index, giving a 500 path and a sequential scan on every auth call |
+| F-1.1-13 | Low | T-1.1-03 | confirmed | `email` gets no format validation at all, so `@`, `not-an-email`, and a CRLF-bearing address all create accounts |
+| F-1.1-14 | Low | T-1.1-03 | confirmed | Token responses carry no `Cache-Control: no-store`, against RFC 6749 Section 5.1 |
+| F-1.1-15 | Low | T-1.1-03 | rejected | No password policy: out of scope, Section 15 scopes this to basic auth and the PRD puts enterprise security on the production track |
+| F-1.1-16 | Low | T-1.1-03 | confirmed | `auth_sessions.user_agent` is stored unbounded, 60,000 characters written from one login |
+| F-1.1-17 | Low | T-1.1-03 | rejected | `/query` unauthenticated: correct for the shipped build order, not a phase 1.1 defect; becomes a phase 2.0 ticket |
+| F-1.1-18 | Low | T-1.1-02 | confirmed | The `user_id` claim accepts five non-canonical UUID spellings, so one account has many valid subject strings |
 
 ### F-1.1-01: the migration test destroys all data in the shared user database
 
@@ -321,7 +321,30 @@ Action for the lead: add a teardown fixture to `test_router.py` in this phase if
 
 ### F-1.1-07: refresh rotation has no reuse detection, so a stolen token is not bounded to one use
 
-Severity: high. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+Severity: medium, revised down from the adversary's high and up from the sign-off verifier's low. Ticket: T-1.1-03. Status: confirmed 2026-07-28 by the judge. Blocks phase close: yes.
+
+Judge ruling, and the resolution of the two-verifier severity disagreement. Reproduced first, in-process against the live `search_agent_users` database with a judge-generated `AUTH_SECRET`:
+
+```
+signup                                        -> 201
+login (device 1) -> R1 ; login (device 2) -> R2
+POST /auth/refresh {R1}   attacker rotates    -> 200
+POST /auth/refresh {R1}   victim replays      -> 401 {"detail":"invalid or expired refresh token"}   <-- reuse observed
+POST /auth/refresh x7 from the attacker chain -> [200, 200, 200, 200, 200, 200, 200]
+POST /auth/refresh {R2}   victim's device 2   -> 200
+```
+
+The adversary's reproduction is exact. Nothing in the system changes state when the reuse is observed.
+
+The exact spec line, Section 15, "Token model", the refresh-token bullet: "Rotated on every use (the old row is invalidated, a new one issued), which bounds the damage of a stolen refresh token to one use."
+
+The reading I take, and why. The sentence has a mechanism clause and a purpose clause. The mechanism is implemented exactly, which is why the sign-off verifier read this as hardening. The disagreement turns on whether the purpose clause states a security property or merely restates the mechanism. It cannot merely restate it: "rotated on every use" already establishes that any one token string is accepted once, so on the restating reading the purpose clause is empty. A clause that adds nothing is not how the rest of Section 15 is written. So "bounds the damage" is a claim about the access a stolen token confers, and that access is unbounded here: the thief's chain never ends, the victim's other sessions are untouched, and every rotation writes a fresh 30-day `expires_at`, so there is no absolute lifetime to fall back on. The adversary's reading is the correct one, and this is the one place in the phase where shipped behavior contradicts a security property the locked specification states in words.
+
+Not high, though, and the sign-off verifier was right about the reason if not the conclusion. Reaching this requires a refresh token already stolen, and the phase ships no vector for that theft: tokens are opaque, stored only as SHA-256, never logged, and there is no UI, no cookie, and no auth-consuming surface in this branch yet. Section 15 also anticipates detection without specifying any action on it (`ip_hash` exists "to flag anomalous refresh-token reuse"), so no revocation cascade was specified. A contradicted written property with no shipped exploit path is medium: above the verifier's low, because a hardening gap is a thing the spec never promised and this is a thing it did promise, and below the adversary's high, because high should mean reachable.
+
+In scope, checked rather than assumed. `.claude/rules/v1-scope-boundary.md` does not list refresh-reuse detection on either the PRD out-of-scope list or the Section 25 fast-follow table, and the PRD's production-track item covers "enterprise security (IAM, session expiry, access review)", which is not this. Delivering a property the tech spec already states is in scope by construction.
+
+Blocks phase close: yes. It is the only spec contradiction in the set, the fix is confined to the `auth_session is None` branch that already exists, and it is the last cheap moment: once phase 4.6 populates `interactions`, a revocation cascade acquires consumers.
 
 Section 15 states the refresh token is "rotated on every use (the old row is invalidated, a new one issued), which bounds the damage of a stolen refresh token to one use". Rotation is implemented correctly, but the security property the spec claims from it is not delivered, because nothing acts on the replay it detects. `_revoke_active_auth_session` (router.py:138-164) returns `None` when a presented token is already revoked, and `/auth/refresh` (router.py:219-221) turns that into a bare 401. A revoked-token presentation is the canonical signal that a refresh token was stolen, since only one of the two holders can have rotated it. The code discards that signal: it never revokes the rest of the user's `auth_sessions` rows, never records the event, and never surfaces it.
 
@@ -353,9 +376,16 @@ Observed: the attacker rotated seven more times unimpeded after the reuse was vi
 
 This is the standard OAuth refresh-token-rotation reuse-detection rule (RFC 6819 Section 5.2.2.3), and it is a handful of lines: in the `auth_session is None` branch of `/auth/refresh`, look up the presented hash without the `revoked_at IS NULL` predicate, and if a revoked row matches, revoke that user's whole family before returning the 401. Filed rather than fixed, per the finder-is-never-the-closer rule. Flagged as the most serious thing this adversary found, because it is the one place where the shipped behavior contradicts a security property the locked specification states in words.
 
+History:
+- 2026-07-28 judge: confirmed, severity revised to medium. Reproduction re-run independently and matched the adversary's exactly (seven unimpeded rotations after the reuse event, victim's second device still 200). Ruled on the spec's purpose clause rather than its mechanism clause; the mechanism ships correctly and the stated property does not. Blocks phase close
+
 ### F-1.1-08: email is matched case-sensitively, so case variants open separate accounts
 
-Severity: medium. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+Severity: medium, unchanged. Ticket: T-1.1-03. Status: confirmed 2026-07-28 by the judge. Blocks phase close: yes.
+
+Judge ruling. Reproduced: `lower -> 201`, `UPPER -> 201`, `domain-case -> 201`, `leading-space -> 201`, `exact-dup -> 409`. Four accounts, one mailbox. Confirmed at the adversary's severity without revision, and it is the one finding here that needs no attacker at all: a user who signs up as `User@x.com` and later types `user@x.com` gets a bare 401 that is indistinguishable from a wrong password. That is a correctness defect in the primary login path, not only a security one.
+
+Blocks phase close: yes, and the reason is timing rather than severity. Normalization is a data-model decision that this phase owns and that gets baked in the moment real rows exist. Fixing it in a later phase means a backfill plus a duplicate-resolution policy for whatever collided in between; fixing it now is a casefold at the boundary plus a unique index on the normalized form in a migration that is already in hand. The homoglyph and zero-width variants the finding lists are correctly grouped under one root cause and do not need separate handling; casefold plus strip plus NFKC closes them together.
 
 `signup` compares with `User.email == body.email` (router.py:172) and the uniqueness guarantee is the plain `UNIQUE` constraint on `users.email`, which in PostgreSQL is byte-exact on `TEXT`. Email local parts are case-sensitive in the RFC only in theory; every real mail provider treats them case-insensitively, and every user believes the same. The result is that one mailbox can hold several accounts, and `login` will only ever find the one whose bytes match exactly.
 
@@ -377,9 +407,22 @@ Three accounts, one mailbox, three distinct user ids. Adjacent variants that als
 
 The whitespace and homoglyph cases matter most: a support agent, an allowlist, or a log reader cannot distinguish them from the real address by eye. Expected: normalize before both the existence check and the insert (at minimum casefold plus strip, ideally NFKC), and enforce it in the database with a unique index on the normalized form rather than only in application code, so a second code path cannot reintroduce the gap. Note that the domain-case and whitespace variants are unambiguous defects, while the plus-alias case (`adv2-...+alias@example.com`, also 201) is arguably correct behavior and is listed only for completeness.
 
+History:
+- 2026-07-28 judge: confirmed at medium, no severity revision. Independently reproduced all four variants. Blocks phase close, because normalization is a schema-level decision this phase owns and deferring it converts a boundary fix into a backfill plus a collision policy
+
 ### F-1.1-09: an access token with no `exp` claim is accepted and never expires
 
-Severity: medium. Ticket: T-1.1-02. Status: filed. Raised by: adversary.
+Severity: low, revised down from the adversary's medium. Ticket: T-1.1-02. Status: confirmed 2026-07-28 by the judge. Blocks phase close: no.
+
+Judge ruling on the question posed: yes, the verifying path must independently enforce the contract the minting path promises, and no, that does not make this blocking. Both halves matter, so both are stated.
+
+Reproduced, all three, signed with the service's real secret so this exercises claim validation and not the signature: `no exp claim -> 200`, `exp year 3000 -> 200`, `exp as a JSON string -> 200`. The defect is real and the adversary's diagnosis of the cause is correct: `jwt.decode` at tokens.py:109 passes no `options={"require": [...]}`, and PyJWT only validates an `exp` that is present.
+
+Why the defect stands. "The minting path always sets it" is not an argument a verifier gets to rely on. A verifier that trusts the minter has no independent contract, so any future second minting path, a test helper, a migration script, an admin tool, silently inherits an unbounded token. The fix is one argument and it belongs in the verifier.
+
+Why the severity drops to low rather than staying medium. The adversary scoped this honestly and then rated it one notch above its own scoping. Every one of these forgeries requires `AUTH_SECRET`. An attacker holding that secret already mints a valid 15-minute token at will and re-mints it forever, so the missing `exp` requirement confers no capability they do not already have; it saves them a loop. A defense-in-depth gap that adds no incremental attacker capability in any reachable state is low. Contrast F-1.1-07, which is medium precisely because it needs no secret.
+
+Non-blocking, and it should be bundled with F-1.1-18 into one `tokens.py` / `dependencies.py` claim-discipline ticket in build phase 1.2, since both are the same class of defect (the verifying path accepting more than the contract allows) in the same two files.
 
 `decode_access_token` (tokens.py:109) calls `jwt.decode(token, secret, algorithms=["HS256"])` with no `options={"require": [...]}`. PyJWT's `verify_exp` only checks an `exp` that is present; a token with the claim absent passes verification unconditionally. The module docstring and Section 15 both describe the access token as short-lived and 15 minutes, and `mint_access_token` always sets `exp`, so the invariant holds for tokens this service issues, but it is enforced by the minting path alone and not by the verifying path. The judge's probe covered an expired token and `alg: none`; neither reaches this case.
 
@@ -398,9 +441,18 @@ Expected: 401 on the first, since the service's own contract says every access t
 
 Honest scoping of the severity. Forging any of these requires `AUTH_SECRET`, so this is not exploitable on its own; it is a defense-in-depth failure that removes the time bound exactly when the secret has leaked, which is the one moment the time bound is the only thing left. The fix is one argument: `options={"require": ["exp", "user_id"], "verify_exp": True}`, plus a check that `exp - iat` does not exceed the 15-minute policy. Adjacent claim checks that did behave correctly are listed in the adversary's not-broken set.
 
+History:
+- 2026-07-28 judge: confirmed as a real defect, severity revised medium to low. All three variants independently reproduced. Ruled that the verifying path does owe an independent contract, but that a gap conferring no incremental capability on an attacker who already holds `AUTH_SECRET` is low. Non-blocking, bundle with F-1.1-18 into a phase 1.2 claim-discipline ticket
+
 ### F-1.1-10: `/auth/signup` is an unauthenticated account-enumeration oracle
 
-Severity: medium. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+Severity: medium, unchanged. Ticket: T-1.1-03. Status: confirmed 2026-07-28 by the judge. Blocks phase close: no, deferred to build phase 1.2.
+
+Judge ruling. Both channels reproduced independently, 25 interleaved samples per arm in-process: `existing -> 409 {"detail":"email already registered"}`, `new -> 201`, `median existing 2.184 ms`, `median new 50.670 ms`, `ratio 23.2x`. That matches the adversary's 22.8x closely enough to confirm the measurement rather than merely the claim, and the gap is far outside host noise.
+
+Confirmed at medium, no revision. The inconsistency is the substance of it: T-1.1-03 acceptance criterion 3 required and got a byte-identical, timing-flat enumeration defense on `/auth/login`, and the endpoint standing next to it answers the same question in one unauthenticated request. Paying for a defense on one door and leaving the other open is worse than never having claimed the property.
+
+Not blocking, and the reason is that the honest fix is bigger than this phase. A uniform status code alone still leaks through the 23x timing channel unless the argon2 work is made unconditional on the 409 branch too, and genuinely closing the oracle means completing account creation out of band, which is an email-verification flow, a product surface no phase before 4.x owns. Deferring to build phase 1.2 with the F-1.1-08 and F-1.1-13 email work is the right grouping; all three touch the same boundary. If the lead prefers, the alternative disposition is an explicit recorded acceptance of the disclosure as a v1 tradeoff, which the finding correctly offers.
 
 `login` was hardened against enumeration and the defense holds under measurement (see the not-broken set). `signup` was not, and it answers the same question more directly and more cheaply. `POST /auth/signup` returns `409 {"detail":"email already registered"}` for a registered address and `201` for an unregistered one, so any unauthenticated caller can test an arbitrary address for membership with a single request. The dummy-hash work done in `login` (router.py:198) buys nothing while this endpoint stands next to it.
 
@@ -420,11 +472,20 @@ There is a second, independent channel on the same endpoint. The 409 branch retu
 
 That gap is an order of magnitude wider than any measurement noise on this host and would survive real network jitter, so even a variant of this endpoint that returned a uniform status code would still leak through timing unless the argon2 work is made unconditional the way `login` already makes it.
 
+History:
+- 2026-07-28 judge: confirmed at medium, no severity revision. Both channels independently reproduced, judge's own timing run gave 23.2x against the adversary's 22.8x. Non-blocking, deferred to build phase 1.2 with the other email-boundary work, since a complete fix needs an out-of-band account-creation flow no phase before 4.x owns
+
 Blast radius, stated plainly rather than inflated: this is an information disclosure, not an account compromise, and it costs the attacker one throwaway account per negative probe. It matters because the PRD's user base is researchers whose institutional addresses are guessable, and because the phase already paid the cost of a timing defense on `login` that this endpoint hands back for free. Expected: return an identical response for both branches and complete account creation out of band, or accept the disclosure explicitly as a v1 tradeoff and record it, rather than leaving `login` hardened and `signup` open with no note anywhere that the pair is inconsistent.
 
 ### F-1.1-11: a NUL byte in `email` or in `User-Agent` returns an unhandled HTTP 500
 
-Severity: medium. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+Severity: medium, unchanged. Ticket: T-1.1-03. Status: confirmed 2026-07-28 by the judge. Blocks phase close: no, deferred to build phase 1.2.
+
+Judge ruling. Both variants reproduced: `NUL in email -> 500`, `NUL in User-Agent on login -> 500`, and the adversary's non-poisoning claim independently re-checked, `normal login immediately after -> 200`. Confirmed at medium.
+
+It is a genuine `production-standards` gate violation, not a nit: that rule requires every input to be validated and type-coerced at the FastAPI boundary, and a 500 is proof the boundary let something through to the driver. The `User-Agent` variant is the sharper half, since it turns a fully valid credentialed login into a 500 purely by header choice, and it composes badly with F-1.1-05: each one costs a full argon2id verification before failing.
+
+Not blocking, on the adversary's own correctly-stated scoping. There is no disclosure (the 500 body is bare, the traceback carries no connection string, no database name, and no secret), no pool poisoning, and no state corruption. An availability defect with a bounded blast radius and a one-line fix at the boundary is the right thing to bundle into the phase 1.2 input-validation ticket alongside F-1.1-13, which shares both the field and the fix site.
 
 `email` is typed `str` with only a length bound (schemas.py:28), so a `U+0000` passes Pydantic and reaches psycopg2, which rejects it at the driver layer with `ValueError: A string literal cannot contain NUL (0x00) characters.` Nothing catches it, so FastAPI returns a bare 500. The same happens through `auth_sessions.user_agent`, which is written straight from the request header (router.py:130) with no sanitization, meaning an unauthenticated caller can trigger a 500 on a fully valid login purely by choosing a header value.
 
@@ -445,9 +506,23 @@ What was checked and is not a problem, recorded so this finding is not read as w
 
 So this is an availability and hygiene defect, not a disclosure one. It matters mostly because it is a 500 an unauthenticated caller controls, and because the login variant costs a full argon2id verification before it fails, which composes badly with the missing rate limit already filed as F-1.1-05.
 
+History:
+- 2026-07-28 judge: confirmed at medium, no severity revision. Both 500 paths independently reproduced, and the finding's own not-a-problem claims re-checked rather than accepted (recovery login returned 200). Non-blocking, deferred to a phase 1.2 input-validation ticket with F-1.1-13
+
 ### F-1.1-12: `auth_sessions.refresh_token_hash` has no unique constraint and no index
 
-Severity: medium. Ticket: T-1.1-01. Status: filed. Raised by: adversary.
+Severity: medium, unchanged. Ticket: T-1.1-01. Status: confirmed 2026-07-28 by the judge. Blocks phase close: no, but it is the top of the fix-now-anyway list.
+
+Judge ruling. Both halves reproduced. The schema half read from the live database: `SELECT indexname, indexdef FROM pg_indexes WHERE tablename='auth_sessions'` returns exactly one row, `auth_sessions_pkey ... USING btree (id)`, so `refresh_token_hash` carries neither an index nor a unique constraint. The 500 half reproduced by the finding's own method, inserting one already-revoked duplicate row and then refreshing with the live token: `POST /auth/refresh -> 500`.
+
+Confirmed at medium, but the two consequences deserve different weights and the finding slightly conflates them.
+
+- The latent 500 is low on its own. It is not attacker-reachable through HTTP, since it needs a direct database write or a SHA-256 collision, and the finding says so honestly. The `.scalar_one()` at router.py:162-164 should still become `.scalar_one_or_none()` with the `None` case handled, because the code currently assumes an invariant nothing enforces.
+- The missing index is what carries the medium. Every one of `/auth/login`, `/auth/refresh`, and `/auth/logout` filters on this column, and the table grows by one row per login and one per rotation with nothing pruning it.
+
+The finding is right that Section 15's SQL declares neither, so the migration is faithful and this is a schema-design gap rather than a build error. Adding an index is not an edit to the locked specification, it is an implementation detail the spec does not speak to, so `v1-scope-boundary` is not engaged.
+
+Not blocking, because neither consequence is reachable today and a later migration costs the same as this one. Recommended anyway in this phase: an Alembic revision is already in hand, the marginal cost is two lines, and this is the last phase that owns this schema before build phase 4.6 starts putting real volume through it.
 
 `\d auth_sessions` on the live database shows exactly one index, `auth_sessions_pkey` on `id`. The column every auth operation filters by, `refresh_token_hash`, has neither an index nor a unique constraint. Section 15's SQL for this table declares neither, so the migration faithfully reproduces the specification; the gap is in the schema as designed, which is why this is filed against T-1.1-01 rather than treated as a migration error.
 
@@ -467,9 +542,16 @@ A natural collision on a 256-bit SHA-256 will not happen, so this is not attacke
 
 A sequential scan on every auth call. `/auth/login`, `/auth/refresh`, and `/auth/logout` all filter `auth_sessions` by `refresh_token_hash`. With no index, each is a full table scan over a table that grows by one row per login and one per rotation and is never pruned (nothing deletes expired or revoked rows). This is invisible at the 131 rows currently present and will not stay invisible.
 
+History:
+- 2026-07-28 judge: confirmed at medium, no severity revision. Index absence read from `pg_indexes` on the live database (only `auth_sessions_pkey`), and the duplicate-hash 500 independently reproduced. Non-blocking, since neither consequence is reachable through the HTTP surface today, but recommended for this phase because the migration is already in hand and this is the last phase that owns the schema
+
 ### F-1.1-13: `email` gets no format validation at all
 
-Severity: low. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+Severity: low, unchanged. Ticket: T-1.1-03. Status: confirmed 2026-07-28 by the judge. Blocks phase close: no, fix alongside F-1.1-08.
+
+Judge ruling. All five reproduced, each creating a real `users` row with a 201: `not-an-email`, `@`, `<script>alert(1)</script>@x.com`, `' OR 1=1 --@x.com`, and the CRLF-bearing address. Confirmed at low, which is the right rating and the finding argues for it honestly rather than inflating it: nothing here is exploitable inside phase 1.1, the SQL payload is inert against parameterized queries, and the script payload is escaped by both the Pydantic response model and JSX.
+
+The value is forward-looking and the finding states it correctly. Non-blocking on its own, but it should be fixed in the same edit as F-1.1-08, which does block: normalization and format validation are the same field, the same boundary, and the same one-line field-type change. Closing 08 without closing 13 would mean touching `SignupRequest.email` twice for no reason.
 
 `SignupRequest.email` is `str` with `min_length=1, max_length=320` and no format check (schemas.py:28). Pydantic ships `EmailStr` and it is not used. Every one of the following created a real `users` row with a 201:
 
@@ -485,9 +567,18 @@ Only the length bounds fire: `""` gives 422 `string_too_short` and a 400-charact
 
 None of these is exploitable inside phase 1.1, and that should be stated rather than implied. The SQL payload is fully parameterized and inert (see the not-broken set). The script payload comes back out of `/auth/signup` and `/auth/me` as JSON through a Pydantic response model, and React escapes it by default, so it is not XSS today. The value of filing it is what happens next: the CRLF address is a header-injection payload the moment anything sends mail to it, the `<script>` address becomes live the moment any surface renders an email outside JSX or into a non-HTML context, and `production-standards` asks for validation at the boundary rather than for downstream layers to keep saving it. One field type change closes all of them.
 
+History:
+- 2026-07-28 judge: confirmed at low, no severity revision. All five payloads independently reproduced as 201. Non-blocking on its own, but fix it in the same edit as F-1.1-08, which does block and touches the same field at the same boundary
+
 ### F-1.1-14: token responses carry no `Cache-Control: no-store`
 
-Severity: low. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+Severity: low, unchanged. Ticket: T-1.1-03. Status: confirmed 2026-07-28 by the judge. Blocks phase close: no.
+
+Judge ruling. Reproduced: the full header set on a successful login is `{'content-length': '296', 'content-type': 'application/json'}`. No `Cache-Control`, no `Pragma`, confirming the finding exactly.
+
+One correction to the citation that does not change the outcome. RFC 6749 Section 5.1 binds an OAuth 2.0 token endpoint, and this is not an OAuth server, so the RFC does not literally apply. The reason behind it does: a response body carrying a bearer token and a 30-day refresh token should never be cacheable by an intermediary, a browser disk cache, or a debugging proxy. Confirmed on the principle rather than on the citation.
+
+Non-blocking, and it is the cheapest item in the whole set, two response headers on two endpoints. The finding's own note that CORS is absent rather than permissive is independently correct and worth keeping: secure by default is the right starting posture. `Strict-Transport-Security` is correctly excluded as a deployment-layer concern.
 
 `POST /auth/login` and `POST /auth/refresh` return a bearer access token and a refresh token in the response body. The full set of response headers on a successful login, captured verbatim:
 
@@ -502,9 +593,20 @@ No `Cache-Control`, no `Pragma`. RFC 6749 Section 5.1 requires `Cache-Control: n
 
 Checked and correct, recorded so the header posture is not read as uniformly bad: no CORS middleware is configured, so a cross-origin preflight from `https://evil.example` returns 405 with no `Access-Control-Allow-Origin`. Secure by default rather than permissive by default is the right starting point.
 
+History:
+- 2026-07-28 judge: confirmed at low, no severity revision. Header set independently captured and matched. The RFC 6749 citation is loose (this is not an OAuth server) but the underlying reason holds, so confirmed on the principle. Non-blocking, and the cheapest fix in the set
+
 ### F-1.1-15: no password policy
 
-Severity: low. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+Severity: low. Ticket: T-1.1-03. Status: rejected 2026-07-28 by the judge, out of scope for v1. Blocks phase close: no.
+
+Judge ruling. The behavior reproduces exactly as described (`1-char pw -> 201`, `whitespace pw -> 201`, `empty pw -> 422`), so this is not a rejection for failing to reproduce. It is a rejection under criterion 3: the finding restates a deliberate, recorded v1 scope decision rather than identifying a defect against it.
+
+The decision it restates, cited. Section 15 states the auth service "is basic user authentication, per the PRD's 'basic user authentication returns for v1' decision, not an enterprise IAM layer," and names no password policy anywhere in the token model. The PRD's out-of-scope list puts "enterprise security (IAM, session expiry, access review)" on the production track. A password-strength policy is a product decision in that same family, not an implementation gap in what was specified. The finding concedes the point itself: "Section 15 scopes this as basic auth and names no policy, so this is a gap rather than a violation."
+
+The composition argument does not rescue it. The finding's strongest line is that a one-character password plus an unthrottled login is a guessable account. That is true, and the throttle half is F-1.1-05, which Section 25 assigns to build phase 6.0. A risk whose other half is already owned by a named later phase does not create a new obligation on this one.
+
+Rejected rather than deferred, deliberately: deferring implies an accepted obligation, and there is none until the production track opens. The 1024-character and NUL-byte argon2 checks in the same probe were useful and are correctly recorded in the not-broken set; they are the part of this probe that carried real information.
 
 `SignupRequest.password` bounds length to 1..1024 and checks nothing else (schemas.py:29). A one-character password and a whitespace-only password both create accounts:
 
@@ -518,17 +620,37 @@ Section 15 scopes this as basic auth and names no policy, so this is a gap rathe
 
 Checked and correct in the same probe, and worth recording because it was a stated question: argon2id does not truncate the way bcrypt does at 72 bytes. A user registered with a 1024-character password authenticates with the full 1024 characters (200) and fails with the first 1023 (401), and a password containing a NUL byte does not authenticate against its pre-NUL prefix (401). The 1025-character case is a clean 422.
 
+History:
+- 2026-07-28 judge: rejected, out of scope. The behavior reproduces, but it restates the recorded v1 decision that Section 15's auth is "basic user authentication ... not an enterprise IAM layer" with no policy specified, and the PRD's production-track scoping of enterprise security. Its composing risk, the missing login throttle, is F-1.1-05 and already owned by build phase 6.0
+
 ### F-1.1-16: `auth_sessions.user_agent` is stored unbounded
 
-Severity: low. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+Severity: low, unchanged. Ticket: T-1.1-03. Status: confirmed 2026-07-28 by the judge. Blocks phase close: no.
+
+Judge ruling. Reproduced: a login carrying a 60,000-character `User-Agent` returned 200, and `SELECT max(length(user_agent)) FROM auth_sessions` on the live database returns `100000`, which also independently confirms the finding's 100,000-character case persisted in full. Confirmed at low.
+
+The finding's reasoning about `production-standards` is precisely right and worth keeping as written: the letter of the multi-agent pipeline gate reaches schema string fields and a request header is not one, but the principle behind `maxLength` is capping the blast radius of one hostile input, and this is the only place in the auth service where an attacker-chosen string of arbitrary length is persisted. Filing it on the principle while stating that the letter does not reach it is the correct way to raise this.
+
+Non-blocking: it needs valid credentials, the write volume is bounded by the caller's own request rate until F-1.1-05's throttle lands at build phase 6.0, and the fix is a truncation at router.py:130. Group it with the other one-line write-path fixes.
 
 `_issue_session` writes `request.headers.get("user-agent")` straight into a `TEXT` column with no cap (router.py:130). One login with a 60,000-character `User-Agent` stored all 60,000 characters, confirmed with `SELECT max(length(user_agent))`. A 100,000-character header also returned 200. Every login and every rotation writes another row, and nothing prunes them, so an unauthenticated caller with valid credentials can write arbitrary volume into the user-data database at will.
 
 `production-standards` requires `maxLength` on every string field in the multi-agent pipeline gate for exactly this reason, to cap the blast radius of one hostile input. The header is not a schema field, so the letter of that gate does not reach it, but the principle does: this is the one place in the auth service where an attacker-chosen string of arbitrary length is persisted. Expected: truncate to a sane bound, on the order of 512 characters, at write time.
 
+History:
+- 2026-07-28 judge: confirmed at low, no severity revision. A 60,000-character `User-Agent` login independently returned 200, and the live `max(length(user_agent))` of 100000 confirms the finding's larger case persisted in full. Non-blocking, one-line truncation at router.py:130
+
 ### F-1.1-17: `/query` is unauthenticated and trusts a client-supplied `user_id`
 
-Severity: low. Ticket: T-1.1-03. Status: filed. Raised by: adversary.
+Severity: low. Ticket: T-1.1-03. Status: rejected 2026-07-28 by the judge as a phase 1.1 defect, converted to a build phase 2.0 ticket. Blocks phase close: no.
+
+Judge ruling. The behavior reproduces exactly: `POST /query` with no `Authorization` header and a client-chosen `user_id` returns `200` with a full event stream. So this is not a rejection for failing to reproduce, and the forward risk it names is real.
+
+It is rejected as a finding under criterion 3, because it does not describe a defect in anything phase 1.1 was asked to build. `/query` is phase 1.0's route, shipped and merged as PR #5 before any auth existed, and Section 25 places the delivery surfaces that consume auth at build phases 4.0 to 4.7. T-1.1-03's acceptance criterion 10 required the opposite of what this finding asks for: that mounting the auth router leave `/query` behaving exactly as it did at the close of phase 1.0. Changing `/query` in this phase would have failed that criterion. The finding concedes this in its own text: "This is correct for phase 1.0."
+
+A finding against a phase for correctly not doing what a later phase owns is out of scope, and confirming it would put the branch in conflict with a passing acceptance criterion.
+
+What survives, and it is the valuable part. The silent-inheritance risk the finding names is genuine: once build phase 2.0 lands the agent loop and starts writing `interactions` rows, `user_id` becomes attacker-chosen unless someone deliberately derives it from `get_current_user`. That belongs on the build phase 2.0 ticket list as an explicit requirement, either server-derive `user_id` and drop it from the request contract, or state in the contract that `/query` is anonymous by design and the field is advisory. Recommended to the lead as a phase 2.0 ticket rather than carried as an open phase 1.1 finding.
 
 Phase 1.1 built an auth service. Nothing consumes it. `POST /query` (app.py:35-37) declares no `Depends(get_current_user)`, and `Query.user_id` is an ordinary client-supplied string field the caller sets to whatever it likes:
 
@@ -541,9 +663,18 @@ curl -X POST http://127.0.0.1:8731/query -H 'Content-Type: application/json' \
 
 This is correct for phase 1.0, which built the route before any auth existed, and Section 25 places the surfaces that consume auth later. It is filed anyway because the risk is a silent inheritance: once the agent loop lands at build phase 2.0 and starts writing `interactions` rows, `user_id` will be attacker-chosen unless someone remembers to derive it from the access token instead. Expected direction, for phase 1.2 or 2.0 rather than for this phase: make `user_id` a server-derived value from `get_current_user` and remove it from the request contract, or state explicitly that `/query` is anonymous by design and that the field is advisory.
 
+History:
+- 2026-07-28 judge: rejected as a phase 1.1 defect, converted to a recommended build phase 2.0 ticket. The behavior reproduces (200 with no `Authorization` and a client-chosen `user_id`), but `/query` is phase 1.0's merged route and T-1.1-03 acceptance criterion 10 required it to be left unchanged, so confirming this would contradict a passing criterion. The silent-inheritance risk it names is real and carries forward to phase 2.0
+
 ### F-1.1-18: the `user_id` claim accepts five non-canonical UUID spellings
 
-Severity: low, informational. Ticket: T-1.1-02. Status: filed. Raised by: adversary.
+Severity: low, informational, unchanged. Ticket: T-1.1-02. Status: confirmed 2026-07-28 by the judge. Blocks phase close: no.
+
+Judge ruling. All five spellings reproduced, each signed with the real secret and each returning `200` against `/auth/me`: canonical, no-dashes, braced, `urn:uuid:`, and uppercase. Confirmed at low, informational, exactly as filed.
+
+Confirmed rather than dismissed as noise, on the correlation argument, which is the right argument and is specific to this system rather than generic. Section 20 makes `trace_id` the single join key across LangSmith, the `interactions` table, and the audit log, and `interactions.user_id` will be written next to it from build phase 2.0 onward. A subject string with five valid spellings is a join hazard for anything that keys on the raw claim rather than on the resolved `User.id`. The finding is also correctly honest that this is not a vulnerability: minting any spelling needs `AUTH_SECRET`, and all five resolve to the same real user, so no cross-user access exists.
+
+Non-blocking. Bundle with F-1.1-09 into one phase 1.2 claim-discipline ticket: both are the verifying path accepting more than the contract allows, and both live in `tokens.py` and `dependencies.py`. The adjacent rejected cases the finding lists (non-UUID, `null`, list, dict, integer, whitespace-padded, SQL-suffixed, and no-such-user subjects, all 401) are correctly recorded in the not-broken set.
 
 `get_current_user` resolves the subject with `uuid.UUID(claims["user_id"])` (dependencies.py:57). Python's `uuid.UUID` is a lenient parser, so one account has many distinct valid subject strings. All five below, signed with the real secret, returned 200 and the same profile:
 
@@ -558,6 +689,34 @@ Severity: low, informational. Ticket: T-1.1-02. Status: filed. Raised by: advers
 Not a vulnerability: minting any of them needs `AUTH_SECRET`, and every one resolves to the same real user, so no cross-user access is possible. It is filed because a subject identifier with five spellings is a correlation hazard for anything downstream that keys on the raw claim string rather than on the resolved `User.id`, which is exactly what the audit log, the `interactions` table, and the `trace_id` join in Section 20 will do. Expected: reject a subject that is not the canonical lowercase hyphenated form, so the string in the token and the string in the log are always the same string.
 
 Adjacent cases in the same probe that correctly returned 401 are in the not-broken set: a subject that is not a UUID, one that is `null`, a list, a dict, an integer, a UUID with surrounding whitespace, a UUID carrying an appended SQL payload, a valid UUID for no existing user, and a token with no `user_id` claim at all.
+
+History:
+- 2026-07-28 judge: confirmed at low, informational, no severity revision. All five spellings independently reproduced as 200. Non-blocking, bundle with F-1.1-09 into a phase 1.2 claim-discipline ticket
+
+## Adversary triage, 2026-07-28, judge
+
+Twelve findings ruled on, F-1.1-07 through F-1.1-18. Every one was reproduced against the live system before it was ruled on, in-process through `TestClient` against the real `search_agent_users` database with a judge-generated `AUTH_SECRET`, plus direct `pg_indexes` and `pg_constraint` reads for the schema claims. All twelve reproduced as described, so no finding was rejected for failing to reproduce; the adversary's reproductions were accurate, including both of its timing measurements (the judge's own signup run gave 23.2x against the filed 22.8x).
+
+Ten confirmed, two rejected on scope. Two severities revised, in opposite directions, which is the honest outcome of reading each against the locked specification rather than against how confidently it was written.
+
+| ID | Ruling | Severity | Blocks phase close | One-line reason |
+|----|--------|----------|--------------------|-----------------|
+| F-1.1-07 | confirmed | Medium (was High) | Yes | Section 15's "bounds the damage of a stolen refresh token to one use" is a stated property the code does not deliver, but it needs a prior theft with no shipped vector |
+| F-1.1-08 | confirmed | Medium | Yes | Case variants open separate accounts, and normalization is a schema decision this phase owns before rows accrete |
+| F-1.1-09 | confirmed | Low (was Medium) | No | A real verifier-contract gap, but it confers nothing on an attacker who already holds `AUTH_SECRET` |
+| F-1.1-10 | confirmed | Medium | No | Real 23.2x oracle, but a complete fix needs an out-of-band account-creation flow no phase before 4.x owns |
+| F-1.1-11 | confirmed | Medium | No | Unauthenticated attacker-controlled 500, but no disclosure, no pool poisoning, one-line boundary fix |
+| F-1.1-12 | confirmed | Medium | No | Only `auth_sessions_pkey` exists on the live table, but neither consequence is reachable through HTTP today |
+| F-1.1-13 | confirmed | Low | No | No format validation, inert today, and the same field and edit as the blocking F-1.1-08 |
+| F-1.1-14 | confirmed | Low | No | No `Cache-Control` on token responses, confirmed on the principle rather than the loose RFC 6749 citation |
+| F-1.1-15 | rejected | Low | No | Restates the recorded v1 decision that Section 15 is basic auth with no policy and the PRD puts enterprise security on the production track |
+| F-1.1-16 | confirmed | Low | No | 100,000 characters persisted from one header, but it needs valid credentials and a one-line truncation closes it |
+| F-1.1-17 | rejected | Low | No | `/query` is phase 1.0's merged route and T-1.1-03 criterion 10 required it unchanged; converted to a phase 2.0 ticket |
+| F-1.1-18 | confirmed | Low | No | Five valid subject spellings, a real join hazard for Section 20, not a vulnerability |
+
+Ticket status deliberately left alone. The two blocking findings, F-1.1-07 and F-1.1-08, both sit on T-1.1-03, which is `done`. Under the `task-tracker` convention the judge does not reopen a ticket on the strength of its own triage, so T-1.1-03's status is untouched and the reopen decision is referred to the lead. F-1.1-12 sits on T-1.1-01 and does not block, so nothing is pending there.
+
+Adversary quality, recorded because it is the input the next phase's dispatch depends on: twelve filed, ten confirmed, two rejected on scope and none on accuracy. The over-reporting showed up as scope reach (F-1.1-15, F-1.1-17) rather than as unreproducible claims, and the finding texts consistently stated their own limits (F-1.1-09's honest severity scoping, F-1.1-13's "none of these is exploitable inside phase 1.1", F-1.1-17's "this is correct for phase 1.0") rather than overclaiming. Two of its own severity ratings were off, one high and one low. That is a healthy adversary.
 
 ### Adversary not-broken set
 
