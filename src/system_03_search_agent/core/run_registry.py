@@ -73,6 +73,14 @@ instruction to make the most reasonable engineering call and document it:
       exists for a different reason (protecting a shared dict that
       genuinely may be touched from multiple OS threads), which does not
       apply here.
+    - T-1.2-02 cross-ticket addition: `create_run` gained an optional,
+      keyword-only `run_id` parameter (default `None`, preserving every
+      existing call site's behavior unchanged). See `create_run`'s own
+      docstring for the full rationale; in short, it lets an HTTP endpoint
+      mint the run's id once, thread it through `Query.trace_id` before
+      this call, and pass it back in here, so the returned `run_id` and
+      the `trace_id` on every event this run produces are always the same
+      value rather than two independently-minted ones.
 """
 
 from __future__ import annotations
@@ -143,23 +151,48 @@ class RunRegistry:
     def __init__(self) -> None:
         self._runs: dict[str, RunEntry] = {}
 
-    def create_run(self, query: Query, context: RequestContext) -> str:
-        """Mint a `run_id`, start `run_streaming(query, context)` as a
-        background task draining into a fresh per-run queue, and record
-        `query.user_id` as the run's owner.
+    def create_run(
+        self, query: Query, context: RequestContext, *, run_id: str | None = None
+    ) -> str:
+        """Mint a `run_id` (or accept a caller-provided one), start
+        `run_streaming(query, context)` as a background task draining into
+        a fresh per-run queue, and record `query.user_id` as the run's
+        owner.
 
         Returns the new `run_id` immediately; the background task has not
         necessarily produced any events yet by the time this returns (by
         design: the caller, e.g. a `POST /v1/query` endpoint, responds
         `202` with the `run_id` right away, per Section 13.1's intent).
+
+        Args:
+            run_id: T-1.2-02 cross-ticket addition. Section 13.1 frames
+                `run_id` and `Query.trace_id` as "the same identifier
+                under two names", so the HTTP layer that builds `query`
+                needs to know the run's id *before* this call, in order
+                to set `query.trace_id` to it. This module originally
+                always minted its own id and had no way to honor one
+                chosen upstream, which would have forced a mismatch
+                between the returned `run_id` and the `trace_id` woven
+                through every event `run_streaming` produces, breaking
+                `trace_id`'s role as the single join key across
+                LangSmith, the interactions table, and the audit log
+                (production-standards.md). Passing `run_id` here closes
+                that gap: the endpoint mints one `uuid.uuid4()`, builds
+                `query` with `trace_id` set to it, then passes the same
+                value through so the id this method returns is always
+                byte-identical to `query.trace_id`, never a second,
+                independently-minted id. Left as `None` (the default),
+                this method mints its own id exactly as before, so every
+                existing caller (including this file's own test suite)
+                is unaffected.
         """
-        run_id = str(uuid.uuid4())
+        resolved_run_id = run_id if run_id is not None else str(uuid.uuid4())
         queue: asyncio.Queue[Event | None] = asyncio.Queue()
         task = asyncio.create_task(_drain_into_queue(query, context, queue))
-        self._runs[run_id] = RunEntry(
-            run_id=run_id, user_id=query.user_id, queue=queue, task=task
+        self._runs[resolved_run_id] = RunEntry(
+            run_id=resolved_run_id, user_id=query.user_id, queue=queue, task=task
         )
-        return run_id
+        return resolved_run_id
 
     def get_run(self, run_id: str) -> RunEntry:
         """Look up a run's queue, owner, and background task by `run_id`.
