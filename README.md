@@ -37,7 +37,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | User data | PostgreSQL (separate instance) |
 | Caching | Redis |
 | Frontend | React |
-| Auth | python-jose (JWT) |
+| Auth | PyJWT (HS256 access tokens), argon2-cffi (argon2id password hashing) |
 | Observability | LangSmith |
 
 ---
@@ -59,7 +59,8 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 python 3.11+
 node 18+ (for React frontend)
 redis (for caching)
-# No local PostgreSQL+AGE needed - connects to remote Hetzner VPS
+postgresql 15+ (local, for the user-data database: auth, sessions, interactions)
+# No local AGE knowledge graph needed - Layer 1 connects to the remote Hetzner VPS
 
 # Backend setup
 git clone <repo-url>
@@ -68,6 +69,11 @@ cp env.example .env   # fill in API keys and credentials
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+
+# User-data database (auth, sessions, interactions). Create it once, then migrate.
+# USER_DB_URL in .env names the target; the default is the local database below.
+createdb search_agent_users
+alembic upgrade head
 
 # Run backend
 uvicorn system_03_search_agent.adapters.web_sse.app:app --reload
