@@ -42,6 +42,7 @@ from system_03_search_agent.harness.cost_control import (
     get_system_daily_cost_usd,
     get_user_daily_query_count,
     is_end_user_visible_event_type,
+    is_operator_user,
     per_query_cost_cap_usd,
     per_user_daily_query_cap,
     system_daily_cap_usd,
@@ -548,6 +549,47 @@ def test_is_end_user_visible_event_type_hides_cost() -> None:
 )
 def test_is_end_user_visible_event_type_shows_everything_else(event_type: str) -> None:
     assert is_end_user_visible_event_type(event_type) is True
+
+
+# ---------------------------------------------------------------------------
+# is_operator_user: the OPERATOR_USER_IDS allowlist (Section 19.4). A
+# security review of the operator_mode wiring flagged that honoring a
+# client-supplied flag with no server-side check is an authorization
+# bypass; these tests cover the allowlist gate itself, independent of the
+# endpoint that calls it.
+# ---------------------------------------------------------------------------
+
+
+def test_is_operator_user_false_when_allowlist_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPERATOR_USER_IDS", raising=False)
+    assert is_operator_user("11111111-1111-1111-1111-111111111111") is False
+
+
+def test_is_operator_user_false_when_user_id_is_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPERATOR_USER_IDS", "11111111-1111-1111-1111-111111111111")
+    assert is_operator_user(None) is False
+
+
+def test_is_operator_user_true_for_an_allowlisted_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        "OPERATOR_USER_IDS",
+        "11111111-1111-1111-1111-111111111111,22222222-2222-2222-2222-222222222222",
+    )
+    assert is_operator_user("22222222-2222-2222-2222-222222222222") is True
+
+
+def test_is_operator_user_false_for_a_non_allowlisted_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPERATOR_USER_IDS", "11111111-1111-1111-1111-111111111111")
+    assert is_operator_user("99999999-9999-9999-9999-999999999999") is False
+
+
+def test_is_operator_user_tolerates_whitespace_around_entries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "OPERATOR_USER_IDS", " 11111111-1111-1111-1111-111111111111 , 22222222-2222-2222-2222-222222222222"
+    )
+    assert is_operator_user("22222222-2222-2222-2222-222222222222") is True
 
 
 def test_filter_events_for_end_user_drops_only_cost_events() -> None:

@@ -486,6 +486,35 @@ def build_cost_event_payload(
 _BUILDER_ONLY_EVENT_TYPES: frozenset[str] = frozenset({"cost"})
 
 
+def _operator_user_ids() -> frozenset[str]:
+    """Return the allowlist of user ids permitted to request operator visibility.
+
+    Reads `OPERATOR_USER_IDS` fresh on every call (an operator-set env var
+    changes rarely and reading it live costs nothing here, unlike the
+    per-query cost caps this module also reads). Empty or unset resolves
+    to an empty set, which `is_operator_user` treats as "nobody": the
+    allowlist fails closed, never open, when unconfigured.
+    """
+    raw = os.environ.get("OPERATOR_USER_IDS", "")
+    return frozenset(entry.strip() for entry in raw.split(",") if entry.strip())
+
+
+def is_operator_user(user_id: str | None) -> bool:
+    """Return whether `user_id` may request operator visibility (Section 19.4).
+
+    A caller-supplied `RequestContext.operator_mode=true` is not, on its
+    own, authorization to see unredacted cost and token data: `user_id`
+    must also appear in the `OPERATOR_USER_IDS` allowlist. No role or
+    permission system exists yet (Section 15's auth model has no
+    admin/operator field), so this allowlist is the interim access
+    control. `user_id=None` (no authenticated caller) is never an
+    operator.
+    """
+    if user_id is None:
+        return False
+    return user_id in _operator_user_ids()
+
+
 def is_end_user_visible_event_type(event_type: str) -> bool:
     """Return False for an event type that must never reach an end-user surface."""
     return event_type not in _BUILDER_ONLY_EVENT_TYPES
