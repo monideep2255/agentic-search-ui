@@ -1,17 +1,26 @@
-"""Tests for Harness.call_tier and Harness.track_cost (T-2.0-02).
+"""Tests for Harness.call_tier, Harness.track_cost (T-2.0-02), and
+Harness.enforce_timeout plus the query_class to budget_s mapping (T-2.0-04).
 
 Covers the success-path cost math, one-retry-on-transient-failure with
 independent per-attempt metering, recoverable and unexpected failures
 raising without a retry, the invalid-tier path raising before any call
 attempt, track_cost's additive (never-overwriting) accumulation, the
-cache_prefix placeholder threading, and the OpenRouter pricing fallback.
+cache_prefix placeholder threading, the OpenRouter pricing fallback, a
+fast-completing step returning its real result under budget, a slow step
+being aborted at budget_s with its underlying task actually cancelled (not
+orphaned), a non-timeout failure propagating unchanged and distinguishable
+from a timeout, and the query_class-to-budget_s mapping resolving all five
+ThinkPayload query classes.
 
 No real network call is made anywhere in this file: litellm.acompletion
-and litellm.get_model_info are monkeypatched in every test.
+and litellm.get_model_info are monkeypatched in every test. The
+enforce_timeout tests use real, short asyncio.sleep calls rather than a
+mocked clock, since a mock cannot prove a real cancellation happened.
 """
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock
@@ -20,7 +29,11 @@ import litellm
 import pytest
 
 from system_03_search_agent.harness import harness as harness_module
-from system_03_search_agent.harness.harness import Harness, HarnessCallError
+from system_03_search_agent.harness.harness import (
+    Harness,
+    HarnessCallError,
+    budget_for_query_class,
+)
 from system_03_search_agent.harness.tiers import UnknownTierError
 
 _INPUT_PRICE = 3e-06
@@ -323,3 +336,153 @@ def test_track_cost_keeps_separate_traces_isolated() -> None:
 def test_get_query_cost_usd_missing_trace_returns_zero_not_a_keyerror() -> None:
     harness = Harness(trace_id="trace-1")
     assert harness.get_query_cost_usd("never-metered-trace") == 0.0
+
+
+# --- enforce_timeout(): fast step returns its real result, not a false abort ---
+
+
+@pytest.mark.asyncio
+async def test_enforce_timeout_fast_step_returns_real_result_within_budget() -> None:
+    async def _fast_step() -> str:
+        await asyncio.sleep(0.05)
+        return "real-result"
+
+    harness = Harness(trace_id="trace-1")
+    result = await harness.enforce_timeout("act", _fast_step(), budget_s=1.0)
+
+    assert result == "real-result"
+
+
+# --- enforce_timeout(): slow step aborts at budget_s and raises HarnessCallError ---
+
+
+@pytest.mark.asyncio
+async def test_enforce_timeout_slow_step_aborts_and_raises_harness_call_error() -> None:
+    async def _slow_step() -> str:
+        await asyncio.sleep(1.0)
+        return "should-never-return"
+
+    harness = Harness(trace_id="trace-1")
+    with pytest.raises(HarnessCallError) as exc_info:
+        await harness.enforce_timeout("act", _slow_step(), budget_s=0.05)
+
+    assert exc_info.value.error_class == "transient"
+    assert exc_info.value.source == "harness.enforce_timeout:act"
+
+
+@pytest.mark.asyncio
+async def test_enforce_timeout_names_the_step_that_timed_out() -> None:
+    async def _slow_step() -> str:
+        await asyncio.sleep(1.0)
+        return "should-never-return"
+
+    harness = Harness(trace_id="trace-1")
+    with pytest.raises(HarnessCallError) as think_exc:
+        await harness.enforce_timeout("think", _slow_step(), budget_s=0.05)
+    with pytest.raises(HarnessCallError) as act_exc:
+        await harness.enforce_timeout("act", _slow_step(), budget_s=0.05)
+
+    # Two different steps timing out are distinguishable from each other
+    # by source, not just both generically "a timeout happened".
+    assert think_exc.value.source == "harness.enforce_timeout:think"
+    assert act_exc.value.source == "harness.enforce_timeout:act"
+    assert think_exc.value.source != act_exc.value.source
+
+
+# --- enforce_timeout(): the aborted coroutine's task is actually cancelled ---
+
+
+@pytest.mark.asyncio
+async def test_enforce_timeout_aborted_step_is_actually_cancelled_not_orphaned() -> None:
+    completed = {"flag": False}
+
+    async def _slow_step_that_flags_on_graceful_completion() -> str:
+        # Only reaches the flag-set line if it runs to completion
+        # uninterrupted; a real cancellation raises CancelledError inside
+        # asyncio.sleep and this line is never executed.
+        await asyncio.sleep(0.3)
+        completed["flag"] = True
+        return "should-never-return"
+
+    harness = Harness(trace_id="trace-1")
+    with pytest.raises(HarnessCallError):
+        await harness.enforce_timeout(
+            "act", _slow_step_that_flags_on_graceful_completion(), budget_s=0.05
+        )
+
+    # Wait past the original 0.3s sleep duration. If the underlying task
+    # were left running in the background instead of being cancelled, the
+    # flag would be set by now. It must not be.
+    await asyncio.sleep(0.35)
+    assert completed["flag"] is False
+
+
+# --- enforce_timeout(): a non-timeout failure propagates unchanged ---
+
+
+@pytest.mark.asyncio
+async def test_enforce_timeout_non_timeout_failure_propagates_unchanged() -> None:
+    class _StepSpecificError(RuntimeError):
+        pass
+
+    async def _failing_step() -> str:
+        await asyncio.sleep(0.01)
+        raise _StepSpecificError("this step failed for a reason unrelated to timing")
+
+    harness = Harness(trace_id="trace-1")
+    with pytest.raises(_StepSpecificError):
+        await harness.enforce_timeout("act", _failing_step(), budget_s=1.0)
+
+
+@pytest.mark.asyncio
+async def test_enforce_timeout_call_tier_failure_inside_step_keeps_its_own_source(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_model_env(monkeypatch)
+    _patch_price(monkeypatch)
+    mock_acompletion = AsyncMock(
+        side_effect=litellm.ContextWindowExceededError(
+            message="too many tokens",
+            llm_provider="openrouter",
+            model="test-provider/test-model",
+        )
+    )
+    monkeypatch.setattr(harness_module.litellm, "acompletion", mock_acompletion)
+
+    harness = Harness(trace_id="trace-1")
+
+    async def _step_calling_the_model() -> Any:
+        return await harness.call_tier("guard", [{"role": "user", "content": "hi"}])
+
+    with pytest.raises(HarnessCallError) as exc_info:
+        await harness.enforce_timeout("think", _step_calling_the_model(), budget_s=5.0)
+
+    # Distinguishable from a timeout: error_class is "recoverable" (from
+    # call_tier's own classification), source stays "harness.call_tier",
+    # never rewritten to "harness.enforce_timeout:think".
+    assert exc_info.value.error_class == "recoverable"
+    assert exc_info.value.source == "harness.call_tier"
+
+
+# --- budget_for_query_class(): the five ThinkPayload query classes resolve ---
+
+
+@pytest.mark.parametrize(
+    ("query_class", "expected_budget_s"),
+    [
+        ("lookup", 5.0),
+        ("single_hop", 10.0),
+        ("aggregate", 30.0),
+        ("multi_hop", 30.0),
+        ("exploratory", 120.0),
+    ],
+)
+def test_budget_for_query_class_resolves_all_five_query_classes(
+    query_class: str, expected_budget_s: float
+) -> None:
+    assert budget_for_query_class(query_class) == expected_budget_s  # type: ignore[arg-type]
+
+
+def test_budget_for_query_class_raises_value_error_for_an_unmapped_class() -> None:
+    with pytest.raises(ValueError):
+        budget_for_query_class("bogus_class")  # type: ignore[arg-type]

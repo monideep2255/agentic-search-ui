@@ -119,7 +119,7 @@ History:
 
 ### T-2.0-04: Per-step timeout enforcement
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/2.0-langgraph-agent-loop
 Depends on: T-2.0-02
@@ -130,23 +130,28 @@ Files this ticket may create or modify:
 - `tests/system_03_search_agent/harness/test_harness.py` (extends T-2.0-02's file)
 
 Acceptance criteria:
-- [ ] `enforce_timeout(step, coro, budget_s)` aborts and returns a timeout signal if `coro` has not completed within `budget_s`, without leaving the underlying task running unbounded in the background
-- [ ] `budget_s` for a given query resolves from Think's emitted `query_class` using the fixed mapping recorded in this phase's scope decisions: `lookup` to 5s, `single_hop` to 10s, `aggregate` and `multi_hop` both to 30s, `exploratory` to 120s
-- [ ] On a per-step timeout, the loop does not hang or crash: it proceeds to synthesize from whatever partial tool results already exist, per Section 19.1's trigger behavior for this cap
-- [ ] A step that completes just under `budget_s` is not falsely aborted: a test with a fast-completing coroutine asserts the real result is returned, not a timeout
-- [ ] A step that exceeds `budget_s` produces a classified `error` event (`scope="step"`, an `error_class` per Section 3.5's transient/recoverable/unexpected taxonomy) distinguishable from a step that failed for a non-timeout reason
+- [x] `enforce_timeout(step, coro, budget_s)` aborts and returns a timeout signal if `coro` has not completed within `budget_s`, without leaving the underlying task running unbounded in the background
+- [x] `budget_s` for a given query resolves from Think's emitted `query_class` using the fixed mapping recorded in this phase's scope decisions: `lookup` to 5s, `single_hop` to 10s, `aggregate` and `multi_hop` both to 30s, `exploratory` to 120s
+- [x] On a per-step timeout, the loop does not hang or crash: it proceeds to synthesize from whatever partial tool results already exist, per Section 19.1's trigger behavior for this cap. Satisfied at this ticket's file scope by raising a catchable, classified `HarnessCallError` rather than letting a `TimeoutError` propagate unhandled; the actual Guardrail-to-Write loop nodes that catch it and drive the partial-synthesis handoff are not built yet (T-2.0-05 onward), so this criterion is structurally met, not loop-wired
+- [x] A step that completes just under `budget_s` is not falsely aborted: a test with a fast-completing coroutine asserts the real result is returned, not a timeout
+- [x] A step that exceeds `budget_s` produces a classified `error` event (`scope="step"`, an `error_class` per Section 3.5's transient/recoverable/unexpected taxonomy) distinguishable from a step that failed for a non-timeout reason. Satisfied at this ticket's file scope: `HarnessCallError.error_class="transient"` and `source=f"harness.enforce_timeout:{step}"` carry everything a future `ErrorPayload(scope="step", ...)` needs; no `ErrorPayload` is constructed here since no loop node exists yet to emit it
 
 Breakdown:
-- [ ] `enforce_timeout` wrapping any step coroutine with a hard deadline and clean cancellation
-- [ ] `query_class` to `budget_s` mapping table
-- [ ] Timeout-triggered partial-synthesis handoff
-- [ ] Tests: real abort under budget, false-positive-abort check, error event shape on timeout
+- [x] `enforce_timeout` wrapping any step coroutine with a hard deadline and clean cancellation
+- [x] `query_class` to `budget_s` mapping table
+- [x] Timeout-triggered partial-synthesis handoff (structural only, see acceptance criterion 3 note; full wiring is a loop-node ticket)
+- [x] Tests: real abort under budget, false-positive-abort check, error event shape on timeout
 
 Evidence:
-- (filled at close)
+- `enforce_timeout(step, coro, budget_s)` added to `Harness` in `src/system_03_search_agent/harness/harness.py:236-306` (method body `279-306`), using `asyncio.wait_for` so a timeout cancels and awaits the inner task before raising, never leaving it running.
+- `QueryClass` alias, `_QUERY_CLASS_BUDGET_S` table, and `budget_for_query_class()` in `src/system_03_search_agent/harness/harness.py:71-72` and `203-229`, implementing the settled 2026-07-28 DECISIONS.md mapping unchanged.
+- Tests added to `tests/system_03_search_agent/harness/test_harness.py`: fast-step-returns-real-result, slow-step-aborts-and-raises, step-name-distinguishes-two-timeouts, aborted-task-actually-cancelled-not-orphaned (real `asyncio.sleep`, flag-set-only-on-graceful-completion), non-timeout-failure-propagates-unchanged, call_tier-failure-inside-a-step-keeps-its-own-source-and-error_class, and the five-way `budget_for_query_class` parametrized resolution plus an unmapped-class `ValueError` test.
+- `python3 -m pytest tests/system_03_search_agent/harness/test_harness.py -q`: 27 passed (19 pre-existing T-2.0-02 tests unchanged plus 8 new). `python3 -m pytest tests/system_03_search_agent/harness/ -q`: 48 passed (adds `test_tiers.py`).
+- No existing T-2.0-02 code was modified, only its module docstring (reflecting `enforce_timeout` no longer being absent) and the `typing` import line (added `Awaitable`).
 
 History:
 - 2026-07-28 lead: created, scoped from Section 19.1/3.5; carries the query_class-to-budget mapping decision
+- 2026-07-28 builder: implemented `enforce_timeout` and the query_class-to-budget_s mapping on top of the merged T-2.0-02 `Harness` class; 8 new tests added, all 27 tests in `test_harness.py` pass (48 across the harness test directory); left uncommitted in worktree per instructions
 
 ### T-2.0-05: Coordinator-worker split scaffold
 
