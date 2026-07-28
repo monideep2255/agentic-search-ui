@@ -12,11 +12,11 @@ Listed in flow order. Work moves left to right on the board, from `todo` to `don
 
 | Status | Count | Who may set it |
 |--------|-------|----------------|
-| To do | 24 | Lead |
+| To do | 23 | Lead |
 | In progress | 0 | The builder that claimed it |
 | Blocked | 0 | The builder that hit the block, reason required |
 | In review | 0 | The builder that finished |
-| Done | 7 | Judge only, never the builder |
+| Done | 8 | Judge only, never the builder |
 
 `blocked` sits mid-flow rather than on the way to done, because it is where work stalls, not a step toward finishing.
 
@@ -47,7 +47,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 1.0 | `phase/1.0-fastapi-skeleton` | FastAPI skeleton, health endpoint, the run() contract stub with the v1 event taxonomy typed, Pydantic boundary validation | | prototype | done | refined | | | |
 | 1.1 | `phase/1.1-auth-service` | Minimal v1 auth, the PostgreSQL user-data schema | 1.0 | prototype | done | refined | | | |
 | 1.2 | `phase/1.2-react-shell-sse` | React shell, SSE consumption of the event stream, empty chat endpoint wired end to end, the stop button | 1.0 | prototype | todo | product_refine | product owner | playwright | playwright not installed |
-| 2.0 | `phase/2.0-langgraph-agent-loop` | LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one | 1.0 | prototype | todo | refined | | | |
+| 2.0 | `phase/2.0-langgraph-agent-loop` | LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one | 1.0 | prototype | done | refined | | | |
 | 2.1 | `phase/2.1-cypher-tool` | cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement | 2.0 | prototype | todo | tech_refine | | | F-2.0-08, F-2.0-14 |
 | 2.2 | `phase/2.2-write-step-grounding` | Deterministic cite-or-refuse, provenance for Layer 1 citations, the first trust signal, the two required tests | 2.1 | prototype | todo | tech_refine | | eval-harness | whole-repo security scan not yet run |
 | 3.0 | `phase/3.0-guardrail-node` | Full guardrail replacing the stub: validation, prompt-injection rejection, forbidden types, rate and cost pre-checks | 2.0 | v1 | todo | tech_refine | | | |
