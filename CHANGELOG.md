@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) version 1.1.0, and this project intends to adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) once the first release is cut.
 
-This project has not cut a release. There is no version tag, no release date, and no application code yet: System 3 is in requirements planning (Phase 5 as of this entry, per CLAUDE.md), and build execution starts at Plan.md Phase 6. Every entry below therefore sits under Unreleased. This file is hand-maintained; no changelog-generation tooling is wired up yet, and none is planned until the first tag exists (see `.claude/rules/git-workflow.md`).
+This project has not cut a release. There is no version tag and no release date. Requirements planning (Plan.md Phases 1 to 5) is complete, and build execution is underway at Plan.md Phase 6: build phases 1.0 and 1.1 are merged, so application code now exists (the FastAPI app, the typed event contract, the auth service, and the user-data schema). No agent loop, no tools, and no real query behavior yet; those begin at build phase 2.0. Every entry below therefore sits under Unreleased. This file is hand-maintained; no changelog-generation tooling is wired up yet, and none is planned until the first tag exists (see `.claude/rules/git-workflow.md`).
 
 Entries are written from the real commit history (`git log`), not from memory or inference. Commit message format: this repo adopted the Conventional Commits specification (v1.0.0) for commit subject lines on 2026-07-26. Commit 1f2ffd0 and earlier predate that convention and use the prior sentence-case style with no type prefix; see `.claude/rules/git-workflow.md` for the full format.
 
@@ -45,6 +45,13 @@ Scope note: entries start at commit f90b203 (2026-05-05, "Strip System 1+2 code,
 - Phase_6_execution_flow.html visual and Build_workflow_cadence.md, naming the model and effort for every stage of the build loop (2c2dd80, b4c5616).
 - docs/README.md as an index and organizing layer for the docs folder (f30250b, 1f2ffd0).
 - Build phase 1.0: the FastAPI app skeleton and health endpoint (a971d42), the Pydantic event contract (`Query`, `RequestContext`, the `Event` envelope, and all eleven Section 2.3 payload types) (f2b3614), and the `run()` stub wired to a query endpoint (cf630a9).
+- Build phase 1.1, merged as PR #6 (4013477): the auth service and the PostgreSQL user-data schema.
+  - Auth primitives: argon2id password hashing, HS256 access tokens with the verification algorithm pinned explicitly, and opaque refresh tokens stored only as SHA-256 hashes (465291e).
+  - Five endpoints mounted at `/auth`: signup, login, refresh, logout, and me (ff797d2).
+  - All six Section 15 user-data tables (`users`, `auth_sessions`, `sessions`, `interactions`, `cq_candidates`, `saved_queries`) as SQLAlchemy models, plus Alembic scaffolding and the `0001_user_data_schema` revision, both directions (fcd3db0).
+  - Security hardening from the adversary pass: RFC 6819 refresh-token reuse detection, case-insensitive email uniqueness enforced by a functional unique index, a required `exp` claim, and a 90-day absolute session ceiling, in the `0002_auth_hardening` revision (8313d82).
+  - Token lifetimes: 15-minute access, 30-day sliding refresh, 90-day absolute ceiling that does not renew on rotation.
+  - Test suite grew from 191 to 314.
 
 ### Changed
 
@@ -89,3 +96,6 @@ Scope note: entries start at commit f90b203 (2026-05-05, "Strip System 1+2 code,
 - `setuptools` upgraded to 83.0.0, clearing three known CVEs (a path traversal in `PackageIndex`, an RCE in the download functions, a Unicode-normalization bypass in `MANIFEST.in` exclusions).
 - Accepted `ecdsa` 0.19.2's known CVE (PYSEC-2026-1325, no upstream fix) as a risk for build phase 1.1 to resolve when it implements JWT signing, since nothing in phase 1.0 invokes it; see DECISIONS.md 2026-07-27.
 - Deferred the full `claude-security` multi-agent scan for phase 1.0, since no auth, database, LLM, or external-API surface exists yet; relied on the judge's gate review, two independent adversarial-probe passes, and the always-on `security-guidance` layer instead; see DECISIONS.md 2026-07-27.
+- Resolved the `ecdsa` CVE at the root in build phase 1.1 by replacing `python-jose[cryptography]` with `PyJWT` (465291e). `ecdsa` is a core requirement of `python-jose` rather than an extra, so it could not be excluded in place; `pip show ecdsa` now reports not found and `pip-audit` reports no known vulnerabilities. See DECISIONS.md 2026-07-28.
+- Hardened the auth surface against an adversary pass that filed 18 findings, of which 9 were closed with independently re-verified fixes, 2 rejected, and 7 deferred to named later phases (8313d82). The two most serious were reachable only by unscripted testing after the scripted gate had passed: the migration test ran `alembic downgrade base` against the database named by `USER_DB_URL` and destroyed every row on each run while restoring the schema on teardown, and refresh rotation shipped correctly while delivering none of the "bounded to one use" property the technical specification states, since nothing acted on the replay the server detected.
+- Deferred the full security scan a second time at build phase 1.1 and scheduled it once at the Plan.md Step 6.2 reconciliation, scoped to the entire repository rather than a commit range, where it is a hard prerequisite for starting Step 6.3. Build phases 1.0 and 1.1 remain entirely unscanned; the only run in `security/` predates all build-phase code. See DECISIONS.md 2026-07-28.

@@ -94,7 +94,7 @@ pytest tests/
 ```
 agentic-search-ui/
   src/
-    system_03_search_agent/     # Python backend (build phase 1.0: core, contracts, adapters/web_sse live)
+    system_03_search_agent/     # Python backend (build phase 1.0: core, contracts, adapters/web_sse; build phase 1.1: auth, data live)
       core/                     # LangGraph graph: the 5-step loop, run() entrypoint
       contracts/                # Pydantic event models and JSONSchemas
       harness/                  # Tiers, cost caps, timeouts, coordinator-worker, cache hooks
@@ -104,6 +104,7 @@ agentic-search-ui/
         graphql/                # Strawberry schema over the same tools
         mcp/                    # MCP server, outbound-only
         cli/                    # Thin REST client
+      auth/                     # Signup, login, refresh, logout, me endpoints (build phase 1.1)
       data/                     # Postgres models: auth, interactions, cq_candidates
   frontend/                     # React UI
     src/
@@ -115,9 +116,10 @@ agentic-search-ui/
   requirements/                 # Planning docs: Plan.md, PRD.md, Technical_specification.md, Strategic_memo.md, Evaluation_playbook.md
   tracker/                      # In-repo build board: BOARD.md, phase tickets, render_board.py, board.html
   .claude/                      # Claude Code rules, skills, agents, hooks (tracked in git for v1 development)
+  alembic/                      # Alembic migrations for the user-data schema (build phase 1.1)
   CLAUDE.md                     # Claude Code instructions
   AGENTS.md                     # Instructions for other AI agents
-  DECISIONS.md                  # Architecture decision log (127 rows)
+  DECISIONS.md                  # Architecture decision log (135 rows)
   LEARNINGS.md                  # What broke during the build and what fixed it
   CHANGELOG.md                  # Keep a Changelog format, all entries currently Unreleased
   pyproject.toml

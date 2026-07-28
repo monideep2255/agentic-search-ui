@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-07-27.
+Kick-off: 2026-05-06. Last updated: 2026-07-28.
 
 ## Status at a glance
 

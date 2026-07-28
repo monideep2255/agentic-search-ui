@@ -4,6 +4,17 @@ Phase 6 is the build. It is underway. Build phase 1.0 (the FastAPI skeleton and 
 
 This is the file to open at the start of the next build session.
 
+## Table of contents
+
+- [Paste this into a new chat](#paste-this-into-a-new-chat)
+- [What Phase 6 is](#what-phase-6-is)
+- [Build phase 1.0, done (2026-07-27)](#build-phase-10-done-2026-07-27)
+- [Build phase 1.1, done (2026-07-28)](#build-phase-11-done-2026-07-28)
+- [Build phase 2.0, what it delivers](#build-phase-20-what-it-delivers)
+- [Build phase 1.2, also unblocked](#build-phase-12-also-unblocked)
+- [Open items to resolve during Phase 6](#open-items-to-resolve-during-phase-6)
+- [If a different agent takes over](#if-a-different-agent-takes-over)
+
 ## Paste this into a new chat
 
 ---
