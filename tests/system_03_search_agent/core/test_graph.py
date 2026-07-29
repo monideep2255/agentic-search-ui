@@ -99,8 +99,19 @@ def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
 
 
 def _valid_query(**overrides: object) -> Query:
+    """The shared query fixture. Its default text ("hello") is
+    deliberately one of `graph_module._NO_TOOL_QUERY_TEXTS` (T-2.1-08),
+    so plan_node selects no tool and act_node's dispatch loop never runs,
+    leaving every pre-existing stub-era test in this file (event
+    sequence, tier assignment, cap handling, daily-cap declines) exactly
+    as it behaved before real tool selection landed: no extra litellm
+    call, no extra event, no live graph dependency. Tests that need a
+    real cypher_query dispatch override `text=` to a substantive query
+    explicitly (see the "plan selects cypher_query" / "act executes it"
+    tests below).
+    """
     base: dict[str, object] = {
-        "text": "What gene is BRCA1?",
+        "text": "hello",
         "session_id": "session-1",
         "trace_id": "trace-graph-1",
         "user_id": None,
@@ -299,7 +310,10 @@ async def test_think_event_narrative_documents_itself_as_a_stub() -> None:
 
 
 @pytest.mark.asyncio
-async def test_plan_event_tool_calls_is_empty_stub() -> None:
+async def test_plan_event_tool_calls_is_empty_for_a_no_tool_query() -> None:
+    """A query with no graph-answerable content (T-2.1-08's
+    `_NO_TOOL_QUERY_TEXTS`) selects nothing; this is the real,
+    deterministic outcome now, not the phase 2.0 always-empty stub."""
     events = await _run_graph(_valid_query(), _valid_context())
     plan_event = next(event for event in events if event.type == "plan")
     assert plan_event.payload["tool_calls"] == []
@@ -319,9 +333,14 @@ async def test_done_event_trust_outcome_is_answer_on_the_happy_path() -> None:
 
 
 @pytest.mark.asyncio
-async def test_act_node_calls_coordinator_worker_execute_with_empty_lists(
+async def test_act_node_calls_coordinator_worker_execute_with_empty_lists_for_a_no_tool_query(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """With no tool selected (the default "hello" query), act_node still
+    calls coordinator_worker_execute with paired empty lists, proving the
+    integration point remains wired even when there is nothing to fan
+    out over.
+    """
     calls: list[tuple] = []
     original = graph_module.coordinator_worker_execute
 
@@ -333,6 +352,122 @@ async def test_act_node_calls_coordinator_worker_execute_with_empty_lists(
     await _run_graph(_valid_query(), _valid_context())
 
     assert calls == [([], [])]
+
+
+# ---------------------------------------------------------------------------
+# T-2.1-08: real cypher_query selection and dispatch.
+# ---------------------------------------------------------------------------
+
+_GRAPH_ANSWERABLE_QUERY_TEXT = "What gene is associated with BRCA1?"
+
+
+@pytest.mark.asyncio
+async def test_plan_selects_cypher_query_for_a_graph_answerable_query() -> None:
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = await _run_graph(query, _valid_context())
+
+    plan_event = next(event for event in events if event.type == "plan")
+    tool_calls = plan_event.payload["tool_calls"]
+    assert len(tool_calls) == 1
+    assert tool_calls[0]["tool"] == "cypher_query"
+    assert tool_calls[0]["layer"] == "layer_1_graph"
+
+
+@pytest.mark.asyncio
+async def test_act_executes_the_selected_cypher_query_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Act dispatches the real tool call plan selected: cypher_generation's
+    plan-tier call fires (via the mocked litellm), the mocked response
+    ("ok", from `_fake_response`) is not recoverable Cypher, so
+    cypher_query's internal retry-then-error path runs and act still
+    completes, passing exactly one paired (tool_call, result) into
+    coordinator_worker_execute.
+    """
+    calls: list[tuple] = []
+    original = graph_module.coordinator_worker_execute
+
+    async def _spy(harness, tool_calls, results):
+        calls.append((tool_calls, results))
+        return await original(harness, tool_calls, results)
+
+    monkeypatch.setattr(graph_module, "coordinator_worker_execute", _spy)
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = await _run_graph(query, _valid_context())
+
+    assert len(calls) == 1
+    tool_calls, results = calls[0]
+    assert len(tool_calls) == 1
+    assert len(results) == 1
+    assert results[0].contains_untrusted_free_text is False  # a Cypher row is structured data
+
+    done_event = events[-1]
+    assert done_event.type == "done"
+
+
+@pytest.mark.asyncio
+async def test_stable_prefix_still_reaches_every_graph_node_call_when_a_tool_runs(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Guards the LEARNINGS row 28 regression for the scenario that
+    actually exercises a tool, not only the no-tool-selected happy path:
+    the four established graph.py node calls (guardrail, think, plan,
+    write) must each still carry graph_module._STABLE_PREFIX as their
+    leading message, even though Act's cypher_query dispatch issues
+    additional plan-tier calls of its own (cypher_generation.
+    generate_cypher does not accept a cache_prefix, by that module's own
+    design, so those calls are expected to lack the leading system
+    message; this test asserts the count that DOES carry it, not the
+    total call count).
+    """
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    await _run_graph(query, _valid_context())
+
+    node_level_calls = [
+        call
+        for call in _mock_litellm.call_args_list
+        if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
+    ]
+    assert len(node_level_calls) == 4
+
+
+@pytest.mark.asyncio
+async def test_cost_cap_breach_during_act_ships_partial_result_without_calling_the_tool(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Act's own pre-dispatch cost-cap check (the second "plan"-tier check
+    for this query: plan_node's own dispatch is the first) breaches the
+    cap, so cypher_query is never called at all, and the query still
+    ships a partial result via write_node's existing cap-hit handling.
+    """
+    real_check = cost_control.check_per_query_cap
+    plan_tier_check_count = {"n": 0}
+
+    def _raise_on_second_plan_tier_check(harness, trace_id, tier, **kwargs):
+        if tier == "plan":
+            plan_tier_check_count["n"] += 1
+            if plan_tier_check_count["n"] == 2:
+                raise QueryCapExceededError(
+                    "forced for test",
+                    query_cost_usd=0.05,
+                    query_cap_usd=0.05,
+                    estimated_call_cost_usd=0.01,
+                )
+        return real_check(harness, trace_id, tier, **kwargs)
+
+    monkeypatch.setattr(cost_control, "check_per_query_cap", _raise_on_second_plan_tier_check)
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = await _run_graph(query, _valid_context())
+    types = [event.type for event in events]
+
+    assert "plan" in types  # plan_node's own dispatch succeeded and its event fired
+    assert types[-2:] == ["token", "done"]
+    assert events[-1].payload["trust_outcome"] == "flag"
+
+    token_event = next(event for event in events if event.type == "token")
+    assert token_event.payload["text"] == PER_QUERY_CAP_PARTIAL_RESULT_NOTE
 
 
 # ---------------------------------------------------------------------------

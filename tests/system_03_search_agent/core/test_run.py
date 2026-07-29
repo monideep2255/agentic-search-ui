@@ -100,8 +100,17 @@ def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
 
 
 def _valid_query(**overrides: object) -> Query:
+    """The shared query fixture. Its default text ("hello") is
+    deliberately one of `core.graph._NO_TOOL_QUERY_TEXTS` (T-2.1-08), so
+    plan_node selects no tool here, leaving this file's stub-era
+    assertions (an empty `tool_calls` list, `total_tool_calls == 0`)
+    accurate: they describe the no-tool-selected outcome, not a claim
+    that no tool selection logic exists. Real cypher_query dispatch is
+    covered in tests/system_03_search_agent/core/test_graph.py, which
+    exercises the compiled graph directly with a substantive query text.
+    """
     base: dict[str, object] = {
-        "text": "What gene is BRCA1?",
+        "text": "hello",
         "session_id": "session-1",
         "trace_id": "trace-1",
         "user_id": None,

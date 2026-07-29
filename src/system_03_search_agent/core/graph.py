@@ -114,6 +114,7 @@ from __future__ import annotations
 
 import time
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -127,18 +128,24 @@ from system_03_search_agent.contracts.events import (
     PlanPayload,
     ThinkPayload,
     TokenPayload,
+    ToolCall,
 )
 from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.data.session import session_scope
 from system_03_search_agent.harness import cost_control
 from system_03_search_agent.harness.cache import build_stable_prefix
-from system_03_search_agent.harness.coordinator_worker import coordinator_worker_execute
+from system_03_search_agent.harness.coordinator_worker import (
+    ToolExecutionResult,
+    coordinator_worker_execute,
+)
 from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
     QueryClass,
     budget_for_query_class,
 )
+from system_03_search_agent.tools.cypher_query import cypher_query
+from system_03_search_agent.tools.cypher_schemas import CypherQueryInput, CypherQueryOutput
 
 Message = dict[str, str]
 
@@ -407,8 +414,72 @@ async def think_node(state: GraphState) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# plan: tier="plan", empty tool_calls (no real tool exists until 2.1+).
+# plan: tier="plan". T-2.1-08 replaces the phase 2.0 stub (an always-empty
+# tool_calls list) with real, deterministic cypher_query selection: this
+# phase has exactly one tool, so a query with substantive content selects
+# it and a query that plainly needs no graph lookup (a greeting, a
+# thanks) selects nothing. Real intent classification and entity
+# resolution (which would populate CypherQueryInput.target_entities from
+# Think's resolved_entities) are a later phase's job; think_node's own
+# query_class output is still a fixed "lookup" stub (T-2.0-07).
 # ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _PlannedToolCall:
+    """Pairs one Section 2.3 `ToolCall` (the locked event-contract shape,
+    carrying only `tool`/`call_id`/`layer`) with the full structured
+    `CypherQueryInput` Act actually executes. `GraphState.tool_calls` is
+    declared `list[Any]` (core.state.GraphState), so storing this richer
+    pairing there needs no change to that TypedDict.
+    """
+
+    tool_call: ToolCall
+    cypher_input: CypherQueryInput
+
+
+# Query texts that plainly need no graph lookup at all. Deliberately
+# small and exact-match, not a fuzzy classifier: a false negative here
+# (treating a real question as small talk) is worse than a false
+# positive (attempting cypher_query on a genuine greeting, which the
+# pipeline will simply answer "empty" or "error" for), so this list only
+# excludes unambiguous non-questions.
+_NO_TOOL_QUERY_TEXTS: frozenset[str] = frozenset(
+    {"hello", "hi", "hey", "thanks", "thank you", "who are you", "what can you do"}
+)
+
+_PLAN_TOOL_CALL_MAX_INTENT_CHARS = 1000
+_PLAN_TOOL_CALL_ROW_LIMIT = 100
+
+
+def _select_planned_tool_call(
+    query_text: str, query_class: QueryClass
+) -> _PlannedToolCall | None:
+    """Deterministically select `cypher_query`, or nothing, for one query.
+
+    Returns None for empty or plainly non-substantive text
+    (`_NO_TOOL_QUERY_TEXTS`). Otherwise returns a `_PlannedToolCall`
+    carrying a `CypherQueryInput` built from the raw query text as
+    `query_intent` (capped to Section 6.1's 1000-char bound),
+    `query_class` from Think's classification, no `target_entities` (no
+    entity resolution exists yet), and the default row_limit.
+    """
+    normalized = query_text.strip().lower()
+    if not normalized or normalized in _NO_TOOL_QUERY_TEXTS:
+        return None
+
+    cypher_input = CypherQueryInput(
+        query_intent=query_text[:_PLAN_TOOL_CALL_MAX_INTENT_CHARS],
+        query_class=query_class,
+        target_entities=[],
+        row_limit=_PLAN_TOOL_CALL_ROW_LIMIT,
+    )
+    tool_call = ToolCall(
+        tool="cypher_query",
+        call_id=f"cq-{uuid.uuid4().hex[:12]}",
+        layer="layer_1_graph",
+    )
+    return _PlannedToolCall(tool_call=tool_call, cypher_input=cypher_input)
 
 
 async def plan_node(state: GraphState) -> dict[str, Any]:
@@ -432,32 +503,117 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     except HarnessCallError as exc:
         return {"step_error": _step_error_kwargs("plan", exc)}
 
-    # Stub only: real tool selection is phase 2.1+'s job (no tool exists
-    # yet). An empty tool_calls list is the schema-valid, non-fabricated
-    # stub outcome.
-    plan_payload = PlanPayload(narrative="stub: no tool selection yet", tool_calls=[])
+    planned = _select_planned_tool_call(query.text, query_class)
+    if planned is None:
+        plan_payload = PlanPayload(
+            narrative="no graph-answerable content detected; no tool selected",
+            tool_calls=[],
+        )
+        planned_tool_calls: list[_PlannedToolCall] = []
+    else:
+        plan_payload = PlanPayload(
+            narrative="selected cypher_query for a Layer 1 graph lookup",
+            tool_calls=[planned.tool_call],
+        )
+        planned_tool_calls = [planned]
+
     sink.emit("plan", plan_payload)
     sink.emit("cost", cost_control.build_cost_event_payload(harness, trace_id, "plan"))
-    return sink.result(tool_calls=list(plan_payload.tool_calls))
+    return sink.result(tool_calls=planned_tool_calls)
 
 
 # ---------------------------------------------------------------------------
-# act: non-LLM. Proves the coordinator-worker integration point, no events.
+# act: non-LLM (no call_tier of its own), but T-2.1-08 makes it a real
+# tool dispatcher: it executes whatever cypher_query call plan_node
+# selected, subject to the per-query cost cap and a per-step timeout
+# (F-2.0-08's Act-side half; coordinator_worker.py's own reader pass
+# carries the other half), then hands the result to
+# coordinator_worker_execute for the structured pass-through path (a
+# Cypher row is structured data; it never goes through the free-text
+# reader).
 # ---------------------------------------------------------------------------
+
+
+def _cypher_output_to_structured_fields(output: CypherQueryOutput) -> dict[str, Any]:
+    """Shape a `cypher_query` result into `ToolExecutionResult.structured_fields`.
+
+    Deliberately omits `cypher_executed`: that field is an audit trail
+    only (Section 6.1, T-2.1-07's contract), and a `Finding` is what a
+    later Write-step ticket reads to build the actual event payload a
+    client sees. The main agent, and by extension Write, must never
+    receive raw Cypher in a payload rendered to a user.
+    """
+    return {
+        "status": output.status,
+        "row_count": output.row_count,
+        "total_available": output.total_available,
+        "truncated": output.truncated,
+        "rows": [row.model_dump(mode="json") for row in output.rows],
+        "error": output.error,
+    }
 
 
 async def act_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
-    # tool_calls is always [] this phase (plan's stub never populates it),
-    # so results is paired 1:1 (both empty). This still exercises the real
-    # coordinator_worker_execute call path end to end, proving the
-    # integration point exists, per the ticket's explicit instruction, even
-    # though there is nothing yet for it to actually fan out over.
-    findings = await coordinator_worker_execute(harness, [], [])
-    # No event emitted here: Section 2.3 has no "nothing happened" event
-    # shape, and there is genuinely nothing to report yet (no tool ran).
-    # This is a deliberate, documented no-op, not an oversight.
-    return {"findings_count": len(findings)}
+    trace_id = state["query"].trace_id
+    query_class: QueryClass = state.get("query_class", "lookup")
+    planned_tool_calls: list[_PlannedToolCall] = state.get("tool_calls", [])
+
+    tool_calls: list[ToolCall] = []
+    results: list[ToolExecutionResult] = []
+    cap_exceeded = False
+
+    for planned in planned_tool_calls:
+        # F-2.0-08 (Act's own half): checked immediately before dispatch,
+        # never after, matching _dispatch_tier_call's own discipline. A
+        # call that would breach the cap is never issued at all: it is
+        # excluded from both tool_calls and results (never a placeholder
+        # pair), so the two lists coordinator_worker_execute requires to
+        # stay paired 1:1 never drift apart.
+        try:
+            cost_control.check_per_query_cap(harness, trace_id, "plan")
+        except cost_control.QueryCapExceededError:
+            cap_exceeded = True
+            break
+
+        tool_calls.append(planned.tool_call)
+        try:
+            output: CypherQueryOutput = await harness.enforce_timeout(
+                "act",
+                cypher_query(harness, planned.cypher_input),
+                budget_for_query_class(query_class),
+            )
+        except HarnessCallError:
+            results.append(
+                ToolExecutionResult(
+                    contains_untrusted_free_text=False,
+                    structured_fields={
+                        "status": "error",
+                        "error": "cypher_query call did not complete within its per-step timeout budget",
+                    },
+                )
+            )
+            continue
+
+        # A Cypher row is structured data (Section 6.1's typed output
+        # schema, not free text), so this always routes through the
+        # structured pass-through path in coordinator_worker_execute,
+        # never the isolated free-text reader.
+        results.append(
+            ToolExecutionResult(
+                contains_untrusted_free_text=False,
+                structured_fields=_cypher_output_to_structured_fields(output),
+            )
+        )
+
+    findings = await coordinator_worker_execute(harness, tool_calls, results)
+    result: dict[str, Any] = {"findings_count": len(findings)}
+    if cap_exceeded:
+        # Section 19.1: the query still ships an answer, a partial one,
+        # ready with whatever findings already exist; write_node already
+        # knows how to turn this flag into that partial result.
+        result["cap_exceeded"] = True
+    return result
 
 
 # ---------------------------------------------------------------------------

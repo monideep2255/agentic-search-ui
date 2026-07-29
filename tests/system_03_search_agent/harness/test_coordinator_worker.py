@@ -1,12 +1,15 @@
-"""Tests for coordinator_worker_execute (T-2.0-05).
+"""Tests for coordinator_worker_execute (T-2.0-05, extended by T-2.1-08).
 
 Covers the asyncio.gather concurrency guarantee (two artificially delayed
 free-text results run their reader passes in parallel, not sequentially),
 the free-text/structured branching (a free-text result routes through a
 mocked `Harness.call_tier`, a structured result never calls it at all),
-and the no-raw-text-leak guarantee (a free-text result's returned
-`Finding` never contains the original payload substring, including on a
-reader response that fails to parse as JSON).
+the no-raw-text-leak guarantee (a free-text result's returned `Finding`
+never contains the original payload substring, including on a reader
+response that fails to parse as JSON), the F-2.0-08 closure (the reader
+pass now respects the per-query cost cap and a per-step timeout), and the
+F-2.0-14 closure (the structured pass-through path caps an oversized
+payload before a `Finding` is built).
 
 No real model call is made anywhere in this file: `Harness.call_tier` is
 mocked in every test, matching test_harness.py's own convention of never
@@ -23,12 +26,25 @@ from unittest.mock import AsyncMock
 import pytest
 
 from system_03_search_agent.contracts.events import ToolCall
+from system_03_search_agent.harness import coordinator_worker as coordinator_worker_module
+from system_03_search_agent.harness import cost_control
 from system_03_search_agent.harness.coordinator_worker import (
     Finding,
     ToolExecutionResult,
     coordinator_worker_execute,
 )
-from system_03_search_agent.harness.harness import Harness
+from system_03_search_agent.harness.harness import Harness, HarnessCallError
+
+
+@pytest.fixture(autouse=True)
+def _cost_cap_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """F-2.0-08: `_reader_pass` now calls `cost_control.check_per_query_cap`,
+    which reads `PER_QUERY_COST_CAP_USD` from the environment and raises
+    `RuntimeError` if it is unset. Every test in this file needs it set,
+    not only the ones added for F-2.0-08, since the free-text reader path
+    is exercised throughout this file.
+    """
+    monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "1.0")
 
 
 def _make_call(call_id: str, tool: str = "ncbi_efetch", layer: str = "layer_2_api") -> ToolCall:
@@ -254,3 +270,176 @@ async def test_mismatched_list_lengths_raises_value_error() -> None:
         await coordinator_worker_execute(harness, tool_calls, results)
 
     harness.call_tier.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# F-2.0-08: the reader pass now respects the per-query cost cap and a
+# per-step timeout, instead of bypassing both entirely.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_reader_call_skipped_when_it_would_breach_the_per_query_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness = _make_harness()
+    harness.call_tier = AsyncMock()  # type: ignore[method-assign]
+
+    def _always_over_cap(harness_arg, trace_id, tier, **kwargs):
+        raise cost_control.QueryCapExceededError(
+            "forced for test",
+            query_cost_usd=1.0,
+            query_cap_usd=1.0,
+            estimated_call_cost_usd=0.01,
+        )
+
+    monkeypatch.setattr(cost_control, "check_per_query_cap", _always_over_cap)
+
+    call = _make_call("call-1")
+    result = ToolExecutionResult(contains_untrusted_free_text=True, free_text="some abstract")
+
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.source == "reader"
+    assert finding.extracted_entities == []
+    assert finding.normalized_ids == []
+    assert "cost cap" in (finding.evidence_summary or "")
+    harness.call_tier.assert_not_awaited()  # the call was never issued at all
+
+
+@pytest.mark.asyncio
+async def test_reader_call_timeout_degrades_to_a_finding_instead_of_raising(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness = _make_harness()
+
+    async def _hang(*args: object, **kwargs: object) -> object:
+        await asyncio.sleep(10)  # far longer than the reader's timeout budget
+        raise AssertionError("should have been cancelled by enforce_timeout")
+
+    harness.call_tier = AsyncMock(side_effect=_hang)  # type: ignore[method-assign]
+    monkeypatch.setattr(coordinator_worker_module, "_READER_CALL_TIMEOUT_S", 0.05)
+
+    call = _make_call("call-1")
+    result = ToolExecutionResult(contains_untrusted_free_text=True, free_text="some abstract")
+
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.source == "reader"
+    assert finding.extracted_entities == []
+    assert "timeout" in (finding.evidence_summary or "")
+
+
+@pytest.mark.asyncio
+async def test_reader_call_classified_failure_degrades_to_a_finding_instead_of_raising() -> None:
+    harness = _make_harness()
+    harness.call_tier = AsyncMock(  # type: ignore[method-assign]
+        side_effect=HarnessCallError("simulated call_tier failure", error_class="unexpected")
+    )
+
+    call = _make_call("call-1")
+    result = ToolExecutionResult(contains_untrusted_free_text=True, free_text="some abstract")
+
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    assert len(findings) == 1
+    assert findings[0].source == "reader"
+    assert findings[0].extracted_entities == []
+
+
+@pytest.mark.asyncio
+async def test_a_cap_breach_on_one_reader_call_does_not_crash_the_whole_gather(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A partial result, not a crash: one degraded Finding for the call
+    that breached the cap, a normal Finding for the other."""
+    harness = _make_harness()
+    harness.call_tier = AsyncMock(  # type: ignore[method-assign]
+        return_value=_reader_response(
+            '{"entities": ["ok"], "normalized_ids": [], "evidence_summary": "fine"}'
+        )
+    )
+
+    real_check = cost_control.check_per_query_cap
+    call_count = {"n": 0}
+
+    def _raise_on_first_check(harness_arg, trace_id, tier, **kwargs):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            raise cost_control.QueryCapExceededError(
+                "forced for test", query_cost_usd=1.0, query_cap_usd=1.0,
+                estimated_call_cost_usd=0.01,
+            )
+        return real_check(harness_arg, trace_id, tier, **kwargs)
+
+    monkeypatch.setattr(cost_control, "check_per_query_cap", _raise_on_first_check)
+
+    tool_calls = [_make_call("call-1"), _make_call("call-2")]
+    results = [
+        ToolExecutionResult(contains_untrusted_free_text=True, free_text="abstract one"),
+        ToolExecutionResult(contains_untrusted_free_text=True, free_text="abstract two"),
+    ]
+
+    findings = await coordinator_worker_execute(harness, tool_calls, results)
+
+    assert len(findings) == 2
+    assert "cost cap" in (findings[0].evidence_summary or "")
+    assert findings[1].extracted_entities == ["ok"]
+
+
+# ---------------------------------------------------------------------------
+# F-2.0-14: the structured pass-through path caps an oversized payload
+# before a Finding is built.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_oversized_structured_payload_is_capped_before_reaching_a_finding() -> None:
+    harness = _make_harness()
+    harness.call_tier = AsyncMock()  # type: ignore[method-assign]
+
+    hostile_fields: dict[str, object] = {
+        "long_string": "y" * 10_000,  # far longer than the string cap
+        "long_list": list(range(2000)),  # far more items than the list cap
+        "nested": {f"nested_key_{i}": "z" * 5_000 for i in range(100)},
+    }
+    # Padding keys appended after the fields under test, so the top-level
+    # key cap (which keeps the first N keys in insertion order) trims the
+    # padding, not the fields the assertions below check.
+    hostile_fields.update({f"key_{i}": "x" for i in range(100)})
+
+    call = _make_call("call-1", tool="cypher_query", layer="layer_1_graph")
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=hostile_fields)
+
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    assert len(findings) == 1
+    capped = findings[0].structured_fields
+    assert capped is not None
+    assert len(capped) <= 30  # top-level key count capped
+    assert len(capped["long_string"]) <= 2000
+    assert len(capped["long_list"]) <= 500
+    nested = capped["nested"]
+    assert len(nested) <= 30
+    assert all(len(value) <= 500 for value in nested.values() if isinstance(value, str))
+    harness.call_tier.assert_not_awaited()  # structured pass-through never calls the reader
+
+
+@pytest.mark.asyncio
+async def test_well_formed_structured_payload_passes_through_unchanged() -> None:
+    """A payload already within every cap is not altered by the capping
+    pass, only truly oversized payloads are trimmed."""
+    harness = _make_harness()
+    harness.call_tier = AsyncMock()  # type: ignore[method-assign]
+
+    fields = {"gene_symbol": "TP53", "ncbi_gene_id": "7157", "row_count": 1}
+    call = _make_call("call-1", tool="cypher_query", layer="layer_1_graph")
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=fields)
+
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    assert findings[0].structured_fields == fields

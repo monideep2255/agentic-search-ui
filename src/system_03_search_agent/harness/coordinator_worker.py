@@ -50,6 +50,33 @@ untrusted-content boundary, not at every tool result.
   free-text `ToolExecutionResult`'s `free_text` field is read only inside
   `_reader_pass`/`_parse_reader_response` to build the reader prompt and
   is never copied onto the `Finding` object at any point below.
+
+F-2.0-08 closure (tracker/phase_2.1.md T-2.1-08): the isolated reader
+pass's `harness.call_tier("guard", ...)` call used to bypass the
+per-query cost cap and the per-step timeout entirely, both real controls
+`core.graph`'s model-calling nodes already enforce on every one of their
+own calls. `_reader_pass` now runs the same
+`cost_control.check_per_query_cap` pre-flight check, then wraps the call
+in `harness.enforce_timeout`, exactly as `core.graph._dispatch_tier_call`
+does. A reader call that would breach the cap is never issued at all; a
+reader call that times out is never retried. Either case degrades to a
+`Finding` carrying no extracted findings and a fixed, actionable
+`evidence_summary` explaining why, rather than raising out of
+`asyncio.gather` and failing every other concurrent reader pass along
+with it: `coordinator_worker_execute`'s job is to return a partial result
+under a cap or timeout hit, never to crash the whole Act step over one
+degraded call.
+
+F-2.0-14 closure (tracker/phase_2.1.md T-2.1-08): `_structured_pass_through`
+used to place `result.structured_fields` onto a `Finding` with no size
+enforcement at all. `_cap_structured_fields` now caps the top-level key
+count, every string value's length, every list's item count, and one
+level of nested dict/list content, before a `Finding` is built. This is
+defense in depth: a well-behaved tool's own output schema (`cypher_query`'s
+`CypherQueryRow`, for example) already caps its own fields, but this
+boundary must hold even for a tool whose schema does not, since a
+`Finding` is what a later Write-step ticket reads to build the actual
+event payload a client sees.
 """
 
 from __future__ import annotations
@@ -60,7 +87,8 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from system_03_search_agent.contracts.events import Layer, ToolCall, ToolName
-from system_03_search_agent.harness.harness import Harness
+from system_03_search_agent.harness import cost_control
+from system_03_search_agent.harness.harness import Harness, HarnessCallError
 
 # Caps on reader-derived fields, mirroring the multi-agent pipeline gate's
 # maxLength/maxItems discipline (production-standards.md) even though
@@ -72,6 +100,29 @@ _MAX_NORMALIZED_IDS = 25
 _MAX_EVIDENCE_SUMMARY_CHARS = 500
 _MAX_ENTITY_CHARS = 200
 _MAX_NORMALIZED_ID_CHARS = 200
+
+# F-2.0-14: caps on a structured pass-through payload before it reaches a
+# `Finding`. Deliberately generous relative to any one tool's own output
+# schema (a well-behaved tool's schema, e.g. cypher_query's
+# `CypherQueryRow`, already caps tighter than this), since this is a
+# defense-in-depth boundary meant to hold for every tool, not a
+# replacement for a tool's own schema caps.
+_MAX_STRUCTURED_TOP_LEVEL_KEYS = 30
+_MAX_STRUCTURED_STRING_CHARS = 2000
+_MAX_STRUCTURED_NESTED_STRING_CHARS = 500
+_MAX_STRUCTURED_LIST_ITEMS = 500
+
+# F-2.0-08: the fixed per-step timeout budget for the isolated reader
+# pass's single `call_tier("guard", ...)` call. Matches
+# `harness.harness.budget_for_query_class("single_hop")` (10 seconds): a
+# reasonable, fixed budget for a single guard-tier read-and-report call,
+# independent of the originating query's classified complexity, since the
+# reader always does the same fixed-shape one-call job regardless of
+# `query_class`. A named constant here rather than a parameter threaded
+# through `coordinator_worker_execute`'s signature, since threading
+# `query_class` through would change a signature no other ticket's file
+# scope owns changing right now.
+_READER_CALL_TIMEOUT_S = 10.0
 
 # The one-and-only prompt given to the isolated reader. It states the
 # read-and-report-only scope explicitly (never a tool, never a write,
@@ -219,6 +270,29 @@ def _parse_reader_response(call: ToolCall, content: str) -> Finding:
     )
 
 
+def _degraded_reader_finding(call: ToolCall, reason: str) -> Finding:
+    """A `Finding` for a reader pass that was never issued, or that failed.
+
+    F-2.0-08: a reader call that would breach the per-query cost cap, or
+    that hits its per-step timeout, degrades to this rather than raising
+    out of `asyncio.gather` and failing every other concurrent reader
+    pass along with it. `extracted_entities`/`normalized_ids` are empty
+    lists (never None), matching the shape a successfully parsed-but-empty
+    reader response would carry, so a caller does not need a third branch
+    to distinguish "nothing found" from "not attempted".
+    """
+    return Finding(
+        call_id=call.call_id,
+        tool=call.tool,
+        layer=call.layer,
+        source="reader",
+        structured_fields=None,
+        extracted_entities=[],
+        normalized_ids=[],
+        evidence_summary=reason[:_MAX_EVIDENCE_SUMMARY_CHARS],
+    )
+
+
 async def _reader_pass(harness: Harness, call: ToolCall, result: ToolExecutionResult) -> Finding:
     """Issue the one isolated reader call for a free-text result.
 
@@ -226,20 +300,103 @@ async def _reader_pass(harness: Harness, call: ToolCall, result: ToolExecutionRe
     reader is the cheap tier"). Exactly one call; no retry loop of its
     own beyond whatever `call_tier` itself does, and no follow-up call
     regardless of the response shape.
+
+    F-2.0-08: the call is now subject to the same per-query cost cap and
+    per-step timeout every model-calling node in `core.graph` already
+    enforces on its own calls. A cap breach means the call is never
+    issued at all; a timeout or classified `call_tier` failure means the
+    call was issued but did not complete. Both degrade to
+    `_degraded_reader_finding` rather than raising, per the module
+    docstring's F-2.0-08 closure note.
     """
+    try:
+        cost_control.check_per_query_cap(harness, harness.trace_id, "guard")
+    except cost_control.QueryCapExceededError:
+        return _degraded_reader_finding(
+            call, "reader call skipped: dispatching it would breach the per-query cost cap"
+        )
+
     messages = _build_reader_messages(result)
-    response = await harness.call_tier("guard", messages)
+    try:
+        response = await harness.enforce_timeout(
+            "coordinator_worker_reader",
+            harness.call_tier("guard", messages),
+            _READER_CALL_TIMEOUT_S,
+        )
+    except HarnessCallError:
+        return _degraded_reader_finding(
+            call, "reader call did not complete within its per-step timeout budget"
+        )
     return _parse_reader_response(call, response.content)
 
 
+def _cap_leaf_value(value: Any, *, max_chars: int) -> Any:
+    """Cap one non-container value: a string is length-capped, anything
+    else (int, float, bool, None) passes through unchanged."""
+    if isinstance(value, str):
+        return value[:max_chars]
+    return value
+
+
+def _cap_dict_one_level(value: dict[str, Any]) -> dict[str, Any]:
+    """Cap a nested dict's key count and each of its string values'
+    length. One level deep: this is a defense-in-depth boundary, not a
+    full recursive sanitizer, since the tools this phase's tool registry
+    can produce (cypher_query's own `CypherQueryRow`) already cap their
+    own nesting no deeper than this.
+    """
+    limited = list(value.items())[:_MAX_STRUCTURED_TOP_LEVEL_KEYS]
+    return {
+        key: _cap_leaf_value(val, max_chars=_MAX_STRUCTURED_NESTED_STRING_CHARS)
+        for key, val in limited
+    }
+
+
+def _cap_structured_value(value: Any) -> Any:
+    """Cap one top-level structured_fields value by its shape."""
+    if isinstance(value, str):
+        return value[:_MAX_STRUCTURED_STRING_CHARS]
+    if isinstance(value, list):
+        limited_items = value[:_MAX_STRUCTURED_LIST_ITEMS]
+        capped_items = []
+        for item in limited_items:
+            if isinstance(item, dict):
+                capped_items.append(_cap_dict_one_level(item))
+            else:
+                capped_items.append(
+                    _cap_leaf_value(item, max_chars=_MAX_STRUCTURED_NESTED_STRING_CHARS)
+                )
+        return capped_items
+    if isinstance(value, dict):
+        return _cap_dict_one_level(value)
+    return value
+
+
+def _cap_structured_fields(fields: dict[str, Any]) -> dict[str, Any]:
+    """Enforce maxLength/maxItems on a structured pass-through payload
+    before it is placed on a `Finding` (F-2.0-14; production-standards.md's
+    multi-agent pipeline gate). Caps the top-level key count, then caps
+    each value by its own shape: a string is length-capped, a list is
+    item-count-capped (with one level of dict/string capping inside it),
+    a nested dict is key-count- and string-length-capped one level deep,
+    and any other JSON-scalar value (int, float, bool, None) passes
+    through unchanged.
+    """
+    limited_keys = list(fields.items())[:_MAX_STRUCTURED_TOP_LEVEL_KEYS]
+    return {key: _cap_structured_value(value) for key, value in limited_keys}
+
+
 def _structured_pass_through(call: ToolCall, result: ToolExecutionResult) -> Finding:
-    """Pass a structured result straight through onto a `Finding`, no reader call."""
+    """Pass a structured result straight through onto a `Finding`, no
+    reader call, after enforcing F-2.0-14's size caps.
+    """
+    capped_fields = _cap_structured_fields(dict(result.structured_fields or {}))
     return Finding(
         call_id=call.call_id,
         tool=call.tool,
         layer=call.layer,
         source="structured_pass_through",
-        structured_fields=dict(result.structured_fields or {}),
+        structured_fields=capped_fields,
         extracted_entities=None,
         normalized_ids=None,
         evidence_summary=None,
