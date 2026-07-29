@@ -48,7 +48,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | Phase 1.0 complete (FastAPI app skeleton, health endpoint, the Pydantic event contract, a typed run() stub wired to the query endpoint), merged into main (PR #5, 2026-07-27). Phase 1.1 complete on branch phase/1.1-auth-service: minimal v1 auth and the PostgreSQL user-data schema (six tables). No LangGraph loop, no tools, and no real agent behavior yet. Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
+| Build (Phases 6-7) | Phase 1.0 complete (FastAPI app skeleton, health endpoint, the Pydantic event contract, a typed run() stub wired to the query endpoint), merged into main (PR #5, 2026-07-27). Phase 1.1 complete on branch phase/1.1-auth-service: minimal v1 auth and the PostgreSQL user-data schema (six tables). Phase 2.0 complete on branch phase/2.0-langgraph-agent-loop: the real five-node LangGraph Guardrail-Think-Plan-Act-Write loop and the three-tier harness, replacing the phase 1.0 stub. Phase 1.2 complete on branch phase/1.2-react-shell-sse: SSE streaming endpoints (POST /v1/query, GET /v1/query/{run_id}/events, POST /v1/query/{run_id}/stop) and the frontend/ React shell wired end to end against the real backend. Tools not yet wired (build phases 2.1 and 3.1 to 3.5). Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
 
 ---
 
@@ -78,7 +78,7 @@ alembic upgrade head
 # Run backend
 uvicorn system_03_search_agent.adapters.web_sse.app:app --reload
 
-# Frontend setup (separate terminal, build phase 1.2, not yet built)
+# Frontend setup (separate terminal)
 cd frontend
 npm install
 npm run dev
@@ -94,8 +94,8 @@ pytest tests/
 ```
 agentic-search-ui/
   src/
-    system_03_search_agent/     # Python backend (build phase 1.0: core, contracts, adapters/web_sse; build phase 1.1: auth, data live)
-      core/                     # LangGraph graph: the 5-step loop, run() entrypoint
+    system_03_search_agent/     # Python backend (build phase 1.0: core, contracts, adapters/web_sse; build phase 1.1: auth, data; build phase 1.2: SSE streaming endpoints live)
+      core/                     # LangGraph graph: the 5-step loop, run() and run_streaming() entrypoints, run_registry.py (in-process run tracking)
       contracts/                # Pydantic event models and JSONSchemas
       harness/                  # Tiers, cost caps, timeouts, coordinator-worker, cache hooks
       tools/                    # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search
@@ -106,8 +106,14 @@ agentic-search-ui/
         cli/                    # Thin REST client
       auth/                     # Signup, login, refresh, logout, me endpoints (build phase 1.1)
       data/                     # Postgres models: auth, interactions, cq_candidates
-  frontend/                     # React UI (build phase 1.2, not yet built)
+  frontend/                     # React UI (build phase 1.2: Vite, React 19, TypeScript; chat UI wired to SSE)
     src/
+      components/
+        auth/                   # AuthGate (build phase 1.2, T-1.2-08)
+        chat/                   # QueryPipelineStepper, AnswerStream, GuardrailBanner, CapMessage, LoadingSkeleton, StopButton, QueryInput, EmptyState
+      hooks/                    # useAgentRun (SSE consumption via fetch() + ReadableStream)
+      lib/                      # events.ts (typed AgentEvent union), api.ts (typed fetch wrappers)
+      pages/                    # HomePage, ChatPage
     public/
     package.json
   tests/                        # pytest test suite
@@ -119,7 +125,7 @@ agentic-search-ui/
   alembic/                      # Alembic migrations for the user-data schema (build phase 1.1)
   CLAUDE.md                     # Claude Code instructions
   AGENTS.md                     # Instructions for other AI agents
-  DECISIONS.md                  # Architecture decision log (135 rows)
+  DECISIONS.md                  # Architecture decision log (165 rows)
   LEARNINGS.md                  # What broke during the build and what fixed it
   CHANGELOG.md                  # Keep a Changelog format, all entries currently Unreleased
   pyproject.toml
