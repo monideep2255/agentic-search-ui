@@ -1,10 +1,12 @@
 """FastAPI application entry point for the web/SSE adapter."""
 
+import os
 import uuid
 from collections.abc import AsyncIterator
 from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sse_starlette.sse import EventSourceResponse
 
@@ -22,6 +24,39 @@ from system_03_search_agent.harness.cost_control import (
 )
 
 app = FastAPI()
+
+
+def _allowed_origins() -> list[str]:
+    """Browser origins permitted to call this API, from CORS_ORIGINS.
+
+    `.env` and `env.example` have declared `CORS_ORIGINS` since phase 1.0,
+    but nothing read it, so the app shipped with no CORS middleware at all
+    and every cross-origin browser call was blocked. The frontend runs on
+    Vite's port while the API runs on its own, so that is every call the UI
+    makes.
+
+    Why no test caught it: vitest mocks `fetch`, and the Playwright suite
+    drives its own base URL rather than a browser crossing two dev ports.
+    Neither exercises the preflight the browser actually sends. Found by
+    running the UI by hand for the first time.
+
+    Comma separated, whitespace tolerated. Defaults to the two local dev
+    ports rather than to `*`, since a wildcard with credentialed requests
+    is refused by browsers anyway and is the wrong default to ship.
+    """
+    raw = os.environ.get("CORS_ORIGINS", "")
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    return origins or ["http://localhost:5173", "http://localhost:3000"]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins(),
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+
 app.include_router(auth_router)
 
 

@@ -467,11 +467,20 @@ async def test_enforce_timeout_call_tier_failure_inside_step_keeps_its_own_sourc
 # --- budget_for_query_class(): the five ThinkPayload query classes resolve ---
 
 
+# `lookup` and `single_hop` were widened from 5.0 and 10.0 on 2026-07-29,
+# with product-owner approval, after the first end-to-end run through a
+# browser showed 5.0 seconds was not survivable: five warm guard calls on
+# the configured model measured 719, 1380, 1433, 783, and 4615 ms, plus
+# roughly 6000 ms cold, so the spread reached the old budget and queries
+# died at the guardrail. The expected values here are updated to match the
+# approved change, not loosened to make a failure go away; the three larger
+# classes are deliberately unchanged, since nothing measured suggests they
+# are tight. See `_QUERY_CLASS_BUDGET_S`'s own comment for the full record.
 @pytest.mark.parametrize(
     ("query_class", "expected_budget_s"),
     [
-        ("lookup", 5.0),
-        ("single_hop", 10.0),
+        ("lookup", 15.0),
+        ("single_hop", 20.0),
         ("aggregate", 30.0),
         ("multi_hop", 30.0),
         ("exploratory", 120.0),

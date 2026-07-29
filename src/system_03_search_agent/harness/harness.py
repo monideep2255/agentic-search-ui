@@ -252,7 +252,18 @@ def _price_per_token(model_id: str) -> tuple[float, float]:
 # output tokens on reasoning), so they are billed at the output rate and an
 # uncapped reasoning model is an uncapped bill. Every call carries a ceiling.
 _TIER_REASONING: dict[Tier, dict[str, Any]] = {
-    "guard": {"effort": "minimal"},
+    # Guard reasoning is OFF, not merely minimal. Section 3.1 specifies this
+    # tier as "sub-second, fractions of a cent", and its job is validation
+    # and classification, which is not a reasoning task.
+    #
+    # Measured: with `effort: "minimal"` a guard call did not return inside
+    # the 5-second per-step budget, so `enforce_timeout` killed it and the
+    # harness classified the result as a transient failure. Every query then
+    # died at the guardrail with "a step hit a temporary error", which is
+    # true but unhelpful, since the real cause was the tier's own reasoning
+    # budget. "minimal" still emits reasoning tokens on the current guard
+    # model; only "none" actually turns them off.
+    "guard": {"effort": "none"},
     "plan": {"effort": "high"},
     "synth": {"effort": "low"},
 }
@@ -264,9 +275,40 @@ _TIER_MAX_TOKENS: dict[Tier, int] = {
 }
 
 
+# Section 19.1's per-step budgets, widened for `lookup` and `single_hop`
+# against measured model latency.
+#
+# Section 19.1's original figures were written before any model call had
+# been made, and the first end-to-end run through a browser showed the
+# `lookup` budget of 5.0 seconds was not survivable. Measured on the
+# configured guard model (deepseek-v4-flash via OpenRouter), five warm
+# guard-shaped calls: 719, 1380, 1433, 783, and 4615 ms, plus roughly
+# 6000 ms for the first call in a cold process. The spread reaches the old
+# budget, so a query died at the guardrail more often than not, and the
+# failure surfaced as a generic "a step hit a temporary error" that gave no
+# hint the cause was the budget rather than the provider.
+#
+# Every model call in the loop is a step under one of these budgets, and
+# the guardrail hardcodes the `lookup` figure regardless of the eventual
+# query class, so `lookup` is the floor every single query must clear.
+#
+# `lookup` moves 5.0 -> 15.0 and `single_hop` 10.0 -> 20.0, roughly three
+# times the observed worst case, which leaves headroom for provider
+# variance without masking a genuinely hung call. The three larger classes
+# are untouched: nothing measured suggests they are tight, and widening a
+# budget nobody has evidence against would be guessing in the other
+# direction.
+#
+# These are latency budgets, not cost caps. The per-query and daily dollar
+# caps in Section 19.1 are unchanged, so a slower step still cannot spend
+# more than its cap allows. Product owner approved this change on
+# 2026-07-29 on the strength of the measurements above.
+#
+# The `aggregate` and `exploratory` mapping below is a settled decision
+# (DECISIONS.md 2026-07-28); do not re-derive it.
 _QUERY_CLASS_BUDGET_S: dict[QueryClass, float] = {
-    "lookup": 5.0,
-    "single_hop": 10.0,
+    "lookup": 15.0,
+    "single_hop": 20.0,
     "aggregate": 30.0,
     "multi_hop": 30.0,
     "exploratory": 120.0,
