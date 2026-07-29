@@ -18,6 +18,9 @@ One decision is still waiting on the product owner. It is in the open items tabl
 - [Build phase 1.1, done (2026-07-28)](#build-phase-11-done-2026-07-28)
 - [Build phase 2.0, done (2026-07-28)](#build-phase-20-done-2026-07-28)
 - [Build phase 1.2, done (2026-07-28)](#build-phase-12-done-2026-07-28)
+- [What to do next: finish build phase 2.1, do not open 2.2](#what-to-do-next-finish-build-phase-21-do-not-open-22)
+- [Carried forward out of build phase 2.1](#carried-forward-out-of-build-phase-21)
+- [Build phase 2.1, done with one recorded gap (2026-07-29)](#build-phase-21-done-with-one-recorded-gap-2026-07-29)
 - [Build phase 2.1, what it delivers, next up](#build-phase-21-what-it-delivers-next-up)
 - [Open items to resolve during Phase 6](#open-items-to-resolve-during-phase-6)
 - [If a different agent takes over](#if-a-different-agent-takes-over)
@@ -32,26 +35,53 @@ Phases 1 through 5 of System 3 are complete and merged. Phase 6 (build) is under
 2. `requirements/Technical_specification.md` Section 25. The build order: 26 numbered phases, each with its branch name, what it delivers, and what it depends on. This is the source of truth for what gets built and in what sequence. Do not work from a summary.
 3. `requirements/phase_5/Coverage_map.md`. The gate list: 303 obligations from the three locked documents, each mapped to the rule or skill that enforces it.
 4. `docs/build/Build_workflow_cadence.md`. How a phase runs: eleven stages, who acts at each, the capability tier and effort rung per stage.
-5. `tracker/BOARD.md`. Current state: phases 1.0, 1.1, 1.2, and 2.0 are `done`, everything else `todo`. Eleven open flags, four of them new from build phase 1.2's adversary pass (F-1.2-01 through F-1.2-04). The scan flag still binds every remaining prototype phase: the whole-repository security scan has never run against any build-phase code.
+5. `tracker/BOARD.md`. Current state: phases 1.0, 1.1, 1.2, and 2.0 are `done`, phase 2.1 is `in review` (merged, not closed), everything else `todo`. Ten open flags. F-2.0-08 and F-2.0-14 closed in phase 2.1 and were replaced by one new flag, "reworked not re-reviewed", which is the phase 2.1 gap. The scan flag still binds every remaining prototype phase: the whole-repository security scan has never run against any build-phase code.
 6. `tracker/phase_1.1.md` and `tracker/phase_1.2.md`. The full record of what each phase built. Read `phase_1.1.md` before opening any phase that touches auth, the user-data database, or a security property stated in the spec. Read `phase_1.2.md` before opening build phase 2.1, since its own T-1.2-08 entry is the concrete, worked example of the ticket-boundary integration gap named in the `LEARNINGS.md` row above, and because three findings deferred from phase 1.1 (F-1.1-10, F-1.1-11, F-1.1-18) were scheduled to close in phase 1.2 and did not; they carry forward, unresolved, see the open items table below.
 7. `requirements/PRD.md` and `requirements/Evaluation_playbook.md` as needed. The PRD is locked. The playbook is living.
 
-Build phase 2.1 (`cypher_query` over Layer 1) is next by dependency: it depends only on 2.0, which is done, and it is the phase every remaining tool-integration and citation-grounding phase sits behind. Its refinement label is `tech_refine`, not yet `refined`, so opening it is what turns the Section 25 row into scoped tickets:
+## What to do next: finish build phase 2.1, do not open 2.2
 
-```text
-/task-tracker --open 2.2
-```
+Build phase 2.1 is merged into `main` (PR #13, 2026-07-29) but it is NOT closed. Its code is live, its tickets read `in-review`, and its branch `phase/2.1-cypher-tool` is deliberately retained. The next action is to finish 2.1, not to start 2.2.
 
-Before any of 2.2's own tickets, its first task is a fresh judge and adversary pass over the build phase 2.1 surface. 2.1 merged without independent review of its rework, and 2.2 builds directly on that code.
+The one task standing between 2.1 and closed:
 
-That operation will make you read the phase's Section 25 row, verify its dependencies are merged, read the learnings filtered to this phase, and decompose it into tickets before anyone builds. Confirm with the product owner before opening if anything about scope feels underspecified; the phase's own Flags column already names two findings (F-2.0-08, F-2.0-14) that become live the moment this phase's real tool calls exist, and those need a ticket, not a surprise.
+Dispatch a fresh judge and a fresh adversary over the build phase 2.1 surface. Both failed this phase on its pre-rework code, filing roughly 27 findings including 2 critical and 5 high. Every blocker was then fixed and the 9-test live end-to-end gate went green at 798 tests passing. None of that rework was reviewed by any independent agent. Neither the judge nor the adversary may be a resumed instance of the one that filed the original findings, per the raiser-never-closes rule in `.claude/skills/task-tracker/SKILL.md` and the `LEARNINGS.md` row on this from build phase 1.0.
+
+What they must review, since none of it has been seen independently:
+
+- agtype parsing and the provenance mapping (`tools/agtype.py`, `tools/cypher_provenance.py`)
+- the true-total count query (`tools/cypher_query.py`)
+- entity extraction in `plan_node`, including the one-entry gene-symbol seed table
+- the cite-or-refuse enforcement path (`core/graph.py`'s `write_node`)
+- four Cypher validator bypass fixes (`tools/cypher_validator.py`)
+- the recursive structured-field caps (`harness/coordinator_worker.py`)
+- the per-query cost cap inside the tool
+- the `enable_seqscan = off` planner fix (`tools/graph_connection.py`)
+
+Only after that verdict does 2.1 close and 2.2 open with `/task-tracker --open 2.2`. If the judge fails it again, the fix work is still phase 2.1's, not 2.2's.
+
+## Carried forward out of build phase 2.1
+
+Live items, each with a named owner phase. None of these blocks the merge that already happened; all of them bind later work.
+
+| Item | Why it matters | Resolve before |
+|------|----------------|----------------|
+| F-06: 2 of 6 model calls per query bypass the stable prompt prefix | Cost inefficiency, not a correctness defect. `generate_cypher` needs a `cache_prefix` parameter that `cypher_query` then threads through. One test deliberately asserts the honest "6 calls, 4 carry the prefix" split rather than concealing it, so that assertion becomes wrong in the good direction when this is fixed | Build phase 2.2, alongside the re-review |
+| F-2.1-02: Section 6.1 documents a parameter mechanism that cannot work | The worst of the three spec defects. psycopg2 interpolates `%s` client-side, so AGE never receives a bind parameter and rejects the call; the working form is `PREPARE`/`EXECUTE`. The same claim sits in `docs/ncbi/Tool_implementation_mechanics.md` AND in `.claude/rules/production-examples.md` example 1 as the "correct" sample, so it will mislead all six remaining tool builds if it survives | Step 6.2 reconciliation, before any of build phases 3.1 to 3.5 |
+| F-2.1-01: the spec says 10 concept labels, the live graph has 11 | The eleventh, `NamedThing`, is the merge's dangling-endpoint stub label. Code uses all 11, since a generator that cannot name a label cannot query it | Step 6.2 reconciliation |
+| Env var name divergence | Section 24's table names `PER_USER_DAILY_CAP_USD`; the code renamed it to `PER_USER_DAILY_QUERY_CAP` in phase 2.0 because it holds a query count, not dollars. Provisioning from the spec instead of `env.example` yields a config the guardrail rejects with a bare `RuntimeError` and no events | Step 6.2 reconciliation |
+| Cost caps are only partly real | The per-query cap now holds end to end. Both daily caps still read zero, because nothing writes `interactions` rows until phase 4.6, so they cannot fire. The OpenRouter account ceiling (set to 20 US dollars, verified live) is doing the actual work today | Build phase 4.6 for the daily caps |
+| The SSH tunnel is manual | Nothing in the repo opens it. `ssh -N -L 15432:127.0.0.1:5432 root@46.225.128.133`. A fresh clone cannot run the live end-to-end tests until someone runs that by hand, and the tests skip rather than fail when it is absent | Whenever CI is stood up, build phase 6.1 |
+| Two checks never seen to pass | `tracker/render_board.py --check` after the BOARD.md flag edit, and one `pytest -q` after the doc-only commits. Both were blocked by a tooling outage at session end. Neither can plausibly be broken (markdown-only changes, and the renderer's own hook reported no diff), but neither was observed green | The next session, as its first command |
+
+Total LLM spend across the build phase 2.1 session: roughly 0.003 US dollars, six probe calls plus three real tier calls.
 
 Rules that bind here:
 - The PRD, tech spec, and strategic memo are frozen. They are edited only at the Step 6.2 reconciliation, not before.
 - Build phases get a branch and a pull request. Branch name comes from Section 25.
 - Every ticket carries a refinement label. Work does not start until it is `refined`.
 - Acceptance criteria are testable statements of a finished condition, never tasks. Phase 1.1 added a sharper version of this rule: when the spec states a security property in words, write the criterion as that property, not as the mechanism meant to produce it. Phase 1.2 added another: when a phase's own Section 25 line names an end-to-end deliverable ("wired end to end"), at least one ticket must have that exact deliverable as its acceptance criterion, or the phase can pass every ticket and still not deliver what it promised.
-- Log every decision to `DECISIONS.md`, append only, never modify an existing row. 165 rows as of build phase 1.2 close.
+- Log every decision to `DECISIONS.md`, append only, never modify an existing row. 174 rows as of build phase 2.1's merge.
 - Write to `LEARNINGS.md` the moment something breaks, including what did not work. Not at phase end.
 - Never resume the same judge agent to re-verify or close its own findings. Route re-verification to a fresh-context agent, per the phase 1.0 `LEARNINGS.md` row on this and per build phase 1.2's own close, which used a fresh confirmation pass rather than resuming the original judge.
 - The product owner approves each pull request. Do not start the next phase without it.
