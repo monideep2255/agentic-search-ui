@@ -371,7 +371,82 @@ History:
 
 ## Findings
 
-No findings filed yet. This section fills in as building and adversarial review happen during the phase.
+Filed by the adversary after the judge passed all 8 tickets, against the real running system (real PostgreSQL, real backend with only the LLM call mocked, real Chromium via Playwright). No critical or high findings; zero 5xx across every hostile input tried, no access-control bypass, no XSS that executed. Six findings, all medium or below.
+
+### F-1.2-01: the run registry never evicts a completed or abandoned run
+
+Severity: medium. Status: confirmed
+Raised by: adversary (independently corroborated by the judge's own source review)
+Ticket: none this phase, deferred
+
+What happened: `RunRegistry._runs` has no `del`, `pop`, `clear`, or TTL anywhere in `core/run_registry.py`. 400 runs were created by one authenticated account in 32 seconds with zero rejections and no rate limit; every `RunEntry` (its queue, all buffered events, and its finished `Task`) is retained for the process lifetime. Distinct from the already-tracked daily-cap gap (F-2.0-04, phase 4.6): that caps spend, it does not reclaim memory.
+
+History:
+- 2026-07-28 adversary: filed, reproduced with a 400-run creation loop against the real backend
+- 2026-07-28 judge: independently found the same gap during the phase-level premise review (`run_registry.py:152`), calling it "not a phase-1.2 defect... phase 4.0 must close it before this is a public surface"
+- 2026-07-28 lead: confirmed both independent findings agree; deferred to build phase 4.0 ("REST plus SSE adapter finalized as the public API surface"), the phase whose own Section 25 line makes this system a public surface for the first time. Tracked as an open flag on `tracker/BOARD.md`
+
+### F-1.2-02: an abandoned client connection does not halt the server-side run, and React StrictMode doubles run creation in dev
+
+Severity: medium. Status: confirmed
+Raised by: adversary
+Ticket: none this phase, deferred
+
+What happened: a client that aborts its SSE stream after one event does not cancel the server-side task; the run executes all four LLM calls to completion regardless (`task_cancelled` stays `false` throughout, verified via `/__e2e__/run_status`). Separately, `<StrictMode>`'s dev-mode double-invoke of `ChatPage`'s mount effect (already known from `DECISIONS.md` row 172, T-1.2-07) means one real user submit creates two real backend runs; only one is ever consumed by the UI, and the abandoned one runs to completion and is retained forever per F-1.2-01. Compounds F-1.2-01 directly: every dev-mode query currently costs two runs, one of them permanently orphaned.
+
+History:
+- 2026-07-28 adversary: filed, reproduced via a real client abort and via observing two `POST /v1/query` calls from one submit
+- 2026-07-28 lead: confirmed. The phase's own Scope note already frames this phase as "the minimal REAL version" of Section 13.1, explicitly deferring "the finalized [...] shape" to build phase 4.0; auto-cancellation on client disconnect is part of that finalization, not a phase-1.2 gap in isolation. Deferred to build phase 4.0 alongside F-1.2-01. Tracked as an open flag on `tracker/BOARD.md`
+
+### F-1.2-03: a second concurrent SSE consumer for the same run silently receives zero events, HTTP 200
+
+Severity: medium. Status: confirmed
+Raised by: adversary
+Ticket: none this phase, deferred
+
+What happened: the per-run `asyncio.Queue` is destructively single-consumer. When two authenticated, owning clients race to open `GET /v1/query/{run_id}/events` for the same run, whichever loses the race gets zero events, a clean 200, and a clean close, with no error signal. A reconnect after the first connection already drained the queue behaves identically: a legitimate client cannot distinguish "you missed everything" from "the run produced nothing," because both look like an empty successful stream. This is the resumability gap the phase's own Scope note already names as deferred (`Last-Event-ID`, explicitly out of scope, build phase 4.0's job), reproduced concretely rather than only stated as a known gap.
+
+History:
+- 2026-07-28 adversary: filed, reproduced across 3 trials with two real concurrent SSE clients, nondeterministic winner each time
+- 2026-07-28 lead: confirmed as the concrete, reproducible shape of the already-named resumability deferral. Deferred to build phase 4.0 alongside F-1.2-01/02. Tracked as an open flag on `tracker/BOARD.md`
+
+### F-1.2-04: signup's 409 response undermines login's own documented anti-enumeration guarantee
+
+Severity: low-medium. Status: confirmed
+Raised by: adversary
+Ticket: none this phase, needs a product decision
+
+What happened: `POST /auth/login` genuinely returns an identical status and byte-identical body for a wrong password versus a nonexistent email (verified directly, not just trusted from `DECISIONS.md` row 165's claim; median response time also showed no distinguishing signal, 41.1ms vs 42.3ms). The sibling endpoint gives the same fact away for free: `POST /auth/signup` with an already-registered email returns `409 {"detail":"email already registered"}`. `AuthGate.tsx`'s own UI puts "Sign up" directly next to "Log in" (the T-1.2-08 anti-enumeration design decision), so the oracle login deliberately withholds is one click away on the same screen. This is a phase 1.1 backend behavior (the `409` response), surfaced and made concretely exploitable by phase 1.2's own UI choice.
+
+History:
+- 2026-07-28 adversary: filed, reproduced via direct `curl` against `/auth/signup`
+- 2026-07-28 lead: confirmed the behavior. Not fixed in this phase: closing it is a real product trade-off (an ambiguous or verification-gated signup response changes the signup UX, not a pure bug fix), not a mechanical patch. Tracked as an open flag on `tracker/BOARD.md`, trigger is build phase 6.1's full `dev-standards` hardening pass and security scan, or an earlier explicit product-owner decision if the exposure is judged urgent before then
+
+### F-1.2-05: `CreateRunRequest.text` accepted an empty or whitespace-only query, burning a full pipeline run
+
+Severity: low. Status: closed
+Raised by: adversary
+Ticket: none needed, fixed directly (in scope, trivial)
+
+What happened: `text: str = Field(..., max_length=2000)` had no minimum. `{"text": ""}` and `{"text": "   \t\n  "}` both returned 202 and ran all four LLM calls (guard, think, plan, write) for no real query.
+
+Fix: `app.py`'s `CreateRunRequest` gained `min_length=1` plus a `field_validator` rejecting a stripped-empty string (`min_length=1` alone still accepts whitespace-only). Two new tests: `test_empty_text_returns_422`, `test_whitespace_only_text_returns_422`. 539 tests passing, up from 537.
+
+History:
+- 2026-07-28 adversary: filed, reproduced via direct `curl` with empty and whitespace-only `text`
+- 2026-07-28 lead: fixed directly, in scope for this phase (the request model T-1.2-02 owns), re-verified (539 tests passing)
+
+### F-1.2-06: `run_id` existence is distinguishable (404 vs 403) to an authenticated caller
+
+Severity: informational. Status: rejected
+Raised by: adversary
+Ticket: none, not a defect
+
+What happened: an authenticated caller can tell an unowned-but-existing `run_id` (403) apart from a nonexistent one (404).
+
+History:
+- 2026-07-28 adversary: filed as informational, explicitly noting it is "impractical to exploit" given uuid4 run ids and that it matches the ticket's own stated acceptance criterion (404 before 403, an explicit T-1.2-02 requirement)
+- 2026-07-28 lead: rejected as a finding. This is documented, spec-required behavior (`tracker/phase_1.2.md`'s T-1.2-02 acceptance criteria), not a defect; the adversary itself did not claim otherwise
 
 ## History
 

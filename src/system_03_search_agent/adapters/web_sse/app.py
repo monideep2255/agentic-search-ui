@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sse_starlette.sse import EventSourceResponse
 
 from system_03_search_agent.auth.dependencies import get_current_user
@@ -108,9 +108,20 @@ async def post_query(
 class CreateRunRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    text: str = Field(..., max_length=2000)
+    text: str = Field(..., min_length=1, max_length=2000)
     session_id: str = Field(..., max_length=64)
     audience_depth: Literal["clinical_brief", "researcher", "deep_technical"] = "researcher"
+
+    @field_validator("text")
+    @classmethod
+    def _text_is_not_only_whitespace(cls, value: str) -> str:
+        # F-1.2-05 (adversarial pass, build phase 1.2): `min_length=1` alone
+        # accepts a whitespace-only string ("   "), which still passes
+        # Guardrail's stub and burns a full four-call pipeline run for no
+        # real query. Reject before a run is ever created, not after.
+        if not value.strip():
+            raise ValueError("text must not be empty or whitespace-only")
+        return value
 
 
 # Phase 4.5 (personalization and memory) is the ticket that assigns a real

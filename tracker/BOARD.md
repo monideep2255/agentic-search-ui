@@ -56,7 +56,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 3.3 | `phase/3.3-enrichment-tools` | pubtator_annotate and litvar2_lookup, each with untrusted-source-reader separation | 3.1 | v1 | todo | tech_refine | | | relations endpoint unverified |
 | 3.5 | `phase/3.5-pathogen-clinicaltrials-tools` | pathogen_detection and clinicaltrials_search, completing the seven-tool roster | 3.1 | v1 | todo | tech_refine | | | |
 | 3.4 | `phase/3.4-citation-trust-full` | Provenance extended to Layers 2 and 3, the two-tier risk gate, freshness and conflict resolution | 2.2, 3.1, 3.2, 3.3, 3.5 | v1 | todo | tech_refine | | eval-harness | |
-| 4.0 | `phase/4.0-rest-sse-hardening` | The REST plus SSE adapter finalized as the public API surface | 2.2 | v1 | todo | tech_refine | | | |
+| 4.0 | `phase/4.0-rest-sse-hardening` | The REST plus SSE adapter finalized as the public API surface | 2.2 | v1 | todo | tech_refine | | | F-1.2-01, F-1.2-02, F-1.2-03 |
 | 4.1 | `phase/4.1-mcp-server` | Outbound-only MCP server wrapping the same tool functions | 3.4 | v1 | todo | tech_refine | | | |
 | 4.2 | `phase/4.2-cli-adapter` | Thin CLI client over the REST API | 4.0 | v1 | todo | tech_refine | | | |
 | 4.3 | `phase/4.3-graphql-api` | GraphQL surface via Strawberry, sharing auth and tools with REST | 4.0 | v1 | todo | tech_refine | | | |
@@ -67,7 +67,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 5.0 | `phase/5.0-observability` | LangSmith per-run tracing on trace_id, PostHog analytics, the append-only tool-call audit log | 2.0 | v1 | todo | tech_refine | | | |
 | 5.1 | `phase/5.1-golden-dataset-eval` | The 50-query golden dataset, eval-harness grading, the cost dashboard | 3.4, 5.0 | v1 | todo | product_refine | | eval-harness | needs domain sign-off owner |
 | 6.0 | `phase/6.0-rate-limit-concurrency` | Per-layer throttling, the bounded queue per API family, the 20-calls-per-query budget | 3.1, 3.2, 3.3, 3.5 | v1 | todo | tech_refine | | | |
-| 6.1 | `phase/6.1-hardening-release` | The full dev-standards six-lens pass, CI and CD gates, the security scan, accessibility | everything | v1 | todo | tech_refine | | dev-standards | |
+| 6.1 | `phase/6.1-hardening-release` | The full dev-standards six-lens pass, CI and CD gates, the security scan, accessibility | everything | v1 | todo | tech_refine | | dev-standards | F-1.2-04 |
 | 7.0 | `phase/7.0-model-bench` | Benchmark candidate models per tier against the golden dataset, pick the winners | 5.1 | v1 | todo | tech_refine | | | |
 | 7.1 | `phase/7.1-ab-mechanism` | The online A and B randomized-routing mechanism, human-gated | 7.0, 5.0 | v1 | todo | tech_refine | | | |
 |-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
@@ -82,6 +82,10 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | F-2.0-14 | The coordinator-worker structured pass-through path applies no `maxLength`/`maxItems` of any kind, the default branch every tool adapter hits unless it opts into the reader. A `production-standards.md` gate stated as "required, not optional" | Build phase 2.1, before the first tool adapter returns real API JSON as `structured_fields` |
 | F-2.0-04 | Nothing in `src/` writes an `Interaction` row, so `get_user_daily_query_count` and `get_system_daily_cost_usd` read live but always return zero; the per-user and system-wide daily caps cannot fire in production today | Build phase 4.6, feedback capture, the first ticket that writes `interactions` rows |
 | F-2.0-10 | `Query.trace_id` is client-supplied and never server-overwritten (Section 20.1 says it should be minted at Guardrail). Live today as a spec-conformance gap; compounds with F-2.0-04 once caps read from `interactions`, since a client that reuses one `trace_id` writes at most one row/day and evades the 100-query cap. Deliberately not fixed alongside F-2.0-09/11/12/13 in phase 2.0, since `trace_id` is a phase 1.0 contract field threading through every `Event`, not a contained fix | Build phase 4.6, taken together with F-2.0-04 so the daily cap is not shipped silently defeatable |
+| F-1.2-01 | `RunRegistry._runs` never evicts a completed or abandoned run; every `RunEntry` (queue, buffered events, finished `Task`) is retained for the process lifetime, with no per-user rate limit. Reproduced: 400 runs from one account in 32 seconds, zero rejections | Build phase 4.0, the phase whose own Section 25 line makes this system a public surface for the first time |
+| F-1.2-02 | An abandoned client SSE connection does not cancel the server-side run; it executes to completion regardless. React `<StrictMode>` doubles run creation per submit in dev, and the abandoned run is never reclaimed. Compounds F-1.2-01 directly | Build phase 4.0, alongside F-1.2-01 |
+| F-1.2-03 | The per-run event queue is destructively single-consumer: a second concurrent or reconnecting SSE client for the same run silently gets zero events and a clean 200, indistinguishable from a run that produced nothing. The concrete, reproduced shape of the `Last-Event-ID` resumability gap the phase 1.2 Scope note already named as deferred | Build phase 4.0, alongside F-1.2-01/02 |
+| F-1.2-04 | `POST /auth/signup`'s `409` response on an already-registered email undermines `POST /auth/login`'s own verified anti-enumeration guarantee (identical status and body for wrong-password versus nonexistent-email); `AuthGate.tsx` puts "Sign up" next to "Log in" on the same screen, making the oracle one click away | Build phase 6.1's hardening pass and security scan, or an earlier explicit product-owner decision if judged urgent before then |
 
 ## Visualizing this board
 

@@ -254,6 +254,26 @@ class TestCreateRun:
             assert response.status_code == 422
 
     @pytest.mark.asyncio
+    async def test_empty_text_returns_422(self) -> None:
+        """F-1.2-05 (adversarial pass): an empty `text` used to return 202
+        and burn a full four-call pipeline run for no real query."""
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            response = await client.post("/v1/query", json=_create_body(text=""), headers=headers)
+            assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_whitespace_only_text_returns_422(self) -> None:
+        """F-1.2-05: `min_length=1` alone accepts a whitespace-only string;
+        the same rejection must catch this too."""
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            response = await client.post(
+                "/v1/query", json=_create_body(text="   \t\n  "), headers=headers
+            )
+            assert response.status_code == 422
+
+    @pytest.mark.asyncio
     async def test_the_created_run_is_owned_by_the_authenticated_caller(self) -> None:
         async with _client() as client:
             user_id, headers = await _auth_headers(client)
