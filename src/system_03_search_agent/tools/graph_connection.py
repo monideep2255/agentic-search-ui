@@ -81,6 +81,38 @@ ConnectionFactory = Callable[[], "psycopg2.extensions.connection"]
 # (session_preload_libraries = age), and a non-superuser cannot run LOAD.
 _SEARCH_PATH_SQL = 'SET search_path = ag_catalog, "$user", public;'
 
+# Force the planner onto the GIN index for property lookups.
+#
+# The planner mis-estimates a CURIE lookup badly: EXPLAIN reports
+# `rows=67521` for `properties @> '{"id": "..."}'` on the Gene label, where
+# the true answer is 0 or 1. With a small LIMIT it therefore prices a Seq
+# Scan as cheap, assuming it can stop as soon as LIMIT rows are found. When
+# fewer than LIMIT rows actually match, that early exit never happens and it
+# reads all 67.5 million rows.
+#
+# Measured on the live graph, `MATCH (g:Gene {id: $gene_id}) RETURN g LIMIT 5`:
+#     enable_seqscan on   absent entity   42,034 ms
+#     enable_seqscan on   present entity  40,921 ms
+#     enable_seqscan off  absent entity      108 ms
+#     enable_seqscan off  present entity     109 ms
+# A labelled multi-hop traversal is unaffected either way (125 ms versus
+# 129 ms), so this is not a blanket penalty on scans that are genuinely
+# warranted.
+#
+# Note the pathology is NOT about the entity being absent. A present entity
+# with LIMIT 5 is equally slow, because only one row matches and the scan
+# keeps looking for the other four. LIMIT 1 on a present entity happens to
+# be fast, which is what makes this easy to misdiagnose.
+#
+# Rejected alternatives: raising the injected LIMIT to clear the observed
+# cliff between 10 and 20 (a statistics artifact, not a stable boundary, and
+# it would silently change how many rows a caller asked for), and moving the
+# LIMIT onto the wrapping SELECT (measured, still 42 seconds, since the inner
+# plan is chosen the same way). Fixing the statistics server-side is the real
+# repair, but the graph is read-only from this repo and belongs to Systems 1
+# and 2.
+_ENABLE_SEQSCAN_OFF_SQL = "SET enable_seqscan = off;"
+
 # The default AGE output column. A row's Cypher RETURN clause is expected to
 # collapse to one expression per row; a caller with a different shape can
 # override as_clause, since cursor.description drives the returned dict keys
@@ -385,6 +417,7 @@ def execute_cypher(
         try:
             with conn.cursor() as cur:
                 cur.execute(_SEARCH_PATH_SQL)
+                cur.execute(_ENABLE_SEQSCAN_OFF_SQL)
                 cur.execute(
                     "SET statement_timeout = %s;",
                     (int(timeout_s * 1000),),
