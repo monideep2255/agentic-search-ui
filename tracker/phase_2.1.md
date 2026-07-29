@@ -254,7 +254,7 @@ History:
 
 ### T-2.1-07: cypher_query three-step pipeline
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: T-2.1-01, T-2.1-02, T-2.1-03, T-2.1-04, T-2.1-05, T-2.1-06
@@ -273,16 +273,23 @@ Acceptance criteria:
 - [ ] Tests cover: a successful lookup, a successful multi-hop query, zero rows, a first-attempt validation failure that the retry repairs, two consecutive validation failures, and a timeout
 
 Evidence:
-- (filled at close)
+- `src/system_03_search_agent/tools/cypher_query.py` (new). Section 6.1 pipeline: schema slice, generate, validate, execute, provenance-map. Exactly one repair retry; a 30-second outer budget via `asyncio.wait_for`; zero rows returns `status="empty"` and never `"error"`. `cypher_executed` capped at 2000 chars and never copied elsewhere in the output. The function never raises: every failure path folds into `status="error"`.
+- `tests/system_03_search_agent/tools/test_cypher_query.py` (new), 9 tests: successful lookup, successful multi-hop, zero rows, first-attempt validation failure repaired by the retry, two consecutive validation failures, outer timeout, `GraphTimeoutError`, `GraphConnectionError`, unrecoverable generation. `pytest tests/system_03_search_agent/tools/test_cypher_query.py -v` -> `9 passed`.
+- Full suite after this ticket: `716 passed, 1 warning in 21.5s`, including the live graph integration test. `ruff check src/system_03_search_agent/` -> `All checks passed!`.
+- Commit `7c5b8d6` on `phase/2.1-cypher-tool`.
+- Known limitation raised by the builder itself and filed as F-2.1-05: `target_entities` binds to the generated Cypher's `$param_name`s POSITIONALLY, because no naming contract exists between the generation step and the binding step. Under judge and adversary review.
+- Acceptance criteria deliberately left unchecked here. The lead recorded this evidence but did not build the module and does not check its own criteria; the judge verifies and checks them at close.
 
 History:
 - 2026-07-29 lead: created, scoped from Section 6.1
+- 2026-07-29 builder-d: implemented and committed as `7c5b8d6`, set in-review
+- 2026-07-29 lead: pasted builder-d's evidence, since builder-d was told not to touch this file while two other agents held it
 
 ---
 
 ### T-2.1-08: Act-step wiring, cost cap and output caps
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: T-2.1-07
@@ -301,10 +308,19 @@ Acceptance criteria:
 - [ ] Tests cover: a query that selects `cypher_query`, a query that selects no tool, a cost-cap breach during Act, and an oversized tool payload that gets capped
 
 Evidence:
-- (filled at close)
+- `plan_node` (`core/graph.py`) now deterministically selects `cypher_query` for a substantive query and emits a real `ToolCall`, replacing the phase 2.0 stub's always-empty list. A small fixed set of greetings and non-questions selects no tool.
+- `act_node` executes the selected call and maps `CypherQueryOutput` into `ToolExecutionResult.structured_fields`, deliberately omitting `cypher_executed`, replacing the `coordinator_worker_execute(harness, [], [])` placeholder. Graph rows always take the structured pass-through path, never the free-text reader.
+- F-2.0-08: the isolated reader pass now calls `cost_control.check_per_query_cap` before dispatch and wraps the call in `harness.enforce_timeout`. A cap breach or timeout degrades to an empty `Finding` rather than raising out of `asyncio.gather`. `act_node` independently checks the cap before invoking `cypher_query` at all, and excludes an un-dispatched call from both `tool_calls` and `results` so the 1:1 pairing holds.
+- F-2.0-14: `_structured_pass_through` runs every payload through `_cap_structured_fields` (top-level key count, string length, list length, and one level of nested dict and list capping) before a `Finding` is built.
+- Tests: 5 new in `tests/system_03_search_agent/core/test_graph.py`, 6 new in `tests/system_03_search_agent/harness/test_coordinator_worker.py`. Combined run with the tool tests -> `49 passed`.
+- Full suite: `716 passed, 1 warning in 21.5s`. `ruff check src/system_03_search_agent/` -> `All checks passed!`. Commit `7c5b8d6`.
+- Flagged for the judge, not resolved by the lead: commit `7c5b8d6` changed the shared query fixture in `test_graph.py` and `test_run.py` from "What gene is BRCA1?" to "hello", because the original text now triggers real tool selection and broke phase-2.0-era assertions. New tests were added for the tool path (`_GRAPH_ANSWERABLE_QUERY_TEXT`, +141 lines). Whether this is a legitimate refactor or a weakened verify surface under `goal-contracts.md` is explicitly the judge's call, not the builder's and not the lead's.
+- Acceptance criteria deliberately left unchecked here, same reason as T-2.1-07.
 
 History:
 - 2026-07-29 lead: created, scoped from F-2.0-08 and F-2.0-14
+- 2026-07-29 builder-d: implemented and committed as `7c5b8d6`, set in-review
+- 2026-07-29 lead: pasted builder-d's evidence and flagged the test-fixture change for judge adjudication
 
 ---
 
@@ -351,6 +367,95 @@ Disposition: T-2.1-02 uses all 11 from the reference doc, since that is what the
 
 History:
 - 2026-07-29 lead: filed during phase open, after the live schema was verified
+
+---
+
+### F-2.1-02: Section 6.1's parameter-passing mechanism is not implementable
+
+Status: filed
+Raised by: lead
+Severity: high
+Ticket: T-2.1-06 (fixed, awaiting judge confirmation)
+
+What happened: Section 6.1 states "Query parameters pass through the SQL `%s` placeholder as a JSON object, never string-interpolated into the Cypher text". `docs/ncbi/Tool_implementation_mechanics.md` repeats it. That mechanism cannot work. psycopg2 interpolates `%s` client-side before the statement reaches the server, so AGE never receives a genuine bind parameter and rejects the call.
+
+Probed against the live graph, all four forms:
+
+- `%s` plain: sqlstate 22023, "third argument of cypher function must be a parameter"
+- `%s::agtype`: same failure
+- Empty params object: same failure, so an empty dict must omit the third argument entirely rather than pass `{}`
+- `PREPARE name(agtype) AS SELECT * FROM cypher(...,$1) AS (...)` then `EXECUTE name(%s)`: works, returned 15,310 rows for the BRCA1 variant query
+
+Injection resistance of the working form was verified separately, not assumed: passing `NCBIGene:672'}) RETURN v UNION MATCH (x:Gene) RETURN x //` as the parameter value returned 0 rows, with the value treated as an opaque literal.
+
+Why it matters beyond this tool: the same claim appears in the tech spec, the tool mechanics doc, and `.claude/rules/production-examples.md` example 1, whose "correct" code sample uses the non-working form. Every one of the six remaining tools will be written against that sample. This is a documentation defect that propagates.
+
+Disposition: fixed in `graph_connection.py` (commit `6c49f3f`) using PREPARE/EXECUTE with a uuid4-suffixed statement name and a DEALLOCATE in a finally block. The spec and rule wording are a Step 6.2 reconciliation item, since the tech spec is locked until then. The lead raised this and must not also close it; the judge confirms.
+
+History:
+- 2026-07-29 lead: filed after probing four forms against the live graph
+- 2026-07-29 fix agent: implemented PREPARE/EXECUTE, live integration test passes
+
+---
+
+### F-2.1-03: MeSH CURIEs silently lost their citation
+
+Status: filed
+Raised by: lead
+Severity: high
+Ticket: T-2.1-05 (fixed, awaiting judge confirmation)
+
+What happened: `source_url_for_curie()` returned `None` for GO, MeSH, HP, and MONDO, on the stated reasoning that none is NCBI-hosted. That holds for GO (geneontology.org), HP (hpo.jax.org), and MONDO (Monarch Initiative). It is wrong for MeSH, which is NCBI database `mesh` with 355,735 records (`docs/ncbi/NCBI_databases_and_APIs_reference.md` line 65).
+
+Why it matters: `has_mesh_annotation` is the largest edge class in the graph at 349,158,184 edges, and `OntologyClass` nodes carry `MeSH:` CURIEs. Every MeSH-derived fact would have been emitted with no citation, against CLAUDE.md's "every fact in a response must link back to its source". An uncited fact is not a formatting nit here, it is the trust moat failing open.
+
+Note on the builder's reasoning: the rule it applied, never fabricate a URL for a prefix with no NCBI record page, is correct and was applied correctly to the other three. It flagged the call for review rather than guessing. The defect is a misclassification of one database, not a bad principle.
+
+Disposition: fixed (commit `c79be23`), MeSH now maps to `https://www.ncbi.nlm.nih.gov/mesh/?term=<local_id>` with the local id URL-encoded. All six mapped prefixes curl-verified at HTTP 200. GO, HP, MONDO still return `None`, unchanged. The lead raised this and must not also close it; the judge confirms.
+
+History:
+- 2026-07-29 lead: filed after checking MeSH against the NCBI database reference
+- 2026-07-29 fix agent: mapped MeSH, re-verified the other five mappings as correct
+
+---
+
+### F-2.1-04: The live integration test runs only as a side effect of importing litellm
+
+Status: filed
+Raised by: lead
+Severity: medium
+Ticket: none yet
+
+What happened: `litellm/__init__.py:27` calls `load_dotenv()` at import time. Nothing in this repo calls it. So `.env` reaches `os.environ` only when some test imports the app, which imports the harness, which imports litellm. The live graph test's guard reads `GRAPH_PG_HOST` from the environment, so:
+
+- Full suite: litellm gets imported, `.env` loads, the test runs. Verified: `697 passed`, zero skips.
+- `pytest tests/system_03_search_agent/tools/`: litellm never imported, `GRAPH_PG_HOST` is unset, the test skips with the reason "None:5432 is not reachable" even when a tunnel is open.
+
+Why it matters: someone scoping a run to the tools directory gets a silent skip and believes live coverage ran. The reachability guard added in `6c49f3f` makes the failure mode safe (skip, not a false pass), so this is a coverage illusion rather than a correctness bug. It also means an unrelated dependency's import side effect silently decides whether this project's live test executes.
+
+Disposition: not fixed. The test should load `.env` explicitly if it intends to run against live infrastructure, rather than inheriting it. Needs an owner and a phase.
+
+History:
+- 2026-07-29 lead: filed after the test skipped in isolation but passed in the full suite
+
+---
+
+### F-2.1-05: target_entities binds to generated Cypher parameters positionally
+
+Status: filed
+Raised by: builder-d, self-reported
+Severity: medium, pending judge and adversary assessment
+Ticket: T-2.1-07
+
+What happened: `cypher_query.py` binds the caller's `target_entities` list to the generated Cypher's `$param_name` placeholders by position, because no naming contract exists between the generation step and the binding step. The generator is free to name parameters however it likes; the binder assumes an order.
+
+Why it matters: the plausible failure is not a crash. If the generator emits parameters in a different order than `target_entities`, or a different count, the tool can bind the wrong entity to the wrong slot and return rows that are real, well-formed, cited, and about the wrong thing. A confidently wrong biomedical answer is the worst output this system can produce, and it is exactly the class a passing test suite does not catch.
+
+Disposition: raised by the builder itself rather than hidden, which is the right behavior. Under active judge and adversary review; the adversary was tasked to attack this specific binding directly. Not closed by the raiser.
+
+History:
+- 2026-07-29 builder-d: self-reported as a known limitation while implementing T-2.1-07
+- 2026-07-29 lead: recorded as a tracked finding and routed to the judge and adversary
 
 ---
 
