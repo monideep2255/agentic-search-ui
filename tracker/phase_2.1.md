@@ -11,6 +11,29 @@ Reference: `docs/ncbi/Tool_implementation_mechanics.md`, `docs/data-engineering/
 
 A real query reaches the live AGE graph through `cypher_query` and returns cited rows, with the main agent never generating or seeing raw Cypher. A phase where every ticket passes but no query reaches the graph is a failed phase, not a passed one (LEARNINGS rows 28 and 30).
 
+## Phase close status: reworked, NOT re-reviewed
+
+Read this before opening build phase 2.2. It is the one thing about this phase that a reader would otherwise get wrong.
+
+The premise is met. `tests/system_03_search_agent/tools/test_cypher_query_e2e.py` runs 9 tests against the live graph with only the model call mocked, and all 9 pass. The full suite is 798 passing. That gate cannot be satisfied by mocks, which is precisely what caught the original failure.
+
+What did not happen: the judge and the adversary reviewed the code as it stood BEFORE the rework, and both failed it. Everything shipped since that verdict is unreviewed by any independent agent:
+
+- agtype parsing and the provenance mapping (F-2.1-A1, F-01)
+- the true-total count query (A2)
+- entity extraction in `plan_node` (A3)
+- the cite-or-refuse enforcement path (F-02, A5)
+- four Cypher validator bypass fixes (A4, A8, A9, F-08)
+- the recursive structured-field caps (F-03)
+- the per-query cost cap inside the tool (F-04)
+- the Seq Scan planner fix (F-2.1-07)
+
+This phase's own history is the reason that matters. The first time every ticket read green, the judge found the phase premise unmet and the adversary found 17 defects. A green suite has already been wrong once here.
+
+The product owner merged with this gap explicitly recorded rather than glossed, trading a second review round against a budget limit. That is a deliberate, informed decision, not an oversight. Build phase 2.2 depends directly on this code and should treat a fresh judge and adversary pass over the phase 2.1 surface as its own first task, not as optional.
+
+Also carried forward, not fixed: F-06 (2 of 6 model calls bypass the stable prompt prefix, a cost inefficiency rather than a correctness defect) and the operational fact that the SSH tunnel to the graph is a manual step no repo code performs, so a fresh clone cannot run the live tests without it.
+
 ## Layer 1 access, verified 2026-07-29
 
 Established during phase open, before any ticket was scoped:
@@ -254,7 +277,7 @@ History:
 
 ### T-2.1-07: cypher_query three-step pipeline
 
-Status: rejected
+Status: in-review
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: T-2.1-01, T-2.1-02, T-2.1-03, T-2.1-04, T-2.1-05, T-2.1-06
@@ -289,7 +312,7 @@ History:
 
 ### T-2.1-08: Act-step wiring, cost cap and output caps
 
-Status: rejected
+Status: in-review
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: T-2.1-07
@@ -326,7 +349,7 @@ History:
 
 ### T-2.1-09: End-to-end verification against the live graph
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: T-2.1-08
