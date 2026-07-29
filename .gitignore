@@ -18,6 +18,8 @@ node_modules/
 .next/
 dist/
 frontend/build/
+frontend/test-results/
+frontend/playwright-report/
 
 # IDE
 .vscode/
