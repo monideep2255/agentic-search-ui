@@ -147,13 +147,20 @@ def _harness(trace_id: str = "e2e-live") -> Any:
 def _query(text: str, trace_id: str) -> Any:
     from system_03_search_agent.contracts.query import Query
 
-    return Query(text=text, trace_id=trace_id, session_id="e2e-live-session")
+    return Query(
+        text=text,
+        trace_id=trace_id,
+        session_id="e2e-live-session",
+        user_id="00000000-0000-0000-0000-000000000001",
+    )
 
 
 def _context() -> Any:
     from system_03_search_agent.contracts.query import RequestContext
 
-    return RequestContext(user_id="00000000-0000-0000-0000-000000000001")
+    # `surface` is required and RequestContext forbids extras. `user_id`
+    # lives on Query, not here.
+    return RequestContext(surface="rest_sse")
 
 
 async def _run(monkeypatch: pytest.MonkeyPatch, cypher: str, **input_kwargs: Any) -> Any:
@@ -358,6 +365,49 @@ async def test_full_loop_reaches_the_graph_and_returns_a_cited_answer(
 
     citations = [e for e in events if e.type == "citation"]
     assert citations, "the loop reached done with no citation event"
+
+
+@pytest.mark.asyncio
+async def test_full_loop_works_for_a_gene_outside_the_symbol_seed_table(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The loop must not depend on a hardcoded symbol lookup.
+
+    `core/graph.py._extract_target_entities` has two sources: a verbatim
+    CURIE in the query text, which is general, and a gene-symbol seed
+    table, which currently holds exactly one entry (BRCA1, the gene the
+    other tests here query). Without this test the gate could pass on the
+    seed table alone and nobody would notice that symbol resolution does
+    not generalize.
+
+    This names TP53 by CURIE, which is absent from that table, so only the
+    general path can satisfy it. TP53 is NCBIGene:7157 in the live graph,
+    verified 2026-07-29.
+    """
+    from system_03_search_agent.core.run import run
+
+    _mock_generation(monkeypatch, "MATCH (g:Gene {id: $gene_id}) RETURN g")
+
+    events = [
+        event
+        async for event in run(
+            _query("What is NCBIGene:7157?", "e2e-live-3"), _context()
+        )
+    ]
+
+    errors = [e for e in events if e.type == "error"]
+    assert not errors, f"the loop errored: {[e.payload for e in errors]}"
+
+    done = [e for e in events if e.type == "done"]
+    assert done, "the loop produced no done event"
+    outcome = done[0].payload.get("trust_outcome")
+    assert outcome == "answer", (
+        f"trust_outcome was {outcome!r} for a gene that exists in the graph; "
+        "entity extraction did not generalize beyond the symbol seed table"
+    )
+
+    citations = [e for e in events if e.type == "citation"]
+    assert citations, "a real gene resolved by CURIE produced no citation"
 
 
 @pytest.mark.asyncio
