@@ -224,7 +224,7 @@ Acceptance criteria:
 - [x] Clicking it calls `POST /v1/query/{run_id}/stop` AND closes the local `EventSource` immediately, not waiting on the network round trip (Section 12.3's "feels instantly responsive" requirement) — a test with an artificially slow stop-endpoint response still shows the UI as stopped immediately
 - [x] Clicking stop on an already-finished run is a no-op, matching the backend's idempotent 200 (no error toast, no crash)
 - [x] Keyboard-operable: reachable by Tab, activatable by Enter and Space (Section 12.10, success criterion 2.1.1)
-- [ ] An end-to-end test (can be the Playwright test from T-1.2-07, cross-referenced here rather than duplicated) proves stopping a real, running query actually halts the server-side loop, not just the client-side UI state — deferred to T-1.2-07, not yet built
+- [x] An end-to-end test (can be the Playwright test from T-1.2-07, cross-referenced here rather than duplicated) proves stopping a real, running query actually halts the server-side loop, not just the client-side UI state — delivered by T-1.2-07's second E2E test, which polls a server-side `/__e2e__/run_status` route asserting `RunEntry.task.cancelled()`, independent of the browser's own `AbortController`
 
 Breakdown:
 - [x] `StopButton` enabled/disabled state logic
@@ -246,7 +246,7 @@ History:
 
 ### T-1.2-08: Wire ChatPage end to end, with minimal real auth
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: T-1.2-02, T-1.2-04, T-1.2-05, T-1.2-06
@@ -262,26 +262,35 @@ Files this ticket may create or modify:
 - Corresponding `.test.tsx` files (new)
 
 Acceptance criteria:
-- [ ] Submitting a query on `HomePage` leads to a `ChatPage` that actually calls `POST /v1/query` (via `lib/api.ts`'s `createRun`) and mounts `useAgentRun` against the returned `run_id`
-- [ ] `ChatPage` renders `LoadingSkeleton`, `QueryPipelineStepper`, `AnswerStream`, `GuardrailBanner`, `CapMessage`, and `StopButton` together, each driven by the same `events: AgentEvent[]` array from `useAgentRun`, matching the shared prop-shape convention `QueryPipelineStepper.tsx`'s docstring documents
-- [ ] A real bearer token is acquired through a real call to the existing `/auth/login` (and `/auth/signup` when no account exists yet) endpoints from build phase 1.1, not a hardcoded or fake string; held in memory only (component state), never written to `localStorage`/`sessionStorage`/a cookie, since this ticket does not own a token-persistence security decision
-- [ ] The full path is exercised by an integration-style test: render `App`, complete the minimal auth step, submit a query, and assert `createRun`/`openEventStream` were actually invoked with the acquired token (mocking `lib/api.ts` at the network boundary, matching this codebase's established test-mocking convention, not mocking `useAgentRun` itself)
-- [ ] No behavior from T-1.2-05 or T-1.2-06's already-merged components is altered, only wired in; their own test suites still pass unmodified
+- [x] Submitting a query on `HomePage` leads to a `ChatPage` that actually calls `POST /v1/query` (via `lib/api.ts`'s `createRun`) and mounts `useAgentRun` against the returned `run_id`
+- [x] `ChatPage` renders `LoadingSkeleton`, `QueryPipelineStepper`, `AnswerStream`, `GuardrailBanner`, `CapMessage`, and `StopButton` together, each driven by the same `events: AgentEvent[]` array from `useAgentRun`, matching the shared prop-shape convention `QueryPipelineStepper.tsx`'s docstring documents
+- [x] A real bearer token is acquired through a real call to the existing `/auth/login` (and `/auth/signup` when no account exists yet) endpoints from build phase 1.1, not a hardcoded or fake string; held in memory only (component state), never written to `localStorage`/`sessionStorage`/a cookie, since this ticket does not own a token-persistence security decision
+- [x] The full path is exercised by an integration-style test: render `App`, complete the minimal auth step, submit a query, and assert `createRun`/`openEventStream` were actually invoked with the acquired token (mocking `lib/api.ts` at the network boundary, matching this codebase's established test-mocking convention, not mocking `useAgentRun` itself)
+- [x] No behavior from T-1.2-05 or T-1.2-06's already-merged components is altered, only wired in; their own test suites still pass unmodified
 
 Breakdown:
-- [ ] Minimal real auth step: login (and signup-if-needed) against the real backend, in-memory token only
-- [ ] `ChatPage` wiring: `createRun` on submit, `useAgentRun` mount, all six components rendered from one shared `events` array
-- [ ] Tests: end-to-end render-and-submit integration test, auth step unit tests
+- [x] Minimal real auth step: login (and signup-if-needed) against the real backend, in-memory token only
+- [x] `ChatPage` wiring: `createRun` on submit, `useAgentRun` mount, all six components rendered from one shared `events` array
+- [x] Tests: end-to-end render-and-submit integration test, auth step unit tests
 
 Evidence:
-- (filled at close)
+- `npm run test -- --run` (independently re-run in `frontend/` after merge): 15 test files, 121 tests, all passing (106 pre-existing plus 15 new: 6 `AuthGate`, 7 `ChatPage`, 2 `App`)
+- `npx tsc --noEmit` (independently re-run after merge): clean, no output
+- `AuthGate.tsx`: two explicit actions ("Log in", "Sign up") rather than try-login-then-fall-back-to-signup, because `auth/router.py`'s `login` endpoint returns an identical 401 and identical "invalid email or password" detail for both an unknown email and a wrong password (deliberate anti-enumeration behavior, confirmed by reading the router); documented inline and in `DECISIONS.md`
+- `ChatPage.tsx:34-122`: `createRun` called on mount with a per-mount `crypto.randomUUID()` session id, `useAgentRun(runId, token)` mounted unconditionally (treats `runId: null` as idle per that hook's own contract), all six components rendered from the one shared `events` array, a `runFailedBeforeGuard` branch surfaces a stream-open failure that arrives before any `guard` event instead of hanging on the loading skeleton forever
+- Token held in `App.tsx:26` component state only, never `localStorage`/`sessionStorage`/a cookie; never logged, `AuthGate.tsx` logs HTTP status only on failure, matching `StopButton.tsx`'s own `console.warn` convention
+- No merged T-1.2-05/06 component `.tsx` source was touched (`git diff --stat` against the pre-merge tree confirms only `ChatPage.tsx`, `ChatPage.test.tsx`, `App.tsx`, `App.test.tsx`, `lib/api.ts`, and the new `components/auth/` were touched); their own test files pass unmodified
+- Commit 50fcb01 on `phase/1.2-react-shell-sse`, merge from `worktree-agent-t1207` with one resolved conflict in `DECISIONS.md` (two independent appends from a common ancestor, no content conflict)
 
 History:
 - 2026-07-28 lead: created mid-phase during T-1.2-07 dispatch prep, closing a decomposition gap in the original 7-ticket scoping (see the note above); logged to DECISIONS.md
+- 2026-07-28 builder-t1207: claimed, built `AuthGate`, wired `ChatPage`/`App`, reported done with self-verified evidence (121 tests passing, tsc clean)
+- 2026-07-28 lead: merged into phase/1.2-react-shell-sse (one resolved DECISIONS.md conflict, no content conflict), independently re-ran test suite and tsc in the target checkout (both clean), set in-review pending judge close
+- 2026-07-28 lead: background security review flagged a weak-credentials hint in the signup-failure copy ("password may be too short", implying a policy the backend does not enforce, `min_length=1`); fixed directly (commit 40970a6), 121 tests still passing
 
 ### T-1.2-07: Playwright install and the first real E2E test
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: T-1.2-01, T-1.2-02, T-1.2-03, T-1.2-04, T-1.2-05, T-1.2-06, T-1.2-08
@@ -293,24 +302,33 @@ Files this ticket may create or modify:
 - `frontend/e2e/query-stream-and-stop.spec.ts` (new)
 
 Acceptance criteria:
-- [ ] `@playwright/test` is installed pinned to the exact version verified clean this session (`1.62.0`, or a later version re-verified the same way at install time per `supply-chain-security.md`, never `@latest`, never any `playwright-1.4x`-shaped impostor package name)
-- [ ] `npx playwright install` (browser binaries) runs cleanly in this environment
-- [ ] One real E2E test drives a real browser against the real running frontend AND the real backend (with `litellm` mocked at the backend, same pattern every other test in this repo uses, no real API key needed): types a query, submits it, observes the pipeline stepper progress, observes the answer stream render tokens, and reaches a terminal `done` state
-- [ ] A second E2E test proves the stop button: starts a query, clicks stop mid-stream, and asserts the run actually halts (no further token events arrive after the stop click, matching T-1.2-06's server-side halt requirement)
-- [ ] `axe-core` (or an equivalent automated accessibility scanner) runs against the rendered `ChatPage` as part of this test suite, per Section 12.10's "automated axe-core check in CI as a baseline"
+- [x] `@playwright/test` is installed pinned to the exact version verified clean this session (`1.62.0`, or a later version re-verified the same way at install time per `supply-chain-security.md`, never `@latest`, never any `playwright-1.4x`-shaped impostor package name)
+- [x] `npx playwright install` (browser binaries) runs cleanly in this environment
+- [x] One real E2E test drives a real browser against the real running frontend AND the real backend (with `litellm` mocked at the backend, same pattern every other test in this repo uses, no real API key needed): types a query, submits it, observes the pipeline stepper progress, observes the answer stream render tokens, and reaches a terminal `done` state. Caveat: as of build phase 2.0, `write_node`'s only real code path that emits a `token` event is the per-query-cap-exceeded partial result (real citation-grounded synthesis is phase 2.2's job), so this test drives that real path via a deliberately low `PER_QUERY_COST_CAP_USD=0.02`, not a "normal" success path that does not yet exist to test
+- [x] A second E2E test proves the stop button: starts a query, clicks stop mid-stream, and asserts the run actually halts (no further token events arrive after the stop click, matching T-1.2-06's server-side halt requirement). Proven server-side via a throwaway `/__e2e__/run_status` introspection route polling `RunEntry.task.cancelled()`, not just a client-side absence-of-events check
+- [x] `axe-core` (or an equivalent automated accessibility scanner) runs against the rendered `ChatPage` as part of this test suite, per Section 12.10's "automated axe-core check in CI as a baseline". Scoped to WCAG 2.1 A/AA tags; two pre-existing best-practice-only findings (`landmark-one-main`, `page-has-heading-one`) are flagged, not fixed, since fixing them touches already-merged `HomePage.tsx`/`ChatShell.tsx`, outside this ticket's file scope
 
 Breakdown:
-- [ ] Pinned `@playwright/test` install, browser binaries, re-verified against `supply-chain-security.md` at install time (not just at this session's precheck)
-- [ ] `playwright.config.ts`: base URL, dev-server startup (`webServer` config launching both the FastAPI backend with mocked LiteLLM and the Vite dev server)
-- [ ] E2E test: full query-to-done flow
-- [ ] E2E test: stop mid-stream actually halts the server
-- [ ] `axe-core` automated accessibility scan wired into the same suite
+- [x] Pinned `@playwright/test` install, browser binaries, re-verified against `supply-chain-security.md` at install time (not just at this session's precheck)
+- [x] `playwright.config.ts`: base URL, dev-server startup (`webServer` config launching both the FastAPI backend with mocked LiteLLM and the Vite dev server)
+- [x] E2E test: full query-to-done flow
+- [x] E2E test: stop mid-stream actually halts the server
+- [x] `axe-core` automated accessibility scan wired into the same suite
 
 Evidence:
-- (filled at close)
+- `npx playwright test` (independently re-run in `frontend/` after merge, browser binaries reinstalled fresh in this checkout, real PostgreSQL `search_agent_users` confirmed reachable first): 3 passed, ~14s
+- `npm run test -- --run` (independently re-run after merge): 15 test files, 121 tests, all passing, unaffected
+- `npx tsc --noEmit` (independently re-run after merge): clean, no output
+- `python3 -m pytest tests/ -q` (independently re-run after merge, regression check on the Python side): 537 passed, unaffected
+- Fresh supply-chain re-verification, run at actual install time, not reused from the earlier session precheck: `@playwright/test`/`playwright`/`playwright-core`@1.62.0, `@axe-core/playwright`@4.12.1, `@types/node`@26.1.2, all GitHub Actions OIDC trusted-published or a recognized DefinitelyTyped/Deque bot, no postinstall/preinstall scripts, no compromise reports; all five pinned exact in `package.json`
+- `tests/e2e_support/mock_llm_backend.py`: monkeypatches `litellm.acompletion`/`get_model_info` once at process start (the in-process `monkeypatch` technique every other test uses cannot reach a separate `webServer` process), runs the real, unmodified FastAPI `app`; extends it at runtime with a loopback-only CORS middleware and the read-only `/__e2e__/run_status` route, never edits `app.py`
+- Commit 12b7829 on `phase/1.2-react-shell-sse`, merged cleanly (no conflicts) from `worktree-agent-t1207b`
 
 History:
 - 2026-07-28 lead: created, scoped from Section 23 and the standing Playwright board flag
+- 2026-07-28 lead: dispatched only after independently re-verifying the Playwright supply-chain check myself first (the product owner's explicit zero-doubt instruction), and after adding T-1.2-08 as a dependency once ChatPage's placeholder state was discovered
+- 2026-07-28 builder-t1207b: claimed, ran a fresh supply-chain re-verification before installing (matched the precheck), built the mock-LLM E2E backend entrypoint and three E2E tests, reported done with self-verified evidence (121 unit tests unaffected, tsc clean, 3 E2E tests passing, 537 Python tests unaffected)
+- 2026-07-28 lead: merged into phase/1.2-react-shell-sse, independently re-ran the full verification chain (unit tests, tsc, a fresh `npx playwright install` plus `npx playwright test`, and the Python suite) in the target checkout, all clean; gitignored `frontend/test-results/`/`frontend/playwright-report/`; set in-review pending judge close
 
 ## Findings
 
