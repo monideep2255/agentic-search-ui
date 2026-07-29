@@ -26,9 +26,20 @@ host-pinned record page for one of these three is confirmed later, add it
 here as a new mapping entry, never by loosening `NCBI_RECORD_URL_PATTERN`
 itself.
 
+`to_output_rows` (plural), added for finding F-2.1-A1/F-01/A2's fix, is the
+real integration path: it takes one raw AGE result row keyed by column name
+(`c0`, `c1`, ... or `result`), each value the unparsed agtype wire text
+`graph_connection.execute_cypher` read off the socket, parses every column
+with `agtype.parse_agtype`, and shapes each column that decodes to a
+vertex or an edge into its own output row. `to_output_row` (singular)
+stays as the pure, already-parsed-entity shaping function it always was,
+used directly by this module's own unit tests and by any caller that has
+already turned a raw agtype value into a plain dict.
+
 Depends on:
     - system_03_search_agent.tools.graph_schema_constants
       (NCBI_RECORD_URL_PATTERN)
+    - system_03_search_agent.tools.agtype (parse_agtype, is_vertex_or_edge)
 
 Reads:
     - Nothing at import time. Pure functions over their arguments.
@@ -46,7 +57,9 @@ from __future__ import annotations
 import re
 import urllib.parse
 from collections.abc import Callable
+from typing import Any
 
+from system_03_search_agent.tools.agtype import is_vertex_or_edge, parse_agtype
 from system_03_search_agent.tools.graph_schema_constants import (
     NCBI_RECORD_URL_PATTERN,
 )
@@ -197,3 +210,104 @@ def to_output_row(raw_row: dict, snapshot_version: str) -> dict:
         "source_url": resolved_source_url,
         "graph_snapshot_version": snapshot_version,
     }
+
+
+def _shape_entity(entity: dict[str, Any], snapshot_version: str) -> dict:
+    """Shape one parsed AGE vertex or edge dict into the output row shape.
+
+    `entity` is the dict `agtype.parse_agtype` decoded from one `::vertex`
+    or `::edge` payload: `label`, the graph-internal `id` (an integer AGE
+    assigns, never the CURIE), `properties`, and for an edge, `start_id`
+    and `end_id`. The CURIE this system cites lives inside
+    `properties["id"]`, the identifier Systems 1 and 2 stamped onto every
+    node and edge at ingest time. The top-level `id` on the entity itself
+    is AGE's own internal graph id and is never treated as a CURIE.
+    """
+    node_or_edge_type = str(entity.get("label") or "")
+    properties = entity.get("properties")
+    if not isinstance(properties, dict):
+        properties = {}
+    curie = str(properties.get("id") or "")
+
+    fields = dict(properties)
+    if "start_id" in entity:
+        fields.setdefault("_edge_start_id", entity["start_id"])
+    if "end_id" in entity:
+        fields.setdefault("_edge_end_id", entity["end_id"])
+
+    resolved_source_url = _resolve_source_url(curie, properties.get("source_url"))
+
+    return {
+        "node_or_edge_type": node_or_edge_type,
+        "curie": curie,
+        "fields": fields,
+        "source_url": resolved_source_url,
+        "graph_snapshot_version": snapshot_version,
+    }
+
+
+def _iter_entities(parsed: Any) -> list[dict[str, Any]]:
+    """Flatten one parsed agtype value into zero or more vertex/edge dicts.
+
+    A vertex or an edge parses to a single dict and yields itself. A path
+    parses to a list and yields every vertex/edge element it contains,
+    since a path is a sequence of alternating vertices and edges. Any
+    other shape, a bare scalar such as a count or a name, or a value that
+    failed to parse, yields nothing: it carries no label and no
+    properties, so no CURIE and no citation can be derived from it, and
+    it must never be turned into a guessed content row.
+    """
+    if isinstance(parsed, dict):
+        return [parsed] if is_vertex_or_edge(parsed) else []
+    if isinstance(parsed, list):
+        return [item for item in parsed if isinstance(item, dict) and is_vertex_or_edge(item)]
+    return []
+
+
+def to_output_rows(raw_row: dict[str, Any], snapshot_version: str) -> list[dict]:
+    """Shape one raw AGE result row into zero or more output row shapes.
+
+    `raw_row` is a dict keyed by the AGE output column name(s) declared in
+    `execute_cypher`'s `as_clause` (for example `result` for a single
+    column, or `c0`, `c1`, ... for a multi-column `RETURN`), with each
+    value the raw agtype wire text `graph_connection.execute_cypher` read
+    off the socket, unparsed.
+
+    Each column value is parsed independently with `agtype.parse_agtype`.
+    A multi-column `RETURN v, g` therefore yields one output row per
+    column that decodes to a vertex or an edge, not one row per raw graph
+    row: `CypherQueryRow` has no shape for merging two distinct entities
+    into a single row, so a `v`-and-`g` pair becomes two output rows, each
+    carrying its own type, CURIE, and citation, which is more faithful to
+    "every fact links back to its source" than collapsing them into one
+    row that could only cite one of the two.
+
+    A column whose parsed value is not a vertex, an edge, or a path
+    containing one, a bare scalar such as a count, or a value that failed
+    to parse, contributes no output row. That omission is deliberate, not
+    a bug: such a value has no label and no CURIE, so it has no citation,
+    and CLAUDE.md's citation rule means it must never be emitted as an
+    empty content row instead. The caller, `cypher_query._run_pipeline`,
+    applies the matching cite-or-refuse gate at the row level: an
+    entity that does parse but still resolves no `source_url` (an
+    unmapped CURIE prefix such as GO, HP, or MONDO) is also dropped there,
+    for the same reason.
+
+    Args:
+        raw_row: one row as read from the graph connection, keyed by
+            output column name, each value unparsed agtype wire text (or
+            already a parsed dict/list/scalar, never double-parsed).
+        snapshot_version: the graph snapshot version string to stamp onto
+            every shaped row.
+
+    Returns:
+        A list of dicts, each with exactly the keys `node_or_edge_type`,
+        `curie`, `fields`, `source_url`, `graph_snapshot_version`. Empty
+        when no column in `raw_row` decoded to a citable vertex or edge.
+    """
+    shaped_rows: list[dict] = []
+    for value in raw_row.values():
+        parsed = parse_agtype(value)
+        for entity in _iter_entities(parsed):
+            shaped_rows.append(_shape_entity(entity, snapshot_version))
+    return shaped_rows

@@ -18,6 +18,7 @@ import pytest
 from system_03_search_agent.tools.cypher_provenance import (
     source_url_for_curie,
     to_output_row,
+    to_output_rows,
 )
 from system_03_search_agent.tools.graph_schema_constants import (
     CURIE_PREFIXES,
@@ -205,3 +206,104 @@ def test_to_output_row_always_returns_exactly_the_five_expected_keys() -> None:
         "source_url",
         "graph_snapshot_version",
     }
+
+
+# ---------------------------------------------------------------------------
+# to_output_rows: the real integration path, agtype wire text in, zero or
+# more shaped rows out (finding F-2.1-A1's fix).
+# ---------------------------------------------------------------------------
+
+
+def test_to_output_rows_parses_a_single_vertex_column() -> None:
+    raw_row = {
+        "result": (
+            '{"id": 1125899906858506, "label": "Gene", "properties": '
+            '{"id": "NCBIGene:672", "symbol": "BRCA1"}}::vertex'
+        )
+    }
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["node_or_edge_type"] == "Gene"
+    assert row["curie"] == "NCBIGene:672"
+    assert row["fields"]["symbol"] == "BRCA1"
+    assert row["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/672"
+    assert row["graph_snapshot_version"] == "2026-07-01"
+
+
+def test_to_output_rows_splits_a_multi_column_row_into_multiple_output_rows() -> None:
+    raw_row = {
+        "c0": (
+            '{"id": 1, "label": "SequenceVariant", "properties": '
+            '{"id": "ClinVar:17660", "name": "variant"}}::vertex'
+        ),
+        "c1": (
+            '{"id": 2, "label": "Gene", "properties": '
+            '{"id": "NCBIGene:672", "symbol": "BRCA1"}}::vertex'
+        ),
+    }
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert len(rows) == 2
+    types_seen = {row["node_or_edge_type"] for row in rows}
+    assert types_seen == {"SequenceVariant", "Gene"}
+    curies_seen = {row["curie"] for row in rows}
+    assert curies_seen == {"ClinVar:17660", "NCBIGene:672"}
+
+
+def test_to_output_rows_maps_an_edge_including_start_and_end_id() -> None:
+    raw_row = {
+        "result": (
+            '{"id": 5, "label": "is_sequence_variant_of", "start_id": 1, '
+            '"end_id": 2, "properties": {"id": "ClinVar:17660"}}::edge'
+        )
+    }
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["node_or_edge_type"] == "is_sequence_variant_of"
+    assert row["fields"]["_edge_start_id"] == 1
+    assert row["fields"]["_edge_end_id"] == 2
+
+
+def test_to_output_rows_omits_a_bare_scalar_column() -> None:
+    # A scalar column (a count, a bare property) carries no label and no
+    # CURIE, so it contributes no output row rather than an empty one.
+    raw_row = {"result": "42"}
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert rows == []
+
+
+def test_to_output_rows_omits_an_unparseable_column() -> None:
+    raw_row = {"result": "not valid agtype at all {{{"}
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert rows == []
+
+
+def test_to_output_rows_flattens_a_path_into_its_vertex_and_edge_elements() -> None:
+    raw_row = {
+        "result": (
+            "["
+            '{"id": 1, "label": "Gene", "properties": {"id": "NCBIGene:672"}}, '
+            '{"id": 5, "label": "is_sequence_variant_of", "start_id": 1, '
+            '"end_id": 2, "properties": {"id": "ClinVar:17660"}}, '
+            '{"id": 2, "label": "SequenceVariant", "properties": '
+            '{"id": "ClinVar:17660"}}'
+            "]::path"
+        )
+    }
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert len(rows) == 3
+    types_seen = {row["node_or_edge_type"] for row in rows}
+    assert types_seen == {"Gene", "is_sequence_variant_of", "SequenceVariant"}
