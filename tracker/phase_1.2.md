@@ -33,7 +33,7 @@ LEARNINGS.md filtered to this phase: no entry is tool-specific to React, Vite, S
 
 ### T-1.2-01: Incremental streaming via `astream`
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: none
@@ -72,10 +72,11 @@ History:
 - 2026-07-28 lead: built, merged, tests passing (real-time work this session, evidence not filled in at the time)
 - 2026-07-28 judge: independently re-verified against source and the real test run during the phase-level review; PASS
 - 2026-07-28 lead: backfilled Evidence and set in-review from the judge's verified findings, since the gap (built and passing, but the ticket record never updated) was the judge's top blocking finding for phase close
+- 2026-07-28 judge (fresh confirmation pass): independently re-verified against source and a live re-run of the full test suite; closed
 
 ### T-1.2-02: The three endpoints (create, stream, stop)
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: T-1.2-01
@@ -115,10 +116,11 @@ History:
 - 2026-07-28 lead: built, merged, tests passing (real-time work this session, evidence not filled in at the time)
 - 2026-07-28 judge: independently re-verified against source and the real test run during the phase-level review; PASS
 - 2026-07-28 lead: backfilled Evidence and set in-review from the judge's verified findings
+- 2026-07-28 judge (fresh confirmation pass): independently re-verified against source and a live re-run of the full test suite; closed
 
 ### T-1.2-03: React app scaffold
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: none
@@ -158,10 +160,11 @@ History:
 - 2026-07-28 lead: built, merged, tests passing (real-time work this session, evidence not filled in at the time)
 - 2026-07-28 judge: independently re-verified against source and the real test run during the phase-level review; found criterion 4 false in the shipped system (`ChatShell.tsx`'s run-id state was dead code); PASS on every other criterion
 - 2026-07-28 lead: fixed `ChatShell.tsx` and its test per the judge's finding, re-verified (120 tests passing, tsc clean), backfilled Evidence, set in-review
+- 2026-07-28 judge (fresh confirmation pass): independently re-verified against source and a live re-run of the full test suite; closed
 
 ### T-1.2-04: Typed SSE consumption (`lib/events.ts`, `lib/api.ts`, `useAgentRun`)
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: T-1.2-02, T-1.2-03
@@ -203,10 +206,11 @@ History:
 - 2026-07-28 lead: built, merged, tests passing (real-time work this session, evidence not filled in at the time)
 - 2026-07-28 judge: independently re-verified against source and the real test run during the phase-level review; PASS, flagged the `EventSource`-versus-`fetch` deviation as undocumented in `DECISIONS.md` (only in a source docstring)
 - 2026-07-28 lead: logged the deviation to `DECISIONS.md`, backfilled Evidence, set in-review
+- 2026-07-28 judge (fresh confirmation pass): independently re-verified against source and a live re-run of the full test suite; closed
 
 ### T-1.2-05: The streaming stepper and answer rendering
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: T-1.2-04
@@ -245,10 +249,11 @@ History:
 - 2026-07-28 lead: created, scoped from Section 12.3/12.5/12.6/12.10
 - 2026-07-28 builder-aab3a9b: claimed, built all 5 components plus tests, reported done with self-verified evidence (87 tests passing, tsc clean)
 - 2026-07-28 lead: merged into phase/1.2-react-shell-sse, independently re-ran test suite and tsc in the target checkout (both clean), set in-review pending judge close
+- 2026-07-28 judge (fresh confirmation pass): independently re-verified against source and a live re-run of the full test suite; closed
 
 ### T-1.2-06: The stop button, wired end to end
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: T-1.2-02, T-1.2-04, T-1.2-05
@@ -282,10 +287,11 @@ History:
 - 2026-07-28 lead: created, scoped from Section 12.3
 - 2026-07-28 builder-t1206: claimed, built `StopButton` and its tests, reported done with self-verified evidence (106 tests passing, tsc clean)
 - 2026-07-28 lead: merged into phase/1.2-react-shell-sse, independently re-ran test suite and tsc in the target checkout (both clean), set in-review pending judge close; acceptance criterion 5 (real E2E stop) left unchecked, deferred to T-1.2-07
+- 2026-07-28 judge (fresh confirmation pass): independently re-verified against source and a live re-run of the full test suite; closed
 
 ### T-1.2-08: Wire ChatPage end to end, with minimal real auth
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: T-1.2-02, T-1.2-04, T-1.2-05, T-1.2-06
@@ -326,10 +332,11 @@ History:
 - 2026-07-28 builder-t1207: claimed, built `AuthGate`, wired `ChatPage`/`App`, reported done with self-verified evidence (121 tests passing, tsc clean)
 - 2026-07-28 lead: merged into phase/1.2-react-shell-sse (one resolved DECISIONS.md conflict, no content conflict), independently re-ran test suite and tsc in the target checkout (both clean), set in-review pending judge close
 - 2026-07-28 lead: background security review flagged a weak-credentials hint in the signup-failure copy ("password may be too short", implying a policy the backend does not enforce, `min_length=1`); fixed directly (commit 40970a6), 121 tests still passing
+- 2026-07-28 judge (fresh confirmation pass): independently re-verified against source and a live re-run of the full test suite; closed
 
 ### T-1.2-07: Playwright install and the first real E2E test
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: T-1.2-01, T-1.2-02, T-1.2-03, T-1.2-04, T-1.2-05, T-1.2-06, T-1.2-08
@@ -368,6 +375,7 @@ History:
 - 2026-07-28 lead: dispatched only after independently re-verifying the Playwright supply-chain check myself first (the product owner's explicit zero-doubt instruction), and after adding T-1.2-08 as a dependency once ChatPage's placeholder state was discovered
 - 2026-07-28 builder-t1207b: claimed, ran a fresh supply-chain re-verification before installing (matched the precheck), built the mock-LLM E2E backend entrypoint and three E2E tests, reported done with self-verified evidence (121 unit tests unaffected, tsc clean, 3 E2E tests passing, 537 Python tests unaffected)
 - 2026-07-28 lead: merged into phase/1.2-react-shell-sse, independently re-ran the full verification chain (unit tests, tsc, a fresh `npx playwright install` plus `npx playwright test`, and the Python suite) in the target checkout, all clean; gitignored `frontend/test-results/`/`frontend/playwright-report/`; set in-review pending judge close
+- 2026-07-28 judge (fresh confirmation pass): independently re-verified against source and a live re-run of the full test suite; closed
 
 ## Findings
 
