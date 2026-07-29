@@ -298,7 +298,7 @@ async def _fake_acompletion(*_args: object, **kwargs: object):
     return _fake_response()
 
 
-def _fake_get_model_info(model: str) -> dict[str, float]:  # noqa: ARG001 - fixed price for every model, by design
+def _fake_get_model_info(model: str) -> dict[str, float]:
     return {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6}
 
 

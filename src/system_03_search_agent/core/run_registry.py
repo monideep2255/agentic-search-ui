@@ -118,12 +118,12 @@ class RunEntry:
 
     run_id: str
     user_id: str | None
-    queue: "asyncio.Queue[Event | None]" = field(repr=False)
-    task: "asyncio.Task[None]" = field(repr=False)
+    queue: asyncio.Queue[Event | None] = field(repr=False)
+    task: asyncio.Task[None] = field(repr=False)
 
 
 async def _drain_into_queue(
-    query: Query, context: RequestContext, queue: "asyncio.Queue[Event | None]"
+    query: Query, context: RequestContext, queue: asyncio.Queue[Event | None]
 ) -> None:
     """Background task body: run the streaming graph, push every event
     into `queue` as it arrives, then push the `None` end-of-stream

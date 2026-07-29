@@ -70,7 +70,7 @@ def _fake_event(event_type: str, trace_id: str, seq: int) -> Event:
     )
 
 
-async def _drain_until_sentinel(queue: "asyncio.Queue[Event | None]") -> list[Event]:
+async def _drain_until_sentinel(queue: asyncio.Queue[Event | None]) -> list[Event]:
     events: list[Event] = []
     while True:
         item = await asyncio.wait_for(queue.get(), timeout=5.0)
