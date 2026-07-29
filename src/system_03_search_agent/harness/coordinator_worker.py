@@ -50,6 +50,82 @@ untrusted-content boundary, not at every tool result.
   free-text `ToolExecutionResult`'s `free_text` field is read only inside
   `_reader_pass`/`_parse_reader_response` to build the reader prompt and
   is never copied onto the `Finding` object at any point below.
+
+F-2.0-08 closure (tracker/phase_2.1.md T-2.1-08): the isolated reader
+pass's `harness.call_tier("guard", ...)` call used to bypass the
+per-query cost cap and the per-step timeout entirely, both real controls
+`core.graph`'s model-calling nodes already enforce on every one of their
+own calls. `_reader_pass` now runs the same
+`cost_control.check_per_query_cap` pre-flight check, then wraps the call
+in `harness.enforce_timeout`, exactly as `core.graph._dispatch_tier_call`
+does. A reader call that would breach the cap is never issued at all; a
+reader call that times out is never retried. Either case degrades to a
+`Finding` carrying no extracted findings and a fixed, actionable
+`evidence_summary` explaining why, rather than raising out of
+`asyncio.gather` and failing every other concurrent reader pass along
+with it: `coordinator_worker_execute`'s job is to return a partial result
+under a cap or timeout hit, never to crash the whole Act step over one
+degraded call.
+
+F-2.0-14 closure (tracker/phase_2.1.md T-2.1-08): `_structured_pass_through`
+used to place `result.structured_fields` onto a `Finding` with no size
+enforcement at all. `_cap_structured_fields` now caps the top-level key
+count, every string value's length, every list's item count, and one
+level of nested dict/list content, before a `Finding` is built. This is
+defense in depth: a well-behaved tool's own output schema (`cypher_query`'s
+`CypherQueryRow`, for example) already caps its own fields, but this
+boundary must hold even for a tool whose schema does not, since a
+`Finding` is what a later Write-step ticket reads to build the actual
+event payload a client sees.
+
+F-03 closure (tracker/phase_2.1.md finding F-03, HIGH): a judge proved the
+F-2.0-14 fix above was not actually recursive. `_cap_leaf_value` only
+special-cased `str`; a dict or a list reached it unchanged. The list
+branch of the old `_cap_structured_value` capped dict items but handed a
+nested LIST straight to `_cap_leaf_value`, which passed it through
+whole. Dict KEYS were never length-capped at all. Measured: a 5-level
+nest with a 10,000,000-char leaf, a list of lists, a dict of dicts of
+dicts, and a single 1,000,000-char dict key all passed through byte-for-
+byte unbounded, and even the fully-capped shallow case composed to a
+7.7 MB `Finding` (30 properties x 500-char values x 500 rows: no single
+field's own cap bounds that product).
+
+`_cap_value` below replaces the old one-level cappers with one recursive
+walk: a dict's values and a list's items are each capped by calling back
+into `_cap_value` at `depth + 1`, whatever shape they turn out to be, so
+an arbitrarily nested mix of dicts and lists is bounded at every level,
+not just the first. Dict keys are length-capped the same way string
+values are. Recursion depth itself is bounded by `_MAX_STRUCTURED_DEPTH`:
+past that depth, `_cap_value` replaces the remaining subtree with a fixed
+marker string instead of ever descending into it, which is what prevents
+a pathologically deep structure from growing the call stack without
+bound, not merely from growing the output.
+
+Per-field caps alone still allow many capped rows, or many capped keys,
+to compose past any reasonable size, which is exactly how the 7.7 MB case
+above arose from an input that was already fully capped field-by-field.
+`_cap_structured_fields` therefore also enforces `_MAX_FINDING_TOTAL_BYTES`,
+a ceiling on the whole capped structure's serialized size, not just each
+field's own cap. When the first capping pass is still over the ceiling,
+list length is shrunk uniformly across every list at any depth first
+(list length is the dominant multiplier in the real production shape,
+`{"rows": [...]}`); if shrinking every list to zero items is still not
+enough, dict key count is shrunk the same way next. Both searches are a
+bounded binary search over an integer limit, never an unbounded loop, and
+both always terminate: at limit 0, every list or dict in the structure
+shrinks to empty, which fits any positive byte ceiling.
+
+Truncation must never be silent (a separate finding, F-2.1-A16, on the
+same invisible-truncation failure mode applied to `cypher_query`'s own
+`row_count`). `Finding` carries a new `truncated` field, defaulted to
+`False` so the concurrent caller in `core/graph.py` is unaffected:
+`_cap_value` returns, alongside the capped value, whether anything in
+that subtree was actually cut (a string shortened, a list or dict
+shortened, a key shortened, or a depth-limited subtree replaced), and
+`_structured_pass_through` threads that flag onto the returned `Finding`.
+A caller can now tell "this Finding is everything the tool returned" from
+"this Finding was cut to fit a cap" without re-deriving it from the
+capped data itself.
 """
 
 from __future__ import annotations
@@ -60,7 +136,8 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from system_03_search_agent.contracts.events import Layer, ToolCall, ToolName
-from system_03_search_agent.harness.harness import Harness
+from system_03_search_agent.harness import cost_control
+from system_03_search_agent.harness.harness import Harness, HarnessCallError
 
 # Caps on reader-derived fields, mirroring the multi-agent pipeline gate's
 # maxLength/maxItems discipline (production-standards.md) even though
@@ -72,6 +149,56 @@ _MAX_NORMALIZED_IDS = 25
 _MAX_EVIDENCE_SUMMARY_CHARS = 500
 _MAX_ENTITY_CHARS = 200
 _MAX_NORMALIZED_ID_CHARS = 200
+
+# F-2.0-14/F-03: caps on a structured pass-through payload before it
+# reaches a `Finding`. Deliberately generous relative to any one tool's
+# own output schema (a well-behaved tool's schema, e.g. cypher_query's
+# `CypherQueryRow`, already caps tighter than this), since this is a
+# defense-in-depth boundary meant to hold for every tool, not a
+# replacement for a tool's own schema caps. Applied recursively: the key
+# count and list-item caps hold at every nesting level, not only the top
+# one, and the string cap is tighter below the top level (matching the
+# F-2.0-14 behavior this replaces, now actually enforced past one level).
+_MAX_STRUCTURED_TOP_LEVEL_KEYS = 30
+_MAX_STRUCTURED_STRING_CHARS = 2000
+_MAX_STRUCTURED_NESTED_STRING_CHARS = 500
+_MAX_STRUCTURED_LIST_ITEMS = 500
+
+# F-03: a dict KEY was never length-capped at all; a single 1,000,000-char
+# key passed through unbounded. Same cap class as the entity/normalized-id
+# char caps above, applied to every dict key at every nesting level.
+_MAX_STRUCTURED_KEY_CHARS = 200
+
+# F-03: recursion depth ceiling. Past this depth, `_cap_value` replaces
+# the remaining subtree with `_TRUNCATED_DEPTH_MARKER` rather than ever
+# descending into it, bounding the recursion itself, not just the output,
+# against a pathologically deep input. Generous enough that no real
+# NCBI/graph payload shape this phase produces (at most a few levels:
+# a row, its fields, an occasional nested property) is ever affected.
+_MAX_STRUCTURED_DEPTH = 8
+_TRUNCATED_DEPTH_MARKER = "<truncated: maximum nesting depth exceeded>"
+
+# F-03: a ceiling on the whole capped structure's serialized size, not
+# just each field's own cap. Chosen empirically: the existing F-2.0-14
+# hostile-payload regression test (one oversized string, one oversized
+# list, one 100-key nested dict, all already field-capped) serializes to
+# just under 19,000 bytes, so 50,000 leaves that case untouched by this
+# ceiling while still bounding the composed-rows case (30 properties x
+# 500 chars x 500 rows, ~7.7 MB field-capped) down by roughly two orders
+# of magnitude.
+_MAX_FINDING_TOTAL_BYTES = 50_000
+
+# F-2.0-08: the fixed per-step timeout budget for the isolated reader
+# pass's single `call_tier("guard", ...)` call. Matches
+# `harness.harness.budget_for_query_class("single_hop")` (10 seconds): a
+# reasonable, fixed budget for a single guard-tier read-and-report call,
+# independent of the originating query's classified complexity, since the
+# reader always does the same fixed-shape one-call job regardless of
+# `query_class`. A named constant here rather than a parameter threaded
+# through `coordinator_worker_execute`'s signature, since threading
+# `query_class` through would change a signature no other ticket's file
+# scope owns changing right now.
+_READER_CALL_TIMEOUT_S = 10.0
 
 # The one-and-only prompt given to the isolated reader. It states the
 # read-and-report-only scope explicitly (never a tool, never a write,
@@ -148,6 +275,13 @@ class Finding:
         structured findings. Populated only when source == "reader".
         Never derived from, and never containing, the original free-text
         payload verbatim.
+    truncated: True when `_cap_structured_fields` actually cut something
+        (a string, a list, a dict's key count, a dict key's own length,
+        or a depth-limited subtree) to bring this `Finding` under its
+        caps. False means this `Finding` carries everything the tool
+        returned, unaltered by capping. Defaults to False so the
+        concurrent `core/graph.py` caller, which does not pass this
+        field, keeps working unchanged (F-03).
     """
 
     call_id: str
@@ -158,6 +292,7 @@ class Finding:
     extracted_entities: list[str] | None
     normalized_ids: list[str] | None
     evidence_summary: str | None
+    truncated: bool = False
 
 
 def _build_reader_messages(result: ToolExecutionResult) -> list[dict[str, str]]:
@@ -219,6 +354,29 @@ def _parse_reader_response(call: ToolCall, content: str) -> Finding:
     )
 
 
+def _degraded_reader_finding(call: ToolCall, reason: str) -> Finding:
+    """A `Finding` for a reader pass that was never issued, or that failed.
+
+    F-2.0-08: a reader call that would breach the per-query cost cap, or
+    that hits its per-step timeout, degrades to this rather than raising
+    out of `asyncio.gather` and failing every other concurrent reader
+    pass along with it. `extracted_entities`/`normalized_ids` are empty
+    lists (never None), matching the shape a successfully parsed-but-empty
+    reader response would carry, so a caller does not need a third branch
+    to distinguish "nothing found" from "not attempted".
+    """
+    return Finding(
+        call_id=call.call_id,
+        tool=call.tool,
+        layer=call.layer,
+        source="reader",
+        structured_fields=None,
+        extracted_entities=[],
+        normalized_ids=[],
+        evidence_summary=reason[:_MAX_EVIDENCE_SUMMARY_CHARS],
+    )
+
+
 async def _reader_pass(harness: Harness, call: ToolCall, result: ToolExecutionResult) -> Finding:
     """Issue the one isolated reader call for a free-text result.
 
@@ -226,23 +384,201 @@ async def _reader_pass(harness: Harness, call: ToolCall, result: ToolExecutionRe
     reader is the cheap tier"). Exactly one call; no retry loop of its
     own beyond whatever `call_tier` itself does, and no follow-up call
     regardless of the response shape.
+
+    F-2.0-08: the call is now subject to the same per-query cost cap and
+    per-step timeout every model-calling node in `core.graph` already
+    enforces on its own calls. A cap breach means the call is never
+    issued at all; a timeout or classified `call_tier` failure means the
+    call was issued but did not complete. Both degrade to
+    `_degraded_reader_finding` rather than raising, per the module
+    docstring's F-2.0-08 closure note.
     """
+    try:
+        cost_control.check_per_query_cap(harness, harness.trace_id, "guard")
+    except cost_control.QueryCapExceededError:
+        return _degraded_reader_finding(
+            call, "reader call skipped: dispatching it would breach the per-query cost cap"
+        )
+
     messages = _build_reader_messages(result)
-    response = await harness.call_tier("guard", messages)
+    try:
+        response = await harness.enforce_timeout(
+            "coordinator_worker_reader",
+            harness.call_tier("guard", messages),
+            _READER_CALL_TIMEOUT_S,
+        )
+    except HarnessCallError:
+        return _degraded_reader_finding(
+            call, "reader call did not complete within its per-step timeout budget"
+        )
     return _parse_reader_response(call, response.content)
 
 
+def _cap_scalar_string(value: str, depth: int) -> tuple[str, bool]:
+    """Cap one string leaf, using the top-level cap at depth 0 and the
+    tighter nested cap below it, matching the F-2.0-14 shape this
+    replaces. Returns the capped string and whether it was actually cut.
+    """
+    max_chars = _MAX_STRUCTURED_STRING_CHARS if depth == 0 else _MAX_STRUCTURED_NESTED_STRING_CHARS
+    capped = value[:max_chars]
+    return capped, len(value) > max_chars
+
+
+def _cap_value(
+    value: Any, depth: int, *, list_item_limit: int, key_limit: int
+) -> tuple[Any, bool]:
+    """Recursively cap one value to F-03's shape-based limits: string
+    length, list length, dict key count, and dict key length, all
+    enforced at every nesting level by calling back into this same
+    function, not just the first level (the F-03 defect this closes).
+
+    depth: counted from the top-level structured_fields dict (depth 0).
+        Past `_MAX_STRUCTURED_DEPTH`, the remaining subtree is replaced
+        with `_TRUNCATED_DEPTH_MARKER` instead of ever being descended
+        into, which bounds the recursion itself against a pathologically
+        deep input, not only the size of what it produces.
+    list_item_limit / key_limit: the effective ceilings on list length
+        and dict key count for this call. `_cap_structured_fields` starts
+        both at their module-level maximum and only ever narrows them, in
+        its second pass, when the per-field caps alone left the whole
+        structure over `_MAX_FINDING_TOTAL_BYTES`.
+
+    Returns the capped value alongside whether anything anywhere in this
+    subtree was actually cut, so a caller can signal truncation on the
+    `Finding` rather than leaving it invisible (F-2.1-A16).
+    """
+    if depth > _MAX_STRUCTURED_DEPTH:
+        return _TRUNCATED_DEPTH_MARKER, True
+
+    if isinstance(value, str):
+        return _cap_scalar_string(value, depth)
+
+    if isinstance(value, list):
+        keep = min(len(value), _MAX_STRUCTURED_LIST_ITEMS, list_item_limit)
+        truncated = keep < len(value)
+        capped_items: list[Any] = []
+        for item in value[:keep]:
+            capped_item, item_truncated = _cap_value(
+                item, depth + 1, list_item_limit=list_item_limit, key_limit=key_limit
+            )
+            capped_items.append(capped_item)
+            truncated = truncated or item_truncated
+        return capped_items, truncated
+
+    if isinstance(value, dict):
+        keep = min(len(value), _MAX_STRUCTURED_TOP_LEVEL_KEYS, key_limit)
+        truncated = keep < len(value)
+        items = list(value.items())[:keep]
+        capped_dict: dict[str, Any] = {}
+        for key, val in items:
+            str_key = str(key)
+            capped_key = str_key[:_MAX_STRUCTURED_KEY_CHARS]
+            truncated = truncated or len(capped_key) < len(str_key)
+            capped_val, val_truncated = _cap_value(
+                val, depth + 1, list_item_limit=list_item_limit, key_limit=key_limit
+            )
+            capped_dict[capped_key] = capped_val
+            truncated = truncated or val_truncated
+        return capped_dict, truncated
+
+    # int, float, bool, None: JSON scalars with no length to cap.
+    return value, False
+
+
+def _measure_serialized_bytes(value: Any) -> int:
+    """Measure a capped structure's serialized size in bytes: the size
+    proxy `_cap_structured_fields`'s total ceiling checks against.
+    `default=str` guarantees this never raises regardless of the value's
+    exact shape; it only needs to be a stable, monotonic size proxy for
+    the ceiling check, not a byte-exact reproduction of whatever wire
+    format the Write step eventually serializes to.
+    """
+    return len(json.dumps(value, ensure_ascii=False, default=str).encode("utf-8"))
+
+
+def _cap_structured_fields(fields: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+    """Enforce every F-03 cap on a structured pass-through payload before
+    it is placed on a `Finding` (production-standards.md's multi-agent
+    pipeline gate and bounded-context-items requirement). Recursively caps
+    string length, list length, dict key count, dict key length, and a
+    bounded recursion depth, over arbitrarily nested dicts and lists, not
+    just one level deep.
+
+    Also enforces `_MAX_FINDING_TOTAL_BYTES`, a ceiling on the whole
+    capped structure, since per-field caps alone still let many capped
+    rows, or many capped keys, compose past any one field's own cap. When
+    the first pass is still over the ceiling, list length is shrunk
+    uniformly across every list at any depth first, since list length is
+    the dominant multiplier in the real production shape
+    (`{"rows": [...]}`); if shrinking every list to zero items is still
+    not enough, dict key count is shrunk the same way next. Both searches
+    are a bounded binary search over an integer limit in [0, cap], never
+    an unbounded loop, and both always terminate: at limit 0, every list
+    or dict in the structure shrinks to empty, which fits any positive
+    byte ceiling.
+
+    Returns the capped structure and whether anything, anywhere, was
+    actually trimmed to produce it.
+    """
+    capped, truncated = _cap_value(
+        fields,
+        depth=0,
+        list_item_limit=_MAX_STRUCTURED_LIST_ITEMS,
+        key_limit=_MAX_STRUCTURED_TOP_LEVEL_KEYS,
+    )
+    if _measure_serialized_bytes(capped) <= _MAX_FINDING_TOTAL_BYTES:
+        return capped, truncated
+
+    best_list_limit = 0
+    low, high = 0, _MAX_STRUCTURED_LIST_ITEMS
+    while low <= high:
+        mid = (low + high) // 2
+        candidate, _ = _cap_value(
+            fields, depth=0, list_item_limit=mid, key_limit=_MAX_STRUCTURED_TOP_LEVEL_KEYS
+        )
+        if _measure_serialized_bytes(candidate) <= _MAX_FINDING_TOTAL_BYTES:
+            best_list_limit = mid
+            low = mid + 1
+        else:
+            high = mid - 1
+
+    capped, _ = _cap_value(
+        fields, depth=0, list_item_limit=best_list_limit, key_limit=_MAX_STRUCTURED_TOP_LEVEL_KEYS
+    )
+    if _measure_serialized_bytes(capped) <= _MAX_FINDING_TOTAL_BYTES:
+        return capped, True
+
+    best_key_limit = 0
+    low, high = 0, _MAX_STRUCTURED_TOP_LEVEL_KEYS
+    while low <= high:
+        mid = (low + high) // 2
+        candidate, _ = _cap_value(fields, depth=0, list_item_limit=0, key_limit=mid)
+        if _measure_serialized_bytes(candidate) <= _MAX_FINDING_TOTAL_BYTES:
+            best_key_limit = mid
+            low = mid + 1
+        else:
+            high = mid - 1
+
+    capped, _ = _cap_value(fields, depth=0, list_item_limit=0, key_limit=best_key_limit)
+    return capped, True
+
+
 def _structured_pass_through(call: ToolCall, result: ToolExecutionResult) -> Finding:
-    """Pass a structured result straight through onto a `Finding`, no reader call."""
+    """Pass a structured result straight through onto a `Finding`, no
+    reader call, after enforcing F-03's recursive caps and total-size
+    ceiling.
+    """
+    capped_fields, truncated = _cap_structured_fields(dict(result.structured_fields or {}))
     return Finding(
         call_id=call.call_id,
         tool=call.tool,
         layer=call.layer,
         source="structured_pass_through",
-        structured_fields=dict(result.structured_fields or {}),
+        structured_fields=capped_fields,
         extracted_entities=None,
         normalized_ids=None,
         evidence_summary=None,
+        truncated=truncated,
     )
 
 

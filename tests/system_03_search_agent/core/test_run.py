@@ -100,8 +100,17 @@ def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
 
 
 def _valid_query(**overrides: object) -> Query:
+    """The shared query fixture. Its default text ("hello") is
+    deliberately one of `core.graph._NO_TOOL_QUERY_TEXTS` (T-2.1-08), so
+    plan_node selects no tool here, leaving this file's stub-era
+    assertions (an empty `tool_calls` list, `total_tool_calls == 0`)
+    accurate: they describe the no-tool-selected outcome, not a claim
+    that no tool selection logic exists. Real cypher_query dispatch is
+    covered in tests/system_03_search_agent/core/test_graph.py, which
+    exercises the compiled graph directly with a substantive query text.
+    """
     base: dict[str, object] = {
-        "text": "What gene is BRCA1?",
+        "text": "hello",
         "session_id": "session-1",
         "trace_id": "trace-1",
         "user_id": None,
@@ -243,6 +252,65 @@ class TestRunEmitsTheFullFiveNodeLoop:
         types = {event.type for event in events}
         assert "citation" not in types
         assert "trust_signal" not in types
+
+
+# ---------------------------------------------------------------------------
+# T-2.1 rework: every `_valid_query()` use above defaults to "hello",
+# core.graph._NO_TOOL_QUERY_TEXTS's no-tool path, leaving run() and
+# run_streaming() with zero coverage of real tool dispatch through their
+# own real entry points (tests/system_03_search_agent/core/test_graph.py
+# exercises the compiled graph directly, which is a different call path).
+# These exercise dispatch through run() and run_streaming() themselves,
+# and pin down the cite-or-refuse fix (findings A5/F-02): the generic
+# "ok" mocked model response is not recoverable Cypher (see
+# test_graph.py's test_act_executes_the_selected_cypher_query_call
+# docstring for the same mechanics), so cypher_query returns
+# status="error" and the query must refuse, not fabricate an answer.
+# ---------------------------------------------------------------------------
+
+_GRAPH_ANSWERABLE_QUERY_TEXT = "What gene is associated with BRCA1?"
+
+
+@pytest.mark.asyncio
+async def test_run_dispatches_the_selected_tool_call_for_a_graph_answerable_query(
+    _mock_litellm: AsyncMock,
+) -> None:
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = [event async for event in run(query, _valid_context())]
+
+    plan_event = next(event for event in events if event.type == "plan")
+    tool_calls = plan_event.payload["tool_calls"]
+    assert len(tool_calls) == 1
+    assert tool_calls[0]["tool"] == "cypher_query"
+
+    done_event = events[-1]
+    assert done_event.type == "done"
+    assert done_event.payload["total_tool_calls"] == 1
+    assert done_event.payload["trust_outcome"] == "refuse"
+
+    for event in events:
+        PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)
+
+
+@pytest.mark.asyncio
+async def test_run_streaming_dispatches_the_selected_tool_call_for_a_graph_answerable_query(
+    _mock_litellm: AsyncMock,
+) -> None:
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = [event async for event in run_streaming(query, _valid_context())]
+
+    plan_event = next(event for event in events if event.type == "plan")
+    tool_calls = plan_event.payload["tool_calls"]
+    assert len(tool_calls) == 1
+    assert tool_calls[0]["tool"] == "cypher_query"
+
+    done_event = events[-1]
+    assert done_event.type == "done"
+    assert done_event.payload["total_tool_calls"] == 1
+    assert done_event.payload["trust_outcome"] == "refuse"
+
+    for event in events:
+        PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)
 
 
 @pytest.mark.asyncio

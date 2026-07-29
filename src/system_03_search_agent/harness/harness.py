@@ -71,6 +71,9 @@ from typing import Any, Literal
 
 import litellm
 
+from system_03_search_agent.harness.tiers import (
+    _FALLBACK_PRICES_USD_PER_TOKEN as _TIER_FALLBACK_PRICES,
+)
 from system_03_search_agent.harness.tiers import Tier, TierContext
 
 # A LiteLLM chat message: {"role": "system" | "user" | "assistant", "content": str}.
@@ -171,7 +174,14 @@ def _classify_exception(exc: BaseException) -> ErrorClass:
 # this gap is real, not hypothetical. Extend this table, or wait for
 # litellm to add the model upstream, whichever lands first; never invent a
 # price for a model missing from both sources (see _price_per_token below).
-_FALLBACK_PRICES_USD_PER_TOKEN: dict[str, tuple[float, float]] = {}
+# Fallback OpenRouter per-model pricing, re-exported from tiers.py.
+#
+# The table itself lives in tiers.py, not here, because its keys are model
+# ids and system-design-patterns.md pattern 11 allows a literal model id in
+# exactly one file. Pricing keyed by model identity belongs next to the
+# model identity it prices. This name is kept so existing callers and tests
+# that patch harness._FALLBACK_PRICES_USD_PER_TOKEN keep working.
+_FALLBACK_PRICES_USD_PER_TOKEN = _TIER_FALLBACK_PRICES
 
 
 def _price_per_token(model_id: str) -> tuple[float, float]:
@@ -223,6 +233,37 @@ def _price_per_token(model_id: str) -> tuple[float, float]:
 # already-resolved facts), so it takes the multi-hop budget; `exploratory`
 # reads as the deep-research class Section 19.1 already budgets for at 2
 # minutes. Do not re-derive this mapping; it is a settled decision.
+# Per-tier reasoning depth and output ceiling.
+#
+# OpenRouter exposes one `reasoning.effort` dial that drives each provider's
+# own native control (a token budget on Anthropic, an effort tier on OpenAI,
+# a thinking flag on Google), so switching models does not mean rewriting
+# the control. Verified live on 2026-07-29: all three tier defaults report
+# `reasoning` in OpenRouter's `supported_parameters`, and litellm passes the
+# block straight through.
+#
+# The effort per tier follows Section 3.1's tier purposes exactly, not a new
+# decision: Guard is classification, Plan is decomposition and the Cypher
+# generation call, Synth assembles already-verified data and is explicitly
+# forbidden from open-ended reasoning over unverified payloads.
+#
+# max_tokens is not decoration. Reasoning tokens are counted inside
+# `completion_tokens` (verified live: a trivial prompt spent 74 of its 76
+# output tokens on reasoning), so they are billed at the output rate and an
+# uncapped reasoning model is an uncapped bill. Every call carries a ceiling.
+_TIER_REASONING: dict[Tier, dict[str, Any]] = {
+    "guard": {"effort": "minimal"},
+    "plan": {"effort": "high"},
+    "synth": {"effort": "low"},
+}
+
+_TIER_MAX_TOKENS: dict[Tier, int] = {
+    "guard": 1_000,
+    "plan": 4_000,
+    "synth": 4_000,
+}
+
+
 _QUERY_CLASS_BUDGET_S: dict[QueryClass, float] = {
     "lookup": 5.0,
     "single_hop": 10.0,
@@ -327,7 +368,12 @@ class Harness:
         max_attempts = 2  # one retry, transient failures only
         for attempt in range(1, max_attempts + 1):
             try:
-                response: Any = await litellm.acompletion(model=target, messages=final_messages)
+                response: Any = await litellm.acompletion(
+                    model=target,
+                    messages=final_messages,
+                    reasoning=_TIER_REASONING[tier],
+                    max_tokens=_TIER_MAX_TOKENS[tier],
+                )
             except Exception as exc:
                 error_class = _classify_exception(exc)
                 if error_class == "transient" and attempt < max_attempts:

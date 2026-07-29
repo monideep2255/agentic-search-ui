@@ -57,6 +57,38 @@ _DEFAULT_MODELS: dict[Tier, str] = {
 }
 
 
+# Fallback OpenRouter per-model pricing, (input_price_per_token,
+# output_price_per_token) in USD, for models litellm's own static map does
+# not yet carry. `harness.harness._price_per_token` tries litellm first and
+# falls back to this table.
+#
+# It lives here rather than in harness.py for the same reason _DEFAULT_MODELS
+# does: its keys are literal model ids, and system-design-patterns.md
+# pattern 11 permits a model-id-shaped string in this file only. Pricing
+# keyed by model identity belongs beside the model identity it prices.
+#
+# Provenance, and this matters because a wrong price silently mis-bills every
+# query: every value below was read from OpenRouter's own public catalogue
+# (GET https://openrouter.ai/api/v1/models, fields `pricing.prompt` and
+# `pricing.completion`) on 2026-07-29. That is the same source OpenRouter
+# bills from. Nothing here is estimated, and nothing is copied from
+# documentation that could have drifted.
+#
+# Why it stopped being empty: none of the three tier defaults above appears
+# in litellm's map, so `_price_per_token` raised on every real call and the
+# harness could not complete a single model call end to end. The call itself
+# succeeded and was billed by OpenRouter; only the pricing lookup failed, so
+# the money was spent and the response discarded. Verified live 2026-07-29.
+#
+# When a price changes, re-read the catalogue rather than hand-editing, and
+# never invent a price for a model missing from both sources.
+_FALLBACK_PRICES_USD_PER_TOKEN: dict[str, tuple[float, float]] = {
+    "deepseek/deepseek-v4-flash": (0.00000014, 0.00000028),
+    "moonshotai/kimi-k2.6": (0.000000646, 0.00000272),
+    "z-ai/glm-5.2": (0.0000007182, 0.0000022572),
+}
+
+
 class UnknownTierError(ValueError):
     """Raised when a tier outside {"guard", "plan", "synth"} is requested."""
 

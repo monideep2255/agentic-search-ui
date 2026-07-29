@@ -2,6 +2,8 @@
 
 Phase 6 is the build. It is underway. Build phases 1.0 (FastAPI skeleton and typed event contract), 1.1 (auth service and PostgreSQL user-data schema), 2.0 (LangGraph agent loop and the three-tier harness), and 1.2 (React shell and SSE) are all done, judge-reviewed, adversary-tested, and merged into `main` as PR #5, #6, #9, and #12.
 
+Build phase 2.1 (`cypher_query` over Layer 1) is PR #13, built but NOT closed. Its tickets stay `in-review` and its branch is not deleted, because the judge and adversary both failed it pre-rework and none of the rework was independently reviewed. 798 Python tests passing, 23 learnings recorded, 174 decisions logged. Next up is build phase 2.2, whose first task is a fresh judge and adversary pass over the 2.1 surface, not new code. Read the "Build phase 2.1, done with one recorded gap" section below and `tracker/phase_2.1.md`'s "Phase close status" before opening anything.
+
 This is the file to open at the start of the next build session.
 
 One decision is still waiting on the product owner. It is in the open items table below, with the reasoning behind it. Do not assume it.
@@ -36,9 +38,11 @@ Phases 1 through 5 of System 3 are complete and merged. Phase 6 (build) is under
 
 Build phase 2.1 (`cypher_query` over Layer 1) is next by dependency: it depends only on 2.0, which is done, and it is the phase every remaining tool-integration and citation-grounding phase sits behind. Its refinement label is `tech_refine`, not yet `refined`, so opening it is what turns the Section 25 row into scoped tickets:
 
+```text
+/task-tracker --open 2.2
 ```
-/task-tracker --open 2.1
-```
+
+Before any of 2.2's own tickets, its first task is a fresh judge and adversary pass over the build phase 2.1 surface. 2.1 merged without independent review of its rework, and 2.2 builds directly on that code.
 
 That operation will make you read the phase's Section 25 row, verify its dependencies are merged, read the learnings filtered to this phase, and decompose it into tickets before anyone builds. Confirm with the product owner before opening if anything about scope feels underspecified; the phase's own Flags column already names two findings (F-2.0-08, F-2.0-14) that become live the moment this phase's real tool calls exist, and those need a ticket, not a surprise.
 
@@ -129,10 +133,36 @@ Two findings from phase 2.0 are already queued against this phase, both because 
 
 `docs/ncbi/Tool_implementation_mechanics.md` has the per-tool API traps taken from Section 6, including edge-label enforcement for `cypher_query` specifically. Read it before writing the query generation or validation logic.
 
+## Build phase 2.1, done with one recorded gap (2026-07-29)
+
+Delivered, per Section 25 row 2.1: `cypher_query` over Layer 1 through an SSH tunnel, schema slicing, the validate-then-execute generation pipeline with one repair retry, and edge-label enforcement. 798 Python tests passing. Branch `phase/2.1-cypher-tool`.
+
+Read the "Phase close status" section at the top of `tracker/phase_2.1.md` before opening build phase 2.2. The short version, and it is the one thing a reader would otherwise get wrong:
+
+- The phase premise is met. `tests/system_03_search_agent/tools/test_cypher_query_e2e.py` runs 9 tests against the live 115M-node graph with only the model call mocked, and all 9 pass. That gate cannot be satisfied by mocks, which is exactly what exposed the original failure.
+- The judge and the adversary both FAILED this phase on the pre-rework code, filing roughly 27 findings including 2 critical and 5 high. Every blocker was then fixed. None of that rework has been reviewed by any independent agent.
+- This phase produced one false green already: every ticket read green, and the judge still found the premise unmet while the adversary found 17 defects. A green suite has a track record of being wrong here.
+- Merged on an explicit product-owner decision against a weekly budget limit, with the gap recorded rather than glossed. A fresh judge and adversary pass over the phase 2.1 surface is build phase 2.2's first task, not an optional extra.
+
+What this phase established that later phases depend on:
+
+- Layer 1 access is an SSH local port-forward, `ssh -N -L 15432:127.0.0.1:5432 root@46.225.128.133`. Postgres binds 127.0.0.1 only, so there is no direct-connect option. Nothing in the repo opens the tunnel, so a fresh clone cannot run the live tests until someone does it by hand.
+- The graph credential is `kg_reader`, created 2026-07-29 with product-owner approval: non-superuser, `pg_read_all_data`, `default_transaction_read_only`, 30s `statement_timeout`, and `session_preload_libraries = age`. A non-superuser cannot run `LOAD 'age'`, which is why the preload is set per role.
+- The harness could not complete a single real model call before this phase: the fallback price table was empty and none of the three tier defaults is in litellm's price map, so every call was billed by OpenRouter and then discarded. Fixed, with prices read from OpenRouter's own catalogue.
+- Per-tier reasoning effort and `max_tokens` ceilings are now set on every `call_tier` call. Reasoning tokens bill as output tokens, so an uncapped reasoning model is an uncapped bill.
+
+Still open after this phase:
+
+- F-06: 2 of 6 model calls per query bypass the stable prompt prefix. Cost inefficiency, not a correctness defect.
+- F-2.1-02: `Technical_specification.md` Section 6.1 states a parameter-passing mechanism that cannot work. psycopg2 interpolates `%s` client-side, so AGE never receives a bind parameter and rejects the call. The working form is `PREPARE`/`EXECUTE`. The same claim appears in `docs/ncbi/Tool_implementation_mechanics.md` and in `.claude/rules/production-examples.md` example 1, whose "correct" sample uses the non-working form, so it will mislead every remaining tool build. A Step 6.2 reconciliation item.
+- F-2.1-01: the spec says 10 concept labels, the graph has 11. Also Step 6.2.
+- The spec's Section 24 env-var table names `PER_USER_DAILY_CAP_USD`, but the code deliberately renamed it to `PER_USER_DAILY_QUERY_CAP` in phase 2.0 because it holds a query count, not dollars. Anyone provisioning from the spec instead of `env.example` reproduces a broken config. Step 6.2.
+
 ## Open items to resolve during Phase 6
 
 | Item | Needed before | Owner |
 |------|---------------|-------|
+| A fresh judge and adversary pass over the build phase 2.1 surface. Both failed the phase pre-rework; none of the rework was independently reviewed. Detail in `tracker/phase_2.1.md`'s "Phase close status" | Build phase 2.2's first task | Lead |
 | Run the whole-repository security scan. No build-phase code has ever been scanned; the only run in `security/` predates phase 1.0. Scope is the entire repository, not a commit range, so there is no baseline to carry forward | The Step 6.2 reconciliation, and it is a hard prerequisite for starting Step 6.3 | Lead, with product-owner-committed token budget |
 | Decide whether `security/` should stay gitignored (`.gitignore:50`). Nothing under it is tracked, so the Step 6.2 whole-repository scan results would not be committed: not reviewable in a pull request, not diffable against a later scan, and gone on a fresh clone. Cheaper to settle before the scan runs than after | The Step 6.2 scan runs | Product owner |
 | Name a domain sign-off owner for the clinical and human-variation golden fixtures | Build phase 5.1 | Product owner |
