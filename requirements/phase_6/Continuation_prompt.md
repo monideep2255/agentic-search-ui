@@ -2,6 +2,8 @@
 
 Phase 6 is the build. It is underway. Build phases 1.0 (FastAPI skeleton and typed event contract), 1.1 (auth service and PostgreSQL user-data schema), 2.0 (LangGraph agent loop and the three-tier harness), and 1.2 (React shell and SSE) are all done, judge-reviewed, adversary-tested, and merged into `main` as PR #5, #6, #9, and #12.
 
+Build phase 2.1 (`cypher_query` over Layer 1) is PR #13, built but NOT closed. Its tickets stay `in-review` and its branch is not deleted, because the judge and adversary both failed it pre-rework and none of the rework was independently reviewed. 798 Python tests passing, 23 learnings recorded, 174 decisions logged. Next up is build phase 2.2, whose first task is a fresh judge and adversary pass over the 2.1 surface, not new code. Read the "Build phase 2.1, done with one recorded gap" section below and `tracker/phase_2.1.md`'s "Phase close status" before opening anything.
+
 This is the file to open at the start of the next build session.
 
 One decision is still waiting on the product owner. It is in the open items table below, with the reasoning behind it. Do not assume it.
@@ -36,9 +38,11 @@ Phases 1 through 5 of System 3 are complete and merged. Phase 6 (build) is under
 
 Build phase 2.1 (`cypher_query` over Layer 1) is next by dependency: it depends only on 2.0, which is done, and it is the phase every remaining tool-integration and citation-grounding phase sits behind. Its refinement label is `tech_refine`, not yet `refined`, so opening it is what turns the Section 25 row into scoped tickets:
 
+```text
+/task-tracker --open 2.2
 ```
-/task-tracker --open 2.1
-```
+
+Before any of 2.2's own tickets, its first task is a fresh judge and adversary pass over the build phase 2.1 surface. 2.1 merged without independent review of its rework, and 2.2 builds directly on that code.
 
 That operation will make you read the phase's Section 25 row, verify its dependencies are merged, read the learnings filtered to this phase, and decompose it into tickets before anyone builds. Confirm with the product owner before opening if anything about scope feels underspecified; the phase's own Flags column already names two findings (F-2.0-08, F-2.0-14) that become live the moment this phase's real tool calls exist, and those need a ticket, not a surprise.
 

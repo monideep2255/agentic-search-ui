@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-07-28.
+Kick-off: 2026-05-06. Last updated: 2026-07-29.
 
 ## Status at a glance
 
@@ -14,7 +14,7 @@ Kick-off: 2026-05-06. Last updated: 2026-07-28.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) underway. Build phase 1.0 (FastAPI skeleton, health endpoint, the event contract, the run() stub) done and merged (PR #5, 2026-07-27). Build phase 1.1 (auth service, the six-table PostgreSQL user-data schema) done and merged (PR #6, 2026-07-28), closing the ecdsa CVE carried forward from 1.0. Build phase 2.0 (the real five-node LangGraph loop, the three-tier harness) done and merged (PR #9, 2026-07-28). Build phase 1.2 (React shell, SSE streaming, the chat UI wired end to end) done and merged (PR #12, 2026-07-28). Next up: build phase 2.1 (cypher_query over Layer 1), the only phase now unblocked by dependency (depends on 2.0, done) |
+| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) underway. Build phase 1.0 (FastAPI skeleton, health endpoint, the event contract, the run() stub) done and merged (PR #5, 2026-07-27). Build phase 1.1 (auth service, the six-table PostgreSQL user-data schema) done and merged (PR #6, 2026-07-28), closing the ecdsa CVE carried forward from 1.0. Build phase 2.0 (the real five-node LangGraph loop, the three-tier harness) done and merged (PR #9, 2026-07-28). Build phase 1.2 (React shell, SSE streaming, the chat UI wired end to end) done and merged (PR #12, 2026-07-28). Build phase 2.1 (cypher_query over Layer 1, the first live graph access) built and open as PR #13 (2026-07-29), NOT closed: the judge and adversary both failed it pre-rework, every blocker was fixed and the 9-test live end-to-end gate went green at 798 tests passing, but none of the rework has been independently reviewed, so its tickets stay `in-review` and a fresh judge and adversary pass is build phase 2.2's first task. Next up: build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal), which depends on 2.1 |
 | Phase 7: iteration and new information | Not started |
 
 Decisions logged: 165 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
