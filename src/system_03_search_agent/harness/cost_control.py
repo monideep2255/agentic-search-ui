@@ -553,6 +553,26 @@ def _redact_done_event_for_end_user(event: Event) -> Event:
     return event.model_copy(update={"payload": redacted_payload.model_dump()})
 
 
+def sanitize_event_for_end_user(event: Event) -> Event | None:
+    """Sanitize one event for an end-user-facing adapter (Section 19.4, 19.5).
+
+    The per-event sibling of `filter_events_for_end_user`, added in T-1.2-02
+    for the streaming SSE path: a consumer reading events one at a time off
+    a queue as they arrive (rather than holding a fully materialized list)
+    calls this once per event instead of re-deriving the same drop/redact
+    logic inline.
+
+    Returns:
+        None if `event` must be dropped entirely (a builder-only event
+        type, currently just `cost`). Otherwise the event, redacted via
+        `_redact_done_event_for_end_user` if it is a `done` event
+        (unchanged for every other type).
+    """
+    if not is_end_user_visible_event_type(event.type):
+        return None
+    return _redact_done_event_for_end_user(event)
+
+
 def filter_events_for_end_user(events: Iterable[Event]) -> list[Event]:
     """Sanitize an event sequence for an end-user-facing adapter (Section 19.4, 19.5).
 
@@ -563,9 +583,9 @@ def filter_events_for_end_user(events: Iterable[Event]) -> list[Event]:
     the MCP server, the CLI) applies this before forwarding events; only
     the operator dashboard adapter sees the unfiltered stream with real
     cost data intact.
+
+    Built on `sanitize_event_for_end_user`, the per-event entry point,
+    rather than duplicating its drop/redact logic here.
     """
-    return [
-        _redact_done_event_for_end_user(event)
-        for event in events
-        if is_end_user_visible_event_type(event.type)
-    ]
+    sanitized = (sanitize_event_for_end_user(event) for event in events)
+    return [event for event in sanitized if event is not None]
