@@ -12,10 +12,10 @@ Listed in flow order. Work moves left to right on the board, from `todo` to `don
 
 | Status | Count | Who may set it |
 |--------|-------|----------------|
-| To do | 23 | Lead |
+| To do | 22 | Lead |
 | In progress | 0 | The builder that claimed it |
 | Blocked | 0 | The builder that hit the block, reason required |
-| In review | 0 | The builder that finished |
+| In review | 1 | The builder that finished |
 | Done | 8 | Judge only, never the builder |
 
 `blocked` sits mid-flow rather than on the way to done, because it is where work stalls, not a step toward finishing.
@@ -46,7 +46,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 |-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
 | 1.0 | `phase/1.0-fastapi-skeleton` | FastAPI skeleton, health endpoint, the run() contract stub with the v1 event taxonomy typed, Pydantic boundary validation | | prototype | done | refined | | | |
 | 1.1 | `phase/1.1-auth-service` | Minimal v1 auth, the PostgreSQL user-data schema | 1.0 | prototype | done | refined | | | |
-| 1.2 | `phase/1.2-react-shell-sse` | React shell, SSE consumption of the event stream, empty chat endpoint wired end to end, the stop button | 1.0 | prototype | todo | refined | | playwright | playwright not installed |
+| 1.2 | `phase/1.2-react-shell-sse` | React shell, SSE consumption of the event stream, empty chat endpoint wired end to end, the stop button | 1.0 | prototype | in-review | refined | | | |
 | 2.0 | `phase/2.0-langgraph-agent-loop` | LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one | 1.0 | prototype | done | refined | | | |
 | 2.1 | `phase/2.1-cypher-tool` | cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement | 2.0 | prototype | todo | tech_refine | | | F-2.0-08, F-2.0-14 |
 | 2.2 | `phase/2.2-write-step-grounding` | Deterministic cite-or-refuse, provenance for Layer 1 citations, the first trust signal, the two required tests | 2.1 | prototype | todo | tech_refine | | eval-harness | whole-repo security scan not yet run |
@@ -77,7 +77,6 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 |------|--------|----------------|
 | Golden fixture domain sign-off | Nobody is named to verify the clinical and human-variation expected answers. A wrong expected answer makes a wrong agent pass, which is the failure the gate exists to catch | Build phase 5.1 |
 | PubTator3 relations endpoint | Path and fields not live-verified | Build phase 3.3 ship |
-| Playwright not installed | The UI gate has no tool behind it yet, and it must clear `supply-chain-security` first | Build phase 1.2 |
 | Whole-repo security scan not yet run | No build-phase code has ever been security scanned. The only run in `security/` is dated 2026-07-25 and predates phase 1.0. Deferred twice by product-owner decision (2026-07-27, 2026-07-28) on the reasoning that the Step 6.1 prototype is throwaway and the scan earns its cost once the code is meant to survive. The agreed shape is ONE deep dive over the ENTIRE repository, not a commit range, so there is no baseline SHA to carry forward and nothing to forget to widen | The Step 6.2 reconciliation, after build phase 2.2 closes and before any Step 6.3 v1 work starts |
 | F-2.0-08 | The Act step's coordinator-worker reader calls bypass the per-query cost cap and the per-step timeout entirely. Latent today, since `plan`'s stub always produces an empty `tool_calls` list; becomes live the moment 2.1 makes `act_node` consume real tool calls | Build phase 2.1, wired in alongside `act_node`'s first real tool call |
 | F-2.0-14 | The coordinator-worker structured pass-through path applies no `maxLength`/`maxItems` of any kind, the default branch every tool adapter hits unless it opts into the reader. A `production-standards.md` gate stated as "required, not optional" | Build phase 2.1, before the first tool adapter returns real API JSON as `structured_fields` |

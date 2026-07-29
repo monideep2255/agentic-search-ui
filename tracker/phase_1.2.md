@@ -33,7 +33,7 @@ LEARNINGS.md filtered to this phase: no entry is tool-specific to React, Vite, S
 
 ### T-1.2-01: Incremental streaming via `astream`
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: none
@@ -46,27 +46,36 @@ Files this ticket may create or modify:
 - `tests/system_03_search_agent/core/test_run_registry.py` (new)
 
 Acceptance criteria:
-- [ ] A new function (e.g. `run_streaming(query, context)` or an equivalent generator) drives `compiled_graph.astream(initial_state, stream_mode="updates")` and yields each node's `events` slice as that node completes, not buffered until the whole graph finishes
-- [ ] The existing `run(query, context)` (used by the existing buffered `/query` endpoint) is UNCHANGED in its public behavior: all existing tests in `test_run.py` still pass without modification to their assertions
-- [ ] A real timing test proves incrementality: a test that artificially delays one node's model call (via the mocked `litellm.acompletion`) asserts that earlier nodes' events are observable by the caller BEFORE the delayed node completes, not all at once at the end
-- [ ] `run_registry.py` provides: create a run (mint a `run_id`, uuid4), register a background `asyncio.Task` running the streaming graph and pushing its events into a per-run queue, look up a run by id, and cancel a run by id (idempotent: cancelling an already-finished or already-cancelled run does not raise)
-- [ ] A run's ownership is tracked (the `user_id` that created it), so a later ticket's endpoint can 403 a caller that does not own the `run_id`
-- [ ] The F-2.0-11 crash-fallback behavior (an otherwise-uncaught exception during the graph run yields a synthetic error/done pair rather than propagating raw) holds for the streaming path too, not just the buffered one
+- [x] A new function (e.g. `run_streaming(query, context)` or an equivalent generator) drives `compiled_graph.astream(initial_state, stream_mode="updates")` and yields each node's `events` slice as that node completes, not buffered until the whole graph finishes
+- [x] The existing `run(query, context)` (used by the existing buffered `/query` endpoint) is UNCHANGED in its public behavior: all existing tests in `test_run.py` still pass without modification to their assertions
+- [x] A real timing test proves incrementality: a test that artificially delays one node's model call (via the mocked `litellm.acompletion`) asserts that earlier nodes' events are observable by the caller BEFORE the delayed node completes, not all at once at the end
+- [x] `run_registry.py` provides: create a run (mint a `run_id`, uuid4), register a background `asyncio.Task` running the streaming graph and pushing its events into a per-run queue, look up a run by id, and cancel a run by id (idempotent: cancelling an already-finished or already-cancelled run does not raise)
+- [x] A run's ownership is tracked (the `user_id` that created it), so a later ticket's endpoint can 403 a caller that does not own the `run_id`
+- [x] The F-2.0-11 crash-fallback behavior (an otherwise-uncaught exception during the graph run yields a synthetic error/done pair rather than propagating raw) holds for the streaming path too, not just the buffered one
 
 Breakdown:
-- [ ] `astream(stream_mode="updates")` wiring, decoding each node's partial state update to its `events` slice
-- [ ] `run_registry.py`: run creation, background task registration, per-run event queue, cancellation, ownership tracking
-- [ ] Tests: incrementality (real timing), crash fallback on the streaming path, registry create/lookup/cancel/idempotent-cancel, ownership tracking
+- [x] `astream(stream_mode="updates")` wiring, decoding each node's partial state update to its `events` slice
+- [x] `run_registry.py`: run creation, background task registration, per-run event queue, cancellation, ownership tracking
+- [x] Tests: incrementality (real timing), crash fallback on the streaming path, registry create/lookup/cancel/idempotent-cancel, ownership tracking
 
-Evidence:
-- (filled at close)
+Evidence (backfilled 2026-07-28 during phase close, from the judge review's independent verification, since this ticket's own evidence was never filled in when it was built and merged earlier in the same session):
+- `python3 -m pytest tests/ -q`: 537 passed (whole-repo run, this ticket's suite included)
+- `core/run.py:238` — `async for update in compiled_graph.astream(initial_state, stream_mode="updates")`, yielding each node's `events` slice at `:240-242`
+- `run()` itself unchanged at `run.py:149-188`, still `ainvoke`-based
+- Real timing test: `tests/system_03_search_agent/core/test_run.py:358` `class TestRunStreamingIsGenuinelyIncremental`, `:368` `test_earlier_events_arrive_before_a_delayed_nodes_event_by_a_real_measurable_gap`
+- `run_registry.py:189-195` create (uuid4, background task, per-run queue), `:197-206` lookup (`RunNotFoundError`), `:208-230` cancel (idempotent); ownership tracked at `:193` from `query.user_id`
+- Crash fallback on the streaming path at `run.py:243-246` with `start_seq=next_seq` keeping `seq` monotonic; tests at `test_run.py:412` and `:444`
+- Commit 22be5b7 on `phase/1.2-react-shell-sse`
 
 History:
 - 2026-07-28 lead: created, scoped from Section 2.1/13.1 and F-2.0-11's closure note
+- 2026-07-28 lead: built, merged, tests passing (real-time work this session, evidence not filled in at the time)
+- 2026-07-28 judge: independently re-verified against source and the real test run during the phase-level review; PASS
+- 2026-07-28 lead: backfilled Evidence and set in-review from the judge's verified findings, since the gap (built and passing, but the ticket record never updated) was the judge's top blocking finding for phase close
 
 ### T-1.2-02: The three endpoints (create, stream, stop)
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: T-1.2-01
@@ -77,29 +86,39 @@ Files this ticket may create or modify:
 - `tests/system_03_search_agent/adapters/web_sse/test_streaming_endpoints.py` (new)
 
 Acceptance criteria:
-- [ ] `POST /v1/query` (`{text, session_id, audience_depth?}`, same auth as the existing `/query`) constructs `Query`/`RequestContext` server-side exactly as `/query` already does (server-derived `user_id`, per T-2.0-08), starts the streaming run via `run_registry`, and returns `202 {run_id, persona_name}` immediately, before the graph has necessarily finished (a test asserts the response returns while a deliberately-slowed node is still running)
-- [ ] `persona_name` is a fixed placeholder string for this phase (e.g. `"Assistant"`), since real persona assignment is phase 4.5's job; document this as a stub, not a silent omission
-- [ ] `GET /v1/query/{run_id}/events` streams `text/event-stream` via `sse-starlette`'s `EventSourceResponse`, forwarding each event from the run's queue as an SSE frame (event name = the envelope's `type`, data = the JSON payload), and closes the stream after `done` or a fatal `error`
-- [ ] The events endpoint 403s a caller that does not own `run_id` (a different authenticated user's token), and 404s an unknown `run_id`
-- [ ] `POST /v1/query/{run_id}/stop` cancels the run's background task; calling it on an already-finished or already-stopped run returns `200` as a no-op, never an error (production-standards retry-safety gate)
-- [ ] The existing cost/operator_mode filtering (`filter_events_for_end_user`, the `OPERATOR_USER_IDS` allowlist) applies identically to the new streaming path: a non-operator caller's SSE stream never carries a `cost` event or an un-redacted `done.total_cost_usd`
-- [ ] The existing `POST /query` endpoint's behavior and tests are completely unaffected by this ticket
+- [x] `POST /v1/query` (`{text, session_id, audience_depth?}`, same auth as the existing `/query`) constructs `Query`/`RequestContext` server-side exactly as `/query` already does (server-derived `user_id`, per T-2.0-08), starts the streaming run via `run_registry`, and returns `202 {run_id, persona_name}` immediately, before the graph has necessarily finished (a test asserts the response returns while a deliberately-slowed node is still running)
+- [x] `persona_name` is a fixed placeholder string for this phase (e.g. `"Assistant"`), since real persona assignment is phase 4.5's job; document this as a stub, not a silent omission
+- [x] `GET /v1/query/{run_id}/events` streams `text/event-stream` via `sse-starlette`'s `EventSourceResponse`, forwarding each event from the run's queue as an SSE frame (event name = the envelope's `type`, data = the JSON payload), and closes the stream after `done` or a fatal `error`
+- [x] The events endpoint 403s a caller that does not own `run_id` (a different authenticated user's token), and 404s an unknown `run_id`
+- [x] `POST /v1/query/{run_id}/stop` cancels the run's background task; calling it on an already-finished or already-stopped run returns `200` as a no-op, never an error (production-standards retry-safety gate)
+- [x] The existing cost/operator_mode filtering (`filter_events_for_end_user`, the `OPERATOR_USER_IDS` allowlist) applies identically to the new streaming path: a non-operator caller's SSE stream never carries a `cost` event or an un-redacted `done.total_cost_usd`
+- [x] The existing `POST /query` endpoint's behavior and tests are completely unaffected by this ticket
 
 Breakdown:
-- [ ] `POST /v1/query`: run creation, 202 response
-- [ ] `GET /v1/query/{run_id}/events`: SSE streaming via `sse-starlette`, ownership check, cost filtering
-- [ ] `POST /v1/query/{run_id}/stop`: cancellation, idempotent
-- [ ] Tests: 202-before-completion timing, ownership 403, unknown-run 404, idempotent stop, cost filtering on the streaming path
+- [x] `POST /v1/query`: run creation, 202 response
+- [x] `GET /v1/query/{run_id}/events`: SSE streaming via `sse-starlette`, ownership check, cost filtering
+- [x] `POST /v1/query/{run_id}/stop`: cancellation, idempotent
+- [x] Tests: 202-before-completion timing, ownership 403, unknown-run 404, idempotent stop, cost filtering on the streaming path
 
-Evidence:
-- (filled at close)
+Evidence (backfilled 2026-07-28 during phase close, from the judge review's independent verification, since this ticket's own evidence was never filled in when it was built and merged earlier in the same session):
+- `python3 -m pytest tests/ -q`: 537 passed (whole-repo run, this ticket's suite included)
+- `app.py:139-154` — `POST /v1/query`, 202, `run_id` plus `_STUB_PERSONA_NAME = "Assistant"` (`:119`), server-derived `user_id` at `:149`
+- `app.py:177-215` — SSE via `EventSourceResponse`, event name = envelope `type`, closes on `done` (`:210`) or fatal `error` (`:212`)
+- `app.py:157-174` — `_get_owned_run`, 404 before 403
+- `app.py:222-234` — idempotent stop, always 200 once ownership is established
+- Cost filtering on the streaming path: `app.py:207` calls `sanitize_event_for_end_user` unconditionally; tests at `test_streaming_endpoints.py:396`, `:407`, and `:422` (the third proves the real unfiltered run did produce a `cost` event, which is what makes the first two meaningful)
+- `POST /query` unaffected: `test_streaming_endpoints.py:530` `class TestExistingQueryEndpointIsUnaffected`
+- Commit 771e338 on `phase/1.2-react-shell-sse`
 
 History:
 - 2026-07-28 lead: created, scoped from Section 13.1's minimal subset
+- 2026-07-28 lead: built, merged, tests passing (real-time work this session, evidence not filled in at the time)
+- 2026-07-28 judge: independently re-verified against source and the real test run during the phase-level review; PASS
+- 2026-07-28 lead: backfilled Evidence and set in-review from the judge's verified findings
 
 ### T-1.2-03: React app scaffold
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: none
@@ -113,27 +132,36 @@ Files this ticket may create or modify:
 - `.gitignore` (add `frontend/node_modules/`, `frontend/dist/` if not already covered by the existing `frontend/build/` or `frontend/dist/` pattern; verify first, do not duplicate)
 
 Acceptance criteria:
-- [ ] `npm install && npm run dev` starts a working Vite dev server with no errors
-- [ ] TypeScript strict mode is enabled (`tsconfig.json`); no `any` type anywhere without an explicit, commented justification (production-standards code-quality gate)
-- [ ] `HomePage` renders an empty state (`EmptyState`) with a `QueryInput`; submitting a non-empty query navigates to `ChatPage`
-- [ ] `ChatShell` holds the current run's state (a `run_id` once created, session state) as the page layout wrapper
-- [ ] `QueryInput` has an explicit `<label>`, never a placeholder-only affordance (Section 12.10, success criterion 3.3.2), and is keyboard-operable (Tab, Enter submits)
-- [ ] Every new npm dependency added by this ticket passes `supply-chain-security.md`'s pre-install checks (no compromise reports, no unexplained postinstall script, `npm audit` clean) before being committed; document which packages were checked in the ticket's evidence
+- [x] `npm install && npm run dev` starts a working Vite dev server with no errors
+- [x] TypeScript strict mode is enabled (`tsconfig.json`); no `any` type anywhere without an explicit, commented justification (production-standards code-quality gate)
+- [x] `HomePage` renders an empty state (`EmptyState`) with a `QueryInput`; submitting a non-empty query navigates to `ChatPage`
+- [x] `ChatShell` holds the current run's state (a `run_id` once created, session state) as the page layout wrapper — corrected 2026-07-28 during phase close: the judge found `ChatShell.tsx` held a dead `useState` with no setter, never written to, and a stale docstring; T-1.2-08's actual wiring put run and token state in `App.tsx`/`ChatPage.tsx` instead, which has to reach `useAgentRun`/`createRun`/every chat component directly, so a layout-only wrapper had no reason to hold that state just to pass it through unused. Removed the dead state, the stale docstring, and the test that certified the dead attribute's absence as correct behavior (`ChatShell.tsx`, `ChatShell.test.tsx`), rather than record this criterion as met against code that did not do what it said
+- [x] `QueryInput` has an explicit `<label>`, never a placeholder-only affordance (Section 12.10, success criterion 3.3.2), and is keyboard-operable (Tab, Enter submits)
+- [x] Every new npm dependency added by this ticket passes `supply-chain-security.md`'s pre-install checks (no compromise reports, no unexplained postinstall script, `npm audit` clean) before being committed; document which packages were checked in the ticket's evidence
 
 Breakdown:
-- [ ] Vite + React + TypeScript scaffold, strict mode, dev server
-- [ ] `HomePage`, `EmptyState`, `QueryInput`, `ChatShell`, `ChatPage` (routing between them)
-- [ ] `npm audit` and per-package supply-chain check for every new dependency
+- [x] Vite + React + TypeScript scaffold, strict mode, dev server
+- [x] `HomePage`, `EmptyState`, `QueryInput`, `ChatShell`, `ChatPage` (routing between them)
+- [x] `npm audit` and per-package supply-chain check for every new dependency
 
-Evidence:
-- (filled at close)
+Evidence (backfilled 2026-07-28 during phase close, from the judge review's independent verification, since this ticket's own evidence was never filled in when it was built and merged earlier in the same session):
+- `npm run test -- --run`: 120 tests passing (post-`ChatShell` cleanup); `npx tsc --noEmit`: clean
+- `tsconfig.json` — `"strict": true` plus `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`; `grep -rn ': any\|as any\|<any>' frontend/src` returns zero hits
+- `QueryInput.tsx:44` — real `<label htmlFor={inputId}>`; Enter handling at `:34-39`
+- `npm audit`: 0 vulnerabilities
+- `App.tsx:16-27` — minimal `useState`-based two-page routing, not `react-router-dom` (logged in `DECISIONS.md`)
+- `ChatShell.tsx` cleaned up per the criterion-4 correction above; `git log --oneline -- frontend/src/components/chat/ChatShell.tsx` shows the phase-close fix as a separate commit from T-1.2-03's original build
+- Commit 6b03433 on `phase/1.2-react-shell-sse` (original scaffold)
 
 History:
 - 2026-07-28 lead: created, scoped from Section 12.1/1.6
+- 2026-07-28 lead: built, merged, tests passing (real-time work this session, evidence not filled in at the time)
+- 2026-07-28 judge: independently re-verified against source and the real test run during the phase-level review; found criterion 4 false in the shipped system (`ChatShell.tsx`'s run-id state was dead code); PASS on every other criterion
+- 2026-07-28 lead: fixed `ChatShell.tsx` and its test per the judge's finding, re-verified (120 tests passing, tsc clean), backfilled Evidence, set in-review
 
 ### T-1.2-04: Typed SSE consumption (`lib/events.ts`, `lib/api.ts`, `useAgentRun`)
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/1.2-react-shell-sse
 Depends on: T-1.2-02, T-1.2-03
@@ -146,24 +174,35 @@ Files this ticket may create or modify:
 - `frontend/src/lib/events.test.ts`, `frontend/src/hooks/useAgentRun.test.ts` (new)
 
 Acceptance criteria:
-- [ ] `lib/events.ts`'s `AgentEvent` union mirrors Section 2.3's payload shapes field-for-field for every type EXCEPT `cost` (which has no client-side variant at all, per Section 12.2's own note, since it is server-filtered before it ever reaches this client in the non-operator case this phase targets)
-- [ ] `lib/api.ts` provides typed wrappers: create a run (`POST /v1/query`), stop a run (`POST /v1/query/{run_id}/stop`)
-- [ ] `useAgentRun(runId)` opens one `EventSource` against `GET /v1/query/{run_id}/events`, registers a listener per known event type (matching Section 12.2's `knownTypes` list minus `cost`), and dispatches into a reducer/state array in arrival order
-- [ ] The hook closes its `EventSource` when `done` arrives, or when an `error` event with `fatal: true` arrives; it does NOT close on a non-fatal `error` (matching Section 12.2's `fatal`-only branching, never reading a nonexistent `code` or `recoverable` field)
-- [ ] The hook closes its `EventSource` on unmount (React cleanup), so navigating away from an active run does not leak an open connection
-- [ ] A real integration test (mocking `EventSource` or using a test server, builder's choice, documented) proves events dispatch in the order the server sent them, not just that individual handlers are wired
+- [x] `lib/events.ts`'s `AgentEvent` union mirrors Section 2.3's payload shapes field-for-field for every type EXCEPT `cost` (which has no client-side variant at all, per Section 12.2's own note, since it is server-filtered before it ever reaches this client in the non-operator case this phase targets)
+- [x] `lib/api.ts` provides typed wrappers: create a run (`POST /v1/query`), stop a run (`POST /v1/query/{run_id}/stop`)
+- [x] `useAgentRun(runId)` opens one `EventSource` against `GET /v1/query/{run_id}/events`, registers a listener per known event type (matching Section 12.2's `knownTypes` list minus `cost`), and dispatches into a reducer/state array in arrival order — delivered via `fetch()` plus a hand-parsed `ReadableStream`, not the literal native `EventSource` API; see the deviation note below and the `DECISIONS.md` row logged for it
+- [x] The hook closes its `EventSource` when `done` arrives, or when an `error` event with `fatal: true` arrives; it does NOT close on a non-fatal `error` (matching Section 12.2's `fatal`-only branching, never reading a nonexistent `code` or `recoverable` field)
+- [x] The hook closes its `EventSource` on unmount (React cleanup), so navigating away from an active run does not leak an open connection
+- [x] A real integration test (mocking `EventSource` or using a test server, builder's choice, documented) proves events dispatch in the order the server sent them, not just that individual handlers are wired
+
+Deviation from criterion 3's literal wording, PASS on substance: Section 12.2's own snippet (`new EventSource(url, { withCredentials: true })`) assumes cookie-based session auth. This backend has no cookie session; every protected route requires a `Bearer` token in the `Authorization` header, and the native `EventSource` API cannot set custom request headers, so it cannot authenticate against this backend at all. `useAgentRun.ts:12-28` documents this in full; a `DECISIONS.md` row was added at phase close (it existed only in the source docstring until the judge review flagged that it was never logged as a decision).
 
 Breakdown:
-- [ ] `lib/events.ts` typed union
-- [ ] `lib/api.ts` typed fetch wrappers
-- [ ] `useAgentRun.ts` hook: EventSource lifecycle, dispatch, fatal-close logic, unmount cleanup
-- [ ] Tests: union shape matches the real backend payloads (cross-check against a live or mocked `/events` response), ordering, fatal vs non-fatal close, unmount cleanup
+- [x] `lib/events.ts` typed union
+- [x] `lib/api.ts` typed fetch wrappers
+- [x] `useAgentRun.ts` hook: EventSource lifecycle, dispatch, fatal-close logic, unmount cleanup
+- [x] Tests: union shape matches the real backend payloads (cross-check against a live or mocked `/events` response), ordering, fatal vs non-fatal close, unmount cleanup
 
-Evidence:
-- (filled at close)
+Evidence (backfilled 2026-07-28 during phase close, from the judge review's independent verification, since this ticket's own evidence was never filled in when it was built and merged earlier in the same session):
+- `npm run test -- --run` and `npx tsc --noEmit`: both clean as part of the whole-suite runs recorded on later tickets
+- Union verified field-for-field against `src/system_03_search_agent/contracts/events.py` by the judge's own independent check: all 10 non-`cost` payload types plus the envelope match exactly (envelope `events.py:198-215` vs `events.ts:149-156`; `citation`'s 12 fields `events.py:118-134` vs `events.ts:107-120`); `cost` absent from the TS union at `events.ts:158-168`, `:177-188`, `:367-378`
+- `lib/api.ts:93` `createRun`, `:118` `stopRun`, `:145` `openEventStream`
+- Fatal-only close: `useAgentRun.ts:181-188` closes on `done` and on `error` with `payload.fatal === true` only; test at `useAgentRun.test.ts:214`
+- Unmount cleanup: `useAgentRun.ts:340-343`; test at `useAgentRun.test.ts:235`
+- Ordering tests at `useAgentRun.test.ts:115` and `:195`
+- Commit 93dacfe on `phase/1.2-react-shell-sse`
 
 History:
 - 2026-07-28 lead: created, scoped from Section 12.2
+- 2026-07-28 lead: built, merged, tests passing (real-time work this session, evidence not filled in at the time)
+- 2026-07-28 judge: independently re-verified against source and the real test run during the phase-level review; PASS, flagged the `EventSource`-versus-`fetch` deviation as undocumented in `DECISIONS.md` (only in a source docstring)
+- 2026-07-28 lead: logged the deviation to `DECISIONS.md`, backfilled Evidence, set in-review
 
 ### T-1.2-05: The streaming stepper and answer rendering
 
@@ -236,7 +275,7 @@ Evidence:
 - `npx tsc --noEmit` (independently re-run after merge): clean, no output
 - `deriveStopEnabled` (`StopButton.tsx:48-60`): pure derivation from event existence, not array position, documented as correct because the agent loop can never emit a terminal event before guard passes
 - Local `hasStopped` state (`StopButton.tsx:73`, reset on `runId` change) added because the events-only derivation could stay stuck enabled after a click, since this client stops listening the moment `stop()` runs; documented inline and logged to `DECISIONS.md`
-- `stopRun` is called unawaited in the click handler (`StopButton.tsx:88-100`) so a slow backend never delays the local stopped state; failures are caught and `console.warn`'d with `runId` only, never `token`
+- `stopRun` is called unawaited in the click handler (`StopButton.tsx:88-100`) so a slow backend never delays the local stopped state; failures are caught and logged via `console.warn(\`stopRun request failed for run ${runId}\`, caughtError)`. The caught `ApiError` is passed too, but its message is built at `api.ts:78` only from the HTTP status and the response body's `detail` field, never from a request header, so `token` cannot reach it either way (corrected 2026-07-28 per judge review; the original wording here said only `runId` is logged, which understated what the second `console.warn` argument actually carries, though the no-secrets property itself holds)
 - Commit b635bc1 on `phase/1.2-react-shell-sse`, fast-forward merge from `worktree-agent-t1206`, no conflicts
 
 History:

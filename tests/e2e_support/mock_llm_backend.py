@@ -221,6 +221,15 @@ if str(_SRC) not in sys.path:
 # test suite establishes as correct. Uses setdefault, never a blind
 # overwrite, so an operator running this script with real env overrides
 # (e.g. a different USER_DB_URL) is respected.
+#
+# Applied inside `main()`, not at module import time: this file lives under
+# `tests/` with an `__init__.py`, so it is importable by name. A future test
+# that imports this module for any reason (even just to reuse a helper)
+# would otherwise silently set AUTH_SECRET, PER_QUERY_COST_CAP_USD, and
+# USER_DB_URL for the rest of that pytest process as a side effect of the
+# import alone. Nothing imports this module today (only `playwright.config
+# .ts` invokes it via `python3 -m`), but a bare import should never be able
+# to mutate global process state regardless.
 # ---------------------------------------------------------------------------
 _TEST_AUTH_SECRET = "e2e-only-auth-secret-do-not-reuse-outside-playwright-webserver"
 
@@ -238,10 +247,12 @@ _ENV_DEFAULTS = {
     "AUTH_SECRET": _TEST_AUTH_SECRET,
     "USER_DB_URL": "postgresql://localhost:5432/search_agent_users",
 }
-for _key, _value in _ENV_DEFAULTS.items():
-    os.environ.setdefault(_key, _value)
 
-_BACKEND_PORT = int(os.environ.get("PORT", "8931"))
+
+def _apply_env_defaults() -> None:
+    for key, value in _ENV_DEFAULTS.items():
+        os.environ.setdefault(key, value)
+
 
 # A query's own text opts into an artificial per-call delay by containing
 # this marker (see this module's docstring). Never a global delay: only the
@@ -334,6 +345,9 @@ def _build_app():
 
 
 def main() -> None:
+    _apply_env_defaults()
+    backend_port = int(os.environ.get("PORT", "8931"))
+
     if not _can_connect_to_user_db():
         print(
             "mock_llm_backend: search_agent_users PostgreSQL database is not "
@@ -352,7 +366,7 @@ def main() -> None:
 
     # 127.0.0.1 only, never 0.0.0.0: this process is throwaway test
     # infrastructure for one local Playwright run, not a deployment.
-    uvicorn.run(app, host="127.0.0.1", port=_BACKEND_PORT, log_level="warning")
+    uvicorn.run(app, host="127.0.0.1", port=backend_port, log_level="warning")
 
 
 if __name__ == "__main__":

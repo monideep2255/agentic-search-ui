@@ -13,15 +13,4 @@ describe("ChatShell", () => {
     expect(screen.getByText("What is BRCA1?")).toBeInTheDocument();
     expect(screen.getByText("child content")).toBeInTheDocument();
   });
-
-  it("has no run_id yet, since run creation is wired in a later ticket", () => {
-    const { container } = render(
-      <ChatShell query="test">
-        <span>body</span>
-      </ChatShell>,
-    );
-
-    const shell = container.querySelector(".chat-shell");
-    expect(shell).not.toHaveAttribute("data-run-id");
-  });
 });
