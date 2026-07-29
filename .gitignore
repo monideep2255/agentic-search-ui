@@ -52,6 +52,10 @@ security/
 # Agent worktrees (transient, created by bossman-mode builders)
 .claude/worktrees/
 
+# Personal dev-workflow note (API keys/env-var setup for alternate model
+# backends). Not repo doc content, stays local only.
+docs/Claude_Code_model_fallback_setup.md
+
 # macOS Finder/Archive Utility duplicate-copy artifacts (e.g. "env 2.py").
 # These appear when a file is copied into a directory that already has a
 # same-named file: Finder "Keep Both", or a zip extracted on top of an
