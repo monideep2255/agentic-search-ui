@@ -254,7 +254,7 @@ History:
 
 ### T-2.1-07: cypher_query three-step pipeline
 
-Status: in-review
+Status: rejected
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: T-2.1-01, T-2.1-02, T-2.1-03, T-2.1-04, T-2.1-05, T-2.1-06
@@ -289,7 +289,7 @@ History:
 
 ### T-2.1-08: Act-step wiring, cost cap and output caps
 
-Status: in-review
+Status: rejected
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: T-2.1-07
