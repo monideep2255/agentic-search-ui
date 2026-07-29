@@ -47,8 +47,17 @@ Field lifecycle:
             the classification itself is not real yet.
         tool_calls: set by `plan` (empty in this stub, since no tool
             exists until phase 2.1+).
-        findings_count: set by `act`, the length of the (empty, in this
-            stub) `Finding` list `coordinator_worker_execute` returns.
+        findings_count: set by `act`, the length of the `Finding` list
+            `coordinator_worker_execute` returns.
+        findings: set by `act`, the real `Finding` list itself (T-2.1
+            rework, findings A5/F-02). `write` reads this to classify
+            what Act actually found (no tool selected, a real result, an
+            empty result, or a tool error) via
+            `core.graph._tool_execution_outcome`, and to build real
+            `citation` events via `core.graph._citations_from_findings`,
+            rather than emitting `trust_outcome="answer"` off a bare
+            count with no way to tell a real result from an empty or
+            errored one.
         cap_exceeded: set True by whichever of guardrail/think/plan/write
             first catches a `QueryCapExceededError` from its own
             pre-flight `check_per_query_cap` call. Once set, the graph's
@@ -101,6 +110,7 @@ class GraphState(TypedDict, total=False):
     query_class: QueryClass
     tool_calls: list[Any]
     findings_count: int
+    findings: list[Any]
     cap_exceeded: bool
     step_error: dict[str, Any] | None
     daily_cap_declined: bool

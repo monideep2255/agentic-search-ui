@@ -254,6 +254,65 @@ class TestRunEmitsTheFullFiveNodeLoop:
         assert "trust_signal" not in types
 
 
+# ---------------------------------------------------------------------------
+# T-2.1 rework: every `_valid_query()` use above defaults to "hello",
+# core.graph._NO_TOOL_QUERY_TEXTS's no-tool path, leaving run() and
+# run_streaming() with zero coverage of real tool dispatch through their
+# own real entry points (tests/system_03_search_agent/core/test_graph.py
+# exercises the compiled graph directly, which is a different call path).
+# These exercise dispatch through run() and run_streaming() themselves,
+# and pin down the cite-or-refuse fix (findings A5/F-02): the generic
+# "ok" mocked model response is not recoverable Cypher (see
+# test_graph.py's test_act_executes_the_selected_cypher_query_call
+# docstring for the same mechanics), so cypher_query returns
+# status="error" and the query must refuse, not fabricate an answer.
+# ---------------------------------------------------------------------------
+
+_GRAPH_ANSWERABLE_QUERY_TEXT = "What gene is associated with BRCA1?"
+
+
+@pytest.mark.asyncio
+async def test_run_dispatches_the_selected_tool_call_for_a_graph_answerable_query(
+    _mock_litellm: AsyncMock,
+) -> None:
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = [event async for event in run(query, _valid_context())]
+
+    plan_event = next(event for event in events if event.type == "plan")
+    tool_calls = plan_event.payload["tool_calls"]
+    assert len(tool_calls) == 1
+    assert tool_calls[0]["tool"] == "cypher_query"
+
+    done_event = events[-1]
+    assert done_event.type == "done"
+    assert done_event.payload["total_tool_calls"] == 1
+    assert done_event.payload["trust_outcome"] == "refuse"
+
+    for event in events:
+        PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)
+
+
+@pytest.mark.asyncio
+async def test_run_streaming_dispatches_the_selected_tool_call_for_a_graph_answerable_query(
+    _mock_litellm: AsyncMock,
+) -> None:
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = [event async for event in run_streaming(query, _valid_context())]
+
+    plan_event = next(event for event in events if event.type == "plan")
+    tool_calls = plan_event.payload["tool_calls"]
+    assert len(tool_calls) == 1
+    assert tool_calls[0]["tool"] == "cypher_query"
+
+    done_event = events[-1]
+    assert done_event.type == "done"
+    assert done_event.payload["total_tool_calls"] == 1
+    assert done_event.payload["trust_outcome"] == "refuse"
+
+    for event in events:
+        PAYLOAD_MODEL_BY_TYPE[event.type].model_validate(event.payload)
+
+
 @pytest.mark.asyncio
 async def test_an_otherwise_uncaught_graph_exception_yields_error_then_done_not_a_crash(
     monkeypatch: pytest.MonkeyPatch,
