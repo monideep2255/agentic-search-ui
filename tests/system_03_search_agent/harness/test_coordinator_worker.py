@@ -7,9 +7,18 @@ mocked `Harness.call_tier`, a structured result never calls it at all),
 the no-raw-text-leak guarantee (a free-text result's returned `Finding`
 never contains the original payload substring, including on a reader
 response that fails to parse as JSON), the F-2.0-08 closure (the reader
-pass now respects the per-query cost cap and a per-step timeout), and the
+pass now respects the per-query cost cap and a per-step timeout), the
 F-2.0-14 closure (the structured pass-through path caps an oversized
-payload before a `Finding` is built).
+payload before a `Finding` is built), and the F-03 closure (the F-2.0-14
+cap is now genuinely recursive over arbitrarily nested dicts and lists,
+dict keys are length-capped, recursion depth is bounded, and a total
+size ceiling on the whole `Finding` composes with the per-field caps).
+
+The F-03 regression tests below construct the real production shape
+(`{"rows": [{"fields": {...}}, ...]}`, what `core/graph.py`'s
+`_cypher_output_to_structured_fields` actually produces), not only the
+flat one-level dict the pre-F-03 test suite used, since that flat shape
+is exactly what let the F-2.0-14 cap's non-recursion go undetected.
 
 No real model call is made anywhere in this file: `Harness.call_tier` is
 mocked in every test, matching test_harness.py's own convention of never
@@ -19,6 +28,7 @@ issuing a real LiteLLM/network call.
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -427,6 +437,8 @@ async def test_oversized_structured_payload_is_capped_before_reaching_a_finding(
     assert len(nested) <= 30
     assert all(len(value) <= 500 for value in nested.values() if isinstance(value, str))
     harness.call_tier.assert_not_awaited()  # structured pass-through never calls the reader
+    # F-03: truncation is signalled on the Finding, not left invisible.
+    assert findings[0].truncated is True
 
 
 @pytest.mark.asyncio
@@ -443,3 +455,200 @@ async def test_well_formed_structured_payload_passes_through_unchanged() -> None
     findings = await coordinator_worker_execute(harness, [call], [result])
 
     assert findings[0].structured_fields == fields
+    # F-03: nothing was cut, so truncated must be False, not left as an
+    # unconditional True whenever the capping pass merely ran.
+    assert findings[0].truncated is False
+
+
+# ---------------------------------------------------------------------------
+# F-03: the F-2.0-14 cap was not actually recursive. A dict or a list
+# reached `_cap_leaf_value` and passed through untouched; a nested list
+# handed to the old list branch also passed through untouched; dict keys
+# were never length-capped at all. The four cases below are the judge's
+# own measured probes, each asserting the actual byte size before and
+# after, not merely that the function returned something.
+# ---------------------------------------------------------------------------
+
+
+def _json_bytes(value: object) -> int:
+    """The same size proxy the judge used: serialized JSON, encoded to
+    bytes. Used here only to state the measured before/after sizes on the
+    record; the module itself uses the same proxy internally.
+    """
+    return len(json.dumps(value, ensure_ascii=False, default=str).encode("utf-8"))
+
+
+async def _pass_through_one(structured_fields: dict[str, object]) -> object:
+    """Run one structured payload through the real
+    coordinator_worker_execute path and return the resulting Finding."""
+    harness = _make_harness()
+    harness.call_tier = AsyncMock()  # type: ignore[method-assign]
+    call = _make_call("call-1", tool="cypher_query", layer="layer_1_graph")
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+    harness.call_tier.assert_not_awaited()
+    return findings[0]
+
+
+@pytest.mark.asyncio
+async def test_real_production_shape_rows_and_fields_is_bounded_and_signalled() -> None:
+    """The shape `core/graph.py`'s `_cypher_output_to_structured_fields`
+    actually produces: `{"rows": [{"fields": {...}}, ...]}`. This is the
+    shape the pre-F-03 test suite never constructed (it only exercised a
+    flat one-level dict), which is exactly how the non-recursive F-2.0-14
+    cap's gap went undetected: a hostile 5,000,000-char value inside a
+    graph node's `fields` reaches this path unchanged under the old code.
+    """
+    hostile_row = {
+        "node_id": "gene:7157",
+        "fields": {"description": "d" * 5_000_000, "symbol": "TP53"},
+    }
+    structured_fields = {
+        "status": "ok",
+        "row_count": 3,
+        "total_available": 3,
+        "truncated": False,
+        "rows": [hostile_row, hostile_row, hostile_row],
+        "error": None,
+    }
+    before = _json_bytes(structured_fields)
+
+    finding = await _pass_through_one(structured_fields)
+
+    after = _json_bytes(finding.structured_fields)
+    assert before > 15_000_000  # sanity: the hostile input really is huge
+    assert after <= 50_000  # _MAX_FINDING_TOTAL_BYTES
+    assert finding.truncated is True
+    # the nested hostile description string is gone from the output at
+    # anything like its original size, wherever it survived at all
+    for row in finding.structured_fields.get("rows", []):
+        description = row.get("fields", {}).get("description", "")
+        assert len(description) <= 500
+
+
+@pytest.mark.asyncio
+async def test_measured_case_five_level_nest_with_ten_million_char_leaf() -> None:
+    """Judge's measured case 1: 5-level nest with a 10,000,000-char leaf.
+    Before F-03: 10,000,062 -> 10,000,062 bytes, UNBOUNDED (the leaf never
+    reached a string cap because the nesting was more than one dict level
+    deep, past what the old one-level `_cap_dict_one_level` covered).
+    """
+    nested = {"level1": {"level2": {"level3": {"level4": {"level5": "x" * 10_000_000}}}}}
+    before = _json_bytes(nested)
+    assert before > 10_000_000
+
+    finding = await _pass_through_one(nested)
+
+    after = _json_bytes(finding.structured_fields)
+    assert after < 10_000  # collapsed from ~10,000,062 bytes
+    assert finding.truncated is True
+    leaf = finding.structured_fields["level1"]["level2"]["level3"]["level4"]["level5"]
+    assert len(leaf) <= 500  # nested string cap
+
+
+@pytest.mark.asyncio
+async def test_measured_case_list_of_lists() -> None:
+    """Judge's measured case 2: a list of lists. Before F-03: 10,000,023
+    -> 10,000,023 bytes, UNBOUNDED. The old list branch capped a dict item
+    but handed a nested LIST item straight to `_cap_leaf_value`, which
+    only special-cased `str` and returned every other type, including a
+    list, unchanged.
+    """
+    list_of_lists = {"data": [["y" * 5_000_000, "y" * 5_000_000]]}
+    before = _json_bytes(list_of_lists)
+    assert before > 10_000_000
+
+    finding = await _pass_through_one(list_of_lists)
+
+    after = _json_bytes(finding.structured_fields)
+    assert after < 10_000  # collapsed from ~10,000,023 bytes
+    assert finding.truncated is True
+    inner_list = finding.structured_fields["data"][0]
+    assert all(len(item) <= 500 for item in inner_list)
+
+
+@pytest.mark.asyncio
+async def test_measured_case_dict_of_dicts_of_dicts() -> None:
+    """Judge's measured case 3: dict -> dict -> dict. Before F-03:
+    10,000,023 -> 10,000,023 bytes, UNBOUNDED, for the same reason as the
+    5-level nest above: only one dict level was ever capped.
+    """
+    triple_nested = {"outer": {"middle": {"inner": "z" * 10_000_000}}}
+    before = _json_bytes(triple_nested)
+    assert before > 10_000_000
+
+    finding = await _pass_through_one(triple_nested)
+
+    after = _json_bytes(finding.structured_fields)
+    assert after < 10_000  # collapsed from ~10,000,023 bytes
+    assert finding.truncated is True
+    assert len(finding.structured_fields["outer"]["middle"]["inner"]) <= 500
+
+
+@pytest.mark.asyncio
+async def test_measured_case_single_massive_dict_key() -> None:
+    """Judge's measured case 4: a single 1,000,000-char dict key. Before
+    F-03: 1,000,009 -> 1,000,009 bytes, UNBOUNDED. Dict KEYS were never
+    length-capped at all, only dict values were.
+    """
+    massive_key = "k" * 1_000_000
+    payload = {massive_key: "small value"}
+    before = _json_bytes(payload)
+    assert before > 1_000_000
+
+    finding = await _pass_through_one(payload)
+
+    after = _json_bytes(finding.structured_fields)
+    assert after < 1_000  # collapsed from ~1,000,009 bytes
+    assert finding.truncated is True
+    (capped_key,) = finding.structured_fields.keys()
+    assert len(capped_key) <= 200  # _MAX_STRUCTURED_KEY_CHARS
+
+
+@pytest.mark.asyncio
+async def test_recursion_depth_is_bounded_not_just_the_output() -> None:
+    """A structure nested far past any real tool's output shape must not
+    grow the recursion past a fixed ceiling: no RecursionError, no stack
+    overflow, and the over-depth subtree is replaced rather than ever
+    descended into. 200 levels comfortably exceeds
+    `_MAX_STRUCTURED_DEPTH` (8) many times over.
+    """
+    deeply_nested: dict[str, object] = {"leaf": "bottom"}
+    for _ in range(200):
+        deeply_nested = {"child": deeply_nested}
+
+    # Must complete without raising RecursionError.
+    finding = await _pass_through_one(deeply_nested)
+
+    assert finding.truncated is True
+    after = _json_bytes(finding.structured_fields)
+    assert after < 1_000  # the over-depth subtree was replaced, not descended into
+
+
+@pytest.mark.asyncio
+async def test_total_size_ceiling_shrinks_composed_rows_past_per_field_caps() -> None:
+    """Even a payload that is already within every per-field cap (a
+    well-formed 30-property row, repeated across many rows) can compose
+    past a reasonable total size. Mirrors the report's own 7.7 MB example:
+    30 properties x 500 chars x 500 rows, none of it individually over any
+    per-field cap, still needs the total ceiling to bound it.
+    """
+    row = {"node_id": "n1", "fields": {f"prop_{i}": "v" * 500 for i in range(30)}}
+    structured_fields = {
+        "status": "ok",
+        "row_count": 500,
+        "total_available": 500,
+        "truncated": False,
+        "rows": [dict(row) for _ in range(500)],
+        "error": None,
+    }
+    before = _json_bytes(structured_fields)
+    assert before > 7_000_000  # matches the report's measured 7.7 MB figure
+
+    finding = await _pass_through_one(structured_fields)
+
+    after = _json_bytes(finding.structured_fields)
+    assert after <= 50_000  # _MAX_FINDING_TOTAL_BYTES
+    assert finding.truncated is True
+    # some rows survive; the ceiling shrinks the list, it does not empty it
+    assert len(finding.structured_fields["rows"]) >= 1
