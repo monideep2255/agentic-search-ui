@@ -78,7 +78,7 @@ export function AuthGate({ onAuthenticated }: AuthGateProps) {
       // own fixed copy.
       setError(
         mode === "signup"
-          ? "Could not create that account. It may already be registered, or the password may be too short."
+          ? "Could not create that account. That email may already be registered."
           : "Could not log in with that email and password.",
       );
       setPending(false);
