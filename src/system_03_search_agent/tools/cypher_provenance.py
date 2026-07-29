@@ -7,19 +7,24 @@ host-pinned NCBI record page returns None rather than a guessed path, and
 every URL this module emits, whether newly derived or an existing stored
 value, is checked against `NCBI_RECORD_URL_PATTERN` before it is returned.
 
-Five of the nine CURIE prefixes in `graph_schema_constants.CURIE_PREFIXES`
+Six of the nine CURIE prefixes in `graph_schema_constants.CURIE_PREFIXES`
 map to a documented NCBI record page and are handled below: NCBIGene,
-ClinVar, MedGen, PMID, NCBITaxon. The remaining four, GO, MeSH, HP, and
-MONDO, are not NCBI-hosted databases. Gene Ontology, the Human Phenotype
-Ontology, and Mondo are maintained outside NCBI entirely (the OBO Foundry
-and the Monarch Initiative), so no host-pinned `ncbi.nlm.nih.gov` record
-page exists for them at all; inventing one would be exactly the fabricated
-citation this module exists to prevent. `source_url_for_curie` returns
-None for all four, not a guessed external host and not a loosened pattern.
-This is a documented, deliberate gap, not an oversight: if a verified
-NCBI-hosted or otherwise host-pinned record page for one of these four is
-confirmed later, add it here as a new mapping entry, never by loosening
-`NCBI_RECORD_URL_PATTERN` itself.
+ClinVar, MedGen, PMID, NCBITaxon, MeSH. MeSH (Medical Subject Headings)
+is an NCBI-hosted controlled vocabulary in its own right, listed in
+`docs/ncbi/NCBI_databases_and_APIs_reference.md`, so a `MeSH:D012345`
+CURIE maps to `https://www.ncbi.nlm.nih.gov/mesh/?term=D012345`.
+
+The remaining three, GO, HP, and MONDO, are not NCBI-hosted databases.
+Gene Ontology, the Human Phenotype Ontology, and Mondo are maintained
+outside NCBI entirely (the OBO Foundry and the Monarch Initiative), so no
+host-pinned `ncbi.nlm.nih.gov` record page exists for them at all;
+inventing one would be exactly the fabricated citation this module exists
+to prevent. `source_url_for_curie` returns None for all three, not a
+guessed external host and not a loosened pattern. This is a documented,
+deliberate gap, not an oversight: if a verified NCBI-hosted or otherwise
+host-pinned record page for one of these three is confirmed later, add it
+here as a new mapping entry, never by loosening `NCBI_RECORD_URL_PATTERN`
+itself.
 
 Depends on:
     - system_03_search_agent.tools.graph_schema_constants
@@ -40,6 +45,7 @@ from __future__ import annotations
 
 import re
 import urllib.parse
+from collections.abc import Callable
 
 from system_03_search_agent.tools.graph_schema_constants import (
     NCBI_RECORD_URL_PATTERN,
@@ -74,16 +80,21 @@ def _ncbitaxon_url(local_id: str) -> str:
     return "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=" + local_id
 
 
-# GO, MeSH, HP, and MONDO are intentionally absent from this table. See the
+def _mesh_url(local_id: str) -> str:
+    return "https://www.ncbi.nlm.nih.gov/mesh/?term=" + local_id
+
+
+# GO, HP, and MONDO are intentionally absent from this table. See the
 # module docstring for why: no verified NCBI-hosted record page exists for
-# any of the four, so they fall through to the None-returning default in
+# any of the three, so they fall through to the None-returning default in
 # `source_url_for_curie` rather than appearing here with a guessed path.
-_CURIE_URL_BUILDERS: dict[str, "callable[[str], str]"] = {
+_CURIE_URL_BUILDERS: dict[str, Callable[[str], str]] = {
     "NCBIGene": _ncbigene_url,
     "ClinVar": _clinvar_url,
     "MedGen": _medgen_url,
     "PMID": _pmid_url,
     "NCBITaxon": _ncbitaxon_url,
+    "MeSH": _mesh_url,
 }
 
 
@@ -100,11 +111,11 @@ def source_url_for_curie(curie: str) -> str | None:
             empty local id is treated as malformed and returns None.
 
     Returns:
-        The record page URL when the prefix is one of the five documented
+        The record page URL when the prefix is one of the six documented
         mappings and the resulting URL matches `NCBI_RECORD_URL_PATTERN`.
-        None for every other prefix, including all nine CURIE_PREFIXES
-        entries this module does not map (GO, MeSH, HP, MONDO) and any
-        prefix outside the nine entirely. Never a guessed or malformed URL.
+        None for every other prefix, including the three CURIE_PREFIXES
+        entries this module does not map (GO, HP, MONDO) and any prefix
+        outside the nine entirely. Never a guessed or malformed URL.
     """
     if not curie or ":" not in curie:
         return None

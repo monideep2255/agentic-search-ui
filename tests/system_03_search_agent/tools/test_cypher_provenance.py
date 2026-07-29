@@ -11,16 +11,21 @@ Depends on:
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from system_03_search_agent.tools.cypher_provenance import (
     source_url_for_curie,
     to_output_row,
 )
-from system_03_search_agent.tools.graph_schema_constants import CURIE_PREFIXES
+from system_03_search_agent.tools.graph_schema_constants import (
+    CURIE_PREFIXES,
+    NCBI_RECORD_URL_PATTERN,
+)
 
 # ---------------------------------------------------------------------------
-# The five prefixes with a documented NCBI record page.
+# The six prefixes with a documented NCBI record page.
 # ---------------------------------------------------------------------------
 
 
@@ -35,6 +40,7 @@ from system_03_search_agent.tools.graph_schema_constants import CURIE_PREFIXES
             "NCBITaxon:9606",
             "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=9606",
         ),
+        ("MeSH:D012345", "https://www.ncbi.nlm.nih.gov/mesh/?term=D012345"),
     ],
 )
 def test_documented_prefix_maps_to_expected_ncbi_record_url(
@@ -43,15 +49,29 @@ def test_documented_prefix_maps_to_expected_ncbi_record_url(
     assert source_url_for_curie(curie) == expected_url
 
 
+def test_mesh_url_matches_the_host_pinned_ncbi_record_pattern() -> None:
+    url = source_url_for_curie("MeSH:D012345")
+    assert url is not None
+    assert re.match(NCBI_RECORD_URL_PATTERN, url)
+
+
+def test_mesh_local_id_needing_encoding_is_encoded_correctly() -> None:
+    # A local id with a character that needs encoding must still resolve to
+    # a well-formed query-string value, matching the same encoding path
+    # every other prefix's local id goes through.
+    url = source_url_for_curie("MeSH:D012345 supplement")
+    assert url == "https://www.ncbi.nlm.nih.gov/mesh/?term=D012345%20supplement"
+
+
 # ---------------------------------------------------------------------------
-# The four prefixes with no NCBI-hosted record page: GO, MeSH, HP, MONDO.
+# The three prefixes with no NCBI-hosted record page: GO, HP, MONDO.
 # Returning None here is the correct, documented behavior, not a gap: none
-# of the four is an NCBI database, so no host-pinned URL can be built
+# of the three is an NCBI database, so no host-pinned URL can be built
 # without fabricating one.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("curie", ["GO:0006096", "MeSH:D012345", "HP:0001250", "MONDO:0009861"])
+@pytest.mark.parametrize("curie", ["GO:0006096", "HP:0001250", "MONDO:0009861"])
 def test_non_ncbi_ontology_prefix_returns_none(curie: str) -> None:
     assert source_url_for_curie(curie) is None
 
@@ -60,8 +80,8 @@ def test_every_curie_prefix_in_the_graph_schema_is_covered_by_a_test() -> None:
     # Guards against a tenth prefix being added to CURIE_PREFIXES with no
     # corresponding test above, either in the documented-mapping test or
     # the non-NCBI-ontology test.
-    documented = {"NCBIGene", "ClinVar", "MedGen", "PMID", "NCBITaxon"}
-    non_ncbi = {"GO", "MeSH", "HP", "MONDO"}
+    documented = {"NCBIGene", "ClinVar", "MedGen", "PMID", "NCBITaxon", "MeSH"}
+    non_ncbi = {"GO", "HP", "MONDO"}
 
     assert documented | non_ncbi == set(CURIE_PREFIXES)
     assert len(CURIE_PREFIXES) == 9
