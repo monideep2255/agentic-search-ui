@@ -11,6 +11,19 @@ receives is a Cypher template that uses named parameters ($paramName) for
 every caller-supplied value, never a literal value concatenated in by an
 upstream step.
 
+AGE's `cypher()` function rejects a client-side `%s` placeholder as its third
+argument with sqlstate 22023, "third argument of cypher function must be a
+parameter", because psycopg2 substitutes `%s` before the statement reaches
+the server, so AGE never sees a real bind parameter in that position. When
+`params` is non-empty this module instead issues `PREPARE` with an `agtype`
+parameter, then `EXECUTE` with the JSON-encoded params bound through the
+psycopg2 placeholder, which AGE accepts as a genuine parameter. When `params`
+is empty or absent, the third argument is omitted entirely rather than
+passed as an empty object, since AGE rejects an empty params object the same
+way. Each call uses a fresh, code-generated prepared statement name and
+deallocates it after use, so a reused connection never accumulates prepared
+statements and a re-`PREPARE` of the same name never collides.
+
 Adapted from the AGE connection pattern in
 `reference/agentic-search-data-engineering/system-02-knowledge-graph/loader/connection.py`,
 with one deliberate divergence: that pattern issues `LOAD 'age';` because it
@@ -46,6 +59,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import uuid
 from collections.abc import Callable
 from typing import Any
 
@@ -200,18 +214,12 @@ def _default_connection_factory() -> psycopg2.extensions.connection:
     return conn
 
 
-def _wrap_cypher(cypher: str, as_clause: str) -> str:
-    """Build the AGE SQL wrapper around an already-validated Cypher body.
+def _validate_cypher_and_as_clause(cypher: str, as_clause: str) -> None:
+    """Reject a Cypher body or as_clause shape that is unsafe to concatenate.
 
-    The wrapper is built with plain string concatenation, never an f-string
-    or `.format()` call, per the production-standards query-safety gate.
-    GRAPH_NAME is a fixed system constant, not caller-supplied. `cypher` must
-    already be validated Cypher that uses named parameters ($paramName) for
-    every data value; this function performs no validation of its own, that
-    is cypher_validator's job upstream. The only value that ever passes
-    through the psycopg2 %s placeholder is the params JSON object, appended
-    by the caller of this function, never a value spliced into the Cypher
-    text itself.
+    Shared by both the prepared-statement path and the no-params path, so
+    every route to execution gets the same defense-in-depth check before any
+    SQL text is built.
     """
     if "$$" in cypher:
         raise GraphConnectionError(
@@ -223,12 +231,72 @@ def _wrap_cypher(cypher: str, as_clause: str) -> str:
             "as_clause did not match the expected '(name type, ...)' shape, "
             "rejecting before execution"
         )
+
+
+def _new_statement_name() -> str:
+    """Generate a unique, code-controlled prepared statement name.
+
+    A hex uuid has no hyphens, so the result is a valid SQL identifier on
+    its own. Uniqueness per call means a reused connection never trips
+    "prepared statement already exists", and the name is never derived from
+    caller-supplied input.
+    """
+    return "cq_" + uuid.uuid4().hex
+
+
+def _build_prepare_sql(statement_name: str, cypher: str, as_clause: str) -> str:
+    """Build a PREPARE statement wrapping the AGE cypher() call.
+
+    Built with plain string concatenation, never an f-string or `.format()`
+    call, per the production-standards query-safety gate. GRAPH_NAME is a
+    fixed system constant, `statement_name` is code-generated, and `cypher`
+    must already be validated Cypher that uses named parameters ($paramName)
+    for every data value; this function performs no validation of the
+    Cypher body's semantics itself, that is cypher_validator's job upstream.
+    The declared `agtype` parameter is bound at EXECUTE time, never spliced
+    into this text.
+    """
+    _validate_cypher_and_as_clause(cypher, as_clause)
+    return (
+        "PREPARE "
+        + statement_name
+        + "(agtype) AS SELECT * FROM cypher('"
+        + GRAPH_NAME
+        + "', $$ "
+        + cypher
+        + " $$, $1) AS "
+        + as_clause
+    )
+
+
+def _build_execute_sql(statement_name: str) -> str:
+    """Build the EXECUTE call for a previously prepared statement.
+
+    The single %s placeholder is filled by psycopg2 with the JSON-encoded
+    params value, never with a caller-supplied Cypher fragment.
+    """
+    return "EXECUTE " + statement_name + "(%s);"
+
+
+def _build_deallocate_sql(statement_name: str) -> str:
+    """Build the DEALLOCATE call that releases a prepared statement."""
+    return "DEALLOCATE " + statement_name + ";"
+
+
+def _build_no_params_sql(cypher: str, as_clause: str) -> str:
+    """Build the AGE SQL call for a query with no caller-supplied params.
+
+    AGE rejects an empty params object passed as the cypher() third
+    argument with the same sqlstate 22023 error as a %s placeholder, so this
+    omits the third argument entirely rather than passing `{}`.
+    """
+    _validate_cypher_and_as_clause(cypher, as_clause)
     return (
         "SELECT * FROM cypher('"
         + GRAPH_NAME
         + "', $$ "
         + cypher
-        + " $$, %s) AS "
+        + " $$) AS "
         + as_clause
     )
 
@@ -243,9 +311,15 @@ def execute_cypher(
 ) -> tuple[list[dict[str, Any]], int]:
     """Execute an already-validated Cypher query against the Layer 1 graph.
 
-    Wraps `cypher` as `SELECT * FROM cypher('ncbi_kg', $$ ... $$, %s) AS
-    (...)`. `params` passes through the psycopg2 %s placeholder as a JSON
-    object; it is never string-interpolated into the Cypher text.
+    When `params` is non-empty, wraps `cypher` in a `PREPARE ...(agtype) AS
+    SELECT * FROM cypher('ncbi_kg', $$ ... $$, $1) AS (...)` statement, then
+    runs `EXECUTE` with the JSON-encoded params bound through the psycopg2
+    %s placeholder, then `DEALLOCATE`s the statement. AGE rejects a
+    client-side %s passed directly as the cypher() third argument (sqlstate
+    22023), so the params value only ever reaches AGE as a genuine bound
+    parameter through EXECUTE, never spliced into the Cypher text itself.
+    When `params` is empty or None, the cypher() call omits the third
+    argument entirely, since AGE rejects an empty params object the same way.
 
     Args:
         cypher: An already-validated Cypher body using named parameters
@@ -315,10 +389,32 @@ def execute_cypher(
                     "SET statement_timeout = %s;",
                     (int(timeout_s * 1000),),
                 )
-                wrapped_sql = _wrap_cypher(cypher, as_clause)
-                cur.execute(wrapped_sql, (json.dumps(bound_params),))
-                fetched = cur.fetchall()
-                columns = [desc[0] for desc in cur.description] if cur.description else []
+                if bound_params:
+                    statement_name = _new_statement_name()
+                    prepare_sql = _build_prepare_sql(statement_name, cypher, as_clause)
+                    try:
+                        cur.execute(prepare_sql)
+                        cur.execute(
+                            _build_execute_sql(statement_name),
+                            (json.dumps(bound_params),),
+                        )
+                        fetched = cur.fetchall()
+                        columns = (
+                            [desc[0] for desc in cur.description] if cur.description else []
+                        )
+                    finally:
+                        # A failed DEALLOCATE must never mask the original
+                        # error (or a successful result). This is best-effort
+                        # cleanup only, never re-raised.
+                        try:
+                            cur.execute(_build_deallocate_sql(statement_name))
+                        except Exception:  # noqa: BLE001, S110 - cleanup only, never propagate
+                            pass
+                else:
+                    no_params_sql = _build_no_params_sql(cypher, as_clause)
+                    cur.execute(no_params_sql)
+                    fetched = cur.fetchall()
+                    columns = [desc[0] for desc in cur.description] if cur.description else []
         except psycopg2.errors.QueryCanceled:
             timeout_display = f"{timeout_s:g}"
             raise GraphTimeoutError(

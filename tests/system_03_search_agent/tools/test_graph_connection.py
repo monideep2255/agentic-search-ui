@@ -5,8 +5,12 @@ Depends on:
     - psycopg2 (for constructing realistic error instances)
 
 Reads:
-    - Environment variable GRAPH_PG_HOST, only to decide whether the one
-      integration test should run or skip.
+    - Environment variables GRAPH_PG_HOST and GRAPH_PG_PORT, to decide
+      whether the one live integration test should run or skip. The guard
+      checks both that the variable is set and that the host:port is
+      actually reachable, since importing litellm anywhere in the process
+      calls load_dotenv() at import time, which can populate GRAPH_PG_HOST
+      from this repo's .env even when no SSH tunnel is open.
 
 Writes:
     - Nothing.
@@ -15,6 +19,7 @@ Writes:
 from __future__ import annotations
 
 import os
+import socket
 
 import psycopg2
 import psycopg2.errors
@@ -80,6 +85,27 @@ class FakeConnection:
         self.closed = True
 
 
+def _graph_host_reachable(host: str, port: str, timeout: float = 2.0) -> bool:
+    """Check whether the graph host is actually reachable, not just named.
+
+    Importing litellm anywhere in the process calls load_dotenv() at import
+    time (venv/lib/python3.11/site-packages/litellm/__init__.py:27), which
+    silently loads this repo's .env and can populate GRAPH_PG_HOST even when
+    no SSH tunnel is open. Checking the environment variable alone is not
+    enough to decide whether the live integration test should run, so this
+    does a short TCP connect and treats any failure as unreachable.
+    """
+    try:
+        port_number = int(port)
+    except (TypeError, ValueError):
+        return False
+    try:
+        with socket.create_connection((host, port_number), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
 def _factory_for(cursor: FakeCursor):
     conn = FakeConnection(cursor)
 
@@ -122,7 +148,7 @@ def test_successful_query_sets_search_path_and_never_calls_load_age():
     assert not any("LOAD" in sql for sql in executed_sql)
 
 
-def test_query_params_pass_through_json_placeholder_not_string_interpolation():
+def test_query_params_pass_through_prepared_statement_not_string_interpolation():
     cursor = FakeCursor(rows=[], columns=["result"])
     factory = _factory_for(cursor)
 
@@ -132,15 +158,87 @@ def test_query_params_pass_through_json_placeholder_not_string_interpolation():
         connection_factory=factory,
     )
 
-    query_call = next(
-        (sql, params) for sql, params in cursor.executed if "cypher(" in sql
+    prepare_sql = next(sql for sql, _ in cursor.executed if sql.startswith("PREPARE "))
+    execute_sql, execute_params = next(
+        (sql, params) for sql, params in cursor.executed if sql.startswith("EXECUTE ")
     )
-    sql, params = query_call
-    # The Cypher body appears literally between the dollar-quote delimiters.
-    assert "$gene_id" in sql
-    assert "NCBIGene:672" not in sql
-    # The actual value is carried only in the bound parameter, as JSON.
-    assert params == ('{"gene_id": "NCBIGene:672"}',)
+    # The Cypher body appears literally between the dollar-quote delimiters
+    # in the PREPARE statement, never with the caller value spliced in.
+    assert "$gene_id" in prepare_sql
+    assert "NCBIGene:672" not in prepare_sql
+    # The actual value is carried only in the bound EXECUTE parameter, as JSON.
+    assert execute_params == ('{"gene_id": "NCBIGene:672"}',)
+    assert "NCBIGene:672" not in execute_sql
+
+
+# ---------------------------------------------------------------------------
+# PREPARE/EXECUTE path selection
+# ---------------------------------------------------------------------------
+
+
+def test_params_supplied_uses_prepare_execute_deallocate_sequence():
+    cursor = FakeCursor(rows=[("row-one",)], columns=["result"])
+    factory = _factory_for(cursor)
+
+    execute_cypher(
+        "MATCH (g:Gene {id: $gene_id}) RETURN g",
+        params={"gene_id": "NCBIGene:672"},
+        connection_factory=factory,
+    )
+
+    executed_sql = [sql for sql, _ in cursor.executed]
+    prepare_calls = [sql for sql in executed_sql if sql.startswith("PREPARE ")]
+    execute_calls = [sql for sql in executed_sql if sql.startswith("EXECUTE ")]
+    deallocate_calls = [sql for sql in executed_sql if sql.startswith("DEALLOCATE ")]
+
+    assert len(prepare_calls) == 1
+    assert len(execute_calls) == 1
+    assert len(deallocate_calls) == 1
+    # The three statements reference the same generated statement name.
+    statement_name = prepare_calls[0].split("(", 1)[0].removeprefix("PREPARE ").strip()
+    assert statement_name.startswith("cq_")
+    assert statement_name in execute_calls[0]
+    assert statement_name in deallocate_calls[0]
+    # No bare %s placeholder is ever passed as the cypher() third argument.
+    assert not any(", %s)" in sql for sql in executed_sql)
+
+
+def test_no_params_supplied_omits_third_argument_to_cypher():
+    cursor = FakeCursor(rows=[], columns=["result"])
+    factory = _factory_for(cursor)
+
+    execute_cypher("MATCH (g:Gene) RETURN g", connection_factory=factory)
+
+    executed_sql = [sql for sql, _ in cursor.executed]
+    query_sql = next(sql for sql in executed_sql if "cypher(" in sql)
+
+    assert not any(sql.startswith("PREPARE ") for sql in executed_sql)
+    assert not any(sql.startswith("EXECUTE ") for sql in executed_sql)
+    assert not any(sql.startswith("DEALLOCATE ") for sql in executed_sql)
+    # No third argument, bound or literal, is passed to cypher() at all.
+    assert ", %s)" not in query_sql
+    assert ", $1)" not in query_sql
+    assert query_sql.rstrip().endswith("$$) AS (result agtype)")
+
+
+def test_deallocate_failure_never_masks_a_successful_result():
+    class DeallocateFailingCursor(FakeCursor):
+        def execute(self, sql, params=None):
+            self.executed.append((sql, params))
+            if sql.startswith("DEALLOCATE "):
+                raise psycopg2.Error("prepared statement does not exist")
+
+    cursor = DeallocateFailingCursor(rows=[("row-one",)], columns=["result"])
+    factory = _factory_for(cursor)
+
+    rows, total_available = execute_cypher(
+        "MATCH (g:Gene {id: $gene_id}) RETURN g",
+        params={"gene_id": "NCBIGene:672"},
+        connection_factory=factory,
+    )
+
+    assert rows == [{"result": "row-one"}]
+    assert total_available == 1
 
 
 # ---------------------------------------------------------------------------
@@ -341,16 +439,19 @@ def test_malformed_as_clause_is_rejected():
 
 
 # ---------------------------------------------------------------------------
-# Live integration test: skips cleanly when GRAPH_PG_HOST is unset
+# Live integration test: skips cleanly when the graph host is unreachable
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
 def test_live_graph_returns_brca1_via_labelled_edge():
-    if not os.environ.get("GRAPH_PG_HOST"):
+    host = os.environ.get("GRAPH_PG_HOST")
+    port = os.environ.get("GRAPH_PG_PORT", "5432")
+    if not host or not _graph_host_reachable(host, port):
         pytest.skip(
-            "GRAPH_PG_HOST is not set; no SSH tunnel to the graph host is "
-            "available in this environment, skipping the live integration test"
+            "GRAPH_PG_HOST is not set, or " + str(host) + ":" + str(port) +
+            " is not reachable (no SSH tunnel to the graph host is open in "
+            "this environment), skipping the live integration test"
         )
 
     rows, total_available = execute_cypher(
