@@ -14,10 +14,10 @@ Kick-off: 2026-05-06. Last updated: 2026-07-28.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) underway. Build phase 1.0 (FastAPI skeleton, health endpoint, the event contract, the run() stub) done and merged (PR #5, 2026-07-27). Build phase 1.1 (auth service, the six-table PostgreSQL user-data schema) done and merged (PR #6, 2026-07-28), closing the ecdsa CVE carried forward from 1.0. Next up: build phase 2.0 or 1.2, both unblocked since each depends only on 1.0 |
+| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) underway. Build phase 1.0 (FastAPI skeleton, health endpoint, the event contract, the run() stub) done and merged (PR #5, 2026-07-27). Build phase 1.1 (auth service, the six-table PostgreSQL user-data schema) done and merged (PR #6, 2026-07-28), closing the ecdsa CVE carried forward from 1.0. Build phase 2.0 (the real five-node LangGraph loop, the three-tier harness) done and merged (PR #9, 2026-07-28). Build phase 1.2 (React shell, SSE streaming, the chat UI wired end to end) done and merged (PR #12, 2026-07-28). Next up: build phase 2.1 (cypher_query over Layer 1), the only phase now unblocked by dependency (depends on 2.0, done) |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 135 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 165 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -493,7 +493,7 @@ Phase 5 output: all project infrastructure aligned with the PRD and tech spec. D
 
 ## Phase 6: build (bossman execution)
 
-Status: IN PROGRESS. Build phases 1.0 (PR #5, 2026-07-27) and 1.1 (PR #6, 2026-07-28) done and merged. Next up: build phase 2.0 or 1.2, both unblocked since each depends only on 1.0. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
+Status: IN PROGRESS. Build phases 1.0 (PR #5, 2026-07-27), 1.1 (PR #6, 2026-07-28), 2.0 (PR #9, 2026-07-28), and 1.2 (PR #12, 2026-07-28) done and merged. Next up: build phase 2.1 (cypher_query over Layer 1), the only phase now unblocked by dependency. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
 
 Goal: build System 3 using bossman-mode. Agent teams execute, I orchestrate.
 
@@ -622,17 +622,29 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Summary of what happens next
 
-Phases 1 through 4 are complete, with the Phase 1 synthesis, the evaluation playbook, the locked PRD, the verified API capability sheet, the locked technical specification, and the strategic memo all written. Phase 5 (system and tooling updates) opened 2026-07-26 and its four steps are done: the build harness, skills, rules, root documents, and reference docs are now consistent with the locked specification. Phase 6 (build) opened 2026-07-27. Two build phases are done and merged into main:
+Phases 1 through 4 are complete, with the Phase 1 synthesis, the evaluation playbook, the locked PRD, the verified API capability sheet, the locked technical specification, and the strategic memo all written. Phase 5 (system and tooling updates) opened 2026-07-26 and its four steps are done: the build harness, skills, rules, root documents, and reference docs are now consistent with the locked specification. Phase 6 (build) opened 2026-07-27. Four build phases are done and merged into main:
 
 - Build phase 1.0, the FastAPI skeleton and typed event contract (PR #5, 2026-07-27). Judge-reviewed with one rejection-and-fix round and an independent sign-off verification.
 - Build phase 1.1, the auth service and the six-table PostgreSQL user-data schema (PR #6, 2026-07-28). It closed the ecdsa CVE that 1.0 accepted as a known risk, by replacing `python-jose` with `PyJWT`. 314 tests passing, up from 191.
+- Build phase 2.0, the real five-node LangGraph loop and the three-tier harness (PR #9, 2026-07-28), replacing the phase 1.0 stub. 483 tests passing, up from 314.
+- Build phase 1.2, the React shell, SSE streaming, and the chat UI wired end to end (PR #12, 2026-07-28). 539 Python tests, 120 frontend tests, and 3 Playwright end-to-end tests passing.
 
-135 decisions logged, 14 learnings recorded. Next: build phase 2.0 (the LangGraph loop) or 1.2 (the React shell), both unblocked since each depends only on 1.0, then the rest of Step 6.1's prototype. One security gate is scheduled and outstanding: the whole-repository scan at Step 6.2, which is a hard prerequisite for starting Step 6.3. We debate. We decide. We log decisions.
+165 decisions logged, 19 learnings recorded. Next: build phase 2.1 (`cypher_query` over Layer 1), the only phase now unblocked by dependency, then the rest of Step 6.1's prototype. One security gate is scheduled and outstanding: the whole-repository scan at Step 6.2, which is a hard prerequisite for starting Step 6.3. We debate. We decide. We log decisions.
 
 One phase at a time. No skipping.
 
 ## Revision history
 
+- 2026-07-28: Shipped build phase 1.2 on branch phase/1.2-react-shell-sse, merged as PR #12. Delivered the React shell (Vite plus React 19 plus TypeScript), incremental SSE streaming (`core/run_streaming()`, `core/run_registry.py`, three new endpoints alongside the untouched buffered `/query`), the full chat UI, and Playwright end-to-end testing. All 8 tickets done, including T-1.2-08, added mid-phase to wire `ChatPage` end to end after the lead caught that the built-and-tested chat components were never assembled into a working page. 539 Python tests passing, up from 483, plus 120 frontend unit tests and 3 Playwright end-to-end tests.
+  - Judge-reviewed (all 8 tickets passed on the code; the review also caught that 4 tickets' tracker records were never backfilled at build time and a dead-code defect in `ChatShell.tsx`, both fixed before close) and adversary-tested against the real running system (6 findings: 1 fixed in-phase, an unvalidated empty or whitespace-only query; 4 deferred with named triggers on `tracker/BOARD.md` against build phases 4.0 and 6.1; 1 rejected as spec-conformant behavior, not a defect).
+  - Scope decision, mid-phase: added T-1.2-08 to the original 7-ticket decomposition after the lead found `ChatPage.tsx` was still a placeholder and no ticket owned wiring the six already-built chat components together, closing the gap before the E2E ticket needed a real page to test against.
+  - Supply-chain decision: `@playwright/test` and `@axe-core/playwright` installed pinned exact after a live re-verification at install time, honoring an explicit product-owner instruction that any doubt at all blocks the install.
+  - Release gate outcome: the whole-repository security scan was deferred again, consistent with build phases 1.0, 1.1, and 2.0, all in the Step 6.1 prototype group awaiting the Step 6.2 reconciliation.
+  - Phase close was independently re-confirmed by a fresh-context agent rather than the same judge resuming to close its own findings, per this repo's own `LEARNINGS.md` rule against that pattern.
+- 2026-07-28: Shipped build phase 2.0 on branch phase/2.0-langgraph-agent-loop, merged as PR #9. Delivered the real five-node LangGraph Guardrail, Think, Plan, Act, Write loop, replacing the phase 1.0 stub; the three-tier harness wired to LiteLLM and OpenRouter with per-model cost accounting; all four Section 19.1 cost caps enforced end to end where the two daily caps are wired but not yet fed real data; the coordinator-worker split scaffold; the prompt-cache stable-prefix scaffold. 483 tests passing, up from 314.
+  - Judge-reviewed (all 8 tickets passed, phase-level premise independently verified) and adversary-tested (8 findings filed, all confirmed by a second judge triage; 4 fixed in-phase, 4 deferred with named triggers against build phases 2.1, 4.6, and 7.0).
+  - Product-owner decision on a judge-filed finding (F-2.0-05): cost and token usage are internal-only, never shown to the end user, resolving a conflict between two spec sections on whether the final cost figure may reach an end-user surface.
+  - Release gate outcome: the whole-repository security scan was deferred again, staying consistent with build phases 1.0 and 1.1.
 - 2026-07-28: Shipped build phase 1.1 on branch phase/1.1-auth-service, merged as PR #6. Delivered minimal v1 auth (argon2id password hashing, HS256 access tokens with the algorithm pinned, opaque SHA-256-hashed refresh tokens, a 15-minute access TTL, a 30-day sliding refresh TTL, a 90-day absolute ceiling), five endpoints at `/auth`, and all six Section 15 user-data tables via SQLAlchemy models and two Alembic migrations with working downgrades. 314 tests passing, up from 191. Six decisions logged, three learnings recorded.
   - Closed the ecdsa CVE carried forward from build phase 1.0 by replacing `python-jose[cryptography]` with `PyJWT`. Researcher verification established that `ecdsa` is a core requirement of `python-jose`, not gated behind the `[cryptography]` extra, so it could not be excluded in place.
   - Scope decision: built all six Section 15 tables rather than the three named in Section 25's parenthetical, since `interactions`, `saved_queries`, and `auth_sessions` are foreign-key interdependent and three tables alone do not form a loadable schema.
