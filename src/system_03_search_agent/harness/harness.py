@@ -510,6 +510,31 @@ class Harness:
                     reasoning=_TIER_REASONING[tier],
                     max_tokens=_TIER_MAX_TOKENS[tier],
                 )
+            except asyncio.CancelledError:
+                # F-2.1-B02, second order. `enforce_timeout` cancels this
+                # coroutine on a timeout, so the metering below never runs
+                # and the call records 0.00 US dollars. The provider has
+                # already billed it: measured, a timed-out call cost 0.005
+                # to 0.010 while reporting cost_usd=0.000000. Since the most
+                # expensive query class is also the one most likely to time
+                # out, all three caps read zero for exactly the queries that
+                # spend the most, and spend accumulates invisibly.
+                #
+                # The real usage is unknowable here, because the response
+                # never arrived. So this meters a deliberate OVER-estimate:
+                # the tier's full output ceiling at its output price. A cost
+                # cap that guesses must guess toward stopping, never toward
+                # letting the next call through, and this is the only place
+                # that knows a billable call happened at all.
+                #
+                # Estimation has precedent in this file: Section 19.2
+                # already has the pre-flight check estimate a call's likely
+                # cost from the tier's token profile before dispatching it.
+                _, output_price = _price_per_token(model_id)
+                self.track_cost(
+                    self.trace_id, tier, _TIER_MAX_TOKENS[tier] * output_price
+                )
+                raise
             except Exception as exc:
                 error_class = _classify_exception(exc)
                 if error_class == "transient" and attempt < max_attempts:
