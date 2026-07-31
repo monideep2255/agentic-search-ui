@@ -962,7 +962,7 @@ The adversary's own one-line summary is the right one: the parameter naming cont
 | F-2.1-C05 | high | The F-2.1-B06 fix discarded a correct, more precise citation | fixed |
 | F-2.1-C10 | high | An aggregate over an entity absent from the graph answered a cited "0" | fixed |
 | F-2.1-C12 | high | Three independent truncations reported through one signal: 20 rows shown of 15,310, user told nothing | fixed |
-| F-2.1-C16 | high | The live-test skip guard reports the graph reachable whenever the SSH tunnel binds the local port, even with the database down | open |
+| F-2.1-C16 | high | The live-test skip guard reports the graph reachable whenever the SSH tunnel binds the local port, even with the database down | fixed |
 | F-2.1-J02 | med-high | The truncation check saw only one direction, so a model LIMIT above row_limit reported `truncated=False` | fixed |
 | F-2.1-J04 | med-high | The CURIE pattern swallowed a trailing colon, so `NCBIGene:672:` replaced the valid CURIE and resolved nothing | fixed |
 | F-2.1-C06 | med-high | Duplicate citations halved the 20-citation budget | fixed |
@@ -1028,16 +1028,16 @@ History:
 
 ### F-2.1-C16: the live-test skip guard cannot tell a dead database from a healthy one
 
-Status: open
+Status: fixed
 Raised by: lead, 2026-07-31
 Severity: high
-Ticket: none yet, belongs to build phase 2.2
+Ticket: none yet
 
 What happened: when the graph went down, 21 live tests reported as FAILURES rather than skips. F-2.1-B12 replaced an env-var check with a TCP reachability check against `GRAPH_PG_HOST:GRAPH_PG_PORT`, which was the right direction and is not sufficient. An SSH local forward binds the local port as soon as the tunnel process starts, so the port accepts a connection whether or not anything is alive at the far end. The guard sees an open port and concludes the graph is reachable.
 
 Why it matters: it turns an infrastructure outage into what reads as a code regression, which is the most expensive kind of false signal to receive mid-review. Real time was spent confirming that 21 failures were not caused by the change under test.
 
-Fix shape: probe the database rather than the socket, one cheap authenticated round trip, and skip on a connection error. The check has to survive the case where the port is bound and the far end is not answering.
+Fixed: the guard now opens a real connection and runs `SELECT 1`, and treats any connection-level or query-level failure as a skip with a message that says the port being open only means the forward is bound. A dead dependency is not a defect in the code under test.
 
 History:
-- 2026-07-31 lead: found when the graph host went down mid-session, filed
+- 2026-07-31 lead: found when the graph host went down mid-session, filed, and fixed the same day

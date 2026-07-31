@@ -48,6 +48,10 @@ _REOPEN_TUNNEL_CMD = (
     "ssh -o BatchMode=yes -f -N -L 15432:127.0.0.1:5432 root@46.225.128.133"
 )
 
+# The env var holding the graph credential. Named once here so the health
+# probe below reads it by name and the value never appears in this file.
+_GRAPH_PASSWORD_VAR = "GRAPH_PG_PASSWORD"
+
 
 def _load_env_explicitly() -> None:
     """Populate the graph variables from .env without relying on litellm.
@@ -77,7 +81,6 @@ def _graph_reachable() -> tuple[bool, str]:
     sock.settimeout(2.0)
     try:
         sock.connect((host, int(port_raw)))
-        return True, ""
     except OSError as exc:
         return False, (
             f"{host}:{port_raw} not reachable ({type(exc).__name__}); no SSH tunnel open. "
@@ -85,6 +88,49 @@ def _graph_reachable() -> tuple[bool, str]:
         )
     finally:
         sock.close()
+
+    # F-2.1-C16: an open port is not a live database. An SSH local forward
+    # binds the local port the moment the tunnel process starts, and keeps it
+    # bound whether or not anything is alive at the far end. When the graph
+    # host's postgres was OOM-killed mid-session, this guard still reported
+    # "reachable" and 21 tests came back as FAILURES rather than skips, which
+    # reads exactly like a code regression in whatever change is under
+    # review. That false signal is expensive: it cost real time proving the
+    # failures were not caused by the change being tested.
+    #
+    # So ask the database, not the socket. One cheap round trip, and any
+    # connection-level failure is a skip rather than a failure, because a
+    # dead dependency is not a defect in the code under test.
+    try:
+        import psycopg2
+
+        conn = psycopg2.connect(
+            host=host,
+            port=int(port_raw),
+            dbname=os.environ.get("GRAPH_PG_DBNAME", ""),
+            user=os.environ.get("GRAPH_PG_USER", ""),
+            password=os.environ.get(_GRAPH_PASSWORD_VAR, ""),
+            connect_timeout=5,
+        )
+    except Exception as exc:  # noqa: BLE001 - any connect failure is a skip
+        return False, (
+            f"{host}:{port_raw} accepts connections but the graph database did "
+            f"not answer ({type(exc).__name__}). An open port only means the SSH "
+            "forward is bound, not that postgres is running. Check the graph "
+            f"host, then reopen the tunnel with: {_REOPEN_TUNNEL_CMD}"
+        )
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+            cur.fetchone()
+    except Exception as exc:  # noqa: BLE001 - any query failure is a skip
+        return False, (
+            "the graph database accepted a connection but failed a trivial "
+            f"query ({type(exc).__name__}); it is not healthy"
+        )
+    finally:
+        conn.close()
+    return True, ""
 
 
 pytestmark = [pytest.mark.integration]
@@ -888,13 +934,17 @@ def test_an_unaliased_or_malformed_column_keeps_its_positional_name() -> None:
     [
         (
             "alias concatenation",
-            "WITH 'NCBIGene' AS p, '7157' AS n WITH p + ':' + n AS target "
-            "MATCH (g:Gene {id: target}) RETURN g",
+            (
+                "WITH 'NCBIGene' AS p, '7157' AS n WITH p + ':' + n AS target "
+                "MATCH (g:Gene {id: target}) RETURN g"
+            ),
         ),
         (
             "name literal bound to an alias",
-            "WITH 'BRCA1 DNA repair associated' AS t "
-            "MATCH (g:Gene) WHERE g.name = t RETURN g",
+            (
+                "WITH 'BRCA1 DNA repair associated' AS t "
+                "MATCH (g:Gene) WHERE g.name = t RETURN g"
+            ),
         ),
     ],
 )
