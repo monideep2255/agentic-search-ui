@@ -454,11 +454,11 @@ async def test_done_event_trust_outcome_is_answer_with_a_real_citation_when_the_
     trust_outcome="answer", never the old stub "answer" that required no
     evidence at all.
     """
-    valid_cypher = "MATCH (g:Gene {id: $gene_id}) RETURN g"
+    valid_cypher = "MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g"
     monkeypatch.setattr(_mock_litellm, "return_value", _fake_response(content=valid_cypher))
 
     def _fake_execute_cypher(cypher: str, *, params: dict, **_kwargs: object) -> tuple[list[dict], int]:
-        assert params == {"gene_id": "NCBIGene:672"}
+        assert params == {"e_NCBIGene_672": "NCBIGene:672"}
         # One placeholder raw AGE row; its content is irrelevant since
         # `to_output_rows` (the agtype-parsing shaping step, a different
         # builder's module) is mocked below to return the already-shaped

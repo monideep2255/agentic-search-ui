@@ -173,6 +173,91 @@ async def _run(monkeypatch: pytest.MonkeyPatch, cypher: str, **input_kwargs: Any
 
 
 # ---------------------------------------------------------------------------
+# F-2.1-B01: the parameter naming contract
+#
+# These exist because updating the other tests in this file to use the new
+# parameter names would, on its own, prove nothing. Renaming a fixture to
+# match the implementation is exactly the shape of change that hides a
+# defect rather than fixing one. These two assert the properties the
+# contract has to deliver, against the adversary's own reproduction.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_two_entities_binds_the_one_the_query_asks_about_not_the_first(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The adversary's reproduction, F-2.1-B01, as a regression test.
+
+    "Compare NCBIGene:7157 and BRCA1: which diseases is BRCA1 linked to?"
+    extracts TP53 first, because it appears first in the text. Binding used
+    to be a positional zip, so the query about BRCA1 ran against TP53 and
+    returned 12 real TP53 disease rows, correctly cited, with status ok and
+    trust_outcome answer. A fully cited, confident answer about the wrong
+    gene, every gate green.
+
+    The model here asks for BRCA1 by its bound name while TP53 sits first
+    in the entity list, which is precisely the case position gets wrong.
+    """
+    from system_03_search_agent.tools.cypher_query import entity_param_bindings
+
+    tp53 = "NCBIGene:7157"
+    entities = [tp53, BRCA1_CURIE]
+    bindings = entity_param_bindings(entities)
+    brca1_param = next(name for name, value in bindings.items() if value == BRCA1_CURIE)
+
+    result = await _run(
+        monkeypatch,
+        "MATCH (g:Gene {id: $" + brca1_param + "}) RETURN g",
+        query_intent="Compare TP53 and BRCA1: what is BRCA1?",
+        query_class="lookup",
+        target_entities=entities,
+        row_limit=1,
+    )
+
+    assert result.status == "ok", f"expected ok, got {result.status}: {result.error}"
+    assert result.row_count == 1
+    row = result.rows[0]
+    assert row.curie == BRCA1_CURIE, (
+        f"bound {row.curie!r}, but the query asked about {BRCA1_CURIE!r}. "
+        "Positional binding is back."
+    )
+    assert row.fields.get("name") == BRCA1_NAME
+
+
+@pytest.mark.asyncio
+async def test_a_parameter_the_model_invented_is_rejected_not_silently_unbound(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A name outside the contract must fail loudly, before execution.
+
+    Previously an unbound parameter reached AGE and failed there as an
+    opaque `UndefinedParameter`, which the tool surfaced as a graph error,
+    reading as though the graph were at fault. The repair retry had nothing
+    actionable to work from.
+
+    The mocked model ignores its instructions on both attempts, so this also
+    proves the retry does not rescue a query that never becomes valid.
+    """
+    result = await _run(
+        monkeypatch,
+        "MATCH (g:Gene {id: $totally_made_up_name}) RETURN g",
+        query_intent="Look up the gene BRCA1",
+        query_class="lookup",
+        target_entities=[BRCA1_CURIE],
+        row_limit=1,
+    )
+
+    assert result.status == "error", f"expected error, got {result.status}"
+    assert result.rows == []
+    assert result.error is not None
+    assert "totally_made_up_name" in result.error, (
+        "the error must name the invented parameter, so the repair retry is "
+        f"informed rather than blind. Got: {result.error!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # The premise: a real query returns cited rows
 # ---------------------------------------------------------------------------
 
@@ -189,7 +274,7 @@ async def test_single_hop_lookup_returns_a_populated_cited_row(
     """
     result = await _run(
         monkeypatch,
-        "MATCH (g:Gene {id: $gene_id}) RETURN g",
+        "MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g",
         query_intent="Look up the gene BRCA1",
         query_class="lookup",
         target_entities=[BRCA1_CURIE],
@@ -214,7 +299,7 @@ async def test_multi_hop_traversal_returns_real_variant_rows(
     """A labelled-edge traversal, the query class this phase exists to serve."""
     result = await _run(
         monkeypatch,
-        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $gene_id}) RETURN v",
+        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $e_NCBIGene_672}) RETURN v",
         query_intent="What sequence variants are known in BRCA1",
         query_class="multi_hop",
         target_entities=[BRCA1_CURIE],
@@ -241,7 +326,7 @@ async def test_multi_column_return_is_supported(monkeypatch: pytest.MonkeyPatch)
     """
     result = await _run(
         monkeypatch,
-        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $gene_id}) "
+        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $e_NCBIGene_672}) "
         "RETURN v, g",
         query_intent="Variants and their gene",
         query_class="multi_hop",
@@ -270,7 +355,7 @@ async def test_truncated_result_reports_the_true_total_not_the_row_limit(
     """
     result = await _run(
         monkeypatch,
-        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $gene_id}) RETURN v",
+        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $e_NCBIGene_672}) RETURN v",
         query_intent="How many sequence variants does BRCA1 have",
         query_class="aggregate",
         target_entities=[BRCA1_CURIE],
@@ -298,7 +383,7 @@ async def test_absent_entity_returns_empty_never_a_fabricated_row(
     """A fabricated gene must produce status="empty", the cite-or-refuse trigger."""
     result = await _run(
         monkeypatch,
-        "MATCH (g:Gene {id: $gene_id}) RETURN g",
+        "MATCH (g:Gene {id: $e_NCBIGene_99999999}) RETURN g",
         query_intent="Look up the gene ZZZFAKE9",
         query_class="lookup",
         target_entities=["NCBIGene:99999999"],
@@ -321,7 +406,7 @@ async def test_every_returned_row_carries_a_host_pinned_citation(
     """
     result = await _run(
         monkeypatch,
-        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $gene_id}) RETURN v",
+        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $e_NCBIGene_672}) RETURN v",
         query_intent="BRCA1 variants",
         query_class="multi_hop",
         target_entities=[BRCA1_CURIE],
@@ -351,7 +436,11 @@ async def test_full_loop_reaches_the_graph_and_returns_a_cited_answer(
     """
     from system_03_search_agent.core.run import run
 
-    _mock_generation(monkeypatch, "MATCH (g:Gene {id: $gene_id}) RETURN g")
+    # The parameter name is the one the caller binds for BRCA1, per the
+    # F-2.1-B01 naming contract: `entity_param_bindings` derives it from the
+    # CURIE, so a mocked model that used any other name would be rejected
+    # exactly as a real one would.
+    _mock_generation(monkeypatch, "MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g")
 
     events = [
         event
@@ -386,7 +475,7 @@ async def test_full_loop_works_for_a_gene_outside_the_symbol_seed_table(
     """
     from system_03_search_agent.core.run import run
 
-    _mock_generation(monkeypatch, "MATCH (g:Gene {id: $gene_id}) RETURN g")
+    _mock_generation(monkeypatch, "MATCH (g:Gene {id: $e_NCBIGene_7157}) RETURN g")
 
     events = [
         event
@@ -423,7 +512,7 @@ async def test_full_loop_refuses_when_the_graph_returns_nothing(
     """
     from system_03_search_agent.core.run import run
 
-    _mock_generation(monkeypatch, "MATCH (g:Gene {id: $gene_id}) RETURN g")
+    _mock_generation(monkeypatch, "MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g")
 
     events = [
         event

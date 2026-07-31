@@ -423,20 +423,74 @@ def _ordered_unique_param_names(cypher: str) -> list[str]:
     return ordered
 
 
-def _build_params(cypher: str, target_entities: list[str]) -> dict[str, Any]:
-    """Bind the generated Cypher's named parameters to `target_entities`
-    values, positionally. See the module docstring for why this is a
-    documented, pragmatic resolution rather than a named binding contract.
-    A parameter name with no corresponding `target_entities` value at its
-    position is left unbound; `execute_cypher` then either receives fewer
-    bound names than the Cypher references (AGE raises a bind-time error,
-    classified as a `GraphError` and surfaced as `status: "error"`, never
-    a crash) or, when there is nothing to bind at all, an empty params
-    dict, which `execute_cypher` treats as "no params" and omits the
-    third `cypher()` argument entirely.
+_PARAM_NAME_SAFE = re.compile(r"[^A-Za-z0-9]+")
+
+
+def entity_param_bindings(target_entities: list[str]) -> dict[str, str]:
+    """Assign each target entity a deterministic Cypher parameter name.
+
+    This is one half of the naming contract that closes F-2.1-B01. The
+    caller decides the names, tells the generation step exactly which name
+    holds which entity, and binds by that name on the way back. Nothing
+    anywhere guesses from position.
+
+    A CURIE is not a legal Cypher identifier (`NCBIGene:672` contains a
+    colon), so the name is derived by replacing every non-alphanumeric run
+    with an underscore and prefixing `e_`: `NCBIGene:672` becomes
+    `e_NCBIGene_672`. Readable in a generated query and in a log, which
+    matters when someone is reading the `cypher_executed` audit field to
+    work out which entity a row came from.
+
+    Two distinct CURIEs could in principle sanitize to the same name if
+    they differ only in punctuation, so a collision gets a numeric suffix
+    rather than silently overwriting, which would reintroduce exactly the
+    wrong-value binding this contract exists to prevent.
     """
-    names = _ordered_unique_param_names(cypher)
-    return dict(zip(names, target_entities))
+    bindings: dict[str, str] = {}
+    for entity in target_entities:
+        base = "e_" + _PARAM_NAME_SAFE.sub("_", entity).strip("_")
+        name = base
+        suffix = 2
+        while name in bindings and bindings[name] != entity:
+            name = f"{base}_{suffix}"
+            suffix += 1
+        bindings[name] = entity
+    return bindings
+
+
+def _build_params(cypher: str, entity_bindings: dict[str, str]) -> dict[str, Any]:
+    """Bind the generated Cypher's parameters BY NAME, never by position.
+
+    Returns only the bindings the Cypher actually references, so a query
+    using one of three supplied entities does not carry two unused values
+    into the graph call.
+
+    This replaces a positional `zip` of parameter names against
+    `target_entities`, which produced F-2.1-B01: a query naming two genes
+    bound the wrong one, returned real rows about it, and cited them
+    correctly. Every gate was green while the answer was about an entity
+    the user had not asked about. Position was never a contract, only a
+    coincidence that held whenever exactly one entity was in play, which
+    is the only case the tests covered.
+
+    A parameter the model invented outside the supplied names is NOT bound
+    here. `_unknown_param_names` is what rejects it, before execution.
+    """
+    referenced = _ordered_unique_param_names(cypher)
+    return {name: entity_bindings[name] for name in referenced if name in entity_bindings}
+
+
+def _unknown_param_names(cypher: str, entity_bindings: dict[str, str]) -> list[str]:
+    """Parameter names the generated Cypher references but nothing binds.
+
+    An unbound parameter used to reach AGE and fail there as an opaque
+    `UndefinedParameter`, which the tool reported as a graph error and
+    which read as though the graph were at fault. Catching it here makes
+    the repair retry informed: the validator error names the invented
+    parameter and lists the legal ones, so the second generation attempt
+    can actually fix it.
+    """
+    return [name for name in _ordered_unique_param_names(cypher) if name not in entity_bindings]
 
 
 # Finding F-04's own reason code: a cap breach detected here, before any
@@ -446,12 +500,19 @@ def _build_params(cypher: str, target_entities: list[str]) -> dict[str, Any]:
 # condition that has nothing to do with the Cypher's shape.
 _REASON_COST_CAP_EXCEEDED = "cost_cap_exceeded"
 
+# F-2.1-B01: the generated Cypher referenced a $parameter the caller
+# never bound. Distinct from the validator's own reason codes because
+# the Cypher's shape is fine; it is the binding contract that was
+# broken, and the repair retry needs to be told which names are legal.
+_REASON_UNBOUND_PARAM = "unbound_param_name"
+
 
 async def _generate_and_validate(
     harness: HarnessLike,
     tool_input: CypherQueryInput,
     schema_slice: str,
     prior_error: str | None,
+    entity_bindings: dict[str, str],
 ) -> tuple[str | None, ValidationResult]:
     """Run one generate-then-validate attempt.
 
@@ -495,7 +556,9 @@ async def _generate_and_validate(
         )
 
     try:
-        raw_cypher = await generate_cypher(harness, tool_input, schema_slice, prior_error)
+        raw_cypher = await generate_cypher(
+            harness, tool_input, schema_slice, prior_error, entity_bindings
+        )
     except CypherGenerationError as exc:
         return None, ValidationResult(
             ok=False,
@@ -503,7 +566,33 @@ async def _generate_and_validate(
             message=str(exc),
             normalized_cypher=None,
         )
-    return raw_cypher, validate_cypher(raw_cypher, tool_input.row_limit)
+
+    result = validate_cypher(raw_cypher, tool_input.row_limit)
+    if not result.ok:
+        return raw_cypher, result
+
+    # F-2.1-B01's second half. The validator checks the Cypher's shape; it
+    # has no view of which parameter names the caller actually bound, so a
+    # name the model invented passes it and used to reach AGE as an opaque
+    # UndefinedParameter. Reject it here instead, naming both the invented
+    # parameter and the legal ones, so the one repair retry is an informed
+    # fix rather than a blind resample.
+    unknown = _unknown_param_names(result.normalized_cypher or raw_cypher, entity_bindings)
+    if unknown:
+        legal = ", ".join("$" + name for name in entity_bindings) or "(none)"
+        return raw_cypher, ValidationResult(
+            ok=False,
+            reason=_REASON_UNBOUND_PARAM,
+            message=(
+                "generated Cypher references unbound parameter(s) "
+                + ", ".join("$" + name for name in unknown)
+                + "; the only bound parameter names are: "
+                + legal
+                + ". Rewrite the query using only those names."
+            ),
+            normalized_cypher=None,
+        )
+    return raw_cypher, result
 
 
 def _cap_shaped_row(shaped: dict[str, Any]) -> dict[str, Any]:
@@ -548,11 +637,20 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     start = time.monotonic()
     schema_slice = build_schema_slice(tool_input.query_class.value, tool_input.target_entities)
 
-    raw_cypher, validation = await _generate_and_validate(harness, tool_input, schema_slice, None)
+    # F-2.1-B01: assign each entity its parameter name ONCE, up front, and
+    # use the same mapping for both the generation prompt and the bind on
+    # the way back. One source of truth is the whole point: the defect was
+    # two halves each deciding independently, generation naming freely and
+    # binding zipping positionally.
+    entity_bindings = entity_param_bindings(tool_input.target_entities)
+
+    raw_cypher, validation = await _generate_and_validate(
+        harness, tool_input, schema_slice, None, entity_bindings
+    )
     if not validation.ok:
         # Exactly one repair retry, informed by the first attempt's error.
         raw_cypher, validation = await _generate_and_validate(
-            harness, tool_input, schema_slice, validation.message
+            harness, tool_input, schema_slice, validation.message, entity_bindings
         )
         if not validation.ok:
             return _error_output(
@@ -572,7 +670,7 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             "internal error: Cypher validation reported success with no normalized query",
         )
 
-    params = _build_params(normalized_cypher, tool_input.target_entities)
+    params = _build_params(normalized_cypher, entity_bindings)
     elapsed = time.monotonic() - start
     remaining_budget = max(1.0, CYPHER_QUERY_TIMEOUT_SECONDS - elapsed)
 

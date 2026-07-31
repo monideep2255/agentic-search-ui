@@ -193,13 +193,53 @@ def _build_system_message(schema_slice: str) -> dict[str, str]:
     return {"role": "system", "content": content}
 
 
-def _build_user_message(tool_input: CypherQueryInput, prior_error: str | None) -> dict[str, str]:
+def _build_user_message(
+    tool_input: CypherQueryInput,
+    prior_error: str | None,
+    entity_bindings: dict[str, str] | None = None,
+) -> dict[str, str]:
+    """Build the generation call's user message.
+
+    `entity_bindings` is the naming contract that closes finding F-2.1-B01.
+    Before it existed, the caller listed `target_entities` as a bare array
+    and let the model name its own parameters, then bound them back
+    POSITIONALLY. A query naming two entities therefore bound the first
+    extracted CURIE to whatever parameter the model happened to write
+    first, which is not necessarily the entity the question was about.
+
+    Reproduced: "Compare NCBIGene:7157 and BRCA1: which diseases is BRCA1
+    linked to?" bound TP53, returned 12 real TP53 disease rows with valid
+    NCBI citations, and reported `status="ok"` with
+    `trust_outcome="answer"`. A fully cited, confident answer about the
+    wrong gene, with every gate green.
+
+    Naming each value explicitly, and requiring the model to use only
+    those names, removes the guess. The binding is then by name on the way
+    back, never by position, and a parameter the model invents anyway is
+    rejected by the validator rather than silently bound to the wrong
+    value.
+    """
     lines = [
         f"query_intent: {tool_input.query_intent}",
         f"query_class: {tool_input.query_class.value}",
-        f"target_entities: {tool_input.target_entities}",
-        f"row_limit: {tool_input.row_limit}",
     ]
+
+    if entity_bindings:
+        lines.append(
+            "Bound parameters. Use ONLY these parameter names, exactly as "
+            "written, and use the one whose value is the entity the "
+            "query_intent actually asks about:"
+        )
+        for name, value in entity_bindings.items():
+            lines.append(f"  ${name} = {value}")
+        lines.append(
+            "Do not invent any other $parameter name. Do not write an "
+            "entity value as a literal; reference it by its bound name."
+        )
+    else:
+        lines.append(f"target_entities: {tool_input.target_entities}")
+
+    lines.append(f"row_limit: {tool_input.row_limit}")
     if prior_error:
         lines.append("")
         lines.append(
@@ -216,6 +256,7 @@ async def generate_cypher(
     tool_input: CypherQueryInput,
     schema_slice: str,
     prior_error: str | None = None,
+    entity_bindings: dict[str, str] | None = None,
 ) -> str:
     """Issue exactly one plan-tier call and return the generated Cypher
     body.
@@ -236,7 +277,7 @@ async def generate_cypher(
     """
     messages = [
         _build_system_message(schema_slice),
-        _build_user_message(tool_input, prior_error),
+        _build_user_message(tool_input, prior_error, entity_bindings),
     ]
     response = await harness.call_tier("plan", messages)
     return _extract_cypher_body(response.content)

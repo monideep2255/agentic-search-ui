@@ -32,10 +32,10 @@ from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
+    UnknownStepError,
     budget_for_query_class,
     budget_for_step,
 )
-from system_03_search_agent.harness.harness import UnknownStepError
 from system_03_search_agent.harness.tiers import UnknownTierError
 
 _INPUT_PRICE = 3e-06

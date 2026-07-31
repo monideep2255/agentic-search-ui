@@ -133,7 +133,7 @@ def _raw_gene_row(curie: str = "NCBIGene:672", symbol: str = "BRCA1") -> dict[st
 async def test_successful_lookup_returns_ok_status_with_rows(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    harness = _FakeHarness(responses=["MATCH (g:Gene {id: $gene_id}) RETURN g"])
+    harness = _FakeHarness(responses=["MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g"])
     captured: dict[str, Any] = {}
 
     def _fake_execute_cypher(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
@@ -165,7 +165,7 @@ async def test_successful_lookup_returns_ok_status_with_rows(
     assert "LIMIT" in output.cypher_executed
 
     # target_entities bound positionally to the generated parameter name.
-    assert captured["params"] == {"gene_id": "NCBIGene:672"}
+    assert captured["params"] == {"e_NCBIGene_672": "NCBIGene:672"}
 
     # Finding F-01's fix: a single-item RETURN gets a single-column
     # as_clause, derived from the RETURN clause, never the raw caller text.
@@ -189,7 +189,7 @@ async def test_successful_multi_hop_query_returns_ok_status_with_multiple_rows(
     harness = _FakeHarness(
         responses=[
             (
-                "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $gene_id}) "
+                "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $e_NCBIGene_672}) "
                 "RETURN v, g"
             )
         ]
@@ -237,7 +237,7 @@ async def test_row_count_under_the_limit_needs_no_count_query(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Fewer rows than row_limit is already the true total: no second call."""
-    harness = _FakeHarness(responses=["MATCH (g:Gene {id: $gene_id}) RETURN g"])
+    harness = _FakeHarness(responses=["MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g"])
     calls: list[str] = []
 
     def _fake_execute_cypher(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
@@ -264,7 +264,7 @@ async def test_truncated_result_issues_a_count_query_for_the_true_total(
     """
     harness = _FakeHarness(
         responses=[
-            "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $gene_id}) RETURN v"
+            "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $e_NCBIGene_672}) RETURN v"
         ]
     )
     calls: list[tuple[str, str | None]] = []
@@ -305,7 +305,7 @@ async def test_count_query_failure_reports_total_available_as_unknown_not_the_li
     """
     harness = _FakeHarness(
         responses=[
-            "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $gene_id}) RETURN v"
+            "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $e_NCBIGene_672}) RETURN v"
         ]
     )
 
@@ -344,7 +344,7 @@ async def test_row_with_no_resolvable_citation_is_omitted_not_emitted_empty(
     caller as a content row with no citation. CLAUDE.md: every fact must
     link back to its source.
     """
-    harness = _FakeHarness(responses=["MATCH (o:OntologyClass {id: $go_id}) RETURN o"])
+    harness = _FakeHarness(responses=["MATCH (o:OntologyClass {id: $e_NCBIGene_672}) RETURN o"])
 
     def _fake_execute_cypher(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
         return (
@@ -370,7 +370,7 @@ async def test_row_with_no_resolvable_citation_is_omitted_not_emitted_empty(
 async def test_zero_rows_returns_empty_status_not_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    harness = _FakeHarness(responses=["MATCH (g:Gene {id: $gene_id}) RETURN g"])
+    harness = _FakeHarness(responses=["MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g"])
 
     def _fake_execute_cypher(cypher, params=None, row_limit=100, timeout_s=30.0, **kwargs):
         return [], 0
@@ -398,7 +398,7 @@ async def test_first_attempt_validation_failure_is_repaired_by_the_retry(
         responses=[
             "MATCH (g:Gene)-->(v:SequenceVariant) RETURN g",  # untyped edge, rejected
             (
-                "MATCH (g:Gene {id: $gene_id})<-[:is_sequence_variant_of]-(v:SequenceVariant) "
+                "MATCH (g:Gene {id: $e_NCBIGene_672})<-[:is_sequence_variant_of]-(v:SequenceVariant) "
                 "RETURN g"
             ),  # repaired: explicit edge label
         ]
@@ -465,7 +465,7 @@ async def test_outer_timeout_returns_error_status_with_actionable_message(
 ) -> None:
     monkeypatch.setattr(cypher_query_module, "CYPHER_QUERY_TIMEOUT_SECONDS", 0.05)
     harness = _FakeHarness(
-        responses=["MATCH (g:Gene {id: $gene_id}) RETURN g"], delay=0.3
+        responses=["MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g"], delay=0.3
     )
 
     output = await cypher_query(harness, _gene_lookup_input())
@@ -486,7 +486,7 @@ async def test_outer_timeout_returns_error_status_with_actionable_message(
 async def test_graph_execution_timeout_returns_error_status(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    harness = _FakeHarness(responses=["MATCH (g:Gene {id: $gene_id}) RETURN g"])
+    harness = _FakeHarness(responses=["MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g"])
 
     def _raise_timeout(cypher, params=None, row_limit=100, timeout_s=30.0, **kwargs):
         raise GraphTimeoutError(
@@ -507,7 +507,7 @@ async def test_graph_execution_timeout_returns_error_status(
 async def test_graph_connection_error_returns_error_status_not_a_crash(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    harness = _FakeHarness(responses=["MATCH (g:Gene {id: $gene_id}) RETURN g"])
+    harness = _FakeHarness(responses=["MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g"])
 
     def _raise_connection_error(cypher, params=None, row_limit=100, timeout_s=30.0, **kwargs):
         raise GraphConnectionError("graph connection refused or unreachable, retry")
@@ -555,7 +555,7 @@ async def test_cap_already_breached_blocks_the_first_generate_call(
     """
     monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "0.10")
     harness = _FakeHarness(
-        responses=["MATCH (g:Gene {id: $gene_id}) RETURN g"],
+        responses=["MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g"],
         query_cost_usd=1.00,  # already well past the 0.10 cap
     )
 
