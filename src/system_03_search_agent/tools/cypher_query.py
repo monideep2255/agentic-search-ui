@@ -645,6 +645,35 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     # binding zipping positionally.
     entity_bindings = entity_param_bindings(tool_input.target_entities)
 
+    # F-2.1-B10. With no entity to bind, a parameterized query cannot run and
+    # a literal one is rejected by the validator, so this used to spend two
+    # plan-tier generation calls and then report "graph query failed:
+    # UndefinedParameter". The graph was never reached. Telling a user the
+    # graph failed, when the truth is that the system did not recognise the
+    # entity they named, is a false statement about where the fault lies,
+    # and `production-standards`'s retry-safety gate makes it worse than
+    # cosmetic: the error tells the next step to retry the graph, which is
+    # the wrong action and will fail identically.
+    #
+    # Refusing here is also strictly cheaper. Two generation calls were
+    # being spent to reach a conclusion available before the first one.
+    #
+    # This does not resolve the entity, which is the actual gap: the graph
+    # carries no `symbol` property (a Gene's properties are id, name,
+    # xrefs, source, source_url, agent_type, knowledge_level), so "BRCA1"
+    # exists only as a prefix of the description and matching it means an
+    # unindexed scan over 67 million rows. Symbol-to-CURIE resolution
+    # belongs to `ncbi_efetch` in build phase 3.1, which is what Layer 2 is
+    # for. Tracked as F-2.1-07 and F-2.1-B10.
+    if not entity_bindings:
+        return _error_output(
+            None,
+            "no entity could be identified in this query, so no graph lookup "
+            "was attempted. Supply a CURIE such as NCBIGene:672, or wait for "
+            "symbol resolution, which needs the Layer 2 NCBI lookup that "
+            "build phase 3.1 adds. Retrying this query unchanged will not help.",
+        )
+
     raw_cypher, validation = await _generate_and_validate(
         harness, tool_input, schema_slice, None, entity_bindings
     )
@@ -737,7 +766,14 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     snapshot_version = _graph_snapshot_version()
     mapped_rows: list[CypherQueryRow] = []
     for raw_row in rows:
-        for shaped_row in to_output_rows(raw_row, snapshot_version):
+        for shaped_row in to_output_rows(
+            raw_row,
+            snapshot_version,
+            # F-2.1-B05: a derived value (a count, a projection) has no
+            # record of its own, so it is cited to the entity the query
+            # was computed from. This is the only place that knows it.
+            derived_source_curie=next(iter(entity_bindings.values()), None),
+        ):
             if not shaped_row.get("source_url"):
                 # Finding F-2.1-A1's cite-or-refuse corollary: an entity
                 # that parsed but resolves no source_url (an unmapped

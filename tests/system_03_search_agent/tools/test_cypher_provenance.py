@@ -271,14 +271,51 @@ def test_to_output_rows_maps_an_edge_including_start_and_end_id() -> None:
     assert row["fields"]["_edge_end_id"] == 2
 
 
-def test_to_output_rows_omits_a_bare_scalar_column() -> None:
-    # A scalar column (a count, a bare property) carries no label and no
-    # CURIE, so it contributes no output row rather than an empty one.
+def test_to_output_rows_shapes_a_bare_scalar_as_a_derived_row() -> None:
+    """A scalar is an answer, not an absence.
+
+    This test previously asserted `rows == []` and was WRONG, in the sense
+    that mattered: finding F-2.1-B05 showed that dropping scalars made the
+    tool report `status="empty"` for `RETURN count(sv)` while
+    `total_available` sat non-zero. It knew the graph had answered and said
+    nothing was found, and it did that for five of the six query shapes the
+    real plan model actually produces, including every "how many" question.
+
+    The test encoded the defect as intended behaviour, which is why nothing
+    caught it. It is changed here deliberately, not to make a failure go
+    away: the assertion below is the opposite claim, and it fails against
+    the old code.
+    """
     raw_row = {"result": "42"}
 
-    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01", derived_source_curie="NCBIGene:672")
 
-    assert rows == []
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["node_or_edge_type"] == "derived", (
+        "a computed value must be distinguishable from a retrieved record"
+    )
+    assert row["fields"] == {"result": 42}
+    assert row["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/672", (
+        "a derived value is cited to the entity it was computed from"
+    )
+
+
+def test_a_derived_row_with_no_source_entity_carries_no_citation() -> None:
+    """The guarantee the old assertion was really protecting.
+
+    Shaping a scalar into a row must not become a way to emit an uncitable
+    number. Without an entity to attribute it to, the row carries no
+    `source_url`, and `cypher_query._run_pipeline`'s cite-or-refuse gate
+    drops it exactly as it drops any other uncitable row.
+    """
+    rows = to_output_rows({"result": "42"}, snapshot_version="2026-07-01")
+
+    assert len(rows) == 1
+    assert rows[0]["source_url"] is None, (
+        "an uncitable computed number must not acquire a citation it has no "
+        "basis for; the caller drops it on this being None"
+    )
 
 
 def test_to_output_rows_omits_an_unparseable_column() -> None:

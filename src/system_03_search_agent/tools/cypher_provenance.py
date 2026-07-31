@@ -264,7 +264,45 @@ def _iter_entities(parsed: Any) -> list[dict[str, Any]]:
     return []
 
 
-def to_output_rows(raw_row: dict[str, Any], snapshot_version: str) -> list[dict]:
+
+def _shape_derived_value(
+    derived: dict[str, Any],
+    snapshot_version: str,
+    source_curie: str | None,
+) -> dict:
+    """Shape a scalar or projection result into one citable output row.
+
+    Finding F-2.1-B05: a count, a projected property, or a `collect()` list
+    is a real answer that carried no label, so it produced no row at all and
+    the tool reported `status="empty"` for a query the graph had answered
+    correctly.
+
+    Provenance for a derived value is not the value's own record, because it
+    has none. It is the entity the query was computed FROM: the count of
+    BRCA1's variants is attributable to BRCA1's NCBI record, and that is a
+    claim this system can stand behind. `source_curie` carries that entity
+    down from the caller, which is the only place that knows it.
+
+    `node_or_edge_type` is "derived" rather than a graph label, so a
+    downstream consumer can tell a computed value from a retrieved record
+    and never present one as the other. Without `source_curie` the row
+    still carries no citation and the caller's cite-or-refuse gate drops
+    it, which is the correct outcome: an uncitable computed number is
+    exactly the fluent-but-ungrounded output this system must not emit.
+    """
+    return {
+        "node_or_edge_type": "derived",
+        "curie": source_curie or "",
+        "fields": dict(derived),
+        "source_url": source_url_for_curie(source_curie) if source_curie else None,
+        "graph_snapshot_version": snapshot_version,
+    }
+
+def to_output_rows(
+    raw_row: dict[str, Any],
+    snapshot_version: str,
+    derived_source_curie: str | None = None,
+) -> list[dict]:
     """Shape one raw AGE result row into zero or more output row shapes.
 
     `raw_row` is a dict keyed by the AGE output column name(s) declared in
@@ -306,8 +344,33 @@ def to_output_rows(raw_row: dict[str, Any], snapshot_version: str) -> list[dict]
         when no column in `raw_row` decoded to a citable vertex or edge.
     """
     shaped_rows: list[dict] = []
-    for value in raw_row.values():
+    derived: dict[str, Any] = {}
+
+    for column, value in raw_row.items():
         parsed = parse_agtype(value)
-        for entity in _iter_entities(parsed):
-            shaped_rows.append(_shape_entity(entity, snapshot_version))
+        entities = _iter_entities(parsed)
+        if entities:
+            for entity in entities:
+                shaped_rows.append(_shape_entity(entity, snapshot_version))
+        elif parsed is not None:
+            # F-2.1-B05. A scalar or a list is a real answer, not an absence.
+            # `count(sv)`, `d.name`, `collect(m.id)` all parse to something
+            # that is not a vertex, so every one of them used to contribute
+            # zero rows and the tool reported `status="empty"` while
+            # `total_available` sat non-zero: it knew the graph had answered
+            # and said nothing was found. Five of the six query shapes the
+            # real plan model actually produced were projections or scalars,
+            # so this refused the correct answer most of the time, including
+            # every "how many" question.
+            #
+            # These are collected per column and emitted as ONE derived row
+            # below, rather than one row each, because a projection's columns
+            # are fields of a single result, not separate findings.
+            derived[column] = parsed
+
+    if derived and not shaped_rows:
+        shaped_rows.append(
+            _shape_derived_value(derived, snapshot_version, derived_source_curie)
+        )
+
     return shaped_rows

@@ -466,7 +466,9 @@ async def test_done_event_trust_outcome_is_answer_with_a_real_citation_when_the_
         # module's own internal wire-format choices.
         return ([{"c0": "placeholder-raw-agtype-text"}], 1)
 
-    def _fake_to_output_rows(raw_row: dict, snapshot_version: str) -> list[dict]:
+    def _fake_to_output_rows(
+        raw_row: dict, snapshot_version: str, derived_source_curie: str | None = None
+    ) -> list[dict]:
         return [
             {
                 "node_or_edge_type": "Gene",
