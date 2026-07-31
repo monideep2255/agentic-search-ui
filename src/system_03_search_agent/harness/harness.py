@@ -269,7 +269,14 @@ _TIER_REASONING: dict[Tier, dict[str, Any]] = {
 }
 
 _TIER_MAX_TOKENS: dict[Tier, int] = {
-    "guard": 1_000,
+    # Guard is validation and classification, which Section 3.1 budgets as
+    # "sub-second, fractions of a cent". 1000 was not a ceiling this tier
+    # ever approached on purpose, it was a ceiling it hit: a Guard call
+    # measured `out=1000` exactly, every time, because the step sent a bare
+    # question with no instruction and the model answered it at length.
+    # 128 is ample for a verdict and makes the ceiling a real bound rather
+    # than a target.
+    "guard": 128,
     "plan": 4_000,
     "synth": 4_000,
 }
