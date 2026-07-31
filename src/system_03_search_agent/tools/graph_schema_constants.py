@@ -140,8 +140,34 @@ FORBIDDEN_CYPHER_CLAUSES: Final[tuple[str, ...]] = (
 DEFAULT_ROW_LIMIT: Final[int] = 100
 MAX_ROW_LIMIT: Final[int] = 500
 
-# Section 6.1's per-call budget, matching `.claude/rules/tool-call-budgets.md`.
-CYPHER_QUERY_TIMEOUT_SECONDS: Final[float] = 30.0
+# The whole tool call's budget: generate, validate, execute, map.
+#
+# Section 6.1 and `.claude/rules/tool-call-budgets.md` both state 30
+# seconds, and both describe it as the GRAPH query's budget. The graph is
+# not the expensive part. Measured on the live graph, an indexed CURIE
+# lookup returns in roughly 110 ms and a labelled multi-hop traversal in
+# roughly 130 ms. What actually consumes the budget is the plan-tier
+# generation call that writes the Cypher, which Section 3.1 budgets at
+# "1 to a few seconds" and which measures nothing like that.
+#
+# Six real generation calls across lookup, single-hop, multi-hop and
+# aggregate shapes: 13169, 20083, and up to 39378 ms, mean 25472 ms. Two
+# of the six exceeded 30 seconds on generation ALONE, before the graph was
+# touched at all, so the tool could not complete. Finding F-2.1-B02
+# measured 8 of 10 real-model queries timing out before the guard-tier and
+# off-thread fixes narrowed the distribution.
+#
+# 90.0 is roughly 2.3x the observed worst case, leaving headroom for
+# provider variance without letting a genuinely hung call sit forever. The
+# per-query COST cap is unchanged and still bounds spend independently, so
+# a longer wall-clock budget does not mean an unbounded bill.
+#
+# PROVISIONAL, and model-dependent. These figures are six calls against
+# one plan-tier model at `effort: high`. Build phase 7.0's model-bench
+# picks the tier winners and should re-measure. Section 6.1 still states
+# 30 seconds and is a Step 6.2 reconciliation item, filed with the other
+# spec-versus-code divergences this phase found.
+CYPHER_QUERY_TIMEOUT_SECONDS: Final[float] = 90.0
 
 # Section 9.3's strict host-pinned citation pattern. Never the looser
 # any-subdomain form: a citation resolves to the human-facing record page,
