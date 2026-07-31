@@ -105,9 +105,21 @@ def _strip_sql_wrapper(body: str) -> str:
     return inner if inner else body
 
 
-def _extract_cypher_body(raw: str) -> str:
+def _extract_cypher_body(raw: str | None) -> str:
     """Deterministically recover the Cypher body from a raw model
     response, or raise `CypherGenerationError`.
+
+    `raw` is typed `str | None` because a provider genuinely returns
+    `content=None`, which finding F-2.1-B03 observed live: this function
+    was annotated `raw: str`, called `raw.strip()` on it, and raised
+    `AttributeError` out of a pipeline whose own docstring promises it
+    never raises. `act_node` catches only `HarnessCallError`, so it
+    escaped `run()` entirely and crashed the query rather than degrading.
+
+    A `None` response is a model that produced nothing, which is exactly
+    the condition `CypherGenerationError` already exists to signal, so it
+    routes there and the caller's existing retry-then-error path handles
+    it like any other unrecoverable response.
 
     Order of attempts:
         1. The first fenced code block (```cypher, ```sql, or bare```),
@@ -129,6 +141,11 @@ def _extract_cypher_body(raw: str) -> str:
     is empty, is not passed through raw: it raises
     `CypherGenerationError` instead.
     """
+    if raw is None:
+        raise CypherGenerationError(
+            "model returned no content at all (content=None); no Cypher to extract"
+        )
+
     text = raw.strip()
     if not text:
         raise CypherGenerationError("model returned an empty response; no Cypher to extract")
