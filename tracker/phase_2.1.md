@@ -482,6 +482,217 @@ History:
 
 ---
 
+### F-2.1-06: execute_cypher blocks the event loop, so its 30 second bound cannot fire
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: high
+Ticket: none yet
+
+What happened: `graph_connection.execute_cypher` is a plain `def`, not `async def` (`graph_connection.py:336`), and `cypher_query` calls it with no `await`, no `asyncio.to_thread`, and no executor from inside the coroutine `_run_pipeline` (`cypher_query.py:587`, and again at `:385` for the count query).
+
+A synchronous call inside a coroutine cannot be cancelled by `asyncio.wait_for`, so both the tool's own 30 second bound (`cypher_query.py:682`) and Act's `enforce_timeout` (`graph.py:784-788`) are dead code for the duration of every graph query. The judge measured it: a `wait_for` with a 0.5 second timeout around a 4 second blocking call returned normally after 4.01 seconds, with the event loop ticking once where a healthy loop ticks roughly 40 times.
+
+Failure scenario: two users query concurrently. User A's Cypher runs 25 seconds server-side. User B's SSE stream, every other in-flight run, and every FastAPI health check are frozen for those 25 seconds, because the single event loop ticked once. The only real bound left is the server-side `statement_timeout`.
+
+Why nothing caught it: the phase's 9 live end-to-end tests run sequentially, so none of them has a second concurrent request to starve. No ticket's acceptance criteria asked whether the tool was actually async. This is the ticket-boundary shape of LEARNINGS rows 28, 30, and 33 again, in a fourth form.
+
+Rules: `tool-call-budgets.md` ("never ship a tool with no per-call timeout", which it nominally has and cannot execute) and `system-design-patterns` pattern 6 (time to first token under one second).
+
+History:
+- 2026-07-31 judge: filed with a reproduction, confirmed by the lead reading the two signatures
+
+---
+
+### F-2.1-07: Entity extraction resolves one gene symbol, and the phase gate is satisfiable by that table
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: high
+Ticket: none yet
+
+What happened: `_KNOWN_GENE_SYMBOL_CURIES` holds exactly one entry, `{"BRCA1": "NCBIGene:672"}` (`core/graph.py:585-587`), and the phase's own end-to-end gate queries BRCA1.
+
+The judge measured the real reach: of five realistic gene-symbol queries (TP53, BRCA2, EGFR, KRAS, MECP2), zero resolve. All return `target_entities=[]`, which produces `status="error"` with `UndefinedParameter` and a refusal. Against roughly 20,000 protein-coding gene symbols in the graph plus every disease and phenotype term, this resolves well under 0.01 percent of realistic biomedical queries.
+
+On the mitigation already in place: `test_full_loop_works_for_a_gene_outside_the_symbol_seed_table` queries `"What is NCBIGene:7157?"`. The judge's assessment is that this is not cosmetic, since it genuinely exercises `_CURIE_IN_TEXT_PATTERN`, a distinct code path from the seed table, but it is not sufficient either, because a user typing a raw NCBI gene id is not the query class this system exists to serve. The lead's docstring on that test claiming "only the general path can satisfy it" overstates what it proves.
+
+It fails safe, refusing rather than answering wrongly, which is the right direction. It still means the phase premise is satisfied by a hand-listed entity set.
+
+Disposition: needs an explicit product-owner decision. Either accept it as a documented dependency that build phase 2.2 or a later entity-resolution phase closes, or fix it now. Real symbol-to-CURIE resolution is arguably a different capability from this phase's Section 25 row.
+
+History:
+- 2026-07-31 judge: filed with a five-query measurement
+
+---
+
+### F-2.1-08: The loop-level empty-to-refuse branch is unproven
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: medium
+Ticket: none yet
+
+What happened: `test_full_loop_refuses_when_the_graph_returns_nothing` queries `"What is known about the gene ZZZFAKE9?"`. `ZZZFAKE9` is neither a CURIE nor a seed-table entry, so `target_entities` is empty and the tool returns `status="error"` on an unbound parameter, never `status="empty"`. Both paths produce `trust_outcome="refuse"`, so the assertion passes and cannot distinguish them.
+
+The empty-to-refuse half of the loop-level cite-or-refuse gate is therefore untested end to end. The tool-level half is genuinely proven by `test_absent_entity_returns_empty_never_a_fabricated_row`.
+
+The lead wrote this test believing it proved the empty path.
+
+Fix: name a real-shaped CURIE that is absent from the graph, for example `"What is NCBIGene:99999999?"`, so the tool actually returns `empty`.
+
+History:
+- 2026-07-31 judge: filed with a probe showing `status='error'` rather than `'empty'`
+
+---
+
+### F-2.1-09: Worst-case tool wall time roughly doubles the locked 30 second budget
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: medium
+Ticket: none yet
+
+What happened: `remaining_budget` is computed once (`cypher_query.py:577`) and passed unchanged both to the main `execute_cypher` (`:591`) and to `_fetch_true_total` (`:618`), so each gets its own full server-side `statement_timeout`.
+
+Failure scenario: two generation calls take 8 seconds, leaving `remaining_budget` at 22 seconds. The main query takes 21 seconds and returns exactly `row_limit` rows, triggering the count query, which carries no LIMIT and runs with `enable_seqscan=off` over a 693M-edge graph, and gets a fresh 22 seconds. Total roughly 51 seconds against Section 6.1's locked 30 second per-call budget. Compounded by F-2.1-06, nothing in Python can interrupt it.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
+### F-2.1-10: Finding.truncated has no readers
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: medium
+Ticket: none yet
+
+What happened: the F-03 fix added a `truncated` field to `Finding` specifically so truncation "is never silent" (`coordinator_worker.py:118-128,295`). Nothing in `core/` or `adapters/` reads it. The only `.truncated` hit elsewhere is `graph.py:742`, which reads `CypherQueryOutput.truncated`, a different field on a different object.
+
+So a `Finding` silently cut to fit the 50,000 byte ceiling reaches `write_node` indistinguishable from a complete one. A field added to close an invisible-truncation finding, that nothing reads, has not closed it. This is the LEARNINGS row 28 shape (a module with no callers) in miniature.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
+### F-2.1-11: The byte ceiling can silently turn a successful query into a refusal
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: medium
+Ticket: none yet
+
+What happened: `_cap_structured_fields` binary-searches `list_item_limit` down to as low as zero (`coordinator_worker.py:532-547`) when the payload exceeds `_MAX_FINDING_TOTAL_BYTES`. A 100-row multi-hop result with rich property maps can have `rows` trimmed or emptied while `status` stays `"ok"`, so `_citations_from_findings` yields fewer or zero citations and `write_node` emits `refuse` for a query that actually succeeded.
+
+It fails in the safe direction, but silently, and F-2.1-10 means the caller cannot detect it.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
+### F-2.1-12: Write's synth call is pure waste
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: medium
+Ticket: none yet
+
+What happened: `write_node` sends `[{"role": "user", "content": query.text}]` (`graph.py:1019`), never reads the return value, and emits no `token` event on the success path. The findings never reach it.
+
+Synth is the most expensive tier and was measured at 17,527 to 21,572 ms. Every query therefore pays roughly 20 seconds of latency and the full synth spend for output nobody reads. It is the single largest contributor to end-to-end latency.
+
+Defensible as a phase 2.2 placeholder, since real synthesis is exactly what 2.2 builds. Filed because it is not documented as a known cost anywhere, and because the same shape (a discarded response) is what made F-2.1's guardrail and think steps generate 1000 tokens each until it was measured.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
+### F-2.1-13: _build_count_cypher mishandles UNION and skips validation
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: low
+Ticket: none yet
+
+What happened: `cypher_query.py:350-356` takes everything before the first `RETURN` and appends `RETURN count(*) AS total_count`. On a UNION query, which the validator explicitly supports (`cypher_validator.py:467-525`), every branch after the first is discarded, so `total_available` reports the first branch's count as the whole result's total, presented as authoritative.
+
+The count query is also never passed back through `validate_cypher` and carries no LIMIT, so the validator's own "a query with no LIMIT gets one injected before execution" contract does not hold for it.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
+### F-2.1-14: claim_text carries raw graph text into a citation without the untrusted-reader gate
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: low today, becomes live in build phase 2.2
+Ticket: none yet
+
+What happened: `_pick_representative_field` (`graph.py:881-895`) selects `fields["name"]` or the first key in insertion order, and `_citation_for_row` interpolates it into `claim_text` (`:931-934`). Cypher rows are routed `contains_untrusted_free_text=False` by construction (`graph.py:806`), so arbitrary free-text property values reach the client as citation text with no reader mediation.
+
+Harmless today only because `write_node` never feeds findings into a model prompt. It becomes a live prompt-injection surface the moment build phase 2.2 wires findings into the synth call, which is precisely what 2.2 is for.
+
+History:
+- 2026-07-31 judge: filed as forward-looking
+
+---
+
+### F-2.1-15: Stale comments and a dead public function
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: low
+Ticket: none yet
+
+What happened: `coordinator_worker.py:193` states the reader timeout "matches `budget_for_query_class("single_hop")` (10 seconds)"; that value is now 20.0, so the stated invariant is false. `graph.py:135,141,776` still narrate the `max(budget_for_query_class(...), ...)` design that `budget_for_step` replaced. `budget_for_query_class` itself (`harness.py:412`) now has no production caller, only stale comments and tests.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
+### F-2.1-16: The spec-versus-code budget divergence was not filed in this phase file
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: low
+Ticket: none yet
+
+What happened: the `budget_for_step` change diverges from `Technical_specification.md` Section 19.1's per-query-class shape. It is recorded in `DECISIONS.md` with product-owner approval and named as a Step 6.2 item there, but unlike F-2.1-01 and F-2.1-02 it was never filed in this phase file's Findings section, so a reader of the phase file alone would not see it.
+
+Filed here now, which closes it.
+
+History:
+- 2026-07-31 judge: filed
+- 2026-07-31 lead: recorded here, which is the fix
+
+---
+
+### F-2.1-17: The lead cited the wrong rule for the stub-step scope check
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: low, process
+Ticket: none
+
+What happened: the lead justified the guardrail and think stub instruction as not crossing `.claude/rules/v1-scope-boundary.md`. That rule governs the PRD out-of-scope list and the Section 25 fast-follow table. Build phase 3.0 is inside the locked build order, so it appears on neither list, and doing 3.0's work early is a build-order concern rather than a v1-scope crossing.
+
+The conclusion held, and the judge independently verified it: both payloads are hardcoded and both model responses are discarded, so nothing in the emitted payload depends on the model. The justification was a category error.
+
+Worth keeping because a rule cited wrongly and reached the right answer is a habit that will eventually reach the wrong one.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
 ## Phase notes
 
 Learnings that bind here, read before building:
