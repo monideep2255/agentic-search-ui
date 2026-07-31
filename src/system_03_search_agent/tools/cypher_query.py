@@ -1021,6 +1021,27 @@ async def _generate_and_validate(
     return raw_cypher, result
 
 
+def _dedupe_by_cited_record(rows: list[CypherQueryRow]) -> list[CypherQueryRow]:
+    """Drop repeat rows that cite a record already present, keeping the first.
+
+    F-2.1-C14. Order is preserved, so the first mention of a record is the
+    one kept and the result still reads in the order the graph returned it.
+    Derived rows are passed through untouched (see the caller's note).
+    """
+    seen: set[str] = set()
+    deduped: list[CypherQueryRow] = []
+    for row in rows:
+        if row.node_or_edge_type == "derived":
+            deduped.append(row)
+            continue
+        key = row.source_url or ""
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    return deduped
+
+
 def _cap_shaped_row(shaped: dict[str, Any]) -> dict[str, Any]:
     """Defensively cap one `to_output_rows` result to the Section 6.1 output
     row's field-length and field-count bounds before constructing a
@@ -1320,15 +1341,29 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     # F-2.1-C14: F-2.1-B04c put `row_count` and `total_available` into the
     # same unit, and that unit is wrong for a reader. It counts EMITTED ROWS,
     # which after the endpoint-attribution fix includes an edge row and its
-    # endpoint vertex row for the same record. Measured: "8 results, 8
+    # endpoint vertex row for the same record, and a `RETURN v, g` that
+    # repeats one gene across every variant row. Measured: "8 results, 8
     # available, nothing truncated" for a question whose true answer is 4
     # diseases. Internally coherent and externally wrong, which is the kind
     # of number a reader has no way to challenge.
     #
-    # Counting distinct cited records answers the question a reader is
-    # actually asking. Every row still here passed the cite-or-refuse filter
-    # above, so `source_url` is never None and is the record's identity.
-    distinct_record_count = len({row.source_url for row in mapped_rows})
+    # The obvious repair, reporting a distinct-record count while leaving
+    # `rows` untouched, was rejected: it makes `row_count` disagree with
+    # `len(rows)`, which is precisely the second half of F-2.1-C12 (a
+    # `row_count` of 500 beside 118 actual rows). A count that contradicts
+    # the list beside it trades one wrong number for another.
+    #
+    # So the duplicates are removed rather than merely discounted, and the
+    # count follows the list. A record is identified by its `source_url`,
+    # which every row here already has, since the cite-or-refuse filter
+    # above dropped any row without one.
+    #
+    # A derived row is never deduplicated away: a count and the entity it
+    # was computed from legitimately share a citation URL and are two
+    # different facts, so collapsing them would silently discard the
+    # answer, which is F-2.1-C03 all over again.
+    mapped_rows = _dedupe_by_cited_record(mapped_rows)
+    distinct_record_count = len(mapped_rows)
 
     if not hit_cap:
         # Finding F-2.1-B04c's fix: nothing was capped, so every match

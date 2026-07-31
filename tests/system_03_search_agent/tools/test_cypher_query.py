@@ -294,7 +294,14 @@ async def test_truncated_result_issues_a_count_query_for_the_true_total(
     output = await cypher_query(harness, _gene_lookup_input(row_limit=2))
 
     assert output.status == "ok"
-    assert output.row_count == 2
+    # F-2.1-C14 changed what this number means. The fixture returns the
+    # SAME variant vertex twice (`[...] * 2`), which is one record reported
+    # twice, not two findings. `row_count` now counts distinct cited
+    # records and `rows` holds one entry per record, so the two agree.
+    # Truncation and the true total are unaffected: the row LIMIT was still
+    # hit, and 15310 is still the answer.
+    assert output.row_count == 1
+    assert output.row_count == len(output.rows)
     assert output.truncated is True
     assert output.total_available == 15310, (
         f"total_available was {output.total_available}, expected the true count "
@@ -338,7 +345,12 @@ async def test_count_query_failure_reports_total_available_as_unknown_not_the_li
     output = await cypher_query(harness, _gene_lookup_input(row_limit=2))
 
     assert output.status == "ok"
-    assert output.row_count == 2
+    # F-2.1-C14: the fixture returns one variant twice, so one distinct
+    # record. What this test is actually about is unchanged: a failed count
+    # query must report the total as unknown rather than fall back to the
+    # row limit.
+    assert output.row_count == 1
+    assert output.row_count == len(output.rows)
     assert output.truncated is True
     assert output.total_available is None, (
         "a failed count query must report total_available as unknown, "
@@ -845,12 +857,23 @@ async def test_multi_column_return_reports_total_available_in_row_count_units(
     output = await cypher_query(harness, tool_input)
 
     assert output.status == "ok"
-    assert output.row_count == 8
-    assert output.total_available == 8, (
-        f"total_available was {output.total_available}, expected 8 to match "
-        "row_count; reporting the raw graph-row count of 4 next to it is "
-        "the incoherence the adversary reproduced"
+    # F-2.1-B04c's requirement still holds: total_available and row_count
+    # must be in the same unit. F-2.1-C14 corrected which unit that is.
+    #
+    # `RETURN v, g` over 4 raw rows emits 4 variants and the SAME gene four
+    # times. Reporting 8 was internally coherent and told the reader there
+    # were eight findings when there are five records: four variants and
+    # one gene. The repeats are dropped rather than counted, so `rows`
+    # holds five entries and both numbers are five.
+    assert output.row_count == 5
+    assert output.row_count == len(output.rows)
+    assert output.total_available == 5, (
+        f"total_available was {output.total_available}, expected 5 to match "
+        "row_count; the raw graph-row count of 4 and the pre-dedup row count "
+        "of 8 are both the wrong unit for a reader"
     )
+    # The repeated gene is present once, not four times.
+    assert [row.node_or_edge_type for row in output.rows].count("Gene") == 1
     assert output.truncated is False
 
 
