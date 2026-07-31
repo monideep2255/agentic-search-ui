@@ -87,6 +87,14 @@ ErrorClass = Literal["transient", "recoverable", "unexpected"]
 QueryClass = Literal["lookup", "single_hop", "multi_hop", "aggregate", "exploratory"]
 
 
+class UnknownStepError(ValueError):
+    """Raised when a budget is requested for a step outside the five-step loop.
+
+    A typo in a caller would otherwise resolve to a silently wrong timeout,
+    which is the failure a per-step budget exists to prevent.
+    """
+
+
 class HarnessCallError(RuntimeError):
     """A classified call_tier failure (transient, recoverable, or unexpected).
 
@@ -320,6 +328,85 @@ _QUERY_CLASS_BUDGET_S: dict[QueryClass, float] = {
     "multi_hop": 30.0,
     "exploratory": 120.0,
 }
+
+
+# Which tier each step of the loop runs on (Section 3.2's step-to-tier
+# assignment, restated here so a budget can be resolved from a step name).
+# `act` is deliberately absent: it is not a single tier's call, it runs the
+# tool plus a Guard-tier reader pass, and its budget comes from the query
+# class instead. See `budget_for_step`.
+_STEP_TIER: dict[str, Tier] = {
+    "guardrail": "guard",
+    "think": "guard",
+    "plan": "plan",
+    "write": "synth",
+}
+
+# Per-step timeout by tier, in seconds.
+#
+# Section 19.1 budgets a per-step timeout but selects the value by QUERY
+# CLASS alone, so every step of a lookup query got the same 5.0 s. The two
+# axes are not the same thing: query class describes how hard the question
+# is, while what a step actually costs is driven by which tier answers it.
+# Measured on the configured models at the reasoning effort each tier runs:
+#
+#   guard  deepseek-v4-flash, effort none:               719 to 4615 ms
+#   plan   kimi-k2.6, effort high, 4000-token ceiling:   both completed and
+#                                                        exceeded 15 s on
+#                                                        the same query
+#   synth  glm-5.2, effort low, over real graph rows:    17527, 19196,
+#                                                        19343, 21572 ms
+#
+# No single per-query-class number fits those three at once. Raising the
+# query-class figure until synth fits hands the same loose budget to a
+# guard classification, which is exactly where a tight timeout is worth
+# having; leaving it where synth cannot fit kills every query at Write.
+#
+# A per-step timeout exists to kill a HUNG step, so each value answers
+# "this step should never legitimately take this long" for its own tier,
+# rather than inheriting a number chosen for the query as a whole.
+#
+# PROVISIONAL. These come from three or four calls per tier, enough to show
+# the original figures were unworkable and not enough to set a production
+# value. They are also model-dependent: build phase 7.0 (model-bench) picks
+# the tier winners, and these should be re-measured against whatever wins.
+# `Technical_specification.md` Section 19.1 still describes the old
+# query-class-only shape and is a Step 6.2 reconciliation item.
+_TIER_STEP_BUDGET_S: dict[Tier, float] = {
+    "guard": 15.0,
+    "plan": 45.0,
+    "synth": 45.0,
+}
+
+
+def budget_for_step(step: str, query_class: QueryClass) -> float:
+    """Per-step timeout in seconds for `step` on a query of `query_class`.
+
+    Two shapes, because two kinds of step:
+
+    - A model-calling step (guardrail, think, plan, write) is bounded by
+      what its own tier costs, from `_TIER_STEP_BUDGET_S`. A guard
+      classification does not become slower because the question is a
+      deep-research one; it makes the same size of call either way.
+    - `act` is bounded by the query class, from `_QUERY_CLASS_BUDGET_S`,
+      because it is the step whose work genuinely scales with how hard the
+      question is: a multi-hop query runs more tool calls and traverses
+      more graph than a lookup does.
+
+    Raises:
+        UnknownStepError: for a step name outside the five loop steps,
+            before any budget is returned, so a typo in a caller surfaces
+            as a named error rather than a silently wrong timeout.
+    """
+    if step == "act":
+        return _QUERY_CLASS_BUDGET_S[query_class]
+    tier = _STEP_TIER.get(step)
+    if tier is None:
+        raise UnknownStepError(
+            f"unknown loop step {step!r}; expected one of "
+            f"{sorted([*_STEP_TIER, 'act'])}"
+        )
+    return _TIER_STEP_BUDGET_S[tier]
 
 
 def budget_for_query_class(query_class: QueryClass) -> float:

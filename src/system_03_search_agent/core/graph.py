@@ -23,7 +23,7 @@ Depends on:
       integration point exists even though `plan`'s stub `tool_calls` is
       always empty this phase.
     - system_03_search_agent.harness.harness (Harness, HarnessCallError,
-      QueryClass, budget_for_query_class)
+      QueryClass, budget_for_step)
     - system_03_search_agent.harness.cache (build_stable_prefix): called
       once at import time (`_STABLE_PREFIX`, module-level below) and
       passed as every model call's `cache_prefix`, closing the gap the
@@ -199,7 +199,7 @@ from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
     QueryClass,
-    budget_for_query_class,
+    budget_for_step,
 )
 from system_03_search_agent.tools.cypher_query import cypher_query
 from system_03_search_agent.tools.cypher_schemas import CypherQueryInput, CypherQueryOutput
@@ -274,13 +274,10 @@ async def _dispatch_tier_call(
             retry (both classified; see `harness.harness.Harness`).
     """
     cost_control.check_per_query_cap(harness, trace_id, tier)  # type: ignore[arg-type]
-    # The query-class budget is the baseline; a tier that measurably needs
-    # longer raises it. See `_TIER_MIN_BUDGET_S` for the measurements.
-    effective_budget_s = max(budget_s, _TIER_MIN_BUDGET_S.get(tier, 0.0))
     return await harness.enforce_timeout(
         step,
         harness.call_tier(tier, messages, cache_prefix=_STABLE_PREFIX),  # type: ignore[arg-type]
-        effective_budget_s,
+        budget_s,
     )
 
 
@@ -366,39 +363,10 @@ _STUB_TIER_PROBE_SYSTEM = (
 )
 
 
-# Per-tier floor on a step's timeout, in seconds.
-#
-# Section 19.1 budgets a timeout per QUERY CLASS, and every step resolves
-# its budget from that one figure. The steps are not alike, though: the
-# tiers differ by an order of magnitude in how long they take, so a single
-# per-query-class number cannot fit all three at once. Raising the
-# query-class figure until the slowest tier fits would hand the same loose
-# budget to a Guard classification, which is where a tight timeout is
-# actually worth having.
-#
-# Measured on the configured models, with the reasoning effort each tier
-# now runs at:
-#   guard  deepseek-v4-flash, effort none:  719 to 4615 ms
-#   synth  glm-5.2, effort low, write-shaped over real graph rows:
-#          17527, 19196, 19343, 21572 ms
-#   plan   kimi-k2.6, effort high, 4000-token ceiling: observed both
-#          completing and exceeding a 15 s budget on the same query shape
-#
-# So Guard is comfortable inside the query-class budget and the two
-# reasoning tiers are not. These floors leave the query-class budget as the
-# baseline and raise it only for the tier that needs it, which keeps the
-# Guard timeout tight. `act_node` already applies the same shape of floor
-# for `cypher_query`'s own 30 s budget.
-#
-# The real fix is a per-step, per-tier budget table in the spec rather than
-# a per-query-class one applied uniformly. That is a Section 19.1 design
-# change, out of scope for a defect fix, and is filed as a finding for the
-# Step 6.2 reconciliation.
-_TIER_MIN_BUDGET_S: dict[str, float] = {
-    "guard": 0.0,
-    "plan": 45.0,
-    "synth": 45.0,
-}
+# Step timeouts now come from `harness.budget_for_step`, which resolves a
+# model-calling step against its own tier and `act` against the query
+# class. See that function for the measurements and the provisional-value
+# caveat.
 
 
 def _stub_probe_messages(query_text: str) -> list[dict[str, str]]:
@@ -452,7 +420,7 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
             "guard",
             "guardrail",
             _stub_probe_messages(query.text),
-            budget_s=budget_for_query_class("lookup"),
+            budget_s=budget_for_step("guardrail", "lookup"),
         )
     except cost_control.QueryCapExceededError:
         return {"cap_exceeded": True}
@@ -522,7 +490,7 @@ async def think_node(state: GraphState) -> dict[str, Any]:
             "guard",
             "think",
             _stub_probe_messages(query.text),
-            budget_s=budget_for_query_class("lookup"),
+            budget_s=budget_for_step("think", "lookup"),
         )
     except cost_control.QueryCapExceededError:
         return {"cap_exceeded": True}
@@ -715,7 +683,7 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             "plan",
             "plan",
             [{"role": "user", "content": query.text}],
-            budget_s=budget_for_query_class(query_class),
+            budget_s=budget_for_step("plan", query_class),
         )
     except cost_control.QueryCapExceededError:
         return {"cap_exceeded": True}
@@ -812,7 +780,7 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             # own floor, but let a query_class that already budgets more
             # (multi_hop, aggregate, exploratory) keep that larger
             # number.
-            act_timeout_s = max(budget_for_query_class(query_class), CYPHER_QUERY_TIMEOUT_SECONDS)
+            act_timeout_s = max(budget_for_step("act", query_class), CYPHER_QUERY_TIMEOUT_SECONDS)
             output: CypherQueryOutput = await harness.enforce_timeout(
                 "act",
                 cypher_query(harness, planned.cypher_input),
@@ -1049,7 +1017,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             "synth",
             "write",
             [{"role": "user", "content": query.text}],
-            budget_s=budget_for_query_class(query_class),
+            budget_s=budget_for_step("write", query_class),
         )
     except cost_control.QueryCapExceededError:
         # A cap hit discovered only here, at Write's own call, not routed
