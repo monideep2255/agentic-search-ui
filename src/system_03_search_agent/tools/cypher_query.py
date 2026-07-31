@@ -209,7 +209,10 @@ from system_03_search_agent.tools.cypher_schemas import (
 )
 from system_03_search_agent.tools.cypher_validator import ValidationResult, validate_cypher
 from system_03_search_agent.tools.graph_connection import GraphError, execute_cypher
-from system_03_search_agent.tools.graph_schema_constants import CYPHER_QUERY_TIMEOUT_SECONDS
+from system_03_search_agent.tools.graph_schema_constants import (
+    CYPHER_QUERY_TIMEOUT_SECONDS,
+    LABEL_CURIE_PREFIXES,
+)
 from system_03_search_agent.tools.schema_slice import build_schema_slice
 
 # Section 6.1's row_limit output cap; CypherQueryRow already enforces this
@@ -492,6 +495,101 @@ def column_labels_for(cypher: str) -> dict[str, str]:
     return labels
 
 
+# F-2.1-C10. `count()` over a match that found nothing returns one row
+# holding 0, so the derived-value path added for F-2.1-B05 turns "we found
+# nothing about this entity" into "the answer is zero, here is the source".
+# The pre-existing empty-`target_entities` refusal cannot catch it: an
+# entity WAS extracted, it just does not exist in the graph.
+#
+# "Zero associations are recorded for this gene" and "this identifier is
+# not in the graph" are different answers, and only the first is a finding.
+# A cited zero is the wrong-answer shape a clinician is least equipped to
+# catch, because zero is a plausible biomedical result and it arrives with
+# a citation.
+#
+# Distinguishing them takes one indexed lookup, issued only when a derived
+# result is empty, which is the only case the two are confusable. The label
+# comes from inverting the schema's own label-to-prefix map, so it is
+# code-controlled and never assembled from caller text, and the CURIE
+# itself still travels as a bound parameter.
+_PREFIX_TO_LABELS: dict[str, tuple[str, ...]] = {}
+for _label, _prefixes in LABEL_CURIE_PREFIXES.items():
+    for _prefix in _prefixes:
+        _PREFIX_TO_LABELS.setdefault(_prefix, ())
+        _PREFIX_TO_LABELS[_prefix] = _PREFIX_TO_LABELS[_prefix] + (_label,)
+
+_EXISTENCE_AS_CLAUSE = "(c0 agtype)"
+_EMPTY_DERIVED_VALUES: tuple[Any, ...] = (0, None)
+
+
+def _derived_result_is_empty(rows: list[CypherQueryRow]) -> bool:
+    """True when every row is a derived value and all of them are empty.
+
+    Empty means a zero count, a null, or an empty list. A result holding
+    any real entity row is not this case at all: the graph returned a
+    record, so something was found and the question of whether the anchor
+    entity exists is already answered.
+    """
+    if not rows:
+        return False
+    if any(row.node_or_edge_type != "derived" for row in rows):
+        return False
+    for row in rows:
+        for value in row.fields.values():
+            if isinstance(value, bool):
+                return False
+            if isinstance(value, (list, tuple, dict)):
+                if len(value) > 0:
+                    return False
+            elif value not in _EMPTY_DERIVED_VALUES:
+                return False
+    return True
+
+
+async def _entity_is_present(
+    curie: str, params: dict[str, Any], timeout_s: float
+) -> bool | None:
+    """Whether `curie` exists as a node in the graph.
+
+    Returns True or False when the graph answers, and None when it cannot
+    be determined (an unmapped prefix, no label for it, or a graph error).
+    None is not False: the caller must not turn "I could not check" into
+    "this does not exist", which would refuse a real answer.
+    """
+    prefix = curie.split(":", 1)[0] if ":" in curie else ""
+    labels = _PREFIX_TO_LABELS.get(prefix, ())
+    if not labels:
+        return None
+
+    param_name = next((name for name, value in params.items() if value == curie), None)
+    if param_name is None:
+        return None
+
+    determined = False
+    for label in labels:
+        # `label` is a dict key from the schema constants, never caller
+        # text; the CURIE itself is bound, not interpolated.
+        probe = f"MATCH (n:{label}) WHERE n.id = ${param_name} RETURN count(n) LIMIT 1"
+        try:
+            probe_rows, _ = await asyncio.to_thread(
+                execute_cypher,
+                probe,
+                params=params,
+                row_limit=1,
+                timeout_s=timeout_s,
+                as_clause=_EXISTENCE_AS_CLAUSE,
+            )
+        except GraphError:
+            continue
+        determined = True
+        if not probe_rows:
+            continue
+        value = parse_agtype(next(iter(probe_rows[0].values()), None))
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            return True
+    return False if determined else None
+
+
 def _build_as_clause(cypher: str) -> str:
     """Derive the AGE `as_clause` output column declaration from `cypher`.
 
@@ -749,6 +847,18 @@ def _build_params(cypher: str, entity_bindings: dict[str, str]) -> dict[str, Any
     return {name: entity_bindings[name] for name in referenced if name in entity_bindings}
 
 
+def _bound_param_names(cypher: str, entity_bindings: dict[str, str]) -> list[str]:
+    """Return the caller-bound parameter names `cypher` actually references.
+
+    The complement of `_unknown_param_names`: that one asks "did the model
+    invent a name", this one asks "did it use any of ours". Empty means the
+    query consults no caller-supplied entity at all, which F-2.1-C08 showed
+    is how both live bypasses of the naming contract present.
+    """
+    referenced = set(_ordered_unique_param_names(cypher))
+    return [name for name in entity_bindings if name in referenced]
+
+
 def _unknown_param_names(cypher: str, entity_bindings: dict[str, str]) -> list[str]:
     """Parameter names the generated Cypher references but nothing binds.
 
@@ -774,6 +884,12 @@ _REASON_COST_CAP_EXCEEDED = "cost_cap_exceeded"
 # the Cypher's shape is fine; it is the binding contract that was
 # broken, and the repair retry needs to be told which names are legal.
 _REASON_UNBOUND_PARAM = "unbound_param_name"
+
+# F-2.1-C08: the generated Cypher is well-formed and binds nothing the
+# caller supplied. Distinct from _REASON_UNBOUND_PARAM, which fires when a
+# name was invented: here no parameter is referenced at all, which is how
+# both live bypasses of the naming contract presented.
+_REASON_NO_ENTITY_BOUND = "no_entity_bound"
 
 
 async def _generate_and_validate(
@@ -858,6 +974,47 @@ async def _generate_and_validate(
                 + "; the only bound parameter names are: "
                 + legal
                 + ". Rewrite the query using only those names."
+            ),
+            normalized_cypher=None,
+        )
+
+    # F-2.1-C08's second half, and the one that does not depend on
+    # out-pattern-matching the model.
+    #
+    # The validator rejects an entity id written as a literal by
+    # recognising its shape. An adversary defeated that by binding the
+    # literal to an alias first, `WITH 'NCBIGene' AS p, '7157' AS n WITH p
+    # + ':' + n AS target MATCH (g:Gene {id: target})`, which returned TP53
+    # while the caller had asked about BRCA1. A second form,
+    # `WITH 'BRCA1 DNA repair associated' AS t MATCH (g:Gene) WHERE
+    # g.name = t`, returned 100 non-human orthologs, every citation
+    # resolving and not one of them the gene asked about.
+    #
+    # Both go around the F-2.1-B01 naming contract rather than through it:
+    # because they reference ZERO parameters, `_build_params` returns `{}`
+    # and `_unknown_param_names` returns `[]`, so the entire remediation
+    # never engages. Chasing each new spelling is a losing game, since the
+    # bypass is "avoid the shape the checker looks for".
+    #
+    # The invariant does not depend on spelling at all: the caller supplied
+    # entities, so a query that consults none of them is not answering the
+    # caller's question, whatever it returns. This is `system-design-
+    # patterns` pattern 8 applied to generated text, removing the ability
+    # rather than asking the model not to use it.
+    if entity_bindings and not _bound_param_names(
+        result.normalized_cypher or raw_cypher, entity_bindings
+    ):
+        legal = ", ".join("$" + name for name in entity_bindings)
+        return raw_cypher, ValidationResult(
+            ok=False,
+            reason=_REASON_NO_ENTITY_BOUND,
+            message=(
+                "generated Cypher references none of the bound entity "
+                "parameters, so it cannot be answering a question about "
+                + ", ".join(entity_bindings.values())
+                + ". Do not write an entity id as a literal, and do not bind "
+                "one to an alias with WITH or UNWIND first. Rewrite the query "
+                "to match on one of: " + legal + "."
             ),
             normalized_cypher=None,
         )
@@ -1160,17 +1317,62 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
                 # dropped, not raised.
                 continue
 
+    # F-2.1-C14: F-2.1-B04c put `row_count` and `total_available` into the
+    # same unit, and that unit is wrong for a reader. It counts EMITTED ROWS,
+    # which after the endpoint-attribution fix includes an edge row and its
+    # endpoint vertex row for the same record. Measured: "8 results, 8
+    # available, nothing truncated" for a question whose true answer is 4
+    # diseases. Internally coherent and externally wrong, which is the kind
+    # of number a reader has no way to challenge.
+    #
+    # Counting distinct cited records answers the question a reader is
+    # actually asking. Every row still here passed the cite-or-refuse filter
+    # above, so `source_url` is never None and is the record's identity.
+    distinct_record_count = len({row.source_url for row in mapped_rows})
+
     if not hit_cap:
         # Finding F-2.1-B04c's fix: nothing was capped, so every match
-        # already reached this point, and the output row count computed
-        # just above is the true total, not a raw graph-row count in a
-        # different, incoherent unit.
-        total_available = len(mapped_rows)
+        # already reached this point, and the count computed just above is
+        # the true total, not a raw graph-row count in a different,
+        # incoherent unit.
+        total_available = distinct_record_count
+
+    # F-2.1-C10: an all-empty derived result is the one case where "zero
+    # associations are recorded" and "this identifier is not in the graph"
+    # are indistinguishable from the result alone. Check, rather than emit
+    # a cited zero for an entity that was never there.
+    if _derived_result_is_empty(mapped_rows):
+        anchor_curie = _derived_source_curie(params)
+        if anchor_curie is not None:
+            # Recomputed from elapsed time, the same discipline
+            # F-2.1-09 required of the count query: a second call must
+            # not be handed a fresh full budget on top of what the first
+            # already spent.
+            probe_budget = max(1.0, CYPHER_QUERY_TIMEOUT_SECONDS - (time.monotonic() - start))
+            present = await _entity_is_present(anchor_curie, params, probe_budget)
+            if present is False:
+                # Not an error: the query ran and the graph answered. There
+                # is simply no record to cite, which is exactly the state
+                # cite-or-refuse requires a refusal for. `empty` is the
+                # status the Write step already turns into "I could not
+                # find information on this".
+                return CypherQueryOutput(
+                    status="empty",
+                    rows=[],
+                    row_count=0,
+                    total_available=0,
+                    truncated=False,
+                    cypher_executed=normalized_cypher[:_MAX_CYPHER_EXECUTED_CHARS],
+                    error=None,
+                )
+            # `present is None` means the check itself could not run. That
+            # is not evidence of absence, so the result stands rather than
+            # being refused on a failed probe.
 
     return CypherQueryOutput(
         status="ok" if mapped_rows else "empty",
         rows=mapped_rows,
-        row_count=len(mapped_rows),
+        row_count=distinct_record_count,
         total_available=total_available,
         truncated=truncated,
         cypher_executed=normalized_cypher[:_MAX_CYPHER_EXECUTED_CHARS],

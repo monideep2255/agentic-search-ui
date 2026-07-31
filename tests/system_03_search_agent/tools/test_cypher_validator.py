@@ -683,3 +683,180 @@ def test_unsafe_limit_clause_in_one_union_branch_rejects_the_whole_query() -> No
     assert result.ok is False
     assert result.reason == REASON_UNSAFE_LIMIT_CLAUSE
     assert result.normalized_cypher is None
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-C08: the adversary's three live reproductions. Each binds a literal
+# to a WITH/UNWIND alias before using the alias in a match position, so no
+# literal ever sits directly next to a field name, which is the only shape
+# the pre-fix _find_suspect_literal could see. Each of these three was
+# confirmed FAILING (ok=True, no rejection) against the validator before
+# this fix, executed live against the graph in the adversary's report and
+# returning results for an entity the caller never asked about.
+# ---------------------------------------------------------------------------
+
+
+def test_literal_bound_via_with_alias_then_used_in_property_map_is_rejected() -> None:
+    # Reproduction 1 from the adversary report. 'NCBIGene' + ':' + '7157'
+    # is concatenated across two chained WITH clauses into `target`, which
+    # is then used directly in the property map instead of the literal.
+    # Returned TP53 live while the caller had asked about NCBIGene:672.
+    result = validate_cypher(
+        "WITH 'NCBIGene' AS p, '7157' AS n WITH p + ':' + n AS target "
+        "MATCH (g:Gene {id: target}) RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+    assert result.normalized_cypher is None
+
+
+def test_literal_bound_via_with_alias_then_used_in_where_comparison_is_rejected() -> None:
+    # Reproduction 2 from the adversary report. The literal is bound to
+    # `t` in a WITH clause, then compared against g.name in WHERE via the
+    # alias rather than the literal itself. Returned 100 non-human
+    # ortholog genes live, none of them the gene actually asked about.
+    result = validate_cypher(
+        "WITH 'BRCA1 DNA repair associated' AS t MATCH (g:Gene) "
+        "WHERE g.name = t RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+    assert result.normalized_cypher is None
+
+
+def test_literal_bound_via_unwind_alias_then_used_in_property_map_is_rejected() -> None:
+    # Reproduction 3 from the adversary report: the UNWIND-list form of
+    # the same bypass class. Every item in the unwound list is itself a
+    # literal, so the alias carries a literal value on every row.
+    #
+    # Deliberately '7157', not 'NCBIGene:672': the colon-digit shape
+    # inside 'NCBIGene:672' is itself an accidental match under the old,
+    # non-quote-aware pattern (see the next test), so it would have
+    # passed pre-fix for the wrong reason and proven nothing about this
+    # specific alias-indirection bypass. Confirmed FAILING (ok=True)
+    # against the validator before this fix with this exact literal.
+    result = validate_cypher(
+        "UNWIND ['7157'] AS x MATCH (g:Gene {id: x}) RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+    assert result.normalized_cypher is None
+
+
+def test_literal_split_across_two_literals_no_longer_passes_by_accident() -> None:
+    # The adversary's root-cause note: the un-quote-aware old pattern
+    # rejected 'NCBIGene:672' as one whole literal only because that
+    # literal's own content happened to contain a colon followed by
+    # digits, a pure accident of the string's payload, not the query's
+    # structure. Splitting the same value across two literals joined by
+    # concatenation stopped that accidental match from firing, and the
+    # query passed. It must still be rejected, on purpose this time,
+    # through the alias-taint check rather than by coincidence.
+    result = validate_cypher(
+        "WITH 'NCBIGene' + ':7157' AS target MATCH (g:Gene {id: target}) "
+        "RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+    assert result.normalized_cypher is None
+
+
+def test_tainted_alias_on_internal_constant_field_is_still_allowed() -> None:
+    # The alias-taint check must apply the exact same F-2.1-A17 allowlist
+    # as the direct-literal check: an internal constant literal routed
+    # through a WITH alias onto an allowlisted field is no more dangerous
+    # than writing the literal directly, and must still pass.
+    result = validate_cypher(
+        "WITH 'PubMed' AS src MATCH (a:Article) WHERE a.source = src "
+        "RETURN a",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is True
+    assert result.reason is None
+
+
+def test_alias_bound_to_a_real_field_is_not_tainted() -> None:
+    # A WITH alias bound to an actual field access, not a literal, must
+    # not be flagged: this is the ordinary, legitimate shape of
+    # projecting a field through a WITH clause for later use.
+    result = validate_cypher(
+        "MATCH (g:Gene) WITH g.name AS n RETURN n",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is True
+    assert result.reason is None
+
+
+def test_alias_bound_to_a_parameter_is_not_tainted() -> None:
+    result = validate_cypher(
+        "WITH $symbol AS s MATCH (g:Gene) WHERE g.symbol = s RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is True
+    assert result.reason is None
+
+
+def test_unwind_over_a_parameter_list_is_not_tainted() -> None:
+    result = validate_cypher(
+        "UNWIND $ids AS id MATCH (g:Gene) WHERE g.id = id RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is True
+    assert result.reason is None
+
+
+def test_alias_bound_to_a_function_call_over_a_real_field_is_not_tainted() -> None:
+    # toLower(g.name) is a function call over a real field, not a
+    # literal, so the alias it is bound to is not tainted and this
+    # legitimate query must still pass.
+    result = validate_cypher(
+        "MATCH (g:Gene) WITH toLower(g.name) AS n RETURN n",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is True
+    assert result.reason is None
+
+
+def test_tainted_alias_name_does_not_leak_across_union_branches() -> None:
+    # Cypher scopes a WITH/UNWIND alias to the branch that defines it. The
+    # first branch taints alias x with an allowlisted-field literal (and
+    # passes on its own); the second branch reuses the same alias name x
+    # for an unrelated, legitimate field passthrough. If taint tracking
+    # leaked across the UNION boundary, the second branch would be wrongly
+    # rejected for a query that never bound a literal to x at all.
+    result = validate_cypher(
+        "MATCH (a:Article) WITH 'PubMed' AS x WHERE a.source = x RETURN a "
+        "UNION MATCH (b:Gene) WITH b.symbol AS x MATCH (c:Gene) "
+        "WHERE c.symbol = x RETURN c",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is True
+    assert result.reason is None
+
+
+def test_unterminated_string_literal_is_rejected_as_suspect() -> None:
+    # _mask_string_literals cannot account for a string with no closing
+    # quote. This module never proves a construct safe on a string it
+    # could not fully account for, so this fails closed as suspect rather
+    # than falling back to unmasked text that could hide anything.
+    result = validate_cypher(
+        "MATCH (g:Gene {id: 'abc}) RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED

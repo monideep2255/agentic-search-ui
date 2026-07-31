@@ -272,7 +272,33 @@ _TIER_REASONING: dict[Tier, dict[str, Any]] = {
     # budget. "minimal" still emits reasoning tokens on the current guard
     # model; only "none" actually turns them off.
     "guard": {"effort": "none"},
-    "plan": {"effort": "high"},
+    # F-2.1-C11. The plan tier ran at "high", and that single setting was
+    # the whole of F-2.1-B02: 9 of 10 real queries timed out, first against
+    # a 30-second budget and then, unchanged, against the 90-second budget
+    # commit 9a3f50a widened it to. Widening treated the symptom. The cause
+    # was that this tier spent almost its entire output on reasoning tokens
+    # to write one line of Cypher: 1014 output tokens for a single query, of
+    # which 970 were reasoning.
+    #
+    # Measured over the five query shapes that were timing out (two-entity
+    # compare, disease list, plain lookup, node-plus-aggregate, multi-hop),
+    # two runs each:
+    #
+    #   effort "high": 163.0s total, up to 84.3s on multi-hop alone
+    #   effort "none":   6.1s total, 2.2s at worst
+    #
+    # All five were CORRECT at both settings, and neither setting ever
+    # interpolated an entity id as a literal. The reasoning tokens bought
+    # nothing measurable on this tier's actual workload and cost roughly a
+    # 27x latency multiple, so the budget could never have been widened far
+    # enough to hide it.
+    #
+    # Scope this honestly: today the plan tier generates one Cypher query
+    # against a fixed schema, which is translation, not reasoning. When
+    # build phase 3.x gives this tier real multi-tool decomposition, this
+    # setting is measured again on that workload rather than assumed to
+    # carry over.
+    "plan": {"effort": "none"},
     "synth": {"effort": "low"},
 }
 

@@ -126,6 +126,15 @@ shortened, a key shortened, or a depth-limited subtree replaced), and
 A caller can now tell "this Finding is everything the tool returned" from
 "this Finding was cut to fit a cap" without re-deriving it from the
 capped data itself.
+
+F-2.1-C12 closure (adversary, third pass, 2026-07-31): the `truncated`
+flag was only ever half the story. `row_count`, copied verbatim from
+`structured_fields` onto a capped `Finding`, kept its pre-cut value even
+when the byte ceiling shrank `rows` underneath it (measured:
+`row_limit=500` capped to 118 surviving rows, `row_count` still reporting
+500). `_reconcile_row_count` recomputes `row_count` from the actual,
+already-capped `rows` list in `_structured_pass_through`, so the two
+fields can never disagree, whether or not capping fired this call.
 """
 
 from __future__ import annotations
@@ -563,12 +572,32 @@ def _cap_structured_fields(fields: dict[str, Any]) -> tuple[dict[str, Any], bool
     return capped, True
 
 
+def _reconcile_row_count(fields: dict[str, Any]) -> dict[str, Any]:
+    """Keep `row_count` honest against the `rows` list it is meant to describe.
+
+    F-2.1-C12: `_cap_structured_fields`'s byte-ceiling binary search can
+    shrink `rows` down to a fraction of its original length (measured:
+    `row_limit=500` capped to 118 surviving rows) while `row_count`, a
+    plain integer with nothing of its own to cap, keeps whatever value the
+    tool put there before the cut. A caller reading `row_count`, the
+    natural field to read for "how many rows does this Finding carry", then
+    sees a number off by a wide margin from `len(rows)`. Recompute it from
+    the rows list actually present after capping, whenever both keys
+    exist, so the two can never disagree, whether or not capping fired.
+    """
+    rows = fields.get("rows")
+    if isinstance(rows, list) and "row_count" in fields:
+        fields["row_count"] = len(rows)
+    return fields
+
+
 def _structured_pass_through(call: ToolCall, result: ToolExecutionResult) -> Finding:
     """Pass a structured result straight through onto a `Finding`, no
     reader call, after enforcing F-03's recursive caps and total-size
-    ceiling.
+    ceiling, then F-2.1-C12's `row_count` reconciliation.
     """
     capped_fields, truncated = _cap_structured_fields(dict(result.structured_fields or {}))
+    capped_fields = _reconcile_row_count(capped_fields)
     return Finding(
         call_id=call.call_id,
         tool=call.tool,

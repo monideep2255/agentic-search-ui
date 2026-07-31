@@ -182,6 +182,37 @@ Second judge pass, 2026-07-31 (tracker/phase_2.1.md F-2.1-10, F-2.1-11):
       citeable still refuses (cite-or-refuse is not weakened), but emits
       a non-fatal `error` event naming the real cause, so the two
       "refuse" cases are never confused with each other downstream.
+
+Adversary pass, third pass, 2026-07-31 (tracker/phase_2.1.md F-2.1-C12,
+F-2.1-C13):
+
+    - F-2.1-C12: `_ok_finding_was_truncated` above read only the byte-
+      ceiling flag, one of three independent truncations on the path from
+      the graph to the user (the tool's own row-limit cap, the byte
+      ceiling, and `_MAX_CITATIONS_PER_ANSWER`). A result cut by the
+      row-limit cap alone, comfortably under the byte ceiling, reached
+      the user as 20 of 15,310 rows with no signal at all. It now reads
+      `structured_fields["truncated"]` (the tool's own flag) as well, and
+      `_citations_from_findings` reports whether the citation cap itself
+      cut anything. The emitted note states the scale of what is missing
+      (`_build_truncated_answer_note`), not just that a cut happened.
+      Separately, `coordinator_worker._reconcile_row_count` keeps
+      `row_count` honest against the rows a capped `Finding` actually
+      carries, which used to disagree by a wide margin (measured:
+      `row_count=500` reported for 118 surviving rows).
+    - F-2.1-C13: `act_node` used to set `contains_untrusted_free_text=
+      False` unconditionally for every `cypher_query` result, so
+      coordinator_worker's isolated Guard-tier reader (system-design-
+      patterns.md pattern 8) could never fire for any Layer 1 result, by
+      construction, even though an Article row's own `fields["name"]` is
+      raw, third-party-authored PubMed text, not graph-curated data.
+      `_split_rows_by_trust` now partitions a result's rows before
+      `_cypher_output_to_structured_fields` runs: trusted rows still pass
+      straight through as before; any Article rows are quarantined into a
+      second, reader-bound `ToolCall`/`ToolExecutionResult` pair
+      (`contains_untrusted_free_text=True`), so their raw content can
+      never reach `structured_fields`, and from there a citation's
+      `claim_text`, unmediated.
 """
 
 from __future__ import annotations
@@ -223,7 +254,11 @@ from system_03_search_agent.harness.harness import (
     budget_for_step,
 )
 from system_03_search_agent.tools.cypher_query import cypher_query
-from system_03_search_agent.tools.cypher_schemas import CypherQueryInput, CypherQueryOutput
+from system_03_search_agent.tools.cypher_schemas import (
+    CypherQueryInput,
+    CypherQueryOutput,
+    CypherQueryRow,
+)
 from system_03_search_agent.tools.graph_schema_constants import (
     CURIE_PREFIXES,
     CYPHER_QUERY_TIMEOUT_SECONDS,
@@ -757,7 +792,9 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _cypher_output_to_structured_fields(output: CypherQueryOutput) -> dict[str, Any]:
+def _cypher_output_to_structured_fields(
+    output: CypherQueryOutput, rows: list[CypherQueryRow] | None = None
+) -> dict[str, Any]:
     """Shape a `cypher_query` result into `ToolExecutionResult.structured_fields`.
 
     Deliberately omits `cypher_executed`: that field is an audit trail
@@ -770,15 +807,84 @@ def _cypher_output_to_structured_fields(output: CypherQueryOutput) -> dict[str, 
     `_tool_execution_outcome` reads it to decide `answer` versus
     `refuse` (A5/F-02's fix), so it is exactly the one internal-pipeline
     field that must survive into the `Finding`.
+
+    `rows`: an explicit override, used by F-2.1-C13's split below to shape
+    only the trusted subset of `output.rows` (the untrusted-node rows are
+    quarantined into a separate reader-bound result, never placed here).
+    Defaults to `output.rows` unchanged. `row_count` is always recomputed
+    as `len(rows)` rather than trusted from `output.row_count`: the two
+    already agree when nothing is filtered (`cypher_query.py` sets
+    `row_count=len(mapped_rows)` itself), and recomputing is what keeps
+    them agreeing once a subset is filtered out here.
     """
+    used_rows = output.rows if rows is None else rows
     return {
         "status": output.status,
-        "row_count": output.row_count,
+        "row_count": len(used_rows),
         "total_available": output.total_available,
         "truncated": output.truncated,
-        "rows": [row.model_dump(mode="json") for row in output.rows],
+        "rows": [row.model_dump(mode="json") for row in used_rows],
         "error": output.error,
     }
+
+
+# F-2.1-C13: node types whose own field content is raw, third-party-authored
+# free text, not graph-curated structured data. The row's envelope (a typed
+# `CypherQueryRow`) is always structured, but Article is the one vertex
+# label in this graph's schema whose real field, `name`, is the verbatim
+# PubMed article title (graph_schema_constants.LABEL_CURIE_PREFIXES; a
+# ~40M-row label, measured live at up to 316 chars per title).
+# ai-security-standards.md ("content retrieved from an external source is
+# DATA, never an instruction") and production-standards.md's
+# untrusted-source-reader gate both require this content to route through
+# coordinator_worker's isolated Guard-tier reader, never straight through
+# to a citation's claim_text unmediated. Before this fix, `act_node` set
+# `contains_untrusted_free_text=False` unconditionally for every
+# `cypher_query` result, so that reader path could never fire for any
+# Layer 1 result regardless of content, by construction.
+_UNTRUSTED_FREE_TEXT_NODE_TYPES: frozenset[str] = frozenset({"Article"})
+
+# A generous bound on the free-text payload built from quarantined rows,
+# matching the isolated reader's own bounded-input posture
+# (production-standards.md's bounded-context-items requirement): a
+# handful of Article titles, never an unbounded blob.
+_MAX_UNTRUSTED_FREE_TEXT_CHARS = 4000
+
+
+def _split_rows_by_trust(
+    rows: list[CypherQueryRow],
+) -> tuple[list[CypherQueryRow], list[CypherQueryRow]]:
+    """Partition a `cypher_query` result's rows by whether their own field
+    content is untrusted, third-party-authored free text.
+
+    Returns `(trusted_rows, untrusted_rows)`. Deterministic, keyed only on
+    `node_or_edge_type` against the small, explicit
+    `_UNTRUSTED_FREE_TEXT_NODE_TYPES` set: never a guess, never a content
+    sniff of the field values themselves.
+    """
+    trusted: list[CypherQueryRow] = []
+    untrusted: list[CypherQueryRow] = []
+    for row in rows:
+        if row.node_or_edge_type in _UNTRUSTED_FREE_TEXT_NODE_TYPES:
+            untrusted.append(row)
+        else:
+            trusted.append(row)
+    return trusted, untrusted
+
+
+def _untrusted_rows_free_text(rows: list[CypherQueryRow]) -> str:
+    """Render quarantined untrusted rows as the one free-text payload
+    `coordinator_worker`'s isolated reader is given.
+
+    This string is passed to `ToolExecutionResult.free_text` only.
+    `coordinator_worker._reader_pass`/`_parse_reader_response` read it
+    solely to build the reader's own bounded prompt and never copy it
+    onto the returned `Finding` (that module's own docstring guarantee);
+    it never reaches `structured_fields`, `claim_text`, or any other field
+    `write_node` reads to build a citation.
+    """
+    lines = [f"{row.curie}: {row.fields.get('name', '')}" for row in rows]
+    return "\n".join(lines)[:_MAX_UNTRUSTED_FREE_TEXT_CHARS]
 
 
 async def act_node(state: GraphState) -> dict[str, Any]:
@@ -834,16 +940,35 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             )
             continue
 
-        # A Cypher row is structured data (Section 6.1's typed output
-        # schema, not free text), so this always routes through the
-        # structured pass-through path in coordinator_worker_execute,
-        # never the isolated free-text reader.
+        # F-2.1-C13: a Cypher row's envelope is structured data (Section
+        # 6.1's typed output schema), but an Article row's own field
+        # content (the raw PubMed title) is untrusted external free text.
+        # Split before building the structured pass-through payload: the
+        # trusted rows still route through structured pass-through as
+        # before, never the isolated reader; any Article rows are
+        # quarantined into a second, reader-bound tool_call/result pair
+        # so their content never reaches structured_fields, and from
+        # there a citation's claim_text, unmediated.
+        trusted_rows, untrusted_rows = _split_rows_by_trust(output.rows)
         results.append(
             ToolExecutionResult(
                 contains_untrusted_free_text=False,
-                structured_fields=_cypher_output_to_structured_fields(output),
+                structured_fields=_cypher_output_to_structured_fields(output, trusted_rows),
             )
         )
+        if untrusted_rows:
+            untrusted_call = ToolCall(
+                tool=planned.tool_call.tool,
+                call_id=f"{planned.tool_call.call_id}-articles"[:64],
+                layer=planned.tool_call.layer,
+            )
+            tool_calls.append(untrusted_call)
+            results.append(
+                ToolExecutionResult(
+                    contains_untrusted_free_text=True,
+                    free_text=_untrusted_rows_free_text(untrusted_rows),
+                )
+            )
 
     findings = await coordinator_worker_execute(harness, tool_calls, results)
     # A5/F-02 fix: the real Finding list now survives into GraphState
@@ -985,7 +1110,7 @@ def _citation_for_row(
     )
 
 
-def _citations_from_findings(findings: list[Finding]) -> list[CitationPayload]:
+def _citations_from_findings(findings: list[Finding]) -> tuple[list[CitationPayload], bool]:
     """Build every citation earned by this query's real, `"ok"` tool results.
 
     Only `structured_pass_through` findings with `status == "ok"`
@@ -995,6 +1120,13 @@ def _citations_from_findings(findings: list[Finding]) -> list[CitationPayload]:
     Capped at `_MAX_CITATIONS_PER_ANSWER`, the same defense-in-depth
     posture every other emitted list in this module already carries
     (production-standards.md's multi-agent pipeline gate).
+
+    Returns `(citations, capped_by_citation_limit)`. F-2.1-C12: the old
+    version returned only the capped list, so a caller had no way to tell
+    "every citeable row is shown" from "there were more citeable rows than
+    `_MAX_CITATIONS_PER_ANSWER` and the rest were silently dropped". The
+    full citeable list is built first so the comparison is exact (never a
+    false positive from stopping exactly at the cap with nothing left).
     """
     citations: list[CitationPayload] = []
     for finding in findings:
@@ -1002,12 +1134,11 @@ def _citations_from_findings(findings: list[Finding]) -> list[CitationPayload]:
         if fields is None or fields.get("status") != "ok":
             continue
         for row in fields.get("rows", []):
-            if len(citations) >= _MAX_CITATIONS_PER_ANSWER:
-                return citations
             citation = _citation_for_row(finding.call_id, finding.layer, row, len(citations) + 1)
             if citation is not None:
                 citations.append(citation)
-    return citations
+    capped_by_citation_limit = len(citations) > _MAX_CITATIONS_PER_ANSWER
+    return citations[:_MAX_CITATIONS_PER_ANSWER], capped_by_citation_limit
 
 
 # F-2.1-10 fix: `Finding.truncated` (coordinator_worker.py's F-03 fix) was
@@ -1019,8 +1150,20 @@ def _citations_from_findings(findings: list[Finding]) -> list[CitationPayload]:
 # This is that reader.
 def _ok_finding_was_truncated(findings: list[Finding]) -> bool:
     """True when at least one `"ok"` structured-pass-through `Finding` in
-    this query's result set was cut by
-    `coordinator_worker._cap_structured_fields`.
+    this query's result set was cut, by either of two independent
+    truncations that can fire before a `Finding` reaches this module.
+
+    F-2.1-C12: the pre-fix version read only `finding.truncated`, the
+    byte-ceiling flag `coordinator_worker._cap_structured_fields` sets.
+    It never read `structured_fields["truncated"]`, `cypher_query`'s own
+    row-limit flag (`CypherQueryOutput.truncated`, set whenever the
+    graph's true match count exceeds `row_limit`), sitting in the same
+    dict. Measured: a 15,310-row match capped to 100 rows by the tool's
+    own row limit, comfortably under the 50,000-byte ceiling, so the old
+    check saw `truncated=False` and emitted no note at all for a result
+    the user was shown 100 of 15,310 rows of. Both flags now gate the
+    same signal, since either one means the user is not seeing the whole
+    answer.
 
     Scoped to `"ok"` findings only: an `"empty"` or `"error"` finding is
     already refused for its own, unrelated reason, and `truncated` on a
@@ -1029,17 +1172,55 @@ def _ok_finding_was_truncated(findings: list[Finding]) -> bool:
     the first place.
     """
     return any(
-        finding.truncated
+        finding.truncated or bool(finding.structured_fields.get("truncated"))
         for finding in findings
         if finding.structured_fields is not None
         and finding.structured_fields.get("status") == "ok"
     )
 
 
-_TRUNCATED_ANSWER_NOTE = (
-    "Note: this result was larger than the response size limit and was "
-    "truncated; not every matching row is shown above."
-)
+def _known_total_available(findings: list[Finding]) -> int | None:
+    """Sum `total_available` across this query's `"ok"` findings.
+
+    Returns `None` when any contributing finding's own `total_available`
+    is unknown (`cypher_query._fetch_true_total` abstained rather than
+    guessing, e.g. a UNION or an aliased multi-item `DISTINCT`), since
+    summing a known figure with an unknown one is not itself a knowable
+    total. A caller reading `None` states scale honestly as "more than
+    shown, exact total unavailable" rather than fabricating a number.
+    """
+    total = 0
+    saw_any = False
+    for finding in findings:
+        fields = finding.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        saw_any = True
+        available = fields.get("total_available")
+        if available is None:
+            return None
+        total += available
+    return total if saw_any else None
+
+
+def _build_truncated_answer_note(shown: int, total_available: int | None) -> str:
+    """F-2.1-C12: state the scale of what is not shown, not just that a
+    cut happened. "Results were truncated" said nothing when the user was
+    shown 20 of 15,310 rows; a note that omits the scale is technically
+    true and practically useless.
+    """
+    if total_available is not None and total_available > shown:
+        return (
+            f"Note: this result was truncated. Showing {shown} of "
+            f"{total_available} matching rows; the rest are not shown above."
+        )
+    return (
+        f"Note: this result was truncated. Showing {shown} matching rows, "
+        "but more exist than are shown above; the exact total is not "
+        "available for this query."
+    )
+
+
 _TRUNCATED_REFUSAL_MESSAGE = (
     "The graph query found matching data, but the result was cut to fit "
     "the response size limit before any row kept a citeable source_url. "
@@ -1119,7 +1300,9 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # honestly do now is refuse to say "answer" when nothing was found,
     # and emit a real citation for every row that earned one.
     tool_outcome = _tool_execution_outcome(findings)
-    citations = _citations_from_findings(findings) if tool_outcome == "ok" else []
+    citations, citations_capped = (
+        _citations_from_findings(findings) if tool_outcome == "ok" else ([], False)
+    )
     trust_outcome: TrustOutcome
     if tool_outcome == "no_tool" or (tool_outcome == "ok" and citations):
         trust_outcome = "answer"
@@ -1130,23 +1313,35 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # answering with nothing behind it.
         trust_outcome = "refuse"
 
-    # F-2.1-10/F-2.1-11 fix: a `Finding` the byte ceiling actually cut must
-    # never look identical to one it left alone. `_ok_finding_was_truncated`
-    # is the reader `Finding.truncated` was missing (F-2.1-10). Two cases:
+    # F-2.1-10/F-2.1-11/F-2.1-C12 fix: a result the user is shown only part
+    # of must never look identical to one they are shown in full.
+    # `_ok_finding_was_truncated` is the reader `Finding.truncated` and
+    # `structured_fields["truncated"]` were both missing (F-2.1-10,
+    # F-2.1-C12: the byte ceiling and the tool's own row-limit cap are two
+    # independent truncations, and the pre-fix code read only the first).
+    # `citations_capped` is the third: `_MAX_CITATIONS_PER_ANSWER` cutting
+    # an already-fetched row list down further still. Any one of the three
+    # means the user is not seeing the whole answer. Two cases:
     #   - The cut still left a citeable row: the query genuinely succeeded
     #     (trust_outcome is already "answer" above) and cite-or-refuse is
     #     not weakened, but the cut is acknowledged rather than silently
     #     dropped, so a user is never shown a partial result as if it were
-    #     complete.
+    #     complete. The note states the scale (shown vs. total_available),
+    #     not just that a cut happened.
     #   - The cut left nothing citeable: cite-or-refuse still refuses (a
     #     truncated Finding earns no exemption from that gate), but the
     #     refusal names the real cause, so it is never confused with the
     #     graph genuinely returning no matching data (F-2.1-11's exact
     #     failure mode: both cases used to reach an identical, silent
     #     "refuse").
-    truncated_ok_finding = tool_outcome == "ok" and _ok_finding_was_truncated(findings)
+    truncated_ok_finding = tool_outcome == "ok" and (
+        _ok_finding_was_truncated(findings) or citations_capped
+    )
     if truncated_ok_finding and trust_outcome == "answer":
-        sink.emit("token", TokenPayload(text=_TRUNCATED_ANSWER_NOTE, marker_ids=[]))
+        note = _build_truncated_answer_note(
+            shown=len(citations), total_available=_known_total_available(findings)
+        )
+        sink.emit("token", TokenPayload(text=note, marker_ids=[]))
     elif truncated_ok_finding and trust_outcome == "refuse":
         sink.emit(
             "error",

@@ -56,12 +56,12 @@ def test_mesh_url_matches_the_host_pinned_ncbi_record_pattern() -> None:
     assert re.match(NCBI_RECORD_URL_PATTERN, url)
 
 
-def test_mesh_local_id_needing_encoding_is_encoded_correctly() -> None:
-    # A local id with a character that needs encoding must still resolve to
-    # a well-formed query-string value, matching the same encoding path
-    # every other prefix's local id goes through.
-    url = source_url_for_curie("MeSH:D012345 supplement")
-    assert url == "https://www.ncbi.nlm.nih.gov/mesh/?term=D012345%20supplement"
+def test_mesh_local_id_with_extra_text_returns_none() -> None:
+    # F-2.1-C09: a MeSH local id is a letter followed by digits. Anything
+    # else, including a trailing "supplement" annotation, is not a real
+    # MeSH descriptor id and must not be built into a citation URL, even
+    # though it would previously have quoted cleanly into one.
+    assert source_url_for_curie("MeSH:D012345 supplement") is None
 
 
 # ---------------------------------------------------------------------------
@@ -101,18 +101,44 @@ def test_unrecognized_or_malformed_curie_returns_none(curie: str) -> None:
     assert source_url_for_curie(curie) is None
 
 
-def test_url_encodes_the_local_id() -> None:
-    # A local id with a character that needs encoding must not break the
-    # constructed URL's path structure.
-    url = source_url_for_curie("NCBIGene:67 2")
-    assert url == "https://www.ncbi.nlm.nih.gov/gene/67%202"
+def test_ncbigene_local_id_with_a_space_returns_none() -> None:
+    # F-2.1-C09: an NCBIGene local id is digits only. A space-containing
+    # string is not a real gene id, so no URL is built from it, even
+    # though it would previously have quoted cleanly into one.
+    assert source_url_for_curie("NCBIGene:67 2") is None
 
 
 def test_local_id_cannot_escape_the_pinned_host_via_path_traversal() -> None:
-    url = source_url_for_curie("NCBIGene:../../evil.example")
-    assert url is not None
-    assert url.startswith("https://www.ncbi.nlm.nih.gov/gene/")
-    assert "evil.example" not in url or "%2F" in url
+    # F-2.1-C09: a path-traversal-shaped local id fails the digit-only
+    # shape check for NCBIGene outright, so no URL is built at all, not
+    # merely one whose traversal characters happen to be percent-encoded.
+    assert source_url_for_curie("NCBIGene:../../evil.example") is None
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-C09: a CURIE prefix having a documented URL builder never meant the
+# text after the colon was checked against the real shape for that prefix.
+# Every string below passes the prefix lookup and would previously have
+# quoted cleanly into a syntactically valid, host-pinned URL; the adversary
+# verified live that every one of these exact URLs 404s. The host is
+# genuine, only the path is attacker-controlled, so the shape check must
+# reject the local id itself.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "curie",
+    [
+        "NCBIGene:672.",
+        "NCBIGene:672-related",
+        "NCBIGene:not_a_number",
+        "NCBIGene:672 OR 1=1",
+        "MedGen:../../etc/passwd",
+        "NCBIGene:672-VALIDATED-BY-FDA",
+    ],
+)
+def test_local_id_with_wrong_shape_for_its_prefix_returns_none(curie: str) -> None:
+    assert source_url_for_curie(curie) is None
 
 
 # ---------------------------------------------------------------------------
@@ -318,6 +344,57 @@ def test_a_derived_row_with_no_source_entity_carries_no_citation() -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# F-2.1-C02: a derived/projected value that is itself a resolvable CURIE
+# must be cited to its own record, not to the entity the query was computed
+# from. Only a genuine non-identifier scalar falls back to that entity.
+# ---------------------------------------------------------------------------
+
+
+def test_derived_row_cites_a_projected_identifier_rather_than_the_source_entity() -> None:
+    """`RETURN d.id AS disease_id` projects a real MedGen CURIE. That CURIE
+    is itself a resolvable, citable identifier, so the derived row must
+    cite the disease's own record, not BRCA1's gene page just because the
+    query started from BRCA1.
+    """
+    rows = to_output_rows(
+        # A string scalar's raw agtype wire text is JSON-quoted, the same
+        # way `graph_connection.execute_cypher` reads it off the socket.
+        {"result": '"MedGen:C0346153"'},
+        snapshot_version="2026-07-01",
+        derived_source_curie="NCBIGene:672",
+        column_labels={"result": "disease_id"},
+    )
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["curie"] == "MedGen:C0346153", (
+        "a projected identifier is cited to its own record, not the "
+        "computed-from entity"
+    )
+    assert row["source_url"] == "https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+    assert row["fields"] == {"disease_id": "MedGen:C0346153"}
+
+
+def test_derived_row_falls_back_to_source_entity_when_nothing_projected_is_an_identifier() -> None:
+    """A count or a name string is not itself a citable record, so the
+    original F-2.1-B05 behaviour (cite the computed-from entity) still
+    applies when nothing projected is a resolvable CURIE.
+    """
+    rows = to_output_rows(
+        {"result": "4"},
+        snapshot_version="2026-07-01",
+        derived_source_curie="NCBIGene:672",
+        column_labels={"result": "disease_count"},
+    )
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["curie"] == "NCBIGene:672"
+    assert row["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/672"
+    assert row["fields"] == {"disease_count": 4}
+
+
 def test_to_output_rows_omits_an_unparseable_column() -> None:
     raw_row = {"result": "not valid agtype at all {{{"}
 
@@ -334,17 +411,20 @@ def test_to_output_rows_omits_an_unparseable_column() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_edge_only_row_with_no_curie_and_no_endpoint_carries_no_citation() -> None:
-    """The exact adversary reproduction: `RETURN e` alone.
+def test_edge_alone_with_a_valid_own_source_url_is_cited_to_its_own_record() -> None:
+    """F-2.1-C04/C05: `RETURN e` alone, no sibling vertex in the row at all.
 
-    Live probe of `is_sequence_variant_of` confirmed the edge carries a
-    real, host-valid `source_url` (the ClinVar variation page for its
-    start endpoint) but no `properties["id"]`. Before the fix, this row
-    shipped `curie=""` (source_id="unknown" downstream) next to that
-    ClinVar URL, a citation that resolves to a genuine record the row
-    itself never names. With no sibling vertex present in the row to
-    verify an attribution against, the only honest outcome is no
-    citation at all.
+    Before the C04/C05 fix this returned no citation (F-2.1-B06's original
+    outcome: no endpoint vertex in the row to verify an attribution
+    against). The edge's own stored `source_url` is data already in hand
+    on the edge itself, live-verified in F-2.1-B06's own probe
+    (`is_sequence_variant_of`, `gene_associated_with_condition`,
+    `has_mesh_annotation`, `in_taxon`, `orthologous_to` all carry one), and
+    F-2.1-C05 found it is also the MORE PRECISE citation: for
+    `is_sequence_variant_of` it is the ClinVar variation page, exactly the
+    record that asserts the relationship. Reverse-deriving the CURIE from
+    that URL needs no sibling vertex at all, so it is honest even with
+    nothing else in the row.
     """
     raw_row = {
         "result": (
@@ -353,6 +433,33 @@ def test_edge_only_row_with_no_curie_and_no_endpoint_carries_no_citation() -> No
             '"properties": {"source": "ClinVar", "agent_type": "manual_agent", '
             '"source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/2", '
             '"knowledge_level": "knowledge_assertion"}}::edge'
+        )
+    }
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["curie"] == "ClinVar:2", (
+        "the edge's own stored source_url reverse-derives a verified CURIE, "
+        "with no sibling vertex needed"
+    )
+    assert row["source_url"] == "https://www.ncbi.nlm.nih.gov/clinvar/variation/2/"
+    assert row["fields"]["_cited_via_endpoint_curie"] == "ClinVar:2"
+
+
+def test_edge_alone_with_no_valid_own_source_url_still_carries_no_citation() -> None:
+    """The honest "cannot attribute" case survives the C04/C05 fix: an edge
+    with neither a verifiable own `source_url` (here, a foreign host) nor
+    any sibling vertex in the row gets no citation. Nothing is invented to
+    fill the gap.
+    """
+    raw_row = {
+        "result": (
+            '{"id": 4222124650659841, "label": "is_sequence_variant_of", '
+            '"start_id": 1125899906842625, "end_id": 844424943788979, '
+            '"properties": {"source": "ClinVar", '
+            '"source_url": "https://evil.example/clinvar/variation/2"}}::edge'
         )
     }
 
@@ -370,40 +477,50 @@ def test_edge_only_row_with_no_curie_and_no_endpoint_carries_no_citation() -> No
 def test_edge_with_no_curie_is_attributed_to_a_sibling_endpoint_vertex() -> None:
     """When the query also returns an endpoint vertex, attribution is honest.
 
-    `RETURN v, e` (the SequenceVariant and the edge, as separate columns
+    `RETURN e, v` (the edge and the SequenceVariant, as separate columns
     of the same row) gives this module a genuine, verified CURIE for the
     edge's start endpoint, taken from data already in the row, never
-    fetched or guessed. The row's own `curie` and `source_url` are then
-    set from that endpoint, so the two agree, and the row is marked as
-    endpoint-attributed rather than presented as the edge's own identity.
+    fetched or guessed.
+
+    F-2.1-C06: the edge's own stored `source_url` and the sibling vertex's
+    own citation now resolve to the identical record (both `ClinVar:2`),
+    so `to_output_rows`'s dedup collapses the pair to one row rather than
+    emitting the same citation twice. The edge column comes first here,
+    so it is the edge row, carrying the endpoint-attribution marker, that
+    survives.
     """
     raw_row = {
         "c0": (
-            '{"id": 1125899906842625, "label": "SequenceVariant", "properties": '
-            '{"id": "ClinVar:2", "name": "NM_000059.4(BRCA2):c.1_10del"}}::vertex'
-        ),
-        "c1": (
             '{"id": 4222124650659841, "label": "is_sequence_variant_of", '
             '"start_id": 1125899906842625, "end_id": 844424943788979, '
             '"properties": {"source": "ClinVar", "agent_type": "manual_agent", '
             '"source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/2", '
             '"knowledge_level": "knowledge_assertion"}}::edge'
         ),
+        "c1": (
+            '{"id": 1125899906842625, "label": "SequenceVariant", "properties": '
+            '{"id": "ClinVar:2", "name": "NM_000059.4(BRCA2):c.1_10del"}}::vertex'
+        ),
     }
 
     rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
 
-    assert len(rows) == 2
-    edge_row = next(row for row in rows if row["node_or_edge_type"] == "is_sequence_variant_of")
+    assert len(rows) == 1
+    edge_row = rows[0]
+    assert edge_row["node_or_edge_type"] == "is_sequence_variant_of"
     assert edge_row["curie"] == "ClinVar:2"
     assert edge_row["source_url"] == "https://www.ncbi.nlm.nih.gov/clinvar/variation/2/"
     assert edge_row["fields"]["_cited_via_endpoint_curie"] == "ClinVar:2"
 
 
-def test_edge_with_no_curie_and_a_foreign_endpoint_id_still_carries_no_citation() -> None:
-    """A sibling vertex present in the row does not help if it is not this
-    edge's own endpoint: the vertex's internal id must actually match the
-    edge's start_id or end_id, never merely be present somewhere in the row.
+def test_edge_with_a_foreign_endpoint_id_and_no_valid_own_url_still_carries_no_citation() -> None:
+    """Priority 2's safety net (F-2.1-B06's original mechanism): a sibling
+    vertex present in the row does not help if it is not this edge's own
+    endpoint, its internal id must actually match the edge's start_id or
+    end_id, never merely be present somewhere in the row. This only comes
+    into play once priority 1 (the edge's own stored source_url,
+    F-2.1-C04/C05) has nothing valid to offer, here because the URL is on
+    a foreign host.
     """
     raw_row = {
         "c0": (
@@ -414,7 +531,7 @@ def test_edge_with_no_curie_and_a_foreign_endpoint_id_still_carries_no_citation(
             '{"id": 4222124650659841, "label": "is_sequence_variant_of", '
             '"start_id": 1125899906842625, "end_id": 844424943788979, '
             '"properties": {"source": "ClinVar", '
-            '"source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/2"}}::edge'
+            '"source_url": "https://evil.example/clinvar/variation/2"}}::edge'
         ),
     }
 
@@ -423,6 +540,122 @@ def test_edge_with_no_curie_and_a_foreign_endpoint_id_still_carries_no_citation(
     edge_row = next(row for row in rows if row["node_or_edge_type"] == "is_sequence_variant_of")
     assert edge_row["curie"] == ""
     assert edge_row["source_url"] is None
+
+
+def test_edge_citation_is_deterministic_regardless_of_which_endpoint_column_is_returned() -> None:
+    """F-2.1-C04: the identical edge must resolve to the identical citation
+    whether the query also returns its start endpoint, its end endpoint,
+    or neither, since the edge's own stored source_url, not the sibling
+    vertex, drives the citation.
+    """
+    edge_json = (
+        '{"id": 555, "label": "gene_associated_with_condition", '
+        '"start_id": 10, "end_id": 20, "properties": {"source": "NCBI MIM2Gene", '
+        '"source_url": "https://www.ncbi.nlm.nih.gov/gene/672"}}::edge'
+    )
+    gene_json = (
+        '{"id": 10, "label": "Gene", "properties": '
+        '{"id": "NCBIGene:672", "symbol": "BRCA1"}}::vertex'
+    )
+    disease_json = (
+        '{"id": 20, "label": "Disease", "properties": '
+        '{"id": "MedGen:C0346153", "name": "Breast cancer"}}::vertex'
+    )
+
+    def edge_row_of(rows: list[dict]) -> dict:
+        return next(
+            row for row in rows if row["node_or_edge_type"] == "gene_associated_with_condition"
+        )
+
+    alone = edge_row_of(to_output_rows({"result": edge_json}, snapshot_version="2026-07-01"))
+    with_gene = edge_row_of(
+        to_output_rows({"c0": edge_json, "c1": gene_json}, snapshot_version="2026-07-01")
+    )
+    with_disease = edge_row_of(
+        to_output_rows({"c0": edge_json, "c1": disease_json}, snapshot_version="2026-07-01")
+    )
+
+    assert alone["curie"] == with_gene["curie"] == with_disease["curie"] == "NCBIGene:672"
+    assert (
+        alone["source_url"]
+        == with_gene["source_url"]
+        == with_disease["source_url"]
+        == "https://www.ncbi.nlm.nih.gov/gene/672"
+    )
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-C06: two output rows citing the identical record collapse to one.
+# ---------------------------------------------------------------------------
+
+
+def test_to_output_rows_deduplicates_rows_citing_the_identical_record() -> None:
+    """Two columns of the same raw row resolving to the same citable record
+    must produce one output row, not two, so the caller's fixed citation
+    budget is not halved by a duplicate.
+    """
+    gene_json = (
+        '{"id": 1, "label": "Gene", "properties": '
+        '{"id": "NCBIGene:672", "symbol": "BRCA1"}}::vertex'
+    )
+    raw_row = {"c0": gene_json, "c1": gene_json}
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert len(rows) == 1
+    assert rows[0]["curie"] == "NCBIGene:672"
+
+
+def test_to_output_rows_keeps_distinct_records_when_no_identity_collides() -> None:
+    """The dedup must never merge two output rows that cite genuinely
+    different records.
+    """
+    gene_json = (
+        '{"id": 1, "label": "Gene", "properties": '
+        '{"id": "NCBIGene:672", "symbol": "BRCA1"}}::vertex'
+    )
+    disease_json = (
+        '{"id": 2, "label": "Disease", "properties": '
+        '{"id": "MedGen:C0346153", "name": "Breast cancer"}}::vertex'
+    )
+    raw_row = {"c0": gene_json, "c1": disease_json}
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert len(rows) == 2
+    assert {row["curie"] for row in rows} == {"NCBIGene:672", "MedGen:C0346153"}
+
+
+def test_dedup_never_drops_a_derived_row_sharing_its_entitys_own_url() -> None:
+    """F-2.1-C03 x C06 interaction: `RETURN g, count(v)` cites the derived
+    count to the same entity (and therefore the same `source_url`) as the
+    Gene row in the same raw row. The two rows are NOT a duplicate
+    citation of the same fact: the derived row is new information (the
+    count) the entity row does not itself carry, so the dedup added for
+    F-2.1-C06 must never drop it just because it shares a URL with the
+    entity it was computed from. Dropping it here would silently remove
+    the very number the user asked for, F-2.1-C03's original symptom.
+    """
+    gene_json = (
+        '{"id": 1, "label": "Gene", "properties": '
+        '{"id": "NCBIGene:672", "symbol": "BRCA1"}}::vertex'
+    )
+    raw_row = {"c0": gene_json, "c1": "15310"}
+
+    rows = to_output_rows(
+        raw_row,
+        snapshot_version="2026-07-01",
+        derived_source_curie="NCBIGene:672",
+        column_labels={"c1": "variant_count"},
+    )
+
+    kinds = {row["node_or_edge_type"] for row in rows}
+    assert kinds == {"Gene", "derived"}, (
+        f"the derived count must survive alongside the entity row; got {kinds}"
+    )
+    derived_row = next(row for row in rows if row["node_or_edge_type"] == "derived")
+    assert derived_row["fields"] == {"variant_count": 15310}
+    assert derived_row["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/672"
 
 
 def test_edge_with_a_genuine_curie_of_its_own_is_unaffected_by_the_fix() -> None:
@@ -447,12 +680,17 @@ def test_edge_with_a_genuine_curie_of_its_own_is_unaffected_by_the_fix() -> None
 
 
 def test_to_output_rows_flattens_a_path_into_its_vertex_and_edge_elements() -> None:
+    # The edge carries its own distinct CURIE (`ClinVar:999999`), not the
+    # same one as either endpoint vertex, so all three path elements cite
+    # three genuinely different records and F-2.1-C06's dedup has nothing
+    # to collapse; the path-flattening mechanic this test targets is
+    # otherwise indistinguishable from a duplicate-citation collision.
     raw_row = {
         "result": (
             "["
             '{"id": 1, "label": "Gene", "properties": {"id": "NCBIGene:672"}}, '
             '{"id": 5, "label": "is_sequence_variant_of", "start_id": 1, '
-            '"end_id": 2, "properties": {"id": "ClinVar:17660"}}, '
+            '"end_id": 2, "properties": {"id": "ClinVar:999999"}}, '
             '{"id": 2, "label": "SequenceVariant", "properties": '
             '{"id": "ClinVar:17660"}}'
             "]::path"

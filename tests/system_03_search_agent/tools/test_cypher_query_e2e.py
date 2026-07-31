@@ -875,3 +875,134 @@ def test_an_unaliased_or_malformed_column_keeps_its_positional_name() -> None:
     # An over-long alias is refused rather than truncated.
     long_alias = "x" * 65
     assert column_labels_for(f"MATCH (g) RETURN count(g) AS {long_alias} LIMIT 1") == {}
+
+
+# ---------------------------------------------------------------------------
+# Third adversary pass, findings C08 and C10
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("label", "cypher"),
+    [
+        (
+            "alias concatenation",
+            "WITH 'NCBIGene' AS p, '7157' AS n WITH p + ':' + n AS target "
+            "MATCH (g:Gene {id: target}) RETURN g",
+        ),
+        (
+            "name literal bound to an alias",
+            "WITH 'BRCA1 DNA repair associated' AS t "
+            "MATCH (g:Gene) WHERE g.name = t RETURN g",
+        ),
+    ],
+)
+async def test_a_query_binding_none_of_the_callers_entities_is_refused(
+    monkeypatch: pytest.MonkeyPatch, label: str, cypher: str
+) -> None:
+    """C08: both live bypasses of the F-2.1-B01 naming contract.
+
+    The validator rejects an entity id written as a literal by recognising
+    its shape. Binding the literal to an alias first defeats that, and both
+    of these ran live: the first returned TP53 for a question about BRCA1,
+    the second returned 100 non-human ortholog genes with every citation
+    resolving and not one of them the gene asked about.
+
+    Both reference zero parameters, so `_build_params` returns `{}` and the
+    entire naming contract never engages. The invariant asserted here does
+    not depend on spelling, which is what makes it hold against the next
+    variant too: the caller supplied entities, so a query consulting none
+    of them is not answering the caller's question.
+    """
+    result = await _run(
+        monkeypatch,
+        cypher,
+        query_intent="Which diseases are associated with BRCA1?",
+        query_class="lookup",
+        target_entities=[BRCA1_CURIE],
+        row_limit=10,
+    )
+
+    assert result.status == "error", (
+        f"{label} was accepted with status {result.status} and "
+        f"{len(result.rows)} row(s); it consults no caller entity"
+    )
+    assert result.rows == []
+    assert result.error is not None
+    # The error is read by the repair retry, so it must say what to do.
+    assert "literal" in result.error.lower() or "bound entity" in result.error.lower()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("label", "curie"),
+    [
+        ("well-formed but absent", "NCBIGene:99999999"),
+        ("user-supplied suffix", "NCBIGene:672-VALIDATED-BY-FDA"),
+    ],
+)
+async def test_an_aggregate_over_an_absent_entity_refuses_instead_of_citing_zero(
+    monkeypatch: pytest.MonkeyPatch, label: str, curie: str
+) -> None:
+    """C10: a cited "0" for an identifier that is not in the graph.
+
+    `count()` over a match that found nothing returns one row holding 0,
+    so the derived path turned "we found nothing about this entity" into
+    "the answer is zero, here is the source", with `trust_outcome="answer"`.
+    The empty-`target_entities` refusal cannot catch it, because an entity
+    was extracted; it just does not exist.
+
+    Zero is the wrong-answer shape a clinician is least equipped to catch:
+    it is a plausible biomedical result and it arrives with a citation.
+    "Zero associations are recorded" and "this identifier is not in the
+    graph" are different answers and must not be collapsed.
+    """
+    from system_03_search_agent.tools.cypher_query import entity_param_bindings
+
+    param = next(iter(entity_param_bindings([curie])))
+
+    result = await _run(
+        monkeypatch,
+        "MATCH (g:Gene)-[:gene_associated_with_condition]->(d:Disease) "
+        "WHERE g.id = $" + param + " RETURN count(d) AS n",
+        query_intent=f"Which diseases are associated with {curie}?",
+        query_class="aggregate",
+        target_entities=[curie],
+        row_limit=10,
+    )
+
+    assert result.status == "empty", (
+        f"{label} ({curie}) returned status {result.status} with rows "
+        f"{[(r.curie, dict(r.fields)) for r in result.rows]}; an absent "
+        "identifier must refuse, not answer a cited zero"
+    )
+    assert result.rows == []
+
+
+@pytest.mark.asyncio
+async def test_a_true_zero_for_a_real_entity_is_still_answerable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """C10's cost side: the refusal must not swallow a real answer.
+
+    The existence probe fires only when a derived result is entirely
+    empty, and it must confirm presence for a gene that is genuinely in
+    the graph, so a real aggregate still answers with its citation.
+    """
+    from system_03_search_agent.tools.cypher_query import entity_param_bindings
+
+    param = next(iter(entity_param_bindings([BRCA1_CURIE])))
+
+    result = await _run(
+        monkeypatch,
+        "MATCH (g:Gene)-[:gene_associated_with_condition]->(d:Disease) "
+        "WHERE g.id = $" + param + " RETURN count(d) AS n",
+        query_intent="How many diseases are associated with BRCA1?",
+        query_class="aggregate",
+        target_entities=[BRCA1_CURIE],
+        row_limit=10,
+    )
+
+    assert result.status == "ok", f"a real gene refused: {result.status} {result.error}"
+    assert result.rows, "no row for an aggregate over a gene that exists"
