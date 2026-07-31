@@ -639,3 +639,239 @@ async def test_full_loop_refuses_when_the_graph_returns_nothing(
         f"trust_outcome was {outcome!r} for a query that found nothing; "
         "a zero-row result must refuse, not answer"
     )
+
+
+# ---------------------------------------------------------------------------
+# Third-judge findings J-01 through J-04
+#
+# J-01 is the one that matters most: the fix for F-2.1-B05 re-created
+# F-2.1-B01 on the derived path. Binding was corrected to go by name, but
+# the derived value's citation was still attributed by taking the first of
+# the *candidate* entities rather than the one actually bound, so an
+# aggregate over BRCA1 came back cited to TP53. Same class of defect as
+# B01, in a code path B01's regression test does not reach, which is
+# exactly why these run live rather than against a mock.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_aggregate_over_two_entities_cites_the_one_it_counted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """J-01: a derived value is cited to the entity it was computed from.
+
+    Two entities in the query text, TP53 first. The Cypher counts BRCA1's
+    variants. Before the fix the count, BRCA1's real 15310, was emitted
+    with `curie="NCBIGene:7157"` and a citation to TP53's gene page: a
+    true number attached to the wrong record, status ok, gate green.
+
+    The assertion is on the citation, not the number. A wrong number is
+    visible; a right number under a wrong citation is the failure that
+    survives review.
+    """
+    from system_03_search_agent.tools.cypher_query import entity_param_bindings
+
+    tp53 = "NCBIGene:7157"
+    entities = [tp53, BRCA1_CURIE]
+    bindings = entity_param_bindings(entities)
+    brca1_param = next(name for name, value in bindings.items() if value == BRCA1_CURIE)
+
+    result = await _run(
+        monkeypatch,
+        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->"
+        "(g:Gene {id: $" + brca1_param + "}) RETURN count(v)",
+        query_intent=f"Compare {tp53} and BRCA1: how many variants does BRCA1 have?",
+        query_class="aggregate",
+        target_entities=entities,
+        row_limit=10,
+    )
+
+    assert result.status == "ok", f"expected ok, got {result.status}: {result.error}"
+    assert result.rows, "an aggregate over a real gene returned no row"
+
+    derived = [row for row in result.rows if row.node_or_edge_type == "derived"]
+    assert derived, f"no derived row; got types {[r.node_or_edge_type for r in result.rows]}"
+
+    for row in derived:
+        assert row.curie != tp53, (
+            f"the count was computed from BRCA1 but cited to {row.curie!r}, "
+            "which is TP53. B01 is back on the derived path."
+        )
+        if row.source_url is not None:
+            assert "/7157" not in row.source_url, (
+                f"citation {row.source_url!r} points at TP53's record for a "
+                "value computed from BRCA1"
+            )
+
+
+@pytest.mark.asyncio
+async def test_derived_value_survives_an_entity_in_the_same_row(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """J-03: `RETURN g, count(v)` must not discard the count.
+
+    The emit was guarded on `not shaped_rows`, so a row carrying both a
+    vertex and a scalar emitted the vertex and dropped the scalar. The tool
+    then reported `status="ok"` with a valid BRCA1 citation and the number
+    the user asked for silently removed, which is worse than B05's original
+    symptom: B05 refused, this answered with the answer taken out.
+    """
+    from system_03_search_agent.tools.cypher_query import entity_param_bindings
+
+    bindings = entity_param_bindings([BRCA1_CURIE])
+    brca1_param = next(iter(bindings))
+
+    result = await _run(
+        monkeypatch,
+        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->"
+        "(g:Gene {id: $" + brca1_param + "}) RETURN g, count(v)",
+        query_intent="What is BRCA1 and how many variants does it have?",
+        query_class="aggregate",
+        target_entities=[BRCA1_CURIE],
+        row_limit=10,
+    )
+
+    assert result.status == "ok", f"expected ok, got {result.status}: {result.error}"
+
+    kinds = [row.node_or_edge_type for row in result.rows]
+    assert "derived" in kinds, (
+        f"the count was dropped because a vertex shared its row; got {kinds}. "
+        "An answer that returns everything except the number asked for is "
+        "not an answer."
+    )
+
+    counts = [
+        value
+        for row in result.rows
+        if row.node_or_edge_type == "derived"
+        for value in row.fields.values()
+        if isinstance(value, int)
+    ]
+    assert BRCA1_VARIANT_EDGE_COUNT in counts, (
+        f"expected the true count {BRCA1_VARIANT_EDGE_COUNT} among {counts}"
+    )
+
+
+def test_a_curie_followed_by_punctuation_is_extracted_whole() -> None:
+    """J-04: `NCBIGene:672:` is not a CURIE, and must not replace one.
+
+    `:` sat inside the local-id character class, so a CURIE followed by
+    ordinary sentence punctuation matched greedily through it. The bad
+    match did not sit beside the good one, it *was* the extraction, so a
+    valid question resolved to an id that exists nowhere and returned
+    empty. `source_url_for_curie` still built a host-pinned NCBI URL for
+    it, so the citation gate passed a link to a dead page: host-pinning
+    proves where a URL points, never that the record is real.
+    """
+    from system_03_search_agent.core.graph import _extract_target_entities
+
+    entities = _extract_target_entities(
+        "Compare NCBIGene:7157 and NCBIGene:672: how many variants?"
+    )
+
+    assert "NCBIGene:672" in entities, f"BRCA1 was not extracted: {entities}"
+    assert not any(e.endswith(":") for e in entities), (
+        f"a trailing colon survived extraction: {entities}"
+    )
+    # Internal punctuation is legitimate in a local id and must be kept.
+    assert _extract_target_entities("see MedGen:C0031485 today") == ["MedGen:C0031485"]
+
+
+@pytest.mark.asyncio
+async def test_a_model_limit_above_the_row_limit_still_reports_truncation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """J-02: the truncation check must see both directions, not one.
+
+    F-2.1-B04a fixed the case where the model's LIMIT is *below*
+    `row_limit`, and the fix was written to that example rather than to the
+    property. The ordinary case runs the other way: the validator only
+    lowers a LIMIT above MAX_ROW_LIMIT, never down to `row_limit`, so
+    `LIMIT 500` against a `row_limit` of 20 fetched 500 rows, the tool
+    truncated to 20, and `len(rows) >= 500` was False. Twenty rows of five
+    hundred, reported `truncated=False`: a partial answer presented as a
+    complete one, which is the failure mode a truncation flag exists to
+    prevent.
+    """
+    from system_03_search_agent.tools.cypher_query import entity_param_bindings
+
+    bindings = entity_param_bindings([BRCA1_CURIE])
+    brca1_param = next(iter(bindings))
+
+    result = await _run(
+        monkeypatch,
+        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->"
+        "(g:Gene {id: $" + brca1_param + "}) RETURN v LIMIT 500",
+        query_intent="List the variants of BRCA1",
+        query_class="multi_hop",
+        target_entities=[BRCA1_CURIE],
+        row_limit=20,
+    )
+
+    assert result.status == "ok", f"expected ok, got {result.status}: {result.error}"
+    assert result.row_count <= 20, f"row_limit was not honored: {result.row_count}"
+    assert result.truncated, (
+        f"{result.row_count} rows shipped out of a 500-row fetch, reported "
+        "truncated=False. A partial answer presented as complete."
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_return_alias_reaches_the_output_as_the_field_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """J-09: `count(v) AS variant_count` must not arrive as `c0`.
+
+    AGE's as_clause forces positional column names, so an aliased value
+    reached the Write step as `{"c0": 15310}`: right number, no meaning.
+    With one column that is opaque. With two it is dangerous, because
+    `c0` and `c1` are indistinguishable and a synthesis step reporting
+    the disease count as the variant count would look entirely
+    confident.
+    """
+    from system_03_search_agent.tools.cypher_query import entity_param_bindings
+
+    bindings = entity_param_bindings([BRCA1_CURIE])
+    brca1_param = next(iter(bindings))
+
+    result = await _run(
+        monkeypatch,
+        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->"
+        "(g:Gene {id: $" + brca1_param + "}) RETURN count(v) AS variant_count",
+        query_intent="How many variants does BRCA1 have?",
+        query_class="aggregate",
+        target_entities=[BRCA1_CURIE],
+        row_limit=10,
+    )
+
+    assert result.status == "ok", f"expected ok, got {result.status}: {result.error}"
+    keys = [key for row in result.rows for key in row.fields]
+    assert "variant_count" in keys, (
+        f"the alias was dropped; the field arrived as {keys}. A number whose "
+        "name is 'c0' cannot be synthesized into a sentence safely."
+    )
+    assert result.rows[-1].fields["variant_count"] == BRCA1_VARIANT_EDGE_COUNT
+
+
+def test_an_unaliased_or_malformed_column_keeps_its_positional_name() -> None:
+    """J-09's other half: never paraphrase, never sanitize into a lookalike.
+
+    A RETURN alias is model-supplied text that becomes a key in a dict
+    serialized into the synthesis prompt, so it is accepted only as an
+    ordinary short identifier. Anything else keeps `c0`, which is honest
+    about the query not having named that column, rather than being
+    cleaned up into something that resembles a name it never had.
+    """
+    from system_03_search_agent.tools.cypher_query import column_labels_for
+
+    assert column_labels_for("MATCH (g) RETURN count(g) LIMIT 1") == {}
+    # A duplicate alias would collapse two columns onto one key and drop a
+    # value silently, so both stay positional.
+    assert column_labels_for("MATCH (g) RETURN count(a) AS n, count(b) AS n LIMIT 1") == {}
+    # A comma inside a function call is not an item separator.
+    assert column_labels_for("MATCH (g) RETURN coalesce(a, b) AS both LIMIT 1") == {
+        "c0": "both"
+    }
+    # An over-long alias is refused rather than truncated.
+    long_alias = "x" * 65
+    assert column_labels_for(f"MATCH (g) RETURN count(g) AS {long_alias} LIMIT 1") == {}

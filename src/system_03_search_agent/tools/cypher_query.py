@@ -393,6 +393,105 @@ def _return_column_count(cypher: str) -> int:
     return max(1, min(_count_top_level_items(segment), _MAX_RETURN_COLUMNS))
 
 
+# F-2.1-J09: a RETURN alias must survive into the output.
+#
+# AGE's as_clause forces positional column names (`c0`, `c1`, ...), so
+# `RETURN count(v) AS variant_count` reached the Write step as
+# `{"c0": 15310}`. The number was right and its meaning was gone. With a
+# single column that is merely opaque; with two, `RETURN count(v) AS
+# variants, count(d) AS diseases` becomes `c0` and `c1`, and nothing
+# downstream can tell which is which, so a synthesis step has a coin-flip
+# chance of reporting the disease count as the variant count. A confident
+# answer with two numbers transposed is exactly the failure this phase's
+# review keeps finding.
+#
+# An alias is model-supplied text that ends up as a key in the `fields`
+# dict, and that dict is serialized into the synthesis prompt. So the
+# alias is accepted only when it looks like an ordinary Cypher
+# identifier and is short. Anything else falls back to the positional
+# name rather than being sanitized into something resembling itself:
+# a mangled alias is a worse label than an honest `c0`.
+_ALIAS_PATTERN = re.compile(r"(?is)\bAS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$")
+_MAX_ALIAS_CHARS = 64
+
+
+def _split_top_level_items(segment: str) -> list[str]:
+    """Split `segment` on depth-0 commas outside quotes.
+
+    Same scanning discipline as `_count_top_level_items`: `()`, `[]`, and
+    `{}` track depth, a quoted string is skipped whole, and a backslash
+    escapes the next character. A comma inside a property map, a list
+    literal, or a function's argument list is therefore never mistaken
+    for an item separator.
+    """
+    items: list[str] = []
+    start = 0
+    depth = 0
+    quote_char: str | None = None
+    i = 0
+    while i < len(segment):
+        ch = segment[i]
+        if quote_char is not None:
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == quote_char:
+                quote_char = None
+            i += 1
+            continue
+        if ch in ("'", '"'):
+            quote_char = ch
+            i += 1
+            continue
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            items.append(segment[start:i])
+            start = i + 1
+        i += 1
+    items.append(segment[start:])
+    return items
+
+
+def column_labels_for(cypher: str) -> dict[str, str]:
+    """Map AGE positional column names to their RETURN aliases.
+
+    Returns only the columns that carry an explicit, well-formed `AS`
+    alias, keyed by the positional name `_build_as_clause` declares for
+    the same position. A column with no alias is absent from the mapping,
+    and the caller keeps the positional name for it, which is honest
+    about the fact that the query never named that column.
+
+    An expression with no alias is deliberately NOT used as a label.
+    `count(v)` as a dict key would read as a name the query supplied when
+    it is really this function's paraphrase of an expression, and it
+    carries parentheses and quotes into a prompt-bound key for no gain.
+    """
+    segment = _return_items_segment(cypher)
+    if not segment.strip():
+        return {}
+
+    labels: dict[str, str] = {}
+    seen: set[str] = set()
+    for index, item in enumerate(_split_top_level_items(segment)[:_MAX_RETURN_COLUMNS]):
+        match = _ALIAS_PATTERN.search(item.strip())
+        if match is None:
+            continue
+        alias = match.group(1)
+        if len(alias) > _MAX_ALIAS_CHARS:
+            continue
+        # A duplicate alias would collapse two columns onto one key and
+        # silently drop a value. Keep both positional instead.
+        if alias in seen:
+            labels = {k: v for k, v in labels.items() if v != alias}
+            continue
+        seen.add(alias)
+        labels[f"c{index}"] = alias
+    return labels
+
+
 def _build_as_clause(cypher: str) -> str:
     """Derive the AGE `as_clause` output column declaration from `cypher`.
 
@@ -803,6 +902,33 @@ def _error_output(cypher_executed: str | None, error: str) -> CypherQueryOutput:
     )
 
 
+
+def _derived_source_curie(params: dict[str, Any]) -> str | None:
+    """The entity a derived value is attributable to, or None if ambiguous.
+
+    A scalar or projection has no record of its own, so its provenance is
+    the entity the query was computed FROM. That is knowable only when
+    exactly one entity was bound: a count over a single gene is about that
+    gene, and citing it to that gene's record is a claim this system can
+    stand behind.
+
+    With zero or several bound entities there is no answer to "which entity
+    is this number about", and finding F-2.1-J01 is what happens when the
+    code invents one anyway. It previously took the first candidate entity
+    rather than a bound one, so a count of BRCA1's variants returned the
+    correct 15310 cited to TP53, with `status="ok"` and every gate green.
+    That is finding F-2.1-B01, this phase's worst, reproduced on the path
+    added to fix a different finding.
+
+    Returning None here means the derived row carries no `source_url`, and
+    `_run_pipeline`'s cite-or-refuse gate drops it. Losing an uncitable
+    number is the correct outcome; shipping it under someone else's
+    citation is not.
+    """
+    if len(params) != 1:
+        return None
+    return next(iter(params.values()))
+
 async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> CypherQueryOutput:
     start = time.monotonic()
     schema_slice = build_schema_slice(tool_input.query_class.value, tool_input.target_entities)
@@ -928,7 +1054,24 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     # looked "full" against a row_limit of 100 and reported 10 as if it
     # were the whole answer.
     effective_limit = _effective_row_limit(normalized_cypher, tool_input.row_limit)
-    hit_cap = len(rows) >= effective_limit
+
+    # F-2.1-J02: `hit_cap` used to be `len(rows) >= effective_limit` alone,
+    # which only sees the case where the model's LIMIT is at or below
+    # `row_limit`. That is the direction F-2.1-B04a quoted, and the fix was
+    # written to the example rather than to the property.
+    #
+    # The other direction is the ordinary case: the validator only lowers a
+    # LIMIT above MAX_ROW_LIMIT, never down to `row_limit`, so a model
+    # writing `LIMIT 500` against a `row_limit` of 100 fetched 500 rows,
+    # `execute_cypher` truncated to 100, and `len(rows) >= 500` was False.
+    # Result: 500 matched, 100 shipped, reported complete with
+    # `truncated=False`.
+    #
+    # `execute_cypher` already returns the true fetched count as
+    # `returned_total`, bound above and previously discarded on every
+    # non-empty path. Using it closes the direction the row count cannot
+    # see on its own.
+    hit_cap = len(rows) >= effective_limit or returned_total > len(rows)
 
     # Finding F-2.1-B04c's fix: to_output_rows can emit more than one
     # output row per raw graph row, one per RETURN column that decodes to
@@ -970,6 +1113,7 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
         truncated = False
 
     snapshot_version = _graph_snapshot_version()
+    column_labels = column_labels_for(normalized_cypher)
     mapped_rows: list[CypherQueryRow] = []
     for raw_row in rows:
         for shaped_row in to_output_rows(
@@ -978,7 +1122,25 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             # F-2.1-B05: a derived value (a count, a projection) has no
             # record of its own, so it is cited to the entity the query
             # was computed from. This is the only place that knows it.
-            derived_source_curie=next(iter(entity_bindings.values()), None),
+            #
+            # F-2.1-J01, and this line is why the finding exists: it used
+            # to read `next(iter(entity_bindings.values()), None)`, which
+            # is the FIRST CANDIDATE entity, not the one the query bound.
+            # `entity_bindings` holds every entity extracted from the query
+            # text; `params` holds only those the generated Cypher actually
+            # referenced. Citing from the former reproduced F-2.1-B01, this
+            # phase's worst finding, on a new path: a count of BRCA1's
+            # variants came back correct at 15310 and cited to TP53, with
+            # status ok and every gate green.
+            #
+            # `_derived_source_curie` takes `params`, and refuses to guess
+            # when more than one entity was bound, because "which entity is
+            # this number about" has no answer then and inventing one is
+            # exactly what B01 was.
+            derived_source_curie=_derived_source_curie(params),
+            # F-2.1-J09: carry the RETURN aliases so a derived value
+            # reaches the Write step named, not as a positional `c0`.
+            column_labels=column_labels,
         ):
             if not shaped_row.get("source_url"):
                 # Finding F-2.1-A1's cite-or-refuse corollary: an entity

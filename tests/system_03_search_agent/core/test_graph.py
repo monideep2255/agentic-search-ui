@@ -471,7 +471,10 @@ async def test_done_event_trust_outcome_is_answer_with_a_real_citation_when_the_
         return ([{"c0": "placeholder-raw-agtype-text"}], 1)
 
     def _fake_to_output_rows(
-        raw_row: dict, snapshot_version: str, derived_source_curie: str | None = None
+        raw_row: dict,
+        snapshot_version: str,
+        derived_source_curie: str | None = None,
+        **_kwargs: object,
     ) -> list[dict]:
         return [
             {

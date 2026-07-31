@@ -586,8 +586,23 @@ _TARGET_ENTITIES_MAX_ITEMS = 10
 # from the same nine prefixes the live graph actually uses
 # (graph_schema_constants.CURIE_PREFIXES), so this can never invent a
 # prefix the graph would reject.
+# F-2.1-J04: `:` used to be inside the local-id character class, so a CURIE
+# followed by ordinary sentence punctuation swallowed it. "NCBIGene:672: how
+# many variants?" extracted `NCBIGene:672:`, which is not a CURIE that exists
+# anywhere, and the greedy match REPLACED the correct one rather than sitting
+# beside it, so a perfectly valid question silently queried nothing. Worse,
+# `source_url_for_curie` still built a host-pinned URL for it
+# (.../gene/672%3A), which passes the citation gate and resolves to a dead
+# page: the pattern that guarantees a citation is NCBI-hosted cannot tell
+# whether the record exists.
+#
+# A trailing `.` or `-` is excluded for the same reason. A CURIE's local id
+# may contain them internally, so they stay in the class, but the match no
+# longer ends on one.
 _CURIE_IN_TEXT_PATTERN = re.compile(
-    r"\b(?:" + "|".join(re.escape(prefix) for prefix in CURIE_PREFIXES) + r"):[A-Za-z0-9_.:-]+"
+    r"\b(?:"
+    + "|".join(re.escape(prefix) for prefix in CURIE_PREFIXES)
+    + r"):[A-Za-z0-9_](?:[A-Za-z0-9_.:-]*[A-Za-z0-9_])?"
 )
 
 # A narrow, explicitly verified seed table mapping an ALL-CAPS gene

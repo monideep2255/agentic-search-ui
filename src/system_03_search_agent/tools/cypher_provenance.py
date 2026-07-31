@@ -401,6 +401,7 @@ def _shape_derived_value(
     derived: dict[str, Any],
     snapshot_version: str,
     source_curie: str | None,
+    column_labels: dict[str, str] | None = None,
 ) -> dict:
     """Shape a scalar or projection result into one citable output row.
 
@@ -422,10 +423,17 @@ def _shape_derived_value(
     it, which is the correct outcome: an uncitable computed number is
     exactly the fluent-but-ungrounded output this system must not emit.
     """
+    # F-2.1-J09: key each value by its RETURN alias where the query gave
+    # one, so `count(v) AS variant_count` reaches the Write step as
+    # `variant_count` rather than the positional `c0`. A column with no
+    # alias keeps its positional name; see `cypher_query.column_labels_for`
+    # for why an unaliased expression is not paraphrased into a label.
+    labels = column_labels or {}
+    fields = {labels.get(column, column): value for column, value in derived.items()}
     return {
         "node_or_edge_type": "derived",
         "curie": source_curie or "",
-        "fields": dict(derived),
+        "fields": fields,
         "source_url": source_url_for_curie(source_curie) if source_curie else None,
         "graph_snapshot_version": snapshot_version,
     }
@@ -434,6 +442,7 @@ def to_output_rows(
     raw_row: dict[str, Any],
     snapshot_version: str,
     derived_source_curie: str | None = None,
+    column_labels: dict[str, str] | None = None,
 ) -> list[dict]:
     """Shape one raw AGE result row into zero or more output row shapes.
 
@@ -513,9 +522,22 @@ def to_output_rows(
         _shape_entity(entity, snapshot_version, endpoint_curies) for entity in all_entities
     ]
 
-    if derived and not shaped_rows:
+    if derived:
+        # F-2.1-J03: this used to read `if derived and not shaped_rows`, so a
+        # row mixing an entity and a scalar, `RETURN g, count(v)`, emitted the
+        # gene and silently discarded the count. The result reported
+        # `status="ok"` with a valid citation while the number the user
+        # actually asked for was gone, which is worse than F-2.1-B05's
+        # original symptom: that refused, this answers with the answer
+        # removed.
+        #
+        # A derived value is emitted whether or not entities share the row.
+        # It still carries a citation only when one can be stood behind, and
+        # `cypher_query`'s cite-or-refuse gate still drops it otherwise.
         shaped_rows.append(
-            _shape_derived_value(derived, snapshot_version, derived_source_curie)
+            _shape_derived_value(
+                derived, snapshot_version, derived_source_curie, column_labels
+            )
         )
 
     return shaped_rows
