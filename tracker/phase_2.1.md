@@ -711,3 +711,187 @@ Deliverables checklist, from Section 25:
 - [ ] Edge-label enforcement
 - [ ] F-2.0-08 and F-2.0-14 closed
 - [ ] A real query reaching the live graph end to end
+
+## Adversary findings, second pass (2026-07-31)
+
+Full report with every reproduction, exact inputs, and the attacks that FAILED: `tracker/phase_2.1_adversary_report.md`, committed alongside this file. The entries below are the ledger; that file is the evidence, and several findings carry a runnable reproduction there.
+
+This pass had model credentials for the first time, so it ran real Cypher generation end to end. That is what surfaced B01, B02 and B05: none is reachable with generation mocked, which is how every other test in this phase runs.
+
+### F-2.1-B01: A fully cited, confident answer about the wrong gene
+
+Status: closed
+Raised by: adversary
+Severity: critical
+Ticket: fixed in commit `b400f78`
+
+`"Compare NCBIGene:7157 and BRCA1: which diseases is BRCA1 linked to?"` extracted TP53 first, and binding was a positional zip, so the query about BRCA1 ran against TP53. Returned 12 real TP53 disease rows, correctly cited, `status="ok"`, `trust_outcome="answer"`. Every gate green. Ground truth for BRCA1 is 4 rows with entirely different CURIEs.
+
+Why it stayed dormant: this is F-2.1-05, filed by its own builder as a documented scope limitation rather than a defect, because while every row came back empty there was nothing to bind wrongly. Fixing agtype parsing activated it. A latent defect switched on by a fix elsewhere, where both were individually known and neither was individually wrong.
+
+Fix: a naming contract. `entity_param_bindings` assigns each entity a deterministic name from its CURIE, the generation prompt states which name holds which value, `_build_params` binds by name, and `_unknown_param_names` rejects an invented name before execution. Two regression tests assert the properties rather than the fixture names.
+
+History:
+- 2026-07-31 adversary: filed, reproduced live with a real model
+- 2026-07-31 lead: independently reproduced, fixed and closed in `b400f78`
+
+### F-2.1-B02: With a real model, 8 of 10 queries time out
+
+Status: confirmed
+Raised by: adversary
+Severity: critical
+Ticket: none yet
+
+Generation alone takes 5.8 to 83.9 seconds against a 30 second total tool budget. Eight of ten real-model queries never complete.
+
+The phase's 9-test end-to-end gate mocks generation, which is exactly the part that is broken, so the gate cannot see this.
+
+Second-order and worse: a timed-out call reports `cost_usd=0.000000` while actually costing 0.005 to 0.010 US dollars, so all three cost caps read zero for the most expensive query class and spend accumulates invisibly.
+
+Compounds with F-2.1-06. Generation is an await point and can be cancelled; the graph call is not. The tool has no enforceable bound in either phase.
+
+History:
+- 2026-07-31 adversary: filed with per-query timings
+
+### F-2.1-B03: AttributeError escapes a function documented "Never raises"
+
+Status: confirmed
+Raised by: adversary
+Severity: high
+Ticket: none yet
+
+`cypher_query` raises `AttributeError` when the model returns `content=None`. Observed live, not inferred. `act_node` catches only `HarnessCallError`, so it escapes `run()`.
+
+History:
+- 2026-07-31 adversary: filed, observed live
+
+### F-2.1-B04: total_available is fabricated in three distinct shapes
+
+Status: confirmed
+Raised by: adversary
+Severity: high
+Ticket: none yet
+
+- B04a: a model-supplied `LIMIT 10` reported as the true total for a 15,310-row answer, with `truncated=False`.
+- B04b: `RETURN DISTINCT` inflates the total by three orders of magnitude.
+- B04c: `row_count` exceeds `total_available` on any multi-column RETURN.
+
+A wrong count presented as authoritative is the same class of harm as B01: fluent, precise, wrong. "How many variants does this gene have" is a question a researcher will actually ask.
+
+History:
+- 2026-07-31 adversary: filed with three reproductions
+
+### F-2.1-B05: The system refuses correct answers
+
+Status: confirmed
+Raised by: adversary
+Severity: high
+Ticket: none yet
+
+Every aggregate, projection, and `collect()` query returns `status="empty"` and refuses. That is 5 of the 6 query shapes the real model actually produced.
+
+A refusal on a query that genuinely succeeded is a correctness defect, not the safe direction. It also means the cite-or-refuse gate's pass rate is not evidence of anything while this holds.
+
+History:
+- 2026-07-31 adversary: filed
+
+### F-2.1-B06: F-2.1-A10 is live, citations point at a different record
+
+Status: confirmed
+Raised by: adversary
+Severity: high
+Ticket: none yet
+
+Edges carry no `id` property, so an edge row yields no CURIE, ships `source_id="unknown"`, and still carries a `source_url` derived from something else. The citation resolves to a genuine NCBI record that is not the record the row came from.
+
+Filed in the first adversary pass as F-2.1-A10 and dormant only because every row was empty. Confirmed live now that agtype parsing works.
+
+A citation that looks right and points at the wrong record is worse than no citation, because it survives inspection.
+
+History:
+- 2026-07-31 adversary: confirmed live, previously filed as A10
+
+### F-2.1-B07: Vocabulary artifacts shipped as asserted primary evidence
+
+Status: confirmed
+Raised by: adversary
+Severity: high
+Ticket: none yet
+
+The graph's `Disease` and `OntologyClass` `name` values are frequently parse artifacts, literally the strings "MeSH", "MONDO", "SNOMEDCT_US". The system ships them with `evidence_kind="primary_assertion"` and `assertion_confidence="asserted"`.
+
+The data problem is Layer 1's and this repo does not own it. The provenance claim attached to it is ours. Asserting confidence in a value that is a vocabulary name rather than a disease name is a trust-signal defect wherever the data came from.
+
+History:
+- 2026-07-31 adversary: filed
+
+### F-2.1-B08: The 5th validator bypass, six comparison forms carry literals
+
+Status: confirmed
+Raised by: adversary
+Severity: medium-high
+Ticket: none yet
+
+The literal-interpolation gate checks only `=` or `:` followed by a quote. `STARTS WITH`, `CONTAINS`, `ENDS WITH`, `=~`, `IN [...]`, `<>` and bare numerics all carry a literal value into the Cypher text unchecked.
+
+Four bypasses were fixed in the rework. This is the fifth, in the same function, found by the same method.
+
+History:
+- 2026-07-31 adversary: filed
+
+### F-2.1-B09: LIMIT normalization produces invalid Cypher for two shapes
+
+Status: confirmed
+Raised by: adversary
+Severity: medium
+Ticket: none yet
+
+Two query shapes come out of `_normalize_limit` syntactically invalid, so a query the validator accepted fails at execution. Both shapes are in the report.
+
+History:
+- 2026-07-31 adversary: filed
+
+### F-2.1-B10: Only BRCA1 resolves, and the rest error rather than refuse
+
+Status: confirmed
+Raised by: adversary
+Severity: medium
+Ticket: none yet
+
+Reaches the judge's F-2.1-07 independently, with one addition that matters: an unresolvable gene symbol produces `status="error"` on an unbound parameter, not a clean refusal. The user is told the graph failed, when the truth is the system never recognised the entity.
+
+"I could not identify that gene" and "the graph query failed" are different messages, and only one is true.
+
+History:
+- 2026-07-31 adversary: filed, overlaps F-2.1-07 on cause, differs on surfaced behaviour
+
+### F-2.1-B11: A timed-out or capped tool error is reported as a graph failure
+
+Status: confirmed
+Raised by: adversary
+Severity: low-medium
+Ticket: none yet
+
+When the tool times out or trips a cost cap, the error text blames the graph, which was often never reached. This is what made B02 hard to diagnose: the symptom pointed at Layer 1 while the cause was generation latency.
+
+`production-standards`'s retry-safety gate requires an error to say what to do next. "Graph query failed" tells the next step to retry the graph, which is the wrong action.
+
+History:
+- 2026-07-31 adversary: filed
+
+### Attacks that failed, and one worth repeating
+
+The report lists eight. One matters beyond this phase: a `DETACH DELETE` injection **succeeded at the model layer**, meaning the real Plan model emitted it, and was stopped only by the deterministic validator.
+
+That is defence in depth proving itself. A prompt-level instruction not to emit write clauses would have failed. Keep the validator's write-clause check as a hard gate regardless of how well-behaved a future model appears.
+
+Also held: host-pinned citations against five spoof forms, `$$` dollar-quote breakout, `as_clause` injection, and the read-only credential.
+
+### Still unexamined
+
+Named so the gap is visible rather than implied. Nobody has tested:
+
+- The 50 KB `Finding` ceiling, and whether the `truncated` flag can be made to lie.
+- Whether untrusted PubMed free text on `Article.name` reaches a model prompt or the rendered UI unmediated. `act_node` hardcodes `contains_untrusted_free_text=False` for every `cypher_query` result, and 40M Article nodes carry arbitrary prose.
+
+Both belong to whoever picks up build phase 2.2, which is the phase that wires findings into a model prompt and makes the second one live.
