@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from types import SimpleNamespace
 from typing import Any
 
@@ -594,3 +595,81 @@ async def test_cap_breach_mid_retry_blocks_the_second_generate_call(
     # attempt, itself rejected by the validator); the retry never reached
     # generate_cypher because the cap check blocked it first.
     assert len(harness.calls) == 1
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-06: the graph call must not block the event loop
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_slow_graph_call_does_not_starve_the_event_loop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`execute_cypher` is synchronous and must run off-thread.
+
+    Finding F-2.1-06. Awaiting a synchronous call directly blocks the whole
+    event loop, so `asyncio.wait_for` cannot cancel it: measured, a 0.5
+    second wait_for around a 4 second call returned normally after 4.01
+    seconds with the loop ticking once where a healthy loop ticks about 40
+    times. Both this tool's own 30 second bound and Act's `enforce_timeout`
+    were dead code for the duration of every graph query, and one query
+    froze every concurrent SSE stream.
+
+    This asserts the two properties that fix has to deliver: another task
+    keeps running while the graph call is in flight, and a `wait_for` above
+    it can actually interrupt it.
+    """
+    started = asyncio.Event()
+
+    def slow_execute(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
+        time.sleep(1.0)
+        return ([], 0)
+
+    monkeypatch.setattr(cypher_query_module, "execute_cypher", slow_execute)
+
+    ticks = 0
+
+    async def ticker() -> None:
+        nonlocal ticks
+        while not started.is_set():
+            await asyncio.sleep(0.05)
+            ticks += 1
+
+    ticker_task = asyncio.create_task(ticker())
+
+    harness = _FakeHarness(responses=["MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g"])
+    await cypher_query(harness, _gene_lookup_input())
+
+    started.set()
+    await ticker_task
+
+    assert ticks >= 3, (
+        f"the event loop ticked only {ticks} times during a 1 second graph "
+        "call; it is being starved, so the graph call is still blocking"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_timeout_above_the_graph_call_can_actually_cancel_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A budget above a blocking call is only real if it can interrupt it."""
+
+    def slow_execute(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
+        time.sleep(3.0)
+        return ([], 0)
+
+    monkeypatch.setattr(cypher_query_module, "execute_cypher", slow_execute)
+
+    harness = _FakeHarness(responses=["MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g"])
+
+    start = time.monotonic()
+    with pytest.raises((TimeoutError, asyncio.TimeoutError)):
+        await asyncio.wait_for(cypher_query(harness, _gene_lookup_input()), timeout=0.5)
+    elapsed = time.monotonic() - start
+
+    assert elapsed < 1.5, (
+        f"wait_for(0.5) returned after {elapsed:.2f}s against a 3s call; the "
+        "timeout is not able to interrupt the graph call"
+    )

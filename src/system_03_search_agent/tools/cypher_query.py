@@ -359,7 +359,7 @@ def _build_count_cypher(cypher: str) -> str | None:
 _COUNT_AS_CLAUSE = "(total_count agtype)"
 
 
-def _fetch_true_total(
+async def _fetch_true_total(
     cypher: str, params: dict[str, Any], timeout_s: float
 ) -> int | None:
     """Fetch the true total match count for `cypher`'s pattern, uncapped.
@@ -382,7 +382,8 @@ def _fetch_true_total(
     if count_cypher is None:
         return None
     try:
-        count_rows, _ = execute_cypher(
+        count_rows, _ = await asyncio.to_thread(
+            execute_cypher,
             count_cypher,
             params=params,
             row_limit=1,
@@ -682,7 +683,16 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     as_clause = _build_as_clause(normalized_cypher)
 
     try:
-        rows, returned_total = execute_cypher(
+        # F-2.1-06: `execute_cypher` is synchronous, so awaiting it directly
+        # would block the event loop for the whole query. `asyncio.wait_for`
+        # cannot cancel a blocking call, which made both this tool's own 30
+        # second bound and Act's `enforce_timeout` dead code: a 0.5 second
+        # wait_for around a 4 second call was measured returning after 4.01
+        # seconds, with the loop ticking once. Off-thread, the await point is
+        # real, so the bound above it can actually fire and one graph query
+        # no longer freezes every concurrent SSE stream.
+        rows, returned_total = await asyncio.to_thread(
+            execute_cypher,
             normalized_cypher,
             params=params,
             row_limit=tool_input.row_limit,
@@ -713,7 +723,7 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     # the wrong answer this fix exists to prevent, so a count-query
     # failure reports total_available as unknown (None), never a number.
     if len(rows) >= tool_input.row_limit:
-        true_total = _fetch_true_total(normalized_cypher, params, remaining_budget)
+        true_total = await _fetch_true_total(normalized_cypher, params, remaining_budget)
         if true_total is None:
             total_available = None
             truncated = True
