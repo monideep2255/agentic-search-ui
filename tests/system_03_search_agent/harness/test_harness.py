@@ -33,7 +33,9 @@ from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
     budget_for_query_class,
+    budget_for_step,
 )
+from system_03_search_agent.harness.harness import UnknownStepError
 from system_03_search_agent.harness.tiers import UnknownTierError
 
 _INPUT_PRICE = 3e-06
@@ -464,14 +466,75 @@ async def test_enforce_timeout_call_tier_failure_inside_step_keeps_its_own_sourc
     assert exc_info.value.source == "harness.call_tier"
 
 
+# --- budget_for_step(): per-step, per-tier timeouts ---
+#
+# The property that matters is not the specific numbers, which are
+# provisional and model-dependent, but the SHAPE: a model-calling step is
+# bounded by its own tier and does not inherit a looser budget just because
+# the query is a harder class, while `act` does scale with query class
+# because its work genuinely does.
+
+
+@pytest.mark.parametrize("query_class", ["lookup", "single_hop", "multi_hop", "exploratory"])
+def test_a_guard_step_budget_does_not_change_with_query_class(query_class) -> None:
+    """A guard classification is the same size of call whatever the query.
+
+    This is the regression guard on the original defect: Section 19.1's
+    per-query-class budget was applied to every step, so an exploratory
+    query handed a guard classification a 120 second timeout, and a lookup
+    handed the synth write 5 seconds. Neither is what a per-step timeout is
+    for.
+    """
+    assert budget_for_step("guardrail", query_class) == budget_for_step("guardrail", "lookup")
+    assert budget_for_step("think", query_class) == budget_for_step("think", "lookup")
+
+
+def test_act_budget_does_scale_with_query_class() -> None:
+    """`act` is the one step whose work really does scale with the question."""
+    assert budget_for_step("act", "exploratory") > budget_for_step("act", "lookup")
+    assert budget_for_step("act", "lookup") == budget_for_query_class("lookup")
+
+
+def test_the_reasoning_tiers_get_more_than_a_guard_step_on_a_lookup() -> None:
+    """Measured latency ordering: guard is fast, plan and synth are not.
+
+    Guard measured 719 to 4615 ms; synth measured 17527 to 21572 ms. A
+    single lookup-class figure cannot bound both, which is why the budget
+    resolves per tier.
+    """
+    guard = budget_for_step("guardrail", "lookup")
+    assert budget_for_step("plan", "lookup") > guard
+    assert budget_for_step("write", "lookup") > guard
+
+
+def test_write_on_a_lookup_clears_the_measured_synth_worst_case() -> None:
+    """21572 ms was the slowest write-shaped synth call measured."""
+    assert budget_for_step("write", "lookup") > 21.572
+
+
+def test_unknown_step_raises_rather_than_resolving_a_wrong_timeout() -> None:
+    """A typo must surface, not silently resolve to some other step's budget."""
+    with pytest.raises(UnknownStepError):
+        budget_for_step("guardrial", "lookup")
+
+
 # --- budget_for_query_class(): the five ThinkPayload query classes resolve ---
 
 
+# `lookup` and `single_hop` were widened from 5.0 and 10.0 on 2026-07-29,
+# with product-owner approval, after the first end-to-end run through a
+# browser showed 5.0 seconds was not survivable: five warm guard calls on
+# the configured model measured 719, 1380, 1433, 783, and 4615 ms, plus
+# roughly 6000 ms cold, so the spread reached the old budget and queries
+# died at the guardrail. The expected values here are updated to match the
+# approved change, not loosened to make a failure go away; the three larger
+# classes are deliberately unchanged, since nothing measured suggests they
+# are tight. See `_QUERY_CLASS_BUDGET_S`'s own comment for the full record.
 @pytest.mark.parametrize(
     ("query_class", "expected_budget_s"),
     [
-        ("lookup", 5.0),
-        ("single_hop", 10.0),
+        ("lookup", 15.0),
+        ("single_hop", 20.0),
         ("aggregate", 30.0),
         ("multi_hop", 30.0),
         ("exploratory", 120.0),

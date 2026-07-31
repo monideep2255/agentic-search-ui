@@ -23,7 +23,7 @@ Depends on:
       integration point exists even though `plan`'s stub `tool_calls` is
       always empty this phase.
     - system_03_search_agent.harness.harness (Harness, HarnessCallError,
-      QueryClass, budget_for_query_class)
+      QueryClass, budget_for_step)
     - system_03_search_agent.harness.cache (build_stable_prefix): called
       once at import time (`_STABLE_PREFIX`, module-level below) and
       passed as every model call's `cache_prefix`, closing the gap the
@@ -199,7 +199,7 @@ from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
     QueryClass,
-    budget_for_query_class,
+    budget_for_step,
 )
 from system_03_search_agent.tools.cypher_query import cypher_query
 from system_03_search_agent.tools.cypher_schemas import CypherQueryInput, CypherQueryOutput
@@ -335,6 +335,48 @@ def _elapsed_ms(state: GraphState) -> int:
 # ---------------------------------------------------------------------------
 
 
+# The instruction the two stub Guard-tier steps send alongside the query.
+#
+# Both `guardrail_node` and `think_node` make a real model call whose
+# response they then discard: the guardrail emits a hardcoded
+# `passed=True` and think a hardcoded `query_class="lookup"`, because the
+# real classification logic is build phase 3.0's and a later phase's work
+# respectively. The call exists to prove the harness path end to end, not
+# to produce an answer.
+#
+# Until this constant existed the call sent only `query.text` with no
+# instruction at all, so the model did the obvious thing with a bare
+# question and wrote a full essay, running to the 1000-token ceiling on
+# every query. Measured: `out=1000` exactly, roughly 10 to 15 seconds per
+# call, which then blew the step budget and killed the query at the
+# guardrail. Section 3.1 specifies this tier as "sub-second, fractions of
+# a cent", so an essay per step was wrong on latency, on cost, and on the
+# tier's stated purpose.
+#
+# This is deliberately NOT guardrail logic. It does not classify, detect
+# injection, or influence the emitted payload, all of which remain phase
+# 3.0's job per `.claude/rules/v1-scope-boundary.md`. It only stops a
+# throwaway call from generating a thousand tokens nobody reads.
+_STUB_TIER_PROBE_SYSTEM = (
+    "Reply with exactly one word: ok. Do not explain, do not answer the "
+    "user's question, do not add punctuation."
+)
+
+
+# Step timeouts now come from `harness.budget_for_step`, which resolves a
+# model-calling step against its own tier and `act` against the query
+# class. See that function for the measurements and the provisional-value
+# caveat.
+
+
+def _stub_probe_messages(query_text: str) -> list[dict[str, str]]:
+    """Messages for a stub Guard-tier call whose response is discarded."""
+    return [
+        {"role": "system", "content": _STUB_TIER_PROBE_SYSTEM},
+        {"role": "user", "content": query_text},
+    ]
+
+
 async def guardrail_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
@@ -377,8 +419,8 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
             trace_id,
             "guard",
             "guardrail",
-            [{"role": "user", "content": query.text}],
-            budget_s=budget_for_query_class("lookup"),
+            _stub_probe_messages(query.text),
+            budget_s=budget_for_step("guardrail", "lookup"),
         )
     except cost_control.QueryCapExceededError:
         return {"cap_exceeded": True}
@@ -447,8 +489,8 @@ async def think_node(state: GraphState) -> dict[str, Any]:
             trace_id,
             "guard",
             "think",
-            [{"role": "user", "content": query.text}],
-            budget_s=budget_for_query_class("lookup"),
+            _stub_probe_messages(query.text),
+            budget_s=budget_for_step("think", "lookup"),
         )
     except cost_control.QueryCapExceededError:
         return {"cap_exceeded": True}
@@ -641,7 +683,7 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             "plan",
             "plan",
             [{"role": "user", "content": query.text}],
-            budget_s=budget_for_query_class(query_class),
+            budget_s=budget_for_step("plan", query_class),
         )
     except cost_control.QueryCapExceededError:
         return {"cap_exceeded": True}
@@ -738,7 +780,7 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             # own floor, but let a query_class that already budgets more
             # (multi_hop, aggregate, exploratory) keep that larger
             # number.
-            act_timeout_s = max(budget_for_query_class(query_class), CYPHER_QUERY_TIMEOUT_SECONDS)
+            act_timeout_s = max(budget_for_step("act", query_class), CYPHER_QUERY_TIMEOUT_SECONDS)
             output: CypherQueryOutput = await harness.enforce_timeout(
                 "act",
                 cypher_query(harness, planned.cypher_input),
@@ -975,7 +1017,7 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             "synth",
             "write",
             [{"role": "user", "content": query.text}],
-            budget_s=budget_for_query_class(query_class),
+            budget_s=budget_for_step("write", query_class),
         )
     except cost_control.QueryCapExceededError:
         # A cap hit discovered only here, at Write's own call, not routed
