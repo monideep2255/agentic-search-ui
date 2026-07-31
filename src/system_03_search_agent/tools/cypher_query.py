@@ -1404,6 +1404,30 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             # is not evidence of absence, so the result stands rather than
             # being refused on a failed probe.
 
+    if not mapped_rows:
+        # F-2.1-C07: the tool used to state, in one object, both that it
+        # found nothing and that 15,310 matching rows existed and the
+        # result was truncated. That happens when rows are fetched and
+        # parsed and then dropped by the cite-or-refuse gate, so
+        # `mapped_rows` empties while the count query's total stands.
+        #
+        # Dropping uncitable rows is correct and stays. Reporting a total
+        # that contradicts the status is not: `write_node` reads `status`
+        # alone, so the user already gets a flat refusal, and the
+        # contradictory numbers only mislead a machine reader downstream.
+        # The numbers now agree with the status.
+        #
+        # What this deliberately does NOT do is tell the user the more
+        # useful thing, that the graph matched plenty and none of it could
+        # be cited. That is a third outcome distinct from both "nothing
+        # matched" and "here are results", and saying it needs a fourth
+        # `status` value. Adding one is additive and therefore allowed
+        # within v1, but `system-design-patterns` rule 10 makes it a
+        # coordinated contract change rather than a local edit, so it is
+        # filed for build phase 2.2 rather than slipped in here.
+        total_available = 0
+        truncated = False
+
     return CypherQueryOutput(
         status="ok" if mapped_rows else "empty",
         rows=mapped_rows,

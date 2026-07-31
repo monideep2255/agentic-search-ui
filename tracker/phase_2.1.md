@@ -966,7 +966,7 @@ The adversary's own one-line summary is the right one: the parameter naming cont
 | F-2.1-J02 | med-high | The truncation check saw only one direction, so a model LIMIT above row_limit reported `truncated=False` | fixed |
 | F-2.1-J04 | med-high | The CURIE pattern swallowed a trailing colon, so `NCBIGene:672:` replaced the valid CURIE and resolved nothing | fixed |
 | F-2.1-C06 | med-high | Duplicate citations halved the 20-citation budget | fixed |
-| F-2.1-C07 | med-high | `status="empty"` emitted alongside `total_available=15310, truncated=True` | open |
+| F-2.1-C07 | med-high | `status="empty"` emitted alongside `total_available=15310, truncated=True` | contradiction fixed, the third outcome needs a contract change in 2.2 |
 | F-2.1-C13 | med-high | Raw PubMed titles reached citations with the untrusted-content gate hardcoded off | fixed, with a stated cost |
 | F-2.1-J09 | medium | A RETURN alias was lost, so `count(v) AS variant_count` reached the Write step as `c0` | fixed |
 | F-2.1-C14 | medium | `row_count` and `total_available` counted emitted rows, not records: 8 reported for 4 diseases | fixed |
@@ -1001,6 +1001,28 @@ Related host risk, recorded not fixed: the graph host's root filesystem is at 92
 
 History:
 - 2026-07-31 lead: reproduced unintentionally while verifying the F-2.1-C11 fix, diagnosed from the host's logs, mitigated at the session level, filed. Database restarted with the product owner's explicit approval
+
+---
+
+### F-2.1-C07 follow-up: the third outcome has no way to be said
+
+Status: the contradiction is fixed, the missing distinction is open
+Severity: medium-high
+Ticket: none yet, belongs to build phase 2.2, and it is a contract item rather than a local fix
+
+The adversary's own reproduction no longer fires: an edge queried alone now recovers its own `source_url`, courtesy of the F-2.1-C05 fix, so that query returns three cited rows and `status="ok"`. The general contradiction it exposed was real and is fixed separately: when rows are fetched, parsed, and then dropped by the cite-or-refuse gate, the totals no longer contradict `status="empty"`.
+
+What is still missing is the useful half. There are three outcomes and only two ways to say them:
+
+- nothing in the graph matched
+- matches were found and here they are
+- matches were found and not one of them could be cited
+
+The third currently reaches the user as the first, an undifferentiated refusal, which hides a signal an operator would want: a query that matches plenty and cites nothing is evidence of a provenance defect, not of an empty graph. Saying it needs a fourth `status` value. That is additive and allowed within v1, and `system-design-patterns` rule 10 makes it a coordinated contract change rather than a local edit, which is why it was not slipped in alongside the coherence fix.
+
+History:
+- 2026-07-31 adversary: filed as F-2.1-C07 with a live reproduction
+- 2026-07-31 lead: reproduction retested and no longer fires after the C05 fix; the underlying contradiction fixed; the missing third outcome carried forward as a contract item
 
 ---
 
