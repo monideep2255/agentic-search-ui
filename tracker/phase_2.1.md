@@ -930,11 +930,92 @@ History:
 
 ---
 
-### Still unexamined
+### Previously unexamined, now examined
 
-Named so the gap is visible rather than implied. Nobody has tested:
+Both items named here were tested by the third adversary pass on 2026-07-31, and both were real:
 
-- The 50 KB `Finding` ceiling, and whether the `truncated` flag can be made to lie.
-- Whether untrusted PubMed free text on `Article.name` reaches a model prompt or the rendered UI unmediated. `act_node` hardcodes `contains_untrusted_free_text=False` for every `cypher_query` result, and 40M Article nodes carry arbitrary prose.
+- Whether the `truncated` flag can be made to lie. It can, and it did, on the ordinary path. Filed as F-2.1-C12, fixed.
+- Whether untrusted PubMed free text reaches a model prompt unmediated. It does, with the gate hardcoded off. Filed as F-2.1-C13, fixed within the reachable scope.
 
-Both belong to whoever picks up build phase 2.2, which is the phase that wires findings into a model prompt and makes the second one live.
+Naming the gap is what got it closed. Keeping this section is worth more than the two items in it.
+
+---
+
+## Third judge and adversary pass, 2026-07-31
+
+The rework that closed F-2.1-B01 to B12 had never been independently reviewed. This pass reviewed it. The judge returned PREMISE: FAIL with 10 findings; the adversary filed 14. Two more were found by the lead while verifying the fixes.
+
+The adversary's own one-line summary is the right one: the parameter naming contract that closed F-2.1-B01 is genuinely sound, and the wrong-entity answer came back anyway through two doors the contract does not cover, the derived-value provenance line and a bypass that removes parameters from the query entirely.
+
+### Findings and status at 2026-07-31
+
+| ID | Sev | What | Status |
+|----|-----|------|--------|
+| F-2.1-J01 / C01 | critical | The F-2.1-B05 fix re-created F-2.1-B01 on the derived path: a count of BRCA1's variants, correct at 15310, cited to TP53 | fixed |
+| F-2.1-C02 | critical | A projection over disease IDs emitted four citations to the gene page while the real MedGen CURIEs sat unused in the rows | fixed |
+| F-2.1-C08 | critical | Two live bypasses of the naming contract, binding a literal to an alias so the query references no parameter at all. One returned TP53 for a BRCA1 question, one returned 100 non-human orthologs | fixed |
+| F-2.1-C09 | critical | A user-supplied string became a host-pinned NCBI citation URL, verified 404. Cite-or-refuse satisfied by a dead link | fixed |
+| F-2.1-C11 | critical | F-2.1-B02 was not fixed. Widening the budget 30s to 90s changed nothing: 9 of 10 real queries still timed out, at up to $0.022 each | fixed |
+| F-2.1-C15 | critical | A generated query took the graph server down for every user: kernel OOM kill, abnormal shutdown | mitigated, generation side open |
+| F-2.1-J03 / C03 | high | A derived value was discarded whenever an entity shared its row, so `RETURN g, count(v)` answered with the count removed | fixed |
+| F-2.1-C04 | high | The same edge got a different citation depending only on which endpoint the model returned | fixed |
+| F-2.1-C05 | high | The F-2.1-B06 fix discarded a correct, more precise citation | fixed |
+| F-2.1-C10 | high | An aggregate over an entity absent from the graph answered a cited "0" | fixed |
+| F-2.1-C12 | high | Three independent truncations reported through one signal: 20 rows shown of 15,310, user told nothing | fixed |
+| F-2.1-C16 | high | The live-test skip guard reports the graph reachable whenever the SSH tunnel binds the local port, even with the database down | open |
+| F-2.1-J02 | med-high | The truncation check saw only one direction, so a model LIMIT above row_limit reported `truncated=False` | fixed |
+| F-2.1-J04 | med-high | The CURIE pattern swallowed a trailing colon, so `NCBIGene:672:` replaced the valid CURIE and resolved nothing | fixed |
+| F-2.1-C06 | med-high | Duplicate citations halved the 20-citation budget | fixed |
+| F-2.1-C07 | med-high | `status="empty"` emitted alongside `total_available=15310, truncated=True` | open |
+| F-2.1-C13 | med-high | Raw PubMed titles reached citations with the untrusted-content gate hardcoded off | fixed, with a stated cost |
+| F-2.1-J09 | medium | A RETURN alias was lost, so `count(v) AS variant_count` reached the Write step as `c0` | fixed |
+| F-2.1-C14 | medium | `row_count` and `total_available` counted emitted rows, not records: 8 reported for 4 diseases | fixed |
+
+Stated cost of the F-2.1-C13 fix, since a fix with a cost is not a free win: an `Article` row's own PMID citation is no longer emitted in this phase. Quarantining the row is what closes the gate, and translating a quarantined reader's findings back into citations is work the coordinator's own docstring already defers. The alternative was leaving raw external prose on the path into a model prompt, which is worse.
+
+---
+
+### F-2.1-C15: a generated query took the graph server down for every user
+
+Status: mitigated at the session level, generation side open
+Raised by: lead, 2026-07-31, while re-running the adversary's own C11 reproduction
+Severity: critical
+Ticket: none yet, belongs to build phase 2.2
+
+What happened: the real plan model, asked "What are the NCBIGene:672-associated diseases?", generated an unbounded `orthologous_to` traversal with DISTINCT. AGE ran it with four parallel workers. The kernel OOM killer killed the postgres backend at roughly 3 GB resident and the database shut down abnormally, taking Layer 1 offline for every user until it was restarted by hand.
+
+Evidence, from the graph host's own logs rather than inferred:
+
+- `postgresql-15-main.log`: `server process (PID 2847901) was terminated by signal 9: Killed`, then `abnormal database system shutdown`, with the failing statement recorded as the `orthologous_to` DISTINCT traversal.
+- `dmesg`: `Out of memory: Killed process 2847901 (postgres) total-vm:10162944kB, anon-rss:3071176kB`.
+
+Why the existing bounds did not help: `LIMIT 100` was present, and DISTINCT materializes its input before the limit applies. `statement_timeout` was set, and it bounds time, not memory. Memory was what ran out, and nothing bounded it.
+
+Why it outranks every other finding in this phase: the others produce an incorrect result for one user. This one removes the system for all users, and it is reachable from an ordinary question asked in good faith.
+
+Mitigation applied: `max_parallel_workers_per_gather = 0` and `work_mem = '32MB'` are now set per session in `graph_connection.py`. Measured on the server first: `work_mem` 64 MB, `hash_mem_multiplier` 2, `max_parallel_workers_per_gather` 4, so one query could reach five processes at 128 MB per hash node on a 15 GB host already holding 4 GB of shared_buffers. Both settings are session-level, so no server configuration changed and no other database user is affected. Measured cost across the phase's four query shapes: 125 to 124 ms, 263 to 277 ms, 154 to 154 ms, and 696 to 771 ms, which is noise except the aggregate at roughly 11 percent.
+
+What remains open, and it is the larger half: the mitigation bounds what one query may spend. It does not stop the model generating an unbounded traversal, and it does not bound several expensive queries running at once. Constraining generation, and a concurrency bound on Layer 1, belong to build phase 2.2.
+
+Related host risk, recorded not fixed: the graph host's root filesystem is at 92 percent, 26 G free. Not the cause of this incident. It belongs to Systems 1 and 2 rather than this repo, so it is flagged rather than acted on.
+
+History:
+- 2026-07-31 lead: reproduced unintentionally while verifying the F-2.1-C11 fix, diagnosed from the host's logs, mitigated at the session level, filed. Database restarted with the product owner's explicit approval
+
+---
+
+### F-2.1-C16: the live-test skip guard cannot tell a dead database from a healthy one
+
+Status: open
+Raised by: lead, 2026-07-31
+Severity: high
+Ticket: none yet, belongs to build phase 2.2
+
+What happened: when the graph went down, 21 live tests reported as FAILURES rather than skips. F-2.1-B12 replaced an env-var check with a TCP reachability check against `GRAPH_PG_HOST:GRAPH_PG_PORT`, which was the right direction and is not sufficient. An SSH local forward binds the local port as soon as the tunnel process starts, so the port accepts a connection whether or not anything is alive at the far end. The guard sees an open port and concludes the graph is reachable.
+
+Why it matters: it turns an infrastructure outage into what reads as a code regression, which is the most expensive kind of false signal to receive mid-review. Real time was spent confirming that 21 failures were not caused by the change under test.
+
+Fix shape: probe the database rather than the socket, one cheap authenticated round trip, and skip on a connection error. The check has to survive the case where the port is bound and the far end is not answering.
+
+History:
+- 2026-07-31 lead: found when the graph host went down mid-session, filed
