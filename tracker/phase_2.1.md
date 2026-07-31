@@ -887,6 +887,26 @@ That is defence in depth proving itself. A prompt-level instruction not to emit 
 
 Also held: host-pinned citations against five spoof forms, `$$` dollar-quote breakout, `as_clause` injection, and the read-only credential.
 
+### F-2.1-B12: the live-test skip guard is evaluated once at import
+
+Status: confirmed
+Raised by: lead
+Severity: low
+Ticket: none yet
+
+What happened: `test_cypher_query_e2e.py` computes `_REACHABLE` at module import and uses it in a module-level `pytest.mark.skipif`. The SSH tunnel to the graph is a manual, long-lived process that does drop. When it drops mid-session the guard has already been evaluated, so the tests do not skip, they FAIL.
+
+Observed directly while fixing B02: one full-suite run reported 9 failures, a second reported 800 passed with 12 skipped, and the difference was the tunnel dying in between. A reader seeing the first run has no way to tell a real regression from a dropped SSH connection, and the failure text does not mention the tunnel at all.
+
+Why it matters beyond convenience: this phase has twice mistaken an environment problem for a code problem, and once the reverse. A gate that reports infrastructure failure as test failure makes that confusion the default.
+
+Fix shape: evaluate reachability per test rather than once at import, or have the failure message name the tunnel explicitly so the diagnosis is one line rather than an investigation.
+
+History:
+- 2026-07-31 lead: filed after a full-suite run failed 9 tests purely because the tunnel had dropped
+
+---
+
 ### Still unexamined
 
 Named so the gap is visible rather than implied. Nobody has tested:
