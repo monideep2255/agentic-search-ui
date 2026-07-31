@@ -35,6 +35,50 @@ short and reviewed by hand, not grown ad hoc, because every field added
 to it is a field this validator can no longer catch a literal-bound
 caller value through.
 
+Known limitation surfaced by the adversary as F-2.1-B08, fixed here: the
+literal check used to key off named comparison operators one at a time,
+`=` or `:` immediately followed by a quote. Cypher's other comparison and
+predicate forms (`STARTS WITH`, `CONTAINS`, `ENDS WITH`, `=~`, `IN [...]`,
+`<>`, and a bare unquoted numeric literal such as `{taxon: 9606}`) walked
+straight through, because the old pattern only recognized a quote right
+after `=` or `:`. Four bypasses of this same shape were already fixed in
+this phase's rework before this one; the fix here does not add a sixth
+enumerated operator, it inverts the default. `_LITERAL_VALUE_PATTERN` now
+matches a field name followed by any run of comparison symbol characters
+(`=`, `<`, `>`, `~`, `!`, `:`) or one of openCypher's fixed keyword
+predicates (`IN`, `STARTS WITH`, `CONTAINS`, `ENDS WITH`, a small closed
+set the language itself defines, not an open-ended list of operators
+someone might invent), followed directly by a quote or a digit. A
+comparison operator this validator has never seen before is still
+recognized as some connector between a field and a literal, because the
+symbol class matches by character, not by naming the operator, so a
+seventh bypass of this same shape needs no further code change here. The
+one thing this still cannot see is a literal with no field name
+immediately adjacent to it at all, for example one wrapped inside a
+function call (`toLower(g.name) = 'x'`); that gap is the same documented,
+conservative scope boundary the rest of this module already lives with,
+not a new one this fix introduces.
+
+Known limitation surfaced by the adversary as F-2.1-B09, fixed here: LIMIT
+normalization only ever recognized `LIMIT <digits>` anchored to the very
+end of a branch. A LIMIT followed by a trailing `SKIP <digits>` in
+non-standard order, or a parameterized `LIMIT $name`, was invisible to
+that check, so a second LIMIT got appended after it and the validator
+handed back Cypher it had just made syntactically invalid (confirmed
+against the live graph: AGE raises a genuine syntax error on `LIMIT
+<digits> SKIP <digits>`, and raises `UndefinedParameter` on `LIMIT
+$name` called with no bound parameter, since this validator has no way
+to know at validation time what value a parameter will carry, so it
+cannot verify the value is within the row cap). Every LIMIT occurrence is
+now classified as scoping (more query structure follows, the legitimate
+`WITH ... LIMIT n MATCH ...` shape from F-2.1-A8, left untouched),
+terminal and safe (plain digits, nothing meaningful follows, capped as
+before), or terminal and unsafe (anything else meant to be the query's
+final LIMIT: a parameter reference, a trailing SKIP in the wrong order,
+or any other tail this validator cannot verify). A terminal-unsafe LIMIT
+rejects the whole query with `unsafe_limit_clause` rather than silently
+producing a second, broken LIMIT clause.
+
 Depends on:
     - system_03_search_agent.tools.graph_schema_constants (VERTEX_LABELS,
       EDGE_LABELS, FORBIDDEN_CYPHER_CLAUSES, DEFAULT_ROW_LIMIT, MAX_ROW_LIMIT)
@@ -76,6 +120,12 @@ REASON_LITERAL_INTERPOLATION_SUSPECTED = "literal_interpolation_suspected"
 # already bounds it. A validator that trusts an un-type-checked argument
 # is not a safety gate.
 REASON_INVALID_ROW_LIMIT = "invalid_row_limit"
+# New for F-2.1-B09: a LIMIT clause that is meant to be the query's final,
+# caller-facing cap, but is not a single plain integer with nothing but
+# the query's own results following it. Appending a second LIMIT after it
+# would produce syntactically invalid Cypher, so this rejects instead of
+# guessing.
+REASON_UNSAFE_LIMIT_CLAUSE = "unsafe_limit_clause"
 
 # A relationship "hop": optional leading <, a dash, an optional bracket
 # group (the typed or untyped part), a dash, an optional trailing >.
@@ -95,29 +145,64 @@ _RELATIONSHIP_HOP_PATTERN = re.compile(r"<?\s*-\s*(?:\[([^\[\]]*)\]\s*)?-\s*>?")
 # splitting a bracket interior into labels so it is never mistaken for one.
 _VAR_LENGTH_SPEC_PATTERN = re.compile(r"\*\d*(?:\.\.\d*)?")
 
-# A genuine, top-level trailing LIMIT: the keyword and its digits anchored
-# to the very end of a (rstripped) query or UNION branch. Deliberately not
-# a bare "LIMIT anywhere" search (see _split_on_union and _normalize_limit):
-# a mid-query `WITH g LIMIT 1` is a legitimate scoping clause, not the
-# caller-facing cap this validator injects, and must never be mistaken
-# for one (F-2.1-A8).
-_TRAILING_LIMIT_PATTERN = re.compile(r"\bLIMIT\s+(\d+)\s*$", re.IGNORECASE)
+# Every LIMIT keyword and its immediate argument token, wherever it occurs
+# in a (rstripped) query or UNION branch, not only at the very end
+# (F-2.1-B09). Group 1 is the argument token itself: plain digits, a
+# parameter reference, or anything else a generator might emit. Finding
+# every occurrence, rather than only a trailing one, is what lets
+# `_classify_limit_occurrence` tell a legitimate mid-query scoping LIMIT
+# apart from a final LIMIT this validator cannot safely normalize.
+_LIMIT_OCCURRENCE_PATTERN = re.compile(r"\bLIMIT\s+(\S+)", re.IGNORECASE)
+
+# Clause-starting keywords that indicate a LIMIT occurrence is a
+# legitimate intra-query scoping LIMIT (F-2.1-A8: `WITH g LIMIT 1 MATCH
+# ...`), not the query's final, caller-facing LIMIT. When one of these
+# keywords is the next word after a LIMIT clause's argument, more query
+# structure continues, so that LIMIT is left untouched and the
+# validator's own cap is still appended at the true end of the branch.
+_CLAUSE_CONTINUATION_KEYWORDS = frozenset({
+    "MATCH", "OPTIONAL", "WITH", "WHERE", "UNWIND", "CALL", "RETURN",
+    "MERGE", "CREATE", "SET", "DELETE", "REMOVE", "DETACH",
+})
 
 # A top-level UNION or UNION ALL keyword. Cypher scopes a trailing LIMIT
 # to the query part immediately before it, never to the whole UNION result
 # set, so every branch must be normalized independently (F-2.1-A8).
 _UNION_PATTERN = re.compile(r"\bUNION\s+ALL\b|\bUNION\b", re.IGNORECASE)
 
-# A field name (optionally `variable.field`) directly followed by `:` or
-# `=` and a quote character marks a literal value bound in place of a
-# parameter, e.g. `symbol: 'BRCA1'` or `n.name = "BRCA1"`. Per
-# production-standards, every caller-supplied value must travel through a
-# parameter, never a literal interpolated into the Cypher text. The field
-# name is captured so the allowlist below can exempt a genuine internal
-# constant (F-2.1-A17) without reopening the door to a caller-supplied
-# entity value bound the same way.
+# A connector between a field and a literal value, matched by shape
+# rather than enumerated operator-by-operator (F-2.1-B08). Two kinds:
+#
+# - A run of comparison symbol characters (`=`, `<`, `>`, `~`, `!`, `:`).
+#   This is a character class, not a list of named operators, so it
+#   already matches `=`, `:`, `<>`, `=~`, and any future symbol-based
+#   comparison this validator has never been told about by name.
+# - One of openCypher's own fixed keyword predicates for string and list
+#   membership tests: `IN`, `STARTS WITH`, `CONTAINS`, `ENDS WITH`. This
+#   is enumerated, but it is enumerating the language's own closed
+#   grammar, not an open-ended set of operators someone might invent;
+#   openCypher defines exactly these four.
+_CONNECTOR_PATTERN = (
+    r"(?:[=<>~!:]+|\bIN\b|\bSTARTS\s+WITH\b|\bCONTAINS\b|\bENDS\s+WITH\b)"
+)
+
+# A field name (optionally `variable.field`) followed by one or more
+# connectors (see above), an optional `[` for an `IN [...]` list, and then
+# a literal: a quote character, or a bare digit for an unquoted numeric
+# literal such as `{taxon: 9606}`. Per production-standards, every
+# caller-supplied value must travel through a parameter, never a literal
+# interpolated into the Cypher text, whatever comparison form carries it.
+# The field name is captured so the allowlist below can exempt a genuine
+# internal constant (F-2.1-A17) without reopening the door to a
+# caller-supplied entity value bound the same way. Because the connector
+# is matched by shape rather than by naming every operator that might
+# carry a literal, a comparison form this validator has never seen before
+# is still recognized as *some* connector: it is caught by the same
+# pattern, not by a new one (F-2.1-B08, the fifth bypass of this shape;
+# the design here is meant to make a sixth unnecessary).
 _LITERAL_VALUE_PATTERN = re.compile(
-    r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?([A-Za-z_][A-Za-z0-9_]*)\s*[:=]\s*['\"]"
+    r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?([A-Za-z_][A-Za-z0-9_]*)"
+    r"\s*(?:" + _CONNECTOR_PATTERN + r"\s*)+\[?\s*(?:['\"]|-?\d)"
 )
 
 # Fields whose value set is a small, system-defined vocabulary describing
@@ -486,42 +571,92 @@ def _split_on_union(cypher: str) -> list[str]:
     return parts
 
 
-def _normalize_branch_limit(branch: str, row_limit: int) -> str:
-    """Inject a missing top-level LIMIT into one query branch, or cap an
-    existing genuine trailing one at MAX_ROW_LIMIT.
+def _classify_limit_occurrence(branch: str, match: re.Match[str]) -> str:
+    """Classify one LIMIT occurrence in `branch` (F-2.1-B09).
 
-    Only a LIMIT anchored to the very end of the (rstripped) branch counts
-    as genuine (see `_TRAILING_LIMIT_PATTERN`). A `LIMIT` keyword found
-    anywhere else in the branch, inside a comment (already stripped by
-    the time this runs), inside a mid-query `WITH ... LIMIT n` scoping
-    clause, or on an earlier UNION branch, is not this branch's trailing
-    limit and must not be mistaken for one (F-2.1-A8).
+    Returns one of three labels:
+
+    - "scoping": a recognized clause keyword (`_CLAUSE_CONTINUATION_KEYWORDS`)
+      immediately follows this LIMIT's argument, so more query structure
+      continues. This is the legitimate `WITH g LIMIT 1 MATCH ...`
+      mid-query cap from F-2.1-A8. Left untouched.
+    - "terminal_safe": nothing but optional trailing whitespace follows
+      the argument, and the argument is plain digits. The one shape this
+      validator can verify and cap.
+    - "terminal_unsafe": this LIMIT is meant to be the branch's final
+      clause (no recognized further query structure follows it), but the
+      argument is not a plain digit literal, or something this validator
+      does not recognize follows it (a parameter reference, a `SKIP`
+      clause tacked on in the wrong order, or anything else). Confirmed
+      against the live graph that both of these actually fail at
+      execution: `LIMIT <digits> SKIP <digits>` is a genuine AGE syntax
+      error, and `LIMIT $name` cannot be verified as within the row cap
+      at validation time, since a parameter's value is not known until
+      execution. Appending a second LIMIT after either would only make
+      matters worse, so this validator rejects instead.
+    """
+    rest = branch[match.end():]
+    stripped_rest = rest.strip()
+    if not stripped_rest:
+        return "terminal_safe" if match.group(1).isdigit() else "terminal_unsafe"
+    first_word = re.match(r"[A-Za-z_]+", stripped_rest)
+    if first_word is not None and first_word.group(0).upper() in _CLAUSE_CONTINUATION_KEYWORDS:
+        return "scoping"
+    return "terminal_unsafe"
+
+
+def _normalize_branch_limit(branch: str, row_limit: int) -> str | None:
+    """Inject a missing top-level LIMIT into one query branch, cap an
+    existing genuine trailing one at MAX_ROW_LIMIT, or signal that the
+    branch cannot be safely normalized by returning None (F-2.1-B09).
+
+    Every LIMIT occurrence in the branch is classified (see
+    `_classify_limit_occurrence`). A single "terminal_unsafe" occurrence
+    rejects the whole branch rather than being silently normalized into a
+    second, syntactically invalid LIMIT clause. A "scoping" occurrence,
+    such as a mid-query `WITH ... LIMIT n` clause, is left untouched
+    (F-2.1-A8); a "terminal_safe" occurrence is the one this function caps
+    as before. When no occurrence is terminal at all, the caller-facing
+    LIMIT is injected fresh, exactly as when no LIMIT was present.
     """
     stripped = branch.strip()
     if stripped.endswith(";"):
         stripped = stripped[:-1].rstrip()
 
-    existing = _TRAILING_LIMIT_PATTERN.search(stripped)
-    if existing is None:
+    terminal_safe_match: re.Match[str] | None = None
+    for match in _LIMIT_OCCURRENCE_PATTERN.finditer(stripped):
+        classification = _classify_limit_occurrence(stripped, match)
+        if classification == "terminal_unsafe":
+            return None
+        if classification == "terminal_safe":
+            terminal_safe_match = match
+
+    if terminal_safe_match is None:
         return stripped + " LIMIT " + str(row_limit)
 
-    requested = int(existing.group(1))
+    requested = int(terminal_safe_match.group(1))
     if requested > MAX_ROW_LIMIT:
-        start, end = existing.span(1)
+        start, end = terminal_safe_match.span(1)
         return stripped[:start] + str(MAX_ROW_LIMIT) + stripped[end:]
     return stripped
 
 
-def _normalize_limit(cypher: str, row_limit: int) -> str:
+def _normalize_limit(cypher: str, row_limit: int) -> str | None:
     """Inject a missing LIMIT, or cap an existing one, independently on
-    every top-level UNION branch."""
+    every top-level UNION branch. Returns None when any branch carries a
+    LIMIT clause this validator cannot safely normalize (F-2.1-B09), so
+    the caller rejects the query instead of executing a corrupted one.
+    """
     parts = _split_on_union(cypher)
     normalized_parts: list[str] = []
     for index, part in enumerate(parts):
         if index % 2 == 1:
             normalized_parts.append(part.strip())
         else:
-            normalized_parts.append(_normalize_branch_limit(part, row_limit))
+            normalized_branch = _normalize_branch_limit(part, row_limit)
+            if normalized_branch is None:
+                return None
+            normalized_parts.append(normalized_branch)
     return " ".join(piece for piece in normalized_parts if piece)
 
 
@@ -573,6 +708,21 @@ def validate_cypher(cypher: str, row_limit: int = DEFAULT_ROW_LIMIT) -> Validati
         return rejection
 
     normalized = _normalize_limit(working, bounded_row_limit)
+    if normalized is None:
+        return ValidationResult(
+            ok=False,
+            reason=REASON_UNSAFE_LIMIT_CLAUSE,
+            message=(
+                "Generated Cypher has a LIMIT clause that is not a single "
+                "plain integer with nothing but the query's own results "
+                "following it. A parameterized LIMIT, or a LIMIT followed "
+                "by SKIP in the wrong order, cannot be verified or capped "
+                "by this validator. Retry generation with a plain integer "
+                "LIMIT, or omit LIMIT entirely and let the row cap be "
+                "injected."
+            ),
+            normalized_cypher=None,
+        )
 
     post_rejection = _run_safety_checks(normalized)
     if post_rejection is not None:

@@ -131,18 +131,19 @@ found. Fixed here:
       tool error) before deciding `answer` versus `refuse`, and
       `_citations_from_findings` emits a real `citation` event per row
       that earned one, never a fabricated one.
-    - F-05: `act_node` used to wrap `cypher_query` in
-      `budget_for_query_class(query_class)`, which resolves to 5.0
-      seconds for `think_node`'s stub `"lookup"` classification, well
-      under `cypher_query`'s own locked 30-second budget
-      (`.claude/rules/tool-call-budgets.md`) and under live graph
-      latency alone. The tool's own declared budget is the locked
-      number; the caller's budget is what gives: `act_node` now wraps
-      the call in `max(budget_for_query_class(query_class),
+    - F-05: `act_node` used to wrap `cypher_query` in a budget resolved
+      from `think_node`'s stub `"lookup"` classification alone, which
+      was well under `cypher_query`'s own declared budget and under live
+      graph latency. The tool's own declared budget is the floor; the
+      caller's budget is what gives: `act_node` wraps the call in
+      `max(budget_for_step("act", query_class),
       CYPHER_QUERY_TIMEOUT_SECONDS)`, so a `query_class` that already
-      budgets more (`multi_hop`, `exploratory`) is untouched, and one
-      that budgets less (`lookup`, `single_hop`) is raised to the tool's
-      own floor rather than starving it.
+      budgets more is untouched and one that budgets less is raised to
+      the tool's floor rather than starving it. Note the budget function
+      itself was later replaced: `budget_for_step` resolves a
+      model-calling step against its own TIER and `act` against the
+      query class, because those are two different axes. See
+      `harness.harness._TIER_STEP_BUDGET_S` for the measurements.
     - F-04: `cypher_query` may issue up to two plan-tier calls internally
       through `generate_cypher` (the initial attempt plus one repair
       retry), neither individually gated by
@@ -161,6 +162,26 @@ found. Fixed here:
       silent gap. `tests/system_03_search_agent/core/test_graph.py`
       asserts the current, honest split (4 of 6 calls carry the prefix)
       rather than concealing it behind a vacuous filter.
+
+Second judge pass, 2026-07-31 (tracker/phase_2.1.md F-2.1-10, F-2.1-11):
+
+    - F-2.1-10: `coordinator_worker.Finding.truncated` (the F-03 fix's own
+      "truncation is never silent" field) had no reader anywhere in
+      `core/` or `adapters/`, so a `Finding` cut by the 50,000-byte
+      ceiling reached `write_node` indistinguishable from a complete one.
+      `_ok_finding_was_truncated` below is that reader.
+    - F-2.1-11: `_cap_structured_fields`'s binary search can shrink a
+      real, `status="ok"` result's `rows` list down to zero while
+      `status` itself stays `"ok"`, so `_citations_from_findings` yields
+      no citations and `write_node` used to emit an identical, silent
+      `trust_outcome="refuse"` whether the tool found nothing or found
+      something the byte ceiling then erased. `write_node` now checks
+      `_ok_finding_was_truncated` alongside `tool_outcome` and `citations`:
+      a cut that still left a citeable row still answers, but emits a
+      `token` note acknowledging the cut; a cut that left nothing
+      citeable still refuses (cite-or-refuse is not weakened), but emits
+      a non-fatal `error` event naming the real cause, so the two
+      "refuse" cases are never confused with each other downstream.
 """
 
 from __future__ import annotations
@@ -501,9 +522,9 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # are a later phase's job. `query_class="lookup"` is a fixed,
     # documented placeholder, never an actual classification of
     # `query.text`; it still drives every later node's real timeout
-    # budget via `budget_for_query_class`, since that mapping needs some
-    # concrete `query_class` value to resolve against regardless of
-    # whether the value itself is real yet.
+    # budget via `budget_for_step`, which resolves `act` against the
+    # query class, so that mapping still needs some concrete
+    # `query_class` value regardless of whether the value is real yet.
     stub_query_class: QueryClass = "lookup"
     think_payload = ThinkPayload(
         narrative="stub: real query classification lands in a later phase",
@@ -773,10 +794,10 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             # F-05 fix: cypher_query's own declared budget
             # (CYPHER_QUERY_TIMEOUT_SECONDS, 30s, tool-call-budgets.md)
             # is the locked number; think_node's stub "lookup"
-            # classification resolves budget_for_query_class to 5.0s,
-            # well under both the tool's own budget and live graph
-            # latency alone. The caller's budget is what gives: never
-            # let a query_class's own budget starve the tool below its
+            # classification resolves `budget_for_step("act", ...)` to a
+            # figure well under both the tool's own budget and live
+            # graph latency alone. The caller's budget is what gives:
+            # never let a query_class's own budget starve the tool below its
             # own floor, but let a query_class that already budgets more
             # (multi_hop, aggregate, exploratory) keep that larger
             # number.
@@ -974,6 +995,44 @@ def _citations_from_findings(findings: list[Finding]) -> list[CitationPayload]:
     return citations
 
 
+# F-2.1-10 fix: `Finding.truncated` (coordinator_worker.py's F-03 fix) was
+# added specifically so a caller could tell "the tool succeeded and this
+# is everything it found" from "the tool succeeded but the result was cut
+# to fit the 50,000-byte defense-in-depth ceiling". The judge found
+# nothing in `core/` or `adapters/` ever read the field, so a capped
+# `Finding` reached this module indistinguishable from a complete one.
+# This is that reader.
+def _ok_finding_was_truncated(findings: list[Finding]) -> bool:
+    """True when at least one `"ok"` structured-pass-through `Finding` in
+    this query's result set was cut by
+    `coordinator_worker._cap_structured_fields`.
+
+    Scoped to `"ok"` findings only: an `"empty"` or `"error"` finding is
+    already refused for its own, unrelated reason, and `truncated` on a
+    `"reader"`-sourced finding (`structured_fields is None`) is never
+    meaningful, since that path has no `structured_fields` to have cut in
+    the first place.
+    """
+    return any(
+        finding.truncated
+        for finding in findings
+        if finding.structured_fields is not None
+        and finding.structured_fields.get("status") == "ok"
+    )
+
+
+_TRUNCATED_ANSWER_NOTE = (
+    "Note: this result was larger than the response size limit and was "
+    "truncated; not every matching row is shown above."
+)
+_TRUNCATED_REFUSAL_MESSAGE = (
+    "The graph query found matching data, but the result was cut to fit "
+    "the response size limit before any row kept a citeable source_url. "
+    "This is not the same as the graph returning no matching data. Retry "
+    "with a narrower query_intent or a smaller row_limit."
+)
+
+
 async def write_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     query = state["query"]
@@ -1055,6 +1114,36 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # earned a confident answer, so this refuses rather than
         # answering with nothing behind it.
         trust_outcome = "refuse"
+
+    # F-2.1-10/F-2.1-11 fix: a `Finding` the byte ceiling actually cut must
+    # never look identical to one it left alone. `_ok_finding_was_truncated`
+    # is the reader `Finding.truncated` was missing (F-2.1-10). Two cases:
+    #   - The cut still left a citeable row: the query genuinely succeeded
+    #     (trust_outcome is already "answer" above) and cite-or-refuse is
+    #     not weakened, but the cut is acknowledged rather than silently
+    #     dropped, so a user is never shown a partial result as if it were
+    #     complete.
+    #   - The cut left nothing citeable: cite-or-refuse still refuses (a
+    #     truncated Finding earns no exemption from that gate), but the
+    #     refusal names the real cause, so it is never confused with the
+    #     graph genuinely returning no matching data (F-2.1-11's exact
+    #     failure mode: both cases used to reach an identical, silent
+    #     "refuse").
+    truncated_ok_finding = tool_outcome == "ok" and _ok_finding_was_truncated(findings)
+    if truncated_ok_finding and trust_outcome == "answer":
+        sink.emit("token", TokenPayload(text=_TRUNCATED_ANSWER_NOTE, marker_ids=[]))
+    elif truncated_ok_finding and trust_outcome == "refuse":
+        sink.emit(
+            "error",
+            ErrorPayload(
+                fatal=False,
+                scope="tool",
+                source="cypher_query",
+                error_class="recoverable",
+                message=_TRUNCATED_REFUSAL_MESSAGE,
+                retry_after_s=0,
+            ),
+        )
 
     for citation in citations:
         sink.emit("citation", citation)

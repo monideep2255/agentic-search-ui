@@ -36,6 +36,27 @@ stays as the pure, already-parsed-entity shaping function it always was,
 used directly by this module's own unit tests and by any caller that has
 already turned a raw agtype value into a plain dict.
 
+Finding F-2.1-B06: a real AGE edge carries no `properties["id"]`, so it has
+no CURIE and no record page of its own. A live probe of five edge labels
+(`is_sequence_variant_of`, `gene_associated_with_condition`,
+`has_mesh_annotation`, `in_taxon`, `orthologous_to`) found every edge still
+carries a `source_url` property, and in every sampled case that URL was
+the same page its start endpoint's own CURIE derives, not a citation the
+edge earns on its own. Before this fix, an empty CURIE did not stop
+`_resolve_source_url` from keeping that stored URL whenever it matched
+the host pattern, so the row shipped `source_id="unknown"` next to a
+link that resolves to a real but different record, a citation that
+survives inspection while pointing at the wrong thing. `to_output_rows`
+now collects every vertex and edge entity across all of a raw row's
+columns first, so an edge with no CURIE of its own can be attributed to
+a genuine endpoint vertex's CURIE when that vertex is present in the
+same row (a sibling column, or an adjacent path element), verified from
+data already in hand, never fabricated and never fetched. When no
+endpoint vertex is present in the row, the honest outcome is no citation:
+`source_url` is None, and the caller's cite-or-refuse gate drops the row.
+See `_shape_entity`, `_endpoint_curies_by_internal_id`, and
+`_attributed_endpoint_curie`.
+
 Depends on:
     - system_03_search_agent.tools.graph_schema_constants
       (NCBI_RECORD_URL_PATTERN)
@@ -212,7 +233,81 @@ def to_output_row(raw_row: dict, snapshot_version: str) -> dict:
     }
 
 
-def _shape_entity(entity: dict[str, Any], snapshot_version: str) -> dict:
+def _is_edge_entity(entity: dict[str, Any]) -> bool:
+    """Return True when `entity` is an AGE edge, per `agtype.is_vertex_or_edge`'s
+    own convention: a vertex carries only `label`, an edge additionally
+    carries `start_id` and/or `end_id`.
+    """
+    return "start_id" in entity or "end_id" in entity
+
+
+def _endpoint_curies_by_internal_id(entities: list[dict[str, Any]]) -> dict[Any, str]:
+    """Map every vertex's own AGE-internal id to its own CURIE, for one raw row.
+
+    Built once per raw graph row from every vertex entity that row's
+    columns actually parsed (a plain multi-column `RETURN v, e, g`, or a
+    path's flattened elements), never from a separate graph lookup: this
+    module is a pure transform over its arguments and never queries the
+    graph on its own (see the module docstring). This mapping is the
+    input finding F-2.1-B06's fix depends on: it lets an edge with no
+    CURIE of its own (`_shape_entity`, below) attribute its citation to a
+    genuine endpoint vertex that is actually present in the same row,
+    verified from data already in hand, never to a guessed or freshly
+    fetched one.
+
+    An edge entity never contributes to this mapping, only a vertex does,
+    so an edge can never be attributed to another edge's identity.
+    """
+    mapping: dict[Any, str] = {}
+    for entity in entities:
+        if _is_edge_entity(entity):
+            continue
+        properties = entity.get("properties")
+        if not isinstance(properties, dict):
+            continue
+        curie = str(properties.get("id") or "")
+        internal_id = entity.get("id")
+        if curie and internal_id is not None:
+            mapping[internal_id] = curie
+    return mapping
+
+
+def _attributed_endpoint_curie(
+    entity: dict[str, Any], endpoint_curies: dict[Any, str] | None
+) -> str | None:
+    """Find a verified endpoint CURIE for an edge entity with no CURIE of its own.
+
+    Checks `entity`'s `start_id` first, then `end_id`, against
+    `endpoint_curies` (built by `_endpoint_curies_by_internal_id` from the
+    same raw row). The start endpoint is preferred only for determinism,
+    not because it is more correct: a live probe of the graph
+    (`is_sequence_variant_of`, `gene_associated_with_condition`,
+    `has_mesh_annotation`, `in_taxon`, `orthologous_to`) found the edge's
+    own stored `source_url` consistently equal to the start endpoint's own
+    record page, so preferring `start_id` reconstructs the same URL the
+    row used to carry, this time with a `curie` that actually matches it.
+    Returns None when neither endpoint vertex is present in the same row,
+    which is the honest "cannot attribute" case: an edge queried alone
+    (`RETURN e`, finding F-2.1-B06's reproduction) carries no sibling
+    vertex data at all, so nothing here is invented to fill the gap.
+    """
+    if not endpoint_curies:
+        return None
+    for key in ("start_id", "end_id"):
+        internal_id = entity.get(key)
+        if internal_id is None:
+            continue
+        candidate = endpoint_curies.get(internal_id)
+        if candidate:
+            return candidate
+    return None
+
+
+def _shape_entity(
+    entity: dict[str, Any],
+    snapshot_version: str,
+    endpoint_curies: dict[Any, str] | None = None,
+) -> dict:
     """Shape one parsed AGE vertex or edge dict into the output row shape.
 
     `entity` is the dict `agtype.parse_agtype` decoded from one `::vertex`
@@ -222,12 +317,36 @@ def _shape_entity(entity: dict[str, Any], snapshot_version: str) -> dict:
     `properties["id"]`, the identifier Systems 1 and 2 stamped onto every
     node and edge at ingest time. The top-level `id` on the entity itself
     is AGE's own internal graph id and is never treated as a CURIE.
+
+    Finding F-2.1-B06: a real AGE edge carries no `properties["id"]` at
+    all (verified live: `source`, `agent_type`, `source_url`, and
+    `knowledge_level`, never `id`). Before this fix, an edge's empty
+    `curie` still let `_resolve_source_url` pass through the edge's own
+    stored `source_url` whenever it matched the host pattern, so the row
+    shipped `source_id="unknown"` next to a URL for a genuine but
+    different record, a citation that survives inspection while pointing
+    at the wrong thing.
+
+    An edge with no CURIE of its own (`is_edge` and `not curie`, below)
+    never keeps its raw stored `source_url` unconditionally. It is
+    attributed to a verified endpoint CURIE when one is present in the
+    same raw row (`endpoint_curies`, built by
+    `_endpoint_curies_by_internal_id` from every column of that row), and
+    both `curie` and `source_url` are then set from that endpoint so the
+    two agree; `fields["_cited_via_endpoint_curie"]` marks the row as an
+    edge citing an endpoint's record, never presented as the edge's own
+    identity. When no endpoint vertex is present in the row (an edge
+    queried alone), `source_url` is None: the honest "no citation"
+    outcome, which the caller's cite-or-refuse gate (`cypher_query.
+    _run_pipeline`) drops rather than emitting an uncited or
+    misattributed row.
     """
     node_or_edge_type = str(entity.get("label") or "")
     properties = entity.get("properties")
     if not isinstance(properties, dict):
         properties = {}
     curie = str(properties.get("id") or "")
+    is_edge = _is_edge_entity(entity)
 
     fields = dict(properties)
     if "start_id" in entity:
@@ -235,7 +354,20 @@ def _shape_entity(entity: dict[str, Any], snapshot_version: str) -> dict:
     if "end_id" in entity:
         fields.setdefault("_edge_end_id", entity["end_id"])
 
-    resolved_source_url = _resolve_source_url(curie, properties.get("source_url"))
+    if is_edge and not curie:
+        attributed_curie = _attributed_endpoint_curie(entity, endpoint_curies)
+        if attributed_curie:
+            curie = attributed_curie
+            fields["_cited_via_endpoint_curie"] = attributed_curie
+            resolved_source_url = source_url_for_curie(attributed_curie)
+        else:
+            # No verified endpoint available in this row. The edge's own
+            # stored source_url, if any, is never trusted here: it is not
+            # this row's own record, and nothing in this call's inputs
+            # can verify whose record it actually is.
+            resolved_source_url = None
+    else:
+        resolved_source_url = _resolve_source_url(curie, properties.get("source_url"))
 
     return {
         "node_or_edge_type": node_or_edge_type,
@@ -328,8 +460,17 @@ def to_output_rows(
     empty content row instead. The caller, `cypher_query._run_pipeline`,
     applies the matching cite-or-refuse gate at the row level: an
     entity that does parse but still resolves no `source_url` (an
-    unmapped CURIE prefix such as GO, HP, or MONDO) is also dropped there,
-    for the same reason.
+    unmapped CURIE prefix such as GO, HP, or MONDO, or an edge with no
+    CURIE of its own and no endpoint vertex in the same row, finding
+    F-2.1-B06) is also dropped there, for the same reason.
+
+    Finding F-2.1-B06: entities are collected from every column of `raw_row`
+    before any of them is shaped, specifically so that an edge column
+    (which never carries its own CURIE on the live graph) can be
+    attributed to a genuine endpoint vertex's CURIE when that vertex was
+    also returned in this same row, whether as a sibling column
+    (`RETURN v, e, g`) or as an adjacent element of the same path
+    (`RETURN p`). See `_shape_entity` and `_endpoint_curies_by_internal_id`.
 
     Args:
         raw_row: one row as read from the graph connection, keyed by
@@ -343,15 +484,14 @@ def to_output_rows(
         `curie`, `fields`, `source_url`, `graph_snapshot_version`. Empty
         when no column in `raw_row` decoded to a citable vertex or edge.
     """
-    shaped_rows: list[dict] = []
+    all_entities: list[dict[str, Any]] = []
     derived: dict[str, Any] = {}
 
     for column, value in raw_row.items():
         parsed = parse_agtype(value)
         entities = _iter_entities(parsed)
         if entities:
-            for entity in entities:
-                shaped_rows.append(_shape_entity(entity, snapshot_version))
+            all_entities.extend(entities)
         elif parsed is not None:
             # F-2.1-B05. A scalar or a list is a real answer, not an absence.
             # `count(sv)`, `d.name`, `collect(m.id)` all parse to something
@@ -367,6 +507,11 @@ def to_output_rows(
             # below, rather than one row each, because a projection's columns
             # are fields of a single result, not separate findings.
             derived[column] = parsed
+
+    endpoint_curies = _endpoint_curies_by_internal_id(all_entities)
+    shaped_rows = [
+        _shape_entity(entity, snapshot_version, endpoint_curies) for entity in all_entities
+    ]
 
     if derived and not shaped_rows:
         shaped_rows.append(

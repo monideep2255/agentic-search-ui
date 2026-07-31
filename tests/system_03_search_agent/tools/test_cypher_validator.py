@@ -18,6 +18,7 @@ from system_03_search_agent.tools.cypher_validator import (
     REASON_MISSING_EDGE_LABEL,
     REASON_UNKNOWN_EDGE_LABEL,
     REASON_UNKNOWN_VERTEX_LABEL,
+    REASON_UNSAFE_LIMIT_CLAUSE,
     REASON_WRITE_CLAUSE_FORBIDDEN,
     ValidationResult,
     validate_cypher,
@@ -539,3 +540,146 @@ def test_allowlisted_and_caller_facing_literal_together_still_rejects() -> None:
 
     assert result.ok is False
     assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-B08: the fifth validator bypass. Six comparison forms other than
+# `=`/`:` followed directly by a quote used to carry a literal straight
+# through unchecked. Reproductions are the adversary report's exact
+# strings. Each was confirmed FAILING (ok=True, no rejection) against the
+# validator before this fix.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "cypher",
+    [
+        "MATCH (g:Gene) WHERE g.name STARTS WITH 'BRCA' RETURN g",
+        "MATCH (g:Gene) WHERE g.name CONTAINS 'BRCA1' RETURN g",
+        "MATCH (g:Gene) WHERE g.name ENDS WITH 'X' RETURN g",
+        "MATCH (g:Gene) WHERE g.id =~ '.*' RETURN g",
+        "MATCH (g:Gene) WHERE g.id IN ['NCBIGene:672'] RETURN g",
+        "MATCH (g:Gene) WHERE g.id <> 'x' RETURN g",
+        "MATCH (g:Gene {taxon: 9606}) RETURN g",
+    ],
+    ids=[
+        "starts_with",
+        "contains",
+        "ends_with",
+        "regex_match",
+        "in_list",
+        "not_equal",
+        "bare_numeric",
+    ],
+)
+def test_literal_via_every_bypassed_comparison_form_is_rejected(cypher: str) -> None:
+    result = validate_cypher(cypher, row_limit=DEFAULT_ROW_LIMIT)
+
+    assert result.ok is False
+    assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+    assert result.normalized_cypher is None
+
+
+def test_literal_via_a_novel_symbol_operator_is_still_caught() -> None:
+    # The connector is matched by character class, not by naming every
+    # operator, so a comparison symbol this validator has never been
+    # told about by name (here a made-up doubled "==") is still
+    # recognized as a connector between a field and a literal.
+    result = validate_cypher(
+        "MATCH (g:Gene) WHERE g.id == 'NCBIGene:672' RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+
+
+def test_internal_constant_field_still_allowed_via_the_new_connectors() -> None:
+    # The generalized connector must not swallow the F-2.1-A17 allowlist:
+    # an internal constant field bound through one of the newly-caught
+    # comparison forms is still exempt.
+    result = validate_cypher(
+        "MATCH (a:Article) WHERE a.source STARTS WITH 'Pub' RETURN a",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is True
+    assert result.reason is None
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-B09: LIMIT normalization must not hand back invalid Cypher. Two
+# shapes come out of the old normalizer syntactically broken: a LIMIT
+# followed by SKIP in the wrong order, and a parameterized LIMIT. Both are
+# confirmed against the live graph (in the fix report) to actually fail at
+# execution, one with a genuine AGE syntax error and one with
+# UndefinedParameter. Each reproduction was confirmed FAILING (ok=True,
+# with a syntactically doubled LIMIT in normalized_cypher) before this
+# fix.
+# ---------------------------------------------------------------------------
+
+
+def test_limit_before_skip_at_the_end_is_rejected_not_double_limited() -> None:
+    result = validate_cypher(
+        "MATCH (g:Gene)-[:mentioned_in]->(a:Article) RETURN g LIMIT 10 SKIP 5",
+        row_limit=100,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_UNSAFE_LIMIT_CLAUSE
+    assert result.normalized_cypher is None
+
+
+def test_parameterized_limit_is_rejected_not_double_limited() -> None:
+    result = validate_cypher(
+        "MATCH (g:Gene)-[:mentioned_in]->(a:Article) RETURN g LIMIT $n",
+        row_limit=100,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_UNSAFE_LIMIT_CLAUSE
+    assert result.normalized_cypher is None
+
+
+def test_skip_before_limit_the_conventional_order_still_passes() -> None:
+    # The conventional clause order (SKIP then LIMIT) was already handled
+    # correctly before this fix and must remain so: it is a genuine
+    # trailing LIMIT with nothing after it.
+    result = validate_cypher(
+        "MATCH (g:Gene {id: $id}) RETURN g SKIP 5 LIMIT 10",
+        row_limit=100,
+    )
+
+    assert result.ok is True
+    assert result.normalized_cypher == (
+        "MATCH (g:Gene {id: $id}) RETURN g SKIP 5 LIMIT 10"
+    )
+
+
+def test_mid_query_scoping_limit_still_left_untouched_by_the_new_classifier() -> None:
+    # F-2.1-A8's legitimate case must survive the rewritten classifier:
+    # a `WITH ... LIMIT n` scoping clause followed by more query
+    # structure is not the branch's terminal LIMIT, so it is left alone
+    # and the validator's own cap is still appended at the true end.
+    result = validate_cypher(
+        "MATCH (g:Gene) WHERE g.id=$x WITH g LIMIT 1 MATCH "
+        "(v:SequenceVariant)-[:is_sequence_variant_of]->(g) RETURN v",
+        row_limit=500,
+    )
+
+    assert result.ok is True
+    assert result.normalized_cypher is not None
+    assert result.normalized_cypher.count("LIMIT 1") == 1
+    assert result.normalized_cypher.rstrip().endswith("LIMIT 500")
+
+
+def test_unsafe_limit_clause_in_one_union_branch_rejects_the_whole_query() -> None:
+    result = validate_cypher(
+        "MATCH (a:Gene) WHERE a.id=$x RETURN a LIMIT $n UNION MATCH "
+        "(b:Gene) WHERE b.id=$y RETURN b",
+        row_limit=500,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_UNSAFE_LIMIT_CLAUSE
+    assert result.normalized_cypher is None

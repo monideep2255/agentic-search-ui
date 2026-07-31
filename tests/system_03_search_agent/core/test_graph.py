@@ -31,12 +31,16 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from system_03_search_agent.contracts.events import PAYLOAD_MODEL_BY_TYPE, Event
+from system_03_search_agent.contracts.events import PAYLOAD_MODEL_BY_TYPE, Event, ToolCall
 from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.core.graph import compiled_graph
 from system_03_search_agent.harness import cost_control
 from system_03_search_agent.harness import harness as harness_module
+from system_03_search_agent.harness.coordinator_worker import (
+    ToolExecutionResult,
+    coordinator_worker_execute,
+)
 from system_03_search_agent.harness.cost_control import (
     PER_QUERY_CAP_PARTIAL_RESULT_NOTE,
     QueryCapExceededError,
@@ -499,6 +503,177 @@ async def test_done_event_trust_outcome_is_answer_with_a_real_citation_when_the_
     assert done_event.type == "done"
     assert done_event.payload["trust_outcome"] == "answer"
     assert done_event.payload["total_tool_calls"] == 1
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-10/F-2.1-11: `Finding.truncated` had no reader in `core/`, so a
+# `Finding` cut by coordinator_worker's 50,000-byte ceiling reached
+# write_node indistinguishable from a complete one, and a cut that erased
+# every citeable row surfaced as an identical, silent refusal to a
+# genuinely empty tool result. These tests build a `Finding` through the
+# real `coordinator_worker_execute` capping pipeline (not a hand-set
+# `truncated=True` flag) so the byte ceiling genuinely fires, then call
+# `write_node` directly against a minimal state, the same node function
+# `_run_graph` drives end to end elsewhere in this file.
+# ---------------------------------------------------------------------------
+
+
+def _citeable_row(index: int) -> dict[str, object]:
+    """One graph row shaped so `_citation_for_row` can cite it: a real
+    `source_url`, `curie`, and a 30-property `fields` dict at the F-03
+    per-field cap (500 chars each), matching the coordinator_worker.py
+    test suite's own "composed rows past per-field caps" fixture shape.
+    """
+    return {
+        "node_or_edge_type": "Gene",
+        "curie": "NCBIGene:672",
+        "fields": {f"prop_{i}": "v" * 500 for i in range(30)},
+        "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+        "graph_snapshot_version": f"v{index}",
+    }
+
+
+async def _truncated_ok_finding(row_count: int) -> object:
+    """Run `row_count` copies of `_citeable_row` through the real
+    `coordinator_worker_execute` structured pass-through path and return
+    the resulting `Finding`. `row_count` controls whether the byte
+    ceiling still leaves a citeable row (a smaller count) or erases every
+    row (a large enough count that even one already-capped row plus the
+    rest of the payload cannot fit)."""
+    harness = harness_module.Harness(trace_id="test-trace-truncation")
+    call = ToolCall(tool="cypher_query", call_id="call-truncation", layer="layer_1_graph")
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": [_citeable_row(i) for i in range(row_count)],
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+    return findings[0]
+
+
+def _write_state(query: Query, findings: list[object]) -> dict[str, object]:
+    harness = harness_module.Harness(trace_id=query.trace_id)
+    return {
+        "query": query,
+        "harness": harness,
+        "seq": 0,
+        "start_monotonic": time.monotonic(),
+        "findings": findings,
+        "findings_count": len(findings),
+    }
+
+
+@pytest.mark.asyncio
+async def test_truncated_ok_finding_still_answers_but_acknowledges_the_cut(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """F-2.1-10: confirmed failing against the pre-fix code, since nothing
+    read `Finding.truncated` at all, so write_node emitted only
+    citation/cost/done with no acknowledgement of the cut, exactly as if
+    the byte ceiling had never fired. 100 citeable rows, each already
+    within every per-field cap, still compose past the 50,000-byte total
+    ceiling (mirrors coordinator_worker.py's own
+    test_total_size_ceiling_shrinks_composed_rows_past_per_field_caps),
+    so `truncated=True` while a handful of rows survive. The cite-or-
+    refuse gate is satisfied (a real, citeable row exists) so the query
+    must still answer, but the cut must be acknowledged, not silently
+    dropped.
+    """
+    finding = await _truncated_ok_finding(row_count=100)
+    assert finding.truncated is True, "the byte ceiling must actually have fired for this fixture"
+    assert 0 < len(finding.structured_fields["rows"]) < 100, (
+        "some rows must survive the cap for this to be the answer-and-acknowledge case"
+    )
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    result = await graph_module.write_node(_write_state(query, [finding]))
+    events = result["events"]
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "answer"
+
+    citation_events = [event for event in events if event.type == "citation"]
+    assert len(citation_events) >= 1
+
+    token_events = [event for event in events if event.type == "token"]
+    assert any("truncat" in event.payload["text"].lower() for event in token_events), (
+        "a truncated-but-successful Finding answered with no acknowledgement of the cut"
+    )
+
+
+@pytest.mark.asyncio
+async def test_truncated_to_zero_rows_refuses_but_is_distinguishable_from_genuine_empty(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """F-2.1-11: confirmed failing against the pre-fix code. A single row
+    whose bulk lives in dict-key breadth rather than string length or list
+    length (30 outer keys x 30 inner keys x 600 chars) cannot be shrunk by
+    per-field string capping alone, and is still too large to keep even
+    one copy of once every list in the structure is forced to hold at
+    most one item, so the byte-ceiling binary search bottoms out at zero:
+    `status` stays `"ok"` but `rows` becomes empty. Before this fix,
+    write_node's `done` event for this case was byte-for-byte identical to
+    a genuinely empty tool result (no citations, `trust_outcome="refuse"`,
+    no other event), so a caller could not tell "nothing matched" from
+    "something matched but was cut away". The cite-or-refuse gate must
+    still refuse here (a truncated Finding earns no exemption), but the
+    refusal must carry a distinguishing signal a genuine empty result
+    never emits.
+    """
+
+    def _oversized_row() -> dict[str, object]:
+        return {
+            "node_or_edge_type": "Gene",
+            "curie": "NCBIGene:672",
+            "fields": {
+                f"outer_{i}": {f"inner_{j}": "x" * 600 for j in range(30)} for i in range(30)
+            },
+            "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+            "graph_snapshot_version": "v1",
+        }
+
+    harness = harness_module.Harness(trace_id="test-trace-truncation-zero")
+    call = ToolCall(tool="cypher_query", call_id="call-truncation-zero", layer="layer_1_graph")
+    structured_fields = {
+        "status": "ok",
+        "row_count": 1,
+        "total_available": 1,
+        "truncated": False,
+        "rows": [_oversized_row()],
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+    finding = findings[0]
+    assert finding.truncated is True
+    assert finding.structured_fields["status"] == "ok"
+    assert finding.structured_fields["rows"] == [], (
+        "this fixture must genuinely exceed the byte ceiling even at one row"
+    )
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, [finding]))
+    events = write_result["events"]
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "refuse", (
+        "zero citeable rows must still refuse; truncation earns no exemption from cite-or-refuse"
+    )
+    assert [event for event in events if event.type == "citation"] == []
+
+    error_events = [event for event in events if event.type == "error"]
+    assert len(error_events) == 1, (
+        "a refusal caused by truncation must carry a distinguishing signal a genuinely "
+        "empty tool result never emits"
+    )
+    assert error_events[0].payload["fatal"] is False
+    assert "cut" in error_events[0].payload["message"].lower() or (
+        "truncat" in error_events[0].payload["message"].lower()
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -326,6 +326,126 @@ def test_to_output_rows_omits_an_unparseable_column() -> None:
     assert rows == []
 
 
+# ---------------------------------------------------------------------------
+# F-2.1-B06: an edge with no CURIE of its own must never keep a citation
+# that points at a different record than the row itself. Reproduces the
+# adversary's live finding: a real AGE edge carries source, agent_type,
+# source_url, and knowledge_level, but never an "id" property.
+# ---------------------------------------------------------------------------
+
+
+def test_edge_only_row_with_no_curie_and_no_endpoint_carries_no_citation() -> None:
+    """The exact adversary reproduction: `RETURN e` alone.
+
+    Live probe of `is_sequence_variant_of` confirmed the edge carries a
+    real, host-valid `source_url` (the ClinVar variation page for its
+    start endpoint) but no `properties["id"]`. Before the fix, this row
+    shipped `curie=""` (source_id="unknown" downstream) next to that
+    ClinVar URL, a citation that resolves to a genuine record the row
+    itself never names. With no sibling vertex present in the row to
+    verify an attribution against, the only honest outcome is no
+    citation at all.
+    """
+    raw_row = {
+        "result": (
+            '{"id": 4222124650659841, "label": "is_sequence_variant_of", '
+            '"start_id": 1125899906842625, "end_id": 844424943788979, '
+            '"properties": {"source": "ClinVar", "agent_type": "manual_agent", '
+            '"source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/2", '
+            '"knowledge_level": "knowledge_assertion"}}::edge'
+        )
+    }
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["curie"] == "", "an edge with no id property has no CURIE of its own"
+    assert row["source_url"] is None, (
+        "a citation must never point at a record the row itself does not name; "
+        "an unattributable edge carries no citation, not a borrowed one"
+    )
+
+
+def test_edge_with_no_curie_is_attributed_to_a_sibling_endpoint_vertex() -> None:
+    """When the query also returns an endpoint vertex, attribution is honest.
+
+    `RETURN v, e` (the SequenceVariant and the edge, as separate columns
+    of the same row) gives this module a genuine, verified CURIE for the
+    edge's start endpoint, taken from data already in the row, never
+    fetched or guessed. The row's own `curie` and `source_url` are then
+    set from that endpoint, so the two agree, and the row is marked as
+    endpoint-attributed rather than presented as the edge's own identity.
+    """
+    raw_row = {
+        "c0": (
+            '{"id": 1125899906842625, "label": "SequenceVariant", "properties": '
+            '{"id": "ClinVar:2", "name": "NM_000059.4(BRCA2):c.1_10del"}}::vertex'
+        ),
+        "c1": (
+            '{"id": 4222124650659841, "label": "is_sequence_variant_of", '
+            '"start_id": 1125899906842625, "end_id": 844424943788979, '
+            '"properties": {"source": "ClinVar", "agent_type": "manual_agent", '
+            '"source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/2", '
+            '"knowledge_level": "knowledge_assertion"}}::edge'
+        ),
+    }
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert len(rows) == 2
+    edge_row = next(row for row in rows if row["node_or_edge_type"] == "is_sequence_variant_of")
+    assert edge_row["curie"] == "ClinVar:2"
+    assert edge_row["source_url"] == "https://www.ncbi.nlm.nih.gov/clinvar/variation/2/"
+    assert edge_row["fields"]["_cited_via_endpoint_curie"] == "ClinVar:2"
+
+
+def test_edge_with_no_curie_and_a_foreign_endpoint_id_still_carries_no_citation() -> None:
+    """A sibling vertex present in the row does not help if it is not this
+    edge's own endpoint: the vertex's internal id must actually match the
+    edge's start_id or end_id, never merely be present somewhere in the row.
+    """
+    raw_row = {
+        "c0": (
+            '{"id": 999, "label": "Gene", "properties": '
+            '{"id": "NCBIGene:672", "symbol": "BRCA1"}}::vertex'
+        ),
+        "c1": (
+            '{"id": 4222124650659841, "label": "is_sequence_variant_of", '
+            '"start_id": 1125899906842625, "end_id": 844424943788979, '
+            '"properties": {"source": "ClinVar", '
+            '"source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/2"}}::edge'
+        ),
+    }
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    edge_row = next(row for row in rows if row["node_or_edge_type"] == "is_sequence_variant_of")
+    assert edge_row["curie"] == ""
+    assert edge_row["source_url"] is None
+
+
+def test_edge_with_a_genuine_curie_of_its_own_is_unaffected_by_the_fix() -> None:
+    """Defensive: if an edge ever does carry its own properties["id"], the
+    fix's new branch never runs, and the pre-existing behaviour (keep a
+    valid stored source_url, else derive from the CURIE) is unchanged.
+    """
+    raw_row = {
+        "result": (
+            '{"id": 5, "label": "is_sequence_variant_of", "start_id": 1, '
+            '"end_id": 2, "properties": {"id": "ClinVar:17660"}}::edge'
+        )
+    }
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["curie"] == "ClinVar:17660"
+    assert row["source_url"] == "https://www.ncbi.nlm.nih.gov/clinvar/variation/17660/"
+    assert "_cited_via_endpoint_curie" not in row["fields"]
+
+
 def test_to_output_rows_flattens_a_path_into_its_vertex_and_edge_elements() -> None:
     raw_row = {
         "result": (

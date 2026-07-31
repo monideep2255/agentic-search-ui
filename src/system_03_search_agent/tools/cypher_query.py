@@ -94,6 +94,62 @@ happens in `_run_pipeline`, not in `to_output_rows`, so the shaping layer
 stays a faithful transform and the cite-or-refuse policy stays visible
 here, at the one place this module already drops a malformed row.
 
+Defect fix (findings F-2.1-B04, F-2.1-13, F-2.1-09, F-2.1-B11, adversary
+and judge second pass): four more bugs in what this pipeline reports
+about a query it already ran.
+
+- F-2.1-B04a: hitting the row cap was detected by comparing the row
+  count against `tool_input.row_limit` alone, but `cypher_validator`
+  preserves a model-supplied `LIMIT` smaller than `row_limit` rather than
+  replacing it, so a generated `LIMIT 10` on a 15,310-row answer never
+  looked "full" against a `row_limit` of 100 and shipped `total_available:
+  10, truncated: false`, a confident, wrong, and small number standing in
+  for the true one. Fixed by `_effective_row_limit`, which reads the
+  `LIMIT` that actually ran straight off the normalized Cypher and
+  compares against that instead.
+- F-2.1-B04b: `_build_count_cypher` discarded `DISTINCT` and any
+  aggregation, so `RETURN DISTINCT g` was counted with a bare `count(*)`,
+  inflating a "1 distinct gene" answer to 15,310 by counting every
+  underlying edge instead of the deduplicated node. Fixed by detecting a
+  single, unaliased `DISTINCT` item and counting `count(DISTINCT <item>)`
+  instead; anything more complex (more than one item, or an aliased one)
+  returns `None` rather than guess.
+- F-2.1-B04c: `to_output_rows` can emit more than one output row per raw
+  graph row, one per RETURN column that decodes to a node or edge, so a
+  raw MATCH count and the output row count only share a unit when the
+  RETURN clause has exactly one column. Reporting a raw-row total next to
+  an exploded row_count produced the ticket's own example verbatim,
+  `row_count=8 total_available=4 truncated=false`, two numbers in two
+  units presented as one comparison. Fixed by reporting `total_available`
+  in the same unit as `row_count` whenever nothing was capped (it is
+  simply `row_count`, since every match is already in hand), and by
+  reporting `None` rather than a wrong-unit number whenever the cap was
+  hit on a multi-column RETURN, where the true total cannot be had from a
+  single count-only query without re-running the same explosion this
+  pipeline just did once already.
+- F-2.1-13: the count-only query silently discarded every branch after
+  the first on a UNION query, so `_build_count_cypher` now returns `None`
+  for any top-level UNION rather than reporting one branch's count as the
+  whole result's total. The count query, once built, is also now passed
+  back through `validate_cypher` before execution (row_limit 1), so it
+  picks up the same trailing LIMIT the validator's own contract requires
+  of every executed query, which it previously ran without.
+- F-2.1-09: `_fetch_true_total`'s count-only query used to reuse the
+  exact `remaining_budget` computed before the main query, handing it a
+  full fresh timeout on top of whatever the main query itself already
+  spent and roughly doubling this tool's declared wall-clock bound in the
+  worst case. Fixed by recomputing the remaining budget from elapsed time
+  immediately before issuing the count query, the same pattern already
+  used to compute the first budget.
+- F-2.1-B11: the outer `asyncio.wait_for` timeout in `cypher_query`
+  reported "graph query exceeded Xs" even when the graph was never
+  reached, because that budget covers schema slicing, up to two
+  generation calls, validation, and execution together, and generation
+  latency alone can exhaust it. The message no longer names the graph
+  specifically; it names the whole budget instead, so the next step is
+  not told to retry a component that was not necessarily where the time
+  went.
+
 Depends on:
     - system_03_search_agent.tools.cypher_schemas (CypherQueryInput,
       CypherQueryOutput, CypherQueryRow)
@@ -194,6 +250,37 @@ _TRAILING_CLAUSE_PATTERN = re.compile(r"\b(ORDER\s+BY|SKIP|LIMIT)\b", re.IGNOREC
 # unbounded item count cannot grow the AS clause without limit.
 _MAX_RETURN_COLUMNS = 30
 
+# Finding F-2.1-13: a top-level UNION or UNION ALL keyword. A count-only
+# rewrite that takes everything before the first RETURN silently discards
+# every branch after the first, so a query matching this pattern gets no
+# count query at all rather than one that describes only its first branch
+# presented as the whole result's total. Not quote-aware, the same scope
+# choice cypher_validator's own UNION pattern makes: this module only ever
+# sees Cypher already accepted by that validator, a narrow generated shape,
+# not arbitrary user-authored text.
+_UNION_KEYWORD_PATTERN = re.compile(r"\bUNION\s+ALL\b|\bUNION\b", re.IGNORECASE)
+
+# Finding F-2.1-B04a: a genuine top-level trailing LIMIT, anchored to the
+# very end of the (rstripped) Cypher body, the same anchoring
+# cypher_validator's own trailing-LIMIT pattern uses and for the same
+# reason: a mid-query `WITH g LIMIT 1` is a legitimate scoping clause, not
+# the cap this module needs to read back.
+_TRAILING_LIMIT_VALUE_PATTERN = re.compile(r"\bLIMIT\s+(\d+)\s*$", re.IGNORECASE)
+
+# Finding F-2.1-B04b: a RETURN clause's item list starting with DISTINCT,
+# so _build_count_cypher can count the deduplicated expression itself
+# (`count(DISTINCT ...)`) instead of a bare `count(*)`, which would count
+# every raw match before deduplication.
+_DISTINCT_PREFIX_PATTERN = re.compile(r"^\s*DISTINCT\b", re.IGNORECASE)
+
+# Finding F-2.1-B04b: any AS keyword in a DISTINCT item's remainder marks
+# it too complex for this module to safely re-express inside
+# `count(DISTINCT ...)` (an alias cannot appear there), so that shape
+# returns None rather than a guessed rewrite. A plain, non-quote-aware
+# search is intentionally conservative here: a false positive only costs
+# an abstained count, never a fabricated one.
+_AS_KEYWORD_PATTERN = re.compile(r"\bAS\b", re.IGNORECASE)
+
 
 def _return_items_segment(cypher: str) -> str:
     """Extract the comma-separated item list following the RETURN keyword.
@@ -291,6 +378,21 @@ def _count_top_level_items(segment: str) -> int:
     return count
 
 
+def _return_column_count(cypher: str) -> int:
+    """Return the number of top-level comma-separated items in `cypher`'s
+    RETURN clause, clamped to at least 1 and at most `_MAX_RETURN_COLUMNS`.
+
+    Shared by `_build_as_clause`, which needs the count to declare AGE's
+    output columns, and `_run_pipeline`'s F-2.1-B04c fix, which needs it
+    to decide whether a raw graph-row count and the output row count
+    share a unit at all: they do only when RETURN has exactly one column,
+    since `to_output_rows` emits one output row per column that decodes
+    to a node or edge.
+    """
+    segment = _return_items_segment(cypher)
+    return max(1, min(_count_top_level_items(segment), _MAX_RETURN_COLUMNS))
+
+
 def _build_as_clause(cypher: str) -> str:
     """Derive the AGE `as_clause` output column declaration from `cypher`.
 
@@ -316,11 +418,32 @@ def _build_as_clause(cypher: str) -> str:
         A string of the shape `(c0 agtype, c1 agtype, ...)`, with at
         least one column and never more than `_MAX_RETURN_COLUMNS`.
     """
-    segment = _return_items_segment(cypher)
-    column_count = _count_top_level_items(segment)
-    column_count = max(1, min(column_count, _MAX_RETURN_COLUMNS))
+    column_count = _return_column_count(cypher)
     columns = ", ".join(f"c{i} agtype" for i in range(column_count))
     return f"({columns})"
+
+
+def _effective_row_limit(cypher: str, fallback: int) -> int:
+    """Return the LIMIT actually enforced on `cypher`, or `fallback`.
+
+    Finding F-2.1-B04a's fix: `cypher_validator._normalize_branch_limit`
+    preserves a model-supplied trailing LIMIT smaller than the caller's
+    row_limit rather than replacing it, so the cap a query can actually
+    return under is not always `tool_input.row_limit`. Reading the LIMIT
+    that actually ran, straight off the normalized Cypher, means hitting
+    a model's own `LIMIT 10` is recognised as "the cap was hit" the same
+    way hitting the caller's row_limit is, instead of only the latter
+    ever being able to trigger the true-total count query.
+
+    Falls back to `fallback` only when no trailing LIMIT can be found at
+    all, which should not happen for Cypher that has already passed
+    `validate_cypher`'s normalization (every branch of which always ends
+    in one), but is handled defensively rather than assumed impossible.
+    """
+    match = _TRAILING_LIMIT_VALUE_PATTERN.search(cypher.rstrip())
+    if match is None:
+        return fallback
+    return int(match.group(1))
 
 
 def _build_count_cypher(cypher: str) -> str | None:
@@ -328,31 +451,62 @@ def _build_count_cypher(cypher: str) -> str | None:
 
     Takes everything before the RETURN keyword, the MATCH and WHERE
     clauses, already validated and already binding every caller-supplied
-    value through a named parameter rather than a literal, and appends
-    its own `RETURN count(*) AS total_count`, discarding the original
-    RETURN items, ORDER BY, SKIP, and LIMIT entirely. The result returns
-    exactly one row: the true number of matches for the same pattern,
-    uncapped by the row_limit that shaped the first query.
+    value through a named parameter rather than a literal, and appends a
+    code-controlled count expression. The result returns exactly one row:
+    the true number of matches for the same pattern, uncapped by the
+    row_limit that shaped the first query.
 
-    Only the code-controlled suffix (`RETURN count(*) AS total_count`) is
-    ever appended here; the prefix this function reuses is exactly the
-    substring of an already-validated query, never caller text assembled
-    fresh, so this stays inside the same query-safety guarantees the
-    original query already satisfied.
+    Only the code-controlled suffix is ever appended here; the prefix
+    this function reuses is exactly the substring of an already-validated
+    query, never caller text assembled fresh, so this stays inside the
+    same query-safety guarantees the original query already satisfied.
+
+    Finding F-2.1-13's fix, first half: a top-level UNION combines
+    independent branches this function has no way to count together,
+    since taking only the text before the first RETURN silently discards
+    every branch after the first. That used to report one branch's count
+    as the whole result's total; now it returns None instead, "cannot
+    compute a true total for this shape" rather than a number that
+    describes less than what was asked.
+
+    Finding F-2.1-B04b's fix: a RETURN clause opening with DISTINCT is
+    counted as `count(DISTINCT <item>)`, not `count(*)`, since a bare
+    `count(*)` counts every raw match before deduplication and can
+    overstate a deduplicated total by orders of magnitude. Handled only
+    for the simple case, exactly one DISTINCT item with no alias; a
+    DISTINCT over more than one item, or an aliased one, is not something
+    this function can safely re-express inside `count(DISTINCT ...)`
+    (an alias cannot appear there), so it also returns None.
 
     Returns:
-        The count-only Cypher body, or None when no RETURN keyword is
-        found (defensive: should not happen for cypher that already
-        passed `validate_cypher`, which requires the query be well-formed
-        enough to execute, and is handled as "cannot compute a true
-        total" rather than assumed impossible).
+        The count-only Cypher body, or None when the query's shape is
+        one this function cannot safely count: a top-level UNION, a
+        DISTINCT over more than one item or an aliased item, or no
+        RETURN keyword at all (defensive: should not happen for cypher
+        that already passed `validate_cypher`, and is handled as "cannot
+        compute a true total" rather than assumed impossible).
     """
+    if _UNION_KEYWORD_PATTERN.search(cypher):
+        return None
+
     match = _RETURN_KEYWORD_PATTERN.search(cypher)
     if match is None:
         return None
     prefix = cypher[: match.start()].rstrip()
     if not prefix:
         return None
+
+    items_segment = _return_items_segment(cypher)
+    distinct_match = _DISTINCT_PREFIX_PATTERN.match(items_segment)
+    if distinct_match is not None:
+        remainder = items_segment[distinct_match.end() :]
+        if _count_top_level_items(remainder) != 1 or _AS_KEYWORD_PATTERN.search(remainder):
+            return None
+        item_expr = remainder.strip()
+        if not item_expr:
+            return None
+        return prefix + f" RETURN count(DISTINCT {item_expr}) AS total_count"
+
     return prefix + " RETURN count(*) AS total_count"
 
 
@@ -377,14 +531,29 @@ async def _fetch_true_total(
     reporting the row limit itself as if it were the total is exactly the
     finding this function exists to prevent, so a failure here must never
     fall back to a fabricated number.
+
+    Finding F-2.1-13's fix, second half: the count-only query is now
+    passed back through `validate_cypher` before execution, the same gate
+    the original query already passed, rather than executed as raw
+    unvalidated text. This is also what gives it a LIMIT: the validator's
+    own "every query it validates leaves with a LIMIT" contract used to
+    not hold for this one, and normalization is what supplies it (row
+    limit 1 is enough for a query returning a single count row). A count
+    query this validator would itself reject, which should not happen
+    for a MATCH/WHERE prefix lifted from an already-validated query but
+    is not assumed impossible, also returns None rather than executing an
+    unvalidated string.
     """
     count_cypher = _build_count_cypher(cypher)
     if count_cypher is None:
         return None
+    count_validation = validate_cypher(count_cypher, row_limit=1)
+    if not count_validation.ok or count_validation.normalized_cypher is None:
+        return None
     try:
         count_rows, _ = await asyncio.to_thread(
             execute_cypher,
-            count_cypher,
+            count_validation.normalized_cypher,
             params=params,
             row_limit=1,
             timeout_s=timeout_s,
@@ -744,23 +913,60 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
 
     # Finding A2's fix: the LIMIT clause is already baked into
     # normalized_cypher, so execute_cypher can never return more rows than
-    # tool_input.row_limit in the first place, and comparing against that
+    # the limit that ran in the first place, and comparing against that
     # same-bounded count could never detect a truncation. Only when the
     # first query returned exactly the limit is more data even possible;
     # in that case only, issue the count-only query for the true total.
     # Reporting the row limit itself as if it were the total is exactly
     # the wrong answer this fix exists to prevent, so a count-query
     # failure reports total_available as unknown (None), never a number.
-    if len(rows) >= tool_input.row_limit:
-        true_total = await _fetch_true_total(normalized_cypher, params, remaining_budget)
-        if true_total is None:
+    #
+    # Finding F-2.1-B04a's fix: compare against the LIMIT that actually
+    # ran (`_effective_row_limit`), not tool_input.row_limit alone. A
+    # model-supplied LIMIT smaller than tool_input.row_limit is preserved
+    # verbatim by cypher_validator, so a query capped at 10 rows never
+    # looked "full" against a row_limit of 100 and reported 10 as if it
+    # were the whole answer.
+    effective_limit = _effective_row_limit(normalized_cypher, tool_input.row_limit)
+    hit_cap = len(rows) >= effective_limit
+
+    # Finding F-2.1-B04c's fix: to_output_rows can emit more than one
+    # output row per raw graph row, one per RETURN column that decodes to
+    # a node or edge, so a raw MATCH count and the output row count only
+    # share a unit when RETURN has exactly one column. A count query is
+    # only attempted on that single-column shape; a multi-column RETURN
+    # that hit its cap reports total_available as unknown rather than a
+    # number phrased in a different unit than row_count.
+    column_count = _return_column_count(normalized_cypher)
+
+    total_available: int | None
+    if hit_cap:
+        if column_count == 1:
+            # Finding F-2.1-09's fix: recompute the remaining budget here
+            # from elapsed time, rather than reusing remaining_budget as
+            # computed before the main query ran. Reusing that value gave
+            # the count-only query its own full fresh timeout on top of
+            # whatever the main query itself had already spent, roughly
+            # doubling this tool's declared wall-clock bound in the worst
+            # case.
+            elapsed_before_count = time.monotonic() - start
+            count_budget = max(1.0, CYPHER_QUERY_TIMEOUT_SECONDS - elapsed_before_count)
+            true_total = await _fetch_true_total(normalized_cypher, params, count_budget)
+            if true_total is None:
+                total_available = None
+                truncated = True
+            else:
+                total_available = true_total
+                truncated = true_total > len(rows)
+        else:
             total_available = None
             truncated = True
-        else:
-            total_available = true_total
-            truncated = true_total > len(rows)
     else:
-        total_available = len(rows)
+        # Finalized below, once the output row count is known: with
+        # nothing capped, every match is already in hand, and the true
+        # total is exactly that output row count, in the same unit
+        # row_count itself reports.
+        total_available = None
         truncated = False
 
     snapshot_version = _graph_snapshot_version()
@@ -792,6 +998,13 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
                 # dropped, not raised.
                 continue
 
+    if not hit_cap:
+        # Finding F-2.1-B04c's fix: nothing was capped, so every match
+        # already reached this point, and the output row count computed
+        # just above is the true total, not a raw graph-row count in a
+        # different, incoherent unit.
+        total_available = len(mapped_rows)
+
     return CypherQueryOutput(
         status="ok" if mapped_rows else "empty",
         rows=mapped_rows,
@@ -821,6 +1034,16 @@ async def cypher_query(harness: HarnessLike, tool_input: CypherQueryInput) -> Cy
     `status: "error"` `CypherQueryOutput`, never an unhandled exception,
     per the retry-safety gate's "an error message must say what to do
     next" requirement.
+
+    Finding F-2.1-B11's fix: the outer timeout's message used to say
+    "graph query exceeded Xs", but this budget covers schema slicing, up
+    to two generation calls, and validation, in addition to graph
+    execution, so the graph was often never reached at all; generation
+    latency alone can exhaust it. Blaming the graph specifically told the
+    next step to retry the wrong component, and made an earlier finding
+    hard to diagnose for exactly that reason. The message now names the
+    whole budget, never the graph alone, so it stays true regardless of
+    which internal step actually consumed the time.
     """
     try:
         return await asyncio.wait_for(
@@ -829,6 +1052,9 @@ async def cypher_query(harness: HarnessLike, tool_input: CypherQueryInput) -> Cy
     except TimeoutError:
         return _error_output(
             None,
-            f"graph query exceeded {CYPHER_QUERY_TIMEOUT_SECONDS:g}s, retry with a "
-            "narrower query_intent or a smaller query_class",
+            f"cypher_query exceeded its {CYPHER_QUERY_TIMEOUT_SECONDS:g}s overall "
+            "budget before returning a result. That budget covers Cypher "
+            "generation, validation, and graph execution together, so the "
+            "delay was not necessarily the graph; retry with a narrower "
+            "query_intent or a smaller query_class.",
         )

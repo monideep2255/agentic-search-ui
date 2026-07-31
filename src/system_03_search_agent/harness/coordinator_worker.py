@@ -190,7 +190,7 @@ _MAX_FINDING_TOTAL_BYTES = 50_000
 
 # F-2.0-08: the fixed per-step timeout budget for the isolated reader
 # pass's single `call_tier("guard", ...)` call. Matches
-# `harness.harness.budget_for_query_class("single_hop")` (10 seconds): a
+# `harness.harness.budget_for_step`'s guard-tier budget: a
 # reasonable, fixed budget for a single guard-tier read-and-report call,
 # independent of the originating query's classified complexity, since the
 # reader always does the same fixed-shape one-call job regardless of

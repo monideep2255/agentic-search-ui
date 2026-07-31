@@ -13,6 +13,9 @@ schema are all exercised for real. A test here that needs a new mock to pass
 is a test that has stopped doing its job.
 
 Skips cleanly, with a stated reason, when no tunnel to the graph is open.
+Reachability is checked fresh before every single test, not once at import
+(finding F-2.1-B12): the tunnel is a manual, long-lived SSH process that can
+drop mid-session, and a guard evaluated once at import cannot notice that.
 
 Depends on:
     - system_03_search_agent.tools.cypher_query (the assembled pipeline)
@@ -38,6 +41,12 @@ from unittest.mock import AsyncMock
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+
+# Finding F-2.1-B12: the exact command to reopen the tunnel, named directly in
+# the skip and failure text so diagnosis is one line, not an investigation.
+_REOPEN_TUNNEL_CMD = (
+    "ssh -o BatchMode=yes -f -N -L 15432:127.0.0.1:5432 root@46.225.128.133"
+)
 
 
 def _load_env_explicitly() -> None:
@@ -70,17 +79,33 @@ def _graph_reachable() -> tuple[bool, str]:
         sock.connect((host, int(port_raw)))
         return True, ""
     except OSError as exc:
-        return False, f"{host}:{port_raw} not reachable ({type(exc).__name__}); no SSH tunnel open"
+        return False, (
+            f"{host}:{port_raw} not reachable ({type(exc).__name__}); no SSH tunnel open. "
+            f"Reopen it with: {_REOPEN_TUNNEL_CMD}"
+        )
     finally:
         sock.close()
 
 
-_REACHABLE, _SKIP_REASON = _graph_reachable()
+pytestmark = [pytest.mark.integration]
 
-pytestmark = [
-    pytest.mark.integration,
-    pytest.mark.skipif(not _REACHABLE, reason="live graph unavailable: " + _SKIP_REASON),
-]
+
+@pytest.fixture(autouse=True)
+def _skip_if_graph_unreachable() -> None:
+    """Check reachability fresh before every test, not once at import.
+
+    Finding F-2.1-B12: a module-level `_REACHABLE` computed at import time
+    freezes the answer for the whole run. The SSH tunnel is a manual,
+    long-lived process that drops mid-session, so a run that started reachable
+    can go unreachable partway through, and every test after that point fails
+    with an opaque connection error instead of skipping with a stated reason.
+    An autouse, function-scoped fixture re-evaluates reachability immediately
+    before each test body runs, so a mid-run drop is caught as a skip, not
+    misread as a regression.
+    """
+    reachable, reason = _graph_reachable()
+    if not reachable:
+        pytest.skip("live graph unavailable: " + reason)
 
 # Ground truth, established during phase open and re-verified after the
 # write-refusal probes. These are facts about the live graph, not fixtures.
@@ -503,23 +528,109 @@ async def test_full_loop_works_for_a_gene_outside_the_symbol_seed_table(
 async def test_full_loop_refuses_when_the_graph_returns_nothing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Findings A5 and F-02: zero rows must not terminate as an answer.
+    """Findings A5, F-02, and F-2.1-08: zero rows must not terminate as an answer.
 
     trust_outcome="answer" on a query that found nothing is the fluent wrong
     answer this system's whole trust story exists to prevent. status="empty"
     being merely represented, with nothing downstream reading it, is not
     enforcement.
-    """
-    from system_03_search_agent.core.run import run
 
-    _mock_generation(monkeypatch, "MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g")
+    F-2.1-08: the original version of this test named "ZZZFAKE9", a token
+    that is neither a verbatim CURIE nor a seed-table entry. Entity
+    extraction found nothing, so `target_entities` came back empty and
+    `cypher_query` refused before ever generating or running a query,
+    reaching status="error", never status="empty". The loop still reached
+    trust_outcome="refuse" through that error branch, so the assertion on
+    `trust_outcome` alone passed without ever exercising the empty-graph
+    path it claimed to prove.
+
+    This version names `NCBIGene:99999999` verbatim: a real-shaped CURIE
+    that the general (non-seed-table) extraction path resolves, so the tool
+    proceeds to generate and execute a real query against the live graph.
+    The CURIE is confirmed absent from the graph, so the query genuinely
+    returns zero rows and reaches the refusal through status="empty". The
+    Cypher below binds the parameter name `entity_param_bindings` derives
+    for that CURIE, the same naming contract F-2.1-B01 established, rather
+    than a hardcoded guess.
+
+    Evidence, not assertion, that this is the empty branch and not the
+    unresolved-entity branch: `run()` does not yet emit a `tool_result`
+    event carrying `cypher_query`'s own status (that instrumentation is not
+    built in this phase; `write_node` folds it into `trust_outcome` without
+    surfacing it), so the loop's event stream alone cannot distinguish the
+    two branches by itself, which is the same gap that let the original,
+    broken version of this test pass unnoticed. Proving the right branch
+    therefore takes two direct checks against the actual components
+    `plan_node`/`act_node` call, using this test's exact query text and
+    exact CURIE, before the full-loop assertions:
+
+    1. `_extract_target_entities` (the deterministic function `plan_node`
+       calls to build `target_entities`) must resolve this query text to
+       exactly `[absent_curie]`, not `[]`. An empty result is precisely
+       what sent the original test down the unresolved-entity, status=
+       "error" branch.
+    2. `cypher_query` itself, called with that resolved entity and the same
+       mocked Cypher the full loop below will use, must return
+       `status="empty"` against the live graph, the exact call `act_node`
+       makes internally.
+
+    Only once both are confirmed does the full-loop run below exercise the
+    same path end to end and check its externally observable outcome.
+    """
+    from system_03_search_agent.core.graph import _extract_target_entities
+    from system_03_search_agent.core.run import run
+    from system_03_search_agent.tools.cypher_query import cypher_query, entity_param_bindings
+    from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
+
+    absent_curie = "NCBIGene:99999999"
+    query_text = f"What is known about the gene {absent_curie}?"
+    param_name = next(iter(entity_param_bindings([absent_curie])))
+    generated_cypher = f"MATCH (g:Gene {{id: ${param_name}}}) RETURN g"
+
+    # Check 1: the extraction step the loop actually calls resolves this
+    # query text to the CURIE, not to nothing.
+    extracted = _extract_target_entities(query_text)
+    assert extracted == [absent_curie], (
+        f"_extract_target_entities returned {extracted!r} for {query_text!r}, "
+        f"expected [{absent_curie!r}]. An empty result here reproduces "
+        "F-2.1-08: cypher_query would refuse before generating anything, "
+        "reaching status='error', never status='empty'."
+    )
+
+    # Check 2: cypher_query itself, called the same way act_node calls it,
+    # genuinely reaches status="empty" for this entity and this Cypher.
+    _mock_generation(monkeypatch, generated_cypher)
+    direct_result = await cypher_query(
+        _harness(trace_id="e2e-live-2-direct"),
+        CypherQueryInput(
+            query_intent=query_text,
+            query_class="lookup",
+            target_entities=extracted,
+            row_limit=5,
+        ),
+    )
+    assert direct_result.status == "empty", (
+        f"expected status='empty' from a real query against the live graph, "
+        f"got {direct_result.status!r}: {direct_result.error}"
+    )
+    assert direct_result.rows == []
+
+    # Now the full loop, exercising the same path end to end.
+    _mock_generation(monkeypatch, generated_cypher)
 
     events = [
         event
-        async for event in run(
-            _query("What is known about the gene ZZZFAKE9?", "e2e-live-2"), _context()
-        )
+        async for event in run(_query(query_text, "e2e-live-2"), _context())
     ]
+
+    errors = [e for e in events if e.type == "error"]
+    assert not errors, f"the loop errored: {[e.payload for e in errors]}"
+
+    citations = [e for e in events if e.type == "citation"]
+    assert not citations, (
+        f"a zero-row result produced {len(citations)} citation(s); "
+        "an empty graph result must never be cited as though it were found"
+    )
 
     done = [e for e in events if e.type == "done"]
     assert done, "the loop produced no done event"

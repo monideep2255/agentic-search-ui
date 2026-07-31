@@ -186,6 +186,14 @@ async def test_successful_multi_hop_query_returns_ok_status_with_multiple_rows(
     two agtype columns, `c0` and `c1`. `to_output_rows` splits that one raw
     row into two output rows, one per column, since `CypherQueryRow` has
     no shape for merging two distinct cited entities into a single row.
+
+    Finding F-2.1-B04c: total_available must match row_count's own unit,
+    not the raw graph-row count, since to_output_rows can emit more
+    output rows than there were graph rows. Before that fix this test
+    asserted total_available == 1 next to row_count == 2, the exact
+    "row_count exceeds total_available" incoherence the adversary
+    reproduced (`row_count=8 total_available=4 truncated=false`) in
+    miniature.
     """
     harness = _FakeHarness(
         responses=[
@@ -216,10 +224,12 @@ async def test_successful_multi_hop_query_returns_ok_status_with_multiple_rows(
 
     assert output.status == "ok"
     assert output.row_count == 2
-    # total_available reflects the one raw graph row that matched, not the
-    # two output rows it was split into: one graph row was returned, and it
-    # was fewer than the 100-row limit, so no truncation is possible.
-    assert output.total_available == 1
+    # Finding F-2.1-B04c's fix: total_available must equal row_count when
+    # nothing was capped, since every match is already in hand and both
+    # numbers describe the same output rows. One graph row was returned
+    # and it was fewer than the 100-row limit, so no truncation is
+    # possible; total_available is 2, not the raw graph-row count of 1.
+    assert output.total_available == 2
     assert output.truncated is False
     types_seen = {row.node_or_edge_type for row in output.rows}
     assert types_seen == {"SequenceVariant", "Gene"}
@@ -292,8 +302,13 @@ async def test_truncated_result_issues_a_count_query_for_the_true_total(
     )
     assert len(calls) == 2
     count_call = next(c for c, _ in calls if "count(*)" in c)
-    assert "LIMIT" not in count_call, "the count query must not carry the original LIMIT"
+    assert "LIMIT 2" not in count_call, "the count query must not carry the original LIMIT"
     assert "RETURN v" not in count_call, "the count query must discard the original RETURN"
+    # Finding F-2.1-13's fix: the count query is now itself passed back
+    # through validate_cypher, which is what supplies this LIMIT; the
+    # validator's own contract is that every query it validates leaves
+    # with one.
+    assert "LIMIT" in count_call, "the count query must pass through validate_cypher too"
 
 
 @pytest.mark.asyncio
@@ -672,4 +687,321 @@ async def test_a_timeout_above_the_graph_call_can_actually_cancel_it(
     assert elapsed < 1.5, (
         f"wait_for(0.5) returned after {elapsed:.2f}s against a 3s call; the "
         "timeout is not able to interrupt the graph call"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Finding F-2.1-B04a: a model-supplied LIMIT smaller than the caller's
+# row_limit must still be recognised as "the cap was hit".
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_model_supplied_limit_below_row_limit_still_triggers_true_total(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Before this fix, hitting the cap was detected by comparing the row
+    count against tool_input.row_limit alone. cypher_validator preserves a
+    model-supplied LIMIT smaller than row_limit rather than replacing it,
+    so a generated `LIMIT 10` against a row_limit of 100 never looked
+    "full" and reported 10 as the whole answer to a 15,310-row question,
+    with truncated=False asserting completeness. The adversary's exact
+    reproduction.
+    """
+    harness = _FakeHarness(
+        responses=[
+            (
+                "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $e_NCBIGene_672}) "
+                "RETURN v LIMIT 10"
+            )
+        ]
+    )
+    calls: list[str] = []
+
+    def _fake_execute_cypher(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
+        calls.append(cypher)
+        if "count(*)" in cypher:
+            return [{"total_count": "15310"}], 1
+        return (
+            [
+                {"result": _agtype_vertex_text("SequenceVariant", f"ClinVar:{i}", {})}
+                for i in range(10)
+            ],
+            10,
+        )
+
+    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake_execute_cypher)
+
+    output = await cypher_query(harness, _gene_lookup_input(row_limit=100))
+
+    assert output.status == "ok"
+    assert output.row_count == 10
+    assert output.truncated is True, (
+        "a model-supplied LIMIT 10 hit against a 15,310-row answer must be "
+        "reported as truncated, not as a complete result"
+    )
+    assert output.total_available == 15310, (
+        f"total_available was {output.total_available}, expected the true "
+        "count behind the model's own LIMIT 10, never the limit itself"
+    )
+    assert len(calls) == 2, "hitting the model's own LIMIT must still trigger the count query"
+
+
+# ---------------------------------------------------------------------------
+# Finding F-2.1-B04b: RETURN DISTINCT must be counted as count(DISTINCT
+# ...), not a bare count(*).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_return_distinct_counts_the_deduplicated_expression_not_every_match(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The adversary's reproduction: `RETURN DISTINCT g` over a gene with
+    15,310 variant edges but exactly one distinct gene reported
+    total_available=15310, because the old _build_count_cypher discarded
+    DISTINCT and counted every raw match with a bare count(*). The true
+    answer is 1.
+    """
+    harness = _FakeHarness(
+        responses=[
+            (
+                "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $e_NCBIGene_672}) "
+                "RETURN DISTINCT g"
+            )
+        ]
+    )
+    calls: list[str] = []
+
+    def _fake_execute_cypher(cypher, params=None, row_limit=1, timeout_s=30.0, as_clause=None):
+        calls.append(cypher)
+        if "count(DISTINCT" in cypher:
+            return [{"total_count": "1"}], 1
+        if "count(*)" in cypher:
+            # What the unfixed _build_count_cypher would have built: every
+            # raw match before deduplication, not the distinct total.
+            return [{"total_count": "15310"}], 1
+        return [{"result": _agtype_vertex_text("Gene", "NCBIGene:672", {"symbol": "BRCA1"})}], 1
+
+    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake_execute_cypher)
+
+    output = await cypher_query(harness, _gene_lookup_input(row_limit=1))
+
+    assert output.status == "ok"
+    assert output.row_count == 1
+    assert output.total_available == 1, (
+        f"total_available was {output.total_available}, expected the true "
+        "distinct count (1), not a raw match count that ignores DISTINCT"
+    )
+    assert output.truncated is False
+    assert len(calls) == 2
+    count_call = next(c for c in calls if "count(" in c)
+    assert "count(DISTINCT" in count_call, (
+        "the count query must count the deduplicated expression, not count(*)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Finding F-2.1-B04c: total_available must never sit in a different unit
+# than row_count.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_multi_column_return_reports_total_available_in_row_count_units(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`RETURN v, g` explodes each raw graph row into two output rows, one
+    per column, so four raw matches produce eight citable output rows.
+    total_available must report 8, matching row_count, not the raw
+    graph-row count of 4. The adversary's reproduction was exactly this
+    shape: row_count=8 total_available=4 truncated=false, "incoherent on
+    its face".
+    """
+    harness = _FakeHarness(
+        responses=[
+            (
+                "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $e_NCBIGene_672}) "
+                "RETURN v, g"
+            )
+        ]
+    )
+
+    def _fake_execute_cypher(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
+        return (
+            [
+                {
+                    "c0": _agtype_vertex_text("SequenceVariant", f"ClinVar:{i}", {}),
+                    "c1": _agtype_vertex_text("Gene", "NCBIGene:672", {"symbol": "BRCA1"}),
+                }
+                for i in range(4)
+            ],
+            4,
+        )
+
+    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake_execute_cypher)
+
+    tool_input = _gene_lookup_input(query_class="multi_hop", row_limit=100)
+    output = await cypher_query(harness, tool_input)
+
+    assert output.status == "ok"
+    assert output.row_count == 8
+    assert output.total_available == 8, (
+        f"total_available was {output.total_available}, expected 8 to match "
+        "row_count; reporting the raw graph-row count of 4 next to it is "
+        "the incoherence the adversary reproduced"
+    )
+    assert output.truncated is False
+
+
+# ---------------------------------------------------------------------------
+# Finding F-2.1-13: a UNION query's count-only rewrite must never describe
+# only its first branch.
+# ---------------------------------------------------------------------------
+
+
+def test_build_count_cypher_returns_none_for_a_union_query() -> None:
+    """A top-level UNION combines independent branches this function
+    cannot count together: taking only the text before the first RETURN
+    silently discarded every branch after the first, reporting one
+    branch's count as the whole result's total. It must abstain (None)
+    instead.
+    """
+    cypher = (
+        "MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g LIMIT 5 "
+        "UNION MATCH (d:Disease {id: $e_NCBIGene_672}) RETURN d LIMIT 5"
+    )
+    assert cypher_query_module._build_count_cypher(cypher) is None
+
+
+@pytest.mark.asyncio
+async def test_union_query_that_hits_its_cap_reports_total_available_as_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """End to end: a UNION query must never even reach the count-only
+    path (_build_count_cypher returns None for it), so hitting the cap
+    reports total_available as unknown rather than one branch's count
+    standing in for the whole result.
+    """
+    harness = _FakeHarness(
+        responses=[
+            (
+                "MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g LIMIT 1 "
+                "UNION MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g LIMIT 1"
+            )
+        ]
+    )
+    count_calls: list[str] = []
+
+    def _fake_execute_cypher(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
+        if "count(" in cypher:
+            count_calls.append(cypher)
+            return [{"total_count": "999"}], 1
+        return [_raw_gene_row()], 1
+
+    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake_execute_cypher)
+
+    output = await cypher_query(harness, _gene_lookup_input(row_limit=1))
+
+    assert output.status == "ok"
+    assert output.total_available is None, (
+        "a UNION query must never report a count query's number; only one "
+        "branch's true total can ever be computed, which is not the whole "
+        "answer"
+    )
+    assert output.truncated is True
+    assert count_calls == [], "a UNION query must never even attempt the count-only query"
+
+
+# ---------------------------------------------------------------------------
+# Finding F-2.1-09: the count-only query must get a freshly recomputed
+# budget, not the main query's budget reused unchanged.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_count_query_gets_a_freshly_recomputed_budget_not_a_full_new_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Before this fix, the count-only query reused remaining_budget
+    exactly as computed before the main query ran, handing it a full
+    fresh timeout on top of whatever the main query itself had already
+    spent, roughly doubling this tool's declared wall-clock bound in the
+    worst case. The main query here sleeps for a real, measurable amount
+    of time; the count query's timeout_s must be smaller than the main
+    query's own timeout_s, not equal to it.
+    """
+    harness = _FakeHarness(
+        responses=[
+            (
+                "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->(g:Gene {id: $e_NCBIGene_672}) "
+                "RETURN v"
+            )
+        ]
+    )
+    timeouts: dict[str, float] = {}
+
+    def _fake_execute_cypher(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
+        if "count(*)" in cypher:
+            timeouts["count"] = timeout_s
+            return [{"total_count": "15310"}], 1
+        timeouts["main"] = timeout_s
+        time.sleep(0.2)  # a real, measurable delay inside the "graph call"
+        return (
+            [{"result": _agtype_vertex_text("SequenceVariant", "ClinVar:1", {})}] * 2,
+            2,
+        )
+
+    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake_execute_cypher)
+
+    await cypher_query(harness, _gene_lookup_input(row_limit=2))
+
+    assert "main" in timeouts and "count" in timeouts
+    assert timeouts["count"] < timeouts["main"], (
+        f"count query timeout ({timeouts['count']:.3f}s) must be smaller "
+        f"than the main query's ({timeouts['main']:.3f}s): the elapsed "
+        "time the main query itself took must be subtracted before "
+        "handing the count query its own budget, not reused unchanged"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Finding F-2.1-B11: the outer timeout message must not blame the graph
+# for a delay that was actually generation latency.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_outer_timeout_message_does_not_blame_the_graph_for_generation_delay(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The outer timeout fires while a plan-tier generation call is still
+    in flight, well before any graph call was even attempted. The error
+    message must not say the graph query itself was what exceeded the
+    budget, since retrying "the graph" is the wrong next action when the
+    graph was never reached; this is what made an earlier finding hard to
+    diagnose.
+    """
+    monkeypatch.setattr(cypher_query_module, "CYPHER_QUERY_TIMEOUT_SECONDS", 0.05)
+    harness = _FakeHarness(
+        responses=["MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g"], delay=0.3
+    )
+    execute_calls: list[str] = []
+
+    def _fake_execute_cypher(cypher, params=None, row_limit=100, timeout_s=30.0, as_clause=None):
+        execute_calls.append(cypher)
+        return [_raw_gene_row()], 1
+
+    monkeypatch.setattr(cypher_query_module, "execute_cypher", _fake_execute_cypher)
+
+    output = await cypher_query(harness, _gene_lookup_input())
+
+    assert output.status == "error"
+    assert execute_calls == [], "the graph was never reached; the delay was generation latency"
+    assert "exceeded" in output.error
+    assert "retry" in output.error
+    assert "query_intent" in output.error or "query_class" in output.error
+    assert not output.error.lower().startswith("graph query exceeded"), (
+        "the message must not assert specifically that the graph query "
+        f"was what exceeded the budget when the graph was never reached, got: {output.error!r}"
     )

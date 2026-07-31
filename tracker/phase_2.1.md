@@ -907,6 +907,29 @@ History:
 
 ---
 
+### F-2.1-B13: the event stream cannot distinguish an empty result from a tool error
+
+Status: confirmed
+Raised by: fix agent, while rewriting the F-2.1-08 test
+Severity: medium
+Ticket: none yet
+
+What happened: `run()` emits no `tool_result` event carrying `cypher_query`'s own status, so nothing in the event stream says whether the tool returned `status="empty"` or `status="error"`. Both end in `trust_outcome="refuse"`, and from outside the loop they are indistinguishable.
+
+Found while fixing F-2.1-08, whose whole problem was a test that could not tell those two branches apart. The agent rewriting it discovered the stream cannot either, so it asserted against the components directly and said so, rather than claiming the loop test proved the empty path. That is the right call and it leaves the underlying gap open.
+
+Why it matters beyond testing: "the graph holds no such association" and "the tool failed" are different facts about the world, and only the first is an answer. A subscriber to the event stream, which is every delivery surface in Section 13, currently receives the same thing for both. The operator dashboard cannot tell a healthy refusal from a broken tool, and a user cannot tell "no known link" from "something went wrong".
+
+This is also why F-2.1-08 sat undetected: the test asserted the outcome both branches share.
+
+Fix shape: emit the tool's status on the stream. Section 2.3's event taxonomy would need a payload for it, which makes this a contract question rather than a local fix, and `system-design-patterns` rule 10 requires a contract change to be additive within v1.
+
+History:
+- 2026-07-31 fix agent: found while rewriting the F-2.1-08 test, reported rather than worked around silently
+- 2026-07-31 lead: filed
+
+---
+
 ### Still unexamined
 
 Named so the gap is visible rather than implied. Nobody has tested:
