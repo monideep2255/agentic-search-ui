@@ -211,3 +211,54 @@ Still open after this phase:
 ## If a different agent takes over
 
 Read the "Running this project with a different agent" section in `CLAUDE.md`, which `AGENTS.md` mirrors. The short version: the file artifacts and the model tiering port cleanly, the skills and rules port as content but not as invocation, and the four security hooks do not port at all. They are the only structural enforcement in this repo, so substituting them is the first handover step.
+
+## STOP-POINT, 2026-08-01: build phase 2.1 rework, stage 8 of 11
+
+Read this before anything else in this file. It supersedes the "Build phase 2.1, done with one recorded gap" section below, which describes a state that is two review rounds old.
+
+### Where the work actually is
+
+Branch `phase/2.1-cypher-tool`, 25 commits, all committed locally, NOTHING PUSHED. PR #13 is already MERGED, so this rework needs a NEW pull request, not an update to that one.
+
+The cadence is `docs/build/Build_workflow_cadence.md`'s eleven stages. Position: stage 8. Stages 9, 10, and 11 remain.
+
+| Check | State on stopping |
+|-------|-------------------|
+| Python tests | 946 passing |
+| Premise gate | 9 of 9, and 8 passed plus 1 xpassed on the last run |
+| Ruff, `src/` | clean |
+| Ruff, `tests/` | 2 pre-existing errors, both predate this work, both verified against HEAD |
+| Working tree | clean |
+| Live graph | healthy |
+
+### The one thing to do first
+
+The fifth ADVERSARY was stopped mid-run and never wrote its report. Its last message before being stopped was "Two significant results already", so it had found something and those findings are LOST, not absent. Re-run it before stage 9. Its brief is in the session transcript; the essential framing is that the newest code is the most dangerous code, which has held true five rounds running.
+
+Do NOT treat the fifth judge's PREMISE: PASS as the phase being closeable. The judge grades against known criteria; the adversary attacks what the judge certified, and in this phase the adversary has found things the judge could not in every single round.
+
+### What the fifth judge established, and it matters
+
+PREMISE: PASS, the first of five reviews to return one. It proved the root cause rather than accepting it, with a controlled A/B: at `_STUB_CLASSIFIER_HOP_FLOOR = 0` the schema slice contains no Disease and the model returns 25 non-human orthologs; at floor 1 it returns the correct 4 diseases. Same model, same question, one constant.
+
+It also confirmed no check was weakened to reach green, which was the specific thing it was asked to audit.
+
+### Open, and deliberately so. Do not rediscover these
+
+- F-2.1-J4-02, prompt injection. Mitigated by delimiting the question, NOT closed: the test passes and fails run to run against identical code. Marked `xfail(strict=False)` with the reason recorded so it keeps reporting. Clearing that marker belongs to build phase 3.0's Guardrail definition of done.
+- F-2.1-C15's generation half, constraining generation so an unbounded traversal cannot be produced. Filed for 2.2. The hop-floor fix removed the specific shape that caused the OOM.
+- F-2.1-C07's fourth status value for "matched plenty, cited none". Needs a contract change, filed for 2.2.
+- The vocabulary-artifact rule would be strictly better as a name frequency table. Stated as the residual in `core/graph.py`, filed for 2.2.
+- Gene symbol resolution beyond a one-entry seed table. Layer 2 work, build phase 3.1.
+
+### The load-bearing lesson, so the next session does not repeat it
+
+This phase failed FOUR consecutive reviews with a green suite, and the reason was one composition defect that was visible from the first day: `Think` emits a hardcoded `query_class="lookup"`, `lookup` mapped to a 0-hop schema slice, and a 0-hop Gene slice contains exactly one edge, `orthologous_to`. The generator was asked about diseases and handed a schema with no disease in it.
+
+Three rounds recorded that as generation quality and hardened the parameter binder instead. Roughly 25 findings were fixed, every one of them real, none of them causal.
+
+What actually found it: printing the model's real input. What would have found it on day one: the same thing.
+
+The durable fix is `tests/system_03_search_agent/tools/test_cypher_query_premise.py`. It does not mock the model, and it asserts on the meaning of the answer against ground truth pinned from the live graph. Every one of the other 946 tests mocks the model call, which is why they were green throughout. A premise claim in this repo now cites that file, never a suite total.
+
+Two design points in it must not be undone: it sends `query_class="lookup"`, the stub production actually emits, never a hand-picked class (a draft that hand-picked scored 8 of 9 where production scored 3 of 9); and its ground truth is read from the graph so "correct" is checkable rather than plausible.
