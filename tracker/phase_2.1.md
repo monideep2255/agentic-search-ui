@@ -1108,3 +1108,36 @@ Two design points in it are load-bearing and must not be undone:
 
 - It sends `query_class="lookup"`, the stub Think actually emits, never a hand-picked class. An earlier draft passed a per-question class and scored 8 of 9 where production scored 3 of 9. A gate handed a better classification than production sends is a fixture, not a gate.
 - Its ground truth is read from the graph, so "correct" is checkable rather than plausible. When the Layer 1 snapshot is refreshed these figures move, and a failure after a refresh means re-verify the constants, never weaken the test.
+
+## Fifth judge pass, 2026-07-31
+
+The first review of this phase to return PREMISE: PASS. Full report: `judge_5.md` in the session scratchpad. Model spend: $0.035.
+
+It did not accept the round-five root-cause claim, it tested it. Controlled A/B, one constant changed, same model and same question: at `_STUB_CLASSIFIER_HOP_FLOOR = 0` the schema slice contains no Disease and the model returns 25 non-human orthologs, which is round four's worst case exactly; at floor 1 it returns the correct 4 diseases. That is the proof that three rounds of findings were misattributed to generation quality.
+
+It also composed six of its own questions, none of them from the repo's premise gate, and read its own ground truth off the graph rather than trusting the pinned constants: 5 correct, 1 timeout, 0 wrong answers, 0 orthologs, against round four's 3 of 8.
+
+On the question that mattered most, whether a check was weakened to reach green: no. Four deleted assertion lines total, all accounted for, and both replacements strictly stronger. The provenance tests are +138/-0 and restore a previously weakened fixture.
+
+### Findings and status
+
+| ID | Sev | What | Status |
+|----|-----|------|--------|
+| F-2.1-J5-01 | critical | The connectivity invariant never read `WITH`, so `WITH d AS x ... RETURN x` laundered an unanchored variable past it and returned five arbitrary cited diseases for a question about BRCA1. The fix's own comment block claimed the opposite property while the code did not implement it | fixed |
+| F-2.1-J5-02 | medium | `WHERE g.id IN [$p1, $p2]`, an ordinary multi-entity constraint, was falsely rejected | fixed |
+| F-2.1-J5-03 | low | An empty binding set produced a message ending "one of: ." with nothing after the colon. Latent, since the no-entity check returns first | fixed |
+| F-2.1-J5-04 | medium | The vocabulary-artifact rule missed 15,466 of 200,845 Disease rows, measured by exhaustive census | fixed |
+
+### What the fifth judge verified as genuinely closed
+
+Stated because it is evidence the next reader would otherwise have to regenerate:
+
+- F-2.1-J4-01, the validator: 18 attacks, zero leaks, including 13 the judge invented. The two residual gaps the fix's own docstring disclosed are actually closed. 5 of 5 legitimate queries accepted.
+- F-2.1-J4-05, CURIE shapes: the exhaustive census re-run independently with row counts matching exactly, 20 attack strings all returning None, and 1,200 real ids across six mapped labels all keeping their citations.
+- F-2.1-J4-03 dedup and F-2.1-J4-06 Article: both hold, and C13's untrusted-content gate is not reopened.
+
+### The lesson this phase is actually about
+
+Five rounds, and the shape never changed: the newest code was the most dangerous code every single time. F-2.1-J5-01 is the cleanest instance, because the fix carried a comment asserting the exact property the code failed to implement. A comment that claims a property is a claim to be checked, not documentation to be trusted, and the next reader stops checking precisely where the comment sounds most confident.
+
+The durable change is not any one of the fixes. It is that the phase now has a verify surface that can see this class of defect at all, and a rule that a premise claim cites that surface rather than a suite total.
