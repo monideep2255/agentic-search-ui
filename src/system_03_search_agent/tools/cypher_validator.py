@@ -113,6 +113,57 @@ identifier once a function wraps it, and this module does not evaluate
 functions. That is a known, open gap, not a claim of completeness this
 fix makes and later breaks.
 
+The paragraph above was wrong to leave that gap open, and a judge proved
+it as F-2.1-J4-01, reproducing it live alongside four further bypasses
+of the same overall check, three of them executed live against the
+graph and returning results for an entity the caller never asked about,
+the same shape of failure as F-2.1-B01 and F-2.1-C08 before it, arriving
+through a third door. Fixed here, five bypasses at once:
+
+- Function-call and other opaque wrapping (`WITH 'NCBIGene:7157' AS t
+  WITH toString(t) AS t2 ...`, and the same shape through `substring`).
+  `_is_tainted_expr` no longer gives up the moment an expression stops
+  being a bare literal, a bare numeric literal, or a bare tainted
+  identifier. Any further atom it cannot decompose into a list or a
+  `+`-chain, a function call, a `CASE` expression, anything, is now
+  treated as tainted the moment a literal token or a whole-word
+  reference to an already-tainted alias appears anywhere inside its
+  text. A function wrapper does not remove a literal from the value it
+  produces, it only obscures how, so this fix does not need to know
+  what any specific function does.
+- List literals (`WITH ['NCBIGene:7157'] AS l MATCH (g:Gene {id: l[0]})
+  ...`). `_is_tainted_expr` previously recognized no bracketed shape at
+  all; a list literal is now tainted when every one of its top-level
+  comma-separated elements is.
+- Reversed operand order (`WITH 'NCBIGene:7157' AS t ... WHERE t =
+  g.id ...`). Both the direct-literal pattern and the tainted-alias
+  pattern only ever recognized field-connector-value, never
+  value-connector-field, even though Cypher's comparison operators
+  carry no direction. Both patterns now run in both orders.
+- A literal reached through a `CASE` expression with no alias involved
+  at all (`WHERE g.id = CASE WHEN true THEN 'NCBIGene:7157' ELSE ''
+  END`). This one is a regression, not a new gap: it was rejected before
+  the F-2.1-C08 alias-taint rework and passed afterward. A `CASE ...
+  END` block immediately following a field and a connector is now
+  scanned for a literal token anywhere inside it, not only directly
+  adjacent to the connector; the same allowlist exemption for a known
+  internal-constant field still applies.
+
+What this fix does not claim, stated precisely rather than asserted
+closed: an opaque atom containing neither a literal token nor a
+reference to an already-tainted alias is still left untainted, because
+this module does not evaluate what a function actually computes, only
+what literal text flows into it. A `CASE` expression reached through
+further indirection, behind a further function call, or compared to a
+field only after being routed through its own alias first, is not
+provably covered: the `CASE` check here is adjacency-based, the same
+family of gap the alias-taint mechanism closes for a plain alias but
+that this fix does not extend to a `CASE` block sitting behind one.
+That is a known, open gap. The three corrections stacked in this
+docstring now, this one and the two above it, are the record of what
+"closed" has actually meant each time it was claimed, not a promise
+this is the last one.
+
 Known limitation surfaced by the adversary as F-2.1-B09, fixed here: LIMIT
 normalization only ever recognized `LIMIT <digits>` anchored to the very
 end of a branch. A LIMIT followed by a trailing `SKIP <digits>` in
@@ -277,6 +328,46 @@ _LITERAL_VALUE_PATTERN = re.compile(
     r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?([A-Za-z_][A-Za-z0-9_]*)"
     r"\s*(?:" + _CONNECTOR_PATTERN + r"\s*)+\[?\s*"
     r"(?:" + re.escape(_LITERAL_TOKEN) + r"|-?\d)"
+)
+
+# The same field-connector-literal shape as `_LITERAL_VALUE_PATTERN`,
+# operands swapped: a literal on the left, the field on the right
+# (F-2.1-J4-01). `_LITERAL_VALUE_PATTERN` alone only ever recognized
+# field-connector-literal; `literal-connector-field` (`WHERE 'BRCA1' =
+# g.symbol`) walked straight through it, the same order-sensitivity bug
+# the reversed alias pattern below closes for the aliased case. The
+# captured group is the field name, same position convention as the
+# forward pattern, so callers read `match.group(1)` identically either
+# way.
+_REVERSED_LITERAL_VALUE_PATTERN = re.compile(
+    r"(?:" + re.escape(_LITERAL_TOKEN) + r"|-?\d)"
+    r"\s*(?:" + _CONNECTOR_PATTERN + r"\s*)+"
+    r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?([A-Za-z_][A-Za-z0-9_]*)"
+)
+
+# A `CASE ... END` block, non-greedy so consecutive CASE blocks in one
+# query are each captured on their own rather than one match swallowing
+# everything from the first CASE to the last END (F-2.1-J4-01). A CASE
+# expression nested inside another CASE's WHEN/THEN/ELSE branch is not
+# specially handled: the non-greedy match stops at the first END it
+# finds, which is the inner one, not the outer one. That is a known,
+# narrow gap in this one detection, not a claim every CASE shape is
+# covered.
+_CASE_BLOCK_PATTERN = re.compile(r"\bCASE\b.*?\bEND\b", re.IGNORECASE | re.DOTALL)
+
+# A field name, a connector, and an optional `[`, immediately followed by
+# a CASE block, matched against the masked string so only the query's
+# real syntax can trigger it (F-2.1-J4-01). This is what lets
+# `_find_suspect_case_literal` apply the same F-2.1-A17 internal-constant
+# allowlist to a literal reached through a CASE expression that it
+# already applies to a literal reached directly or through a tainted
+# alias: the field immediately before the CASE block is the field this
+# validator checks against the allowlist, not the CASE block's own
+# content.
+_FIELD_BEFORE_CASE_PATTERN = re.compile(
+    r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?([A-Za-z_][A-Za-z0-9_]*)"
+    r"\s*(?:" + _CONNECTOR_PATTERN + r"\s*)+\[?\s*(?=CASE\b)",
+    re.IGNORECASE,
 )
 
 # Fields whose value set is a small, system-defined vocabulary describing
@@ -590,36 +681,92 @@ def _is_fully_parenthesized(expr: str) -> bool:
     return True
 
 
-def _is_tainted_expr(expr: str, tainted: frozenset[str]) -> bool:
-    """Return True when expr is built solely out of literals, numeric or
-    masked-string, and aliases already known to be tainted, joined only
-    by `+` concatenation (F-2.1-C08).
+def _is_fully_bracketed(expr: str, open_char: str, close_char: str) -> bool:
+    """Return True when expr is wrapped in one matching outer bracket pair
+    that spans the whole string, the same guarantee `_is_fully_parenthesized`
+    gives for `(...)`, generalized to any single open/close character pair
+    (F-2.1-J4-01, used here for `[...]`).
+    """
+    if not (expr.startswith(open_char) and expr.endswith(close_char)):
+        return False
+    depth = 0
+    for index, char in enumerate(expr):
+        if char == open_char:
+            depth += 1
+        elif char == close_char:
+            depth -= 1
+            if depth == 0 and index != len(expr) - 1:
+                return False
+    return True
 
-    A real field access (`g.name`), a parameter reference (`$symbol`), a
-    function call (`toUpper(t)`), or any expression this function cannot
-    fully account for as literal-or-tainted is never treated as tainted:
-    the whole point is to track only the value the adversary's bypass
-    actually used, a literal or a chain of aliases built purely from
-    literals, not to guess at every possible data flow.
+
+def _is_tainted_expr(expr: str, tainted: frozenset[str]) -> bool:
+    """Return True when expr can only ever carry a value built from a
+    literal, directly or through indirection this module can see through
+    (F-2.1-C08, widened by F-2.1-J4-01).
+
+    Three structural shapes are decomposed and checked recursively: a
+    fully-parenthesized wrapper is unwrapped, a list literal (`[...]`) is
+    tainted when every one of its top-level comma-separated elements is,
+    and a `+`-chain is tainted when every top-level part is. Neither
+    shape was recognized before F-2.1-J4-01; a list literal fell straight
+    through to "not tainted" with no check at all, which is what let a
+    literal wrapped in a one-element list and pulled back out by index
+    (`l[0]`) go undetected.
+
+    Anything left over after those three shapes are ruled out is a
+    single, non-decomposable atom. A bare literal, a bare numeric
+    literal, or a bare identifier already in `tainted` is classified
+    directly, unchanged from before this fix. Everything else, a real
+    field access (`g.name`), a parameter reference (`$symbol`), a
+    function call (`toString(t)`, `substring(t, 1)`), a `CASE`
+    expression, or any other construct this module does not parse, used
+    to fall through to "not tainted" unconditionally. That was the
+    F-2.1-J4-01 gap: a function or `CASE` wrapper does not remove a
+    literal from the value it produces, it only obscures how, so an
+    opaque atom is now tainted the moment a literal token or a whole-word
+    reference to an already-tainted alias appears anywhere inside its
+    text, not only when the atom is nothing but that literal or that
+    alias. An opaque atom with neither is still left untainted: this
+    module does not evaluate what a function or a `CASE` branch actually
+    computes, only what literal text visibly flows into it, so an atom
+    that clears both scans is a known, open gap, not a proof of safety.
     """
     expr = expr.strip()
     while _is_fully_parenthesized(expr):
         expr = expr[1:-1].strip()
     if not expr:
         return False
+
+    if _is_fully_bracketed(expr, "[", "]"):
+        items = _split_top_level(expr[1:-1], ",")
+        return bool(items) and all(
+            item.strip() and _is_tainted_expr(item, tainted) for item in items
+        )
+
     parts = _split_top_level(expr, "+")
-    if any(not part.strip() for part in parts):
-        return False
-    for raw_part in parts:
-        part = raw_part.strip()
-        if part == _LITERAL_TOKEN:
-            continue
-        if _NUMERIC_LITERAL_PATTERN.match(part):
-            continue
-        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", part) and part in tainted:
-            continue
-        return False
-    return True
+    if len(parts) > 1:
+        if any(not part.strip() for part in parts):
+            return False
+        return all(_is_tainted_expr(part, tainted) for part in parts)
+
+    if expr == _LITERAL_TOKEN:
+        return True
+    if _NUMERIC_LITERAL_PATTERN.match(expr):
+        return True
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", expr):
+        return expr in tainted
+
+    # An opaque atom: a function call, a CASE expression, or any other
+    # construct this module cannot decompose further. See the docstring
+    # above (F-2.1-J4-01) for why this scans the atom's text for a
+    # literal or a tainted reference anywhere, rather than requiring the
+    # whole atom to be one.
+    if _LITERAL_TOKEN in expr:
+        return True
+    return any(
+        re.search(r"\b" + re.escape(name) + r"\b", expr) for name in tainted
+    )
 
 
 # The `AS` keyword binding an expression to an alias in a `WITH` or
@@ -763,6 +910,21 @@ def _find_tainted_aliases(masked_cypher: str) -> frozenset[str]:
     return frozenset(tainted)
 
 
+def _alias_alternation(tainted: frozenset[str]) -> str:
+    """Build a `|`-joined, escaped regex alternation over tainted alias
+    names, longest name first (F-2.1-J4-01).
+
+    Longest-first is not load-bearing for correctness, since a regex
+    alternation backtracks across alternatives to satisfy the rest of a
+    pattern including a `\\b` boundary, but it avoids relying on that
+    backtracking at all: with "t2" listed before "t", a search for "t2"
+    matches on the first alternative tried, not the second.
+    """
+    return "|".join(
+        re.escape(alias) for alias in sorted(tainted, key=lambda a: (-len(a), a))
+    )
+
+
 def _build_tainted_alias_value_pattern(tainted: frozenset[str]) -> re.Pattern[str]:
     """Build the same field-connector-literal shape as
     `_LITERAL_VALUE_PATTERN`, with a tainted alias standing in for the
@@ -776,18 +938,74 @@ def _build_tainted_alias_value_pattern(tainted: frozenset[str]) -> re.Pattern[st
     exclusion, not a loophole this pattern leaves open on purpose for any
     other reason.
     """
-    alias_alternation = "|".join(re.escape(alias) for alias in sorted(tainted))
     return re.compile(
         r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?([A-Za-z_][A-Za-z0-9_]*)"
         r"\s*(?:" + _CONNECTOR_PATTERN + r"\s*)+\[?\s*"
-        r"\b(?:" + alias_alternation + r")\b(?!\s*\.)"
+        r"\b(?:" + _alias_alternation(tainted) + r")\b(?!\s*\.)"
     )
+
+
+def _build_reversed_tainted_alias_value_pattern(
+    tainted: frozenset[str],
+) -> re.Pattern[str]:
+    """The same shape as `_build_tainted_alias_value_pattern`, operands
+    swapped: a tainted alias on the left, the field on the right
+    (F-2.1-J4-01).
+
+    `WITH 'NCBIGene:7157' AS t MATCH (g:Gene) WHERE t = g.id RETURN g`
+    defeated the field-first pattern with nothing more than writing the
+    same comparison backwards; Cypher's comparison operators carry no
+    direction, so this validator's detection of them should not either.
+    The captured group is still the field name, the last one in the
+    pattern here, so callers read `match.group(1)` the same way for both
+    directions.
+    """
+    return re.compile(
+        r"\b(?:" + _alias_alternation(tainted) + r")\b(?!\s*\.)"
+        r"\s*(?:" + _CONNECTOR_PATTERN + r"\s*)+"
+        r"(?:[A-Za-z_][A-Za-z0-9_]*\.)?([A-Za-z_][A-Za-z0-9_]*)"
+    )
+
+
+def _find_suspect_case_literal(masked: str) -> bool:
+    """Return True when a `CASE ... END` block immediately following a
+    field and a connector contains a literal token anywhere inside it,
+    and that field is outside the F-2.1-A17 internal-constant allowlist
+    (F-2.1-J4-01).
+
+    `g.id = CASE WHEN true THEN 'NCBIGene:7157' ELSE '' END` has no
+    literal directly adjacent to the `=` connector, `_LITERAL_VALUE_PATTERN`
+    requires exactly that adjacency, so this shape walked straight
+    through it. This check widens the window from "directly adjacent" to
+    "anywhere inside the CASE block that follows", without widening it
+    all the way to "anywhere in the query": the field immediately before
+    the CASE block is still the field checked against the allowlist,
+    matching the same convention `_find_suspect_literal`'s other two
+    passes already use.
+
+    This is adjacency-based like the checks around it, not a general
+    scan: a CASE expression reached only through further indirection (a
+    further function call, or compared to a field through its own alias
+    first) is not covered here. See the module docstring's F-2.1-J4-01
+    paragraph for what remains open.
+    """
+    for field_match in _FIELD_BEFORE_CASE_PATTERN.finditer(masked):
+        case_match = _CASE_BLOCK_PATTERN.match(masked, field_match.end())
+        if case_match is None:
+            continue
+        if _LITERAL_TOKEN not in case_match.group(0):
+            continue
+        field = field_match.group(1).lower()
+        if field not in _INTERNAL_CONSTANT_FIELDS:
+            return True
+    return False
 
 
 def _find_suspect_literal(cypher: str) -> bool:
     """Return True when a literal is bound to a field outside the small
-    internal-constant allowlist (F-2.1-A17), directly or through a
-    literal-derived alias (F-2.1-C08).
+    internal-constant allowlist (F-2.1-A17), directly, through a
+    literal-derived alias (F-2.1-C08), or through a CASE expression
+    (F-2.1-J4-01).
 
     Runs on a quote-masked copy of cypher (see `_mask_string_literals`),
     never the raw string, so a match can only ever fire on the query's
@@ -795,31 +1013,39 @@ def _find_suspect_literal(cypher: str) -> bool:
     itself treated as suspect, the same conservative posture
     `_mask_string_literals` documents.
 
-    Two passes, both over every match, not only the first: a query can
+    Three passes, all over every match, not only the first: a query can
     legitimately contain one allowlisted literal (`a.source = 'PubMed'`)
     and one caller-facing one, direct or aliased, in the same string, and
     the whole query must still be rejected for the second.
 
-    - The direct pass is the original field-connector-literal shape,
-      unchanged in behavior except for now running against the masked
-      string, checked once over the whole query: a field-adjacent
+    - The direct pass is the field-connector-literal shape, run in both
+      operand orders (F-2.1-J4-01: a comparison written backwards,
+      literal-connector-field, is exactly as unsafe as the forward
+      order), checked once over the whole query: a field-adjacent
       literal is unsafe regardless of which `UNION` branch it sits in,
       so there is no scoping concern for this pass.
-    - The alias pass repeats the same shape with a tainted alias (see
-      `_find_tainted_aliases`) standing in for the literal, run
-      independently per top-level `UNION` branch. Cypher scopes a `WITH`
-      or `UNWIND` alias to the branch that defines it, so an alias name
-      tainted in one branch must never be treated as tainted in another
-      branch that happens to reuse the same name for something else.
+    - The CASE pass (`_find_suspect_case_literal`) is also checked once
+      over the whole query, for the same reason.
+    - The alias pass repeats the field-connector shape, also in both
+      operand orders, with a tainted alias (see `_find_tainted_aliases`)
+      standing in for the literal, run independently per top-level
+      `UNION` branch. Cypher scopes a `WITH` or `UNWIND` alias to the
+      branch that defines it, so an alias name tainted in one branch must
+      never be treated as tainted in another branch that happens to
+      reuse the same name for something else.
     """
     masked = _mask_string_literals(cypher)
     if masked is None:
         return True
 
-    for match in _LITERAL_VALUE_PATTERN.finditer(masked):
-        field = match.group(1).lower()
-        if field not in _INTERNAL_CONSTANT_FIELDS:
-            return True
+    for pattern in (_LITERAL_VALUE_PATTERN, _REVERSED_LITERAL_VALUE_PATTERN):
+        for match in pattern.finditer(masked):
+            field = match.group(1).lower()
+            if field not in _INTERNAL_CONSTANT_FIELDS:
+                return True
+
+    if _find_suspect_case_literal(masked):
+        return True
 
     for index, branch in enumerate(_split_on_union(masked)):
         if index % 2 == 1:
@@ -827,11 +1053,15 @@ def _find_suspect_literal(cypher: str) -> bool:
         tainted = _find_tainted_aliases(branch)
         if not tainted:
             continue
-        alias_pattern = _build_tainted_alias_value_pattern(tainted)
-        for match in alias_pattern.finditer(branch):
-            field = match.group(1).lower()
-            if field not in _INTERNAL_CONSTANT_FIELDS:
-                return True
+        for builder in (
+            _build_tainted_alias_value_pattern,
+            _build_reversed_tainted_alias_value_pattern,
+        ):
+            alias_pattern = builder(tainted)
+            for match in alias_pattern.finditer(branch):
+                field = match.group(1).lower()
+                if field not in _INTERNAL_CONSTANT_FIELDS:
+                    return True
 
     return False
 

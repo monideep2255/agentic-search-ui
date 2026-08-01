@@ -213,6 +213,35 @@ F-2.1-C13):
       (`contains_untrusted_free_text=True`), so their raw content can
       never reach `structured_fields`, and from there a citation's
       `claim_text`, unmediated.
+
+Fourth judge pass, 2026-07-31 (tracker/phase_2.1.md F-2.1-J4-06): C13's
+own fix above over-corrected. Excluding an Article row from
+`_cypher_output_to_structured_fields` entirely, not just its untrusted
+`fields`, made `row_count` disagree with `total_available` on the
+`Finding` (F-2.1-C07's exact contradiction, reintroduced one layer up),
+and made a query whose only matching rows were Article rows refuse
+outright, silently: `tool_outcome` still read `"ok"` off the structured
+Finding, so the refusal carried none of F-2.1-11's distinguishing
+signal, indistinguishable from the graph genuinely finding nothing.
+Excluding the whole row also traded away more than production-
+standards.md's untrusted-source-reader gate ever asked for: the gate
+requires the row's own free-text field content never reach a citation
+unmediated, not that the record itself become uncitable.
+
+`_sanitized_citeable_row` now replaces that exclusion. An Article row
+still counts toward `row_count`/`total_available` and still earns a
+real citation to its real `source_url`, but with `fields` dropped to
+empty before it is ever placed in `structured_fields`: not summarized
+by a reader, not truncated, simply never carried past `act_node` at
+all, which is a stronger "never reach unmediated" than routing it
+through a model first. `_citation_for_row`'s existing empty-fields
+fallback (`f"{node_or_edge_type} {curie}"`) already handles the rest:
+the citation reads "Article PMID:12345", never the title. The separate
+reader-bound quarantine call (`_untrusted_rows_free_text`, still built
+from the row's real, un-sanitized fields) is unchanged and still runs
+against the same rows, for whatever future entity-extraction use a
+later phase makes of it; it was never what made the record citable or
+uncitable, so leaving it in place changes nothing about this fix.
 """
 
 from __future__ import annotations
@@ -808,9 +837,12 @@ def _cypher_output_to_structured_fields(
     `refuse` (A5/F-02's fix), so it is exactly the one internal-pipeline
     field that must survive into the `Finding`.
 
-    `rows`: an explicit override, used by F-2.1-C13's split below to shape
-    only the trusted subset of `output.rows` (the untrusted-node rows are
-    quarantined into a separate reader-bound result, never placed here).
+    `rows`: an explicit override, used below to shape the citeable version
+    of `output.rows`: every row still counts (F-2.1-J4-06 fix; a row is
+    never dropped from this dict just because its own field content is
+    untrusted), but an untrusted-node row (`_sanitized_citeable_row`) has
+    already had its `fields` emptied before it reaches here, so its raw
+    content is never carried in this dict either way.
     Defaults to `output.rows` unchanged. `row_count` is always recomputed
     as `len(rows)` rather than trusted from `output.row_count`: the two
     already agree when nothing is filtered (`cypher_query.py` sets
@@ -887,6 +919,48 @@ def _untrusted_rows_free_text(rows: list[CypherQueryRow]) -> str:
     return "\n".join(lines)[:_MAX_UNTRUSTED_FREE_TEXT_CHARS]
 
 
+def _sanitized_citeable_row(row: CypherQueryRow) -> CypherQueryRow:
+    """F-2.1-J4-06 fix: an untrusted-type row's own record must still be
+    countable and citeable; only its own free-text field content must
+    never reach `structured_fields` unmediated.
+
+    C13's original fix dropped an untrusted row (Article) out of
+    `_cypher_output_to_structured_fields` entirely, not just its `fields`.
+    That made `row_count` disagree with `total_available` on the `Finding`
+    (F-2.1-C07's exact contradiction, one layer up) and made an
+    Article-only result refuse outright, silently, since `write_node`
+    never learned the drop was the cause. `fields` is the only untrusted
+    part of the row (an Article's `name` is the verbatim PubMed title;
+    see the module docstring's fourth-judge-pass note); `node_or_edge_type`,
+    `curie`, `source_url`, and `graph_snapshot_version` are graph-curated
+    structured data, never third-party-authored text, and are kept as-is.
+    Emptying `fields` here means the raw title is never carried into
+    `structured_fields` at all, not merely mediated through a reader
+    first: `_citation_for_row`'s existing empty-fields fallback
+    (`f"{node_or_edge_type} {curie}"`) still earns the record a real
+    citation to its real `source_url`, just with no title text in it.
+    """
+    return row.model_copy(update={"fields": {}})
+
+
+def _rows_for_citation(rows: list[CypherQueryRow]) -> list[CypherQueryRow]:
+    """Shape every row of a `cypher_query` result into the version that
+    counts toward `row_count`/`total_available` and is citation-eligible.
+
+    F-2.1-J4-06 fix: every row is kept, in its original order, so a query
+    whose result happens to be entirely Article rows still reports the
+    real row count and still earns real citations. An untrusted-type row
+    is replaced with its sanitized copy (`_sanitized_citeable_row`); every
+    other row passes through unchanged, exactly as before this fix.
+    """
+    return [
+        row
+        if row.node_or_edge_type not in _UNTRUSTED_FREE_TEXT_NODE_TYPES
+        else _sanitized_citeable_row(row)
+        for row in rows
+    ]
+
+
 async def act_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     trace_id = state["query"].trace_id
@@ -943,17 +1017,27 @@ async def act_node(state: GraphState) -> dict[str, Any]:
         # F-2.1-C13: a Cypher row's envelope is structured data (Section
         # 6.1's typed output schema), but an Article row's own field
         # content (the raw PubMed title) is untrusted external free text.
-        # Split before building the structured pass-through payload: the
-        # trusted rows still route through structured pass-through as
-        # before, never the isolated reader; any Article rows are
-        # quarantined into a second, reader-bound tool_call/result pair
-        # so their content never reaches structured_fields, and from
-        # there a citation's claim_text, unmediated.
-        trusted_rows, untrusted_rows = _split_rows_by_trust(output.rows)
+        # F-2.1-J4-06 fix: C13's original split excluded an Article row
+        # from the structured pass-through payload entirely, which made
+        # row_count disagree with total_available (F-2.1-C07's
+        # contradiction, one layer up) and made an Article-only result
+        # refuse outright, silently. Every row, trusted or not, now goes
+        # into the structured pass-through payload via `_rows_for_citation`
+        # (an untrusted row's `fields` already emptied, never its whole
+        # row dropped), so row_count and total_available always agree and
+        # a real record is never silently disappeared. The untrusted rows'
+        # own free-text content is separately quarantined into a second,
+        # reader-bound tool_call/result pair, same as before this fix, so
+        # that content still never reaches structured_fields or a
+        # citation's claim_text unmediated; it just no longer gates
+        # whether the record itself is countable and citeable.
+        _, untrusted_rows = _split_rows_by_trust(output.rows)
         results.append(
             ToolExecutionResult(
                 contains_untrusted_free_text=False,
-                structured_fields=_cypher_output_to_structured_fields(output, trusted_rows),
+                structured_fields=_cypher_output_to_structured_fields(
+                    output, _rows_for_citation(output.rows)
+                ),
             )
         )
         if untrusted_rows:
@@ -1039,21 +1123,100 @@ def _tool_execution_outcome(
     return "empty"
 
 
-def _pick_representative_field(fields: dict[str, Any]) -> tuple[str, Any] | tuple[None, None]:
-    """Pick one field off a row to ground a citation's `claim_text` in.
+# F-2.1-B07: `docs/data-engineering/Knowledge_graph_on_server_reference.md`
+# section M documents the root cause directly: "MedGen Disease nodes have
+# `name` populated with source-vocabulary codes such as `SNOMEDCT_US`
+# instead of human-readable disease names... Root cause is in the MedGen
+# ETL parser." That is System 1/2's data defect, out of this repo's
+# scope to fix at the source (file-protection.md forbids touching ETL
+# code). What is this repo's own defect is stapling
+# `assertion_confidence="asserted"` onto a citation built from one of
+# these corrupted values: asserting high confidence in a value that is
+# actually a controlled-vocabulary system name, not the disease name it
+# claims to be, is a trust-signal defect regardless of who introduced the
+# bad value.
+#
+# Confirmed live (BRCA1's four MedGen-associated diseases): "MeSH",
+# "MONDO", "MedGen", "MedGen". The doc above independently names
+# "SNOMEDCT_US" as the same class of defect. A fix keyed to those literal
+# strings would miss the next UMLS source-vocabulary abbreviation this
+# ETL bug produces, so `_is_vocabulary_token_artifact` below is a shape
+# rule, not a lookup table: every confirmed bad value is a single token
+# (no whitespace) that either exactly names a known source vocabulary
+# already canonical in this codebase (`CURIE_PREFIXES`, which already
+# lists "MedGen"/"MeSH"/"MONDO" as this graph's own source-database
+# prefixes) or fails to read as an ordinary English word (not all
+# lowercase, not simple Title Case, and either mixed-case in a way no
+# disease name in this data is written (`MeSH`, `MedGen`) or fully
+# upper-case and longer than a real standalone medical abbreviation would
+# plausibly be ("MONDO", "SNOMEDCT_US" versus "HIV", "AIDS", "COPD",
+# "SIDS")). A short, fully upper-case value is deliberately let through
+# as plausibly legitimate: downgrading confidence is the safe failure
+# mode this system prefers (production-standards.md's cite-or-refuse
+# ethos: under-confidence is cheap, over-confidence is the trust moat),
+# so the one acknowledged residual gap, a longer legitimate all-caps name
+# (for example "COVID-19") being downgraded as a false positive, is an
+# accepted, documented trade rather than a silent one.
+_MAX_PLAUSIBLE_ABBREVIATION_CHARS = 4
+
+
+def _is_vocabulary_token_artifact(value: str) -> bool:
+    """True when `value` looks like a bare controlled-vocabulary system
+    name or source-abbreviation code rather than a genuine, human-
+    readable field value. See the module comment above this function for
+    the reasoning and the confirmed examples this rule is built from.
+    """
+    text = value.strip()
+    if not text or " " in text:
+        return False
+    if text in CURIE_PREFIXES:
+        return True
+    if text.islower():
+        return False
+    if text[0].isupper() and text[1:].islower():
+        return False
+    return not (text.isupper() and len(text) <= _MAX_PLAUSIBLE_ABBREVIATION_CHARS)
+
+
+def _pick_representative_field(
+    fields: dict[str, Any],
+) -> tuple[str, Any, bool] | tuple[None, None, bool]:
+    """Pick one field off a row to ground a citation's `claim_text` in,
+    and report whether the picked value looks like a vocabulary-token
+    parse artifact rather than a genuine field value.
 
     Deterministic, never a model judgment: prefer a `name` field when
     present (the most human-readable field most rows carry), else the
-    first key in the row's own insertion order. A row with no fields at
-    all yields `(None, None)`; the caller falls back to citing the row's
-    bare identity (its type and CURIE).
+    row's own insertion order, exactly as before F-2.1-B07. The one
+    change that finding requires: a candidate field whose value trips
+    `_is_vocabulary_token_artifact` is skipped in favor of the next
+    candidate first ("preferring a different representative field when
+    the name is an artifact"), and only returned, flagged, when every
+    candidate is equally suspect, so the record still gets a real citation
+    rather than none, but `_citation_for_row` can downgrade
+    `assertion_confidence` instead of asserting it at full strength. A row
+    with no fields at all yields `(None, None, False)`; the caller falls
+    back to citing the row's bare identity (its type and CURIE).
     """
     if not fields:
-        return None, None
-    if "name" in fields:
-        return "name", fields["name"]
-    first_key = next(iter(fields))
-    return first_key, fields[first_key]
+        return None, None, False
+
+    def _is_artifact(value: Any) -> bool:
+        return isinstance(value, str) and _is_vocabulary_token_artifact(value)
+
+    preferred_keys = (["name"] if "name" in fields else []) + [
+        key for key in fields if key != "name"
+    ]
+    for key in preferred_keys:
+        if not _is_artifact(fields[key]):
+            return key, fields[key], False
+
+    # Every candidate field looked like a vocabulary-token artifact.
+    # Still cite the first-preference one (a suspect real value beats no
+    # value), flagged so the caller downgrades confidence rather than
+    # asserting it.
+    key = preferred_keys[0]
+    return key, fields[key], True
 
 
 def _citation_for_row(
@@ -1073,12 +1236,23 @@ def _citation_for_row(
     database, the full CURIE is the source id. `evidence_kind=
     "primary_assertion"` and `license="public_domain_us_gov"` are Section
     9.2's documented defaults for a `cypher_query` graph property (an
-    NCBI-native, US-federal-government record);
-    `assertion_confidence="asserted"` is Section 9.2's default for a
-    plain field with no hedge or conflict signal (no ClinVar
-    review_status lookup or hedge-lexicon scan exists yet at this phase).
-    `population_ancestry_context` stays None: no population or ancestry
-    field exists on a Layer 1 graph row.
+    NCBI-native, US-federal-government record).
+    `assertion_confidence` is Section 9.2's default, "asserted", for a
+    plain field with no hedge or conflict signal, EXCEPT when
+    `_pick_representative_field` flags the picked value as a
+    vocabulary-token parse artifact (F-2.1-B07: a `Disease`/`OntologyClass`
+    row's stored `name` is sometimes a source-vocabulary code such as
+    "MeSH" or "SNOMEDCT_US", not the disease name it claims to be, a
+    documented MedGen ETL defect, `docs/data-engineering/
+    Knowledge_graph_on_server_reference.md` section M). Section 9.2's
+    three-value enum has no dedicated state for "the value itself looks
+    corrupted"; "hedged" (Section 9.2: reduced confidence with no known
+    conflicting record) is the closer, spec-compliant fit versus
+    "contested" (which implies a specific conflicting interpretation this
+    case does not have) or leaving it at "asserted" (which is exactly the
+    trust-signal defect this fix closes). `population_ancestry_context`
+    stays None: no population or ancestry field exists on a Layer 1 graph
+    row.
     """
     source_url = row.get("source_url")
     if not source_url:
@@ -1086,7 +1260,7 @@ def _citation_for_row(
     curie = str(row.get("curie", ""))[:100]
     prefix = curie.split(":", 1)[0] if ":" in curie else "cypher_query"
     fields = row.get("fields") or {}
-    field_name, field_value = _pick_representative_field(fields)
+    field_name, field_value, field_is_suspect = _pick_representative_field(fields)
     node_or_edge_type = str(row.get("node_or_edge_type", ""))
     claim_text = (
         f"{node_or_edge_type} {curie}: {field_name}={field_value}"
@@ -1104,7 +1278,7 @@ def _citation_for_row(
         field=(field_name or "curie")[:128],
         claim_text=claim_text[:1000],
         evidence_kind="primary_assertion",
-        assertion_confidence="asserted",
+        assertion_confidence="hedged" if field_is_suspect else "asserted",
         population_ancestry_context=None,
         license="public_domain_us_gov",
     )
@@ -1226,6 +1400,22 @@ _TRUNCATED_REFUSAL_MESSAGE = (
     "the response size limit before any row kept a citeable source_url. "
     "This is not the same as the graph returning no matching data. Retry "
     "with a narrower query_intent or a smaller row_limit."
+)
+
+# F-2.1-J4-06: the general form of the same "never a silent refuse beside
+# status='ok'" principle F-2.1-11 established for the truncation case.
+# `tool_outcome == "ok"` alongside zero citations can also happen with no
+# truncation involved at all, for example every row a query matched
+# carried no resolvable `source_url` (an unmapped CURIE prefix). Before
+# this fix that case fell through both branches below with no error
+# event at all, identical to `tool_outcome == "empty"`'s genuine "the
+# graph found nothing" refusal. This message is deliberately distinct
+# from `_TRUNCATED_REFUSAL_MESSAGE`: it never claims a cut happened,
+# since none did.
+_UNCITED_OK_REFUSAL_MESSAGE = (
+    "The graph query found matching data, but no returned row carried a "
+    "citeable source_url. This is not the same as the graph returning no "
+    "matching data."
 )
 
 
@@ -1351,6 +1541,22 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 source="cypher_query",
                 error_class="recoverable",
                 message=_TRUNCATED_REFUSAL_MESSAGE,
+                retry_after_s=0,
+            ),
+        )
+    elif tool_outcome == "ok" and trust_outcome == "refuse":
+        # F-2.1-J4-06: a status="ok" tool result that still refuses for a
+        # reason other than truncation (every matching row lacked a
+        # citeable source_url) must not look identical to a genuinely
+        # empty tool result either. See _UNCITED_OK_REFUSAL_MESSAGE.
+        sink.emit(
+            "error",
+            ErrorPayload(
+                fatal=False,
+                scope="tool",
+                source="cypher_query",
+                error_class="recoverable",
+                message=_UNCITED_OK_REFUSAL_MESSAGE,
                 retry_after_s=0,
             ),
         )

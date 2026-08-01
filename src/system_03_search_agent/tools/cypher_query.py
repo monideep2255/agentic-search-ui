@@ -847,6 +847,163 @@ def _build_params(cypher: str, entity_bindings: dict[str, str]) -> dict[str, Any
     return {name: entity_bindings[name] for name in referenced if name in entity_bindings}
 
 
+# F-2.1-J4-01B. The "binds at least one caller entity" invariant is too
+# weak, and a decoy defeats it. Reproduced live:
+#
+#   MATCH (decoy:Gene {id: $e_NCBIGene_672})
+#   WITH decoy
+#   MATCH (g:Gene)-[:gene_associated_with_condition]->(d:Disease)
+#   RETURN d
+#
+# BRCA1 is bound, so the invariant passes. `d` is not connected to it in
+# any way. The query returned five arbitrary diseases, `status="ok"`,
+# each with a resolving MedGen citation, for a question about BRCA1.
+# That is F-2.1-B01's failure class once more: a confidently cited answer
+# about records the user never asked about.
+#
+# Presence is the wrong property. What has to hold is CONNECTIVITY: every
+# value returned must trace back to an entity the caller supplied. So the
+# variables are partitioned into components, a component is anchored when
+# some pattern in it binds a caller parameter, and every returned variable
+# must sit in an anchored component.
+#
+# Honest limits, since three rounds of this check have each been claimed
+# closed and were not. This is a regex-level approximation, not a Cypher
+# parser:
+#
+#   - Comma-separated patterns inside one MATCH are treated as separate
+#     components, which is what makes the cartesian-product case visible.
+#   - A variable carried through WITH keeps its component, so a WITH does
+#     not launder an unanchored variable into an anchored one.
+#   - An aggregate over an anchored variable, `RETURN count(v)`, is
+#     anchored through `v`.
+#   - A query whose RETURN yields no identifiable variable at all cannot
+#     be judged here, so it is left to the other checks rather than
+#     rejected on a guess.
+_VAR_IN_NODE_PATTERN = re.compile(r"\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*[:)\s{]")
+_VAR_IN_REL_PATTERN = re.compile(r"\[\s*([A-Za-z_][A-Za-z0-9_]*)\s*[:\]\s*]")
+_MATCH_CLAUSE_PATTERN = re.compile(
+    r"(?is)\b(?:OPTIONAL\s+)?MATCH\b(.*?)(?=\b(?:OPTIONAL\s+)?MATCH\b|\bWITH\b"
+    r"|\bRETURN\b|\bUNWIND\b|\bWHERE\b|$)"
+)
+_IDENTIFIER_PATTERN = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b")
+_CYPHER_KEYWORDS = frozenset(
+    {
+        "and", "as", "asc", "by", "case", "contains", "count", "collect", "desc",
+        "distinct", "else", "end", "ends", "exists", "false", "in", "is", "limit",
+        "match", "not", "null", "optional", "or", "order", "return", "skip",
+        "starts", "then", "true", "unwind", "when", "where", "with", "xor",
+        "avg", "max", "min", "sum", "size", "toupper", "tolower", "tostring",
+        "coalesce", "substring", "labels", "type", "id", "keys", "properties",
+    }
+)
+
+
+def _returned_variables(cypher: str) -> set[str]:
+    """Identifiers in the RETURN clause that could name a matched variable."""
+    segment = _return_items_segment(cypher)
+    found: set[str] = set()
+    for match in _IDENTIFIER_PATTERN.finditer(segment):
+        name = match.group(1)
+        if name.lower() in _CYPHER_KEYWORDS:
+            continue
+        # `g.name` names the variable `g`; the property is not a variable.
+        if segment[: match.start()].rstrip().endswith("."):
+            continue
+        found.add(name)
+    return found
+
+
+# A caller parameter can constrain a variable from the WHERE clause rather
+# than from inside the node pattern: `MATCH (g:Gene) WHERE g.id = $e_1` is
+# every bit as anchored as `MATCH (g:Gene {id: $e_1})`. Missing this
+# rejected three legitimate aggregate queries outright, which is the
+# over-blocking cost this check has to stay clear of: a false reject means
+# the user gets nothing.
+_WHERE_PARAM_CONSTRAINT_PATTERN = re.compile(
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*[A-Za-z_][A-Za-z0-9_]*\s*"
+    r"(?:=|=~|IN|STARTS\s+WITH|ENDS\s+WITH|CONTAINS)\s*\$([A-Za-z_][A-Za-z0-9_]*)",
+    re.IGNORECASE,
+)
+_WHERE_PARAM_CONSTRAINT_REVERSED = re.compile(
+    r"\$([A-Za-z_][A-Za-z0-9_]*)\s*(?:=|IN)\s*"
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*[A-Za-z_][A-Za-z0-9_]*",
+    re.IGNORECASE,
+)
+
+
+def _variables_constrained_by_param(
+    cypher: str, entity_bindings: dict[str, str]
+) -> set[str]:
+    """Variables a caller parameter constrains from outside a node pattern."""
+    constrained: set[str] = set()
+    for var, param in _WHERE_PARAM_CONSTRAINT_PATTERN.findall(cypher):
+        if param in entity_bindings:
+            constrained.add(var)
+    for param, var in _WHERE_PARAM_CONSTRAINT_REVERSED.findall(cypher):
+        if param in entity_bindings:
+            constrained.add(var)
+    return constrained
+
+
+def _anchored_variables(cypher: str, entity_bindings: dict[str, str]) -> set[str]:
+    """Variables reachable from a pattern that binds a caller parameter."""
+    where_anchored = _variables_constrained_by_param(cypher, entity_bindings)
+    components: list[tuple[set[str], bool]] = []
+    for clause in _MATCH_CLAUSE_PATTERN.findall(cypher):
+        for pattern in _split_top_level_items(clause):
+            variables = set(_VAR_IN_NODE_PATTERN.findall(pattern))
+            variables |= set(_VAR_IN_REL_PATTERN.findall(pattern))
+            variables = {v for v in variables if v.lower() not in _CYPHER_KEYWORDS}
+            if not variables:
+                continue
+            pattern_params = set(_ordered_unique_param_names(pattern))
+            anchored = any(name in pattern_params for name in entity_bindings) or bool(
+                variables & where_anchored
+            )
+            components.append((variables, anchored))
+
+    # Merge components that share a variable, propagating the anchor.
+    merged = True
+    while merged:
+        merged = False
+        for i in range(len(components)):
+            for j in range(i + 1, len(components)):
+                if components[i][0] & components[j][0]:
+                    components[i] = (
+                        components[i][0] | components[j][0],
+                        components[i][1] or components[j][1],
+                    )
+                    del components[j]
+                    merged = True
+                    break
+            if merged:
+                break
+
+    anchored_vars: set[str] = set()
+    for variables, anchored in components:
+        if anchored:
+            anchored_vars |= variables
+    return anchored_vars
+
+
+def _unanchored_returned_variables(
+    cypher: str, entity_bindings: dict[str, str]
+) -> list[str]:
+    """Returned variables that trace back to no caller-supplied entity."""
+    returned = _returned_variables(cypher)
+    if not returned:
+        return []
+    anchored = _anchored_variables(cypher, entity_bindings)
+    # A returned name that never appears as a matched variable is an alias
+    # or a literal projection, not an unanchored entity.
+    all_matched: set[str] = set()
+    for clause in _MATCH_CLAUSE_PATTERN.findall(cypher):
+        all_matched |= set(_VAR_IN_NODE_PATTERN.findall(clause))
+        all_matched |= set(_VAR_IN_REL_PATTERN.findall(clause))
+    return sorted((returned & all_matched) - anchored)
+
+
 def _bound_param_names(cypher: str, entity_bindings: dict[str, str]) -> list[str]:
     """Return the caller-bound parameter names `cypher` actually references.
 
@@ -890,6 +1047,11 @@ _REASON_UNBOUND_PARAM = "unbound_param_name"
 # name was invented: here no parameter is referenced at all, which is how
 # both live bypasses of the naming contract presented.
 _REASON_NO_ENTITY_BOUND = "no_entity_bound"
+
+# F-2.1-J4-01B: the query binds a caller entity but returns values that
+# are not connected to it, the decoy shape. Distinct from
+# _REASON_NO_ENTITY_BOUND, where nothing is bound at all.
+_REASON_UNANCHORED_RESULT = "unanchored_result"
 
 
 async def _generate_and_validate(
@@ -1015,6 +1177,29 @@ async def _generate_and_validate(
                 + ". Do not write an entity id as a literal, and do not bind "
                 "one to an alias with WITH or UNWIND first. Rewrite the query "
                 "to match on one of: " + legal + "."
+            ),
+            normalized_cypher=None,
+        )
+
+    # F-2.1-J4-01B: presence is not enough, the returned values must trace
+    # back to a caller-supplied entity. See `_unanchored_returned_variables`.
+    unanchored = _unanchored_returned_variables(
+        result.normalized_cypher or raw_cypher, entity_bindings
+    )
+    if unanchored:
+        legal = ", ".join("$" + name for name in entity_bindings)
+        return raw_cypher, ValidationResult(
+            ok=False,
+            reason=_REASON_UNANCHORED_RESULT,
+            message=(
+                "generated Cypher returns "
+                + ", ".join(unanchored)
+                + ", which is not connected to any bound entity, so the rows "
+                "would be about records the question never asked for. Match "
+                "the returned pattern to one of: "
+                + legal
+                + ". Binding an entity in a separate, unconnected pattern "
+                "does not count."
             ),
             normalized_cypher=None,
         )

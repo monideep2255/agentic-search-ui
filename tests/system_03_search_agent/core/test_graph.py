@@ -805,6 +805,15 @@ async def test_citation_cap_truncation_is_surfaced_even_when_tool_reports_no_tru
 # exactly this case (system-design-patterns.md pattern 8,
 # production-standards.md's untrusted-source-reader gate) could never fire
 # for any Layer 1 result, by construction.
+#
+# F-2.1-J4-06 (judge, fourth pass): C13's own fix above over-corrected.
+# Excluding an Article row from structured_fields entirely, not just its
+# untrusted `fields`, made row_count disagree with total_available
+# (F-2.1-C07's contradiction, reintroduced one layer up) and made a query
+# whose only matching rows were Article rows refuse outright, silently.
+# The tests below now prove both properties hold at once: the raw title
+# never reaches anywhere, AND the Article record is never silently
+# dropped.
 # ---------------------------------------------------------------------------
 
 _HOSTILE_ARTICLE_TITLE = (
@@ -813,20 +822,23 @@ _HOSTILE_ARTICLE_TITLE = (
 
 
 @pytest.mark.asyncio
-async def test_article_rows_are_quarantined_from_structured_pass_through(
+async def test_article_rows_keep_their_record_but_never_their_raw_title(
     _mock_litellm: AsyncMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-2.1-C13: confirmed failing against the pre-fix code, since
-    `contains_untrusted_free_text` was hardcoded `False` unconditionally,
-    so an Article row's raw title reached `structured_fields` (and from
-    there `claim_text`) exactly like any other structured field. A Cypher
-    result mixing a Gene row (structured) and an Article row (untrusted
-    free text) must split: the Gene row still earns a normal citation; the
-    Article row's raw title must never appear in `structured_fields`, in
-    any citation event, or anywhere in the emitted event stream, and must
-    instead be dispatched through a second, isolated-reader-bound
-    tool_call/result pair (`contains_untrusted_free_text=True`).
+    """F-2.1-C13/F-2.1-J4-06: confirmed failing against the pre-C13 code
+    (the raw title reached structured_fields unmediated) and against the
+    post-C13, pre-J4-06 code (the Article row vanished from
+    structured_fields entirely, `row_count` disagreed with
+    `total_available`, and the record earned no citation at all). A
+    Cypher result mixing a Gene row (fully trusted) and an Article row
+    (untrusted `fields`) must, at once: keep both rows in `row_count` and
+    `structured_fields["rows"]`; never let the raw title reach
+    `structured_fields`, any citation, or any emitted event; and still
+    dispatch the Article row's real (unsanitized) content through a
+    second, isolated-reader-bound tool_call/result pair
+    (`contains_untrusted_free_text=True`) for whatever future
+    entity-extraction use that reader pass serves.
     """
     output = CypherQueryOutput(
         status="ok",
@@ -876,12 +888,23 @@ async def test_article_rows_are_quarantined_from_structured_pass_through(
     act_result = await graph_module.act_node(act_state)
 
     findings = act_result["findings"]
-    assert len(findings) == 2, "the Article row must be quarantined into its own Finding"
+    assert len(findings) == 2, "the Article row's free text is still quarantined into its own Finding"
 
     structured_finding, reader_finding = findings
     assert structured_finding.source == "structured_pass_through"
-    trusted_types = [row["node_or_edge_type"] for row in structured_finding.structured_fields["rows"]]
-    assert trusted_types == ["Gene"], "the Article row must not appear in the structured pass-through result"
+    assert structured_finding.structured_fields["status"] == "ok"
+    assert structured_finding.structured_fields["row_count"] == 2, (
+        "F-2.1-J4-06: the Article row must still be counted, not silently dropped"
+    )
+    assert structured_finding.structured_fields["total_available"] == 2
+    row_types = [row["node_or_edge_type"] for row in structured_finding.structured_fields["rows"]]
+    assert row_types == ["Gene", "Article"], (
+        "both rows must survive into structured_fields, in their original order"
+    )
+    article_row = structured_finding.structured_fields["rows"][1]
+    assert article_row["fields"] == {}, (
+        "the Article row's own field content must never reach structured_fields"
+    )
     assert _HOSTILE_ARTICLE_TITLE not in str(structured_finding.structured_fields)
 
     assert reader_finding.source == "reader"
@@ -898,9 +921,265 @@ async def test_article_rows_are_quarantined_from_structured_pass_through(
             "raw untrusted free text must never reach any emitted event"
         )
 
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "answer", (
+        "F-2.1-J4-06: a real Article record in the result must not cause a refusal"
+    )
+
+    citation_events = [event for event in events if event.type == "citation"]
+    assert len(citation_events) == 2, (
+        "F-2.1-J4-06: the Article row must earn its own citation, not vanish"
+    )
+    citations_by_source_id = {c.payload["source_id"]: c.payload for c in citation_events}
+    assert citations_by_source_id["NCBIGene:672"]["claim_text"] == (
+        "Gene NCBIGene:672: name=BRCA1 DNA repair associated"
+    )
+    article_citation = citations_by_source_id["PMID:1"]
+    assert article_citation["claim_text"] == "Article PMID:1", (
+        "the Article citation must fall back to its bare identity, never the raw title"
+    )
+    assert _HOSTILE_ARTICLE_TITLE not in article_citation["claim_text"]
+    assert article_citation["source_url"] == "https://www.ncbi.nlm.nih.gov/pubmed/1"
+
+
+@pytest.mark.asyncio
+async def test_an_article_only_result_answers_with_a_citation_not_a_silent_refusal(
+    _mock_litellm: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-2.1-J4-06's exact measured regression: a single, indexed PMID
+    lookup whose only matching row is an Article. Before this fix,
+    `write_node` reported `status="ok"`/`row_count=0`/`total_available=1`
+    internally (F-2.1-C07's contradiction, one layer up) and refused with
+    no error event at all, indistinguishable from the graph genuinely
+    finding nothing. It must now answer, with a real citation to the real
+    PMID, and never surface the raw title anywhere.
+    """
+    output = CypherQueryOutput(
+        status="ok",
+        row_count=1,
+        total_available=1,
+        truncated=False,
+        rows=[
+            CypherQueryRow(
+                node_or_edge_type="Article",
+                curie="PMID:2",
+                fields={"name": _HOSTILE_ARTICLE_TITLE},
+                source_url="https://www.ncbi.nlm.nih.gov/pubmed/2",
+                graph_snapshot_version="v1",
+            ),
+        ],
+        error=None,
+    )
+
+    async def _fake_cypher_query(harness: object, cypher_input: object) -> CypherQueryOutput:
+        return output
+
+    monkeypatch.setattr(graph_module, "cypher_query", _fake_cypher_query)
+
+    harness = harness_module.Harness(trace_id="test-trace-article-only")
+    planned = graph_module._PlannedToolCall(
+        tool_call=ToolCall(tool="cypher_query", call_id="cq-article-only", layer="layer_1_graph"),
+        cypher_input=CypherQueryInput(
+            query_intent="What does PMID 2 say?",
+            query_class="lookup",
+            target_entities=["PMID:2"],
+            row_limit=100,
+        ),
+    )
+    act_state = {
+        "harness": harness,
+        "query": _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT),
+        "query_class": "lookup",
+        "tool_calls": [planned],
+    }
+    act_result = await graph_module.act_node(act_state)
+    findings = act_result["findings"]
+
+    structured_finding = next(f for f in findings if f.source == "structured_pass_through")
+    assert structured_finding.structured_fields["status"] == "ok"
+    assert structured_finding.structured_fields["row_count"] == 1, (
+        "row_count must agree with total_available; F-2.1-C07's contradiction must not reappear"
+    )
+    assert structured_finding.structured_fields["total_available"] == 1
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "answer", (
+        "F-2.1-J4-06: an Article-only result must answer, not refuse silently"
+    )
+    error_events = [event for event in events if event.type == "error"]
+    assert error_events == [], "a genuine answer must not also carry a spurious error event"
+
     citation_events = [event for event in events if event.type == "citation"]
     assert len(citation_events) == 1
-    assert citation_events[0].payload["source_id"] == "NCBIGene:672"
+    assert citation_events[0].payload["source_id"] == "PMID:2"
+    assert citation_events[0].payload["claim_text"] == "Article PMID:2"
+    for event in events:
+        assert _HOSTILE_ARTICLE_TITLE not in str(event.payload)
+
+
+@pytest.mark.asyncio
+async def test_ok_outcome_with_zero_citeable_rows_refuses_explicitly_not_silently(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """F-2.1-J4-06's general safety net: a `status="ok"` Finding whose
+    rows carry no citeable `source_url` at all (not caused by
+    truncation) must still refuse, per cite-or-refuse, but the refusal
+    must carry F-2.1-11's distinguishing signal, an `error` event, so it
+    is never confused with a genuinely empty tool result.
+    """
+    harness = harness_module.Harness(trace_id="test-trace-uncited-ok")
+    call = ToolCall(tool="cypher_query", call_id="call-uncited-ok", layer="layer_1_graph")
+    structured_fields = {
+        "status": "ok",
+        "row_count": 1,
+        "total_available": 1,
+        "truncated": False,
+        "rows": [
+            {
+                "node_or_edge_type": "OntologyClass",
+                "curie": "GO:0000001",
+                "fields": {"name": "mitochondrion inheritance"},
+                "source_url": None,
+                "graph_snapshot_version": "v1",
+            }
+        ],
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "refuse"
+    assert [event for event in events if event.type == "citation"] == []
+
+    error_events = [event for event in events if event.type == "error"]
+    assert len(error_events) == 1, (
+        "an 'ok' outcome that refuses for a non-truncation reason must still carry an "
+        "explicit, distinguishing error event, never a silent refusal"
+    )
+    assert error_events[0].payload["fatal"] is False
+    assert "citeable source_url" in error_events[0].payload["message"]
+    assert "truncat" not in error_events[0].payload["message"].lower(), (
+        "this refusal was not caused by truncation; the message must not claim it was"
+    )
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-B07 (adversary, second pass, open until now): a Disease/
+# OntologyClass row's stored `name` is sometimes a bare source-vocabulary
+# code ("MeSH", "MONDO", "SNOMEDCT_US"), a documented MedGen ETL defect
+# (docs/data-engineering/Knowledge_graph_on_server_reference.md section
+# M), not the disease name it claims to be. Asserting
+# assertion_confidence="asserted" on a citation built from one of these
+# values overstates confidence in a corrupted display value.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_vocabulary_token_name_downgrades_confidence_instead_of_asserting_it(
+    _mock_litellm: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-2.1-B07: confirmed failing against the pre-fix code, which
+    hardcoded `assertion_confidence="asserted"` for every citation
+    regardless of the field value it was built from. A Disease row whose
+    stored `name` is literally "MeSH" (one of the four confirmed live
+    examples) must still earn a citation (the record is real; refusing it
+    is not the fix, per the same "sanitize, do not refuse" preference as
+    F-2.1-J4-06), but at `assertion_confidence="hedged"`, never
+    "asserted", and the corrupted value itself is still shown (never
+    invented, never hidden) so a caller can see exactly what the graph
+    stored.
+    """
+    output = CypherQueryOutput(
+        status="ok",
+        row_count=1,
+        total_available=1,
+        truncated=False,
+        rows=[
+            CypherQueryRow(
+                node_or_edge_type="Disease",
+                curie="MedGen:C0346153",
+                fields={"name": "MeSH"},
+                source_url="https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+                graph_snapshot_version="v1",
+            ),
+        ],
+        error=None,
+    )
+
+    async def _fake_cypher_query(harness: object, cypher_input: object) -> CypherQueryOutput:
+        return output
+
+    monkeypatch.setattr(graph_module, "cypher_query", _fake_cypher_query)
+
+    harness = harness_module.Harness(trace_id="test-trace-vocab-artifact")
+    planned = graph_module._PlannedToolCall(
+        tool_call=ToolCall(tool="cypher_query", call_id="cq-vocab-artifact", layer="layer_1_graph"),
+        cypher_input=CypherQueryInput(
+            query_intent="What diseases are associated with BRCA1?",
+            query_class="lookup",
+            target_entities=["NCBIGene:672"],
+            row_limit=100,
+        ),
+    )
+    act_state = {
+        "harness": harness,
+        "query": _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT),
+        "query_class": "lookup",
+        "tool_calls": [planned],
+    }
+    act_result = await graph_module.act_node(act_state)
+    findings = act_result["findings"]
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    citation_events = [event for event in events if event.type == "citation"]
+    assert len(citation_events) == 1
+    citation = citation_events[0].payload
+    assert citation["assertion_confidence"] == "hedged", (
+        "a citation built from a vocabulary-token value must be downgraded, never asserted"
+    )
+    assert citation["claim_text"] == "Disease MedGen:C0346153: name=MeSH", (
+        "the corrupted value is still shown, never hidden or invented"
+    )
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("MeSH", True),
+        ("MONDO", True),
+        ("MedGen", True),
+        ("SNOMEDCT_US", True),
+        ("HIV", False),
+        ("AIDS", False),
+        ("COPD", False),
+        ("Diabetes", False),
+        ("Phenylketonuria", False),
+        ("Breast-ovarian cancer, familial 1", False),
+        ("BRCA1 DNA repair associated", False),
+    ],
+)
+def test_is_vocabulary_token_artifact_matches_confirmed_examples(value: str, expected: bool) -> None:
+    """F-2.1-B07: the shape rule, not a lookup table, catches every
+    confirmed live example (the four BRCA1-associated MedGen rows, plus
+    the independently documented "SNOMEDCT_US" case) while letting short,
+    genuinely standalone medical abbreviations and ordinary multi-word
+    disease names through unflagged.
+    """
+    assert graph_module._is_vocabulary_token_artifact(value) is expected
 
 
 # ---------------------------------------------------------------------------

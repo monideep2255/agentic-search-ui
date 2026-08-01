@@ -848,6 +848,118 @@ def test_tainted_alias_name_does_not_leak_across_union_branches() -> None:
     assert result.reason is None
 
 
+# ---------------------------------------------------------------------------
+# F-2.1-J4-01: five further bypasses a judge found, all confirmed FAILING
+# (ok=True, no rejection) against the validator before this fix. Three were
+# live-executed reproductions of F-2.1-B01, this phase's worst defect: a
+# confident, fully cited answer about the wrong gene, arriving through a
+# third door.
+# ---------------------------------------------------------------------------
+
+
+def test_reversed_alias_comparison_is_rejected() -> None:
+    # Bypass 1: the same tainted-alias comparison as F-2.1-C08's
+    # reproduction 2, operands swapped. The old alias pattern only
+    # recognized field-connector-alias, never alias-connector-field, even
+    # though Cypher's comparison operators carry no direction.
+    result = validate_cypher(
+        "WITH 'NCBIGene:7157' AS t MATCH (g:Gene) WHERE t = g.id RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+    assert result.normalized_cypher is None
+
+
+def test_literal_bound_via_list_index_is_rejected() -> None:
+    # Bypass 2: a literal wrapped in a one-element list and pulled back out
+    # by index. _is_tainted_expr recognized a bare literal, a bare numeric
+    # literal, and a chain of "+"-joined tainted parts, but never a list
+    # literal, so the alias was never tainted at all.
+    result = validate_cypher(
+        "WITH ['NCBIGene:7157'] AS l MATCH (g:Gene {id: l[0]}) RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+    assert result.normalized_cypher is None
+
+
+def test_literal_bound_via_alias_then_wrapped_in_a_function_is_rejected() -> None:
+    # Bypass 3: the exact function-call indirection this module's own
+    # docstring used to name as a deliberately open, uncovered case. A
+    # tainted alias passed through toString() before use in a match
+    # position.
+    result = validate_cypher(
+        "WITH 'NCBIGene:7157' AS t WITH toString(t) AS t2 "
+        "MATCH (g:Gene {id: t2}) RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+    assert result.normalized_cypher is None
+
+
+def test_literal_bound_via_alias_then_wrapped_in_substring_is_rejected() -> None:
+    # Bypass 4: the same function-wrap indirection through a different
+    # function, substring(), with a leading junk character so no check
+    # keyed on the literal's own content would coincidentally catch it.
+    result = validate_cypher(
+        "WITH 'XNCBIGene:7157' AS t WITH substring(t, 1) AS t2 "
+        "MATCH (g:Gene {id: t2}) RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+    assert result.normalized_cypher is None
+
+
+def test_literal_inside_a_case_expression_is_rejected() -> None:
+    # Bypass 5, a regression: this shape was rejected before the F-2.1-C08
+    # alias-taint rework and passed afterward. No alias is involved at all,
+    # just a literal buried inside a CASE...END block used directly as a
+    # comparison operand.
+    result = validate_cypher(
+        "MATCH (g:Gene) WHERE g.id = CASE WHEN true THEN 'NCBIGene:7157' "
+        "ELSE '' END RETURN g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+    assert result.normalized_cypher is None
+
+
+def test_reversed_comparison_on_internal_constant_field_still_allowed() -> None:
+    # The reversed-operand fix must not swallow the F-2.1-A17 allowlist:
+    # an allowlisted field compared in reverse order is still exempt.
+    result = validate_cypher(
+        "WITH 'PubMed' AS src MATCH (a:Article) WHERE src = a.source "
+        "RETURN a",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is True
+    assert result.reason is None
+
+
+def test_case_expression_on_internal_constant_field_still_allowed() -> None:
+    # Same allowlist guarantee for the new CASE-expression check: a literal
+    # bound to an allowlisted field through a CASE block is still exempt.
+    result = validate_cypher(
+        "MATCH (a:Article) WHERE a.source = CASE WHEN true THEN 'PubMed' "
+        "ELSE 'Other' END RETURN a",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is True
+    assert result.reason is None
+
+
 def test_unterminated_string_literal_is_rejected_as_suspect() -> None:
     # _mask_string_literals cannot account for a string with no closing
     # quote. This module never proves a construct safe on a string it

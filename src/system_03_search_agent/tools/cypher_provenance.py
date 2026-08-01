@@ -66,6 +66,50 @@ rework): five more defects in what this module cites.
   host-pinned URL that 404s live. Fixed by `_CURIE_LOCAL_ID_SHAPES`: a
   local id that does not match its prefix's verified shape now returns
   None, the same outcome as an unmapped prefix.
+
+Finding F-2.1-J4-05 (fourth judge pass): the C09 fix's shape table was a
+regression. It was derived from a roughly 40-row live sample rather than
+each prefix's real format, and the resulting single-letter-plus-digits
+shape (one letter, then digits, nothing else) was too narrow for MedGen:
+it rejected `MedGen:CN517202`, a genuine two-letter MedGen concept id
+(MedGen assigns its own `CN`-prefixed ids when a concept has no UMLS CUI,
+alongside the UMLS-standard `C`-prefixed CUI), stripping the citation from
+a real Disease record and dropping it from any answer under cite-or-refuse.
+The judge measured the blast radius at 4,401 of 200,845 Disease nodes.
+
+`_CURIE_LOCAL_ID_SHAPES` is now derived per prefix as follows, not from a
+further, larger sample:
+
+- NCBIGene, ClinVar, PMID, NCBITaxon: NCBI's own documented external id
+  conventions state these are plain positive integers (an Entrez Gene ID, a
+  ClinVar Variation ID, a PubMed ID, and an NCBI Taxonomy id are each
+  defined as numeric), cross-checked against an unfiltered 15-row `LIMIT`
+  sample per label read straight off the live graph
+  (`Gene`, `SequenceVariant`, `Article`, `OrganismTaxon`) on 2026-07-31.
+  A 15-row `LIMIT` is a bounded read, never a full scan of these
+  multi-million-row labels.
+- MedGen, MeSH: no external numeric convention applies, since both use
+  letter-prefixed ids, so the shape is instead derived from an EXHAUSTIVE,
+  bounded aggregate query grouping every row of the `Disease` (200,845
+  rows) and `OntologyClass` (30,790 rows) tables by their digit-collapsed
+  id shape, run directly against the small per-label SQL tables on
+  2026-07-31 (both labels are small enough that a full read carries no OOM
+  risk, unlike the multi-million-row labels above). This is complete
+  coverage of every Disease and OntologyClass row in the graph, not a
+  sample: MedGen ids are exactly `C` followed by digits (196,444 rows) or
+  `CN` followed by digits (4,401 rows), never a third shape; MeSH ids are
+  exactly `D` followed by digits, in either a 6-digit legacy length
+  (27,177 rows) or a 9-digit length NLM introduced for newer descriptors
+  (3,613 rows), never a third shape. `_MEDGEN_LOCAL_ID` and
+  `_MESH_LOCAL_ID` accept any digit count after the letter prefix rather
+  than hardcoding 6, 7, or 9 digits specifically, since the exhaustive scan
+  already shows the digit count is not fixed within a single prefix and a
+  future MeSH or MedGen id one digit longer must not be treated as an
+  attack string the way `NCBIGene:672-VALIDATED-BY-FDA` genuinely is.
+  Unlike the old single-letter shape, the letter itself is now pinned
+  (uppercase `C`/`CN` for MedGen, uppercase `D` for MeSH) rather than "any
+  single letter", because the exhaustive scan leaves no evidence any other
+  letter is real for either prefix.
 - F-2.1-C04/C05: an edge with no CURIE of its own used to be attributed
   only to whichever sibling endpoint vertex the query happened to also
   RETURN, so the identical edge got a different citation depending on the
@@ -178,26 +222,39 @@ def _matches_host_pattern(url: str) -> bool:
 # record this module can stand behind, so it must return None, the same
 # outcome as an unmapped prefix, not a plausible-looking guess.
 #
-# Shapes below are the live-verified format for each prefix
-# (docs/data-engineering/Knowledge_graph_on_server_reference.md section F,
-# cross-checked against sampled live graph data on 2026-07-31):
-# NCBIGene, ClinVar, PMID, and NCBITaxon local ids are pure digit
-# strings. MedGen and MeSH local ids are a single letter followed by
-# digits (every sampled MedGen id begins `C`, every sampled MeSH id
-# begins `D`); the check accepts any single letter rather than hardcoding
-# one, since neither the docs nor the live sample rule out a legitimate
-# variant this module has not seen, and an attacker string still fails
-# this shape regardless of which letter it starts with.
+# Finding F-2.1-J4-05: the shapes below replace a table derived from a
+# roughly 40-row live sample, which was too narrow. It rejected
+# `MedGen:CN517202`, a genuine two-letter MedGen id, stripping 4,401 of
+# 200,845 real Disease nodes of their citation. See the module docstring
+# for the full derivation, restated briefly here:
+#
+# - NCBIGene, ClinVar, PMID, NCBITaxon: NCBI's own documented id
+#   conventions (Entrez Gene ID, ClinVar Variation ID, PubMed ID, NCBI
+#   Taxonomy id are all plain positive integers), cross-checked against a
+#   bounded 15-row `LIMIT` sample per label, never a full scan of these
+#   multi-million-row labels.
+# - MedGen, MeSH: an EXHAUSTIVE aggregate over every row of the `Disease`
+#   and `OntologyClass` tables (small labels, a full read is safe), not a
+#   sample. MedGen ids are `C` or `CN` followed by digits, never a third
+#   shape, and never a lowercase or any other letter. MeSH ids are `D`
+#   followed by digits, never a third shape or another letter. Neither
+#   shape hardcodes a digit count: the exhaustive scan itself found two
+#   different digit counts live for each prefix (MedGen: 7 after `C`, 6
+#   after `CN`; MeSH: 6 and 9 after `D`, the 9-digit form being newer
+#   descriptors NLM introduced once 6 digits ran out), so a real id one
+#   digit longer than anything sampled must not be treated the way
+#   `NCBIGene:672-VALIDATED-BY-FDA` genuinely should be.
 _NUMERIC_LOCAL_ID = re.compile(r"^\d+$")
-_LETTER_DIGITS_LOCAL_ID = re.compile(r"^[A-Za-z]\d+$")
+_MEDGEN_LOCAL_ID = re.compile(r"^CN?\d+$")
+_MESH_LOCAL_ID = re.compile(r"^D\d+$")
 
 _CURIE_LOCAL_ID_SHAPES: dict[str, re.Pattern[str]] = {
     "NCBIGene": _NUMERIC_LOCAL_ID,
     "ClinVar": _NUMERIC_LOCAL_ID,
-    "MedGen": _LETTER_DIGITS_LOCAL_ID,
+    "MedGen": _MEDGEN_LOCAL_ID,
     "PMID": _NUMERIC_LOCAL_ID,
     "NCBITaxon": _NUMERIC_LOCAL_ID,
-    "MeSH": _LETTER_DIGITS_LOCAL_ID,
+    "MeSH": _MESH_LOCAL_ID,
 }
 
 
@@ -212,7 +269,8 @@ def source_url_for_curie(curie: str) -> str | None:
     Returns:
         The record page URL when the prefix is one of the six documented
         mappings, the local id matches the verified shape for that prefix
-        (finding F-2.1-C09), and the resulting URL matches
+        (finding F-2.1-C09, corrected by F-2.1-J4-05), and the resulting
+        URL matches
         `NCBI_RECORD_URL_PATTERN`. None for every other prefix, including
         the three CURIE_PREFIXES entries this module does not map (GO,
         HP, MONDO) and any prefix outside the nine entirely. Never a
@@ -237,6 +295,12 @@ def source_url_for_curie(curie: str) -> str | None:
         # one that happens to be syntactically well-formed.
         return None
 
+    # Finding F-2.1-J4-05: every shape in `_CURIE_LOCAL_ID_SHAPES` is now
+    # restricted to uppercase ASCII letters and digits, so no local id that
+    # reaches this line ever contains a character `quote` needs to escape.
+    # The call stays as defense in depth for a shape added later that does
+    # admit such a character, not because today's shapes exercise it; see
+    # `test_no_documented_prefix_url_ever_contains_a_percent_encoded_local_id`.
     quoted_local_id = urllib.parse.quote(local_id, safe="")
     url = builder(quoted_local_id)
 
