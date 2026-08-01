@@ -157,13 +157,16 @@ Open a phase (`--open N.M`):
 2. Verify every dependency phase is `done` on the board. If not, stop and report.
 3. Read `LEARNINGS.md` for entries tagged to this phase or its tools before scoping anything.
 4. Decompose the phase into tickets. Each gets acceptance criteria traced to a spec section.
-5. Create `tracker/phase_N.M.md`, add the phase row to `tracker/BOARD.md`.
+5. If the phase's deliverable is model-generated output, the FIRST ticket is the premise gate, and it blocks every other ticket in the phase. See `docs/build/Build_workflow_cadence.md` stage 5. Its acceptance criteria are fixed: the gate does not mock the model, asserts on the meaning of the answer rather than its shape, pins ground truth read from the live source, runs the way production runs, states which shapes of question it exercises and which it omits, and has been SEEN FAILING before any other ticket opens. A gate that passed on first run has not been shown to be capable of failing and does not satisfy this ticket.
+6. Create `tracker/phase_N.M.md`, add the phase row to `tracker/BOARD.md`.
 
 Status (`--status`): print the board index plus the open tickets in the current phase, grouped by status. Blocked tickets first, with their reasons.
 
 Close a ticket (`--close`): only after the judge has produced evidence. Paste the evidence into the ticket's Evidence block, append the history line, set `done`.
 
 Phase close: every ticket in the phase file is `done` or explicitly deferred with a reason. A phase with an open ticket is not complete, regardless of what the builders reported.
+
+A phase premise claim cites the premise gate, never a suite total. Build phase 2.1 closed once on "798 tests passing and 9 live-graph tests green", which was true, and the phase was then found to answer 3 of 8 real questions correctly. A count of passing tests is evidence about the tests.
 
 ### The board is the team's point of reference
 

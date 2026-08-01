@@ -9,7 +9,8 @@ Last updated: 2026-07-26.
 ## Table of contents
 
 - [The one-paragraph version](#the-one-paragraph-version)
-- [The eleven stages](#the-eleven-stages)
+- [The twelve stages](#the-twelve-stages)
+- [Stage 5, the premise gate, and why it blocks](#stage-5-the-premise-gate-and-why-it-blocks)
 - [Model assignment](#model-assignment)
 - [Provider mapping](#provider-mapping)
 - [Where everything is written](#where-everything-is-written)
@@ -20,7 +21,7 @@ Last updated: 2026-07-26.
 
 It runs like a normal engineering team. Tickets get read, picked up, worked, and moved across a board as they progress. Agents verify the engineering: does it work, is it correct, is it safe to ship. The product owner verifies the product: is this the right thing, and does it meet the user need. Nothing merges without that second check.
 
-## The eleven stages
+## The twelve stages
 
 | # | Stage | Who | Tier | Effort |
 |---|-------|-----|------|--------|
@@ -28,13 +29,64 @@ It runs like a normal engineering team. Tickets get read, picked up, worked, and
 | 2 | Read `LEARNINGS.md` filtered to this phase | Lead | depth | low |
 | 3 | Decompose into tickets with acceptance criteria and file scopes | Lead | depth | high |
 | 4 | Cut the branch, dispatch researchers | Lead, researchers | depth lead, speed research | low |
-| 5 | Builders work tickets in parallel | Builders | balance | medium |
-| 6 | Record what broke, at the moment it breaks | Whoever hit it | inherits its own | n/a |
-| 7 | Judge grades with cited evidence, closes tickets | Judge | depth | high or extra high |
-| 8 | Adversary attacks what the judge certified | Adversary | depth | high |
-| 9 | Gates: verify, eval-harness, dev-standards, release-workflow | Lead, test writer | depth lead, balance tests | medium |
-| 10 | Close the board, render, republish, open the pull request | Lead | depth | low |
-| 11 | Review and merge | Product owner | human | n/a |
+| 5 | Write the premise gate and WATCH IT FAIL. Blocks stage 6 | Lead | depth | high |
+| 6 | Builders work tickets in parallel | Builders | balance | medium |
+| 7 | Record what broke, at the moment it breaks | Whoever hit it | inherits its own | n/a |
+| 8 | Judge grades with cited evidence, closes tickets | Judge | depth | high or extra high |
+| 9 | Adversary attacks what the judge certified | Adversary | depth | high |
+| 10 | Gates: verify, eval-harness, dev-standards, release-workflow | Lead, test writer | depth lead, balance tests | medium |
+| 11 | Close the board, render, republish, open the pull request | Lead | depth | low |
+| 12 | Review and merge | Product owner | human | n/a |
+
+## Stage 5, the premise gate, and why it blocks
+
+Added 2026-08-01 after build phase 2.1 failed four consecutive reviews with
+a green suite. This stage is mandatory and blocking for any phase whose
+deliverable is model-generated output, which is every remaining tool phase
+(3.1 to 3.5). No tool code is written until the gate exists and has been
+seen failing.
+
+What phase 2.1 cost, stated plainly because it is the argument for the
+stage: 879 passing tests, and 3 of 8 real questions answered correctly. The
+worst case returned twenty-five non-human orthologs for "which diseases are
+associated with BRCA1?", `status="ok"`, every row carrying a real and
+resolving NCBI citation. Five review rounds found roughly 25 real defects,
+none of them the cause. The cause was a schema slice that handed the
+generator no Disease label at all, and it was visible from day one to
+anyone who printed what the model was actually given.
+
+A premise gate has four properties. Each one is there because its absence
+was a measured failure in 2.1:
+
+- It does NOT mock the model. Every one of 2.1's 879 tests did, which means
+  every test supplied a query someone already knew was correct, and no test
+  in the suite could see a generation defect.
+- It asserts on the MEANING of the answer, not its shape. "Rows came back"
+  and "every row is cited" both passed on the ortholog answer.
+- Its ground truth is read from the live source and pinned, so "correct" is
+  checkable rather than plausible.
+- It runs the way PRODUCTION runs. A first draft of 2.1's gate hand-picked a
+  `query_class` per question and scored 8 of 9, where sending the stub value
+  production actually emits scored 3 of 9. A gate handed a better input than
+  production sends is a fixture, not a gate.
+
+It must also state its own coverage: which shapes of question it exercises
+and which it omits. 2.1's gate could not see finding F-2.1-A5-03 because all
+nine of its questions were one hop from a single anchor type, so a defect
+making every two-hop question unanswerable was invisible to the gate built
+to catch exactly that class. A gate with an unstated blind spot inherits the
+blind spot of the code it grades.
+
+Cost, measured on 2.1: about 40 minutes to write, and $0.013 per run for
+eight real generations. Against ten review passes at 20 to 30 minutes each,
+it pays for itself the first time it fires. It already has: two regressions
+introduced by 2.1's own late fixes were caught by the gate rather than by a
+sixth review round.
+
+The reason it blocks rather than merely being required: a gate written after
+the code it grades is written against behavior that already exists, and will
+tend to encode that behavior as correct. Watching it fail first is what
+proves it can fail at all.
 
 ## Model assignment
 
@@ -100,3 +152,4 @@ Stated rather than hidden, because each one is a place the cadence can quietly f
 - A board edit made through a shell command instead of the Edit tool bypasses the sync hook and leaves the rendered page stale. Mitigated by re-rendering at phase close, not eliminated.
 - The golden fixtures at build phase 5.1 have no named domain sign-off owner. If an expected answer is wrong, a wrong agent passes the gate, which is the exact failure the gate exists to catch.
 - Playwright is not installed, so the UI gate on build phases 1.2 and 4.5 has nothing behind it yet.
+- The premise gate at stage 5 is only as good as its question set, and nothing mechanically checks that the set covers the shapes a phase will actually be asked. Build phase 2.1's gate omitted every two-hop question and the omission was found by an adversary, not by the gate. Stating coverage is required; verifying that the stated coverage is complete is still a human judgment.

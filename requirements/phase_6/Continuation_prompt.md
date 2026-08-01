@@ -34,7 +34,7 @@ Phases 1 through 5 of System 3 are complete and merged. Phase 6 (build) is under
 1. `LEARNINGS.md` at the repo root. Read this first, not last. 19 entries now. Three matter most for any phase from here on, beyond the venv-identity and judge-and-adversary entries already flagged in earlier versions of this file. The `ChatPage` wiring row (build phase 1.2): a leaf-level ticket can satisfy its own acceptance criteria while the phase's actual end-to-end deliverable goes unwired, unless one ticket explicitly owns the assembly. The run-lifecycle row (build phase 1.2, adversary pass): a green scripted judge review carries no signal on resource lifecycle when no acceptance criterion named it, so a judge pass and an adversary pass are not redundant even back to back on the same phase. The tracker-backfill row implicit in T-1.2-01 through 04's own History sections: evidence not filled in at build time has to be reconstructed later from a judge's independent re-verification, which is real but avoidable cost.
 2. `requirements/Technical_specification.md` Section 25. The build order: 26 numbered phases, each with its branch name, what it delivers, and what it depends on. This is the source of truth for what gets built and in what sequence. Do not work from a summary.
 3. `requirements/phase_5/Coverage_map.md`. The gate list: 303 obligations from the three locked documents, each mapped to the rule or skill that enforces it.
-4. `docs/build/Build_workflow_cadence.md`. How a phase runs: eleven stages, who acts at each, the capability tier and effort rung per stage.
+4. `docs/build/Build_workflow_cadence.md`. How a phase runs: twelve stages, who acts at each, the capability tier and effort rung per stage. Stage 5, the premise gate, blocks all builder work in any phase whose deliverable is model-generated.
 5. `tracker/BOARD.md`. Current state: phases 1.0, 1.1, 1.2, and 2.0 are `done`, phase 2.1 is `in review` (merged, not closed), everything else `todo`. Ten open flags. F-2.0-08 and F-2.0-14 closed in phase 2.1 and were replaced by one new flag, "reworked not re-reviewed", which is the phase 2.1 gap. The scan flag still binds every remaining prototype phase: the whole-repository security scan has never run against any build-phase code.
 6. `tracker/phase_1.1.md` and `tracker/phase_1.2.md`. The full record of what each phase built. Read `phase_1.1.md` before opening any phase that touches auth, the user-data database, or a security property stated in the spec. Read `phase_1.2.md` before opening build phase 2.1, since its own T-1.2-08 entry is the concrete, worked example of the ticket-boundary integration gap named in the `LEARNINGS.md` row above, and because three findings deferred from phase 1.1 (F-1.1-10, F-1.1-11, F-1.1-18) were scheduled to close in phase 1.2 and did not; they carry forward, unresolved, see the open items table below.
 7. `requirements/PRD.md` and `requirements/Evaluation_playbook.md` as needed. The PRD is locked. The playbook is living.
@@ -212,15 +212,17 @@ Still open after this phase:
 
 Read the "Running this project with a different agent" section in `CLAUDE.md`, which `AGENTS.md` mirrors. The short version: the file artifacts and the model tiering port cleanly, the skills and rules port as content but not as invocation, and the four security hooks do not port at all. They are the only structural enforcement in this repo, so substituting them is the first handover step.
 
-## STOP-POINT, 2026-08-01: build phase 2.1 rework, stage 8 of 11
+## Build phase 2.1, CLOSED 2026-08-01 as PR #15
 
-Read this before anything else in this file. It supersedes the "Build phase 2.1, done with one recorded gap" section below, which describes a state that is two review rounds old.
+Read this before anything else in this file. It supersedes the "Build phase 2.1, done with one recorded gap" section below, which describes a state that is three review rounds old.
 
 ### Where the work actually is
 
-Branch `phase/2.1-cypher-tool`, 25 commits, all committed locally, NOTHING PUSHED. PR #13 is already MERGED, so this rework needs a NEW pull request, not an update to that one.
+Merged to `main` as PR #15, 31 commits, branch deleted. The phase is closed. PR #13 was the earlier, unreviewed merge of the same phase; #15 is the reviewed rework and supersedes it.
 
-The cadence is `docs/build/Build_workflow_cadence.md`'s eleven stages. Position: stage 8. Stages 9, 10, and 11 remain.
+Final gates at close: 968 Python tests passing, premise gate 9 of 9 on three consecutive runs, 120 frontend tests, ruff clean, pip-audit and npm audit clean.
+
+Reviewed by five judge passes and five adversary passes. The fifth judge returned the phase's first PREMISE: PASS and proved the root-cause claim with a controlled A/B rather than accepting it.
 
 | Check | State on stopping |
 |-------|-------------------|
@@ -231,11 +233,11 @@ The cadence is `docs/build/Build_workflow_cadence.md`'s eleven stages. Position:
 | Working tree | clean |
 | Live graph | healthy |
 
-### The one thing to do first
+### The one thing to carry into the next phase
 
-The fifth ADVERSARY was stopped mid-run and never wrote its report. Its last message before being stopped was "Two significant results already", so it had found something and those findings are LOST, not absent. Re-run it before stage 9. Its brief is in the session transcript; the essential framing is that the newest code is the most dangerous code, which has held true five rounds running.
+Stage 5 of `docs/build/Build_workflow_cadence.md` is new, mandatory, and BLOCKING: write the premise gate and watch it fail before any tool code is written. It applies to every remaining tool phase (3.1 to 3.5), since each one's deliverable is model-generated.
 
-Do NOT treat the fifth judge's PREMISE: PASS as the phase being closeable. The judge grades against known criteria; the adversary attacks what the judge certified, and in this phase the adversary has found things the judge could not in every single round.
+This exists because of what this phase cost. Four consecutive reviews failed while the suite was green, and the cause was found on round five. Read the retrospective in `LEARNINGS.md` before opening 3.1; it is the shortest useful summary of why.
 
 ### What the fifth judge established, and it matters
 
