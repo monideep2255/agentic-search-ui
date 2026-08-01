@@ -48,6 +48,62 @@ Newest entries at the bottom.
 | 2026-08-01 | reviewing any fix, build phase 2.1 | Every one of five review rounds found its worst defect in the code written to fix the previous round. F-2.1-J4-03, J4-05 and J4-06 were all regressions in fixes from the round before. F-2.1-J5-01 is the cleanest instance: the connectivity check carried a comment block asserting "a WITH does not launder an unanchored variable" while the code never read WITH at all, so `WITH d AS x ... RETURN x` returned five arbitrary cited diseases | Reviewing new code and fix code at the same level of scrutiny, and treating a confident code comment as documentation | Two rules, both earned. First, a fix landing in the same phase as the finding it repairs deserves MORE scrutiny than untouched code, not less, so review briefs now say so explicitly. Second, a comment that CLAIMS a property is a claim to be tested, not documentation to be trusted: the next reader stops checking exactly where the comment sounds most confident, which is why J5-01 survived. Where a comment asserts a security or correctness property, there must be a test asserting the same property, or the comment is a liability |
 | 2026-08-01 | any invariant that gates generated output, build phase 2.1 | The same invariant was defeated twice in one day. First "the query must bind at least one caller entity" was defeated by a decoy: bind BRCA1 in a throwaway MATCH, then match an unrelated pattern, and five arbitrary diseases came back cited for a question about BRCA1. Replaced with a connectivity invariant, which was then defeated by renaming through WITH | Enumerating shapes to block. Four rounds of adding one pattern per newly discovered spelling of the same attack | Presence was the wrong PROPERTY, not a property implemented badly. What has to hold is that every returned value traces back to an entity the caller supplied, which is connectivity, and provenance has to be resolved through aliases before the check runs. The general lesson is that a blocklist of unsafe shapes is infinite while an allowlist of safe ones is finite: the validator only stopped leaking when its inner classification flipped from allowlist-of-known-shapes to fail-closed, so an expression it cannot decompose is guilty until scanned clean. Equally load-bearing, and nearly missed: a first cut of the connectivity check falsely rejected three legitimate aggregates and `WHERE g.id IN [$p1, $p2]`. A false reject means the user gets nothing, so a gate needs its cost side tested as hard as its block side |
 
+## Retrospective: why build phase 2.1 took five review rounds
+
+Written 2026-08-01, after the phase merged as PR #15. This is the one entry
+in this file that is a narrative rather than a single failure, because the
+cost was not any one defect. It was the shape of how the work was run.
+
+### The root cause was visible on day one and was found on round five
+
+Think sends a hardcoded `query_class="lookup"`. `lookup` mapped to a 0-hop
+schema slice. A 0-hop Gene slice contains exactly one edge:
+`orthologous_to`. The model was asked about diseases and handed a schema
+with no disease in it, so it returned orthologs. One `print()` of the
+model's actual input would have shown it in minute one.
+
+Neither component was wrong. Zero hops is correct for a true lookup, and a
+stub classifier is a reasonable placeholder. That is why every
+component-level review passed. The defect was in the COMPOSITION, and
+nothing in the process looked there.
+
+### Four things made it expensive
+
+1. The layer that was failing was fixed, not the layer that was causing it.
+   Roughly 25 findings across three rounds landed in the parameter binder
+   and the citation layer. Every one was a real defect. None was causal.
+   `attack-the-constraint` is a rule in this repo, and it was applied to
+   the code and never to the process running it.
+
+2. The verify surface could not see the failure class. 879 green tests, all
+   mocking the model call. So every round ended green and could only be
+   disproven by a 20 to 30 minute review pass. Ten of those passes is most
+   of the elapsed time. The gate that finally worked took about 40 minutes
+   to build.
+
+3. A large share of the rounds were self-inflicted. F-2.1-J4-03, J4-05,
+   J4-06, J5-01 and A5-01 were all regressions in fixes from the round
+   before. Round four existed largely to catch round three's damage, and
+   the same invariant was defeated three separate times.
+
+4. Confident artifacts were trusted, including this agent's own. F-2.1-J5-01
+   was a code comment asserting a property the code did not implement.
+
+### What to do differently in the next tool phase
+
+- Build the premise gate FIRST, not last. Before any tool code: 8 to 10 real
+  questions, answers read from the graph, real model, asserting on meaning.
+  It costs about 40 minutes and $0.013 per run. It would have caught this on
+  day one, and it already caught two regressions before a reviewer did.
+- Print the model's real input before debugging its output. Cheap, and it
+  was the whole ballgame here.
+- Review fixes harder than new code. Six rounds for six, the newest code was
+  the defect.
+- Make the gate state its own coverage. The fifth adversary caught that all
+  nine gate questions were one hop from a Gene anchor, so the gate built to
+  catch this class of failure had the same blind spot as the code it grades.
+  A gate must say which question shapes it exercises and which it omits.
+
 ## Standing notes
 
 No standing notes are currently open. The earlier note about Phase 5 infrastructure living outside git was resolved on 2026-07-26 when `.claude/` and `.codex` were re-tracked for the duration of v1 development, so skill and rule changes now appear in pull requests and survive a fresh clone.
