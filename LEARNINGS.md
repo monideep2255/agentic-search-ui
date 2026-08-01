@@ -104,6 +104,35 @@ nothing in the process looked there.
   catch this class of failure had the same blind spot as the code it grades.
   A gate must say which question shapes it exercises and which it omits.
 
+### Why these were written into the cadence rather than left as advice
+
+The four items above were all available as guidance before this phase
+started, and three of them were already in `.claude/rules/` in some form.
+`attack-the-constraint` has said "find the bottleneck before optimizing"
+since the repo was set up. `goal-contracts` already described rigor
+pointing at the wrong layer. `self-eval-loop` already owned the
+maker-cannot-check split.
+
+None of it fired. The evidence that the binder was the wrong layer was
+available after round two, and the response was three more rounds of
+fixing the binder. Knowing a rule and applying it to your own process
+under pressure are different things, and the second one failed here.
+
+So the conclusion is not "remember these next time". It is that a lesson
+which depends on someone remembering it, at the moment they are most
+invested in the approach that is failing, is not a control. The premise
+gate became a BLOCKING stage in `docs/build/Build_workflow_cadence.md`
+and a mandatory first ticket in the `task-tracker` skill for exactly that
+reason: a stage that blocks does not require anyone to recall why it
+exists.
+
+That is the same reasoning this repo already applies to code in
+`system-design-patterns` pattern 8, that the strongest constraint on an
+agent is removing the ability rather than asking it not to use one, and in
+`ai-security-standards`, that Layer 1 is read-only by CREDENTIAL rather
+than by instruction. This is that principle turned on the build process
+itself. Decision recorded in `DECISIONS.md`, 2026-08-01.
+
 ## Standing notes
 
 No standing notes are currently open. The earlier note about Phase 5 infrastructure living outside git was resolved on 2026-07-26 when `.claude/` and `.codex` were re-tracked for the duration of v1 development, so skill and rule changes now appear in pull requests and survive a fresh clone.
