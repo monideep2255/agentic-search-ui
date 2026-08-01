@@ -1141,3 +1141,53 @@ Stated because it is evidence the next reader would otherwise have to regenerate
 Five rounds, and the shape never changed: the newest code was the most dangerous code every single time. F-2.1-J5-01 is the cleanest instance, because the fix carried a comment asserting the exact property the code failed to implement. A comment that claims a property is a claim to be checked, not documentation to be trusted, and the next reader stops checking precisely where the comment sounds most confident.
 
 The durable change is not any one of the fixes. It is that the phase now has a verify surface that can see this class of defect at all, and a rule that a premise claim cites that surface rather than a suite total.
+
+## Fifth adversary pass, 2026-08-01
+
+Eight findings, four critical. Three of the four criticals sat in code written in the two commits immediately before it. The pattern held for the sixth consecutive round: the newest code is the most dangerous code. Full report: `adversary_5.md` in the session scratchpad. Cost: about $0.02.
+
+The first pass of this review was stopped mid-run having reported "two significant results already" and never wrote its report, so those findings were lost. The re-run brief added an instruction to append each finding to the report file the moment it is confirmed, rather than batching to the end.
+
+### Findings and status
+
+| ID | Sev | What | Status |
+|----|-----|------|--------|
+| F-2.1-A5-01 | critical | The F-2.1-J5-01 fix resolved the ANCHORED set through aliases as well as the returned set, which is backwards. openCypher drops a variable a WITH does not project, so `WITH d AS g` after `g` leaves scope marked an unconnected Disease as anchored. Five arbitrary diseases, `status="ok"`, `total_available=200845`, every row cited and resolving, for a question about BRCA1 | fixed |
+| F-2.1-A5-06 | critical | `_is_vocabulary_token_artifact("")` returns False, so an empty value was never suspect and outranked every flagged candidate. Every citation on the CORRECT answer to the flagship question grounded an empty string at full asserted confidence. The downgrade path was disabled on exactly the rows it was built for | fixed |
+| F-2.1-A5-04 | critical | "A count over a single gene is about that gene" is sound for an aggregate and false for a projection, and the row shape cannot tell them apart. `RETURN d.name` produced four facts about four distinct Disease records, each cited to the BRCA1 gene page | fixed |
+| F-2.1-A5-03 | critical | A hop floor of 1 was also the CEILING, since no class Think emits maps above it. Every question in the system got exactly one hop, so any two-hop question was unanswerable by construction. A phenotypic-feature question returned four cited DISEASES | fixed |
+| F-2.1-A5-05 | high | A new exhaustion shape: `mentioned_in` from BRCA1 costs 27 seconds forward and the full budget reversed, despite being indexed, anchored, and `LIMIT 25`. Described and deliberately not reproduced | DEFERRED to 2.2 |
+| F-2.1-A5-02 | high | The artifact rule guarded the citation but not the `fields` dict reaching the synthesis payload | marker added, consumer deferred to 2.2 |
+| F-2.1-A5-07 | medium | `\d` without `re.ASCII` admitted non-ASCII digits into the CURIE shape check, reopening C09's spoofing class through a character class. The guard test that should have caught it could not fail on it | fixed |
+| F-2.1-A5-08 | medium | Two legitimate shapes falsely rejected by the connectivity invariant | half fixed, half deliberately not, see below |
+
+### Two defects this round's own fixes caused, and how they were caught
+
+Recorded separately because HOW they were caught is the point:
+
+- The `row_limit` cap bounded fetched graph rows, not emitted ones, so a `RETURN s, s.id` shape fetched 20 and emitted 40.
+- The generation rule added for A5-04, telling the model to return a node alongside a projected property, applied to an aggregate produced `RETURN count(d) AS n, d.id, d.name`. That groups BY those properties, turning one count of twelve into twelve counts of one. Valid Cypher, wrong answer.
+
+Both were caught by the premise gate, not by a review round. That is the first time in six rounds that a defect introduced by a fix was caught before a reviewer found it, and it is the whole argument for the gate existing.
+
+### F-2.1-A5-08, why only half is fixed
+
+The half that is fixed: `WHERE toUpper(g.id) = $e` anchors `g` and was falsely rejected because the constraint patterns required adjacency.
+
+The half that is not, deliberately: a pattern predicate written inside WHERE, `MATCH (g:Gene), (d:Disease) WHERE g.id = $e AND (g)-[...]->(d)`. Admitting it means loosening the MATCH-clause boundary, which also admits `MATCH (g:Gene), (d:Disease)`, the comma-separated cartesian shape the component split exists to catch. The fix for a false reject would reopen a false accept.
+
+It is also the right query to refuse on its own merits: that pattern is a 67 million by 200 thousand cartesian product before WHERE filters it, on a database a generated query has already OOM-killed once. The adversary that filed it declined to execute it for exactly that reason. The pipeline grants one repair retry seeded with the validator's message, so the cost is a retry rather than the answer.
+
+### What the adversary could not break, recorded because a judge cannot produce it
+
+- Nineteen legitimate query shapes accepted with zero false rejects, including the J5-02 `IN [$p1, $p2]` case.
+- The round-5 decoy and a UNION laundering variant both correctly blocked.
+- All six pinned premise-gate ground-truth constants re-verified live and correct, plus BRCA1's four disease CURIEs.
+- All nine genuine CURIE shapes resolve; every ASCII malformed CURIE returns None; both host-spoof URLs rejected.
+- Vocabulary-artifact false positives essentially absent from this snapshot.
+
+### The blind spot worth carrying into 2.2
+
+The premise gate could not see F-2.1-A5-03. All nine of its questions are one hop from a Gene anchor, so a defect that makes every two-hop question unanswerable was invisible to the gate built specifically to catch that class of failure. The gate had the same blind spot as the code it grades.
+
+The lesson is not that the gate is bad, it caught two regressions this round that review would otherwise have found later. It is that a premise gate needs its own coverage argument: which shapes of question does it actually exercise, and which does it silently omit. That belongs in 2.2 alongside the deferred items.
