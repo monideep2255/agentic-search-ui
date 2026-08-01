@@ -1534,3 +1534,85 @@ async def test_malformed_user_id_declines_gracefully_instead_of_crashing(
     assert events[0].payload["error_class"] == "recoverable"
     assert "uuid" in events[0].payload["message"].lower()
     assert events[-1].payload["trust_outcome"] == "refuse"
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-J5-04: the vocabulary-artifact rule missed 15,466 of 200,845 rows
+#
+# Measured by an exhaustive census of the live `Disease` table. The rule was
+# a genuine shape rule and still let three short all-caps vocabulary names
+# through, because it deliberately allows short all-caps values so real
+# abbreviations keep full confidence. A Title Case vocabulary name, three
+# multi-word qualifier forms, and the ETL stub placeholders were missed too.
+#
+# Both directions are asserted. A false positive downgrades a REAL disease
+# name's confidence, so the allow cases are not filler.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "MedGen",
+        "SNOMEDCT_US",
+        "HPO",
+        "GARD",
+        "OMIM",
+        "Orphanet",
+        "MONDO",
+        "MeSH",
+        "OMIM allelic variant",
+        "OMIM included",
+        "OMIM Phenotypic Series",
+        '[stub] MedGen:C1419385',
+    ],
+)
+def test_leaked_vocabulary_names_are_recognised_as_artifacts(value: str) -> None:
+    """Every one of these is a real `name` value on real Disease rows.
+
+    They are source-vocabulary abbreviations that leaked into MedGen's name
+    column during ingest. The data defect belongs to Layer 1; the confidence
+    signal this repo staples to it is ours, and asserting full confidence in
+    a value that names a vocabulary rather than a disease is the trust-signal
+    defect F-2.1-B07 filed.
+    """
+    from system_03_search_agent.core.graph import _is_vocabulary_token_artifact
+
+    assert _is_vocabulary_token_artifact(value), (
+        f"{value!r} is a confirmed leaked vocabulary token and was treated as "
+        "a genuine disease name"
+    )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "HIV",
+        "AIDS",
+        "COPD",
+        "SIDS",
+        "Diabetes",
+        "Phenylketonuria",
+        "breast cancer",
+        "Li-Fraumeni syndrome",
+        "Omenn syndrome",
+        "Gardner syndrome",
+        "hereditary breast ovarian cancer syndrome",
+        "Marfan syndrome",
+    ],
+)
+def test_genuine_disease_names_keep_their_confidence(value: str) -> None:
+    """The cost side of F-2.1-J5-04.
+
+    A false positive downgrades a real record's `assertion_confidence`, so
+    widening the rule has to leave genuine names alone. "Gardner syndrome"
+    is the case that matters most here: it begins with the same letters as
+    the leaked "GARD" token, and is caught only if the rule matches on a
+    prefix rather than on the whole first word.
+    """
+    from system_03_search_agent.core.graph import _is_vocabulary_token_artifact
+
+    assert not _is_vocabulary_token_artifact(value), (
+        f"{value!r} is a genuine name and was flagged as a vocabulary "
+        "artifact, which downgrades a correct record's confidence"
+    )

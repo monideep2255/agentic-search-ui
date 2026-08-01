@@ -1107,3 +1107,115 @@ def test_the_same_record_twice_is_still_collapsed() -> None:
     ]
 
     assert len(_dedupe_by_cited_record(rows)) == 1
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-J4-01B and F-2.1-J5-01: the connectivity invariant
+#
+# Two rounds of the same lesson. First the invariant was "binds at least
+# one caller entity", which a decoy binding defeated. Then the replacement
+# claimed in its own comment that a WITH could not launder provenance,
+# while the code never read WITH at all, and `WITH d AS x ... RETURN x`
+# returned five arbitrary cited diseases for a question about BRCA1.
+#
+# Both directions are asserted here. A false reject means the user gets
+# nothing, which is its own defect, so the legitimate shapes matter as
+# much as the blocked ones.
+# ---------------------------------------------------------------------------
+
+_BINDINGS = {"e_NCBIGene_672": "NCBIGene:672", "e_NCBIGene_7157": "NCBIGene:7157"}
+
+_DECOY_PREFIX = "MATCH (dc:Gene {id: $e_NCBIGene_672}) WITH dc "
+_UNRELATED = "MATCH (g:Gene)-[:gene_associated_with_condition]->(d:Disease) "
+
+
+@pytest.mark.parametrize(
+    ("label", "cypher"),
+    [
+        ("plain decoy", _DECOY_PREFIX + _UNRELATED + "RETURN d"),
+        ("WITH rename", _DECOY_PREFIX + _UNRELATED + "WITH d AS x RETURN x"),
+        ("WITH property", _DECOY_PREFIX + _UNRELATED + "WITH d.id AS did RETURN did"),
+        (
+            "transitive rename",
+            _DECOY_PREFIX + _UNRELATED + "WITH d AS x WITH x AS y RETURN y",
+        ),
+        (
+            "comma cartesian",
+            "MATCH (dc:Gene {id: $e_NCBIGene_672}), (d:Disease) RETURN d",
+        ),
+    ],
+)
+def test_a_result_not_connected_to_a_bound_entity_is_flagged(
+    label: str, cypher: str
+) -> None:
+    """Every one of these returned real, cited records nobody asked for.
+
+    The binding is present in all five, which is why presence was the
+    wrong property. What has to hold is that the returned value traces
+    back to an entity the caller supplied.
+    """
+    from system_03_search_agent.tools.cypher_query import _unanchored_returned_variables
+
+    assert _unanchored_returned_variables(cypher, _BINDINGS), (
+        f"{label} was accepted; it returns records unconnected to any bound "
+        "entity, which is F-2.1-B01's failure class with a citation attached"
+    )
+
+
+@pytest.mark.parametrize(
+    ("label", "cypher"),
+    [
+        (
+            "direct pattern",
+            (
+                "MATCH (g:Gene {id: $e_NCBIGene_672})"
+                "-[:gene_associated_with_condition]->(d:Disease) RETURN d"
+            ),
+        ),
+        (
+            "WHERE anchor",
+            (
+                "MATCH (g:Gene)-[:gene_associated_with_condition]->(d:Disease) "
+                "WHERE g.id = $e_NCBIGene_672 RETURN d"
+            ),
+        ),
+        (
+            "IN list of params",
+            (
+                "MATCH (g:Gene)-[:gene_associated_with_condition]->(d:Disease) "
+                "WHERE g.id IN [$e_NCBIGene_672, $e_NCBIGene_7157] RETURN g, d"
+            ),
+        ),
+        (
+            "aggregate",
+            (
+                "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->"
+                "(g:Gene {id: $e_NCBIGene_672}) RETURN count(v)"
+            ),
+        ),
+        (
+            "legitimate alias",
+            (
+                "MATCH (g:Gene {id: $e_NCBIGene_672})"
+                "-[:gene_associated_with_condition]->(d:Disease) "
+                "WITH d.id AS did RETURN did"
+            ),
+        ),
+        ("property projection", "MATCH (g:Gene {id: $e_NCBIGene_672}) RETURN g.name"),
+    ],
+)
+def test_a_legitimately_anchored_result_is_not_rejected(label: str, cypher: str) -> None:
+    """The cost side, and F-2.1-J5-02 specifically.
+
+    A first cut of this check rejected three legitimate aggregates because
+    it only looked for parameters inside MATCH patterns, and a later one
+    rejected `WHERE g.id IN [$p1, $p2]`, an ordinary multi-entity
+    constraint. A query wrongly refused returns nothing to the user, which
+    is a defect in its own right, not a safe default.
+    """
+    from system_03_search_agent.tools.cypher_query import _unanchored_returned_variables
+
+    assert not _unanchored_returned_variables(cypher, _BINDINGS), (
+        f"{label} is properly anchored and was rejected; a false refusal "
+        "means the user gets no answer at all"
+    )

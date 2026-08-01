@@ -873,8 +873,15 @@ def _build_params(cypher: str, entity_bindings: dict[str, str]) -> dict[str, Any
 #
 #   - Comma-separated patterns inside one MATCH are treated as separate
 #     components, which is what makes the cartesian-product case visible.
-#   - A variable carried through WITH keeps its component, so a WITH does
-#     not launder an unanchored variable into an anchored one.
+#   - A variable carried or RENAMED through WITH keeps its component, so a
+#     WITH cannot launder an unanchored variable into an anchored one.
+#     F-2.1-J5-01: this comment previously claimed that property while the
+#     code did not implement it. `WITH d AS x ... RETURN x` returned five
+#     arbitrary cited diseases for a question about BRCA1, because `x` is
+#     not a matched variable so the check never looked at it. The most
+#     likely real form is `WITH d.id AS did ... RETURN did`, which is
+#     idiomatic generated Cypher, so the check was not so much bypassed as
+#     absent. Alias provenance is now resolved before anchoring is checked.
 #   - An aggregate over an anchored variable, `RETURN count(v)`, is
 #     anchored through `v`.
 #   - A query whose RETURN yields no identifiable variable at all cannot
@@ -932,11 +939,26 @@ _WHERE_PARAM_CONSTRAINT_REVERSED = re.compile(
 )
 
 
+# F-2.1-J5-02: `WHERE g.id IN [$p1, $p2]` is a legitimate multi-entity
+# constraint and was falsely rejected, because the constraint pattern only
+# matched a bare `$param` after the operator, never a bracketed list of
+# them. A false reject means the user gets nothing, which is its own
+# defect, so this is as load-bearing as the block itself.
+_WHERE_PARAM_IN_LIST_PATTERN = re.compile(
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*[A-Za-z_][A-Za-z0-9_]*\s*IN\s*\[([^\]]*)\]",
+    re.IGNORECASE,
+)
+
+
 def _variables_constrained_by_param(
     cypher: str, entity_bindings: dict[str, str]
 ) -> set[str]:
     """Variables a caller parameter constrains from outside a node pattern."""
     constrained: set[str] = set()
+    for var, items in _WHERE_PARAM_IN_LIST_PATTERN.findall(cypher):
+        listed = set(_ordered_unique_param_names(items))
+        if any(name in listed for name in entity_bindings):
+            constrained.add(var)
     for var, param in _WHERE_PARAM_CONSTRAINT_PATTERN.findall(cypher):
         if param in entity_bindings:
             constrained.add(var)
@@ -987,6 +1009,54 @@ def _anchored_variables(cypher: str, entity_bindings: dict[str, str]) -> set[str
     return anchored_vars
 
 
+_WITH_CLAUSE_PATTERN = re.compile(
+    r"(?is)\bWITH\b(.*?)(?=\bWITH\b|\bRETURN\b|\bMATCH\b|\bUNWIND\b|$)"
+)
+
+
+def _alias_sources(cypher: str) -> dict[str, set[str]]:
+    """Map each WITH alias to the matched variables it was derived from.
+
+    F-2.1-J5-01. `WITH d AS x` and `WITH d.id AS did` both carry `d`'s
+    provenance forward under a new name. Without this the new name is not
+    a matched variable, so the anchoring check simply never saw it.
+    """
+    aliases: dict[str, set[str]] = {}
+    for clause in _WITH_CLAUSE_PATTERN.findall(cypher):
+        for item in _split_top_level_items(clause):
+            stripped = item.strip()
+            match = _ALIAS_PATTERN.search(stripped)
+            if match is None:
+                continue
+            alias = match.group(1)
+            expression = stripped[: match.start()]
+            sources = {
+                name
+                for name in _IDENTIFIER_PATTERN.findall(expression)
+                if name.lower() not in _CYPHER_KEYWORDS
+            }
+            if sources:
+                aliases.setdefault(alias, set()).update(sources)
+    return aliases
+
+
+def _resolve_through_aliases(names: set[str], aliases: dict[str, set[str]]) -> set[str]:
+    """Expand alias names to the matched variables they came from.
+
+    Resolves transitively, since `WITH d AS x WITH x AS y` is legal, and is
+    bounded by the alias count so a cyclic binding cannot loop forever.
+    """
+    resolved = set(names)
+    for _ in range(len(aliases) + 1):
+        expanded = set(resolved)
+        for name in resolved:
+            expanded |= aliases.get(name, set())
+        if expanded == resolved:
+            break
+        resolved = expanded
+    return resolved
+
+
 def _unanchored_returned_variables(
     cypher: str, entity_bindings: dict[str, str]
 ) -> list[str]:
@@ -995,8 +1065,15 @@ def _unanchored_returned_variables(
     if not returned:
         return []
     anchored = _anchored_variables(cypher, entity_bindings)
-    # A returned name that never appears as a matched variable is an alias
-    # or a literal projection, not an unanchored entity.
+
+    # F-2.1-J5-01: resolve WITH aliases back to their matched variables
+    # BEFORE checking anchoring, so renaming cannot launder provenance.
+    aliases = _alias_sources(cypher)
+    returned = _resolve_through_aliases(returned, aliases)
+    anchored = _resolve_through_aliases(anchored, aliases) | anchored
+
+    # A returned name that never appears as a matched variable is a literal
+    # projection or a pure alias, not an unanchored entity.
     all_matched: set[str] = set()
     for clause in _MATCH_CLAUSE_PATTERN.findall(cypher):
         all_matched |= set(_VAR_IN_NODE_PATTERN.findall(clause))
@@ -1196,8 +1273,8 @@ async def _generate_and_validate(
                 + ", ".join(unanchored)
                 + ", which is not connected to any bound entity, so the rows "
                 "would be about records the question never asked for. Match "
-                "the returned pattern to one of: "
-                + legal
+                "the returned pattern to "
+                + (f"one of: {legal}" if legal else "a bound entity parameter")
                 + ". Binding an entity in a separate, unconnected pattern "
                 "does not count."
             ),

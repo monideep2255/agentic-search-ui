@@ -1159,18 +1159,62 @@ def _tool_execution_outcome(
 # accepted, documented trade rather than a silent one.
 _MAX_PLAUSIBLE_ABBREVIATION_CHARS = 4
 
+# F-2.1-J5-04. The shape rule above is real, and an exhaustive census of
+# all 200,845 `Disease` rows on 2026-07-31 showed it still missed 15,466
+# of them, because three of the leaked tokens are short all-caps values
+# the rule deliberately lets through in order to protect genuine short
+# abbreviations.
+#
+# Measured, with row counts: the two largest leaked names were already
+# caught; three short all-caps vocabulary names totalling 13,384 rows were
+# missed, one Title Case vocabulary name of 968 rows was missed, three
+# multi-word qualifier forms totalling 1,103 rows were missed, and the ETL
+# stub placeholders were missed entirely.
+#
+# These are source-vocabulary abbreviations that leaked into MedGen's name
+# column. The graph's own `source` field cannot separate them, since it
+# reads "MedGen" for every one of those rows regardless of which
+# vocabulary leaked, so it is not the discriminator it first appears to be.
+#
+# The set below is census-derived, not invented: every entry was read off
+# the live graph with its row count. Stated plainly as the residual, a
+# strictly better rule exists and is not built here. A genuine disease
+# name is close to unique, so a name shared by tens of thousands of
+# distinct records is by definition not one, and a precomputed name
+# frequency table would catch the next leaked vocabulary with no list at
+# all. That needs a build-time artifact this phase does not have, and is
+# filed for build phase 2.2.
+_LEAKED_VOCABULARY_NAMES = frozenset(
+    {"HPO", "GARD", "OMIM", "Orphanet", "SNOMEDCT_US", "UMLS", "ORDO"}
+)
+_ETL_STUB_PREFIX = "[stub]"
+
 
 def _is_vocabulary_token_artifact(value: str) -> bool:
     """True when `value` looks like a bare controlled-vocabulary system
     name or source-abbreviation code rather than a genuine, human-
-    readable field value. See the module comment above this function for
-    the reasoning and the confirmed examples this rule is built from.
+    readable field value. See the module comments above for the reasoning
+    and the confirmed examples this rule is built from.
     """
     text = value.strip()
-    if not text or " " in text:
+    if not text:
         return False
-    if text in CURIE_PREFIXES:
+
+    # An ETL stub placeholder is never a disease name, whatever its shape.
+    if text.startswith(_ETL_STUB_PREFIX):
         return True
+
+    # F-2.1-J5-04: a vocabulary token followed by a qualifier is still a
+    # vocabulary token, so the multi-word qualifier forms are caught
+    # alongside the bare token. The token must be the whole first word, so
+    # a genuine name that merely begins with the same letters is
+    # unaffected.
+    first_token = text.split(" ", 1)[0]
+    if first_token in _LEAKED_VOCABULARY_NAMES or first_token in CURIE_PREFIXES:
+        return True
+
+    if " " in text:
+        return False
     if text.islower():
         return False
     if text[0].isupper() and text[1:].islower():
