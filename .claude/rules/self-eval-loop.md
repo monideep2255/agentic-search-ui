@@ -53,6 +53,33 @@ When each applies:
 
 Adversary findings land in a shared-ledger file, not scattered across agent outputs. Each state has a single writer, judgment states carry a reason, and every transition appends a history line, so the finder-is-not-closer rule holds by construction. The full convention is the "Shared-ledger coordination" subsection in `.claude/skills/bossman-mode/SKILL.md`. Source: the Personal Space autonomous build harness, analyzed in the personal-os Reference-repos set, which pairs a scripted qa role with a separate unscripted adversary.
 
+### Review a fix harder than new code
+
+A fix landing in the same phase as the finding it repairs deserves MORE
+scrutiny than untouched code, not less. This is counter-intuitive, because
+a fix is written with the defect freshly in mind and feels safer than
+unreviewed new work.
+
+Build phase 2.1 measured it: across six review rounds, the worst defect
+found in every single round was in the code written to fix the previous
+round. The same invariant was defeated three separate times, each time by
+its own replacement. Findings F-2.1-J4-03, J4-05, J4-06, J5-01 and A5-01
+were all regressions in fixes, and one entire review round existed only to
+catch the previous round's damage.
+
+Two practices follow:
+
+- Say so in the review brief. A judge or adversary told "the newest code is
+  the most dangerous code, and here are the commits that are new" hunts
+  where the defects actually are.
+- Treat a code comment that CLAIMS a property as a claim to be tested, not
+  as documentation. F-2.1-J5-01 was a comment asserting "a WITH does not
+  launder an unanchored variable" sitting directly above code that never
+  read WITH at all. It survived review because a confident comment is
+  exactly where the next reader stops checking. Where a comment asserts a
+  security or correctness property, a test must assert the same property,
+  or the comment is a liability rather than an aid.
+
 ### Relationship to goal-contracts and objective-review
 
 This rule is the verify surface `goal-contracts.md` points to whenever the check is "a second-agent grade" rather than a test or a grep: the contract names it, this rule defines how to run it. The two compose on any substantial autonomous output: write the done-when and pass/fail criteria first, then grade against them with a fresh-context agent.

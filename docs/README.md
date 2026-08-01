@@ -43,7 +43,7 @@ Last updated: 2026-07-26.
 
 | Doc | What it is |
 |-----|-----------|
-| `Build_workflow_cadence.md` | The quick reference for one build phase: eleven stages, who acts at each, the model and effort per stage, where every file gets written |
+| `Build_workflow_cadence.md` | The quick reference for one build phase: twelve stages, who acts at each, the model and effort per stage, where every file gets written. Stage 5 is the blocking premise gate |
 | `Phase_6_execution_flow.html` | The same cadence as a visual page. Opens in a browser with no server. Also published as a Claude artifact |
 | `Agent_teams_tmux_quickstart.md` | tmux launch guide so parallel builders appear in live panes rather than invisible background sessions |
 

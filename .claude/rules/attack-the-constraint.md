@@ -39,6 +39,36 @@ Once you've identified the bottleneck as process, run these 5 steps in order. Th
 4. **Accelerate** - speed up cycle times only once you're building the right, simplified thing. "If you're digging your grave, don't dig it faster."
 5. **Automate** - last, not first. Automating a broken process just produces fast wrongness.
 
+**When the output is model-generated, read the INPUT first**
+
+A model that produces a wrong answer is the visible symptom. What it was
+given is the constraint, and it is almost always cheaper to inspect.
+
+Build phase 2.1 is the measured case. `cypher_query` returned twenty-five
+non-human orthologs for "which diseases are associated with BRCA1?", every
+row correctly cited. Three review rounds recorded that as generation
+quality and hardened the parameter binder in response, roughly 25 real
+defects fixed, none of them causal. The actual cause was that the schema
+slice handed the model contained no Disease label and exactly one edge,
+`orthologous_to`. The model answered the only question it had been given
+the vocabulary to ask.
+
+Printing the assembled prompt would have shown it in minute one. It was
+found on round five.
+
+So before debugging a wrong generated output:
+
+- Print the exact prompt, tool schema, or retrieved context the model
+  actually received, not the one the code is supposed to assemble.
+- Check whether the correct answer is even EXPRESSIBLE from what it was
+  given. If it is not, the generation is not the defect.
+- Only then look at what the model did with it.
+
+The general form: when a component is fed by an assembly step, the
+assembly step is upstream of it and is therefore the constraint until
+proven otherwise. Optimizing the fed component is optimizing a
+non-bottleneck.
+
 **Examples:**
 - 6 FTP sources, 278M edges, 1 OOM crash - the constraint is memory during export, not download speed. Fix: add append_edges() streaming before optimizing anything else.
 - Gene pipeline OOM during export - the constraint isn't parsing speed, it's memory. Fix: stream edges to disk instead of accumulating in a list.

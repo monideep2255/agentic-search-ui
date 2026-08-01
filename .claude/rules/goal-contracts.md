@@ -48,6 +48,28 @@ Budget or iteration caps are checkpoints, not success. When a cap is hit, the ru
 
 Rigor about the wrong layer is the third failure mode, and it hides behind a verify surface that is genuinely real. A check can audit every leaf output honestly and still certify a wrong answer, because the premise that generated those outputs was never checked. A measured instance: a research run verified all twenty of its facts against two independent authoritative sources each, an honest and rigorous verify surface, and still shipped a wrong answer, because the premise that produced the fact list (the list itself, built from model memory) went unverified. The rigor was real and pointed one layer too low. When the decomposition or premise matters, the verify surface must cover it, not only the leaves. Done-when should name the premise as a checkable element, or the contract certifies a confident wrong answer with a clean audit trail.
 
+### A verify surface must state its own coverage
+
+The failure above says a verify surface can point one layer too low. This
+one says it can point at the right layer and still have a hole, because
+nothing forces it to declare what it does not test.
+
+Build phase 2.1 built a premise gate specifically to catch generation
+defects, and it worked: it caught two regressions before a reviewer did.
+It also could not see finding F-2.1-A5-03, a defect that made every
+two-hop question in the system unanswerable, because all nine of its
+questions happened to be one hop from a single anchor type. The gate built
+to catch that class of failure had inherited the blind spot of the code it
+was grading, and an adversary found it rather than the gate.
+
+So a verify surface must state, in its own file, which shapes of input it
+exercises and which it deliberately omits. That statement is what makes a
+gap arguable. Without it, a green gate reads as "this class is covered"
+when it may mean "the cases someone happened to think of are covered".
+
+The test: if someone asked "what would this gate miss", could they answer
+from the gate itself, or would they have to re-derive it?
+
 ### Three-state permissions
 
 Allow:

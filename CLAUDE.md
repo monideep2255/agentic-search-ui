@@ -54,7 +54,7 @@ Multi-model harness with three tiers:
 | `build/Agent_teams_tmux_quickstart.md` | tmux launch guide so bossman-mode parallel builders show in live panes | Before running `/bossman-mode` with 2 or more builder tasks |
 | `Claude_security_plugin_usage.md` | Reference for the on-demand `claude-security` scan plugin: how to run a scan, apply patches, and how it complements the always-on `security-guidance` plugin | Before the release-workflow Step 3 security scan gate, or before opening a pull request |
 | `ncbi/Tool_implementation_mechanics.md` | Per-tool API traps taken from tech spec Section 6: edge-label enforcement, ELink target db, the `global_mafs` array, sequential dbSNP calls, snapshot pinning | Before wiring any of the seven tools. Facts, not policy; the policy lives in the rules |
-| `build/Build_workflow_cadence.md` | The quick reference for how a build phase runs: the eleven stages, who acts at each, the model and effort per stage, where every file gets written | Before opening any build phase, and any time the model tiering is in question |
+| `build/Build_workflow_cadence.md` | The quick reference for how a build phase runs: the twelve stages, who acts at each, the model and effort per stage, where every file gets written. Stage 5, the premise gate, is mandatory and blocking for any phase whose deliverable is model-generated | Before opening any build phase, and any time the model tiering is in question |
 | `build/Phase_6_execution_flow.html` | The same cadence as a visual page, openable in a browser. Also published as a Claude artifact | When explaining the build loop to someone, or checking the flow at a glance |
 
 ---
