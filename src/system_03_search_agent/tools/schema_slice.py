@@ -91,6 +91,39 @@ _QUERY_CLASS_HOPS: dict[str, int | None] = {
     "exploratory": None,
 }
 
+# The floor below which `query_class` is not allowed to narrow the slice,
+# for as long as the Think step's classification is a stub.
+#
+# This is the root cause the fourth judge's PREMISE failure came down to,
+# and it is a composition defect: two components, each defensible alone.
+#
+# Think emits a hardcoded `query_class="lookup"` for every query
+# (`core/graph.py`, T-2.0-07). Real classification is a later phase. So
+# "lookup" is not a classification here, it is a placeholder.
+#
+# Meanwhile `lookup` maps to 0 hops, which for a Gene anchor renders a
+# slice containing exactly one edge: `orthologous_to`, Gene to Gene. Zero
+# hops is the right slice for a true lookup ("what is BRCA1's name"), and
+# it is the whole schema the generator ever sees.
+#
+# Composed, the model is asked "which diseases are associated with BRCA1?"
+# and handed a schema in which no disease exists and the only traversal
+# available is gene-to-gene. It cannot express the correct query. It did
+# the only thing the schema permitted and returned twenty-five non-human
+# orthologs, `status="ok"`, every row carrying a resolving NCBI citation.
+# That was recorded as a generation-quality failure through three review
+# rounds. Generation was not the problem; it was answering the only
+# question the schema left askable.
+#
+# The same defect drove the OOM: `orthologous_to` is the one traversal a
+# `lookup` slice offers, so ortholog queries are what generation kept
+# producing, and one of them exhausted the server.
+#
+# Slicing on a value that is always the same placeholder is narrowing on
+# noise, so the floor holds until Think classifies for real. At that point
+# this drops back to the per-class table, which is sound once its input is.
+_STUB_CLASSIFIER_HOP_FLOOR = 1
+
 
 def _endpoint_text(edge: str) -> str:
     """Render one edge's typical endpoint pair, or a mixed-pair note.
@@ -231,6 +264,8 @@ def build_schema_slice(query_class: str, target_entities: Sequence[str] | None =
         )
 
     hops = _QUERY_CLASS_HOPS[query_class]
+    if hops is not None:
+        hops = max(hops, _STUB_CLASSIFIER_HOP_FLOOR)
     entities = tuple(target_entities) if target_entities else ()
 
     if hops is None or not entities:

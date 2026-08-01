@@ -1027,6 +1027,22 @@ def _dedupe_by_cited_record(rows: list[CypherQueryRow]) -> list[CypherQueryRow]:
     F-2.1-C14. Order is preserved, so the first mention of a record is the
     one kept and the result still reads in the order the graph returned it.
     Derived rows are passed through untouched (see the caller's note).
+
+    F-2.1-J4-03: the key was `source_url`, which deleted facts. All four of
+    BRCA1's `gene_associated_with_condition` edges carry the same stored
+    `source_url`, so the four distinct diseases collapsed to one row
+    reported as `row_count=1, total_available=1, truncated=False`: three
+    quarters of the answer gone, with an affirmative claim that nothing
+    was cut. Silent deletion under a completeness claim is worse than the
+    duplicate citations this function was added to remove.
+
+    A citation URL identifies a page, not a fact. One NCBI page can be the
+    cited source for several distinct records, which is exactly the BRCA1
+    case. The CURIE is the record's identity, so that is the key, and two
+    records sharing a page stay two records.
+
+    `source_url` remains the fallback for a row with no CURIE, which is
+    the only case where nothing better exists.
     """
     seen: set[str] = set()
     deduped: list[CypherQueryRow] = []
@@ -1034,7 +1050,7 @@ def _dedupe_by_cited_record(rows: list[CypherQueryRow]) -> list[CypherQueryRow]:
         if row.node_or_edge_type == "derived":
             deduped.append(row)
             continue
-        key = row.source_url or ""
+        key = row.curie or row.source_url or ""
         if key in seen:
             continue
         seen.add(key)

@@ -124,12 +124,63 @@ def _vertex_label_lines(text: str) -> list[str]:
     return lines[start:end]
 
 
-def test_build_schema_slice_lookup_excludes_unrelated_labels() -> None:
+def test_build_schema_slice_lookup_stays_narrow_but_reaches_one_hop() -> None:
+    """A lookup slice is bounded, and bounded at one hop, not zero.
+
+    This test used to assert that `Article` was absent, which followed
+    from `lookup` mapping to 0 hops. That assertion was correct for the
+    design and wrong for the system, and the difference cost four review
+    rounds.
+
+    `lookup` is not a classification at this phase. Think emits it as a
+    hardcoded stub for EVERY query (T-2.0-07), so a 0-hop Gene slice was
+    the only schema the generator ever saw, and it contained exactly one
+    edge: `orthologous_to`. Asked "which diseases are associated with
+    BRCA1?", the model was handed a schema with no disease in it and
+    answered with twenty-five non-human orthologs, `status="ok"`, every
+    row correctly cited. See `_STUB_CLASSIFIER_HOP_FLOOR`.
+
+    So the assertion moved to the property that still has to hold: the
+    slice is bounded. `Article` is a genuine one-hop neighbour of `Gene`
+    and belongs. `OntologyClass` and `PhenotypicFeature` sit two hops out
+    and must not appear, which is what keeps this a real constraint
+    rather than an assertion rewritten until it passed.
+
+    When Think classifies for real, the floor goes and the 0-hop
+    assertion comes back with it.
+    """
     sliced = schema_slice.build_schema_slice("lookup", ["NCBIGene:672"])
-    # A lookup with only a Gene target should not need to mention a wholly
-    # unrelated large label such as Article in its vertex label section.
-    label_lines = _vertex_label_lines(sliced)
-    assert not any(line.strip().startswith("Article:") for line in label_lines)
+    label_lines = [line.strip() for line in _vertex_label_lines(sliced)]
+
+    assert any(line.startswith("Disease:") for line in label_lines), (
+        "a Gene lookup cannot answer a disease question without the "
+        "Disease label in scope, which is the defect this floor exists "
+        f"to prevent. Got: {label_lines}"
+    )
+    for beyond_one_hop in ("OntologyClass:", "PhenotypicFeature:"):
+        assert not any(line.startswith(beyond_one_hop) for line in label_lines), (
+            f"{beyond_one_hop} is two hops from Gene and must not be in a "
+            f"lookup slice; the slice is still bounded. Got: {label_lines}"
+        )
+    assert len(sliced) < len(schema_slice.full_schema_text()), (
+        "a lookup slice must still be narrower than the full schema"
+    )
+
+
+def test_the_hop_floor_keeps_lookup_from_slicing_on_a_stub_classification() -> None:
+    """Pin the floor itself, so removing it fails loudly rather than quietly.
+
+    The per-class table still records the intended design (`lookup` is 0
+    hops). The floor is what stands between that design and a stub
+    classifier, and it is the fix for the fourth judge's PREMISE failure.
+    """
+    assert schema_slice._QUERY_CLASS_HOPS["lookup"] == 0, (
+        "the intended design is unchanged: a true lookup needs 0 hops"
+    )
+    assert schema_slice._STUB_CLASSIFIER_HOP_FLOOR >= 1, (
+        "with Think emitting a hardcoded 'lookup', a 0-hop slice offers a "
+        "Gene query only orthologous_to and no disease at all"
+    )
 
 
 def test_build_schema_slice_single_hop_includes_direct_neighbor() -> None:
