@@ -131,18 +131,19 @@ found. Fixed here:
       tool error) before deciding `answer` versus `refuse`, and
       `_citations_from_findings` emits a real `citation` event per row
       that earned one, never a fabricated one.
-    - F-05: `act_node` used to wrap `cypher_query` in
-      `budget_for_query_class(query_class)`, which resolves to 5.0
-      seconds for `think_node`'s stub `"lookup"` classification, well
-      under `cypher_query`'s own locked 30-second budget
-      (`.claude/rules/tool-call-budgets.md`) and under live graph
-      latency alone. The tool's own declared budget is the locked
-      number; the caller's budget is what gives: `act_node` now wraps
-      the call in `max(budget_for_query_class(query_class),
+    - F-05: `act_node` used to wrap `cypher_query` in a budget resolved
+      from `think_node`'s stub `"lookup"` classification alone, which
+      was well under `cypher_query`'s own declared budget and under live
+      graph latency. The tool's own declared budget is the floor; the
+      caller's budget is what gives: `act_node` wraps the call in
+      `max(budget_for_step("act", query_class),
       CYPHER_QUERY_TIMEOUT_SECONDS)`, so a `query_class` that already
-      budgets more (`multi_hop`, `exploratory`) is untouched, and one
-      that budgets less (`lookup`, `single_hop`) is raised to the tool's
-      own floor rather than starving it.
+      budgets more is untouched and one that budgets less is raised to
+      the tool's floor rather than starving it. Note the budget function
+      itself was later replaced: `budget_for_step` resolves a
+      model-calling step against its own TIER and `act` against the
+      query class, because those are two different axes. See
+      `harness.harness._TIER_STEP_BUDGET_S` for the measurements.
     - F-04: `cypher_query` may issue up to two plan-tier calls internally
       through `generate_cypher` (the initial attempt plus one repair
       retry), neither individually gated by
@@ -161,6 +162,120 @@ found. Fixed here:
       silent gap. `tests/system_03_search_agent/core/test_graph.py`
       asserts the current, honest split (4 of 6 calls carry the prefix)
       rather than concealing it behind a vacuous filter.
+
+Second judge pass, 2026-07-31 (tracker/phase_2.1.md F-2.1-10, F-2.1-11):
+
+    - F-2.1-10: `coordinator_worker.Finding.truncated` (the F-03 fix's own
+      "truncation is never silent" field) had no reader anywhere in
+      `core/` or `adapters/`, so a `Finding` cut by the 50,000-byte
+      ceiling reached `write_node` indistinguishable from a complete one.
+      `_ok_finding_was_truncated` below is that reader.
+    - F-2.1-11: `_cap_structured_fields`'s binary search can shrink a
+      real, `status="ok"` result's `rows` list down to zero while
+      `status` itself stays `"ok"`, so `_citations_from_findings` yields
+      no citations and `write_node` used to emit an identical, silent
+      `trust_outcome="refuse"` whether the tool found nothing or found
+      something the byte ceiling then erased. `write_node` now checks
+      `_ok_finding_was_truncated` alongside `tool_outcome` and `citations`:
+      a cut that still left a citeable row still answers, but emits a
+      `token` note acknowledging the cut; a cut that left nothing
+      citeable still refuses (cite-or-refuse is not weakened), but emits
+      a non-fatal `error` event naming the real cause, so the two
+      "refuse" cases are never confused with each other downstream.
+
+Adversary pass, third pass, 2026-07-31 (tracker/phase_2.1.md F-2.1-C12,
+F-2.1-C13):
+
+    - F-2.1-C12: `_ok_finding_was_truncated` above read only the byte-
+      ceiling flag, one of three independent truncations on the path from
+      the graph to the user (the tool's own row-limit cap, the byte
+      ceiling, and `_MAX_CITATIONS_PER_ANSWER`). A result cut by the
+      row-limit cap alone, comfortably under the byte ceiling, reached
+      the user as 20 of 15,310 rows with no signal at all. It now reads
+      `structured_fields["truncated"]` (the tool's own flag) as well, and
+      `_citations_from_findings` reports whether the citation cap itself
+      cut anything. The emitted note states the scale of what is missing
+      (`_build_truncated_answer_note`), not just that a cut happened.
+      Separately, `coordinator_worker._reconcile_row_count` keeps
+      `row_count` honest against the rows a capped `Finding` actually
+      carries, which used to disagree by a wide margin (measured:
+      `row_count=500` reported for 118 surviving rows).
+    - F-2.1-C13: `act_node` used to set `contains_untrusted_free_text=
+      False` unconditionally for every `cypher_query` result, so
+      coordinator_worker's isolated Guard-tier reader (system-design-
+      patterns.md pattern 8) could never fire for any Layer 1 result, by
+      construction, even though an Article row's own `fields["name"]` is
+      raw, third-party-authored PubMed text, not graph-curated data.
+      `_split_rows_by_trust` now partitions a result's rows before
+      `_cypher_output_to_structured_fields` runs: trusted rows still pass
+      straight through as before; any Article rows are quarantined into a
+      second, reader-bound `ToolCall`/`ToolExecutionResult` pair
+      (`contains_untrusted_free_text=True`), so their raw content can
+      never reach `structured_fields`, and from there a citation's
+      `claim_text`, unmediated.
+
+Fourth judge pass, 2026-07-31 (tracker/phase_2.1.md F-2.1-J4-06): C13's
+own fix above over-corrected. Excluding an Article row from
+`_cypher_output_to_structured_fields` entirely, not just its untrusted
+`fields`, made `row_count` disagree with `total_available` on the
+`Finding` (F-2.1-C07's exact contradiction, reintroduced one layer up),
+and made a query whose only matching rows were Article rows refuse
+outright, silently: `tool_outcome` still read `"ok"` off the structured
+Finding, so the refusal carried none of F-2.1-11's distinguishing
+signal, indistinguishable from the graph genuinely finding nothing.
+Excluding the whole row also traded away more than production-
+standards.md's untrusted-source-reader gate ever asked for: the gate
+requires the row's own free-text field content never reach a citation
+unmediated, not that the record itself become uncitable.
+
+`_sanitized_citeable_row` now replaces that exclusion. An Article row
+still counts toward `row_count`/`total_available` and still earns a
+real citation to its real `source_url`, but with `fields` dropped to
+empty before it is ever placed in `structured_fields`: not summarized
+by a reader, not truncated, simply never carried past `act_node` at
+all, which is a stronger "never reach unmediated" than routing it
+through a model first. `_citation_for_row`'s existing empty-fields
+fallback (`f"{node_or_edge_type} {curie}"`) already handles the rest:
+the citation reads "Article PMID:12345", never the title. The separate
+reader-bound quarantine call (`_untrusted_rows_free_text`, still built
+from the row's real, un-sanitized fields) is unchanged and still runs
+against the same rows, for whatever future entity-extraction use a
+later phase makes of it; it was never what made the record citable or
+uncitable, so leaving it in place changes nothing about this fix.
+
+Fifth adversary pass, 2026-08-01 (F-2.1-A5-06, F-2.1-A5-02): both findings
+sit inside the F-2.1-B07 confidence-downgrade path this same docstring
+already covers above.
+
+    - F-2.1-A5-06: `_is_vocabulary_token_artifact("")` returns False on
+      its own first line, so an empty or whitespace-only field value was
+      never "suspect" and therefore outranked every flagged candidate in
+      `_pick_representative_field`. Every `Disease` row this system's
+      flagship question returns carries both empty fields (`xrefs`,
+      `agent_type`, `knowledge_level`) and vocabulary-artifact fields
+      (`name`, `source`, ...) side by side, so the picked field was
+      always the empty one, cited at full `assertion_confidence` on
+      every row of a correct answer: the exact rows the B07 hedge exists
+      to catch. `_pick_representative_field` now excludes a blank
+      candidate from consideration before the artifact check ever runs,
+      so the ranking is a clean value, else a suspect-but-non-empty
+      value (flagged), else the same "nothing to cite" fallback a row
+      with no fields at all already used.
+    - F-2.1-A5-02: `_is_vocabulary_token_artifact` protects the citation
+      object `write_node` builds. It never touched
+      `_cypher_output_to_structured_fields`'s own output, the `Finding.
+      structured_fields` payload this docstring already documents as
+      what a future phase's synthesis prompt reads, so that payload
+      carried `fields: {"name": "MeSH", ...}` with no marker at all. A
+      consumer reading `fields` directly, never the separate citation
+      object, would see the corrupted value with nothing to say it is
+      not a genuine name. `_dump_row_for_synthesis` now adds an
+      additive `vocabulary_artifact_fields` key to each dumped row,
+      naming which of that row's field keys tripped the same shape rule,
+      without altering any existing key or value: `_pick_representative_
+      field` still reads the identical, unmodified `fields` dict off the
+      same dumped row (via `_citations_from_findings`) to make its own,
+      separately-fixed decision.
 """
 
 from __future__ import annotations
@@ -202,7 +317,11 @@ from system_03_search_agent.harness.harness import (
     budget_for_step,
 )
 from system_03_search_agent.tools.cypher_query import cypher_query
-from system_03_search_agent.tools.cypher_schemas import CypherQueryInput, CypherQueryOutput
+from system_03_search_agent.tools.cypher_schemas import (
+    CypherQueryInput,
+    CypherQueryOutput,
+    CypherQueryRow,
+)
 from system_03_search_agent.tools.graph_schema_constants import (
     CURIE_PREFIXES,
     CYPHER_QUERY_TIMEOUT_SECONDS,
@@ -501,9 +620,9 @@ async def think_node(state: GraphState) -> dict[str, Any]:
     # are a later phase's job. `query_class="lookup"` is a fixed,
     # documented placeholder, never an actual classification of
     # `query.text`; it still drives every later node's real timeout
-    # budget via `budget_for_query_class`, since that mapping needs some
-    # concrete `query_class` value to resolve against regardless of
-    # whether the value itself is real yet.
+    # budget via `budget_for_step`, which resolves `act` against the
+    # query class, so that mapping still needs some concrete
+    # `query_class` value regardless of whether the value is real yet.
     stub_query_class: QueryClass = "lookup"
     think_payload = ThinkPayload(
         narrative="stub: real query classification lands in a later phase",
@@ -565,8 +684,23 @@ _TARGET_ENTITIES_MAX_ITEMS = 10
 # from the same nine prefixes the live graph actually uses
 # (graph_schema_constants.CURIE_PREFIXES), so this can never invent a
 # prefix the graph would reject.
+# F-2.1-J04: `:` used to be inside the local-id character class, so a CURIE
+# followed by ordinary sentence punctuation swallowed it. "NCBIGene:672: how
+# many variants?" extracted `NCBIGene:672:`, which is not a CURIE that exists
+# anywhere, and the greedy match REPLACED the correct one rather than sitting
+# beside it, so a perfectly valid question silently queried nothing. Worse,
+# `source_url_for_curie` still built a host-pinned URL for it
+# (.../gene/672%3A), which passes the citation gate and resolves to a dead
+# page: the pattern that guarantees a citation is NCBI-hosted cannot tell
+# whether the record exists.
+#
+# A trailing `.` or `-` is excluded for the same reason. A CURIE's local id
+# may contain them internally, so they stay in the class, but the match no
+# longer ends on one.
 _CURIE_IN_TEXT_PATTERN = re.compile(
-    r"\b(?:" + "|".join(re.escape(prefix) for prefix in CURIE_PREFIXES) + r"):[A-Za-z0-9_.:-]+"
+    r"\b(?:"
+    + "|".join(re.escape(prefix) for prefix in CURIE_PREFIXES)
+    + r"):[A-Za-z0-9_](?:[A-Za-z0-9_.:-]*[A-Za-z0-9_])?"
 )
 
 # A narrow, explicitly verified seed table mapping an ALL-CAPS gene
@@ -721,7 +855,34 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _cypher_output_to_structured_fields(output: CypherQueryOutput) -> dict[str, Any]:
+def _dump_row_for_synthesis(row: CypherQueryRow) -> dict[str, Any]:
+    """Serialize one row exactly as `model_dump` always has, plus the
+    F-2.1-A5-02 marker: `vocabulary_artifact_fields`, the keys of `row.
+    fields` whose value is a known ETL vocabulary-token artifact
+    (`_is_vocabulary_token_artifact`, F-2.1-B07).
+
+    Additive only. Every existing key and value is unchanged, in
+    particular `fields` itself: `_citation_for_row` reads this exact
+    dumped dict (via `_citations_from_findings`, which iterates
+    `finding.structured_fields["rows"]`, the list this function builds),
+    and `_pick_representative_field`'s own F-2.1-A5-06 fix already
+    decides, from those unmodified values, which field a citation is
+    built from and whether to hedge it. This function does not duplicate
+    or override that decision; it gives a consumer of the row as a whole
+    (the future synthesis prompt, per this module's docstring, which
+    already notes `fields` is what gets serialized there) an explicit
+    signal to act on instead of reading, for example, `fields["name"] ==
+    "MeSH"` as a genuine disease name with nothing to say it is not one.
+    An empty list means no field on this row tripped the check.
+    """
+    dumped = row.model_dump(mode="json")
+    dumped["vocabulary_artifact_fields"] = _vocabulary_artifact_fields(row.fields)
+    return dumped
+
+
+def _cypher_output_to_structured_fields(
+    output: CypherQueryOutput, rows: list[CypherQueryRow] | None = None
+) -> dict[str, Any]:
     """Shape a `cypher_query` result into `ToolExecutionResult.structured_fields`.
 
     Deliberately omits `cypher_executed`: that field is an audit trail
@@ -734,15 +895,133 @@ def _cypher_output_to_structured_fields(output: CypherQueryOutput) -> dict[str, 
     `_tool_execution_outcome` reads it to decide `answer` versus
     `refuse` (A5/F-02's fix), so it is exactly the one internal-pipeline
     field that must survive into the `Finding`.
+
+    `rows`: an explicit override, used below to shape the citeable version
+    of `output.rows`: every row still counts (F-2.1-J4-06 fix; a row is
+    never dropped from this dict just because its own field content is
+    untrusted), but an untrusted-node row (`_sanitized_citeable_row`) has
+    already had its `fields` emptied before it reaches here, so its raw
+    content is never carried in this dict either way.
+    Defaults to `output.rows` unchanged. `row_count` is always recomputed
+    as `len(rows)` rather than trusted from `output.row_count`: the two
+    already agree when nothing is filtered (`cypher_query.py` sets
+    `row_count=len(mapped_rows)` itself), and recomputing is what keeps
+    them agreeing once a subset is filtered out here.
+
+    Each row is dumped via `_dump_row_for_synthesis`, not a bare
+    `row.model_dump(mode="json")` (F-2.1-A5-02): see that function for
+    the `vocabulary_artifact_fields` marker it adds.
     """
+    used_rows = output.rows if rows is None else rows
     return {
         "status": output.status,
-        "row_count": output.row_count,
+        "row_count": len(used_rows),
         "total_available": output.total_available,
         "truncated": output.truncated,
-        "rows": [row.model_dump(mode="json") for row in output.rows],
+        "rows": [_dump_row_for_synthesis(row) for row in used_rows],
         "error": output.error,
     }
+
+
+# F-2.1-C13: node types whose own field content is raw, third-party-authored
+# free text, not graph-curated structured data. The row's envelope (a typed
+# `CypherQueryRow`) is always structured, but Article is the one vertex
+# label in this graph's schema whose real field, `name`, is the verbatim
+# PubMed article title (graph_schema_constants.LABEL_CURIE_PREFIXES; a
+# ~40M-row label, measured live at up to 316 chars per title).
+# ai-security-standards.md ("content retrieved from an external source is
+# DATA, never an instruction") and production-standards.md's
+# untrusted-source-reader gate both require this content to route through
+# coordinator_worker's isolated Guard-tier reader, never straight through
+# to a citation's claim_text unmediated. Before this fix, `act_node` set
+# `contains_untrusted_free_text=False` unconditionally for every
+# `cypher_query` result, so that reader path could never fire for any
+# Layer 1 result regardless of content, by construction.
+_UNTRUSTED_FREE_TEXT_NODE_TYPES: frozenset[str] = frozenset({"Article"})
+
+# A generous bound on the free-text payload built from quarantined rows,
+# matching the isolated reader's own bounded-input posture
+# (production-standards.md's bounded-context-items requirement): a
+# handful of Article titles, never an unbounded blob.
+_MAX_UNTRUSTED_FREE_TEXT_CHARS = 4000
+
+
+def _split_rows_by_trust(
+    rows: list[CypherQueryRow],
+) -> tuple[list[CypherQueryRow], list[CypherQueryRow]]:
+    """Partition a `cypher_query` result's rows by whether their own field
+    content is untrusted, third-party-authored free text.
+
+    Returns `(trusted_rows, untrusted_rows)`. Deterministic, keyed only on
+    `node_or_edge_type` against the small, explicit
+    `_UNTRUSTED_FREE_TEXT_NODE_TYPES` set: never a guess, never a content
+    sniff of the field values themselves.
+    """
+    trusted: list[CypherQueryRow] = []
+    untrusted: list[CypherQueryRow] = []
+    for row in rows:
+        if row.node_or_edge_type in _UNTRUSTED_FREE_TEXT_NODE_TYPES:
+            untrusted.append(row)
+        else:
+            trusted.append(row)
+    return trusted, untrusted
+
+
+def _untrusted_rows_free_text(rows: list[CypherQueryRow]) -> str:
+    """Render quarantined untrusted rows as the one free-text payload
+    `coordinator_worker`'s isolated reader is given.
+
+    This string is passed to `ToolExecutionResult.free_text` only.
+    `coordinator_worker._reader_pass`/`_parse_reader_response` read it
+    solely to build the reader's own bounded prompt and never copy it
+    onto the returned `Finding` (that module's own docstring guarantee);
+    it never reaches `structured_fields`, `claim_text`, or any other field
+    `write_node` reads to build a citation.
+    """
+    lines = [f"{row.curie}: {row.fields.get('name', '')}" for row in rows]
+    return "\n".join(lines)[:_MAX_UNTRUSTED_FREE_TEXT_CHARS]
+
+
+def _sanitized_citeable_row(row: CypherQueryRow) -> CypherQueryRow:
+    """F-2.1-J4-06 fix: an untrusted-type row's own record must still be
+    countable and citeable; only its own free-text field content must
+    never reach `structured_fields` unmediated.
+
+    C13's original fix dropped an untrusted row (Article) out of
+    `_cypher_output_to_structured_fields` entirely, not just its `fields`.
+    That made `row_count` disagree with `total_available` on the `Finding`
+    (F-2.1-C07's exact contradiction, one layer up) and made an
+    Article-only result refuse outright, silently, since `write_node`
+    never learned the drop was the cause. `fields` is the only untrusted
+    part of the row (an Article's `name` is the verbatim PubMed title;
+    see the module docstring's fourth-judge-pass note); `node_or_edge_type`,
+    `curie`, `source_url`, and `graph_snapshot_version` are graph-curated
+    structured data, never third-party-authored text, and are kept as-is.
+    Emptying `fields` here means the raw title is never carried into
+    `structured_fields` at all, not merely mediated through a reader
+    first: `_citation_for_row`'s existing empty-fields fallback
+    (`f"{node_or_edge_type} {curie}"`) still earns the record a real
+    citation to its real `source_url`, just with no title text in it.
+    """
+    return row.model_copy(update={"fields": {}})
+
+
+def _rows_for_citation(rows: list[CypherQueryRow]) -> list[CypherQueryRow]:
+    """Shape every row of a `cypher_query` result into the version that
+    counts toward `row_count`/`total_available` and is citation-eligible.
+
+    F-2.1-J4-06 fix: every row is kept, in its original order, so a query
+    whose result happens to be entirely Article rows still reports the
+    real row count and still earns real citations. An untrusted-type row
+    is replaced with its sanitized copy (`_sanitized_citeable_row`); every
+    other row passes through unchanged, exactly as before this fix.
+    """
+    return [
+        row
+        if row.node_or_edge_type not in _UNTRUSTED_FREE_TEXT_NODE_TYPES
+        else _sanitized_citeable_row(row)
+        for row in rows
+    ]
 
 
 async def act_node(state: GraphState) -> dict[str, Any]:
@@ -773,10 +1052,10 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             # F-05 fix: cypher_query's own declared budget
             # (CYPHER_QUERY_TIMEOUT_SECONDS, 30s, tool-call-budgets.md)
             # is the locked number; think_node's stub "lookup"
-            # classification resolves budget_for_query_class to 5.0s,
-            # well under both the tool's own budget and live graph
-            # latency alone. The caller's budget is what gives: never
-            # let a query_class's own budget starve the tool below its
+            # classification resolves `budget_for_step("act", ...)` to a
+            # figure well under both the tool's own budget and live
+            # graph latency alone. The caller's budget is what gives:
+            # never let a query_class's own budget starve the tool below its
             # own floor, but let a query_class that already budgets more
             # (multi_hop, aggregate, exploratory) keep that larger
             # number.
@@ -798,16 +1077,45 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             )
             continue
 
-        # A Cypher row is structured data (Section 6.1's typed output
-        # schema, not free text), so this always routes through the
-        # structured pass-through path in coordinator_worker_execute,
-        # never the isolated free-text reader.
+        # F-2.1-C13: a Cypher row's envelope is structured data (Section
+        # 6.1's typed output schema), but an Article row's own field
+        # content (the raw PubMed title) is untrusted external free text.
+        # F-2.1-J4-06 fix: C13's original split excluded an Article row
+        # from the structured pass-through payload entirely, which made
+        # row_count disagree with total_available (F-2.1-C07's
+        # contradiction, one layer up) and made an Article-only result
+        # refuse outright, silently. Every row, trusted or not, now goes
+        # into the structured pass-through payload via `_rows_for_citation`
+        # (an untrusted row's `fields` already emptied, never its whole
+        # row dropped), so row_count and total_available always agree and
+        # a real record is never silently disappeared. The untrusted rows'
+        # own free-text content is separately quarantined into a second,
+        # reader-bound tool_call/result pair, same as before this fix, so
+        # that content still never reaches structured_fields or a
+        # citation's claim_text unmediated; it just no longer gates
+        # whether the record itself is countable and citeable.
+        _, untrusted_rows = _split_rows_by_trust(output.rows)
         results.append(
             ToolExecutionResult(
                 contains_untrusted_free_text=False,
-                structured_fields=_cypher_output_to_structured_fields(output),
+                structured_fields=_cypher_output_to_structured_fields(
+                    output, _rows_for_citation(output.rows)
+                ),
             )
         )
+        if untrusted_rows:
+            untrusted_call = ToolCall(
+                tool=planned.tool_call.tool,
+                call_id=f"{planned.tool_call.call_id}-articles"[:64],
+                layer=planned.tool_call.layer,
+            )
+            tool_calls.append(untrusted_call)
+            results.append(
+                ToolExecutionResult(
+                    contains_untrusted_free_text=True,
+                    free_text=_untrusted_rows_free_text(untrusted_rows),
+                )
+            )
 
     findings = await coordinator_worker_execute(harness, tool_calls, results)
     # A5/F-02 fix: the real Finding list now survives into GraphState
@@ -878,21 +1186,202 @@ def _tool_execution_outcome(
     return "empty"
 
 
-def _pick_representative_field(fields: dict[str, Any]) -> tuple[str, Any] | tuple[None, None]:
-    """Pick one field off a row to ground a citation's `claim_text` in.
+# F-2.1-B07: `docs/data-engineering/Knowledge_graph_on_server_reference.md`
+# section M documents the root cause directly: "MedGen Disease nodes have
+# `name` populated with source-vocabulary codes such as `SNOMEDCT_US`
+# instead of human-readable disease names... Root cause is in the MedGen
+# ETL parser." That is System 1/2's data defect, out of this repo's
+# scope to fix at the source (file-protection.md forbids touching ETL
+# code). What is this repo's own defect is stapling
+# `assertion_confidence="asserted"` onto a citation built from one of
+# these corrupted values: asserting high confidence in a value that is
+# actually a controlled-vocabulary system name, not the disease name it
+# claims to be, is a trust-signal defect regardless of who introduced the
+# bad value.
+#
+# Confirmed live (BRCA1's four MedGen-associated diseases): "MeSH",
+# "MONDO", "MedGen", "MedGen". The doc above independently names
+# "SNOMEDCT_US" as the same class of defect. A fix keyed to those literal
+# strings would miss the next UMLS source-vocabulary abbreviation this
+# ETL bug produces, so `_is_vocabulary_token_artifact` below is a shape
+# rule, not a lookup table: every confirmed bad value is a single token
+# (no whitespace) that either exactly names a known source vocabulary
+# already canonical in this codebase (`CURIE_PREFIXES`, which already
+# lists "MedGen"/"MeSH"/"MONDO" as this graph's own source-database
+# prefixes) or fails to read as an ordinary English word (not all
+# lowercase, not simple Title Case, and either mixed-case in a way no
+# disease name in this data is written (`MeSH`, `MedGen`) or fully
+# upper-case and longer than a real standalone medical abbreviation would
+# plausibly be ("MONDO", "SNOMEDCT_US" versus "HIV", "AIDS", "COPD",
+# "SIDS")). A short, fully upper-case value is deliberately let through
+# as plausibly legitimate: downgrading confidence is the safe failure
+# mode this system prefers (production-standards.md's cite-or-refuse
+# ethos: under-confidence is cheap, over-confidence is the trust moat),
+# so the one acknowledged residual gap, a longer legitimate all-caps name
+# (for example "COVID-19") being downgraded as a false positive, is an
+# accepted, documented trade rather than a silent one.
+_MAX_PLAUSIBLE_ABBREVIATION_CHARS = 4
+
+# F-2.1-J5-04. The shape rule above is real, and an exhaustive census of
+# all 200,845 `Disease` rows on 2026-07-31 showed it still missed 15,466
+# of them, because three of the leaked tokens are short all-caps values
+# the rule deliberately lets through in order to protect genuine short
+# abbreviations.
+#
+# Measured, with row counts: the two largest leaked names were already
+# caught; three short all-caps vocabulary names totalling 13,384 rows were
+# missed, one Title Case vocabulary name of 968 rows was missed, three
+# multi-word qualifier forms totalling 1,103 rows were missed, and the ETL
+# stub placeholders were missed entirely.
+#
+# These are source-vocabulary abbreviations that leaked into MedGen's name
+# column. The graph's own `source` field cannot separate them, since it
+# reads "MedGen" for every one of those rows regardless of which
+# vocabulary leaked, so it is not the discriminator it first appears to be.
+#
+# The set below is census-derived, not invented: every entry was read off
+# the live graph with its row count. Stated plainly as the residual, a
+# strictly better rule exists and is not built here. A genuine disease
+# name is close to unique, so a name shared by tens of thousands of
+# distinct records is by definition not one, and a precomputed name
+# frequency table would catch the next leaked vocabulary with no list at
+# all. That needs a build-time artifact this phase does not have, and is
+# filed for build phase 2.2.
+_LEAKED_VOCABULARY_NAMES = frozenset(
+    {"HPO", "GARD", "OMIM", "Orphanet", "SNOMEDCT_US", "UMLS", "ORDO"}
+)
+_ETL_STUB_PREFIX = "[stub]"
+
+
+def _is_vocabulary_token_artifact(value: str) -> bool:
+    """True when `value` looks like a bare controlled-vocabulary system
+    name or source-abbreviation code rather than a genuine, human-
+    readable field value. See the module comments above for the reasoning
+    and the confirmed examples this rule is built from.
+    """
+    text = value.strip()
+    if not text:
+        return False
+
+    # An ETL stub placeholder is never a disease name, whatever its shape.
+    if text.startswith(_ETL_STUB_PREFIX):
+        return True
+
+    # F-2.1-J5-04: a vocabulary token followed by a qualifier is still a
+    # vocabulary token, so the multi-word qualifier forms are caught
+    # alongside the bare token. The token must be the whole first word, so
+    # a genuine name that merely begins with the same letters is
+    # unaffected.
+    first_token = text.split(" ", 1)[0]
+    if first_token in _LEAKED_VOCABULARY_NAMES or first_token in CURIE_PREFIXES:
+        return True
+
+    if " " in text:
+        return False
+    if text.islower():
+        return False
+    if text[0].isupper() and text[1:].islower():
+        return False
+    return not (text.isupper() and len(text) <= _MAX_PLAUSIBLE_ABBREVIATION_CHARS)
+
+
+def _vocabulary_artifact_fields(fields: dict[str, Any]) -> list[str]:
+    """List every key in a row's `fields` dict whose value trips
+    `_is_vocabulary_token_artifact`, sorted for a deterministic order.
+
+    F-2.1-A5-02: `_pick_representative_field`/`_citation_for_row` only
+    ever look at ONE field per row, and only ever act on what they find
+    by downgrading a `CitationPayload`'s `assertion_confidence`. That
+    protects the citation object built in `write_node`. It says nothing
+    about `_cypher_output_to_structured_fields`'s own output, the
+    `Finding.structured_fields` payload this module's docstring already
+    documents as what a future phase's synthesis prompt reads: a row
+    there carries `fields: {"name": "MeSH", ...}` with no marker
+    distinguishing it from a genuine disease name, so a consumer that
+    reads `fields` directly (never inspecting the separate citation
+    object) sees the corrupted value with no qualification at all. This
+    function is called from `_dump_row_for_synthesis` to attach that
+    qualification as an explicit, additive key on the dumped row, so a
+    synthesis-prompt consumer has something to act on beyond the raw
+    string. It never removes or rewrites a field value: `_pick_
+    representative_field` still needs the original values, unmodified,
+    to keep doing its own job on the very same dumped `fields` dict (see
+    `_citations_from_findings`, which reads `finding.structured_fields
+    ["rows"]`, the output of this same dump, to build every citation).
+    """
+    return sorted(
+        key
+        for key, value in fields.items()
+        if isinstance(value, str) and _is_vocabulary_token_artifact(value)
+    )
+
+
+def _pick_representative_field(
+    fields: dict[str, Any],
+) -> tuple[str, Any, bool] | tuple[None, None, bool]:
+    """Pick one field off a row to ground a citation's `claim_text` in,
+    and report whether the picked value looks like a vocabulary-token
+    parse artifact rather than a genuine field value.
 
     Deterministic, never a model judgment: prefer a `name` field when
     present (the most human-readable field most rows carry), else the
-    first key in the row's own insertion order. A row with no fields at
-    all yields `(None, None)`; the caller falls back to citing the row's
-    bare identity (its type and CURIE).
+    row's own insertion order, exactly as before F-2.1-B07. The one
+    change that finding requires: a candidate field whose value trips
+    `_is_vocabulary_token_artifact` is skipped in favor of the next
+    candidate first ("preferring a different representative field when
+    the name is an artifact"), and only returned, flagged, when every
+    candidate is equally suspect, so the record still gets a real citation
+    rather than none, but `_citation_for_row` can downgrade
+    `assertion_confidence` instead of asserting it at full strength. A row
+    with no fields at all yields `(None, None, False)`; the caller falls
+    back to citing the row's bare identity (its type and CURIE).
+
+    F-2.1-A5-06: an empty or whitespace-only string is never a citeable
+    claim, so it must never be preferred over a suspect-but-present
+    value, let alone a clean one. Before this fix `_is_vocabulary_token_
+    artifact("")` returned False on its first line (a blank string is not
+    "suspect"), so a genuinely empty field such as `xrefs=''` outranked
+    every flagged candidate and was cited at full `assertion_confidence`,
+    exactly on the rows the B07 hedge exists to catch (every `Disease`
+    row this system's flagship question returns carries both empty
+    fields and vocabulary-artifact fields side by side). Empty candidates
+    are excluded from consideration entirely, before the artifact check
+    ever runs, so the ranking is: a clean non-empty value, else a
+    suspect-but-non-empty value (flagged), else the same `(None, None,
+    False)` "nothing to cite" fallback a row with no fields at all
+    already used, since a field that is only ever an empty string is, for
+    citation purposes, no field at all.
     """
     if not fields:
-        return None, None
-    if "name" in fields:
-        return "name", fields["name"]
-    first_key = next(iter(fields))
-    return first_key, fields[first_key]
+        return None, None, False
+
+    def _is_artifact(value: Any) -> bool:
+        return isinstance(value, str) and _is_vocabulary_token_artifact(value)
+
+    def _is_blank(value: Any) -> bool:
+        return isinstance(value, str) and not value.strip()
+
+    preferred_keys = (["name"] if "name" in fields else []) + [
+        key for key in fields if key != "name"
+    ]
+    usable_keys = [key for key in preferred_keys if not _is_blank(fields[key])]
+
+    for key in usable_keys:
+        if not _is_artifact(fields[key]):
+            return key, fields[key], False
+
+    if usable_keys:
+        # Every non-empty candidate looked like a vocabulary-token
+        # artifact. Still cite the first-preference one (a suspect real
+        # value beats no value), flagged so the caller downgrades
+        # confidence rather than asserting it.
+        key = usable_keys[0]
+        return key, fields[key], True
+
+    # Every candidate field was empty or whitespace-only. There is
+    # nothing here to ground a claim in beyond the row's own type and
+    # CURIE, the identical fallback a row with no fields at all uses.
+    return None, None, False
 
 
 def _citation_for_row(
@@ -912,12 +1401,23 @@ def _citation_for_row(
     database, the full CURIE is the source id. `evidence_kind=
     "primary_assertion"` and `license="public_domain_us_gov"` are Section
     9.2's documented defaults for a `cypher_query` graph property (an
-    NCBI-native, US-federal-government record);
-    `assertion_confidence="asserted"` is Section 9.2's default for a
-    plain field with no hedge or conflict signal (no ClinVar
-    review_status lookup or hedge-lexicon scan exists yet at this phase).
-    `population_ancestry_context` stays None: no population or ancestry
-    field exists on a Layer 1 graph row.
+    NCBI-native, US-federal-government record).
+    `assertion_confidence` is Section 9.2's default, "asserted", for a
+    plain field with no hedge or conflict signal, EXCEPT when
+    `_pick_representative_field` flags the picked value as a
+    vocabulary-token parse artifact (F-2.1-B07: a `Disease`/`OntologyClass`
+    row's stored `name` is sometimes a source-vocabulary code such as
+    "MeSH" or "SNOMEDCT_US", not the disease name it claims to be, a
+    documented MedGen ETL defect, `docs/data-engineering/
+    Knowledge_graph_on_server_reference.md` section M). Section 9.2's
+    three-value enum has no dedicated state for "the value itself looks
+    corrupted"; "hedged" (Section 9.2: reduced confidence with no known
+    conflicting record) is the closer, spec-compliant fit versus
+    "contested" (which implies a specific conflicting interpretation this
+    case does not have) or leaving it at "asserted" (which is exactly the
+    trust-signal defect this fix closes). `population_ancestry_context`
+    stays None: no population or ancestry field exists on a Layer 1 graph
+    row.
     """
     source_url = row.get("source_url")
     if not source_url:
@@ -925,7 +1425,7 @@ def _citation_for_row(
     curie = str(row.get("curie", ""))[:100]
     prefix = curie.split(":", 1)[0] if ":" in curie else "cypher_query"
     fields = row.get("fields") or {}
-    field_name, field_value = _pick_representative_field(fields)
+    field_name, field_value, field_is_suspect = _pick_representative_field(fields)
     node_or_edge_type = str(row.get("node_or_edge_type", ""))
     claim_text = (
         f"{node_or_edge_type} {curie}: {field_name}={field_value}"
@@ -943,13 +1443,13 @@ def _citation_for_row(
         field=(field_name or "curie")[:128],
         claim_text=claim_text[:1000],
         evidence_kind="primary_assertion",
-        assertion_confidence="asserted",
+        assertion_confidence="hedged" if field_is_suspect else "asserted",
         population_ancestry_context=None,
         license="public_domain_us_gov",
     )
 
 
-def _citations_from_findings(findings: list[Finding]) -> list[CitationPayload]:
+def _citations_from_findings(findings: list[Finding]) -> tuple[list[CitationPayload], bool]:
     """Build every citation earned by this query's real, `"ok"` tool results.
 
     Only `structured_pass_through` findings with `status == "ok"`
@@ -959,6 +1459,13 @@ def _citations_from_findings(findings: list[Finding]) -> list[CitationPayload]:
     Capped at `_MAX_CITATIONS_PER_ANSWER`, the same defense-in-depth
     posture every other emitted list in this module already carries
     (production-standards.md's multi-agent pipeline gate).
+
+    Returns `(citations, capped_by_citation_limit)`. F-2.1-C12: the old
+    version returned only the capped list, so a caller had no way to tell
+    "every citeable row is shown" from "there were more citeable rows than
+    `_MAX_CITATIONS_PER_ANSWER` and the rest were silently dropped". The
+    full citeable list is built first so the comparison is exact (never a
+    false positive from stopping exactly at the cap with nothing left).
     """
     citations: list[CitationPayload] = []
     for finding in findings:
@@ -966,12 +1473,115 @@ def _citations_from_findings(findings: list[Finding]) -> list[CitationPayload]:
         if fields is None or fields.get("status") != "ok":
             continue
         for row in fields.get("rows", []):
-            if len(citations) >= _MAX_CITATIONS_PER_ANSWER:
-                return citations
             citation = _citation_for_row(finding.call_id, finding.layer, row, len(citations) + 1)
             if citation is not None:
                 citations.append(citation)
-    return citations
+    capped_by_citation_limit = len(citations) > _MAX_CITATIONS_PER_ANSWER
+    return citations[:_MAX_CITATIONS_PER_ANSWER], capped_by_citation_limit
+
+
+# F-2.1-10 fix: `Finding.truncated` (coordinator_worker.py's F-03 fix) was
+# added specifically so a caller could tell "the tool succeeded and this
+# is everything it found" from "the tool succeeded but the result was cut
+# to fit the 50,000-byte defense-in-depth ceiling". The judge found
+# nothing in `core/` or `adapters/` ever read the field, so a capped
+# `Finding` reached this module indistinguishable from a complete one.
+# This is that reader.
+def _ok_finding_was_truncated(findings: list[Finding]) -> bool:
+    """True when at least one `"ok"` structured-pass-through `Finding` in
+    this query's result set was cut, by either of two independent
+    truncations that can fire before a `Finding` reaches this module.
+
+    F-2.1-C12: the pre-fix version read only `finding.truncated`, the
+    byte-ceiling flag `coordinator_worker._cap_structured_fields` sets.
+    It never read `structured_fields["truncated"]`, `cypher_query`'s own
+    row-limit flag (`CypherQueryOutput.truncated`, set whenever the
+    graph's true match count exceeds `row_limit`), sitting in the same
+    dict. Measured: a 15,310-row match capped to 100 rows by the tool's
+    own row limit, comfortably under the 50,000-byte ceiling, so the old
+    check saw `truncated=False` and emitted no note at all for a result
+    the user was shown 100 of 15,310 rows of. Both flags now gate the
+    same signal, since either one means the user is not seeing the whole
+    answer.
+
+    Scoped to `"ok"` findings only: an `"empty"` or `"error"` finding is
+    already refused for its own, unrelated reason, and `truncated` on a
+    `"reader"`-sourced finding (`structured_fields is None`) is never
+    meaningful, since that path has no `structured_fields` to have cut in
+    the first place.
+    """
+    return any(
+        finding.truncated or bool(finding.structured_fields.get("truncated"))
+        for finding in findings
+        if finding.structured_fields is not None
+        and finding.structured_fields.get("status") == "ok"
+    )
+
+
+def _known_total_available(findings: list[Finding]) -> int | None:
+    """Sum `total_available` across this query's `"ok"` findings.
+
+    Returns `None` when any contributing finding's own `total_available`
+    is unknown (`cypher_query._fetch_true_total` abstained rather than
+    guessing, e.g. a UNION or an aliased multi-item `DISTINCT`), since
+    summing a known figure with an unknown one is not itself a knowable
+    total. A caller reading `None` states scale honestly as "more than
+    shown, exact total unavailable" rather than fabricating a number.
+    """
+    total = 0
+    saw_any = False
+    for finding in findings:
+        fields = finding.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        saw_any = True
+        available = fields.get("total_available")
+        if available is None:
+            return None
+        total += available
+    return total if saw_any else None
+
+
+def _build_truncated_answer_note(shown: int, total_available: int | None) -> str:
+    """F-2.1-C12: state the scale of what is not shown, not just that a
+    cut happened. "Results were truncated" said nothing when the user was
+    shown 20 of 15,310 rows; a note that omits the scale is technically
+    true and practically useless.
+    """
+    if total_available is not None and total_available > shown:
+        return (
+            f"Note: this result was truncated. Showing {shown} of "
+            f"{total_available} matching rows; the rest are not shown above."
+        )
+    return (
+        f"Note: this result was truncated. Showing {shown} matching rows, "
+        "but more exist than are shown above; the exact total is not "
+        "available for this query."
+    )
+
+
+_TRUNCATED_REFUSAL_MESSAGE = (
+    "The graph query found matching data, but the result was cut to fit "
+    "the response size limit before any row kept a citeable source_url. "
+    "This is not the same as the graph returning no matching data. Retry "
+    "with a narrower query_intent or a smaller row_limit."
+)
+
+# F-2.1-J4-06: the general form of the same "never a silent refuse beside
+# status='ok'" principle F-2.1-11 established for the truncation case.
+# `tool_outcome == "ok"` alongside zero citations can also happen with no
+# truncation involved at all, for example every row a query matched
+# carried no resolvable `source_url` (an unmapped CURIE prefix). Before
+# this fix that case fell through both branches below with no error
+# event at all, identical to `tool_outcome == "empty"`'s genuine "the
+# graph found nothing" refusal. This message is deliberately distinct
+# from `_TRUNCATED_REFUSAL_MESSAGE`: it never claims a cut happened,
+# since none did.
+_UNCITED_OK_REFUSAL_MESSAGE = (
+    "The graph query found matching data, but no returned row carried a "
+    "citeable source_url. This is not the same as the graph returning no "
+    "matching data."
+)
 
 
 async def write_node(state: GraphState) -> dict[str, Any]:
@@ -1045,7 +1655,9 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     # honestly do now is refuse to say "answer" when nothing was found,
     # and emit a real citation for every row that earned one.
     tool_outcome = _tool_execution_outcome(findings)
-    citations = _citations_from_findings(findings) if tool_outcome == "ok" else []
+    citations, citations_capped = (
+        _citations_from_findings(findings) if tool_outcome == "ok" else ([], False)
+    )
     trust_outcome: TrustOutcome
     if tool_outcome == "no_tool" or (tool_outcome == "ok" and citations):
         trust_outcome = "answer"
@@ -1055,6 +1667,64 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # earned a confident answer, so this refuses rather than
         # answering with nothing behind it.
         trust_outcome = "refuse"
+
+    # F-2.1-10/F-2.1-11/F-2.1-C12 fix: a result the user is shown only part
+    # of must never look identical to one they are shown in full.
+    # `_ok_finding_was_truncated` is the reader `Finding.truncated` and
+    # `structured_fields["truncated"]` were both missing (F-2.1-10,
+    # F-2.1-C12: the byte ceiling and the tool's own row-limit cap are two
+    # independent truncations, and the pre-fix code read only the first).
+    # `citations_capped` is the third: `_MAX_CITATIONS_PER_ANSWER` cutting
+    # an already-fetched row list down further still. Any one of the three
+    # means the user is not seeing the whole answer. Two cases:
+    #   - The cut still left a citeable row: the query genuinely succeeded
+    #     (trust_outcome is already "answer" above) and cite-or-refuse is
+    #     not weakened, but the cut is acknowledged rather than silently
+    #     dropped, so a user is never shown a partial result as if it were
+    #     complete. The note states the scale (shown vs. total_available),
+    #     not just that a cut happened.
+    #   - The cut left nothing citeable: cite-or-refuse still refuses (a
+    #     truncated Finding earns no exemption from that gate), but the
+    #     refusal names the real cause, so it is never confused with the
+    #     graph genuinely returning no matching data (F-2.1-11's exact
+    #     failure mode: both cases used to reach an identical, silent
+    #     "refuse").
+    truncated_ok_finding = tool_outcome == "ok" and (
+        _ok_finding_was_truncated(findings) or citations_capped
+    )
+    if truncated_ok_finding and trust_outcome == "answer":
+        note = _build_truncated_answer_note(
+            shown=len(citations), total_available=_known_total_available(findings)
+        )
+        sink.emit("token", TokenPayload(text=note, marker_ids=[]))
+    elif truncated_ok_finding and trust_outcome == "refuse":
+        sink.emit(
+            "error",
+            ErrorPayload(
+                fatal=False,
+                scope="tool",
+                source="cypher_query",
+                error_class="recoverable",
+                message=_TRUNCATED_REFUSAL_MESSAGE,
+                retry_after_s=0,
+            ),
+        )
+    elif tool_outcome == "ok" and trust_outcome == "refuse":
+        # F-2.1-J4-06: a status="ok" tool result that still refuses for a
+        # reason other than truncation (every matching row lacked a
+        # citeable source_url) must not look identical to a genuinely
+        # empty tool result either. See _UNCITED_OK_REFUSAL_MESSAGE.
+        sink.emit(
+            "error",
+            ErrorPayload(
+                fatal=False,
+                scope="tool",
+                source="cypher_query",
+                error_class="recoverable",
+                message=_UNCITED_OK_REFUSAL_MESSAGE,
+                retry_after_s=0,
+            ),
+        )
 
     for citation in citations:
         sink.emit("citation", citation)

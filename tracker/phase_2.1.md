@@ -11,11 +11,19 @@ Reference: `docs/ncbi/Tool_implementation_mechanics.md`, `docs/data-engineering/
 
 A real query reaches the live AGE graph through `cypher_query` and returns cited rows, with the main agent never generating or seeing raw Cypher. A phase where every ticket passes but no query reaches the graph is a failed phase, not a passed one (LEARNINGS rows 28 and 30).
 
-## Phase close status: reworked, NOT re-reviewed
+## Phase close status: the premise claim below was wrong, corrected 2026-07-31
 
 Read this before opening build phase 2.2. It is the one thing about this phase that a reader would otherwise get wrong.
 
-The premise is met. `tests/system_03_search_agent/tools/test_cypher_query_e2e.py` runs 9 tests against the live graph with only the model call mocked, and all 9 pass. The full suite is 798 passing. That gate cannot be satisfied by mocks, which is precisely what caught the original failure.
+The sentence that used to open this section, "The premise is met", was false when it was written, and the evidence offered for it is the reason it went unchallenged for four review rounds. It is preserved here rather than deleted, because how it was wrong is more useful than the correction:
+
+> The premise is met. `test_cypher_query_e2e.py` runs 9 tests against the live graph with only the model call mocked, and all 9 pass. The full suite is 798 passing. That gate cannot be satisfied by mocks, which is precisely what caught the original failure.
+
+Every clause is true. The conclusion does not follow. "Only the model call mocked" is exactly the gap: mocking the model means every test supplies a Cypher query someone already knew was correct, so the suite could never see a generation defect, and generation is where the phase actually failed. The gate that "cannot be satisfied by mocks" was satisfied by the one mock that mattered.
+
+Measured on 2026-07-31 by the fourth judge: 879 tests passing, and 3 of 8 real questions answered correctly. The worst case returned 25 non-human orthologs for "which diseases are associated with BRCA1?", `status="ok"`, every row carrying a resolving NCBI citation. This is `goal-contracts`'s "rigor about the wrong layer", measured rather than hypothesised: an honest, green verify surface certifying a system that answers a different question than the one asked.
+
+The current premise evidence is `tests/system_03_search_agent/tools/test_cypher_query_premise.py`, which does NOT mock the model and asserts on the meaning of the answer against ground truth read from the live graph. It went 3 of 9 on landing and 9 of 9 after the root cause was fixed. A phase-premise claim in this repo now cites that file, never a suite total.
 
 What did not happen: the judge and the adversary reviewed the code as it stood BEFORE the rework, and both failed it. Everything shipped since that verdict is unreviewed by any independent agent:
 
@@ -482,6 +490,217 @@ History:
 
 ---
 
+### F-2.1-06: execute_cypher blocks the event loop, so its 30 second bound cannot fire
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: high
+Ticket: none yet
+
+What happened: `graph_connection.execute_cypher` is a plain `def`, not `async def` (`graph_connection.py:336`), and `cypher_query` calls it with no `await`, no `asyncio.to_thread`, and no executor from inside the coroutine `_run_pipeline` (`cypher_query.py:587`, and again at `:385` for the count query).
+
+A synchronous call inside a coroutine cannot be cancelled by `asyncio.wait_for`, so both the tool's own 30 second bound (`cypher_query.py:682`) and Act's `enforce_timeout` (`graph.py:784-788`) are dead code for the duration of every graph query. The judge measured it: a `wait_for` with a 0.5 second timeout around a 4 second blocking call returned normally after 4.01 seconds, with the event loop ticking once where a healthy loop ticks roughly 40 times.
+
+Failure scenario: two users query concurrently. User A's Cypher runs 25 seconds server-side. User B's SSE stream, every other in-flight run, and every FastAPI health check are frozen for those 25 seconds, because the single event loop ticked once. The only real bound left is the server-side `statement_timeout`.
+
+Why nothing caught it: the phase's 9 live end-to-end tests run sequentially, so none of them has a second concurrent request to starve. No ticket's acceptance criteria asked whether the tool was actually async. This is the ticket-boundary shape of LEARNINGS rows 28, 30, and 33 again, in a fourth form.
+
+Rules: `tool-call-budgets.md` ("never ship a tool with no per-call timeout", which it nominally has and cannot execute) and `system-design-patterns` pattern 6 (time to first token under one second).
+
+History:
+- 2026-07-31 judge: filed with a reproduction, confirmed by the lead reading the two signatures
+
+---
+
+### F-2.1-07: Entity extraction resolves one gene symbol, and the phase gate is satisfiable by that table
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: high
+Ticket: none yet
+
+What happened: `_KNOWN_GENE_SYMBOL_CURIES` holds exactly one entry, `{"BRCA1": "NCBIGene:672"}` (`core/graph.py:585-587`), and the phase's own end-to-end gate queries BRCA1.
+
+The judge measured the real reach: of five realistic gene-symbol queries (TP53, BRCA2, EGFR, KRAS, MECP2), zero resolve. All return `target_entities=[]`, which produces `status="error"` with `UndefinedParameter` and a refusal. Against roughly 20,000 protein-coding gene symbols in the graph plus every disease and phenotype term, this resolves well under 0.01 percent of realistic biomedical queries.
+
+On the mitigation already in place: `test_full_loop_works_for_a_gene_outside_the_symbol_seed_table` queries `"What is NCBIGene:7157?"`. The judge's assessment is that this is not cosmetic, since it genuinely exercises `_CURIE_IN_TEXT_PATTERN`, a distinct code path from the seed table, but it is not sufficient either, because a user typing a raw NCBI gene id is not the query class this system exists to serve. The lead's docstring on that test claiming "only the general path can satisfy it" overstates what it proves.
+
+It fails safe, refusing rather than answering wrongly, which is the right direction. It still means the phase premise is satisfied by a hand-listed entity set.
+
+Disposition: needs an explicit product-owner decision. Either accept it as a documented dependency that build phase 2.2 or a later entity-resolution phase closes, or fix it now. Real symbol-to-CURIE resolution is arguably a different capability from this phase's Section 25 row.
+
+History:
+- 2026-07-31 judge: filed with a five-query measurement
+
+---
+
+### F-2.1-08: The loop-level empty-to-refuse branch is unproven
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: medium
+Ticket: none yet
+
+What happened: `test_full_loop_refuses_when_the_graph_returns_nothing` queries `"What is known about the gene ZZZFAKE9?"`. `ZZZFAKE9` is neither a CURIE nor a seed-table entry, so `target_entities` is empty and the tool returns `status="error"` on an unbound parameter, never `status="empty"`. Both paths produce `trust_outcome="refuse"`, so the assertion passes and cannot distinguish them.
+
+The empty-to-refuse half of the loop-level cite-or-refuse gate is therefore untested end to end. The tool-level half is genuinely proven by `test_absent_entity_returns_empty_never_a_fabricated_row`.
+
+The lead wrote this test believing it proved the empty path.
+
+Fix: name a real-shaped CURIE that is absent from the graph, for example `"What is NCBIGene:99999999?"`, so the tool actually returns `empty`.
+
+History:
+- 2026-07-31 judge: filed with a probe showing `status='error'` rather than `'empty'`
+
+---
+
+### F-2.1-09: Worst-case tool wall time roughly doubles the locked 30 second budget
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: medium
+Ticket: none yet
+
+What happened: `remaining_budget` is computed once (`cypher_query.py:577`) and passed unchanged both to the main `execute_cypher` (`:591`) and to `_fetch_true_total` (`:618`), so each gets its own full server-side `statement_timeout`.
+
+Failure scenario: two generation calls take 8 seconds, leaving `remaining_budget` at 22 seconds. The main query takes 21 seconds and returns exactly `row_limit` rows, triggering the count query, which carries no LIMIT and runs with `enable_seqscan=off` over a 693M-edge graph, and gets a fresh 22 seconds. Total roughly 51 seconds against Section 6.1's locked 30 second per-call budget. Compounded by F-2.1-06, nothing in Python can interrupt it.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
+### F-2.1-10: Finding.truncated has no readers
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: medium
+Ticket: none yet
+
+What happened: the F-03 fix added a `truncated` field to `Finding` specifically so truncation "is never silent" (`coordinator_worker.py:118-128,295`). Nothing in `core/` or `adapters/` reads it. The only `.truncated` hit elsewhere is `graph.py:742`, which reads `CypherQueryOutput.truncated`, a different field on a different object.
+
+So a `Finding` silently cut to fit the 50,000 byte ceiling reaches `write_node` indistinguishable from a complete one. A field added to close an invisible-truncation finding, that nothing reads, has not closed it. This is the LEARNINGS row 28 shape (a module with no callers) in miniature.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
+### F-2.1-11: The byte ceiling can silently turn a successful query into a refusal
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: medium
+Ticket: none yet
+
+What happened: `_cap_structured_fields` binary-searches `list_item_limit` down to as low as zero (`coordinator_worker.py:532-547`) when the payload exceeds `_MAX_FINDING_TOTAL_BYTES`. A 100-row multi-hop result with rich property maps can have `rows` trimmed or emptied while `status` stays `"ok"`, so `_citations_from_findings` yields fewer or zero citations and `write_node` emits `refuse` for a query that actually succeeded.
+
+It fails in the safe direction, but silently, and F-2.1-10 means the caller cannot detect it.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
+### F-2.1-12: Write's synth call is pure waste
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: medium
+Ticket: none yet
+
+What happened: `write_node` sends `[{"role": "user", "content": query.text}]` (`graph.py:1019`), never reads the return value, and emits no `token` event on the success path. The findings never reach it.
+
+Synth is the most expensive tier and was measured at 17,527 to 21,572 ms. Every query therefore pays roughly 20 seconds of latency and the full synth spend for output nobody reads. It is the single largest contributor to end-to-end latency.
+
+Defensible as a phase 2.2 placeholder, since real synthesis is exactly what 2.2 builds. Filed because it is not documented as a known cost anywhere, and because the same shape (a discarded response) is what made F-2.1's guardrail and think steps generate 1000 tokens each until it was measured.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
+### F-2.1-13: _build_count_cypher mishandles UNION and skips validation
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: low
+Ticket: none yet
+
+What happened: `cypher_query.py:350-356` takes everything before the first `RETURN` and appends `RETURN count(*) AS total_count`. On a UNION query, which the validator explicitly supports (`cypher_validator.py:467-525`), every branch after the first is discarded, so `total_available` reports the first branch's count as the whole result's total, presented as authoritative.
+
+The count query is also never passed back through `validate_cypher` and carries no LIMIT, so the validator's own "a query with no LIMIT gets one injected before execution" contract does not hold for it.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
+### F-2.1-14: claim_text carries raw graph text into a citation without the untrusted-reader gate
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: low today, becomes live in build phase 2.2
+Ticket: none yet
+
+What happened: `_pick_representative_field` (`graph.py:881-895`) selects `fields["name"]` or the first key in insertion order, and `_citation_for_row` interpolates it into `claim_text` (`:931-934`). Cypher rows are routed `contains_untrusted_free_text=False` by construction (`graph.py:806`), so arbitrary free-text property values reach the client as citation text with no reader mediation.
+
+Harmless today only because `write_node` never feeds findings into a model prompt. It becomes a live prompt-injection surface the moment build phase 2.2 wires findings into the synth call, which is precisely what 2.2 is for.
+
+History:
+- 2026-07-31 judge: filed as forward-looking
+
+---
+
+### F-2.1-15: Stale comments and a dead public function
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: low
+Ticket: none yet
+
+What happened: `coordinator_worker.py:193` states the reader timeout "matches `budget_for_query_class("single_hop")` (10 seconds)"; that value is now 20.0, so the stated invariant is false. `graph.py:135,141,776` still narrate the `max(budget_for_query_class(...), ...)` design that `budget_for_step` replaced. `budget_for_query_class` itself (`harness.py:412`) now has no production caller, only stale comments and tests.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
+### F-2.1-16: The spec-versus-code budget divergence was not filed in this phase file
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: low
+Ticket: none yet
+
+What happened: the `budget_for_step` change diverges from `Technical_specification.md` Section 19.1's per-query-class shape. It is recorded in `DECISIONS.md` with product-owner approval and named as a Step 6.2 item there, but unlike F-2.1-01 and F-2.1-02 it was never filed in this phase file's Findings section, so a reader of the phase file alone would not see it.
+
+Filed here now, which closes it.
+
+History:
+- 2026-07-31 judge: filed
+- 2026-07-31 lead: recorded here, which is the fix
+
+---
+
+### F-2.1-17: The lead cited the wrong rule for the stub-step scope check
+
+Status: confirmed
+Raised by: judge (second pass, 2026-07-31)
+Severity: low, process
+Ticket: none
+
+What happened: the lead justified the guardrail and think stub instruction as not crossing `.claude/rules/v1-scope-boundary.md`. That rule governs the PRD out-of-scope list and the Section 25 fast-follow table. Build phase 3.0 is inside the locked build order, so it appears on neither list, and doing 3.0's work early is a build-order concern rather than a v1-scope crossing.
+
+The conclusion held, and the judge independently verified it: both payloads are hardcoded and both model responses are discarded, so nothing in the emitted payload depends on the model. The justification was a category error.
+
+Worth keeping because a rule cited wrongly and reached the right answer is a habit that will eventually reach the wrong one.
+
+History:
+- 2026-07-31 judge: filed
+
+---
+
 ## Phase notes
 
 Learnings that bind here, read before building:
@@ -500,3 +719,475 @@ Deliverables checklist, from Section 25:
 - [ ] Edge-label enforcement
 - [ ] F-2.0-08 and F-2.0-14 closed
 - [ ] A real query reaching the live graph end to end
+
+## Adversary findings, second pass (2026-07-31)
+
+Full report with every reproduction, exact inputs, and the attacks that FAILED: `tracker/phase_2.1_adversary_report.md`, committed alongside this file. The entries below are the ledger; that file is the evidence, and several findings carry a runnable reproduction there.
+
+This pass had model credentials for the first time, so it ran real Cypher generation end to end. That is what surfaced B01, B02 and B05: none is reachable with generation mocked, which is how every other test in this phase runs.
+
+### F-2.1-B01: A fully cited, confident answer about the wrong gene
+
+Status: closed
+Raised by: adversary
+Severity: critical
+Ticket: fixed in commit `b400f78`
+
+`"Compare NCBIGene:7157 and BRCA1: which diseases is BRCA1 linked to?"` extracted TP53 first, and binding was a positional zip, so the query about BRCA1 ran against TP53. Returned 12 real TP53 disease rows, correctly cited, `status="ok"`, `trust_outcome="answer"`. Every gate green. Ground truth for BRCA1 is 4 rows with entirely different CURIEs.
+
+Why it stayed dormant: this is F-2.1-05, filed by its own builder as a documented scope limitation rather than a defect, because while every row came back empty there was nothing to bind wrongly. Fixing agtype parsing activated it. A latent defect switched on by a fix elsewhere, where both were individually known and neither was individually wrong.
+
+Fix: a naming contract. `entity_param_bindings` assigns each entity a deterministic name from its CURIE, the generation prompt states which name holds which value, `_build_params` binds by name, and `_unknown_param_names` rejects an invented name before execution. Two regression tests assert the properties rather than the fixture names.
+
+History:
+- 2026-07-31 adversary: filed, reproduced live with a real model
+- 2026-07-31 lead: independently reproduced, fixed and closed in `b400f78`
+
+### F-2.1-B02: With a real model, 8 of 10 queries time out
+
+Status: confirmed
+Raised by: adversary
+Severity: critical
+Ticket: none yet
+
+Generation alone takes 5.8 to 83.9 seconds against a 30 second total tool budget. Eight of ten real-model queries never complete.
+
+The phase's 9-test end-to-end gate mocks generation, which is exactly the part that is broken, so the gate cannot see this.
+
+Second-order and worse: a timed-out call reports `cost_usd=0.000000` while actually costing 0.005 to 0.010 US dollars, so all three cost caps read zero for the most expensive query class and spend accumulates invisibly.
+
+Compounds with F-2.1-06. Generation is an await point and can be cancelled; the graph call is not. The tool has no enforceable bound in either phase.
+
+History:
+- 2026-07-31 adversary: filed with per-query timings
+
+### F-2.1-B03: AttributeError escapes a function documented "Never raises"
+
+Status: confirmed
+Raised by: adversary
+Severity: high
+Ticket: none yet
+
+`cypher_query` raises `AttributeError` when the model returns `content=None`. Observed live, not inferred. `act_node` catches only `HarnessCallError`, so it escapes `run()`.
+
+History:
+- 2026-07-31 adversary: filed, observed live
+
+### F-2.1-B04: total_available is fabricated in three distinct shapes
+
+Status: confirmed
+Raised by: adversary
+Severity: high
+Ticket: none yet
+
+- B04a: a model-supplied `LIMIT 10` reported as the true total for a 15,310-row answer, with `truncated=False`.
+- B04b: `RETURN DISTINCT` inflates the total by three orders of magnitude.
+- B04c: `row_count` exceeds `total_available` on any multi-column RETURN.
+
+A wrong count presented as authoritative is the same class of harm as B01: fluent, precise, wrong. "How many variants does this gene have" is a question a researcher will actually ask.
+
+History:
+- 2026-07-31 adversary: filed with three reproductions
+
+### F-2.1-B05: The system refuses correct answers
+
+Status: confirmed
+Raised by: adversary
+Severity: high
+Ticket: none yet
+
+Every aggregate, projection, and `collect()` query returns `status="empty"` and refuses. That is 5 of the 6 query shapes the real model actually produced.
+
+A refusal on a query that genuinely succeeded is a correctness defect, not the safe direction. It also means the cite-or-refuse gate's pass rate is not evidence of anything while this holds.
+
+History:
+- 2026-07-31 adversary: filed
+
+### F-2.1-B06: F-2.1-A10 is live, citations point at a different record
+
+Status: confirmed
+Raised by: adversary
+Severity: high
+Ticket: none yet
+
+Edges carry no `id` property, so an edge row yields no CURIE, ships `source_id="unknown"`, and still carries a `source_url` derived from something else. The citation resolves to a genuine NCBI record that is not the record the row came from.
+
+Filed in the first adversary pass as F-2.1-A10 and dormant only because every row was empty. Confirmed live now that agtype parsing works.
+
+A citation that looks right and points at the wrong record is worse than no citation, because it survives inspection.
+
+History:
+- 2026-07-31 adversary: confirmed live, previously filed as A10
+
+### F-2.1-B07: Vocabulary artifacts shipped as asserted primary evidence
+
+Status: confirmed
+Raised by: adversary
+Severity: high
+Ticket: none yet
+
+The graph's `Disease` and `OntologyClass` `name` values are frequently parse artifacts, literally the strings "MeSH", "MONDO", "SNOMEDCT_US". The system ships them with `evidence_kind="primary_assertion"` and `assertion_confidence="asserted"`.
+
+The data problem is Layer 1's and this repo does not own it. The provenance claim attached to it is ours. Asserting confidence in a value that is a vocabulary name rather than a disease name is a trust-signal defect wherever the data came from.
+
+History:
+- 2026-07-31 adversary: filed
+
+### F-2.1-B08: The 5th validator bypass, six comparison forms carry literals
+
+Status: confirmed
+Raised by: adversary
+Severity: medium-high
+Ticket: none yet
+
+The literal-interpolation gate checks only `=` or `:` followed by a quote. `STARTS WITH`, `CONTAINS`, `ENDS WITH`, `=~`, `IN [...]`, `<>` and bare numerics all carry a literal value into the Cypher text unchecked.
+
+Four bypasses were fixed in the rework. This is the fifth, in the same function, found by the same method.
+
+History:
+- 2026-07-31 adversary: filed
+
+### F-2.1-B09: LIMIT normalization produces invalid Cypher for two shapes
+
+Status: confirmed
+Raised by: adversary
+Severity: medium
+Ticket: none yet
+
+Two query shapes come out of `_normalize_limit` syntactically invalid, so a query the validator accepted fails at execution. Both shapes are in the report.
+
+History:
+- 2026-07-31 adversary: filed
+
+### F-2.1-B10: Only BRCA1 resolves, and the rest error rather than refuse
+
+Status: confirmed
+Raised by: adversary
+Severity: medium
+Ticket: none yet
+
+Reaches the judge's F-2.1-07 independently, with one addition that matters: an unresolvable gene symbol produces `status="error"` on an unbound parameter, not a clean refusal. The user is told the graph failed, when the truth is the system never recognised the entity.
+
+"I could not identify that gene" and "the graph query failed" are different messages, and only one is true.
+
+History:
+- 2026-07-31 adversary: filed, overlaps F-2.1-07 on cause, differs on surfaced behaviour
+
+### F-2.1-B11: A timed-out or capped tool error is reported as a graph failure
+
+Status: confirmed
+Raised by: adversary
+Severity: low-medium
+Ticket: none yet
+
+When the tool times out or trips a cost cap, the error text blames the graph, which was often never reached. This is what made B02 hard to diagnose: the symptom pointed at Layer 1 while the cause was generation latency.
+
+`production-standards`'s retry-safety gate requires an error to say what to do next. "Graph query failed" tells the next step to retry the graph, which is the wrong action.
+
+History:
+- 2026-07-31 adversary: filed
+
+### Attacks that failed, and one worth repeating
+
+The report lists eight. One matters beyond this phase: a `DETACH DELETE` injection **succeeded at the model layer**, meaning the real Plan model emitted it, and was stopped only by the deterministic validator.
+
+That is defence in depth proving itself. A prompt-level instruction not to emit write clauses would have failed. Keep the validator's write-clause check as a hard gate regardless of how well-behaved a future model appears.
+
+Also held: host-pinned citations against five spoof forms, `$$` dollar-quote breakout, `as_clause` injection, and the read-only credential.
+
+### F-2.1-B12: the live-test skip guard is evaluated once at import
+
+Status: confirmed
+Raised by: lead
+Severity: low
+Ticket: none yet
+
+What happened: `test_cypher_query_e2e.py` computes `_REACHABLE` at module import and uses it in a module-level `pytest.mark.skipif`. The SSH tunnel to the graph is a manual, long-lived process that does drop. When it drops mid-session the guard has already been evaluated, so the tests do not skip, they FAIL.
+
+Observed directly while fixing B02: one full-suite run reported 9 failures, a second reported 800 passed with 12 skipped, and the difference was the tunnel dying in between. A reader seeing the first run has no way to tell a real regression from a dropped SSH connection, and the failure text does not mention the tunnel at all.
+
+Why it matters beyond convenience: this phase has twice mistaken an environment problem for a code problem, and once the reverse. A gate that reports infrastructure failure as test failure makes that confusion the default.
+
+Fix shape: evaluate reachability per test rather than once at import, or have the failure message name the tunnel explicitly so the diagnosis is one line rather than an investigation.
+
+History:
+- 2026-07-31 lead: filed after a full-suite run failed 9 tests purely because the tunnel had dropped
+
+---
+
+### F-2.1-B13: the event stream cannot distinguish an empty result from a tool error
+
+Status: confirmed
+Raised by: fix agent, while rewriting the F-2.1-08 test
+Severity: medium
+Ticket: none yet
+
+What happened: `run()` emits no `tool_result` event carrying `cypher_query`'s own status, so nothing in the event stream says whether the tool returned `status="empty"` or `status="error"`. Both end in `trust_outcome="refuse"`, and from outside the loop they are indistinguishable.
+
+Found while fixing F-2.1-08, whose whole problem was a test that could not tell those two branches apart. The agent rewriting it discovered the stream cannot either, so it asserted against the components directly and said so, rather than claiming the loop test proved the empty path. That is the right call and it leaves the underlying gap open.
+
+Why it matters beyond testing: "the graph holds no such association" and "the tool failed" are different facts about the world, and only the first is an answer. A subscriber to the event stream, which is every delivery surface in Section 13, currently receives the same thing for both. The operator dashboard cannot tell a healthy refusal from a broken tool, and a user cannot tell "no known link" from "something went wrong".
+
+This is also why F-2.1-08 sat undetected: the test asserted the outcome both branches share.
+
+Fix shape: emit the tool's status on the stream. Section 2.3's event taxonomy would need a payload for it, which makes this a contract question rather than a local fix, and `system-design-patterns` rule 10 requires a contract change to be additive within v1.
+
+History:
+- 2026-07-31 fix agent: found while rewriting the F-2.1-08 test, reported rather than worked around silently
+- 2026-07-31 lead: filed
+
+---
+
+### Previously unexamined, now examined
+
+Both items named here were tested by the third adversary pass on 2026-07-31, and both were real:
+
+- Whether the `truncated` flag can be made to lie. It can, and it did, on the ordinary path. Filed as F-2.1-C12, fixed.
+- Whether untrusted PubMed free text reaches a model prompt unmediated. It does, with the gate hardcoded off. Filed as F-2.1-C13, fixed within the reachable scope.
+
+Naming the gap is what got it closed. Keeping this section is worth more than the two items in it.
+
+---
+
+## Third judge and adversary pass, 2026-07-31
+
+The rework that closed F-2.1-B01 to B12 had never been independently reviewed. This pass reviewed it. The judge returned PREMISE: FAIL with 10 findings; the adversary filed 14. Two more were found by the lead while verifying the fixes.
+
+The adversary's own one-line summary is the right one: the parameter naming contract that closed F-2.1-B01 is genuinely sound, and the wrong-entity answer came back anyway through two doors the contract does not cover, the derived-value provenance line and a bypass that removes parameters from the query entirely.
+
+### Findings and status at 2026-07-31
+
+| ID | Sev | What | Status |
+|----|-----|------|--------|
+| F-2.1-J01 / C01 | critical | The F-2.1-B05 fix re-created F-2.1-B01 on the derived path: a count of BRCA1's variants, correct at 15310, cited to TP53 | fixed |
+| F-2.1-C02 | critical | A projection over disease IDs emitted four citations to the gene page while the real MedGen CURIEs sat unused in the rows | fixed |
+| F-2.1-C08 | critical | Two live bypasses of the naming contract, binding a literal to an alias so the query references no parameter at all. One returned TP53 for a BRCA1 question, one returned 100 non-human orthologs | fixed |
+| F-2.1-C09 | critical | A user-supplied string became a host-pinned NCBI citation URL, verified 404. Cite-or-refuse satisfied by a dead link | fixed |
+| F-2.1-C11 | critical | F-2.1-B02 was not fixed. Widening the budget 30s to 90s changed nothing: 9 of 10 real queries still timed out, at up to $0.022 each | fixed |
+| F-2.1-C15 | critical | A generated query took the graph server down for every user: kernel OOM kill, abnormal shutdown | mitigated, generation side open |
+| F-2.1-J03 / C03 | high | A derived value was discarded whenever an entity shared its row, so `RETURN g, count(v)` answered with the count removed | fixed |
+| F-2.1-C04 | high | The same edge got a different citation depending only on which endpoint the model returned | fixed |
+| F-2.1-C05 | high | The F-2.1-B06 fix discarded a correct, more precise citation | fixed |
+| F-2.1-C10 | high | An aggregate over an entity absent from the graph answered a cited "0" | fixed |
+| F-2.1-C12 | high | Three independent truncations reported through one signal: 20 rows shown of 15,310, user told nothing | fixed |
+| F-2.1-C16 | high | The live-test skip guard reports the graph reachable whenever the SSH tunnel binds the local port, even with the database down | fixed |
+| F-2.1-J02 | med-high | The truncation check saw only one direction, so a model LIMIT above row_limit reported `truncated=False` | fixed |
+| F-2.1-J04 | med-high | The CURIE pattern swallowed a trailing colon, so `NCBIGene:672:` replaced the valid CURIE and resolved nothing | fixed |
+| F-2.1-C06 | med-high | Duplicate citations halved the 20-citation budget | fixed |
+| F-2.1-C07 | med-high | `status="empty"` emitted alongside `total_available=15310, truncated=True` | contradiction fixed, the third outcome needs a contract change in 2.2 |
+| F-2.1-C13 | med-high | Raw PubMed titles reached citations with the untrusted-content gate hardcoded off | fixed, with a stated cost |
+| F-2.1-J09 | medium | A RETURN alias was lost, so `count(v) AS variant_count` reached the Write step as `c0` | fixed |
+| F-2.1-C14 | medium | `row_count` and `total_available` counted emitted rows, not records: 8 reported for 4 diseases | fixed |
+
+Stated cost of the F-2.1-C13 fix, since a fix with a cost is not a free win: an `Article` row's own PMID citation is no longer emitted in this phase. Quarantining the row is what closes the gate, and translating a quarantined reader's findings back into citations is work the coordinator's own docstring already defers. The alternative was leaving raw external prose on the path into a model prompt, which is worse.
+
+---
+
+### F-2.1-C15: a generated query took the graph server down for every user
+
+Status: mitigated at the session level, generation side open
+Raised by: lead, 2026-07-31, while re-running the adversary's own C11 reproduction
+Severity: critical
+Ticket: none yet, belongs to build phase 2.2
+
+What happened: the real plan model, asked "What are the NCBIGene:672-associated diseases?", generated an unbounded `orthologous_to` traversal with DISTINCT. AGE ran it with four parallel workers. The kernel OOM killer killed the postgres backend at roughly 3 GB resident and the database shut down abnormally, taking Layer 1 offline for every user until it was restarted by hand.
+
+Evidence, from the graph host's own logs rather than inferred:
+
+- `postgresql-15-main.log`: `server process (PID 2847901) was terminated by signal 9: Killed`, then `abnormal database system shutdown`, with the failing statement recorded as the `orthologous_to` DISTINCT traversal.
+- `dmesg`: `Out of memory: Killed process 2847901 (postgres) total-vm:10162944kB, anon-rss:3071176kB`.
+
+Why the existing bounds did not help: `LIMIT 100` was present, and DISTINCT materializes its input before the limit applies. `statement_timeout` was set, and it bounds time, not memory. Memory was what ran out, and nothing bounded it.
+
+Why it outranks every other finding in this phase: the others produce an incorrect result for one user. This one removes the system for all users, and it is reachable from an ordinary question asked in good faith.
+
+Mitigation applied: `max_parallel_workers_per_gather = 0` and `work_mem = '32MB'` are now set per session in `graph_connection.py`. Measured on the server first: `work_mem` 64 MB, `hash_mem_multiplier` 2, `max_parallel_workers_per_gather` 4, so one query could reach five processes at 128 MB per hash node on a 15 GB host already holding 4 GB of shared_buffers. Both settings are session-level, so no server configuration changed and no other database user is affected. Measured cost across the phase's four query shapes: 125 to 124 ms, 263 to 277 ms, 154 to 154 ms, and 696 to 771 ms, which is noise except the aggregate at roughly 11 percent.
+
+What remains open, and it is the larger half: the mitigation bounds what one query may spend. It does not stop the model generating an unbounded traversal, and it does not bound several expensive queries running at once. Constraining generation, and a concurrency bound on Layer 1, belong to build phase 2.2.
+
+Related host risk, recorded not fixed: the graph host's root filesystem is at 92 percent, 26 G free. Not the cause of this incident. It belongs to Systems 1 and 2 rather than this repo, so it is flagged rather than acted on.
+
+History:
+- 2026-07-31 lead: reproduced unintentionally while verifying the F-2.1-C11 fix, diagnosed from the host's logs, mitigated at the session level, filed. Database restarted with the product owner's explicit approval
+
+---
+
+### F-2.1-C07 follow-up: the third outcome has no way to be said
+
+Status: the contradiction is fixed, the missing distinction is open
+Severity: medium-high
+Ticket: none yet, belongs to build phase 2.2, and it is a contract item rather than a local fix
+
+The adversary's own reproduction no longer fires: an edge queried alone now recovers its own `source_url`, courtesy of the F-2.1-C05 fix, so that query returns three cited rows and `status="ok"`. The general contradiction it exposed was real and is fixed separately: when rows are fetched, parsed, and then dropped by the cite-or-refuse gate, the totals no longer contradict `status="empty"`.
+
+What is still missing is the useful half. There are three outcomes and only two ways to say them:
+
+- nothing in the graph matched
+- matches were found and here they are
+- matches were found and not one of them could be cited
+
+The third currently reaches the user as the first, an undifferentiated refusal, which hides a signal an operator would want: a query that matches plenty and cites nothing is evidence of a provenance defect, not of an empty graph. Saying it needs a fourth `status` value. That is additive and allowed within v1, and `system-design-patterns` rule 10 makes it a coordinated contract change rather than a local edit, which is why it was not slipped in alongside the coherence fix.
+
+History:
+- 2026-07-31 adversary: filed as F-2.1-C07 with a live reproduction
+- 2026-07-31 lead: reproduction retested and no longer fires after the C05 fix; the underlying contradiction fixed; the missing third outcome carried forward as a contract item
+
+---
+
+### F-2.1-C16: the live-test skip guard cannot tell a dead database from a healthy one
+
+Status: fixed
+Raised by: lead, 2026-07-31
+Severity: high
+Ticket: none yet
+
+What happened: when the graph went down, 21 live tests reported as FAILURES rather than skips. F-2.1-B12 replaced an env-var check with a TCP reachability check against `GRAPH_PG_HOST:GRAPH_PG_PORT`, which was the right direction and is not sufficient. An SSH local forward binds the local port as soon as the tunnel process starts, so the port accepts a connection whether or not anything is alive at the far end. The guard sees an open port and concludes the graph is reachable.
+
+Why it matters: it turns an infrastructure outage into what reads as a code regression, which is the most expensive kind of false signal to receive mid-review. Real time was spent confirming that 21 failures were not caused by the change under test.
+
+Fixed: the guard now opens a real connection and runs `SELECT 1`, and treats any connection-level or query-level failure as a skip with a message that says the port being open only means the forward is bound. A dead dependency is not a defect in the code under test.
+
+History:
+- 2026-07-31 lead: found when the graph host went down mid-session, filed, and fixed the same day
+
+## Fourth judge pass, 2026-07-31
+
+The judge returned PREMISE: FAIL and NOT CLOSEABLE, with four criticals, three of which were regressions the third round's own fixes introduced. Full report: `judge_4.md` in the session scratchpad. Model spend for the review: $0.0127.
+
+Its closing paragraph is the finding that mattered, and it is recorded here verbatim because it changed what the next round did:
+
+> four rounds of fixing have been aimed at the layer below the one that fails: the binder gets harder every round while the failure keeps arriving from generation. Until a fixed set of real questions with known correct answers runs against the real model on every change, round five will close these nine and produce nine more.
+
+### The root cause, found on the fifth round
+
+One composition defect explains the premise failure, the ortholog answers, most of the latency, and the OOM. Two components, each defensible alone:
+
+- Think emits a hardcoded `query_class="lookup"` for every query (T-2.0-07). Real classification is a later phase, so "lookup" is a placeholder, not a classification.
+- `lookup` maps to a 0-hop schema slice. For a Gene anchor that renders exactly one edge: `orthologous_to`, Gene to Gene. Zero hops is the correct slice for a true lookup.
+
+Composed, the generator was asked "which diseases are associated with BRCA1?" and handed a schema containing no disease and one gene-to-gene traversal. It could not express the correct query. It answered the only question the schema left askable, and returned 25 correctly cited non-human orthologs.
+
+Three review rounds recorded this as generation quality. Generation was never the problem. The fix is a hop floor that refuses to slice below one hop while the classification is a stub, since slicing on a value that is always the same placeholder is narrowing on noise. The per-class table is unchanged and correct; the floor lifts when Think classifies for real.
+
+The same defect drove F-2.1-C15's OOM: `orthologous_to` is the one traversal a lookup slice offers, so ortholog queries are what generation kept producing, and one of them exhausted the server.
+
+### Findings and status
+
+| ID | Sev | What | Status |
+|----|-----|------|--------|
+| F-2.1-J4-04 | critical | Real-model generation answered a disease question with 25 cited orthologs. Recorded through three rounds as generation quality; the cause was the schema slice above | fixed |
+| F-2.1-J4-03 | critical | Deduplication keyed on `source_url`, and all four of BRCA1's `gene_associated_with_condition` edges share one stored URL, so four distinct diseases collapsed to one row reported `row_count=1, truncated=False`. Silent deletion under a completeness claim | fixed, now keyed on the CURIE |
+| F-2.1-J4-01 | critical | F-2.1-C08 is not closed. Five more validator forms still pass, including the reversed alias comparison `WHERE t = g.id`, which is not indirection but the same expression with operands swapped. Three returned TP53 for a BRCA1 question, live, `status=ok` | in progress |
+| F-2.1-J4-02 | critical | Prompt injection steers entity selection at the model layer. The judge's run failed on an unrelated `SyntaxError`, by luck rather than by defense; every gate would have passed | mitigated, NOT closed. See below |
+| F-2.1-J4-05 | high | The F-2.1-C09 shape check was derived from a 40-row sample rather than documented formats, and strips citations from 4,401 of 200,845 real Disease nodes. `MedGen:CN517202` resolves HTTP 200 and gets no citation. Under cite-or-refuse those records silently vanish | in progress |
+| F-2.1-J4-06 | high | The F-2.1-C13 quarantine over-corrected: an Article query now refuses outright, and F-2.1-C07's `status=ok` with a contradicting row count reappeared at the Finding layer | in progress |
+| F-2.1-B07 | high | Vocabulary artifacts shipped as asserted primary evidence. BRCA1's four diseases carry `name` values of "MeSH", "MONDO", "MedGen", "MedGen", every one emitted with `evidence_kind="primary_assertion"` and `assertion_confidence="asserted"`. Open since the second adversary pass | in progress |
+| F-2.1-J4-07 | med-high | The F-2.1-C11 claim was overstated in this tracker | corrected below |
+| F-2.1-J4-08 | medium | Multi-entity aggregate comparison reported `empty` and was unanswerable | fixed by the schema slice floor; the premise gate's two-entity test passes |
+| F-2.1-J4-09 | medium | No weakened assertion, but one weakened fixture and two coverage holes | partly addressed, see below |
+
+### F-2.1-J4-07: the C11 claim, restated to what was measured
+
+The previous section recorded F-2.1-C11 as fixed with "timeouts 9-of-10 to 0-of-10, cost down roughly 20x". The judge could not reproduce the timeout figure. What is actually measured:
+
+- Cost per query down roughly 20x: VERIFIED independently.
+- Timeouts: roughly 1 of 8, twice, not 0 of 10.
+- Generation correctness at `effort: none`: 3 of 8 on the judge's wider question set, against the five shapes the harness comment cites. That correctness figure was the schema-slice defect above, not the reasoning setting, and the premise gate now measures 9 of 9 with the floor in place.
+
+### F-2.1-J4-02: what is and is not true about the injection defense
+
+`query_intent` is now delimited and named as data in the generation system rules, per `ai-security-standards`. That reduces the finding and does not close it: the premise gate's injection test passed three consecutive runs and then failed on the fourth against identical code. A prompt-level defense is probabilistic by nature.
+
+The test is marked `xfail(strict=False)` with that reason recorded, not deleted and not weakened, so it keeps running and reports XPASS or XFAIL every run. The signal stays visible and the day it becomes reliable is observable. Rejecting prompt injection is the Guardrail step's job, which build phase 3.0 delivers, and clearing this marker belongs to that phase's definition of done.
+
+### The verify surface changed, and that is the durable outcome
+
+`tests/system_03_search_agent/tools/test_cypher_query_premise.py` is the phase's premise evidence from now on. It does not mock the model, and it asserts on the meaning of the answer against ground truth pinned from the live graph on 2026-07-31 (BRCA1: 15310 variants, 4 diseases with known MedGen ids; TP53: 12 diseases, 3869 variants).
+
+Two design points in it are load-bearing and must not be undone:
+
+- It sends `query_class="lookup"`, the stub Think actually emits, never a hand-picked class. An earlier draft passed a per-question class and scored 8 of 9 where production scored 3 of 9. A gate handed a better classification than production sends is a fixture, not a gate.
+- Its ground truth is read from the graph, so "correct" is checkable rather than plausible. When the Layer 1 snapshot is refreshed these figures move, and a failure after a refresh means re-verify the constants, never weaken the test.
+
+## Fifth judge pass, 2026-07-31
+
+The first review of this phase to return PREMISE: PASS. Full report: `judge_5.md` in the session scratchpad. Model spend: $0.035.
+
+It did not accept the round-five root-cause claim, it tested it. Controlled A/B, one constant changed, same model and same question: at `_STUB_CLASSIFIER_HOP_FLOOR = 0` the schema slice contains no Disease and the model returns 25 non-human orthologs, which is round four's worst case exactly; at floor 1 it returns the correct 4 diseases. That is the proof that three rounds of findings were misattributed to generation quality.
+
+It also composed six of its own questions, none of them from the repo's premise gate, and read its own ground truth off the graph rather than trusting the pinned constants: 5 correct, 1 timeout, 0 wrong answers, 0 orthologs, against round four's 3 of 8.
+
+On the question that mattered most, whether a check was weakened to reach green: no. Four deleted assertion lines total, all accounted for, and both replacements strictly stronger. The provenance tests are +138/-0 and restore a previously weakened fixture.
+
+### Findings and status
+
+| ID | Sev | What | Status |
+|----|-----|------|--------|
+| F-2.1-J5-01 | critical | The connectivity invariant never read `WITH`, so `WITH d AS x ... RETURN x` laundered an unanchored variable past it and returned five arbitrary cited diseases for a question about BRCA1. The fix's own comment block claimed the opposite property while the code did not implement it | fixed |
+| F-2.1-J5-02 | medium | `WHERE g.id IN [$p1, $p2]`, an ordinary multi-entity constraint, was falsely rejected | fixed |
+| F-2.1-J5-03 | low | An empty binding set produced a message ending "one of: ." with nothing after the colon. Latent, since the no-entity check returns first | fixed |
+| F-2.1-J5-04 | medium | The vocabulary-artifact rule missed 15,466 of 200,845 Disease rows, measured by exhaustive census | fixed |
+
+### What the fifth judge verified as genuinely closed
+
+Stated because it is evidence the next reader would otherwise have to regenerate:
+
+- F-2.1-J4-01, the validator: 18 attacks, zero leaks, including 13 the judge invented. The two residual gaps the fix's own docstring disclosed are actually closed. 5 of 5 legitimate queries accepted.
+- F-2.1-J4-05, CURIE shapes: the exhaustive census re-run independently with row counts matching exactly, 20 attack strings all returning None, and 1,200 real ids across six mapped labels all keeping their citations.
+- F-2.1-J4-03 dedup and F-2.1-J4-06 Article: both hold, and C13's untrusted-content gate is not reopened.
+
+### The lesson this phase is actually about
+
+Five rounds, and the shape never changed: the newest code was the most dangerous code every single time. F-2.1-J5-01 is the cleanest instance, because the fix carried a comment asserting the exact property the code failed to implement. A comment that claims a property is a claim to be checked, not documentation to be trusted, and the next reader stops checking precisely where the comment sounds most confident.
+
+The durable change is not any one of the fixes. It is that the phase now has a verify surface that can see this class of defect at all, and a rule that a premise claim cites that surface rather than a suite total.
+
+## Fifth adversary pass, 2026-08-01
+
+Eight findings, four critical. Three of the four criticals sat in code written in the two commits immediately before it. The pattern held for the sixth consecutive round: the newest code is the most dangerous code. Full report: `adversary_5.md` in the session scratchpad. Cost: about $0.02.
+
+The first pass of this review was stopped mid-run having reported "two significant results already" and never wrote its report, so those findings were lost. The re-run brief added an instruction to append each finding to the report file the moment it is confirmed, rather than batching to the end.
+
+### Findings and status
+
+| ID | Sev | What | Status |
+|----|-----|------|--------|
+| F-2.1-A5-01 | critical | The F-2.1-J5-01 fix resolved the ANCHORED set through aliases as well as the returned set, which is backwards. openCypher drops a variable a WITH does not project, so `WITH d AS g` after `g` leaves scope marked an unconnected Disease as anchored. Five arbitrary diseases, `status="ok"`, `total_available=200845`, every row cited and resolving, for a question about BRCA1 | fixed |
+| F-2.1-A5-06 | critical | `_is_vocabulary_token_artifact("")` returns False, so an empty value was never suspect and outranked every flagged candidate. Every citation on the CORRECT answer to the flagship question grounded an empty string at full asserted confidence. The downgrade path was disabled on exactly the rows it was built for | fixed |
+| F-2.1-A5-04 | critical | "A count over a single gene is about that gene" is sound for an aggregate and false for a projection, and the row shape cannot tell them apart. `RETURN d.name` produced four facts about four distinct Disease records, each cited to the BRCA1 gene page | fixed |
+| F-2.1-A5-03 | critical | A hop floor of 1 was also the CEILING, since no class Think emits maps above it. Every question in the system got exactly one hop, so any two-hop question was unanswerable by construction. A phenotypic-feature question returned four cited DISEASES | fixed |
+| F-2.1-A5-05 | high | A new exhaustion shape: `mentioned_in` from BRCA1 costs 27 seconds forward and the full budget reversed, despite being indexed, anchored, and `LIMIT 25`. Described and deliberately not reproduced | DEFERRED to 2.2 |
+| F-2.1-A5-02 | high | The artifact rule guarded the citation but not the `fields` dict reaching the synthesis payload | marker added, consumer deferred to 2.2 |
+| F-2.1-A5-07 | medium | `\d` without `re.ASCII` admitted non-ASCII digits into the CURIE shape check, reopening C09's spoofing class through a character class. The guard test that should have caught it could not fail on it | fixed |
+| F-2.1-A5-08 | medium | Two legitimate shapes falsely rejected by the connectivity invariant | half fixed, half deliberately not, see below |
+
+### Two defects this round's own fixes caused, and how they were caught
+
+Recorded separately because HOW they were caught is the point:
+
+- The `row_limit` cap bounded fetched graph rows, not emitted ones, so a `RETURN s, s.id` shape fetched 20 and emitted 40.
+- The generation rule added for A5-04, telling the model to return a node alongside a projected property, applied to an aggregate produced `RETURN count(d) AS n, d.id, d.name`. That groups BY those properties, turning one count of twelve into twelve counts of one. Valid Cypher, wrong answer.
+
+Both were caught by the premise gate, not by a review round. That is the first time in six rounds that a defect introduced by a fix was caught before a reviewer found it, and it is the whole argument for the gate existing.
+
+### F-2.1-A5-08, why only half is fixed
+
+The half that is fixed: `WHERE toUpper(g.id) = $e` anchors `g` and was falsely rejected because the constraint patterns required adjacency.
+
+The half that is not, deliberately: a pattern predicate written inside WHERE, `MATCH (g:Gene), (d:Disease) WHERE g.id = $e AND (g)-[...]->(d)`. Admitting it means loosening the MATCH-clause boundary, which also admits `MATCH (g:Gene), (d:Disease)`, the comma-separated cartesian shape the component split exists to catch. The fix for a false reject would reopen a false accept.
+
+It is also the right query to refuse on its own merits: that pattern is a 67 million by 200 thousand cartesian product before WHERE filters it, on a database a generated query has already OOM-killed once. The adversary that filed it declined to execute it for exactly that reason. The pipeline grants one repair retry seeded with the validator's message, so the cost is a retry rather than the answer.
+
+### What the adversary could not break, recorded because a judge cannot produce it
+
+- Nineteen legitimate query shapes accepted with zero false rejects, including the J5-02 `IN [$p1, $p2]` case.
+- The round-5 decoy and a UNION laundering variant both correctly blocked.
+- All six pinned premise-gate ground-truth constants re-verified live and correct, plus BRCA1's four disease CURIEs.
+- All nine genuine CURIE shapes resolve; every ASCII malformed CURIE returns None; both host-spoof URLs rejected.
+- Vocabulary-artifact false positives essentially absent from this snapshot.
+
+### The blind spot worth carrying into 2.2
+
+The premise gate could not see F-2.1-A5-03. All nine of its questions are one hop from a Gene anchor, so a defect that makes every two-hop question unanswerable was invisible to the gate built specifically to catch that class of failure. The gate had the same blind spot as the code it grades.
+
+The lesson is not that the gate is bad, it caught two regressions this round that review would otherwise have found later. It is that a premise gate needs its own coverage argument: which shapes of question does it actually exercise, and which does it silently omit. That belongs in 2.2 alongside the deferred items.

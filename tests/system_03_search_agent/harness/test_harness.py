@@ -32,10 +32,10 @@ from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.harness.harness import (
     Harness,
     HarnessCallError,
+    UnknownStepError,
     budget_for_query_class,
     budget_for_step,
 )
-from system_03_search_agent.harness.harness import UnknownStepError
 from system_03_search_agent.harness.tiers import UnknownTierError
 
 _INPUT_PRICE = 3e-06
@@ -549,3 +549,53 @@ def test_budget_for_query_class_resolves_all_five_query_classes(
 def test_budget_for_query_class_raises_value_error_for_an_unmapped_class() -> None:
     with pytest.raises(ValueError):
         budget_for_query_class("bogus_class")  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-B02, second order: a timed-out call must still be metered
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_timed_out_call_still_meters_its_cost(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A cancelled model call has already been billed by the provider.
+
+    Finding F-2.1-B02's second-order half. `enforce_timeout` cancels the
+    coroutine, so `call_tier`'s metering never ran and the call recorded
+    0.00 US dollars. Measured, a timed-out call actually cost 0.005 to
+    0.010. Because the most expensive query class is also the one most
+    likely to time out, all three caps read zero for exactly the queries
+    that spend the most.
+
+    The real usage is unknowable once the response never arrives, so the
+    harness meters a deliberate over-estimate. A cost cap that has to guess
+    must guess toward stopping.
+    """
+
+    async def never_returns(*args, **kwargs):
+        await asyncio.sleep(30)
+
+    monkeypatch.setattr(litellm, "acompletion", never_returns)
+    monkeypatch.setattr(
+        harness_module,
+        "_FALLBACK_PRICES_USD_PER_TOKEN",
+        {harness_module.TierContext().resolve("guard"): (1e-6, 1e-6)},
+    )
+
+    harness = Harness(trace_id="timeout-metering")
+    assert harness.get_query_cost_usd("timeout-metering") == 0.0
+
+    with pytest.raises(HarnessCallError):
+        await harness.enforce_timeout(
+            "guardrail",
+            harness.call_tier("guard", [{"role": "user", "content": "hi"}]),
+            0.2,
+        )
+
+    metered = harness.get_query_cost_usd("timeout-metering")
+    assert metered > 0.0, (
+        "a timed-out call recorded 0.00 US dollars; the provider billed it, "
+        "so every cap is blind to the spend"
+    )

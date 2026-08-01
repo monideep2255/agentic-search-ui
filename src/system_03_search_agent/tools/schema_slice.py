@@ -91,6 +91,68 @@ _QUERY_CLASS_HOPS: dict[str, int | None] = {
     "exploratory": None,
 }
 
+# The floor below which `query_class` is not allowed to narrow the slice,
+# for as long as the Think step's classification is a stub.
+#
+# This is the root cause the fourth judge's PREMISE failure came down to,
+# and it is a composition defect: two components, each defensible alone.
+#
+# Think emits a hardcoded `query_class="lookup"` for every query
+# (`core/graph.py`, T-2.0-07). Real classification is a later phase. So
+# "lookup" is not a classification here, it is a placeholder.
+#
+# Meanwhile `lookup` maps to 0 hops, which for a Gene anchor renders a
+# slice containing exactly one edge: `orthologous_to`, Gene to Gene. Zero
+# hops is the right slice for a true lookup ("what is BRCA1's name"), and
+# it is the whole schema the generator ever sees.
+#
+# Composed, the model is asked "which diseases are associated with BRCA1?"
+# and handed a schema in which no disease exists and the only traversal
+# available is gene-to-gene. It cannot express the correct query. It did
+# the only thing the schema permitted and returned twenty-five non-human
+# orthologs, `status="ok"`, every row carrying a resolving NCBI citation.
+# That was recorded as a generation-quality failure through three review
+# rounds. Generation was not the problem; it was answering the only
+# question the schema left askable.
+#
+# The same defect drove the OOM: `orthologous_to` is the one traversal a
+# `lookup` slice offers, so ortholog queries are what generation kept
+# producing, and one of them exhausted the server.
+#
+# Slicing on a value that is always the same placeholder is narrowing on
+# noise, so the floor holds until Think classifies for real. At that point
+# this drops back to the per-class table, which is sound once its input is.
+# F-2.1-A5-03. A floor of 1 made the floor the CEILING. Think emits a
+# hardcoded `lookup` for every query, `lookup` maps to 0 hops, and
+# `max(0, 1)` is 1, so every question the system will ever be asked got
+# exactly one hop. `multi_hop` and `aggregate` map to 2 and Think never
+# emits either.
+#
+# That is round four's root cause displaced by one hop rather than
+# removed. A one-hop slice from a Gene anchor omits `PhenotypicFeature`,
+# `OntologyClass`, `has_phenotype`, `has_mesh_annotation`, and
+# `subclass_of`, because `_edges_for_labels` requires BOTH endpoints
+# inside the label set. So "what phenotypic features are associated with
+# the diseases linked to BRCA1" was handed a schema in which the answer
+# does not exist, and the generator answered the only question the schema
+# left askable. Confirmed live: a phenotypic-feature question returned
+# four cited DISEASES, `status="ok"`, no flag.
+#
+# The floor is now the widest bounded depth in the per-class table, which
+# is what `multi_hop` and `aggregate` already ask for. The principle is
+# the same one that set the floor at all: a classification that is always
+# the same placeholder carries no information, so slicing on it narrows on
+# noise, and the safe default is the widest BOUNDED slice rather than the
+# narrowest. `exploratory` still means the full schema, so this is not
+# that.
+#
+# Measured cost, Gene anchor: 1809 characters at one hop, 2095 at two. The
+# extra 286 characters buy every two-hop question in the system.
+#
+# This drops back to the per-class table when Think classifies for real,
+# at which point the table is sound because its input finally is.
+_STUB_CLASSIFIER_HOP_FLOOR = 2
+
 
 def _endpoint_text(edge: str) -> str:
     """Render one edge's typical endpoint pair, or a mixed-pair note.
@@ -231,6 +293,8 @@ def build_schema_slice(query_class: str, target_entities: Sequence[str] | None =
         )
 
     hops = _QUERY_CLASS_HOPS[query_class]
+    if hops is not None:
+        hops = max(hops, _STUB_CLASSIFIER_HOP_FLOOR)
     entities = tuple(target_entities) if target_entities else ()
 
     if hops is None or not entities:

@@ -94,6 +94,62 @@ happens in `_run_pipeline`, not in `to_output_rows`, so the shaping layer
 stays a faithful transform and the cite-or-refuse policy stays visible
 here, at the one place this module already drops a malformed row.
 
+Defect fix (findings F-2.1-B04, F-2.1-13, F-2.1-09, F-2.1-B11, adversary
+and judge second pass): four more bugs in what this pipeline reports
+about a query it already ran.
+
+- F-2.1-B04a: hitting the row cap was detected by comparing the row
+  count against `tool_input.row_limit` alone, but `cypher_validator`
+  preserves a model-supplied `LIMIT` smaller than `row_limit` rather than
+  replacing it, so a generated `LIMIT 10` on a 15,310-row answer never
+  looked "full" against a `row_limit` of 100 and shipped `total_available:
+  10, truncated: false`, a confident, wrong, and small number standing in
+  for the true one. Fixed by `_effective_row_limit`, which reads the
+  `LIMIT` that actually ran straight off the normalized Cypher and
+  compares against that instead.
+- F-2.1-B04b: `_build_count_cypher` discarded `DISTINCT` and any
+  aggregation, so `RETURN DISTINCT g` was counted with a bare `count(*)`,
+  inflating a "1 distinct gene" answer to 15,310 by counting every
+  underlying edge instead of the deduplicated node. Fixed by detecting a
+  single, unaliased `DISTINCT` item and counting `count(DISTINCT <item>)`
+  instead; anything more complex (more than one item, or an aliased one)
+  returns `None` rather than guess.
+- F-2.1-B04c: `to_output_rows` can emit more than one output row per raw
+  graph row, one per RETURN column that decodes to a node or edge, so a
+  raw MATCH count and the output row count only share a unit when the
+  RETURN clause has exactly one column. Reporting a raw-row total next to
+  an exploded row_count produced the ticket's own example verbatim,
+  `row_count=8 total_available=4 truncated=false`, two numbers in two
+  units presented as one comparison. Fixed by reporting `total_available`
+  in the same unit as `row_count` whenever nothing was capped (it is
+  simply `row_count`, since every match is already in hand), and by
+  reporting `None` rather than a wrong-unit number whenever the cap was
+  hit on a multi-column RETURN, where the true total cannot be had from a
+  single count-only query without re-running the same explosion this
+  pipeline just did once already.
+- F-2.1-13: the count-only query silently discarded every branch after
+  the first on a UNION query, so `_build_count_cypher` now returns `None`
+  for any top-level UNION rather than reporting one branch's count as the
+  whole result's total. The count query, once built, is also now passed
+  back through `validate_cypher` before execution (row_limit 1), so it
+  picks up the same trailing LIMIT the validator's own contract requires
+  of every executed query, which it previously ran without.
+- F-2.1-09: `_fetch_true_total`'s count-only query used to reuse the
+  exact `remaining_budget` computed before the main query, handing it a
+  full fresh timeout on top of whatever the main query itself already
+  spent and roughly doubling this tool's declared wall-clock bound in the
+  worst case. Fixed by recomputing the remaining budget from elapsed time
+  immediately before issuing the count query, the same pattern already
+  used to compute the first budget.
+- F-2.1-B11: the outer `asyncio.wait_for` timeout in `cypher_query`
+  reported "graph query exceeded Xs" even when the graph was never
+  reached, because that budget covers schema slicing, up to two
+  generation calls, validation, and execution together, and generation
+  latency alone can exhaust it. The message no longer names the graph
+  specifically; it names the whole budget instead, so the next step is
+  not told to retry a component that was not necessarily where the time
+  went.
+
 Depends on:
     - system_03_search_agent.tools.cypher_schemas (CypherQueryInput,
       CypherQueryOutput, CypherQueryRow)
@@ -153,7 +209,10 @@ from system_03_search_agent.tools.cypher_schemas import (
 )
 from system_03_search_agent.tools.cypher_validator import ValidationResult, validate_cypher
 from system_03_search_agent.tools.graph_connection import GraphError, execute_cypher
-from system_03_search_agent.tools.graph_schema_constants import CYPHER_QUERY_TIMEOUT_SECONDS
+from system_03_search_agent.tools.graph_schema_constants import (
+    CYPHER_QUERY_TIMEOUT_SECONDS,
+    LABEL_CURIE_PREFIXES,
+)
 from system_03_search_agent.tools.schema_slice import build_schema_slice
 
 # Section 6.1's row_limit output cap; CypherQueryRow already enforces this
@@ -193,6 +252,37 @@ _TRAILING_CLAUSE_PATTERN = re.compile(r"\b(ORDER\s+BY|SKIP|LIMIT)\b", re.IGNOREC
 # target_entities/row shape bounds, so a pathological RETURN with an
 # unbounded item count cannot grow the AS clause without limit.
 _MAX_RETURN_COLUMNS = 30
+
+# Finding F-2.1-13: a top-level UNION or UNION ALL keyword. A count-only
+# rewrite that takes everything before the first RETURN silently discards
+# every branch after the first, so a query matching this pattern gets no
+# count query at all rather than one that describes only its first branch
+# presented as the whole result's total. Not quote-aware, the same scope
+# choice cypher_validator's own UNION pattern makes: this module only ever
+# sees Cypher already accepted by that validator, a narrow generated shape,
+# not arbitrary user-authored text.
+_UNION_KEYWORD_PATTERN = re.compile(r"\bUNION\s+ALL\b|\bUNION\b", re.IGNORECASE)
+
+# Finding F-2.1-B04a: a genuine top-level trailing LIMIT, anchored to the
+# very end of the (rstripped) Cypher body, the same anchoring
+# cypher_validator's own trailing-LIMIT pattern uses and for the same
+# reason: a mid-query `WITH g LIMIT 1` is a legitimate scoping clause, not
+# the cap this module needs to read back.
+_TRAILING_LIMIT_VALUE_PATTERN = re.compile(r"\bLIMIT\s+(\d+)\s*$", re.IGNORECASE)
+
+# Finding F-2.1-B04b: a RETURN clause's item list starting with DISTINCT,
+# so _build_count_cypher can count the deduplicated expression itself
+# (`count(DISTINCT ...)`) instead of a bare `count(*)`, which would count
+# every raw match before deduplication.
+_DISTINCT_PREFIX_PATTERN = re.compile(r"^\s*DISTINCT\b", re.IGNORECASE)
+
+# Finding F-2.1-B04b: any AS keyword in a DISTINCT item's remainder marks
+# it too complex for this module to safely re-express inside
+# `count(DISTINCT ...)` (an alias cannot appear there), so that shape
+# returns None rather than a guessed rewrite. A plain, non-quote-aware
+# search is intentionally conservative here: a false positive only costs
+# an abstained count, never a fabricated one.
+_AS_KEYWORD_PATTERN = re.compile(r"\bAS\b", re.IGNORECASE)
 
 
 def _return_items_segment(cypher: str) -> str:
@@ -291,6 +381,215 @@ def _count_top_level_items(segment: str) -> int:
     return count
 
 
+def _return_column_count(cypher: str) -> int:
+    """Return the number of top-level comma-separated items in `cypher`'s
+    RETURN clause, clamped to at least 1 and at most `_MAX_RETURN_COLUMNS`.
+
+    Shared by `_build_as_clause`, which needs the count to declare AGE's
+    output columns, and `_run_pipeline`'s F-2.1-B04c fix, which needs it
+    to decide whether a raw graph-row count and the output row count
+    share a unit at all: they do only when RETURN has exactly one column,
+    since `to_output_rows` emits one output row per column that decodes
+    to a node or edge.
+    """
+    segment = _return_items_segment(cypher)
+    return max(1, min(_count_top_level_items(segment), _MAX_RETURN_COLUMNS))
+
+
+# F-2.1-J09: a RETURN alias must survive into the output.
+#
+# AGE's as_clause forces positional column names (`c0`, `c1`, ...), so
+# `RETURN count(v) AS variant_count` reached the Write step as
+# `{"c0": 15310}`. The number was right and its meaning was gone. With a
+# single column that is merely opaque; with two, `RETURN count(v) AS
+# variants, count(d) AS diseases` becomes `c0` and `c1`, and nothing
+# downstream can tell which is which, so a synthesis step has a coin-flip
+# chance of reporting the disease count as the variant count. A confident
+# answer with two numbers transposed is exactly the failure this phase's
+# review keeps finding.
+#
+# An alias is model-supplied text that ends up as a key in the `fields`
+# dict, and that dict is serialized into the synthesis prompt. So the
+# alias is accepted only when it looks like an ordinary Cypher
+# identifier and is short. Anything else falls back to the positional
+# name rather than being sanitized into something resembling itself:
+# a mangled alias is a worse label than an honest `c0`.
+_ALIAS_PATTERN = re.compile(r"(?is)\bAS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$")
+_MAX_ALIAS_CHARS = 64
+
+
+def _split_top_level_items(segment: str) -> list[str]:
+    """Split `segment` on depth-0 commas outside quotes.
+
+    Same scanning discipline as `_count_top_level_items`: `()`, `[]`, and
+    `{}` track depth, a quoted string is skipped whole, and a backslash
+    escapes the next character. A comma inside a property map, a list
+    literal, or a function's argument list is therefore never mistaken
+    for an item separator.
+    """
+    items: list[str] = []
+    start = 0
+    depth = 0
+    quote_char: str | None = None
+    i = 0
+    while i < len(segment):
+        ch = segment[i]
+        if quote_char is not None:
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == quote_char:
+                quote_char = None
+            i += 1
+            continue
+        if ch in ("'", '"'):
+            quote_char = ch
+            i += 1
+            continue
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            items.append(segment[start:i])
+            start = i + 1
+        i += 1
+    items.append(segment[start:])
+    return items
+
+
+def column_labels_for(cypher: str) -> dict[str, str]:
+    """Map AGE positional column names to their RETURN aliases.
+
+    Returns only the columns that carry an explicit, well-formed `AS`
+    alias, keyed by the positional name `_build_as_clause` declares for
+    the same position. A column with no alias is absent from the mapping,
+    and the caller keeps the positional name for it, which is honest
+    about the fact that the query never named that column.
+
+    An expression with no alias is deliberately NOT used as a label.
+    `count(v)` as a dict key would read as a name the query supplied when
+    it is really this function's paraphrase of an expression, and it
+    carries parentheses and quotes into a prompt-bound key for no gain.
+    """
+    segment = _return_items_segment(cypher)
+    if not segment.strip():
+        return {}
+
+    labels: dict[str, str] = {}
+    seen: set[str] = set()
+    for index, item in enumerate(_split_top_level_items(segment)[:_MAX_RETURN_COLUMNS]):
+        match = _ALIAS_PATTERN.search(item.strip())
+        if match is None:
+            continue
+        alias = match.group(1)
+        if len(alias) > _MAX_ALIAS_CHARS:
+            continue
+        # A duplicate alias would collapse two columns onto one key and
+        # silently drop a value. Keep both positional instead.
+        if alias in seen:
+            labels = {k: v for k, v in labels.items() if v != alias}
+            continue
+        seen.add(alias)
+        labels[f"c{index}"] = alias
+    return labels
+
+
+# F-2.1-C10. `count()` over a match that found nothing returns one row
+# holding 0, so the derived-value path added for F-2.1-B05 turns "we found
+# nothing about this entity" into "the answer is zero, here is the source".
+# The pre-existing empty-`target_entities` refusal cannot catch it: an
+# entity WAS extracted, it just does not exist in the graph.
+#
+# "Zero associations are recorded for this gene" and "this identifier is
+# not in the graph" are different answers, and only the first is a finding.
+# A cited zero is the wrong-answer shape a clinician is least equipped to
+# catch, because zero is a plausible biomedical result and it arrives with
+# a citation.
+#
+# Distinguishing them takes one indexed lookup, issued only when a derived
+# result is empty, which is the only case the two are confusable. The label
+# comes from inverting the schema's own label-to-prefix map, so it is
+# code-controlled and never assembled from caller text, and the CURIE
+# itself still travels as a bound parameter.
+_PREFIX_TO_LABELS: dict[str, tuple[str, ...]] = {}
+for _label, _prefixes in LABEL_CURIE_PREFIXES.items():
+    for _prefix in _prefixes:
+        _PREFIX_TO_LABELS.setdefault(_prefix, ())
+        _PREFIX_TO_LABELS[_prefix] = _PREFIX_TO_LABELS[_prefix] + (_label,)
+
+_EXISTENCE_AS_CLAUSE = "(c0 agtype)"
+_EMPTY_DERIVED_VALUES: tuple[Any, ...] = (0, None)
+
+
+def _derived_result_is_empty(rows: list[CypherQueryRow]) -> bool:
+    """True when every row is a derived value and all of them are empty.
+
+    Empty means a zero count, a null, or an empty list. A result holding
+    any real entity row is not this case at all: the graph returned a
+    record, so something was found and the question of whether the anchor
+    entity exists is already answered.
+    """
+    if not rows:
+        return False
+    if any(row.node_or_edge_type != "derived" for row in rows):
+        return False
+    for row in rows:
+        for value in row.fields.values():
+            if isinstance(value, bool):
+                return False
+            if isinstance(value, (list, tuple, dict)):
+                if len(value) > 0:
+                    return False
+            elif value not in _EMPTY_DERIVED_VALUES:
+                return False
+    return True
+
+
+async def _entity_is_present(
+    curie: str, params: dict[str, Any], timeout_s: float
+) -> bool | None:
+    """Whether `curie` exists as a node in the graph.
+
+    Returns True or False when the graph answers, and None when it cannot
+    be determined (an unmapped prefix, no label for it, or a graph error).
+    None is not False: the caller must not turn "I could not check" into
+    "this does not exist", which would refuse a real answer.
+    """
+    prefix = curie.split(":", 1)[0] if ":" in curie else ""
+    labels = _PREFIX_TO_LABELS.get(prefix, ())
+    if not labels:
+        return None
+
+    param_name = next((name for name, value in params.items() if value == curie), None)
+    if param_name is None:
+        return None
+
+    determined = False
+    for label in labels:
+        # `label` is a dict key from the schema constants, never caller
+        # text; the CURIE itself is bound, not interpolated.
+        probe = f"MATCH (n:{label}) WHERE n.id = ${param_name} RETURN count(n) LIMIT 1"
+        try:
+            probe_rows, _ = await asyncio.to_thread(
+                execute_cypher,
+                probe,
+                params=params,
+                row_limit=1,
+                timeout_s=timeout_s,
+                as_clause=_EXISTENCE_AS_CLAUSE,
+            )
+        except GraphError:
+            continue
+        determined = True
+        if not probe_rows:
+            continue
+        value = parse_agtype(next(iter(probe_rows[0].values()), None))
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            return True
+    return False if determined else None
+
+
 def _build_as_clause(cypher: str) -> str:
     """Derive the AGE `as_clause` output column declaration from `cypher`.
 
@@ -316,11 +615,32 @@ def _build_as_clause(cypher: str) -> str:
         A string of the shape `(c0 agtype, c1 agtype, ...)`, with at
         least one column and never more than `_MAX_RETURN_COLUMNS`.
     """
-    segment = _return_items_segment(cypher)
-    column_count = _count_top_level_items(segment)
-    column_count = max(1, min(column_count, _MAX_RETURN_COLUMNS))
+    column_count = _return_column_count(cypher)
     columns = ", ".join(f"c{i} agtype" for i in range(column_count))
     return f"({columns})"
+
+
+def _effective_row_limit(cypher: str, fallback: int) -> int:
+    """Return the LIMIT actually enforced on `cypher`, or `fallback`.
+
+    Finding F-2.1-B04a's fix: `cypher_validator._normalize_branch_limit`
+    preserves a model-supplied trailing LIMIT smaller than the caller's
+    row_limit rather than replacing it, so the cap a query can actually
+    return under is not always `tool_input.row_limit`. Reading the LIMIT
+    that actually ran, straight off the normalized Cypher, means hitting
+    a model's own `LIMIT 10` is recognised as "the cap was hit" the same
+    way hitting the caller's row_limit is, instead of only the latter
+    ever being able to trigger the true-total count query.
+
+    Falls back to `fallback` only when no trailing LIMIT can be found at
+    all, which should not happen for Cypher that has already passed
+    `validate_cypher`'s normalization (every branch of which always ends
+    in one), but is handled defensively rather than assumed impossible.
+    """
+    match = _TRAILING_LIMIT_VALUE_PATTERN.search(cypher.rstrip())
+    if match is None:
+        return fallback
+    return int(match.group(1))
 
 
 def _build_count_cypher(cypher: str) -> str | None:
@@ -328,38 +648,69 @@ def _build_count_cypher(cypher: str) -> str | None:
 
     Takes everything before the RETURN keyword, the MATCH and WHERE
     clauses, already validated and already binding every caller-supplied
-    value through a named parameter rather than a literal, and appends
-    its own `RETURN count(*) AS total_count`, discarding the original
-    RETURN items, ORDER BY, SKIP, and LIMIT entirely. The result returns
-    exactly one row: the true number of matches for the same pattern,
-    uncapped by the row_limit that shaped the first query.
+    value through a named parameter rather than a literal, and appends a
+    code-controlled count expression. The result returns exactly one row:
+    the true number of matches for the same pattern, uncapped by the
+    row_limit that shaped the first query.
 
-    Only the code-controlled suffix (`RETURN count(*) AS total_count`) is
-    ever appended here; the prefix this function reuses is exactly the
-    substring of an already-validated query, never caller text assembled
-    fresh, so this stays inside the same query-safety guarantees the
-    original query already satisfied.
+    Only the code-controlled suffix is ever appended here; the prefix
+    this function reuses is exactly the substring of an already-validated
+    query, never caller text assembled fresh, so this stays inside the
+    same query-safety guarantees the original query already satisfied.
+
+    Finding F-2.1-13's fix, first half: a top-level UNION combines
+    independent branches this function has no way to count together,
+    since taking only the text before the first RETURN silently discards
+    every branch after the first. That used to report one branch's count
+    as the whole result's total; now it returns None instead, "cannot
+    compute a true total for this shape" rather than a number that
+    describes less than what was asked.
+
+    Finding F-2.1-B04b's fix: a RETURN clause opening with DISTINCT is
+    counted as `count(DISTINCT <item>)`, not `count(*)`, since a bare
+    `count(*)` counts every raw match before deduplication and can
+    overstate a deduplicated total by orders of magnitude. Handled only
+    for the simple case, exactly one DISTINCT item with no alias; a
+    DISTINCT over more than one item, or an aliased one, is not something
+    this function can safely re-express inside `count(DISTINCT ...)`
+    (an alias cannot appear there), so it also returns None.
 
     Returns:
-        The count-only Cypher body, or None when no RETURN keyword is
-        found (defensive: should not happen for cypher that already
-        passed `validate_cypher`, which requires the query be well-formed
-        enough to execute, and is handled as "cannot compute a true
-        total" rather than assumed impossible).
+        The count-only Cypher body, or None when the query's shape is
+        one this function cannot safely count: a top-level UNION, a
+        DISTINCT over more than one item or an aliased item, or no
+        RETURN keyword at all (defensive: should not happen for cypher
+        that already passed `validate_cypher`, and is handled as "cannot
+        compute a true total" rather than assumed impossible).
     """
+    if _UNION_KEYWORD_PATTERN.search(cypher):
+        return None
+
     match = _RETURN_KEYWORD_PATTERN.search(cypher)
     if match is None:
         return None
     prefix = cypher[: match.start()].rstrip()
     if not prefix:
         return None
+
+    items_segment = _return_items_segment(cypher)
+    distinct_match = _DISTINCT_PREFIX_PATTERN.match(items_segment)
+    if distinct_match is not None:
+        remainder = items_segment[distinct_match.end() :]
+        if _count_top_level_items(remainder) != 1 or _AS_KEYWORD_PATTERN.search(remainder):
+            return None
+        item_expr = remainder.strip()
+        if not item_expr:
+            return None
+        return prefix + f" RETURN count(DISTINCT {item_expr}) AS total_count"
+
     return prefix + " RETURN count(*) AS total_count"
 
 
 _COUNT_AS_CLAUSE = "(total_count agtype)"
 
 
-def _fetch_true_total(
+async def _fetch_true_total(
     cypher: str, params: dict[str, Any], timeout_s: float
 ) -> int | None:
     """Fetch the true total match count for `cypher`'s pattern, uncapped.
@@ -377,13 +728,29 @@ def _fetch_true_total(
     reporting the row limit itself as if it were the total is exactly the
     finding this function exists to prevent, so a failure here must never
     fall back to a fabricated number.
+
+    Finding F-2.1-13's fix, second half: the count-only query is now
+    passed back through `validate_cypher` before execution, the same gate
+    the original query already passed, rather than executed as raw
+    unvalidated text. This is also what gives it a LIMIT: the validator's
+    own "every query it validates leaves with a LIMIT" contract used to
+    not hold for this one, and normalization is what supplies it (row
+    limit 1 is enough for a query returning a single count row). A count
+    query this validator would itself reject, which should not happen
+    for a MATCH/WHERE prefix lifted from an already-validated query but
+    is not assumed impossible, also returns None rather than executing an
+    unvalidated string.
     """
     count_cypher = _build_count_cypher(cypher)
     if count_cypher is None:
         return None
+    count_validation = validate_cypher(count_cypher, row_limit=1)
+    if not count_validation.ok or count_validation.normalized_cypher is None:
+        return None
     try:
-        count_rows, _ = execute_cypher(
-            count_cypher,
+        count_rows, _ = await asyncio.to_thread(
+            execute_cypher,
+            count_validation.normalized_cypher,
             params=params,
             row_limit=1,
             timeout_s=timeout_s,
@@ -423,20 +790,379 @@ def _ordered_unique_param_names(cypher: str) -> list[str]:
     return ordered
 
 
-def _build_params(cypher: str, target_entities: list[str]) -> dict[str, Any]:
-    """Bind the generated Cypher's named parameters to `target_entities`
-    values, positionally. See the module docstring for why this is a
-    documented, pragmatic resolution rather than a named binding contract.
-    A parameter name with no corresponding `target_entities` value at its
-    position is left unbound; `execute_cypher` then either receives fewer
-    bound names than the Cypher references (AGE raises a bind-time error,
-    classified as a `GraphError` and surfaced as `status: "error"`, never
-    a crash) or, when there is nothing to bind at all, an empty params
-    dict, which `execute_cypher` treats as "no params" and omits the
-    third `cypher()` argument entirely.
+_PARAM_NAME_SAFE = re.compile(r"[^A-Za-z0-9]+")
+
+
+def entity_param_bindings(target_entities: list[str]) -> dict[str, str]:
+    """Assign each target entity a deterministic Cypher parameter name.
+
+    This is one half of the naming contract that closes F-2.1-B01. The
+    caller decides the names, tells the generation step exactly which name
+    holds which entity, and binds by that name on the way back. Nothing
+    anywhere guesses from position.
+
+    A CURIE is not a legal Cypher identifier (`NCBIGene:672` contains a
+    colon), so the name is derived by replacing every non-alphanumeric run
+    with an underscore and prefixing `e_`: `NCBIGene:672` becomes
+    `e_NCBIGene_672`. Readable in a generated query and in a log, which
+    matters when someone is reading the `cypher_executed` audit field to
+    work out which entity a row came from.
+
+    Two distinct CURIEs could in principle sanitize to the same name if
+    they differ only in punctuation, so a collision gets a numeric suffix
+    rather than silently overwriting, which would reintroduce exactly the
+    wrong-value binding this contract exists to prevent.
     """
-    names = _ordered_unique_param_names(cypher)
-    return dict(zip(names, target_entities))
+    bindings: dict[str, str] = {}
+    for entity in target_entities:
+        base = "e_" + _PARAM_NAME_SAFE.sub("_", entity).strip("_")
+        name = base
+        suffix = 2
+        while name in bindings and bindings[name] != entity:
+            name = f"{base}_{suffix}"
+            suffix += 1
+        bindings[name] = entity
+    return bindings
+
+
+def _build_params(cypher: str, entity_bindings: dict[str, str]) -> dict[str, Any]:
+    """Bind the generated Cypher's parameters BY NAME, never by position.
+
+    Returns only the bindings the Cypher actually references, so a query
+    using one of three supplied entities does not carry two unused values
+    into the graph call.
+
+    This replaces a positional `zip` of parameter names against
+    `target_entities`, which produced F-2.1-B01: a query naming two genes
+    bound the wrong one, returned real rows about it, and cited them
+    correctly. Every gate was green while the answer was about an entity
+    the user had not asked about. Position was never a contract, only a
+    coincidence that held whenever exactly one entity was in play, which
+    is the only case the tests covered.
+
+    A parameter the model invented outside the supplied names is NOT bound
+    here. `_unknown_param_names` is what rejects it, before execution.
+    """
+    referenced = _ordered_unique_param_names(cypher)
+    return {name: entity_bindings[name] for name in referenced if name in entity_bindings}
+
+
+# F-2.1-J4-01B. The "binds at least one caller entity" invariant is too
+# weak, and a decoy defeats it. Reproduced live:
+#
+#   MATCH (decoy:Gene {id: $e_NCBIGene_672})
+#   WITH decoy
+#   MATCH (g:Gene)-[:gene_associated_with_condition]->(d:Disease)
+#   RETURN d
+#
+# BRCA1 is bound, so the invariant passes. `d` is not connected to it in
+# any way. The query returned five arbitrary diseases, `status="ok"`,
+# each with a resolving MedGen citation, for a question about BRCA1.
+# That is F-2.1-B01's failure class once more: a confidently cited answer
+# about records the user never asked about.
+#
+# Presence is the wrong property. What has to hold is CONNECTIVITY: every
+# value returned must trace back to an entity the caller supplied. So the
+# variables are partitioned into components, a component is anchored when
+# some pattern in it binds a caller parameter, and every returned variable
+# must sit in an anchored component.
+#
+# Honest limits, since three rounds of this check have each been claimed
+# closed and were not. This is a regex-level approximation, not a Cypher
+# parser:
+#
+#   - Comma-separated patterns inside one MATCH are treated as separate
+#     components, which is what makes the cartesian-product case visible.
+#   - A variable carried or RENAMED through WITH keeps its component, so a
+#     WITH cannot launder an unanchored variable into an anchored one.
+#     F-2.1-J5-01: this comment previously claimed that property while the
+#     code did not implement it. `WITH d AS x ... RETURN x` returned five
+#     arbitrary cited diseases for a question about BRCA1, because `x` is
+#     not a matched variable so the check never looked at it. The most
+#     likely real form is `WITH d.id AS did ... RETURN did`, which is
+#     idiomatic generated Cypher, so the check was not so much bypassed as
+#     absent. Alias provenance is now resolved before anchoring is checked.
+#   - An aggregate over an anchored variable, `RETURN count(v)`, is
+#     anchored through `v`.
+#   - A query whose RETURN yields no identifiable variable at all cannot
+#     be judged here, so it is left to the other checks rather than
+#     rejected on a guess.
+_VAR_IN_NODE_PATTERN = re.compile(r"\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*[:)\s{]")
+_VAR_IN_REL_PATTERN = re.compile(r"\[\s*([A-Za-z_][A-Za-z0-9_]*)\s*[:\]\s*]")
+_MATCH_CLAUSE_PATTERN = re.compile(
+    r"(?is)\b(?:OPTIONAL\s+)?MATCH\b(.*?)(?=\b(?:OPTIONAL\s+)?MATCH\b|\bWITH\b"
+    r"|\bRETURN\b|\bUNWIND\b|\bWHERE\b|$)"
+)
+_IDENTIFIER_PATTERN = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b")
+_CYPHER_KEYWORDS = frozenset(
+    {
+        "and", "as", "asc", "by", "case", "contains", "count", "collect", "desc",
+        "distinct", "else", "end", "ends", "exists", "false", "in", "is", "limit",
+        "match", "not", "null", "optional", "or", "order", "return", "skip",
+        "starts", "then", "true", "unwind", "when", "where", "with", "xor",
+        "avg", "max", "min", "sum", "size", "toupper", "tolower", "tostring",
+        "coalesce", "substring", "labels", "type", "id", "keys", "properties",
+    }
+)
+
+
+def _returned_variables(cypher: str) -> set[str]:
+    """Identifiers in the RETURN clause that could name a matched variable."""
+    segment = _return_items_segment(cypher)
+    found: set[str] = set()
+    for match in _IDENTIFIER_PATTERN.finditer(segment):
+        name = match.group(1)
+        if name.lower() in _CYPHER_KEYWORDS:
+            continue
+        # `g.name` names the variable `g`; the property is not a variable.
+        if segment[: match.start()].rstrip().endswith("."):
+            continue
+        found.add(name)
+    return found
+
+
+# A caller parameter can constrain a variable from the WHERE clause rather
+# than from inside the node pattern: `MATCH (g:Gene) WHERE g.id = $e_1` is
+# every bit as anchored as `MATCH (g:Gene {id: $e_1})`. Missing this
+# rejected three legitimate aggregate queries outright, which is the
+# over-blocking cost this check has to stay clear of: a false reject means
+# the user gets nothing.
+_WHERE_PARAM_CONSTRAINT_PATTERN = re.compile(
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*[A-Za-z_][A-Za-z0-9_]*\s*"
+    r"(?:=|=~|IN|STARTS\s+WITH|ENDS\s+WITH|CONTAINS)\s*\$([A-Za-z_][A-Za-z0-9_]*)",
+    re.IGNORECASE,
+)
+_WHERE_PARAM_CONSTRAINT_REVERSED = re.compile(
+    r"\$([A-Za-z_][A-Za-z0-9_]*)\s*(?:=|IN)\s*"
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*[A-Za-z_][A-Za-z0-9_]*",
+    re.IGNORECASE,
+)
+
+
+# F-2.1-J5-02: `WHERE g.id IN [$p1, $p2]` is a legitimate multi-entity
+# constraint and was falsely rejected, because the constraint pattern only
+# matched a bare `$param` after the operator, never a bracketed list of
+# them. A false reject means the user gets nothing, which is its own
+# defect, so this is as load-bearing as the block itself.
+# F-2.1-A5-08, half one of two. `WHERE toUpper(g.id) = $e` anchors `g`
+# every bit as much as `WHERE g.id = $e`, but the constraint patterns
+# require the variable and its property to sit immediately before the
+# operator, so any function wrapping broke the match and the query was
+# falsely rejected. A false reject means the user gets nothing, which the
+# check's own comment names as the cost it must stay clear of.
+#
+# This looks for `<var>.<prop>` anywhere inside the expression on either
+# side of a comparison against a bound parameter, rather than requiring
+# adjacency.
+_WHERE_PARAM_WRAPPED_PATTERN = re.compile(
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*[A-Za-z_][A-Za-z0-9_]*[^$=<>!]*?"
+    r"(?:=|=~|IN|STARTS\s+WITH|ENDS\s+WITH|CONTAINS)\s*\$([A-Za-z_][A-Za-z0-9_]*)",
+    re.IGNORECASE,
+)
+
+# F-2.1-A5-08, half two, deliberately NOT fixed, and this is a decision
+# rather than an omission.
+#
+# A pattern predicate written inside WHERE, `MATCH (g:Gene), (d:Disease)
+# WHERE g.id = $e AND (g)-[:gene_associated_with_condition]->(d)`, is
+# rejected because `_MATCH_CLAUSE_PATTERN` stops each clause at WHERE and
+# never sees the connecting pattern. Widening the boundary to admit it
+# would also admit `MATCH (g:Gene), (d:Disease)`, which is the exact
+# comma-separated cartesian shape the component split exists to catch, so
+# the fix for a false reject would reopen a false accept.
+#
+# It is also the right query to refuse on its own merits: that pattern is
+# a 67 million by 200 thousand cartesian product before WHERE filters it,
+# on a database a generated query has already OOM-killed once. The
+# adversary that filed this declined to execute it for that reason.
+#
+# The pipeline grants one repair retry seeded with the validator's
+# message, so the cost here is a retry rather than the whole answer.
+_WHERE_PARAM_IN_LIST_PATTERN = re.compile(
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*[A-Za-z_][A-Za-z0-9_]*\s*IN\s*\[([^\]]*)\]",
+    re.IGNORECASE,
+)
+
+
+def _variables_constrained_by_param(
+    cypher: str, entity_bindings: dict[str, str]
+) -> set[str]:
+    """Variables a caller parameter constrains from outside a node pattern."""
+    constrained: set[str] = set()
+    for var, items in _WHERE_PARAM_IN_LIST_PATTERN.findall(cypher):
+        listed = set(_ordered_unique_param_names(items))
+        if any(name in listed for name in entity_bindings):
+            constrained.add(var)
+    for var, param in _WHERE_PARAM_CONSTRAINT_PATTERN.findall(cypher):
+        if param in entity_bindings:
+            constrained.add(var)
+    # F-2.1-A5-08: the same comparison with the variable wrapped in a
+    # function, `toUpper(g.id) = $e`.
+    for var, param in _WHERE_PARAM_WRAPPED_PATTERN.findall(cypher):
+        if param in entity_bindings:
+            constrained.add(var)
+    for param, var in _WHERE_PARAM_CONSTRAINT_REVERSED.findall(cypher):
+        if param in entity_bindings:
+            constrained.add(var)
+    return constrained
+
+
+def _anchored_variables(cypher: str, entity_bindings: dict[str, str]) -> set[str]:
+    """Variables reachable from a pattern that binds a caller parameter."""
+    where_anchored = _variables_constrained_by_param(cypher, entity_bindings)
+    components: list[tuple[set[str], bool]] = []
+    for clause in _MATCH_CLAUSE_PATTERN.findall(cypher):
+        for pattern in _split_top_level_items(clause):
+            variables = set(_VAR_IN_NODE_PATTERN.findall(pattern))
+            variables |= set(_VAR_IN_REL_PATTERN.findall(pattern))
+            variables = {v for v in variables if v.lower() not in _CYPHER_KEYWORDS}
+            if not variables:
+                continue
+            pattern_params = set(_ordered_unique_param_names(pattern))
+            anchored = any(name in pattern_params for name in entity_bindings) or bool(
+                variables & where_anchored
+            )
+            components.append((variables, anchored))
+
+    # Merge components that share a variable, propagating the anchor.
+    merged = True
+    while merged:
+        merged = False
+        for i in range(len(components)):
+            for j in range(i + 1, len(components)):
+                if components[i][0] & components[j][0]:
+                    components[i] = (
+                        components[i][0] | components[j][0],
+                        components[i][1] or components[j][1],
+                    )
+                    del components[j]
+                    merged = True
+                    break
+            if merged:
+                break
+
+    anchored_vars: set[str] = set()
+    for variables, anchored in components:
+        if anchored:
+            anchored_vars |= variables
+    return anchored_vars
+
+
+_WITH_CLAUSE_PATTERN = re.compile(
+    r"(?is)\bWITH\b(.*?)(?=\bWITH\b|\bRETURN\b|\bMATCH\b|\bUNWIND\b|$)"
+)
+
+
+def _alias_sources(cypher: str) -> dict[str, set[str]]:
+    """Map each WITH alias to the matched variables it was derived from.
+
+    F-2.1-J5-01. `WITH d AS x` and `WITH d.id AS did` both carry `d`'s
+    provenance forward under a new name. Without this the new name is not
+    a matched variable, so the anchoring check simply never saw it.
+    """
+    aliases: dict[str, set[str]] = {}
+    for clause in _WITH_CLAUSE_PATTERN.findall(cypher):
+        for item in _split_top_level_items(clause):
+            stripped = item.strip()
+            match = _ALIAS_PATTERN.search(stripped)
+            if match is None:
+                continue
+            alias = match.group(1)
+            expression = stripped[: match.start()]
+            sources = {
+                name
+                for name in _IDENTIFIER_PATTERN.findall(expression)
+                if name.lower() not in _CYPHER_KEYWORDS
+            }
+            if sources:
+                aliases.setdefault(alias, set()).update(sources)
+    return aliases
+
+
+def _resolve_through_aliases(names: set[str], aliases: dict[str, set[str]]) -> set[str]:
+    """Expand alias names to the matched variables they came from.
+
+    Resolves transitively, since `WITH d AS x WITH x AS y` is legal, and is
+    bounded by the alias count so a cyclic binding cannot loop forever.
+    """
+    resolved = set(names)
+    for _ in range(len(aliases) + 1):
+        expanded = set(resolved)
+        for name in resolved:
+            expanded |= aliases.get(name, set())
+        if expanded == resolved:
+            break
+        resolved = expanded
+    return resolved
+
+
+def _unanchored_returned_variables(
+    cypher: str, entity_bindings: dict[str, str]
+) -> list[str]:
+    """Returned variables that trace back to no caller-supplied entity."""
+    returned = _returned_variables(cypher)
+    if not returned:
+        return []
+    anchored = _anchored_variables(cypher, entity_bindings)
+
+    # F-2.1-J5-01: resolve WITH aliases back to their matched variables
+    # BEFORE checking anchoring, so renaming cannot launder provenance.
+    #
+    # F-2.1-A5-01, and this is the line the finding is about: `anchored`
+    # used to be alias-resolved too, which is backwards. Expanding
+    # `returned` toward its sources is right, since `RETURN x` where
+    # `WITH d AS x` must be judged as `d`. Expanding `anchored` toward its
+    # sources says the opposite: that if an anchored variable's NAME is
+    # reused as an alias, whatever that alias came from is anchored. An
+    # alias does not confer its target's anchoring on its source.
+    #
+    # It is reachable because openCypher drops a variable a WITH does not
+    # project, so the name is free to rebind:
+    #
+    #   MATCH (g:Gene {id: $e}) WITH g.id AS gid
+    #   MATCH (d:Disease) WITH d AS g RETURN g
+    #
+    # `g` leaves scope at the first WITH, `d AS g` rebinds the name, and
+    # the old line then read `g` as anchored and marked `d` anchored with
+    # it. Live result: five arbitrary diseases, `status="ok"`,
+    # `total_available=200845`, every row cited and resolving, for a
+    # question about BRCA1. The `anchored` set is not alias-resolved at
+    # all now; only what a query RETURNS gets traced back to its source.
+    aliases = _alias_sources(cypher)
+    returned = _resolve_through_aliases(returned, aliases)
+
+    # A returned name that never appears as a matched variable is a literal
+    # projection or a pure alias, not an unanchored entity.
+    all_matched: set[str] = set()
+    for clause in _MATCH_CLAUSE_PATTERN.findall(cypher):
+        all_matched |= set(_VAR_IN_NODE_PATTERN.findall(clause))
+        all_matched |= set(_VAR_IN_REL_PATTERN.findall(clause))
+    return sorted((returned & all_matched) - anchored)
+
+
+def _bound_param_names(cypher: str, entity_bindings: dict[str, str]) -> list[str]:
+    """Return the caller-bound parameter names `cypher` actually references.
+
+    The complement of `_unknown_param_names`: that one asks "did the model
+    invent a name", this one asks "did it use any of ours". Empty means the
+    query consults no caller-supplied entity at all, which F-2.1-C08 showed
+    is how both live bypasses of the naming contract present.
+    """
+    referenced = set(_ordered_unique_param_names(cypher))
+    return [name for name in entity_bindings if name in referenced]
+
+
+def _unknown_param_names(cypher: str, entity_bindings: dict[str, str]) -> list[str]:
+    """Parameter names the generated Cypher references but nothing binds.
+
+    An unbound parameter used to reach AGE and fail there as an opaque
+    `UndefinedParameter`, which the tool reported as a graph error and
+    which read as though the graph were at fault. Catching it here makes
+    the repair retry informed: the validator error names the invented
+    parameter and lists the legal ones, so the second generation attempt
+    can actually fix it.
+    """
+    return [name for name in _ordered_unique_param_names(cypher) if name not in entity_bindings]
 
 
 # Finding F-04's own reason code: a cap breach detected here, before any
@@ -446,12 +1172,30 @@ def _build_params(cypher: str, target_entities: list[str]) -> dict[str, Any]:
 # condition that has nothing to do with the Cypher's shape.
 _REASON_COST_CAP_EXCEEDED = "cost_cap_exceeded"
 
+# F-2.1-B01: the generated Cypher referenced a $parameter the caller
+# never bound. Distinct from the validator's own reason codes because
+# the Cypher's shape is fine; it is the binding contract that was
+# broken, and the repair retry needs to be told which names are legal.
+_REASON_UNBOUND_PARAM = "unbound_param_name"
+
+# F-2.1-C08: the generated Cypher is well-formed and binds nothing the
+# caller supplied. Distinct from _REASON_UNBOUND_PARAM, which fires when a
+# name was invented: here no parameter is referenced at all, which is how
+# both live bypasses of the naming contract presented.
+_REASON_NO_ENTITY_BOUND = "no_entity_bound"
+
+# F-2.1-J4-01B: the query binds a caller entity but returns values that
+# are not connected to it, the decoy shape. Distinct from
+# _REASON_NO_ENTITY_BOUND, where nothing is bound at all.
+_REASON_UNANCHORED_RESULT = "unanchored_result"
+
 
 async def _generate_and_validate(
     harness: HarnessLike,
     tool_input: CypherQueryInput,
     schema_slice: str,
     prior_error: str | None,
+    entity_bindings: dict[str, str],
 ) -> tuple[str | None, ValidationResult]:
     """Run one generate-then-validate attempt.
 
@@ -495,7 +1239,9 @@ async def _generate_and_validate(
         )
 
     try:
-        raw_cypher = await generate_cypher(harness, tool_input, schema_slice, prior_error)
+        raw_cypher = await generate_cypher(
+            harness, tool_input, schema_slice, prior_error, entity_bindings
+        )
     except CypherGenerationError as exc:
         return None, ValidationResult(
             ok=False,
@@ -503,7 +1249,134 @@ async def _generate_and_validate(
             message=str(exc),
             normalized_cypher=None,
         )
-    return raw_cypher, validate_cypher(raw_cypher, tool_input.row_limit)
+
+    result = validate_cypher(raw_cypher, tool_input.row_limit)
+    if not result.ok:
+        return raw_cypher, result
+
+    # F-2.1-B01's second half. The validator checks the Cypher's shape; it
+    # has no view of which parameter names the caller actually bound, so a
+    # name the model invented passes it and used to reach AGE as an opaque
+    # UndefinedParameter. Reject it here instead, naming both the invented
+    # parameter and the legal ones, so the one repair retry is an informed
+    # fix rather than a blind resample.
+    unknown = _unknown_param_names(result.normalized_cypher or raw_cypher, entity_bindings)
+    if unknown:
+        legal = ", ".join("$" + name for name in entity_bindings) or "(none)"
+        return raw_cypher, ValidationResult(
+            ok=False,
+            reason=_REASON_UNBOUND_PARAM,
+            message=(
+                "generated Cypher references unbound parameter(s) "
+                + ", ".join("$" + name for name in unknown)
+                + "; the only bound parameter names are: "
+                + legal
+                + ". Rewrite the query using only those names."
+            ),
+            normalized_cypher=None,
+        )
+
+    # F-2.1-C08's second half, and the one that does not depend on
+    # out-pattern-matching the model.
+    #
+    # The validator rejects an entity id written as a literal by
+    # recognising its shape. An adversary defeated that by binding the
+    # literal to an alias first, `WITH 'NCBIGene' AS p, '7157' AS n WITH p
+    # + ':' + n AS target MATCH (g:Gene {id: target})`, which returned TP53
+    # while the caller had asked about BRCA1. A second form,
+    # `WITH 'BRCA1 DNA repair associated' AS t MATCH (g:Gene) WHERE
+    # g.name = t`, returned 100 non-human orthologs, every citation
+    # resolving and not one of them the gene asked about.
+    #
+    # Both go around the F-2.1-B01 naming contract rather than through it:
+    # because they reference ZERO parameters, `_build_params` returns `{}`
+    # and `_unknown_param_names` returns `[]`, so the entire remediation
+    # never engages. Chasing each new spelling is a losing game, since the
+    # bypass is "avoid the shape the checker looks for".
+    #
+    # The invariant does not depend on spelling at all: the caller supplied
+    # entities, so a query that consults none of them is not answering the
+    # caller's question, whatever it returns. This is `system-design-
+    # patterns` pattern 8 applied to generated text, removing the ability
+    # rather than asking the model not to use it.
+    if entity_bindings and not _bound_param_names(
+        result.normalized_cypher or raw_cypher, entity_bindings
+    ):
+        legal = ", ".join("$" + name for name in entity_bindings)
+        return raw_cypher, ValidationResult(
+            ok=False,
+            reason=_REASON_NO_ENTITY_BOUND,
+            message=(
+                "generated Cypher references none of the bound entity "
+                "parameters, so it cannot be answering a question about "
+                + ", ".join(entity_bindings.values())
+                + ". Do not write an entity id as a literal, and do not bind "
+                "one to an alias with WITH or UNWIND first. Rewrite the query "
+                "to match on one of: " + legal + "."
+            ),
+            normalized_cypher=None,
+        )
+
+    # F-2.1-J4-01B: presence is not enough, the returned values must trace
+    # back to a caller-supplied entity. See `_unanchored_returned_variables`.
+    unanchored = _unanchored_returned_variables(
+        result.normalized_cypher or raw_cypher, entity_bindings
+    )
+    if unanchored:
+        legal = ", ".join("$" + name for name in entity_bindings)
+        return raw_cypher, ValidationResult(
+            ok=False,
+            reason=_REASON_UNANCHORED_RESULT,
+            message=(
+                "generated Cypher returns "
+                + ", ".join(unanchored)
+                + ", which is not connected to any bound entity, so the rows "
+                "would be about records the question never asked for. Match "
+                "the returned pattern to "
+                + (f"one of: {legal}" if legal else "a bound entity parameter")
+                + ". Binding an entity in a separate, unconnected pattern "
+                "does not count."
+            ),
+            normalized_cypher=None,
+        )
+    return raw_cypher, result
+
+
+def _dedupe_by_cited_record(rows: list[CypherQueryRow]) -> list[CypherQueryRow]:
+    """Drop repeat rows that cite a record already present, keeping the first.
+
+    F-2.1-C14. Order is preserved, so the first mention of a record is the
+    one kept and the result still reads in the order the graph returned it.
+    Derived rows are passed through untouched (see the caller's note).
+
+    F-2.1-J4-03: the key was `source_url`, which deleted facts. All four of
+    BRCA1's `gene_associated_with_condition` edges carry the same stored
+    `source_url`, so the four distinct diseases collapsed to one row
+    reported as `row_count=1, total_available=1, truncated=False`: three
+    quarters of the answer gone, with an affirmative claim that nothing
+    was cut. Silent deletion under a completeness claim is worse than the
+    duplicate citations this function was added to remove.
+
+    A citation URL identifies a page, not a fact. One NCBI page can be the
+    cited source for several distinct records, which is exactly the BRCA1
+    case. The CURIE is the record's identity, so that is the key, and two
+    records sharing a page stay two records.
+
+    `source_url` remains the fallback for a row with no CURIE, which is
+    the only case where nothing better exists.
+    """
+    seen: set[str] = set()
+    deduped: list[CypherQueryRow] = []
+    for row in rows:
+        if row.node_or_edge_type == "derived":
+            deduped.append(row)
+            continue
+        key = row.curie or row.source_url or ""
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    return deduped
 
 
 def _cap_shaped_row(shaped: dict[str, Any]) -> dict[str, Any]:
@@ -544,15 +1417,153 @@ def _error_output(cypher_executed: str | None, error: str) -> CypherQueryOutput:
     )
 
 
+
+# F-2.1-A5-04. `_derived_source_curie`'s reasoning, "a count over a single
+# gene is about that gene", is sound for an AGGREGATE and false for a
+# PROJECTION, and the row shape cannot tell them apart because both arrive
+# as `node_or_edge_type="derived"`.
+#
+# Measured live on the natural phrasing of this phase's flagship question,
+# "Name the diseases associated with NCBIGene:672":
+#
+#   MATCH (g:Gene {id: $e})-[:gene_associated_with_condition]->(d:Disease)
+#   RETURN d.name AS disease_name
+#
+# returned four rows, each a fact about a distinct DISEASE record, and each
+# cited to `https://www.ncbi.nlm.nih.gov/gene/672`. The citation resolves
+# perfectly and points at a record that asserts nothing of the kind, which
+# is worse than a dead link: it looks verified. That is F-2.1-B01's class,
+# a value from record A cited to record B, on the derived-value line that
+# already reinstated it once in round three.
+#
+# The distinction that is actually available: an aggregate COLLAPSES many
+# records into one value, so attributing it to the anchor is a claim we can
+# stand behind. A bare property projection does not collapse anything; each
+# row is a separate fact about a separate record, and the anchor is not its
+# source. So the anchor citation is allowed only when every returned item
+# is an aggregate over the anchored pattern.
+_AGGREGATE_FUNCTIONS = frozenset(
+    {"count", "sum", "avg", "min", "max", "collect", "stdev", "percentilecont"}
+)
+_AGGREGATE_CALL_PATTERN = re.compile(
+    r"\b(" + "|".join(sorted(_AGGREGATE_FUNCTIONS)) + r")\s*\(", re.IGNORECASE
+)
+
+
+def _returns_only_aggregates(cypher: str) -> bool:
+    """Whether every non-entity RETURN item is an aggregate call.
+
+    A projection mixed in with an aggregate still makes the projected
+    value's provenance unknowable, so this requires ALL of them rather
+    than any.
+    """
+    segment = _return_items_segment(cypher)
+    if not segment.strip():
+        return False
+    saw_aggregate = False
+    for item in _split_top_level_items(segment):
+        stripped = item.strip()
+        if not stripped:
+            continue
+        # Strip a trailing alias so `count(v) AS n` is judged on `count(v)`.
+        alias = _ALIAS_PATTERN.search(stripped)
+        if alias is not None:
+            stripped = stripped[: alias.start()].strip()
+        if _AGGREGATE_CALL_PATTERN.search(stripped):
+            saw_aggregate = True
+            continue
+        # A bare variable is an entity column, shaped by its own record and
+        # cited from it, so it does not constrain the derived attribution.
+        if _IDENTIFIER_PATTERN.fullmatch(stripped):
+            continue
+        # Anything else is a projection: `d.name`, `d.id`, an expression.
+        return False
+    return saw_aggregate
+
+
+def _derived_source_curie(
+    params: dict[str, Any], cypher: str | None = None
+) -> str | None:
+    """The entity a derived value is attributable to, or None if ambiguous.
+
+    F-2.1-A5-04: when `cypher` is supplied, the anchor citation is granted
+    only if every returned item is an aggregate. A projection such as
+    `RETURN d.name` describes records the anchor is not, so it gets no
+    citation here and the cite-or-refuse gate drops it, which is the
+    correct outcome for a value this system cannot attribute.
+
+    A scalar or projection has no record of its own, so its provenance is
+    the entity the query was computed FROM. That is knowable only when
+    exactly one entity was bound: a count over a single gene is about that
+    gene, and citing it to that gene's record is a claim this system can
+    stand behind.
+
+    With zero or several bound entities there is no answer to "which entity
+    is this number about", and finding F-2.1-J01 is what happens when the
+    code invents one anyway. It previously took the first candidate entity
+    rather than a bound one, so a count of BRCA1's variants returned the
+    correct 15310 cited to TP53, with `status="ok"` and every gate green.
+    That is finding F-2.1-B01, this phase's worst, reproduced on the path
+    added to fix a different finding.
+
+    Returning None here means the derived row carries no `source_url`, and
+    `_run_pipeline`'s cite-or-refuse gate drops it. Losing an uncitable
+    number is the correct outcome; shipping it under someone else's
+    citation is not.
+    """
+    if cypher is not None and not _returns_only_aggregates(cypher):
+        return None
+    if len(params) != 1:
+        return None
+    return next(iter(params.values()))
+
 async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> CypherQueryOutput:
     start = time.monotonic()
     schema_slice = build_schema_slice(tool_input.query_class.value, tool_input.target_entities)
 
-    raw_cypher, validation = await _generate_and_validate(harness, tool_input, schema_slice, None)
+    # F-2.1-B01: assign each entity its parameter name ONCE, up front, and
+    # use the same mapping for both the generation prompt and the bind on
+    # the way back. One source of truth is the whole point: the defect was
+    # two halves each deciding independently, generation naming freely and
+    # binding zipping positionally.
+    entity_bindings = entity_param_bindings(tool_input.target_entities)
+
+    # F-2.1-B10. With no entity to bind, a parameterized query cannot run and
+    # a literal one is rejected by the validator, so this used to spend two
+    # plan-tier generation calls and then report "graph query failed:
+    # UndefinedParameter". The graph was never reached. Telling a user the
+    # graph failed, when the truth is that the system did not recognise the
+    # entity they named, is a false statement about where the fault lies,
+    # and `production-standards`'s retry-safety gate makes it worse than
+    # cosmetic: the error tells the next step to retry the graph, which is
+    # the wrong action and will fail identically.
+    #
+    # Refusing here is also strictly cheaper. Two generation calls were
+    # being spent to reach a conclusion available before the first one.
+    #
+    # This does not resolve the entity, which is the actual gap: the graph
+    # carries no `symbol` property (a Gene's properties are id, name,
+    # xrefs, source, source_url, agent_type, knowledge_level), so "BRCA1"
+    # exists only as a prefix of the description and matching it means an
+    # unindexed scan over 67 million rows. Symbol-to-CURIE resolution
+    # belongs to `ncbi_efetch` in build phase 3.1, which is what Layer 2 is
+    # for. Tracked as F-2.1-07 and F-2.1-B10.
+    if not entity_bindings:
+        return _error_output(
+            None,
+            "no entity could be identified in this query, so no graph lookup "
+            "was attempted. Supply a CURIE such as NCBIGene:672, or wait for "
+            "symbol resolution, which needs the Layer 2 NCBI lookup that "
+            "build phase 3.1 adds. Retrying this query unchanged will not help.",
+        )
+
+    raw_cypher, validation = await _generate_and_validate(
+        harness, tool_input, schema_slice, None, entity_bindings
+    )
     if not validation.ok:
         # Exactly one repair retry, informed by the first attempt's error.
         raw_cypher, validation = await _generate_and_validate(
-            harness, tool_input, schema_slice, validation.message
+            harness, tool_input, schema_slice, validation.message, entity_bindings
         )
         if not validation.ok:
             return _error_output(
@@ -572,7 +1583,7 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             "internal error: Cypher validation reported success with no normalized query",
         )
 
-    params = _build_params(normalized_cypher, tool_input.target_entities)
+    params = _build_params(normalized_cypher, entity_bindings)
     elapsed = time.monotonic() - start
     remaining_budget = max(1.0, CYPHER_QUERY_TIMEOUT_SECONDS - elapsed)
 
@@ -584,7 +1595,16 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     as_clause = _build_as_clause(normalized_cypher)
 
     try:
-        rows, returned_total = execute_cypher(
+        # F-2.1-06: `execute_cypher` is synchronous, so awaiting it directly
+        # would block the event loop for the whole query. `asyncio.wait_for`
+        # cannot cancel a blocking call, which made both this tool's own 30
+        # second bound and Act's `enforce_timeout` dead code: a 0.5 second
+        # wait_for around a 4 second call was measured returning after 4.01
+        # seconds, with the loop ticking once. Off-thread, the await point is
+        # real, so the bound above it can actually fire and one graph query
+        # no longer freezes every concurrent SSE stream.
+        rows, returned_total = await asyncio.to_thread(
+            execute_cypher,
             normalized_cypher,
             params=params,
             row_limit=tool_input.row_limit,
@@ -607,29 +1627,109 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
 
     # Finding A2's fix: the LIMIT clause is already baked into
     # normalized_cypher, so execute_cypher can never return more rows than
-    # tool_input.row_limit in the first place, and comparing against that
+    # the limit that ran in the first place, and comparing against that
     # same-bounded count could never detect a truncation. Only when the
     # first query returned exactly the limit is more data even possible;
     # in that case only, issue the count-only query for the true total.
     # Reporting the row limit itself as if it were the total is exactly
     # the wrong answer this fix exists to prevent, so a count-query
     # failure reports total_available as unknown (None), never a number.
-    if len(rows) >= tool_input.row_limit:
-        true_total = _fetch_true_total(normalized_cypher, params, remaining_budget)
-        if true_total is None:
+    #
+    # Finding F-2.1-B04a's fix: compare against the LIMIT that actually
+    # ran (`_effective_row_limit`), not tool_input.row_limit alone. A
+    # model-supplied LIMIT smaller than tool_input.row_limit is preserved
+    # verbatim by cypher_validator, so a query capped at 10 rows never
+    # looked "full" against a row_limit of 100 and reported 10 as if it
+    # were the whole answer.
+    effective_limit = _effective_row_limit(normalized_cypher, tool_input.row_limit)
+
+    # F-2.1-J02: `hit_cap` used to be `len(rows) >= effective_limit` alone,
+    # which only sees the case where the model's LIMIT is at or below
+    # `row_limit`. That is the direction F-2.1-B04a quoted, and the fix was
+    # written to the example rather than to the property.
+    #
+    # The other direction is the ordinary case: the validator only lowers a
+    # LIMIT above MAX_ROW_LIMIT, never down to `row_limit`, so a model
+    # writing `LIMIT 500` against a `row_limit` of 100 fetched 500 rows,
+    # `execute_cypher` truncated to 100, and `len(rows) >= 500` was False.
+    # Result: 500 matched, 100 shipped, reported complete with
+    # `truncated=False`.
+    #
+    # `execute_cypher` already returns the true fetched count as
+    # `returned_total`, bound above and previously discarded on every
+    # non-empty path. Using it closes the direction the row count cannot
+    # see on its own.
+    hit_cap = len(rows) >= effective_limit or returned_total > len(rows)
+
+    # Finding F-2.1-B04c's fix: to_output_rows can emit more than one
+    # output row per raw graph row, one per RETURN column that decodes to
+    # a node or edge, so a raw MATCH count and the output row count only
+    # share a unit when RETURN has exactly one column. A count query is
+    # only attempted on that single-column shape; a multi-column RETURN
+    # that hit its cap reports total_available as unknown rather than a
+    # number phrased in a different unit than row_count.
+    column_count = _return_column_count(normalized_cypher)
+
+    total_available: int | None
+    if hit_cap:
+        if column_count == 1:
+            # Finding F-2.1-09's fix: recompute the remaining budget here
+            # from elapsed time, rather than reusing remaining_budget as
+            # computed before the main query ran. Reusing that value gave
+            # the count-only query its own full fresh timeout on top of
+            # whatever the main query itself had already spent, roughly
+            # doubling this tool's declared wall-clock bound in the worst
+            # case.
+            elapsed_before_count = time.monotonic() - start
+            count_budget = max(1.0, CYPHER_QUERY_TIMEOUT_SECONDS - elapsed_before_count)
+            true_total = await _fetch_true_total(normalized_cypher, params, count_budget)
+            if true_total is None:
+                total_available = None
+                truncated = True
+            else:
+                total_available = true_total
+                truncated = true_total > len(rows)
+        else:
             total_available = None
             truncated = True
-        else:
-            total_available = true_total
-            truncated = true_total > len(rows)
     else:
-        total_available = len(rows)
+        # Finalized below, once the output row count is known: with
+        # nothing capped, every match is already in hand, and the true
+        # total is exactly that output row count, in the same unit
+        # row_count itself reports.
+        total_available = None
         truncated = False
 
     snapshot_version = _graph_snapshot_version()
+    column_labels = column_labels_for(normalized_cypher)
     mapped_rows: list[CypherQueryRow] = []
     for raw_row in rows:
-        for shaped_row in to_output_rows(raw_row, snapshot_version):
+        for shaped_row in to_output_rows(
+            raw_row,
+            snapshot_version,
+            # F-2.1-B05: a derived value (a count, a projection) has no
+            # record of its own, so it is cited to the entity the query
+            # was computed from. This is the only place that knows it.
+            #
+            # F-2.1-J01, and this line is why the finding exists: it used
+            # to read `next(iter(entity_bindings.values()), None)`, which
+            # is the FIRST CANDIDATE entity, not the one the query bound.
+            # `entity_bindings` holds every entity extracted from the query
+            # text; `params` holds only those the generated Cypher actually
+            # referenced. Citing from the former reproduced F-2.1-B01, this
+            # phase's worst finding, on a new path: a count of BRCA1's
+            # variants came back correct at 15310 and cited to TP53, with
+            # status ok and every gate green.
+            #
+            # `_derived_source_curie` takes `params`, and refuses to guess
+            # when more than one entity was bound, because "which entity is
+            # this number about" has no answer then and inventing one is
+            # exactly what B01 was.
+            derived_source_curie=_derived_source_curie(params, normalized_cypher),
+            # F-2.1-J09: carry the RETURN aliases so a derived value
+            # reaches the Write step named, not as a positional `c0`.
+            column_labels=column_labels,
+        ):
             if not shaped_row.get("source_url"):
                 # Finding F-2.1-A1's cite-or-refuse corollary: an entity
                 # that parsed but resolves no source_url (an unmapped
@@ -648,10 +1748,120 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
                 # dropped, not raised.
                 continue
 
+    # F-2.1-C14: F-2.1-B04c put `row_count` and `total_available` into the
+    # same unit, and that unit is wrong for a reader. It counts EMITTED ROWS,
+    # which after the endpoint-attribution fix includes an edge row and its
+    # endpoint vertex row for the same record, and a `RETURN v, g` that
+    # repeats one gene across every variant row. Measured: "8 results, 8
+    # available, nothing truncated" for a question whose true answer is 4
+    # diseases. Internally coherent and externally wrong, which is the kind
+    # of number a reader has no way to challenge.
+    #
+    # The obvious repair, reporting a distinct-record count while leaving
+    # `rows` untouched, was rejected: it makes `row_count` disagree with
+    # `len(rows)`, which is precisely the second half of F-2.1-C12 (a
+    # `row_count` of 500 beside 118 actual rows). A count that contradicts
+    # the list beside it trades one wrong number for another.
+    #
+    # So the duplicates are removed rather than merely discounted, and the
+    # count follows the list. A record is identified by its `source_url`,
+    # which every row here already has, since the cite-or-refuse filter
+    # above dropped any row without one.
+    #
+    # A derived row is never deduplicated away: a count and the entity it
+    # was computed from legitimately share a citation URL and are two
+    # different facts, so collapsing them would silently discard the
+    # answer, which is F-2.1-C03 all over again.
+    mapped_rows = _dedupe_by_cited_record(mapped_rows)
+
+    # F-2.1-A5-04b. `row_limit` is a promise about what the CALLER
+    # receives, and until now it bounded only the graph rows fetched.
+    # `to_output_rows` emits one output row per RETURN column that decodes
+    # to an entity, plus one for any derived value, so a multi-column
+    # RETURN multiplies them: `RETURN s, s.id` against `row_limit=20`
+    # fetched 20 graph rows and emitted 40, breaching the caller's own cap.
+    #
+    # This surfaced from the generation rule added for F-2.1-A5-04, which
+    # asks the model to return a node alongside a projected property so the
+    # projection can be cited. That rule is right and this is the bound it
+    # needs: the cap is enforced where the promise is made, rather than by
+    # hoping generation never produces a shape that multiplies rows.
+    #
+    # Cutting here counts as truncation, because the caller is being shown
+    # less than the query matched, which is exactly what that flag means.
+    if len(mapped_rows) > tool_input.row_limit:
+        mapped_rows = mapped_rows[: tool_input.row_limit]
+        truncated = True
+
+    distinct_record_count = len(mapped_rows)
+
+    if not hit_cap:
+        # Finding F-2.1-B04c's fix: nothing was capped, so every match
+        # already reached this point, and the count computed just above is
+        # the true total, not a raw graph-row count in a different,
+        # incoherent unit.
+        total_available = distinct_record_count
+
+    # F-2.1-C10: an all-empty derived result is the one case where "zero
+    # associations are recorded" and "this identifier is not in the graph"
+    # are indistinguishable from the result alone. Check, rather than emit
+    # a cited zero for an entity that was never there.
+    if _derived_result_is_empty(mapped_rows):
+        anchor_curie = _derived_source_curie(params)
+        if anchor_curie is not None:
+            # Recomputed from elapsed time, the same discipline
+            # F-2.1-09 required of the count query: a second call must
+            # not be handed a fresh full budget on top of what the first
+            # already spent.
+            probe_budget = max(1.0, CYPHER_QUERY_TIMEOUT_SECONDS - (time.monotonic() - start))
+            present = await _entity_is_present(anchor_curie, params, probe_budget)
+            if present is False:
+                # Not an error: the query ran and the graph answered. There
+                # is simply no record to cite, which is exactly the state
+                # cite-or-refuse requires a refusal for. `empty` is the
+                # status the Write step already turns into "I could not
+                # find information on this".
+                return CypherQueryOutput(
+                    status="empty",
+                    rows=[],
+                    row_count=0,
+                    total_available=0,
+                    truncated=False,
+                    cypher_executed=normalized_cypher[:_MAX_CYPHER_EXECUTED_CHARS],
+                    error=None,
+                )
+            # `present is None` means the check itself could not run. That
+            # is not evidence of absence, so the result stands rather than
+            # being refused on a failed probe.
+
+    if not mapped_rows:
+        # F-2.1-C07: the tool used to state, in one object, both that it
+        # found nothing and that 15,310 matching rows existed and the
+        # result was truncated. That happens when rows are fetched and
+        # parsed and then dropped by the cite-or-refuse gate, so
+        # `mapped_rows` empties while the count query's total stands.
+        #
+        # Dropping uncitable rows is correct and stays. Reporting a total
+        # that contradicts the status is not: `write_node` reads `status`
+        # alone, so the user already gets a flat refusal, and the
+        # contradictory numbers only mislead a machine reader downstream.
+        # The numbers now agree with the status.
+        #
+        # What this deliberately does NOT do is tell the user the more
+        # useful thing, that the graph matched plenty and none of it could
+        # be cited. That is a third outcome distinct from both "nothing
+        # matched" and "here are results", and saying it needs a fourth
+        # `status` value. Adding one is additive and therefore allowed
+        # within v1, but `system-design-patterns` rule 10 makes it a
+        # coordinated contract change rather than a local edit, so it is
+        # filed for build phase 2.2 rather than slipped in here.
+        total_available = 0
+        truncated = False
+
     return CypherQueryOutput(
         status="ok" if mapped_rows else "empty",
         rows=mapped_rows,
-        row_count=len(mapped_rows),
+        row_count=distinct_record_count,
         total_available=total_available,
         truncated=truncated,
         cypher_executed=normalized_cypher[:_MAX_CYPHER_EXECUTED_CHARS],
@@ -677,6 +1887,16 @@ async def cypher_query(harness: HarnessLike, tool_input: CypherQueryInput) -> Cy
     `status: "error"` `CypherQueryOutput`, never an unhandled exception,
     per the retry-safety gate's "an error message must say what to do
     next" requirement.
+
+    Finding F-2.1-B11's fix: the outer timeout's message used to say
+    "graph query exceeded Xs", but this budget covers schema slicing, up
+    to two generation calls, and validation, in addition to graph
+    execution, so the graph was often never reached at all; generation
+    latency alone can exhaust it. Blaming the graph specifically told the
+    next step to retry the wrong component, and made an earlier finding
+    hard to diagnose for exactly that reason. The message now names the
+    whole budget, never the graph alone, so it stays true regardless of
+    which internal step actually consumed the time.
     """
     try:
         return await asyncio.wait_for(
@@ -685,6 +1905,9 @@ async def cypher_query(harness: HarnessLike, tool_input: CypherQueryInput) -> Cy
     except TimeoutError:
         return _error_output(
             None,
-            f"graph query exceeded {CYPHER_QUERY_TIMEOUT_SECONDS:g}s, retry with a "
-            "narrower query_intent or a smaller query_class",
+            f"cypher_query exceeded its {CYPHER_QUERY_TIMEOUT_SECONDS:g}s overall "
+            "budget before returning a result. That budget covers Cypher "
+            "generation, validation, and graph execution together, so the "
+            "delay was not necessarily the graph; retry with a narrower "
+            "query_intent or a smaller query_class.",
         )

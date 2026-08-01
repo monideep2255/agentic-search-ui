@@ -113,6 +113,41 @@ _SEARCH_PATH_SQL = 'SET search_path = ag_catalog, "$user", public;'
 # and 2.
 _ENABLE_SEQSCAN_OFF_SQL = "SET enable_seqscan = off;"
 
+# F-2.1-C15. A query this tool generated took the graph server down for
+# every user. The real plan model, asked "what are the NCBIGene:672-
+# associated diseases?", produced an unbounded `orthologous_to` traversal
+# with DISTINCT. AGE ran it with four parallel workers, the kernel OOM
+# killer killed the backend at roughly 3 GB resident, and postgres shut
+# down abnormally. Recovered from the host's own logs, not inferred.
+#
+# `LIMIT 100` did not help, because DISTINCT materializes its input before
+# the limit applies, and `statement_timeout` did not help either, because
+# it bounds time and this was memory.
+#
+# Measured on the server: work_mem 64 MB with hash_mem_multiplier 2, and
+# max_parallel_workers_per_gather 4. So one query could reach five
+# processes at 128 MB per hash node, which is how a single traversal got
+# to gigabytes on a 15 GB host that also holds 4 GB of shared_buffers.
+#
+# Both settings are session-level and set by this client, so no server
+# configuration changes and no other database user is affected. Removing
+# the parallel multiplier is the load-bearing half; halving work_mem
+# lowers the per-node ceiling underneath it.
+#
+# Measured cost on the query shapes this phase runs (lookup, multi-hop
+# variants, disease traversal, aggregate): 125 to 124 ms, 263 to 277 ms,
+# 154 to 154 ms, and 696 to 771 ms. Within noise except the aggregate at
+# roughly 11 percent, which is a cheap price for a denial of service that
+# takes the graph down for everyone.
+#
+# This is a mitigation, not the whole fix: it bounds what one query can
+# spend, and it does not stop the model generating an unbounded traversal
+# in the first place. Constraining generation is filed as F-2.1-C15.
+_MEMORY_GUARD_SQL: tuple[str, ...] = (
+    "SET max_parallel_workers_per_gather = 0;",
+    "SET work_mem = '32MB';",
+)
+
 # The default AGE output column. A row's Cypher RETURN clause is expected to
 # collapse to one expression per row; a caller with a different shape can
 # override as_clause, since cursor.description drives the returned dict keys
@@ -418,6 +453,8 @@ def execute_cypher(
             with conn.cursor() as cur:
                 cur.execute(_SEARCH_PATH_SQL)
                 cur.execute(_ENABLE_SEQSCAN_OFF_SQL)
+                for guard_sql in _MEMORY_GUARD_SQL:
+                    cur.execute(guard_sql)
                 cur.execute(
                     "SET statement_timeout = %s;",
                     (int(timeout_s * 1000),),

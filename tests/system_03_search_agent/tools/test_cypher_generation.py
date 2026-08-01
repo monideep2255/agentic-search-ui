@@ -175,3 +175,36 @@ async def test_generate_cypher_raises_on_empty_fence() -> None:
     harness = _FakeHarness("```cypher\n\n```")
     with pytest.raises(CypherGenerationError):
         await generate_cypher(harness, _tool_input(), schema_slice="schema text")
+
+
+@pytest.mark.asyncio
+async def test_content_none_raises_generation_error_not_attribute_error() -> None:
+    """Finding F-2.1-B03, observed live.
+
+    A provider genuinely returns `content=None`. `_extract_cypher_body` was
+    annotated `raw: str` and called `raw.strip()`, so it raised
+    `AttributeError` out of a pipeline documented "Never raises".
+    `act_node` catches only `HarnessCallError`, so it escaped `run()` and
+    crashed the query instead of degrading to a refusal.
+
+    The right failure is `CypherGenerationError`, which the caller already
+    handles as retry-then-error like any other unrecoverable response.
+    """
+
+    class _NoContentHarness:
+        trace_id = "test-none-content"
+
+        async def call_tier(self, tier, messages, *, cache_prefix=None):
+            return SimpleNamespace(content=None)
+
+    tool_input = CypherQueryInput(
+        query_intent="Look up BRCA1",
+        query_class="lookup",
+        target_entities=["NCBIGene:672"],
+        row_limit=1,
+    )
+
+    with pytest.raises(CypherGenerationError) as excinfo:
+        await generate_cypher(_NoContentHarness(), tool_input, "schema", None, {})
+
+    assert "content=None" in str(excinfo.value) or "no content" in str(excinfo.value).lower()

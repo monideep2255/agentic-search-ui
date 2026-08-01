@@ -652,3 +652,33 @@ async def test_total_size_ceiling_shrinks_composed_rows_past_per_field_caps() ->
     assert finding.truncated is True
     # some rows survive; the ceiling shrinks the list, it does not empty it
     assert len(finding.structured_fields["rows"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_row_count_is_reconciled_against_the_rows_the_byte_ceiling_actually_kept() -> None:
+    """F-2.1-C12 (adversary, third pass): confirmed failing against the
+    pre-fix code. The byte ceiling shrinks `rows` from 500 down to a
+    fraction of that (measured: 118 survivors), but `row_count`, a plain
+    integer with nothing of its own to cap, kept reporting the pre-cut
+    value of 500. Any caller reading `row_count`, the natural field to
+    read, was off by a factor of several times. `row_count` must always
+    agree with `len(rows)` once capping has run.
+    """
+    row = {"node_id": "n1", "fields": {f"prop_{i}": "v" * 500 for i in range(30)}}
+    structured_fields = {
+        "status": "ok",
+        "row_count": 500,
+        "total_available": 500,
+        "truncated": False,
+        "rows": [dict(row) for _ in range(500)],
+        "error": None,
+    }
+
+    finding = await _pass_through_one(structured_fields)
+
+    kept = len(finding.structured_fields["rows"])
+    assert 0 < kept < 500, "the byte ceiling must actually have shrunk the rows list for this fixture"
+    assert finding.structured_fields["row_count"] == kept, (
+        "row_count must be recomputed from the rows the byte ceiling actually kept, "
+        "not left at its pre-cut value"
+    )

@@ -36,6 +36,110 @@ stays as the pure, already-parsed-entity shaping function it always was,
 used directly by this module's own unit tests and by any caller that has
 already turned a raw agtype value into a plain dict.
 
+Finding F-2.1-B06: a real AGE edge carries no `properties["id"]`, so it has
+no CURIE and no record page of its own. A live probe of five edge labels
+(`is_sequence_variant_of`, `gene_associated_with_condition`,
+`has_mesh_annotation`, `in_taxon`, `orthologous_to`) found every edge still
+carries a `source_url` property, and in every sampled case that URL was
+the same page its start endpoint's own CURIE derives, not a citation the
+edge earns on its own. Before this fix, an empty CURIE did not stop
+`_resolve_source_url` from keeping that stored URL whenever it matched
+the host pattern, so the row shipped `source_id="unknown"` next to a
+link that resolves to a real but different record, a citation that
+survives inspection while pointing at the wrong thing. `to_output_rows`
+now collects every vertex and edge entity across all of a raw row's
+columns first, so an edge with no CURIE of its own can be attributed to
+a genuine endpoint vertex's CURIE when that vertex is present in the
+same row (a sibling column, or an adjacent path element), verified from
+data already in hand, never fabricated and never fetched. When no
+endpoint vertex is present in the row, the honest outcome is no citation:
+`source_url` is None, and the caller's cite-or-refuse gate drops the row.
+See `_shape_entity`, `_endpoint_curies_by_internal_id`, and
+`_attributed_endpoint_curie`.
+
+Findings F-2.1-C02, C04, C05, C06, C09 (third adversary pass, unreviewed
+rework): five more defects in what this module cites.
+
+- F-2.1-C09: `source_url_for_curie` mapped a prefix to a builder but never
+  checked the local id's shape, so an unverified string after the colon
+  (`672.`, `672-related`, `../../etc/passwd`) built a syntactically valid,
+  host-pinned URL that 404s live. Fixed by `_CURIE_LOCAL_ID_SHAPES`: a
+  local id that does not match its prefix's verified shape now returns
+  None, the same outcome as an unmapped prefix.
+
+Finding F-2.1-J4-05 (fourth judge pass): the C09 fix's shape table was a
+regression. It was derived from a roughly 40-row live sample rather than
+each prefix's real format, and the resulting single-letter-plus-digits
+shape (one letter, then digits, nothing else) was too narrow for MedGen:
+it rejected `MedGen:CN517202`, a genuine two-letter MedGen concept id
+(MedGen assigns its own `CN`-prefixed ids when a concept has no UMLS CUI,
+alongside the UMLS-standard `C`-prefixed CUI), stripping the citation from
+a real Disease record and dropping it from any answer under cite-or-refuse.
+The judge measured the blast radius at 4,401 of 200,845 Disease nodes.
+
+`_CURIE_LOCAL_ID_SHAPES` is now derived per prefix as follows, not from a
+further, larger sample:
+
+- NCBIGene, ClinVar, PMID, NCBITaxon: NCBI's own documented external id
+  conventions state these are plain positive integers (an Entrez Gene ID, a
+  ClinVar Variation ID, a PubMed ID, and an NCBI Taxonomy id are each
+  defined as numeric), cross-checked against an unfiltered 15-row `LIMIT`
+  sample per label read straight off the live graph
+  (`Gene`, `SequenceVariant`, `Article`, `OrganismTaxon`) on 2026-07-31.
+  A 15-row `LIMIT` is a bounded read, never a full scan of these
+  multi-million-row labels.
+- MedGen, MeSH: no external numeric convention applies, since both use
+  letter-prefixed ids, so the shape is instead derived from an EXHAUSTIVE,
+  bounded aggregate query grouping every row of the `Disease` (200,845
+  rows) and `OntologyClass` (30,790 rows) tables by their digit-collapsed
+  id shape, run directly against the small per-label SQL tables on
+  2026-07-31 (both labels are small enough that a full read carries no OOM
+  risk, unlike the multi-million-row labels above). This is complete
+  coverage of every Disease and OntologyClass row in the graph, not a
+  sample: MedGen ids are exactly `C` followed by digits (196,444 rows) or
+  `CN` followed by digits (4,401 rows), never a third shape; MeSH ids are
+  exactly `D` followed by digits, in either a 6-digit legacy length
+  (27,177 rows) or a 9-digit length NLM introduced for newer descriptors
+  (3,613 rows), never a third shape. `_MEDGEN_LOCAL_ID` and
+  `_MESH_LOCAL_ID` accept any digit count after the letter prefix rather
+  than hardcoding 6, 7, or 9 digits specifically, since the exhaustive scan
+  already shows the digit count is not fixed within a single prefix and a
+  future MeSH or MedGen id one digit longer must not be treated as an
+  attack string the way `NCBIGene:672-VALIDATED-BY-FDA` genuinely is.
+  Unlike the old single-letter shape, the letter itself is now pinned
+  (uppercase `C`/`CN` for MedGen, uppercase `D` for MeSH) rather than "any
+  single letter", because the exhaustive scan leaves no evidence any other
+  letter is real for either prefix.
+- F-2.1-A5-07 (fifth adversary pass): J4-05 pinned each shape's letters to
+  specific uppercase ASCII characters, but left every `\\d` in the same
+  shapes unrestricted, and Python's `\\d` matches any Unicode decimal
+  digit, not only ASCII 0-9. An Arabic-Indic, Devanagari, or fullwidth
+  digit therefore fullmatched a shape exactly as a real digit would,
+  quoted cleanly, and built a syntactically valid, host-pinned URL for a
+  record that cannot exist, F-2.1-C09's citation-spoofing class reopened
+  through a character class instead of a shape. Every pattern in
+  `_CURIE_LOCAL_ID_SHAPES` now compiles with `re.ASCII`, so `\\d` in each
+  one matches only `[0-9]`.
+- F-2.1-C04/C05: an edge with no CURIE of its own used to be attributed
+  only to whichever sibling endpoint vertex the query happened to also
+  RETURN, so the identical edge got a different citation depending on the
+  projection, and the more precise endpoint (for example the ClinVar
+  variation page for `is_sequence_variant_of`) was lost whenever the query
+  stopped projecting that vertex. Fixed by `_curie_for_source_url`,
+  reverse-deriving a verified CURIE from the edge's own stored
+  `source_url` first (edge-intrinsic, independent of projection), falling
+  back to sibling-vertex attribution only when that fails.
+- F-2.1-C02: a derived/projected value that is itself a resolvable CURIE
+  (`d.id AS disease_id`) used to be cited to the entity the query was
+  computed from, discarding the real record the fact is actually about.
+  Fixed by `_first_resolvable_curie`: a projected identifier is now cited
+  to its own record; only a genuine non-identifier scalar (a count, a
+  name) falls back to the computed-from entity.
+- F-2.1-C06: an edge attributed to a sibling vertex's CURIE, and that
+  vertex's own row in the same raw row, used to produce two output rows
+  citing the identical record. Fixed by `_dedupe_rows_by_record_identity`,
+  applied to every list `to_output_rows` returns.
+
 Depends on:
     - system_03_search_agent.tools.graph_schema_constants
       (NCBI_RECORD_URL_PATTERN)
@@ -115,6 +219,64 @@ def _matches_host_pattern(url: str) -> bool:
     return bool(_HOST_PATTERN.match(url))
 
 
+# Finding F-2.1-C09: a CURIE prefix having a documented URL builder never
+# meant the text after the colon was checked against the SHAPE real ids
+# for that prefix actually take, only that a builder existed at all.
+# `NCBIGene:672.`, `NCBIGene:672-related`, `NCBIGene:not_a_number`,
+# `NCBIGene:672 OR 1=1`, and `MedGen:../../etc/passwd` all pass the prefix
+# lookup and quote cleanly into a syntactically valid, host-pinned URL,
+# and the adversary verified live that every one of those exact URLs
+# 404s: the host is genuine, only the path is attacker-controlled, so the
+# cite-or-refuse gate was satisfied by a citation to a dead page. A CURIE
+# whose local id does not match the real shape for its prefix is not a
+# record this module can stand behind, so it must return None, the same
+# outcome as an unmapped prefix, not a plausible-looking guess.
+#
+# Finding F-2.1-J4-05: the shapes below replace a table derived from a
+# roughly 40-row live sample, which was too narrow. It rejected
+# `MedGen:CN517202`, a genuine two-letter MedGen id, stripping 4,401 of
+# 200,845 real Disease nodes of their citation. See the module docstring
+# for the full derivation, restated briefly here:
+#
+# - NCBIGene, ClinVar, PMID, NCBITaxon: NCBI's own documented id
+#   conventions (Entrez Gene ID, ClinVar Variation ID, PubMed ID, NCBI
+#   Taxonomy id are all plain positive integers), cross-checked against a
+#   bounded 15-row `LIMIT` sample per label, never a full scan of these
+#   multi-million-row labels.
+# - MedGen, MeSH: an EXHAUSTIVE aggregate over every row of the `Disease`
+#   and `OntologyClass` tables (small labels, a full read is safe), not a
+#   sample. MedGen ids are `C` or `CN` followed by digits, never a third
+#   shape, and never a lowercase or any other letter. MeSH ids are `D`
+#   followed by digits, never a third shape or another letter. Neither
+#   shape hardcodes a digit count: the exhaustive scan itself found two
+#   different digit counts live for each prefix (MedGen: 7 after `C`, 6
+#   after `CN`; MeSH: 6 and 9 after `D`, the 9-digit form being newer
+#   descriptors NLM introduced once 6 digits ran out), so a real id one
+#   digit longer than anything sampled must not be treated the way
+#   `NCBIGene:672-VALIDATED-BY-FDA` genuinely should be.
+#
+# Finding F-2.1-A5-07: Python's `\d` matches every Unicode decimal digit,
+# not only ASCII 0-9, so without `re.ASCII` an Arabic-Indic, Devanagari, or
+# fullwidth digit fullmatched these shapes as cleanly as a real digit and
+# quoted straight into a syntactically valid, host-pinned URL for a record
+# that cannot exist: F-2.1-C09's exact failure mode, reopened through a
+# character class rather than a shape. Every pattern below now carries
+# `re.ASCII`, so `\d` in each one matches only `[0-9]` and a non-ASCII
+# digit is rejected the same way `NCBIGene:672-related` already was.
+_NUMERIC_LOCAL_ID = re.compile(r"^\d+$", re.ASCII)
+_MEDGEN_LOCAL_ID = re.compile(r"^CN?\d+$", re.ASCII)
+_MESH_LOCAL_ID = re.compile(r"^D\d+$", re.ASCII)
+
+_CURIE_LOCAL_ID_SHAPES: dict[str, re.Pattern[str]] = {
+    "NCBIGene": _NUMERIC_LOCAL_ID,
+    "ClinVar": _NUMERIC_LOCAL_ID,
+    "MedGen": _MEDGEN_LOCAL_ID,
+    "PMID": _NUMERIC_LOCAL_ID,
+    "NCBITaxon": _NUMERIC_LOCAL_ID,
+    "MeSH": _MESH_LOCAL_ID,
+}
+
+
 def source_url_for_curie(curie: str) -> str | None:
     """Map a graph CURIE to its NCBI record page, or None.
 
@@ -125,10 +287,14 @@ def source_url_for_curie(curie: str) -> str | None:
 
     Returns:
         The record page URL when the prefix is one of the six documented
-        mappings and the resulting URL matches `NCBI_RECORD_URL_PATTERN`.
-        None for every other prefix, including the three CURIE_PREFIXES
-        entries this module does not map (GO, HP, MONDO) and any prefix
-        outside the nine entirely. Never a guessed or malformed URL.
+        mappings, the local id matches the verified shape for that prefix
+        (finding F-2.1-C09, corrected by F-2.1-J4-05), and the resulting
+        URL matches
+        `NCBI_RECORD_URL_PATTERN`. None for every other prefix, including
+        the three CURIE_PREFIXES entries this module does not map (GO,
+        HP, MONDO) and any prefix outside the nine entirely. Never a
+        guessed or malformed URL, and never a URL built from a local id
+        this module cannot verify the shape of.
     """
     if not curie or ":" not in curie:
         return None
@@ -140,6 +306,29 @@ def source_url_for_curie(curie: str) -> str | None:
     if builder is None:
         return None
 
+    shape = _CURIE_LOCAL_ID_SHAPES.get(prefix)
+    if shape is not None and not shape.fullmatch(local_id):
+        # F-2.1-C09: a shape mismatch means this local id cannot be
+        # verified against the graph's own id format for this prefix.
+        # Treated the same as an unmapped prefix: no URL, never a guessed
+        # one that happens to be syntactically well-formed.
+        return None
+
+    # Findings F-2.1-J4-05 and F-2.1-A5-07: every shape in
+    # `_CURIE_LOCAL_ID_SHAPES` restricts its letters to specific uppercase
+    # ASCII characters (J4-05) and, since A5-07, compiles with `re.ASCII` so
+    # its `\d` classes match only ASCII digits too. Together those two make
+    # the following true: no local id that reaches this line ever contains
+    # a character `quote` needs to escape. Before the A5-07 fix this
+    # comment asserted that property while `\d` still matched every Unicode
+    # decimal digit, so a local id built from Arabic-Indic or fullwidth
+    # digits reached this line and DID need escaping; `quote` silently
+    # escaped it into a syntactically valid, host-pinned, and dead URL
+    # instead of the shape check catching it. The call stays as defense in
+    # depth for a shape added later that does admit an encodable character,
+    # not because today's shapes exercise it; see
+    # `test_no_documented_prefix_url_ever_contains_a_percent_encoded_local_id`
+    # and `test_curie_local_id_shapes_reject_non_ascii_digits`.
     quoted_local_id = urllib.parse.quote(local_id, safe="")
     url = builder(quoted_local_id)
 
@@ -149,6 +338,54 @@ def source_url_for_curie(curie: str) -> str | None:
         # citation. Never pass such a URL through.
         return None
     return url
+
+
+# Finding F-2.1-C04/C05: an edge's own stored `source_url` is data already
+# in hand on the edge itself (F-2.1-B06's own probe found every sampled
+# edge carries one), never dependent on which sibling endpoint vertex a
+# query happens to also RETURN. Reverse-deriving the CURIE that produced
+# it, rather than only matching it against whichever vertex is present in
+# this particular row, makes the citation a property of the edge, not of
+# the projection: the same edge resolves to the same record whether the
+# query returned its start endpoint, its end endpoint, both, or neither.
+_CURIE_URL_PATTERNS: dict[str, re.Pattern[str]] = {
+    "NCBIGene": re.compile(r"^https://www\.ncbi\.nlm\.nih\.gov/gene/(?P<local_id>[^/?#]+)/?$"),
+    "ClinVar": re.compile(
+        r"^https://www\.ncbi\.nlm\.nih\.gov/clinvar/variation/(?P<local_id>[^/?#]+)/?$"
+    ),
+    "MedGen": re.compile(r"^https://www\.ncbi\.nlm\.nih\.gov/medgen/(?P<local_id>[^/?#]+)/?$"),
+    "PMID": re.compile(r"^https://pubmed\.ncbi\.nlm\.nih\.gov/(?P<local_id>[^/?#]+)/?$"),
+    "NCBITaxon": re.compile(
+        r"^https://www\.ncbi\.nlm\.nih\.gov/Taxonomy/Browser/wwwtax\.cgi\?id="
+        r"(?P<local_id>[^&#]+)$"
+    ),
+    "MeSH": re.compile(r"^https://www\.ncbi\.nlm\.nih\.gov/mesh/\?term=(?P<local_id>[^&#]+)$"),
+}
+
+
+def _curie_for_source_url(url: str) -> str | None:
+    """Reverse-derive a verified CURIE from a URL this module could have
+    built itself, or None.
+
+    Tries each documented prefix's own path pattern, decodes the extracted
+    local id, and accepts the candidate only when feeding it back through
+    `source_url_for_curie` succeeds, i.e. only when it is a shape this
+    module recognizes as a real id for that prefix. This is never a guess
+    from regex shape alone: `source_url_for_curie` applies the exact same
+    per-prefix shape check finding F-2.1-C09 added, so a URL that is
+    host-valid and even path-shaped like one of the six documented
+    templates, but whose local id does not match that prefix's real id
+    shape, still correctly yields None here.
+    """
+    for prefix, pattern in _CURIE_URL_PATTERNS.items():
+        match = pattern.match(url)
+        if match is None:
+            continue
+        local_id = urllib.parse.unquote(match.group("local_id"))
+        candidate = f"{prefix}:{local_id}"
+        if source_url_for_curie(candidate) is not None:
+            return candidate
+    return None
 
 
 def _resolve_source_url(curie: str, stored_url: object) -> str | None:
@@ -212,7 +449,108 @@ def to_output_row(raw_row: dict, snapshot_version: str) -> dict:
     }
 
 
-def _shape_entity(entity: dict[str, Any], snapshot_version: str) -> dict:
+def _is_edge_entity(entity: dict[str, Any]) -> bool:
+    """Return True when `entity` is an AGE edge, per `agtype.is_vertex_or_edge`'s
+    own convention: a vertex carries only `label`, an edge additionally
+    carries `start_id` and/or `end_id`.
+    """
+    return "start_id" in entity or "end_id" in entity
+
+
+def _endpoint_curies_by_internal_id(entities: list[dict[str, Any]]) -> dict[Any, str]:
+    """Map every vertex's own AGE-internal id to its own CURIE, for one raw row.
+
+    Built once per raw graph row from every vertex entity that row's
+    columns actually parsed (a plain multi-column `RETURN v, e, g`, or a
+    path's flattened elements), never from a separate graph lookup: this
+    module is a pure transform over its arguments and never queries the
+    graph on its own (see the module docstring). This mapping is the
+    input finding F-2.1-B06's fix depends on: it lets an edge with no
+    CURIE of its own (`_shape_entity`, below) attribute its citation to a
+    genuine endpoint vertex that is actually present in the same row,
+    verified from data already in hand, never to a guessed or freshly
+    fetched one.
+
+    An edge entity never contributes to this mapping, only a vertex does,
+    so an edge can never be attributed to another edge's identity.
+    """
+    mapping: dict[Any, str] = {}
+    for entity in entities:
+        if _is_edge_entity(entity):
+            continue
+        properties = entity.get("properties")
+        if not isinstance(properties, dict):
+            continue
+        curie = str(properties.get("id") or "")
+        internal_id = entity.get("id")
+        if curie and internal_id is not None:
+            mapping[internal_id] = curie
+    return mapping
+
+
+def _attributed_endpoint_curie(
+    entity: dict[str, Any],
+    endpoint_curies: dict[Any, str] | None,
+    stored_url: object = None,
+) -> str | None:
+    """Find a verified citation CURIE for an edge entity with no CURIE of
+    its own.
+
+    Finding F-2.1-C04/C05: this used to check only `entity`'s `start_id`
+    then `end_id` against `endpoint_curies`, so an edge's citation
+    depended on which sibling endpoint vertex the query happened to also
+    RETURN in the same row. `RETURN e, d` cited the end endpoint,
+    `RETURN e, g` cited the start endpoint, and the identical edge in the
+    graph got two different citations across two differently-projected
+    queries of it, and the more precise of the two (for example the
+    ClinVar variation page for `is_sequence_variant_of`) was lost the
+    moment the query stopped projecting that specific vertex. Provenance
+    for a fact must not be a property of which column a model chose to
+    project.
+
+    Priority 1: reverse-derive a verified CURIE from the edge's own stored
+    `source_url` (`_curie_for_source_url`), when that URL is host-pinned.
+    This is edge-intrinsic data, always present on the edge itself
+    regardless of which sibling columns the query returned (F-2.1-B06's
+    own probe found every sampled edge carries a `source_url` property),
+    so it is what makes the citation deterministic for the same edge and
+    what restores the precision F-2.1-C05 found lost.
+
+    Priority 2 (fallback, only when priority 1 finds nothing verifiable):
+    the original F-2.1-B06 mechanism, checking `start_id` then `end_id`
+    against `endpoint_curies`, built from whichever vertex entities this
+    row's own columns actually parsed. Kept for edges whose own stored URL
+    is missing, malformed, or on a foreign host, so such an edge is not
+    made uncitable just because this row happens to include a genuine
+    sibling endpoint vertex it could otherwise be attributed to.
+
+    Returns None when neither priority finds anything: an edge queried
+    alone (`RETURN e`), with no valid stored URL of its own and no sibling
+    vertex in the row, is the honest "cannot attribute" case, and nothing
+    here is invented to fill it.
+    """
+    if isinstance(stored_url, str) and stored_url and _matches_host_pattern(stored_url):
+        own_curie = _curie_for_source_url(stored_url)
+        if own_curie:
+            return own_curie
+
+    if not endpoint_curies:
+        return None
+    for key in ("start_id", "end_id"):
+        internal_id = entity.get(key)
+        if internal_id is None:
+            continue
+        candidate = endpoint_curies.get(internal_id)
+        if candidate:
+            return candidate
+    return None
+
+
+def _shape_entity(
+    entity: dict[str, Any],
+    snapshot_version: str,
+    endpoint_curies: dict[Any, str] | None = None,
+) -> dict:
     """Shape one parsed AGE vertex or edge dict into the output row shape.
 
     `entity` is the dict `agtype.parse_agtype` decoded from one `::vertex`
@@ -222,12 +560,42 @@ def _shape_entity(entity: dict[str, Any], snapshot_version: str) -> dict:
     `properties["id"]`, the identifier Systems 1 and 2 stamped onto every
     node and edge at ingest time. The top-level `id` on the entity itself
     is AGE's own internal graph id and is never treated as a CURIE.
+
+    Finding F-2.1-B06: a real AGE edge carries no `properties["id"]` at
+    all (verified live: `source`, `agent_type`, `source_url`, and
+    `knowledge_level`, never `id`). Before this fix, an edge's empty
+    `curie` still let `_resolve_source_url` pass through the edge's own
+    stored `source_url` whenever it matched the host pattern, so the row
+    shipped `source_id="unknown"` next to a URL for a genuine but
+    different record, a citation that survives inspection while pointing
+    at the wrong thing.
+
+    An edge with no CURIE of its own (`is_edge` and `not curie`, below)
+    never keeps its raw stored `source_url` as-is, unverified. Finding
+    F-2.1-C04/C05: `_attributed_endpoint_curie` first tries to
+    reverse-derive a verified CURIE from the edge's own stored
+    `source_url` itself, edge-intrinsic data that does not depend on
+    which sibling columns the query returned, and falls back to a sibling
+    endpoint vertex's CURIE (`endpoint_curies`, built by
+    `_endpoint_curies_by_internal_id` from every column of the row) only
+    when that fails. Either way, both `curie` and `source_url` are set
+    together from the same verified CURIE so the two always agree, and
+    the canonical URL is re-derived from that CURIE rather than the raw
+    stored string passed through, so a stored value's own formatting
+    quirks never leak into the citation;
+    `fields["_cited_via_endpoint_curie"]` marks the row as an edge citing
+    an endpoint's record, never presented as the edge's own identity.
+    When neither the edge's own stored URL nor a sibling vertex verifies,
+    `source_url` is None: the honest "no citation" outcome, which the
+    caller's cite-or-refuse gate (`cypher_query._run_pipeline`) drops
+    rather than emitting an uncited or misattributed row.
     """
     node_or_edge_type = str(entity.get("label") or "")
     properties = entity.get("properties")
     if not isinstance(properties, dict):
         properties = {}
     curie = str(properties.get("id") or "")
+    is_edge = _is_edge_entity(entity)
 
     fields = dict(properties)
     if "start_id" in entity:
@@ -235,7 +603,27 @@ def _shape_entity(entity: dict[str, Any], snapshot_version: str) -> dict:
     if "end_id" in entity:
         fields.setdefault("_edge_end_id", entity["end_id"])
 
-    resolved_source_url = _resolve_source_url(curie, properties.get("source_url"))
+    if is_edge and not curie:
+        attributed_curie = _attributed_endpoint_curie(
+            entity, endpoint_curies, properties.get("source_url")
+        )
+        if attributed_curie:
+            curie = attributed_curie
+            fields["_cited_via_endpoint_curie"] = attributed_curie
+            # Always re-derive the canonical URL from the verified CURIE,
+            # never pass the raw stored string through as-is: a stored
+            # value's own formatting (a missing trailing slash, stray
+            # whitespace) must never leak into the citation, or two
+            # differently-formatted stored URLs for the same record would
+            # defeat F-2.1-C04's determinism guarantee.
+            resolved_source_url = source_url_for_curie(attributed_curie)
+        else:
+            # Neither the edge's own stored source_url nor a sibling
+            # endpoint vertex in this row could be verified against a
+            # real CURIE. Nothing here is invented to fill the gap.
+            resolved_source_url = None
+    else:
+        resolved_source_url = _resolve_source_url(curie, properties.get("source_url"))
 
     return {
         "node_or_edge_type": node_or_edge_type,
@@ -264,7 +652,93 @@ def _iter_entities(parsed: Any) -> list[dict[str, Any]]:
     return []
 
 
-def to_output_rows(raw_row: dict[str, Any], snapshot_version: str) -> list[dict]:
+
+def _first_resolvable_curie(derived: dict[str, Any]) -> str | None:
+    """Return the first value in `derived` that is itself a citable CURIE.
+
+    Finding F-2.1-C02: a projected identifier column (`d.id AS
+    disease_id`) already IS the record a derived row's fact is about. The
+    original F-2.1-B05/J01 fix cited every derived row to the entity the
+    query was computed FROM, which is correct for a genuine scalar (a
+    count, a name) but wrong for a projected identifier: four distinct
+    MedGen disease ids all cited to one Gene page, the record the query
+    started from, while the real identifiers each fact is actually about
+    sat unused in the row's own fields.
+
+    Iterates `derived` in its own insertion order, which mirrors the
+    RETURN clause's own column order, so the choice is deterministic
+    rather than a further coincidence of dict ordering. Only a string
+    value that `source_url_for_curie` itself accepts counts: this reuses
+    the exact same prefix and shape checks finding F-2.1-C09 added, so an
+    ordinary string that merely contains a colon is never mistaken for an
+    identifier.
+    """
+    for value in derived.values():
+        if isinstance(value, str) and source_url_for_curie(value) is not None:
+            return value
+    return None
+
+
+def _shape_derived_value(
+    derived: dict[str, Any],
+    snapshot_version: str,
+    source_curie: str | None,
+    column_labels: dict[str, str] | None = None,
+) -> dict:
+    """Shape a scalar or projection result into one citable output row.
+
+    Finding F-2.1-B05: a count, a projected property, or a `collect()` list
+    is a real answer that carried no label, so it produced no row at all and
+    the tool reported `status="empty"` for a query the graph had answered
+    correctly.
+
+    Finding F-2.1-C02: provenance for a derived value is preferentially the
+    value's own record, when the projected value is itself a resolvable
+    CURIE (`_first_resolvable_curie`). Only when nothing projected is
+    itself an identifier, a genuine scalar such as a count or a name, does
+    provenance fall back to the entity the query was computed FROM:
+    `source_curie` carries that entity down from the caller, which is the
+    only place that knows it, and citing BRCA1's own record for the count
+    of BRCA1's variants is a claim this system can stand behind.
+
+    `node_or_edge_type` is "derived" rather than a graph label, so a
+    downstream consumer can tell a computed value from a retrieved record
+    and never present one as the other. Without a projected identifier or
+    a `source_curie`, the row still carries no citation and the caller's
+    cite-or-refuse gate drops it, which is the correct outcome: an
+    uncitable computed number is exactly the fluent-but-ungrounded output
+    this system must not emit.
+    """
+    # F-2.1-J09: key each value by its RETURN alias where the query gave
+    # one, so `count(v) AS variant_count` reaches the Write step as
+    # `variant_count` rather than the positional `c0`. A column with no
+    # alias keeps its positional name; see `cypher_query.column_labels_for`
+    # for why an unaliased expression is not paraphrased into a label.
+    labels = column_labels or {}
+    fields = {labels.get(column, column): value for column, value in derived.items()}
+
+    projected_curie = _first_resolvable_curie(derived)
+    if projected_curie:
+        citation_curie = projected_curie
+        resolved_source_url = source_url_for_curie(projected_curie)
+    else:
+        citation_curie = source_curie or ""
+        resolved_source_url = source_url_for_curie(source_curie) if source_curie else None
+
+    return {
+        "node_or_edge_type": "derived",
+        "curie": citation_curie,
+        "fields": fields,
+        "source_url": resolved_source_url,
+        "graph_snapshot_version": snapshot_version,
+    }
+
+def to_output_rows(
+    raw_row: dict[str, Any],
+    snapshot_version: str,
+    derived_source_curie: str | None = None,
+    column_labels: dict[str, str] | None = None,
+) -> list[dict]:
     """Shape one raw AGE result row into zero or more output row shapes.
 
     `raw_row` is a dict keyed by the AGE output column name(s) declared in
@@ -290,8 +764,17 @@ def to_output_rows(raw_row: dict[str, Any], snapshot_version: str) -> list[dict]
     empty content row instead. The caller, `cypher_query._run_pipeline`,
     applies the matching cite-or-refuse gate at the row level: an
     entity that does parse but still resolves no `source_url` (an
-    unmapped CURIE prefix such as GO, HP, or MONDO) is also dropped there,
-    for the same reason.
+    unmapped CURIE prefix such as GO, HP, or MONDO, or an edge with no
+    CURIE of its own and no endpoint vertex in the same row, finding
+    F-2.1-B06) is also dropped there, for the same reason.
+
+    Finding F-2.1-B06: entities are collected from every column of `raw_row`
+    before any of them is shaped, specifically so that an edge column
+    (which never carries its own CURIE on the live graph) can be
+    attributed to a genuine endpoint vertex's CURIE when that vertex was
+    also returned in this same row, whether as a sibling column
+    (`RETURN v, e, g`) or as an adjacent element of the same path
+    (`RETURN p`). See `_shape_entity` and `_endpoint_curies_by_internal_id`.
 
     Args:
         raw_row: one row as read from the graph connection, keyed by
@@ -300,14 +783,111 @@ def to_output_rows(raw_row: dict[str, Any], snapshot_version: str) -> list[dict]
         snapshot_version: the graph snapshot version string to stamp onto
             every shaped row.
 
+    Finding F-2.1-C06: the returned list is deduplicated by cited record
+    (`_dedupe_rows_by_record_identity`) before it reaches the caller. An
+    edge attributed to a sibling endpoint vertex's CURIE, and that same
+    vertex returned as its own column in the same row, used to produce
+    two output rows citing the identical record, halving the caller's
+    fixed citation budget with no signal that a duplicate was dropped.
+
     Returns:
         A list of dicts, each with exactly the keys `node_or_edge_type`,
-        `curie`, `fields`, `source_url`, `graph_snapshot_version`. Empty
-        when no column in `raw_row` decoded to a citable vertex or edge.
+        `curie`, `fields`, `source_url`, `graph_snapshot_version`, with at
+        most one row per distinct cited record. Empty when no column in
+        `raw_row` decoded to a citable vertex or edge.
     """
-    shaped_rows: list[dict] = []
-    for value in raw_row.values():
+    all_entities: list[dict[str, Any]] = []
+    derived: dict[str, Any] = {}
+
+    for column, value in raw_row.items():
         parsed = parse_agtype(value)
-        for entity in _iter_entities(parsed):
-            shaped_rows.append(_shape_entity(entity, snapshot_version))
-    return shaped_rows
+        entities = _iter_entities(parsed)
+        if entities:
+            all_entities.extend(entities)
+        elif parsed is not None:
+            # F-2.1-B05. A scalar or a list is a real answer, not an absence.
+            # `count(sv)`, `d.name`, `collect(m.id)` all parse to something
+            # that is not a vertex, so every one of them used to contribute
+            # zero rows and the tool reported `status="empty"` while
+            # `total_available` sat non-zero: it knew the graph had answered
+            # and said nothing was found. Five of the six query shapes the
+            # real plan model actually produced were projections or scalars,
+            # so this refused the correct answer most of the time, including
+            # every "how many" question.
+            #
+            # These are collected per column and emitted as ONE derived row
+            # below, rather than one row each, because a projection's columns
+            # are fields of a single result, not separate findings.
+            derived[column] = parsed
+
+    endpoint_curies = _endpoint_curies_by_internal_id(all_entities)
+    shaped_rows = [
+        _shape_entity(entity, snapshot_version, endpoint_curies) for entity in all_entities
+    ]
+
+    if derived:
+        # F-2.1-J03: this used to read `if derived and not shaped_rows`, so a
+        # row mixing an entity and a scalar, `RETURN g, count(v)`, emitted the
+        # gene and silently discarded the count. The result reported
+        # `status="ok"` with a valid citation while the number the user
+        # actually asked for was gone, which is worse than F-2.1-B05's
+        # original symptom: that refused, this answers with the answer
+        # removed.
+        #
+        # A derived value is emitted whether or not entities share the row.
+        # It still carries a citation only when one can be stood behind, and
+        # `cypher_query`'s cite-or-refuse gate still drops it otherwise.
+        shaped_rows.append(
+            _shape_derived_value(
+                derived, snapshot_version, derived_source_curie, column_labels
+            )
+        )
+
+    return _dedupe_rows_by_record_identity(shaped_rows)
+
+
+def _dedupe_rows_by_record_identity(rows: list[dict]) -> list[dict]:
+    """Keep only the first ENTITY output row per cited record, by
+    `source_url`.
+
+    Finding F-2.1-C06: an edge attributed to an endpoint's CURIE and that
+    same endpoint's own vertex, parsed from separate columns of one raw
+    graph row (`RETURN e, d`), used to become two separate output rows
+    citing the identical record, one from each code path (`_shape_entity`'s
+    edge branch and its ordinary vertex branch). Two output rows for one
+    record become two citations for one record downstream, silently
+    halving the caller's fixed citation budget with no signal that a
+    duplicate was ever dropped. This dedup only ever applies among rows
+    `_shape_entity` produced, both genuinely redundant restatements of the
+    same underlying record.
+
+    A "derived" row (`_shape_derived_value`) is never deduplicated away,
+    and never counted toward another row's identity, even when it shares
+    a `source_url` with an entity row in the same call: finding F-2.1-C03
+    (`RETURN g, count(v)`) established that a derived value is new
+    information (a count, a projection) the entity row does not itself
+    carry, and citing it to its computed-from entity, when it has no more
+    specific identifier of its own, means it will legitimately share that
+    entity's URL. Dropping it as a "duplicate" in that case would silently
+    remove the very number the user asked for, which is F-2.1-C03's
+    original symptom reborn through this fix.
+
+    A row with no resolvable `source_url` is never deduplicated against
+    another: it carries no citation for the caller's cite-or-refuse gate
+    to drop in the first place, so there is no record identity to compare
+    it against, and it must not be collapsed with an unrelated uncitable
+    row just because both happen to have `source_url is None`.
+    """
+    seen_urls: set[str] = set()
+    deduped: list[dict] = []
+    for row in rows:
+        if row.get("node_or_edge_type") == "derived":
+            deduped.append(row)
+            continue
+        source_url = row.get("source_url")
+        if source_url:
+            if source_url in seen_urls:
+                continue
+            seen_urls.add(source_url)
+        deduped.append(row)
+    return deduped
