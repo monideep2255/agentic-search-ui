@@ -1028,3 +1028,82 @@ async def test_outer_timeout_message_does_not_blame_the_graph_for_generation_del
         "the message must not assert specifically that the graph query "
         f"was what exceeded the budget when the graph was never reached, got: {output.error!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-J4-03: deduplication must not be able to delete a distinct fact
+#
+# Filed as a coverage hole by the fourth judge, in these words: "no test
+# anywhere covers J4-03. The dedup tests all use fixtures where the
+# duplicate is genuinely the same record. The case where the dedup
+# destroys distinct records, four edges sharing one stored source_url, is
+# untested, which is why 879 green tests say nothing about it."
+#
+# The live premise gate covers this too, but it costs a real model call.
+# This is the same property asserted as a pure function, so it runs in
+# milliseconds on every suite and fails loudly if the key regresses.
+# ---------------------------------------------------------------------------
+
+
+def _row(curie: str, source_url: str, name: str) -> object:
+    from system_03_search_agent.tools.cypher_schemas import CypherQueryRow
+
+    return CypherQueryRow(
+        node_or_edge_type="Disease",
+        curie=curie,
+        fields={"name": name},
+        source_url=source_url,
+        graph_snapshot_version="v1",
+    )
+
+
+def test_records_sharing_one_source_url_are_not_collapsed() -> None:
+    """Four distinct diseases, one shared citation page, four rows out.
+
+    This is BRCA1's real shape in the graph: all four of its
+    `gene_associated_with_condition` edges carry the same stored
+    `source_url`. Keying deduplication on that URL reported
+    `row_count=1, total_available=1, truncated=False`, deleting three
+    quarters of the answer while affirming that nothing was cut.
+
+    A citation URL identifies a page, not a fact, and one NCBI page can be
+    the cited source for many records. The key is the CURIE.
+    """
+    from system_03_search_agent.tools.cypher_query import _dedupe_by_cited_record
+
+    shared = "https://www.ncbi.nlm.nih.gov/clinvar/?term=BRCA1"
+    rows = [
+        _row("MedGen:C0346153", shared, "MeSH"),
+        _row("MedGen:C2676676", shared, "MONDO"),
+        _row("MedGen:C3280442", shared, "MedGen"),
+        _row("MedGen:C4554406", shared, "MedGen"),
+    ]
+
+    deduped = _dedupe_by_cited_record(rows)
+
+    assert len(deduped) == 4, (
+        "four distinct diseases sharing one citation page were collapsed to "
+        f"{len(deduped)}. Silent deletion under a completeness claim."
+    )
+    assert [r.curie for r in deduped] == [r.curie for r in rows], (
+        "order must be preserved so the result still reads as the graph "
+        "returned it"
+    )
+
+
+def test_the_same_record_twice_is_still_collapsed() -> None:
+    """The property F-2.1-C06 added, which must survive the J4-03 fix.
+
+    An edge and its endpoint vertex can cite the same record twice per raw
+    row, which halved the effective 20-citation budget. Repeats of one
+    record still collapse; only distinct records are protected.
+    """
+    from system_03_search_agent.tools.cypher_query import _dedupe_by_cited_record
+
+    url = "https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+    rows = [
+        _row("MedGen:C0346153", url, "MeSH"),
+        _row("MedGen:C0346153", url, "MeSH"),
+    ]
+
+    assert len(_dedupe_by_cited_record(rows)) == 1
