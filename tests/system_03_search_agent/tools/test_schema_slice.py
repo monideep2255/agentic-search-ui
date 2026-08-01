@@ -124,46 +124,59 @@ def _vertex_label_lines(text: str) -> list[str]:
     return lines[start:end]
 
 
-def test_build_schema_slice_lookup_stays_narrow_but_reaches_one_hop() -> None:
-    """A lookup slice is bounded, and bounded at one hop, not zero.
+def test_build_schema_slice_lookup_stays_bounded_but_reaches_two_hops() -> None:
+    """A lookup slice is bounded, and bounded at two hops, not zero or one.
 
-    This test used to assert that `Article` was absent, which followed
-    from `lookup` mapping to 0 hops. That assertion was correct for the
-    design and wrong for the system, and the difference cost four review
-    rounds.
+    This assertion has moved twice, and both moves are the same lesson.
 
-    `lookup` is not a classification at this phase. Think emits it as a
-    hardcoded stub for EVERY query (T-2.0-07), so a 0-hop Gene slice was
-    the only schema the generator ever saw, and it contained exactly one
-    edge: `orthologous_to`. Asked "which diseases are associated with
-    BRCA1?", the model was handed a schema with no disease in it and
-    answered with twenty-five non-human orthologs, `status="ok"`, every
-    row correctly cited. See `_STUB_CLASSIFIER_HOP_FLOOR`.
+    It first asserted `Article` was ABSENT, which followed correctly from
+    `lookup` mapping to 0 hops. That was right for the design and wrong
+    for the system, and the difference cost four review rounds: `lookup`
+    is not a classification at this phase, Think emits it as a hardcoded
+    stub for EVERY query (T-2.0-07), so a 0-hop Gene slice was the only
+    schema the generator ever saw and it held exactly one edge,
+    `orthologous_to`. Asked which diseases are associated with BRCA1, the
+    model was handed a schema with no disease in it and returned
+    twenty-five non-human orthologs, `status="ok"`, every row cited.
 
-    So the assertion moved to the property that still has to hold: the
-    slice is bounded. `Article` is a genuine one-hop neighbour of `Gene`
-    and belongs. `OntologyClass` and `PhenotypicFeature` sit two hops out
-    and must not appear, which is what keeps this a real constraint
-    rather than an assertion rewritten until it passed.
+    It then asserted `OntologyClass` and `PhenotypicFeature` were absent,
+    which followed from a floor of 1. Finding F-2.1-A5-03: a floor of 1
+    was also the CEILING, because no class Think emits maps above it, so
+    every question in the system got exactly one hop and any two-hop
+    question was unanswerable by construction. A phenotypic-feature
+    question returned four cited DISEASES, which is the same failure
+    displaced by one hop.
 
-    When Think classifies for real, the floor goes and the 0-hop
-    assertion comes back with it.
+    What is asserted now is the property that survives both moves: the
+    slice must CONTAIN what a question anchored here plausibly needs, and
+    must still be strictly narrower than the full schema. Both halves
+    matter. Without the first, the generator answers a question the schema
+    cannot express. Without the second, this stops being a slice at all
+    and the cost control it exists for is gone.
     """
     sliced = schema_slice.build_schema_slice("lookup", ["NCBIGene:672"])
     label_lines = [line.strip() for line in _vertex_label_lines(sliced)]
 
+    # One hop from Gene, and the flagship question's answer.
     assert any(line.startswith("Disease:") for line in label_lines), (
         "a Gene lookup cannot answer a disease question without the "
-        "Disease label in scope, which is the defect this floor exists "
-        f"to prevent. Got: {label_lines}"
+        f"Disease label in scope. Got: {label_lines}"
     )
-    for beyond_one_hop in ("OntologyClass:", "PhenotypicFeature:"):
-        assert not any(line.startswith(beyond_one_hop) for line in label_lines), (
-            f"{beyond_one_hop} is two hops from Gene and must not be in a "
-            f"lookup slice; the slice is still bounded. Got: {label_lines}"
-        )
+    # Two hops from Gene, via Disease. F-2.1-A5-03's own reproduction.
+    assert any(line.startswith("PhenotypicFeature:") for line in label_lines), (
+        "PhenotypicFeature is two hops from Gene and a phenotype question "
+        "cannot be expressed without it. A floor that is also a ceiling is "
+        f"the defect this asserts against. Got: {label_lines}"
+    )
+    assert "has_phenotype" in sliced, (
+        "the Disease to PhenotypicFeature edge must be offered, not just "
+        "its endpoint labels; _edges_for_labels needs BOTH endpoints in "
+        "scope and that is exactly what the old floor cut off"
+    )
+    # Still a slice, not the whole topology.
     assert len(sliced) < len(schema_slice.full_schema_text()), (
-        "a lookup slice must still be narrower than the full schema"
+        "a lookup slice must still be narrower than the full schema, or "
+        "it is not a slice and the cost control it exists for is gone"
     )
 
 

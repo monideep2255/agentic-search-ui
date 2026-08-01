@@ -1068,9 +1068,29 @@ def _unanchored_returned_variables(
 
     # F-2.1-J5-01: resolve WITH aliases back to their matched variables
     # BEFORE checking anchoring, so renaming cannot launder provenance.
+    #
+    # F-2.1-A5-01, and this is the line the finding is about: `anchored`
+    # used to be alias-resolved too, which is backwards. Expanding
+    # `returned` toward its sources is right, since `RETURN x` where
+    # `WITH d AS x` must be judged as `d`. Expanding `anchored` toward its
+    # sources says the opposite: that if an anchored variable's NAME is
+    # reused as an alias, whatever that alias came from is anchored. An
+    # alias does not confer its target's anchoring on its source.
+    #
+    # It is reachable because openCypher drops a variable a WITH does not
+    # project, so the name is free to rebind:
+    #
+    #   MATCH (g:Gene {id: $e}) WITH g.id AS gid
+    #   MATCH (d:Disease) WITH d AS g RETURN g
+    #
+    # `g` leaves scope at the first WITH, `d AS g` rebinds the name, and
+    # the old line then read `g` as anchored and marked `d` anchored with
+    # it. Live result: five arbitrary diseases, `status="ok"`,
+    # `total_available=200845`, every row cited and resolving, for a
+    # question about BRCA1. The `anchored` set is not alias-resolved at
+    # all now; only what a query RETURNS gets traced back to its source.
     aliases = _alias_sources(cypher)
     returned = _resolve_through_aliases(returned, aliases)
-    anchored = _resolve_through_aliases(anchored, aliases) | anchored
 
     # A returned name that never appears as a matched variable is a literal
     # projection or a pure alias, not an unanchored entity.
@@ -1359,8 +1379,79 @@ def _error_output(cypher_executed: str | None, error: str) -> CypherQueryOutput:
 
 
 
-def _derived_source_curie(params: dict[str, Any]) -> str | None:
+# F-2.1-A5-04. `_derived_source_curie`'s reasoning, "a count over a single
+# gene is about that gene", is sound for an AGGREGATE and false for a
+# PROJECTION, and the row shape cannot tell them apart because both arrive
+# as `node_or_edge_type="derived"`.
+#
+# Measured live on the natural phrasing of this phase's flagship question,
+# "Name the diseases associated with NCBIGene:672":
+#
+#   MATCH (g:Gene {id: $e})-[:gene_associated_with_condition]->(d:Disease)
+#   RETURN d.name AS disease_name
+#
+# returned four rows, each a fact about a distinct DISEASE record, and each
+# cited to `https://www.ncbi.nlm.nih.gov/gene/672`. The citation resolves
+# perfectly and points at a record that asserts nothing of the kind, which
+# is worse than a dead link: it looks verified. That is F-2.1-B01's class,
+# a value from record A cited to record B, on the derived-value line that
+# already reinstated it once in round three.
+#
+# The distinction that is actually available: an aggregate COLLAPSES many
+# records into one value, so attributing it to the anchor is a claim we can
+# stand behind. A bare property projection does not collapse anything; each
+# row is a separate fact about a separate record, and the anchor is not its
+# source. So the anchor citation is allowed only when every returned item
+# is an aggregate over the anchored pattern.
+_AGGREGATE_FUNCTIONS = frozenset(
+    {"count", "sum", "avg", "min", "max", "collect", "stdev", "percentilecont"}
+)
+_AGGREGATE_CALL_PATTERN = re.compile(
+    r"\b(" + "|".join(sorted(_AGGREGATE_FUNCTIONS)) + r")\s*\(", re.IGNORECASE
+)
+
+
+def _returns_only_aggregates(cypher: str) -> bool:
+    """Whether every non-entity RETURN item is an aggregate call.
+
+    A projection mixed in with an aggregate still makes the projected
+    value's provenance unknowable, so this requires ALL of them rather
+    than any.
+    """
+    segment = _return_items_segment(cypher)
+    if not segment.strip():
+        return False
+    saw_aggregate = False
+    for item in _split_top_level_items(segment):
+        stripped = item.strip()
+        if not stripped:
+            continue
+        # Strip a trailing alias so `count(v) AS n` is judged on `count(v)`.
+        alias = _ALIAS_PATTERN.search(stripped)
+        if alias is not None:
+            stripped = stripped[: alias.start()].strip()
+        if _AGGREGATE_CALL_PATTERN.search(stripped):
+            saw_aggregate = True
+            continue
+        # A bare variable is an entity column, shaped by its own record and
+        # cited from it, so it does not constrain the derived attribution.
+        if _IDENTIFIER_PATTERN.fullmatch(stripped):
+            continue
+        # Anything else is a projection: `d.name`, `d.id`, an expression.
+        return False
+    return saw_aggregate
+
+
+def _derived_source_curie(
+    params: dict[str, Any], cypher: str | None = None
+) -> str | None:
     """The entity a derived value is attributable to, or None if ambiguous.
+
+    F-2.1-A5-04: when `cypher` is supplied, the anchor citation is granted
+    only if every returned item is an aggregate. A projection such as
+    `RETURN d.name` describes records the anchor is not, so it gets no
+    citation here and the cite-or-refuse gate drops it, which is the
+    correct outcome for a value this system cannot attribute.
 
     A scalar or projection has no record of its own, so its provenance is
     the entity the query was computed FROM. That is knowable only when
@@ -1381,6 +1472,8 @@ def _derived_source_curie(params: dict[str, Any]) -> str | None:
     number is the correct outcome; shipping it under someone else's
     citation is not.
     """
+    if cypher is not None and not _returns_only_aggregates(cypher):
+        return None
     if len(params) != 1:
         return None
     return next(iter(params.values()))
@@ -1593,7 +1686,7 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             # when more than one entity was bound, because "which entity is
             # this number about" has no answer then and inventing one is
             # exactly what B01 was.
-            derived_source_curie=_derived_source_curie(params),
+            derived_source_curie=_derived_source_curie(params, normalized_cypher),
             # F-2.1-J09: carry the RETURN aliases so a derived value
             # reaches the Write step named, not as a positional `c0`.
             column_labels=column_labels,

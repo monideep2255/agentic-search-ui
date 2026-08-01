@@ -122,7 +122,36 @@ _QUERY_CLASS_HOPS: dict[str, int | None] = {
 # Slicing on a value that is always the same placeholder is narrowing on
 # noise, so the floor holds until Think classifies for real. At that point
 # this drops back to the per-class table, which is sound once its input is.
-_STUB_CLASSIFIER_HOP_FLOOR = 1
+# F-2.1-A5-03. A floor of 1 made the floor the CEILING. Think emits a
+# hardcoded `lookup` for every query, `lookup` maps to 0 hops, and
+# `max(0, 1)` is 1, so every question the system will ever be asked got
+# exactly one hop. `multi_hop` and `aggregate` map to 2 and Think never
+# emits either.
+#
+# That is round four's root cause displaced by one hop rather than
+# removed. A one-hop slice from a Gene anchor omits `PhenotypicFeature`,
+# `OntologyClass`, `has_phenotype`, `has_mesh_annotation`, and
+# `subclass_of`, because `_edges_for_labels` requires BOTH endpoints
+# inside the label set. So "what phenotypic features are associated with
+# the diseases linked to BRCA1" was handed a schema in which the answer
+# does not exist, and the generator answered the only question the schema
+# left askable. Confirmed live: a phenotypic-feature question returned
+# four cited DISEASES, `status="ok"`, no flag.
+#
+# The floor is now the widest bounded depth in the per-class table, which
+# is what `multi_hop` and `aggregate` already ask for. The principle is
+# the same one that set the floor at all: a classification that is always
+# the same placeholder carries no information, so slicing on it narrows on
+# noise, and the safe default is the widest BOUNDED slice rather than the
+# narrowest. `exploratory` still means the full schema, so this is not
+# that.
+#
+# Measured cost, Gene anchor: 1809 characters at one hop, 2095 at two. The
+# extra 286 characters buy every two-hop question in the system.
+#
+# This drops back to the per-class table when Think classifies for real,
+# at which point the table is sound because its input finally is.
+_STUB_CLASSIFIER_HOP_FLOOR = 2
 
 
 def _endpoint_text(edge: str) -> str:

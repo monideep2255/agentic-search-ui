@@ -1219,3 +1219,115 @@ def test_a_legitimately_anchored_result_is_not_rejected(label: str, cypher: str)
         f"{label} is properly anchored and was rejected; a false refusal "
         "means the user gets no answer at all"
     )
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-A5-01: alias shadowing, the third defeat of the same invariant
+#
+# Round 4 defeated "binds at least one caller entity" with a decoy. Round 5
+# defeated its connectivity replacement by renaming through WITH. This is
+# the third: the J5-01 fix resolved the ANCHORED set through aliases as
+# well as the returned set, which is backwards. An alias does not confer
+# its target's anchoring on its source.
+#
+# openCypher drops a variable a WITH does not project, so the name is free
+# to rebind, and `WITH d AS g` after the real `g` leaves scope marked `d`
+# anchored. Live: five arbitrary diseases, status ok, total_available
+# 200845, every row cited and resolving, for a question about BRCA1.
+# ---------------------------------------------------------------------------
+
+
+def test_an_alias_reusing_an_anchored_name_does_not_launder_the_result() -> None:
+    """The adversary's A5-01 reproduction, as a pure function test."""
+    from system_03_search_agent.tools.cypher_query import _unanchored_returned_variables
+
+    shadowed = (
+        "MATCH (g:Gene {id: $e_NCBIGene_672}) WITH g.id AS gid "
+        "MATCH (d:Disease) WITH d AS g RETURN g"
+    )
+
+    assert _unanchored_returned_variables(shadowed, _BINDINGS), (
+        "an alias reused an anchored variable's name and laundered an "
+        "unconnected Disease past the check. An alias must never confer "
+        "anchoring onto what it was derived from."
+    )
+
+
+def test_a_legitimate_alias_of_an_anchored_variable_still_passes() -> None:
+    """The cost side: renaming an anchored variable is ordinary Cypher."""
+    from system_03_search_agent.tools.cypher_query import _unanchored_returned_variables
+
+    legitimate = (
+        "MATCH (g:Gene {id: $e_NCBIGene_672})"
+        "-[:gene_associated_with_condition]->(d:Disease) "
+        "WITH d AS disease RETURN disease"
+    )
+
+    assert not _unanchored_returned_variables(legitimate, _BINDINGS), (
+        "renaming a properly anchored variable was rejected; a false "
+        "refusal means the user gets no answer at all"
+    )
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-A5-04: an aggregate may be cited to its anchor, a projection may not
+#
+# `_derived_source_curie`'s reasoning, "a count over a single gene is about
+# that gene", is sound for an aggregate and false for a projection.
+# `RETURN d.name` produced four facts about four distinct DISEASE records,
+# every one cited to the BRCA1 GENE page. The citation resolves perfectly
+# and points at a record asserting nothing of the kind, which is worse than
+# a dead link because it looks verified.
+# ---------------------------------------------------------------------------
+
+
+def test_an_aggregate_may_be_attributed_to_the_anchor_entity() -> None:
+    from system_03_search_agent.tools.cypher_query import _derived_source_curie
+
+    params = {"e_NCBIGene_672": "NCBIGene:672"}
+    aggregate = (
+        "MATCH (v:SequenceVariant)-[:is_sequence_variant_of]->"
+        "(g:Gene {id: $e_NCBIGene_672}) RETURN count(v) AS variant_count"
+    )
+
+    assert _derived_source_curie(params, aggregate) == "NCBIGene:672", (
+        "an aggregate collapses many records into one value, so the anchor "
+        "is a citation this system can stand behind, and refusing it would "
+        "lose a correct answer"
+    )
+
+
+def test_a_projection_of_another_nodes_property_is_not_attributed_to_the_anchor() -> None:
+    from system_03_search_agent.tools.cypher_query import _derived_source_curie
+
+    params = {"e_NCBIGene_672": "NCBIGene:672"}
+    projection = (
+        "MATCH (g:Gene {id: $e_NCBIGene_672})"
+        "-[:gene_associated_with_condition]->(d:Disease) "
+        "RETURN d.name AS disease_name"
+    )
+
+    assert _derived_source_curie(params, projection) is None, (
+        "each row of a projection is a separate fact about a separate "
+        "record, so citing them all to the anchor gene is F-2.1-B01's "
+        "class: a value from record A cited to record B"
+    )
+
+
+def test_a_projection_mixed_with_an_aggregate_is_still_not_attributed() -> None:
+    """Requiring ALL items to be aggregates, not any.
+
+    A projection sitting beside an aggregate still has unknowable
+    provenance, so one aggregate in the RETURN must not licence the anchor
+    citation for everything else in it.
+    """
+    from system_03_search_agent.tools.cypher_query import _derived_source_curie
+
+    params = {"e_NCBIGene_672": "NCBIGene:672"}
+    mixed = (
+        "MATCH (g:Gene {id: $e_NCBIGene_672})"
+        "-[:gene_associated_with_condition]->(d:Disease) "
+        "RETURN count(d) AS n, d.name AS disease_name"
+    )
+
+    assert _derived_source_curie(params, mixed) is None
