@@ -1183,6 +1183,260 @@ def test_is_vocabulary_token_artifact_matches_confirmed_examples(value: str, exp
 
 
 # ---------------------------------------------------------------------------
+# F-2.1-A5-06 (adversary, fifth pass): `_is_vocabulary_token_artifact("")`
+# returns False on its own first line, so a blank field outranked every
+# flagged candidate in `_pick_representative_field`. Every `Disease` row
+# this system's flagship question returns carries both empty fields
+# (xrefs, agent_type, knowledge_level) and vocabulary-artifact fields
+# (name, source, ...) side by side, so the picked field was always the
+# empty one, cited at full assertion_confidence on every row of a correct
+# answer: the exact rows the F-2.1-B07 hedge exists to catch.
+# ---------------------------------------------------------------------------
+
+
+def test_pick_representative_field_skips_a_blank_value_ahead_of_an_artifact() -> None:
+    """The adversary's exact reproduction (F-2.1-A5-06): a real `Disease`
+    row's `fields` dict, three empty fields and four vocabulary-token
+    artifacts. Pre-fix this returned `("xrefs", "", False)`, an empty
+    string cited at full confidence. Expected: the first-preference
+    non-blank candidate, `name`, flagged as suspect.
+    """
+    fields = {
+        "id": "MedGen:C0346153",
+        "name": "MeSH",
+        "xrefs": "",
+        "source": "MedGen",
+        "agent_type": "",
+        "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+        "knowledge_level": "",
+    }
+
+    assert graph_module._pick_representative_field(fields) == ("name", "MeSH", True)
+
+
+def test_pick_representative_field_returns_no_field_when_every_value_is_blank() -> None:
+    """Every candidate is empty or whitespace-only: there is nothing to
+    ground a claim in, the identical fallback a row with no fields at all
+    already uses, not a fabricated or hedged claim built from blank text.
+    """
+    fields = {"xrefs": "", "agent_type": "   ", "knowledge_level": "\t"}
+
+    assert graph_module._pick_representative_field(fields) == (None, None, False)
+
+
+def test_pick_representative_field_prefers_a_clean_value_over_a_blank_one() -> None:
+    """A blank `name` must not shadow a clean, non-artifact value sitting
+    later in the same row: the blank is skipped entirely, never picked,
+    never flagged.
+    """
+    fields = {"name": "", "source": "Breast-ovarian cancer, familial 1"}
+
+    assert graph_module._pick_representative_field(fields) == (
+        "source",
+        "Breast-ovarian cancer, familial 1",
+        False,
+    )
+
+
+def test_pick_representative_field_flags_an_artifact_when_the_only_alternative_is_blank() -> None:
+    """A blank `name` and an artifact `source` leave no clean candidate at
+    all: the artifact is still cited (a suspect real value beats no
+    value), flagged so the caller downgrades confidence.
+    """
+    fields = {"name": "", "source": "MeSH"}
+
+    assert graph_module._pick_representative_field(fields) == ("source", "MeSH", True)
+
+
+def test_pick_representative_field_still_flags_when_every_candidate_is_a_non_blank_artifact() -> None:
+    """Regression: the pre-A5-06 F-2.1-B07 case, no blanks involved at
+    all, must still behave exactly as before this fix.
+    """
+    fields = {"name": "MeSH"}
+
+    assert graph_module._pick_representative_field(fields) == ("name", "MeSH", True)
+
+
+def test_pick_representative_field_still_prefers_a_clean_name_with_no_blanks_present() -> None:
+    """Regression: a clean `name` with no blank fields anywhere in the row
+    is still picked unflagged, exactly as before this fix.
+    """
+    fields = {"name": "Diabetes", "source": "MedGen"}
+
+    assert graph_module._pick_representative_field(fields) == ("name", "Diabetes", False)
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-A5-02 (adversary, fifth pass): `_is_vocabulary_token_artifact`
+# protects the citation object only. `_cypher_output_to_structured_fields`'s
+# own output, the payload a future phase's synthesis prompt reads, carried
+# the same corrupted value with no marker at all.
+# ---------------------------------------------------------------------------
+
+
+def test_vocabulary_artifact_fields_lists_every_flagged_key_sorted() -> None:
+    fields = {
+        "id": "MedGen:C0346153",
+        "name": "MeSH",
+        "xrefs": "",
+        "source": "MedGen",
+        "agent_type": "",
+        "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+        "knowledge_level": "",
+    }
+
+    assert graph_module._vocabulary_artifact_fields(fields) == [
+        "id",
+        "name",
+        "source",
+        "source_url",
+    ]
+
+
+def test_vocabulary_artifact_fields_is_empty_when_nothing_is_suspect() -> None:
+    fields = {"name": "Diabetes", "source": "curated multi word description", "row_count": 4}
+
+    assert graph_module._vocabulary_artifact_fields(fields) == []
+
+
+def test_dump_row_for_synthesis_adds_the_marker_without_changing_fields() -> None:
+    """The marker is additive: `fields` itself, the dict
+    `_pick_representative_field` and `_citation_for_row` both read off the
+    same dumped row, must survive completely unchanged.
+    """
+    row = CypherQueryRow(
+        node_or_edge_type="Disease",
+        curie="MedGen:C0346153",
+        fields={"name": "MeSH", "xrefs": ""},
+        source_url="https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+        graph_snapshot_version="v1",
+    )
+
+    dumped = graph_module._dump_row_for_synthesis(row)
+
+    assert dumped["fields"] == {"name": "MeSH", "xrefs": ""}, (
+        "F-2.1-A5-02's fix must never rewrite or drop a field value"
+    )
+    assert dumped["vocabulary_artifact_fields"] == ["name"]
+
+
+def test_cypher_output_to_structured_fields_carries_the_marker_per_row() -> None:
+    output = CypherQueryOutput(
+        status="ok",
+        row_count=1,
+        total_available=1,
+        truncated=False,
+        rows=[
+            CypherQueryRow(
+                node_or_edge_type="Disease",
+                curie="MedGen:C0346153",
+                fields={"name": "MeSH"},
+                source_url="https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+                graph_snapshot_version="v1",
+            ),
+        ],
+        error=None,
+    )
+
+    structured = graph_module._cypher_output_to_structured_fields(output)
+
+    assert structured["rows"][0]["vocabulary_artifact_fields"] == ["name"]
+    assert structured["rows"][0]["fields"] == {"name": "MeSH"}
+
+
+@pytest.mark.asyncio
+async def test_flagship_disease_row_hedges_its_citation_and_flags_its_payload_fields(
+    _mock_litellm: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The adversary's full end-to-end reproduction, run through the real
+    `act_node`/`write_node` path: the correct Cypher, the correct four
+    MedGen CURIEs, a row shaped exactly like the live graph's own Disease
+    rows (three empty fields, four vocabulary-token artifacts). Both
+    findings are proven together here: the emitted citation must hedge
+    (F-2.1-A5-06, never ground itself in the empty `xrefs` field), and the
+    row's own payload must carry an explicit artifact marker
+    (F-2.1-A5-02), not a bare, unqualified `name: "MeSH"`.
+    """
+    row_fields = {
+        "id": "MedGen:C0346153",
+        "name": "MeSH",
+        "xrefs": "",
+        "source": "MedGen",
+        "agent_type": "",
+        "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+        "knowledge_level": "",
+    }
+    output = CypherQueryOutput(
+        status="ok",
+        row_count=1,
+        total_available=1,
+        truncated=False,
+        rows=[
+            CypherQueryRow(
+                node_or_edge_type="Disease",
+                curie="MedGen:C0346153",
+                fields=row_fields,
+                source_url="https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+                graph_snapshot_version="v1",
+            ),
+        ],
+        error=None,
+    )
+
+    async def _fake_cypher_query(harness: object, cypher_input: object) -> CypherQueryOutput:
+        return output
+
+    monkeypatch.setattr(graph_module, "cypher_query", _fake_cypher_query)
+
+    harness = harness_module.Harness(trace_id="test-trace-a5-06-a5-02")
+    planned = graph_module._PlannedToolCall(
+        tool_call=ToolCall(tool="cypher_query", call_id="cq-a5-06-a5-02", layer="layer_1_graph"),
+        cypher_input=CypherQueryInput(
+            query_intent="Which diseases are associated with BRCA1?",
+            query_class="lookup",
+            target_entities=["NCBIGene:672"],
+            row_limit=100,
+        ),
+    )
+    act_state = {
+        "harness": harness,
+        "query": _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT),
+        "query_class": "lookup",
+        "tool_calls": [planned],
+    }
+    act_result = await graph_module.act_node(act_state)
+    findings = act_result["findings"]
+
+    structured_finding = next(f for f in findings if f.source == "structured_pass_through")
+    payload_row = structured_finding.structured_fields["rows"][0]
+    assert payload_row["vocabulary_artifact_fields"] == [
+        "id",
+        "name",
+        "source",
+        "source_url",
+    ], "F-2.1-A5-02: the payload row must name every field that tripped the artifact rule"
+    assert payload_row["fields"] == row_fields, (
+        "F-2.1-A5-02's marker must never rewrite the raw values downstream code still needs"
+    )
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    citation_events = [event for event in events if event.type == "citation"]
+    assert len(citation_events) == 1
+    citation = citation_events[0].payload
+    assert citation["assertion_confidence"] == "hedged", (
+        "F-2.1-A5-06: the empty xrefs field must never ground a full-confidence citation"
+    )
+    assert citation["claim_text"] == "Disease MedGen:C0346153: name=MeSH", (
+        "F-2.1-A5-06: the representative field must be the first-preference non-blank "
+        "candidate (name), never the empty xrefs field"
+    )
+
+
+# ---------------------------------------------------------------------------
 # act: proves the coordinator-worker integration point is actually wired.
 # ---------------------------------------------------------------------------
 

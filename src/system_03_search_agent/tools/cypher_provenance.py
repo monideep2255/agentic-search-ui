@@ -110,6 +110,16 @@ further, larger sample:
   (uppercase `C`/`CN` for MedGen, uppercase `D` for MeSH) rather than "any
   single letter", because the exhaustive scan leaves no evidence any other
   letter is real for either prefix.
+- F-2.1-A5-07 (fifth adversary pass): J4-05 pinned each shape's letters to
+  specific uppercase ASCII characters, but left every `\\d` in the same
+  shapes unrestricted, and Python's `\\d` matches any Unicode decimal
+  digit, not only ASCII 0-9. An Arabic-Indic, Devanagari, or fullwidth
+  digit therefore fullmatched a shape exactly as a real digit would,
+  quoted cleanly, and built a syntactically valid, host-pinned URL for a
+  record that cannot exist, F-2.1-C09's citation-spoofing class reopened
+  through a character class instead of a shape. Every pattern in
+  `_CURIE_LOCAL_ID_SHAPES` now compiles with `re.ASCII`, so `\\d` in each
+  one matches only `[0-9]`.
 - F-2.1-C04/C05: an edge with no CURIE of its own used to be attributed
   only to whichever sibling endpoint vertex the query happened to also
   RETURN, so the identical edge got a different citation depending on the
@@ -244,9 +254,18 @@ def _matches_host_pattern(url: str) -> bool:
 #   descriptors NLM introduced once 6 digits ran out), so a real id one
 #   digit longer than anything sampled must not be treated the way
 #   `NCBIGene:672-VALIDATED-BY-FDA` genuinely should be.
-_NUMERIC_LOCAL_ID = re.compile(r"^\d+$")
-_MEDGEN_LOCAL_ID = re.compile(r"^CN?\d+$")
-_MESH_LOCAL_ID = re.compile(r"^D\d+$")
+#
+# Finding F-2.1-A5-07: Python's `\d` matches every Unicode decimal digit,
+# not only ASCII 0-9, so without `re.ASCII` an Arabic-Indic, Devanagari, or
+# fullwidth digit fullmatched these shapes as cleanly as a real digit and
+# quoted straight into a syntactically valid, host-pinned URL for a record
+# that cannot exist: F-2.1-C09's exact failure mode, reopened through a
+# character class rather than a shape. Every pattern below now carries
+# `re.ASCII`, so `\d` in each one matches only `[0-9]` and a non-ASCII
+# digit is rejected the same way `NCBIGene:672-related` already was.
+_NUMERIC_LOCAL_ID = re.compile(r"^\d+$", re.ASCII)
+_MEDGEN_LOCAL_ID = re.compile(r"^CN?\d+$", re.ASCII)
+_MESH_LOCAL_ID = re.compile(r"^D\d+$", re.ASCII)
 
 _CURIE_LOCAL_ID_SHAPES: dict[str, re.Pattern[str]] = {
     "NCBIGene": _NUMERIC_LOCAL_ID,
@@ -295,12 +314,21 @@ def source_url_for_curie(curie: str) -> str | None:
         # one that happens to be syntactically well-formed.
         return None
 
-    # Finding F-2.1-J4-05: every shape in `_CURIE_LOCAL_ID_SHAPES` is now
-    # restricted to uppercase ASCII letters and digits, so no local id that
-    # reaches this line ever contains a character `quote` needs to escape.
-    # The call stays as defense in depth for a shape added later that does
-    # admit such a character, not because today's shapes exercise it; see
-    # `test_no_documented_prefix_url_ever_contains_a_percent_encoded_local_id`.
+    # Findings F-2.1-J4-05 and F-2.1-A5-07: every shape in
+    # `_CURIE_LOCAL_ID_SHAPES` restricts its letters to specific uppercase
+    # ASCII characters (J4-05) and, since A5-07, compiles with `re.ASCII` so
+    # its `\d` classes match only ASCII digits too. Together those two make
+    # the following true: no local id that reaches this line ever contains
+    # a character `quote` needs to escape. Before the A5-07 fix this
+    # comment asserted that property while `\d` still matched every Unicode
+    # decimal digit, so a local id built from Arabic-Indic or fullwidth
+    # digits reached this line and DID need escaping; `quote` silently
+    # escaped it into a syntactically valid, host-pinned, and dead URL
+    # instead of the shape check catching it. The call stays as defense in
+    # depth for a shape added later that does admit an encodable character,
+    # not because today's shapes exercise it; see
+    # `test_no_documented_prefix_url_ever_contains_a_percent_encoded_local_id`
+    # and `test_curie_local_id_shapes_reject_non_ascii_digits`.
     quoted_local_id = urllib.parse.quote(local_id, safe="")
     url = builder(quoted_local_id)
 

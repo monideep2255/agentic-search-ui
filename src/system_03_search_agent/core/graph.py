@@ -242,6 +242,40 @@ from the row's real, un-sanitized fields) is unchanged and still runs
 against the same rows, for whatever future entity-extraction use a
 later phase makes of it; it was never what made the record citable or
 uncitable, so leaving it in place changes nothing about this fix.
+
+Fifth adversary pass, 2026-08-01 (F-2.1-A5-06, F-2.1-A5-02): both findings
+sit inside the F-2.1-B07 confidence-downgrade path this same docstring
+already covers above.
+
+    - F-2.1-A5-06: `_is_vocabulary_token_artifact("")` returns False on
+      its own first line, so an empty or whitespace-only field value was
+      never "suspect" and therefore outranked every flagged candidate in
+      `_pick_representative_field`. Every `Disease` row this system's
+      flagship question returns carries both empty fields (`xrefs`,
+      `agent_type`, `knowledge_level`) and vocabulary-artifact fields
+      (`name`, `source`, ...) side by side, so the picked field was
+      always the empty one, cited at full `assertion_confidence` on
+      every row of a correct answer: the exact rows the B07 hedge exists
+      to catch. `_pick_representative_field` now excludes a blank
+      candidate from consideration before the artifact check ever runs,
+      so the ranking is a clean value, else a suspect-but-non-empty
+      value (flagged), else the same "nothing to cite" fallback a row
+      with no fields at all already used.
+    - F-2.1-A5-02: `_is_vocabulary_token_artifact` protects the citation
+      object `write_node` builds. It never touched
+      `_cypher_output_to_structured_fields`'s own output, the `Finding.
+      structured_fields` payload this docstring already documents as
+      what a future phase's synthesis prompt reads, so that payload
+      carried `fields: {"name": "MeSH", ...}` with no marker at all. A
+      consumer reading `fields` directly, never the separate citation
+      object, would see the corrupted value with nothing to say it is
+      not a genuine name. `_dump_row_for_synthesis` now adds an
+      additive `vocabulary_artifact_fields` key to each dumped row,
+      naming which of that row's field keys tripped the same shape rule,
+      without altering any existing key or value: `_pick_representative_
+      field` still reads the identical, unmodified `fields` dict off the
+      same dumped row (via `_citations_from_findings`) to make its own,
+      separately-fixed decision.
 """
 
 from __future__ import annotations
@@ -821,6 +855,31 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def _dump_row_for_synthesis(row: CypherQueryRow) -> dict[str, Any]:
+    """Serialize one row exactly as `model_dump` always has, plus the
+    F-2.1-A5-02 marker: `vocabulary_artifact_fields`, the keys of `row.
+    fields` whose value is a known ETL vocabulary-token artifact
+    (`_is_vocabulary_token_artifact`, F-2.1-B07).
+
+    Additive only. Every existing key and value is unchanged, in
+    particular `fields` itself: `_citation_for_row` reads this exact
+    dumped dict (via `_citations_from_findings`, which iterates
+    `finding.structured_fields["rows"]`, the list this function builds),
+    and `_pick_representative_field`'s own F-2.1-A5-06 fix already
+    decides, from those unmodified values, which field a citation is
+    built from and whether to hedge it. This function does not duplicate
+    or override that decision; it gives a consumer of the row as a whole
+    (the future synthesis prompt, per this module's docstring, which
+    already notes `fields` is what gets serialized there) an explicit
+    signal to act on instead of reading, for example, `fields["name"] ==
+    "MeSH"` as a genuine disease name with nothing to say it is not one.
+    An empty list means no field on this row tripped the check.
+    """
+    dumped = row.model_dump(mode="json")
+    dumped["vocabulary_artifact_fields"] = _vocabulary_artifact_fields(row.fields)
+    return dumped
+
+
 def _cypher_output_to_structured_fields(
     output: CypherQueryOutput, rows: list[CypherQueryRow] | None = None
 ) -> dict[str, Any]:
@@ -848,6 +907,10 @@ def _cypher_output_to_structured_fields(
     already agree when nothing is filtered (`cypher_query.py` sets
     `row_count=len(mapped_rows)` itself), and recomputing is what keeps
     them agreeing once a subset is filtered out here.
+
+    Each row is dumped via `_dump_row_for_synthesis`, not a bare
+    `row.model_dump(mode="json")` (F-2.1-A5-02): see that function for
+    the `vocabulary_artifact_fields` marker it adds.
     """
     used_rows = output.rows if rows is None else rows
     return {
@@ -855,7 +918,7 @@ def _cypher_output_to_structured_fields(
         "row_count": len(used_rows),
         "total_available": output.total_available,
         "truncated": output.truncated,
-        "rows": [row.model_dump(mode="json") for row in used_rows],
+        "rows": [_dump_row_for_synthesis(row) for row in used_rows],
         "error": output.error,
     }
 
@@ -1222,6 +1285,37 @@ def _is_vocabulary_token_artifact(value: str) -> bool:
     return not (text.isupper() and len(text) <= _MAX_PLAUSIBLE_ABBREVIATION_CHARS)
 
 
+def _vocabulary_artifact_fields(fields: dict[str, Any]) -> list[str]:
+    """List every key in a row's `fields` dict whose value trips
+    `_is_vocabulary_token_artifact`, sorted for a deterministic order.
+
+    F-2.1-A5-02: `_pick_representative_field`/`_citation_for_row` only
+    ever look at ONE field per row, and only ever act on what they find
+    by downgrading a `CitationPayload`'s `assertion_confidence`. That
+    protects the citation object built in `write_node`. It says nothing
+    about `_cypher_output_to_structured_fields`'s own output, the
+    `Finding.structured_fields` payload this module's docstring already
+    documents as what a future phase's synthesis prompt reads: a row
+    there carries `fields: {"name": "MeSH", ...}` with no marker
+    distinguishing it from a genuine disease name, so a consumer that
+    reads `fields` directly (never inspecting the separate citation
+    object) sees the corrupted value with no qualification at all. This
+    function is called from `_dump_row_for_synthesis` to attach that
+    qualification as an explicit, additive key on the dumped row, so a
+    synthesis-prompt consumer has something to act on beyond the raw
+    string. It never removes or rewrites a field value: `_pick_
+    representative_field` still needs the original values, unmodified,
+    to keep doing its own job on the very same dumped `fields` dict (see
+    `_citations_from_findings`, which reads `finding.structured_fields
+    ["rows"]`, the output of this same dump, to build every citation).
+    """
+    return sorted(
+        key
+        for key, value in fields.items()
+        if isinstance(value, str) and _is_vocabulary_token_artifact(value)
+    )
+
+
 def _pick_representative_field(
     fields: dict[str, Any],
 ) -> tuple[str, Any, bool] | tuple[None, None, bool]:
@@ -1241,6 +1335,22 @@ def _pick_representative_field(
     `assertion_confidence` instead of asserting it at full strength. A row
     with no fields at all yields `(None, None, False)`; the caller falls
     back to citing the row's bare identity (its type and CURIE).
+
+    F-2.1-A5-06: an empty or whitespace-only string is never a citeable
+    claim, so it must never be preferred over a suspect-but-present
+    value, let alone a clean one. Before this fix `_is_vocabulary_token_
+    artifact("")` returned False on its first line (a blank string is not
+    "suspect"), so a genuinely empty field such as `xrefs=''` outranked
+    every flagged candidate and was cited at full `assertion_confidence`,
+    exactly on the rows the B07 hedge exists to catch (every `Disease`
+    row this system's flagship question returns carries both empty
+    fields and vocabulary-artifact fields side by side). Empty candidates
+    are excluded from consideration entirely, before the artifact check
+    ever runs, so the ranking is: a clean non-empty value, else a
+    suspect-but-non-empty value (flagged), else the same `(None, None,
+    False)` "nothing to cite" fallback a row with no fields at all
+    already used, since a field that is only ever an empty string is, for
+    citation purposes, no field at all.
     """
     if not fields:
         return None, None, False
@@ -1248,19 +1358,30 @@ def _pick_representative_field(
     def _is_artifact(value: Any) -> bool:
         return isinstance(value, str) and _is_vocabulary_token_artifact(value)
 
+    def _is_blank(value: Any) -> bool:
+        return isinstance(value, str) and not value.strip()
+
     preferred_keys = (["name"] if "name" in fields else []) + [
         key for key in fields if key != "name"
     ]
-    for key in preferred_keys:
+    usable_keys = [key for key in preferred_keys if not _is_blank(fields[key])]
+
+    for key in usable_keys:
         if not _is_artifact(fields[key]):
             return key, fields[key], False
 
-    # Every candidate field looked like a vocabulary-token artifact.
-    # Still cite the first-preference one (a suspect real value beats no
-    # value), flagged so the caller downgrades confidence rather than
-    # asserting it.
-    key = preferred_keys[0]
-    return key, fields[key], True
+    if usable_keys:
+        # Every non-empty candidate looked like a vocabulary-token
+        # artifact. Still cite the first-preference one (a suspect real
+        # value beats no value), flagged so the caller downgrades
+        # confidence rather than asserting it.
+        key = usable_keys[0]
+        return key, fields[key], True
+
+    # Every candidate field was empty or whitespace-only. There is
+    # nothing here to ground a claim in beyond the row's own type and
+    # CURIE, the identical fallback a row with no fields at all uses.
+    return None, None, False
 
 
 def _citation_for_row(

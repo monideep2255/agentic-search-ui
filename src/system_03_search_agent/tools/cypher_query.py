@@ -944,6 +944,40 @@ _WHERE_PARAM_CONSTRAINT_REVERSED = re.compile(
 # matched a bare `$param` after the operator, never a bracketed list of
 # them. A false reject means the user gets nothing, which is its own
 # defect, so this is as load-bearing as the block itself.
+# F-2.1-A5-08, half one of two. `WHERE toUpper(g.id) = $e` anchors `g`
+# every bit as much as `WHERE g.id = $e`, but the constraint patterns
+# require the variable and its property to sit immediately before the
+# operator, so any function wrapping broke the match and the query was
+# falsely rejected. A false reject means the user gets nothing, which the
+# check's own comment names as the cost it must stay clear of.
+#
+# This looks for `<var>.<prop>` anywhere inside the expression on either
+# side of a comparison against a bound parameter, rather than requiring
+# adjacency.
+_WHERE_PARAM_WRAPPED_PATTERN = re.compile(
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*[A-Za-z_][A-Za-z0-9_]*[^$=<>!]*?"
+    r"(?:=|=~|IN|STARTS\s+WITH|ENDS\s+WITH|CONTAINS)\s*\$([A-Za-z_][A-Za-z0-9_]*)",
+    re.IGNORECASE,
+)
+
+# F-2.1-A5-08, half two, deliberately NOT fixed, and this is a decision
+# rather than an omission.
+#
+# A pattern predicate written inside WHERE, `MATCH (g:Gene), (d:Disease)
+# WHERE g.id = $e AND (g)-[:gene_associated_with_condition]->(d)`, is
+# rejected because `_MATCH_CLAUSE_PATTERN` stops each clause at WHERE and
+# never sees the connecting pattern. Widening the boundary to admit it
+# would also admit `MATCH (g:Gene), (d:Disease)`, which is the exact
+# comma-separated cartesian shape the component split exists to catch, so
+# the fix for a false reject would reopen a false accept.
+#
+# It is also the right query to refuse on its own merits: that pattern is
+# a 67 million by 200 thousand cartesian product before WHERE filters it,
+# on a database a generated query has already OOM-killed once. The
+# adversary that filed this declined to execute it for that reason.
+#
+# The pipeline grants one repair retry seeded with the validator's
+# message, so the cost here is a retry rather than the whole answer.
 _WHERE_PARAM_IN_LIST_PATTERN = re.compile(
     r"([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*[A-Za-z_][A-Za-z0-9_]*\s*IN\s*\[([^\]]*)\]",
     re.IGNORECASE,
@@ -960,6 +994,11 @@ def _variables_constrained_by_param(
         if any(name in listed for name in entity_bindings):
             constrained.add(var)
     for var, param in _WHERE_PARAM_CONSTRAINT_PATTERN.findall(cypher):
+        if param in entity_bindings:
+            constrained.add(var)
+    # F-2.1-A5-08: the same comparison with the variable wrapped in a
+    # function, `toUpper(g.id) = $e`.
+    for var, param in _WHERE_PARAM_WRAPPED_PATTERN.findall(cypher):
         if param in entity_bindings:
             constrained.add(var)
     for param, var in _WHERE_PARAM_CONSTRAINT_REVERSED.findall(cypher):
@@ -1734,6 +1773,26 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     # different facts, so collapsing them would silently discard the
     # answer, which is F-2.1-C03 all over again.
     mapped_rows = _dedupe_by_cited_record(mapped_rows)
+
+    # F-2.1-A5-04b. `row_limit` is a promise about what the CALLER
+    # receives, and until now it bounded only the graph rows fetched.
+    # `to_output_rows` emits one output row per RETURN column that decodes
+    # to an entity, plus one for any derived value, so a multi-column
+    # RETURN multiplies them: `RETURN s, s.id` against `row_limit=20`
+    # fetched 20 graph rows and emitted 40, breaching the caller's own cap.
+    #
+    # This surfaced from the generation rule added for F-2.1-A5-04, which
+    # asks the model to return a node alongside a projected property so the
+    # projection can be cited. That rule is right and this is the bound it
+    # needs: the cap is enforced where the promise is made, rather than by
+    # hoping generation never produces a shape that multiplies rows.
+    #
+    # Cutting here counts as truncation, because the caller is being shown
+    # less than the query matched, which is exactly what that flag means.
+    if len(mapped_rows) > tool_input.row_limit:
+        mapped_rows = mapped_rows[: tool_input.row_limit]
+        truncated = True
+
     distinct_record_count = len(mapped_rows)
 
     if not hit_cap:

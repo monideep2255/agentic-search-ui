@@ -2,7 +2,9 @@
 
 Depends on:
     - system_03_search_agent.tools.cypher_provenance
-      (source_url_for_curie, to_output_row)
+      (source_url_for_curie, to_output_row, _CURIE_LOCAL_ID_SHAPES, used
+      only to assert directly against the compiled shapes for finding
+      F-2.1-A5-07, never to duplicate the mapping logic under test)
     - system_03_search_agent.tools.graph_schema_constants
       (CURIE_PREFIXES, used only to assert every documented prefix in the
       graph is covered by a test, never to duplicate the mapping logic
@@ -16,6 +18,7 @@ import re
 import pytest
 
 from system_03_search_agent.tools.cypher_provenance import (
+    _CURIE_LOCAL_ID_SHAPES,
     source_url_for_curie,
     to_output_row,
     to_output_rows,
@@ -222,6 +225,80 @@ def test_no_documented_prefix_url_ever_contains_a_percent_encoded_local_id() -> 
             f"{curie} produced a percent-encoded URL: a valid shape now "
             "needs real encoding coverage, not just this guard"
         )
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-A5-07: Python's `\d` matches every Unicode decimal digit, not only
+# ASCII 0-9, so a shape compiled without `re.ASCII` accepted Arabic-Indic,
+# Devanagari, and fullwidth digits as if they were real numeric local ids.
+# Each one quoted cleanly into a syntactically valid, host-pinned URL for a
+# record that cannot exist, reopening F-2.1-C09's citation-spoofing class
+# through a character class instead of a shape.
+#
+# The guard test just above this one, added for F-2.1-J4-05, could not
+# catch this: it only checks that seven hand-picked, already-ASCII CURIEs
+# do not need percent-encoding. It never feeds the shapes a non-ASCII
+# digit, so a shape that lost `re.ASCII` would keep passing it. A guard
+# that asserts a property over a hand-listed sample rather than over the
+# shapes themselves does not guard the property. The test below asserts
+# directly against `_CURIE_LOCAL_ID_SHAPES`, the compiled patterns under
+# test, so a future edit that drops `re.ASCII` from any of them fails this
+# test directly instead of merely going unnoticed.
+# ---------------------------------------------------------------------------
+
+# Each is a real Unicode decimal digit, `str.isdigit()` and `\d` both agree,
+# but none is one of the ASCII characters '0' through '9'.
+_NON_ASCII_DIGIT_SAMPLES = [
+    "٦٧٢",  # Arabic-Indic digits for 672
+    "६७२",  # Devanagari digits for 672
+    "６７２",  # fullwidth digits for 672
+]
+
+# The literal, prefix-specific text each shape in `_CURIE_LOCAL_ID_SHAPES`
+# requires before its digit run, so a candidate actually reaches the `\d+`
+# portion of its own shape rather than failing to match for an unrelated
+# reason (a missing letter prefix). Kept here, next to the shapes dict
+# import, rather than re-deriving it from the compiled patterns, since the
+# point of this test is to exercise each shape's digit class specifically.
+_LOCAL_ID_PREFIX_LITERAL: dict[str, str] = {
+    "NCBIGene": "",
+    "ClinVar": "",
+    "PMID": "",
+    "NCBITaxon": "",
+    "MedGen": "CN",
+    "MeSH": "D",
+}
+
+
+def test_curie_local_id_shapes_reject_non_ascii_digits() -> None:
+    assert set(_LOCAL_ID_PREFIX_LITERAL) == set(_CURIE_LOCAL_ID_SHAPES)
+    for prefix, shape in _CURIE_LOCAL_ID_SHAPES.items():
+        literal = _LOCAL_ID_PREFIX_LITERAL[prefix]
+        for digits in _NON_ASCII_DIGIT_SAMPLES:
+            candidate = literal + digits
+            assert not shape.fullmatch(candidate), (
+                f"{prefix} shape {shape.pattern!r} fullmatched the "
+                f"non-ASCII-digit local id {candidate!r}; \\d without "
+                "re.ASCII matches Unicode digits, not only 0-9"
+            )
+
+
+@pytest.mark.parametrize(
+    "curie",
+    [
+        "NCBIGene:٦٧٢",  # Arabic-Indic 672
+        "NCBIGene:6７2",  # fullwidth 7 mixed into an otherwise-ASCII id
+        "PMID:１２３",  # fullwidth 123
+        "MedGen:CN٤٥٦",  # Arabic-Indic digits after CN
+        "MeSH:D００００００",  # fullwidth zeros after D
+    ],
+)
+def test_non_ascii_digit_curie_returns_none(curie: str) -> None:
+    # F-2.1-A5-07: the adversary's own reproduction. Before the re.ASCII
+    # fix, every one of these fullmatched its prefix's shape and built a
+    # syntactically valid, host-pinned URL that 404s live, since none of
+    # these local ids names a real record.
+    assert source_url_for_curie(curie) is None
 
 
 # ---------------------------------------------------------------------------
