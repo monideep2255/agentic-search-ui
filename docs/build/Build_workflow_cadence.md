@@ -1,10 +1,10 @@
 # Build workflow cadence
 
-The loop one build phase runs, who does each step, and which model runs it. This is the quick reference. The visual version is `docs/Phase_6_execution_flow.html`, and the full detail lives in `.claude/skills/bossman-mode/SKILL.md`.
+The loop one build phase runs, who does each step, and which model runs it. This is the quick reference. The visual version is `docs/build/Phase_6_execution_flow.html`, and the full detail lives in `.claude/skills/bossman-mode/SKILL.md`.
 
 The loop repeats 26 times, once per build phase in `requirements/Technical_specification.md` section 25.
 
-Last updated: 2026-07-26.
+Last updated: 2026-08-02.
 
 ## Table of contents
 
@@ -34,22 +34,30 @@ It runs like a normal engineering team. Tickets get read, picked up, worked, and
 | 7 | Record what broke, at the moment it breaks | Whoever hit it | inherits its own | n/a |
 | 8 | Judge grades with cited evidence, closes tickets | Judge | depth | high or extra high |
 | 9 | Adversary attacks what the judge certified | Adversary | depth | high |
-| 10 | Gates: verify, eval-harness, dev-standards, release-workflow | Lead, test writer | depth lead, balance tests | medium |
+| 10 | Gates: see the breakdown below the table, they are not all run on the same schedule | Lead, test writer | depth lead, balance tests | medium |
 | 11 | Close the board, render, republish, open the pull request | Lead | depth | low |
 | 12 | Review and merge | Product owner | human | n/a |
+
+Stage 10 names four gate skills, and they are not interchangeable items on one checklist. Measured against `tracker/phase_*.md` across the five build phases completed so far (1.0, 1.1, 2.0, 1.2, 2.1):
+
+- `release-workflow` is mandatory at every phase end per the bossman-mode rule's "Skill chain at phase end: release-workflow -> ship (mandatory, no skips)". Measured dispatch count: 0 of 5 phases. This is a real gap between what the rule requires and what has actually run, not a gate this document is dropping. Not-yet-exercised, and the gap is stated here so it stays visible.
+- `verify` is the pre-commit check (Python compile, tests, lint, git status) that `release-workflow` calls as part of its own local-verify step. Measured dispatch count: 1 of 5 phases (build phase 2.0). Runs whenever `release-workflow` runs, so its own gap tracks the release-workflow gap above.
+- `dev-standards` is the six-lens production readiness review, invoked for a full readiness check rather than on every phase automatically. Measured dispatch count: 1 of 5 phases (build phase 1.2).
+- `eval-harness` is required before shipping any answer-generation feature, per the AI answer grounding gate in `production-standards.md`. Measured dispatch count: 0 of 5 phases, which is expected rather than a gap: none of the five completed phases shipped answer generation. The trigger is build phase 2.2, deterministic cite-or-refuse, the next phase in the sequence.
 
 ## Stage 5, the premise gate, and why it blocks
 
 Added 2026-08-01 after build phase 2.1 failed four consecutive reviews with
 a green suite. This stage is mandatory and blocking for any phase whose
-deliverable is model-generated output, which is every remaining tool phase
-(3.1 to 3.5). No tool code is written until the gate exists and has been
-seen failing.
+deliverable is model-generated output. That property currently names build
+phase 2.2 (deterministic cite-or-refuse over model-generated synthesis) and
+every remaining tool phase, 3.1 to 3.5. No tool code is written until the
+gate exists and has been seen failing.
 
 What phase 2.1 cost, stated plainly because it is the argument for the
-stage: 879 passing tests, and 3 of 8 real questions answered correctly. The
-worst case returned twenty-five non-human orthologs for "which diseases are
-associated with BRCA1?", `status="ok"`, every row carrying a real and
+stage: a fully green suite, and 3 of 8 real questions answered correctly.
+The worst case returned twenty-five non-human orthologs for "which diseases
+are associated with BRCA1?", `status="ok"`, every row carrying a real and
 resolving NCBI citation. Five review rounds found roughly 25 real defects,
 none of them the cause. The cause was a schema slice that handed the
 generator no Disease label at all, and it was visible from day one to
@@ -58,9 +66,12 @@ anyone who printed what the model was actually given.
 A premise gate has four properties. Each one is there because its absence
 was a measured failure in 2.1:
 
-- It does NOT mock the model. Every one of 2.1's 879 tests did, which means
-  every test supplied a query someone already knew was correct, and no test
-  in the suite could see a generation defect.
+- It does NOT mock the model. Every other test in the suite does, which
+  means every one of those tests supplied a query someone already knew was
+  correct, and none of them could see a generation defect. The premise
+  evidence lives in `tests/system_03_search_agent/tools/test_cypher_query_premise.py`,
+  the one test file that calls the real model against pinned live ground
+  truth rather than a mock.
 - It asserts on the MEANING of the answer, not its shape. "Rows came back"
   and "every row is cited" both passed on the ortholog answer.
 - Its ground truth is read from the live source and pinned, so "correct" is
@@ -99,11 +110,11 @@ The rule: spend reasoning where a mistake is expensive and cascades, spend cheap
 | Researcher, bulk reading | speed | low | The cost is input tokens, not reasoning. Reading an API doc does not need a frontier model |
 | Researcher, analysis | balance | medium | When the research needs a judgment, not just a summary |
 | Builder | balance | medium | Well-scoped construction against clear acceptance criteria. Reserve high effort for genuinely hard builds |
-| Sub-planner | depth | high | Same cascade risk as the lead's own decomposition |
 | Judge | depth | high or extra high | A missed defect here is the most expensive thing in the loop, because it ships |
 | Adversary | depth | high | Finding a fluent, plausible, wrong answer needs real adversarial reasoning. A cheap tier will not find what the judge missed |
 | Test writer | balance | medium | Bounded work against a finished artifact |
-| Integrator | balance | medium | Wiring, only dispatched when builders produced isolated pieces |
+
+The role list above once also carried a Sub-planner row and an Integrator row. Both are removed: across the five build phases completed so far (1.0, 1.1, 2.0, 1.2, 2.1), `tracker/phase_*.md` shows zero dispatches of either role. If either role is genuinely needed on a future phase, add it back with its first real dispatch as evidence.
 
 Two notes on this table:
 
@@ -151,5 +162,5 @@ Stated rather than hidden, because each one is a place the cadence can quietly f
 
 - A board edit made through a shell command instead of the Edit tool bypasses the sync hook and leaves the rendered page stale. Mitigated by re-rendering at phase close, not eliminated.
 - The golden fixtures at build phase 5.1 have no named domain sign-off owner. If an expected answer is wrong, a wrong agent passes the gate, which is the exact failure the gate exists to catch.
-- Playwright is not installed, so the UI gate on build phases 1.2 and 4.5 has nothing behind it yet.
+- Playwright 1.62.0 shipped in build phase 1.2, with three passing end-to-end tests in `frontend/e2e/query-stream-and-stop.spec.ts`. The UI gate has something behind it as of that phase. Build phase 4.5 has not opened yet, so its own UI gate has nothing behind it until that phase runs.
 - The premise gate at stage 5 is only as good as its question set, and nothing mechanically checks that the set covers the shapes a phase will actually be asked. Build phase 2.1's gate omitted every two-hop question and the omission was found by an adversary, not by the gate. Stating coverage is required; verifying that the stated coverage is complete is still a human judgment.

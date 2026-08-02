@@ -10,7 +10,7 @@ Per Section 4.2, the main agent's Think, Plan, and Write calls share one stable 
 
 - System instructions and behavioral directives, static across every query.
 - Tool schemas for the seven registered tools, sorted alphabetically and fixed in code.
-- The static graph and BioLink schema at the concept level (the 10 concept labels and 14 edge predicates), not the per-query slice.
+- The static graph and BioLink schema at the concept level (the 11 vertex labels and 14 edge predicates), not the per-query slice. The eleventh vertex label is `NamedThing`, the dangling-endpoint stub the five-database merge produces. It is a real label the live graph contains and a generator must be able to name, so it belongs in the stable prefix along with the other 10 (finding F-2.1-01, `tracker/phase_2.1.md`; recorded 2026-07-29 in `DECISIONS.md`). The locked technical specification still says "10 concept labels" and is not edited until the Step 6.2 reconciliation; do not revert this figure to 10 to match it.
 
 Everything else, the current query, resolved entities, the session-memory tail, and the structured plan, belongs in the dynamic suffix, never the prefix.
 

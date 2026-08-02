@@ -45,12 +45,12 @@ Purpose: the only path to Layer 1, the AGE graph on Hetzner. The main agent neve
 - Instead: the tool's internal Cypher-generation call is constrained to only emit typed edge patterns, and the validation step (step 3 of the internal pipeline) rejects any generated Cypher missing an edge label before execution, feeding the validator's error back into one retry.
 (Technical_specification.md Section 6.1, line 794)
 
-### Trap: parameters interpolated into the Cypher text
+### Trap: parameters interpolated into the Cypher text, and the mechanism that actually binds them
 
-- What: query parameters must pass through the wrapping SQL `%s` placeholder as a JSON object, never string-interpolated into the Cypher payload itself.
-- Why it bites: this is the same injection class as SQL built with an f-string, but with a second layer, the Cypher payload is itself quoted text inside the SQL string, so an f-string here creates injection at both the SQL and the Cypher level simultaneously.
-- Instead: `SELECT * FROM cypher('ncbi_kg', $$ ... $$, params) AS (...)` with `params` passed through psycopg2's `%s` placeholder, never built with `.format()` or an f-string. See `.claude/rules/production-standards.md` query-safety gate and `.claude/rules/production-examples.md` example 1 for the full before and after.
-(Technical_specification.md Section 6.1, line 794)
+- What: query parameters must never be string-interpolated into the Cypher payload itself. That much matches the locked spec. What the locked spec gets wrong is the binding mechanism: a psycopg2 `%s` placeholder passed as the `cypher()` function's third argument does not work at all. psycopg2 substitutes `%s` client-side before the statement reaches the server, so AGE never receives a genuine bind parameter in that position and rejects the call with sqlstate 22023, "third argument of cypher function must be a parameter". Build phase 2.1 probed this against the live graph: a plain `%s`, a `%s::agtype` cast, and even an empty params object (`{}`) all fail the same way (finding F-2.1-02, `tracker/phase_2.1.md`).
+- Why it bites: a builder who follows the locked spec's `%s`-as-third-argument wording writes a tool that cannot execute a single parameterized query, not a subtly-injectable one. This is a functional defect, not only a security one, and it would have blocked every one of build phases 3.1 to 3.5 if it had not been caught first.
+- Instead: `PREPARE` a statement that declares one `agtype` parameter, then `EXECUTE` it with the params JSON bound through the psycopg2 `%s` placeholder on the `EXECUTE` call, never on the `cypher()` call itself, then `DEALLOCATE` the statement in a `finally` block. When there are no caller-supplied parameters, omit the third argument to `cypher()` entirely rather than passing `{}`. This is the shipped mechanism in `src/system_03_search_agent/tools/graph_connection.py` (`_build_prepare_sql`, `_build_execute_sql`, `_build_deallocate_sql`, wired together in `execute_cypher`). See `.claude/rules/production-standards.md` query-safety gate and `.claude/rules/production-examples.md` example 1 for the full before and after.
+(Technical_specification.md Section 6.1, line 794, wrong on the binding mechanism, reconciliation pending at Step 6.2; `tracker/phase_2.1.md` finding F-2.1-02 is the corrected account)
 
 ### Trap: missing LIMIT
 

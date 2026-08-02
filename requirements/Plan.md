@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-08-01.
+Kick-off: 2026-05-06. Last updated: 2026-08-02.
 
 ## Status at a glance
 
@@ -34,7 +34,6 @@ Decisions logged: 183 (DECISIONS.md). Deliverables produced: the Phase 1 synthes
 - [Phase 7: iteration and new information](#phase-7-iteration-and-new-information)
 - [Documents we will create](#documents-we-will-create)
 - [How new information gets incorporated](#how-new-information-gets-incorporated)
-- [Summary of what happens next](#summary-of-what-happens-next)
 - [Revision history](#revision-history)
 
 ---
@@ -493,7 +492,15 @@ Phase 5 output: all project infrastructure aligned with the PRD and tech spec. D
 
 ## Phase 6: build (bossman execution)
 
-Status: IN PROGRESS. Build phases 1.0 (PR #5, 2026-07-27), 1.1 (PR #6, 2026-07-28), 2.0 (PR #9, 2026-07-28), and 1.2 (PR #12, 2026-07-28) done and merged. Next up: build phase 2.1 (cypher_query over Layer 1), the only phase now unblocked by dependency. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
+Status: IN PROGRESS. Five build phases done and merged:
+
+- 1.0 (PR #5, 2026-07-27)
+- 1.1 (PR #6, 2026-07-28)
+- 2.0 (PR #9, 2026-07-28)
+- 1.2 (PR #12, 2026-07-28)
+- 2.1 (PR #15, 2026-08-01)
+
+Next up: build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal), on branch `phase/2.2-write-step-grounding`. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
 
 Goal: build System 3 using bossman-mode. Agent teams execute, I orchestrate.
 
@@ -621,27 +628,13 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ---
 
-## Summary of what happens next
-
-Phases 1 through 4 are complete, with the Phase 1 synthesis, the evaluation playbook, the locked PRD, the verified API capability sheet, the locked technical specification, and the strategic memo all written. Phase 5 (system and tooling updates) opened 2026-07-26 and its four steps are done: the build harness, skills, rules, root documents, and reference docs are now consistent with the locked specification. Phase 6 (build) opened 2026-07-27. Five build phases are done and merged into main:
-
-- Build phase 1.0, the FastAPI skeleton and typed event contract (PR #5, 2026-07-27). Judge-reviewed with one rejection-and-fix round and an independent sign-off verification.
-- Build phase 1.1, the auth service and the six-table PostgreSQL user-data schema (PR #6, 2026-07-28). It closed the ecdsa CVE that 1.0 accepted as a known risk, by replacing `python-jose` with `PyJWT`. 314 tests passing, up from 191.
-- Build phase 2.0, the real five-node LangGraph loop and the three-tier harness (PR #9, 2026-07-28), replacing the phase 1.0 stub. 483 tests passing, up from 314.
-- Build phase 1.2, the React shell, SSE streaming, and the chat UI wired end to end (PR #12, 2026-07-28). 539 Python tests, 120 frontend tests, and 3 Playwright end-to-end tests passing.
-- Build phase 2.1, `cypher_query` over Layer 1 and the first live graph access (PR #15, 2026-08-01). Closed after five judge passes and five adversary passes, the most reviewed phase so far and the only one to fail four consecutive reviews with a green suite. 968 Python tests passing, plus a premise gate that runs real model generation against the live graph. The process changes it forced merged as PR #16.
-
-183 decisions logged, 37 learnings recorded plus a retrospective. Next: build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal), then the rest of Step 6.1's prototype. One security gate is scheduled and outstanding: the whole-repository scan at Step 6.2, which is a hard prerequisite for starting Step 6.3. We debate. We decide. We log decisions.
-
-One phase at a time. No skipping.
-
 ## Revision history
 
-- 2026-08-01: Closed build phase 2.1, merged as PR #15, after FIVE judge passes and FIVE adversary passes. All 9 tickets `done`, 26 findings `closed`, 3 `deferred` with a named reason. Final gates: 968 Python tests passing (up from 798), premise gate 9 of 9 on three consecutive runs, 120 frontend tests, ruff clean, pip-audit and npm audit clean.
+- 2026-08-01: Closed build phase 2.1, merged as PR #15, after FIVE judge passes and FIVE adversary passes. All 9 tickets `done`, 27 findings `closed`, 3 `deferred` with a named reason. Final gates: 968 Python tests passing (up from 798), premise gate 9 of 9 on three consecutive runs, 120 frontend tests, ruff clean, pip-audit and npm audit clean.
   - The load-bearing fact about this phase, and the reason it took five rounds: it failed four consecutive reviews while its test suite was green. At the fourth review the suite stood at 879 passing and the judge's live run answered 3 of 8 real questions correctly. The worst case returned twenty-five non-human orthologs for "which diseases are associated with BRCA1?", `status="ok"`, every row carrying a real and resolving NCBI citation.
   - The root cause was a COMPOSITION defect between two individually correct components. Think emits a hardcoded `query_class="lookup"` stub, and `lookup` mapped to a 0-hop schema slice, which for a Gene anchor renders exactly one edge, `orthologous_to`. The generator was asked about diseases and handed a schema containing no disease at all. Neither component was wrong, which is why every component-level review passed it. The fifth judge proved it with a controlled A/B: at hop floor 0 the model returns 25 orthologs, at floor 1 it returns the correct 4 diseases, same model and same question.
   - Roughly 25 real defects were fixed across rounds two to four in the parameter binder and the citation layer. Every one was genuine. None was causal. The same wrong-entity invariant was defeated three separate times, each time by its own replacement.
-  - The durable outcome is `tests/system_03_search_agent/tools/test_cypher_query_premise.py`, which does not mock the model and asserts on the MEANING of the answer against ground truth pinned from the live graph. Every one of the other 968 tests mocks the model call, so none of them could see a generation defect. It landed failing at 3 of 9 and now passes 9 of 9. It has already caught two regressions from the phase's own late fixes, before a reviewer found them.
+  - The durable outcome is `tests/system_03_search_agent/tools/test_cypher_query_premise.py`, which does not mock the model and asserts on the MEANING of the answer against ground truth pinned from the live graph. Every other test in the suite, outside this one file, mocks the model call, so none of them could see a generation defect. It landed failing at 3 of 9 and now passes 9 of 9. It has already caught two regressions from the phase's own late fixes, before a reviewer found them.
   - Process changes merged separately as PR #16, so the lesson binds on later phases rather than depending on recall. The build cadence gained a twelfth stage: write the premise gate and WATCH IT FAIL, blocking all builder work, mandatory for any phase whose deliverable is model-generated. `task-tracker` makes it the first ticket at phase open. Three rules gained sections: read the model's INPUT before debugging its output, review a fix harder than new code, and a verify surface must state its own coverage.
   - Deferred with named triggers, not silently: prompt injection steering entity selection (mitigated, `xfail` with the reason recorded, closes in build phase 3.0's Guardrail); constraining generation so an unbounded traversal cannot be produced, and a second exhaustion shape, both to 2.2; a fourth `status` value for "matched plenty, cited none", to 2.2; the `vocabulary_artifact_fields` marker's consumer, to 2.2's Write step; and gene symbol resolution beyond a one-entry seed table, which is Layer 2 work in build phase 3.1.
   - A generated query OOM-killed the live graph database mid-phase and it was restarted by hand. Mitigated with a session-level memory cap, and the hop-floor fix removed the query shape that caused it.

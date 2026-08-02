@@ -9,13 +9,17 @@ Reference: `docs/ncbi/Tool_implementation_mechanics.md`, `docs/data-engineering/
 
 ## Phase premise (the done-when)
 
-A real query reaches the live AGE graph through `cypher_query` and returns cited rows, with the main agent never generating or seeing raw Cypher. A phase where every ticket passes but no query reaches the graph is a failed phase, not a passed one (LEARNINGS rows 28 and 30).
+A real query reaches the live AGE graph through `cypher_query` and returns cited rows, with the main agent never generating or seeing raw Cypher. A phase where every ticket passes but no query reaches the graph is a failed phase, not a passed one (LEARNINGS.md, 2026-07-28: `build_stable_prefix()` passed every acceptance criterion with zero callers, and `frontend/src/pages/ChatPage.tsx`'s six components each passed their own criteria while no ticket owned the wiring).
 
-## Phase close status: the premise claim below was wrong, corrected 2026-07-31
+## Phase close status: closed 2026-08-01, PREMISE: PASS
 
 Read this before opening build phase 2.2. It is the one thing about this phase that a reader would otherwise get wrong.
 
-The sentence that used to open this section, "The premise is met", was false when it was written, and the evidence offered for it is the reason it went unchallenged for four review rounds. It is preserved here rather than deleted, because how it was wrong is more useful than the correction:
+Current state, 2026-08-01: build phase 2.1 is closed and merged as PR #15. It was merged first as PR #13, before the rework had any independent review, then superseded by PR #15 once the fifth judge and fifth adversary passes actually reviewed it. The fifth judge pass returned PREMISE: PASS, the first of five review rounds to return one, and did not accept the round-four root-cause claim on trust. It tested the claim with a controlled A/B: one constant changed, same model, same question. At the old value the schema slice carried no Disease label and the model returned 25 non-human orthologs, round four's worst case exactly. At the corrected value it returned the correct 4 diseases. The premise gate, `tests/system_03_search_agent/tools/test_cypher_query_premise.py`, went 9 of 9 on three consecutive runs. The fifth adversary pass followed the same day and filed 8 findings, all fixed or explicitly deferred with a reason. Full detail: the "Fifth judge pass" and "Fifth adversary pass" sections below.
+
+The rest of this section is preserved history, not the current state. It describes how a false premise claim survived four review rounds before the fifth round caught it, and it is superseded by the paragraph above. It is kept rather than deleted because how the claim was wrong is more useful than just the correction.
+
+As of 2026-07-31, the sentence that used to open this section was "The premise is met", and it was false when it was written. The evidence offered for it is the reason it went unchallenged for four review rounds:
 
 > The premise is met. `test_cypher_query_e2e.py` runs 9 tests against the live graph with only the model call mocked, and all 9 pass. The full suite is 798 passing. That gate cannot be satisfied by mocks, which is precisely what caught the original failure.
 
@@ -23,9 +27,13 @@ Every clause is true. The conclusion does not follow. "Only the model call mocke
 
 Measured on 2026-07-31 by the fourth judge: 879 tests passing, and 3 of 8 real questions answered correctly. The worst case returned 25 non-human orthologs for "which diseases are associated with BRCA1?", `status="ok"`, every row carrying a resolving NCBI citation. This is `goal-contracts`'s "rigor about the wrong layer", measured rather than hypothesised: an honest, green verify surface certifying a system that answers a different question than the one asked.
 
-The current premise evidence is `tests/system_03_search_agent/tools/test_cypher_query_premise.py`, which does NOT mock the model and asserts on the meaning of the answer against ground truth read from the live graph. It went 3 of 9 on landing and 9 of 9 after the root cause was fixed. A phase-premise claim in this repo now cites that file, never a suite total.
+The premise evidence as of 2026-07-31 was `tests/system_03_search_agent/tools/test_cypher_query_premise.py`, which does NOT mock the model and asserts on the meaning of the answer against ground truth read from the live graph. It went 3 of 9 on landing and 9 of 9 after the round-four root cause was fixed, and stayed 9 of 9 through the fifth judge pass. A phase-premise claim in this repo now cites that file, never a suite total.
 
-What did not happen: the judge and the adversary reviewed the code as it stood BEFORE the rework, and both failed it. Everything shipped since that verdict is unreviewed by any independent agent:
+### Review coverage
+
+Current state, 2026-08-01: every surface listed below has now been reviewed by an independent agent. The fifth judge pass verified several of them as genuinely closed (see "What the fifth judge verified as genuinely closed" under the fifth judge pass section). The fifth adversary pass attacked the rest directly (see "What the adversary could not break" under the fifth adversary pass section) and also found new defects in the same surfaces, filed as F-2.1-A5-01 through A5-08 under that section. Four related findings carried over from the fourth round, F-2.1-J4-01, J4-05, J4-06 and F-2.1-B07, remain at status `in progress` rather than closed; the evidence gathered for each is recorded directly under the fourth judge pass findings table, and the status change itself is deliberately left for an independent verification pass, not decided here.
+
+Superseded state, as of 2026-07-29 to 2026-07-31: at that point, the judge and the adversary had reviewed the code only as it stood BEFORE the rework, and both had failed it. Everything shipped after that verdict was, at that time, unreviewed by any independent agent:
 
 - agtype parsing and the provenance mapping (F-2.1-A1, F-01)
 - the true-total count query (A2)
@@ -36,11 +44,11 @@ What did not happen: the judge and the adversary reviewed the code as it stood B
 - the per-query cost cap inside the tool (F-04)
 - the Seq Scan planner fix (F-2.1-07)
 
-This phase's own history is the reason that matters. The first time every ticket read green, the judge found the phase premise unmet and the adversary found 17 defects. A green suite has already been wrong once here.
+This phase's own history is the reason that mattered. The first time every ticket read green, the judge found the phase premise unmet and the adversary found 17 defects. A green suite had already been wrong once here, which is why the 2026-07-31 merge decision below was followed by two more review rounds rather than treated as final.
 
-The product owner merged with this gap explicitly recorded rather than glossed, trading a second review round against a budget limit. That is a deliberate, informed decision, not an oversight. Build phase 2.2 depends directly on this code and should treat a fresh judge and adversary pass over the phase 2.1 surface as its own first task, not as optional.
+The 2026-07-31 merge decision, recorded for the historical record: the product owner merged (as PR #13) with this review-coverage gap explicitly recorded rather than glossed, trading a second review round against a budget limit. That was a deliberate, informed decision, not an oversight, and build phase 2.2 was told to treat a fresh judge and adversary pass over the phase 2.1 surface as its own first task rather than optional. That fresh pass happened: the fifth judge and fifth adversary rounds recorded above are it, run before build phase 2.2 opened and merged as PR #15, rather than deferred into that phase.
 
-Also carried forward, not fixed: F-06 (2 of 6 model calls bypass the stable prompt prefix, a cost inefficiency rather than a correctness defect) and the operational fact that the SSH tunnel to the graph is a manual step no repo code performs, so a fresh clone cannot run the live tests without it.
+Also carried forward, not fixed as of 2026-08-01: F-06 (2 of 6 model calls bypass the stable prompt prefix, a cost inefficiency rather than a correctness defect, owned by build phase 2.2 and flagged on `tracker/BOARD.md`) and the operational fact that the SSH tunnel to the graph is a manual step no repo code performs, so a fresh clone cannot run the live tests without it.
 
 ## Layer 1 access, verified 2026-07-29
 
@@ -310,7 +318,7 @@ Depends on: T-2.1-01, T-2.1-02, T-2.1-03, T-2.1-04, T-2.1-05, T-2.1-06
 Spec: Technical_specification.md Section 6.1
 Files: `src/system_03_search_agent/tools/cypher_query.py`, `tests/system_03_search_agent/tools/test_cypher_query.py`
 
-This is the integration ticket, named at decomposition time rather than discovered later (LEARNINGS row 30). It owns the assembly of every module above into the tool the Act step actually calls.
+This is the integration ticket, named at decomposition time rather than discovered later (LEARNINGS.md, 2026-07-28: `frontend/src/pages/ChatPage.tsx`'s six components each passed their own criteria while no ticket owned the wiring). It owns the assembly of every module above into the tool the Act step actually calls.
 
 Acceptance criteria:
 - [x] `cypher_query(harness, tool_input)` runs the Section 6.1 pipeline: slice the schema, generate, validate, execute, map to output rows
@@ -324,7 +332,7 @@ Acceptance criteria:
 Evidence:
 - `src/system_03_search_agent/tools/cypher_query.py` (new). Section 6.1 pipeline: schema slice, generate, validate, execute, provenance-map. Exactly one repair retry; a 30-second outer budget via `asyncio.wait_for`; zero rows returns `status="empty"` and never `"error"`. `cypher_executed` capped at 2000 chars and never copied elsewhere in the output. The function never raises: every failure path folds into `status="error"`.
 - `tests/system_03_search_agent/tools/test_cypher_query.py` (new), 9 tests: successful lookup, successful multi-hop, zero rows, first-attempt validation failure repaired by the retry, two consecutive validation failures, outer timeout, `GraphTimeoutError`, `GraphConnectionError`, unrecoverable generation. `pytest tests/system_03_search_agent/tools/test_cypher_query.py -v` -> `9 passed`.
-- Full suite after this ticket: `716 passed, 1 warning in 21.5s`, including the live graph integration test. `ruff check src/system_03_search_agent/` -> `All checks passed!`.
+- Full suite after this ticket, as measured 2026-07-29 at commit `7c5b8d6`, before the phase 2.1 rework: `716 passed, 1 warning in 21.5s`, including the live graph integration test. `ruff check src/system_03_search_agent/` -> `All checks passed!`.
 - Commit `7c5b8d6` on `phase/2.1-cypher-tool`.
 - Known limitation raised by the builder itself and filed as F-2.1-05: `target_entities` binds to the generated Cypher's `$param_name`s POSITIONALLY, because no naming contract exists between the generation step and the binding step. Under judge and adversary review.
 - Acceptance criteria deliberately left unchecked here. The lead recorded this evidence but did not build the module and does not check its own criteria; the judge verifies and checks them at close.
@@ -356,7 +364,7 @@ Acceptance criteria:
 - [x] F-2.0-08: every coordinator-worker reader call is subject to the per-query cost cap and the per-step timeout; a reader call that would breach the cap is not issued, and the query returns a partial result rather than overspending
 - [x] F-2.0-14: the structured pass-through path enforces `maxLength` on every string field and `maxItems` on every array before a `Finding` is built, so a hostile or oversized tool payload cannot reach the Write step unbounded
 - [x] A Cypher row is structured data and passes through without a reader call; no graph row is routed through the free-text reader
-- [x] `build_stable_prefix()` output is still injected into every model call in `graph.py`, verified by asserting the mocked call receives it (guards the LEARNINGS row 28 regression)
+- [x] `build_stable_prefix()` output is still injected into every model call in `graph.py`, verified by asserting the mocked call receives it (guards the LEARNINGS.md 2026-07-28 regression: `build_stable_prefix()` passed every acceptance criterion with zero callers)
 - [x] Tests cover: a query that selects `cypher_query`, a query that selects no tool, a cost-cap breach during Act, and an oversized tool payload that gets capped
 
 Evidence:
@@ -365,7 +373,7 @@ Evidence:
 - F-2.0-08: the isolated reader pass now calls `cost_control.check_per_query_cap` before dispatch and wraps the call in `harness.enforce_timeout`. A cap breach or timeout degrades to an empty `Finding` rather than raising out of `asyncio.gather`. `act_node` independently checks the cap before invoking `cypher_query` at all, and excludes an un-dispatched call from both `tool_calls` and `results` so the 1:1 pairing holds.
 - F-2.0-14: `_structured_pass_through` runs every payload through `_cap_structured_fields` (top-level key count, string length, list length, and one level of nested dict and list capping) before a `Finding` is built.
 - Tests: 5 new in `tests/system_03_search_agent/core/test_graph.py`, 6 new in `tests/system_03_search_agent/harness/test_coordinator_worker.py`. Combined run with the tool tests -> `49 passed`.
-- Full suite: `716 passed, 1 warning in 21.5s`. `ruff check src/system_03_search_agent/` -> `All checks passed!`. Commit `7c5b8d6`.
+- Full suite, as measured 2026-07-29 at commit `7c5b8d6`, before the phase 2.1 rework: `716 passed, 1 warning in 21.5s`. `ruff check src/system_03_search_agent/` -> `All checks passed!`.
 - Flagged for the judge, not resolved by the lead: commit `7c5b8d6` changed the shared query fixture in `test_graph.py` and `test_run.py` from "What gene is BRCA1?" to "hello", because the original text now triggers real tool selection and broke phase-2.0-era assertions. New tests were added for the tool path (`_GRAPH_ANSWERABLE_QUERY_TEXT`, +141 lines). Whether this is a legitimate refactor or a weakened verify surface under `goal-contracts.md` is explicitly the judge's call, not the builder's and not the lead's.
 - Acceptance criteria deliberately left unchecked here, same reason as T-2.1-07.
 
@@ -398,7 +406,7 @@ Acceptance criteria:
 - [x] The suite does not depend on an already-open tunnel: it either opens one or skips
 
 Evidence:
-- Fifth judge pass, 2026-08-01: PREMISE PASS, the first of five reviews to return one. It proved the root-cause claim with a controlled A/B rather than accepting it, ran six of its own questions (5 correct, 0 wrong answers, against round four's 3 of 8), and confirmed no check was weakened to reach green. Fifth adversary pass, 2026-08-01: 8 findings, all fixed or explicitly deferred with a reason. Final gates: 968 Python tests, premise gate 9 of 9 on three consecutive runs, 120 frontend tests, ruff clean, pip-audit and npm audit clean. Merged as PR #15.
+- Fifth judge pass and fifth adversary pass, both 2026-08-01: full detail in the "Fifth judge pass" and "Fifth adversary pass" sections below, not repeated here. Summary: PREMISE PASS, the first of five reviews to return one, proved with a controlled A/B rather than accepted on trust, 5 of 6 correct on the judge's own six questions against round four's 3 of 8, and confirmed no check was weakened to reach green; the adversary filed 8 findings, all fixed or explicitly deferred with a reason. Final gates at merge: premise gate 9 of 9 on three consecutive runs, 120 frontend tests, ruff clean, pip-audit and npm audit clean, and 977 Python tests as currently measured (968 at the 2026-08-01 merge). Merged as PR #15.
 
 History:
 - 2026-07-29 lead: created, scoped from Section 23
@@ -536,7 +544,11 @@ A synchronous call inside a coroutine cannot be cancelled by `asyncio.wait_for`,
 
 Failure scenario: two users query concurrently. User A's Cypher runs 25 seconds server-side. User B's SSE stream, every other in-flight run, and every FastAPI health check are frozen for those 25 seconds, because the single event loop ticked once. The only real bound left is the server-side `statement_timeout`.
 
-Why nothing caught it: the phase's 9 live end-to-end tests run sequentially, so none of them has a second concurrent request to starve. No ticket's acceptance criteria asked whether the tool was actually async. This is the ticket-boundary shape of LEARNINGS rows 28, 30, and 33 again, in a fourth form.
+Why nothing caught it: the phase's 9 live end-to-end tests run sequentially, so none of them has a second concurrent request to starve. No ticket's acceptance criteria asked whether the tool was actually async. This is the ticket-boundary shape from three LEARNINGS.md entries again, in a fourth form:
+
+- 2026-07-28, `build_stable_prefix()`: passed every acceptance criterion with zero callers
+- 2026-07-28, `frontend/src/pages/ChatPage.tsx`: six components passed their own criteria, no ticket owned the wiring
+- 2026-07-29, every `cypher_query` test: the phase reported 716 tests passing and every ticket green, and did not work at all
 
 Rules: `tool-call-budgets.md` ("never ship a tool with no per-call timeout", which it nominally has and cannot execute) and `system-design-patterns` pattern 6 (time to first token under one second).
 
@@ -616,7 +628,7 @@ Ticket: none yet
 
 What happened: the F-03 fix added a `truncated` field to `Finding` specifically so truncation "is never silent" (`coordinator_worker.py:118-128,295`). Nothing in `core/` or `adapters/` reads it. The only `.truncated` hit elsewhere is `graph.py:742`, which reads `CypherQueryOutput.truncated`, a different field on a different object.
 
-So a `Finding` silently cut to fit the 50,000 byte ceiling reaches `write_node` indistinguishable from a complete one. A field added to close an invisible-truncation finding, that nothing reads, has not closed it. This is the LEARNINGS row 28 shape (a module with no callers) in miniature.
+So a `Finding` silently cut to fit the 50,000 byte ceiling reaches `write_node` indistinguishable from a complete one. A field added to close an invisible-truncation finding, that nothing reads, has not closed it. This is the LEARNINGS.md 2026-07-28 `build_stable_prefix()` shape (a module with no callers) in miniature.
 
 History:
 - 2026-07-31 judge: filed
@@ -749,11 +761,11 @@ History:
 
 Learnings that bind here, read before building:
 
-- Row 28 (build phase 2.0): `build_stable_prefix()` passed every acceptance criterion with zero callers. T-2.1-08 carries an explicit criterion that the prefix still reaches every model call.
-- Row 30 (build phase 1.2): six components passed their own criteria while nothing assembled them, because no ticket owned the wiring. T-2.1-07 and T-2.1-08 are that ticket here, named up front.
-- Row 25 (build phase 1.1): a worktree builder's green test run proves nothing about the checkout it merges into. The lead re-runs the full suite in the main checkout after every merge.
-- Row 27 (build phase 2.0): a builder set its own ticket to `done`. The lead diffs each worktree's tracker file for a status-field change before merging.
-- Row 29 (build phase 2.0): a credential-shaped literal in a Bash heredoc trips the secret-scanning hook. Write scripts to a file and generate secrets at runtime.
+- LEARNINGS.md, 2026-07-28 (build phase 2.0): `build_stable_prefix()` passed every acceptance criterion with zero callers. T-2.1-08 carries an explicit criterion that the prefix still reaches every model call.
+- LEARNINGS.md, 2026-07-28 (build phase 1.2): six components passed their own criteria while nothing assembled them, because no ticket owned the wiring. T-2.1-07 and T-2.1-08 are that ticket here, named up front.
+- LEARNINGS.md, 2026-07-28 (build phase 1.1): a worktree builder's green test run proves nothing about the checkout it merges into. The lead re-runs the full suite in the main checkout after every merge.
+- LEARNINGS.md, 2026-07-28 (build phase 2.0): a builder set its own ticket to `done`. The lead diffs each worktree's tracker file for a status-field change before merging.
+- LEARNINGS.md, 2026-07-28 (build phase 2.0): a credential-shaped literal in a Bash heredoc trips the secret-scanning hook. Write scripts to a file and generate secrets at runtime.
 
 Deliverables checklist, from Section 25:
 
@@ -1142,6 +1154,15 @@ The same defect drove F-2.1-C15's OOM: `orthologous_to` is the one traversal a l
 | F-2.1-J4-08 | medium | Multi-entity aggregate comparison reported `empty` and was unanswerable | fixed by the schema slice floor; the premise gate's two-entity test passes |
 | F-2.1-J4-09 | medium | No weakened assertion, but one weakened fixture and two coverage holes | partly addressed, see below |
 
+### Evidence gathered for the four findings still `in progress`
+
+F-2.1-J4-01, F-2.1-J4-05, F-2.1-J4-06 and F-2.1-B07 remain at `in progress` in the table above. The fourth judge raised all four, so the fourth judge cannot be the one to close them, and this tracker file is not an independent reviewer either. What follows is the evidence the fifth judge and fifth adversary passes produced that bears on each one. The status column above is left unchanged. Closing any of these four needs its own independent verification pass, not a reading of this evidence by the party that already touched the code.
+
+- F-2.1-J4-01 (validator, five more bypass forms including the reversed alias comparison): the fifth judge pass states, under "What the fifth judge verified as genuinely closed", that it ran 18 attacks against the validator, zero leaks, including 13 the judge invented itself, that the two residual gaps the fix's own docstring disclosed are actually closed, and that 5 of 5 legitimate queries were still accepted. That is evidence toward closure, not a closure.
+- F-2.1-J4-05 (CURIE shape check dropping citations on 4,401 of 200,845 real Disease nodes): the fifth judge pass states, under the same heading, that it re-ran the exhaustive census independently with row counts matching exactly, that 20 attack strings all returned `None`, and that 1,200 real ids across six mapped labels all kept their citations. That is evidence toward closure, not a closure.
+- F-2.1-J4-06 (Article quarantine over-correction, reappearance of F-2.1-C07's contradicting row count): the fifth judge pass states, under the same heading, that "F-2.1-J4-03 dedup and F-2.1-J4-06 Article: both hold, and C13's untrusted-content gate is not reopened." That is evidence toward closure, not a closure.
+- F-2.1-B07 (vocabulary artifacts such as "MeSH" and "MONDO" shipped as asserted primary evidence): two later findings attack the same detection mechanism directly. The fifth judge pass's own F-2.1-J5-04 (see "Fifth judge pass") found the vocabulary-artifact rule still missed 15,466 of 200,845 Disease rows and records it fixed. The fifth adversary pass's own F-2.1-A5-06 (see "Fifth adversary pass") found `_is_vocabulary_token_artifact("")` returned `False`, so an empty value was never flagged as suspect, and records it fixed; the same pass's closing list states "vocabulary-artifact false positives essentially absent from this snapshot." None of these three findings is filed under the F-2.1-B07 id itself, so whether they constitute closing B07 or are adjacent fixes to the same mechanism is exactly the judgment call left to an independent pass.
+
 ### F-2.1-J4-07: the C11 claim, restated to what was measured
 
 The previous section recorded F-2.1-C11 as fixed with "timeouts 9-of-10 to 0-of-10, cost down roughly 20x". The judge could not reproduce the timeout figure. What is actually measured:
@@ -1165,7 +1186,7 @@ Two design points in it are load-bearing and must not be undone:
 - It sends `query_class="lookup"`, the stub Think actually emits, never a hand-picked class. An earlier draft passed a per-question class and scored 8 of 9 where production scored 3 of 9. A gate handed a better classification than production sends is a fixture, not a gate.
 - Its ground truth is read from the graph, so "correct" is checkable rather than plausible. When the Layer 1 snapshot is refreshed these figures move, and a failure after a refresh means re-verify the constants, never weaken the test.
 
-## Fifth judge pass, 2026-07-31
+## Fifth judge pass, 2026-08-01
 
 The first review of this phase to return PREMISE: PASS. Full report: `judge_5.md` in the session scratchpad. Model spend: $0.035.
 

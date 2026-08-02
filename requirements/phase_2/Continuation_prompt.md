@@ -1,6 +1,6 @@
 # Phase 2 continuation prompt
 
-> Superseded. Phase 2 and Phase 3 are complete and the PRD is locked. The current resume pointer is `requirements/phase_3/Continuation_prompt.md` (Phase 4 is next). This file is kept as the Phase 2 record.
+> Superseded. Phases 2 through 5 are complete. The current resume pointer is `requirements/phase_6/Continuation_prompt.md` (Phase 6, the build, is in progress). This file is kept as the Phase 2 record.
 
 Use this to resume Phase 2 (competency questions and the evaluation playbook) in a new chat session. Living document, updated as Phase 2 progresses.
 

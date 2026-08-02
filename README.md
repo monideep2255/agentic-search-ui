@@ -48,7 +48,19 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | Phase 1.0 complete (FastAPI app skeleton, health endpoint, the Pydantic event contract, a typed run() stub wired to the query endpoint), merged into main (PR #5, 2026-07-27). Phase 1.1 complete on branch phase/1.1-auth-service: minimal v1 auth and the PostgreSQL user-data schema (six tables). Phase 2.0 complete on branch phase/2.0-langgraph-agent-loop: the real five-node LangGraph Guardrail-Think-Plan-Act-Write loop and the three-tier harness, replacing the phase 1.0 stub. Phase 1.2 complete on branch phase/1.2-react-shell-sse: SSE streaming endpoints (POST /v1/query, GET /v1/query/{run_id}/events, POST /v1/query/{run_id}/stop) and the frontend/ React shell wired end to end against the real backend. Phase 2.1 complete, merged into main (PR #15, 2026-08-01): cypher_query over Layer 1, the first live graph access. Tools for Layers 2 and 3 not yet wired (build phases 3.1 to 3.5). Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
+| Build (Phases 6-7) | In progress. Five build phases merged into main, phase 2.2 next. See the table below |
+
+### Build phase detail
+
+| Phase | Delivers | Status |
+|-------|----------|--------|
+| 1.0 | FastAPI app skeleton, health endpoint, the Pydantic event contract, a typed run() stub wired to the query endpoint | Merged into main, PR #5, 2026-07-27 |
+| 1.1 | Minimal v1 auth and the PostgreSQL user-data schema (six tables) | Merged into main, PR #6 |
+| 2.0 | The real five-node LangGraph Guardrail, Think, Plan, Act, Write loop and the three-tier harness, replacing the phase 1.0 stub | Merged into main, PR #9 |
+| 1.2 | SSE streaming endpoints (POST /v1/query, GET /v1/query/{run_id}/events, POST /v1/query/{run_id}/stop) and the frontend/ React shell wired end to end against the real backend | Merged into main, PR #12 |
+| 2.1 | cypher_query over Layer 1, the first live graph access | Merged into main, PR #15, 2026-08-01 |
+
+Next: build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance). Tools for Layers 2 and 3 not yet wired (build phases 3.1 to 3.5). Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md).
 
 ---
 
@@ -125,9 +137,8 @@ agentic-search-ui/
   alembic/                      # Alembic migrations for the user-data schema (build phase 1.1)
   CLAUDE.md                     # Claude Code instructions
   AGENTS.md                     # Instructions for other AI agents
-  DECISIONS.md                  # Architecture decision log (183 rows)
+  DECISIONS.md                  # Architecture decision log
   LEARNINGS.md                  # What broke during the build and what fixed it
-  CHANGELOG.md                  # Keep a Changelog format, all entries currently Unreleased
   pyproject.toml
   requirements.txt
   env.example
@@ -139,7 +150,7 @@ agentic-search-ui/
 
 | Doc | Status |
 |-----|--------|
-| [Plan](requirements/Plan.md) | Master phase tracker |
+| [Plan](requirements/Plan.md) | Master phase tracker. Its Revision history section is the project's change record, since no release has been cut yet |
 | [PRD](requirements/PRD.md) | Locked 2026-07-22 |
 | [Technical specification](requirements/Technical_specification.md) | Locked. 25 sections, seven tools, six delivery surfaces (web UI, REST plus SSE API, GraphQL API, MCP server, KGX export, CLI), Section 25 build order |
 | [Strategic memo](requirements/Strategic_memo.md) | Phase 4 deliverable |
@@ -198,4 +209,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-08-01
+Last updated: 2026-08-02

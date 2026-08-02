@@ -27,16 +27,30 @@ Problems:
 
 Correct:
 
+A psycopg2 `%s` placeholder passed as the `cypher()` function's third argument does not work, and this is not a style preference, it is a measured failure. psycopg2 substitutes `%s` client-side before the statement ever reaches the server, so AGE never receives a genuine bind parameter in that position and rejects the call with sqlstate 22023, "third argument of cypher function must be a parameter". Build phase 2.1 probed this against the live graph and confirmed it: a plain `%s`, a `%s::agtype` cast, and even an empty params object all fail the same way (finding F-2.1-02, `tracker/phase_2.1.md`). The form that actually works is `PREPARE`/`EXECUTE`: prepare a statement that declares one `agtype` parameter, then execute it with the params JSON bound through the psycopg2 placeholder on the `EXECUTE` call, not on the `cypher()` call itself.
+
 ```python
+import json
+import uuid
+
 def get_gene_by_symbol(cursor, symbol):
-    cursor.execute(
-        "SELECT * FROM cypher('kg', $$ MATCH (g:Gene {symbol: $symbol}) RETURN g $$, %s) AS (gene agtype)",
-        (json.dumps({"symbol": symbol}),)
-    )
-    return cursor.fetchone()
+    statement_name = "cq_" + uuid.uuid4().hex
+    try:
+        cursor.execute(
+            "PREPARE " + statement_name + "(agtype) AS "
+            "SELECT * FROM cypher('kg', $$ MATCH (g:Gene {symbol: $symbol}) "
+            "RETURN g $$, $1) AS (gene agtype)"
+        )
+        cursor.execute(
+            "EXECUTE " + statement_name + "(%s);",
+            (json.dumps({"symbol": symbol}),)
+        )
+        return cursor.fetchone()
+    finally:
+        cursor.execute("DEALLOCATE " + statement_name + ";")
 ```
 
-Every value that reaches the Cypher payload goes through a parameter, never through string formatting of the Cypher text itself. If the AGE driver in use does not support named Cypher parameters, pass the value only through the outer psycopg2 `%s` placeholder and never build the inner Cypher string with the raw value.
+Every value that reaches the Cypher payload goes through the `EXECUTE` call's bound parameter, never through string formatting of the Cypher text and never through a `%s` placed directly on the `cypher()` call. The statement name is code-generated with `uuid.uuid4()`, never derived from caller input, so a reused connection never collides on "prepared statement already exists". The `DEALLOCATE` runs in a `finally` block so a failed query still releases the prepared statement. When there are no caller-supplied parameters, omit the third argument to `cypher()` entirely rather than passing an empty object, since AGE rejects `{}` the same way it rejects `%s`. This is the exact mechanism the shipped tool uses: `src/system_03_search_agent/tools/graph_connection.py`, `_build_prepare_sql` (lines 314 to 336), `_build_execute_sql` (lines 339 to 345), `_build_deallocate_sql` (lines 348 to 350), and the `PREPARE` / `EXECUTE` / `DEALLOCATE` sequence wired together in `execute_cypher` (lines 462 to 482).
 
 ### 2. Output escaping and XSS
 
