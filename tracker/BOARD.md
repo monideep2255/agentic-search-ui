@@ -4,7 +4,7 @@ The index of every phase. Maintained by the `task-tracker` skill. Per-phase tick
 
 Build phases and their dependencies come from `requirements/Technical_specification.md` Section 25, which is the source of truth. This board never invents a phase.
 
-Last updated: 2026-07-29.
+Last updated: 2026-08-01.
 
 ## Status counts
 
@@ -15,8 +15,8 @@ Listed in flow order. Work moves left to right on the board, from `todo` to `don
 | To do | 21 | Lead |
 | In progress | 0 | The builder that claimed it |
 | Blocked | 0 | The builder that hit the block, reason required |
-| In review | 1 | The builder that finished |
-| Done | 9 | Judge only, never the builder |
+| In review | 0 | The builder that finished |
+| Done | 10 | Judge only, never the builder |
 
 `blocked` sits mid-flow rather than on the way to done, because it is where work stalls, not a step toward finishing.
 
@@ -48,7 +48,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 1.1 | `phase/1.1-auth-service` | Minimal v1 auth, the PostgreSQL user-data schema | 1.0 | prototype | done | refined | | | |
 | 1.2 | `phase/1.2-react-shell-sse` | React shell, SSE consumption of the event stream, empty chat endpoint wired end to end, the stop button | 1.0 | prototype | done | refined | | | |
 | 2.0 | `phase/2.0-langgraph-agent-loop` | LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one | 1.0 | prototype | done | refined | | | |
-| 2.1 | `phase/2.1-cypher-tool` | cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement | 2.0 | prototype | in-review | refined | | | reworked not re-reviewed |
+| 2.1 | `phase/2.1-cypher-tool` | cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement | 2.0 | prototype | done | refined | | | |
 | 2.2 | `phase/2.2-write-step-grounding` | Deterministic cite-or-refuse, provenance for Layer 1 citations, the first trust signal, the two required tests | 2.1 | prototype | todo | tech_refine | | eval-harness | whole-repo security scan not yet run |
 | 3.0 | `phase/3.0-guardrail-node` | Full guardrail replacing the stub: validation, prompt-injection rejection, forbidden types, rate and cost pre-checks | 2.0 | v1 | todo | tech_refine | | | |
 | 3.1 | `phase/3.1-ncbi-efetch` | ncbi_efetch over E-utilities and Datasets API v2 | 2.0, 3.0 | v1 | todo | tech_refine | | | |
@@ -78,7 +78,6 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | Golden fixture domain sign-off | Nobody is named to verify the clinical and human-variation expected answers. A wrong expected answer makes a wrong agent pass, which is the failure the gate exists to catch | Build phase 5.1 |
 | PubTator3 relations endpoint | Path and fields not live-verified | Build phase 3.3 ship |
 | Whole-repo security scan not yet run | No build-phase code has ever been security scanned. The only run in `security/` is dated 2026-07-25 and predates phase 1.0. Deferred twice by product-owner decision (2026-07-27, 2026-07-28) on the reasoning that the Step 6.1 prototype is throwaway and the scan earns its cost once the code is meant to survive. The agreed shape is ONE deep dive over the ENTIRE repository, not a commit range, so there is no baseline SHA to carry forward and nothing to forget to widen | The Step 6.2 reconciliation, after build phase 2.2 closes and before any Step 6.3 v1 work starts |
-| Reworked not re-reviewed | Build phase 2.1's judge and adversary both FAILED the phase, then every blocker was fixed and the 9-test live end-to-end gate went green (798 tests passing overall). No independent agent has reviewed any of that rework: agtype parsing, the true-total count, entity extraction, the cite-or-refuse enforcement path, four validator bypass fixes, the recursive payload caps, the in-tool cost cap, or the Seq Scan planner fix. This phase has already produced one false green, where every ticket passed and the judge still found the premise unmet plus 17 adversary defects, so a green suite here has a track record of being wrong. Merged on an explicit, informed product-owner decision against a weekly budget limit, recorded rather than glossed. Detail in `tracker/phase_2.1.md`'s "Phase close status" section | Build phase 2.2's first task, since 2.2 depends directly on this code |
 | F-2.0-04 | Nothing in `src/` writes an `Interaction` row, so `get_user_daily_query_count` and `get_system_daily_cost_usd` read live but always return zero; the per-user and system-wide daily caps cannot fire in production today | Build phase 4.6, feedback capture, the first ticket that writes `interactions` rows |
 | F-2.0-10 | `Query.trace_id` is client-supplied and never server-overwritten (Section 20.1 says it should be minted at Guardrail). Live today as a spec-conformance gap; compounds with F-2.0-04 once caps read from `interactions`, since a client that reuses one `trace_id` writes at most one row/day and evades the 100-query cap. Deliberately not fixed alongside F-2.0-09/11/12/13 in phase 2.0, since `trace_id` is a phase 1.0 contract field threading through every `Event`, not a contained fix | Build phase 4.6, taken together with F-2.0-04 so the daily cap is not shipped silently defeatable |
 | F-1.2-01 | `RunRegistry._runs` never evicts a completed or abandoned run; every `RunEntry` (queue, buffered events, finished `Task`) is retained for the process lifetime, with no per-user rate limit. Reproduced: 400 runs from one account in 32 seconds, zero rejections | Build phase 4.0, the phase whose own Section 25 line makes this system a public surface for the first time |

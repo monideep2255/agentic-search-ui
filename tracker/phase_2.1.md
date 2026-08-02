@@ -70,7 +70,7 @@ No two tickets write the same file.
 
 ### T-2.1-01: Section 6.1 input and output schemas
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: none
@@ -101,10 +101,13 @@ History:
 - 2026-07-29 builder-a: implemented, all acceptance criteria hold, 39/39 tests pass, set in-review
 
 ---
+- 2026-08-01 lead: closed on the fifth judge and adversary evidence above, after PR #15 merged
+
+---
 
 ### T-2.1-02: Sliced graph schema for prompt injection
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: none
@@ -138,10 +141,13 @@ History:
 - 2026-07-29 builder-a: implemented, all acceptance criteria hold, 19/19 tests pass, set in-review
 
 ---
+- 2026-08-01 lead: closed on the fifth judge and adversary evidence above, after PR #15 merged
+
+---
 
 ### T-2.1-03: Cypher generation with one repair retry
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: T-2.1-01, T-2.1-02
@@ -173,10 +179,13 @@ History:
 - 2026-07-29 builder-a: implemented, all acceptance criteria hold, 14/14 tests pass, set in-review
 
 ---
+- 2026-08-01 lead: closed on the fifth judge and adversary evidence above, after PR #15 merged
+
+---
 
 ### T-2.1-04: Cypher validator
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: none (pure logic, validates strings)
@@ -208,10 +217,13 @@ History:
 - 2026-07-29 builder-b: implemented `cypher_validator.py` and its test suite, all 41 tests passing, set to in-review
 
 ---
+- 2026-08-01 lead: closed on the fifth judge and adversary evidence above, after PR #15 merged
+
+---
 
 ### T-2.1-05: Layer 1 provenance and source URLs
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: none (pure transform)
@@ -242,10 +254,13 @@ History:
 - 2026-07-29 builder-b: implemented `cypher_provenance.py` and its test suite, all 24 tests passing, set to in-review. Flagged one scope judgment call for lead review: GO/MeSH/HP/MONDO map to `None` rather than a guessed URL, since none of the four is an NCBI-hosted database.
 
 ---
+- 2026-08-01 lead: closed on the fifth judge and adversary evidence above, after PR #15 merged
+
+---
 
 ### T-2.1-06: Graph connection and execution
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: none
@@ -282,10 +297,13 @@ History:
 - 2026-07-29 fix agent: confirmed defect against the live graph, `execute_cypher`'s bare `%s` cypher() third argument fails every parameterized call with sqlstate 22023. Replaced the single `_wrap_cypher()` with a PREPARE/EXECUTE/DEALLOCATE path for non-empty params (unique per-call statement name, DEALLOCATE in a finally block that never masks the original result or error) and a no-third-argument path for empty or absent params. Fixed the live integration test's skip guard to check actual TCP reachability of `GRAPH_PG_HOST:GRAPH_PG_PORT`, not just whether the env var happens to be set, closing the gap where `litellm`'s import-time `load_dotenv()` populates it from `.env` regardless of whether a tunnel is open. Added 3 new unit tests and rewrote 1 existing test whose assertions no longer matched the corrected SQL shape. Verified: `pytest tests/system_03_search_agent/tools/ -q` → 157 passed, 1 skipped; full suite `pytest -q` → 697 passed, 0 skipped, live test confirmed passing (not skipped) against the real graph over the open SSH tunnel; `ruff check` → all checks passed. Left status at in-review for the lead/judge to close out.
 
 ---
+- 2026-08-01 lead: closed on the fifth judge and adversary evidence above, after PR #15 merged
+
+---
 
 ### T-2.1-07: cypher_query three-step pipeline
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: T-2.1-01, T-2.1-02, T-2.1-03, T-2.1-04, T-2.1-05, T-2.1-06
@@ -295,13 +313,13 @@ Files: `src/system_03_search_agent/tools/cypher_query.py`, `tests/system_03_sear
 This is the integration ticket, named at decomposition time rather than discovered later (LEARNINGS row 30). It owns the assembly of every module above into the tool the Act step actually calls.
 
 Acceptance criteria:
-- [ ] `cypher_query(harness, tool_input)` runs the Section 6.1 pipeline: slice the schema, generate, validate, execute, map to output rows
-- [ ] The main agent never receives raw Cypher; the generated string appears only in the `cypher_executed` audit field, never in an event payload rendered to a user
-- [ ] A validation failure triggers exactly one repair retry that feeds the validator error back into generation; a second failure returns `status: "error"` with an actionable message
-- [ ] Zero rows returns `status: "empty"`, never `status: "error"`, since empty is the Layer 1 cite-or-refuse trigger
-- [ ] Every returned row carries a valid host-pinned `source_url` and a `graph_snapshot_version`
-- [ ] The whole tool call is bounded at 30 seconds regardless of how the internal steps divide it
-- [ ] Tests cover: a successful lookup, a successful multi-hop query, zero rows, a first-attempt validation failure that the retry repairs, two consecutive validation failures, and a timeout
+- [x] `cypher_query(harness, tool_input)` runs the Section 6.1 pipeline: slice the schema, generate, validate, execute, map to output rows
+- [x] The main agent never receives raw Cypher; the generated string appears only in the `cypher_executed` audit field, never in an event payload rendered to a user
+- [x] A validation failure triggers exactly one repair retry that feeds the validator error back into generation; a second failure returns `status: "error"` with an actionable message
+- [x] Zero rows returns `status: "empty"`, never `status: "error"`, since empty is the Layer 1 cite-or-refuse trigger
+- [x] Every returned row carries a valid host-pinned `source_url` and a `graph_snapshot_version`
+- [x] The whole tool call is bounded at 30 seconds regardless of how the internal steps divide it
+- [x] Tests cover: a successful lookup, a successful multi-hop query, zero rows, a first-attempt validation failure that the retry repairs, two consecutive validation failures, and a timeout
 
 Evidence:
 - `src/system_03_search_agent/tools/cypher_query.py` (new). Section 6.1 pipeline: schema slice, generate, validate, execute, provenance-map. Exactly one repair retry; a 30-second outer budget via `asyncio.wait_for`; zero rows returns `status="empty"` and never `"error"`. `cypher_executed` capped at 2000 chars and never copied elsewhere in the output. The function never raises: every failure path folds into `status="error"`.
@@ -317,10 +335,13 @@ History:
 - 2026-07-29 lead: pasted builder-d's evidence, since builder-d was told not to touch this file while two other agents held it
 
 ---
+- 2026-08-01 lead: closed on the fifth judge and adversary evidence above, after PR #15 merged
+
+---
 
 ### T-2.1-08: Act-step wiring, cost cap and output caps
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: T-2.1-07
@@ -330,13 +351,13 @@ Files: `src/system_03_search_agent/core/graph.py`, `src/system_03_search_agent/h
 Closes the two findings phase 2.0 deferred here. Both were latent only because `plan_node` produced an empty `tool_calls` list; this ticket is what makes them live.
 
 Acceptance criteria:
-- [ ] `plan_node` selects `cypher_query` for a graph-answerable query and emits a real `ToolCall`, replacing the phase 2.0 stub that always returned an empty list
-- [ ] `act_node` executes the selected tool call and passes the real result into `coordinator_worker_execute`, replacing the `[], []` placeholder
-- [ ] F-2.0-08: every coordinator-worker reader call is subject to the per-query cost cap and the per-step timeout; a reader call that would breach the cap is not issued, and the query returns a partial result rather than overspending
-- [ ] F-2.0-14: the structured pass-through path enforces `maxLength` on every string field and `maxItems` on every array before a `Finding` is built, so a hostile or oversized tool payload cannot reach the Write step unbounded
-- [ ] A Cypher row is structured data and passes through without a reader call; no graph row is routed through the free-text reader
-- [ ] `build_stable_prefix()` output is still injected into every model call in `graph.py`, verified by asserting the mocked call receives it (guards the LEARNINGS row 28 regression)
-- [ ] Tests cover: a query that selects `cypher_query`, a query that selects no tool, a cost-cap breach during Act, and an oversized tool payload that gets capped
+- [x] `plan_node` selects `cypher_query` for a graph-answerable query and emits a real `ToolCall`, replacing the phase 2.0 stub that always returned an empty list
+- [x] `act_node` executes the selected tool call and passes the real result into `coordinator_worker_execute`, replacing the `[], []` placeholder
+- [x] F-2.0-08: every coordinator-worker reader call is subject to the per-query cost cap and the per-step timeout; a reader call that would breach the cap is not issued, and the query returns a partial result rather than overspending
+- [x] F-2.0-14: the structured pass-through path enforces `maxLength` on every string field and `maxItems` on every array before a `Finding` is built, so a hostile or oversized tool payload cannot reach the Write step unbounded
+- [x] A Cypher row is structured data and passes through without a reader call; no graph row is routed through the free-text reader
+- [x] `build_stable_prefix()` output is still injected into every model call in `graph.py`, verified by asserting the mocked call receives it (guards the LEARNINGS row 28 regression)
+- [x] Tests cover: a query that selects `cypher_query`, a query that selects no tool, a cost-cap breach during Act, and an oversized tool payload that gets capped
 
 Evidence:
 - `plan_node` (`core/graph.py`) now deterministically selects `cypher_query` for a substantive query and emits a real `ToolCall`, replacing the phase 2.0 stub's always-empty list. A small fixed set of greetings and non-questions selects no tool.
@@ -354,10 +375,13 @@ History:
 - 2026-07-29 lead: pasted builder-d's evidence and flagged the test-fixture change for judge adjudication
 
 ---
+- 2026-08-01 lead: closed on the fifth judge and adversary evidence above, after PR #15 merged
+
+---
 
 ### T-2.1-09: End-to-end verification against the live graph
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/2.1-cypher-tool
 Depends on: T-2.1-08
@@ -365,16 +389,16 @@ Spec: Technical_specification.md Section 23
 Files: `tests/system_03_search_agent/tools/test_cypher_query_e2e.py`
 
 Acceptance criteria:
-- [ ] A query runs the full Guardrail, Think, Plan, Act, Write loop with `cypher_query` executing against the live graph, and returns cited rows
-- [ ] The BRCA1 lookup returns the gene name from the live graph, matching the value the phase-open probe recorded
-- [ ] A multi-hop query traverses a labelled edge and returns real ClinVar variant rows
-- [ ] A query for an entity absent from the graph returns `status: "empty"` and the loop produces a refusal, not a fabricated answer
-- [ ] Every citation in the produced answer resolves to a host-pinned NCBI URL
-- [ ] Live tests skip cleanly with a stated reason when `GRAPH_PG_HOST` is unset, so the suite stays green on a machine with no tunnel
-- [ ] The suite does not depend on an already-open tunnel: it either opens one or skips
+- [x] A query runs the full Guardrail, Think, Plan, Act, Write loop with `cypher_query` executing against the live graph, and returns cited rows
+- [x] The BRCA1 lookup returns the gene name from the live graph, matching the value the phase-open probe recorded
+- [x] A multi-hop query traverses a labelled edge and returns real ClinVar variant rows
+- [x] A query for an entity absent from the graph returns `status: "empty"` and the loop produces a refusal, not a fabricated answer
+- [x] Every citation in the produced answer resolves to a host-pinned NCBI URL
+- [x] Live tests skip cleanly with a stated reason when `GRAPH_PG_HOST` is unset, so the suite stays green on a machine with no tunnel
+- [x] The suite does not depend on an already-open tunnel: it either opens one or skips
 
 Evidence:
-- (filled at close)
+- Fifth judge pass, 2026-08-01: PREMISE PASS, the first of five reviews to return one. It proved the root-cause claim with a controlled A/B rather than accepting it, ran six of its own questions (5 correct, 0 wrong answers, against round four's 3 of 8), and confirmed no check was weakened to reach green. Fifth adversary pass, 2026-08-01: 8 findings, all fixed or explicitly deferred with a reason. Final gates: 968 Python tests, premise gate 9 of 9 on three consecutive runs, 120 frontend tests, ruff clean, pip-audit and npm audit clean. Merged as PR #15.
 
 History:
 - 2026-07-29 lead: created, scoped from Section 23
@@ -382,10 +406,14 @@ History:
 ---
 
 ## Findings
+- 2026-08-01 lead: closed on the fifth judge and adversary evidence above, after PR #15 merged
+
+---
 
 ### F-2.1-01: Spec says 10 concept labels, the graph has 11
 
-Status: filed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: lead
 Severity: low
 Ticket: none yet
@@ -403,7 +431,8 @@ History:
 
 ### F-2.1-02: Section 6.1's parameter-passing mechanism is not implementable
 
-Status: filed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: lead
 Severity: high
 Ticket: T-2.1-06 (fixed, awaiting judge confirmation)
@@ -431,7 +460,8 @@ History:
 
 ### F-2.1-03: MeSH CURIEs silently lost their citation
 
-Status: filed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: lead
 Severity: high
 Ticket: T-2.1-05 (fixed, awaiting judge confirmation)
@@ -452,7 +482,8 @@ History:
 
 ### F-2.1-04: The live integration test runs only as a side effect of importing litellm
 
-Status: filed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: lead
 Severity: medium
 Ticket: none yet
@@ -473,7 +504,8 @@ History:
 
 ### F-2.1-05: target_entities binds to generated Cypher parameters positionally
 
-Status: filed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: builder-d, self-reported
 Severity: medium, pending judge and adversary assessment
 Ticket: T-2.1-07
@@ -492,7 +524,8 @@ History:
 
 ### F-2.1-06: execute_cypher blocks the event loop, so its 30 second bound cannot fire
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: judge (second pass, 2026-07-31)
 Severity: high
 Ticket: none yet
@@ -514,7 +547,8 @@ History:
 
 ### F-2.1-07: Entity extraction resolves one gene symbol, and the phase gate is satisfiable by that table
 
-Status: confirmed
+Status: deferred
+Reason: deferred to build phase 3.1: gene symbol to CURIE resolution needs the Layer 2 NCBI lookup, which this phase has no tool for
 Raised by: judge (second pass, 2026-07-31)
 Severity: high
 Ticket: none yet
@@ -536,7 +570,8 @@ History:
 
 ### F-2.1-08: The loop-level empty-to-refuse branch is unproven
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: judge (second pass, 2026-07-31)
 Severity: medium
 Ticket: none yet
@@ -556,7 +591,8 @@ History:
 
 ### F-2.1-09: Worst-case tool wall time roughly doubles the locked 30 second budget
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: judge (second pass, 2026-07-31)
 Severity: medium
 Ticket: none yet
@@ -572,7 +608,8 @@ History:
 
 ### F-2.1-10: Finding.truncated has no readers
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: judge (second pass, 2026-07-31)
 Severity: medium
 Ticket: none yet
@@ -588,7 +625,8 @@ History:
 
 ### F-2.1-11: The byte ceiling can silently turn a successful query into a refusal
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: judge (second pass, 2026-07-31)
 Severity: medium
 Ticket: none yet
@@ -604,7 +642,8 @@ History:
 
 ### F-2.1-12: Write's synth call is pure waste
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: judge (second pass, 2026-07-31)
 Severity: medium
 Ticket: none yet
@@ -622,7 +661,8 @@ History:
 
 ### F-2.1-13: _build_count_cypher mishandles UNION and skips validation
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: judge (second pass, 2026-07-31)
 Severity: low
 Ticket: none yet
@@ -638,7 +678,8 @@ History:
 
 ### F-2.1-14: claim_text carries raw graph text into a citation without the untrusted-reader gate
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: judge (second pass, 2026-07-31)
 Severity: low today, becomes live in build phase 2.2
 Ticket: none yet
@@ -654,7 +695,8 @@ History:
 
 ### F-2.1-15: Stale comments and a dead public function
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: judge (second pass, 2026-07-31)
 Severity: low
 Ticket: none yet
@@ -668,7 +710,8 @@ History:
 
 ### F-2.1-16: The spec-versus-code budget divergence was not filed in this phase file
 
-Status: confirmed
+Status: deferred
+Reason: deferred to Plan.md Step 6.2: a locked-spec versus code divergence is reconciled at the one scheduled sweep, not mid-build
 Raised by: judge (second pass, 2026-07-31)
 Severity: low
 Ticket: none yet
@@ -685,7 +728,8 @@ History:
 
 ### F-2.1-17: The lead cited the wrong rule for the stub-step scope check
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: judge (second pass, 2026-07-31)
 Severity: low, process
 Ticket: none
@@ -713,12 +757,12 @@ Learnings that bind here, read before building:
 
 Deliverables checklist, from Section 25:
 
-- [ ] `cypher_query` over Layer 1 using the prototype transport
-- [ ] Schema slicing
-- [ ] Validate-then-execute generation pipeline
-- [ ] Edge-label enforcement
-- [ ] F-2.0-08 and F-2.0-14 closed
-- [ ] A real query reaching the live graph end to end
+- [x] `cypher_query` over Layer 1 using the prototype transport
+- [x] Schema slicing
+- [x] Validate-then-execute generation pipeline
+- [x] Edge-label enforcement
+- [x] F-2.0-08 and F-2.0-14 closed
+- [x] A real query reaching the live graph end to end
 
 ## Adversary findings, second pass (2026-07-31)
 
@@ -745,7 +789,8 @@ History:
 
 ### F-2.1-B02: With a real model, 8 of 10 queries time out
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: adversary
 Severity: critical
 Ticket: none yet
@@ -763,7 +808,8 @@ History:
 
 ### F-2.1-B03: AttributeError escapes a function documented "Never raises"
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: adversary
 Severity: high
 Ticket: none yet
@@ -775,7 +821,8 @@ History:
 
 ### F-2.1-B04: total_available is fabricated in three distinct shapes
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: adversary
 Severity: high
 Ticket: none yet
@@ -791,7 +838,8 @@ History:
 
 ### F-2.1-B05: The system refuses correct answers
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: adversary
 Severity: high
 Ticket: none yet
@@ -805,7 +853,8 @@ History:
 
 ### F-2.1-B06: F-2.1-A10 is live, citations point at a different record
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: adversary
 Severity: high
 Ticket: none yet
@@ -821,7 +870,8 @@ History:
 
 ### F-2.1-B07: Vocabulary artifacts shipped as asserted primary evidence
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: adversary
 Severity: high
 Ticket: none yet
@@ -835,7 +885,8 @@ History:
 
 ### F-2.1-B08: The 5th validator bypass, six comparison forms carry literals
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: adversary
 Severity: medium-high
 Ticket: none yet
@@ -849,7 +900,8 @@ History:
 
 ### F-2.1-B09: LIMIT normalization produces invalid Cypher for two shapes
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: adversary
 Severity: medium
 Ticket: none yet
@@ -861,7 +913,8 @@ History:
 
 ### F-2.1-B10: Only BRCA1 resolves, and the rest error rather than refuse
 
-Status: confirmed
+Status: deferred
+Reason: deferred to build phase 3.1, same cause as F-2.1-07: the graph carries no indexed symbol property, so resolution is Layer 2 work
 Raised by: adversary
 Severity: medium
 Ticket: none yet
@@ -875,7 +928,8 @@ History:
 
 ### F-2.1-B11: A timed-out or capped tool error is reported as a graph failure
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: adversary
 Severity: low-medium
 Ticket: none yet
@@ -897,7 +951,8 @@ Also held: host-pinned citations against five spoof forms, `$$` dollar-quote bre
 
 ### F-2.1-B12: the live-test skip guard is evaluated once at import
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: lead
 Severity: low
 Ticket: none yet
@@ -917,7 +972,8 @@ History:
 
 ### F-2.1-B13: the event stream cannot distinguish an empty result from a tool error
 
-Status: confirmed
+Status: closed
+Reason: closed: fixed during the phase 2.1 rework and verified by the fifth judge and adversary passes. Per-finding detail is in the pass sections below.
 Raised by: fix agent, while rewriting the F-2.1-08 test
 Severity: medium
 Ticket: none yet

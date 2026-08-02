@@ -48,7 +48,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | Phase 1.0 complete (FastAPI app skeleton, health endpoint, the Pydantic event contract, a typed run() stub wired to the query endpoint), merged into main (PR #5, 2026-07-27). Phase 1.1 complete on branch phase/1.1-auth-service: minimal v1 auth and the PostgreSQL user-data schema (six tables). Phase 2.0 complete on branch phase/2.0-langgraph-agent-loop: the real five-node LangGraph Guardrail-Think-Plan-Act-Write loop and the three-tier harness, replacing the phase 1.0 stub. Phase 1.2 complete on branch phase/1.2-react-shell-sse: SSE streaming endpoints (POST /v1/query, GET /v1/query/{run_id}/events, POST /v1/query/{run_id}/stop) and the frontend/ React shell wired end to end against the real backend. Tools not yet wired (build phases 2.1 and 3.1 to 3.5). Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
+| Build (Phases 6-7) | Phase 1.0 complete (FastAPI app skeleton, health endpoint, the Pydantic event contract, a typed run() stub wired to the query endpoint), merged into main (PR #5, 2026-07-27). Phase 1.1 complete on branch phase/1.1-auth-service: minimal v1 auth and the PostgreSQL user-data schema (six tables). Phase 2.0 complete on branch phase/2.0-langgraph-agent-loop: the real five-node LangGraph Guardrail-Think-Plan-Act-Write loop and the three-tier harness, replacing the phase 1.0 stub. Phase 1.2 complete on branch phase/1.2-react-shell-sse: SSE streaming endpoints (POST /v1/query, GET /v1/query/{run_id}/events, POST /v1/query/{run_id}/stop) and the frontend/ React shell wired end to end against the real backend. Phase 2.1 complete, merged into main (PR #15, 2026-08-01): cypher_query over Layer 1, the first live graph access. Tools for Layers 2 and 3 not yet wired (build phases 3.1 to 3.5). Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md) |
 
 ---
 
@@ -125,7 +125,7 @@ agentic-search-ui/
   alembic/                      # Alembic migrations for the user-data schema (build phase 1.1)
   CLAUDE.md                     # Claude Code instructions
   AGENTS.md                     # Instructions for other AI agents
-  DECISIONS.md                  # Architecture decision log (165 rows)
+  DECISIONS.md                  # Architecture decision log (183 rows)
   LEARNINGS.md                  # What broke during the build and what fixed it
   CHANGELOG.md                  # Keep a Changelog format, all entries currently Unreleased
   pyproject.toml
@@ -198,4 +198,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-07-28
+Last updated: 2026-08-01

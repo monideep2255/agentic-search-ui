@@ -2,7 +2,17 @@
 
 Phase 6 is the build. It is underway. Build phases 1.0 (FastAPI skeleton and typed event contract), 1.1 (auth service and PostgreSQL user-data schema), 2.0 (LangGraph agent loop and the three-tier harness), and 1.2 (React shell and SSE) are all done, judge-reviewed, adversary-tested, and merged into `main` as PR #5, #6, #9, and #12.
 
-Build phase 2.1 (`cypher_query` over Layer 1) is PR #13, built but NOT closed. Its tickets stay `in-review` and its branch is not deleted, because the judge and adversary both failed it pre-rework and none of the rework was independently reviewed. 798 Python tests passing, 23 learnings recorded, 174 decisions logged. Next up is build phase 2.2, whose first task is a fresh judge and adversary pass over the 2.1 surface, not new code. Read the "Build phase 2.1, done with one recorded gap" section below and `tracker/phase_2.1.md`'s "Phase close status" before opening anything.
+Build phase 2.1 (`cypher_query` over Layer 1) is DONE and merged as PR #15, after five judge passes and five adversary passes. All nine tickets are `done`, 26 findings are `closed`, and three are `deferred` with a named reason. The process changes that phase forced are merged separately as PR #16.
+
+Current counts: 968 Python tests, 120 frontend tests, premise gate 9 of 9, 37 learnings plus a retrospective, 183 decisions logged.
+
+Next up is build phase 2.2 (`phase/2.2-write-step-grounding`): deterministic cite-or-refuse, the provenance type wired for Layer 1 citations, a first version of the trust signal for the graph-only path, and the two required tests from Section 23.
+
+Read three things before opening it, in this order:
+
+1. `LEARNINGS.md`'s retrospective, "why build phase 2.1 took five review rounds". It is the shortest useful account of how a phase passes every ticket and still does not work.
+2. `docs/build/Build_workflow_cadence.md` stage 5. The premise gate is now a BLOCKING stage, not advice. Build phase 2.2's deliverable is model-generated, so no builder ticket opens until the gate exists and has been seen failing.
+3. `tracker/phase_2.1.md`'s deferred findings, since three of them come due in later phases and two are 2.2's inheritance.
 
 This is the file to open at the start of the next build session.
 
@@ -165,7 +175,7 @@ Two findings from phase 2.0 are already queued against this phase, both because 
 
 ## Build phase 2.1, done with one recorded gap (2026-07-29)
 
-Delivered, per Section 25 row 2.1: `cypher_query` over Layer 1 through an SSH tunnel, schema slicing, the validate-then-execute generation pipeline with one repair retry, and edge-label enforcement. 798 Python tests passing. Branch `phase/2.1-cypher-tool`.
+Delivered, per Section 25 row 2.1: `cypher_query` over Layer 1 through an SSH tunnel, schema slicing, the validate-then-execute generation pipeline with one repair retry, and edge-label enforcement. Closed at 968 Python tests passing, premise gate 9 of 9. Merged as PR #15, branch deleted.
 
 Read the "Phase close status" section at the top of `tracker/phase_2.1.md` before opening build phase 2.2. The short version, and it is the one thing a reader would otherwise get wrong:
 
@@ -192,7 +202,12 @@ Still open after this phase:
 
 | Item | Needed before | Owner |
 |------|---------------|-------|
-| A fresh judge and adversary pass over the build phase 2.1 surface. Both failed the phase pre-rework; none of the rework was independently reviewed. Detail in `tracker/phase_2.1.md`'s "Phase close status" | Build phase 2.2's first task | Lead |
+| F-2.1-J4-02, prompt injection steering entity selection. Mitigated by delimiting the question, NOT closed: the premise gate's injection test passes and fails run to run against identical code, so a prompt-level defense is probabilistic. Marked `xfail(strict=False)` with the reason recorded, so it keeps reporting every run. Rejecting injection is the Guardrail step's job | Build phase 3.0, and clearing the xfail marker belongs to that phase's definition of done | Lead |
+| F-2.1-C15's generation half. The session memory cap mitigates the OOM that took the graph server down, and the hop-floor fix removed the query shape that caused it, but nothing yet stops generation producing an unbounded traversal in the first place | Build phase 2.2 | Lead |
+| F-2.1-A5-05, a second exhaustion shape. `mentioned_in` from BRCA1 costs 27 seconds forward and the full budget reversed, despite being indexed, anchored, and `LIMIT 25`. Described by the fifth adversary and deliberately not reproduced | Build phase 2.2 | Lead |
+| F-2.1-C07's fourth status value, for "matched plenty, cited none". Needs an event-contract change, which is additive within v1 | Build phase 2.2 | Lead |
+| F-2.1-A5-02's consumer. Rows now carry a `vocabulary_artifact_fields` marker and nothing reads it, because no synthesis prompt exists yet | Build phase 2.2, the Write step | Lead |
+| The premise gate's own coverage. Build phase 2.1's gate could not see F-2.1-A5-03 because all nine of its questions were one hop from a single anchor type. Every gate from 2.2 onward states which question shapes it exercises and which it omits, per `goal-contracts` | Every phase whose deliverable is model-generated | Lead |
 | Run the whole-repository security scan. No build-phase code has ever been scanned; the only run in `security/` predates phase 1.0. Scope is the entire repository, not a commit range, so there is no baseline to carry forward | The Step 6.2 reconciliation, and it is a hard prerequisite for starting Step 6.3 | Lead, with product-owner-committed token budget |
 | Decide whether `security/` should stay gitignored (`.gitignore:50`). Nothing under it is tracked, so the Step 6.2 whole-repository scan results would not be committed: not reviewable in a pull request, not diffable against a later scan, and gone on a fresh clone. Cheaper to settle before the scan runs than after | The Step 6.2 scan runs | Product owner |
 | Name a domain sign-off owner for the clinical and human-variation golden fixtures | Build phase 5.1 | Product owner |
