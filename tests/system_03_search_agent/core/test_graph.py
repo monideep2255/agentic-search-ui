@@ -96,7 +96,13 @@ def _no_op_daily_caps(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cost_control, "check_system_daily_cost_cap", _system_check)
 
 
-_FINDING_LINE = re.compile(r"^\[(\d+)\]\s+([^:]+):\s+(.*)$", re.MULTILINE)
+# Matches a rendered findings line without assuming its internal shape.
+# An earlier version parsed "field: value" and broke silently the moment
+# `render_findings_block` started naming the record type, because a
+# non-matching line yields no clause, which yields a refusal, which fails
+# every test here for a reason none of them are about. Echoing the whole
+# body is both simpler and robust to how the block is worded.
+_FINDING_LINE = re.compile(r"^\[(\d+)\]\s+(.+)$", re.MULTILINE)
 
 
 def _compliant_synth_narrative(messages: list[dict[str, str]]) -> str:
@@ -122,8 +128,7 @@ def _compliant_synth_narrative(messages: list[dict[str, str]]) -> str:
     """
     prompt = "\n".join(message.get("content", "") for message in messages)
     clauses = [
-        f"{field.strip()} is {value.strip()} [{index}]"
-        for index, field, value in _FINDING_LINE.findall(prompt)
+        f"{body.strip()} [{index}]" for index, body in _FINDING_LINE.findall(prompt)
     ]
     if not clauses:
         return "ok"

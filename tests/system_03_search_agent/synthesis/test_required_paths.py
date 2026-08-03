@@ -39,6 +39,7 @@ from system_03_search_agent.synthesis.grounding import (
     REFUSAL_TEXT,
     ground_claim,
     normalize,
+    numbers_are_supported,
     run_grounding_pass,
 )
 from system_03_search_agent.synthesis.refuse import (
@@ -165,6 +166,40 @@ class TestCiteOrRefuseCompliance:
         assert not ground_claim("BRCA1 causes cancer", "")
         assert not ground_claim("", "BRCA1")
         assert not ground_claim("...", "   ")
+
+    def test_a_thousands_separator_does_not_break_grounding(self) -> None:
+        """F-2.2-05, measured on the live loop rather than anticipated.
+
+        A finding worth `15310` produced "BRCA1 has 15,310 ClinVar variants
+        [1]", which is correct and well cited, and was stripped, so the user
+        got a refusal for a question the graph had answered perfectly. A
+        false reject costs the user the whole answer, so a gate's cost side
+        needs testing as hard as its block side (LEARNINGS.md, 2026-08-01).
+        """
+        assert ground_claim("BRCA1 has 15,310 ClinVar variants", "15310")
+        assert numbers_are_supported("BRCA1 has 15,310 ClinVar variants", "15310")
+        assert normalize("15,310") == normalize("15310")
+
+        findings = [_finding(1, "variant_count", "15310")]
+        result = run_grounding_pass(
+            "BRCA1 has 15,310 ClinVar variants [1].", findings
+        )
+        assert result.grounded
+        assert result.stripped_count == 0
+
+    def test_the_separator_fix_does_not_equate_two_different_numbers(self) -> None:
+        """The widening must be exactly one spelling of one number.
+
+        If this ever fails, the lookarounds have been loosened and the
+        separator rule is now eating punctuation between words, which would
+        let real digits merge into numbers nobody stated.
+        """
+        assert not ground_claim("15,311 variants", "15310")
+        assert not numbers_are_supported(
+            "BRCA1 has 15,310 variants and 400 orthologs", "15310"
+        )
+        assert normalize("alpha, beta") == "alpha, beta"
+        assert normalize("MedGen:C0346153") == "medgen:c0346153"
 
     def test_normalization_keeps_internal_punctuation_in_a_curie(self) -> None:
         """A CURIE's colon is load-bearing. Strip it and every CURIE claim

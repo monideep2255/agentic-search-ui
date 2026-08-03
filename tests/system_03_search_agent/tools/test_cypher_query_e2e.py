@@ -182,7 +182,11 @@ def _completion_response(content: str) -> Any:
     )()
 
 
-_FINDING_LINE = re.compile(r"^\[(\d+)\]\s+([^:]+):\s+(.*)$", re.MULTILINE)
+# Deliberately shape-agnostic: it echoes the whole rendered body rather
+# than parsing "field: value" out of it, so a change to how
+# `render_findings_block` words a line cannot silently turn every test in
+# this file into a refusal.
+_FINDING_LINE = re.compile(r"^\[(\d+)\]\s+(.+)$", re.MULTILINE)
 
 
 def _compliant_synth_narrative(messages: list[dict[str, str]]) -> str:
@@ -209,8 +213,7 @@ def _compliant_synth_narrative(messages: list[dict[str, str]]) -> str:
     """
     prompt = "\n".join(message.get("content", "") for message in messages)
     clauses = [
-        f"{field.strip()} is {value.strip()} [{index}]"
-        for index, field, value in _FINDING_LINE.findall(prompt)
+        f"{body.strip()} [{index}]" for index, body in _FINDING_LINE.findall(prompt)
     ]
     if not clauses:
         return "I could not find information on this."

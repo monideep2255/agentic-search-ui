@@ -87,9 +87,40 @@ FRAMING_OPENERS: tuple[str, ...] = (
 REFUSAL_TEXT = "I could not find information on this."
 
 
+# A comma or thin space sitting between two digits is a thousands
+# separator, not punctuation between words. Matched with lookarounds so it
+# only ever fires inside a number and can never touch a comma between
+# words or a colon inside a CURIE.
+_DIGIT_GROUP_SEPARATOR = re.compile(r"(?<=\d)[,  ](?=\d)")
+
+
 def normalize(text: str) -> str:
-    """Section 8.2 step 4: lowercase, collapse whitespace, strip edge punctuation."""
+    """Section 8.2 step 4: lowercase, collapse whitespace, strip edge punctuation.
+
+    Plus one addition the spec does not list, recorded as F-2.2-05: a
+    thousands separator inside a number is removed, so "15,310" and "15310"
+    normalize to the same string.
+
+    Measured, not anticipated. A finding carrying `variant_count: 15310`
+    produced the answer "BRCA1 has 15,310 ClinVar variants [1]", which is
+    correct, well cited, and was stripped, because "15310" is not a
+    substring of "15,310". The user then got a refusal for a question the
+    graph had answered perfectly.
+
+    This widens what the gate accepts, which is the direction that needs
+    justifying. Two reasons it is safe. It only equates two spellings of
+    the same number, never two different numbers: the lookarounds confine
+    it to a separator between digits, so "400" still fails against "15310"
+    exactly as before. And `LEARNINGS.md`'s 2026-08-01 entry on the
+    validator makes the cost case directly, from this repo's own history: a
+    false reject means the user gets nothing, so a gate needs its cost side
+    tested as hard as its block side.
+
+    Filed alongside F-2.2-02 for the Step 6.2 reconciliation, since both
+    touch a locked specification's matching rule.
+    """
     collapsed = " ".join(text.lower().split())
+    collapsed = _DIGIT_GROUP_SEPARATOR.sub("", collapsed)
     return collapsed.strip(_EDGE_PUNCTUATION)
 
 
@@ -117,7 +148,10 @@ _STANDALONE_NUMBER = re.compile(r"\b\d+\b")
 
 
 def numbers_are_supported(
-    claim_text: str, field_value: str, question: str = ""
+    claim_text: str,
+    field_value: str,
+    question: str = "",
+    record_context: str = "",
 ) -> bool:
     """Every standalone number in a claim must appear in the value it cites.
 
@@ -172,11 +206,27 @@ def numbers_are_supported(
     question asserts nothing new, so it cannot be a fabricated fact. A
     number in neither the question nor the cited value came from the model,
     and that is exactly the case worth stripping.
+
+    Both sides are normalized first, for the same reason `normalize` strips
+    thousands separators (F-2.2-05): without it, "15,310" tokenizes as the
+    two numbers 15 and 310, neither of which appears in "15310", so the
+    check would reject the very claim it is meant to pass.
+
+    `record_context` is the rest of the finding the claim cites, its CURIE
+    above all. A finding rendered as "Gene NCBIGene:672, name: BRCA1 DNA
+    repair associated" supports the clause "NCBIGene:672 is named BRCA1 DNA
+    repair associated", which carries the standalone number 672 that is not
+    in the field value. It is not invented either: it is the identifier of
+    the very record being cited, and naming the record you are citing is
+    what a readable answer does. Retrieved data is retrieved data wherever
+    on the finding it sits.
     """
-    allowed = set(_STANDALONE_NUMBER.findall(field_value))
-    allowed |= set(_STANDALONE_NUMBER.findall(question))
-    for number in _STANDALONE_NUMBER.findall(claim_text):
-        if number in allowed or number in field_value:
+    normalized_value = normalize(field_value)
+    allowed = set(_STANDALONE_NUMBER.findall(normalized_value))
+    allowed |= set(_STANDALONE_NUMBER.findall(normalize(question)))
+    allowed |= set(_STANDALONE_NUMBER.findall(normalize(record_context)))
+    for number in _STANDALONE_NUMBER.findall(normalize(claim_text)):
+        if number in allowed or number in normalized_value:
             continue
         return False
     return True
@@ -357,7 +407,12 @@ def run_grounding_pass(
                 # chip.
                 continue
             if not ground_claim(claim_text, finding.field_value) or not (
-                numbers_are_supported(claim_text, finding.field_value, question)
+                numbers_are_supported(
+                    claim_text,
+                    finding.field_value,
+                    question,
+                    record_context=f"{finding.curie} {finding.entity_type}",
+                )
             ):
                 # Steps 5 and 6: no similarity fallback, no partial credit.
                 # The second check is the F-2.2-02 tightening; see
