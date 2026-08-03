@@ -36,6 +36,7 @@ over-flagging" is that trade taken on purpose.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Literal
 
@@ -112,18 +113,34 @@ class ClaimTrust:
 
     @property
     def triangulated(self) -> bool | None:
-        """The wire-level tri-state on `TrustSignalPayload`.
+        """The wire-level `triangulated` field on `TrustSignalPayload`.
 
-        None when triangulation did not run (a low-risk claim, per Section
-        8.3.3's "not evaluated"), which is a genuinely different statement
-        from False. Reporting False for "never checked" would claim the
-        check ran and disagreed.
+        Three wire states, and they do NOT map one-to-one onto the three
+        triangulation results:
+
+            None   triangulation did not run (a low-risk claim, Section
+                   8.3.3's "not evaluated")
+            True   ran, and the sources concorded
+            False  ran, and did not concord
+
+        Finding J-07: an earlier docstring here called this a tri-state that
+        distinguishes "ran and disagreed" from "not evaluated". Only the
+        first half was true. `discordant` and `insufficient` BOTH map to
+        False, so this field alone cannot tell a consumer whether the
+        sources actively disagreed or whether there was only one of them.
+
+        That distinction is not lost, it just lives on a different field of
+        the same event: `outcome` is `flag` for discordant and `ask` for
+        insufficient (Section 8.3.3). A consumer needing the difference
+        reads `outcome`, which is the field Section 8.3 makes authoritative
+        anyway. The docstring is corrected rather than the contract widened,
+        because `TrustSignalPayload.triangulated` is a `bool | None` on a
+        locked v1 contract and Section 2.6 permits adding an optional field,
+        not redefining an existing one's type.
         """
         if self.risk_tier == "low":
             return None
-        return {"concordant": True, "discordant": False, "insufficient": False}[
-            self.triangulation
-        ]
+        return self.triangulation == "concordant"
 
 
 def risk_tier_for(field: str, node_or_edge_type: str = "") -> RiskTier:
@@ -139,13 +156,30 @@ def risk_tier_for(field: str, node_or_edge_type: str = "") -> RiskTier:
     through the aggregation rule below, and train a reader to ignore the
     signal precisely when it means something.
     """
-    field_token = field.strip().lower()
-    type_token = node_or_edge_type.strip().lower()
+    field_token = _canonical(field)
+    type_token = _canonical(node_or_edge_type)
     if field_token in _HIGH_RISK_FIELD_TOKENS:
         return "high"
     if type_token in _HIGH_RISK_RELATIONSHIP_TOKENS:
         return "high"
     return "low"
+
+
+def _canonical(token: str) -> str:
+    """Fold a field or type name to the spelling the risk tables use.
+
+    Finding J-08: the tables are exact-token, so `clinicalSignificance` and
+    `clinical significance` both missed `clinical_significance` and dropped a
+    genuinely clinical claim to `low` risk, skipping triangulation entirely.
+    Graph properties, API fields and BioLink predicates do not agree on a
+    casing convention, and this rule must not depend on which one a given
+    source happened to use.
+
+    Lowercases, then collapses spaces, hyphens and camelCase boundaries to
+    underscores, so all three spellings above canonicalize to one.
+    """
+    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", token.strip())
+    return re.sub(r"[\s\-]+", "_", spaced.lower())
 
 
 def bucket_for(value: str) -> str | None:

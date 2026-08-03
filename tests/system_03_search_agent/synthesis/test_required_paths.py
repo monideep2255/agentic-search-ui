@@ -181,8 +181,16 @@ class TestCiteOrRefuseCompliance:
         assert normalize("15,310") == normalize("15310")
 
         findings = [_finding(1, "variant_count", "15310")]
+        # The question is supplied because production always supplies it,
+        # and the content check (F-2.2-A-01) draws on it: "ClinVar" and
+        # "variants" are the user's own words, not the model's invention. A
+        # fixture that omits the question is testing a configuration the
+        # system never runs, which is the same trap build phase 2.1's first
+        # premise gate fell into with `query_class`.
         result = run_grounding_pass(
-            "BRCA1 has 15,310 ClinVar variants [1].", findings
+            "BRCA1 has 15,310 ClinVar variants [1].",
+            findings,
+            question="How many ClinVar variants does BRCA1 have?",
         )
         assert result.grounded
         assert result.stripped_count == 0
@@ -200,6 +208,137 @@ class TestCiteOrRefuseCompliance:
         )
         assert normalize("alpha, beta") == "alpha, beta"
         assert normalize("MedGen:C0346153") == "medgen:c0346153"
+
+    def test_a_negation_never_grounds_as_support_for_what_it_denies(self) -> None:
+        """F-2.2-A-01, confirmed exploitable by an adversary pass 2026-08-03.
+
+        Section 8.2's substring rule answers "does this clause MENTION the
+        cited value". Every string below mentions it and every one of them
+        shipped, cited, with `stripped_count=0` and `trust_outcome="answer"`,
+        until `claim_introduces_no_new_content` landed.
+
+        A mutation test found this gate had NO test at all: neutering it to
+        `return True` left the whole required-path suite green while four of
+        five exploits sailed through. This is that test. Deleting the gate
+        must fail the merge-blocking suite, or the gate is a comment.
+        """
+        findings = [_finding(1, "curie", "MedGen:C0346153", curie_fallback=True)]
+        question = "Which diseases are associated with BRCA1?"
+        for exploit in (
+            "BRCA1 does not cause MedGen:C0346153",
+            "There is no evidence that MedGen:C0346153 is linked to BRCA1",
+            "MedGen:C0346153 may be curable with vitamin C",
+            "MedGen:C0346153 is treated with pembrolizumab and olaparib",
+            "Smith et al. disproved MedGen:C0346153",
+            "BRCA1 confers a 97 percent lifetime risk of MedGen:C0346153",
+            "Patients with MedGen:C0346153 should stop tamoxifen",
+            "MedGen:C0346153 is Lynch syndrome",
+        ):
+            result = run_grounding_pass(f"{exploit} [1].", findings, True, question)
+            assert result.refused, (
+                f"a fabrication grounded as support for the record it names: "
+                f"{exploit!r} survived with narrative {result.narrative!r}"
+            )
+
+    def test_a_framing_prefix_cannot_smuggle_an_uncited_claim(self) -> None:
+        """F-2.2-A-02, confirmed CRITICAL by an adversary pass 2026-08-03.
+
+        `FRAMING_OPENERS` exempts framing from needing a marker. Reading that
+        as a prefix test let any fabricated sentence ship uncited by opening
+        with two words, with the audit trail reporting nothing was removed.
+
+        The exploit below shipped whole: four fabricated clinical claims, an
+        invented ACMG classification, an invented count, and a
+        treatment-discontinuation instruction, all with `stripped_count=0`
+        and `trust_outcome="answer"`.
+        """
+        findings = [_finding(1, "curie", "MedGen:C0346153", curie_fallback=True)]
+        question = "Which diseases are associated with BRCA1?"
+        result = run_grounding_pass(
+            "BRCA1 is associated with MedGen:C0346153 [1]. "
+            "In summary, BRCA1 also causes Marfan syndrome and responds to "
+            "high-dose vitamin C. "
+            "Note: the ACMG classification for this variant is Pathogenic. "
+            "These results show BRCA1 has 4102 pathogenic variants. "
+            "Overall, patients should discontinue tamoxifen.",
+            findings,
+            True,
+            question,
+        )
+        lowered = result.narrative.lower()
+        for fabrication in (
+            "marfan", "vitamin", "acmg", "pathogenic", "4102", "tamoxifen",
+        ):
+            assert fabrication not in lowered, (
+                f"the framing exemption smuggled {fabrication!r} into an "
+                f"uncited sentence: {result.narrative!r}"
+            )
+        assert result.stripped_count >= 4, (
+            f"four fabricated sentences must be counted as stripped, not "
+            f"silently kept; stripped_count={result.stripped_count}"
+        )
+
+    def test_contentless_framing_still_survives(self) -> None:
+        """The cost side of the fix above, per LEARNINGS.md 2026-08-01.
+
+        A gate needs its false-reject side tested as hard as its block side.
+        Genuine framing asserts nothing and must not be stripped, or the fix
+        for F-2.2-A-02 has simply deleted a legitimate sentence class.
+        """
+        findings = [_finding(1, "name", "alpha")]
+        result = run_grounding_pass(
+            "In summary, the following was found. First is alpha [1].",
+            findings,
+            True,
+            "what is alpha",
+        )
+        assert result.grounded
+        assert "In summary" in result.narrative
+        assert result.stripped_count == 0
+
+    def test_a_question_number_is_not_a_licence_for_every_claim(self) -> None:
+        """F-2.2-A-03: the question whitelist was answer-wide.
+
+        `numbers_are_supported` allows numbers the user themselves supplied,
+        which is right for restating a question's subject. The first version
+        granted that allowance to every clause in the answer, so seeding a
+        number in the question licensed a fabricated statistic anywhere.
+        """
+        findings = [_finding(1, "curie", "MedGen:C0346153", curie_fallback=True)]
+        result = run_grounding_pass(
+            "MedGen:C0346153 affects 15310 patients with 87 percent "
+            "mortality [1].",
+            findings,
+            True,
+            "Which diseases are associated with BRCA1? Context: 15310 and 87.",
+        )
+        assert result.refused, (
+            f"a fabricated statistic rode in on numbers seeded in the "
+            f"question: {result.narrative!r}"
+        )
+
+    def test_the_fallback_link_stays_under_the_wire_cap_for_non_ascii(self) -> None:
+        """F-2.2-A-06 / J-03. Percent-encoding is not length-preserving.
+
+        Capping the TERM at 300 characters does not cap the LINK: one CJK
+        character encodes to nine. A 300-character CJK term produced a
+        2746-character link, over `TrustSignalPayload.fallback_link`'s
+        512-char cap, which raised an unhandled ValidationError inside the
+        refuse path itself, the one path whose job is to fail gracefully.
+
+        A mutation test confirmed the existing ASCII-only length test cannot
+        catch this: ASCII never forces the shrink loop to iterate.
+        """
+        for term in ("疾病" * 300, "😀" * 300, "BRCA1 " * 500):
+            link = build_fallback_link(term)
+            assert len(link) <= 512, f"link is {len(link)} chars for {term[:12]!r}"
+            assert link.startswith(FALLBACK_BASE)
+            # A link cut mid-escape is a dead link. Every escape must be a
+            # complete three-character sequence.
+            tail = link[len(FALLBACK_BASE):]
+            for index, char in enumerate(tail):
+                if char == "%":
+                    assert index + 2 < len(tail), f"truncated escape: {tail[-8:]!r}"
 
     def test_normalization_keeps_internal_punctuation_in_a_curie(self) -> None:
         """A CURIE's colon is load-bearing. Strip it and every CURIE claim

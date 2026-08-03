@@ -88,8 +88,13 @@ Deliberately NOT exercised, each with the reason:
 - Whether a specific expected record appears in a TRUNCATED result set.
   Which rows land in the shown slice is a property of the tool's row
   ordering, not of the Write step, so an assertion of that shape produces
-  false rejects (F-2.2-07). The two-hop test asserts the entity TYPE of
-  every cited record instead, which holds across the whole result set.
+  false rejects (F-2.2-07). The two-hop test asserts instead that every
+  cited record is a Gene AND is a member of the 21 genes the snapshot
+  actually associates with that disease, which is truncation-invariant and
+  still catches a traversal that reached the wrong anchor. An earlier
+  version asserted only the entity type, which a judge pass correctly
+  called strictly weaker: ten arbitrary genes from anywhere in the graph
+  would have satisfied it (finding J-05).
 
 The known-flaky note, recorded 2026-08-03 rather than hidden: generation
 intermittently emits Cypher with no parentheses around node patterns
@@ -145,6 +150,25 @@ TP53_DISEASES = 12
 # the genes associated with it. Two hops from a Disease anchor, the shape
 # 2.1's gate had none of.
 HEREDITARY_BREAST_OVARIAN = "MedGen:C0346153"
+
+# Every gene associated with that disease in this snapshot. Read from the
+# live graph 2026-08-03:
+#   MATCH (g:Gene)-[:gene_associated_with_condition]->
+#         (d:Disease {id: 'MedGen:C0346153'}) RETURN g.id
+# 21 distinct genes. The tool reports more matching ROWS than that, since a
+# gene can carry more than one edge to the same disease, which is exactly
+# why the assertion using this set is a SUBSET test rather than an equality
+# or a membership test: it is invariant under truncation and under
+# duplicate edges, while still catching a traversal that reached the wrong
+# anchor (finding J-05).
+HBOC_GENE_CURIES = {
+    "NCBIGene:207", "NCBIGene:2099", "NCBIGene:3161", "NCBIGene:3845",
+    "NCBIGene:472", "NCBIGene:4835", "NCBIGene:5002", "NCBIGene:5245",
+    "NCBIGene:5290", "NCBIGene:580", "NCBIGene:5888", "NCBIGene:672",
+    "NCBIGene:675", "NCBIGene:7157", "NCBIGene:7517", "NCBIGene:83990",
+    "NCBIGene:841", "NCBIGene:8438", "NCBIGene:8493", "NCBIGene:9821",
+    "NCBIGene:999",
+}
 
 ABSENT_GENE = "NCBIGene:99999999"
 
@@ -292,21 +316,105 @@ async def _run_once(question: str) -> Answer:
     return Answer([event async for event in run(query, context)])
 
 
+def _is_environmental_failure(answer: Answer) -> bool:
+    """Whether this run failed for a reason outside the Write step.
+
+    Two causes, both narrowly identified, both belonging to a different
+    step than the one this file grades:
+
+    - The generation-syntax flake (F-2.2-01): the plan tier intermittently
+      emits Cypher with no parentheses around node patterns, the graph
+      rejects it, and nothing retries.
+    - A `transient` step error: `call_tier`'s own classification for a
+      provider or network hiccup, a timeout or a dropped connection. On
+      2026-08-03 this machine's DNS dropped three times, and each outage
+      turned every question in this file into a refusal with an empty
+      narrative that nothing had reached synthesis to produce.
+
+    Deliberately NOT a general retry-on-failure. A retry that swallowed any
+    failure would let a real Write-step defect pass on a second roll of the
+    dice, which is exactly the "weaken the check until it passes" move
+    `goal-contracts` forbids.
+
+    The `source` check below is load-bearing and was missing in the first
+    version (finding J-06). That version's docstring claimed both conditions
+    came "from a step OTHER than Write", and the code tested only `scope`
+    and `error_class`, never `source`. `core/graph.py`'s Write step emits
+    exactly that shape, `scope="step"` with a transient class, on its own
+    synthesis-call failure, so the claim was false and a Write-step failure
+    would have been retried as environmental.
+
+    That is precisely the F-2.1-J5-01 pattern this repo already paid for: a
+    confident comment asserting a property the code did not implement,
+    surviving review because a reader stops checking exactly where the prose
+    sounds most certain. The fix is to make the code enforce what the
+    comment says, and the sibling test below asserts the same property, so
+    the comment is no longer the only thing guaranteeing it.
+    """
+    for error in answer.errors:
+        if _GENERATION_SYNTAX_FAILURE in (error.get("message") or ""):
+            return True
+        if (
+            error.get("scope") == "step"
+            and error.get("error_class") == "transient"
+            and error.get("source") != "write"
+        ):
+            return True
+    return False
+
+
+def test_the_environmental_retry_never_covers_a_write_step_failure() -> None:
+    """J-06: the property `_is_environmental_failure`'s docstring claims.
+
+    Deliberately not decorated with `premise_gate`: it needs neither the
+    graph nor a model, and a guarantee about when the gate retries must hold
+    whether or not the environment is up. A test that skips exactly when the
+    environment is broken cannot guard against mis-handling a broken
+    environment.
+    """
+
+    def _answer(errors: list[dict[str, str]]) -> Answer:
+        blank = Answer([])
+        blank.errors = errors  # type: ignore[assignment]
+        return blank
+
+    write_failure = [
+        {"scope": "step", "source": "write", "error_class": "transient",
+         "message": "A step in this query hit a temporary error."}
+    ]
+    assert not _is_environmental_failure(_answer(write_failure)), (
+        "a transient failure of the WRITE step is this file's subject and "
+        "must never be retried away as environmental"
+    )
+
+    for upstream in ("guardrail", "think", "plan"):
+        failure = [
+            {"scope": "step", "source": upstream, "error_class": "transient",
+             "message": "A step in this query hit a temporary error."}
+        ]
+        assert _is_environmental_failure(_answer(failure)), (
+            f"a transient failure in {upstream} is upstream of the Write step "
+            f"and should be retried once"
+        )
+
+    recoverable = [
+        {"scope": "step", "source": "plan", "error_class": "recoverable",
+         "message": "A step in this query could not complete as requested."}
+    ]
+    assert not _is_environmental_failure(_answer(recoverable)), (
+        "a recoverable failure is not a network hiccup and must not be retried"
+    )
+
+
 async def _ask(question: str) -> Answer:
     """Run one real question exactly the way a surface would.
 
-    Retries once, and only on the known generation-syntax flake documented
-    in the module docstring. This is NOT a general retry: a retry that
-    swallowed any failure would let a real Write-step defect pass on the
-    second roll of the dice, which is the same "weaken the check until it
-    passes" failure `goal-contracts` forbids. The retry is keyed to one
-    error string, from a different step, with a finding that owns its fix.
+    Retries at most once, and only when the first attempt failed for a
+    reason that is not this file's subject. See `_is_environmental_failure`
+    for why that is a narrow, named set rather than a blanket retry.
     """
     answer = await _run_once(question)
-    if any(
-        _GENERATION_SYNTAX_FAILURE in (e.get("message") or "")
-        for e in answer.errors
-    ):
+    if _is_environmental_failure(answer):
         answer = await _run_once(question)
     return answer
 
@@ -332,6 +440,27 @@ def _unmarked_factual_clauses(narrative: str) -> list[str]:
             continue
         offenders.append(clause)
     return offenders
+
+
+def _states_number(narrative: str, number: int) -> bool:
+    """Whether the answer states `number`, however it chose to spell it.
+
+    A model writes 15,310 where the finding carries 15310, and both are the
+    same number. The grounding pass already treats them as equal (F-2.2-05);
+    this gate did not, so it failed a run whose answer was exactly right:
+    "NCBIGene:672 has 15,310 variants [1]." with no error and a live
+    citation. That is a false reject, the failure class LEARNINGS.md's
+    2026-08-01 entry warns about, and it is worse here than elsewhere
+    because a premise gate reporting a defect that is not there costs a
+    review round and trains its reader to discount the next failure.
+
+    Deliberately re-implemented rather than importing `grounding.normalize`,
+    for the reason `_normalize` below already states: a gate that imports
+    the normalizer it is grading passes whenever that normalizer is
+    self-consistent, including when it is self-consistently wrong.
+    """
+    stripped = re.sub(r"(?<=\d)[,  ](?=\d)", "", narrative)
+    return str(number) in stripped
 
 
 def _normalize(text: str) -> str:
@@ -411,11 +540,11 @@ async def test_a_count_answer_states_the_true_count() -> None:
     assert answer.trust_outcome != "refuse", (
         f"refused a question the graph can answer.{answer.describe()}"
     )
-    assert str(BRCA1_VARIANTS) in answer.narrative, (
+    assert _states_number(answer.narrative, BRCA1_VARIANTS), (
         f"the true count {BRCA1_VARIANTS} is not in the answer text."
         f"{answer.describe()}"
     )
-    assert str(TP53_DISEASES) not in answer.narrative, (
+    assert not _states_number(answer.narrative, TP53_DISEASES), (
         f"a number belonging to a different gene appears in the answer."
         f"{answer.describe()}"
     )
@@ -459,19 +588,27 @@ async def test_a_two_hop_question_from_a_disease_anchor_is_answered() -> None:
         f"{answer.describe()}"
     )
 
-    # Deliberately NOT asserting that BRCA1 specifically is cited, and the
-    # reason is worth recording so nobody re-adds it. This disease has 42
-    # associated genes in the snapshot and the answer is capped well below
-    # that, so which genes land in the shown slice is a property of the
-    # tool's row ordering, not of whether the two-hop traversal works. The
-    # first version of this test asserted BRCA1 was present and failed
-    # against a CORRECT answer that said, accurately, "Showing 10 of 42
-    # matching rows". That is a false reject: it reports a defect where the
-    # system behaved exactly right, which is the failure mode LEARNINGS.md's
-    # 2026-08-01 entry warns about when a gate's cost side goes untested.
+    # Anchor verification, in the subset form. Finding J-05: an earlier
+    # version of this test asserted BRCA1 specifically was cited, which is a
+    # FALSE REJECT under truncation (42 genes exist, 10 are shown, and which
+    # 10 is the tool's row ordering). Replacing it with the entity-type
+    # check alone was described in its commit as "the stronger check", and a
+    # judge pass correctly refused that: it is stronger against truncation
+    # and strictly WEAKER on the thing this question exists to test, since
+    # ten arbitrary genes from anywhere in the graph would satisfy it. The
+    # two-hop traversal could target the wrong anchor entirely and pass.
     #
-    # The entity-type assertion above is the stronger check anyway. It holds
-    # for every gene in the 42, so truncation cannot make it flaky.
+    # The subset form is truncation-invariant AND anchor-verifying, which is
+    # the assertion that was available all along and not taken. It is the
+    # same shape the one-hop disease test already uses. Ground truth read
+    # from the live graph 2026-08-03.
+    assert cited <= HBOC_GENE_CURIES, (
+        f"the answer cites genes that are NOT associated with this disease "
+        f"in the snapshot: {sorted(cited - HBOC_GENE_CURIES)}. A two-hop "
+        f"traversal that reaches the wrong anchor returns real, citable, "
+        f"resolving records for a question nobody asked, which is build "
+        f"phase 2.1's exact failure shape.{answer.describe()}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -695,7 +832,7 @@ async def test_a_truncated_answer_states_the_scale_of_what_is_missing() -> None:
 
     if answer.trust_outcome == "refuse":
         pytest.skip("refused; truncation honesty is not reachable on a refusal")
-    assert str(BRCA1_VARIANTS) in answer.narrative, (
+    assert _states_number(answer.narrative, BRCA1_VARIANTS), (
         f"the note omits the scale: the user cannot tell whether they are "
         f"missing 5 rows or 15,290.{answer.describe()}"
     )

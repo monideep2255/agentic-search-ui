@@ -147,7 +147,21 @@ def _citable_value_for_row(
     # no usable value at all, still supports one true statement: which
     # record it is. Cite that rather than a value the row does not honestly
     # carry.
-    if field_name is None or is_suspect or not str(field_value).strip():
+    #
+    # `field_value is None` is checked explicitly (finding J-10). A literal
+    # JSON null in a row's `fields` is neither blank nor an artifact by the
+    # upstream checks, both of which test `isinstance(value, str)` first, so
+    # it was selected as a CLEAN representative and shipped as the string
+    # "None" with `assertion_confidence="asserted"`. A citation asserting,
+    # at full confidence, that a gene's name is "None" is worse than no
+    # citation. `str(None).strip()` is "None", which is truthy, so the
+    # blank test below cannot catch it either.
+    if (
+        field_name is None
+        or field_value is None
+        or is_suspect
+        or not str(field_value).strip()
+    ):
         if curie:
             return "curie", curie, is_suspect, True
         # No CURIE and no usable field: nothing here is citable at all.

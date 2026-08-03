@@ -262,9 +262,149 @@ class GroundingResult:
         return bool(self.claims) and not self.refused
 
 
+# Words that carry no claim of their own: articles, copulas, connectives, and
+# the small vocabulary an answer uses to scaffold a sentence around a fact.
+# A token outside this set is CONTENT, and content has to come from somewhere.
+_FUNCTION_WORDS: frozenset[str] = frozenset(
+    {
+        "a", "an", "the", "this", "that", "these", "those", "it", "its", "they",
+        "them", "their", "there", "here", "above", "below", "following",
+        "is", "are", "was", "were", "be", "been", "being", "am",
+        "has", "have", "had", "having", "do", "does", "did",
+        "and", "or", "but", "also", "then", "while", "with", "plus", "as",
+        "well", "of", "for", "to", "in", "on", "at", "by", "from", "into",
+        "which", "who", "whose", "what", "when", "where",
+        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+        "ten", "both", "all", "each", "every", "any", "some", "no", "none",
+        "include", "includes", "including", "included",
+        "list", "lists", "listed", "listing",
+        "show", "shows", "shown", "showing",
+        "found", "identified", "returned", "retrieved", "reported",
+        "record", "records", "result", "results", "row", "rows",
+        "answer", "answers", "information", "data", "value", "values",
+        "query", "search", "graph", "knowledge", "summary", "note", "overall",
+        "taken", "together", "short", "based", "according", "accordingly",
+        "respectively", "namely", "total", "count", "counts",
+        # Ordinals and positional words. They order a list; they assert
+        # nothing about its contents.
+        "first", "second", "third", "fourth", "fifth", "sixth", "seventh",
+        "eighth", "ninth", "tenth", "last", "next", "other", "others",
+        "another", "same", "such", "only", "just", "further", "additional",
+        # Verbs that attach a value to a record without asserting anything
+        # beyond what the finding already says. "X is named Y" claims
+        # exactly what "name: Y" on the finding claims.
+        "named", "called", "titled", "labelled", "labeled", "known",
+        "corresponds", "corresponding", "matches", "matching",
+    }
+)
+
+# A token runs from an alphanumeric through any internal `:._-`, which is
+# what keeps a CURIE ("medgen:c0346153"), a version ("nm_007294.4") and a
+# hyphenated term whole. Trailing separators are trimmed afterwards, since
+# a token's own punctuation is not part of it: without that, "name:" in the
+# prose failed to match "name" on the finding, and a correct claim was
+# stripped for a colon.
+_TOKEN = re.compile(r"[a-z0-9][a-z0-9:._-]*")
+_TOKEN_EDGE = ":._-"
+
+
+def content_tokens(text: str) -> set[str]:
+    """The tokens in `text` that assert something, function words removed."""
+    tokens = set()
+    for raw in _TOKEN.findall(normalize(text)):
+        token = raw.strip(_TOKEN_EDGE)
+        if token and token not in _FUNCTION_WORDS:
+            tokens.add(token)
+    return tokens
+
+
+def claim_introduces_no_new_content(
+    claim_text: str, supporting_text: str
+) -> bool:
+    """Every content token in the claim must come from somewhere real.
+
+    ## Why this exists: F-2.2-A-01, A-03 and A-04, all confirmed exploitable
+
+    Section 8.2's substring rule answers "does this clause MENTION the cited
+    value". It has no mechanism for "is this clause TRUE about it", and the
+    adversary pass on 2026-08-03 turned that gap into a working exploit.
+    Every one of these grounded cleanly against a finding whose value is
+    `MedGen:C0346153`, with `stripped_count=0` and `trust_outcome="answer"`:
+
+        BRCA1 does not cause MedGen:C0346153
+        There is no evidence that MedGen:C0346153 is linked to BRCA1
+        MedGen:C0346153 may be curable with vitamin C
+        MedGen:C0346153 is treated with pembrolizumab and olaparib
+        Smith et al. disproved MedGen:C0346153
+
+    A negation grounded as SUPPORT for the thing it denies. An invented drug
+    regimen rode along on a matched identifier. `numbers_are_supported` could
+    not see any of it, because `\\b\\d+\\b` never fires inside
+    `MedGen:C0346153` (no word boundary before the digits).
+
+    Rather than enumerate the ways a sentence can be false about a record,
+    which is an infinite blocklist, this inverts the question into a finite
+    allowlist: every content-bearing word in the claim must appear in the
+    finding it cites or in the user's own question. `LEARNINGS.md`'s
+    2026-08-01 entry on the Cypher validator records the same lesson from
+    the same repo, in almost the same words: a blocklist of unsafe shapes is
+    infinite while an allowlist of safe ones is finite, and the validator
+    only stopped leaking once it flipped to fail-closed.
+
+    So `not`, `cause`, `curable`, `vitamin`, `pembrolizumab` and `disproved`
+    are all rejected for one reason rather than five: none of them is in the
+    record, and none is in what the user asked.
+
+    ## What this costs
+
+    It rejects claims Section 8.2 would accept, so it can only tighten the
+    gate, never loosen it. The cost is a false reject when a model reaches
+    for an ordinary synonym the question did not use, and that cost is real:
+    the answer is withheld rather than shown wrong. In a system where a
+    confident wrong answer about a disease is worse than no answer, that is
+    the correct direction to fail, and the premise gate measures the cost
+    every run.
+
+    Recorded as part of F-2.2-02 for the Step 6.2 spec reconciliation, since
+    it tightens a locked specification.
+    """
+    return content_tokens(claim_text) <= content_tokens(supporting_text)
+
+
 def _is_framing(clause: str) -> bool:
+    """Whether a clause is pure framing, and therefore needs no marker.
+
+    ## Why this is not a prefix test: F-2.2-A-02, confirmed CRITICAL
+
+    Section 8.1 exempts framing language ("in summary", "taken together")
+    from needing a marker, because it asserts nothing. The first
+    implementation read that as a prefix test, and the adversary pass on
+    2026-08-03 showed what a prefix test buys. This shipped whole, uncited,
+    with `stripped_count=0` and `trust_outcome="answer"`:
+
+        In summary, BRCA1 also causes Marfan syndrome and responds to
+        high-dose vitamin C. Note: the ACMG classification for this variant
+        is Pathogenic. These results show BRCA1 has 4102 pathogenic
+        variants. Overall, patients should discontinue tamoxifen.
+
+    Four fabricated clinical claims, an invented ACMG classification, an
+    invented count, and a treatment-discontinuation instruction, all reaching
+    the user because each sentence began with two exempt words. The audit
+    trail reported that nothing had been removed.
+
+    The exemption is for framing, not for anything WEARING framing. So the
+    opener is stripped and what remains must itself assert nothing: a clause
+    is framing only if every token left is a function word. "In summary, the
+    following was found" survives. "In summary, BRCA1 causes Marfan
+    syndrome" does not, and is stripped as the uncited factual claim it is.
+    """
     lowered = normalize(clause)
-    return any(lowered.startswith(opener) for opener in FRAMING_OPENERS)
+    for opener in FRAMING_OPENERS:
+        if not lowered.startswith(opener):
+            continue
+        remainder = lowered[len(opener) :].strip(" ,.;:")
+        return not content_tokens(remainder)
+    return False
 
 
 def _asserts_something(text: str) -> bool:
@@ -406,17 +546,28 @@ def run_grounding_pass(
                 # is dropped, since a marker with no claim is an unbound
                 # chip.
                 continue
-            if not ground_claim(claim_text, finding.field_value) or not (
-                numbers_are_supported(
+            # Everything the claim is allowed to draw on: the finding it
+            # cites, and the question the user actually asked. Nothing else
+            # is a source, so nothing else may appear as content.
+            supporting_text = (
+                f"{finding.field_value} {finding.field} {finding.curie} "
+                f"{finding.entity_type} {question}"
+            )
+            if (
+                # Section 8.2 step 5, as the spec writes it.
+                not ground_claim(claim_text, finding.field_value)
+                # F-2.2-02: invented NUMBERS.
+                or not numbers_are_supported(
                     claim_text,
                     finding.field_value,
                     question,
                     record_context=f"{finding.curie} {finding.entity_type}",
                 )
+                # F-2.2-A-01/03/04: invented WORDS, including the negations
+                # and reversals that made a finding support its own denial.
+                or not claim_introduces_no_new_content(claim_text, supporting_text)
             ):
                 # Steps 5 and 6: no similarity fallback, no partial credit.
-                # The second check is the F-2.2-02 tightening; see
-                # `numbers_are_supported` for why it is separate.
                 stripped += 1
                 continue
 

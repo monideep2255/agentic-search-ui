@@ -35,9 +35,26 @@ REFUSE_MESSAGE = (
 # building code got it right.
 _HOST_PATTERN = re.compile(NCBI_RECORD_URL_PATTERN)
 
-# Bounds the query term reaching the URL. A 2000-character question (the
-# `Query.text` cap) percent-encodes to well over the 512-character
-# `source_url` cap every other URL in this system respects.
+# The cap that actually matters: the ENCODED url must fit the 512-character
+# limit `TrustSignalPayload.fallback_link` declares, which is the same cap
+# every `source_url` in this system respects.
+#
+# F-2.2-A-06 / J-03: capping the term at 300 CHARACTERS does not cap the
+# link, because percent-encoding is not length-preserving. One character
+# becomes up to nine bytes ("%F0%9F%98%80" for an emoji, "%E7%96%BE" for a
+# CJK character), so 300 characters of non-ASCII text produced a 2746- and
+# in one probe a 3646-character link. Two consequences, and the second is
+# the serious one: the link blew the 512 cap that exists to keep it
+# renderable, and `TrustSignalPayload` then rejected it with an unhandled
+# `ValidationError` raised INSIDE the refuse path, which is the one path
+# whose entire job is to fail gracefully. `write_node` also truncates the
+# refusal token at 1000 characters, so before the validation error the user
+# would have seen a URL cut mid-escape ("...%E7%96%BE%E"), a dead link
+# offered as somewhere to go next.
+MAX_ENCODED_LINK_CHARS = 512
+
+# A starting cap on the term, tightened by the loop below until the encoded
+# link fits. Not the guarantee, just the first guess.
 MAX_QUERY_TERM_CHARS = 300
 
 
@@ -61,11 +78,32 @@ def build_fallback_link(query_term: str) -> str:
     user.
     """
     term = " ".join(query_term.split())[:MAX_QUERY_TERM_CHARS]
-    encoded = urllib.parse.quote(term, safe="")
-    link = FALLBACK_BASE + encoded
+
+    # Shrink the TERM until the ENCODED link fits, rather than truncating
+    # the encoded string, which would cut a percent-escape in half and hand
+    # the user a dead link. Dropping whole characters keeps every escape
+    # intact, so a shortened link still resolves.
+    while term:
+        link = FALLBACK_BASE + urllib.parse.quote(term, safe="")
+        if len(link) <= MAX_ENCODED_LINK_CHARS:
+            break
+        term = term[: len(term) - max(1, len(term) // 8)].rstrip()
+    else:
+        # Every character was dropped, so search the base with no term at
+        # all. Still a working NCBI page, still not a dead end.
+        link = FALLBACK_BASE
+
     if not _HOST_PATTERN.match(link):
         raise FallbackLinkError(
             "the constructed fallback link is not on an allowed NCBI host"
+        )
+    if len(link) > MAX_ENCODED_LINK_CHARS:
+        # Unreachable given the loop above, and asserted rather than assumed
+        # because the cost of being wrong is a ValidationError raised inside
+        # the refuse path itself (J-03).
+        raise FallbackLinkError(
+            f"the constructed fallback link is {len(link)} characters, over "
+            f"the {MAX_ENCODED_LINK_CHARS}-character limit"
         )
     return link
 
