@@ -13,9 +13,32 @@ A real question reaches the live graph, comes back as rows, and leaves as prose 
 
 The verify surface is `tests/system_03_search_agent/core/test_write_grounding_premise.py`, not a suite total. Build phase 2.1's whole retrospective is that a green suite proved nothing about whether the answer was right.
 
-## Phase open status: IN PROGRESS
+## Phase open status: IN PROGRESS, paused 2026-08-03
 
-Opened 2026-08-03.
+Opened 2026-08-03. Paused the same day at the product owner's call after repeated network outages made the remaining gates unrunnable.
+
+### Resume here
+
+Everything below is committed on `phase/2.2-write-step-grounding`, 6 commits, clean working tree, nothing pushed and no pull request opened.
+
+Before doing anything else, check the network. Three outages on 2026-08-03 killed two premise-gate runs and three review agents, and every failure they produced looked like a code defect at first glance:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v1/models
+```
+
+`000` means down and nothing model-dependent will run. `200` means proceed. The graph tunnel is separate and needs its own check, `nc -z 127.0.0.1 15432`, reopened with `ssh -o BatchMode=yes -f -N -L 15432:127.0.0.1:5432 root@46.225.128.133`.
+
+How to tell an outage from a real defect, since this cost real time twice: an outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations. No query reaches synthesis at all. A genuine Write-step defect reaches synthesis and fails somewhere later.
+
+Remaining work, in order:
+
+1. Adversary pass. Run twice on 2026-08-03, killed by the network both times. The second run reported "two critical hits already" and died before delivering them, so those findings were never received and are NOT recorded anywhere. They must be re-derived, not recovered. Its highest-priority target is the open half of F-2.2-02: whether an invented entity name, or a NEGATION such as "BRCA1 does not cause MedGen:C0346153", can ground as support for the identifier it names.
+2. Judge pass. Dispatched and stopped before reporting. Its specific job beyond the standard review: verify that the two premise-gate changes made on 2026-08-03 (F-2.2-06's split and F-2.2-07's replaced assertion) were legitimate rather than a verify surface weakened to pass, since the lead both made and justified those changes.
+3. Fix whatever 1 and 2 find.
+4. A clean premise-gate run. Last valid score: 8 of 10, on the run before the assertion fixes. Two later runs are invalid, both network.
+5. `eval-harness`. Required before any answer-generation feature ships, per the AI answer grounding gate in `production-standards.md`, and never yet run in this project. This phase is its trigger.
+6. `python tracker/check_doc_drift.py --check`, then `/phase-checkpoint`, then `/ship`. The drift check currently fails on stale counts in `CLAUDE.md`, `AGENTS.md`, `requirements/Plan.md` and the Phase 6 continuation prompt: they say 977 Python tests, 190 decisions and 36 learnings, against 1009, 194 and 39 now. Deliberately left stale while the phase is open, since the numbers move with every commit.
 
 Stage 5, the blocking premise gate, is satisfied: the gate was written before any Write-step code and run against the unmodified 2.1 Write step, where it failed 7 of 10. Evidence recorded under "Premise gate" below.
 
