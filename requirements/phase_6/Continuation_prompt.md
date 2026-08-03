@@ -27,7 +27,7 @@ Current counts, stated once here:
 - Frontend tests: 120
 - Playwright end-to-end tests: 3
 - Premise gate: 9 of 9
-- Decisions logged: 188
+- Decisions logged: 190
 - Learnings entries: 36, plus a retrospective
 
 Next phase is 2.2, branch `phase/2.2-write-step-grounding`, depends on 2.1. Per `requirements/Technical_specification.md` Section 25, it delivers: "Deterministic cite-or-refuse, the provenance type wired for Layer 1 citations, a first version of the trust signal for the graph-only path, the two required tests from Section 23."
