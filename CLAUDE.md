@@ -169,6 +169,7 @@ Portable as is, no changes needed:
 
 - The file artifacts: `tracker/BOARD.md`, `tracker/phase_N.M.md`, `LEARNINGS.md`, `DECISIONS.md`. Plain markdown any agent can read and write.
 - `tracker/render_board.py`. Stdlib Python, no Claude Code dependency. Verified by running it outside a Claude Code context.
+- `tracker/check_doc_drift.py`. Stdlib Python, no Claude Code dependency. Computes every tracked count (tests, DECISIONS.md and LEARNINGS.md rows, open flags) from source and fails on a stale value; `phase-checkpoint` already gates on it, `verify` does not yet.
 - Every planning document in `requirements/` and every reference doc in `docs/`.
 - The model tiering, which names capability tiers rather than products. See `docs/build/Build_workflow_cadence.md` under "Provider mapping" for the tier-to-model table. Switching providers is a one-table edit.
 
@@ -196,4 +197,4 @@ Security hooks in `.claude/hooks/` (wired in `.claude/settings.json`) run on Pre
 
 ---
 
-Last updated: 2026-08-01
+Last updated: 2026-08-02

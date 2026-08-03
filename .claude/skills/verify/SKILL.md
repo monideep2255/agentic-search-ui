@@ -77,7 +77,17 @@ test -f frontend/package.json && (cd frontend && npm test && npm run test:e2e)
 
 Keep the `test -f frontend/package.json` guard for robustness, but do not treat it as expected to fail. If it ever does fail, that itself is a regression worth flagging (a deleted or moved frontend), not the normal Phase 1 state it used to guard against.
 
-A sixth check, documentation drift (`tracker/check_doc_drift.py`), is planned for a future revision of this skill and is not implemented yet. Do not run it and do not report a placeholder result for it until it exists.
+### 6. Documentation drift
+
+```bash
+python tracker/check_doc_drift.py --check
+```
+
+Computes the tracked counts from source (Python tests, frontend tests, Playwright tests, the premise gate, DECISIONS.md rows, LEARNINGS.md entries, open flags, build-phase statuses, merged pull request numbers) and fails when any tracked document states a stale value. It also checks structure: a table of contents that does not match its body, two sections describing the same build phase, a last-updated date older than the file's newest content, and a phase called "next" that the board marks done.
+
+Exit 0 is clean. A nonzero exit names each drifted document as `path:line`. Fix the document, then rerun. Never pass this check by narrowing it, and never report it as skipped when the script exists.
+
+The script never writes a file. Run `--self-test` if a result looks wrong: it exercises the classifier that separates a current assertion from a dated historical record, which is the part most likely to produce a false result. Its module docstring states what it does not check, and that statement is part of the check, not a footnote to it.
 
 ## Output format
 
@@ -91,6 +101,7 @@ Tests:           X passed, Y failed / FAIL: no tests collected, investigate befo
 Lint:            X issues found (0 is PASS) / FAIL (details) / not installed (note, unexpected)
 Git status:      clean / N files changed
 Frontend:        PASS / FAIL (vitest: X passed Y failed, playwright: X passed Y failed)
+Doc drift:       PASS (0 stale, 0 structural) / FAIL (N stale, M structural, list them)
 
 Overall:         READY / NOT READY
 ```
