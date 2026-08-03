@@ -76,7 +76,7 @@ Source: phase5_demand_01_sections_1-5.md, extracted from requirements/Technical_
 | D1-36 | 5.2 | The model must never see a raw Layer 2 or Layer 3 response body. | security | production-standards | 667 |
 | D1-37 | 5.2 | Every Layer 2/3 tool output string field must carry maxLength, every array maxItems, and every source_url a host-pinned regex. | security | production-standards | 669 |
 | D1-38 | 5.2 | Each Layer 2/3 tool must declare its allowed host or hosts, its own per-call timeout, and its own rate-limit pool up front. | security | ai-security-standards | 671 |
-| D1-39 | 5.2 | Independent tool calls must run in parallel via asyncio.gather whenever the Plan step's call list contains two or more independent calls. | performance | parallel-first | 665 |
+| D1-39 | 5.2 | Independent tool calls must run in parallel via asyncio.gather whenever the Plan step's call list contains two or more independent calls. | performance | plan-then-fan-out | 665 |
 | D1-40 | 5.3 | No tool call may span two layers; each tool is scoped to exactly one layer. | correctness | system-design-patterns | 673 |
 
 ## Slice 2: Technical specification, section 6 (tool specifications)
@@ -348,7 +348,7 @@ Source: phase5_demand_06_prd.md, extracted from requirements/PRD.md. 45 rows.
 | D6-07 | Core user flows | The Guardrail step must reject prompt injection, block off-topic and medical-advice requests, and check rate and cost caps, with a cheap non-LLM pre-filter running before any model call | security | ai-security-standards | 135 |
 | D6-08 | Core user flows | The Think step must ask one targeted clarifying question on ambiguity before querying, never guess | correctness | NONE | 136 |
 | D6-09 | Core user flows | The agent must never write Cypher directly; only the cypher_query tool generates and validates Cypher internally | security | production-standards | 137 |
-| D6-10 | Core user flows | The Act step must execute independent tool calls in parallel | performance | parallel-first? | 138 |
+| D6-10 | Core user flows | The Act step must execute independent tool calls in parallel | performance | plan-then-fan-out? | 138 |
 | D6-11 | Core user flows | The Write step must map each narrative marker to a verified source and strip any marker it cannot verify | security | production-standards | 139 |
 | D6-12 | UI experience | Time-to-first-token must be under one second | performance | system-design-patterns | 149 |
 | D6-13 | UI experience | Streaming must use typed SSE events (status, tool_result, token, citation, done) | correctness | system-design-patterns | 149 |

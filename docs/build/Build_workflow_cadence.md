@@ -12,6 +12,7 @@ Last updated: 2026-08-02.
 - [The twelve stages](#the-twelve-stages)
 - [Stage 5, the premise gate, and why it blocks](#stage-5-the-premise-gate-and-why-it-blocks)
 - [Model assignment](#model-assignment)
+- [Effort and tier basis, measured 2026-08-02](#effort-and-tier-basis-measured-2026-08-02)
 - [Provider mapping](#provider-mapping)
 - [Where everything is written](#where-everything-is-written)
 - [The two verification halves](#the-two-verification-halves)
@@ -25,18 +26,20 @@ It runs like a normal engineering team. Tickets get read, picked up, worked, and
 
 | # | Stage | Who | Tier | Effort |
 |---|-------|-----|------|--------|
-| 1 | Open the phase: read section 25, verify dependencies merged | Lead | depth | high |
-| 2 | Read `LEARNINGS.md` filtered to this phase | Lead | depth | low |
+| 1 | Open the phase: read section 25, verify dependencies merged | Lead | balance | medium |
+| 2 | Read `LEARNINGS.md` filtered to this phase | Lead | balance | low |
 | 3 | Decompose into tickets with acceptance criteria and file scopes | Lead | depth | high |
-| 4 | Cut the branch, dispatch researchers | Lead, researchers | depth lead, speed research | low |
+| 4 | Cut the branch, dispatch researchers | Lead, researchers | balance lead, speed research | low |
 | 5 | Write the premise gate and WATCH IT FAIL. Blocks stage 6 | Lead | depth | high |
 | 6 | Builders work tickets in parallel | Builders | balance | medium |
 | 7 | Record what broke, at the moment it breaks | Whoever hit it | inherits its own | n/a |
 | 8 | Judge grades with cited evidence, closes tickets | Judge | depth | high or extra high |
 | 9 | Adversary attacks what the judge certified | Adversary | depth | high |
-| 10 | Gates: see the breakdown below the table, they are not all run on the same schedule | Lead, test writer | depth lead, balance tests | medium |
-| 11 | Close the board, render, republish, open the pull request | Lead | depth | low |
+| 10 | Gates: see the breakdown below the table, they are not all run on the same schedule | Lead, test writer | balance | medium |
+| 11 | Close the board, render, republish, open the pull request | Lead | balance | low |
 | 12 | Review and merge | Product owner | human | n/a |
+
+Five of these ten model-driven stages ran at `high` or `extra high` effort and seven ran on the `depth` tier before 2026-08-02. Both numbers dropped. See "Effort and tier basis" below the model assignment table for the measured reason and per-stage reasoning.
 
 Stage 10 names four gate skills, and they are not interchangeable items on one checklist. Measured against `tracker/phase_*.md` across the five build phases completed so far (1.0, 1.1, 2.0, 1.2, 2.1):
 
@@ -105,12 +108,15 @@ The rule: spend reasoning where a mistake is expensive and cascades, spend cheap
 
 | Role | Tier | Effort | Why this tier |
 |------|------|--------|---------------|
-| Lead, planning and decomposition | depth | high | A bad split cascades into every builder downstream. This is the most expensive place to be wrong |
-| Lead, mechanical steps | depth | low | Same session, but branch cutting and board closing need no reasoning. Keep the lead thin |
+| Lead, planning and decomposition (stage 3) | depth | high | A bad split cascades into every builder downstream. This is the most expensive place to be wrong |
+| Lead, premise gate design (stage 5) | depth | high | The same cascading logic as decomposition, not a blanket carry-over: a weak premise gate reproduces the exact cost stage 5 exists to prevent, and its own coverage gaps are invisible to every test it grades. Build phase 2.1 shipped four consecutive failed reviews behind a green suite before this was found |
+| Lead, phase-open verification (stage 1) | balance | medium | Bounded checking against a fixed document, does section 25 name this phase, did the dependency actually merge. A miss here surfaces fast, at build start, rather than compounding silently the way a bad decomposition does |
+| Lead, routine steps (stages 2, 4, 11) | balance | low | Reading a filtered log, cutting a branch, closing a board. No reasoning, bounded, instructions already clear |
+| Lead, gate execution and readiness call (stage 10) | balance | medium | Running a finished gate skill and reading its pass or fail output is checklist work against a defined bar, not open architectural judgment |
 | Researcher, bulk reading | speed | low | The cost is input tokens, not reasoning. Reading an API doc does not need a frontier model |
 | Researcher, analysis | balance | medium | When the research needs a judgment, not just a summary |
 | Builder | balance | medium | Well-scoped construction against clear acceptance criteria. Reserve high effort for genuinely hard builds |
-| Judge | depth | high or extra high | A missed defect here is the most expensive thing in the loop, because it ships |
+| Judge | depth | high or extra high | A missed defect here is the most expensive thing in the loop, because it ships. Measured on this repo: build phase 2.1 failed four consecutive judge and adversary reviews with a green suite before the real defect surfaced |
 | Adversary | depth | high | Finding a fluent, plausible, wrong answer needs real adversarial reasoning. A cheap tier will not find what the judge missed |
 | Test writer | balance | medium | Bounded work against a finished artifact |
 
@@ -120,6 +126,28 @@ Two notes on this table:
 
 - These are build-time capability tiers, assigned to the agents that write System 3 itself. They are a separate concept from the product's own guard, plan, and synth runtime tiers, which route models per user query at serve time and are chosen by model-bench at build phase 7.0. Both are called tiers, but they name different things: one sizes the agent doing the building, the other picks the model that answers a live query. Do not conflate the two.
 - Delegation has a fixed setup cost, so do not shard a phase into many tiny tasks just to parallelize. Each dispatched agent should carry a task worth its overhead.
+
+## Effort and tier basis, measured 2026-08-02
+
+Both tables above were re-tiered on this date from a prior default of `depth` and `high` on most roles. This section states the measurement behind that change and what would justify raising a rung back, so the next reader does not mistake a guess for a finding.
+
+External evidence, on reasoning effort specifically:
+
+- Dropping reasoning effort from high to medium gave 76 percent fewer output tokens at the same task-completion rate.
+- Each effort rung costs roughly twice the rung below it.
+- Thinking tokens reach up to 40 percent of total output spend, and they are replayed as input on every later turn in a session, so an unnecessarily high rung compounds across a whole phase, not just one call.
+
+External evidence, on capability tier:
+
+- A mid-tier model costs about 0.6 times a top-tier model and performs comparably on most development work.
+
+Internal evidence, from this repo's own build. `LEARNINGS.md`'s 2026-07-31 entry on `harness/harness.py` tier configuration records that the plan tier, configured `effort: high`, spent 970 of 1014 output tokens on a single Cypher generation on reasoning rather than content. Measured over five failing query shapes, two runs each: `high` totalled 163.0 seconds with a worst case of 84.3 seconds on a multi-hop query, and dropping the same calls to `effort: none`, a rung below this ladder's own `low`, totalled 6.1 seconds with a worst case of 2.2. All five runs were correct at both settings, with neither setting ever writing an entity id as a literal. The entry calls this "a 27x latency multiple for no measurable quality" and states the general lesson directly: reasoning effort is a latency setting, not just a quality setting, and its cost is invisible in the response because reasoning tokens do not appear in the content.
+
+That internal data point is narrower than the change made here: it proves `none` was safe for one bounded, fixed-schema Cypher generation, not that `medium` is safe for every role in this cadence. The external 76 percent figure is the direct evidence for the specific high-to-medium move applied to most roles below. Reading both together: the internal result is a strict superset of the claim actually needed, so it supports the change without overstating what was measured.
+
+Per-role reasoning is recorded inline in the "Why this tier" column above rather than repeated here. The two roles that did not move, judge and adversary, share one justification: this repo has direct evidence that a weaker review costs entire rounds, not just latency. Build phase 2.1 failed four consecutive judge and adversary reviews behind a fully green test suite before the real defect was found, and the fifth pass found a defect class (every two-hop question unanswerable) that the phase's own premise gate could not see. Reasoning effort measurably changed neither the pass rate nor the citations on a bounded lookup task; it has not been measured against a review role's job, which is finding what a prior pass missed. The premise gate design step (stage 5) is treated the same way as decomposition for a stated reason, not by default: its own section above states that a first draft of a premise gate scored 8 of 9 against a hand-picked input and 3 of 9 against what production actually sends, and that its coverage gaps are invisible to the very tests it grades. That is the same cascading-cost shape as a bad decomposition, so it stays on `depth` and `high`.
+
+What would justify raising a tier or a rung back: a specific, cited miss. A defect that a lower effort or tier demonstrably let through, recorded as a finding in a `tracker/phase_N.M.md` file or as a `LEARNINGS.md` entry naming the tier or effort setting as a contributing cause, the same evidentiary bar this section itself used to justify the cut. A feeling that a role "seems important" is not that bar. Per `goal-contracts`, this section is a verify surface for the tables above: weakening it back to a guess, rather than a fresh measurement, does not meet the bar it sets.
 
 ## Provider mapping
 

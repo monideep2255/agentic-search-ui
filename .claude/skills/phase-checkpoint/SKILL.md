@@ -1,12 +1,11 @@
 ---
 name: phase-checkpoint
-description: "Sync the planning or build documentation at a phase boundary: append new decisions to DECISIONS.md, and depending on mode either refresh the planning session doc, meeting note, and phase continuation prompt (Plan.md Phases 2 to 5), or refresh the Phase 6 continuation prompt and bump Plan.md status (Plan.md Phase 6 onward, one checkpoint per merged build phase). Distinct from /ship, which commits and pushes to GitHub: this updates the planning artifacts and runs before /ship, and never touches git. Distinct from /release, which is the local-verify-then-ship ritual for code changes."
+description: "Sync planning or build documentation at a phase boundary: after closing a planning sub-phase or full phase (Plan.md Phases 2 to 5), or after a build phase's pull request merges to main (Plan.md Phase 6 onward, one checkpoint per merged build phase). Appends new decisions to DECISIONS.md and refreshes the mode-appropriate artifacts: the planning session doc, meeting note, and phase continuation prompt in planning mode, or the Phase 6 continuation prompt and Plan.md status in build mode. Distinct from /ship, which commits and pushes to GitHub: this updates the planning artifacts and runs before /ship, and never touches git. Distinct from /release, which is the local-verify-then-ship ritual for code changes."
 scope: project
 depends_on:
   - requirements/Plan.md
   - DECISIONS.md
   - tracker/BOARD.md
-  - .claude/rules/file-naming.md
   - .claude/rules/writing-style.md
   - .claude/rules/decision-logging.md
 depended_by:
@@ -36,6 +35,23 @@ The steps differ by which side of Plan.md Phase 6 the checkpoint falls on. Deter
 
 A planning-phase checkpoint can be sub-phase (mid-phase) or phase-end (whole phase closes); a build-phase checkpoint is always phase-end shaped, because Plan.md Phase 6's own numbered items (1.0, 1.1, ...) are each a complete, individually-merged unit by the time anyone would run this skill against one.
 
+## One-owner convention
+
+Every fact this checkpoint touches has exactly one owner file. A checkpoint updates the fact in its owner file and replaces every other mention with a pointer to that file. It never writes the same fact into two files.
+
+| Fact | Single owner | Everywhere else |
+|------|--------------|-------------------|
+| Per-phase tickets, findings, evidence | `tracker/phase_N.M.md` | A pointer, never a copy |
+| Phase status and open flags | `tracker/BOARD.md` | A pointer |
+| Phase narrative and history | `requirements/Plan.md` Revision history | A pointer |
+| Current state and next action | `requirements/phase_6/Continuation_prompt.md` | A pointer |
+| Failures and their fixes | `LEARNINGS.md` | A pointer |
+| Choices between alternatives | `DECISIONS.md` | A pointer |
+| Build order | `requirements/Technical_specification.md` Section 25 | A pointer |
+| Counts (tests, decisions, entries, flags) | Computed by `tracker/check_doc_drift.py` | Only CLAUDE.md and the continuation prompt may state them |
+
+This is why Step 4 and Step 5 below say refresh and update, not add a new section. A build phase's own ticket-level detail belongs in `tracker/phase_N.M.md`, written during the build itself. The continuation prompt and Plan.md hold only a pointer to it plus the current state, never a second copy of the ticket-level record.
+
 ## When to run
 
 - Planning-phase checkpoint: after finishing a sub-phase (for example 2.3) or a full phase during requirements planning (Plan.md Phases 2 to 5).
@@ -60,13 +76,13 @@ Confirm before writing. Ask if unclear from context:
 
 ### Step 2: session doc (planning-phase mode only)
 
-- Ensure the phase session file exists: `requirements/phase_N/Session_<Month>_<Day>.md` (per file-naming.md: one file per day, append each step as a section).
+- Ensure the phase session file exists: `requirements/phase_N/Session_<Month>_<Day>.md` (per writing-style.md: one file per day, append each step as a section).
 - Append or update sections for the sub-phase(s) closed, capturing discussion, rationale, and any diagrams. This is the detailed record and the personal learning log.
 - Build-phase mode: skip, and say why (`tracker/phase_N.M.md` already holds this record).
 
 ### Step 3: meeting note (planning-phase mode only)
 
-- Create or update the dated meeting note: `requirements/meetings/YYYY-MM-DD_Phase_N_steps_X-Y.md` (per file-naming.md).
+- Create or update the dated meeting note: `requirements/meetings/YYYY-MM-DD_Phase_N_steps_X-Y.md` (per writing-style.md).
 - Nested bullets with an action-items section. Keep it a concise cadence record, not a duplicate of the session doc.
 - Build-phase mode: skip, and say why (no meeting-note convention applies to build execution).
 
@@ -74,11 +90,12 @@ Confirm before writing. Ask if unclear from context:
 
 - Planning-phase mode: refresh `requirements/phase_N/Continuation_prompt.md`: update the progress tracker, the decisions-so-far list, the DECISIONS.md count, and the next-up section so a new chat can resume cleanly.
 - Build-phase mode: refresh `requirements/phase_6/Continuation_prompt.md` instead, the single file spanning all of Phase 6. Update: the opening status line (which build phase just merged, its PR number), the "read these first" list (the current LEARNINGS.md count, the current `tracker/BOARD.md` state including any new flags), the "then start build phase X" command to name the next build phase, a short "build phase N.M, done" section summarizing what just merged, and the "what it delivers" section for the phase now next up. Carry forward any open item the merged phase's release gate created (for example an accepted CVE deferred to a later phase) into the "Open items to resolve during Phase 6" table.
+- The continuation prompt is rewritten in place, not appended to: every field above is edited where it already sits. A section describing a state the merge just superseded, a prior "build phase N.M, done" section, a prior status line, a prior "then start build phase X" pointer, is deleted, not left below the new one. This is the failure this rule exists to prevent: after five build phases handled as appends instead of rewrites, the file described build phase 2.1 in five contradictory sections at once, and its own copy-paste block told the next agent not to open build phase 2.2, the phase that was actually next.
 
 ### Step 5: synthesis and Plan status (both modes, different scope)
 
 - Planning-phase mode, phase-end only: extend or write `requirements/phase_N/Phase_N_synthesis.md`, the topic-organized narrative of the phase's decisions, ready for the downstream phase.
-- Build-phase mode: no per-phase synthesis doc (Step 6.2's one scheduled reconciliation plays that role once, mid-build). Instead, always update `requirements/Plan.md`: bump the Phase 6 status-table row to name the build phase just merged and the one next up, update the last-updated line, update the "Summary of what happens next" paragraph, and append a Revision history entry naming what merged, its PR number, and its release-gate outcome (tests passing, findings fixed, any decisions logged).
+- Build-phase mode: no per-phase synthesis doc (Step 6.2's one scheduled reconciliation plays that role once, mid-build). Instead, always update `requirements/Plan.md`: bump the Phase 6 status-table row to name the build phase just merged and the one next up, update the last-updated line, and append a Revision history entry naming what merged, its PR number, and its release-gate outcome (tests passing, findings fixed, any decisions logged). Plan.md no longer carries a separate "Summary of what happens next" paragraph, so there is no fourth edit to make; do not recreate one.
 
 ### Step 6: structural hygiene pass (both modes)
 
@@ -89,10 +106,14 @@ Before the exit checklist, verify the structure of every document this checkpoin
 - Status and counts current: the continuation prompt, the Plan.md status table, and any progress table name the correct current phase and the correct DECISIONS.md count. No finished phase is labeled "next", and no just-merged build phase is labeled "not started".
 - Titles and filenames current: a session doc or meeting note whose title or filename names fewer steps than it now covers is retitled, and the file renamed with `mv` (never `rm`) if the step span in the name is wrong.
 
+### Step 7: drift check (both modes)
+
+Run `python tracker/check_doc_drift.py --check` before declaring the checkpoint done. It computes the tracked counts (tests, DECISIONS.md rows, LEARNINGS.md entries, open flags, PR numbers) from source and fails if any tracked document states a stale value. A nonzero exit blocks the checkpoint: fix the drifted document the script names in its output, then rerun the check. Never declare the checkpoint done on a failing or unrun drift check.
+
 ## Constraints
 
 - Append-only for DECISIONS.md and session docs. Never delete or rewrite existing content.
-- Follow writing-style.md (no em dashes, sentence case headings, no bold, no walls of text, ToC and status kept current) and file-naming.md.
+- Follow writing-style.md (no em dashes, sentence case headings, no bold, no walls of text, ToC and status kept current, file naming conventions).
 - Do not commit or push. Hand off to `/ship` for that.
 - If a required input is missing (which mode, which phase or build phase, or sub-phase versus phase-end), ask before writing.
 - Never invent a build phase or its deliverables. Build-phase mode content comes from `requirements/Technical_specification.md` Section 25 and the merged phase's own `tracker/phase_N.M.md`, not from memory.
@@ -106,10 +127,11 @@ Before declaring the checkpoint done, verify:
 - [ ] Build-phase mode: `requirements/phase_6/Continuation_prompt.md` names the correct just-merged build phase, the correct next-up build phase, the current LEARNINGS.md count, and any open item the merged phase's release gate created.
 - [ ] The continuation prompt (whichever mode) reflects current state: no just-merged phase described as "not started" or "next up" to build.
 - [ ] Planning-phase mode, phase-end: the phase synthesis is updated.
-- [ ] Build-phase mode: `requirements/Plan.md`'s status table, summary paragraph, last-updated line, and Revision history are all updated to name the merged build phase.
-- [ ] No existing content was deleted or rewritten.
+- [ ] Build-phase mode: `requirements/Plan.md`'s status table, last-updated line, and Revision history are all updated to name the merged build phase.
+- [ ] No existing content in DECISIONS.md or a session doc was deleted or rewritten. Every other document this checkpoint touched, including the continuation prompt, was corrected in place: a superseded section was deleted, not left below the new one.
 - [ ] No wall of text: every enumerated passage in a touched doc is a list or a table, not a run-on paragraph (writing-style.md).
 - [ ] Every touched doc's table of contents, status, counts, titles, and filenames are current: no missing ToC entry, no finished phase labeled "next", no stale count, no title or filename naming fewer steps than the file covers.
+- [ ] `python tracker/check_doc_drift.py --check` exits 0.
 
 ## Output
 

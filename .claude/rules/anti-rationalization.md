@@ -10,6 +10,16 @@ LLMs quietly skip steps in multi-step skills when those steps feel like "extra w
 
 This pattern comes from testing 25+ skills over 75 runs (Aakash Gupta's 10 Laws for High-Trust Skills, Law 7).
 
+### Pause before acting, first
+
+Before executing any task, take a beat:
+
+1. Check rules: does any rule in `.claude/rules/` apply to this file type, task, or context?
+2. Check clarification: do I need to ask something before I can do this correctly?
+3. Execute: only after 1 and 2 are clear.
+
+Do not jump straight to reading files or calling tools. The system has rules for a reason: they only work if checked before acting.
+
 ### Common rationalizations and counters
 
 | The model thinks | The counter |

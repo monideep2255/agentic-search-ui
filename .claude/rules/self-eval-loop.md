@@ -60,12 +60,11 @@ scrutiny than untouched code, not less. This is counter-intuitive, because
 a fix is written with the defect freshly in mind and feels safer than
 unreviewed new work.
 
-Build phase 2.1 measured it: across six review rounds, the worst defect
-found in every single round was in the code written to fix the previous
-round. The same invariant was defeated three separate times, each time by
-its own replacement. Findings F-2.1-J4-03, J4-05, J4-06, J5-01 and A5-01
-were all regressions in fixes, and one entire review round existed only to
-catch the previous round's damage.
+Build phase 2.1 measured it: across six review rounds, the worst defect in
+every round was a regression in the previous round's fix, the same
+invariant defeated three separate times by its own replacement (findings
+F-2.1-J4-03, J4-05, J4-06, J5-01, A5-01). Full account: LEARNINGS.md's
+retrospective ("why build phase 2.1 took five review rounds").
 
 Two practices follow:
 

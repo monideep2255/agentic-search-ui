@@ -32,9 +32,27 @@ Write these before the first action, not after:
 4. Constraints: what must stay true throughout (no deletions without asking, no secrets in logs, style rules hold).
 5. Blocked-stop: the condition under which you stop and report rather than guess. A blocked stop is a valid, honest end state, not a failure to hide.
 
+### Completeness is part of done-when
+
+When AI compresses a task from days to minutes, the old instinct to do 80 percent and iterate becomes wrong: if the full version costs 15 more minutes, do the full version. A task completable in one pass is a lake. Do it 100 percent, not a representative sample:
+
+- User stories: write every one.
+- Edge cases: cover every one.
+- Acceptance criteria: cover every one.
+- Agenda items: address every one.
+- Action plans: list every task, not a shortlist.
+
+A task that spans multiple weeks or quarters is an ocean: flag it as out of scope for a single done-when and plan it in phases instead.
+
+This does not apply when:
+
+- The task requires human judgment at each step: interviews, negotiations.
+- The task has an external dependency blocking completion: waiting on another person.
+- The task has hit genuine diminishing returns: a tenth draft of the same paragraph.
+
 ### Meta-prompt the contract for long runs
 
-Hand-written contracts under-specify. For any run over roughly 30 minutes of autonomous work, do not write the contract from memory. Dispatch a fresh-context agent to read the target files first, surface hidden assumptions, constraints, and edge cases, then draft the five elements. Review its draft, tighten it, then launch. A second agent writing the contract is a maker-checker split applied upstream of execution instead of after it, and the file reads are independent work that parallelize (see `parallel-first`).
+Hand-written contracts under-specify. For any run over roughly 30 minutes of autonomous work, do not write the contract from memory. Dispatch a fresh-context agent to read the target files first, surface hidden assumptions, constraints, and edge cases, then draft the five elements. Review its draft, tighten it, then launch. A second agent writing the contract is a maker-checker split applied upstream of execution instead of after it, and the file reads are independent work that parallelize (see `plan-then-fan-out`'s "Check for parallelism first" section).
 
 The inline variant: let the executing agent write its own goal from your high-level intent. It works only when you hand it the same raw materials (the files to read, the exact validation command, the constraints) and tell it to ask before committing when the intent is underspecified. Otherwise the self-set goal drifts.
 
@@ -54,13 +72,12 @@ The failure above says a verify surface can point one layer too low. This
 one says it can point at the right layer and still have a hole, because
 nothing forces it to declare what it does not test.
 
-Build phase 2.1 built a premise gate specifically to catch generation
-defects, and it worked: it caught two regressions before a reviewer did.
-It also could not see finding F-2.1-A5-03, a defect that made every
-two-hop question in the system unanswerable, because all nine of its
-questions happened to be one hop from a single anchor type. The gate built
-to catch that class of failure had inherited the blind spot of the code it
-was grading, and an adversary found it rather than the gate.
+Build phase 2.1's premise gate caught two regressions before a reviewer
+did, and still missed finding F-2.1-A5-03, a defect that made every
+two-hop question unanswerable, because all nine of its questions happened
+to be one hop from a single anchor type, the same blind spot as the code
+it graded. Full account: LEARNINGS.md's retrospective ("why build phase
+2.1 took five review rounds").
 
 So a verify surface must state, in its own file, which shapes of input it
 exercises and which it deliberately omits. That statement is what makes a
