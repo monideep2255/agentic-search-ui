@@ -80,6 +80,16 @@ Deliberately NOT exercised, each with the reason:
 - Multi-tool answers. Plan selects at most one tool call this phase, so a
   defect in cross-tool `ref_index` numbering cannot appear.
 - Cost, latency, and concurrency. Owned by build phases 6.0 and 6.1.
+- The SCALE half of truncation honesty on a listing query. `total_available`
+  comes back None for that shape, so the note discloses the cut without
+  saying how much is missing. Tracked as F-2.2-06 and kept running as an
+  `xfail(strict=False)`, so it reports XPASS the day the total exists. The
+  DISCLOSURE half is a separate, non-xfail test that is fully enforced.
+- Whether a specific expected record appears in a TRUNCATED result set.
+  Which rows land in the shown slice is a property of the tool's row
+  ordering, not of the Write step, so an assertion of that shape produces
+  false rejects (F-2.2-07). The two-hop test asserts the entity TYPE of
+  every cited record instead, which holds across the whole result set.
 
 The known-flaky note, recorded 2026-08-03 rather than hidden: generation
 intermittently emits Cypher with no parentheses around node patterns
@@ -436,10 +446,32 @@ async def test_a_two_hop_question_from_a_disease_anchor_is_answered() -> None:
         f"type, not synthesis.{answer.describe()}"
     )
     assert answer.citations, f"answered with no citation.{answer.describe()}"
-    assert BRCA1 in {c.get("source_id") for c in answer.citations}, (
-        f"BRCA1 is associated with this disease in the snapshot and is not "
-        f"in the cited set.{answer.describe()}"
+
+    # Every cited record must be a Gene, since the question asked for genes.
+    # This is the assertion that actually catches the 2.1 failure shape at
+    # two hops: an answer that returns the wrong ENTITY TYPE, fully cited.
+    cited = {str(c.get("source_id")) for c in answer.citations}
+    non_genes = {curie for curie in cited if not curie.startswith("NCBIGene:")}
+    assert not non_genes, (
+        f"a question asking for genes was answered with non-gene records: "
+        f"{sorted(non_genes)}. This is build phase 2.1's failure shape (a "
+        f"fully cited answer to a different question) at two hops."
+        f"{answer.describe()}"
     )
+
+    # Deliberately NOT asserting that BRCA1 specifically is cited, and the
+    # reason is worth recording so nobody re-adds it. This disease has 42
+    # associated genes in the snapshot and the answer is capped well below
+    # that, so which genes land in the shown slice is a property of the
+    # tool's row ordering, not of whether the two-hop traversal works. The
+    # first version of this test asserted BRCA1 was present and failed
+    # against a CORRECT answer that said, accurately, "Showing 10 of 42
+    # matching rows". That is a false reject: it reports a defect where the
+    # system behaved exactly right, which is the failure mode LEARNINGS.md's
+    # 2026-08-01 entry warns about when a gate's cost side goes untested.
+    #
+    # The entity-type assertion above is the stronger check anyway. It holds
+    # for every gene in the 42, so truncation cannot make it flaky.
 
 
 # ---------------------------------------------------------------------------
@@ -628,6 +660,41 @@ async def test_a_truncated_answer_says_so_in_the_prose() -> None:
         f"a capped listing of {BRCA1_VARIANTS} variants was presented with "
         f"no mention that it is partial.{answer.describe()}"
     )
+
+
+@premise_gate
+@pytest.mark.xfail(
+    strict=False,
+    reason=(
+        "F-2.2-06, OPEN. The disclosure fires and names the shown count, but "
+        "not the total: the note reads 'Showing 10 matching rows, but more "
+        "exist than are shown above; the exact total is not available for "
+        "this query.' That is honest rather than wrong, and it is not what "
+        "F-2.1-C12 asked for, which was the SCALE, so a reader still cannot "
+        "tell whether they are missing 5 rows or 15,290. The cause is "
+        "upstream of the Write step: `total_available` comes back None for "
+        "this query shape, so `_build_truncated_answer_note` takes its "
+        "no-total branch and there is nothing for Write to state. Fixing it "
+        "means making the tool compute a true total for a listing query, "
+        "which is cypher_query's job, not this phase's. Marked xfail rather "
+        "than deleted or relaxed so it keeps running and reports XPASS the "
+        "day the total becomes available, per goal-contracts: a check "
+        "weakened to make it pass is a failed change, and a gap that is "
+        "written down is arguable where a gap that is not is invisible."
+    ),
+)
+@pytest.mark.asyncio
+async def test_a_truncated_answer_states_the_scale_of_what_is_missing() -> None:
+    """The half of F-2.1-C12 that is not met yet. See the xfail reason.
+
+    Split out of the test above deliberately. The disclosure half genuinely
+    passes and must keep being enforced; folding both into one test would
+    have meant either xfailing a working guarantee or relaxing a real one.
+    """
+    answer = await _ask(f"List the ClinVar variants of {BRCA1}")
+
+    if answer.trust_outcome == "refuse":
+        pytest.skip("refused; truncation honesty is not reachable on a refusal")
     assert str(BRCA1_VARIANTS) in answer.narrative, (
         f"the note omits the scale: the user cannot tell whether they are "
         f"missing 5 rows or 15,290.{answer.describe()}"

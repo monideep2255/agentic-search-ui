@@ -290,6 +290,36 @@ Fixed by rendering the record type and identifier alongside the value, so the bl
 
 Worth noting for the judge: no test in the 988-test suite could see this. Every one of them mocks the model, and a mocked model returns whatever the test author already decided was correct.
 
+### F-2.2-06: a truncated answer discloses the cut but not its scale
+
+Severity: medium
+Status: open, xfail'd so it stays visible
+Raised by: the premise gate, 2026-08-03
+
+F-2.1-C12 established that "Results were truncated" says nothing useful when the user was shown 20 of 15,310 rows, and required the note to state the SCALE. Build phase 2.2 carries that note into the prose, and for a listing query it reads:
+
+> Note: this result was truncated. Showing 10 matching rows, but more exist than are shown above; the exact total is not available for this query.
+
+Honest, and not what C12 asked for. A reader still cannot tell whether they are missing 5 rows or 15,290.
+
+The cause is upstream of the Write step. `total_available` comes back None for this query shape, so `_build_truncated_answer_note` takes its no-total branch, and there is nothing for Write to state. Fixing it means making `cypher_query` compute a true total for a listing query, which is that tool's job rather than this phase's.
+
+Worth noting the contrast: the two-hop question in the same gate run DID state its scale ("Showing 10 of 42 matching rows"), so the note itself works. It is the total that is missing, on one query shape.
+
+`test_a_truncated_answer_states_the_scale_of_what_is_missing` is marked `xfail(strict=False)` rather than deleted or relaxed, so it keeps running and reports XPASS the day the total becomes available. The disclosure half is a separate, non-xfail test that genuinely passes and stays enforced.
+
+### F-2.2-07: a premise-gate assertion produced a false reject
+
+Severity: low
+Status: fixed
+Raised by: lead, 2026-08-03
+
+`test_a_two_hop_question_from_a_disease_anchor_is_answered` asserted BRCA1 specifically appeared in the cited set. It failed against a fully CORRECT answer: the disease has 42 associated genes, the answer showed 10 of them, each cited, and stated "Showing 10 of 42 matching rows". BRCA1 was simply not in the shown slice.
+
+Recorded rather than quietly fixed because it is the failure class this repo has already been bitten by from the other direction. `LEARNINGS.md`'s 2026-08-01 validator entry: a first cut of the connectivity check falsely rejected three legitimate aggregates, and a false reject means the user gets nothing, so a gate needs its cost side tested as hard as its block side. A gate that reports a defect where the system behaved exactly right burns a review round on nothing, and it trains its reader to discount the next failure.
+
+Replaced with a stronger assertion that truncation cannot make flaky: every cited record must be a Gene, since the question asked for genes. That is the actual 2.1 failure shape (a fully cited answer to a different question) checked at two hops, and it holds for all 42.
+
 ## Decisions taken in this phase
 
 Logged to `DECISIONS.md`. Recorded here with the reasoning that belongs to the phase:
