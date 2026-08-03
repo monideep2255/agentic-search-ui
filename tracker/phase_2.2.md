@@ -343,6 +343,33 @@ Recorded rather than quietly fixed because it is the failure class this repo has
 
 Replaced with a stronger assertion that truncation cannot make flaky: every cited record must be a Gene, since the question asked for genes. That is the actual 2.1 failure shape (a fully cited answer to a different question) checked at two hops, and it holds for all 42.
 
+### F-2.2-R-11: an intermittent false reject on the leading clause
+
+Severity: medium
+Status: open, measured
+Raised by: lead, 2026-08-03, from the premise gate and the eval gate
+
+The R-01 fix scopes what the user's question licenses: only an interrogative sentence contributes content tokens, and a closed yes/no question contributes nothing, because a proposition in a question is a hypothesis rather than a fact. That closes a critical hole. It also has a cost, and this is the measured shape of it.
+
+For "Which diseases are associated with NCBIGene:672?", the licensed tokens are exactly `associated`, `diseases`, `ncbigene:672`. A model that answers using the CURIE it was given grounds cleanly, verified by probe: 4 findings, 4 clauses kept, 0 stripped, the full narrative shipped. A model that instead writes the gene SYMBOL, "BRCA1", introduces a token that is in neither the question nor the finding, so that clause is stripped.
+
+Measured across a premise-gate run and an eval-gate run on 2026-08-03:
+
+| Surface | Result |
+|---------|--------|
+| Premise gate, disease question | Answer correct but truncated to 3 of 4 diseases; the leading clause was stripped and the remaining citations renumbered from 1 |
+| Eval gate, two-hop case | 1 run refused, 1 run clean at 10 citations and 100 percent coverage, 1 run environmental. pass^3 fell to 75 percent against a 90 percent target |
+| Eval gate, other three cases | Clean on every run, including all three zero-retrieval abstains |
+
+Two things worth separating, because they pull in opposite directions:
+
+- The strip is arguably CORRECT. "BRCA1" is model prior knowledge, not retrieved data. The finding says `NCBIGene:672`, and a citation is a claim that the cited record supports the sentence. Letting an unretrieved synonym through is how a gate starts trusting the model's memory.
+- The strip is also a real loss. An answer naming 3 of 4 diseases is incomplete, and the user is not told that a clause was removed. That is worse than the truncation case, which at least says so.
+
+Not fixed here, deliberately. The obvious fix, resolving a gene symbol to its CURIE and licensing both, needs an entity resolver the system does not have until build phase 3.1's Layer 2 NCBI lookup (finding F-2.1-07 already owns that gap). Widening the licensed set by guessing at synonyms would reopen exactly the channel R-01 closed, since the question is attacker-controlled.
+
+The honest reading of the current state: the gate now errs toward withholding a true clause rather than shipping a false one, at a measured rate of roughly 1 run in 3 on the two-hop shape. For a biomedical answer system that is the correct direction to fail, and it is not a state to leave unresolved.
+
 ## Decisions taken in this phase
 
 Logged to `DECISIONS.md`. Recorded here with the reasoning that belongs to the phase:
@@ -393,10 +420,30 @@ From `requirements/phase_6/Continuation_prompt.md`:
 | `ruff check src/` | clean |
 | `ruff check tests/` | 2 pre-existing errors, unchanged from baseline |
 | Premise gate, before the code | 7 failed, 2 passed, 1 skipped |
-| Premise gate, after the code | NOT YET RUN to completion |
-| Judge pass | NOT RUN |
-| Adversary pass | NOT RUN |
-| `eval-harness` | NOT RUN. Required before shipping any answer-generation feature |
-| Frontend suite | NOT RUN |
+| Premise gate, after the fixes | 10 passed, 1 skipped, 1 xfailed, 0 failed, 2026-08-03. PREMISE: PASS |
+| Judge pass | RUN. Returned PREMISE: FAIL, 10 findings. All addressed, see below |
+| Adversary pass | RUN. 14 findings, 2 critical. All addressed, see below |
+| Mutation pass | RUN. Found the first cut of the new gates had no tests at all |
+| Fix re-review | RUN, independent. The lead wrote every fix and must not sign them off |
+| `eval-harness` | Required before shipping any answer-generation feature |
+| Frontend suite | 120 passed, 15 files, 2026-08-03 |
+
+### Review round on 2026-08-03
+
+Three independent passes ran against the phase and two of them failed it. The full findings live in this session's records; what matters here is the shape of what they found, because it is the same shape build phase 2.1 recorded and it recurred despite the whole cadence built to prevent it.
+
+The adversary and the judge, working separately, found the SAME two critical defects, and both described them as build phase 2.1's failure reproduced inside 2.2:
+
+- F-2.2-A-01 / J-01: a negation grounded as SUPPORT for the record it denies. Section 8.2's substring rule answers "does this clause MENTION the cited value" and has no mechanism for "is this clause TRUE about it". `BRCA1 does not cause MedGen:C0346153`, `MedGen:C0346153 is treated with pembrolizumab and olaparib`, and nine more variants all shipped cited with `trust_outcome="answer"`.
+- F-2.2-A-02 / J-02: the framing exemption was a prefix test, so any fabrication shipped entirely uncited by opening with two exempt words, and `stripped_count` stayed 0 so the audit trail reported nothing had been removed. The passage that shipped whole included an invented ACMG classification and a treatment-discontinuation instruction.
+
+Both are fixed and both now carry regression tests. The fix for the first inverts an infinite blocklist into a finite allowlist, which is the same move `LEARNINGS.md`'s 2026-08-01 entry records for the Cypher validator: every content-bearing word in a claim must come from the finding it cites or from the user's own question.
+
+A third pass mutation-tested the required-path suite and found the thing most worth recording: the first cut of both new gates had NO test anywhere in the repo. Neutering the content check left all 22 required-path tests green while four of five exploits sailed through. Every new gate now has a test, and each test was verified to kill its own mutant rather than assumed to.
+
+Two findings were about the lead's own earlier judgments rather than the code, and both were upheld against the lead:
+
+- J-05: the two-hop assertion introduced as F-2.2-07's fix was described in its commit as "the stronger check". It was not. It dropped anchor verification entirely, so ten arbitrary genes from anywhere in the graph would have passed. Replaced with the subset form against 21 CURIEs read from the live graph, which is truncation-invariant AND anchor-verifying.
+- J-06: `_is_environmental_failure`'s docstring claimed both retry conditions came from a step other than Write, and the code never checked `source`. That is the F-2.1-J5-01 pattern, a confident comment asserting a property the code does not implement, recurring inside the very phase whose retrospective named it.
 
 This phase is NOT ready to close. The premise gate is the phase premise and has not yet been re-run to completion after the fixes.

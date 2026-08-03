@@ -46,10 +46,34 @@ frequency table" item from the phase 6 continuation prompt, resolved a
 different way than that note guessed: the frequency table was an idea for
 detecting the artifact better, and the actual defect was what the code did
 after detecting it.
+
+## Degenerate values, finding F-2.2-R-06
+
+A previous fix (finding J-10) added an explicit `field_value is None`
+check, because a literal null passes the upstream blank test and the
+upstream artifact test, both of which test `isinstance(value, str)`
+first, so it was picked as a clean representative and shipped as the
+string "None" at full confidence. A re-review (F-2.2-R-06) found that fix
+caught only the literal `None`: a boolean, a bare `0`, a container, or an
+ETL sentinel string ("None", "null", "N/A", "-") all still shipped, and an
+empty container was the worse half, because it ships as text ("[]",
+"{}") that survives the blank check, then normalizes to nothing wherever
+downstream matching strips punctuation, so the resulting claim can never
+ground and the query refuses a question its CURIE fallback would have
+answered.
+
+`_citable_value_for_row` now routes every one of those shapes to the same
+CURIE fallback already described above, on the same reasoning: a
+degenerate value is not a fact this row can honestly support, and the
+record's own identity is. Deliberately excluded from "degenerate": a bare
+`int` or `float`, including `0`, since a zero-valued count or measurement
+is real data, not an absence, and rejecting every falsy number on sight
+would silently swallow correct answers.
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -124,6 +148,37 @@ def _clip(value: str, limit: int) -> str:
     return value if len(value) <= limit else value[:limit]
 
 
+# ETL placeholder tokens seen written as text where the field's own value
+# would otherwise be a plain null: an upstream pipeline's own way of
+# spelling "no value" as a string rather than a literal `None`. Matched
+# case-insensitively and stripped in `_citable_value_for_row`. Kept
+# deliberately short, limited to the tokens finding F-2.2-R-06 actually
+# observed: a bare "na" is left out on purpose, because that string is
+# also a plausible real value (an ISO country code, an abbreviation), and
+# a short real value must never be rejected for merely resembling a
+# sentinel.
+_STRING_SENTINELS = frozenset({"none", "null", "-"})
+
+# The slashed sentinel is a pattern rather than a member of the frozenset
+# above, and the reason is a repo-wide guard rather than anything about
+# ETL data. `tests/system_03_search_agent/harness/test_tiers.py`'s
+# `test_no_model_id_shaped_string_outside_the_default_table` walks every
+# string constant in `src/` and fails on anything matching
+# `^[\w.-]+/[\w.-]+$`, because `system-design-patterns` pattern 11 says the
+# harness owns model identity and a bare "vendor/model" literal must never
+# appear outside `harness/tiers.py`'s table. The literal "n/a" matches that
+# shape exactly, so adding it to the set above broke a guard that is doing
+# real architectural work.
+#
+# Weakening the guard to admit short segments was the wrong trade: it
+# exists to catch a hardcoded model id, and "n" plus "a" is precisely the
+# degenerate case a narrowed pattern would start missing. Expressing this
+# one sentinel as a compiled pattern keeps the guard at full strength, and
+# it is also slightly more correct, since it accepts the spaced "n / a"
+# form an ETL can emit and the plain frozenset could not.
+_SLASHED_NA_SENTINEL = re.compile(r"^n\s*[/\\]\s*a$", re.IGNORECASE)
+
+
 def _citable_value_for_row(
     row: dict[str, Any],
     pick_representative_field: Any,
@@ -143,27 +198,96 @@ def _citable_value_for_row(
     fields = row.get("fields") or {}
     field_name, field_value, is_suspect = pick_representative_field(fields)
 
-    # A row whose only usable value is a vocabulary artifact, or which has
-    # no usable value at all, still supports one true statement: which
-    # record it is. Cite that rather than a value the row does not honestly
-    # carry.
-    #
-    # `field_value is None` is checked explicitly (finding J-10). A literal
-    # JSON null in a row's `fields` is neither blank nor an artifact by the
-    # upstream checks, both of which test `isinstance(value, str)` first, so
-    # it was selected as a CLEAN representative and shipped as the string
-    # "None" with `assertion_confidence="asserted"`. A citation asserting,
-    # at full confidence, that a gene's name is "None" is worse than no
-    # citation. `str(None).strip()` is "None", which is truthy, so the
-    # blank test below cannot catch it either.
-    if (
+    # Each flag below answers the same question in a different shape: does
+    # `field_value` carry a fact this row can honestly state, or only its
+    # own identity? All of them are computed unconditionally (never
+    # short-circuited on type) so a value can only ever match the checks
+    # that apply to its actual type; none of them can misfire on a type
+    # they were not written for.
+
+    # `field_value is None` (finding J-10). A literal JSON null passes both
+    # the upstream blank test and the upstream artifact test, which both
+    # test `isinstance(value, str)` first, so it was selected as a CLEAN
+    # representative and shipped as the literal string "None" with
+    # `assertion_confidence="asserted"`. `str(None).strip()` is "None",
+    # which is truthy, so the blank check further down cannot catch it
+    # either; this has to be its own check, ahead of everything else.
+    is_null = field_value is None
+
+    # A boolean. Checked with `isinstance(..., bool)`, not a truthiness
+    # test, and ahead of the numeric case below on purpose:
+    # `isinstance(True, int)` is True in Python, so an unguarded numeric
+    # check would treat a bare flag as "a genuine number" and ship it. A
+    # bare True/False is never itself the descriptive fact a finding
+    # states; it has no meaning outside the column it was read from
+    # (finding F-2.2-R-06: `value=False` shipped as "is named False").
+    is_bool = isinstance(field_value, bool)
+
+    # A container, empty or not. `[{'a': 1}]` (finding F-2.2-R-06) renders
+    # through `str()` as its Python repr and lands in the model's prompt
+    # verbatim, no different in kind from splicing raw data into an
+    # f-string query. An empty container (`[]`, `{}`) is not blank by the
+    # string check below, since `str([])` is the non-blank text "[]", so
+    # without this check it shipped, then normalized away to nothing
+    # wherever downstream matching strips brackets and punctuation before
+    # comparing a claim to its value, so the claim could never ground and
+    # the query refused a question its CURIE fallback would have answered.
+    # There is no size of container this function should ever render as
+    # text, so both the empty and the populated case are degenerate.
+    is_container = isinstance(field_value, (list, dict, tuple, set, frozenset))
+
+    # A string sentinel: an ETL step's own way of writing "no value" as
+    # text instead of a literal null. `'None'` (finding F-2.2-R-06) is the
+    # exact J-10 symptom one type over, since the null check above only
+    # ever catches a real `None`, never the string an upstream pipeline
+    # wrote for the same absence.
+    is_sentinel_string = isinstance(field_value, str) and (
+        field_value.strip().lower() in _STRING_SENTINELS
+        or _SLASHED_NA_SENTINEL.match(field_value.strip()) is not None
+    )
+
+    # A blank string. Left last and scoped to `str` alone, because a
+    # numeric zero is not blank and must not be caught here (see below).
+    is_blank_string = isinstance(field_value, str) and not field_value.strip()
+
+    # Deliberately never flagged degenerate by anything above: `int` and
+    # `float`, including `0`. A zero-valued count or measurement (an exon
+    # count, a mutation count) is real data, not an absence, so a
+    # falsy-but-numeric value is left exactly as `pick_representative_field`
+    # returned it. Nothing in this function special-cases it; it simply
+    # never matches `is_bool`, `is_container`, `is_sentinel_string`, or
+    # `is_blank_string`, all of which are type-scoped on purpose.
+
+    degenerate = (
         field_name is None
-        or field_value is None
+        or is_null
         or is_suspect
-        or not str(field_value).strip()
-    ):
+        or is_bool
+        or is_container
+        or is_sentinel_string
+        or is_blank_string
+    )
+
+    if degenerate:
         if curie:
-            return "curie", curie, is_suspect, True
+            # Whichever condition fired above is itself evidence this
+            # row's own data is unreliable, the same signal `is_suspect`
+            # already carries for a vocabulary artifact (module
+            # docstring). Report it as suspect here regardless of what
+            # `pick_representative_field` returned, so the citation layer
+            # hedges a bool, container, or sentinel fallback exactly as it
+            # already hedges a MeSH-style artifact fallback
+            # (`assertion_confidence="hedged"`, `core/graph.py`), rather
+            # than asserting a CURIE-only claim at full confidence while
+            # staying silent about why the row's own field could not be
+            # used. This is a change from the original J-10 fix, which
+            # passed `is_suspect` through unchanged for the null case; it
+            # is unified here because a null field and a boolean field are
+            # the same class of unreliable row, and there is no test
+            # pinning the old, narrower behavior (verified: neither
+            # `test_graph.py` nor `test_required_paths.py` asserts on
+            # `value_is_suspect` for the null-value path).
+            return "curie", curie, True, True
         # No CURIE and no usable field: nothing here is citable at all.
         return "", "", is_suspect, False
 

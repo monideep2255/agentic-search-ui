@@ -84,6 +84,89 @@ _HIGH_RISK_RELATIONSHIP_TOKENS: frozenset[str] = frozenset(
     }
 )
 
+# Of the seven relationship tokens above, only `gene_associated_with_
+# condition` is a label `graph_schema_constants.EDGE_LABELS` actually
+# carries today. The other six are not dead code: Section 8.3.1's table
+# names them for PubTator3 and LitVar2 extracted relationships (cause,
+# associated_with, treat) and the module docstring above already records
+# that mapping. They are unreachable in build phase 2.2 because Layer 1 is
+# the only source wired up, not because they are wrong, and they need no
+# change here; they start firing the moment build phase 3.4 wires a Layer
+# 2 or Layer 3 tool that supplies one of these relationship types.
+
+
+def _canonical(token: str) -> str:
+    """Fold a field, edge, or predicate name to one comparable spelling.
+
+    Finding J-08: the tables are exact-token, so `clinicalSignificance` and
+    `clinical significance` both missed `clinical_significance` and dropped
+    a genuinely clinical claim to `low` risk, skipping triangulation
+    entirely.
+
+    Finding F-2.2-R-08: the first fix reinserted underscores at camelCase
+    boundaries (`(?<=[a-z0-9])(?=[A-Z])`), which requires a lowercase
+    character immediately before the boundary. `CLINICALSIGNIFICANCE` has
+    none, every character is uppercase, so there is no boundary for that
+    pattern to find, and neither a `.` separator nor a CURIE-style
+    namespace prefix (`biolink:...`) was collapsed at all. Verified still
+    broken: `CLINICALSIGNIFICANCE`, `clinicalsignificance`,
+    `clinical.significance`, and `biolink:gene_associated_with_condition`
+    all missed their table entry under the camelCase-only fix.
+
+    Reinserting a separator at a word boundary needs a signal that an
+    all-caps, no-separator string does not carry: there is nothing to look
+    for, since uppercase follows uppercase the whole way through, and no
+    general rule can tell "clinicalsignificance" apart from any other run
+    of letters without a dictionary. So this goes the other direction
+    instead of trying to reinsert boundaries: it removes every separator a
+    source might use (space, hyphen, dot, underscore) from both sides of a
+    comparison and compares on the bare letters alone.
+    `clinical_significance`, `clinicalSignificance`,
+    `CLINICALSIGNIFICANCE`, `clinical significance`, and
+    `clinical.significance` all collapse to the same
+    `"clinicalsignificance"`, regardless of which convention the source
+    used, with no word-segmentation guess involved anywhere.
+
+    A CURIE or BioLink-style predicate carries its namespace before a
+    colon (`biolink:gene_associated_with_condition`). The live graph's
+    `EDGE_LABELS` (`tools/graph_schema_constants.py`) are bare snake_case
+    today, so this branch is latent, not live: no caller currently passes
+    a prefixed value. It is fixed anyway because the moment a Layer 2 or
+    Layer 3 tool supplies a prefixed relationship type (build phase 3.4),
+    an unstripped prefix would silently sink a real
+    `gene_associated_with_condition` match back to `low`, the exact
+    failure this function exists to prevent, with no test in front of it
+    to catch the regression before a clinical claim shipped on it.
+
+    Still exact match, never substring, after collapsing: two names
+    compare equal only when they are the same name spelled a different
+    way, not when one merely contains the other.
+    `not_clinical_significance` collapses to
+    `"notclinicalsignificance"`, which is not `"clinicalsignificance"`, so
+    a field that happens to CONTAIN the phrase is not swept in by this
+    change; only a field that spells the same phrase under a different
+    casing or separator convention is. This is what keeps the "no new
+    false positive" property the re-review verified: collapsing widens
+    which SPELLINGS of a listed token match, never which DISTINCT names
+    match.
+    """
+    local = token.strip().rsplit(":", 1)[-1]
+    return re.sub(r"[\s\-_.]+", "", local.lower())
+
+
+# Precomputed once, at import time: the same collapse applied to the table
+# entries themselves, so a lookup is a plain frozenset membership check
+# against a value built the identical way. Recomputing this per call would
+# work too, but a module-level constant is what makes it obvious the table
+# is fixed and versioned rather than something that could drift between
+# two calls in the same process.
+_HIGH_RISK_FIELD_TOKENS_CANONICAL: frozenset[str] = frozenset(
+    _canonical(token) for token in _HIGH_RISK_FIELD_TOKENS
+)
+_HIGH_RISK_RELATIONSHIP_TOKENS_CANONICAL: frozenset[str] = frozenset(
+    _canonical(token) for token in _HIGH_RISK_RELATIONSHIP_TOKENS
+)
+
 # Section 8.3.2's equivalence buckets. A fixed, versioned lookup table:
 # categorical values are bucketed before comparison, never compared as free
 # text. Bump `EQUIVALENCE_BUCKET_VERSION` when a value moves buckets, so a
@@ -155,31 +238,72 @@ def risk_tier_for(field: str, node_or_edge_type: str = "") -> RiskTier:
     every gene-symbol lookup high risk, push the whole system to `ask`
     through the aggregation rule below, and train a reader to ignore the
     signal precisely when it means something.
+
+    ## F-2.2-A-05: an open gap, recorded rather than papered over
+
+    The system's flagship question, "which diseases are associated with
+    BRCA1?", returns `Disease` NODES (the `gene_associated_with_condition`
+    edge's endpoint), not the edge itself. That is exactly Section
+    8.3.1's "OMIM phenotype-gene mechanistic or causal mapping" row, and it
+    still classifies `low` here, because `node_or_edge_type` for that row
+    is `"Disease"`, which is not in `_HIGH_RISK_RELATIONSHIP_TOKENS_
+    CANONICAL` on purpose (see below).
+
+    This function's only inputs are `field` and `node_or_edge_type`, one
+    claim's finding and the row type it came from (per the docstring
+    above, and per `trust_for_claims`'s call site in `write_node`, which
+    supplies `node_or_edge_type` from `graph.py`'s
+    `_node_or_edge_type_by_citation_id`, itself built only from the row's
+    own `node_or_edge_type` field). Neither input, nor anything upstream
+    of them, carries which edge (if any) connected the query's anchor
+    entity to this row. `cypher_provenance.to_output_row` builds a
+    `CypherQueryRow` with exactly `node_or_edge_type`, `curie`, `fields`,
+    `source_url`, `graph_snapshot_version`; the traversed relationship
+    label is never captured, so it cannot reach this function no matter
+    how the row type is compared.
+
+    That gap is real and this function cannot close it by itself. A row
+    typed `Disease` is ALSO what a bare identifier lookup returns
+    (`MATCH (d:Disease {curie: $c}) RETURN d`, no relationship at all),
+    which Section 8.3.1's own table calls out as low risk ("Identifier
+    lookups... cross-reference resolution"). Per `graph_schema_constants.
+    EDGE_ENDPOINTS`, `Disease` is the endpoint of exactly two edges in
+    this graph, `gene_associated_with_condition` (as target) and
+    `has_phenotype` (as source), plus the no-edge bare-lookup case above;
+    the row carries no signal distinguishing any of the three. Widening
+    `node_or_edge_type == "disease"` to `high` unconditionally would
+    correctly catch the flagship question and incorrectly catch every
+    plain "what is MedGen:C0346153" lookup too, misclassifying a case
+    Section 8.3.1 explicitly names as low risk. That is the false
+    positive `.claude/rules/goal-contracts.md` and this ticket both warn
+    against manufacturing, not a hypothetical one: it is the identical
+    failure shape defect 1 was verified NOT to have, reintroduced through
+    a different table.
+
+    Closing this for real needs the traversed edge label (or an
+    equivalent "why was this row included" signal) carried from the
+    Cypher row through `Finding`, `SynthFinding`, and
+    `_node_or_edge_type_by_citation_id` to this call, which touches
+    `cypher_provenance.py`, `core/graph.py`, and possibly
+    `cypher_query.py`, none of which this ticket's two-file scope
+    (`synthesis/trust.py` and its test file) may edit. Until that
+    plumbing lands, a high-risk gene-disease claim reached through the
+    Disease endpoint answers with full confidence on one source rather
+    than asking, which is the module docstring's stated, deliberate
+    trade for build phase 2.2: "That is not a stub... the graph-only
+    path... yields `ask`, not `answer`" describes the edge-row path,
+    which works; the endpoint-row path is the residual case that trade
+    does not yet cover. Filed here rather than silently worked around,
+    per this ticket's instruction that an honest recorded finding beats a
+    wrong classification.
     """
     field_token = _canonical(field)
     type_token = _canonical(node_or_edge_type)
-    if field_token in _HIGH_RISK_FIELD_TOKENS:
+    if field_token in _HIGH_RISK_FIELD_TOKENS_CANONICAL:
         return "high"
-    if type_token in _HIGH_RISK_RELATIONSHIP_TOKENS:
+    if type_token in _HIGH_RISK_RELATIONSHIP_TOKENS_CANONICAL:
         return "high"
     return "low"
-
-
-def _canonical(token: str) -> str:
-    """Fold a field or type name to the spelling the risk tables use.
-
-    Finding J-08: the tables are exact-token, so `clinicalSignificance` and
-    `clinical significance` both missed `clinical_significance` and dropped a
-    genuinely clinical claim to `low` risk, skipping triangulation entirely.
-    Graph properties, API fields and BioLink predicates do not agree on a
-    casing convention, and this rule must not depend on which one a given
-    source happened to use.
-
-    Lowercases, then collapses spaces, hyphens and camelCase boundaries to
-    underscores, so all three spellings above canonicalize to one.
-    """
-    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", token.strip())
-    return re.sub(r"[\s\-]+", "_", spaced.lower())
 
 
 def bucket_for(value: str) -> str | None:
