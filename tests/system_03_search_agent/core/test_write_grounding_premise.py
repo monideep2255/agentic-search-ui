@@ -247,12 +247,22 @@ class Answer:
             f"{c.get('field')}={c.get('claim_text')!r} {c.get('source_url')}"
             for c in self.citations[:6]
         ]
+        # Full error payloads, not just the message. A refusal caused by a
+        # failed step and a refusal caused by ungroundable synthesis read
+        # identically when only the message is shown, and they are entirely
+        # different defects: `source` and `scope` are what tell them apart.
+        # Printing the message alone sent one debugging pass looking at
+        # synthesis for a DNS failure in `guardrail`.
+        errors = [
+            {key: err.get(key) for key in ("scope", "source", "error_class", "message")}
+            for err in self.errors
+        ]
         return (
             f"\n  trust_outcome={self.trust_outcome}"
             f"\n  narrative={self.narrative!r}"
             f"\n  citations={cites}"
             f"\n  trust_signals={self.trust_signals}"
-            f"\n  errors={[e.get('message') for e in self.errors]}"
+            f"\n  errors={errors}"
         )
 
 
