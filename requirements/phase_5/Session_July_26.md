@@ -35,7 +35,7 @@ The method that followed, applying `plan-then-fan-out` and `parallel-first` at t
 
 Deliberate design choice: the demand-side workers were given only the list of rule and skill names, never the rule files themselves. A worker that cannot read a rule cannot talk itself into believing the rule covers something it does not. Every proposed match was then verified against the actual rule text during synthesis, which is the maker-checker split applied to the analysis itself.
 
-Result: 303 obligations extracted, 191 already owned, 57 unowned. The full map is in `requirements/phase_5/Coverage_map.md`.
+Result: 303 obligations extracted, 246 already owned, 57 unowned. The full map is in `requirements/phase_5/Coverage_map.md`.
 
 Three findings shaped everything after:
 

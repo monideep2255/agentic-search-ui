@@ -73,3 +73,6 @@ docs/Claude_Code_model_fallback_setup.md
 * [0-9].jsx
 * [0-9][0-9].py
 * [0-9][0-9].md
+
+# Local session artifacts, product owner only, never committed
+docs/artifacts/

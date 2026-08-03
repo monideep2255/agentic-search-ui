@@ -32,6 +32,7 @@ Read it before opening psql against the production graph for the first time.
 - [P. Cost and downgrade plan](#p-cost-and-downgrade-plan)
 - [Q. What is NOT in scope for this graph](#q-what-is-not-in-scope-for-this-graph)
 - [R. Troubleshooting playbook](#r-troubleshooting-playbook)
+- [References](#references)
 
 ## A. What lives on the server
 

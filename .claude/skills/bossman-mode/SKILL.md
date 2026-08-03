@@ -37,9 +37,9 @@ These rules are suspended during bossman mode execution:
 
 | Rule | Why suspended |
 |------|--------------|
-| `pause-before-acting` | Plan is already agreed. No need to pause and re-check. |
+| `anti-rationalization` (pause-before-acting behavior) | Plan is already agreed. No need to pause and re-check. |
 | `preserve-your-thinking` | Decisions are made. This is execution, not deliberation. |
-| `clarify-before-drafting` | Scope is defined. No Socratic questioning mid-build. |
+| `preserve-your-thinking` (clarify-before-drafting behavior) | Scope is defined. No Socratic questioning mid-build. |
 
 These rules remain active:
 
@@ -47,9 +47,9 @@ These rules remain active:
 |------|---------|
 | `file-protection` | Never delete without informing, even in execution mode. |
 | `dependency-tracking` | Track what you build. |
-| `parallel-first` | Maximize execution speed. |
+| `plan-then-fan-out` (parallel-first behavior) | Maximize execution speed. |
 | `plan-then-fan-out` | The lead plans and decomposes, cheaper models execute the bounded pieces. |
-| `boil-the-lake` | Do it 100%. No half-measures. |
+| `goal-contracts` (boil-the-lake behavior) | Do it 100%. No half-measures. |
 | `writing-style` | Output quality stays high. |
 | `git-workflow` | Clean commits, phase branches. |
 | `v1-scope-boundary` | Autonomy is exactly when scope creep happens. This binds hardest here, not least. |

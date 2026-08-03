@@ -19,12 +19,10 @@ For any goal, project, or system: what single thing, if removed or improved, wou
 - Choosing what to fix - which parser error blocks the gate, not which code looks cleanest?
 - Reviewing the OS itself - is the system overhead (rules, docs-sync, retros) justified by the value it creates?
 - Weekly reflection - what blocked me this week? Same thing as last week? Then it's the real constraint.
-- Starting a work block - of the options in my cluster (Build/Learn/Practice), which one attacks the constraint?
 
 **Do NOT apply when:**
 - The constraint is external and you can't act on it (waiting on someone else)
 - You're in execution mode on a clear plan - don't re-question the plan mid-sprint
-- Recovery/rest days - not everything needs to be optimized
 
 **Idiot index check:**
 When something feels expensive (in time, effort, or friction), break it into components. How much of the cost is the actual work vs overhead, process, or indecision? A high ratio of overhead to actual work means the constraint is the process, not the task.
@@ -44,17 +42,14 @@ Once you've identified the bottleneck as process, run these 5 steps in order. Th
 A model that produces a wrong answer is the visible symptom. What it was
 given is the constraint, and it is almost always cheaper to inspect.
 
-Build phase 2.1 is the measured case. `cypher_query` returned twenty-five
-non-human orthologs for "which diseases are associated with BRCA1?", every
-row correctly cited. Three review rounds recorded that as generation
-quality and hardened the parameter binder in response, roughly 25 real
-defects fixed, none of them causal. The actual cause was that the schema
-slice handed the model contained no Disease label and exactly one edge,
-`orthologous_to`. The model answered the only question it had been given
-the vocabulary to ask.
-
-Printing the assembled prompt would have shown it in minute one. It was
-found on round five.
+Build phase 2.1 measured it: `cypher_query` returned twenty-five non-human
+orthologs for "which diseases are associated with BRCA1?", every row
+correctly cited, and three review rounds hardened the parameter binder in
+response, roughly 25 real defects fixed, none of them causal, before
+printing the assembled prompt on round five showed the schema slice
+handed to the model contained no Disease label at all. Full account:
+LEARNINGS.md's retrospective ("why build phase 2.1 took five review
+rounds").
 
 So before debugging a wrong generated output:
 
@@ -70,6 +65,6 @@ proven otherwise. Optimizing the fed component is optimizing a
 non-bottleneck.
 
 **Examples:**
-- 6 FTP sources, 278M edges, 1 OOM crash - the constraint is memory during export, not download speed. Fix: add append_edges() streaming before optimizing anything else.
-- Gene pipeline OOM during export - the constraint isn't parsing speed, it's memory. Fix: stream edges to disk instead of accumulating in a list.
-- Gate 1 has three pipelines to validate - the constraint is the Gene parser (largest dataset), not MedGen (smallest). Fix: run MedGen first to validate the flow, then tackle Gene.
+- Cypher generation timeouts survived a 3x budget increase, 30s to 90s, 9 of 10 real-model queries still timed out - the constraint was the plan tier's reasoning effort spent on one line of Cypher, not the timeout value. Fix: drop the plan tier to `effort: none`, cutting latency 27x with no quality loss.
+- Guardrail and think steps ran 10 to 15 seconds per stub classification, generating a full unused answer every call - the constraint was a bare user question sent to a real model with no system instruction, not slow inference. Fix: give each stub a one-word system instruction and cap `max_tokens` at 128.
+- A CURIE lookup against the live graph took 42 seconds - the constraint was the query planner's row-count estimate under a small LIMIT clause, not connection latency. Fix: `SET enable_seqscan = off`, cutting 42034ms to 108ms.

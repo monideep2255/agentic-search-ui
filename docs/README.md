@@ -4,7 +4,7 @@ Reference material for System 3. Start here to find the right document without o
 
 Planning documents live in `requirements/`, not here. This folder holds reference and how-to material. The distinction that matters: `requirements/` says what we are building and why, `docs/` says how things actually work.
 
-Last updated: 2026-07-26.
+Last updated: 2026-08-02.
 
 ## Table of contents
 
@@ -67,6 +67,7 @@ Last updated: 2026-07-26.
 | File | What it is |
 |------|-----------|
 | `Claude_security_plugin_usage.md` | How to run the on-demand security scan and apply patches. Pinned here, see below |
+| `Claude_Code_model_fallback_setup.md` | Personal dev-workflow note on switching Claude Code to a cheaper model backend past a weekly usage limit, without spending real money on prototype development |
 | `publish_body.sh` | Derives the publishable fragment from a standalone HTML page in this repo |
 
 ## What is not here

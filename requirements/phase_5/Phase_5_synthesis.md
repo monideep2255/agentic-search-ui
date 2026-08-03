@@ -29,7 +29,7 @@ The scoping question was reframed early, at the product owner's insistence, from
 | Category | Count |
 |----------|-------|
 | Obligations extracted from the three locked docs | 303 |
-| Already owned by an existing rule or skill | 191 |
+| Already owned by an existing rule or skill | 246 |
 | Unowned, needing new coverage | 57 |
 | New skills the 57 justified | 0 |
 

@@ -8,9 +8,9 @@ When bossman mode is active (user has invoked `/bossman` and activation checklis
 
 ### Suspended behaviors
 
-- **Do not pause to check if clarification is needed** (overrides pause-before-acting step 2). Rules still apply, but you do not stop to ask.
+- **Do not pause to check if clarification is needed** (overrides the pause-before-acting check in anti-rationalization, step 2). Rules still apply, but you do not stop to ask.
 - **Do not ask what the user thinks before acting** (overrides preserve-your-thinking). Decisions were made during planning. Execute.
-- **Do not run Socratic clarification before drafting** (overrides clarify-before-drafting). Scope is defined.
+- **Do not run Socratic clarification before drafting** (overrides the clarify-before-drafting section of preserve-your-thinking). Scope is defined.
 - **Do not ask "should I do X or Y?"** - pick the better path, note the choice, keep moving.
 
 ### Preserved behaviors
@@ -19,8 +19,8 @@ When bossman mode is active (user has invoked `/bossman` and activation checklis
 - Dependency tracking: track what you build.
 - Writing style: output quality stays high.
 - Git workflow: phase branches, MRs, clean commits, no co-author lines.
-- Parallel-first: maximize speed via agent teams for builders.
-- Boil-the-lake: do it 100%.
+- Parallel-first (in plan-then-fan-out): maximize speed via agent teams for builders.
+- Boil-the-lake (in goal-contracts): do it 100%.
 - Skill chain at phase end: release-workflow -> ship (mandatory, no skips).
 
 ### Dispatch model

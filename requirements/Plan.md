@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-08-01.
+Kick-off: 2026-05-06. Last updated: 2026-08-02.
 
 ## Status at a glance
 
@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-08-01.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) underway. Build phase 1.0 (FastAPI skeleton, typed event contract) merged as PR #5. Build phase 1.1 (auth service, six-table user-data schema) merged as PR #6. Build phase 2.0 (five-node LangGraph loop, three-tier harness) merged as PR #9. Build phase 1.2 (React shell, SSE, chat UI) merged as PR #12. Build phase 2.1 (`cypher_query` over Layer 1, the first live graph access) merged as PR #15 on 2026-08-01, closed after five judge passes and five adversary passes, with the process changes it forced merged separately as PR #16. Next up: build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal), which depends on 2.1 |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 183 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 190 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -34,7 +34,6 @@ Decisions logged: 183 (DECISIONS.md). Deliverables produced: the Phase 1 synthes
 - [Phase 7: iteration and new information](#phase-7-iteration-and-new-information)
 - [Documents we will create](#documents-we-will-create)
 - [How new information gets incorporated](#how-new-information-gets-incorporated)
-- [Summary of what happens next](#summary-of-what-happens-next)
 - [Revision history](#revision-history)
 
 ---
@@ -493,7 +492,15 @@ Phase 5 output: all project infrastructure aligned with the PRD and tech spec. D
 
 ## Phase 6: build (bossman execution)
 
-Status: IN PROGRESS. Build phases 1.0 (PR #5, 2026-07-27), 1.1 (PR #6, 2026-07-28), 2.0 (PR #9, 2026-07-28), and 1.2 (PR #12, 2026-07-28) done and merged. Next up: build phase 2.1 (cypher_query over Layer 1), the only phase now unblocked by dependency. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
+Status: IN PROGRESS. Five build phases done and merged:
+
+- 1.0 (PR #5, 2026-07-27)
+- 1.1 (PR #6, 2026-07-28)
+- 2.0 (PR #9, 2026-07-28)
+- 1.2 (PR #12, 2026-07-28)
+- 2.1 (PR #15, 2026-08-01)
+
+Next up: build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal), on branch `phase/2.2-write-step-grounding`. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
 
 Goal: build System 3 using bossman-mode. Agent teams execute, I orchestrate.
 
@@ -621,27 +628,13 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ---
 
-## Summary of what happens next
-
-Phases 1 through 4 are complete, with the Phase 1 synthesis, the evaluation playbook, the locked PRD, the verified API capability sheet, the locked technical specification, and the strategic memo all written. Phase 5 (system and tooling updates) opened 2026-07-26 and its four steps are done: the build harness, skills, rules, root documents, and reference docs are now consistent with the locked specification. Phase 6 (build) opened 2026-07-27. Five build phases are done and merged into main:
-
-- Build phase 1.0, the FastAPI skeleton and typed event contract (PR #5, 2026-07-27). Judge-reviewed with one rejection-and-fix round and an independent sign-off verification.
-- Build phase 1.1, the auth service and the six-table PostgreSQL user-data schema (PR #6, 2026-07-28). It closed the ecdsa CVE that 1.0 accepted as a known risk, by replacing `python-jose` with `PyJWT`. 314 tests passing, up from 191.
-- Build phase 2.0, the real five-node LangGraph loop and the three-tier harness (PR #9, 2026-07-28), replacing the phase 1.0 stub. 483 tests passing, up from 314.
-- Build phase 1.2, the React shell, SSE streaming, and the chat UI wired end to end (PR #12, 2026-07-28). 539 Python tests, 120 frontend tests, and 3 Playwright end-to-end tests passing.
-- Build phase 2.1, `cypher_query` over Layer 1 and the first live graph access (PR #15, 2026-08-01). Closed after five judge passes and five adversary passes, the most reviewed phase so far and the only one to fail four consecutive reviews with a green suite. 968 Python tests passing, plus a premise gate that runs real model generation against the live graph. The process changes it forced merged as PR #16.
-
-183 decisions logged, 37 learnings recorded plus a retrospective. Next: build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal), then the rest of Step 6.1's prototype. One security gate is scheduled and outstanding: the whole-repository scan at Step 6.2, which is a hard prerequisite for starting Step 6.3. We debate. We decide. We log decisions.
-
-One phase at a time. No skipping.
-
 ## Revision history
 
-- 2026-08-01: Closed build phase 2.1, merged as PR #15, after FIVE judge passes and FIVE adversary passes. All 9 tickets `done`, 26 findings `closed`, 3 `deferred` with a named reason. Final gates: 968 Python tests passing (up from 798), premise gate 9 of 9 on three consecutive runs, 120 frontend tests, ruff clean, pip-audit and npm audit clean.
+- 2026-08-01: Closed build phase 2.1, merged as PR #15, after FIVE judge passes and FIVE adversary passes. All 9 tickets `done`, 27 findings `closed`, 3 `deferred` with a named reason. Final gates: 968 Python tests passing (up from 798), premise gate 9 of 9 on three consecutive runs, 120 frontend tests, ruff clean, pip-audit and npm audit clean.
   - The load-bearing fact about this phase, and the reason it took five rounds: it failed four consecutive reviews while its test suite was green. At the fourth review the suite stood at 879 passing and the judge's live run answered 3 of 8 real questions correctly. The worst case returned twenty-five non-human orthologs for "which diseases are associated with BRCA1?", `status="ok"`, every row carrying a real and resolving NCBI citation.
   - The root cause was a COMPOSITION defect between two individually correct components. Think emits a hardcoded `query_class="lookup"` stub, and `lookup` mapped to a 0-hop schema slice, which for a Gene anchor renders exactly one edge, `orthologous_to`. The generator was asked about diseases and handed a schema containing no disease at all. Neither component was wrong, which is why every component-level review passed it. The fifth judge proved it with a controlled A/B: at hop floor 0 the model returns 25 orthologs, at floor 1 it returns the correct 4 diseases, same model and same question.
   - Roughly 25 real defects were fixed across rounds two to four in the parameter binder and the citation layer. Every one was genuine. None was causal. The same wrong-entity invariant was defeated three separate times, each time by its own replacement.
-  - The durable outcome is `tests/system_03_search_agent/tools/test_cypher_query_premise.py`, which does not mock the model and asserts on the MEANING of the answer against ground truth pinned from the live graph. Every one of the other 968 tests mocks the model call, so none of them could see a generation defect. It landed failing at 3 of 9 and now passes 9 of 9. It has already caught two regressions from the phase's own late fixes, before a reviewer found them.
+  - The durable outcome is `tests/system_03_search_agent/tools/test_cypher_query_premise.py`, which does not mock the model and asserts on the MEANING of the answer against ground truth pinned from the live graph. Every other test in the suite, outside this one file, mocks the model call, so none of them could see a generation defect. It landed failing at 3 of 9 and now passes 9 of 9. It has already caught two regressions from the phase's own late fixes, before a reviewer found them.
   - Process changes merged separately as PR #16, so the lesson binds on later phases rather than depending on recall. The build cadence gained a twelfth stage: write the premise gate and WATCH IT FAIL, blocking all builder work, mandatory for any phase whose deliverable is model-generated. `task-tracker` makes it the first ticket at phase open. Three rules gained sections: read the model's INPUT before debugging its output, review a fix harder than new code, and a verify surface must state its own coverage.
   - Deferred with named triggers, not silently: prompt injection steering entity selection (mitigated, `xfail` with the reason recorded, closes in build phase 3.0's Guardrail); constraining generation so an unbounded traversal cannot be produced, and a second exhaustion shape, both to 2.2; a fourth `status` value for "matched plenty, cited none", to 2.2; the `vocabulary_artifact_fields` marker's consumer, to 2.2's Write step; and gene symbol resolution beyond a one-entry seed table, which is Layer 2 work in build phase 3.1.
   - A generated query OOM-killed the live graph database mid-phase and it was restarted by hand. Mitigated with a session-level memory cap, and the hop-floor fix removed the query shape that caused it.
@@ -670,7 +663,7 @@ One phase at a time. No skipping.
   - Release gate outcome: 18 findings raised, 9 closed with re-verified fixes, 2 rejected, 7 deferred to named later phases (1.2, 2.0, 4.x, 6.0). The two most serious were found only by the unscripted adversary pass after the scripted judge had passed the phase clean. First, the migration test ran `alembic downgrade base` against the database named by `USER_DB_URL`, destroying every row on each run while restoring the schema on teardown so nothing looked wrong; canary-proven, 11 users before and 0 after. Second, refresh rotation shipped correctly but delivered none of the security property Section 15 claims for it, since nothing acted on the replay it detected; now fixed with RFC 6819 reuse detection that revokes the whole session family.
   - `dev-standards` six-lens pass returned safe to open, and caught that the README still listed `python-jose` under Auth, so a developer following it would have reinstalled the removed vulnerability.
   - The whole-repository security scan was deferred again by product-owner decision and scheduled once at Step 6.2, where it is now a hard prerequisite for starting Step 6.3. Build phases 1.0 and 1.1 remain entirely unscanned.
-- 2026-07-27: Opened Phase 6 (build) and shipped build phase 1.0 on branch phase/1.0-fastapi-skeleton, merged as PR #5: the FastAPI app skeleton, the health endpoint, the Pydantic event contract (Query, RequestContext, the Event envelope, all eleven Section 2.3 payload types), and a typed run() stub wired to a query endpoint. Judge rejected once (an open-dict payload not bound to its declared type, an unbounded session_memory field), both fixed and independently re-verified by a separate agent per task-tracker's raiser-never-closes rule. 191 tests passing. Two supply-chain items resolved: setuptools upgraded to clear three CVEs, ecdsa's unfixable CVE accepted as a risk deferred to phase 1.1. The full multi-agent security scan was deliberately skipped for this phase (no auth, database, LLM, or external-API surface yet), relying on the judge's gates and two independent adversarial-probe passes instead.
+- 2026-07-27: Opened Phase 6 (build) and shipped build phase 1.0 on branch phase/1.0-fastapi-skeleton, merged as PR #5: the FastAPI app skeleton, the health endpoint, the Pydantic event contract (Query, RequestContext, the Event envelope, all eleven Section 2.3 payload types), and a typed run() stub wired to a query endpoint. Judge rejected once (an open-dict payload not bound to its declared type, an unbounded session_memory field), both fixed and independently re-verified by a separate agent per task-tracker's raiser-never-closes rule. 191 tests passing. Two supply-chain items resolved: setuptools upgraded to 83.0.0, clearing three known CVEs (a path traversal in `PackageIndex`, a remote code execution in the download functions, and a Unicode-normalization bypass in `MANIFEST.in` exclusions), ecdsa's unfixable CVE accepted as a risk deferred to phase 1.1. The full multi-agent security scan was deliberately skipped for this phase (no auth, database, LLM, or external-API surface yet), relying on the judge's gates and two independent adversarial-probe passes instead.
 - 2026-07-26: Opened Phase 5 on branch phase/5.0-system-tooling-updates and completed Steps 5.1 to 5.4. Scope was set by a coverage map: 303 obligations extracted from the three locked documents by ten parallel agents, 57 of which had no owner.
   - Step 5.1: overhauled bossman-mode. Fixed the branch-naming defect (both executing skills created `feature/description` against the `phase/N.M-description` convention every rule states, which also silently disabled ship's MR step). Made tech spec Section 25 the source of truth for the 26 build phases. Made worktree isolation the default for concurrent file-mutating builders with read-only agents in the shared checkout. Added the product owner role, per-phase product-owner-required marking, a scope check, and a Playwright gate for UI phases. Wired `verify`, `eval-harness`, and `dev-standards` into the phase-end chain, none of which the skill had ever invoked.
   - Step 5.2: added two skills, `task-tracker` and `learnings`. Rewrote `eval-harness`, which never referenced the evaluation playbook and was missing 13 of its 17 demands. Added rules `tool-call-budgets` and `v1-scope-boundary`, adopted `prompt-cache-discipline` from the personal-os reference, extended `production-standards` and `system-design-patterns`, and narrowed `dependency-tracking` to hooks only. Zero of the four skills this document originally floated were built, because the coverage map showed the gaps were rules and docs.

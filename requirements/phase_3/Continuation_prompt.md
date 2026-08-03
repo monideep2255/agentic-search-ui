@@ -1,6 +1,6 @@
 # Phase 3 continuation prompt
 
-Phase 3 is complete: the PRD is locked. Use this to resume the project and start Phase 4 (the technical specification and the strategic memo) in a new chat session. Living document, updated as Phase 4 progresses.
+Phase 3 is COMPLETE (closed 2026-07-24): the PRD is locked. There is no remaining Phase 3 work. The next phase is Phase 4, the technical specification and the strategic memo. This file is kept as the Phase 3 record.
 
 ## Context to provide
 
