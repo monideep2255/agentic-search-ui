@@ -135,12 +135,45 @@ class CitationPayload(BaseModel):
 
 
 class TrustSignalPayload(BaseModel):
+    """Section 8.3's per-claim verdict, and Section 8.4's refuse payload.
+
+    The four fields below `outcome` are additive within v1 (Section 2.6:
+    "a new optional field" is an allowed in-version change; removing a
+    field or changing one's meaning would need a v2). Each is optional and
+    defaults to None, so every payload built before build phase 2.2
+    validates unchanged.
+
+    `citation_id` is the join key Section 9.1 specifies: a trust signal is
+    never a field ON a citation, it is its own event bound to one by shared
+    id, so a surface can render a per-chip verdict (8.3.4) without the
+    citation having to be re-emitted to carry it. It is None on the
+    answer-level signal, which belongs to the whole response rather than to
+    any one claim.
+
+    `message` and `fallback_link` carry Section 8.4's refuse payload, whose
+    example in the spec shows exactly these two keys alongside `outcome`.
+    `fallback_link` is host-pinned by the same pattern every `source_url`
+    uses: a refusal that links somewhere other than NCBI is a worse failure
+    than a refusal with no link at all.
+
+    `triangulated` is a tri-state on purpose. None means triangulation was
+    not evaluated (Section 8.3.3's "not evaluated" cell, i.e. every
+    low-risk claim), which is a different statement from False, meaning it
+    ran and did not concord.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     outcome: TrustOutcome
     risk_tier: str = Field(..., max_length=16)
     grounded: bool
     triangulated: bool | None = None
+    citation_id: str | None = Field(None, max_length=64)
+    scope: Literal["claim", "answer"] | None = None
+    message: str | None = Field(None, max_length=500)
+    fallback_link: str | None = Field(
+        None, max_length=512, pattern=NCBI_SOURCE_URL_PATTERN
+    )
 
 
 class CostPayload(BaseModel):

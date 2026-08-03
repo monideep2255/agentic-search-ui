@@ -33,6 +33,7 @@ Writes:
 from __future__ import annotations
 
 import os
+import re
 import socket
 from pathlib import Path
 from typing import Any
@@ -161,15 +162,8 @@ BRCA1_VARIANT_EDGE_COUNT = 15310
 KNOWN_VARIANT_CURIE = "ClinVar:17660"
 
 
-def _mock_generation(monkeypatch: pytest.MonkeyPatch, cypher: str) -> AsyncMock:
-    """Force the generation step to return one exact Cypher string.
-
-    Only the model call is mocked. Everything downstream of it runs for real
-    against the graph.
-    """
-    import litellm
-
-    response = type(
+def _completion_response(content: str) -> Any:
+    return type(
         "Response",
         (),
         {
@@ -177,7 +171,7 @@ def _mock_generation(monkeypatch: pytest.MonkeyPatch, cypher: str) -> AsyncMock:
                 type(
                     "Choice",
                     (),
-                    {"message": type("Msg", (), {"content": cypher, "role": "assistant"})()},
+                    {"message": type("Msg", (), {"content": content, "role": "assistant"})()},
                 )()
             ],
             "usage": type(
@@ -186,7 +180,71 @@ def _mock_generation(monkeypatch: pytest.MonkeyPatch, cypher: str) -> AsyncMock:
             "model": "mock-plan-tier",
         },
     )()
-    mock = AsyncMock(return_value=response)
+
+
+_FINDING_LINE = re.compile(r"^\[(\d+)\]\s+([^:]+):\s+(.*)$", re.MULTILINE)
+
+
+def _compliant_synth_narrative(messages: list[dict[str, str]]) -> str:
+    """Play the role of a Synth model that follows its instructions.
+
+    Build phase 2.2 note. This mock patches `litellm.acompletion` globally,
+    so it answers every tier's call, Write's included. Before 2.2 that did
+    not matter: `write_node` discarded whatever synth returned. It matters
+    now, and returning the Cypher string for the synthesis call would make
+    every test in this file assert on an answer no compliant model would
+    ever produce, then refuse.
+
+    So this reads the findings block out of the prompt it was handed and
+    writes one marked clause per finding, exactly as the Synth instruction
+    requires. It restates each finding's value verbatim, which is what
+    makes the answer groundable: the grounding pass then runs for real
+    against real findings, and a defect in it still fails these tests.
+
+    What this deliberately does NOT do is bypass grounding or fabricate a
+    pass. It is a compliant model, not a permissive gate. A test that needs
+    a NON-compliant model (an invented claim, a hallucinated marker) builds
+    that case directly in `tests/system_03_search_agent/synthesis/`, where
+    the grounding pass is exercised without a network call at all.
+    """
+    prompt = "\n".join(message.get("content", "") for message in messages)
+    clauses = [
+        f"{field.strip()} is {value.strip()} [{index}]"
+        for index, field, value in _FINDING_LINE.findall(prompt)
+    ]
+    if not clauses:
+        return "I could not find information on this."
+    return ". ".join(clauses) + "."
+
+
+def _mock_generation(monkeypatch: pytest.MonkeyPatch, cypher: str) -> AsyncMock:
+    """Force the generation step to return one exact Cypher string.
+
+    Only the model call is mocked. Everything downstream of it runs for real
+    against the graph.
+
+    The Write step's own synthesis call is answered separately, by
+    `_compliant_synth_narrative`, since it needs prose rather than Cypher;
+    see that function. The two are told apart by the Synth system
+    instruction, which only the Write call carries.
+    """
+    import litellm
+
+    from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
+
+    cypher_response = _completion_response(cypher)
+
+    async def _dispatch(*args: Any, **kwargs: Any) -> Any:
+        messages = kwargs.get("messages") or (args[1] if len(args) > 1 else [])
+        is_synth = any(
+            SYNTH_SYSTEM_INSTRUCTION in (message.get("content") or "")
+            for message in messages
+        )
+        if is_synth:
+            return _completion_response(_compliant_synth_narrative(messages))
+        return cypher_response
+
+    mock = AsyncMock(side_effect=_dispatch)
     monkeypatch.setattr(litellm, "acompletion", mock)
 
     # The harness prices every call from the OpenRouter map, and the tier
