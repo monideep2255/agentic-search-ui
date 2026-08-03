@@ -299,7 +299,9 @@ Logged to `DECISIONS.md`. Recorded here with the reasoning that belongs to the p
 - `numbers_are_supported` tightens Section 8.2. See F-2.2-02.
 - The refuse path uses the resolved entity string. See F-2.2-03.
 
-### The one reversal, called out for the product owner
+### The one reversal, confirmed by the product owner 2026-08-03
+
+Status: CONFIRMED. The product owner delegated the call to the lead's recommendation on 2026-08-03 and the 2.2 behavior stands. The judge pass was asked to assess it independently anyway, since a decision the lead recommended and the lead implemented has had no adversarial look at it, and the specific thing to check is whether the hedge and the payload marker actually survive to the wire. If they do not, the argument below does not hold and this reopens.
 
 Build phase 2.1 decided that a row whose `name` is a vocabulary artifact (`name="MeSH"` on a `Disease`, a documented MedGen ETL defect) should be cited on the artifact with `assertion_confidence` downgraded to `hedged`, on the principle that the corrupted value is shown rather than hidden.
 
