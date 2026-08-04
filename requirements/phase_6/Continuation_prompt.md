@@ -31,7 +31,7 @@ Current counts, stated once here:
 - Playwright end-to-end tests: 3
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
-- Decisions logged: 198
+- Decisions logged: 199
 - Learnings entries: 43, plus a retrospective
 
 Next is NOT a build phase. Step 6.2, the one reconciliation pause, sits between 2.2 and 3.0 and is a hard prerequisite for any Step 6.3 work. Do not open build phase 3.0 before it closes.
