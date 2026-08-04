@@ -624,6 +624,52 @@ Why the scan was already deferred repeatedly before this pause, decided by the p
 
 ### Step 6.3: build v1
 
+Everything from build phase 3.0 onward is v1. There is no separate later "v1 phase": Step 6.3 IS v1, and it spans build phases 3.0 through 7.1, twenty phases in all.
+
+#### Which numbered phases belong to which step
+
+The three Step 6.x labels and the numbered build phases are two different numbering schemes, and conflating them has caused real confusion. The mapping, stated once here:
+
+| Step | Numbered build phases | Status as of 2026-08-03 |
+|------|------------------------|--------------------------|
+| 6.1, the prototype | 1.0, 1.1, 1.2, 2.0, 2.1, 2.2 | Complete, all six merged |
+| 6.2, reconcile the documents | none, it is a documentation pause | Moved to run after the 3.x tool phases |
+| 6.3, build v1 | 3.0 through 7.1, twenty phases | Starting at 3.0 |
+
+Current sequence after the 2026-08-03 resequencing: the 3.x tool phases, then Step 6.2, then 4.0 and everything beyond.
+
+#### Order inside the 3.x block is not linear
+
+Section 25's dependency graph is the source of truth. Its shape for 3.x:
+
+- 3.0, the guardrail, depends on 2.0 only.
+- 3.1, `ncbi_efetch`, depends on 3.0.
+- 3.2, 3.3 and 3.5 each depend on 3.1 and are independent of each other, so they can run in parallel.
+- 3.4, the full citation-trust surface, depends on 2.2, 3.1, 3.2, 3.3 AND 3.5, so it is LAST in the block despite its number.
+
+Two consequences worth stating rather than rediscovering:
+
+- 3.1 is the phase that makes the system demonstrable to someone other than the product owner. See the note below.
+- Build phase 2.2's two open findings, F-2.2-T-01-residual and F-2.2-A-05, are closed at 3.4, not earlier. F-2.2-A-05 in particular needs the traversed edge label plumbed through provenance, which is Layer 2 and 3 work. They stay open through the whole 3.x block, and that is expected rather than drift.
+
+#### The demo bar is separate from Step 6.1's written goal
+
+Step 6.1's goal is "something you can see and feel end to end, one real query through the agent loop with a real answer and citations". That bar is met and the premise gate proves it.
+
+"A working prototype you can show people" is a different bar, and it is NOT met. Measured 2026-08-03: `core/graph.py`'s `_KNOWN_GENE_SYMBOL_CURIES` holds exactly one entry, `BRCA1`.
+
+| What a visitor would type | Resolves |
+|----------------------------|----------|
+| "Which diseases are associated with BRCA1?" | Yes |
+| "What diseases are linked to TP53?" | No |
+| "What genes cause breast cancer?" | No |
+| "Tell me about cystic fibrosis" | No |
+| "Which diseases are associated with NCBIGene:672?" | Yes |
+
+So a visitor can ask about one gene, or type raw NCBI CURIEs. The loop works and the product does not yet. The fix is finding F-2.1-07, gene symbol resolution beyond the seed table, which needs the Layer 2 lookup and is owned by build phase 3.1.
+
+#### The per-phase ritual
+
 Execution follows the build order from the tech spec. Each phase:
 1. Create feature branch
 2. Dispatch agent teams (builders in parallel, judge, test writer)
@@ -728,7 +774,14 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
-- 2026-08-03: Build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal) merged as PR #18, closing the Step 6.1 prototype group. Next up is Step 6.2, not a build phase.
+- 2026-08-03, later the same day: Resequenced Step 6.2 and paused the security scan. Three product-owner decisions, logged in DECISIONS.md.
+  - Step 6.2 now runs AFTER the 3.x tool phases rather than between 2.2 and 3.0. The argument is that step's own: its security-scan rationale names 3.x as the genuinely dangerous code, so scanning before 3.x scans everything except the thing the scan is most for. Reconciling the frozen documents after the tool phases is also better input than before them.
+  - Checked before moving it rather than assumed: the blocking risk was agents building against known-wrong documentation, and the two documents an agent actually reads, `.claude/rules/production-examples.md` and `docs/ncbi/Tool_implementation_mechanics.md`, are both already corrected. The one still carrying the wrong claim is the locked spec's Section 6.1, which describes a tool already built.
+  - The whole-repository security scan is PAUSED INDEFINITELY on cost, and is no longer a prerequisite for Step 6.3. The system has never been tested with a real user and the query set still needs refinement, so hardening a surface that is still moving pays twice. One condition survives and is written into both Plan.md and `tracker/BOARD.md`: exposure re-triggers it, meaning a deploy, a public URL, or first contact with a user who is not the product owner. The five hooks stay armed, `production-standards` and `ai-security-standards` still gate every line, and `pip-audit` and `ruff` remain installed and free.
+  - Recorded separately: "a working prototype you can show people" is a different bar from Step 6.1's written goal, and only the written goal was met. `_KNOWN_GENE_SYMBOL_CURIES` holds one entry, so "What diseases are linked to TP53?" resolves to nothing, as does every plain-language question. Build phase 3.1 owns the fix, finding F-2.1-07.
+  - Stale-status sweep prompted by the product owner catching one the drift checker could not: `Plan.md` still said "Step 6.1 (prototype) underway", and `CLAUDE.md`, `AGENTS.md` and `README.md` all still named Step 6.2 as next. The checker passed clean throughout, since it verifies counts and phase statuses rather than free-text claims about what comes next.
+  - Next up: build phase 3.0, the full guardrail.
+- 2026-08-03: Build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal) merged as PR #18, closing the Step 6.1 prototype group. At merge time Step 6.2 was next; that was resequenced later the same day, see the entry above.
   - What shipped: the Write step's deterministic half, Sections 8 and 9 plus the two required tests from Section 23. Before this, `write_node` made a synth-tier model call with a bare user question and discarded the response entirely, so no narrative reached any surface and `trust_outcome` was derived from whether a fetched row happened to carry a `source_url`. A citation now means a specific sentence was checked against a specific field value, rather than that a row was fetched. New `synthesis/` package: `findings.py` (8.1), `grounding.py` (8.2), `trust.py` (8.3), `refuse.py` (8.4). Contract additions to `TrustSignalPayload` are additive within v1 per Section 2.6.
   - Release gate outcome: premise gate 11 passed, 1 xfailed by design, 0 failed. Eval gate passed 12 of 12 runs, and 23 of 24 across both runs of the day. Python suite 1154 passed. Frontend 120 passed. `ruff check src/` clean. Doc drift 0 stale, 0 structural. `eval-harness` ran for the first time in this project.
   - Three independent review rounds, two of which returned a failing verdict, and each round's worst defect was in the previous round's fix. That is the pattern `LEARNINGS.md`'s build phase 2.1 retrospective predicts, now confirmed three times in one phase. What they caught, all closed and mutation-tested: a negation grounding as support for the record it denies, a framing prefix smuggling uncited fabrications including a treatment-discontinuation instruction, question-seeding licensing its own affirmation, an ASCII-only tokenizer that made every non-Latin script invisible to both new gates, and non-renderable values shipping as facts.
