@@ -13,15 +13,33 @@ A real question reaches the live graph, comes back as rows, and leaves as prose 
 
 The verify surface is `tests/system_03_search_agent/core/test_write_grounding_premise.py`, not a suite total. Build phase 2.1's whole retrospective is that a green suite proved nothing about whether the answer was right.
 
-## Phase open status: IN PROGRESS, paused 2026-08-03
+## Phase close status: closed 2026-08-03, PREMISE: PASS with two findings carried to Step 6.2
 
-Opened 2026-08-03. Paused the same day at the product owner's call after repeated network outages made the remaining gates unrunnable.
+Opened and closed 2026-08-03, in one session, after three independent review rounds.
 
-### Resume here
+What the phase delivers, stated against what was there before: `write_node` previously made a synth-tier model call with a bare user question and discarded the response entirely. No narrative reached any surface, and `trust_outcome` was derived from whether a fetched row happened to carry a `source_url`. The Write step now produces grounded, cited prose in which a citation means a specific sentence was checked against a specific field value, rather than that a row was fetched.
 
-Everything below is committed on `phase/2.2-write-step-grounding`, 6 commits, clean working tree, nothing pushed and no pull request opened.
+Gate results at close:
 
-Before doing anything else, check the network. Three outages on 2026-08-03 killed two premise-gate runs and three review agents, and every failure they produced looked like a code defect at first glance:
+| Gate | Result |
+|------|--------|
+| Premise gate | 11 passed, 1 xfailed by design, 0 failed |
+| Eval gate, the citation-synthesizer component gate | Passed, 12 of 12 runs. Across both runs of the day, 23 of 24 individual runs clean |
+| Python suite | 1154 passed, 1 xfailed |
+| Frontend | 120 passed, 15 files |
+| `ruff check src/` | Clean. `tests/` carries the same 2 pre-existing errors build phase 2.1 already recorded |
+| Review rounds | 3 independent rounds. Rounds 1 and 2 each returned a failing verdict |
+
+Two findings are deliberately OPEN and carried to the Step 6.2 reconciliation rather than fixed here. Both are the safe direction of failure, meaning the system withholds or under-classifies rather than shipping a false claim:
+
+- F-2.2-T-01-residual: a declarative injected as a comma-spliced clause inside a single wh-question still licenses its own words. Needs clause-level rather than sentence-level filtering. Pinned by a strict xfail so it fails loudly the day that lands.
+- F-2.2-A-05: the flagship gene-disease claim classifies `low` risk, because a `Disease` endpoint row is byte-identical to an identifier-lookup row at `risk_tier_for`'s boundary, and Section 8.3.1 calls the second case low risk. Deliberately not fixed by widening the tier tables, which would have broken the protected case. Guarded by four tests that catch a future naive widen.
+
+Why the phase closed with those open rather than running a fourth review round: three consecutive rounds each found their worst defect in the previous round's fix, which is exactly the pattern `LEARNINGS.md`'s build phase 2.1 retrospective predicts. The dangerous direction is closed and verified. Step 6.2 is a scheduled reconciliation pause that already sits between 2.2 and 3.0, which makes it the right place to weigh the residual against the rest of the plan rather than iterating in place. Product owner's decision, recorded in `DECISIONS.md` dated 2026-08-03.
+
+### The environmental note, kept because it cost real time twice
+
+Three network outages on 2026-08-03 killed two premise-gate runs and three review agents, and every failure they produced looked like a code defect at first glance. Before diagnosing any model-dependent failure in this repo, check the network:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v1/models
@@ -31,14 +49,7 @@ curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v
 
 How to tell an outage from a real defect, since this cost real time twice: an outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations. No query reaches synthesis at all. A genuine Write-step defect reaches synthesis and fails somewhere later.
 
-Remaining work, in order:
-
-1. Adversary pass. Run twice on 2026-08-03, killed by the network both times. The second run reported "two critical hits already" and died before delivering them, so those findings were never received and are NOT recorded anywhere. They must be re-derived, not recovered. Its highest-priority target is the open half of F-2.2-02: whether an invented entity name, or a NEGATION such as "BRCA1 does not cause MedGen:C0346153", can ground as support for the identifier it names.
-2. Judge pass. Dispatched and stopped before reporting. Its specific job beyond the standard review: verify that the two premise-gate changes made on 2026-08-03 (F-2.2-06's split and F-2.2-07's replaced assertion) were legitimate rather than a verify surface weakened to pass, since the lead both made and justified those changes.
-3. Fix whatever 1 and 2 find.
-4. A clean premise-gate run. Last valid score: 8 of 10, on the run before the assertion fixes. Two later runs are invalid, both network.
-5. `eval-harness`. Required before any answer-generation feature ships, per the AI answer grounding gate in `production-standards.md`, and never yet run in this project. This phase is its trigger.
-6. `python tracker/check_doc_drift.py --check`, then `/phase-checkpoint`, then `/ship`. The drift check currently fails on stale counts in `CLAUDE.md`, `AGENTS.md`, `requirements/Plan.md` and the Phase 6 continuation prompt: they say 977 Python tests, 190 decisions and 36 learnings, against 1009, 194 and 39 now. Deliberately left stale while the phase is open, since the numbers move with every commit.
+All of that work completed on 2026-08-03. The adversary, judge, re-review and round-3 passes all ran, `eval-harness` ran for the first time in this project, and the doc drift check was cleared at close.
 
 Stage 5, the blocking premise gate, is satisfied: the gate was written before any Write-step code and run against the unmodified 2.1 Write step, where it failed 7 of 10. Evidence recorded under "Premise gate" below.
 

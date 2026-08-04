@@ -4,7 +4,7 @@ The loop one build phase runs, who does each step, and which model runs it. This
 
 The loop repeats 26 times, once per build phase in `requirements/Technical_specification.md` section 25.
 
-Last updated: 2026-08-02.
+Last updated: 2026-08-03.
 
 ## Table of contents
 
@@ -46,7 +46,7 @@ Stage 10 names four gate skills, and they are not interchangeable items on one c
 - `release-workflow` is mandatory at every phase end per the bossman-mode rule's "Skill chain at phase end: release-workflow -> ship (mandatory, no skips)". Measured dispatch count: 0 of 5 phases. This is a real gap between what the rule requires and what has actually run, not a gate this document is dropping. Not-yet-exercised, and the gap is stated here so it stays visible.
 - `verify` is the pre-commit check (Python compile, tests, lint, git status) that `release-workflow` calls as part of its own local-verify step. Measured dispatch count: 1 of 5 phases (build phase 2.0). Runs whenever `release-workflow` runs, so its own gap tracks the release-workflow gap above.
 - `dev-standards` is the six-lens production readiness review, invoked for a full readiness check rather than on every phase automatically. Measured dispatch count: 1 of 5 phases (build phase 1.2).
-- `eval-harness` is required before shipping any answer-generation feature, per the AI answer grounding gate in `production-standards.md`. Measured dispatch count: 0 of 5 phases, which is expected rather than a gap: none of the five completed phases shipped answer generation. The trigger is build phase 2.2, deterministic cite-or-refuse, the next phase in the sequence.
+- `eval-harness` is required before shipping any answer-generation feature, per the AI answer grounding gate in `production-standards.md`. First dispatched on build phase 2.2, 2026-08-03, which is the phase that triggered it: none of the five phases before it shipped answer generation. It ran as the citation-synthesizer component gate rather than the full v1 must-pass gate, and said so explicitly, because that gate's questions span PubMed, ClinVar, GTR, MedGen, SRA, BioProject and ClinicalTrials, none of which have a tool until build phases 3.1 to 3.5. Superseded note, kept for the record: before 2026-08-03 this line read "0 of 5 phases, which is expected rather than a gap", since none of the five phases completed by then shipped answer generation.
 
 ## Stage 5, the premise gate, and why it blocks
 
