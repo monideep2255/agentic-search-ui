@@ -14,10 +14,10 @@ Kick-off: 2026-05-06. Last updated: 2026-08-03.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) underway. Build phase 1.0 (FastAPI skeleton, typed event contract) merged as PR #5. Build phase 1.1 (auth service, six-table user-data schema) merged as PR #6. Build phase 2.0 (five-node LangGraph loop, three-tier harness) merged as PR #9. Build phase 1.2 (React shell, SSE, chat UI) merged as PR #12. Build phase 2.1 (`cypher_query` over Layer 1, the first live graph access) merged as PR #15 on 2026-08-01, closed after five judge passes and five adversary passes, with the process changes it forced merged separately as PR #16. Build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal) closed 2026-08-03, completing the Step 6.1 prototype group. Next up: Step 6.2, the reconciliation pause, a hard prerequisite for any Step 6.3 work |
+| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE, all six build phases merged. Step 6.3 (build v1) underway from build phase 3.0. Build phase 1.0 (FastAPI skeleton, typed event contract) merged as PR #5. Build phase 1.1 (auth service, six-table user-data schema) merged as PR #6. Build phase 2.0 (five-node LangGraph loop, three-tier harness) merged as PR #9. Build phase 1.2 (React shell, SSE, chat UI) merged as PR #12. Build phase 2.1 (`cypher_query` over Layer 1, the first live graph access) merged as PR #15 on 2026-08-01, closed after five judge passes and five adversary passes, with the process changes it forced merged separately as PR #16. Build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal) closed 2026-08-03, completing the Step 6.1 prototype group. Next up: build phase 3.0, the full guardrail, continuing in Section 25 order. Step 6.2 moved to run after the 3.x tool phases, and its security scan is paused indefinitely on cost |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 199 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 202 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -505,7 +505,7 @@ Status: IN PROGRESS. Five build phases done and merged:
 - 1.2 (PR #12, 2026-07-28)
 - 2.1 (PR #15, 2026-08-01)
 
-Next up: Step 6.2, the reconciliation pause. Build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal) closed 2026-08-03 and completes the Step 6.1 prototype group. Step 6.2 is a hard prerequisite for any Step 6.3 work: it holds the whole-repository security scan, the spec reconciliation from `LEARNINGS.md`, and two grounding findings build phase 2.2 deliberately left open. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
+Next up: build phase 3.0, the full guardrail, continuing in Section 25 order. Build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal) closed 2026-08-03 and completes the Step 6.1 prototype group. Step 6.2 moved on 2026-08-03 to run after the 3.x tool phases, since its own reasoning names 3.x as the code its security scan most exists for, and reconciling the frozen documents after the tool phases is better input than reconciling before them. That scan is separately paused indefinitely on cost, with exposure as the one condition that turns it back on. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
 
 Goal: build System 3 using bossman-mode. Agent teams execute, I orchestrate.
 
@@ -517,7 +517,18 @@ Build a running prototype from the locked PRD and tech spec. Goal: something you
 
 ### Step 6.2: reconcile the documents
 
-Once the prototype runs, reconcile the docs with what it taught us. Five groups of work, then the security scan that gates Step 6.3.
+Position changed 2026-08-03: this step now runs AFTER the 3.x tool phases, not immediately after build phase 2.2. The build continues from 3.0 in Section 25 order and returns here once the tool roster is in.
+
+Why, and the argument is this step's own: the security-scan rationale below explains that scanning per phase would pay repeatedly for the cheap half of the surface "while the genuinely dangerous code (Cypher generation against the live graph in 2.1, LLM calls and the agent loop in 2.0, untrusted NCBI payloads reaching synthesis in 3.x) had not landed yet." That names 3.x as the dangerous code. Scanning before 3.x scans everything except the thing the scan is most for. The reconciliation half moves for the same reason: this step exists to update the frozen documents from what the prototype taught, and the tool phases teach more.
+
+Two conditions, stated rather than implied:
+
+- The whole-repository security scan runs before anything is deployed or before a real user touches the system. Its trigger is exposure, not a position in the sequence.
+- The frozen-spec findings stay logged in `tracker/phase_2.2.md` and in this step's own list, so deferral cannot quietly become forgetting.
+
+What made the move safe rather than merely convenient, checked rather than assumed: the blocking risk was agents building against known-wrong documentation, and the two documents an agent actually reads, `.claude/rules/production-examples.md` and `docs/ncbi/Tool_implementation_mechanics.md`, are both already corrected. The one document still carrying the wrong claim is the locked tech spec's Section 6.1, which describes `cypher_query`, a tool already built. Build phase 3.1 reads Section 6.2 instead.
+
+Reconcile the docs with what the build taught us. Five groups of work. The security scan that used to gate Step 6.3 is paused indefinitely, see below.
 
 #### The document reconciliation
 
@@ -585,15 +596,27 @@ The default-branch rename, `main` to `develop`, on GitHub and across the docs, a
 - The sweep covers 8 genuine branch references: `.claude/rules/git-workflow.md`, `.claude/rules/bossman-mode.md`, `.claude/rules/system-design-patterns.md`, `.claude/skills/bossman-mode/SKILL.md`, `.claude/skills/best-practices/SKILL.md`, `.claude/skills/ship/SKILL.md`, `.claude/skills/release-workflow/SKILL.md`, and `.claude/skills/phase-checkpoint/SKILL.md`. Plus `README.md`'s status table and Section 24's three lines.
 - What NOT to sweep: every other match on the word is `maintain`, `domain`, `main agent` or `main loop`, and must be left alone.
 
-#### The whole-repository security scan
+#### The whole-repository security scan: PAUSED INDEFINITELY
 
-This is the one scheduled security gate of the prototype track, and a hard prerequisite for starting Step 6.3.
+Paused 2026-08-03 by the product owner, on cost. The multi-agent scan is token-expensive and is not being funded for prototype code. It is no longer a hard prerequisite for starting Step 6.3.
 
-- Scope it to the ENTIRE repository, not a commit range. Every build phase from 1.0 through 2.2 is covered in a single pass, so there is no baseline commit to carry forward and no range anyone has to remember to widen.
-- Nothing in the build has been scanned before this point.
-- The only run in `security/` is dated 2026-07-25 and predates every line of build-phase code, so treat this as a first scan rather than an incremental one.
+The one condition that survives the pause, and the only thing that turns it back on:
 
-Why the scan waits until here rather than running per phase, decided by the product owner on 2026-07-27 and again on 2026-07-28:
+- Exposure re-triggers it. If this is ever deployed, given a public URL, or shown to a user who is not the product owner, the scan runs first. The scan's real trigger was always exposure rather than a position in the sequence, so pausing it while nothing is exposed changes the schedule and not the guarantee.
+
+What still holds while it is paused, which is why this is a deferral rather than dropping security:
+
+- The five hooks stay armed: secret scanning on Bash commands and on config writes, the deletion block, the sensitive-read block, and the context-injection scan. These are the only structural enforcement in the repo and they cost nothing.
+- `production-standards` and `ai-security-standards` still gate every line written.
+- Layer 1 access is read-only by credential rather than by instruction, so no input can mutate the graph.
+- `pip-audit` and `ruff` are already installed and free to run, and cover the dependency and static-analysis half of what the scan would have found.
+
+When it does run, whenever that is:
+
+- Scope it to the ENTIRE repository, not a commit range, so there is no baseline commit to carry forward and no range anyone has to remember to widen.
+- The only run in `security/` is dated 2026-07-25 and predates every line of build-phase code, so treat it as a first scan rather than an incremental one.
+
+Why the scan was already deferred repeatedly before this pause, decided by the product owner on 2026-07-27 and again on 2026-07-28:
 
 - The Step 6.1 prototype is deliberately throwaway. It holds no real user data and is never exposed, so a defect found in it costs a rewrite that was already planned.
 - Scanning per phase would pay repeatedly for the cheap half of the surface while the genuinely dangerous code had not landed yet: Cypher generation against the live graph in 2.1, LLM calls and the agent loop in 2.0, untrusted NCBI payloads reaching synthesis in 3.x.

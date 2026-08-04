@@ -5,9 +5,10 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 ## Table of contents
 
 - [State now](#state-now)
-- [Read before opening Step 6.2](#read-before-opening-step-62)
+- [Read before opening the next phase](#read-before-opening-the-next-phase)
 - [Build phase 2.2, done](#build-phase-22-done)
-- [What Step 6.2 delivers](#what-step-62-delivers)
+- [What build phase 3.0 delivers](#what-build-phase-30-delivers)
+- [What Step 6.2 delivers, later](#what-step-62-delivers-later)
 - [Open items](#open-items)
 - [Handover](#handover)
 
@@ -31,21 +32,23 @@ Current counts, stated once here:
 - Playwright end-to-end tests: 3
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
-- Decisions logged: 199
+- Decisions logged: 202
 - Learnings entries: 43, plus a retrospective
 
-Next is NOT a build phase. Step 6.2, the one reconciliation pause, sits between 2.2 and 3.0 and is a hard prerequisite for any Step 6.3 work. Do not open build phase 3.0 before it closes.
+Next is build phase 3.0, the full guardrail, continuing in `requirements/Technical_specification.md` Section 25 order. It depends on 2.0 only, which is merged.
+
+Step 6.2 moved on 2026-08-03. It now runs AFTER the 3.x tool phases rather than between 2.2 and 3.0, because its own written reasoning names 3.x as the code its security scan most exists for, and because reconciling the frozen documents after the tool phases is better input than reconciling before them. Its security scan is separately PAUSED INDEFINITELY on cost, with one condition that turns it back on: exposure. First contact with a real user, a deploy, or a public URL triggers it, whichever comes first.
 
 Per-phase detail lives in `tracker/phase_N.M.md`. Phase narrative lives in `requirements/Plan.md`'s Revision history. Status and open flags live in `tracker/BOARD.md`. This file points at those, it does not copy them.
 
-## Read before opening Step 6.2
+## Read before opening the next phase
 
 In this order:
 
-1. `requirements/Plan.md` Step 6.2. It is the authoritative list of what the reconciliation covers, and build phase 2.2 added six items to it.
-2. `LEARNINGS.md`, all of it rather than a filtered slice. Plan.md names it as the input to this reconciliation: the docs get updated from a captured record rather than memory.
-3. `tracker/phase_2.2.md`'s close-status section, for the two findings that phase deliberately left open.
-4. `docs/build/Build_velocity_post_mortem.md`, for the measured account of what the build process costs and which parts earn it.
+1. `requirements/Technical_specification.md` Section 10, the guardrail implementation, and Section 25 for the build order. Section 10 is what 3.0 builds.
+2. `LEARNINGS.md`, filtered to the model-generated-output entries. Build phase 3.0's deliverable includes prompt-injection rejection, which is model-adjacent, so `docs/build/Build_workflow_cadence.md` stage 5's blocking premise gate applies.
+3. `tracker/phase_2.2.md`'s close-status section, for the two findings that phase deliberately left open and for F-2.1-J4-02, the prompt-injection xfail that 3.0's definition of done is supposed to clear.
+4. `docs/build/Build_velocity_post_mortem.md`, for the measured account of what the build process costs and which parts earn it. Its first recommendation is a pre-flight network check before dispatching any gate run or review agent.
 
 ## Build phase 2.2, done
 
@@ -68,9 +71,22 @@ Rounds 1 and 2 each returned a failing verdict, and each round's worst defect wa
 
 `eval-harness` ran for the first time in this project. It ran as the citation-synthesizer component gate rather than the full v1 must-pass gate, and said so explicitly: that gate's questions span PubMed, ClinVar, GTR, MedGen, SRA, BioProject and ClinicalTrials, none of which have a tool until build phases 3.1 to 3.5.
 
-## What Step 6.2 delivers
+## What build phase 3.0 delivers
 
-From `requirements/Plan.md` Step 6.2, which is the authoritative list. Shape of it:
+Branch: `phase/3.0-guardrail-node`. Depends on 2.0, which is merged. From Section 25:
+
+> Full guardrail replacing the phase 2.0 passthrough stub: Pydantic validation, prompt-injection rejection, forbidden query types, rate and cost pre-checks.
+
+Two things carried in from earlier phases that this one is expected to close:
+
+- F-2.1-J4-02: prompt injection at the generation step, currently mitigated by delimiting the question rather than closed, and pinned by an `xfail(strict=False)`. Clearing that marker is part of 3.0's definition of done.
+- F-2.1-C15, generation half: nothing yet stops generation from producing an unbounded traversal in the first place.
+
+Stage 5 applies. Prompt-injection rejection is a judgment the guardrail makes about untrusted text, so the premise gate is written first and watched failing before any guardrail code.
+
+## What Step 6.2 delivers, later
+
+Runs after the 3.x tool phases, not next. From `requirements/Plan.md` Step 6.2, which is the authoritative list. Shape of it:
 
 - Reconcile the PRD, technical specification and strategic memo against what the prototype taught. This is the one planned spec update before those three lock at v1.
 - Reconcile the evaluation playbook, which is a living document rather than frozen.
@@ -79,7 +95,7 @@ From `requirements/Plan.md` Step 6.2, which is the authoritative list. Shape of 
 - Carry build phase 2.2's four grounding findings, including whether Section 8.2's matching rule survives contact with the spec as written.
 - Decide whether Section 23's offline gate can be claimed at all before Layers 2 and 3 exist.
 - Weigh the build-velocity post-mortem's recommendations.
-- Run the whole-repository security scan. A hard prerequisite for starting Step 6.3, and nothing in the build has ever been scanned.
+- The whole-repository security scan is PAUSED INDEFINITELY on cost, and is no longer a prerequisite for Step 6.3. Exposure is the one thing that turns it back on.
 
 ## Open items
 
