@@ -1,0 +1,478 @@
+"""Section 8.3: the deterministic trust signal.
+
+Decision E fixes the shape: a decision table over risk tier, grounded, and
+triangulated, yielding one of answer, flag, ask, or refuse. No step is
+model-judged, and every step in this module is a lookup or a comparison.
+
+Depends on:
+    - system_03_search_agent.synthesis.findings (SynthFinding)
+    - system_03_search_agent.synthesis.grounding (GroundedClaim)
+
+Reads:
+    - Nothing.
+
+Writes:
+    - Nothing.
+
+## What this phase can and cannot reach
+
+Section 8.3.2 requires two INDEPENDENT-ORIGIN sources to triangulate, and
+explicitly rules out counting a Layer 1 snapshot of a database and a Layer 2
+live fetch of the same database as two. Build phase 2.2 is the graph-only
+path: every finding has origin Layer 1, so the independent-source count is
+at most one and triangulation always returns INSUFFICIENT.
+
+That is not a stub, and the distinction matters. The rule is implemented in
+full and evaluated for real; it is the DATA that is currently single-origin.
+When build phase 3.4 extends provenance to Layers 2 and 3, concordant and
+discordant become reachable with no change to this module beyond the origin
+table below. The premise gate asserts the consequence directly: a graph-only
+answer must never come back `triangulated=True`.
+
+The practical effect on today's answers: a high-risk claim resting on the
+graph alone yields `ask`, not `answer`. Decision E's "accepting some
+over-flagging" is that trade taken on purpose.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from typing import Literal
+
+from system_03_search_agent.synthesis.findings import SynthFinding
+from system_03_search_agent.synthesis.grounding import GroundedClaim
+
+RiskTier = Literal["low", "high"]
+TriangulationResult = Literal["concordant", "discordant", "insufficient"]
+TrustOutcome = Literal["answer", "flag", "ask", "refuse"]
+
+# Section 8.3.1's high-risk rows, expressed as the field names and edge
+# predicates a Layer 1 row can actually carry. Matched case-insensitively
+# against a finding's `field`, and against the `node_or_edge_type` the
+# caller passes alongside it.
+#
+# Every entry traces to a specific Section 8.3.1 table row:
+#   clinical_significance / review_status -> the ClinVar row
+#   gene_associated_with_condition       -> the OMIM phenotype-gene row,
+#                                           which is the graph's own
+#                                           mechanistic gene-disease mapping
+#   causes / contributes_to / treats     -> the extracted-relationship row
+_HIGH_RISK_FIELD_TOKENS: frozenset[str] = frozenset(
+    {
+        "clinical_significance",
+        "clinical_significance_ordered",
+        "review_status",
+        "acmg_criteria",
+        "acmg_classification",
+        "interpretation",
+        "pathogenicity",
+        "amr_genotype",
+        "antimicrobial_resistance",
+    }
+)
+
+_HIGH_RISK_RELATIONSHIP_TOKENS: frozenset[str] = frozenset(
+    {
+        "gene_associated_with_condition",
+        "condition_associated_with_gene",
+        "causes",
+        "contributes_to",
+        "treats",
+        "associated_with",
+        "biomarker_for",
+    }
+)
+
+# Of the seven relationship tokens above, only `gene_associated_with_
+# condition` is a label `graph_schema_constants.EDGE_LABELS` actually
+# carries today. The other six are not dead code: Section 8.3.1's table
+# names them for PubTator3 and LitVar2 extracted relationships (cause,
+# associated_with, treat) and the module docstring above already records
+# that mapping. They are unreachable in build phase 2.2 because Layer 1 is
+# the only source wired up, not because they are wrong, and they need no
+# change here; they start firing the moment build phase 3.4 wires a Layer
+# 2 or Layer 3 tool that supplies one of these relationship types.
+
+
+def _canonical(token: str) -> str:
+    """Fold a field, edge, or predicate name to one comparable spelling.
+
+    Finding J-08: the tables are exact-token, so `clinicalSignificance` and
+    `clinical significance` both missed `clinical_significance` and dropped
+    a genuinely clinical claim to `low` risk, skipping triangulation
+    entirely.
+
+    Finding F-2.2-R-08: the first fix reinserted underscores at camelCase
+    boundaries (`(?<=[a-z0-9])(?=[A-Z])`), which requires a lowercase
+    character immediately before the boundary. `CLINICALSIGNIFICANCE` has
+    none, every character is uppercase, so there is no boundary for that
+    pattern to find, and neither a `.` separator nor a CURIE-style
+    namespace prefix (`biolink:...`) was collapsed at all. Verified still
+    broken: `CLINICALSIGNIFICANCE`, `clinicalsignificance`,
+    `clinical.significance`, and `biolink:gene_associated_with_condition`
+    all missed their table entry under the camelCase-only fix.
+
+    Reinserting a separator at a word boundary needs a signal that an
+    all-caps, no-separator string does not carry: there is nothing to look
+    for, since uppercase follows uppercase the whole way through, and no
+    general rule can tell "clinicalsignificance" apart from any other run
+    of letters without a dictionary. So this goes the other direction
+    instead of trying to reinsert boundaries: it removes every separator a
+    source might use (space, hyphen, dot, underscore) from both sides of a
+    comparison and compares on the bare letters alone.
+    `clinical_significance`, `clinicalSignificance`,
+    `CLINICALSIGNIFICANCE`, `clinical significance`, and
+    `clinical.significance` all collapse to the same
+    `"clinicalsignificance"`, regardless of which convention the source
+    used, with no word-segmentation guess involved anywhere.
+
+    A CURIE or BioLink-style predicate carries its namespace before a
+    colon (`biolink:gene_associated_with_condition`). The live graph's
+    `EDGE_LABELS` (`tools/graph_schema_constants.py`) are bare snake_case
+    today, so this branch is latent, not live: no caller currently passes
+    a prefixed value. It is fixed anyway because the moment a Layer 2 or
+    Layer 3 tool supplies a prefixed relationship type (build phase 3.4),
+    an unstripped prefix would silently sink a real
+    `gene_associated_with_condition` match back to `low`, the exact
+    failure this function exists to prevent, with no test in front of it
+    to catch the regression before a clinical claim shipped on it.
+
+    Still exact match, never substring, after collapsing: two names
+    compare equal only when they are the same name spelled a different
+    way, not when one merely contains the other.
+    `not_clinical_significance` collapses to
+    `"notclinicalsignificance"`, which is not `"clinicalsignificance"`, so
+    a field that happens to CONTAIN the phrase is not swept in by this
+    change; only a field that spells the same phrase under a different
+    casing or separator convention is. This is what keeps the "no new
+    false positive" property the re-review verified: collapsing widens
+    which SPELLINGS of a listed token match, never which DISTINCT names
+    match.
+    """
+    local = token.strip().rsplit(":", 1)[-1]
+    return re.sub(r"[\s\-_.]+", "", local.lower())
+
+
+# Precomputed once, at import time: the same collapse applied to the table
+# entries themselves, so a lookup is a plain frozenset membership check
+# against a value built the identical way. Recomputing this per call would
+# work too, but a module-level constant is what makes it obvious the table
+# is fixed and versioned rather than something that could drift between
+# two calls in the same process.
+_HIGH_RISK_FIELD_TOKENS_CANONICAL: frozenset[str] = frozenset(
+    _canonical(token) for token in _HIGH_RISK_FIELD_TOKENS
+)
+_HIGH_RISK_RELATIONSHIP_TOKENS_CANONICAL: frozenset[str] = frozenset(
+    _canonical(token) for token in _HIGH_RISK_RELATIONSHIP_TOKENS
+)
+
+# Section 8.3.2's equivalence buckets. A fixed, versioned lookup table:
+# categorical values are bucketed before comparison, never compared as free
+# text. Bump `EQUIVALENCE_BUCKET_VERSION` when a value moves buckets, so a
+# stored trust verdict can be traced to the table that produced it.
+EQUIVALENCE_BUCKET_VERSION = "v1"
+
+_BUCKET_BY_VALUE: dict[str, str] = {
+    "pathogenic": "pathogenic_leaning",
+    "likely pathogenic": "pathogenic_leaning",
+    "benign": "benign_leaning",
+    "likely benign": "benign_leaning",
+    "uncertain significance": "uncertain",
+    "conflicting interpretations of pathogenicity": "uncertain",
+    "no assertion criteria provided": "uncertain",
+}
+
+
+@dataclass(frozen=True)
+class ClaimTrust:
+    """One claim's trust verdict, ready to become a `trust_signal` event."""
+
+    citation_id: str
+    risk_tier: RiskTier
+    grounded: bool
+    triangulation: TriangulationResult
+    outcome: TrustOutcome
+
+    @property
+    def triangulated(self) -> bool | None:
+        """The wire-level `triangulated` field on `TrustSignalPayload`.
+
+        Three wire states, and they do NOT map one-to-one onto the three
+        triangulation results:
+
+            None   triangulation did not run (a low-risk claim, Section
+                   8.3.3's "not evaluated")
+            True   ran, and the sources concorded
+            False  ran, and did not concord
+
+        Finding J-07: an earlier docstring here called this a tri-state that
+        distinguishes "ran and disagreed" from "not evaluated". Only the
+        first half was true. `discordant` and `insufficient` BOTH map to
+        False, so this field alone cannot tell a consumer whether the
+        sources actively disagreed or whether there was only one of them.
+
+        That distinction is not lost, it just lives on a different field of
+        the same event: `outcome` is `flag` for discordant and `ask` for
+        insufficient (Section 8.3.3). A consumer needing the difference
+        reads `outcome`, which is the field Section 8.3 makes authoritative
+        anyway. The docstring is corrected rather than the contract widened,
+        because `TrustSignalPayload.triangulated` is a `bool | None` on a
+        locked v1 contract and Section 2.6 permits adding an optional field,
+        not redefining an existing one's type.
+        """
+        if self.risk_tier == "low":
+            return None
+        return self.triangulation == "concordant"
+
+
+def risk_tier_for(field: str, node_or_edge_type: str = "") -> RiskTier:
+    """Section 8.3.1: per claim, never per query.
+
+    A single answer can mix a low-stakes identifier lookup with a
+    clinical-adjacent assertion, so this takes one claim's field and the
+    row type it came from, and nothing about the query as a whole.
+
+    Defaults to `low` per the table's last row. Defaulting the other way
+    would be the safer-looking choice and the wrong one: it would mark
+    every gene-symbol lookup high risk, push the whole system to `ask`
+    through the aggregation rule below, and train a reader to ignore the
+    signal precisely when it means something.
+
+    ## F-2.2-A-05: an open gap, recorded rather than papered over
+
+    The system's flagship question, "which diseases are associated with
+    BRCA1?", returns `Disease` NODES (the `gene_associated_with_condition`
+    edge's endpoint), not the edge itself. That is exactly Section
+    8.3.1's "OMIM phenotype-gene mechanistic or causal mapping" row, and it
+    still classifies `low` here, because `node_or_edge_type` for that row
+    is `"Disease"`, which is not in `_HIGH_RISK_RELATIONSHIP_TOKENS_
+    CANONICAL` on purpose (see below).
+
+    This function's only inputs are `field` and `node_or_edge_type`, one
+    claim's finding and the row type it came from (per the docstring
+    above, and per `trust_for_claims`'s call site in `write_node`, which
+    supplies `node_or_edge_type` from `graph.py`'s
+    `_node_or_edge_type_by_citation_id`, itself built only from the row's
+    own `node_or_edge_type` field). Neither input, nor anything upstream
+    of them, carries which edge (if any) connected the query's anchor
+    entity to this row. `cypher_provenance.to_output_row` builds a
+    `CypherQueryRow` with exactly `node_or_edge_type`, `curie`, `fields`,
+    `source_url`, `graph_snapshot_version`; the traversed relationship
+    label is never captured, so it cannot reach this function no matter
+    how the row type is compared.
+
+    That gap is real and this function cannot close it by itself. A row
+    typed `Disease` is ALSO what a bare identifier lookup returns
+    (`MATCH (d:Disease {curie: $c}) RETURN d`, no relationship at all),
+    which Section 8.3.1's own table calls out as low risk ("Identifier
+    lookups... cross-reference resolution"). Per `graph_schema_constants.
+    EDGE_ENDPOINTS`, `Disease` is the endpoint of exactly two edges in
+    this graph, `gene_associated_with_condition` (as target) and
+    `has_phenotype` (as source), plus the no-edge bare-lookup case above;
+    the row carries no signal distinguishing any of the three. Widening
+    `node_or_edge_type == "disease"` to `high` unconditionally would
+    correctly catch the flagship question and incorrectly catch every
+    plain "what is MedGen:C0346153" lookup too, misclassifying a case
+    Section 8.3.1 explicitly names as low risk. That is the false
+    positive `.claude/rules/goal-contracts.md` and this ticket both warn
+    against manufacturing, not a hypothetical one: it is the identical
+    failure shape defect 1 was verified NOT to have, reintroduced through
+    a different table.
+
+    Closing this for real needs the traversed edge label (or an
+    equivalent "why was this row included" signal) carried from the
+    Cypher row through `Finding`, `SynthFinding`, and
+    `_node_or_edge_type_by_citation_id` to this call, which touches
+    `cypher_provenance.py`, `core/graph.py`, and possibly
+    `cypher_query.py`, none of which this ticket's two-file scope
+    (`synthesis/trust.py` and its test file) may edit. Until that
+    plumbing lands, a high-risk gene-disease claim reached through the
+    Disease endpoint answers with full confidence on one source rather
+    than asking, which is the module docstring's stated, deliberate
+    trade for build phase 2.2: "That is not a stub... the graph-only
+    path... yields `ask`, not `answer`" describes the edge-row path,
+    which works; the endpoint-row path is the residual case that trade
+    does not yet cover. Filed here rather than silently worked around,
+    per this ticket's instruction that an honest recorded finding beats a
+    wrong classification.
+    """
+    field_token = _canonical(field)
+    type_token = _canonical(node_or_edge_type)
+    if field_token in _HIGH_RISK_FIELD_TOKENS_CANONICAL:
+        return "high"
+    if type_token in _HIGH_RISK_RELATIONSHIP_TOKENS_CANONICAL:
+        return "high"
+    return "low"
+
+
+def bucket_for(value: str) -> str | None:
+    """Map a categorical value into its Section 8.3.2 equivalence bucket.
+
+    None when the value is not in the table. An unmapped value never
+    silently becomes its own bucket: two unmapped values would then compare
+    as concordant purely because they are both unknown.
+    """
+    return _BUCKET_BY_VALUE.get(" ".join(value.strip().lower().split()))
+
+
+def _origin_of(finding: SynthFinding) -> str:
+    """The origin DATABASE a finding came from, not the layer it came through.
+
+    Section 8.3.2's independence rule turns on origin, and layer is not
+    origin: a Layer 1 snapshot of ClinVar and a Layer 2 live ClinVar fetch
+    are one origin reached two ways. Deriving origin from the CURIE prefix
+    (or the tool, when there is no CURIE) is what keeps the two distinct
+    once Layers 2 and 3 arrive in build phase 3.4.
+    """
+    value = finding.field_value.strip()
+    if ":" in value and finding.field == "curie":
+        return value.split(":", 1)[0].lower()
+    return finding.tool.lower()
+
+
+def triangulate(
+    claim_finding: SynthFinding,
+    all_findings: list[SynthFinding],
+) -> TriangulationResult:
+    """Section 8.3.2's structural concordance check.
+
+    Only ever called for high-risk claims (Section 8.3.2's first line);
+    `decide` enforces that, not this function.
+
+    Compares categorical values across independent-origin sources. Two
+    findings count as independent only when their origin databases differ.
+    A claim with fewer than two independent origins is INSUFFICIENT, which
+    is the only branch a graph-only phase can reach. See the module
+    docstring.
+    """
+    claim_origin = _origin_of(claim_finding)
+    same_field = [
+        f
+        for f in all_findings
+        if f.field == claim_finding.field and _origin_of(f) != claim_origin
+    ]
+    independent_origins = {_origin_of(f) for f in same_field}
+    if not independent_origins:
+        return "insufficient"
+
+    buckets = {bucket_for(claim_finding.field_value)}
+    for other in same_field:
+        buckets.add(bucket_for(other.field_value))
+    if None in buckets:
+        # At least one value is outside the versioned bucket table, so the
+        # comparison cannot be made structurally. Insufficient, never a
+        # guess in either direction.
+        return "insufficient"
+    return "concordant" if len(buckets) == 1 else "discordant"
+
+
+# Section 8.3.3, transcribed as data rather than as branching code, so a
+# reader can check it against the spec table line by line. Keyed by
+# `(risk_tier, grounded, triangulation)`; triangulation is None where the
+# table says "not applicable" or "not evaluated".
+DECISION_TABLE: dict[tuple[RiskTier, bool, TriangulationResult | None], TrustOutcome] = {
+    ("low", False, None): "refuse",
+    ("low", True, None): "answer",
+    ("high", False, None): "refuse",
+    ("high", True, "concordant"): "answer",
+    ("high", True, "discordant"): "flag",
+    ("high", True, "insufficient"): "ask",
+}
+
+
+def decide(
+    citation_id: str,
+    field: str,
+    node_or_edge_type: str,
+    grounded: bool,
+    claim_finding: SynthFinding | None,
+    all_findings: list[SynthFinding],
+) -> ClaimTrust:
+    """Run Section 8.3.1 to 8.3.3 for one claim.
+
+    Grounded is the gate every other row depends on: an ungrounded claim
+    refuses regardless of risk tier, and triangulation is not even
+    evaluated for it, because there is nothing established to corroborate.
+    """
+    tier = risk_tier_for(field, node_or_edge_type)
+    if not grounded:
+        return ClaimTrust(
+            citation_id=citation_id,
+            risk_tier=tier,
+            grounded=False,
+            triangulation="insufficient",
+            outcome=DECISION_TABLE[(tier, False, None)],
+        )
+
+    if tier == "low":
+        return ClaimTrust(
+            citation_id=citation_id,
+            risk_tier="low",
+            grounded=True,
+            triangulation="insufficient",
+            outcome=DECISION_TABLE[("low", True, None)],
+        )
+
+    triangulation: TriangulationResult = (
+        triangulate(claim_finding, all_findings) if claim_finding is not None else "insufficient"
+    )
+    return ClaimTrust(
+        citation_id=citation_id,
+        risk_tier="high",
+        grounded=True,
+        triangulation=triangulation,
+        outcome=DECISION_TABLE[("high", True, triangulation)],
+    )
+
+
+# Section 8.3.4: refuse outranks ask, ask outranks flag, flag outranks
+# answer. Lower number wins.
+_SEVERITY: dict[TrustOutcome, int] = {"refuse": 0, "ask": 1, "flag": 2, "answer": 3}
+
+
+def aggregate(outcomes: list[TrustOutcome], default: TrustOutcome = "refuse") -> TrustOutcome:
+    """Section 8.3.4: the answer-level signal is the most restrictive claim.
+
+    An empty list means no claim survived grounding, which is a refusal
+    rather than an answer with nothing in it. That is why `default` is
+    `refuse` and not `answer`: defaulting the other way would make an
+    answer with zero grounded claims report as fully trustworthy, the exact
+    inversion this whole section exists to prevent.
+    """
+    if not outcomes:
+        return default
+    return min(outcomes, key=lambda outcome: _SEVERITY[outcome])
+
+
+def trust_for_claims(
+    claims: list[GroundedClaim],
+    all_findings: list[SynthFinding],
+    node_or_edge_type_by_citation_id: dict[str, str] | None = None,
+) -> list[ClaimTrust]:
+    """Compute one `ClaimTrust` per surviving claim, deduped by citation.
+
+    Deduped because Section 8.3.4 attaches a signal to a CITATION, and two
+    clauses citing the same finding share one citation. Emitting two
+    trust_signal events for one `citation_id` would give a surface two
+    verdicts to render on one chip.
+    """
+    types = node_or_edge_type_by_citation_id or {}
+    seen: set[str] = set()
+    out: list[ClaimTrust] = []
+    for claim in claims:
+        citation_id = claim.finding.citation_id
+        if citation_id in seen:
+            continue
+        seen.add(citation_id)
+        out.append(
+            decide(
+                citation_id=citation_id,
+                field=claim.finding.field,
+                node_or_edge_type=types.get(citation_id, ""),
+                grounded=True,
+                claim_finding=claim.finding,
+                all_findings=all_findings,
+            )
+        )
+    return out

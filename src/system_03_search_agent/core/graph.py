@@ -300,6 +300,7 @@ from system_03_search_agent.contracts.events import (
     TokenPayload,
     ToolCall,
     TrustOutcome,
+    TrustSignalPayload,
 )
 from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.data.session import session_scope
@@ -315,6 +316,26 @@ from system_03_search_agent.harness.harness import (
     HarnessCallError,
     QueryClass,
     budget_for_step,
+)
+from system_03_search_agent.synthesis.findings import (
+    SynthFinding,
+    build_synth_findings,
+    build_synth_messages,
+)
+from system_03_search_agent.synthesis.grounding import (
+    GroundingResult,
+    display_index_by_citation_id,
+    run_grounding_pass,
+)
+from system_03_search_agent.synthesis.refuse import (
+    REFUSE_MESSAGE,
+    build_fallback_link,
+    build_refusal_text,
+)
+from system_03_search_agent.synthesis.trust import (
+    ClaimTrust,
+    aggregate,
+    trust_for_claims,
 )
 from system_03_search_agent.tools.cypher_query import cypher_query
 from system_03_search_agent.tools.cypher_schemas import (
@@ -1583,6 +1604,220 @@ _UNCITED_OK_REFUSAL_MESSAGE = (
     "matching data."
 )
 
+# F-2.1-C07, "matched plenty, cited none". Build phase 2.1 could not tell
+# this case from the one above, because it had no grounding pass: a row
+# either carried a `source_url` and was cited, or it did not. Build phase
+# 2.2 introduces a third way to reach a refusal with `tool_outcome == "ok"`,
+# and it is the most important of the three to name precisely, because it is
+# the only one where the DATA was fine and the ANSWER was not.
+#
+# Reached when citable findings were built and handed to Synth, and not one
+# clause of what came back survived Section 8.2. The retrieval succeeded.
+# The synthesis produced nothing a reader could trace. Collapsing this into
+# either message above would tell an operator to go and look at the graph,
+# which is the one place the defect is not.
+#
+# `.claude/rules/tool-call-budgets.md`: an error message is an instruction
+# to the next agent step, not just a failure signal, so this one names the
+# stage that actually failed and what to do about it.
+_UNGROUNDED_SYNTHESIS_REFUSAL_MESSAGE = (
+    "The graph query returned citeable data, but no statement in the "
+    "generated answer could be matched to it, so the answer was withheld "
+    "rather than shown ungrounded. The retrieval succeeded; the synthesis "
+    "did not. Retrying may succeed."
+)
+
+
+def _response_text(response: Any) -> str:
+    """Pull the completion text out of whatever `_dispatch_tier_call` returned.
+
+    `call_tier` returns an `LLMResponse`, but this stays tolerant of a bare
+    string and of None on purpose: every existing Write-step test in this
+    repo patches the dispatch with a mock whose return value is whatever
+    that test needed, and a Write step that raises `AttributeError` on an
+    unexpected shape would turn a synthesis defect into a crash. An
+    unreadable response yields an empty narrative, which the grounding pass
+    then refuses, which is the honest outcome.
+    """
+    if response is None:
+        return ""
+    content = getattr(response, "content", response)
+    return content if isinstance(content, str) else ""
+
+
+def _node_or_edge_type_by_citation_id(
+    findings: list[Finding], synth_findings: list[SynthFinding]
+) -> dict[str, str]:
+    """Map each finding's `citation_id` to the graph row type behind it.
+
+    Section 8.3.1 classifies risk on the source field OR the relationship
+    type, and `SynthFinding` deliberately carries only the seven Section
+    8.1 fields, none of which is the row type. Rather than widen that
+    schema (it is the shape handed to a model, and every field in it is a
+    field the model can misread), the type is looked up here, on the
+    harness side, keyed by the `source_url`/`field`/`field_value` identity
+    the finding was built from.
+
+    Without this, `gene_associated_with_condition` edges, the graph's own
+    mechanistic gene-to-disease mapping and a Section 8.3.1 high-risk row,
+    would classify `low` and answer confidently on a single origin.
+    """
+    by_identity: dict[tuple[str, str], str] = {}
+    for finding in findings:
+        fields = finding.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        for row in fields.get("rows", []):
+            source_url = str(row.get("source_url") or "")
+            if not source_url:
+                continue
+            by_identity[(source_url, str(row.get("curie") or ""))] = str(
+                row.get("node_or_edge_type") or ""
+            )
+
+    out: dict[str, str] = {}
+    for synth_finding in synth_findings:
+        for (source_url, curie), row_type in by_identity.items():
+            if source_url != synth_finding.source_url:
+                continue
+            if synth_finding.curie_fallback and curie != synth_finding.field_value:
+                continue
+            out[synth_finding.citation_id] = row_type
+            break
+    return out
+
+
+def _citations_from_grounded_claims(
+    grounding: GroundingResult, findings: list[Finding]
+) -> list[CitationPayload]:
+    """Build one `CitationPayload` per surviving grounded claim.
+
+    This replaces build phase 2.1's `_citations_from_findings` on the live
+    path, and the difference is the whole point of this phase: 2.1 emitted
+    a citation for every row that carried a `source_url`, whether or not
+    the answer said anything about it. That is how the flagship question
+    shipped twenty-five chips over an answer to a different question, each
+    one resolving perfectly.
+
+    A citation now exists only where a claim survived Section 8.2, so a
+    chip is evidence that a specific sentence was checked against a
+    specific field value, not that a row was fetched. `claim_text` is the
+    surviving clause itself rather than a machine-built
+    `"{type} {curie}: {field}={value}"` string, which is what makes the
+    citation legible to a reader and checkable by the premise gate.
+
+    `_citations_from_findings` is deliberately left in place: it is the
+    reader for the truncation and cap accounting, and several 2.1 tests
+    assert on it directly.
+    """
+    display_slots = display_index_by_citation_id(grounding)
+    suspect_by_citation_id = {
+        claim.finding.citation_id: claim.finding.value_is_suspect
+        for claim in grounding.claims
+    }
+    claim_text_by_citation_id: dict[str, str] = {}
+    finding_by_citation_id: dict[str, SynthFinding] = {}
+    for claim in grounding.claims:
+        citation_id = claim.finding.citation_id
+        finding_by_citation_id.setdefault(citation_id, claim.finding)
+        # A finding cited by two clauses keeps the first clause as its
+        # claim_text; both clauses were independently grounded against the
+        # same field value, so either is true, and picking deterministically
+        # beats concatenating into a claim no single sentence made.
+        claim_text_by_citation_id.setdefault(citation_id, claim.claim_text)
+
+    citations: list[CitationPayload] = []
+    for citation_id, display_index in sorted(display_slots.items(), key=lambda kv: kv[1]):
+        synth_finding = finding_by_citation_id[citation_id]
+        curie = (
+            synth_finding.field_value
+            if synth_finding.curie_fallback
+            else _curie_for_citation(citation_id, findings, synth_finding)
+        )
+        prefix = curie.split(":", 1)[0] if ":" in curie else synth_finding.tool
+        citations.append(
+            CitationPayload(
+                citation_id=citation_id,
+                display_index=display_index,
+                source=(prefix or synth_finding.tool)[:128],
+                source_id=(curie or "unknown")[:128],
+                source_url=synth_finding.source_url,
+                layer=synth_finding.layer,  # type: ignore[arg-type]
+                field=synth_finding.field[:128],
+                claim_text=claim_text_by_citation_id[citation_id][:1000],
+                # Section 9.2's per-tool static defaults for a cypher_query
+                # graph property: a value copied from an NCBI-native record,
+                # which is a US federal government work.
+                evidence_kind="primary_assertion",
+                # F-2.1-B07's hedge, preserved. A row whose representative
+                # value was a vocabulary-token artifact is cited on its
+                # CURIE now rather than on the artifact, but the record
+                # itself is still known to carry a corrupted field, so the
+                # confidence downgrade still applies.
+                assertion_confidence="hedged" if suspect_by_citation_id[citation_id] else "asserted",
+                # No Layer 1 graph row carries a population or ancestry
+                # field. Section 9.2: null is a normal, honest state here,
+                # never inferred or guessed.
+                population_ancestry_context=None,
+                license="public_domain_us_gov",
+            )
+        )
+    return citations
+
+
+def _curie_for_citation(
+    citation_id: str, findings: list[Finding], synth_finding: SynthFinding
+) -> str:
+    """Recover the CURIE of the row a non-fallback finding was built from.
+
+    A finding whose citable value is a real field (a gene name, a count)
+    does not carry its own CURIE, but `source_id` on the citation must be
+    the record identifier, not the field value. Looked up by `source_url`,
+    which is derived from the CURIE and is therefore unique per record.
+    """
+    for finding in findings:
+        fields = finding.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        for row in fields.get("rows", []):
+            if str(row.get("source_url") or "") == synth_finding.source_url:
+                return str(row.get("curie") or "")
+    return ""
+
+
+# One `token` event per sentence rather than per answer. Section 6 of
+# `system-design-patterns` requires time-to-first-token under a second and
+# citation chips emitted inline as the model references sources; a single
+# token event carrying the whole answer satisfies neither. Real per-token
+# streaming out of the model call is build phase 4.0's, and this is the
+# sentence-granular step toward it that does not require restructuring the
+# harness call.
+def _narrative_chunks(
+    grounding: GroundingResult, citations: list[CitationPayload]
+) -> list[tuple[str, list[str]]]:
+    """Split the grounded narrative into `(text, marker_ids)` token chunks.
+
+    `marker_ids` carries `citation_id` values, never display numbers
+    (Section 9.4: the wire-level marker is the stable opaque key, and
+    `display_index` is only what a surface prints). A surface binds a token
+    to its citation by that key, then looks up the number.
+    """
+    if not grounding.narrative.strip():
+        return []
+    citation_id_by_display = {c.display_index: c.citation_id for c in citations}
+    chunks: list[tuple[str, list[str]]] = []
+    for sentence in re.split(r"(?<=[.;?!])\s+", grounding.narrative.strip()):
+        if not sentence.strip():
+            continue
+        marker_ids = [
+            citation_id_by_display[int(number)]
+            for number in re.findall(r"\[(\d{1,3})\]", sentence)
+            if int(number) in citation_id_by_display
+        ]
+        text = sentence if sentence.endswith(" ") else sentence + " "
+        chunks.append((text[:1000], marker_ids[:20]))
+    return chunks
+
 
 async def write_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
@@ -1620,13 +1855,30 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         return _partial_result_for_cap(sink, harness, trace_id, elapsed_ms, total_tool_calls)
 
     query_class: QueryClass = state.get("query_class", "lookup")
+
+    # Section 8.1: the findings list is code-built before the model is ever
+    # called, and it is the only thing Synth can draw a fact from. Built
+    # here, before the call, so a zero-finding query never spends a synth
+    # call at all: there is nothing it could honestly write.
+    # `max_findings` is the citation cap, deliberately, not the findings
+    # module's own larger default. A citation exists only where a claim
+    # grounded against a finding, so the number of findings handed to Synth
+    # is an upper bound on the number of citations that can be emitted, and
+    # setting the two to different values would let the citation cap be
+    # exceeded by construction. Build phase 2.1's cap is not weakened by
+    # this phase's rewrite of how citations are built.
+    synth_findings, findings_capped = build_synth_findings(
+        findings, _pick_representative_field, max_findings=_MAX_CITATIONS_PER_ANSWER
+    )
+    row_types = _node_or_edge_type_by_citation_id(findings, synth_findings)
+
     try:
-        await _dispatch_tier_call(
+        synth_text = await _dispatch_tier_call(
             harness,
             trace_id,
             "synth",
             "write",
-            [{"role": "user", "content": query.text}],
+            build_synth_messages(query.text, synth_findings),
             budget_s=budget_for_step("write", query_class),
         )
     except cost_control.QueryCapExceededError:
@@ -1647,26 +1899,38 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         )
         return sink.result()
 
-    # A5/F-02 fix: the terminal trust_outcome now reflects what Act
-    # actually found, never a fabricated "answer" over an empty or
-    # errored tool result (production-standards.md's cite-or-refuse
-    # gate). Real citation-grounded narrative synthesis (a token-by-token
-    # written answer) is still phase 2.2's job; what this phase can
-    # honestly do now is refuse to say "answer" when nothing was found,
-    # and emit a real citation for every row that earned one.
+    # A5/F-02 (build phase 2.1) established that the terminal
+    # trust_outcome must reflect what Act actually found. Build phase 2.2
+    # replaces the row-count proxy that stood in for grounding with the
+    # real thing: Section 8.2 runs over the narrative Synth just wrote,
+    # and the outcome comes from Section 8.3's decision table over what
+    # survived, not from whether any row happened to carry a source_url.
     tool_outcome = _tool_execution_outcome(findings)
-    citations, citations_capped = (
-        _citations_from_findings(findings) if tool_outcome == "ok" else ([], False)
+
+    grounding = run_grounding_pass(
+        _response_text(synth_text),
+        synth_findings,
+        core_ask_required=True,
+        question=query.text,
     )
-    trust_outcome: TrustOutcome
-    if tool_outcome == "no_tool" or (tool_outcome == "ok" and citations):
-        trust_outcome = "answer"
+
+    if tool_outcome == "no_tool":
+        # No tool was selected at all, so there is nothing to ground
+        # against and nothing to refuse about. Preserved from 2.1
+        # unchanged; build phase 3.0's Guardrail owns the queries that
+        # legitimately reach Write with no tool call.
+        citations = []
+        claim_trusts: list[ClaimTrust] = []
+        trust_outcome: TrustOutcome = "answer"
     else:
-        # "empty" (zero rows), "error" (the tool call broke), or "ok"
-        # with rows that carried no citeable source_url: none of these
-        # earned a confident answer, so this refuses rather than
-        # answering with nothing behind it.
-        trust_outcome = "refuse"
+        claim_trusts = trust_for_claims(grounding.claims, synth_findings, row_types)
+        citations = _citations_from_grounded_claims(grounding, findings)
+        trust_outcome = aggregate([trust.outcome for trust in claim_trusts])
+
+    # `citations_capped` keeps its 2.1 meaning: the user is being shown
+    # fewer facts than exist. Its two sources are now the findings cap
+    # (more citable rows than one prompt may carry) and the citation cap.
+    citations_capped = findings_capped or len(citations) >= _MAX_CITATIONS_PER_ANSWER
 
     # F-2.1-10/F-2.1-11/F-2.1-C12 fix: a result the user is shown only part
     # of must never look identical to one they are shown in full.
@@ -1689,14 +1953,30 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     #     graph genuinely returning no matching data (F-2.1-11's exact
     #     failure mode: both cases used to reach an identical, silent
     #     "refuse").
+    #
+    # Build phase 2.2 changes one thing here: the note is no longer emitted
+    # at this point in the function. There is a real narrative now, and a
+    # "showing 20 of 15,310" note that arrives BEFORE the prose it
+    # qualifies reads as a header rather than as a caveat on what follows.
+    # It is held in `truncation_note` and emitted after the narrative
+    # chunks below. The two `error` branches are unchanged and stay here:
+    # they fire on refusals, where there is no narrative to sequence
+    # against.
+    #
+    # The `answer` test also widens to "anything that is not a refusal".
+    # Section 8.3.3 added `flag` and `ask` to the reachable outcomes this
+    # phase, and a flagged or ask-tiered answer is still an answer the user
+    # is being shown part of; leaving the test at `== "answer"` would have
+    # silently dropped the note on exactly the higher-stakes answers that
+    # most need it.
     truncated_ok_finding = tool_outcome == "ok" and (
         _ok_finding_was_truncated(findings) or citations_capped
     )
-    if truncated_ok_finding and trust_outcome == "answer":
-        note = _build_truncated_answer_note(
+    truncation_note: str | None = None
+    if truncated_ok_finding and trust_outcome != "refuse":
+        truncation_note = _build_truncated_answer_note(
             shown=len(citations), total_available=_known_total_available(findings)
         )
-        sink.emit("token", TokenPayload(text=note, marker_ids=[]))
     elif truncated_ok_finding and trust_outcome == "refuse":
         sink.emit(
             "error",
@@ -1710,24 +1990,109 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             ),
         )
     elif tool_outcome == "ok" and trust_outcome == "refuse":
-        # F-2.1-J4-06: a status="ok" tool result that still refuses for a
-        # reason other than truncation (every matching row lacked a
-        # citeable source_url) must not look identical to a genuinely
-        # empty tool result either. See _UNCITED_OK_REFUSAL_MESSAGE.
+        # F-2.1-J4-06: a status="ok" tool result that still refuses must
+        # not look identical to a genuinely empty tool result. F-2.1-C07
+        # splits this branch in two, because build phase 2.2 makes the two
+        # causes genuinely different things an operator would act on
+        # differently. `synth_findings` is the discriminator, and it is the
+        # right one: it is non-empty exactly when at least one row was
+        # citeable, so an empty list means the rows were uncitable and a
+        # non-empty list means the rows were fine and the answer was not.
+        ungrounded_synthesis = bool(synth_findings)
         sink.emit(
             "error",
             ErrorPayload(
                 fatal=False,
-                scope="tool",
-                source="cypher_query",
+                scope="step" if ungrounded_synthesis else "tool",
+                source="write" if ungrounded_synthesis else "cypher_query",
                 error_class="recoverable",
-                message=_UNCITED_OK_REFUSAL_MESSAGE,
+                message=(
+                    _UNGROUNDED_SYNTHESIS_REFUSAL_MESSAGE
+                    if ungrounded_synthesis
+                    else _UNCITED_OK_REFUSAL_MESSAGE
+                ),
                 retry_after_s=0,
             ),
         )
 
-    for citation in citations:
-        sink.emit("citation", citation)
+    # Section 8: the answer itself. Order matters to a consuming surface
+    # and is fixed here: the narrative first (so a reader sees prose as
+    # soon as it exists), then the citations the markers in it resolve
+    # against, then the per-claim trust verdicts joined to those
+    # citations by `citation_id`, then the answer-level verdict.
+    if trust_outcome == "refuse":
+        # Section 8.4. A refusal is a content-safety outcome, not a
+        # failure, and it always carries somewhere to go next.
+        #
+        # Step 2 offers two sources for `query_term`, the raw query text or
+        # the resolved entity string, and the choice is not cosmetic. The
+        # raw text is echoed back to the user inside a link, so a question
+        # carrying an injected instruction gets that instruction
+        # percent-encoded into a URL the UI renders. The premise gate
+        # caught exactly that: a refusal whose fallback link contained
+        # "...causes%20Marfan%20syndrome...". Nothing is executed and
+        # nothing is asserted, but reflecting attacker-supplied text into a
+        # user-visible link is a gap worth not having, and the resolved
+        # entity is the better search term anyway.
+        #
+        # Falls back to the raw text only when nothing resolved, since a
+        # link built from an empty term is a link to nothing.
+        resolved = _extract_target_entities(query.text)
+        query_term = " ".join(resolved) if resolved else query.text
+        fallback_link = build_fallback_link(query_term)
+        sink.emit(
+            "token",
+            TokenPayload(text=build_refusal_text(query_term)[:1000], marker_ids=[]),
+        )
+        sink.emit(
+            "trust_signal",
+            TrustSignalPayload(
+                outcome="refuse",
+                risk_tier="low",
+                grounded=False,
+                triangulated=None,
+                scope="answer",
+                message=REFUSE_MESSAGE,
+                fallback_link=fallback_link,
+            ),
+        )
+    else:
+        for chunk, marker_ids in _narrative_chunks(grounding, citations):
+            sink.emit("token", TokenPayload(text=chunk, marker_ids=marker_ids))
+
+        if truncation_note is not None:
+            sink.emit("token", TokenPayload(text=truncation_note, marker_ids=[]))
+
+        for citation in citations:
+            sink.emit("citation", citation)
+
+        for trust in claim_trusts:
+            sink.emit(
+                "trust_signal",
+                TrustSignalPayload(
+                    outcome=trust.outcome,
+                    risk_tier=trust.risk_tier,
+                    grounded=trust.grounded,
+                    triangulated=trust.triangulated,
+                    citation_id=trust.citation_id,
+                    scope="claim",
+                ),
+            )
+        if claim_trusts:
+            sink.emit(
+                "trust_signal",
+                TrustSignalPayload(
+                    outcome=trust_outcome,
+                    risk_tier=(
+                        "high"
+                        if any(t.risk_tier == "high" for t in claim_trusts)
+                        else "low"
+                    ),
+                    grounded=True,
+                    triangulated=None,
+                    scope="answer",
+                ),
+            )
 
     sink.emit("cost", cost_control.build_cost_event_payload(harness, trace_id, "synth"))
     sink.emit(

@@ -23,6 +23,7 @@ a query against it.
 
 from __future__ import annotations
 
+import re
 import time
 import uuid
 from datetime import UTC, datetime
@@ -95,9 +96,68 @@ def _no_op_daily_caps(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cost_control, "check_system_daily_cost_cap", _system_check)
 
 
+# Matches a rendered findings line without assuming its internal shape.
+# An earlier version parsed "field: value" and broke silently the moment
+# `render_findings_block` started naming the record type, because a
+# non-matching line yields no clause, which yields a refusal, which fails
+# every test here for a reason none of them are about. Echoing the whole
+# body is both simpler and robust to how the block is worded.
+_FINDING_LINE = re.compile(r"^\[(\d+)\]\s+(.+)$", re.MULTILINE)
+
+
+def _compliant_synth_narrative(messages: list[dict[str, str]]) -> str:
+    """Stand in for a Synth model that follows its instructions.
+
+    Build phase 2.2 note. Before this phase `write_node` discarded whatever
+    the synth call returned, so a fixed `"ok"` for every tier was harmless.
+    It is not harmless now: `"ok"` carries no citation marker, so Section
+    8.2 strips it, step 7 refuses the whole answer, and every test in this
+    file that asserts on a citation or a truncation note fails for a reason
+    that has nothing to do with what it is testing.
+
+    This reads the findings block out of the prompt and writes one marked
+    clause per finding, restating each value verbatim, which is exactly what
+    the Synth instruction asks a real model for. The grounding pass then
+    runs for real: a defect in it still fails these tests, because the
+    narrative is checked against the findings rather than waved through.
+
+    The non-compliant cases (an invented claim, a hallucinated marker, an
+    unmarked factual sentence) are covered without any model at all in
+    `tests/system_03_search_agent/synthesis/test_required_paths.py`. This
+    fixture models a good model; that file models a bad one.
+    """
+    prompt = "\n".join(message.get("content", "") for message in messages)
+    clauses = [
+        f"{body.strip()} [{index}]" for index, body in _FINDING_LINE.findall(prompt)
+    ]
+    if not clauses:
+        return "ok"
+    return ". ".join(clauses) + "."
+
+
 @pytest.fixture(autouse=True)
 def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
-    mock_acompletion = AsyncMock(return_value=_fake_response())
+    from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
+
+    # `side_effect` takes precedence over `return_value` on a Mock, so a
+    # naive side_effect here would silently disable the
+    # `monkeypatch.setattr(_mock_litellm, "return_value", ...)` override
+    # that many tests in this file use to feed the plan tier a specific
+    # Cypher string. The dispatcher reads `return_value` back off the mock
+    # instead, so that override keeps working exactly as before and only
+    # the synth call is answered separately.
+    async def _dispatch(*args: object, **kwargs: object):
+        messages = kwargs.get("messages") or []
+        is_synth = any(
+            SYNTH_SYSTEM_INSTRUCTION in (message.get("content") or "")
+            for message in messages  # type: ignore[union-attr]
+        )
+        if is_synth:
+            return _fake_response(_compliant_synth_narrative(messages))  # type: ignore[arg-type]
+        return mock_acompletion.return_value
+
+    mock_acompletion = AsyncMock(side_effect=_dispatch)
+    mock_acompletion.return_value = _fake_response()
     monkeypatch.setattr(harness_module.litellm, "acompletion", mock_acompletion)
     monkeypatch.setattr(
         harness_module.litellm,
@@ -931,11 +991,15 @@ async def test_article_rows_keep_their_record_but_never_their_raw_title(
         "F-2.1-J4-06: the Article row must earn its own citation, not vanish"
     )
     citations_by_source_id = {c.payload["source_id"]: c.payload for c in citation_events}
-    assert citations_by_source_id["NCBIGene:672"]["claim_text"] == (
-        "Gene NCBIGene:672: name=BRCA1 DNA repair associated"
+    # Build phase 2.2: `claim_text` is the grounded clause the answer
+    # actually made, not the machine-built "{type} {curie}: {field}={value}"
+    # string 2.1 emitted. The value still has to be in it, since a clause
+    # only survives Section 8.2 by matching the field value it cites.
+    assert "BRCA1 DNA repair associated" in (
+        citations_by_source_id["NCBIGene:672"]["claim_text"]
     )
     article_citation = citations_by_source_id["PMID:1"]
-    assert article_citation["claim_text"] == "Article PMID:1", (
+    assert "PMID:1" in article_citation["claim_text"], (
         "the Article citation must fall back to its bare identity, never the raw title"
     )
     assert _HOSTILE_ARTICLE_TITLE not in article_citation["claim_text"]
@@ -1017,7 +1081,10 @@ async def test_an_article_only_result_answers_with_a_citation_not_a_silent_refus
     citation_events = [event for event in events if event.type == "citation"]
     assert len(citation_events) == 1
     assert citation_events[0].payload["source_id"] == "PMID:2"
-    assert citation_events[0].payload["claim_text"] == "Article PMID:2"
+    # Build phase 2.2: the grounded clause, not the 2.1 machine string. The
+    # assertion that matters here is unchanged and sits below: the hostile
+    # title must not appear anywhere in any event.
+    assert "PMID:2" in citation_events[0].payload["claim_text"]
     for event in events:
         assert _HOSTILE_ARTICLE_TITLE not in str(event.payload)
 
@@ -1151,8 +1218,36 @@ async def test_a_vocabulary_token_name_downgrades_confidence_instead_of_assertin
     assert citation["assertion_confidence"] == "hedged", (
         "a citation built from a vocabulary-token value must be downgraded, never asserted"
     )
-    assert citation["claim_text"] == "Disease MedGen:C0346153: name=MeSH", (
-        "the corrupted value is still shown, never hidden or invented"
+    # Build phase 2.2 changes what a corrupted row is cited ON, and the
+    # reason is worth stating because it reverses a build phase 2.1
+    # decision this test previously pinned.
+    #
+    # 2.1 cited the artifact itself ("name=MeSH") and hedged the
+    # confidence, on the principle that the corrupted value should be shown
+    # rather than hidden. That is right for an operator and wrong for a
+    # reader: "MeSH" is not this disease's name, so showing it as the claim
+    # shows a false statement with a caveat attached. It is also
+    # unreachable now, because a claim citing "MeSH" would have to SAY
+    # "MeSH" to survive the grounding pass.
+    #
+    # 2.2 cites the row's CURIE instead, which is the strongest true
+    # statement the row supports and resolves to a real record. Nothing is
+    # hidden: the hedge above is unchanged, and the artifact is still
+    # reported verbatim on the finding payload, asserted below. See
+    # `synthesis/findings.py`'s module docstring.
+    assert "MedGen:C0346153" in citation["claim_text"], (
+        "a corrupted row must still be cited on something true, never dropped"
+    )
+    assert "MeSH" not in citation["claim_text"], (
+        "the vocabulary artifact must never be stated as the disease's name"
+    )
+    payload_rows = findings[0].structured_fields["rows"]
+    assert payload_rows[0]["vocabulary_artifact_fields"] == ["name"], (
+        "F-2.1-A5-02: the corrupted field is still surfaced on the payload, "
+        "so nothing about the row's real state is hidden from an operator"
+    )
+    assert payload_rows[0]["fields"]["name"] == "MeSH", (
+        "the raw value is preserved verbatim, never rewritten or invented"
     )
 
 
@@ -1430,10 +1525,18 @@ async def test_flagship_disease_row_hedges_its_citation_and_flags_its_payload_fi
     assert citation["assertion_confidence"] == "hedged", (
         "F-2.1-A5-06: the empty xrefs field must never ground a full-confidence citation"
     )
-    assert citation["claim_text"] == "Disease MedGen:C0346153: name=MeSH", (
-        "F-2.1-A5-06: the representative field must be the first-preference non-blank "
-        "candidate (name), never the empty xrefs field"
+    # F-2.1-A5-06's real requirement is that an EMPTY field never outranks a
+    # suspect-but-present one and never grounds a citation. That is what is
+    # asserted here. The 2.2 change is only which true value a suspect row
+    # ends up cited on (its CURIE rather than the artifact); see the
+    # sibling vocabulary-token test above for the full reasoning.
+    assert "MedGen:C0346153" in citation["claim_text"], (
+        "F-2.1-A5-06: an empty xrefs field must never become the citation's claim"
     )
+    assert citation["field"] != "xrefs", (
+        "F-2.1-A5-06: the empty xrefs field must never be the representative field"
+    )
+    assert "MeSH" not in citation["claim_text"]
 
 
 # ---------------------------------------------------------------------------
