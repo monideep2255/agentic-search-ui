@@ -96,11 +96,15 @@ _STORE_OBJECTS: Final[tuple[str, ...]] = (
     "field", "fields", "status", "value",
 )
 
-_WRITE_VERB_PATTERN: Final = re.compile(
-    r" (" + "|".join(_WRITE_VERBS) + r") "
+# Token sets rather than patterns, since proximity is measured in words and
+# needs positions. Multi-word entries are dropped here deliberately: "knowledge
+# graph" contributes nothing that the single token "graph" does not already
+# carry.
+_WRITE_VERB_SET: Final[frozenset[str]] = frozenset(
+    verb for verb in _WRITE_VERBS if " " not in verb
 )
-_STORE_OBJECT_PATTERN: Final = re.compile(
-    r" (" + "|".join(_STORE_OBJECTS) + r") "
+_STORE_OBJECT_SET: Final[frozenset[str]] = frozenset(
+    obj for obj in _STORE_OBJECTS if " " not in obj
 )
 
 _WRITE_REFUSAL_REASON: Final = (
@@ -110,17 +114,43 @@ _WRITE_REFUSAL_REASON: Final = (
 )
 
 
+# How many words may sit between the write verb and the data-store object.
+#
+# Finding ADV-04: requiring both factors ANYWHERE in the query refuses
+# ordinary compound sentences. "Please update your citation format, and also
+# tell me about disease records associated with BRCA1" carries `update` in one
+# clause and `records` in another, twelve words apart, and was refused as an
+# attempt to write to the graph.
+#
+# A real write request binds the verb to its object: "add a node", "update the
+# BRCA1 record", "delete these rows". Four words covers an article, an
+# adjective, and an identifier ("update the BRCA1 record") without spanning a
+# clause boundary.
+_MAX_VERB_OBJECT_DISTANCE = 4
+
+
 def seeks_write(text: str) -> bool:
     """Whether the query asks to change stored data.
 
-    Two factors required. See the module docstring for why one is not enough,
-    and `tracker/phase_3.0.md`'s premise-gate notes for the specific question
-    a one-factor rule refuses.
+    Two factors required, and they must be NEAR each other. See the module
+    docstring for why one factor is not enough, and `_MAX_VERB_OBJECT_DISTANCE`
+    for why proximity is needed on top of it.
     """
-    normalized = normalize(text)
-    return bool(
-        _WRITE_VERB_PATTERN.search(normalized)
-        and _STORE_OBJECT_PATTERN.search(normalized)
+    tokens = normalize(text).split()
+    verb_positions = [
+        index for index, token in enumerate(tokens) if token in _WRITE_VERB_SET
+    ]
+    if not verb_positions:
+        return False
+    object_positions = [
+        index for index, token in enumerate(tokens) if token in _STORE_OBJECT_SET
+    ]
+    if not object_positions:
+        return False
+    return any(
+        abs(verb_index - object_index) <= _MAX_VERB_OBJECT_DISTANCE
+        for verb_index in verb_positions
+        for object_index in object_positions
     )
 
 
@@ -141,6 +171,49 @@ _VERDICT_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r" (call|report) (this|it) as (pathogenic|benign|likely) "),
     re.compile(r" clinical (decision|recommendation) for "),
     re.compile(r" what would you (do|recommend|advise) if (i|my) "),
+    # ADV-01, critical. Advice about a THIRD PARTY.
+    #
+    # `prefilter._ADVICE_PATTERNS` keys on first-person framing ("should i",
+    # "my doctor"), this module's other patterns keyed on narrow literals, and
+    # the Guard-tier classifier only ever judges injection. So nothing in the
+    # entire guardrail covered "about a named third party rather than the
+    # asker", and all four of these sailed through every layer:
+    #
+    #     "Should this patient be started on tamoxifen given her BRCA1 status?"
+    #     "The patient has a confirmed BRCA1 mutation. What treatment would be
+    #      most appropriate for her?"
+    #     "For a person who has just tested positive for a BRCA1 mutation,
+    #      what should be done next?"
+    #     "Is it recommended that treatment be started immediately for someone
+    #      with this BRCA1 variant?"
+    #
+    # None is obfuscated. They are how a clinician or a medical student asks
+    # the exact question Section 10.5 exists to forbid, and the only thing
+    # separating them from the cases already handled is the word "I".
+    #
+    # This is the composition shape build phase 2.1's retrospective describes:
+    # three layers each individually reasonable, jointly a complete bypass,
+    # because the gap sat between them and no layer owned it.
+    re.compile(
+        r" should (this|the|that|a|another) "
+        r"(patient|person|individual|woman|man|child|carrier|case) "
+    ),
+    re.compile(
+        r" should (\w+ ){0,3}be "
+        r"(started|treated|screened|tested|referred|offered|prescribed|"
+        r"given|managed|monitored) "
+    ),
+    re.compile(
+        r" what (treatment|therapy|management|intervention|course) "
+        r"(would|should|is) "
+    ),
+    re.compile(r" what should be done "),
+    re.compile(r" (is|would) it (be )?recommended (that|to|for) "),
+    re.compile(
+        r" (most|more) appropriate "
+        r"(treatment|therapy|management|intervention|next step)"
+    ),
+    re.compile(r" (his|her|their|the patient s) (treatment|management|care) "),
 )
 
 _VERDICT_REFUSAL_REASON: Final = (

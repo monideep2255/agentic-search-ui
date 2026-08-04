@@ -123,7 +123,7 @@ def test_every_verdict_pattern_is_covered_by_a_test_case() -> None:
     added here, this assertion catches the drift instead of the coverage
     quietly shrinking.
     """
-    assert len(_VERDICT_PATTERNS) == 8, (
+    assert len(_VERDICT_PATTERNS) == 15, (
         "the number of verdict patterns changed; update the parametrized "
         "cases in this file to match, one text per pattern"
     )
@@ -140,6 +140,18 @@ def test_every_verdict_pattern_is_covered_by_a_test_case() -> None:
         ("Please call this as pathogenic based on the evidence", 5),
         ("clinical decision for this case", 6),
         ("what would you recommend if my child has this", 7),
+        # Patterns 8 to 14 close finding ADV-01: advice about a THIRD PARTY.
+        # Every one of these bypassed the entire guardrail before they
+        # existed, because the pre-filter keys on first-person framing and the
+        # classifier only judges injection. None of them is obfuscated; they
+        # are how a clinician asks the question Section 10.5 forbids.
+        ("Should this patient be started on tamoxifen given her status", 8),
+        ("Should treatment be started immediately for this carrier", 9),
+        ("What treatment would be most suitable in this case", 10),
+        ("Given the result, what should be done next", 11),
+        ("Is it recommended that screening begin at forty", 12),
+        ("What is the most appropriate treatment here", 13),
+        ("What does her treatment plan look like given this result", 14),
     ],
 )
 def test_seeks_verdict_matches_each_pattern(text: str, pattern_index: int) -> None:
