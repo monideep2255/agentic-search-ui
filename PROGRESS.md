@@ -21,6 +21,26 @@ A search tool for biomedical researchers. You ask a question in ordinary English
 
 It searches three kinds of source. A large database we built in advance and hold ourselves, which is fast. Live government APIs at the US National Center for Biotechnology Information, which are always current. And a set of extra enrichment services that add context. The system decides which of the three to use for each question.
 
+Here is the whole thing as a picture. Every question takes this path, and the parts in the middle are what the sprints below have been building one at a time.
+
+```mermaid
+flowchart LR
+    Q[Your question] --> G{Allowed in?}
+    G -->|no| R[Refused, with a reason]
+    G -->|yes| U[Work out what is asked]
+    U --> P[Decide where to look]
+    P --> F[Fetch the records]
+    F --> S1[(Our own database)]
+    F --> S2[(Live NCBI records)]
+    F --> S3[(Extra context services)]
+    S1 --> W[Write the answer]
+    S2 --> W
+    S3 --> W
+    W --> A[Answer, one link per fact]
+```
+
+The two ends are the ones worth noticing. On the left, a question can be turned away before anything is spent on it. On the right, nothing reaches you without a link attached, and if there is no link to attach, you get told so instead of being told something invented.
+
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
@@ -65,6 +85,28 @@ Sprint 2.1, the expensive lesson. We asked "which diseases are associated with B
 Sprint 3.0, the gatekeeper, and why it has two halves. A gatekeeper that refuses everything is perfectly secure and completely useless. So the tests check both directions: that bad questions get turned away, and just as importantly that good questions get through. That second half caught a real problem. An early version refused the single most important question in the whole product, "which diseases are associated with BRCA1?", because our list of biomedical words contained "disease" and the question said "diseases". One letter. No security test would ever have found that.
 
 ## What is next
+
+Where the finished work sits against what is still ahead:
+
+```mermaid
+flowchart LR
+    subgraph Built["Built, reviewed, merged"]
+        direction LR
+        A[Service skeleton] --> B[Sign in]
+        B --> C[The thinking loop]
+        C --> D[The web page]
+        D --> E[Our database, connected]
+        E --> F[Every fact cited]
+        F --> G[The gatekeeper]
+    end
+    G --> H[Gene name lookup]
+    H --> I[Database safety fix]
+    I --> J[Five more data tools]
+    J --> K[Update the written specs]
+    K --> L[Everything else]
+```
+
+The single box that matters right now is "gene name lookup". Everything to its left is done. Nothing to its right can be shown to anyone until it is finished, because until then the system only recognises one gene by name.
 
 In order:
 
