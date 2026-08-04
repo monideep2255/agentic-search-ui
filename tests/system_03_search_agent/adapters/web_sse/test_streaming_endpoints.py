@@ -104,14 +104,11 @@ def _harness_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
-    mock_acompletion = AsyncMock(return_value=_fake_response())
-    monkeypatch.setattr(harness_module.litellm, "acompletion", mock_acompletion)
-    monkeypatch.setattr(
-        harness_module.litellm,
-        "get_model_info",
-        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
-    )
-    return mock_acompletion
+    # T-3.0-06: dispatches per tier. See `tests/system_03_search_agent/
+    # model_stub.py`.
+    from tests.system_03_search_agent.model_stub import install_dispatching_acompletion
+
+    return install_dispatching_acompletion(monkeypatch, harness_module)
 
 
 @pytest.fixture(autouse=True)

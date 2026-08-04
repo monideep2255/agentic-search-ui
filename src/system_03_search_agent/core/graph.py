@@ -304,6 +304,8 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.data.session import session_scope
+from system_03_search_agent.guardrail import classifier, forbidden, prefilter
+from system_03_search_agent.guardrail.verdict import GuardVerdict
 from system_03_search_agent.harness import cost_control
 from system_03_search_agent.harness.cache import build_stable_prefix
 from system_03_search_agent.harness.coordinator_worker import (
@@ -553,13 +555,34 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
             source = "cost_control.check_system_daily_cost_cap"
             return _decline_for_daily_cap(state, sink, source, str(exc))
 
+    # T-3.0-06. Section 10.1's remaining steps, each gating the next.
+    #
+    # The two daily caps above are Section 10.1's step 5 and run FIRST here,
+    # not fifth. Recorded as finding F-3.0-02 rather than silently kept: the
+    # existing order is strictly cheaper, since a capped user costs zero model
+    # calls where the spec's order pays for a classification before finding
+    # out the query cannot run at all. Reordering to match the spec would
+    # spend money to be less correct.
+
+    # Step 1, Section 10.2. No model call, so a confident match is free.
+    # Returns None meaning UNDECIDED, never meaning admitted.
+    prefilter_verdict = prefilter.screen(query.text)
+    if prefilter_verdict is not None:
+        return _decline_for_guardrail(state, sink, prefilter_verdict, charged=False)
+
+    # Step 3, Section 10.4. The first and only model call this node makes.
+    # Dispatched through `_dispatch_tier_call` rather than calling the
+    # classifier's own helper, so this call gets the per-query cap pre-flight,
+    # the step timeout, and `cache_prefix=_STABLE_PREFIX` like every other
+    # model call in the loop. `guardrail/classifier.py` deliberately exposes
+    # no wrapper that would let a caller skip this.
     try:
-        await _dispatch_tier_call(
+        response = await _dispatch_tier_call(
             harness,
             trace_id,
             "guard",
             "guardrail",
-            _stub_probe_messages(query.text),
+            classifier.build_messages(query.text),
             budget_s=budget_for_step("guardrail", "lookup"),
         )
     except cost_control.QueryCapExceededError:
@@ -567,13 +590,86 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
     except HarnessCallError as exc:
         return {"step_error": _step_error_kwargs("guardrail", exc)}
 
-    # Stub only: real guardrail validation (prompt-injection detection,
-    # off-topic/medical-advice classification, rate limiting) is phase
-    # 3.0's job. `passed=True, category="ok"` is the one schema-valid,
-    # non-fabricated stub outcome available before that logic exists.
+    try:
+        classifier_verdict = classifier.verdict_for(
+            classifier.parse_classification(response.content)
+        )
+    except classifier.ClassificationUnavailableError as exc:
+        # The model answered, and the answer was unusable. Deliberately a
+        # step error rather than a refusal: the classifier reached no verdict
+        # about this query, so reporting one would tell the user something
+        # false. What matters for safety is that this path does not admit,
+        # and it does not.
+        return {
+            "step_error": {
+                "source": "guardrail",
+                "error_class": "recoverable",
+                "message": str(exc)[:256],
+                "retry_after_s": 0,
+            }
+        }
+
+    if not classifier_verdict.admitted:
+        return _decline_for_guardrail(state, sink, classifier_verdict, charged=True)
+
+    # Step 4, Section 10.5. Runs after classification clears, per 10.1.
+    forbidden_verdict = forbidden.screen(query.text)
+    if forbidden_verdict is not None:
+        return _decline_for_guardrail(state, sink, forbidden_verdict, charged=True)
+
+    # Step 6. Nothing tripped.
     sink.emit("guard", GuardPayload(passed=True, category="ok", reason=None))
     sink.emit("cost", cost_control.build_cost_event_payload(harness, trace_id, "guard"))
     return sink.result()
+
+
+def _decline_for_guardrail(
+    state: GraphState,
+    sink: _EventSink,
+    verdict: GuardVerdict,
+    *,
+    charged: bool,
+) -> dict[str, Any]:
+    """Section 10.1's refusal path: emit the `guard` verdict, then stop.
+
+    Distinct from `_decline_for_daily_cap`, which emits an `error` event. A
+    guardrail refusal is not an error: the system worked exactly as designed
+    and reached a judgement about the query. Emitting `error` would put a
+    refused query and a broken run in the same bucket for every consumer
+    downstream, including the premise gate that has to tell them apart.
+
+    `charged` says whether a model call already happened, and therefore
+    whether a `cost` event is owed. A pre-filter refusal costs nothing, and
+    emitting a zero-dollar cost event for it would imply a call was made.
+    """
+    query = state["query"]
+    harness = state["harness"]
+
+    sink.emit(
+        "guard",
+        GuardPayload(
+            passed=False,
+            category=verdict.category,
+            reason=verdict.reason,
+        ),
+    )
+    if charged:
+        sink.emit(
+            "cost",
+            cost_control.build_cost_event_payload(harness, query.trace_id, "guard"),
+        )
+    sink.emit(
+        "done",
+        DonePayload(
+            total_cost_usd=(
+                harness.get_query_cost_usd(query.trace_id) if charged else 0.0
+            ),
+            total_tool_calls=0,
+            elapsed_ms=_elapsed_ms(state),
+            trust_outcome="refuse",
+        ),
+    )
+    return sink.result(guard_refused=True)
 
 
 def _decline_for_daily_cap(
@@ -687,9 +783,12 @@ class _PlannedToolCall:
 # positive (attempting cypher_query on a genuine greeting, which the
 # pipeline will simply answer "empty" or "error" for), so this list only
 # excludes unambiguous non-questions.
-_NO_TOOL_QUERY_TEXTS: frozenset[str] = frozenset(
-    {"hello", "hi", "hey", "thanks", "thank you", "who are you", "what can you do"}
-)
+# T-3.0-06: now the same set the guardrail exempts from its Section 10.2
+# off-topic check, imported rather than duplicated. Keeping two copies would
+# let them drift into the worst possible state: a text the guardrail admits
+# and the planner then sends to `cypher_query`, or a text the planner treats
+# as small talk that the guardrail already refused.
+_NO_TOOL_QUERY_TEXTS: frozenset[str] = prefilter.CONVERSATIONAL_TEXTS
 
 _PLAN_TOOL_CALL_MAX_INTENT_CHARS = 1000
 _PLAN_TOOL_CALL_ROW_LIMIT = 100
@@ -2133,7 +2232,18 @@ def _partial_result_for_cap(
 
 
 def _route_after_guardrail(state: GraphState) -> str:
-    if state.get("daily_cap_declined", False):
+    # T-3.0-06. A Section 10 refusal terminates the run exactly as a daily-cap
+    # decline does: straight to END, past `write`. Section 10.1 requires that a
+    # query failing any step "never reaches Think, Plan, or Act", and routing a
+    # refusal through `write` would hand the synthesis step a query the
+    # guardrail already rejected.
+    #
+    # Checked before the cap and step-error branches, not after. A query can be
+    # both refused and carrying a step error (the classifier's own call can
+    # fail on a later retry path), and a refusal is the stronger, more specific
+    # outcome: it is a decision about the query, where a step error is a
+    # statement about the machinery.
+    if state.get("guard_refused", False) or state.get("daily_cap_declined", False):
         return "end"
     if state.get("cap_exceeded", False) or state.get("step_error") is not None:
         return "write"

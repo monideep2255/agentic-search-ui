@@ -135,8 +135,24 @@ def _compliant_synth_narrative(messages: list[dict[str, str]]) -> str:
     return ". ".join(clauses) + "."
 
 
+# T-3.0-06. A compliant Guard-tier classification: this is what a working
+# model returns for an ordinary biomedical question. Every test in this file
+# feeds the loop a legitimate query, so the fixture's guard always admits.
+#
+# The refusal paths are covered without a model at all, in
+# `tests/system_03_search_agent/guardrail/`, and against a real model in the
+# phase 3.0 premise gate. Same split this file's synth fixture already uses:
+# this fixture models a good model, those files model a bad one and an
+# attacker.
+_COMPLIANT_GUARD_CLASSIFICATION = (
+    '{"is_injection": false, "confidence": 0.02, '
+    '"reason": "an ordinary biomedical question"}'
+)
+
+
 @pytest.fixture(autouse=True)
 def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
     from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
 
     # `side_effect` takes precedence over `return_value` on a Mock, so a
@@ -146,13 +162,22 @@ def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     # Cypher string. The dispatcher reads `return_value` back off the mock
     # instead, so that override keeps working exactly as before and only
     # the synth call is answered separately.
+    #
+    # The guard branch was added in build phase 3.0 for the reason
+    # `LEARNINGS.md` recorded on 2026-08-03: a global model mock answers for
+    # every tier, and stays correct only while every tier's response is
+    # unused. The guardrail discarded its response until 3.0 and now parses
+    # it as JSON, so the shared fixed response became wrong the moment that
+    # changed. Dispatching per tier is what keeps that from recurring.
     async def _dispatch(*args: object, **kwargs: object):
         messages = kwargs.get("messages") or []
-        is_synth = any(
-            SYNTH_SYSTEM_INSTRUCTION in (message.get("content") or "")
+        joined = "\n".join(
+            message.get("content") or ""
             for message in messages  # type: ignore[union-attr]
         )
-        if is_synth:
+        if GUARD_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(_COMPLIANT_GUARD_CLASSIFICATION)
+        if SYNTH_SYSTEM_INSTRUCTION in joined:
             return _fake_response(_compliant_synth_narrative(messages))  # type: ignore[arg-type]
         return mock_acompletion.return_value
 
@@ -1767,15 +1792,23 @@ async def test_per_query_cap_hit_at_write_itself_still_ships_partial_result(
 async def test_step_failure_on_think_routes_to_write_as_a_refusal(
     monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock
 ) -> None:
-    call_count = {"n": 0}
+    # Dispatches on WHICH call this is, not on its index. The index version
+    # ("call number 2 is think") broke in build phase 3.0 the moment the
+    # guardrail started making a real classification call ahead of think, and
+    # an off-by-one there fails the guardrail instead, which looks identical
+    # in the assertions below but tests nothing about think.
+    from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
 
-    async def _fail_second_call(*args, **kwargs):
-        call_count["n"] += 1
-        if call_count["n"] == 2:  # the think node's call
+    async def _fail_only_the_think_call(*args, **kwargs):
+        messages = kwargs.get("messages") or []
+        joined = "\n".join(message.get("content") or "" for message in messages)
+        if GUARD_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(_COMPLIANT_GUARD_CLASSIFICATION)
+        if graph_module._STUB_TIER_PROBE_SYSTEM in joined:
             raise RuntimeError("simulated unexpected model failure")
         return _fake_response()
 
-    monkeypatch.setattr(_mock_litellm, "side_effect", _fail_second_call)
+    monkeypatch.setattr(_mock_litellm, "side_effect", _fail_only_the_think_call)
 
     act_calls: list[object] = []
     original_act = graph_module.coordinator_worker_execute

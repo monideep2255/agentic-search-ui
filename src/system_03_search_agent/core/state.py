@@ -82,6 +82,17 @@ Field lifecycle:
             node, past even `write`, since Section 19.1 declines the
             whole query outright for these two caps rather than shipping
             a partial result.
+        guard_refused: set True by `guardrail` only, when a Section 10
+            admission check refuses the query: the pre-filter (10.2), the
+            Guard-tier injection classifier (10.4), or the forbidden-type
+            screen (10.5). Routes straight to `END` for the same reason
+            `daily_cap_declined` does, and is kept as a SEPARATE flag
+            rather than reusing that one because the two are different
+            events that happen to share a route. A cap decline says the
+            query was never eligible to run; a guard refusal says it was
+            eligible and was judged. Collapsing them would make the
+            audit trail unable to tell a rate-limited user from a
+            rejected query.
 """
 
 from __future__ import annotations
@@ -114,3 +125,4 @@ class GraphState(TypedDict, total=False):
     cap_exceeded: bool
     step_error: dict[str, Any] | None
     daily_cap_declined: bool
+    guard_refused: bool

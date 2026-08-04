@@ -21,7 +21,12 @@ SESSION_MEMORY_MAX_SERIALIZED_LENGTH = 5000
 class Query(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    text: str = Field(..., max_length=2000)
+    # T-3.0-05, Section 10.3. `min_length=1` was specified from the start and
+    # was missing until build phase 3.0, so an empty-string query was
+    # contract-valid and reached the guardrail. The paired validator below
+    # closes the whitespace-only case, which `min_length` alone admits: a
+    # query of three spaces has length three and asks nothing.
+    text: str = Field(..., min_length=1, max_length=2000)
     session_id: str = Field(..., max_length=64)
     trace_id: str = Field(..., max_length=64)
     # T-2.0-08 (closes F-1.1-17): on the authenticated rest_sse surface
@@ -34,6 +39,27 @@ class Query(BaseModel):
     audience_depth: Literal["clinical_brief", "researcher", "deep_technical"] = (
         "researcher"
     )
+
+    @field_validator("text")
+    @classmethod
+    def _reject_whitespace_only_text(cls, value: str) -> str:
+        """T-3.0-05, Section 10.3: a query must actually ask something.
+
+        Rejects rather than strips. Stripping would silently rewrite the
+        user's input before the guardrail classifies it, and every check in
+        `guardrail/` would then be reasoning about text the user did not
+        send. A boundary validator's job is to accept or refuse, not to
+        edit.
+
+        Covers Unicode whitespace, not just ASCII spaces, since `str.strip()`
+        is Unicode-aware. That matters here: build phase 2.2's finding
+        F-2.2-R-02 was an ASCII-only tokenizer that made every non-Latin
+        script invisible to two separate gates, and an ASCII-only emptiness
+        check would repeat the same mistake in the opposite direction.
+        """
+        if not value.strip():
+            raise ValueError("text must contain at least one non-whitespace character")
+        return value
 
 
 class RequestContext(BaseModel):

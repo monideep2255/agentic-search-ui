@@ -89,14 +89,12 @@ def _no_op_daily_caps(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
-    mock_acompletion = AsyncMock(return_value=_fake_response())
-    monkeypatch.setattr(harness_module.litellm, "acompletion", mock_acompletion)
-    monkeypatch.setattr(
-        harness_module.litellm,
-        "get_model_info",
-        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
-    )
-    return mock_acompletion
+    # T-3.0-06: dispatches per tier. See `tests/system_03_search_agent/
+    # model_stub.py` for why a single fixed response stopped working the
+    # moment the guardrail began parsing its own model output.
+    from tests.system_03_search_agent.model_stub import install_dispatching_acompletion
+
+    return install_dispatching_acompletion(monkeypatch, harness_module)
 
 
 def _valid_query(**overrides: object) -> Query:
@@ -444,12 +442,29 @@ class TestRunStreamingIsGenuinelyIncremental:
         # `cost` events and `think`'s `think`/`cost` events were already
         # produced (and, under real streaming, already yielded to the
         # caller) before that delay even begins.
+        # T-3.0-06: the guardrail's call is a real classification now, so a
+        # stub that answers every call identically fails to parse there and
+        # the run never reaches `think`. The guard branch below is what keeps
+        # this test measuring streaming rather than accidentally measuring
+        # the guardrail's error path.
+        from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+        from tests.system_03_search_agent.model_stub import (
+            COMPLIANT_GUARD_CLASSIFICATION,
+        )
+
         delay_s = 0.25
         call_count = 0
 
         async def _acompletion(*args: object, **kwargs: object):
             nonlocal call_count
             call_count += 1
+            messages = kwargs.get("messages") or []
+            joined = "\n".join(
+                message.get("content") or ""
+                for message in messages  # type: ignore[union-attr]
+            )
+            if GUARD_SYSTEM_INSTRUCTION in joined:
+                return _fake_response(COMPLIANT_GUARD_CLASSIFICATION)
             if call_count == 3:  # the plan node's call_tier call
                 await asyncio.sleep(delay_s)
             return _fake_response()
