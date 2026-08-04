@@ -4,6 +4,8 @@ Agentic search agent for querying NCBI biomedical data across a 115M-node knowle
 
 Takes natural language questions about genes, diseases, variants, publications, and taxonomy. Returns cited answers with links back to NCBI source records. Built with FastAPI, LangGraph, and React.
 
+For a plain-language, no-jargon project update, see [PROGRESS.md](PROGRESS.md).
+
 ---
 
 ## Architecture
