@@ -22,7 +22,15 @@ frontend/test-results/
 frontend/playwright-report/
 
 # IDE
-.vscode/
+# .vscode/ contents stay local, with one exception: tasks.json can run commands
+# automatically when a folder is opened, so a hostile edit or a newly planted
+# file must surface as a git diff or an untracked file rather than silently.
+# This is the ChainDrop/Shai-Hulud worm vector, the same one that targets
+# .claude/settings.json. The pattern must be `.vscode/*`, not `.vscode/`: git
+# cannot re-include a path whose parent directory is excluded, so a
+# directory-level ignore would defeat the negation below.
+.vscode/*
+!.vscode/tasks.json
 .idea/
 
 # OS
