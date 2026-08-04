@@ -48,7 +48,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | In progress. Five build phases merged into main, phase 2.2 next. See the table below |
+| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete: six build phases merged into main. Step 6.3, build v1, starts at build phase 3.0. See the table below |
 
 ### Build phase detail
 
@@ -59,6 +59,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | 2.0 | The real five-node LangGraph Guardrail, Think, Plan, Act, Write loop and the three-tier harness, replacing the phase 1.0 stub | Merged into main, PR #9 |
 | 1.2 | SSE streaming endpoints (POST /v1/query, GET /v1/query/{run_id}/events, POST /v1/query/{run_id}/stop) and the frontend/ React shell wired end to end against the real backend | Merged into main, PR #12 |
 | 2.1 | cypher_query over Layer 1, the first live graph access | Merged into main, PR #15, 2026-08-01 |
+| 2.2 | Deterministic cite-or-refuse, Layer 1 provenance on every citation, the first trust signal | Merged into main, PR #18, 2026-08-03 |
 
 Next: build phase 3.0, the full guardrail. Build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance) closed 2026-08-03 and completes the Step 6.1 prototype group. Step 6.2, the reconciliation pause, moved to run after the 3.x tool phases. Tools for Layers 2 and 3 not yet wired (build phases 3.1 to 3.5). Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md).
 
