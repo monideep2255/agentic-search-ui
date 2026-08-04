@@ -207,16 +207,44 @@ def test_the_planner_and_the_guardrail_share_one_conversational_set() -> None:
     assert graph_module._NO_TOOL_QUERY_TEXTS is prefilter.CONVERSATIONAL_TEXTS
 
 
-def test_the_stub_probe_constant_is_gone_from_the_guardrail() -> None:
+@pytest.mark.asyncio
+async def test_the_guardrail_makes_exactly_one_model_call(
+    _mock_litellm: AsyncMock,
+) -> None:
     """T-3.0-06: the phase 2.0 passthrough stub is removed, not left dead.
 
     `_STUB_TIER_PROBE_SYSTEM` still exists because `think_node` is still a
-    stub and still uses it. What must be true is that the guardrail no longer
-    does: a throwaway probe left in place beside the real classifier would
-    double this node's model calls and its latency.
-    """
-    import inspect
+    stub and uses it. What must be true is that the guardrail no longer does:
+    a throwaway probe left beside the real classifier would double this
+    node's model calls and its latency for no benefit.
 
-    source = inspect.getsource(graph_module.guardrail_node)
-    assert "_stub_probe_messages" not in source
-    assert "classifier.build_messages" in source
+    Asserted BEHAVIOURALLY, by counting calls, rather than by grepping the
+    function's source with `inspect.getsource`. The first version did the
+    latter and was order-dependent: it passed when run alone and failed in
+    the full suite, because `getsource` resolves through `linecache` and is
+    sensitive to module reloads elsewhere in the run. A test that passes
+    alone and fails in suite is worse than no test, since it teaches the
+    reader to distrust a red run.
+    """
+    await _run_guardrail("Which diseases are associated with BRCA1?")
+    assert _mock_litellm.await_count == 1, (
+        "the guardrail made more than one model call, which means the phase "
+        "2.0 throwaway probe is still firing alongside the real classifier"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_prefilter_refusal_makes_no_model_call_at_all(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Section 10.2's whole economic argument: a confident match is free.
+
+    If the pre-filter ran after the classifier, or the classifier ran
+    unconditionally, every off-topic query would cost a model call. This is
+    the assertion that keeps that true.
+    """
+    await _run_guardrail("What is the capital of France?")
+    assert _mock_litellm.await_count == 0, (
+        "an off-topic query refused by the pre-filter still paid for a "
+        "model call"
+    )
