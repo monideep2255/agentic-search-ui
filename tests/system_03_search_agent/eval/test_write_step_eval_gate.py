@@ -249,9 +249,23 @@ def grade(case: EvalCase, result: dict[str, Any]) -> RunOutcome:
 
     if refused:
         if case.source_exists:
+            # Record WHY, not just that it refused. The first version
+            # reported only "a real miss", which is where the grader stops
+            # being useful: a refusal caused by the Write step failing to
+            # ground and a refusal caused by the tool never returning a row
+            # are completely different defects, in different modules, owned
+            # by different phases, and they render identically without the
+            # error payload. This is the same lesson the premise gate
+            # already learned when six failures reading "a step hit a
+            # temporary error" turned out to be a DNS outage.
+            detail = [
+                f"{e.get('scope')}/{e.get('source')}/{e.get('error_class')}: "
+                f"{(e.get('message') or '')[:120]}"
+                for e in result["errors"]
+            ] or ["no error event emitted"]
             return RunOutcome(
                 case.case_id, "fail",
-                ["refused a question the graph can answer: a real miss"],
+                ["refused a question the graph can answer: a real miss", *detail],
             )
         # Correct refusal on genuine zero retrieval. The skill is explicit
         # that this scores as pass, not fail.
