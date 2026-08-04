@@ -6,15 +6,15 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 
 - [State now](#state-now)
 - [Read before opening the next phase](#read-before-opening-the-next-phase)
-- [Build phase 2.2, done](#build-phase-22-done)
-- [What build phase 3.0 delivers](#what-build-phase-30-delivers)
+- [Build phase 3.0, done](#build-phase-30-done)
+- [What build phase 3.1 delivers, and where it already stands](#what-build-phase-31-delivers-and-where-it-already-stands)
 - [What Step 6.2 delivers, later](#what-step-62-delivers-later)
 - [Open items](#open-items)
 - [Handover](#handover)
 
 ## State now
 
-Six build phases are done and merged into `main`, which completes the Step 6.1 prototype group:
+Seven build phases are done and merged into `main`. The first six complete the Step 6.1 prototype group; 3.0 is the first Step 6.3 v1 phase:
 
 | Phase | Delivered | PR |
 |-------|-----------|-----|
@@ -24,6 +24,7 @@ Six build phases are done and merged into `main`, which completes the Step 6.1 p
 | 1.2 | React shell, SSE streaming, chat UI wired end to end | #12 |
 | 2.1 | cypher_query over Layer 1, first live graph access | #15 |
 | 2.2 | Deterministic cite-or-refuse, Layer 1 provenance, the first trust signal | #18 |
+| 3.0 | The full Section 10 guardrail, replacing the passthrough stub | #19 |
 
 Current counts, stated once here:
 
@@ -32,10 +33,11 @@ Current counts, stated once here:
 - Playwright end-to-end tests: 3
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
-- Decisions logged: 205
+- Premise gate, guardrail: 20 of 20
+- Decisions logged: 207
 - Learnings entries: 48, plus a retrospective
 
-Next is build phase 3.0, the full guardrail, continuing in `requirements/Technical_specification.md` Section 25 order. It depends on 2.0 only, which is merged.
+Next is build phase 3.1, `ncbi_efetch`, the first Layer 2 tool. It depends on 2.0 and 3.0, both merged. It is ALREADY OPEN on branch `phase/3.1-ncbi-efetch` at stage 3: twelve tickets are decomposed in `tracker/phase_3.1.md` and no tool code exists. Stage 5, the blocking premise gate, has not started.
 
 Step 6.2 moved on 2026-08-03. It now runs AFTER the 3.x tool phases rather than between 2.2 and 3.0, because its own written reasoning names 3.x as the code its security scan most exists for, and because reconciling the frozen documents after the tool phases is better input than reconciling before them. Its security scan is separately PAUSED INDEFINITELY on cost, with one condition that turns it back on: exposure. First contact with a real user, a deploy, or a public URL triggers it, whichever comes first.
 
@@ -45,44 +47,51 @@ Per-phase detail lives in `tracker/phase_N.M.md`. Phase narrative lives in `requ
 
 In this order:
 
-1. `requirements/Technical_specification.md` Section 10, the guardrail implementation, and Section 25 for the build order. Section 10 is what 3.0 builds.
-2. `LEARNINGS.md`, filtered to the model-generated-output entries. Build phase 3.0's deliverable includes prompt-injection rejection, which is model-adjacent, so `docs/build/Build_workflow_cadence.md` stage 5's blocking premise gate applies.
-3. `tracker/phase_2.2.md`'s close-status section, for the two findings that phase deliberately left open and for F-2.1-J4-02, the prompt-injection xfail that 3.0's definition of done is supposed to clear.
-4. `docs/build/Build_velocity_post_mortem.md`, for the measured account of what the build process costs and which parts earn it. Its first recommendation is a pre-flight network check before dispatching any gate run or review agent.
+1. `tracker/phase_3.1.md`. The phase is already open and decomposed, so this is the current state, not a starting point to re-derive. It leads with the phase's scale for a reason, and with a recommended build order that front-loads the gene-symbol resolution.
+2. `requirements/Technical_specification.md` Section 6.2, the `ncbi_efetch` specification, plus Section 21.1 for the rate limits. Section 25 for the build order.
+3. `docs/ncbi/Tool_implementation_mechanics.md`, the `ncbi_efetch` trap list. The load-bearing one: E-utilities returns HTTP 200 for a genuinely empty result AND for several error classes, so every E-utilities action decides its status from the response BODY, never the HTTP status. Datasets v2 and PubChem are the exact opposite and branch on status. Both conventions live on the same tool.
+4. `LEARNINGS.md`, filtered to the tool-phase and model-generated-output entries. `docs/build/Build_workflow_cadence.md` stage 5's blocking premise gate applies to every tool phase from 3.1 to 3.5.
+5. `docs/build/Build_velocity_post_mortem.md`, for the measured account of what the build process costs. Note its 2026-08-04 correction: the pre-flight check it recommends covers the product's model provider only and does NOT cover agent dispatch, which is the more expensive of the two to lose.
 
-## Build phase 2.2, done
+## Build phase 3.0, done
 
-Merged as PR #18 on 2026-08-03, in one session, after three independent review rounds.
+Merged as PR #19 on 2026-08-04, in one session, after one judge round and one adversary round.
 
-What changed, stated against what was there before: `write_node` previously made a synth-tier model call with a bare user question and discarded the response entirely. No narrative reached any surface, and `trust_outcome` was derived from whether a fetched row happened to carry a `source_url`. The Write step now produces grounded, cited prose in which a citation means a specific sentence was checked against a specific field value, rather than that a row was fetched.
+What changed, stated against what was there before: `guardrail_node` previously made a throwaway Guard-tier call, discarded the response, and emitted a hardcoded `passed=True, category="ok"` for every query. It now runs Section 10.1's pipeline: the cheap non-LLM pre-filter (10.2), boundary validation closed to spec (10.3), Guard-tier classification of injection AND off-topic (10.4), and the forbidden-type and read-only screen (10.5).
 
 Release gate outcome:
 
 | Gate | Result |
 |------|--------|
-| Premise gate | 11 passed, 1 xfailed by design, 0 failed |
-| Eval gate, citation-synthesizer component | Passed, 12 of 12 runs. Across both runs of the day, 23 of 24 clean |
-| Python suite | 1154 passed, 1 xfailed |
-| Frontend | 120 passed, 15 files |
+| Premise gate | 20 passed, 0 failed, re-run after every fix round |
+| Python suite | 1261 passed, 62 skipped, 1 xfailed |
 | `ruff check src/` | Clean |
+| Guardrail unit tests | 148 across 6 files |
+| Judge round 1 | FAIL, 2 confirmed defects, both fixed |
+| Adversary round 1 | 8 findings, 4 acted on |
 | Doc drift | 0 stale, 0 structural |
 
-Rounds 1 and 2 each returned a failing verdict, and each round's worst defect was in the previous round's fix, which is the pattern `LEARNINGS.md`'s build phase 2.1 retrospective predicts. What they caught, all closed and mutation-tested: a negation grounding as support for the record it denies, a framing prefix smuggling uncited fabrications including a treatment-discontinuation instruction, question-seeding licensing its own affirmation, an ASCII-only tokenizer that made every non-Latin script invisible to both gates, and non-renderable values shipping as facts.
+The premise gate has TWO ARMS, and that design decision is the phase's most transferable output. A guardrail has no safe direction of failure: `return refuse` scores one hundred percent on every attack test ever written and destroys the product. So nine of its eighteen cases are legitimate questions that must be ADMITTED, anchored on the v1 must-pass moat questions, including three collision traps where a real biomedical question shares a word with a block rule.
 
-`eval-harness` ran for the first time in this project. It ran as the citation-synthesizer component gate rather than the full v1 must-pass gate, and said so explicitly: that gate's questions span PubMed, ClinVar, GTR, MedGen, SRA, BioProject and ClinicalTrials, none of which have a tool until build phases 3.1 to 3.5.
+Three defects are worth carrying forward as patterns rather than as fixed bugs:
 
-## What build phase 3.0 delivers
+- The judge returned FAIL with all 34 acceptance criteria individually passing. `"What is the capital of the USA?"` was fully admitted, because the pre-filter's deliberately over-broad symbol pattern was excused by a code comment claiming the classifier would refuse it, and the classifier judged only injection. A deliberate weakness justified by "another layer covers it" is a claim about a DIFFERENT module and must be verified there. It is the F-2.1-J5-01 pattern, committed by an agent that had cited F-2.1-J5-01 by name an hour earlier.
+- The adversary found four third-person clinical questions passing every layer. `"Should this patient be started on tamoxifen given her BRCA1 status?"` is not obfuscated. The pre-filter keyed on first person, the forbidden screen on literals, the classifier on injection, and nothing owned advice about a third party. A composition defect, invisible to 148 per-layer unit tests.
+- The first allowlist refused the flagship question, because it carried `disease` and the question said `diseases`. Fixed by stemming the input rather than enumerating plurals, which is the allowlist-over-blocklist lesson already recorded on 2026-08-03.
 
-Branch: `phase/3.0-guardrail-node`. Depends on 2.0, which is merged. From Section 25:
+Two tickets did not land and are carried, both on `tracker/BOARD.md` with dated positions: T-3.0-07 (clearing the F-2.1-J4-02 xfail needs the graph tunnel, which cannot be opened from this environment) and T-3.0-08 (F-2.1-C15's generation half, untouched, now dated to immediately after 3.1 merges).
 
-> Full guardrail replacing the phase 2.0 passthrough stub: Pydantic validation, prompt-injection rejection, forbidden query types, rate and cost pre-checks.
+## What build phase 3.1 delivers, and where it already stands
 
-Two things carried in from earlier phases that this one is expected to close:
+Branch: `phase/3.1-ncbi-efetch`, already cut. Depends on 2.0 and 3.0, both merged. From Section 25:
 
-- F-2.1-J4-02: prompt injection at the generation step, currently mitigated by delimiting the question rather than closed, and pinned by an `xfail(strict=False)`. Clearing that marker is part of 3.0's definition of done.
-- F-2.1-C15, generation half: nothing yet stops generation from producing an unbounded traversal in the first place.
+> `ncbi_efetch` (E-utilities for PubMed, ClinVar, OMIM; Datasets API v2 for Gene, Genome, Orthologs, Taxonomy)
 
-Stage 5 applies. Prompt-injection rejection is a judgment the guardrail makes about untrusted text, so the premise gate is written first and watched failing before any guardrail code.
+Current state: stage 3 complete. Twelve tickets decomposed in `tracker/phase_3.1.md`, branch cut, NO tool code written. Stage 5, the blocking premise gate, has not started.
+
+Why this phase matters more than its position in the order suggests: it owns finding F-2.1-07. `_KNOWN_GENE_SYMBOL_CURIES` (`core/graph.py:839`) holds exactly one entry, `BRCA1`, so "What diseases are linked to TP53?" resolves nothing and answers nothing today. That is the single thing standing between this repo and a prototype that can be shown to a person, and `tracker/phase_3.1.md`'s recommended build order front-loads it deliberately.
+
+Read `tracker/phase_3.1.md` before touching anything. It leads with the phase's scale, which is wider than 2.1 on every axis: seven actions, three API families, fourteen databases accepted by `search`, eight with a verified per-database field set, and two error conventions that are exact opposites. 2.1 was one tool, one action, one host, and it took four days and five review rounds.
 
 ## What Step 6.2 delivers, later
 
@@ -113,9 +122,12 @@ One decision below is still waiting on the product owner: whether `security/` st
 | F-2.1-01 | The spec says 10 concept labels, the live graph has 11 (the eleventh is `NamedThing`) | Step 6.2 |
 | F-2.1-16 | `budget_for_step` diverges from Section 19.1's per-query-class shape, approved but unreconciled | Step 6.2 |
 | Env var name divergence | Section 24 names `PER_USER_DAILY_CAP_USD`; the code uses `PER_USER_DAILY_QUERY_CAP`, since it holds a query count, not dollars | Step 6.2 |
-| F-2.2-01 | Generation intermittently emits Cypher with no parentheses around node patterns, the graph rejects it, and nothing retries. Roughly 1 run in 10 | 3.0 or 3.1, whichever touches generation first |
-| F-2.1-J4-02, prompt injection | Mitigated by delimiting the question, not closed. `xfail(strict=False)`, clearing the marker is part of 3.0's Guardrail definition of done | 3.0 |
-| F-2.1-C15, generation half | Nothing yet stops generation from producing an unbounded traversal in the first place | 3.0 |
+| F-2.2-01 | Generation intermittently emits Cypher with no parentheses around node patterns, the graph rejects it, and nothing retries. Roughly 1 run in 10. Re-homed 2026-08-04: rides with F-2.1-C15 rather than a tool phase, since 3.1 to 3.5 never open `cypher_generation.py` | The `fix/c15-generation-bound` branch, immediately after 3.1 merges |
+| F-2.1-J4-02, prompt injection | The guardrail now refuses the injected-instruction shape at admission, verified by 3.0's own premise gate. The `xfail` marker itself is NOT cleared: doing so needs 2.1's gate run five consecutive times against the live graph, and the SSH tunnel cannot be opened from this environment (the Layer-7 proxy cannot tunnel raw SSH, and `block-bash-delete.sh` blocks `ssh` as an execution wrapper). Roughly ten minutes of work whenever the tunnel is reachable | T-3.0-07, environment-gated, not phase-gated |
+| F-2.1-C15, generation half | Nothing stops generation producing an unbounded traversal in the first place. Attempted by a builder during 3.0 which inverted its contract, implemented a validator rule with no analysis, and left a rule that rejects `[:orthologous_to {weight: 2*3}]` as unbounded. Reverted; the attempt is preserved as a diff. DATED 2026-08-04 by the product owner rather than left as an open slot, because this is the finding where a generated query took the graph server down for every user | The `fix/c15-generation-bound` branch, immediately after 3.1 merges |
+| F-3.0-01 | Section 10.5 requires refusing a write-seeking request and names no `GuardPayload.category` for it. `off_topic` is used and the real explanation lives only in the reason string. Needs either a new enum member (additive, v1-legal) or a spec amendment | Step 6.2 |
+| ADV-03, ADV-06, ADV-07 | Three guardrail defense-in-depth gaps where the Guard-tier classifier remains the covering layer: non-Latin-script injection phrases are invisible to the pre-filter's literal phrase list, the write-verb list has gaps, and `classifier.build_messages` does not escape a `</query>` in the payload. Re-homed 2026-08-04 from "the next round", which was never scheduled | 6.1 |
+| ADV-02-residual | A non-English question written in pure ASCII with no cognate and no identifier is still refused as off-topic by the pre-filter. Measured: "Welche Krankheiten sind mit dem Gen assoziiert?" A keyword allowlist cannot do language detection, and per-language vocabulary is the infinite-blocklist trap. Mitigated: the classifier now judges off-topic, and the pre-filter abstains on any non-ASCII letter or on a query containing no English function word | 6.1, with the other guardrail hardening |
 | F-2.1-07 | Gene symbol resolution beyond a one-entry seed table, needs the Layer 2 NCBI lookup. Also the real fix for build phase 2.2's symbol-versus-CURIE false reject | 3.1 |
 | F-2.1-B10 | Same cause as F-2.1-07; an unresolvable symbol errors rather than refuses | 3.1 |
 | PubTator3 relations endpoint | Path and fields not yet live-verified | 3.3 |
@@ -144,4 +156,4 @@ If a different agent takes over, read the "Running this project with a different
 
 One operational note that cost real time on 2026-08-03 and is not obvious from any other file: this machine's network dropped three times in one session, killing two premise-gate runs and three review agents, and every failure they produced looked like a code defect at first glance. Before diagnosing any model-dependent failure, check reachability with `curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v1/models`. An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all. A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-08-03.
+Last updated: 2026-08-04.

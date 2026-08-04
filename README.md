@@ -60,8 +60,9 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | 1.2 | SSE streaming endpoints (POST /v1/query, GET /v1/query/{run_id}/events, POST /v1/query/{run_id}/stop) and the frontend/ React shell wired end to end against the real backend | Merged into main, PR #12 |
 | 2.1 | cypher_query over Layer 1, the first live graph access | Merged into main, PR #15, 2026-08-01 |
 | 2.2 | Deterministic cite-or-refuse, Layer 1 provenance on every citation, the first trust signal | Merged into main, PR #18, 2026-08-03 |
+| 3.0 | The full Section 10 guardrail: non-LLM pre-filter, boundary validation, Guard-tier injection and off-topic classification, forbidden query types | Merged into main, PR #19, 2026-08-04 |
 
-Next: build phase 3.0, the full guardrail. Build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance) closed 2026-08-03 and completes the Step 6.1 prototype group. Step 6.2, the reconciliation pause, moved to run after the 3.x tool phases. Tools for Layers 2 and 3 not yet wired (build phases 3.1 to 3.5). Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md).
+Next: build phase 3.1, `ncbi_efetch`, the first Layer 2 tool, already open on branch `phase/3.1-ncbi-efetch`. Build phase 3.0 (the full Section 10 guardrail) merged as PR #19 on 2026-08-04, the first Step 6.3 v1 phase. Build phase 2.2 closed 2026-08-03 and completed the Step 6.1 prototype group. Step 6.2, the reconciliation pause, moved to run after the 3.x tool phases. Tools for Layers 2 and 3 not yet wired (build phases 3.1 to 3.5). Build order: 26 numbered phases (1.0 to 7.1) in Section 25 of the [Technical specification](requirements/Technical_specification.md).
 
 ---
 
@@ -210,4 +211,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-08-03
+Last updated: 2026-08-04
