@@ -15,9 +15,47 @@ Both halves are load-bearing, and this is the property that separates 3.0 from 2
 
 The verify surface is `tests/system_03_search_agent/core/test_guardrail_premise.py`, not a suite total.
 
-## Phase status: OPEN, stage 5
+## Phase status: IN REVIEW, opened and built 2026-08-04
 
-Opened 2026-08-04.
+Opened 2026-08-04. Six of eight tickets implemented, one judge round and one adversary round run, six findings fixed and re-verified, two tickets carried with reasons below.
+
+Gate results at close of the build:
+
+| Gate | Result |
+|------|--------|
+| Premise gate | 20 passed, 0 failed, 0 skipped, run again after every fix round |
+| Python suite | 1261 passed, 62 skipped, 1 xfailed |
+| `ruff check src/` | Clean |
+| Guardrail unit tests | 148 across 6 files |
+| Judge round 1 | FAIL, 2 confirmed defects, both fixed |
+| Adversary round 1 | 8 findings, 4 acted on, 3 recorded for a later round, 1 corroborating a known finding |
+
+Ticket disposition:
+
+| Ticket | Status | Note |
+|--------|--------|------|
+| T-3.0-01 premise gate | in review | Written first, watched failing 9 of 20, now 20 of 20 |
+| T-3.0-02 pre-filter | in review | |
+| T-3.0-03 classifier | in review | Extended to judge off-topic after JUDGE-01 |
+| T-3.0-04 forbidden types | in review | Extended for third-party advice after ADV-01 |
+| T-3.0-05 boundary validation | in review | |
+| T-3.0-06 integration | in review | |
+| T-3.0-07 clear the F-2.1-J4-02 xfail | BLOCKED, carried | See below |
+| T-3.0-08 F-2.1-C15 generation half | NOT DONE, carried | See below |
+
+Nothing here is `done`: the lead built all of it and does not close its own tickets.
+
+### T-3.0-07 is blocked, not skipped
+
+Clearing the `xfail` at `tests/system_03_search_agent/tools/test_cypher_query_premise.py:338` requires re-running build phase 2.1's premise gate five consecutive times, and that gate requires the live graph. The SSH tunnel is down and cannot be reopened from this environment: `.claude/rules/sandbox-diagnosis.md` states that the Layer-7 proxy cannot tunnel raw SSH, and `.claude/hooks/block-bash-delete.sh` independently blocks `ssh` as an execution wrapper. Both are working as designed and neither was worked around.
+
+What is true regardless of the tunnel, and is the substantive half of the ticket: the guardrail now refuses the injected-instruction shape at admission, verified by the phase 3.0 premise gate's own injection cases. The marker itself stays until someone can run 2.1's gate against the graph.
+
+### T-3.0-08 is not done
+
+Dispatched to a builder, which inverted its contract: it skipped the required analysis entirely, implemented a validator rule instead, and stalled before verifying, leaving the suite red. Reverted. The abandoned attempt is preserved as a diff in the session scratchpad, and its own failing test is the useful artifact: `test_star_inside_a_property_map_value_is_not_mistaken_for_var_length` shows the rule would reject `[:orthologous_to {weight: 2*3}]`, a legitimate query, as an unbounded traversal.
+
+F-2.1-C15's generation half and F-2.2-01 both remain open and unowned by this phase.
 
 ## What was already true when this phase opened
 

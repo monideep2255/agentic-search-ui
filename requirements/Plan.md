@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-08-03.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE, all six build phases merged. Step 6.3 (build v1) underway from build phase 3.0. Build phase 1.0 (FastAPI skeleton, typed event contract) merged as PR #5. Build phase 1.1 (auth service, six-table user-data schema) merged as PR #6. Build phase 2.0 (five-node LangGraph loop, three-tier harness) merged as PR #9. Build phase 1.2 (React shell, SSE, chat UI) merged as PR #12. Build phase 2.1 (`cypher_query` over Layer 1, the first live graph access) merged as PR #15 on 2026-08-01, closed after five judge passes and five adversary passes, with the process changes it forced merged separately as PR #16. Build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal) closed 2026-08-03, completing the Step 6.1 prototype group. Next up: build phase 3.0, the full guardrail, continuing in Section 25 order. Step 6.2 moved to run after the 3.x tool phases, and its security scan is paused indefinitely on cost |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 202 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 205 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 

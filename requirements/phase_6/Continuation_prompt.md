@@ -27,13 +27,13 @@ Six build phases are done and merged into `main`, which completes the Step 6.1 p
 
 Current counts, stated once here:
 
-- Python tests: 1154
+- Python tests: 1324
 - Frontend tests: 120
 - Playwright end-to-end tests: 3
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
-- Decisions logged: 202
-- Learnings entries: 43, plus a retrospective
+- Decisions logged: 205
+- Learnings entries: 48, plus a retrospective
 
 Next is build phase 3.0, the full guardrail, continuing in `requirements/Technical_specification.md` Section 25 order. It depends on 2.0 only, which is merged.
 

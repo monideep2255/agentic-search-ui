@@ -13,6 +13,7 @@ Answers one question: why has the build slowed down, is that slowdown real work 
 - [Is auto mode the cause](#is-auto-mode-the-cause)
 - [The algorithm, applied honestly](#the-algorithm-applied-honestly)
 - [What to change](#what-to-change)
+- [Correction, 2026-08-04: the pre-flight check covers one transport, not two](#correction-2026-08-04-the-pre-flight-check-covers-one-transport-not-two)
 - [What could not be measured](#what-could-not-be-measured)
 
 ## The measured answer
