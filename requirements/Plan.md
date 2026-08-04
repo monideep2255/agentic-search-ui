@@ -480,7 +480,12 @@ Rules: added `tool-call-budgets` and `v1-scope-boundary`, adopted `prompt-cache-
 
 ### Step 5.3: update root documents - COMPLETE (2026-07-26)
 
-19 stale statements corrected. CLAUDE.md's four-week build order replaced with a pointer to tech spec Section 25, the tool roster corrected from five to seven, and three documented slash commands fixed that did not match their skills' names and would not have resolved. README.md's claim that a build phase was in progress removed, since no application code exists, along with its stale `.claude/` tracking claim, plus a new link to the planning documents. AGENTS.md regenerates from CLAUDE.md via the sync hook. `.github/pull_request_template.md` rewritten off the BioLink and KGX gates inherited from the System 1 and 2 template repo.
+19 stale statements corrected, across four files:
+
+- CLAUDE.md: the four-week build order replaced with a pointer to tech spec Section 25, the tool roster corrected from five to seven, and three documented slash commands fixed that did not match their skills' names and would not have resolved.
+- README.md: the claim that a build phase was in progress removed, since no application code exists, along with its stale `.claude/` tracking claim. A new link to the planning documents added.
+- AGENTS.md: regenerates from CLAUDE.md via the sync hook.
+- `.github/pull_request_template.md`: rewritten off the BioLink and KGX gates inherited from the System 1 and 2 template repo.
 
 ### Step 5.4: create any new reference docs - COMPLETE (2026-07-26)
 
@@ -512,25 +517,87 @@ Build a running prototype from the locked PRD and tech spec. Goal: something you
 
 ### Step 6.2: reconcile the documents
 
-Once the prototype runs, reconcile the docs with what it taught us:
+Once the prototype runs, reconcile the docs with what it taught us. Five groups of work, then the security scan that gates Step 6.3.
 
-- Update the PRD, tech spec, and strategic memo wherever the prototype changed our thinking. This is the one planned spec update before those three lock at v1 (see the Phase 7 carve-out).
-- Reconcile the evaluation playbook here too, but note it differs: it is a living document, not frozen at v1, since the online feedback loop keeps updating the competency-question set and the evaluation approach keeps evolving. Phase 6.2 is one notable update point for the playbook, not its last.
-- Feed the reconciliation from the running LEARNINGS.md (captured throughout the Phase 6 build): it collects what each build step taught us, so these documents get updated from a captured record rather than memory.
-- Sweep the accumulated new-intake folder here too (`reference/personal-os-work/NIH/Agentic-Search/Reference/new-intake/`). This is the one scheduled point during the build to review everything that landed there since Phase 4 locked. Triage each note: architecture or product material feeds this reconciliation, harness or process material routes to the skills and rules. Then clear the inbox. Between Phase 4 lock and here the folder is parked and unreviewed, so no one has to watch it in the meantime.
+#### The document reconciliation
+
+- PRD, tech spec, strategic memo: update wherever the prototype changed our thinking. This is the one planned spec update before those three lock at v1 (see the Phase 7 carve-out).
+- Evaluation playbook: reconcile here too, but note it differs. It is a living document, not frozen at v1, since the online feedback loop keeps updating the competency-question set and the evaluation approach keeps evolving. Phase 6.2 is one notable update point for it, not its last.
+- The input: the running LEARNINGS.md, captured throughout the Phase 6 build. It collects what each build step taught us, so these documents get updated from a captured record rather than memory.
 - Log any decision that changed.
-- Carry the build phase 2.1 premise-gate change into the tech spec. Section 25's build order is locked and cannot gain a ticket mid-build, so the change lives in `docs/build/Build_workflow_cadence.md` stage 5 and the `task-tracker` skill until this reconciliation folds it back in. What needs to land: every phase whose deliverable is model-generated output opens with a premise gate that does not mock the model, asserts on the meaning of the answer, pins ground truth from the live source, runs the way production runs, states its own coverage, and has been seen failing before any other ticket opens. The evidence for it is in `LEARNINGS.md`'s phase 2.1 retrospective, and the decision is in `DECISIONS.md` dated 2026-08-01.
-- Carry build phase 2.2's grounding findings into the tech spec, and decide the residual. Four items, all recorded with evidence in `tracker/phase_2.2.md`:
-  - Section 8.2's matching rule is exploitable as written. The substring branch answers whether a clause MENTIONS the cited value and has no mechanism for whether it is TRUE about it, so a negation, an invented drug regimen, or a fabricated statistic grounds cleanly against a matched identifier. The prototype closes this with two additions the spec does not describe, `numbers_are_supported` and `claim_introduces_no_new_content`, both of which only ever reject claims Section 8.2 would accept. Either the spec text absorbs them or it states why not.
-  - The thousands-separator normalization (F-2.2-05) widens Section 8.2 step 4 beyond its listed operations. It equates two spellings of one number and nothing else, and without it a correct, well-cited answer was refused.
-  - F-2.2-T-01-residual is OPEN and is the one known hole in the shipped gate: a declarative injected as a comma-spliced clause inside a single wh-question still licenses its own words. It needs clause-level rather than sentence-level filtering. Pinned by a strict xfail so it fails loudly when that lands.
-  - F-2.2-A-05 is OPEN: the flagship gene-disease claim classifies `low` risk, because a `Disease` endpoint row is byte-identical to an identifier-lookup row at `risk_tier_for`'s boundary and Section 8.3.1 calls the second case low risk. Closing it needs the traversed edge label plumbed through `Finding` and `SynthFinding`. Deliberately not fixed by widening the tier tables, which would have broken the protected case.
-- Decide whether Section 23's offline gate can be claimed at all before Layer 2 and 3 exist. Its v1 must-pass set (Q1, Q3, Q4, Q5, Q6, Q8, Q10) spans PubMed, ClinVar, GTR, MedGen, SRA, BioProject and ClinicalTrials, none of which have a tool until build phases 3.1 to 3.5. Build phase 2.2 ran the citation-synthesizer component gate instead and said so explicitly rather than claiming the full gate had passed. The reconciliation should either sequence the full gate to a phase where it is runnable or record that the component gate is what "before shipping an answer-generation feature" means for a graph-only phase.
-- Weigh the build-velocity post-mortem's recommendations, `docs/build/Build_velocity_post_mortem.md`. Its measured finding is that autonomous execution is not the cost driver, since the same harness shipped four phases in under two days, and that the addressable waste is environmental (network loss) plus one ownerless requirement: `release-workflow` is marked mandatory in `bossman-mode.md` and has a 0-of-5 real dispatch rate. Either run it or rewrite the rule to state the real practice.
-- Rename the default branch from `main` to `develop`, on GitHub and across the docs, as one change. Deferred to here on 2026-08-03 rather than done at build phase 2.2's close, for two reasons that both resolve at this checkpoint. First, `requirements/Technical_specification.md` Section 24 states that Railway's GitHub integration watches `main` only and that a merge to `main` triggers the deploy, and that document is locked until this reconciliation, so correcting it earlier would mean either editing a frozen doc or knowingly leaving three wrong lines in it. Second, this checkpoint is already sweeping the spec and the rules, so the branch sweep costs almost nothing folded in and would be a second full pass if done separately. Nothing is live on the old name: there is no `railway.json`, no `.github/workflows/`, and no connected deploy, so the rename breaks no running integration today. Use GitHub's branch-rename API rather than a delete-and-recreate, since it retargets open pull requests and preserves redirects: `gh api -X POST repos/monideep2255/agentic-search-ui/branches/main/rename -f new_name=develop`. The sweep covers 8 genuine branch references, in `.claude/rules/git-workflow.md`, `.claude/rules/bossman-mode.md`, `.claude/rules/system-design-patterns.md`, `.claude/skills/bossman-mode/SKILL.md`, `.claude/skills/best-practices/SKILL.md`, `.claude/skills/ship/SKILL.md`, `.claude/skills/release-workflow/SKILL.md` and `.claude/skills/phase-checkpoint/SKILL.md`, plus `README.md`'s status table and Section 24's three lines. Every other match on the word is `maintain`, `domain`, `main agent` or `main loop` and must be left alone.
-- Run the whole-repository security scan. This is the one scheduled security gate of the prototype track, and it is a hard prerequisite for starting Step 6.3. Scope it to the ENTIRE repository, not a commit range: every build phase from 1.0 through 2.2 is covered in a single pass, so there is no baseline commit to carry forward and no range anyone has to remember to widen. Nothing in the build has been scanned before this point. The only run in `security/` is dated 2026-07-25 and predates every line of build-phase code, so treat this as a first scan rather than an incremental one.
 
-Why the scan waits until here rather than running per phase, decided by the product owner on 2026-07-27 and again on 2026-07-28: the Step 6.1 prototype is deliberately throwaway, it holds no real user data and is never exposed, so a defect found in it costs a rewrite that was already planned. Scanning per phase would pay repeatedly for the cheap half of the surface while the genuinely dangerous code (Cypher generation against the live graph in 2.1, LLM calls and the agent loop in 2.0, untrusted NCBI payloads reaching synthesis in 3.x) had not landed yet. The trade is explicit and accepted: phases 1.0 through 2.2 stay unscanned while they are being built, and nothing from that track ships toward v1 until this gate clears.
+#### The new-intake sweep
+
+Folder: `reference/personal-os-work/NIH/Agentic-Search/Reference/new-intake/`.
+
+- This is the one scheduled point during the build to review everything that landed there since Phase 4 locked.
+- Triage each note: architecture or product material feeds this reconciliation, harness or process material routes to the skills and rules.
+- Then clear the inbox.
+- Between Phase 4 lock and here the folder is parked and unreviewed, so no one has to watch it in the meantime.
+
+#### Carried from build phase 2.1: the premise-gate change
+
+Section 25's build order is locked and cannot gain a ticket mid-build, so the change lives in `docs/build/Build_workflow_cadence.md` stage 5 and the `task-tracker` skill until this reconciliation folds it back in.
+
+What needs to land: every phase whose deliverable is model-generated output opens with a premise gate that
+
+- does not mock the model,
+- asserts on the meaning of the answer,
+- pins ground truth from the live source,
+- runs the way production runs,
+- states its own coverage,
+- and has been seen failing before any other ticket opens.
+
+Evidence: `LEARNINGS.md`'s phase 2.1 retrospective. Decision: `DECISIONS.md`, dated 2026-08-01.
+
+#### Carried from build phase 2.2: the grounding findings
+
+Four items, all recorded with evidence in `tracker/phase_2.2.md`. Two are spec decisions, two are open defects.
+
+| Item | Status | What the reconciliation must decide |
+|------|--------|--------------------------------------|
+| Section 8.2's matching rule | Exploitable as written | The substring branch answers whether a clause MENTIONS the cited value and has no mechanism for whether it is TRUE about it, so a negation, an invented drug regimen, or a fabricated statistic grounds cleanly against a matched identifier. The prototype closes this with two additions the spec does not describe, `numbers_are_supported` and `claim_introduces_no_new_content`, both of which only ever reject claims Section 8.2 would accept. Either the spec text absorbs them or it states why not |
+| F-2.2-05, thousands-separator normalization | Widens the spec | It widens Section 8.2 step 4 beyond its listed operations. It equates two spellings of one number and nothing else, and without it a correct, well-cited answer was refused |
+| F-2.2-T-01-residual | OPEN | The one known hole in the shipped gate: a declarative injected as a comma-spliced clause inside a single wh-question still licenses its own words. It needs clause-level rather than sentence-level filtering. Pinned by a strict xfail so it fails loudly when that lands |
+| F-2.2-A-05 | OPEN | The flagship gene-disease claim classifies `low` risk, because a `Disease` endpoint row is byte-identical to an identifier-lookup row at `risk_tier_for`'s boundary and Section 8.3.1 calls the second case low risk. Closing it needs the traversed edge label plumbed through `Finding` and `SynthFinding`. Deliberately not fixed by widening the tier tables, which would have broken the protected case |
+
+#### Process decisions to make here
+
+Section 23's offline gate: decide whether it can be claimed at all before Layer 2 and 3 exist.
+
+- Its v1 must-pass set (Q1, Q3, Q4, Q5, Q6, Q8, Q10) spans PubMed, ClinVar, GTR, MedGen, SRA, BioProject and ClinicalTrials.
+- None of those have a tool until build phases 3.1 to 3.5.
+- Build phase 2.2 ran the citation-synthesizer component gate instead, and said so explicitly rather than claiming the full gate had passed.
+- The reconciliation should either sequence the full gate to a phase where it is runnable, or record that the component gate is what "before shipping an answer-generation feature" means for a graph-only phase.
+
+The build-velocity post-mortem's recommendations, `docs/build/Build_velocity_post_mortem.md`:
+
+- Its measured finding is that autonomous execution is not the cost driver, since the same harness shipped four phases in under two days.
+- The addressable waste is environmental, meaning network loss, plus one ownerless requirement.
+- That requirement: `release-workflow` is marked mandatory in `bossman-mode.md` and has a 0-of-5 real dispatch rate. Either run it or rewrite the rule to state the real practice.
+
+The default-branch rename, `main` to `develop`, on GitHub and across the docs, as one change. Deferred to here on 2026-08-03 rather than done at build phase 2.2's close.
+
+- Reason one: `requirements/Technical_specification.md` Section 24 states that Railway's GitHub integration watches `main` only and that a merge to `main` triggers the deploy. That document is locked until this reconciliation, so correcting it earlier would mean either editing a frozen doc or knowingly leaving three wrong lines in it.
+- Reason two: this checkpoint is already sweeping the spec and the rules, so the branch sweep costs almost nothing folded in, and would be a second full pass if done separately.
+- Nothing is live on the old name. There is no `railway.json`, no `.github/workflows/`, and no connected deploy, so the rename breaks no running integration today.
+- Use GitHub's branch-rename API rather than a delete-and-recreate, since it retargets open pull requests and preserves redirects: `gh api -X POST repos/monideep2255/agentic-search-ui/branches/main/rename -f new_name=develop`
+- The sweep covers 8 genuine branch references: `.claude/rules/git-workflow.md`, `.claude/rules/bossman-mode.md`, `.claude/rules/system-design-patterns.md`, `.claude/skills/bossman-mode/SKILL.md`, `.claude/skills/best-practices/SKILL.md`, `.claude/skills/ship/SKILL.md`, `.claude/skills/release-workflow/SKILL.md`, and `.claude/skills/phase-checkpoint/SKILL.md`. Plus `README.md`'s status table and Section 24's three lines.
+- What NOT to sweep: every other match on the word is `maintain`, `domain`, `main agent` or `main loop`, and must be left alone.
+
+#### The whole-repository security scan
+
+This is the one scheduled security gate of the prototype track, and a hard prerequisite for starting Step 6.3.
+
+- Scope it to the ENTIRE repository, not a commit range. Every build phase from 1.0 through 2.2 is covered in a single pass, so there is no baseline commit to carry forward and no range anyone has to remember to widen.
+- Nothing in the build has been scanned before this point.
+- The only run in `security/` is dated 2026-07-25 and predates every line of build-phase code, so treat this as a first scan rather than an incremental one.
+
+Why the scan waits until here rather than running per phase, decided by the product owner on 2026-07-27 and again on 2026-07-28:
+
+- The Step 6.1 prototype is deliberately throwaway. It holds no real user data and is never exposed, so a defect found in it costs a rewrite that was already planned.
+- Scanning per phase would pay repeatedly for the cheap half of the surface while the genuinely dangerous code had not landed yet: Cypher generation against the live graph in 2.1, LLM calls and the agent loop in 2.0, untrusted NCBI payloads reaching synthesis in 3.x.
+- The trade is explicit and accepted: phases 1.0 through 2.2 stay unscanned while they are being built, and nothing from that track ships toward v1 until this gate clears.
 
 ### Step 6.3: build v1
 
