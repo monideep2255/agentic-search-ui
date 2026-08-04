@@ -19,7 +19,10 @@ from system_03_search_agent.guardrail.classifier import (
     verdict_for,
 )
 
-_VALID = '{"is_injection": false, "confidence": 0.1, "reason": "a real question"}'
+_VALID = (
+    '{"is_injection": false, "is_off_topic": false, "confidence": 0.1, '
+    '"reason": "a real question"}'
+)
 
 
 # ---------------------------------------------------------------------------
@@ -88,14 +91,14 @@ def test_a_code_fenced_response_parses() -> None:
         ("", "an empty response"),
         ("[1, 2, 3]", "valid JSON that is not an object"),
         ('"a string"', "valid JSON that is not an object"),
-        ('{"is_injection": false}', "a missing required field"),
-        ('{"is_injection": "no", "confidence": 0.1, "reason": "x"}', "a wrong type"),
+        ('{"is_injection": false, "is_off_topic": false}', "a missing required field"),
+        ('{"is_injection": "no", "is_off_topic": false, "confidence": 0.1, "reason": "x"}', "a wrong type"),
         (
-            '{"is_injection": false, "confidence": 4.2, "reason": "x"}',
+            '{"is_injection": false, "is_off_topic": false, "confidence": 4.2, "reason": "x"}',
             "a confidence outside 0 to 1",
         ),
         (
-            '{"is_injection": false, "confidence": 0.1, "reason": "x", "extra": 1}',
+            '{"is_injection": false, "is_off_topic": false, "confidence": 0.1, "reason": "x", "extra": 1}',
             "an unexpected extra field",
         ),
     ],
@@ -122,7 +125,7 @@ def test_a_reason_longer_than_the_schema_allows_is_rejected() -> None:
     `maxLength` on every string is required, not optional: it caps the blast
     radius when an upstream response goes hostile or simply runs away.
     """
-    runaway = '{"is_injection": true, "confidence": 1.0, "reason": "%s"}' % ("x" * 500)
+    runaway = '{"is_injection": true, "is_off_topic": false, "confidence": 1.0, "reason": "%s"}' % ("x" * 500)
     with pytest.raises(ClassificationUnavailableError):
         parse_classification(runaway)
 
@@ -134,7 +137,7 @@ def test_a_reason_longer_than_the_schema_allows_is_rejected() -> None:
 
 def test_an_injection_classification_refuses_under_the_injection_category() -> None:
     verdict = verdict_for(
-        InjectionClassification(is_injection=True, confidence=0.9, reason="override")
+        InjectionClassification(is_injection=True, is_off_topic=False, confidence=0.9, reason="override")
     )
     assert verdict.admitted is False
     assert verdict.category == "injection"
@@ -142,10 +145,49 @@ def test_an_injection_classification_refuses_under_the_injection_category() -> N
 
 def test_a_clean_classification_admits() -> None:
     verdict = verdict_for(
-        InjectionClassification(is_injection=False, confidence=0.05, reason="fine")
+        InjectionClassification(is_injection=False, is_off_topic=False, confidence=0.05, reason="fine")
     )
     assert verdict.admitted is True
     assert verdict.category == "ok"
+
+
+def test_an_off_topic_classification_refuses_under_off_topic() -> None:
+    """JUDGE-01, and it is a spec-compliance property, not a nicety.
+
+    Section 10.1 step 3 defines this step as "nuanced prompt-injection AND
+    OFF-TOPIC cases the pre-filter could not resolve". Before this existed,
+    the classifier judged only injection, and nothing re-checked topicality
+    after the pre-filter. `prefilter`'s symbol pattern deliberately
+    over-matches, so "What is the capital of the USA?" cleared the allowlist
+    on the token USA and was ADMITTED with category "ok".
+    """
+    verdict = verdict_for(
+        InjectionClassification(
+            is_injection=False,
+            is_off_topic=True,
+            confidence=0.95,
+            reason="geography, not biomedical",
+        )
+    )
+    assert verdict.admitted is False
+    assert verdict.category == "off_topic"
+
+
+def test_injection_outranks_off_topic_when_both_are_true() -> None:
+    """A hostile query that is also off topic reports the more serious one.
+
+    The categories are what an operator reviews, so the more specific and
+    more serious label wins rather than whichever check happens to run first.
+    """
+    verdict = verdict_for(
+        InjectionClassification(
+            is_injection=True,
+            is_off_topic=True,
+            confidence=0.9,
+            reason="both",
+        )
+    )
+    assert verdict.category == "injection"
 
 
 def test_low_confidence_injection_still_refuses() -> None:
@@ -157,7 +199,7 @@ def test_low_confidence_injection_still_refuses() -> None:
     deliberate, visible change rather than a silent one.
     """
     verdict = verdict_for(
-        InjectionClassification(is_injection=True, confidence=0.01, reason="maybe")
+        InjectionClassification(is_injection=True, is_off_topic=False, confidence=0.01, reason="maybe")
     )
     assert verdict.admitted is False
 
@@ -170,7 +212,7 @@ def test_the_models_reason_cannot_overflow_the_event_contract() -> None:
     raise at emit time, inside a run, rather than here.
     """
     verdict = verdict_for(
-        InjectionClassification(is_injection=True, confidence=1.0, reason="y" * 200)
+        InjectionClassification(is_injection=True, is_off_topic=False, confidence=1.0, reason="y" * 200)
     )
     assert verdict.reason is not None
     assert len(verdict.reason) <= 256

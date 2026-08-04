@@ -221,7 +221,31 @@ _ADVICE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r" what do you recommend (i|for me) "),
     re.compile(r" (diagnose|treat|prescribe) me "),
     re.compile(r" my (doctor|physician|oncologist|results|diagnosis|prognosis) "),
-    re.compile(r" (my|i have a|i carry a|i tested positive for) .{0,40}(mutation|variant|diagnosis) "),
+    # Judge finding JUDGE-02. The previous version was
+    #   " (my|i have a|...) .{0,40}(mutation|variant|diagnosis) "
+    # which treats a bare "my" plus any of those nouns within forty
+    # characters as personal-advice-seeking. Measured false positives:
+    #
+    #   "In my analysis of this cohort, what mutation frequency is reported
+    #    for BRCA1?"                                    -> refused
+    #   "My lab is studying the BRCA1 mutation spectrum, what does the graph
+    #    have?"                                         -> refused
+    #
+    # Both are ordinary research phrasing. "my" attaches to "analysis" and
+    # "lab", not to the mutation, and a proximity window cannot tell the
+    # difference because it does not know what the possessive binds to.
+    #
+    # Narrowed to a possessive DIRECTLY on a clinical noun, plus the explicit
+    # first-person disclosures. The discriminator is what the speaker claims
+    # to own: my mutation is a personal fact, my analysis is a piece of work.
+    re.compile(
+        r" (my|our) (mutation|variant|diagnosis|prognosis|biopsy|tumou?r|"
+        r"risk|condition|symptoms|treatment|therapy|test results|genotype) "
+    ),
+    re.compile(
+        r" i (have|carry|inherited|tested positive for) "
+        r"(a |an |the )?(\w+ ){0,3}(mutation|variant|diagnosis|syndrome) "
+    ),
 )
 
 # Verdict-seeking requests that carry no first-person framing. Section 10.5
@@ -485,6 +509,45 @@ def clears_biomedical_allowlist(text: str) -> bool:
 
 _NON_ASCII_LETTER: Final = re.compile(r"[^\x00-\x7F]")
 
+# The most common English function words. Their presence is weak evidence the
+# query is English; their complete absence is stronger evidence it is not.
+#
+# This closes the residual left by the non-ASCII check below. "Welche
+# Krankheiten sind mit dem Gen assoziiert?" is a real German question written
+# in pure ASCII with no cognate the vocabulary carries, so the non-ASCII test
+# does not fire and the allowlist refuses it as off-topic. Measured, not
+# hypothesised.
+#
+# Deliberately a SMALL, closed list of function words rather than a growing
+# per-language biomedical vocabulary. Adding German, French, and Spanish terms
+# would be the infinite-blocklist trap this repo recorded on 2026-08-03: the
+# languages you thought of get covered and the rest do not. Function words are
+# finite, they are the same for every English query, and a query that contains
+# none of them is one this English keyword list cannot judge either way.
+_ENGLISH_FUNCTION_WORDS: Final[frozenset[str]] = frozenset(
+    {
+        "the", "a", "an", "is", "are", "was", "were", "be", "been", "do",
+        "does", "did", "what", "which", "who", "whom", "whose", "when",
+        "where", "why", "how", "of", "for", "in", "on", "to", "with", "from",
+        "by", "about", "and", "or", "but", "that", "this", "these", "those",
+        "there", "it", "its", "as", "at", "any", "all", "some", "many",
+        "much", "more", "most", "can", "could", "would", "should", "will",
+        "has", "have", "had", "tell", "show", "give", "find", "list", "me",
+        "my", "you", "your", "please",
+    }
+)
+
+
+def _shows_no_sign_of_english(text: str) -> bool:
+    """Whether the query contains no English function word at all.
+
+    A weak signal used in one direction only: to ABSTAIN, never to refuse. A
+    short English query ("BRCA1 variants?") can legitimately contain none, and
+    the cost of abstaining on it is one model call.
+    """
+    tokens = set(normalize(text).split())
+    return not (tokens & _ENGLISH_FUNCTION_WORDS)
+
 
 def _is_unreadable_by_the_allowlist(text: str) -> bool:
     """Whether the allowlist structurally cannot judge this query's topic.
@@ -510,7 +573,7 @@ def _is_unreadable_by_the_allowlist(text: str) -> bool:
     toward a model call rather than a refusal is the correct direction for
     every check in this module.
     """
-    return bool(_NON_ASCII_LETTER.search(text))
+    return bool(_NON_ASCII_LETTER.search(text)) or _shows_no_sign_of_english(text)
 
 
 def _screen_off_topic(text: str) -> GuardVerdict | None:

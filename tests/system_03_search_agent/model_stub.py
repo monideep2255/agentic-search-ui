@@ -52,7 +52,7 @@ __all__ = [
 # Must satisfy `guardrail.classifier.InjectionClassification`, which forbids
 # extra fields, so this is not free-form.
 COMPLIANT_GUARD_CLASSIFICATION = (
-    '{"is_injection": false, "confidence": 0.02, '
+    '{"is_injection": false, "is_off_topic": false, "confidence": 0.02, '
     '"reason": "an ordinary biomedical question"}'
 )
 

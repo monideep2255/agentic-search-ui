@@ -145,7 +145,7 @@ def _compliant_synth_narrative(messages: list[dict[str, str]]) -> str:
 # this fixture models a good model, those files model a bad one and an
 # attacker.
 _COMPLIANT_GUARD_CLASSIFICATION = (
-    '{"is_injection": false, "confidence": 0.02, '
+    '{"is_injection": false, "is_off_topic": false, "confidence": 0.02, '
     '"reason": "an ordinary biomedical question"}'
 )
 

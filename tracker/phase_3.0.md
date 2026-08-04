@@ -274,6 +274,44 @@ What kept this cheap was probing rather than reasoning. One script that ran the 
 
 Wall time falling from 10m32s to roughly 4 minutes is itself evidence the guardrail works: against the stub every question was admitted and ran the full five-node loop, and now the refusals stop at the guardrail.
 
+## Judge round 1, 2026-08-04: FAIL
+
+All 34 ticket-level acceptance criteria across T-3.0-01 to T-3.0-06 passed individually with file:line evidence, and the suite was green. The judge still returned FAIL, on the phase's own premise, with reproducible counterexamples in both directions. That gap between "every criterion passes" and "the thing does not work" is the entire argument for having a premise rather than a checklist.
+
+### JUDGE-01: genuinely off-topic queries were fully admitted
+
+Severity: critical. Direction: under-block. Status: FIXED, needs an independent closer.
+
+Confirmed end to end through the real node: "What is the capital of the USA?", "Who is the CEO of NASA?", "What does the FBI do?" and "Tell me about the UK and the EU trade deal." were all ADMITTED with `category="ok"`.
+
+The chain: `prefilter`'s symbol pattern deliberately over-matches, so `USA` cleared the allowlist exactly as `BRCA1` does. Finding F-3.0-03 recorded that as an accepted trade-off, and justified it in a code comment reading "a false match costs one Guard-tier call, after which the classifier refuses the query anyway."
+
+That sentence was false. The classifier judged only injection, and `forbidden.py` judges only write and verdict requests, so nothing re-checked topicality after the pre-filter. The excuse for the over-broad pattern depended on a layer that did not exist.
+
+Two things worth carrying:
+
+- This is the F-2.1-J5-01 pattern again, and it was written by the same agent that had just cited F-2.1-J5-01 in another module's docstring. A confident comment asserting a property the code does not implement survives review precisely because the prose sounds certain. Knowing the rule did not prevent committing the error.
+- The fix was a SPEC COMPLIANCE fix, not a hardening extra. Section 10.1 step 3 defines the Guard-tier step as "nuanced prompt-injection AND OFF-TOPIC cases the pre-filter could not resolve". The implementation had quietly dropped half of that. Re-reading the spec line, rather than reasoning about the code, is what identified the correct fix.
+
+Fixed by adding `is_off_topic` to the classification schema and the Guard-tier instruction. Verified end to end: all four now refuse with `off_topic`, and every legitimate question still admits.
+
+### JUDGE-02: a bare possessive refused ordinary research phrasing
+
+Severity: high. Direction: over-block. Status: FIXED, needs an independent closer.
+
+The advice pattern treated the word "my" plus any clinical noun within forty characters as personal-advice-seeking, so both of these were refused as `medical_advice`:
+
+- "In my analysis of this cohort, what mutation frequency is reported for BRCA1?"
+- "My lab is studying the BRCA1 mutation spectrum, what does the graph have?"
+
+A proximity window cannot fix this, because it does not know what the possessive binds to. Narrowed to a possessive sitting DIRECTLY on a clinical noun: my mutation is a personal fact, my analysis is a piece of work. Verified: both admit, and all three genuine personal-advice controls still refuse.
+
+### ADV-02-residual, closed after the judge round
+
+The German case carried from the adversary round ("Welche Krankheiten sind mit dem Gen assoziiert?", pure ASCII, no cognate) became fixable once the classifier judged off-topic properly, since the only thing refusing it was the pre-filter. Closed with a small closed list of English function words: their complete absence is evidence the query is not English, so the pre-filter abstains and the multilingual classifier decides.
+
+Deliberately function words rather than per-language biomedical vocabulary. The second is the infinite-blocklist trap recorded on 2026-08-03: the languages someone thought of get covered and the rest do not. Verified end to end: the German and Spanish questions now both admit.
+
 ## Adversary round 1, 2026-08-04
 
 Eight findings filed, all measured by executing the deterministic screens rather than by inspection. Four were acted on, and every one was independently re-verified by the lead before any fix was written, since the finder does not close its own findings.
