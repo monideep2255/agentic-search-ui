@@ -73,6 +73,7 @@ would silently swallow correct answers.
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -250,6 +251,41 @@ def _citable_value_for_row(
     # numeric zero is not blank and must not be caught here (see below).
     is_blank_string = isinstance(field_value, str) and not field_value.strip()
 
+    # F-2.2-T-01's sibling, F-2.2-T-02: everything the checks above do not
+    # name fell through to a bare `str()` at full confidence. The type
+    # checks are each scoped to one family (`bool`, container, `str`), so a
+    # value outside all of them was treated as a clean, citable fact.
+    #
+    # Reachable rather than hypothetical: `tools/agtype.py` parses graph
+    # values with a bare `json.loads`, which accepts the `NaN`, `Infinity`
+    # and `-Infinity` literals AGE emits for float specials. Measured
+    # results before this check, each shipping with
+    # `assertion_confidence="asserted"`:
+    #
+    #   float("nan")  -> "[1] Disease MedGen:C0346153, name: nan"
+    #   float("inf")  -> "... name: inf"
+    #   b"secret"     -> "... name: b'secret'"
+    #   object()      -> "... name: <object object at 0x11f189790>"
+    #
+    # The last one renders a memory address as a disease name. All four are
+    # the same defect class the R-06 fix documents itself as closing, one
+    # type family over.
+    #
+    # `nan` specifically is NOT covered by the int/float carve-out below.
+    # That carve-out reasons about `0`, a real zero-valued measurement.
+    # `nan` is the float spelling of absence, the standard null in pandas
+    # and numpy, and it is never a count of anything.
+    #
+    # This is deliberately an ALLOWLIST rather than another named-type
+    # blocklist. Three rounds of this phase have now shown a blocklist of
+    # bad shapes losing to the next shape nobody enumerated, which is the
+    # same lesson `LEARNINGS.md`'s 2026-08-01 validator entry records: a
+    # blocklist of unsafe shapes is infinite while an allowlist of safe
+    # ones is finite.
+    is_unrenderable = not isinstance(field_value, (str, int, float)) or (
+        isinstance(field_value, float) and not math.isfinite(field_value)
+    )
+
     # Deliberately never flagged degenerate by anything above: `int` and
     # `float`, including `0`. A zero-valued count or measurement (an exon
     # count, a mutation count) is real data, not an absence, so a
@@ -266,6 +302,7 @@ def _citable_value_for_row(
         or is_container
         or is_sentinel_string
         or is_blank_string
+        or is_unrenderable
     )
 
     if degenerate:

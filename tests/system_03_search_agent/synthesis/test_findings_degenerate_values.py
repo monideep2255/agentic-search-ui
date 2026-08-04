@@ -366,3 +366,69 @@ class TestBuildSynthFindingsNeverShipsADegenerateValue:
         assert findings[0].field == "mutation_count"
         assert findings[0].field_value == "0"
         assert findings[0].curie_fallback is False
+
+
+class TestT02UnrenderableValues:
+    """F-2.2-T-02: values outside every named type family shipped as facts.
+
+    The R-06 fix named `bool`, container, sentinel string and blank string.
+    Each check is scoped to one type, so anything outside all of them fell
+    through to a bare `str()` at full confidence. Measured before the fix,
+    each shipping with `assertion_confidence="asserted"`:
+
+        float("nan") -> "name: nan"
+        float("inf") -> "name: inf"
+        b"secret"    -> "name: b'secret'"
+        object()     -> "name: <object object at 0x11f189790>"
+
+    The last renders a memory address as a disease name.
+
+    Reachable rather than hypothetical: `tools/agtype.py` parses graph
+    values with a bare `json.loads`, which accepts the `NaN`, `Infinity`
+    and `-Infinity` literals AGE emits for float specials.
+
+    Fixed with an ALLOWLIST (str, finite int, finite float) rather than
+    another named-type blocklist, because three rounds of this phase have
+    now shown a blocklist losing to the next shape nobody enumerated.
+    """
+
+    def _row(self, value: object) -> dict:
+        return {
+            "curie": "MedGen:C0346153",
+            "node_or_edge_type": "Disease",
+            "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+            "fields": {"name": value},
+        }
+
+    @pytest.mark.parametrize(
+        "value",
+        [float("nan"), float("inf"), float("-inf"), b"secret", object(), {1, 2}],
+        ids=["nan", "inf", "neg_inf", "bytes", "object", "set"],
+    )
+    def test_an_unrenderable_value_routes_to_the_curie(self, value: object) -> None:
+        from system_03_search_agent.core.graph import _pick_representative_field
+        from system_03_search_agent.synthesis.findings import _citable_value_for_row
+
+        field, field_value, _suspect, fallback = _citable_value_for_row(
+            self._row(value), _pick_representative_field
+        )
+        assert fallback is True, f"{value!r} did not route to the CURIE fallback"
+        assert field == "curie"
+        assert field_value == "MedGen:C0346153"
+
+    @pytest.mark.parametrize(
+        "value", [0, 7, 0.0, 3.14, -1], ids=["zero", "int", "zero_float", "pi", "negative"]
+    )
+    def test_a_finite_number_is_still_real_data(self, value: object) -> None:
+        """The cost side. `0` is a real zero-valued count, not an absence,
+        and the allowlist must not swallow it along with `nan`.
+        """
+        from system_03_search_agent.core.graph import _pick_representative_field
+        from system_03_search_agent.synthesis.findings import _citable_value_for_row
+
+        field, field_value, _suspect, fallback = _citable_value_for_row(
+            self._row(value), _pick_representative_field
+        )
+        assert fallback is False, f"a finite number {value!r} was wrongly rejected"
+        assert field == "name"
+        assert field_value == str(value)
