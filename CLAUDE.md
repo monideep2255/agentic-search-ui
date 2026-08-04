@@ -197,4 +197,4 @@ Security hooks in `.claude/hooks/` (wired in `.claude/settings.json`) run on Pre
 
 ---
 
-Last updated: 2026-08-03.
+Last updated: 2026-08-03
