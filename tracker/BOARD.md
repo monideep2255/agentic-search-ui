@@ -12,10 +12,10 @@ Listed in flow order. Work moves left to right on the board, from `todo` to `don
 
 | Status | Count | Who may set it |
 |--------|-------|----------------|
-| To do | 20 | Lead |
+| To do | 19 | Lead |
 | In progress | 0 | The builder that claimed it |
 | Blocked | 0 | The builder that hit the block, reason required |
-| In review | 0 | The builder that finished |
+| In review | 1 | The builder that finished |
 | Done | 11 | Judge only, never the builder |
 
 `blocked` sits mid-flow rather than on the way to done, because it is where work stalls, not a step toward finishing.
@@ -50,7 +50,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 2.0 | `phase/2.0-langgraph-agent-loop` | LangGraph loop with stub nodes, the three-tier harness on LiteLLM and OpenRouter, coordinator-worker scaffold, cost caps from day one | 1.0 | prototype | done | refined | | | |
 | 2.1 | `phase/2.1-cypher-tool` | cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement | 2.0 | prototype | done | refined | | | |
 | 2.2 | `phase/2.2-write-step-grounding` | Deterministic cite-or-refuse, provenance for Layer 1 citations, the first trust signal, the two required tests | 2.1 | prototype | done | refined | | eval-harness | whole-repo security scan not yet run, F-2.2-T-01-residual, F-2.2-A-05 |
-| 3.0 | `phase/3.0-guardrail-node` | Full guardrail replacing the stub: validation, prompt-injection rejection, forbidden types, rate and cost pre-checks | 2.0 | v1 | todo | tech_refine | | | |
+| 3.0 | `phase/3.0-guardrail-node` | Full guardrail replacing the stub: validation, prompt-injection rejection, forbidden types, rate and cost pre-checks | 2.0 | v1 | in-review | refined | | | F-3.0-01 write category gap, T-3.0-07 blocked on the graph tunnel, T-3.0-08 not done |
 | 3.1 | `phase/3.1-ncbi-efetch` | ncbi_efetch over E-utilities and Datasets API v2 | 2.0, 3.0 | v1 | todo | tech_refine | | | |
 | 3.2 | `phase/3.2-ncbi-dbsnp` | ncbi_dbsnp over Variation Services, plus the dbVar two-step coordinate-overlap sub-tool | 3.1 | v1 | todo | tech_refine | | | |
 | 3.3 | `phase/3.3-enrichment-tools` | pubtator_annotate and litvar2_lookup, each with untrusted-source-reader separation | 3.1 | v1 | todo | tech_refine | | | relations endpoint unverified |
@@ -75,6 +75,9 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 
 | Flag | Detail | Resolve before |
 |------|--------|----------------|
+| F-3.0-01 write category gap | Section 10.5 requires refusing a write-seeking request and names no `GuardPayload.category` for it. The contract's six members contain nothing write-shaped, so `off_topic` is used and the real explanation lives only in the reason string. Resolving it needs either a new enum member, which is an additive and therefore v1-legal contract change, or a spec amendment | Step 6.2 reconciliation |
+| T-3.0-07 blocked on the graph tunnel | Clearing the F-2.1-J4-02 `xfail` needs build phase 2.1's premise gate run five consecutive times against the live graph. The SSH tunnel cannot be opened from this environment: the Layer-7 proxy cannot tunnel raw SSH, and the deletion-block hook independently blocks `ssh` as an execution wrapper. Both are working as designed. The substantive half is done, since the guardrail now refuses the injected-instruction shape at admission | Whenever the graph tunnel is reachable |
+| T-3.0-08 not done | F-2.1-C15's generation half and F-2.2-01 are untouched. The builder dispatched to analyse it inverted its contract, implemented a validator rule without the required analysis, and left a rule that rejects `[:orthologous_to {weight: 2*3}]` as an unbounded traversal. Reverted; the attempt is preserved as a diff | Build phase 3.1, whichever phase next touches generation |
 | Golden fixture domain sign-off | Nobody is named to verify the clinical and human-variation expected answers. A wrong expected answer makes a wrong agent pass, which is the failure the gate exists to catch | Build phase 5.1 |
 | PubTator3 relations endpoint | Path and fields not live-verified | Build phase 3.3 ship |
 | Whole-repo security scan, PAUSED INDEFINITELY | Paused 2026-08-03 by product-owner decision, on cost: the multi-agent scan is token-expensive and is not being funded for prototype code. This is the third and broadest of three deferrals (2026-07-27, 2026-07-28, 2026-08-03), and the reasoning has sharpened each time. The current one: the system has never been tested with a real user, the query set still needs refinement, and hardening code whose shape will change once real queries arrive pays for a surface that is still moving. What still holds while it is paused: the five hooks stay armed, `production-standards` and `ai-security-standards` gate every line written, Layer 1 is read-only by credential rather than by instruction, and `pip-audit` and `ruff` are installed and cost nothing to run. The agreed shape when it does run is ONE deep dive over the ENTIRE repository, not a commit range, so there is no baseline SHA to carry forward and nothing to forget to widen | EXPOSURE, not a phase number. First contact with a real user is the trigger: if this is deployed, given a public URL, or shown to anyone who is not the product owner, the scan runs first |
