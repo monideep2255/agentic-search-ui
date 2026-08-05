@@ -10,8 +10,14 @@ dist/
 venv/
 .venv/
 
-# Environment
+# Environment. `.env` holds the graph password, the auth secret, the NCBI key
+# and both OpenRouter keys, and has never been committed on any branch. The
+# `.env.*` line covers variants that do not exist yet (.env.local, .env.production)
+# so a future file cannot slip in under a name the single `.env` rule misses.
+# `env.example` is deliberately NOT matched by either pattern: it is the tracked
+# template and carries no values.
 .env
+.env.*
 
 # Node/React
 node_modules/
@@ -22,7 +28,15 @@ frontend/test-results/
 frontend/playwright-report/
 
 # IDE
-.vscode/
+# .vscode/ contents stay local, with one exception: tasks.json can run commands
+# automatically when a folder is opened, so a hostile edit or a newly planted
+# file must surface as a git diff or an untracked file rather than silently.
+# This is the ChainDrop/Shai-Hulud worm vector, the same one that targets
+# .claude/settings.json. The pattern must be `.vscode/*`, not `.vscode/`: git
+# cannot re-include a path whose parent directory is excluded, so a
+# directory-level ignore would defeat the negation below.
+.vscode/*
+!.vscode/tasks.json
 .idea/
 
 # OS
@@ -55,6 +69,11 @@ security/
 # Personal dev-workflow note (API keys/env-var setup for alternate model
 # backends). Not repo doc content, stays local only.
 docs/Claude_Code_model_fallback_setup.md
+
+# Multi-model build-harness material (plan, cadence visualization). Names real
+# providers, model identifiers and prices, which writing-style keeps out of
+# tracked docs. Same reason as the note above, stays local only.
+docs/build/multi-model-harness/
 
 # macOS Finder/Archive Utility duplicate-copy artifacts (e.g. "env 2.py").
 # These appear when a file is copied into a directory that already has a

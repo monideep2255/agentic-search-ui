@@ -4,7 +4,7 @@ The index of every phase. Maintained by the `task-tracker` skill. Per-phase tick
 
 Build phases and their dependencies come from `requirements/Technical_specification.md` Section 25, which is the source of truth. This board never invents a phase.
 
-Last updated: 2026-08-03.
+Last updated: 2026-08-04.
 
 ## Status counts
 
@@ -32,7 +32,7 @@ Listed in flow order. Work moves left to right on the board, from `todo` to `don
 
 ## Build phases
 
-Group P is the prototype, Plan.md Step 6.1. Everything else is v1, Step 6.3. Step 6.2, the one reconciliation pause, sits between 2.2 and 3.0.
+Group P is the prototype, Plan.md Step 6.1. Everything else is v1, Step 6.3. Step 6.2, the one reconciliation pause, moved on 2026-08-03 to run after the 3.x tool phases.
 
 This table is parsed by `tracker/render_board.py`. Keep the ten columns and their order.
 

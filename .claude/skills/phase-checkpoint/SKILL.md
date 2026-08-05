@@ -49,6 +49,9 @@ Every fact this checkpoint touches has exactly one owner file. A checkpoint upda
 | Choices between alternatives | `DECISIONS.md` | A pointer |
 | Build order | `requirements/Technical_specification.md` Section 25 | A pointer |
 | Counts (tests, decisions, entries, flags) | Computed by `tracker/check_doc_drift.py` | Only CLAUDE.md and the continuation prompt may state them |
+| The plain-language state of the project, for a non-technical reader | `PROGRESS.md` | Nowhere else. It is the only document written for someone outside the build |
+
+`PROGRESS.md` is the one deliberate exception to the pointer rule, and it is worth saying why. Every other row above avoids restating a fact because a second copy drifts. `PROGRESS.md` restates many of them on purpose, in different words, because its reader cannot follow a pointer into `tracker/phase_N.M.md` and get anything useful out of it. The protection against drift is that it is refreshed at Step 5b of every checkpoint, from the same sources, rather than edited ad hoc.
 
 This is why Step 4 and Step 5 below say refresh and update, not add a new section. A build phase's own ticket-level detail belongs in `tracker/phase_N.M.md`, written during the build itself. The continuation prompt and Plan.md hold only a pointer to it plus the current state, never a second copy of the ticket-level record.
 
@@ -97,6 +100,28 @@ Confirm before writing. Ask if unclear from context:
 - Planning-phase mode, phase-end only: extend or write `requirements/phase_N/Phase_N_synthesis.md`, the topic-organized narrative of the phase's decisions, ready for the downstream phase.
 - Build-phase mode: no per-phase synthesis doc (Step 6.2's one scheduled reconciliation plays that role once, mid-build). Instead, always update `requirements/Plan.md`: bump the Phase 6 status-table row to name the build phase just merged and the one next up, update the last-updated line, and append a Revision history entry naming what merged, its PR number, and its release-gate outcome (tests passing, findings fixed, any decisions logged). Plan.md no longer carries a separate "Summary of what happens next" paragraph, so there is no fourth edit to make; do not recreate one.
 
+### Step 5b: PROGRESS.md, the plain-language update (both modes)
+
+Refresh `PROGRESS.md` at the repo root. It is the one document written for someone who has never seen the code: a sprint-demo style update in ordinary English, saying what works, what does not, and what is next.
+
+Every other artifact this skill touches is written for a builder. This one is not, and that is the whole point of keeping it separate rather than folding it into `README.md` (technical) or the continuation prompt (written for the next agent).
+
+What to update, every checkpoint:
+
+- The "what works today" list, in user-facing terms. What can a person actually do now that they could not do before this phase.
+- The "what does not work yet" section, and its honest headline. Say the single biggest limitation in one sentence, in plain words.
+- The sprint table: add a row for the phase that just merged, with its plain-terms description and its date.
+- The "what is next" ordered list, so item 1 is genuinely the next thing.
+- The known-problems table: add anything this phase carried, remove anything it closed, and keep each row's "when it gets fixed" honest rather than aspirational.
+- The last-updated date.
+
+Rules for the writing, which are stricter here than anywhere else in the repo:
+
+- No jargon at all, or explain it in the same sentence. Not "the guardrail rejects prompt injection" but "the gatekeeper turns away questions that try to manipulate the system".
+- No internal identifiers in the body. A reader does not know what F-2.1-07 is. Describe the problem, not its ticket number.
+- Concrete over abstract. "It currently only knows about one gene by name" beats "entity resolution coverage is limited".
+- Keep the failures in. The value of this document is that a non-technical reader can see what went wrong and what it cost, not a sanitized highlight reel.
+
 ### Step 6: structural hygiene pass (both modes)
 
 Before the exit checklist, verify the structure of every document this checkpoint created or updated, per writing-style.md. This step exists because a status block was once crammed into a single run-on paragraph, and a table of contents lagged the body as sections were appended.
@@ -125,6 +150,7 @@ Before declaring the checkpoint done, verify:
 - [ ] Every decision made this session is in DECISIONS.md (append-only).
 - [ ] Planning-phase mode: the phase session doc has a section for each sub-phase closed, and a dated meeting note exists with an action-items section.
 - [ ] Build-phase mode: `requirements/phase_6/Continuation_prompt.md` names the correct just-merged build phase, the correct next-up build phase, the current LEARNINGS.md count, and any open item the merged phase's release gate created.
+- [ ] `PROGRESS.md` refreshed: the sprint table has a row for the phase that just merged, "what works today" and "what does not work yet" reflect the current state, item 1 of "what is next" is genuinely next, the known-problems table matches the open flags on `tracker/BOARD.md`, and the last-updated date is today. Written in plain English with no internal finding identifiers in the body.
 - [ ] The continuation prompt (whichever mode) reflects current state: no just-merged phase described as "not started" or "next up" to build.
 - [ ] Planning-phase mode, phase-end: the phase synthesis is updated.
 - [ ] Build-phase mode: `requirements/Plan.md`'s status table, last-updated line, and Revision history are all updated to name the merged build phase.
