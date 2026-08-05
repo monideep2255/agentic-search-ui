@@ -13,7 +13,7 @@ This file exists because the lead session reached its context budget mid-phase. 
 | 6, 7, build | Done. All thirteen tickets built and merged to the phase branch |
 | 8, judge | Done, round 1 returned FAIL. Three criticals, seven majors, four minors |
 | 8b, fixes | Five findings fixed and verified. Six remain open |
-| 9, adversary | NOT RUN |
+| 9, adversary | Done, round 1. Fifteen findings, five critical, every one reproduced live. All OPEN |
 | 8c, re-review | NOT RUN. Required: the fixer never closes its own findings |
 | 10, gates | Partially run. See counts below |
 | 11, ship | NOT RUN |
@@ -72,11 +72,24 @@ Full detail in `tracker/phase_3.1.md`. Summary:
 
 They were written regardless: four new LEARNINGS.md rows. But the check itself is not doing the job it was added to do, which is worth fixing before it is trusted again.
 
+## The scope decision, taken 2026-08-05
+
+The product owner chose to CARRY the Act-step wiring to a named 3.x ticket rather than build it inside 3.1. Section 25 groups provenance and the two-tier trust gate across 3.0 to 3.5 rather than inside 3.1, so this is a defensible narrowing.
+
+The obligation that comes with it, and it is not optional: the phase premise must be explicitly RESTATED to what 3.1 actually delivers, recorded as a deliberate narrowing with a named owner for the carried half. Editing the premise quietly so the current state passes is the verify-surface weakening `goal-contracts` forbids, and it is the difference between a scoping decision and a cover-up.
+
 ## What the next session should do, in order
 
-1. Run the adversary, stage 9. It has not run at all. Point it at the answer path and at the two error conventions.
-2. Get the F-3.1-04 scope decision from the product owner.
-3. Run an independent re-review to close the five fixed findings. The fixer cannot close them.
-4. Re-run the gates, sync doc drift, then `/phase-checkpoint` and `/ship`.
+1. Restate the phase premise in this file's Phase premise section, with a dated note that the answer-path half is carried, and open the ticket that owns it.
+2. Work the 21 open findings. Five adversary criticals come first: the fabricated ESummary citation, the lookup budget eaten by English words, the `chr1` spelling returning empty, ELink errors read as no-results, and taxon being discarded. Then the URL parameter injection, which is live-confirmed.
+3. Re-run the premise gate. Note that adversary finding 2 shows gate case 14 PASSES while the behavior it pins is wrong, so that case needs rewriting, and rewriting it is strengthening rather than weakening.
+4. Run an independent re-review to close the fixed findings. The fixer never closes its own.
+5. Re-run the gates, sync doc drift, then `/phase-checkpoint` and `/ship`.
+
+## Why this phase is not close to merging
+
+Twenty-one findings are open across the two review rounds, eight of them critical. The pattern across both rounds is one thing: this tool talks to a live external API, and every critical came from the gap between what the API actually returns and what someone believed it returns. Two of the criticals were hidden by fixtures hand-written from documentation, which tested the author's belief rather than the interface.
+
+That is the transferable lesson for build phases 3.2 to 3.5, which are four more Layer 2 and Layer 3 tools: capture fixtures from live responses, never author them from a reading of the docs.
 
 Do not dispatch a judge and an adversary concurrently. LEARNINGS.md row 44: two frontier reviewers sharing one session limit are one failure, not two.
