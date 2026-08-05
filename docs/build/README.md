@@ -2,6 +2,12 @@
 
 How a build phase actually runs: the loop, the roles, the model tiering, and what the build has taught us so far. This folder answers "how do we build", not "what are we building". For what the system does, start at `docs/data-engineering/Project_overview_A_to_Z.md`; for the build order itself, read `requirements/Technical_specification.md` Section 25.
 
+## Table of contents
+
+- [The files, grouped by what you need](#the-files-grouped-by-what-you-need)
+- [A folder you may see locally that is not in git](#a-folder-you-may-see-locally-that-is-not-in-git)
+- [Why these files are not in subfolders](#why-these-files-are-not-in-subfolders)
+
 ## The files, grouped by what you need
 
 ### The cadence: how one phase runs
