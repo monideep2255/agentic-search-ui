@@ -122,13 +122,19 @@ One-time setup (per machine):
 
 Both settings keys are already configured. Installing tmux is the only per-machine step.
 
-Launch requirement: teammate panes only appear when Claude Code is running inside a tmux session. Start tmux first, then launch Claude inside it, then activate bossman:
+Launch requirement: teammate panes only appear when the CLI is running inside a tmux session. Start tmux first, then launch inside it, then activate bossman:
 
 ```
 tmux        # start a tmux session
-claude      # launch Claude Code inside it
+claude      # launch the CLI inside it
 /bossman    # activate bossman from inside that session
 ```
+
+Which command to launch is a decision, not a default. `claude` runs on the primary provider. If the build harness on this machine has an alternate metered backend configured, it will also have wrapper commands that launch the same CLI against it, and the choice is made HERE, at launch, because it cannot be changed inside a running session.
+
+The rule in one line: open a phase on the primary provider, always. Stages 3 and 5, decomposition and premise gate design, are where a bad split or a weak gate cascades into every builder dispatched afterwards, and `/bossman` starts at stage 1 and runs straight through both. Hand the builder stages over afterwards if the budget is tight.
+
+The stage-to-provider split is in `docs/build/Build_workflow_cadence.md` under "Provider mapping", and the launch commands are named in `requirements/phase_6/Continuation_prompt.md` under "Which session to open". If neither describes an alternate backend for this machine, there is only `claude` and nothing to decide.
 
 Navigate panes with `Ctrl-b` then an arrow key.
 
@@ -150,8 +156,10 @@ Create an agent team for Phase [N]:
 - Teammate "builder-api-routes": build FastAPI routes and schemas
 - Teammate "builder-agent-tools": build LangGraph tool definitions
 - Teammate "builder-ui-components": build React components
-Use Sonnet for each teammate. Require plan approval before they start coding.
+Use the Balance tier for each teammate. Require plan approval before they start coding.
 ```
+
+"Balance tier" rather than a product name is deliberate and is the same rule the model assignment table below states: tiers are named by capability so the instruction survives a change of provider. Resolve it through the provider mapping table in `docs/build/Build_workflow_cadence.md`. On the alternate backend the teammate model is set session-wide at launch instead, so this line has no effect there, which is covered under "When the session is running on the alternate backend" below.
 
 Each teammate receives its task via the shared task list. The lead monitors progress. When all builders complete, the lead dispatches the judge and test writer (as sub-agents, since those are sequential single-task roles).
 
@@ -199,7 +207,7 @@ Tiers are named by capability, never by product, so this table survives a change
 
 The three tiers: Speed for lookups, extraction, classification, and repetitive work. Balance for normal development. Depth for architecture, hard debugging, and long messy agentic work. The effort ladder runs low, medium, high, extra high, max, and rises with the difficulty of the task rather than its importance.
 
-Pass the model and effort choice when you dispatch each sub-agent, and set the teammate model when you create the agent team (the team creation step already says to use Sonnet for each teammate). A tool-less coordinator that delegates heavy reading to cheap scoped workers measured 2.5x cheaper and roughly 3x faster than one frontier model doing everything, with about 84 percent of input tokens billed at the cheap worker rate (the plan-big-execute-small pattern from the claude-cookbooks dive, in the personal-os Reference-repos set). Delegation has a fixed setup cost, so do not shard a phase into many tiny tasks just to parallelize. Each dispatched agent should carry a task worth its overhead.
+Pass the model and effort choice when you dispatch each sub-agent, and set the teammate model when you create the agent team (the team creation step already says to use the Balance tier for each teammate). A tool-less coordinator that delegates heavy reading to cheap scoped workers measured 2.5x cheaper and roughly 3x faster than one frontier model doing everything, with about 84 percent of input tokens billed at the cheap worker rate (the plan-big-execute-small pattern from the claude-cookbooks dive, in the personal-os Reference-repos set). Delegation has a fixed setup cost, so do not shard a phase into many tiny tasks just to parallelize. Each dispatched agent should carry a task worth its overhead.
 
 #### When the session is running on the alternate backend
 
