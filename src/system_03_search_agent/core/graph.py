@@ -990,9 +990,26 @@ _MAX_LIVE_SYMBOL_LOOKUPS = 3
 # per query is the right cost/staleness trade. This is a resolution-
 # result cache, not the prompt-cache stable prefix
 # `prompt-cache-discipline.md` governs, so that rule does not apply to
-# it. Keyed on the upper-cased symbol; `None` is a valid cached value
-# (an already-confirmed non-resolution), distinguished from "not yet
+# it. Keyed on the upper-cased symbol; `None` is a valid cached value,
+# but ONLY when it is a genuinely confirmed non-resolution (both Datasets
+# and ESearch answered and neither found the symbol), never when the
+# lookup could not be completed at all. Distinguished from "not yet
 # looked up" by key presence, not by the value's truthiness.
+#
+# Finding 2 (CRITICAL, re-review, 2026-08-05): before this fix, EVERY
+# outcome from `_resolve_symbol_to_curie_uncached`, including a
+# `status == "error"` from a timeout, connection failure, 5xx, or rate
+# limit, was cached as `None` here unconditionally, permanently. During a
+# transient NCBI outage a symbol would resolve to `None`, get cached, and
+# stay unresolved forever, even after NCBI fully recovered, because the
+# cache lookup at the top of `resolve_symbol_to_curie` short-circuits
+# before any network call is attempted again. This comment used to claim
+# "None is a valid cached value (an already-confirmed non-resolution)"
+# while the code cached every `None`, confirmed or not, which is exactly
+# the `self-eval-loop`'s "a comment that claims a property is a claim to
+# be tested" pattern. `_resolve_symbol_to_curie_uncached` now returns
+# `(curie, cacheable)`, and only a `cacheable=True` result is written
+# here.
 _SYMBOL_CURIE_CACHE: dict[str, str | None] = {}
 
 
@@ -1035,20 +1052,33 @@ async def resolve_symbol_to_curie(symbol: str, *, taxon: str = "human") -> str |
     own docstring), so nothing here needs its own try/except around the
     network call.
 
-    Cached in `_SYMBOL_CURIE_CACHE` for the life of the process,
-    including a `None` result, so a symbol confirmed unresolvable in one
-    query is not looked up again in the next.
+    Cached in `_SYMBOL_CURIE_CACHE` for the life of the process, but ONLY
+    when `_resolve_symbol_to_curie_uncached` reports the result as a
+    genuinely confirmed non-resolution (Finding 2, CRITICAL, re-review):
+    a symbol both Datasets and ESearch answered and neither could find is
+    cached as `None` forever, since that is stable data. A symbol neither
+    call could even ask about, a timeout, connection failure, 5xx, or
+    rate limit, is never cached, so the next query for the same symbol
+    retries the live lookup rather than replaying a stale outage.
     """
     cache_key = symbol.strip().upper()
     if cache_key in _SYMBOL_CURIE_CACHE:
         return _SYMBOL_CURIE_CACHE[cache_key]
 
-    curie = await _resolve_symbol_to_curie_uncached(cache_key, taxon)
-    _SYMBOL_CURIE_CACHE[cache_key] = curie
+    curie, cacheable = await _resolve_symbol_to_curie_uncached(cache_key, taxon)
+    if cacheable:
+        _SYMBOL_CURIE_CACHE[cache_key] = curie
     return curie
 
 
-async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> str | None:
+async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> tuple[str | None, bool]:
+    """Returns `(curie, cacheable)`.
+
+    `cacheable` is `True` only when the `None` (or resolved) result is a
+    genuine, confirmed answer the live APIs actually gave, never when a
+    branch had to give up because a call errored out. See Finding 2's
+    account above `_SYMBOL_CURIE_CACHE`'s declaration.
+    """
     dataset_output = await ncbi_efetch(
         NcbiEfetchInput.model_validate(
             {
@@ -1059,12 +1089,22 @@ async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> str | No
             }
         )
     )
-    if dataset_output.status == "ok" and dataset_output.records:
+    # Finding 5 (MAJOR, re-review): mirror the ESearch guard below
+    # exactly. Before this fix, `dataset_output.records[0]` was taken
+    # with no ambiguity check at all, while the ESearch fallback twenty
+    # lines below explicitly refuses on `len(idlist) != 1` ("never
+    # fabricate a CURIE by guessing among candidates"). `dataset_report`
+    # can return up to 100 records, so an ambiguous Datasets response
+    # used to silently pick an arbitrary first record instead of falling
+    # through to the ESearch path the way a genuinely ambiguous match
+    # should. Zero records or more than one record both fall through to
+    # the ESearch path below; only exactly one resolves here.
+    if dataset_output.status == "ok" and len(dataset_output.records) == 1:
         fields = dataset_output.records[0].fields
         gene_id = fields.get("gene_id")
         taxname = fields.get("taxname")
         if gene_id and taxname == "Homo sapiens":
-            return f"NCBIGene:{gene_id}"
+            return f"NCBIGene:{gene_id}", True
 
     search_output = await ncbi_efetch(
         NcbiEfetchInput.model_validate(
@@ -1076,17 +1116,27 @@ async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> str | No
             }
         )
     )
+    if search_output.status == "error":
+        # Finding 2: a transient failure (timeout, connection error, 5xx,
+        # rate limit), not a confirmed non-resolution. Never cache this;
+        # the next query for the same symbol must retry live rather than
+        # replaying a stale outage forever.
+        return None, False
     if search_output.status != "ok" or not search_output.records:
-        return None
+        # A genuine zero-hit search (status "empty", or "ok" with no
+        # records): both APIs answered and neither found the symbol. A
+        # confirmed non-resolution, safe to cache.
+        return None, True
 
     idlist = search_output.records[0].fields.get("idlist")
     if not isinstance(idlist, list) or len(idlist) != 1:
         # Zero hits, or an ambiguous multi-id match: never fabricate a
-        # CURIE by guessing among candidates.
-        return None
+        # CURIE by guessing among candidates. Both are confirmed answers
+        # from a successful call, safe to cache.
+        return None, True
 
     gene_id = idlist[0]
-    return f"NCBIGene:{gene_id}" if gene_id else None
+    return (f"NCBIGene:{gene_id}", True) if gene_id else (None, True)
 
 
 def _span_overlaps_any(span: tuple[int, int], spans: list[tuple[int, int]]) -> bool:

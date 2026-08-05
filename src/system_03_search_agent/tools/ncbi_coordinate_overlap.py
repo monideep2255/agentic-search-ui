@@ -236,6 +236,33 @@ def _assembly_matches(placement_assembly: str, requested: str) -> bool:
     return placement_assembly == requested or placement_assembly.startswith(requested + ".")
 
 
+def _normalize_chromosome(value: str) -> str:
+    """Fold a chromosome label to one comparable form.
+
+    Strips an optional case-insensitive `chr` prefix and upper-cases the
+    remainder, so `"chr1"`, `"Chr1"`, and `"1"` compare equal, and so do
+    `"chrX"` / `"X"` / `"x"` and `"chrMT"` / `"MT"` / `"mt"`.
+    """
+    stripped = value.strip()
+    if stripped[:3].lower() == "chr":
+        stripped = stripped[3:]
+    return stripped.upper()
+
+
+def _chromosome_matches(placement_chromosome: str, requested: str) -> bool:
+    """Finding 1 fix: the coarse ESearch prefilter's chromosome tag (CH/CHR)
+    is documented (module docstring, "the trap this module exists to
+    close") as unreliable and must be re-verified in code against the
+    resolved placement, exactly like the assembly is re-verified by
+    `_assembly_matches`. Before this fix, `chromosome` was extracted onto
+    `_Placement` and written to output but never compared here, so a
+    candidate whose ONLY placement was on a different chromosome than
+    requested could still be returned as an "overlap" if its numeric range
+    happened to coincide.
+    """
+    return _normalize_chromosome(placement_chromosome) == _normalize_chromosome(requested)
+
+
 def _overlaps(placement: _Placement, start: int, end: int) -> bool:
     """Section 6.2's own predicate, applied here and nowhere else in this module."""
     return placement.chr_start <= end and placement.chr_end >= start
@@ -509,10 +536,19 @@ async def coordinate_overlap(
             continue
 
         placements = _extract_placements(db, record)
-        matching = [p for p in placements if _assembly_matches(p.assembly, assembly)]
+        matching = [
+            p
+            for p in placements
+            if _assembly_matches(p.assembly, assembly) and _chromosome_matches(p.chromosome, chromosome)
+        ]
         if not matching:
-            # Step 5: no placement for the requested assembly. Drop,
-            # never guess one.
+            # Step 5: no placement for the requested assembly AND
+            # chromosome. Drop, never guess one. (Finding 1: a candidate
+            # can carry a placement matching the assembly on a DIFFERENT
+            # chromosome, e.g. a multi-placement record with one hit on
+            # chr1 and another on chr2; only a placement matching BOTH
+            # the requested assembly and chromosome may proceed to the
+            # overlap predicate below.)
             continue
 
         overlapping = [p for p in matching if _overlaps(p, start, end)]

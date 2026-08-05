@@ -29,6 +29,12 @@ What this file proves, mapped to the ticket's acceptance:
     - The live-verified finding: a well-formed but unmatched symbol or
       accession returns HTTP 200 with an empty `{}` body, and this module
       collapses that to `status: "empty"`, never `"ok"` and never `"error"`.
+    - Finding 9 (MAJOR, re-review): that collapse-to-`empty` rule is an
+      ALLOWLIST on the one live-verified not-found shape (the literal
+      empty `{}`), not a blanket rule for "any 2xx body lacking
+      `reports`". A renamed key, an unrecognized non-empty 2xx body, or a
+      `reports` field of the wrong type now fails closed as `error`,
+      never silently reported as "no results".
 
 Depends on:
     - system_03_search_agent.tools.ncbi_datasets_actions (module under test)
@@ -223,6 +229,92 @@ async def test_unmatched_accession_is_empty_not_error() -> None:
     client = _FakeClient([httpx.Response(200, text="{}")])
     action_input = NcbiEfetchDatasetReportInput(
         action="dataset_report", report_type="genome", accession="GCF_00000000X"
+    )
+
+    output = await ncbi_datasets_actions.dataset_report(action_input, client=client)
+
+    assert output.status == "empty"
+    assert not output.records
+
+
+# ===========================================================================
+# Finding 9 (MAJOR, re-review): an unrecognized 2xx shape must fail closed
+# as `error`, never be silently collapsed to `empty` the way any 2xx body
+# lacking a `reports` key used to be. Only the literal empty body `{}`,
+# the one live-verified not-found shape, allowlists to `empty`.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_unrecognized_2xx_body_without_reports_is_error_not_empty() -> None:
+    """A 2xx body that is NOT the live-verified empty `{}` shape and does
+    NOT carry a `reports` key: a renamed key, a schema change, or a 2xx
+    proxy/error page. Before this fix this was indistinguishable from
+    "nothing matched" and silently reported as `empty`. It must fail
+    closed as `error` instead.
+    """
+    client = _FakeClient(
+        [httpx.Response(200, text='{"results": [{"gene": {"gene_id": "7157"}}]}')]
+    )
+    action_input = NcbiEfetchDatasetReportInput(
+        action="dataset_report", report_type="gene", gene_id="7157"
+    )
+
+    output = await ncbi_datasets_actions.dataset_report(action_input, client=client)
+
+    assert output.status == "error", (
+        f"an unrecognized 2xx shape without a 'reports' key must fail closed as "
+        f"'error', not be silently reported as 'empty' (no results), got "
+        f"{output.status!r}"
+    )
+    assert output.error is not None
+    assert "reports" in output.error
+
+
+@pytest.mark.asyncio
+async def test_2xx_body_with_extra_unrelated_keys_and_no_reports_is_error() -> None:
+    """Same shape of gap, a body carrying OTHER real-looking content
+    (not the E-utilities error envelope this module deliberately ignores
+    per the mirror-image test below, just an unrelated non-empty
+    payload) but still no 'reports' key.
+    """
+    client = _FakeClient([httpx.Response(200, text='{"status": "processing", "job_id": "42"}')])
+    action_input = NcbiEfetchDatasetReportInput(
+        action="dataset_report", report_type="genome", accession="GCF_000001405.40"
+    )
+
+    output = await ncbi_datasets_actions.dataset_report(action_input, client=client)
+
+    assert output.status == "error"
+    assert output.error is not None
+
+
+@pytest.mark.asyncio
+async def test_reports_present_but_not_a_list_is_error() -> None:
+    """`reports` present but the wrong TYPE (an object instead of a list)
+    is just as unrecognized as a missing key, and must not be silently
+    treated as zero matches either.
+    """
+    client = _FakeClient([httpx.Response(200, text='{"reports": {"unexpected": "shape"}}')])
+    action_input = NcbiEfetchDatasetReportInput(
+        action="dataset_report", report_type="gene", gene_id="7157"
+    )
+
+    output = await ncbi_datasets_actions.dataset_report(action_input, client=client)
+
+    assert output.status == "error"
+    assert output.error is not None
+
+
+@pytest.mark.asyncio
+async def test_reports_present_as_an_empty_list_is_still_empty_not_error() -> None:
+    """The documented empty-list shape (`{"reports": []}`) is a genuine,
+    well-formed zero-match answer, distinct from an unrecognized shape,
+    and must still classify `empty`, not `error`.
+    """
+    client = _FakeClient([httpx.Response(200, text='{"reports": []}')])
+    action_input = NcbiEfetchDatasetReportInput(
+        action="dataset_report", report_type="gene", gene_id="999999999"
     )
 
     output = await ncbi_datasets_actions.dataset_report(action_input, client=client)

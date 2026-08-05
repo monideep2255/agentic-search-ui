@@ -314,9 +314,37 @@ async def dataset_report(
         )
 
     reports = body.get("reports")
-    if not reports or not isinstance(reports, list):
-        # The live-verified bad-symbol/bad-accession finding: HTTP 200,
-        # body {}. Nothing broke, nothing matched.
+    if reports is None:
+        # Finding 9 (MAJOR, re-review): before this fix, ANY 2xx dict
+        # lacking a `reports` key collapsed to `_empty_output()`, so a
+        # renamed key, a proxy or error page that happens to be valid
+        # JSON, or an undocumented API contract change was
+        # indistinguishable from "nothing matched" and reported to the
+        # user as a clean no-result answer. The only live-verified
+        # not-found shape (module docstring's FINDING section) is a
+        # LITERAL EMPTY BODY, `{}`, no keys at all. Allowlist exactly
+        # that; anything else 2xx-but-keyless-of-reports is unrecognized
+        # and fails closed as `error` rather than silently as `empty`.
+        if not body:
+            return _empty_output()
+        return _error_output(
+            "Datasets v2 returned a 2xx response with no 'reports' key and a "
+            f"non-empty body ({sorted(body.keys())!r}). The only live-verified "
+            "not-found shape is a literal empty body; this does not match it "
+            "and may mean the API contract changed. Refusing to report this "
+            "as \"no results\"; retry, and if this recurs, this module's "
+            "not-found detection needs updating."
+        )
+    if not isinstance(reports, list):
+        return _error_output(
+            f"Datasets v2 returned a 2xx response whose 'reports' field is a "
+            f"{type(reports).__name__}, not a list. This does not match any "
+            "live-verified shape; refusing to guess its meaning."
+        )
+    if not reports:
+        # The documented empty-list shape (`{"reports": []}`): a
+        # confirmed, well-formed zero-match answer, distinct from the
+        # unrecognized-shape case above.
         return _empty_output()
 
     records: list[NcbiEfetchRecord] = []

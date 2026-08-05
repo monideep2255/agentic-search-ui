@@ -169,22 +169,27 @@ def _dbvar_record(
     *,
     uid: str,
     sv: str,
-    placements: list[tuple[int, int, str]],
+    placements: list[tuple[int, int, str]] | list[tuple[int, int, str, str]],
     variant_type: str = "copy number variation",
     gene_name: str | None = None,
 ) -> dict[str, Any]:
-    """One dbVar ESummary record. `placements` is `(chr_start, chr_end, assembly)`.
+    """One dbVar ESummary record. `placements` is `(chr_start, chr_end, assembly)`,
+    or `(chr_start, chr_end, assembly, chromosome)` when a test needs a
+    placement on a chromosome other than the "1" default (Finding 1's
+    cross-chromosome and multi-placement cases).
 
     Shape verified live 2026-08-05 against real dbVar ESummary responses;
     see the module docstring for the exact records this mirrors.
     """
+    entries = []
+    for placement in placements:
+        start, end, assembly = placement[0], placement[1], placement[2]
+        chromosome = placement[3] if len(placement) > 3 else "1"
+        entries.append({"chr": chromosome, "chr_start": start, "chr_end": end, "assembly": assembly})
     return {
         "uid": uid,
         "sv": sv,
-        "dbvarplacementlist": [
-            {"chr": "1", "chr_start": start, "chr_end": end, "assembly": assembly}
-            for start, end, assembly in placements
-        ],
+        "dbvarplacementlist": entries,
         "dbvarvarianttypelist": [variant_type],
         "dbvargenelist": [{"id": 1, "name": gene_name}] if gene_name else [],
     }
@@ -393,6 +398,150 @@ async def test_candidate_with_no_placement_for_requested_assembly_is_dropped() -
 
     assert output.status == "empty"
     assert output.record_count == 0
+
+
+# ===========================================================================
+# Finding 1 (CRITICAL, re-review): the candidate filter must compare the
+# chromosome, not just the assembly and the overlap predicate. Before the
+# fix, `chromosome` was extracted onto `_Placement`, written to output, and
+# never compared, so a record whose ONLY placement was on a DIFFERENT
+# chromosome than requested, but numerically inside the window, was
+# returned as a genuine overlap.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_candidate_on_a_different_chromosome_is_dropped_even_with_numeric_overlap() -> None:
+    """A record whose only placement is chr2, numerically inside a chr1
+    query window, on the requested assembly, must be dropped. This is the
+    judge's exact repro: chr1:1,000,000-1,100,000 GRCh38 must never return
+    a chr2:1,000,500-1,000,600 GRCh38 placement.
+    """
+    client = _FakeClient(
+        [
+            _esearch_response(count=1, ids=["1"]),
+            _dbvar_esummary_response(
+                {
+                    "1": _dbvar_record(
+                        uid="1",
+                        sv="nsv1",
+                        placements=[(1_000_500, 1_000_600, "GRCh38", "2")],
+                    )
+                }
+            ),
+        ]
+    )
+
+    output = await ncbi_coordinate_overlap.coordinate_overlap(
+        _input(db="dbvar", chromosome="1", start=1_000_000, end=1_100_000, assembly="GRCh38"),
+        client=client,
+    )
+
+    assert output.status == "empty", (
+        "a chr2 placement answering a chr1 query is a confident, cited, WRONG "
+        "answer and must never be returned"
+    )
+    assert output.record_count == 0
+
+
+@pytest.mark.asyncio
+async def test_multi_placement_record_where_only_the_wrong_chromosome_overlaps_is_dropped() -> None:
+    """A record with placements on TWO chromosomes, same requested assembly:
+    the chr2 placement overlaps the window numerically, the chr1 placement
+    (the requested chromosome) does not. The record must be dropped, since
+    no placement satisfies BOTH the requested chromosome AND the overlap
+    predicate.
+    """
+    client = _FakeClient(
+        [
+            _esearch_response(count=1, ids=["1"]),
+            _dbvar_esummary_response(
+                {
+                    "1": _dbvar_record(
+                        uid="1",
+                        sv="nsv1",
+                        placements=[
+                            (1_000_500, 1_000_600, "GRCh38", "2"),  # wrong chromosome, overlaps
+                            (5_000_000, 5_000_100, "GRCh38", "1"),  # right chromosome, no overlap
+                        ],
+                    )
+                }
+            ),
+        ]
+    )
+
+    output = await ncbi_coordinate_overlap.coordinate_overlap(
+        _input(db="dbvar", chromosome="1", start=1_000_000, end=1_100_000, assembly="GRCh38"),
+        client=client,
+    )
+
+    assert output.status == "empty"
+    assert output.record_count == 0
+
+
+@pytest.mark.asyncio
+async def test_multi_placement_record_the_matching_chromosome_placement_is_selected() -> None:
+    """Same shape as above, except the requested-chromosome placement DOES
+    overlap: the record must be kept, and the output fields must reflect
+    the chr1 placement, never the chr2 one.
+    """
+    client = _FakeClient(
+        [
+            _esearch_response(count=1, ids=["1"]),
+            _dbvar_esummary_response(
+                {
+                    "1": _dbvar_record(
+                        uid="1",
+                        sv="nsv1",
+                        placements=[
+                            (5_000_000, 5_000_100, "GRCh38", "2"),  # wrong chromosome, no overlap
+                            (1_050_000, 1_050_100, "GRCh38", "1"),  # right chromosome, overlaps
+                        ],
+                    )
+                }
+            ),
+        ]
+    )
+
+    output = await ncbi_coordinate_overlap.coordinate_overlap(
+        _input(db="dbvar", chromosome="1", start=1_000_000, end=1_100_000, assembly="GRCh38"),
+        client=client,
+    )
+
+    assert output.status == "ok"
+    assert output.record_count == 1
+    assert output.records[0].fields["chr"] == "1"
+    assert output.records[0].fields["chr_start"] == 1_050_000
+
+
+@pytest.mark.asyncio
+async def test_chromosome_match_is_case_and_chr_prefix_insensitive() -> None:
+    """A request for chromosome "X" must match a placement carrying "chrX",
+    and lowercase "x" must match too, the same normalization the module
+    docstring's chromosome-casing note requires.
+    """
+    client = _FakeClient(
+        [
+            _esearch_response(count=1, ids=["1"]),
+            _dbvar_esummary_response(
+                {
+                    "1": _dbvar_record(
+                        uid="1",
+                        sv="nsv1",
+                        placements=[(1_050_000, 1_050_100, "GRCh38", "chrX")],
+                    )
+                }
+            ),
+        ]
+    )
+
+    output = await ncbi_coordinate_overlap.coordinate_overlap(
+        _input(db="dbvar", chromosome="x", start=1_000_000, end=1_100_000, assembly="GRCh38"),
+        client=client,
+    )
+
+    assert output.status == "ok"
+    assert output.record_count == 1
 
 
 # ===========================================================================

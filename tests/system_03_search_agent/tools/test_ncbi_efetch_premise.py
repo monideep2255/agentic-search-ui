@@ -127,7 +127,8 @@ Actions exercised (7 of 7):
 - `link`       case 5
 - `dataset_report`   cases 3, 10
 - `pubchem_property` cases 6, 11
-- `coordinate_overlap` cases 17, 18
+- `coordinate_overlap` cases 17, 18, 19 (case 19 added 2026-08-05, closing
+  Finding 1 CRITICAL: a live cross-chromosome MUST-REJECT pin)
 
 T-3.1-10 closed this gate's own stated highest-risk omission on 2026-08-05.
 The gap was real, not decorative: closing it required live-probing dbVar and
@@ -427,6 +428,14 @@ COORD_DBVAR_TRUE_POSITIVE_ACCESSION = "nsv7850635"
 # the raw ESearch match returns this as a false-positive hit; a tool that
 # runs the full five-step procedure never does.
 COORD_DBVAR_FALSE_POSITIVE_ACCESSION = "nsv7855404"
+
+# Finding 1 (CRITICAL, re-review): a wrong-but-plausible chromosome for the
+# SAME window and assembly as COORD_DBVAR_WINDOW. Case 19 re-queries with
+# this chromosome and asserts COORD_DBVAR_TRUE_POSITIVE_ACCESSION, a real
+# chr1 record, never comes back, live-verified 2026-08-05: ESearch returns
+# 710 genuinely different chr2 candidates for this window/assembly, and
+# neither ground-truth chr1 accession above is among them.
+COORD_DBVAR_WRONG_CHROMOSOME = "2"
 
 # ClinVar, chr17, GRCh38, a 10bp window around one TP53 SNV. Read through
 # ESearch's CPOS (GRCh38 "current position") field tag. The same accession
@@ -1026,6 +1035,48 @@ async def test_18_clinvar_overlap_resolves_the_real_tp53_placement() -> None:
         f"If this moved, re-verify against the endpoint; do not widen the assertion."
     )
     assert _record_urls_include_only_ncbi_hosts(survivor)
+
+
+@premise_gate
+@pytest.mark.asyncio
+async def test_19_dbvar_cross_chromosome_record_is_never_returned() -> None:
+    """Case 19. Finding 1 (CRITICAL, re-review), pinned live.
+
+    Added 2026-08-05 closing the judge's exact repro: the candidate filter
+    checked assembly and the overlap predicate and never compared the
+    chromosome, so a record whose ONLY placement was on a different
+    chromosome than requested, but numerically inside the query window,
+    could be returned as a genuine overlap. `chromosome` is used only in
+    the ESearch term, which the module docstring documents as an
+    unreliable coarse prefilter that must be re-verified in code; this
+    case is the live proof that the re-verification actually holds, not
+    merely that the code compiles against the intent.
+
+    COORD_DBVAR_TRUE_POSITIVE_ACCESSION (nsv7850635) is real ground truth:
+    it genuinely overlaps chr1:1,000,000-1,100,000 on GRCh38 (case 17).
+    Re-running the identical window and assembly with chromosome "2"
+    instead of "1" must NEVER surface that accession, and no record this
+    query returns may claim chromosome "1": a chr1 record answering a chr2
+    question is precisely the "confident, cited, WRONG answer" this
+    module exists to prevent.
+    """
+    wrong_chromosome_window = {**COORD_DBVAR_WINDOW, "chromosome": COORD_DBVAR_WRONG_CHROMOSOME}
+    output = await _run({"action": "coordinate_overlap", "db": "dbvar", **wrong_chromosome_window})
+
+    assert output.status in ("ok", "empty"), f"expected ok or empty, got {output.status}: {output.error}"
+    ids = {r.id for r in output.records}
+    assert COORD_DBVAR_TRUE_POSITIVE_ACCESSION not in ids, (
+        f"{COORD_DBVAR_TRUE_POSITIVE_ACCESSION} is a real chr1 record (case 17's ground "
+        f"truth); a query for chromosome {COORD_DBVAR_WRONG_CHROMOSOME!r} over the "
+        f"identical coordinate window and assembly must never return it, got {ids!r}. "
+        f"This is Finding 1's exact cross-chromosome false-positive shape."
+    )
+    assert COORD_DBVAR_FALSE_POSITIVE_ACCESSION not in ids
+    for record in output.records:
+        assert record.fields.get("chr") != "1", (
+            f"record {record.id!r} claims chromosome '1' while answering a chromosome "
+            f"{COORD_DBVAR_WRONG_CHROMOSOME!r} query: {record.fields!r}"
+        )
 
 
 def _record_urls_include_only_ncbi_hosts(record: Any) -> bool:
