@@ -5,6 +5,7 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 ## Table of contents
 
 - [State now](#state-now)
+- [Which session to open, before anything else](#which-session-to-open-before-anything-else)
 - [Read before opening the next phase](#read-before-opening-the-next-phase)
 - [Build phase 3.0, done](#build-phase-30-done)
 - [What build phase 3.1 delivers, and where it already stands](#what-build-phase-31-delivers-and-where-it-already-stands)
@@ -34,14 +35,38 @@ Current counts, stated once here:
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
 - Premise gate, guardrail: 20 of 20
-- Decisions logged: 207
+- Decisions logged: 210
 - Learnings entries: 48, plus a retrospective
 
 Next is build phase 3.1, `ncbi_efetch`, the first Layer 2 tool. It depends on 2.0 and 3.0, both merged. It is ALREADY OPEN on branch `phase/3.1-ncbi-efetch` at stage 3: twelve tickets are decomposed in `tracker/phase_3.1.md` and no tool code exists. Stage 5, the blocking premise gate, has not started.
 
 Step 6.2 moved on 2026-08-03. It now runs AFTER the 3.x tool phases rather than between 2.2 and 3.0, because its own written reasoning names 3.x as the code its security scan most exists for, and because reconciling the frozen documents after the tool phases is better input than reconciling before them. Its security scan is separately PAUSED INDEFINITELY on cost, with one condition that turns it back on: exposure. First contact with a real user, a deploy, or a public URL triggers it, whichever comes first.
 
-Per-phase detail lives in `tracker/phase_N.M.md`. Phase narrative lives in `requirements/Plan.md`'s Revision history. Status and open flags live in `tracker/BOARD.md`. This file points at those, it does not copy them.
+Per-phase detail lives in `tracker/phase_N.M.md`. Phase narrative lives in `requirements/Plan.md`'s Revision history. Phase status and the flags that gate a phase live in `tracker/BOARD.md`.
+
+One exception to the one-owner convention, stated rather than left to be discovered. The Open items table below is NOT a copy of `tracker/BOARD.md`. Measured 2026-08-04: of its 28 tracked identifiers, 14 also appear on the board and 14 appear nowhere else in the repository. So the table is the full forward backlog by owner and is the sole record for half its rows, while the board carries the subset that blocks a specific phase from closing. Where an item appears in both, the board's "Resolve before" column is authoritative.
+
+That split is a known wart rather than a design: the board is the incomplete one. Folding the 14 orphans into it would break the renderer's invariant that every phase's flag count matches the Open flags table, so it is a deliberate task and not a tidy-up. Until then, do not delete a row here on the assumption the board already has it.
+
+## Which session to open, before anything else
+
+Added 2026-08-04. The build harness has an alternate, metered model backend for when the primary provider's weekly budget runs out. It is scoped by ROLE, not by phase, and the choice is not recoverable after the fact, so make it before opening anything.
+
+| Cadence stage | Launch with | Why |
+|---------------|-------------|-----|
+| 3, 5, 8, 9: decompose, premise gate, judge, adversary | `claude` | The only stages that genuinely need the primary provider. Everything spent elsewhere is taken from here |
+| 1, 2, 4, 6, 7, 10, 11: open, learnings, dispatch, build, log, gates, close | `claude-build` | Cheap and metered. Every token spent here is a token those four stages keep |
+| 8, 9 when the primary budget is gone | `claude-review` | Records findings, closes nothing, and stages 8 and 9 re-run on `claude` before anything merges |
+
+Three rules that are not negotiable, each with a reason:
+
+- Never open a phase on the alternate backend. Stages 3 and 5 are where a bad split or a weak gate cascades into every builder dispatched afterwards.
+- A review produced on the alternate backend is non-binding. It records findings and closes no ticket.
+- Do not spend the primary provider on builder volume. The scarce resource is not money, it is capacity for the four stages that cannot run anywhere else. Burn it on building and you reach the limit with those four unfinished, which stalls the phase completely.
+
+Why this needs a separate session rather than a per-dispatch model argument: on the alternate backend a session-wide subagent model overrides both the per-invocation model parameter and any subagent's own frontmatter, so a judge dispatched at Depth silently runs on the builder's model. Role tiering there is done by launching a different command, full stop.
+
+The capability bands and the alternate-backend column are in `docs/build/Build_workflow_cadence.md` under "Provider mapping". The three commands above are local wrappers; the model identifiers, prices and credential location behind them are deliberately not in any tracked file and live in a local, uncommitted note under `docs/build/multi-model-harness/`. If the wrappers are not on this machine, that folder will not be either, and plain `claude` is unaffected.
 
 ## Read before opening the next phase
 
@@ -92,6 +117,15 @@ Current state: stage 3 complete. Twelve tickets decomposed in `tracker/phase_3.1
 Why this phase matters more than its position in the order suggests: it owns finding F-2.1-07. `_KNOWN_GENE_SYMBOL_CURIES` (`core/graph.py:839`) holds exactly one entry, `BRCA1`, so "What diseases are linked to TP53?" resolves nothing and answers nothing today. That is the single thing standing between this repo and a prototype that can be shown to a person, and `tracker/phase_3.1.md`'s recommended build order front-loads it deliberately.
 
 Read `tracker/phase_3.1.md` before touching anything. It leads with the phase's scale, which is wider than 2.1 on every axis: seven actions, three API families, fourteen databases accepted by `search`, eight with a verified per-database field set, and two error conventions that are exact opposites. 2.1 was one tool, one action, one host, and it took four days and five review rounds.
+
+### Live ground truth captured 2026-08-04, before the phase opened
+
+Measured against the real endpoints so the premise gate does not have to rediscover it. Every value carries the date it was read; when one moves, re-verify it, never weaken the assertion.
+
+- `NCBI_API_KEY` is now populated in `.env`. Verified authenticating, and it matters here: unauthenticated, a burst returned HTTP 429 on the FOURTH request, confirming the 3 requests/second figure exactly. Authenticated, 8 concurrent requests all returned 200 in 0.38 seconds.
+- Stated precisely rather than conveniently, because `.claude/rules/tool-call-budgets.md` records an unresolved 3/10-versus-100-per-second conflict and warns against picking the convenient number: that burst is roughly 21/second instantaneous, which is above BOTH the 3/second and 10/second figures, but a short burst does not establish a sustained rate. It settles that 3/second is superseded once authenticated. It does not settle 10 versus 100. Do not lock a throttle constant on this evidence alone.
+- Gene symbol resolution, the F-2.1-07 case, confirmed by two independent endpoints: ESearch on the `gene` database for `TP53[sym] AND human[orgn]` returns exactly one id, `7157`; Datasets v2 `gene/symbol/TP53/taxon/human` returns `gene_id 7157`, `taxname "Homo sapiens"`. ESummary on `7157` gives name `TP53`, description `tumor protein p53`, chromosome `17`.
+- Both HTTP-200 traps reproduced, which is the load-bearing finding for this tool. An invalid database name returns **HTTP 200** with `esearchresult.ERROR` set to `Invalid db name specified: notadatabase`. EFetch on a nonexistent PMID returns **HTTP 200** with an empty `<PubmedArticleSet></PubmedArticleSet>` and no error node at all. A genuine zero-hit search returns HTTP 200, `count` `0`, an empty `idlist`, and NO `ERROR` key. Three different outcomes, one status code, distinguishable only by the body.
 
 ## What Step 6.2 delivers, later
 
