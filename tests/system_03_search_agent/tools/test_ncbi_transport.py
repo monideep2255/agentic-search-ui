@@ -449,48 +449,62 @@ def test_get_rate_limiter_default_is_the_conservative_floor() -> None:
 # ===========================================================================
 
 
+class _DirectLogCapture:
+    """Capture records straight off a named logger, bypassing `caplog`.
+
+    Why this exists rather than `caplog`. Both log-based tests in this phase
+    passed in isolation and failed in the full suite: `caplog.text` came back
+    empty once `tests/system_03_search_agent/harness` had run first. The
+    assertion that broke was the POSITIVE control ("a line was logged at
+    all"), never the security assertion, so the property under test held the
+    whole time and the test was simply going blind. A security test that can
+    silently stop observing is worse than one that fails loudly, which is why
+    this attaches its own handler to the module's own logger and restores the
+    previous state afterwards. It depends on no global logging configuration
+    and no other test module's behavior.
+    """
+
+    def __init__(self, logger_name: str, level: int = logging.DEBUG) -> None:
+        self._logger = logging.getLogger(logger_name)
+        self._level = level
+        self.records: list[logging.LogRecord] = []
+
+    def __enter__(self) -> "_DirectLogCapture":
+        outer = self
+
+        class _Handler(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:
+                outer.records.append(record)
+
+        self._handler = _Handler()
+        self._handler.setLevel(self._level)
+        self._prev_level = self._logger.level
+        self._prev_disable = logging.root.manager.disable
+        logging.disable(logging.NOTSET)
+        self._logger.setLevel(self._level)
+        self._logger.addHandler(self._handler)
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._logger.removeHandler(self._handler)
+        self._logger.setLevel(self._prev_level)
+        logging.disable(self._prev_disable)
+
+    @property
+    def text(self) -> str:
+        return "\n".join(r.getMessage() for r in self.records)
+
+
 @pytest.mark.asyncio
 async def test_api_key_value_never_appears_in_log_on_success(
-    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch
 ) -> None:
     secret = "SUPER-SECRET-NCBI-KEY-24601"
     monkeypatch.setenv("NCBI_API_KEY", secret)
-    caplog.set_level(logging.DEBUG)
-
     ok_response = httpx.Response(200, json={"esearchresult": {"count": "1"}})
     client = _FakeClient([ok_response])
 
-    await ncbi_transport.execute_get(
-        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-        {"db": "gene", "term": "TP53"},
-        family="eutils",
-        include_api_key=True,
-        client=client,
-        sleep_fn=_no_sleep,
-    )
-
-    assert secret not in caplog.text
-    # The fact of the key's presence is expected to be observable...
-    assert "NCBI_API_KEY present" in caplog.text
-    # ...but never the request URL it was appended to, since that URL now
-    # carries the key as a query parameter.
-    for call in client.calls:
-        assert secret not in call["url"] or True  # the URL legitimately carries it
-    # The load-bearing assertion: no LOG RECORD carries the URL-with-key.
-    assert not any(secret in record.getMessage() for record in caplog.records)
-
-
-@pytest.mark.asyncio
-async def test_api_key_value_never_appears_in_log_or_exception_on_failure(
-    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    secret = "SUPER-SECRET-NCBI-KEY-24601"
-    monkeypatch.setenv("NCBI_API_KEY", secret)
-    caplog.set_level(logging.DEBUG)
-
-    client = _FakeClient([httpx.ConnectError("refused"), httpx.ConnectError("refused again")])
-
-    with pytest.raises(ncbi_transport.TransportConnectionError) as exc_info:
+    with _DirectLogCapture("system_03_search_agent.tools.ncbi_transport") as capture:
         await ncbi_transport.execute_get(
             "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
             {"db": "gene", "term": "TP53"},
@@ -500,8 +514,38 @@ async def test_api_key_value_never_appears_in_log_or_exception_on_failure(
             sleep_fn=_no_sleep,
         )
 
+    assert secret not in capture.text
+    # The positive control. Without it this test passes on a code path that
+    # logs nothing at all, which is exactly how it failed in the full suite.
+    assert "NCBI_API_KEY present" in capture.text
+    # The load-bearing assertion: no LOG RECORD carries the URL-with-key,
+    # even though the request URL itself legitimately does.
+    assert not any(secret in record.getMessage() for record in capture.records)
+
+
+@pytest.mark.asyncio
+async def test_api_key_value_never_appears_in_log_or_exception_on_failure(
+    monkeypatch: pytest.MonkeyPatch
+) -> None:
+    secret = "SUPER-SECRET-NCBI-KEY-24601"
+    monkeypatch.setenv("NCBI_API_KEY", secret)
+    client = _FakeClient([httpx.ConnectError("refused"), httpx.ConnectError("refused again")])
+
+    with _DirectLogCapture("system_03_search_agent.tools.ncbi_transport") as capture:
+        with pytest.raises(ncbi_transport.TransportConnectionError) as exc_info:
+            await ncbi_transport.execute_get(
+                "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+                {"db": "gene", "term": "TP53"},
+                family="eutils",
+                include_api_key=True,
+                client=client,
+                sleep_fn=_no_sleep,
+            )
+
     assert secret not in str(exc_info.value)
-    assert not any(secret in record.getMessage() for record in caplog.records)
+    # Positive control, same reasoning as the success-path test above.
+    assert capture.records, "the retry path must log something to be checkable"
+    assert not any(secret in record.getMessage() for record in capture.records)
 
 
 def test_rate_limited_error_message_never_needs_a_secret_to_be_actionable() -> None:

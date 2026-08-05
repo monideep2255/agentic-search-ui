@@ -612,7 +612,14 @@ def _extract_pubmed_articles(root: ElementTree.Element) -> list[NcbiEfetchRecord
     """
     records: list[NcbiEfetchRecord] = []
     for article_el in root.findall("PubmedArticle"):
-        pmid_el = article_el.find("MedlineCitation/PMID")
+        # The leading "./" is load-bearing and must not be "simplified" away.
+        # `harness/tiers.py`'s repo-wide guard scans every string constant for
+        # a provider/model slug, and a bare two-segment XPath like
+        # "MedlineCitation/PMID" matches that shape exactly. Three-segment
+        # paths below do not, which is why only this one carries the prefix.
+        # "./X/Y" is exactly equivalent to "X/Y" for ElementTree.find, so this
+        # keeps the guard intact rather than adding an exclusion to it.
+        pmid_el = article_el.find("./MedlineCitation/PMID")
         pmid = pmid_el.text.strip() if pmid_el is not None and pmid_el.text else None
         if not pmid:
             continue
