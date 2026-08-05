@@ -123,6 +123,90 @@ The highest-risk omission, named in the gate itself rather than left to be disco
 | ID | State | Summary |
 |----|-------|---------|
 | F-3.1-01 | open | Gene-symbol candidate extraction fires on every word in the query, and T-3.1-11 arms it |
+| F-3.1-02 | fixed | The coordinate overlap filter compared assembly and the overlap predicate but never the chromosome |
+| F-3.1-03 | fixed | Resolution caching stored every `None`, including one caused by a transient NCBI failure, as a permanent non-resolution |
+| F-3.1-04 | open | `ncbi_efetch` is never dispatched as an answer-bearing tool, only from inside entity resolution |
+| F-3.1-05 | fixed | The Datasets resolution path took `records[0]` with no ambiguity guard, while its own ESearch fallback refuses on more than one candidate |
+| F-3.1-06 | fixed | The unit suite made live NCBI calls, and its green depended on NCBI being up |
+| F-3.1-07 | fixed | Any 2xx Datasets body lacking a `reports` list collapsed to "empty" rather than "error" |
+| F-3.1-08 | open | Every PubChem record ships `source_url=None`, because the schema's host pattern does not admit `pubchem.ncbi.nlm.nih.gov` |
+| F-3.1-09 | open | A docstring claims the Act step already wraps every tool call in `harness.enforce_timeout`, which is false since `act_node` never dispatches this tool |
+| F-3.1-10 | open | `_generic_summary_fields` copies every response key for five databases with only a 40-key cap, no field-level filter |
+| F-3.1-11 | open | The tool registry gained `ncbi_efetch`, changing the stable prompt prefix, with no contract-version bump |
+| F-3.1-12 | open | Four minor gaps: an unretried 429, untested property-claiming comments, no coordinate range validator, no per-value character cap |
+
+## Judge round 1, 2026-08-05: FAIL
+
+A judge round returned FAIL. Findings below are all now FIXED but NOT closed: the fixer is never the closer, and a re-review closes them. Two findings stay open by design, one on a product-owner scope decision and one on a recommended fix not yet applied; the rest stay open pending the same independent close.
+
+### F-3.1-02: the coordinate overlap filter never compared chromosome
+
+Severity: critical. Status: fixed, needs an independent closer.
+
+`ncbi_coordinate_overlap.py:511-520`, the candidate filter compared assembly and the overlap predicate but never the chromosome. Reproduced by the judge: a caller asking chr1:1,000,000-1,100,000 GRCh38 got back a record whose only placement is chr2:1,000,500-1,000,600 GRCh38, returned as status `ok` with a real host-pinned citation. The module's own docstring documents the ESearch prefilter as unreliable and re-verifies it in code, which is exactly why relying on it for chromosome was wrong: `_Placement` already carried the chromosome and simply never compared it. Fixed with normalized chromosome matching plus 5 unit tests and premise gate case 19.
+
+### F-3.1-03: a transient NCBI failure was cached as a permanent non-resolution
+
+Severity: critical. Status: fixed, needs an independent closer.
+
+`core/graph.py:1043-1048` and `:1079-1086`, resolution cached every `None`, including a `None` caused by a transient NCBI timeout, connection failure, 5xx, or rate limit. A comment claimed `None` meant "an already-confirmed non-resolution", a property the code did not implement. Judge reproduced: one transient outage made TP53 permanently unresolvable for the life of the process, with only 2 calls made. This is the F-2.1-J5-01 pattern, a comment asserting what the code lacks. Fixed by returning a `(curie, cacheable)` pair so only a confirmed negative is cached.
+
+### F-3.1-04: `ncbi_efetch` is never dispatched as an answer-bearing tool
+
+Severity: critical. Status: open, awaiting a product owner scope decision. NOT fixed.
+
+`ncbi_efetch` has exactly two call sites in the whole source tree, both inside entity resolution. `act_node` dispatches only `cypher_query`. No NCBI record becomes a citation, reaches the Write step, or is subject to cite-or-refuse. The tool schema sits in the stable prefix but is inert. The premise gate passes because it calls the tool directly through its `_run` helper, bypassing the agent loop. This is the same shape LEARNINGS.md records for build phase 3.1: a gate whose only production-path case is also its only skippable case tests the component and not the system.
+
+### F-3.1-05: the Datasets resolution path omitted the ambiguity guard its own fallback enforces
+
+Severity: major. Status: fixed, needs an independent closer.
+
+`core/graph.py:1062-1067`, the Datasets resolution path took `records[0]` with no ambiguity guard, while the ESearch fallback twenty lines below explicitly refuses on more than one candidate with the comment "never fabricate a CURIE by guessing among candidates". The path tried first omitted the guard the fallback applied. Fixed by mirroring the guard.
+
+### F-3.1-06: the unit suite made live NCBI calls
+
+Severity: major. Status: fixed, needs an independent closer.
+
+`tests/.../adapters/web_sse/test_streaming_endpoints.py:146`, the unit suite made live NCBI calls, proven by the judge with an `httpx` spy. The suite's green depended on NCBI being up and caused one spurious failure. Fixed with the missing stub plus a new session-scoped autouse guard in `tests/conftest.py` that hard-fails any outbound HTTP outside the premise gate.
+
+### F-3.1-07: an unrecognized 2xx Datasets body silently read as empty rather than error
+
+Severity: major. Status: fixed, needs an independent closer.
+
+`ncbi_datasets_actions.py:316-320`, any 2xx body lacking a `reports` list collapsed to "empty", so a contract change or a 2xx proxy page was reported to the user as "no results". Fixed by allowlisting the live-verified empty body and failing closed to "error" otherwise.
+
+### F-3.1-08: every PubChem record ships with `source_url=None`
+
+Severity: major. Status: open. Not fixed.
+
+`ncbi_pubchem_actions.py:204`, every PubChem record ships `source_url=None`, because the schema's host pattern does not admit `pubchem.ncbi.nlm.nih.gov`. The judge's adjudication: not a violation today since no PubChem record reaches synthesis, but it becomes one the moment it is wired, and the shipped pattern is narrower than `production-standards.md`'s own canonical example `^https://([A-Za-z0-9-]+\.)*ncbi\.nlm\.nih\.gov/`. Recommended fix is to adopt the rule's canonical pin. Not applied.
+
+### F-3.1-09: a docstring claims a timeout enforcement path that does not exist
+
+Severity: major. Status: open.
+
+`ncbi_efetch.py:19`, a docstring claims "the Act step already wraps every tool invocation in `harness.enforce_timeout`", which is false as shipped, since `act_node` never dispatches this tool (F-3.1-04). A justification naming another layer is a claim about that layer, and it was not verified there.
+
+### F-3.1-10: `_generic_summary_fields` copies untrusted content with no field-level filter
+
+Severity: major. Status: open.
+
+`ncbi_eutils_actions.py:541-549`, `_generic_summary_fields` copies every response key for five databases, bounded only by a 40-key cap, so untrusted external content flows toward the model unfiltered. The LEARNINGS.md row 56 blocklist shape: an unbounded field set is the wrong shape regardless of the count cap.
+
+### F-3.1-11: the tool registry changed the stable prefix with no contract-version bump
+
+Severity: major. Status: open.
+
+`harness/cache.py:151-178`, the tool registry gained `ncbi_efetch`, changing the stable prefix, with no contract-version bump, which `system-design-patterns` pattern 10 requires.
+
+### F-3.1-12: four minor gaps
+
+Severity: minor. Status: open.
+
+- A 429 from E-utilities lands in the unparseable-body branch with no `retry_after`.
+- Four property-claiming comments with no enforcing test.
+- No `start <= end` validator on the coordinate input.
+- No per-value character cap in four of five field-extraction paths.
 
 ### F-3.1-01: the over-broad symbol pattern is a scheduled defect
 
