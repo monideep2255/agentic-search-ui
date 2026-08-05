@@ -15,6 +15,12 @@ What this file proves, mapped to T-3.1-02's acceptance:
       different buckets despite differing by one JSON key.
     - An unparseable or unrecognized 200 body fails closed to "error"
       (the allowlist requirement), never a silent "ok".
+    - A DOCTYPE with no internal subset (the real PubMed EFetch shape)
+      parses successfully; a DOCTYPE that declares an internal subset, or
+      any body carrying an ENTITY declaration anywhere, is rejected. See
+      the T-3.1-11 correction: a blanket reject on every DOCTYPE (this
+      module's shipped-but-wrong first version) made real PubMed records
+      unparseable, and this file's cases now pin the corrected boundary.
     - Datasets v2 and PubChem 400s classify by HTTP status, using each
       API's own error envelope for the message.
     - The two classifiers are provably independent: the E-utilities one
@@ -177,7 +183,17 @@ def test_eutils_neither_json_nor_xml_fails_closed_to_error() -> None:
 
 
 def test_eutils_xml_doctype_is_rejected_before_parsing() -> None:
-    """XXE / billion-laughs defense: reject on sight, never reaches ElementTree.fromstring."""
+    """XXE / billion-laughs defense: reject on sight, never reaches ElementTree.fromstring.
+
+    Rewritten under T-3.1-11: this payload is rejected because it declares
+    an INTERNAL SUBSET containing an ENTITY, not merely because it has a
+    DOCTYPE at all. A bare DOCTYPE with no internal subset (the real
+    PubMed EFetch shape) is legitimate and must parse; see
+    `test_eutils_xml_real_pubmed_doctype_with_no_internal_subset_parses`
+    below for that boundary's positive case. The original version of this
+    test predated that distinction and, paired with the module's earlier
+    blanket-reject implementation, encoded the bug this correction fixes.
+    """
     hostile = (
         '<?xml version="1.0"?>'
         "<!DOCTYPE PubmedArticleSet [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]>"
@@ -185,6 +201,101 @@ def test_eutils_xml_doctype_is_rejected_before_parsing() -> None:
     )
     result = ncbi_transport.classify_eutils_response(content_type="text/xml", text=hostile)
     assert result.status == "error"
+
+
+def test_eutils_xml_real_pubmed_doctype_with_no_internal_subset_parses() -> None:
+    """DEFECT 1 regression (T-3.1-11, live premise gate cases 4 and 8,
+    2026-08-04/05). This is the EXACT DOCTYPE line every real PubMed EFetch
+    response begins with. The module's first shipped version rejected any
+    body containing '<!doctype' at all, which made it unable to parse a
+    single real PubMed record: this pins the corrected boundary, a bare
+    DOCTYPE (no internal `[...]` subset) is not itself the attack.
+    """
+    real_pubmed_body = (
+        '<?xml version="1.0" ?>'
+        '<!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January 2019//EN" '
+        '"https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_190101.dtd">'
+        "<PubmedArticleSet><PubmedArticle><PMID>21376230</PMID></PubmedArticle></PubmedArticleSet>"
+    )
+    result = ncbi_transport.classify_eutils_response(content_type="text/xml", text=real_pubmed_body)
+    assert result.status == "ok"
+    assert result.body.tag == "PubmedArticleSet"
+
+
+def test_eutils_xml_doctype_internal_subset_entity_is_rejected() -> None:
+    """The direct boundary case: an internal subset that declares an ENTITY."""
+    hostile = '<!DOCTYPE x [ <!ENTITY a "b"> ]><x>&a;</x>'
+    result = ncbi_transport.classify_eutils_response(content_type="text/xml", text=hostile)
+    assert result.status == "error"
+
+
+def test_eutils_xml_classic_xxe_file_read_payload_is_rejected() -> None:
+    hostile = (
+        '<?xml version="1.0"?>'
+        '<!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
+        "<foo>&xxe;</foo>"
+    )
+    result = ncbi_transport.classify_eutils_response(content_type="text/xml", text=hostile)
+    assert result.status == "error"
+
+
+def test_eutils_xml_billion_laughs_payload_is_rejected() -> None:
+    hostile = (
+        '<?xml version="1.0"?>'
+        "<!DOCTYPE lolz ["
+        '<!ENTITY lol "lol">'
+        '<!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">'
+        '<!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">'
+        "]>"
+        "<lolz>&lol3;</lolz>"
+    )
+    result = ncbi_transport.classify_eutils_response(content_type="text/xml", text=hostile)
+    assert result.status == "error"
+
+
+def test_eutils_xml_entity_declared_after_the_doctype_span_is_still_rejected() -> None:
+    """An ENTITY smuggled into the body AFTER the DOCTYPE's closing `>`, not in
+    the first bytes the DOCTYPE scan walks, must still be caught. The
+    ENTITY check runs over the WHOLE body independently of the DOCTYPE
+    scan, so it cannot be evaded by placing the declaration somewhere the
+    DOCTYPE-span scan does not look.
+    """
+    hostile = (
+        '<!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January 2019//EN" '
+        '"https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_190101.dtd">'
+        "<PubmedArticleSet><PubmedArticle><PMID>1</PMID>"
+        '<!ENTITY smuggled SYSTEM "file:///etc/passwd">'
+        "</PubmedArticle></PubmedArticleSet>"
+    )
+    result = ncbi_transport.classify_eutils_response(content_type="text/xml", text=hostile)
+    assert result.status == "error"
+
+
+def test_eutils_xml_remote_dtd_reference_triggers_no_network_fetch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The real PubMed DOCTYPE names a remote DTD by URL. Parsing it must never
+    cause an actual network fetch of that DTD: stdlib ElementTree does not
+    resolve external entities or DTDs by default, and permitting a bare
+    DOCTYPE here must not accidentally change that. Proven by making any
+    socket connection attempt during classification raise.
+    """
+    import socket
+
+    def _forbidden_connect(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("no network connection may be attempted while parsing XML")
+
+    monkeypatch.setattr(socket.socket, "connect", _forbidden_connect)
+    monkeypatch.setattr(socket, "create_connection", _forbidden_connect)
+
+    real_pubmed_body = (
+        '<?xml version="1.0" ?>'
+        '<!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January 2019//EN" '
+        '"https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_190101.dtd">'
+        "<PubmedArticleSet><PubmedArticle><PMID>21376230</PMID></PubmedArticle></PubmedArticleSet>"
+    )
+    result = ncbi_transport.classify_eutils_response(content_type="text/xml", text=real_pubmed_body)
+    assert result.status == "ok"
 
 
 def test_eutils_classifier_ignores_http_status_entirely() -> None:
@@ -361,6 +472,58 @@ async def test_execute_get_forwards_timeout_to_the_http_client() -> None:
     )
 
     assert client.calls[0]["timeout"] == 15.0
+
+
+def test_execute_get_default_client_survives_across_different_event_loops(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """DEFECT 2 regression (T-3.1-11, live premise gate cases 2, 5, 18,
+    2026-08-05): a module-level `httpx.AsyncClient` singleton, first built on
+    whichever event loop happened to be running at first use, raised
+    `RuntimeError: Event loop is closed` intermittently when a LATER call
+    reused it from a different, still-running event loop after the first
+    loop had closed. That is exactly the shape pytest-asyncio's default
+    per-test event loop produces, and a real risk anywhere a process
+    legitimately runs more than one event loop over its life.
+
+    Deliberately NOT `@pytest.mark.asyncio`: two independent
+    `asyncio.new_event_loop()` calls, driven by hand, so this reproduces the
+    bug at the same granularity the live gate found it (no `client=`
+    override on either call, the real default-client code path both
+    times), rather than relying on whatever loop-per-test policy
+    pytest-asyncio happens to use.
+    """
+    ok_response = httpx.Response(200, json={"esearchresult": {"count": "1"}})
+
+    async def _fake_get(
+        _self: httpx.AsyncClient, _url: str, timeout: float | None = None
+    ) -> httpx.Response:
+        return ok_response
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", _fake_get)
+
+    async def _call() -> httpx.Response:
+        return await ncbi_transport.execute_get(
+            "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+            {"db": "gene", "term": "TP53"},
+            family="eutils",
+            sleep_fn=_no_sleep,
+        )
+
+    loop_one = asyncio.new_event_loop()
+    try:
+        response_one = loop_one.run_until_complete(_call())
+    finally:
+        loop_one.close()
+
+    loop_two = asyncio.new_event_loop()
+    try:
+        response_two = loop_two.run_until_complete(_call())
+    finally:
+        loop_two.close()
+
+    assert response_one is ok_response
+    assert response_two is ok_response
 
 
 # ===========================================================================

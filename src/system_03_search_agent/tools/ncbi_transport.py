@@ -101,14 +101,63 @@ actual security weight, not the choice of parser:
 
     Billion-laughs / internal entity expansion: stdlib ElementTree does
     NOT protect against this on its own, and this is the gap the security
-    hook is really pointing at. It requires a DOCTYPE with internal
-    ENTITY definitions to exist at all, so rejecting any body carrying a
-    `<!DOCTYPE` or `<!ENTITY` declaration before `ElementTree.fromstring`
-    ever sees it (`_XXE_MARKERS` below) closes both vectors at once, not
+    hook is really pointing at. It requires an ENTITY declaration to
+    exist at all (general or parameter), which can only appear inside a
+    DOCTYPE's internal subset or an external DTD subset, so rejecting any
+    `<!ENTITY` occurrence and any DOCTYPE internal subset before
+    `ElementTree.fromstring` ever sees the body closes both vectors, not
     only the external-entity one `resolve_entities=False` would have
-    addressed. No legitimate EFetch response in Section 6.2's documented
-    shapes carries either declaration, so this reject has no known false
-    positive against real NCBI traffic.
+    addressed.
+
+    CORRECTION, filed against this module's own premise gate
+    (T-3.1-11/12, live-caught 2026-08-05): an earlier version of this
+    reject blocked every `<!DOCTYPE`, full stop, and its comment here
+    claimed "no known false positive against real NCBI traffic". That
+    claim was live-disproven on the first real PubMed EFetch response
+    fetched: EVERY genuine PubMed record begins with a DOCTYPE line
+    naming the public NLM DTD, so the blanket reject made this tool
+    unable to parse a single real PubMed record. This is build phase
+    3.0's lesson recurring at the XML-parsing layer instead of the
+    guardrail layer: a security check with no safe direction of failure.
+    Over-blocking is invisible to every attack-only test (rejecting
+    everything scores 100% against XXE payloads) and it destroys the
+    product; under-blocking is a real XXE/billion-laughs hole. Both
+    directions must be satisfied, so the reject now distinguishes a bare
+    DOCTYPE (a declaration with no internal subset, i.e. no `[...]`
+    block) from one that declares entities:
+
+        A DOCTYPE with NO internal subset (regardless of an external
+        SYSTEM/PUBLIC identifier) is PERMITTED. This is exactly the real
+        PubMed shape above. ElementTree never fetches the referenced
+        external DTD, so naming one is inert.
+
+        A DOCTYPE that declares an internal subset (`<!DOCTYPE x [ ... ]>`)
+        is REJECTED outright, regardless of what the subset contains,
+        because that is the only place an internal ENTITY (or a
+        parameter entity, which also starts `<!ENTITY %`) can live.
+
+        `<!ENTITY` anywhere in the body, inside or outside a detected
+        DOCTYPE span, is REJECTED. This is a second, independent check
+        so an entity declaration cannot survive by appearing somewhere
+        the DOCTYPE scan does not look.
+
+    The DOCTYPE scan itself (`_doctype_declares_internal_subset` below)
+    is quote-aware: it walks the declaration from `<!DOCTYPE` looking for
+    the first unquoted `[` or unquoted `>`, so a PUBLIC/SYSTEM literal
+    containing a stray bracket character cannot be mistaken for the start
+    of an internal subset, and an attacker cannot hide a subset opener
+    inside a quoted identifier either, since quotes are tracked, not
+    trusted. An unterminated/truncated DOCTYPE fails closed (treated as
+    carrying a subset) rather than being assumed safe.
+
+    Residual, narrow, deliberately accepted gap: a literal `<!ENTITY`
+    substring inside a CDATA section (`<![CDATA[<!ENTITY x "y">]]>`) is a
+    valid, non-executing way to include that text in a PubMed field, and
+    this reject has no way to distinguish it from a real declaration
+    short of a real XML parser. No such CDATA content has been observed
+    in the documented Section 6.2 shapes; this reject would false-positive
+    on it if one ever appeared. That is a known, named trade, not a
+    silent one.
 
 Depends on:
     - httpx (pinned in pyproject.toml, >=0.27)
@@ -254,8 +303,13 @@ _EUTILS_JSON_ENVELOPES: Final[frozenset[str]] = frozenset({"esearchresult", "res
 _EUTILS_XML_ALLOWED_ROOTS: Final[frozenset[str]] = frozenset({"PubmedArticleSet"})
 
 # Defense in depth against XXE / entity-expansion payloads. See the module
-# docstring's "XML parsing and external entities" section.
-_XXE_MARKERS: Final[tuple[str, ...]] = ("<!doctype", "<!entity")
+# docstring's "XML parsing and external entities" section, including the
+# CORRECTION subsection: a bare DOCTYPE (no internal subset) is NOT itself
+# the attack and must be permitted, since real PubMed EFetch responses
+# always carry one. `<!ENTITY` (general or parameter) is what must never
+# reach the parser, wherever it appears.
+_DOCTYPE_MARKER: Final[str] = "<!doctype"
+_ENTITY_MARKER: Final[str] = "<!entity"
 
 
 def classify_eutils_response(*, content_type: str, text: str) -> ClassificationResult:
@@ -336,16 +390,66 @@ def _classify_eutils_json(text: str) -> ClassificationResult:
     return ClassificationResult(status="ok", body=body)
 
 
+def _doctype_declares_internal_subset(text: str, doctype_index: int) -> bool:
+    """Quote-aware scan from a `<!DOCTYPE` occurrence to its closing `>`.
+
+    Returns True the moment an UNQUOTED `[` appears before an unquoted `>`,
+    meaning the declaration opens an internal subset (the only place an
+    internal `<!ENTITY>` can live). A DOCTYPE naming only an external
+    SYSTEM/PUBLIC identifier, the real PubMed shape, has no `[` at all and
+    returns False. Quote-tracking stops a PUBLIC/SYSTEM literal from being
+    mistaken for subset syntax, and stops a `[` hidden inside a quoted
+    string from being ignored. An unterminated declaration (the text ends
+    before an unquoted `>`) fails closed: treated as carrying a subset
+    rather than assumed safe.
+    """
+    quote: str | None = None
+    i = doctype_index
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if quote is not None:
+            if ch == quote:
+                quote = None
+        elif ch in ("'", '"'):
+            quote = ch
+        elif ch == "[":
+            return True
+        elif ch == ">":
+            return False
+        i += 1
+    return True
+
+
 def _classify_eutils_xml(text: str) -> ClassificationResult:
     lowered = text.lower()
-    if any(marker in lowered for marker in _XXE_MARKERS):
+
+    # Independent of the DOCTYPE scan below: an ENTITY declaration is
+    # rejected wherever it appears in the body, not only inside a detected
+    # DOCTYPE span, so it cannot survive by appearing somewhere the scan
+    # does not look (billion-laughs and classic XXE both require one).
+    if _ENTITY_MARKER in lowered:
         return ClassificationResult(
             status="error",
             error_message=(
-                "E-utilities XML body carries a DOCTYPE or ENTITY declaration, "
+                "E-utilities XML body carries an ENTITY declaration, refusing to parse it"
+            ),
+        )
+
+    doctype_index = lowered.find(_DOCTYPE_MARKER)
+    if doctype_index != -1 and _doctype_declares_internal_subset(text, doctype_index):
+        return ClassificationResult(
+            status="error",
+            error_message=(
+                "E-utilities XML body's DOCTYPE declares an internal subset, "
                 "refusing to parse it"
             ),
         )
+    # A DOCTYPE with no internal subset (e.g. real PubMed's public NLM DTD
+    # reference) reaches ElementTree.fromstring below unmodified. See the
+    # module docstring's CORRECTION subsection: rejecting every DOCTYPE
+    # outright made this tool unable to parse a single real PubMed record.
+
     try:
         root = ElementTree.fromstring(text)
     except ElementTree.ParseError:
@@ -548,14 +652,36 @@ def reset_rate_limiters_for_tests() -> None:
 # Request execution: timeout, one backoff retry, URL encoding, api_key.
 # ---------------------------------------------------------------------------
 
-_default_client: httpx.AsyncClient | None = None
-
-
-def _get_default_client() -> httpx.AsyncClient:
-    global _default_client
-    if _default_client is None:
-        _default_client = httpx.AsyncClient()
-    return _default_client
+# Client lifetime, not a singleton. A module-level `httpx.AsyncClient`
+# singleton was tried first and failed live (T-3.1-11, premise gate cases
+# 2, 5, 18, 2026-08-05): `httpx.AsyncClient` builds event-loop-bound
+# primitives (an httpcore connection pool backed by anyio/asyncio locks)
+# on first use, and reusing that same client from a DIFFERENT running
+# event loop than the one it was built on raises `RuntimeError: Event
+# loop is closed`, intermittently, because it depends on which loop
+# happened to be running the first time any call was made. This is
+# exactly the shape every pytest-asyncio test hits by default (a fresh
+# event loop per test function), and it is also a real production risk
+# anywhere a process legitimately runs more than one event loop over its
+# lifetime.
+#
+# Tradeoff chosen: correctness over connection-pool reuse. When no caller
+# supplies a `client` (true for every call the Act step actually makes;
+# only this module's own tests inject one), `execute_get` opens a fresh
+# `httpx.AsyncClient` scoped to that single call with `async with`, and
+# it is closed before the call returns. This gives up cross-call
+# keep-alive reuse within one query, a real and accepted cost, a fresh
+# TCP+TLS handshake per Layer 2 call instead of a shared connection, in
+# exchange for a client that structurally cannot outlive or cross the
+# event loop it was created on: there is no longer a module-level
+# reference for a second loop to inherit. Each family's rate limiter
+# already paces calls to roughly one per second or slower
+# (`tool-call-budgets.md`), so the relative cost of a fresh handshake
+# against that pacing interval is small. A caller that wants pooling
+# across several calls within a single event loop (a future action
+# module issuing more than one request in a tight loop) passes its own
+# long-lived `client` explicitly; this module does not manage that
+# lifetime on its behalf, only its own default path.
 
 
 def _build_query_string(params: Mapping[str, Any]) -> str:
@@ -634,6 +760,16 @@ async def execute_get(
     Never inspects or embeds `NCBI_API_KEY`'s value in a log line or
     exception string; every diagnostic message here uses `_host_of(url)`.
 
+    Client lifetime: when the caller does not supply `client` (the normal
+    production path), this function opens a fresh `httpx.AsyncClient`
+    scoped to this one call and closes it before returning, rather than
+    reusing a module-level singleton across calls. See the "Client
+    lifetime, not a singleton" comment above `_build_query_string` for
+    why: a shared client can outlive, and be reused from a different
+    event loop than, the one it was created on. A caller-supplied
+    `client` (tests, or a future caller that wants pooling) is used as
+    given and its lifetime stays the caller's responsibility.
+
     Raises:
         TransportRateLimitedError: the call's family pool could not
             schedule it within its queue depth or wait ceiling.
@@ -652,7 +788,36 @@ async def execute_get(
     effective_ceiling = wait_ceiling_s if wait_ceiling_s is not None else timeout_s
     await limiter.acquire(effective_ceiling, time_fn=time_fn, sleep_fn=sleep_fn)
 
-    active_client = client or _get_default_client()
+    if client is not None:
+        return await _execute_with_retry(
+            client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s, sleep_fn=sleep_fn
+        )
+
+    # No caller-supplied client: build one scoped to exactly this call,
+    # bound to whichever event loop is running THIS await, and close it
+    # before returning. Never stored at module level, so no later call
+    # from a different loop can ever inherit it.
+    async with httpx.AsyncClient() as fresh_client:
+        return await _execute_with_retry(
+            fresh_client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s, sleep_fn=sleep_fn
+        )
+
+
+async def _execute_with_retry(
+    active_client: httpx.AsyncClient,
+    url: str,
+    *,
+    family: RateLimitFamily,
+    timeout_s: float,
+    backoff_s: float,
+    sleep_fn: Callable[[float], Awaitable[None]],
+) -> httpx.Response:
+    """The timeout/retry loop itself, factored out of `execute_get`.
+
+    Takes an already-resolved client so `execute_get` can decide, once,
+    whether that client is caller-supplied or freshly opened for this
+    call, without duplicating the retry logic across both branches.
+    """
     host = _host_of(url)
     last_exc: Exception | None = None
 
