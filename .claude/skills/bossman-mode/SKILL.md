@@ -201,6 +201,19 @@ The three tiers: Speed for lookups, extraction, classification, and repetitive w
 
 Pass the model and effort choice when you dispatch each sub-agent, and set the teammate model when you create the agent team (the team creation step already says to use Sonnet for each teammate). A tool-less coordinator that delegates heavy reading to cheap scoped workers measured 2.5x cheaper and roughly 3x faster than one frontier model doing everything, with about 84 percent of input tokens billed at the cheap worker rate (the plan-big-execute-small pattern from the claude-cookbooks dive, in the personal-os Reference-repos set). Delegation has a fixed setup cost, so do not shard a phase into many tiny tasks just to parallelize. Each dispatched agent should carry a task worth its overhead.
 
+#### When the session is running on the alternate backend
+
+The table above assumes per-dispatch model choice works. On a session launched against the alternate backend in the provider mapping table, it does not, and the failure is silent rather than loud.
+
+That backend sets a session-wide subagent model, which overrides both the per-invocation model parameter and any subagent definition's own frontmatter. So every row above collapses to one model: a judge dispatched at Depth runs on whatever the builders are running on, and nothing reports the substitution. Tiering by role therefore has to be done by launching a different session, not by passing a different argument.
+
+Two consequences bind this skill directly:
+
+- Do not open a phase on the alternate backend. Stages 3 and 5, decomposition and premise gate design, are Depth tier, and a weak split or a weak gate cascades into every builder dispatched afterwards. Open the phase on the primary provider, then hand the builder stages over.
+- A judge or adversary pass run on the alternate backend records findings and closes nothing. Tickets stay open, the phase does not reach the product owner, and stages 8 and 9 re-run on the primary provider before anything merges. This is the maker-checker rule in `self-eval-loop` applied to the model layer: if the same model both built and graded the work because that was the only session available, the grade is not a check.
+
+The evidence for treating this as blocking rather than advisory is the same evidence that put Judge and Adversary on Depth in the first place. Build phase 2.1 failed four consecutive judge and adversary reviews behind a fully green test suite, so a weaker review here does not cost latency, it costs whole rounds.
+
 ### The judge produces evidence, not a verdict
 
 A judge that reports "looks good, all checks pass" without showing its work is the maker-checker failure `self-eval-loop.md` warns about: a grader that knows the rubric drifts toward approving everything. Force the judge to produce evidence, and default it to fail when evidence is absent.
