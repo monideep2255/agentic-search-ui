@@ -1,9 +1,10 @@
 # Phase 6 continuation prompt
 
-Phase 6 is the build. Read this file at the start of any session that continues build work.
+Phase 6 is the build. Read this file at the start of any session that continues build work. It is written to be sufficient on its own: reading it is the whole handoff, and no other instruction is needed to begin.
 
 ## Table of contents
 
+- [Start here](#start-here)
 - [State now](#state-now)
 - [Which session to open, before anything else](#which-session-to-open-before-anything-else)
 - [Read before opening the next phase](#read-before-opening-the-next-phase)
@@ -13,7 +14,50 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 - [Open items](#open-items)
 - [Handover](#handover)
 
+## Start here
+
+If you were handed this file and nothing else, this section is the instruction. Work it top to bottom, then stop reading and act.
+
+### Step 1: know which session you are in
+
+Run this first. It is one command and it decides what you are allowed to do:
+
+```bash
+echo "${ANTHROPIC_BASE_URL:-primary provider}"
+```
+
+- Prints `primary provider`: you are on the subscription. Every stage is available to you. Go to step 2.
+- Prints a URL: you are on the alternate metered backend, and only some stages are yours to run. Read "Which session to open, before anything else" below for which, then come back. If the next action is one you may not run, stop and say so rather than running it anyway.
+
+Do not skip this. The constraint is not recoverable once a session is running, and the failure is silent: a judge dispatched on the alternate backend runs on the builder's model and nothing reports the substitution.
+
+### Step 2: do the next action
+
+The next action is always one line, kept current at the top of "State now" below. Right now it is:
+
+> Write build phase 3.1's premise gate, `tests/system_03_search_agent/tools/test_ncbi_efetch_premise.py`, and watch it fail. Stage 5, blocking, primary provider only.
+
+Everything needed to write it is already gathered. The live ground truth is in "Live ground truth captured 2026-08-04" below: TP53 resolves to 7157 confirmed by two independent endpoints, and both HTTP-200 traps are reproduced with their exact response shapes. Do not re-probe what is already pinned there.
+
+### Step 3: how a phase runs across sessions
+
+`/bossman` runs stages 1 to 11 and stops only at the phase boundary. The provider split cuts across those stages and cannot change inside a running session. Those two facts collide, so a budget-split phase is three sessions, not one:
+
+| Session | Launch | Stages | Tell it |
+|---------|--------|--------|---------|
+| 1 | `claude` | 1 to 5 | "open the phase, stop once the premise gate is written and failing" |
+| 2 | `claude-build` | 6 to 7 | "work the tickets, stop at the judge" |
+| 3 | `claude` | 8 to 11 | "judge, adversary, gates, open the pull request" |
+
+Bossman does not stop at stage boundaries on its own, so each session needs its stop condition stated in the prompt.
+
+The simpler default, and the right one while subscription budget is healthy: run the whole phase in one session on `claude`. The three-session split exists to rescue a week that would otherwise be lost, not as a daily routine. Reach for it when the limit is close, not before. In one line: use `claude` until it stops working, then use `claude-build`.
+
 ## State now
+
+NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
+
+> Write build phase 3.1's premise gate, `tests/system_03_search_agent/tools/test_ncbi_efetch_premise.py`, and watch it fail. Stage 5, BLOCKING, primary provider only. Branch `phase/3.1-ncbi-efetch` already exists with twelve tickets decomposed and no tool code.
 
 Seven build phases are done and merged into `main`. The first six complete the Step 6.1 prototype group; 3.0 is the first Step 6.3 v1 phase:
 

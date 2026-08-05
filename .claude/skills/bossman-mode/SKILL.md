@@ -136,6 +136,20 @@ The rule in one line: open a phase on the primary provider, always. Stages 3 and
 
 The stage-to-provider split is in `docs/build/Build_workflow_cadence.md` under "Provider mapping", and the launch commands are named in `requirements/phase_6/Continuation_prompt.md` under "Which session to open". If neither describes an alternate backend for this machine, there is only `claude` and nothing to decide.
 
+#### A budget-split phase is three sessions, not one
+
+This skill runs stages 1 to 11 and stops only at the phase boundary. The provider split cuts across those stages and cannot change inside a running session. Those two facts collide, and the resolution is that splitting a phase across providers means splitting it across sessions:
+
+| Session | Launch | Stages | Stop condition to state in the prompt |
+|---------|--------|--------|----------------------------------------|
+| 1 | primary | 1 to 5 | Once the premise gate is written and failing |
+| 2 | alternate | 6 to 7 | At the judge |
+| 3 | primary | 8 to 11 | At the pull request |
+
+This skill does not stop at stage boundaries on its own, so each session's stop condition has to be stated when it is invoked. Re-enter a partially built phase with `--phase N`, and check where it stands with `--status`.
+
+Do not treat this as the default. While primary-provider budget is healthy, run the whole phase in one session there: three sessions per phase is ceremony that costs more than it saves until the limit is actually close. The split exists to rescue a week that would otherwise be lost.
+
 Navigate panes with `Ctrl-b` then an arrow key.
 
 Preflight (run this at Step 1, before dispatching any team):
