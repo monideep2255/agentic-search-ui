@@ -119,7 +119,7 @@ The honest coverage statement for this tool is a grid, because the tool's
 dimensions multiply: 7 actions x 3 API families x 2 error conventions x 3
 status outcomes.
 
-Actions exercised (6 of 7):
+Actions exercised (7 of 7):
 
 - `search`     cases 1, 7, 9a, 9b, 15
 - `summary`    case 2
@@ -127,19 +127,36 @@ Actions exercised (6 of 7):
 - `link`       case 5
 - `dataset_report`   cases 3, 10
 - `pubchem_property` cases 6, 11
+- `coordinate_overlap` cases 17, 18
 
-Actions NOT exercised, with reasons:
+T-3.1-10 closed this gate's own stated highest-risk omission on 2026-08-05.
+The gap was real, not decorative: closing it required live-probing dbVar and
+ClinVar directly (the module docstring for
+`system_03_search_agent.tools.ncbi_coordinate_overlap` records the full
+probe), because Section 6.2's own description of ClinVar's ESummary shape
+(flat `C37`/`CPOS`/`VLEN` scalars) turned out not to match the live response
+at all; the real shape is a nested `variation_set[].variation_loc[]` array,
+structurally the same kind of per-assembly placement list dbVar returns. A
+fixture built from the documented shape rather than the probed one would have
+asserted a result nobody had verified, exactly the failure this gate's third
+property forbids.
 
-- `coordinate_overlap`. This is the highest-risk omission in this list and is
-  stated rather than hidden. It carries the one trap in this tool with a
-  PROVEN live bug: three sampled "hits" on a chr1 GRCh38 window were all 0bp
-  point insertions matching only because a GRCh37 unplaced-scaffold start
-  paired numerically with a GRCh38 end. It is omitted here because no
-  coordinate ground truth is pinned anywhere in this repository, and
-  constructing an expected overlap set from documentation would assert a
-  result nobody has verified, which is the failure this gate's third property
-  forbids. T-3.1-10 MUST pin its own live-verified overlap fixture and add it
-  here. Until it does, this gate does not cover the tool's worst trap.
+Case 17 pins BOTH ground-truth properties this ticket asked for in a single
+live window (dbVar, chr1, GRCh38, 1,000,000 to 1,100,000): a genuine overlap
+(`nsv7850635`) survives, and the exact proven-bug shape, reproduced live
+through this tool's own step-1 query rather than the capability sheet's
+looser two-field trick, is correctly rejected (`nsv7855404`, a real ~80bp
+copy number variant whose GRCh37.p13 placement falls inside the window and
+whose actual GRCh38 placement is 50kb outside it). Case 18 exercises the
+second database, ClinVar, with a true-positive overlap on a TP53 SNV
+(`VCV004865884`), already load-bearing ground truth elsewhere in this file.
+
+Assemblies exercised: GRCh38 only, both cases. GRCh37 is NOT exercised by
+this gate; `ncbi_coordinate_overlap`'s own unit tests
+(`tests/system_03_search_agent/tools/test_ncbi_coordinate_overlap.py`) cover
+GRCh37 selection with mocked data, but no GRCh37 window has been pinned
+against a LIVE response here. That is a real, named gap in this gate, not a
+covered case.
 
 Databases exercised (4 of 14): `gene`, `pubmed`, plus the deliberately invalid
 `notadatabase`, which is asserted to be rejected locally rather than sent. Not exercised: `clinvar`, `dbvar`, `omim`, `medgen`, `gtr`,
@@ -389,6 +406,35 @@ INVALID_GENE_SYMBOL = "notarealgenesymbolxyzzy"
 # host and record host differ, so this is a new failure surface, not a
 # restatement of cypher_query's.
 FETCH_HOSTS = ("eutils.ncbi.nlm.nih.gov", "api.ncbi.nlm.nih.gov")
+
+# --- coordinate_overlap ground truth, read 2026-08-05. T-3.1-10. ---
+#
+# dbVar, chr1, GRCh38, window 1,000,000 to 1,100,000. Both records below are
+# real, live-verified dbVar entries, read through THIS TOOL'S OWN intended
+# step-1 query (a single `[BASE]` range pinned to `[ASSM]`), not the
+# capability sheet's looser two-field trick. Full derivation:
+# `system_03_search_agent.tools.ncbi_coordinate_overlap`'s module docstring.
+COORD_DBVAR_WINDOW = {"chromosome": "1", "start": 1_000_000, "end": 1_100_000, "assembly": "GRCh38"}
+
+# A genuine overlap: uid 57691674, GRCh38 placement 1,056,628 to 1,056,713,
+# entirely inside the window.
+COORD_DBVAR_TRUE_POSITIVE_ACCESSION = "nsv7850635"
+
+# The proven bug, reproduced live: uid 57696443. Its GRCh37.p13 placement
+# (1,084,984 to 1,085,063) falls inside the window, which is why the coarse
+# ESearch prefilter matches it at all. Its ACTUAL GRCh38 placement
+# (1,149,604 to 1,149,683) is 50kb outside the window. A tool that trusts
+# the raw ESearch match returns this as a false-positive hit; a tool that
+# runs the full five-step procedure never does.
+COORD_DBVAR_FALSE_POSITIVE_ACCESSION = "nsv7855404"
+
+# ClinVar, chr17, GRCh38, a 10bp window around one TP53 SNV. Read through
+# ESearch's CPOS (GRCh38 "current position") field tag. The same accession
+# as build phase 3.1's other TP53 ground truth, so a mismatch here would
+# also contradict cases 1 to 3 and 12.
+COORD_CLINVAR_WINDOW = {"chromosome": "17", "start": 7_670_670, "end": 7_670_680, "assembly": "GRCh38"}
+COORD_CLINVAR_TRUE_POSITIVE_ACCESSION = "VCV004865884"
+COORD_CLINVAR_TRUE_POSITIVE_CHR_START = 7_670_674
 
 
 def _call_input(payload: dict[str, Any]) -> Any:
@@ -898,4 +944,94 @@ async def test_16_tp53_question_answers_end_to_end() -> None:
         "TP53 is one of the best-characterized genes in the graph. A refusal "
         "here is the build phase 2.2 findings-block failure recurring: the "
         "answer was not expressible from what the model was handed."
+    )
+
+
+# ===========================================================================
+# ARM 5: coordinate_overlap, the tool's proven live bug (T-3.1-10).
+#
+# Added 2026-08-05, closing the omission the coverage section named at this
+# gate's own creation: "the highest-risk omission in this list... no
+# coordinate ground truth is pinned anywhere in this repository". Both
+# constants above were read from the live endpoints on 2026-08-05, through
+# `system_03_search_agent.tools.ncbi_coordinate_overlap`'s own intended
+# step-1 query, not a fixture invented from the spec's documentation. That
+# module's docstring carries the full probe and a live-verified correction
+# to Section 6.2's own claimed ClinVar field shape.
+# ===========================================================================
+
+
+@premise_gate
+@pytest.mark.asyncio
+async def test_17_dbvar_overlap_survives_and_the_proven_bug_shape_is_rejected() -> None:
+    """Case 17. Both ground-truth properties this ticket required, one window.
+
+    A genuine overlap (nsv7850635) must reach the output. The exact proven
+    live bug (nsv7855404: a coarse-prefilter candidate whose real GRCh38
+    placement does not overlap the window at all, matched only because a
+    GRCh37 placement's start falls inside it) must NOT. This is the direct
+    live-network analogue of build phase 2.1's ortholog failure and of this
+    file's own near-miss pair (cases 7 and 9a): two outcomes that look alike
+    at the coarse layer and must land in different buckets.
+    """
+    output = await _run({"action": "coordinate_overlap", "db": "dbvar", **COORD_DBVAR_WINDOW})
+
+    assert output.status == "ok", f"expected ok, got {output.status}: {output.error}"
+    ids = {r.id for r in output.records}
+    assert COORD_DBVAR_TRUE_POSITIVE_ACCESSION in ids, (
+        f"{COORD_DBVAR_TRUE_POSITIVE_ACCESSION} genuinely overlaps this window on GRCh38 "
+        f"(ground truth 2026-08-05) and must be in the output, got {ids!r}"
+    )
+    assert COORD_DBVAR_FALSE_POSITIVE_ACCESSION not in ids, (
+        f"{COORD_DBVAR_FALSE_POSITIVE_ACCESSION} is the proven live bug: its GRCh38 "
+        f"placement does not overlap this window, only a GRCh37 placement does. A tool "
+        f"trusting the raw ESearch prefilter returns it as a false-positive hit. Got "
+        f"{ids!r}. If this fails, the five-step procedure has regressed to raw "
+        f"ESearch-range trust, which is the exact defect this ticket exists to close."
+    )
+
+    survivor = next(r for r in output.records if r.id == COORD_DBVAR_TRUE_POSITIVE_ACCESSION)
+    assert survivor.fields.get("assembly", "").startswith("GRCh38"), (
+        "the resolved placement must be the GRCh38 one, not merely present"
+    )
+    assert _record_urls_include_only_ncbi_hosts(survivor), (
+        f"source_url {survivor.source_url!r} must resolve to a page a human can open, "
+        f"not a fetch host"
+    )
+
+
+@premise_gate
+@pytest.mark.asyncio
+async def test_18_clinvar_overlap_resolves_the_real_tp53_placement() -> None:
+    """Case 18. The second database family, and the second half of the
+    ClinVar field-shape correction this ticket found: `ncbi_coordinate_overlap`
+    reads `variation_set[].variation_loc[]`, not Section 6.2's claimed flat
+    `C37`/`CPOS` scalars. This case is the live proof that reading it that
+    way actually produces the right number, not merely that the code
+    compiles against the shape.
+    """
+    output = await _run({"action": "coordinate_overlap", "db": "clinvar", **COORD_CLINVAR_WINDOW})
+
+    assert output.status == "ok", f"expected ok, got {output.status}: {output.error}"
+    ids = {r.id for r in output.records}
+    assert COORD_CLINVAR_TRUE_POSITIVE_ACCESSION in ids, (
+        f"{COORD_CLINVAR_TRUE_POSITIVE_ACCESSION} (TP53 c.1035T>C) genuinely overlaps "
+        f"this window on GRCh38 (ground truth 2026-08-05), got {ids!r}"
+    )
+
+    survivor = next(r for r in output.records if r.id == COORD_CLINVAR_TRUE_POSITIVE_ACCESSION)
+    assert survivor.fields.get("chr_start") == COORD_CLINVAR_TRUE_POSITIVE_CHR_START, (
+        f"expected the resolved GRCh38 placement start to be "
+        f"{COORD_CLINVAR_TRUE_POSITIVE_CHR_START}, got {survivor.fields.get('chr_start')!r}. "
+        f"If this moved, re-verify against the endpoint; do not widen the assertion."
+    )
+    assert _record_urls_include_only_ncbi_hosts(survivor)
+
+
+def _record_urls_include_only_ncbi_hosts(record: Any) -> bool:
+    url = getattr(record, "source_url", None)
+    if not url:
+        return False
+    return url.startswith("https://www.ncbi.nlm.nih.gov/") and not any(
+        fetch_host in url for fetch_host in FETCH_HOSTS
     )
