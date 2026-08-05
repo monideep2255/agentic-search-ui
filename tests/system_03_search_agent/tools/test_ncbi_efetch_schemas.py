@@ -326,33 +326,70 @@ def test_pubchem_property_rejects_additional_property() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_search_accepts_an_invalid_db_name_for_live_classification() -> None:
-    """Design decision 2: `db` is NOT a closed enum for `search`.
+def test_search_rejects_an_invalid_db_name_before_any_request() -> None:
+    """`db` is the spec's closed enum, and an unknown name never leaves here.
 
-    The premise gate's case 9 (`test_09_invalid_db_is_error_despite_http_200`)
-    sends `db: "notadatabase"` and requires the payload to reach the live
-    ESearch endpoint, which alone can tell an invalid db name (HTTP 200,
-    `esearchresult.ERROR` set) apart from a genuine zero-hit search (HTTP
-    200, no ERROR key). A schema-level enum would reject this before the
-    tool ever ran, which is exactly the defect this test guards against.
+    This test asserted the OPPOSITE until 2026-08-05, and the reversal is
+    worth recording rather than quietly rewriting.
+
+    The premise gate's case 9 originally sent `db: "notadatabase"` and
+    required it to reach the live ESearch endpoint, because only the response
+    body distinguishes an invalid db name (HTTP 200 with
+    `esearchresult.ERROR`) from a genuine zero-hit search (HTTP 200, no ERROR
+    key). Satisfying that forced `db` open to a bounded string, which traded a
+    real input-validation control for the ability to observe one error path.
+
+    The gate was rewritten to trigger the SAME HTTP-200-with-an-ERROR body
+    from a malformed term instead, which is schema-legal and leaves `db`
+    closed. Verified live 2026-08-05, three consecutive requests. So body-based
+    error classification is still tested end to end (gate case 9a) and the
+    invalid db is now rejected here, before any request is sent (gate case 9b).
+
+    Section 6.2 contradicts itself on this point: it constrains `db` to a
+    closed enum and also documents an "Invalid db name" response the tool must
+    classify. Both cannot hold. Filed as F-3.1-02 for Step 6.2, resolved here
+    in favor of the enum, since a request never sent cannot be misclassified
+    and cannot spend a rate-limit token.
     """
-    validated = NcbiEfetchInput.model_validate({**SEARCH_DICT, "db": "notadatabase"})
-    assert validated.root.db == "notadatabase"
+    with pytest.raises(ValidationError):
+        NcbiEfetchInput.model_validate({**SEARCH_DICT, "db": "notadatabase"})
 
 
-def test_fetch_accepts_a_db_outside_its_documented_8_value_list() -> None:
-    # "taxonomy" is valid for `search` (14 databases) but not printed in
-    # `fetch`'s narrower 8-database list. It still validates: `db` is a
-    # bounded string for the same reason `notadatabase` must (design
-    # decision 2), and NCBI itself is the authority on whether a given db
-    # supports EFetch, not this schema.
-    validated = NcbiEfetchInput.model_validate({**FETCH_DICT, "db": "taxonomy"})
-    assert validated.root.db == "taxonomy"
+def test_fetch_rejects_a_db_outside_its_documented_8_value_list() -> None:
+    # "taxonomy" is valid for `search` (14 databases) and is deliberately NOT
+    # in `fetch`'s narrower 8-database list. The per-action vocabularies are
+    # genuinely different in Section 6.2, so a db legal for one action must
+    # not be legal for another.
+    with pytest.raises(ValidationError):
+        NcbiEfetchInput.model_validate({**FETCH_DICT, "db": "taxonomy"})
 
 
-def test_summary_accepts_a_db_outside_its_documented_12_value_list() -> None:
-    validated = NcbiEfetchInput.model_validate({**SUMMARY_DICT, "db": "mesh"})
-    assert validated.root.db == "mesh"
+def test_summary_rejects_a_db_outside_its_documented_12_value_list() -> None:
+    # "mesh" is in search's 14 and not in summary's 12.
+    with pytest.raises(ValidationError):
+        NcbiEfetchInput.model_validate({**SUMMARY_DICT, "db": "mesh"})
+
+
+def test_each_action_accepts_every_db_its_spec_enum_lists() -> None:
+    # The counterweight to the three rejections above. An enum that is too
+    # narrow is a silent outage rather than a security control, so pin the
+    # full documented vocabulary per action, not just one member.
+    search_dbs = ("pubmed", "gene", "clinvar", "dbvar", "omim", "medgen",
+                  "gtr", "sra", "bioproject", "biosample", "assembly", "gds",
+                  "taxonomy", "mesh")
+    fetch_dbs = ("pubmed", "gene", "clinvar", "dbvar", "omim", "medgen",
+                 "gtr", "sra")
+    summary_dbs = ("pubmed", "gene", "clinvar", "dbvar", "omim", "medgen",
+                   "gtr", "sra", "bioproject", "biosample", "assembly", "gds")
+    assert len(search_dbs) == 14
+    assert len(fetch_dbs) == 8
+    assert len(summary_dbs) == 12
+    for db in search_dbs:
+        assert NcbiEfetchInput.model_validate({**SEARCH_DICT, "db": db}).root.db == db
+    for db in fetch_dbs:
+        assert NcbiEfetchInput.model_validate({**FETCH_DICT, "db": db}).root.db == db
+    for db in summary_dbs:
+        assert NcbiEfetchInput.model_validate({**SUMMARY_DICT, "db": db}).root.db == db
 
 
 def test_search_rejects_oversized_db() -> None:

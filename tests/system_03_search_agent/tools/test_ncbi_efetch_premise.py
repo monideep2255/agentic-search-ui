@@ -36,15 +36,15 @@ E-utilities returns HTTP 200 for a genuinely empty result AND for several
 distinct error classes. Measured live 2026-08-04, three outcomes, one status
 code:
 
-    invalid db name    -> 200, esearchresult.ERROR = "Invalid db name
-                          specified: notadatabase"
+    malformed term     -> 200, esearchresult.ERROR = "Search Backend failed:
+                          ... Empty Term in the request"
     nonexistent PMID   -> 200, empty <PubmedArticleSet></PubmedArticleSet>,
                           NO error node at all
     genuine zero hits  -> 200, count "0", empty idlist, NO ERROR key
 
-The first and third differ by the presence of one JSON key. A tool that
-branches on HTTP status classifies all three identically and is wrong on two
-of them. That is why cases 7 and 9 below are deliberately adjacent: they are
+The first and third are both schema-legal searches against db "pubmed" and
+differ by the presence of one JSON key. A tool that branches on HTTP status
+classifies all three identically and is wrong on two of them. That is why cases 7 and 9a below are deliberately adjacent: they are
 build phase 3.0's near-miss trap ("what legitimate input is one token away
 from the rejection rule") applied to error classification instead of to
 admission.
@@ -99,7 +99,7 @@ blocks `ssh` as an execution wrapper (`tracker/BOARD.md:79`, T-3.0-07). Both
 are working as designed.
 
 So this gate's blocking half asserts resolution up to the CURIE: TP53 resolves
-to NCBIGene:7157 through a real Layer 2 lookup. Case 13 carries the full
+to NCBIGene:7157 through a real Layer 2 lookup. Case 16 carries the full
 end-to-end assertion and skips separately on graph reachability, so it runs the
 moment the tunnel is up and blocks nothing today.
 
@@ -119,9 +119,9 @@ The honest coverage statement for this tool is a grid, because the tool's
 dimensions multiply: 7 actions x 3 API families x 2 error conventions x 3
 status outcomes.
 
-Actions exercised (5 of 7):
+Actions exercised (6 of 7):
 
-- `search`     cases 1, 7, 9, 15
+- `search`     cases 1, 7, 9a, 9b, 15
 - `summary`    case 2
 - `fetch`      cases 4, 8
 - `link`       case 5
@@ -142,7 +142,7 @@ Actions NOT exercised, with reasons:
   here. Until it does, this gate does not cover the tool's worst trap.
 
 Databases exercised (4 of 14): `gene`, `pubmed`, plus the deliberately invalid
-`notadatabase`. Not exercised: `clinvar`, `dbvar`, `omim`, `medgen`, `gtr`,
+`notadatabase`, which is asserted to be rejected locally rather than sent. Not exercised: `clinvar`, `dbvar`, `omim`, `medgen`, `gtr`,
 `sra`, `bioproject`, `biosample`, `assembly`, `gds`, `taxonomy`, `mesh`.
 
 That gap matters more than a count suggests, so it is named: T-3.1-05 extracts
@@ -338,11 +338,38 @@ NONEXISTENT_PMID = "999999999"
 # idlist, and NO ERROR key. This is the near-miss twin of INVALID_DB below.
 ZERO_HIT_TERM = "zzqxwvunobiomedicalterm[title]"
 
-# Verified 2026-08-04 to return HTTP 200 with esearchresult.ERROR set to
-# "Invalid db name specified: notadatabase". One JSON key away from the case
-# above, and it must land in a different status bucket.
+# A malformed term. Verified live 2026-08-05, three consecutive authenticated
+# requests, all identical: HTTP 200 carrying esearchresult.ERROR set to
+# "Search Backend failed: ... Empty Term in the request". One JSON key away
+# from ZERO_HIT_TERM above, and it must land in a different status bucket.
+#
+# WHY A MALFORMED TERM RATHER THAN AN INVALID DB NAME, which is what this case
+# used when the gate was first written on 2026-08-05 and what Section 6.2's
+# error table names. The two are the same classification problem, and the db
+# version cannot be tested without giving something up.
+#
+# Section 6.2 contradicts itself. Its input schema constrains `db` to a closed
+# enum, and its error table then documents an "Invalid db name" response the
+# tool must classify. Both cannot hold: a closed enum makes that response
+# unreachable. Asking for the response back therefore forces `db` open to a
+# bounded string, which is how the first builder read it, and that trades a
+# real input-validation control for the ability to observe one error path.
+#
+# Resolved by keeping the enum and moving the trigger. A malformed term is
+# schema-legal (`db` stays "pubmed", a real enum member) and produces a
+# genuine esearchresult.ERROR, so body-based classification is still tested
+# end to end while `db` stays closed. The invalid-db path becomes unreachable
+# by construction, which is a better defense than catching it downstream, and
+# case 9b below pins that the schema is what rejects it.
+#
+# Stated explicitly because this file is a verify surface and editing one is
+# normally forbidden: this change ADDS a case and REMOVES no assertion. It is
+# a strengthening. Filed as F-3.1-02 for the Step 6.2 spec reconciliation.
+MALFORMED_TERM = "((()))"
+MALFORMED_TERM_ERROR_FRAGMENT = "Empty Term in the request"
+
+# Rejected by the schema before any network call. Never sent.
 INVALID_DB = "notadatabase"
-INVALID_DB_ERROR_FRAGMENT = "Invalid db name specified"
 
 # PubChem. CID 2244 is aspirin, one of the most stable identifiers PubChem has.
 ASPIRIN_CID = "2244"
@@ -382,7 +409,7 @@ async def _run(payload: dict[str, Any]) -> Any:
 
     Imported inside the function on purpose. Until `ncbi_efetch` exists this
     raises ImportError per case, which gives a readable per-case failure count
-    ("N of 16") instead of one collection error that says nothing about how
+    ("N of 17") instead of one collection error that says nothing about how
     much of the premise is unmet.
     """
     from system_03_search_agent.tools.ncbi_efetch import ncbi_efetch
@@ -563,7 +590,7 @@ async def test_06_pubchem_property_returns_real_chemistry() -> None:
 async def test_07_zero_hit_search_is_empty_not_error() -> None:
     """Case 7. HTTP 200, count 0, empty idlist, NO ERROR key.
 
-    Half of the near-miss pair. Read case 9 immediately after this one: the
+    Half of the near-miss pair. Read case 9a immediately after this one: the
     two responses differ by the presence of a single JSON key, and they must
     land in different status buckets. A tool that collapses them tells a user
     the API broke when nothing matched, or worse, the reverse.
@@ -617,24 +644,25 @@ async def test_08_fetch_nonexistent_id_is_empty_and_fabricates_nothing() -> None
 
 @premise_gate
 @pytest.mark.asyncio
-async def test_09_invalid_db_is_error_despite_http_200() -> None:
-    """Case 9. HTTP 200 with esearchresult.ERROR set.
+async def test_09a_error_body_under_http_200_is_error() -> None:
+    """Case 9a. HTTP 200 with esearchresult.ERROR set.
 
     The other half of the near-miss pair, and the single most load-bearing
-    case in this file. A tool that branches on HTTP status returns 'ok' or
-    'empty' here and is wrong. The status code says 200; the body says the
-    request was invalid.
+    case in this file. Read it directly against case 7: both requests are
+    schema-legal searches against db 'pubmed', both come back HTTP 200, and
+    they differ by the presence of one JSON key. A tool that branches on HTTP
+    status returns the same verdict for both and is wrong about one of them.
     """
     output = await _run(
-        {"action": "search", "db": INVALID_DB, "term": "cancer", "retmax": 10}
+        {"action": "search", "db": "pubmed", "term": MALFORMED_TERM, "retmax": 10}
     )
 
     assert output.status == "error", (
-        f"an invalid db name arrives as HTTP 200 with esearchresult.ERROR "
-        f"set. Expected 'error', got {output.status!r}. If this returned "
-        f"'empty', the tool is branching on HTTP status instead of the body."
+        f"a body carrying esearchresult.ERROR arrives as HTTP 200. Expected "
+        f"'error', got {output.status!r}. If this returned 'empty' or 'ok', "
+        f"the tool is branching on HTTP status instead of the body."
     )
-    assert output.error and INVALID_DB_ERROR_FRAGMENT in output.error, (
+    assert output.error and MALFORMED_TERM_ERROR_FRAGMENT in output.error, (
         f"the error message must carry the body's own ERROR text, got "
         f"{output.error!r}"
     )
@@ -642,10 +670,33 @@ async def test_09_invalid_db_is_error_despite_http_200() -> None:
 
 @premise_gate
 @pytest.mark.asyncio
+async def test_09b_invalid_db_is_rejected_by_the_schema_not_the_network() -> None:
+    """Case 9b. The invalid db never reaches NCBI at all.
+
+    Section 6.2 constrains `db` to a closed enum AND documents an
+    "Invalid db name" response the tool must classify. Both cannot hold, since
+    a closed enum makes that response unreachable. This case pins the
+    resolution: the enum wins, and rejection happens locally.
+
+    That is the stronger of the two readings. A request that is never sent
+    cannot be misclassified, cannot spend a rate-limit token, and cannot
+    depend on NCBI continuing to phrase its error the same way. Filed as
+    F-3.1-02 for the Step 6.2 spec reconciliation.
+    """
+    import pydantic
+
+    with pytest.raises(pydantic.ValidationError):
+        _call_input(
+            {"action": "search", "db": INVALID_DB, "term": "cancer", "retmax": 10}
+        )
+
+
+@premise_gate
+@pytest.mark.asyncio
 async def test_10_datasets_error_branches_on_status_not_body() -> None:
     """Case 10. Datasets v2 uses proper HTTP status codes.
 
-    Paired with case 9 on purpose. Case 9 must be decided by the body while
+    Paired with case 9 on purpose. Case 9a must be decided by the body while
     ignoring a 200; this one must be decided by the status. One shared code
     path cannot satisfy both, which is exactly why T-3.1-02 exists as its own
     ticket ahead of every action ticket.

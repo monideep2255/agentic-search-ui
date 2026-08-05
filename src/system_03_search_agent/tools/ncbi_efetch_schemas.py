@@ -148,19 +148,44 @@ NCBI_EFETCH_RECORD_URL_PATTERN: Final = (
 # ---------------------------------------------------------------------------
 
 
+# The `db` vocabularies, closed per Section 6.2's input schema.
+#
+# These were briefly opened to a bounded string while the premise gate's
+# invalid-db case required an unknown name to reach the live endpoint. That
+# case was rewritten on 2026-08-05 to trigger the same HTTP-200-with-an-ERROR
+# body from a MALFORMED TERM instead, which is schema-legal, so the enums are
+# closed again and the invalid-db request is now rejected locally and never
+# sent. See F-3.1-02 and premise gate case 9b.
+#
+# Section 6.2 contradicts itself here: it constrains `db` to these enums and
+# also documents an "Invalid db name" response the tool must classify. A closed
+# enum makes that response unreachable, which is the stronger reading, since a
+# request never sent cannot be misclassified and cannot spend a rate-limit
+# token. Carried to Step 6.2 rather than resolved by loosening the schema.
+SearchDb = Literal[
+    "pubmed", "gene", "clinvar", "dbvar", "omim", "medgen", "gtr", "sra",
+    "bioproject", "biosample", "assembly", "gds", "taxonomy", "mesh",
+]
+FetchDb = Literal[
+    "pubmed", "gene", "clinvar", "dbvar", "omim", "medgen", "gtr", "sra",
+]
+SummaryDb = Literal[
+    "pubmed", "gene", "clinvar", "dbvar", "omim", "medgen", "gtr", "sra",
+    "bioproject", "biosample", "assembly", "gds",
+]
+
+
 class NcbiEfetchSearchInput(BaseModel):
     """ESearch: `db=<db>&term=<term>`. Section 6.2, the `search` branch.
 
     `db` is a bounded string, not the spec's printed 14-value enum. See
-    design decision 2 in the module docstring: the premise gate's case 9
-    requires an invalid db name to reach the live endpoint and be classified
-    from its response body, not rejected at schema validation.
+    `db` is the spec's closed 14-value enum. See the SearchDb comment above.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     action: Literal["search"]
-    db: Annotated[str, Field(max_length=20)]
+    db: SearchDb
     term: Annotated[str, Field(max_length=500)]
     field_tags: Annotated[
         list[Annotated[str, Field(max_length=20)]],
@@ -173,14 +198,13 @@ class NcbiEfetchSearchInput(BaseModel):
 class NcbiEfetchFetchInput(BaseModel):
     """EFetch: `db=<db>&id=<ids>&rettype=&retmode=`. The `fetch` branch.
 
-    `db` is a bounded string rather than the spec's printed 8-value enum;
-    see design decision 2 in the module docstring.
+    `db` is the spec's closed 8-value enum. See the SearchDb comment above.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     action: Literal["fetch"]
-    db: Annotated[str, Field(max_length=20)]
+    db: FetchDb
     ids: Annotated[
         list[Annotated[str, Field(max_length=30)]],
         Field(max_length=50),
@@ -192,14 +216,13 @@ class NcbiEfetchFetchInput(BaseModel):
 class NcbiEfetchSummaryInput(BaseModel):
     """ESummary: `db=<db>&id=<ids>&retmode=json`. The `summary` branch.
 
-    `db` is a bounded string rather than the spec's printed 12-value enum;
-    see design decision 2 in the module docstring.
+    `db` is the spec's closed 12-value enum. See the SearchDb comment above.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     action: Literal["summary"]
-    db: Annotated[str, Field(max_length=20)]
+    db: SummaryDb
     ids: Annotated[
         list[Annotated[str, Field(max_length=30)]],
         Field(max_length=50),
