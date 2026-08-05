@@ -105,7 +105,9 @@ async def test_cid_lookup_returns_aspirin_chemistry() -> None:
     assert record.id == "2244"
     assert record.db == "pubchem"
     assert record.fields["MolecularFormula"] == "C9H8O4"
-    assert record.source_url is None, "PubChem's host does not satisfy the schema pattern"
+    assert record.source_url == "https://pubchem.ncbi.nlm.nih.gov/compound/2244", (
+            "F-3.1-08: PubChem now emits a valid source_url"
+        )
     assert (
         "cid/2244/property/MolecularFormula%2CMolecularWeight/JSON"
         in client.calls[0]["url"]

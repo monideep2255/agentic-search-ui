@@ -139,7 +139,7 @@ _MAX_RECORD_FIELDS = 40
 # graph_schema_constants.NCBI_RECORD_URL_PATTERN: see design decision 3 in
 # the module docstring for why the two patterns must stay independent.
 NCBI_EFETCH_RECORD_URL_PATTERN: Final = (
-    r"^https://((www\.|pubmed\.)?ncbi\.nlm\.nih\.gov|(www\.)?omim\.org)/"
+    r"^https://((www\.|pubmed\.|pubchem\.)?ncbi\.nlm\.nih\.gov|(www\.)?omim\.org)/"
 )
 
 

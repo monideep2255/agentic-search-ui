@@ -2,7 +2,7 @@
 
 A plain-language update on what this project is, what works today, and what comes next. No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-04.
+Last updated: 2026-08-05.
 
 ## Table of contents
 
@@ -53,16 +53,15 @@ Concretely:
 - Every factual sentence in the answer carries a numbered link to the official record it came from.
 - If the system cannot find support for something, it says so and points you somewhere else, instead of making something up.
 - Questions that are off topic, that ask for medical advice, or that try to manipulate the system are turned away before they cost anything.
+- The system can look up any gene name against the live NCBI databases, not just the one it knew about before. This was the single biggest gap, and it is now closed.
 
 ## What does not work yet
 
-The honest headline: it currently only knows about one gene by name.
+The honest headline: the system can look up genes, but it cannot yet use those lookups to answer questions.
 
-If you ask about BRCA1, it works. If you ask about TP53, or almost any other gene, it comes back with nothing. This is not a subtle bug. There is a lookup table in the code with exactly one entry in it, because the piece that translates a gene name into an official identifier has not been built yet.
+Gene name lookup works. The system can translate any gene name into its official NCBI identifier by asking the live APIs. But the step that connects that lookup to the actual question-answering pipeline is not yet wired in. The tool is built and verified, and the last piece that connects it to the answer path is carried to a later sprint.
 
-That single gap is the main thing standing between this project and something you could show to a colleague. It is the next piece of work.
-
-Also not built yet: the connections to the live government APIs (so anything not already in our own database cannot be answered), the other five data tools, saved history, and anything to do with hosting it somewhere other than a laptop.
+Also not built yet: the connections to the other five live government APIs (so anything not already in our own database cannot be answered), saved history, and anything to do with hosting it somewhere other than a laptop.
 
 ## The story so far, sprint by sprint
 
@@ -77,6 +76,7 @@ Each of these is a completed, reviewed, merged piece of work.
 | 2.1 | The first real connection to our biomedical database | 2026-08-01 |
 | 2.2 | The rule that every sentence must be backed by a source, or the system refuses to answer | 2026-08-03 |
 | 3.0 | The gatekeeper that decides which questions are allowed in at all | 2026-08-04 |
+| 3.1 | The first live government API connection, and gene name lookup | 2026-08-05 |
 
 Two of these are worth understanding, because they explain how this project works.
 
@@ -110,11 +110,11 @@ The single box that matters right now is "gene name lookup". Everything to its l
 
 In order:
 
-1. Sprint 3.1, the gene name lookup. This is the one that fixes the "only knows BRCA1" problem, by connecting to the live government APIs that can translate any gene name into an official identifier. Started, not finished. This is what unblocks showing the project to someone.
-2. A small fix straight after it, for a problem where a badly formed automatic query once overloaded our database server.
-3. Sprints 3.2 to 3.5, the five remaining data tools: genetic variants, published literature enrichment, disease outbreak data, and clinical trials.
+1. Sprint 3.2, the genetic variant lookup tool. This connects to the dbSNP database and can look up variants by their rs numbers.
+2. Sprints 3.3 to 3.5, the four remaining data tools: published literature enrichment, disease outbreak data, and clinical trials.
+3. A small fix for a problem where a badly formed automatic query once overloaded our database server.
 4. A planned pause to update the written specifications with everything we have learned from actually building it.
-5. Then the remaining work: the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
+5. Then the remaining work: wiring the live API tools into the answer pipeline, the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
 
 ## Problems we know about and are tracking
 
@@ -122,6 +122,7 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| The gene lookup tool is built, but the step that connects it to the answer pipeline is not yet wired in. It can look up genes but cannot yet use those lookups to answer questions | A later sprint in the 3.x group |
 | A badly formed automatic query once overloaded the database server. We have limited the damage it can do, but not stopped it being written in the first place | Immediately after sprint 3.1 |
 | Three smaller gaps in the gatekeeper, where a backup layer currently covers for them | The hardening sprint near the end |
 | Two places where the written specification and the working code disagree and need reconciling | The planned specification pause |

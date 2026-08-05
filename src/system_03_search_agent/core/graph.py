@@ -977,6 +977,50 @@ _SYMBOL_CANDIDATE_STOPWORDS: frozenset[str] = frozenset(
         "PART", "PARTS", "ROLE", "ROLES", "USE", "USES", "USED", "USING",
         "NEW", "OLD", "GOOD", "BAD", "BETTER", "WORSE", "BEST", "WORST",
         "QUESTION", "QUESTIONS", "ANSWER", "ANSWERS",
+        # F-3.1-14 (adversary finding 2, CRITICAL): ordinary English words
+        # observed consuming the live-lookup budget before the real gene
+        # symbol in the query is ever tried. Adding these to the stopword
+        # list is not the complete fix (the digit-priority heuristic in
+        # _resolve_query_entities is), but a stopword still costs nothing
+        # and a missed symbol costs a resolution.
+        "SMALL", "LARGE", "BIG", "LITTLE", "HIGH", "LOW", "LONG", "SHORT",
+        "MOLECULE", "MOLECULES", "INHIBITOR", "INHIBITORS", "INHIBIT",
+        "BLOCK", "BLOCKS", "BLOCKED", "BLOCKING",
+        "MUTANT", "MUTANTS", "LUNG", "LUNGS", "CHRONIC", "SMOKING",
+        "INCREASE", "INCREASES", "INCREASED", "INCREASING",
+        "DECREASE", "DECREASES", "DECREASED", "DECREASING",
+        "FREQUENCY", "FREQUENCIES",
+        "LEVEL", "LEVELS", "RATE", "RATES", "CHANGE", "CHANGES", "CHANGED",
+        "COHORT", "COHORTS", "SAMPLE", "SAMPLES", "GROUP", "GROUPS",
+        "FUSION", "FUSIONS", "REARRANGEMENT", "REARRANGEMENTS",
+        "EXPRESSION", "EXPRESSED", "EXPRESSES", "EXPRESSING",
+        "PATHWAY", "PATHWAYS", "SIGNALING", "SIGNALLING",
+        "RECEPTOR", "RECEPTORS", "LIGAND", "LIGANDS",
+        "TARGET", "TARGETS", "TARGETED", "TARGETING",
+        "DRUG", "DRUGS", "THERAPY", "THERAPIES",
+        "RESISTANCE", "RESISTANT", "SENSITIVE", "SENSITIVITY",
+        "RESPONSE", "RESPONSES", "OUTCOME", "OUTCOMES",
+        "CLINICAL", "TRIAL", "TRIALS", "EFFECT", "EFFECTS",
+        "ACTIVITY", "ACTIVITIES", "FUNCTION", "FUNCTIONS",
+        "MECHANISM", "MECHANISMS", "REGULATION", "REGULATES", "REGULATED",
+        "BIOMARKER", "BIOMARKERS", "PROGNOSIS", "PROGNOSTIC",
+        "DIAGNOSIS", "DIAGNOSTIC", "SCREENING", "DETECTION",
+        "ONSET", "PROGRESSION", "SEVERITY", "SURVIVAL",
+        "POPULATION", "POPULATIONS", "INDIVIDUAL", "INDIVIDUALS",
+        "ANALYSIS", "ANALYSES", "DATA", "RESULTS", "FINDINGS",
+        "REPORT", "REPORTS", "REPORTED", "REVIEW", "REVIEWS",
+        "META", "SYSTEMATIC", "OBSERVATIONAL", "COHORT",
+        "CELL", "CELLS", "TISSUE", "TISSUES", "BLOOD", "SERUM", "PLASMA",
+        "CANCER", "CANCERS", "TUMOR", "TUMORS", "TUMOUR", "TUMOURS",
+        "ADHD", "PTSD", "OCD", "COPD", "ALS", "SLE", "IBD", "CKD",
+        "NORMAL", "ABNORMAL", "POSITIVE", "NEGATIVE",
+        "TOTAL", "OVERALL", "SPECIFIC",
+        "FIRST", "SECOND", "THIRD", "LAST", "NEXT", "PREVIOUS",
+        "MAJOR", "MINOR", "SIGNIFICANT", "IMPORTANT", "COMMON", "RARE",
+        "PRIMARY", "SECONDARY", "POTENTIAL", "POSSIBLE",
+        "CURRENT", "RECENT", "EARLY", "LATE", "ADVANCED",
+        "FULL", "PARTIAL", "COMPLETE", "INCOMPLETE",
+        "DOES", "DID", "DOING", "DONE",
     }
 )
 
@@ -1061,7 +1105,7 @@ async def resolve_symbol_to_curie(symbol: str, *, taxon: str = "human") -> str |
     rate limit, is never cached, so the next query for the same symbol
     retries the live lookup rather than replaying a stale outage.
     """
-    cache_key = symbol.strip().upper()
+    cache_key = f"{symbol.strip().upper()}:{taxon.strip().lower()}"
     if cache_key in _SYMBOL_CURIE_CACHE:
         return _SYMBOL_CURIE_CACHE[cache_key]
 
@@ -1103,7 +1147,14 @@ async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> tuple[st
         fields = dataset_output.records[0].fields
         gene_id = fields.get("gene_id")
         taxname = fields.get("taxname")
-        if gene_id and taxname == "Homo sapiens":
+        # F-3.1-17 (adversary finding 5, CRITICAL): the Datasets branch
+        # used to require taxname == "Homo sapiens", discarding correct
+        # non-human results (e.g. TRP53/taxon=mouse returning id 22059,
+        # Trp53, Mus musculus). The Datasets endpoint already filters by
+        # the caller-supplied taxon, so a result with a non-empty taxname
+        # is the correct species. Requiring exactly "Homo sapiens" is
+        # build phase 2.1's ortholog failure re-created one layer up.
+        if gene_id and taxname:
             return f"NCBIGene:{gene_id}", True
 
     search_output = await ncbi_efetch(
@@ -1111,7 +1162,7 @@ async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> tuple[st
             {
                 "action": "search",
                 "db": "gene",
-                "term": f"{symbol}[sym] AND human[orgn]",
+                "term": f"{symbol}[sym] AND {taxon}[orgn]",
                 "retmax": 5,
             }
         )
@@ -1206,14 +1257,29 @@ async def _resolve_query_entities(query_text: str) -> _EntityResolution:
 
     unresolved: list[str] = []
     live_lookups = 0
+
+    # F-3.1-14 (adversary finding 2, CRITICAL): collect ALL non-stopword
+    # candidates first, then sort them so digit-containing tokens (which
+    # are more likely to be real gene symbols: TP53, BRCA1, ROS1) are
+    # tried before pure-alpha tokens (CHRONIC, SMOKING, MOLECULE). Without
+    # this sort, the first N tokens in query order win, and the real gene
+    # symbol is often later in the query.
+    candidates: list[tuple[str, tuple[int, int]]] = []
     for token_match in _GENE_SYMBOL_TOKEN_PATTERN.finditer(query_text.upper()):
-        if live_lookups >= _MAX_LIVE_SYMBOL_LOOKUPS:
-            break
         token = token_match.group(0)
         if token in _SYMBOL_CANDIDATE_STOPWORDS:
             continue
         if _span_overlaps_any(token_match.span(), matched_spans):
             continue
+        candidates.append((token, token_match.span()))
+
+    # Sort: digit-containing tokens first (primary key False = 0, pure-alpha
+    # = 1), then by query order within each group (secondary key).
+    candidates.sort(key=lambda item: (not any(ch.isdigit() for ch in item[0]), item[1][0]))
+
+    for token, _token_span in candidates:
+        if live_lookups >= _MAX_LIVE_SYMBOL_LOOKUPS:
+            break
 
         live_lookups += 1
         curie = await resolve_symbol_to_curie(token)

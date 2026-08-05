@@ -992,6 +992,11 @@ async def test_esummary_error_body_is_error() -> None:
 
 @pytest.mark.asyncio
 async def test_truncated_and_total_available_are_set_when_more_candidates_exist() -> None:
+    """F-3.1-24: total_available is now the number of candidates actually
+    place-checked, not the coarse ESearch prefilter count. The ESearch count
+    (500) is larger than the candidates actually returned (1), so truncated
+    is True, and total_available reports the honest candidate count.
+    """
     client = _FakeClient(
         [
             _esearch_response(count=500, ids=["1"]),  # count vastly exceeds ids returned
@@ -1005,7 +1010,10 @@ async def test_truncated_and_total_available_are_set_when_more_candidates_exist(
         _input(start=1_000_000, end=1_100_000, assembly="GRCh38"), client=client, max_candidates=1
     )
 
-    assert output.total_available == 500
+    assert output.total_available == 1, (
+        "total_available must report the number of candidates actually "
+        "checked, not the coarse ESearch prefilter count"
+    )
     assert output.truncated is True
 
 
@@ -1189,3 +1197,86 @@ async def test_esummary_connection_error_returns_an_actionable_error_and_keeps_t
         "the ESearch count is already known when the ESummary call fails and must "
         "not be discarded"
     )
+
+
+# ===========================================================================
+# Chromosome normalization (F-3.1-15, CRITICAL)
+# ===========================================================================
+
+
+class TestChromosomeNormalization:
+    """F-3.1-15: _normalize_chromosome and _build_search_term must normalize
+    chr-prefixed and MT/M variants before the ESearch query, and
+    _chromosome_matches must compare the normalized forms.
+    """
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            ("1", "1"),
+            ("chr1", "1"),
+            ("Chr1", "1"),
+            ("CHR1", "1"),
+            ("X", "X"),
+            ("chrX", "X"),
+            ("MT", "MT"),
+            ("chrMT", "MT"),
+            ("mt", "MT"),
+            ("M", "MT"),
+            ("chrM", "MT"),
+            ("chr", "CHR"),       # edge case: "chr" with nothing after
+            ("CHR", "CHR"),       # "CHR" is not the prefix "chr" (different case)
+        ],
+    )
+    def test_normalize_chromosome(self, raw: str, expected: str) -> None:
+        from system_03_search_agent.tools.ncbi_coordinate_overlap import (
+            _normalize_chromosome,
+        )
+        assert _normalize_chromosome(raw) == expected
+
+    @pytest.mark.parametrize(
+        "a, b, expected",
+        [
+            ("1", "1", True),
+            ("1", "chr1", True),
+            ("chr1", "1", True),
+            ("MT", "M", True),
+            ("M", "MT", True),
+            ("chrMT", "mt", True),
+            ("1", "2", False),
+            ("X", "Y", False),
+        ],
+    )
+    def test_chromosome_matches(self, a: str, b: str, expected: bool) -> None:
+        from system_03_search_agent.tools.ncbi_coordinate_overlap import (
+            _chromosome_matches,
+        )
+        assert _chromosome_matches(a, b) == expected
+
+    @pytest.mark.parametrize(
+        "chromosome, expected_chromosome_in_term",
+        [
+            ("1", "1[CH]"),
+            ("chr1", "1[CH]"),
+            ("Chr1", "1[CH]"),
+            ("chrM", "MT[CH]"),
+            ("M", "MT[CH]"),
+        ],
+    )
+    def test_build_search_term_normalizes_chromosome(
+        self, chromosome: str, expected_chromosome_in_term: str
+    ) -> None:
+        from system_03_search_agent.tools.ncbi_coordinate_overlap import (
+            _build_search_term,
+        )
+        term = _build_search_term(
+            db="dbvar",
+            chromosome=chromosome,
+            start=1_000_000,
+            end=1_100_000,
+            assembly="GRCh38",
+        )
+        assert expected_chromosome_in_term in term, (
+            f"search term for chromosome {chromosome!r} must contain "
+            f"{expected_chromosome_in_term!r}, got {term!r}"
+        )

@@ -370,6 +370,19 @@ def _classify_eutils_json(text: str) -> ClassificationResult:
         )
 
     envelope = body[matched_key]
+
+    # F-3.1-16 (adversary finding 4, CRITICAL): ELink errors carry ERROR
+    # at the TOP level of the body, not inside the envelope. The real
+    # shape is {"linksets":[],"ERROR":"Invalid db name specified: ..."},
+    # where linksets is a LIST (not a dict) and ERROR is a sibling of the
+    # envelope key. The per-envelope ERROR check below only fires when the
+    # envelope itself is a dict, so a list-envelope ERROR was silently
+    # skipped and classified as ok. Check the body-level ERROR FIRST,
+    # before the envelope type check, so it fires regardless of what the
+    # envelope type is.
+    if isinstance(body, dict) and "ERROR" in body:
+        return ClassificationResult(status="error", error_message=str(body["ERROR"]), body=body)
+
     if isinstance(envelope, dict) and "ERROR" in envelope:
         return ClassificationResult(status="error", error_message=str(envelope["ERROR"]), body=body)
 
@@ -687,15 +700,20 @@ def reset_rate_limiters_for_tests() -> None:
 def _build_query_string(params: Mapping[str, Any]) -> str:
     """URL-encode every parameter per production-standards.md's query-safety gate.
 
-    `urllib.parse.quote(value, safe=":/=?&|+")`, never an f-string or raw
-    concatenation of an unencoded value into the URL.
+    F-3.1-18 (adversary finding 6, a security finding): the previous `safe`
+    pattern left `&` and `=` unencoded, so any caller-supplied value could
+    inject arbitrary parameters into the URL. Live-confirmed: a term
+    containing `&retstart=500` changed the returned record set, and ids
+    containing `&linkname=gene_pubmed_rif` silently swapped the link set.
+    Every query-string value is now fully encoded (`safe=""`), matching the
+    discipline the Datasets and PubChem path-segment builders already use.
     """
     pairs: list[str] = []
     for key, value in params.items():
         if value is None:
             continue
         encoded_key = urllib.parse.quote(str(key), safe="")
-        encoded_value = urllib.parse.quote(str(value), safe=":/=?&|+")
+        encoded_value = urllib.parse.quote(str(value), safe="")
         pairs.append(encoded_key + "=" + encoded_value)
     return "&".join(pairs)
 
@@ -786,11 +804,12 @@ async def execute_get(
 
     limiter = get_rate_limiter(family)
     effective_ceiling = wait_ceiling_s if wait_ceiling_s is not None else timeout_s
-    await limiter.acquire(effective_ceiling, time_fn=time_fn, sleep_fn=sleep_fn)
 
     if client is not None:
         return await _execute_with_retry(
-            client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s, sleep_fn=sleep_fn
+            client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s,
+            sleep_fn=sleep_fn, limiter=limiter, effective_ceiling=effective_ceiling,
+            time_fn=time_fn,
         )
 
     # No caller-supplied client: build one scoped to exactly this call,
@@ -799,7 +818,9 @@ async def execute_get(
     # from a different loop can ever inherit it.
     async with httpx.AsyncClient() as fresh_client:
         return await _execute_with_retry(
-            fresh_client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s, sleep_fn=sleep_fn
+            fresh_client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s,
+            sleep_fn=sleep_fn, limiter=limiter, effective_ceiling=effective_ceiling,
+            time_fn=time_fn,
         )
 
 
@@ -811,17 +832,28 @@ async def _execute_with_retry(
     timeout_s: float,
     backoff_s: float,
     sleep_fn: Callable[[float], Awaitable[None]],
+    limiter: RateLimiter,
+    effective_ceiling: float,
+    time_fn: Callable[[], float],
 ) -> httpx.Response:
     """The timeout/retry loop itself, factored out of `execute_get`.
 
     Takes an already-resolved client so `execute_get` can decide, once,
     whether that client is caller-supplied or freshly opened for this
     call, without duplicating the retry logic across both branches.
+
+    F-3.1-22 (adversary finding 10, MAJOR): the rate limiter is now
+    acquired BEFORE each attempt, not once before the first attempt.
+    Before this fix, a retry issued a second HTTP request without a
+    second rate-limiter acquisition, so the retry escaped the throttle
+    pool entirely. The moment NCBI sent a 429, the code would issue a
+    second unpaced request into the pool it was being throttled out of.
     """
     host = _host_of(url)
     last_exc: Exception | None = None
 
     for attempt_index in range(2):
+        await limiter.acquire(effective_ceiling, time_fn=time_fn, sleep_fn=sleep_fn)
         try:
             response = await active_client.get(url, timeout=timeout_s)
         except _TRANSIENT_TIMEOUT_EXCEPTIONS as exc:

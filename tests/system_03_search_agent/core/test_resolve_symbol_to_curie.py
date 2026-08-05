@@ -176,7 +176,7 @@ async def test_transient_outage_is_never_cached_and_retries_on_the_next_call(
     during_outage = await graph_module.resolve_symbol_to_curie("TP53")
     assert during_outage is None
     assert calls == ["dataset_report", "search"]
-    assert "TP53" not in graph_module._SYMBOL_CURIE_CACHE, (
+    assert "TP53:human" not in graph_module._SYMBOL_CURIE_CACHE, (
         "a transient error must never be written to the cache"
     )
 
@@ -212,7 +212,7 @@ async def test_datasets_error_falling_back_to_a_successful_esearch_is_cached(
     result = await graph_module.resolve_symbol_to_curie("BRCA1")
     assert result == "NCBIGene:672"
     assert calls == ["dataset_report", "search"]
-    assert graph_module._SYMBOL_CURIE_CACHE.get("BRCA1") == "NCBIGene:672"
+    assert graph_module._SYMBOL_CURIE_CACHE.get("BRCA1:human") == "NCBIGene:672"
 
 
 @pytest.mark.asyncio
@@ -326,16 +326,15 @@ async def test_ambiguous_dataset_report_with_no_esearch_match_resolves_to_none(
 async def test_dataset_report_record_missing_gene_id_falls_through_to_esearch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A single record that is missing `gene_id` or is not human must
-    also fall through to ESearch, the existing (pre-Finding-5) behavior,
-    preserved by this fix: the ambiguity guard only changes what happens
-    when there is MORE than one record, not the single-record checks
-    that already existed.
+    """F-3.1-17 (adversary finding 5, CRITICAL): non-human taxon records
+    are now accepted rather than discarded. A single Datasets record with
+    gene_id and any taxname resolves directly; only a record missing
+    gene_id falls through to ESearch.
     """
     calls = _install_fake_ncbi_efetch(
         monkeypatch,
         dataset_report=_dataset_report_output(
-            records=[_dataset_record(gene_id="7157", taxname="Mus musculus")]
+            records=[_dataset_record(gene_id=None, taxname="Mus musculus")]
         ),
         search=_search_output(status="ok", idlist=["672"]),
     )
@@ -343,3 +342,56 @@ async def test_dataset_report_record_missing_gene_id_falls_through_to_esearch(
     result = await graph_module.resolve_symbol_to_curie("MOUSEONLYSYMBOL")
     assert calls == ["dataset_report", "search"]
     assert result == "NCBIGene:672"
+
+
+@pytest.mark.asyncio
+async def test_non_human_taxon_resolves_directly_from_datasets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.1-17 (adversary finding 5, CRITICAL): a non-human taxon must
+    resolve correctly from the Datasets branch without falling through to
+    a human-hardcoded ESearch. Before this fix, TRP53/taxon=mouse returned
+    NCBIGene:7157 (human) because the Datasets result was discarded
+    (taxname != "Homo sapiens") and the ESearch fallback was hardcoded to
+    human[orgn].
+    """
+    calls = _install_fake_ncbi_efetch(
+        monkeypatch,
+        dataset_report=_dataset_report_output(
+            records=[_dataset_record(gene_id="22059", taxname="Mus musculus")]
+        ),
+        search=_search_output(status="ok", idlist=["7157"]),
+    )
+
+    result = await graph_module.resolve_symbol_to_curie("TRP53", taxon="mouse")
+    assert calls == ["dataset_report"], (
+        f"non-human taxon must resolve from Datasets without falling through "
+        f"to ESearch, got calls {calls!r}"
+    )
+    assert result == "NCBIGene:22059", (
+        f"TRP53/mouse must resolve to NCBIGene:22059 (mouse), "
+        f"got {result!r}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_cache_key_includes_taxon(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.1-17 continued: the cache key must include taxon, so BRCA1
+    resolved for human does not return from cache for mouse with zero
+    network calls.
+    """
+    _install_fake_ncbi_efetch(
+        monkeypatch,
+        dataset_report=_dataset_report_output(
+            records=[_dataset_record(gene_id="672", taxname="Homo sapiens")]
+        ),
+    )
+    await graph_module.resolve_symbol_to_curie("BRCA1", taxon="human")
+    assert "BRCA1:human" in graph_module._SYMBOL_CURIE_CACHE, (
+        "cache key must include taxon"
+    )
+    assert "BRCA1:mouse" not in graph_module._SYMBOL_CURIE_CACHE, (
+        "BRCA1 resolved for human must not be cached for mouse"
+    )

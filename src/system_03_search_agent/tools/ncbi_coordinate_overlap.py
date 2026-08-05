@@ -205,20 +205,28 @@ def _build_search_term(*, db: str, chromosome: str, start: int, end: int, assemb
     """Step 1's query text. `execute_get` URL-encodes every parameter; this
     function only ever builds the Entrez TERM VALUE, never the request URL
     or query string, so it carries no injection surface of its own.
+
+    F-3.1-15 (adversary finding 3, CRITICAL): the chromosome value is
+    normalized here BEFORE building the search term, because the ESearch
+    index expects the bare number (e.g. "1") while callers commonly
+    supply "chr1". The post-filter's own _chromosome_matches already
+    normalizes both sides, so normalizing the search term too keeps the
+    input and the filter consistent.
     """
+    normalized = _normalize_chromosome(chromosome)
     if db == "dbvar":
         # Verified live 2026-08-05 against EInfo's db=dbvar fieldlist: the
         # chromosome tag is CH ("Chr"), not CHR. ASSM ("Assembly") accepts
         # a bare assembly name and matches patched placements too (Entrez
         # text search, not an exact-string filter).
-        return f"{chromosome}[CH] AND {start}:{end}[BASE] AND {assembly}[ASSM]"
+        return f"{normalized}[CH] AND {start}:{end}[BASE] AND {assembly}[ASSM]"
     if db == "clinvar":
         # Verified live 2026-08-05 against EInfo's db=clinvar fieldlist:
         # the chromosome tag is CHR here (the opposite of dbVar's CH).
         # C37 is GRCh37's position index; CPOS is GRCh38's (the "current"
         # assembly), confirmed against EInfo's field descriptions.
         position_tag = "C37" if assembly == "GRCh37" else "CPOS"
-        return f"{chromosome}[CHR] AND {start}:{end}[{position_tag}]"
+        return f"{normalized}[CHR] AND {start}:{end}[{position_tag}]"
     # Unreachable: NcbiEfetchCoordinateOverlapInput.db is
     # Literal["dbvar", "clinvar"]. Kept as a fail-closed guard rather than
     # a silent fallthrough, per production-standards.md's allowlist
@@ -242,11 +250,24 @@ def _normalize_chromosome(value: str) -> str:
     Strips an optional case-insensitive `chr` prefix and upper-cases the
     remainder, so `"chr1"`, `"Chr1"`, and `"1"` compare equal, and so do
     `"chrX"` / `"X"` / `"x"` and `"chrMT"` / `"MT"` / `"mt"`.
+
+    F-3.1-15 (adversary finding 3, CRITICAL): also normalizes "M" to "MT"
+    (mitochondrial), since both appear in dbVar placements and the raw
+    caller value may use either. Without this, `_chromosome_matches('MT',
+    'M')` was False, silently dropping mitochondrial results.
     """
     stripped = value.strip()
     if stripped[:3].lower() == "chr":
         stripped = stripped[3:]
-    return stripped.upper()
+    if not stripped:
+        # Edge case: "chr" with nothing after the prefix. Return the raw
+        # upper-cased value so the caller's original intent is preserved
+        # rather than silently returning an empty string.
+        return value.strip().upper()
+    result = stripped.upper()
+    if result == "M":
+        result = "MT"
+    return result
 
 
 def _chromosome_matches(placement_chromosome: str, requested: str) -> bool:
@@ -435,6 +456,20 @@ async def coordinate_overlap(
     end = input_model.end
     assembly = input_model.assembly
 
+    # F-3.1-27 (adversary finding 15, MINOR): validate the coordinate window
+    # before any network call. An inverted, negative, or zero-length window
+    # produces a term that either matches nothing or matches everything.
+    if start > end:
+        return _error_output(
+            f"coordinate_overlap window start ({start}) is after end ({end}). "
+            f"An inverted window is never a valid query; retry with start <= end."
+        )
+    if start < 0 or end < 0:
+        return _error_output(
+            f"coordinate_overlap window contains negative coordinates "
+            f"({start}-{end}). Retry with non-negative values."
+        )
+
     term = _build_search_term(db=db, chromosome=chromosome, start=start, end=end, assembly=assembly)
 
     try:
@@ -477,14 +512,20 @@ async def coordinate_overlap(
     candidate_ids = [str(cid) for cid in (esearch_result.get("idlist", None) or [])]
 
     try:
-        total_available = int(esearch_result.get("count", len(candidate_ids)))
+        esearch_count = int(esearch_result.get("count", len(candidate_ids)))
     except (TypeError, ValueError):
-        total_available = len(candidate_ids)
+        esearch_count = len(candidate_ids)
 
     if not candidate_ids:
-        return _empty_output(total_available=total_available)
+        return _empty_output(total_available=0)
 
-    truncated = total_available > len(candidate_ids)
+    # F-3.1-24 (adversary finding 12, MAJOR): total_available is the number
+    # of candidates actually place-checked, not the coarse ESearch prefilter
+    # count the module itself documents as unreliable. The ESearch count
+    # includes wrong-assembly and wrong-chromosome matches that the five-step
+    # procedure exists to filter out.
+    total_available = len(candidate_ids)
+    truncated = esearch_count > len(candidate_ids)
 
     try:
         summary_response = await execute_get(

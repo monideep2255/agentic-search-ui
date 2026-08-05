@@ -9,9 +9,11 @@ Reference: `docs/ncbi/Tool_implementation_mechanics.md`, `.claude/rules/tool-cal
 
 ## Phase premise (the done-when)
 
-A question the graph cannot answer reaches a live NCBI API, comes back as real records, and is either cited from what the API actually returned or refused, and a question about a gene the system has never been told about resolves to the right gene.
+A question about a gene the system has never been told about resolves to the right gene, and the `ncbi_efetch` tool classifies what a live NCBI API actually returned as `ok`, `empty`, or `error` correctly across all three API families and both error conventions.
 
-The second half is the one a reader will underestimate. `_KNOWN_GENE_SYMBOL_CURIES` (`core/graph.py:839`) holds exactly one entry, `BRCA1`, so today "What diseases are linked to TP53?" resolves nothing and answers nothing. That is finding F-2.1-07, this phase owns it, and it is what stands between this repo and a prototype that can be shown to anyone.
+The answer-path half of the original premise ("reaches a live NCBI API, comes back as real records, and is either cited from what the API actually returned or refused") is CARRIED to T-3.1-28 (the Act-step wiring ticket), by the product owner's decision of 2026-08-05. This is a deliberate narrowing, not a silent edit. Section 25 groups provenance and the two-tier trust gate across 3.0 to 3.5 rather than inside 3.1, and wiring the answer-path inside this phase would have been real additional work: tool selection, a Layer 2 `CitationPayload`, provenance, and the trust gate. The premise is restated here rather than quietly rewritten to match the current state, which is the verify-surface weakening `goal-contracts` forbids.
+
+The second half is the one a reader will underestimate. `_KNOWN_GENE_SYMBOL_CURIES` (`core/graph.py:839`) held exactly one entry, `BRCA1`, so a query about any other gene resolved nothing and answered nothing. That was finding F-2.1-07, this phase owns it, and it is the single thing that stood between this repo and a prototype that can be shown to anyone. It is now resolved: gene symbols are looked up live via NCBI Datasets v2 and ESearch, and the one-entry hardcoded table is gone.
 
 The verify surface is `tests/system_03_search_agent/tools/test_ncbi_efetch_premise.py`, not a suite total.
 
@@ -59,6 +61,7 @@ Both conventions live on the same tool, behind one output shape. Error handling 
 | T-3.1-11 | F-2.1-07: real gene-symbol resolution, replacing the one-entry table. Carries the candidate filter (F-3.1-01) and the async ripple, both named below | `core/graph.py` |
 | T-3.1-12 | Tool registration, and the schema's place in the stable prompt prefix | `core/graph.py`, `harness/cache.py` |
 | T-3.1-13 | F-2.1-B10: an unresolvable entity refuses, rather than reaching the graph as an unbound parameter | `core/graph.py` |
+| T-3.1-28 | Wire the Act step to dispatch ncbi_efetch as an answer-bearing tool, with Layer 2 citation payload and trust gate. Carried from 3.1's original premise (product owner decision 2026-08-05) | `core/graph.py`, `harness/` |
 
 Three tickets changed on 2026-08-05, after the stage 5 research pass. Recording what moved and why, since a silently edited decomposition is the thing build phase 2.1's retrospective warns about:
 

@@ -857,22 +857,20 @@ async def test_13_an_unresolvable_symbol_refuses_rather_than_errors() -> None:
 @premise_gate
 @pytest.mark.asyncio
 async def test_14_resolution_does_not_fire_one_call_per_word() -> None:
-    """Case 14. A dormant defect that T-3.1-11 arms, pinned before it fires.
+    """Case 14. Rewritten 2026-08-05 after the F-3.1-14 fix landed.
 
-    `_GENE_SYMBOL_TOKEN_PATTERN` is matched against `query_text.upper()`, so it
-    matches every 2-to-10-character word in the query, not just symbols.
-    Verified: "What diseases are linked to TP53?" yields
-    ['WHAT','DISEASES','ARE','LINKED','TO','TP53'].
+    The original version of this case asserted `len(calls) <= 3` and passed
+    while the behavior was wrong: the stopword list was incomplete and the
+    digit-priority heuristic did not exist, so ordinary English words consumed
+    the lookup budget before the real gene symbol was ever tried. The adversary
+    found this: "In ADHD, PTSD and OCD cohorts, is TP53 mutated?" never tried
+    TP53, and "Does chronic smoking increase EGFR mutation frequency?" never
+    tried EGFR.
 
-    Today that is free, because the lookup is a dict with one entry. The moment
-    resolution becomes a live NCBI call it is six network calls per query, five
-    of them guaranteed misses, against a pool whose sustained ceiling is
-    unresolved.
-
-    This is LEARNINGS.md row 38 exactly: a dormant limitation is a scheduled
-    defect, the thing making it dormant is usually another bug, and fixing that
-    bug arms it silently. So the bound is pinned here BEFORE the arming change
-    lands, rather than filed as a follow-up after someone notices the bill.
+    The fix added a digit-priority sort (digit-containing tokens first) and
+    expanded the stopword list. This case now asserts the EXACT number of
+    lookups for a query with one real gene symbol and many ordinary English
+    words: exactly one lookup, for TP53, not one per word.
     """
     from system_03_search_agent.core import graph as graph_module
 
@@ -891,10 +889,14 @@ async def test_14_resolution_does_not_fire_one_call_per_word() -> None:
     finally:
         graph_module.resolve_symbol_to_curie = original  # type: ignore[assignment]
 
-    assert len(calls) <= 3, (
-        f"resolution fired {len(calls)} live lookups for one question "
-        f"({calls!r}). Every ordinary English word in the query must be "
-        f"filtered out BEFORE the network call, not after."
+    assert len(calls) == 1, (
+        f"resolution must fire exactly 1 lookup for a query with one real "
+        f"gene symbol and many ordinary English words, got {len(calls)} "
+        f"({calls!r}). Every ordinary English word must be filtered out "
+        f"BEFORE the network call, not after."
+    )
+    assert calls[0] == "TP53", (
+        f"the one lookup must be for TP53, not {calls[0]!r}"
     )
 
 

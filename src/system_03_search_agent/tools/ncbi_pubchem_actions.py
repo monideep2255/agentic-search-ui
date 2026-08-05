@@ -191,17 +191,21 @@ def _empty_output() -> NcbiEfetchOutput:
 def _record_from_property_entry(entry: dict[str, Any]) -> NcbiEfetchRecord:
     """Build one record from one `PropertyTable.Properties[]` entry.
 
-    `source_url` is deliberately always `None` here. See the module
-    docstring's "source_url" section: PubChem's record host does not
-    satisfy `NCBI_EFETCH_RECORD_URL_PATTERN`, and this module never emits a
-    URL that would fail the schema's own validator.
+    F-3.1-08 (judge finding 8, MAJOR): source_url now resolves to
+    pubchem.ncbi.nlm.nih.gov, since the record URL pattern was widened
+    to accept the pubchem subdomain.
     """
     cid_value = entry.get("CID")
+    source_url = (
+        f"https://pubchem.ncbi.nlm.nih.gov/compound/{cid_value}"
+        if cid_value is not None
+        else None
+    )
     return NcbiEfetchRecord(
         id=str(cid_value) if cid_value is not None else None,
         db="pubchem",
         fields=dict(entry),
-        source_url=None,
+        source_url=source_url,
     )
 
 
@@ -332,6 +336,7 @@ async def _pubchem_property_by_name(
     )
 
     records: list[NcbiEfetchRecord] = []
+    any_fetch_succeeded = False
     for cid, result in zip(bounded_cids, fetch_results):
         if result.status == "error":
             # One resolved CID failing its property fetch does not sink the
@@ -339,12 +344,25 @@ async def _pubchem_property_by_name(
             # data. Per production-standards.md's partial-failure gate,
             # this degrades gracefully rather than discarding everything.
             continue
+        any_fetch_succeeded = True
         entries = _properties_from_body(result.body)
         if not entries:
             continue
         records.extend(_record_from_property_entry(entry) for entry in entries)
 
     if not records:
+        # F-3.1-21 (adversary finding 9, MAJOR): distinguish "every
+        # property fetch failed" (error) from "CID resolved but no
+        # properties matched" (empty). Before this fix, both cases
+        # returned empty, so a total failure was indistinguishable from
+        # a clean no-result answer.
+        if not any_fetch_succeeded:
+            return _error_output(
+                "PubChem name resolved to one or more CIDs but every "
+                "property fetch returned an error. The properties may be "
+                "invalid for these CIDs, or the PubChem service may be "
+                "degraded. Retry with different properties."
+            )
         return _empty_output()
 
     return NcbiEfetchOutput(

@@ -298,18 +298,24 @@ def _apply_field_tags(term: str, field_tags: list[str]) -> str:
 
     Builder decision, not pinned by the premise gate (case 15 only pins the
     rejection path; no case exercises a valid, non-empty field_tags list).
-    Each tag becomes `term[tag]`, OR-joined and parenthesized when more than
+    Each tag becomes `(term)[tag]`, OR-joined and parenthesized when more than
     one is given, so the caller's free-text term is matched only within the
     named field(s) rather than E-utilities' own default (a broad, unscoped
     search across every indexed field). An empty field_tags list, the
     common case (see case 1, whose term already embeds its own `[sym]`/
     `[orgn]` tags directly), leaves `term` untouched.
+
+    F-3.1-23 (adversary finding 11, MAJOR): the term is now parenthesized
+    before the tag is applied. Without this, `_apply_field_tags("BRCA1 AND
+    cancer", ["sym"])` produced `"BRCA1 AND cancer[sym]"`, which scopes
+    only the last token, while BRCA1 runs unscoped across every indexed
+    field. The correct form is `"(BRCA1 AND cancer)[sym]"`.
     """
     if not field_tags:
         return term
     if len(field_tags) == 1:
-        return f"{term}[{field_tags[0]}]"
-    clauses = " OR ".join(f"{term}[{tag}]" for tag in field_tags)
+        return f"({term})[{field_tags[0]}]"
+    clauses = " OR ".join(f"({term})[{tag}]" for tag in field_tags)
     return f"({clauses})"
 
 
@@ -432,6 +438,14 @@ async def _get_or_error(
 
     Callers check `isinstance(result, NcbiEfetchOutput)` to detect the
     transport-failure short circuit versus a genuine ClassificationResult.
+
+    F-3.1-19 (adversary finding 7, MAJOR): HTTP status codes were never read
+    on the E-utilities path, so a 429 or 503 was reported as "unparseable
+    body" (pointing the next step at rewriting the request) instead of as a
+    rate-limit or server error (pointing the next step at backing off and
+    retrying). The fix checks the status BEFORE the body classifier, so a
+    transient status code produces an actionable error message with the
+    correct next action.
     """
     try:
         response = await ncbi_transport.execute_get(
@@ -439,6 +453,25 @@ async def _get_or_error(
         )
     except ncbi_transport.TransportError as exc:
         return _error_output(action, str(exc))
+    if response.status_code == 429:
+        return _error_output(
+            action,
+            f"E-utilities returned HTTP 429 (rate limited). Retry after a "
+            f"backoff; if this recurs, reduce the request rate.",
+        )
+    if response.status_code >= 500:
+        return _error_output(
+            action,
+            f"E-utilities returned HTTP {response.status_code} (server error). "
+            f"Retry after a backoff; if this recurs, the NCBI service may be "
+            f"degraded.",
+        )
+    if response.status_code >= 400:
+        return _error_output(
+            action,
+            f"E-utilities returned HTTP {response.status_code}. The request "
+            f"may be malformed; verify the parameters and retry.",
+        )
     return ncbi_transport.classify_eutils_response(
         content_type=response.headers.get("content-type", ""), text=response.text
     )
@@ -475,7 +508,12 @@ async def search(params: NcbiEfetchSearchInput) -> NcbiEfetchOutput:
     envelope = result.body.get("esearchresult", {}) if isinstance(result.body, dict) else {}
     idlist = [str(uid) for uid in (envelope.get("idlist") or [])]
 
-    fields: dict[str, Any] = {"idlist": idlist}
+    # F-3.1-25 (adversary finding 13, MINOR): cap the idlist to the same
+    # _MAX_RECORDS_RETURNED bound records uses, so a 500-id search result
+    # cannot bypass the NcbiEfetchRecord list's max_length=100 cap through
+    # the single aggregate record's fields.
+    capped_idlist = idlist[:_MAX_RECORDS_RETURNED]
+    fields: dict[str, Any] = {"idlist": capped_idlist}
     if params.use_history:
         if "webenv" in envelope:
             fields["webenv"] = envelope["webenv"]
@@ -490,8 +528,22 @@ async def search(params: NcbiEfetchSearchInput) -> NcbiEfetchOutput:
         except (TypeError, ValueError):
             total_available = None
 
-    record_count = len(idlist)
+    record_count = len(capped_idlist)
     truncated = total_available is not None and total_available > record_count
+
+    # F-3.1-26 (adversary finding 14, MINOR): a non-zero count with an empty
+    # idlist means the ESearch index disagrees with itself. This can happen
+    # when the count is stale or a filter excluded every id after the count
+    # was computed. Returning status ok with record_count 0 is consumed by
+    # resolution as a confirmed non-resolution, permanently poisoning the
+    # symbol cache. Fail closed to error instead.
+    if not capped_idlist and total_available is not None and total_available > 0:
+        return _error_output(
+            "search",
+            f"ESearch returned count {total_available} but an empty idlist. "
+            f"The ESearch index may be inconsistent. Retry; if this recurs, "
+            f"the search term or database may need narrowing.",
+        )
 
     return NcbiEfetchOutput(
         status="ok",
@@ -545,8 +597,22 @@ def _generic_summary_fields(entry: dict[str, Any]) -> dict[str, Any]:
     the module docstring's "spec gap" note). Passes the raw per-uid object
     through, minus the redundant `uid` key, rather than guessing a subset
     nobody has verified.
+
+    F-3.1-10 (judge finding 10, MAJOR): string values are now capped per
+    _cap_text, since this is the default extraction path for five databases
+    and every non-XML fetch. Without a per-value cap, untrusted external
+    content (abstracts, free-text descriptions, narrative fields) flows
+    toward the model unbounded.
     """
-    return {key: value for key, value in entry.items() if key != "uid"}
+    result: dict[str, Any] = {}
+    for key, value in entry.items():
+        if key == "uid":
+            continue
+        if isinstance(value, str):
+            result[key] = _cap_text(value)
+        else:
+            result[key] = value
+    return result
 
 
 async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
@@ -570,6 +636,24 @@ async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
         entry = envelope.get(uid)
         if not isinstance(entry, dict):
             continue
+        if "error" in entry:
+            # F-3.1-13 (adversary finding 1, CRITICAL): ESummary signals a
+            # per-uid error as a dict carrying only "uid" and "error" keys,
+            # e.g. {"uid":"999999999","error":"cannot get document summary"}.
+            # The classifier sees envelope "result" and no top-level ERROR,
+            # so it returns ok. The extractor must NOT build a record for
+            # this entry: a record with a real host-pinned source_url but
+            # empty fields is a fabricated citation indistinguishable from a
+            # genuine one. Only skip when the entry genuinely carries no
+            # allowlisted fields at all (a mixed batch of one real uid and
+            # one nonexistent one must keep the real record and drop the
+            # error entry).
+            if known_fields is not None:
+                has_content = any(name in entry for name in known_fields)
+            else:
+                has_content = any(key not in ("uid", "error") for key in entry)
+            if not has_content:
+                continue
         if known_fields is not None:
             extracted = {name: entry[name] for name in known_fields if name in entry}
         else:
@@ -685,6 +769,26 @@ async def fetch(params: NcbiEfetchFetchInput) -> NcbiEfetchOutput:
 
     if params.db == "pubmed" and isinstance(result.body, ElementTree.Element):
         records = _extract_pubmed_articles(result.body)
+    elif (
+        params.db == "pubmed"
+        and params.retmode == "json"
+        and params.rettype == "docsum"
+        and isinstance(result.body, dict)
+    ):
+        # F-3.1-20 (adversary finding 8, MAJOR): the default rettype/docsum
+        # retmode/json returns ESummary-shaped JSON. The generic extractor
+        # builds one aggregate record with the entire multi-record payload,
+        # uncited and uncapped. Instead of silently returning a blob that
+        # passes the cite-or-refuse gate as ok, fail with an actionable
+        # message telling the caller to use retmode=xml, which is the only
+        # verified per-id extraction path.
+        return _error_output(
+            "fetch",
+            f"fetch db=pubmed rettype=docsum retmode=json is not supported for "
+            f"per-record extraction. Retry with rettype=abstract retmode=xml "
+            f"(the only live-verified per-id EFetch path for pubmed), or "
+            f"use the summary action if you only need ESummary fields.",
+        )
     else:
         records = _extract_generic_fetch_records(params.db, result.body)
 

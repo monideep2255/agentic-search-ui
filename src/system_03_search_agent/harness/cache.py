@@ -146,7 +146,15 @@ def _build_tool_schema_section(tool_schemas: list[dict] | None) -> str:
 # ordering is documentation of intent, not the sole enforcement point. When
 # a third tool is added, insert it in alphabetical position: `ncbi_efetch`
 # sorts after `cypher_query` and before `ncbi_dbsnp` (not yet built).
+#
+# F-3.1-11 (judge finding 11, MAJOR): TOOL_REGISTRY_VERSION records the
+# contract version of the registered tool set. Adding or removing a tool
+# must bump this version, per system-design-patterns pattern 10: a tool-
+# registry change is coordinated with a contract-version bump, never silent.
+# Currently v2: cypher_query (v1) + ncbi_efetch (v2).
 # ---------------------------------------------------------------------------
+
+TOOL_REGISTRY_VERSION: Final[str] = "v2"
 
 REGISTERED_TOOL_SCHEMAS: Final[tuple[dict[str, Any], ...]] = (
     {

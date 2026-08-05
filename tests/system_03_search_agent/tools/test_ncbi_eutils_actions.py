@@ -231,7 +231,7 @@ class TestSearch:
         assert len(scripted.calls) == 2
         assert "einfo.fcgi" in scripted.calls[0]["url"]
         assert "esearch.fcgi" in scripted.calls[1]["url"]
-        assert scripted.calls[1]["params"]["term"] == "TP53[sym]"
+        assert scripted.calls[1]["params"]["term"] == "(TP53)[sym]"
 
     @pytest.mark.asyncio
     async def test_second_call_reuses_cached_einfo_fields(
@@ -390,6 +390,88 @@ class TestSummary:
         )
         assert output.status == "error"
         assert "Invalid uid" in output.error
+
+    @pytest.mark.asyncio
+    async def test_per_uid_error_entry_is_skipped_not_cited(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """F-3.1-13 (adversary finding 1, CRITICAL): a per-uid ESummary error
+        object must NOT produce a record with a real host-pinned source_url
+        and empty fields, which is a fabricated citation indistinguishable
+        from a genuine one.
+
+        ESummary answers a nonexistent uid with a per-uid error dict carrying
+        only "uid" and "error" keys, inside a top-level "result" envelope
+        with no ERROR key. The classifier returns ok (correctly: the envelope
+        is valid), but the extractor must skip entries with no allowlisted
+        fields.
+        """
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "result": {
+                            "uids": ["999999999"],
+                            "999999999": {
+                                "uid": "999999999",
+                                "error": "cannot get document summary",
+                            },
+                        }
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.summary(
+            NcbiEfetchSummaryInput(action="summary", db="gene", ids=["999999999"])
+        )
+        assert output.status == "empty", (
+            f"a per-uid error entry with no allowlisted fields must produce "
+            f"empty, not {output.status!r} with a fabricated citation"
+        )
+        assert output.records == []
+        assert output.record_count == 0
+
+    @pytest.mark.asyncio
+    async def test_mixed_batch_keeps_real_record_drops_error_entry(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """F-3.1-13 continued: a mixed batch of one real uid and one
+        nonexistent one must keep the real record and drop the error entry.
+        Both being ok with one having empty fields is indistinguishable
+        downstream.
+        """
+        _install(
+            monkeypatch,
+            [
+                _json_response(
+                    {
+                        "result": {
+                            "uids": ["672", "999999999"],
+                            "672": {
+                                "uid": "672",
+                                "name": "BRCA1",
+                                "description": "breast cancer 1",
+                                "chromosome": "17",
+                            },
+                            "999999999": {
+                                "uid": "999999999",
+                                "error": "cannot get document summary",
+                            },
+                        }
+                    }
+                )
+            ],
+        )
+        output = await ncbi_eutils_actions.summary(
+            NcbiEfetchSummaryInput(action="summary", db="gene", ids=["672", "999999999"])
+        )
+        assert output.status == "ok"
+        assert output.record_count == 1, (
+            f"mixed batch of 1 real + 1 error must yield 1 record, "
+            f"got {output.record_count}: {[r.id for r in output.records]}"
+        )
+        assert output.records[0].id == "672"
 
 
 # ===========================================================================

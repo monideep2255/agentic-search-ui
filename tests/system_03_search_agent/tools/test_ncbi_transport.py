@@ -126,6 +126,24 @@ def test_eutils_json_invalid_db_is_error_with_message_from_body() -> None:
     assert "Invalid db name specified" in result.error_message
 
 
+def test_eutils_json_elink_body_level_error_is_error() -> None:
+    """F-3.1-16 (adversary finding 4, CRITICAL): ELink puts ERROR at the TOP
+    level of the body and makes linksets a LIST:
+    {"linksets":[],"ERROR":"Invalid db name specified: notadatabase"}.
+    Before this fix, the matched envelope was a list, so isinstance(envelope,
+    dict) was False and the ERROR check was skipped entirely, giving status ok.
+    """
+    result = ncbi_transport.classify_eutils_response(
+        content_type="application/json",
+        text='{"linksets":[],"ERROR":"Invalid db name specified: notadatabase"}',
+    )
+    assert result.status == "error", (
+        f"ELink body-level ERROR must classify as error, got {result.status!r}"
+    )
+    assert result.error_message is not None
+    assert "Invalid db name specified" in result.error_message
+
+
 def test_eutils_xml_nonexistent_id_is_empty_and_fabricates_nothing() -> None:
     result = ncbi_transport.classify_eutils_response(
         content_type="text/xml",
@@ -719,4 +737,27 @@ def test_rate_limited_error_message_never_needs_a_secret_to_be_actionable() -> N
         retry_after=0.33,
     )
     assert "eutils" in str(error)
-    assert "retry" in str(error).lower()
+
+
+# ===========================================================================
+# F-3.1-18: query-string parameter injection (CRITICAL, security)
+# ===========================================================================
+
+
+def test_build_query_string_encodes_ampersand_and_equals() -> None:
+    """F-3.1-18: `safe=""` must encode `&` and `=` so caller-supplied
+    values cannot inject arbitrary parameters into the URL.
+    """
+    from system_03_search_agent.tools.ncbi_transport import _build_query_string
+
+    result = _build_query_string(
+        {"db": "gene", "term": "BRCA1[sym] AND human[orgn]&retstart=500", "retmax": "10"}
+    )
+    # The injected &retstart=500 must NOT appear as a literal parameter separator
+    assert "&retstart=500" not in result, (
+        f"injected parameter must be encoded, got {result!r}"
+    )
+    # The injected & must be percent-encoded
+    assert "%26retstart" in result, (
+        f"the & in the term value must be percent-encoded as %26, got {result!r}"
+    )

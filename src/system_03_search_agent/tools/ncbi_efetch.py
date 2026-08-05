@@ -16,8 +16,10 @@ Signature note (DECISIONS.md, 2026-08-05): `ncbi_efetch(tool_input)`
 takes no `harness` parameter, unlike `cypher_query(harness, tool_input)`.
 This tool makes no model call; it is a deterministic HTTP client across
 three API families, carries its own per-call timeout internally
-(Section 6.2), and the Act step already wraps every tool invocation in
-`harness.enforce_timeout`. Adding an unused `harness` parameter to match
+(Section 6.2). This tool carries its own per-call timeout internally via
+`ncbi_transport.execute_get`, and the Act step does not currently dispatch
+this tool (F-3.1-04, the answer-path premise gap). Adding an unused
+`harness` parameter to match
 `cypher_query`'s shape would be cargo-culting a dependency this tool does
 not have.
 
