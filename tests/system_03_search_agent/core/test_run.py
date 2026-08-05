@@ -88,6 +88,23 @@ def _no_op_daily_caps(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _stub_symbol_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
+    """See test_graph.py's identical fixture docstring for the rationale.
+
+    T-3.1-11 made gene-symbol resolution a live NCBI call, and
+    `_GRAPH_ANSWERABLE_QUERY_TEXT` below names BRCA1 in several tests here.
+    """
+    from system_03_search_agent.core import graph as graph_module
+
+    known = {"BRCA1": "NCBIGene:672", "TP53": "NCBIGene:7157"}
+
+    async def _fake_resolve_symbol_to_curie(symbol: str, **kwargs: object) -> str | None:
+        return known.get(symbol.strip().upper())
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _fake_resolve_symbol_to_curie)
+
+
+@pytest.fixture(autouse=True)
 def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     # T-3.0-06: dispatches per tier. See `tests/system_03_search_agent/
     # model_stub.py` for why a single fixed response stopped working the

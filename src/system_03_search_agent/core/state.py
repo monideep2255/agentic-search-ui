@@ -93,6 +93,20 @@ Field lifecycle:
             eligible and was judged. Collapsing them would make the
             audit trail unable to tell a rate-limited user from a
             rejected query.
+        unresolved_entity_symbols: set by `plan` only (T-3.1-13,
+            F-2.1-B10), when the query text carries at least one
+            gene-symbol-shaped candidate that was looked up live against
+            NCBI (`core.graph.resolve_symbol_to_curie`) and resolved to
+            nothing, and no other entity rescues the query. `write` reads
+            this BEFORE its own synth call, the same early-exit shape
+            `step_error` and `cap_exceeded` already use, and ships a
+            refusal naming the unresolved symbol rather than letting an
+            unbound Cypher parameter reach the graph and fail there as an
+            opaque `UndefinedParameter`. Unset or empty means every
+            candidate either resolved or none was found at all, which is
+            not the same thing: "no gene mentioned" answers normally,
+            "a gene-shaped token was mentioned and NCBI does not know it"
+            refuses.
 """
 
 from __future__ import annotations
@@ -126,3 +140,4 @@ class GraphState(TypedDict, total=False):
     step_error: dict[str, Any] | None
     daily_cap_declined: bool
     guard_refused: bool
+    unresolved_entity_symbols: list[str]

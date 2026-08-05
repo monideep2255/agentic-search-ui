@@ -24,11 +24,22 @@ Depends on:
       always empty this phase.
     - system_03_search_agent.harness.harness (Harness, HarnessCallError,
       QueryClass, budget_for_step)
-    - system_03_search_agent.harness.cache (build_stable_prefix): called
-      once at import time (`_STABLE_PREFIX`, module-level below) and
-      passed as every model call's `cache_prefix`, closing the gap the
-      phase 2.0 judge review flagged (F-2.0-03): T-2.0-06 built the
-      prefix-assembly scaffold but nothing called it until this fix.
+    - system_03_search_agent.harness.cache (build_stable_prefix,
+      REGISTERED_TOOL_SCHEMAS): called once at import time
+      (`_STABLE_PREFIX`, module-level below) and passed as every model
+      call's `cache_prefix`, closing the gap the phase 2.0 judge review
+      flagged (F-2.0-03): T-2.0-06 built the prefix-assembly scaffold but
+      nothing called it until this fix. T-3.1-12 (this file's half)
+      passes `REGISTERED_TOOL_SCHEMAS` through, the fixed, alphabetically
+      ordered tuple `cache.py` already built but that no live call ever
+      threaded in: before this change `ncbi_efetch`'s own schema had been
+      live since its own build phase and still never reached a model's
+      prompt.
+    - system_03_search_agent.tools.ncbi_efetch (ncbi_efetch),
+      system_03_search_agent.tools.ncbi_efetch_schemas (NcbiEfetchInput):
+      T-3.1-11's live Layer 2 entity resolution
+      (`resolve_symbol_to_curie`, below) routes every gene-symbol lookup
+      through this tool, never a second HTTP path.
 
 Reads:
     - Nothing at import time beyond the modules above. USER_DB_URL and the
@@ -276,6 +287,81 @@ already covers above.
       field` still reads the identical, unmodified `fields` dict off the
       same dumped row (via `_citations_from_findings`) to make its own,
       separately-fixed decision.
+
+Build phase 3.1, T-3.1-11/T-3.1-13/T-3.1-12 (this file's half), 2026-08-05.
+F-2.1-07: `_KNOWN_GENE_SYMBOL_CURIES` held exactly one entry (BRCA1), so
+every gene symbol other than BRCA1, roughly 20,000 of them, resolved to
+nothing. Five realistic gene queries (TP53, BRCA2, EGFR, KRAS, MECP2)
+tested by a judge all failed. Fixed by replacing the table outright, not
+widening it:
+
+    - `resolve_symbol_to_curie(symbol, *, taxon="human")`: the single
+      chokepoint every live gene-symbol lookup passes through (case 14 of
+      `tests/system_03_search_agent/tools/test_ncbi_efetch_premise.py`
+      monkeypatches this exact module-level name to count calls, so it
+      must stay a plain function other code calls by this name, never a
+      bound alias captured at import time). Tries NCBI Datasets v2's
+      `gene/symbol/{symbol}/taxon/{taxon}` first (one call, and it
+      confirms the organism, per the same ortholog lesson build phase 2.1
+      already paid for once), falling back to ESearch on `db=gene` with
+      `{symbol}[sym] AND human[orgn]` when Datasets returns anything
+      other than a clean, single, human match. Every call goes through
+      `ncbi_efetch`, never a second HTTP path. Results are cached
+      in-process for the life of the run (`_SYMBOL_CURIE_CACHE`): a
+      symbol-to-CURIE mapping is about as stable as data gets, and this
+      is a resolution-result cache, not the prompt-cache stable prefix
+      `prompt-cache-discipline.md` governs, so it is not subject to that
+      rule.
+    - `resolve_entity_curies(query_text)`: the public entry point the
+      premise gate's cases 12 and 13 import directly. `_extract_target_
+      entities` (the name `_select_planned_tool_call` and `write_node`
+      already called) is now a thin async alias for this function, kept
+      so neither call site needed renaming, only awaiting.
+    - F-3.1-01: arming T-3.1-11 without a filter turns the existing
+      `_GENE_SYMBOL_TOKEN_PATTERN` scan, matched against
+      `query_text.upper()` and therefore matching every 2-to-10-character
+      word, into up to one live NCBI call per word in the query.
+      `_SYMBOL_CANDIDATE_STOPWORDS` drops common English and domain
+      filler words before any network call, a verbatim CURIE match's own
+      text span is excluded from the symbol scan so an identifier already
+      resolved exactly is never also fuzzy-matched, and
+      `_MAX_LIVE_SYMBOL_LOOKUPS` (3) hard-caps live calls per query
+      regardless of how complete the stopword list is. Case 14 of the
+      premise gate pins the cap.
+    - T-3.1-13/F-2.1-B10: before this fix, a gene-symbol-shaped token
+      that failed to resolve still reached `cypher_query` with an empty
+      `target_entities` list, the model still wrote Cypher referencing an
+      unbound parameter, and AGE failed with `UndefinedParameter` after
+      two model calls and roughly 21.7 seconds, surfaced to the user as a
+      graph failure that was never true: the graph was never the thing
+      that broke. `_select_planned_tool_call` now returns
+      `_UnresolvedEntityRefusal` when at least one plausible candidate
+      was looked up live and resolved to nothing and no other entity
+      rescues the query; `plan_node` stores the attempted symbols on
+      `GraphState.unresolved_entity_symbols` instead of building a tool
+      call at all; `write_node` checks that field before its own synth
+      call (the same early-exit shape `step_error` and `cap_exceeded`
+      already use) and ships a refusal naming the unresolved symbol,
+      spending zero synth calls and zero graph calls on a question that
+      was never answerable. This is deliberately narrower than "empty
+      `target_entities`": a query with no gene-shaped token at all (for
+      example a disease named in plain English) still reaches
+      `cypher_query` exactly as before, since an absent candidate and a
+      candidate that was tried and failed are different facts.
+    - write_node's own refusal-branch fallback-link decision (previously
+      `resolved = _extract_target_entities(query.text)`, now a live call):
+      re-resolving here would spend a second live NCBI lookup and its
+      latency purely to build a link for a refusal already decided by
+      other means. `write_node` now reuses the resolution `plan_node`
+      already performed, read off `state["tool_calls"][0].cypher_input.
+      target_entities`, since every branch reaching that line already ran
+      `plan_node` (`cap_exceeded` and `step_error` both return earlier).
+    - T-3.1-12 (this file's half): `_STABLE_PREFIX` now passes
+      `list(REGISTERED_TOOL_SCHEMAS)` to `build_stable_prefix`, so both
+      registered tool schemas (`cypher_query`, `ncbi_efetch`) actually
+      reach the model's prompt for the first time; `cache.py`'s own
+      docstring recorded this as the still-missing half since build phase
+      2.1.
 """
 
 from __future__ import annotations
@@ -307,7 +393,7 @@ from system_03_search_agent.data.session import session_scope
 from system_03_search_agent.guardrail import classifier, forbidden, prefilter
 from system_03_search_agent.guardrail.verdict import GuardVerdict
 from system_03_search_agent.harness import cost_control
-from system_03_search_agent.harness.cache import build_stable_prefix
+from system_03_search_agent.harness.cache import REGISTERED_TOOL_SCHEMAS, build_stable_prefix
 from system_03_search_agent.harness.coordinator_worker import (
     Finding,
     ToolExecutionResult,
@@ -349,19 +435,30 @@ from system_03_search_agent.tools.graph_schema_constants import (
     CURIE_PREFIXES,
     CYPHER_QUERY_TIMEOUT_SECONDS,
 )
+from system_03_search_agent.tools.ncbi_efetch import ncbi_efetch
+from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
 
 Message = dict[str, str]
 
 # Built once at import time, matching `compiled_graph` below: the stable
 # prefix is a deterministic function of `tool_schemas` alone (prompt-
-# cache-discipline.md), and no tool exists yet to pass one (phase 2.1+
-# is the first to register a real tool schema), so this is the same
-# prefix for every guardrail/think/plan/write call this phase makes.
-# Rebuilding it per call would cost nothing functionally, since it is
-# byte-identical every time, but computing it once removes any chance of
-# it silently drifting between calls within a session, which is exactly
-# what `prompt-cache-discipline.md` requires the harness to guarantee.
-_STABLE_PREFIX = build_stable_prefix()
+# cache-discipline.md), so this is the same prefix for every
+# guardrail/think/plan/write call the process makes. Rebuilding it per
+# call would cost nothing functionally, since it is byte-identical every
+# time, but computing it once removes any chance of it silently drifting
+# between calls within a session, which is exactly what
+# `prompt-cache-discipline.md` requires the harness to guarantee.
+#
+# T-3.1-12 (this file's half): `REGISTERED_TOOL_SCHEMAS` is
+# `cache.py`'s own fixed, alphabetically-ordered tuple
+# (`cypher_query`, then `ncbi_efetch`); passing it through here is what
+# actually makes either tool's schema reach a model's prompt for the
+# first time. Never re-order this tuple at call time: obligation 2 of
+# `prompt-cache-discipline.md` requires the sort to be fixed in code, and
+# `build_stable_prefix` itself re-sorts alphabetically by name regardless,
+# so a call-site reorder here would change nothing except invite drift
+# between the two orderings.
+_STABLE_PREFIX = build_stable_prefix(list(REGISTERED_TOOL_SCHEMAS))
 
 
 class _EventSink:
@@ -823,96 +920,345 @@ _CURIE_IN_TEXT_PATTERN = re.compile(
     + r"):[A-Za-z0-9_](?:[A-Za-z0-9_.:-]*[A-Za-z0-9_])?"
 )
 
-# A narrow, explicitly verified seed table mapping an ALL-CAPS gene
-# symbol to its real NCBIGene CURIE. This is not entity resolution or
-# NER: it is a small, honest stopgap that lets phase 2.1's wiring
-# actually reach the graph for the one symbol this ticket's e2e verify
-# surface exercises (test_cypher_query_e2e.py's BRCA1 fixtures), without
-# fabricating a CURIE for any symbol not listed here. Real entity
-# resolution against the graph or an external vocabulary (turning
-# Think's stub `resolved_entities=[]` into something real) is explicitly
-# a later phase's job; see this module's own docstring note on
-# think_node. Extend this table only with a symbol whose CURIE has been
-# independently verified against the live graph, never a guessed id: a
-# wrong mapping here is the "confidently wrong answer" this whole system
-# exists to prevent, worse than the symbol resolving to nothing at all.
-_KNOWN_GENE_SYMBOL_CURIES: dict[str, str] = {
-    "BRCA1": "NCBIGene:672",
-}
-
-# An ALL-CAPS alphanumeric token, 2 to 10 characters, used only to probe
-# `_KNOWN_GENE_SYMBOL_CURIES`; a token that is not a key in that table
-# contributes nothing (see `_extract_target_entities`).
+# An ALL-CAPS alphanumeric token, 2 to 10 characters: the shape a live
+# gene-symbol candidate must have before it is worth a network call.
+# Matched against `query_text.upper()`, so it matches every 2-to-10-
+# character word in the query, not just symbols (F-3.1-01). See
+# `_SYMBOL_CANDIDATE_STOPWORDS` and `_gene_symbol_candidates` below for
+# the filter that runs before any candidate this pattern finds reaches
+# `resolve_symbol_to_curie`.
 _GENE_SYMBOL_TOKEN_PATTERN = re.compile(r"\b[A-Z][A-Z0-9]{1,9}\b")
 
+# F-3.1-01: common English function words plus domain filler words that
+# would otherwise pass `_GENE_SYMBOL_TOKEN_PATTERN`'s bare ALL-CAPS shape
+# check and each cost one live NCBI call. Verified live: "What diseases
+# are linked to TP53?" yields ['WHAT','DISEASES','ARE','LINKED','TO',
+# 'TP53'] from the pattern alone. Deliberately over-inclusive rather than
+# a precise part-of-speech filter, since a false exclusion here (a real
+# gene symbol that happens to collide with a stopword, none currently
+# known in this list) costs a missed resolution, while a false inclusion
+# costs a wasted network call bounded by `_MAX_LIVE_SYMBOL_LOOKUPS`
+# regardless. Not exhaustive; extend it when a new filler word is
+# observed reaching a live call in practice.
+_SYMBOL_CANDIDATE_STOPWORDS: frozenset[str] = frozenset(
+    {
+        # function / question words
+        "WHAT", "WHICH", "WHO", "WHOM", "WHOSE", "WHERE", "WHEN", "WHY", "HOW",
+        "IS", "ARE", "WAS", "WERE", "BE", "BEEN", "BEING", "AM",
+        "DO", "DOES", "DID", "DOING", "DONE",
+        "HAS", "HAVE", "HAD", "HAVING",
+        "WILL", "WOULD", "SHALL", "SHOULD", "CAN", "COULD", "MAY", "MIGHT", "MUST",
+        "THE", "A", "AN", "AND", "OR", "NOR", "BUT", "SO", "IF", "THEN", "ELSE",
+        "TO", "OF", "IN", "ON", "AT", "BY", "FOR", "WITH", "FROM", "AS", "ABOUT",
+        "INTO", "OVER", "UNDER", "BETWEEN", "AMONG", "THROUGH", "DURING",
+        "BEFORE", "AFTER", "ABOVE", "BELOW", "UP", "DOWN", "OUT", "OFF", "AGAIN",
+        "THIS", "THAT", "THESE", "THOSE", "IT", "ITS", "EACH", "EVERY", "ALL",
+        "ANY", "SOME", "NO", "NOT", "ONLY", "OWN", "SAME", "SUCH", "MORE",
+        "MOST", "OTHER", "FEW", "TOO", "VERY", "JUST", "ALSO", "THAN",
+        "ONE", "TWO", "THREE", "MANY", "MUCH",
+        # domain filler: not a symbol shape a `dataset_report`/ESearch
+        # lookup would ever confirm, and asking anyway is a wasted call.
+        "LINKED", "LINK", "LINKS", "RELATED", "RELATE", "RELATES",
+        "ASSOCIATED", "ASSOCIATE", "ASSOCIATES", "ASSOCIATION", "ASSOCIATIONS",
+        "DISEASE", "DISEASES", "DISORDER", "DISORDERS", "CONDITION", "CONDITIONS",
+        "GENE", "GENES", "GENETIC", "GENOME", "GENOMES",
+        "PROTEIN", "PROTEINS", "MUTATION", "MUTATIONS", "VARIANT", "VARIANTS",
+        "EVIDENCE", "SUPPORTS", "SUPPORT", "SUPPORTED",
+        "CAUSE", "CAUSES", "CAUSED", "CAUSING",
+        "RISK", "RISKS", "FACTOR", "FACTORS",
+        "SYMPTOM", "SYMPTOMS", "TREATMENT", "TREATMENTS", "TREAT", "TREATS",
+        "PATIENT", "PATIENTS", "HUMAN", "HUMANS",
+        "STUDY", "STUDIES", "RESEARCH", "PAPER", "PAPERS", "ARTICLE", "ARTICLES",
+        "SHOW", "SHOWS", "SHOWN", "KNOWN", "KNOW", "TELL", "GIVE", "GIVEN",
+        "LIST", "LISTS", "FIND", "FINDS", "LOOK", "LOOKS", "SEE", "SEES",
+        "MEAN", "MEANS", "MEANING", "EXPLAIN", "EXPLAINS", "DESCRIBE",
+        "COMPARE", "COMPARES", "COMPARED",
+        "TIMES", "TYPE", "TYPES", "KIND", "KINDS",
+        "PART", "PARTS", "ROLE", "ROLES", "USE", "USES", "USED", "USING",
+        "NEW", "OLD", "GOOD", "BAD", "BETTER", "WORSE", "BEST", "WORST",
+        "QUESTION", "QUESTIONS", "ANSWER", "ANSWERS",
+    }
+)
 
-def _extract_target_entities(query_text: str) -> list[str]:
+# F-3.1-01: a hard ceiling on live symbol lookups per query, independent
+# of how complete the stopword list above is. Case 14 of the ncbi_efetch
+# premise gate pins this at 3 for a 10-word question.
+_MAX_LIVE_SYMBOL_LOOKUPS = 3
+
+# In-process cache: a symbol-to-CURIE mapping is about as stable as data
+# gets, so resolving a symbol once per process lifetime rather than once
+# per query is the right cost/staleness trade. This is a resolution-
+# result cache, not the prompt-cache stable prefix
+# `prompt-cache-discipline.md` governs, so that rule does not apply to
+# it. Keyed on the upper-cased symbol; `None` is a valid cached value
+# (an already-confirmed non-resolution), distinguished from "not yet
+# looked up" by key presence, not by the value's truthiness.
+_SYMBOL_CURIE_CACHE: dict[str, str | None] = {}
+
+
+async def resolve_symbol_to_curie(symbol: str, *, taxon: str = "human") -> str | None:
+    """Resolve one gene symbol to its NCBIGene CURIE via a live Layer 2 call.
+
+    T-3.1-11, replacing `_KNOWN_GENE_SYMBOL_CURIES` (F-2.1-07): that table
+    held exactly one entry, BRCA1, so every other gene symbol, roughly
+    20,000 of them, resolved to nothing. This is the single chokepoint
+    every live gene-symbol lookup passes through: case 14 of
+    `tests/system_03_search_agent/tools/test_ncbi_efetch_premise.py`
+    monkeypatches this exact module-level name to count calls, so any
+    caller must reach it by this name at call time (a plain module-level
+    `await resolve_symbol_to_curie(...)`, never a reference captured once
+    at import time), or the monkeypatch, and this docstring's own
+    contract, silently stop applying.
+
+    Two sources, in order, both reached only through `ncbi_efetch`
+    (never a second HTTP path):
+
+    1. NCBI Datasets v2, `dataset_report` with `report_type="gene"`. One
+       call resolves a symbol straight to a `gene_id`, and its response
+       carries `taxname`, so the organism is confirmed in the same round
+       trip. Requiring `taxname == "Homo sapiens"` here is deliberate,
+       not incidental: build phase 2.1's flagship failure was a query
+       that silently answered from a non-human ortholog, and skipping
+       this check would reopen exactly that class of defect one layer
+       up, in resolution rather than in query generation.
+    2. ESearch on `db="gene"` with `term="{symbol}[sym] AND human[orgn]"`,
+       tried only when Datasets does not return a clean single human
+       match (a bad symbol is a live-verified HTTP 200 with an empty
+       body there, not an error, so this is the expected path for an
+       unresolvable symbol, not a failure path). Only an UNAMBIGUOUS
+       single id is accepted; zero or multiple ids resolve to `None`
+       rather than guessing among them, matching this whole system's
+       existing rule that an unrecognized or ambiguous token contributes
+       nothing rather than a fabricated CURIE.
+
+    Never raises: `ncbi_efetch` itself never raises (see that module's
+    own docstring), so nothing here needs its own try/except around the
+    network call.
+
+    Cached in `_SYMBOL_CURIE_CACHE` for the life of the process,
+    including a `None` result, so a symbol confirmed unresolvable in one
+    query is not looked up again in the next.
+    """
+    cache_key = symbol.strip().upper()
+    if cache_key in _SYMBOL_CURIE_CACHE:
+        return _SYMBOL_CURIE_CACHE[cache_key]
+
+    curie = await _resolve_symbol_to_curie_uncached(cache_key, taxon)
+    _SYMBOL_CURIE_CACHE[cache_key] = curie
+    return curie
+
+
+async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> str | None:
+    dataset_output = await ncbi_efetch(
+        NcbiEfetchInput.model_validate(
+            {
+                "action": "dataset_report",
+                "report_type": "gene",
+                "symbol": symbol,
+                "taxon": taxon,
+            }
+        )
+    )
+    if dataset_output.status == "ok" and dataset_output.records:
+        fields = dataset_output.records[0].fields
+        gene_id = fields.get("gene_id")
+        taxname = fields.get("taxname")
+        if gene_id and taxname == "Homo sapiens":
+            return f"NCBIGene:{gene_id}"
+
+    search_output = await ncbi_efetch(
+        NcbiEfetchInput.model_validate(
+            {
+                "action": "search",
+                "db": "gene",
+                "term": f"{symbol}[sym] AND human[orgn]",
+                "retmax": 5,
+            }
+        )
+    )
+    if search_output.status != "ok" or not search_output.records:
+        return None
+
+    idlist = search_output.records[0].fields.get("idlist")
+    if not isinstance(idlist, list) or len(idlist) != 1:
+        # Zero hits, or an ambiguous multi-id match: never fabricate a
+        # CURIE by guessing among candidates.
+        return None
+
+    gene_id = idlist[0]
+    return f"NCBIGene:{gene_id}" if gene_id else None
+
+
+def _span_overlaps_any(span: tuple[int, int], spans: list[tuple[int, int]]) -> bool:
+    return any(span[0] < end and start < span[1] for start, end in spans)
+
+
+@dataclass(frozen=True)
+class _EntityResolution:
+    """The full result of resolving one query text's entities.
+
+    `curies` is what `resolve_entity_curies` (the public entry point) and
+    `_extract_target_entities` (the back-compat alias every existing call
+    site uses) return. `unresolved_symbols` is the extra signal T-3.1-13
+    needs and neither of those two names carries: which gene-symbol-
+    shaped candidates were looked up live and confirmed to resolve to
+    nothing. Computed once, in one pass, so `_select_planned_tool_call`
+    never pays for a second round of live lookups just to learn what the
+    first round already knew.
+    """
+
+    curies: list[str]
+    unresolved_symbols: list[str]
+
+
+async def _resolve_query_entities(query_text: str) -> _EntityResolution:
     """Deterministically extract candidate CURIEs referenced by `query_text`.
 
     Fixes findings A3/F-02: `plan_node` used to hand `cypher_query` an
     unconditionally empty `target_entities` list, so the generated
     Cypher's named parameter never had a value to bind, and every query
     dead-ended in `status: "error"` (an unbound parameter) or a validator
-    rejection (a literal interpolated instead). Two deterministic
-    sources, no model call and no fuzzy matching:
+    rejection (a literal interpolated instead). Two sources:
 
     1. A CURIE the caller already typed verbatim, matched against
-       `_CURIE_IN_TEXT_PATTERN`, taken as given.
-    2. An ALL-CAPS token matched against the small, explicitly verified
-       `_KNOWN_GENE_SYMBOL_CURIES` seed table.
+       `_CURIE_IN_TEXT_PATTERN`, taken as given. No network call.
+    2. An ALL-CAPS token matched against `_GENE_SYMBOL_TOKEN_PATTERN`,
+       filtered through `_SYMBOL_CANDIDATE_STOPWORDS` and de-duplicated
+       against any span a verbatim CURIE match already covers (F-3.1-01:
+       an identifier already resolved exactly is never also fuzzy-
+       matched as a bare symbol), then resolved live via
+       `resolve_symbol_to_curie`, capped at `_MAX_LIVE_SYMBOL_LOOKUPS`
+       live calls regardless of how many candidates survive filtering
+       (T-3.1-11, replacing `_KNOWN_GENE_SYMBOL_CURIES`).
 
-    An unrecognized token contributes nothing: this function never
-    guesses or fabricates a CURIE for a symbol it does not recognize.
-    That is intentional, not a gap to silently patch over. A query whose
-    only entity is unrecognized ends up with an empty `target_entities`
-    list, which `cypher_query` and `write_node`'s cite-or-refuse logic
-    already turn into a refusal rather than a wrong answer bound to the
-    wrong entity.
+    A candidate that resolves to nothing contributes nothing to `curies`
+    but is recorded in `unresolved_symbols`: this function never guesses
+    or fabricates a CURIE for a symbol it cannot confirm. That distinction
+    is what T-3.1-13 needs: "no gene-shaped token in the query" and "a
+    gene-shaped token was tried and NCBI does not know it" are different
+    facts, and only the second one is what F-2.1-B10 requires a refusal
+    for.
 
-    Capped at `_TARGET_ENTITIES_MAX_ITEMS`, matching
+    `curies` is capped at `_TARGET_ENTITIES_MAX_ITEMS`, matching
     `CypherQueryInput.target_entities`'s own schema bound, and
     de-duplicated while preserving first-seen order.
     """
     found: list[str] = []
     seen: set[str] = set()
+    matched_spans: list[tuple[int, int]] = []
 
     for match in _CURIE_IN_TEXT_PATTERN.finditer(query_text):
         curie = match.group(0)
+        matched_spans.append(match.span())
         if curie not in seen:
             seen.add(curie)
             found.append(curie)
 
+    unresolved: list[str] = []
+    live_lookups = 0
     for token_match in _GENE_SYMBOL_TOKEN_PATTERN.finditer(query_text.upper()):
-        curie = _KNOWN_GENE_SYMBOL_CURIES.get(token_match.group(0))
-        if curie is not None and curie not in seen:
-            seen.add(curie)
-            found.append(curie)
+        if live_lookups >= _MAX_LIVE_SYMBOL_LOOKUPS:
+            break
+        token = token_match.group(0)
+        if token in _SYMBOL_CANDIDATE_STOPWORDS:
+            continue
+        if _span_overlaps_any(token_match.span(), matched_spans):
+            continue
 
-    return found[:_TARGET_ENTITIES_MAX_ITEMS]
+        live_lookups += 1
+        curie = await resolve_symbol_to_curie(token)
+        if curie is not None:
+            if curie not in seen:
+                seen.add(curie)
+                found.append(curie)
+        else:
+            unresolved.append(token)
+
+    return _EntityResolution(
+        curies=found[:_TARGET_ENTITIES_MAX_ITEMS], unresolved_symbols=unresolved
+    )
 
 
-def _select_planned_tool_call(
+async def resolve_entity_curies(query_text: str) -> list[str]:
+    """The public entry point T-3.1-11's premise gate imports directly
+    (cases 12 and 13). See `_resolve_query_entities` for the full
+    contract; this returns only the resolved CURIE list, the same shape
+    `_extract_target_entities` always returned.
+    """
+    resolution = await _resolve_query_entities(query_text)
+    return resolution.curies
+
+
+async def _extract_target_entities(query_text: str) -> list[str]:
+    """Back-compat alias for `resolve_entity_curies`.
+
+    Kept so `_select_planned_tool_call` and `write_node`'s refusal
+    branch, both already calling this name before T-3.1-11, needed only
+    an `await` added at their call sites, not a rename. The real
+    implementation and its docstring live on `resolve_entity_curies` and
+    `_resolve_query_entities`.
+    """
+    return await resolve_entity_curies(query_text)
+
+
+@dataclass(frozen=True)
+class _UnresolvedEntityRefusal:
+    """T-3.1-13/F-2.1-B10: at least one gene-symbol-shaped candidate in
+    the query text was looked up live and confirmed to resolve to
+    nothing, and no other entity (a verbatim CURIE, or a different
+    candidate that did resolve) rescues the query.
+
+    Before this fix, this case still reached `cypher_query` with an
+    empty `target_entities` list. The model still wrote Cypher
+    referencing an unbound parameter for the gene name, and AGE failed
+    with an opaque `UndefinedParameter` after two model calls and
+    roughly 21.7 seconds, a graph failure that was never true: the graph
+    never had a chance to fail, because there was nothing to look up.
+    `_select_planned_tool_call` returns this instead of a
+    `_PlannedToolCall` in that case, so `plan_node` can refuse before
+    either the graph or a second model call is ever reached.
+    """
+
+    attempted_symbols: list[str]
+
+
+async def _select_planned_tool_call(
     query_text: str, query_class: QueryClass
-) -> _PlannedToolCall | None:
-    """Deterministically select `cypher_query`, or nothing, for one query.
+) -> _PlannedToolCall | _UnresolvedEntityRefusal | None:
+    """Deterministically select `cypher_query`, refuse, or select nothing.
 
-    Returns None for empty or plainly non-substantive text
-    (`_NO_TOOL_QUERY_TEXTS`). Otherwise returns a `_PlannedToolCall`
-    carrying a `CypherQueryInput` built from the raw query text as
-    `query_intent` (capped to Section 6.1's 1000-char bound),
-    `query_class` from Think's classification, `target_entities` from
-    `_extract_target_entities` (A3/F-02's fix: real CURIEs when this
-    module can deterministically recognize one, otherwise empty, never
-    fabricated), and the default row_limit.
+    Returns `None` for empty or plainly non-substantive text
+    (`_NO_TOOL_QUERY_TEXTS`): unchanged from before this ticket.
+
+    Returns `_UnresolvedEntityRefusal` (T-3.1-13) when
+    `_resolve_query_entities` found no usable CURIE at all but did find
+    at least one gene-symbol-shaped candidate that a live lookup
+    confirmed does not resolve. This is deliberately narrower than "empty
+    `target_entities`": a query with no gene-shaped token whatsoever (for
+    example a disease named in plain English, which this module's
+    resolution never attempts to look up) still falls through to the
+    normal `_PlannedToolCall` branch below with an empty
+    `target_entities` list, exactly as before this ticket. Only a
+    candidate that was tried and failed triggers a refusal.
+
+    Otherwise returns a `_PlannedToolCall` carrying a `CypherQueryInput`
+    built from the raw query text as `query_intent` (capped to Section
+    6.1's 1000-char bound), `query_class` from Think's classification,
+    `target_entities` from `_resolve_query_entities` (T-3.1-11: real,
+    live-resolved CURIEs, never fabricated), and the default row_limit.
     """
     normalized = query_text.strip().lower()
     if not normalized or normalized in _NO_TOOL_QUERY_TEXTS:
         return None
 
+    resolution = await _resolve_query_entities(query_text)
+    if not resolution.curies and resolution.unresolved_symbols:
+        return _UnresolvedEntityRefusal(attempted_symbols=resolution.unresolved_symbols)
+
     cypher_input = CypherQueryInput(
         query_intent=query_text[:_PLAN_TOOL_CALL_MAX_INTENT_CHARS],
         query_class=query_class,
-        target_entities=_extract_target_entities(query_text),
+        target_entities=resolution.curies,
         row_limit=_PLAN_TOOL_CALL_ROW_LIMIT,
     )
     tool_call = ToolCall(
@@ -944,7 +1290,24 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     except HarnessCallError as exc:
         return {"step_error": _step_error_kwargs("plan", exc)}
 
-    planned = _select_planned_tool_call(query.text, query_class)
+    planned = await _select_planned_tool_call(query.text, query_class)
+    if isinstance(planned, _UnresolvedEntityRefusal):
+        # T-3.1-13/F-2.1-B10: refuse now, before act_node ever dispatches
+        # a tool call and before write_node's own synth call, rather than
+        # letting an unbound Cypher parameter reach the graph and fail
+        # there as an opaque `UndefinedParameter`.
+        plan_payload = PlanPayload(
+            narrative=(
+                "no tool selected; unresolved gene symbol candidate(s): "
+                + ", ".join(planned.attempted_symbols)
+            )[:500],
+            tool_calls=[],
+        )
+        sink.emit("plan", plan_payload)
+        sink.emit("cost", cost_control.build_cost_event_payload(harness, trace_id, "plan"))
+        return sink.result(
+            tool_calls=[], unresolved_entity_symbols=planned.attempted_symbols
+        )
     if planned is None:
         plan_payload = PlanPayload(
             narrative="no graph-answerable content detected; no tool selected",
@@ -1726,6 +2089,31 @@ _UNGROUNDED_SYNTHESIS_REFUSAL_MESSAGE = (
     "did not. Retrying may succeed."
 )
 
+# T-3.1-13/F-2.1-B10. Deliberately a different sentence from every
+# message above, and from "the graph query failed": none of them are
+# true here. The graph was never reached at all, so "the graph query
+# failed" misattributes the failure to a component that never ran; "I
+# could not identify that gene" is the honest, actionable statement, and
+# it is the adversary's own required wording (tracker/phase_3.1.md).
+_UNRESOLVED_ENTITY_REFUSAL_MESSAGE = (
+    "I could not identify that gene. NCBI has no record matching the "
+    "name in your question, so no graph query was attempted."
+)
+
+
+def _build_unresolved_entity_refusal_text(attempted_symbols: list[str]) -> str:
+    """The user-facing refusal for T-3.1-13, naming what was tried.
+
+    Mirrors `synthesis.refuse.build_refusal_text`'s shape (message, then
+    an NCBI fallback link) without importing it: that helper always
+    prepends the generic `REFUSE_MESSAGE`, and this refusal needs its own
+    distinct wording, per this ticket's acceptance criterion that "I
+    could not identify that gene" and "the graph query failed" are
+    different messages and only one is true here.
+    """
+    query_term = " ".join(attempted_symbols) if attempted_symbols else ""
+    return f"{_UNRESOLVED_ENTITY_REFUSAL_MESSAGE} {build_fallback_link(query_term)}"
+
 
 def _response_text(response: Any) -> str:
     """Pull the completion text out of whatever `_dispatch_tier_call` returned.
@@ -1953,6 +2341,44 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         # ship the partial result per Section 19.1, never a blank failure.
         return _partial_result_for_cap(sink, harness, trace_id, elapsed_ms, total_tool_calls)
 
+    unresolved_entity_symbols = state.get("unresolved_entity_symbols")
+    if unresolved_entity_symbols:
+        # T-3.1-13/F-2.1-B10: `plan_node` already determined this query's
+        # only candidate entity does not resolve, before act_node ever
+        # dispatched a tool call. Ship the refusal here, before the synth
+        # call, the same early-exit shape `step_error` and `cap_exceeded`
+        # already use: there is nothing for Synth to honestly write about
+        # a query that was never sent to the graph.
+        sink.emit(
+            "token",
+            TokenPayload(
+                text=_build_unresolved_entity_refusal_text(unresolved_entity_symbols)[:1000],
+                marker_ids=[],
+            ),
+        )
+        sink.emit(
+            "trust_signal",
+            TrustSignalPayload(
+                outcome="refuse",
+                risk_tier="low",
+                grounded=False,
+                triangulated=None,
+                scope="answer",
+                message=_UNRESOLVED_ENTITY_REFUSAL_MESSAGE,
+                fallback_link=build_fallback_link(" ".join(unresolved_entity_symbols)),
+            ),
+        )
+        sink.emit(
+            "done",
+            DonePayload(
+                total_cost_usd=harness.get_query_cost_usd(trace_id),
+                total_tool_calls=total_tool_calls,
+                elapsed_ms=elapsed_ms,
+                trust_outcome="refuse",
+            ),
+        )
+        return sink.result()
+
     query_class: QueryClass = state.get("query_class", "lookup")
 
     # Section 8.1: the findings list is code-built before the model is ever
@@ -2136,7 +2562,24 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         #
         # Falls back to the raw text only when nothing resolved, since a
         # link built from an empty term is a link to nothing.
-        resolved = _extract_target_entities(query.text)
+        #
+        # T-3.1-13 decision: reuse plan_node's own resolution rather than
+        # re-resolving here. Before T-3.1-11 this was a free, deterministic
+        # re-computation; now `_extract_target_entities` is a live NCBI
+        # call, and every branch that reaches this line already ran
+        # plan_node (`cap_exceeded` and `step_error` both return earlier,
+        # above, before this point, and `unresolved_entity_symbols` also
+        # returns earlier), so `state["tool_calls"]` already carries the
+        # `CypherQueryInput.target_entities` plan_node resolved via
+        # `resolve_entity_curies`. Re-resolving here would spend a second
+        # live lookup and its latency purely to build a fallback link for
+        # a refusal already decided by other means.
+        planned_tool_calls: list[_PlannedToolCall] = state.get("tool_calls", [])
+        resolved = (
+            planned_tool_calls[0].cypher_input.target_entities
+            if planned_tool_calls
+            else []
+        )
         query_term = " ".join(resolved) if resolved else query.text
         fallback_link = build_fallback_link(query_term)
         sink.emit(

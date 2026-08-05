@@ -48,16 +48,14 @@ number.
 
 Tool registry note (T-3.1-12, cache.py half): `REGISTERED_TOOL_SCHEMAS`
 below is the first fixed-in-code content ever added to the tool-schema
-slot. Neither tool registered here has actually been threaded into a
-live `build_stable_prefix()` call yet: `core.graph`'s module-level
-`_STABLE_PREFIX = build_stable_prefix()` still passes no `tool_schemas`
-argument at all, even though `cypher_query` has been live since build
-phase 2.1 (see that module's own comment, "no tool exists yet to pass
-one (phase 2.1+ is the first to register a real tool schema)", which
-this ticket is what makes true). Wiring `core.graph` to actually import
-and pass `REGISTERED_TOOL_SCHEMAS` is the other half of T-3.1-12, owned
-by a different builder and out of this file's scope; this module only
-makes the fixed, alphabetically-ordered content available to import.
+slot. As of T-3.1-12's other half (`core.graph`, 2026-08-05), both
+registered tools actually reach a model's prompt: `core.graph`'s
+module-level `_STABLE_PREFIX = build_stable_prefix(list(
+REGISTERED_TOOL_SCHEMAS))` now passes this tuple through, closing the gap
+this note used to record, that `cypher_query` had been live since build
+phase 2.1 and still never reached the tool-schema slot. This module only
+builds the fixed, alphabetically-ordered content; `core.graph` owns
+threading it into the live call.
 """
 
 from __future__ import annotations
