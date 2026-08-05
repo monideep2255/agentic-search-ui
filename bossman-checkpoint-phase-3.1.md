@@ -78,6 +78,17 @@ The product owner chose to CARRY the Act-step wiring to a named 3.x ticket rathe
 
 The obligation that comes with it, and it is not optional: the phase premise must be explicitly RESTATED to what 3.1 actually delivers, recorded as a deliberate narrowing with a named owner for the carried half. Editing the premise quietly so the current state passes is the verify-surface weakening `goal-contracts` forbids, and it is the difference between a scoping decision and a cover-up.
 
+## Running the rest on the metered backend, decided 2026-08-05
+
+The primary provider is at 97 percent of its weekly limit, so the remaining work runs on `claude-build`. What that changes, stated precisely rather than as a blanket warning:
+
+- Safe to hand over: fixing every open finding, verifying each against its own written reproduction, re-running the suite and the gates, syncing doc drift, and opening the pull request. The discovery work is already done, and each finding carries a file:line and a pasted reproduction, so closing one is checkable rather than a judgment call.
+- Genuinely degraded: an adversarial pass over the NEW code the fix round writes. Today's evidence is why. The builders' suites were green and the judge found three criticals; the judge passed and the adversary then found five more, including a tool emitting real citations for records that do not exist. Both rounds were frontier-model reasoning finding defects that tested, green code was hiding.
+
+So the rule for this phase: the fix round may go all the way to an open pull request. It must NOT merge. The pull request carries one known caveat, which belongs in its description: the fix round has not had an adversarial pass, and twenty-one patches across security-sensitive code is exactly where this repo's history says the next critical lives (build phase 2.1 had the same invariant defeated three separate times by its own replacement).
+
+One short primary session clears that caveat later. Nothing is deployed and no user outside the product owner has access, so an unmerged pull request costs time-to-merge and nothing else.
+
 ## What the next session should do, in order
 
 1. Restate the phase premise in this file's Phase premise section, with a dated note that the answer-path half is carried, and open the ticket that owns it.
