@@ -134,6 +134,21 @@ The highest-risk omission, named in the gate itself rather than left to be disco
 | F-3.1-10 | open | `_generic_summary_fields` copies every response key for five databases with only a 40-key cap, no field-level filter |
 | F-3.1-11 | open | The tool registry gained `ncbi_efetch`, changing the stable prompt prefix, with no contract-version bump |
 | F-3.1-12 | open | Four minor gaps: an unretried 429, untested property-claiming comments, no coordinate range validator, no per-value character cap |
+| F-3.1-13 | open | `summary` fabricates a schema-valid citation for a nonexistent uid, since ESummary's per-uid error object has no allowlisted field |
+| F-3.1-14 | open | The live-lookup budget is consumed by ordinary English words matching the symbol pattern, so the real gene in the query is never looked up |
+| F-3.1-15 | open | `_build_search_term` sends the raw chromosome value, so a `chr1`-spelled window returns zero variants although 17 exist |
+| F-3.1-16 | open | ELink's top-level `ERROR` beside a list `linksets` is classified as a confirmed empty result, not an error |
+| F-3.1-17 | open | Non-human taxon resolution discards the correct cross-species record and returns the human gene, and the cache key omits taxon |
+| F-3.1-18 | open | Unencoded `&` and `=` in caller-supplied values inject arbitrary E-utilities parameters, confirmed to change results live |
+| F-3.1-19 | open | HTTP status codes are never read, so a 429 or 5xx is reported as an unparseable body and a 4xx with a good body reports ok |
+| F-3.1-20 | open | `fetch` on its own default schema (docsum, json) returns one uncited multi-record blob and misreports record_count |
+| F-3.1-21 | open | PubChem returns empty rather than error when every fan-out property fetch fails, and silently drops CIDs past the first 5 |
+| F-3.1-22 | open | A retry issues a second HTTP request without a second rate-limiter acquisition, escaping the throttle pool |
+| F-3.1-23 | open | `_apply_field_tags` scopes a field tag to only the last token of a multi-word term, so the rest runs unscoped |
+| F-3.1-24 | open | `total_available` reports the coarse ESearch prefilter count the module's own docstring says is unreliable |
+| F-3.1-25 | open | `record_count` means a different thing per action, and `search` bypasses the records maxItems cap entirely |
+| F-3.1-26 | open | A zero-id search reports status ok, permanently caching a real gene as a confirmed non-resolution |
+| F-3.1-27 | open | `coordinate_overlap` accepts inverted, negative and zero-length windows with no validation |
 
 ## Judge round 1, 2026-08-05: FAIL
 
@@ -223,6 +238,119 @@ Today this costs nothing: six `dict.get` calls against a one-entry table. The mo
 This is LEARNINGS.md row 38 verbatim: a known limitation that is currently dormant is not a limitation, it is a scheduled defect, and the thing that makes it dormant is usually another bug, so fixing that bug arms it silently.
 
 The fix is NOT a wider table. It is a real candidate filter before any network call: drop English stopwords, require a shape heuristic, cap candidates per query, and short-circuit when an exact CURIE was already matched (`Tool_implementation_mechanics.md:272-277`, do not fuzzy-match an identifier that was already exact). Pinned by case 14 of the premise gate, which bounds resolution at 3 live lookups for a question containing ten ordinary words.
+
+## Adversary round 1, 2026-08-05
+
+An adversary round ran against the build phase 3.1 tool surface and filed 15 findings, all reproduced live. Every finding below is state OPEN. The adversary files, it never closes; a separate closer verifies and resolves each one.
+
+### F-3.1-13: `summary` fabricates a citation for a nonexistent record
+
+Severity: critical. Status: open, unfixed.
+
+`tools/ncbi_eutils_actions.py:569-584`. `summary` emits a real, host-pinned, schema-valid citation for a record that does not exist. ESummary answers a nonexistent uid with HTTP 200 and a PER-UID error object: `{"result":{"uids":["999999999"],"999999999":{"uid":"999999999","error":"cannot get document summary"}}}`. The classifier sees envelope `result` and no top-level `ERROR`, so it returns ok. The extractor finds none of the allowlisted fields, discards the `error` string because it is not in the allowlist, and builds a record anyway. Observed: `summary db=gene ids=['999999999']` returns status ok, record_count 1, source_url `https://www.ncbi.nlm.nih.gov/gene/999999999`, fields `{}`. Same for pubmed and clinvar. A mixed batch `ids=['672','999999999']` returns real BRCA1 beside a fabricated citation, both ok, indistinguishable downstream. This is the wrong-record-right-citation shape the whole system exists to prevent, on the tool's most-used action. Not caught because the suite fixtures only the BATCH-level `{"result":{"ERROR":...}}` shape, never the per-uid shape NCBI actually returns.
+
+### F-3.1-14: the live-lookup budget is consumed by ordinary English words
+
+Severity: critical. Status: open, unfixed.
+
+`core/graph.py:930` pattern, `:986` cap, `:1209-1225` loop. The live-lookup budget is consumed by ordinary English words, so the gene in the question is never looked up, and nothing tells the user. `_GENE_SYMBOL_TOKEN_PATTERN` runs against `query_text.upper()` and matches every 2-to-10-character word; `_MAX_LIVE_SYMBOL_LOOKUPS = 3` then breaks. Reproduced with resolution stubbed to resolve every real symbol, so the cap is the only possible cause: "Which small molecule inhibitors block ALK fusion?" looks up SMALL, MOLECULE, INHIBITORS and never tries ALK. "In ADHD, PTSD and OCD cohorts, is TP53 mutated?" never tries TP53. "Does chronic smoking increase EGFR mutation frequency?" never tries EGFR. Two compounding harms: `unresolved_symbols` reports SMALL, MOLECULE, INHIBITORS as gene symbols NCBI could not find, and that list is what the unresolved-entity refusal refuses on, so the user is told ordinary words are unknown genes while the real gene was never queried. A dropped gene appears in neither `curies` nor `unresolved_symbols`, so it is invisible in both directions with no truncation disclosure on this path.
+
+Recorded explicitly because it changes how F-3.1-01 should be read: the earlier stopword fix was aimed at the wrong layer. The constraint is the pattern matching every word, not the completeness of the stopword list, since MUTANT, LUNG, CHRONIC, SMOKING, SMALL, MOLECULE and INHIBITORS are all ordinary English. Premise gate case 14 pins "3 lookups for a 10-word question" and passes while the behavior is wrong, which makes it a gate that measures the wrong property. Amplifier: non-ASCII input synthesizes candidates, since `ß` uppercases to `SS`, which matches the pattern and burns a lookup.
+
+### F-3.1-15: `chr1` reports no variants for a window that has 17
+
+Severity: critical. Status: open, unfixed.
+
+`tools/ncbi_coordinate_overlap.py:214` and `:221` versus `:239-263`. Reports "no variants" for a real window when the chromosome is spelled `chr1`, the spelling its own normalizer claims to accept. `_normalize_chromosome` strips a `chr` prefix and is applied ONLY in the post-filter; `_build_search_term` interpolates the raw caller value, so `chr1[CH]` goes on the wire and dbVar matches nothing. Live, same window three spellings: chromosome `'1'` gives status ok, record_count 17, total_available 1892; chromosome `'chr1'` gives status empty, record_count 0; chromosome `'01'` gives status empty. Telling a clinician no structural variants overlap an interval when 17 do. `chromosome` has no format constraint and `chr1` is the more common spelling in genomics tooling. Related: `_chromosome_matches('MT','M')` and `('M','MT')` are both False, so mitochondrial queries silently return empty either way, and `_normalize_chromosome('chr')` returns empty string. Not caught because the unit tests mock the ESearch response, so the term actually sent is never exercised against a live index.
+
+### F-3.1-16: ELink's real error shape is classified as no results found
+
+Severity: critical. Status: open, unfixed.
+
+`tools/ncbi_transport.py:372-374`, surfacing at `ncbi_eutils_actions.py:754-755`. ELink's real error shape is classified as "no results found". ELink puts `ERROR` at the TOP level and makes `linksets` a LIST: `{"linksets":[],"ERROR":"Invalid db name specified: notadatabase"}`. The matched envelope is a list, so `isinstance(envelope, dict)` is False and the ERROR check is skipped, giving status ok, and `link()` then returns empty. Observed: status empty, record_count 0, error None. A hard API error reported to the agent loop as a confirmed zero-result answer, and `dbfrom`/`db` are unvalidated free strings so a plan-tier typo yields "there are no linked publications". Not caught because the test fixtures `{"linksets": {"ERROR": ...}}` with `linksets` as a DICT, a shape NCBI does not emit. Recorded explicitly: the test invented the shape that would have passed.
+
+### F-3.1-17: taxon is accepted and discarded, returning the wrong species' gene
+
+Severity: critical. Status: open, unfixed.
+
+`core/graph.py:1064-1071` cache key, `:1109-1117` hardcoded `human[orgn]`. `resolve_symbol_to_curie` accepts a taxon, discards the correct cross-species answer, and returns the human gene. The Datasets branch honours taxon but requires `taxname == "Homo sapiens"`; anything else falls through to an ESearch hardcoded to `human[orgn]`. Traced live: `dataset_report symbol=TRP53 taxon=mouse` returns the correct id 22059, symbol Trp53, Mus musculus, and that record is thrown away. `resolve_symbol_to_curie('TRP53', taxon='mouse')` returns NCBIGene:7157, human TP53. This is build phase 2.1's ortholog failure re-created one layer up, in resolution instead of generation. Separately the cache key omits taxon, so `BRCA1` resolved for human returns from cache for mouse with zero network calls. Not caught because no test calls the function with a non-default taxon.
+
+### F-3.1-18: unencoded query-string separators let caller values inject parameters
+
+Severity: major, a security finding. Status: open, unfixed.
+
+`tools/ncbi_transport.py:698`. Caller-supplied values inject arbitrary parameters into every E-utilities URL, confirmed honoured live. `quote(str(value), safe=":/=?&|+")` leaves `&` and `=` unencoded, so any value can append parameters. Live proof one: term `'BRCA1[sym] AND human[orgn]&retstart=500'` returns record_count 0 against a control of 1. Live proof two: `ids=['672&linkname=gene_pubmed_rif']` on a gene-to-pubmed link changes total_available from 7503 to 3006, and the module's own `dbto == params.db` guard still passes because the injected linkname still targets pubmed, so direct cross-references are silently swapped for the GeneRIF set with output that is indistinguishable. That reopens the module's own documented trap 3 through a different door. Path-segment values in the Datasets and PubChem modules correctly use `safe=""`; only the query-string builder is loose.
+
+### F-3.1-19: HTTP status codes are never read
+
+Severity: major. Status: open, unfixed.
+
+`tools/ncbi_eutils_actions.py:436-444`. The E-utilities path never reads `response.status_code`, so a 429 or 503 becomes a misleading non-actionable message and a 4xx with a good-looking body becomes status ok. Stubbed: HTTP 429 twice yields error "E-utilities response body is neither recognizable JSON nor XML ... refusing to guess its meaning". HTTP 503 identical. HTTP 400 carrying a valid-looking esearchresult yields status ok with record_count 3. Two defects: a server-side 429 or 5xx is reported as "your body was unparseable", pointing the next step at rewriting the request when the correct action is back off and retry, and `TransportRateLimitedError` with its family and retry_after is raised only by the CLIENT-side limiter, so a real NCBI 429 can never produce it, which `tool-call-budgets.md` explicitly forbids. The adversary hit this for real when a genuine HTTP 500 surfaced as that same string. No non-2xx fixture exists in the tests.
+
+### F-3.1-20: `fetch` on its own default schema returns one uncited multi-record blob
+
+Severity: major. Status: open, unfixed.
+
+`tools/ncbi_eutils_actions.py:653-663` and `:686-689`, defaults at `ncbi_efetch_schemas.py:212-213`. `fetch` on its own schema defaults returns one uncited multi-record blob and misreports record_count. Defaults are `rettype=docsum, retmode=json`, which for pubmed returns ESummary-shaped JSON, so the XML branch fails and the generic extractor builds ONE record holding the entire payload with id None and source_url None. Observed: 20 PMIDs give status ok, record_count 1, truncated False, source_url None, a 23,696 character blob containing all 20 records. Three problems: zero citations for 20 real articles passing the cite-or-refuse gate as ok, record_count 1 for 20 records, and `_cap_text` is never applied here, confirmed by a 200,000 character value surviving uncapped, violating the bounded-context-items gate. Every fetch test passes `retmode=xml` explicitly, so the default combination is untested.
+
+### F-3.1-21: PubChem confuses total failure with a clean empty result, and silently drops CIDs
+
+Severity: major. Status: open, unfixed.
+
+`tools/ncbi_pubchem_actions.py:334-348` and `:325`, `:350-357`. PubChem returns empty for the exact failure the cid path returns error for, and silently drops resolved CIDs. `lookup_type=name value=aspirin properties=['NotARealProperty']` gives status empty with error None, while `lookup_type=cid value=2244` with the same bad property gives status error "Invalid property". The name path resolves the CID, every fan-out property fetch 400s, each is swallowed by a `continue`, and all-fail collapses to empty. The graceful-degradation comment is right when some fetches succeed and wrong when all fail, and the code does not distinguish. Separately `cids[:5]` discards the remainder while `truncated` is computed as `len(records) > 100` and `total_available` is None, so 40 resolved CIDs report truncated False.
+
+### F-3.1-22: a retry issues a second request without a second rate-limiter acquisition
+
+Severity: major. Status: open, unfixed.
+
+`tools/ncbi_transport.py:787-789` versus `:824-861`. One rate-limiter acquisition, two HTTP requests: the retry escapes the pool. Counted with a stub: one `execute_get` issues 2 requests against a 0.333 s pacing interval. Usually survives by accident because the backoff is 1.0 s, but the retry is triggered BY a 429, so the moment NCBI rate-limits us the code issues a second unpaced request into the pool it is being throttled out of, and raising `NCBI_EUTILS_RPS`, which the module invites, makes the burst real. Nothing asserts requests-per-acquisition.
+
+### F-3.1-23: field tags scope only the last token of a multi-word term
+
+Severity: major. Status: open, unfixed.
+
+`tools/ncbi_eutils_actions.py:296-313`. `_apply_field_tags` scopes only the last token of a multi-word term, contradicting its own docstring. `_apply_field_tags("BRCA1 AND cancer", ["sym"])` gives `'BRCA1 AND cancer[sym]'`, so Entrez binds `[sym]` to the adjacent token only and BRCA1 runs unscoped across every indexed field. The two-tag form gives `'(BRCA1 AND cancer[sym] OR BRCA1 AND cancer[titl])'`, which Entrez reads with different precedence than intended. Same class as trap 1 in `docs/ncbi/Tool_implementation_mechanics.md`: a search the tool believes is scoped silently returning broad hits, arriving through a VALID tag. The term also escapes its own bracket: `_apply_field_tags("BRCA1] OR cancer[titl", ["sym"])`. No test exists; grep returns nothing and the only field_tags tests use single-token terms.
+
+### F-3.1-24: `total_available` reports the coarse prefilter count the module itself discredits
+
+Severity: major. Status: open, unfixed.
+
+`tools/ncbi_coordinate_overlap.py:480-487` and `:576-583`. `total_available` is the count from the prefilter the module exists to discredit. Observed record_count 17, total_available 1892, truncated True, where only 20 candidates were ever place-checked and 1892 is the coarse ESearch count the module's own docstring proves returns wrong-assembly matches. A reader takes it to mean 1892 variants overlap. The honest disclosure, 20 of 1892 candidates checked and 17 confirmed, is not expressible in the current output shape.
+
+### F-3.1-25: `record_count` means different things per action, and `search` bypasses the maxItems cap
+
+Severity: minor. Status: open, unfixed.
+
+`tools/ncbi_eutils_actions.py:493-503`. `record_count` means different things per action and `search` bypasses the records maxItems cap: for search `record_count = len(idlist)` while `len(records) == 1`, and a 500-id search puts 500 ids past a `max_length=100` the schema believes it enforces, since `_cap_fields` caps key count not list length.
+
+### F-3.1-26: a zero-id search reports ok and permanently poisons the symbol cache
+
+Severity: minor. Status: open, unfixed.
+
+`ncbi_eutils_actions.py:496-503` consumed at `core/graph.py:1125-1136`. A zero-id search is status ok, and that answer permanently poisons the symbol cache. Body `{"count":"7","idlist":[]}` gives status ok because empty is reserved for count 0, then resolution reads the empty idlist, takes the not-exactly-one branch, and caches a real gene as a confirmed non-resolution for the process lifetime. F-3.1-18's injection reaches this state deliberately. Related: a comment claims a cached None means both APIs answered, but only `search_output.status` is checked, so a Datasets error still yields cacheable True.
+
+### F-3.1-27: `coordinate_overlap` accepts inverted, negative and zero-length windows
+
+Severity: minor. Status: open, unfixed.
+
+`ncbi_efetch_schemas.py:265-270`, predicate at `ncbi_coordinate_overlap.py:266-268`. `coordinate_overlap` accepts inverted, negative and zero-length windows with no validation. `start=2000, end=1000` is accepted and produces `'1[CH] AND 2000:1000[BASE]'`. An inverted window makes the predicate False for everything, so it degrades to a confident status empty. A dbVar 0 bp insertion where `chr_end = chr_start - 1` is dropped by a single-base window.
+
+### Attacked and found solid
+
+Negative evidence is evidence. The following held under attack:
+
+- Path-segment quoting in the Datasets and PubChem modules, using `safe=""`.
+- The Datasets `reports` allowlist failing closed, confirming that earlier fix (F-3.1-07) genuinely landed.
+- EInfo-backed field_tags validation rejecting before any request.
+- `fetch` with explicit `retmode=xml` on a nonexistent PMID returning empty with no fabricated citation.
+- The XML classifier failing closed on truncated bodies, HTML error pages and unrecognized roots, and the bare-DOCTYPE correction behaving as intended.
+- The record URL pattern rejecting the eutils and api hosts.
+- The coordinate assembly prefix match and the chr2-answering-chr1 guard behaving as documented when the chromosome reaches the index.
+- No secret leakage anywhere across every probe.
+
+### Next target
+
+The adversary's stated next target: `_generic_summary_fields` as an untrusted-content channel, since it copies arbitrary upstream keys with no per-value length cap and no escaping into `NcbiEfetchRecord.fields`, is the default path for five databases and every non-XML fetch, and becomes live the moment the tool is wired into `act_node`.
 
 ## History
 
