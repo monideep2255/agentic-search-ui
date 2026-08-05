@@ -151,15 +151,19 @@ What would justify raising a tier or a rung back: a specific, cited miss. A defe
 
 ## Provider mapping
 
-Two providers, three capability bands each, and an identical five-rung effort ladder. This table is the only place a provider name appears in this document. Every tier reference elsewhere, in the stage table and in the model assignment table above, points back to a row here.
+Three providers, three capability bands each, and an identical five-rung effort ladder. This table is the only place a provider name appears in this document. Every tier reference elsewhere, in the stage table and in the model assignment table above, points back to a row here.
 
-| Tier | What it is for | Claude | Codex |
-|------|-----------------|--------|-------|
-| Depth | Architecture, hard debugging, long messy agentic work with many tradeoffs | Opus | Sol |
-| Balance | Normal development work, bounded construction, careful checking | Sonnet | Terra |
-| Speed | Quick lookups, extraction, classification, repetitive work | Haiku | Luna |
+| Tier | What it is for | Claude | Codex | Alternate backend |
+|------|-----------------|--------|-------|-------------------|
+| Depth | Architecture, hard debugging, long messy agentic work with many tradeoffs | Opus | Sol | See the local note |
+| Balance | Normal development work, bounded construction, careful checking | Sonnet | Terra | See the local note |
+| Speed | Quick lookups, extraction, classification, repetitive work | Haiku | Luna | See the local note |
 
-Effort ladder, identical on both providers: low, medium, high, extra high, max. Raise the rung as the task gets harder, low for quick and bounded work, max for the one hardest problem where maximum depth matters most.
+Effort ladder, identical on all three providers: low, medium, high, extra high, max. Raise the rung as the task gets harder, low for quick and bounded work, max for the one hardest problem where maximum depth matters most.
+
+The alternate backend is the metered fallback used when the primary provider's weekly budget is exhausted. Its model identifiers, prices and launch profiles are deliberately not written here: they name specific products and change monthly, which `writing-style` keeps out of tracked documentation and which would make this table stale by design. They live in a local, uncommitted note instead, `docs/build/multi-model-harness/Multi_model_harness_plan.md`, alongside the cadence visualization that shows how a phase moves across the two engines.
+
+One constraint from that arrangement does belong here, because it governs the cadence itself rather than the configuration: the fallback is scoped by role, not applied to a whole phase. Stages assigned Depth in the model assignment table above, decomposition, premise gate design, judge and adversary, do not fail over. A review run on the fallback records findings and closes nothing, and the phase does not reach stage 12 until those stages have run on the primary provider. This is the same evidence that held judge and adversary at Depth in the first place: a weaker review costs whole rounds, not just latency.
 
 Switching the harness to a different provider means editing this one table and nothing else. Nothing in the stage table, the model assignment table, or `Phase_6_execution_flow.html` names a product directly, so a provider swap is a single edit here, not a search-and-replace across every planning document. That indirection is the property that makes the harness portable.
 
