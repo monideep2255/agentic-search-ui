@@ -17,9 +17,11 @@ The second half is the one a reader will underestimate. `_KNOWN_GENE_SYMBOL_CURI
 
 The verify surface is `tests/system_03_search_agent/tools/test_ncbi_efetch_premise.py`, not a suite total.
 
-## Phase status: OPEN, stage 5 complete
+## Phase status: MERGED as PR #22 on 2026-08-05, re-review outstanding
 
-Opened 2026-08-04, immediately after build phase 3.0 merged. Stage 5, the blocking premise gate, was written and watched failing on 2026-08-05 at 15 of 16, with the failure direction verified. Thirteen tickets, no tool code yet.
+Opened 2026-08-04, immediately after build phase 3.0 merged. Stage 5, the blocking premise gate, was written and watched failing on 2026-08-05 at 15 of 16, with the failure direction verified. Merged 2026-08-05 at 1571 passed, 82 skipped, 1 xfailed, doc drift clean.
+
+The phase merged WITHOUT an adversarial pass over its own fix round, which was the stated pre-merge condition. That is a product-owner decision of 2026-08-05, recorded rather than hidden: twenty-two findings were fixed on the fixer's word and no independent role has confirmed any of them. The re-review is the first item on the next primary-provider session, ahead of the F-2.1-C15 branch and ahead of opening 3.2. Until it runs, treat every fix below as landed but unverified.
 
 ## Scale, stated at the top because it changes how this phase should run
 
@@ -123,35 +125,43 @@ The highest-risk omission, named in the gate itself rather than left to be disco
 
 ## Findings
 
+State vocabulary, added 2026-08-05 because the previous table used one word, `open`, for two genuinely different situations and a reader could not tell them apart:
+
+- `fix-landed`: a commit claiming to fix this finding has merged, and no independent role has confirmed it. This is NOT closed. Commit 59944bc landed 669 insertions across `ncbi_eutils_actions.py`, `ncbi_transport.py`, `ncbi_pubchem_actions.py`, `ncbi_coordinate_overlap.py`, `core/graph.py` and `harness/cache.py`, plus 32 new tests, and its message claims all twenty-seven findings. The per-finding detail sections further down still read `open, unfixed` because that same commit touched this file by only seven lines. Those detail lines predate the fix and are stale; this table is the current state.
+- `carried`: deliberately not fixed in this phase, with a named owner elsewhere.
+- `closed`: an independent re-review confirmed the fix. Nothing in this phase has reached this state yet.
+
+The gap between `fix-landed` and `closed` is the whole reason the re-review is the next primary-provider action. Do not read a `fix-landed` row as evidence the defect is gone.
+
 | ID | State | Summary |
 |----|-------|---------|
-| F-3.1-01 | open | Gene-symbol candidate extraction fires on every word in the query, and T-3.1-11 arms it |
-| F-3.1-02 | fixed | The coordinate overlap filter compared assembly and the overlap predicate but never the chromosome |
-| F-3.1-03 | fixed | Resolution caching stored every `None`, including one caused by a transient NCBI failure, as a permanent non-resolution |
-| F-3.1-04 | open | `ncbi_efetch` is never dispatched as an answer-bearing tool, only from inside entity resolution |
-| F-3.1-05 | fixed | The Datasets resolution path took `records[0]` with no ambiguity guard, while its own ESearch fallback refuses on more than one candidate |
-| F-3.1-06 | fixed | The unit suite made live NCBI calls, and its green depended on NCBI being up |
-| F-3.1-07 | fixed | Any 2xx Datasets body lacking a `reports` list collapsed to "empty" rather than "error" |
-| F-3.1-08 | open | Every PubChem record ships `source_url=None`, because the schema's host pattern does not admit `pubchem.ncbi.nlm.nih.gov` |
-| F-3.1-09 | open | A docstring claims the Act step already wraps every tool call in `harness.enforce_timeout`, which is false since `act_node` never dispatches this tool |
-| F-3.1-10 | open | `_generic_summary_fields` copies every response key for five databases with only a 40-key cap, no field-level filter |
-| F-3.1-11 | open | The tool registry gained `ncbi_efetch`, changing the stable prompt prefix, with no contract-version bump |
-| F-3.1-12 | open | Four minor gaps: an unretried 429, untested property-claiming comments, no coordinate range validator, no per-value character cap |
-| F-3.1-13 | open | `summary` fabricates a schema-valid citation for a nonexistent uid, since ESummary's per-uid error object has no allowlisted field |
-| F-3.1-14 | open | The live-lookup budget is consumed by ordinary English words matching the symbol pattern, so the real gene in the query is never looked up |
-| F-3.1-15 | open | `_build_search_term` sends the raw chromosome value, so a `chr1`-spelled window returns zero variants although 17 exist |
-| F-3.1-16 | open | ELink's top-level `ERROR` beside a list `linksets` is classified as a confirmed empty result, not an error |
-| F-3.1-17 | open | Non-human taxon resolution discards the correct cross-species record and returns the human gene, and the cache key omits taxon |
-| F-3.1-18 | open | Unencoded `&` and `=` in caller-supplied values inject arbitrary E-utilities parameters, confirmed to change results live |
-| F-3.1-19 | open | HTTP status codes are never read, so a 429 or 5xx is reported as an unparseable body and a 4xx with a good body reports ok |
-| F-3.1-20 | open | `fetch` on its own default schema (docsum, json) returns one uncited multi-record blob and misreports record_count |
-| F-3.1-21 | open | PubChem returns empty rather than error when every fan-out property fetch fails, and silently drops CIDs past the first 5 |
-| F-3.1-22 | open | A retry issues a second HTTP request without a second rate-limiter acquisition, escaping the throttle pool |
-| F-3.1-23 | open | `_apply_field_tags` scopes a field tag to only the last token of a multi-word term, so the rest runs unscoped |
-| F-3.1-24 | open | `total_available` reports the coarse ESearch prefilter count the module's own docstring says is unreliable |
-| F-3.1-25 | open | `record_count` means a different thing per action, and `search` bypasses the records maxItems cap entirely |
-| F-3.1-26 | open | A zero-id search reports status ok, permanently caching a real gene as a confirmed non-resolution |
-| F-3.1-27 | open | `coordinate_overlap` accepts inverted, negative and zero-length windows with no validation |
+| F-3.1-01 | fix-landed | Gene-symbol candidate extraction fires on every word in the query, and T-3.1-11 arms it |
+| F-3.1-02 | fix-landed | The coordinate overlap filter compared assembly and the overlap predicate but never the chromosome |
+| F-3.1-03 | fix-landed | Resolution caching stored every `None`, including one caused by a transient NCBI failure, as a permanent non-resolution |
+| F-3.1-04 | carried | `ncbi_efetch` is never dispatched as an answer-bearing tool, only from inside entity resolution |
+| F-3.1-05 | fix-landed | The Datasets resolution path took `records[0]` with no ambiguity guard, while its own ESearch fallback refuses on more than one candidate |
+| F-3.1-06 | fix-landed | The unit suite made live NCBI calls, and its green depended on NCBI being up |
+| F-3.1-07 | fix-landed | Any 2xx Datasets body lacking a `reports` list collapsed to "empty" rather than "error" |
+| F-3.1-08 | fix-landed | Every PubChem record ships `source_url=None`, because the schema's host pattern does not admit `pubchem.ncbi.nlm.nih.gov` |
+| F-3.1-09 | fix-landed | A docstring claims the Act step already wraps every tool call in `harness.enforce_timeout`, which is false since `act_node` never dispatches this tool |
+| F-3.1-10 | fix-landed | `_generic_summary_fields` copies every response key for five databases with only a 40-key cap, no field-level filter |
+| F-3.1-11 | fix-landed | The tool registry gained `ncbi_efetch`, changing the stable prompt prefix, with no contract-version bump |
+| F-3.1-12 | fix-landed | Four minor gaps: an unretried 429, untested property-claiming comments, no coordinate range validator, no per-value character cap |
+| F-3.1-13 | fix-landed | `summary` fabricates a schema-valid citation for a nonexistent uid, since ESummary's per-uid error object has no allowlisted field |
+| F-3.1-14 | fix-landed | The live-lookup budget is consumed by ordinary English words matching the symbol pattern, so the real gene in the query is never looked up |
+| F-3.1-15 | fix-landed | `_build_search_term` sends the raw chromosome value, so a `chr1`-spelled window returns zero variants although 17 exist |
+| F-3.1-16 | fix-landed | ELink's top-level `ERROR` beside a list `linksets` is classified as a confirmed empty result, not an error |
+| F-3.1-17 | fix-landed | Non-human taxon resolution discards the correct cross-species record and returns the human gene, and the cache key omits taxon |
+| F-3.1-18 | fix-landed | Unencoded `&` and `=` in caller-supplied values inject arbitrary E-utilities parameters, confirmed to change results live |
+| F-3.1-19 | fix-landed | HTTP status codes are never read, so a 429 or 5xx is reported as an unparseable body and a 4xx with a good body reports ok |
+| F-3.1-20 | fix-landed | `fetch` on its own default schema (docsum, json) returns one uncited multi-record blob and misreports record_count |
+| F-3.1-21 | fix-landed | PubChem returns empty rather than error when every fan-out property fetch fails, and silently drops CIDs past the first 5 |
+| F-3.1-22 | fix-landed | A retry issues a second HTTP request without a second rate-limiter acquisition, escaping the throttle pool |
+| F-3.1-23 | fix-landed | `_apply_field_tags` scopes a field tag to only the last token of a multi-word term, so the rest runs unscoped |
+| F-3.1-24 | fix-landed | `total_available` reports the coarse ESearch prefilter count the module's own docstring says is unreliable |
+| F-3.1-25 | fix-landed | `record_count` means a different thing per action, and `search` bypasses the records maxItems cap entirely |
+| F-3.1-26 | fix-landed | A zero-id search reports status ok, permanently caching a real gene as a confirmed non-resolution |
+| F-3.1-27 | fix-landed | `coordinate_overlap` accepts inverted, negative and zero-length windows with no validation |
 
 ## Judge round 1, 2026-08-05: FAIL
 
