@@ -51,7 +51,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 2.1 | `phase/2.1-cypher-tool` | cypher_query over Layer 1, schema slicing, validate-then-execute generation, edge-label enforcement | 2.0 | prototype | done | refined | | | |
 | 2.2 | `phase/2.2-write-step-grounding` | Deterministic cite-or-refuse, provenance for Layer 1 citations, the first trust signal, the two required tests | 2.1 | prototype | done | refined | | eval-harness | whole-repo security scan not yet run, F-2.2-T-01-residual, F-2.2-A-05 |
 | 3.0 | `phase/3.0-guardrail-node` | Full guardrail replacing the stub: validation, prompt-injection rejection, forbidden types, rate and cost pre-checks | 2.0 | v1 | done | refined | | | F-3.0-01 write category gap, T-3.0-07 blocked on the graph tunnel, T-3.0-08 needs its own slot |
-| 3.1 | `phase/3.1-ncbi-efetch` | ncbi_efetch over E-utilities and Datasets API v2 | 2.0, 3.0 | v1 | todo | tech_refine | | | |
+| 3.1 | `phase/3.1-ncbi-efetch` | ncbi_efetch over E-utilities and Datasets API v2 | 2.0, 3.0 | v1 | done | refined | | | |
 | 3.2 | `phase/3.2-ncbi-dbsnp` | ncbi_dbsnp over Variation Services, plus the dbVar two-step coordinate-overlap sub-tool | 3.1 | v1 | todo | tech_refine | | | |
 | 3.3 | `phase/3.3-enrichment-tools` | pubtator_annotate and litvar2_lookup, each with untrusted-source-reader separation | 3.1 | v1 | todo | tech_refine | | | relations endpoint unverified |
 | 3.4 | `phase/3.4-citation-trust-full` | Provenance extended to Layers 2 and 3, the two-tier risk gate, freshness and conflict resolution | 2.2, 3.1, 3.2, 3.3, 3.5 | v1 | todo | tech_refine | | eval-harness | |
