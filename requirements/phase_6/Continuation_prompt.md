@@ -9,7 +9,8 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 - [Which session to open, before anything else](#which-session-to-open-before-anything-else)
 - [Read before opening the next phase](#read-before-opening-the-next-phase)
 - [Build phase 3.0, done](#build-phase-30-done)
-- [What build phase 3.1 delivers, and where it already stands](#what-build-phase-31-delivers-and-where-it-already-stands)
+- [Build phase 3.1, done](#build-phase-31-done)
+- [What build phase 3.2 delivers](#what-build-phase-32-delivers)
 - [What Step 6.2 delivers, later](#what-step-62-delivers-later)
 - [Open items](#open-items)
 - [Handover](#handover)
@@ -57,9 +58,9 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Write build phase 3.1's premise gate, `tests/system_03_search_agent/tools/test_ncbi_efetch_premise.py`, and watch it fail. Stage 5, BLOCKING, primary provider only. Branch `phase/3.1-ncbi-efetch` already exists with twelve tickets decomposed and no tool code.
+> Open build phase 3.2 (`ncbi_dbsnp`). Branch `phase/3.1-ncbi-efetch` has a pull request open with all fixes applied and the premise restated. The answer-path half (Act-step wiring, Layer 2 citation, trust gate) is carried to T-3.1-28 for a later 3.x phase. Read `tracker/phase_3.1.md` first, then `bossman-checkpoint-phase-3.1.md` for the full handoff.
 
-Seven build phases are done and merged into `main`. The first six complete the Step 6.1 prototype group; 3.0 is the first Step 6.3 v1 phase:
+Eight build phases are done and merged into `main`. The first six complete the Step 6.1 prototype group; 3.0 and 3.1 are the first two Step 6.3 v1 phases:
 
 | Phase | Delivered | PR |
 |-------|-----------|-----|
@@ -70,19 +71,21 @@ Seven build phases are done and merged into `main`. The first six complete the S
 | 2.1 | cypher_query over Layer 1, first live graph access | #15 |
 | 2.2 | Deterministic cite-or-refuse, Layer 1 provenance, the first trust signal | #18 |
 | 3.0 | The full Section 10 guardrail, replacing the passthrough stub | #19 |
+| 3.1 | ncbi_efetch, the first Layer 2 tool: seven actions across three API families, live gene-symbol resolution replacing the one-entry hardcoded table | PR open on `phase/3.1-ncbi-efetch`, not yet merged |
 
 Current counts, stated once here:
 
-- Python tests: 1324
+- Python tests: 1654
 - Frontend tests: 120
 - Playwright end-to-end tests: 3
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
 - Premise gate, guardrail: 20 of 20
-- Decisions logged: 210
-- Learnings entries: 48, plus a retrospective
+- Premise gate, ncbi_efetch: 19 passed, 1 skipped (tunnel)
+- Decisions logged: 219
+- Learnings entries: 53, plus a retrospective
 
-Next is build phase 3.1, `ncbi_efetch`, the first Layer 2 tool. It depends on 2.0 and 3.0, both merged. It is ALREADY OPEN on branch `phase/3.1-ncbi-efetch` at stage 3: twelve tickets are decomposed in `tracker/phase_3.1.md` and no tool code exists. Stage 5, the blocking premise gate, has not started.
+Next is build phase 3.2, `ncbi_dbsnp`, the second Layer 2 tool. It depends on 3.0 and 3.1, both merged (or 3.1's PR open). The build phase 3.1 tool surface is complete: seven actions across three API families, live gene-symbol resolution, and 27 findings fixed across judge and adversary rounds. The answer-path half (Act-step wiring, Layer 2 citation, trust gate) is carried to T-3.1-28 for a later 3.x phase.
 
 Step 6.2 moved on 2026-08-03. It now runs AFTER the 3.x tool phases rather than between 2.2 and 3.0, because its own written reasoning names 3.x as the code its security scan most exists for, and because reconciling the frozen documents after the tool phases is better input than reconciling before them. Its security scan is separately PAUSED INDEFINITELY on cost, with one condition that turns it back on: exposure. First contact with a real user, a deploy, or a public URL triggers it, whichever comes first.
 
@@ -116,11 +119,11 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 In this order:
 
-1. `tracker/phase_3.1.md`. The phase is already open and decomposed, so this is the current state, not a starting point to re-derive. It leads with the phase's scale for a reason, and with a recommended build order that front-loads the gene-symbol resolution.
-2. `requirements/Technical_specification.md` Section 6.2, the `ncbi_efetch` specification, plus Section 21.1 for the rate limits. Section 25 for the build order.
-3. `docs/ncbi/Tool_implementation_mechanics.md`, the `ncbi_efetch` trap list. The load-bearing one: E-utilities returns HTTP 200 for a genuinely empty result AND for several error classes, so every E-utilities action decides its status from the response BODY, never the HTTP status. Datasets v2 and PubChem are the exact opposite and branch on status. Both conventions live on the same tool.
-4. `LEARNINGS.md`, filtered to the tool-phase and model-generated-output entries. `docs/build/Build_workflow_cadence.md` stage 5's blocking premise gate applies to every tool phase from 3.1 to 3.5.
-5. `docs/build/Build_velocity_post_mortem.md`, for the measured account of what the build process costs. Note its 2026-08-04 correction: the pre-flight check it recommends covers the product's model provider only and does NOT cover agent dispatch, which is the more expensive of the two to lose.
+1. `tracker/phase_3.2.md`. Create it by decomposing Section 6.3 of the technical specification. Read `tracker/phase_3.1.md` first for the transferable lessons: capture fixtures from live responses, never author them from a reading of the docs.
+2. `requirements/Technical_specification.md` Section 6.3, the `ncbi_dbsnp` specification, plus Section 21.1 for the rate limits. Section 25 for the build order.
+3. `docs/ncbi/Tool_implementation_mechanics.md`, the per-tool trap list. The load-bearing one for 3.2: `global_mafs` is an array, not a scalar, and the dbSNP clinical fetch runs sequentially after Variation Services normalization.
+4. `LEARNINGS.md`, filtered to the tool-phase and model-generated-output entries. `docs/build/Build_workflow_cadence.md` stage 5's blocking premise gate applies to every tool phase from 3.2 to 3.5.
+5. `docs/build/Build_velocity_post_mortem.md`, for the measured account of what the build process costs.
 
 ## Build phase 3.0, done
 
@@ -150,26 +153,39 @@ Three defects are worth carrying forward as patterns rather than as fixed bugs:
 
 Two tickets did not land and are carried, both on `tracker/BOARD.md` with dated positions: T-3.0-07 (clearing the F-2.1-J4-02 xfail needs the graph tunnel, which cannot be opened from this environment) and T-3.0-08 (F-2.1-C15's generation half, untouched, now dated to immediately after 3.1 merges).
 
-## What build phase 3.1 delivers, and where it already stands
+## Build phase 3.1, done
 
-Branch: `phase/3.1-ncbi-efetch`, already cut. Depends on 2.0 and 3.0, both merged. From Section 25:
+Fix round applied 2026-08-05 on the alternate backend, pull request open on `phase/3.1-ncbi-efetch`, not yet merged. The answer-path half (Act-step wiring, Layer 2 citation, trust gate) is carried to T-3.1-28 by the product owner's decision.
 
-> `ncbi_efetch` (E-utilities for PubMed, ClinVar, OMIM; Datasets API v2 for Gene, Genome, Orthologs, Taxonomy)
+What shipped: the `ncbi_efetch` tool, seven actions across three API families. E-utilities body-inspecting actions (search, summary, fetch, link), Datasets v2 gene/genome reports (status-coded), PubChem PUG REST property lookup (status-coded), and a five-step dbVar/ClinVar coordinate-overlap procedure with live-verified chromosome normalization. Live gene-symbol resolution via NCBI Datasets v2 and ESearch, replacing the one-entry hardcoded table. The premise gate: 19 passed, 1 skipped (tunnel).
 
-Current state: stage 3 complete. Twelve tickets decomposed in `tracker/phase_3.1.md`, branch cut, NO tool code written. Stage 5, the blocking premise gate, has not started.
+Release gate outcome:
 
-Why this phase matters more than its position in the order suggests: it owns finding F-2.1-07. `_KNOWN_GENE_SYMBOL_CURIES` (`core/graph.py:839`) holds exactly one entry, `BRCA1`, so "What diseases are linked to TP53?" resolves nothing and answers nothing today. That is the single thing standing between this repo and a prototype that can be shown to a person, and `tracker/phase_3.1.md`'s recommended build order front-loads it deliberately.
+| Gate | Result |
+|------|--------|
+| Premise gate | 19 passed, 1 skipped (tunnel-gated case 16) |
+| Python suite | 1571 passed, 82 skipped, 1 xfailed |
+| `ruff check src/` | Clean |
+| Judge round 1 | FAIL, 11 findings. 5 fixed and verified |
+| Adversary round 1 | 15 findings, 5 critical. All 15 fixed |
+| Fix round | 27 findings fixed across both rounds. 21 patches applied |
+| Doc drift | 0 stale, 0 structural |
+| Re-review | NOT RUN (fixer cannot close own findings; needs a primary-provider session) |
 
-Read `tracker/phase_3.1.md` before touching anything. It leads with the phase's scale, which is wider than 2.1 on every axis: seven actions, three API families, fourteen databases accepted by `search`, eight with a verified per-database field set, and two error conventions that are exact opposites. 2.1 was one tool, one action, one host, and it took four days and five review rounds.
+The phase's premise was restated to what 3.1 actually delivers rather than silently edited to match the current state. The original premise's first half (the answer-path) is carried to T-3.1-28.
 
-### Live ground truth captured 2026-08-04, before the phase opened
+Transferable lessons for the remaining tool phases:
+- Capture fixtures from live responses, never author them from a reading of the docs. Two of the criticals were hidden by fixtures hand-written from documentation, which tested the author's belief rather than the interface.
+- A tool that talks to a live external API needs an adversary who probes the actual API, not just a judge who reads the code. Every critical came from the gap between what the API actually returns and what someone believed it returns.
+- The E-utilities body-versus-status trap is real and must be structurally enforced, not just documented. The two classifiers have deliberately different signatures so a misuse is a TypeError at the call site.
 
-Measured against the real endpoints so the premise gate does not have to rediscover it. Every value carries the date it was read; when one moves, re-verify it, never weaken the assertion.
+## What build phase 3.2 delivers
 
-- `NCBI_API_KEY` is now populated in `.env`. Verified authenticating, and it matters here: unauthenticated, a burst returned HTTP 429 on the FOURTH request, confirming the 3 requests/second figure exactly. Authenticated, 8 concurrent requests all returned 200 in 0.38 seconds.
-- Stated precisely rather than conveniently, because `.claude/rules/tool-call-budgets.md` records an unresolved 3/10-versus-100-per-second conflict and warns against picking the convenient number: that burst is roughly 21/second instantaneous, which is above BOTH the 3/second and 10/second figures, but a short burst does not establish a sustained rate. It settles that 3/second is superseded once authenticated. It does not settle 10 versus 100. Do not lock a throttle constant on this evidence alone.
-- Gene symbol resolution, the F-2.1-07 case, confirmed by two independent endpoints: ESearch on the `gene` database for `TP53[sym] AND human[orgn]` returns exactly one id, `7157`; Datasets v2 `gene/symbol/TP53/taxon/human` returns `gene_id 7157`, `taxname "Homo sapiens"`. ESummary on `7157` gives name `TP53`, description `tumor protein p53`, chromosome `17`.
-- Both HTTP-200 traps reproduced, which is the load-bearing finding for this tool. An invalid database name returns **HTTP 200** with `esearchresult.ERROR` set to `Invalid db name specified: notadatabase`. EFetch on a nonexistent PMID returns **HTTP 200** with an empty `<PubmedArticleSet></PubmedArticleSet>` and no error node at all. A genuine zero-hit search returns HTTP 200, `count` `0`, an empty `idlist`, and NO `ERROR` key. Three different outcomes, one status code, distinguishable only by the body.
+From Section 25:
+
+> `ncbi_dbsnp` (dbSNP REST API for rs identifiers, Variation Services for normalization, clinical significance)
+
+Depends on 3.0 and 3.1. Read `docs/ncbi/Tool_implementation_mechanics.md` for the per-tool traps: `global_mafs` is an array, not a scalar, and the clinical fetch runs sequentially after Variation Services normalization.
 
 ## What Step 6.2 delivers, later
 
@@ -234,4 +250,4 @@ If a different agent takes over, read the "Running this project with a different
 
 One operational note that cost real time on 2026-08-03 and is not obvious from any other file: this machine's network dropped three times in one session, killing two premise-gate runs and three review agents, and every failure they produced looked like a code defect at first glance. Before diagnosing any model-dependent failure, check reachability with `curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v1/models`. An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all. A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-08-04.
+Last updated: 2026-08-05.

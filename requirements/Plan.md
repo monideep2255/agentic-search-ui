@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-08-04.
+Kick-off: 2026-05-06. Last updated: 2026-08-05.
 
 ## Status at a glance
 
@@ -14,10 +14,10 @@ Kick-off: 2026-05-06. Last updated: 2026-08-04.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE, all six build phases merged. Step 6.3 (build v1) underway from build phase 3.0. Build phase 1.0 (FastAPI skeleton, typed event contract) merged as PR #5. Build phase 1.1 (auth service, six-table user-data schema) merged as PR #6. Build phase 2.0 (five-node LangGraph loop, three-tier harness) merged as PR #9. Build phase 1.2 (React shell, SSE, chat UI) merged as PR #12. Build phase 2.1 (`cypher_query` over Layer 1, the first live graph access) merged as PR #15 on 2026-08-01, closed after five judge passes and five adversary passes, with the process changes it forced merged separately as PR #16. Build phase 2.2 (deterministic cite-or-refuse, Layer 1 provenance, the first trust signal) merged as PR #18 on 2026-08-03, completing the Step 6.1 prototype group. Build phase 3.0 (the full Section 10 guardrail, replacing the passthrough stub) merged as PR #19 on 2026-08-04, the first Step 6.3 v1 phase, after one judge round that returned FAIL with all 34 acceptance criteria individually passing and one adversary round that filed eight findings. Next up: build phase 3.1, `ncbi_efetch`, ALREADY OPEN on branch `phase/3.1-ncbi-efetch` at stage 3 with twelve tickets decomposed and no tool code written. It owns finding F-2.1-07, the one-entry gene-symbol table, which is what stands between this repo and a prototype that can be shown to a person. Immediately after 3.1 merges: the `fix/c15-generation-bound` branch, dated by the product owner on 2026-08-04. Step 6.2 moved to run after the 3.x tool phases, and its security scan is paused indefinitely on cost |
+| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE, all six build phases merged. Step 6.3 (build v1) underway. Build phases 1.0 to 3.0 merged as PRs #5, #6, #9, #12, #15, #18, #19. Build phase 3.1 (`ncbi_efetch`, the first Layer 2 tool) has a pull request open on `phase/3.1-ncbi-efetch` with all fixes applied and the premise restated. The answer-path half (Act-step wiring, Layer 2 citation, trust gate) is carried to T-3.1-28. Next up: build phase 3.2, `ncbi_dbsnp`. Step 6.2 moved to run after the 3.x tool phases, and its security scan is paused indefinitely on cost |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 210 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 219 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -507,7 +507,7 @@ Status: IN PROGRESS. Five build phases done and merged:
 - 2.2 (PR #18, 2026-08-03)
 - 3.0 (PR #19, 2026-08-04)
 
-Next up: build phase 3.1, `ncbi_efetch`, already open on branch `phase/3.1-ncbi-efetch` at stage 3. Build phase 3.0 (the full Section 10 guardrail) merged as PR #19 on 2026-08-04. Build phase 2.2 closed 2026-08-03 and completed the Step 6.1 prototype group. Step 6.2 moved on 2026-08-03 to run after the 3.x tool phases, since its own reasoning names 3.x as the code its security scan most exists for, and reconciling the frozen documents after the tool phases is better input than reconciling before them. That scan is separately paused indefinitely on cost, with exposure as the one condition that turns it back on. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
+Next up: build phase 3.2, `ncbi_dbsnp`. Build phase 3.1 (`ncbi_efetch`) has a fix round applied and a pull request open on `phase/3.1-ncbi-efetch`, not yet merged. Build phase 3.0 (the full Section 10 guardrail) merged as PR #19 on 2026-08-04. Build phase 2.2 closed 2026-08-03 and completed the Step 6.1 prototype group. Step 6.2 moved on 2026-08-03 to run after the 3.x tool phases, since its own reasoning names 3.x as the code its security scan most exists for, and reconciling the frozen documents after the tool phases is better input than reconciling before them. That scan is separately paused indefinitely on cost, with exposure as the one condition that turns it back on. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
 
 Goal: build System 3 using bossman-mode. Agent teams execute, I orchestrate.
 
@@ -783,6 +783,7 @@ This keeps the build stable while allowing continuous learning. Parked does not 
   - Documents touched: `docs/build/Build_workflow_cadence.md` (an alternate-backend column on the provider mapping table plus the role-scoping rule), `.claude/skills/bossman-mode/SKILL.md` (per-dispatch model choice is inert on that backend, and a phase is never opened there), `requirements/phase_6/Continuation_prompt.md` (which session to open for which stage), and a new `docs/build/README.md`. Model identifiers, prices, launch commands and the credential path are deliberately in a local uncommitted note, since they name products and go stale in weeks.
   - Not touched, and stated so nobody goes looking: `requirements/PRD.md` and `requirements/Technical_specification.md` are locked and describe the product, not the harness that builds it. The product's own Guard, Plan and Synth runtime tiers are a separate concept and are unchanged; they are still chosen by the build phase 7.0 model-bench.
 
+- 2026-08-05: Build phase 3.1 (`ncbi_efetch`), the first Layer 2 tool, fix round applied. Pull request open on `phase/3.1-ncbi-efetch`, not yet merged. 27 findings fixed across one judge round and one adversary round. The phase premise was restated to what 3.1 actually delivers: the answer-path half (Act-step wiring, Layer 2 citation, trust gate) is carried to T-3.1-28 by product owner decision. 1571 Python tests passing, 82 skipped, 1 xfailed. Premise gate: 19 passed, 1 skipped (tunnel). Doc drift clean.
 - 2026-08-04: Build phase 3.0, the full Section 10 guardrail, merged as PR #19. Build phase 3.1 opened.
   - What shipped: the phase 2.0 passthrough stub, which made a throwaway model call and emitted a hardcoded `passed=True` for every query, replaced by Section 10.1's pipeline. The cheap non-LLM pre-filter (10.2), boundary validation closed to spec (10.3), Guard-tier classification of injection and off-topic (10.4), and the forbidden-type and read-only screen (10.5). New `guardrail/` package, 148 unit tests across six files.
   - Release gate: premise gate 20 of 20, re-run after every fix round. Python suite 1261 passed, 62 skipped, 1 xfailed. `ruff check src/` clean. Doc drift 0 stale, 0 structural.

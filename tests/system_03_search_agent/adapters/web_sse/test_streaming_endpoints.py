@@ -112,6 +112,29 @@ def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
 
 
 @pytest.fixture(autouse=True)
+def _stub_symbol_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Finding 4 (MAJOR, re-review, build phase 3.1): `_create_body`'s
+    default query text names BRCA1 by symbol, and `core.graph.
+    resolve_symbol_to_curie` is a live NCBI call (T-3.1-11). This file
+    drives the real graph loop through `RunRegistry`, so without a
+    stand-in a plain `pytest tests/ -q` run reached out to
+    `api.ncbi.nlm.nih.gov` for real, silently burning E-utilities quota
+    and making the suite's green depend on NCBI being up. Same fix
+    `test_graph.py`, `test_run.py`, and `test_query_endpoint.py` already
+    apply, for the identical reason; this file was the one agent-loop
+    test file that had not received it.
+    """
+    from system_03_search_agent.core import graph as graph_module
+
+    known = {"BRCA1": "NCBIGene:672", "TP53": "NCBIGene:7157"}
+
+    async def _fake_resolve_symbol_to_curie(symbol: str, **kwargs: object) -> str | None:
+        return known.get(symbol.strip().upper())
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _fake_resolve_symbol_to_curie)
+
+
+@pytest.fixture(autouse=True)
 def _auth_secret(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AUTH_SECRET", _TEST_AUTH_SECRET)
 

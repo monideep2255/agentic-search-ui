@@ -7,12 +7,18 @@ Depends on:
       system-role message. This module does not import harness.py; the
       dependency runs the other direction (harness.py's docstring names
       this ticket as the eventual source of that string).
+    - system_03_search_agent.tools.cypher_schemas (CypherQueryInput,
+      for `REGISTERED_TOOL_SCHEMAS`'s cypher_query entry; T-3.1-12)
+    - system_03_search_agent.tools.ncbi_efetch_schemas (NcbiEfetchInput,
+      for `REGISTERED_TOOL_SCHEMAS`'s ncbi_efetch entry; T-3.1-12)
 
 Reads:
     - Nothing at runtime. `SYSTEM_INSTRUCTIONS` and `_BIOLINK_CONCEPT_SCHEMA`
       are static string constants fixed in code, per prompt-cache-
       discipline.md obligation 3 (no live per-request source for anything
-      that belongs in the stable prefix).
+      that belongs in the stable prefix). `REGISTERED_TOOL_SCHEMAS` is
+      likewise built once at import time from the two imported models'
+      own `model_json_schema()`, never re-derived per call.
 
 Writes:
     - Nothing. Pure string assembly, no side effects.
@@ -39,12 +45,27 @@ the tech spec's prose and the live graph is unresolved and should be
 reconciled against Technical_specification.md Section 4.2 in a future
 phase; this module's docstring flags it rather than silently picking one
 number.
+
+Tool registry note (T-3.1-12, cache.py half): `REGISTERED_TOOL_SCHEMAS`
+below is the first fixed-in-code content ever added to the tool-schema
+slot. As of T-3.1-12's other half (`core.graph`, 2026-08-05), both
+registered tools actually reach a model's prompt: `core.graph`'s
+module-level `_STABLE_PREFIX = build_stable_prefix(list(
+REGISTERED_TOOL_SCHEMAS))` now passes this tuple through, closing the gap
+this note used to record, that `cypher_query` had been live since build
+phase 2.1 and still never reached the tool-schema slot. This module only
+builds the fixed, alphabetically-ordered content; `core.graph` owns
+threading it into the live call.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+from typing import Any, Final
+
+from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
+from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
 
 # ---------------------------------------------------------------------------
 # Section 1: system instructions and behavioral directives.
@@ -96,6 +117,73 @@ def _build_tool_schema_section(tool_schemas: list[dict] | None) -> str:
         json.dumps(schema, sort_keys=True) for schema in sorted_schemas
     )
     return f"{_TOOL_SCHEMAS_START}\n{serialized}\n{_TOOL_SCHEMAS_END}"
+
+
+# ---------------------------------------------------------------------------
+# Section 2a: the fixed, code-level tool registry (T-3.1-12).
+#
+# `Technical_specification.md` Section 4.2 names the eventual registry:
+# "tool schemas for the seven registered tools, frozen and deterministically
+# sorted by tool name (clinicaltrials_search, cypher_query, litvar2_lookup,
+# ncbi_dbsnp, ncbi_efetch, pathogen_detection, pubtator_annotate)". Two of
+# those seven tools exist in this repo as of this ticket; the other five are
+# added here, one tuple entry at a time, as each one's own build phase lands.
+# Never assembled from a live directory scan or an import-time registry
+# discovery mechanism: prompt-cache-discipline.md obligation 3 forbids a
+# per-request source for anything in the stable prefix, and a scan-based
+# registry would still be exactly that even though today's inputs (imported
+# classes) happen to be static, because "static today" is not the same
+# guarantee as "structurally incapable of drifting between two requests in
+# the same session".
+#
+# Each entry's `input_schema` is `model_json_schema()` on the tool's own
+# pydantic input model, so the schema shown to the model is generated from
+# the same validated contract the tool actually enforces, never a hand-
+# written paraphrase that can drift out of sync with it. Listed here in
+# alphabetical order by tool name, matching obligation 2's "sorted
+# alphabetically ... and fixed in code": `_build_tool_schema_section` above
+# re-sorts by name regardless of the order this tuple is written in, so this
+# ordering is documentation of intent, not the sole enforcement point. When
+# a third tool is added, insert it in alphabetical position: `ncbi_efetch`
+# sorts after `cypher_query` and before `ncbi_dbsnp` (not yet built).
+#
+# F-3.1-11 (judge finding 11, MAJOR): TOOL_REGISTRY_VERSION records the
+# contract version of the registered tool set. Adding or removing a tool
+# must bump this version, per system-design-patterns pattern 10: a tool-
+# registry change is coordinated with a contract-version bump, never silent.
+# Currently v2: cypher_query (v1) + ncbi_efetch (v2).
+# ---------------------------------------------------------------------------
+
+TOOL_REGISTRY_VERSION: Final[str] = "v2"
+
+REGISTERED_TOOL_SCHEMAS: Final[tuple[dict[str, Any], ...]] = (
+    {
+        "name": "cypher_query",
+        "description": (
+            "Query the pre-ingested Layer 1 knowledge graph, 115 million "
+            "nodes and 693 million edges merged from 5 NCBI databases, "
+            "with a structured intent that is compiled to Cypher and "
+            "executed read-only against the AGE graph. Use for questions "
+            "the graph already covers: gene-disease associations, "
+            "variant annotations, and relationships already ingested "
+            "from NCBI Gene, ClinVar, dbVar, PubMed, and MedGen."
+        ),
+        "input_schema": CypherQueryInput.model_json_schema(),
+    },
+    {
+        "name": "ncbi_efetch",
+        "description": (
+            "Reach a live NCBI API for data not yet in the graph, or for "
+            "real-time confirmation of a graph value. Seven actions "
+            "across three API families, selected by the action field: "
+            "search, summary, fetch, and link over E-utilities; "
+            "dataset_report over the Datasets API v2; coordinate_overlap "
+            "against dbVar or ClinVar; and pubchem_property against "
+            "PubChem PUG REST."
+        ),
+        "input_schema": NcbiEfetchInput.model_json_schema(),
+    },
+)
 
 
 # ---------------------------------------------------------------------------

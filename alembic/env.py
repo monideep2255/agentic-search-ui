@@ -35,7 +35,20 @@ from system_03_search_agent.data.base import Base, get_user_db_url
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # `disable_existing_loggers=False` is load-bearing and must not be dropped
+    # back to the default. fileConfig defaults it to True, which sets
+    # `.disabled = True` on every logger that already exists and is not named
+    # in alembic.ini, silently and permanently, for the life of the process.
+    #
+    # Found 2026-08-05 during build phase 3.1. Two of the transport's tests
+    # passed alone and failed in the full suite, and the cause was that
+    # importing this module ran fileConfig and killed
+    # `system_03_search_agent.tools.ncbi_transport`'s logger. The symptom was a
+    # test going blind, but the defect is not a test defect: anything that
+    # imports or runs migrations in-process silences every module logger
+    # already imported, including the tool-call audit trail that
+    # `production-standards.md`'s observability gate requires.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Resolved at runtime from the environment, never hardcoded in alembic.ini.
 config.set_main_option("sqlalchemy.url", get_user_db_url())

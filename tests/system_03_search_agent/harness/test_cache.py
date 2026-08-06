@@ -1,13 +1,17 @@
-"""Tests for the prompt-cache stable-prefix scaffold (T-2.0-06).
+"""Tests for the prompt-cache stable-prefix scaffold (T-2.0-06), plus the
+fixed tool registry T-3.1-12 adds to it.
 
 Depends on:
     - system_03_search_agent.harness.cache (build_stable_prefix,
-      prefix_sha256, and the module's internal section markers, imported
-      only to assert marker ordering/positioning, never to duplicate the
-      assembly logic under test)
+      prefix_sha256, REGISTERED_TOOL_SCHEMAS, and the module's internal
+      section markers, imported only to assert marker ordering/positioning
+      or registry content, never to duplicate the assembly logic under
+      test)
 """
 
 from __future__ import annotations
+
+import json
 
 import pytest
 
@@ -17,6 +21,7 @@ from system_03_search_agent.harness.cache import (
     _GRAPH_SCHEMA_START,
     _TOOL_SCHEMAS_END,
     _TOOL_SCHEMAS_START,
+    REGISTERED_TOOL_SCHEMAS,
     SYSTEM_INSTRUCTIONS,
     build_stable_prefix,
     prefix_sha256,
@@ -282,3 +287,128 @@ def test_build_stable_prefix_has_no_dynamic_suffix_parameter() -> None:
     """
     with pytest.raises(TypeError):
         build_stable_prefix(tool_schemas=None, dynamic_suffix="anything")  # type: ignore[call-arg]
+
+
+# ---------------------------------------------------------------------------
+# T-3.1-12: the fixed, code-level tool registry (REGISTERED_TOOL_SCHEMAS).
+#
+# These tests exercise the registry's actual content, not synthetic
+# `{"name": ...}` stand-ins, closing the gap `prompt-cache-discipline.md`'s
+# "How to verify" section names: a byte-equality assertion proven only
+# against placeholder content would not catch a real schema (e.g. a
+# `model_json_schema()` call that quietly started embedding something
+# volatile) from breaking the stable-prefix guarantee.
+# ---------------------------------------------------------------------------
+
+
+def test_registered_tool_schemas_is_fixed_in_code_as_a_tuple() -> None:
+    """A tuple, not a list: this registry must not be the kind of thing a
+    caller can `.append()` to at runtime, which is the concrete form
+    obligation 1's "the tool list never changes mid-session" takes here.
+    """
+    assert isinstance(REGISTERED_TOOL_SCHEMAS, tuple)
+    for schema in REGISTERED_TOOL_SCHEMAS:
+        assert isinstance(schema, dict)
+        assert "name" in schema
+
+
+def test_registered_tool_schemas_contains_exactly_the_two_built_tools() -> None:
+    """Only `cypher_query` and `ncbi_efetch` exist as of this ticket. The
+    other five names Technical_specification.md Section 4.2 reserves
+    (`clinicaltrials_search`, `litvar2_lookup`, `ncbi_dbsnp`,
+    `pathogen_detection`, `pubtator_annotate`) are not yet built and must
+    not appear here as placeholders.
+    """
+    names = [schema["name"] for schema in REGISTERED_TOOL_SCHEMAS]
+    assert names == ["cypher_query", "ncbi_efetch"], (
+        f"expected exactly [cypher_query, ncbi_efetch] in that order, got {names!r}"
+    )
+
+
+def test_registered_tool_schemas_written_in_alphabetical_order() -> None:
+    """obligation 2: sorted alphabetically and fixed in code. This checks
+    the registry's OWN written order (not `_build_tool_schema_section`'s
+    defensive re-sort, which the earlier tests in this file already cover
+    against synthetic input), since a registry that relies entirely on the
+    re-sort to be correct is not itself "fixed in code" in the sense the
+    rule means.
+    """
+    names = [schema["name"] for schema in REGISTERED_TOOL_SCHEMAS]
+    assert names == sorted(names)
+
+
+def test_registered_tool_schemas_ncbi_efetch_input_schema_matches_the_model() -> None:
+    """The registered `ncbi_efetch` entry's `input_schema` is generated
+    from `NcbiEfetchInput.model_json_schema()`, the same validated
+    contract the tool itself enforces, never a hand-written paraphrase
+    that can silently drift out of sync with it.
+    """
+    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
+
+    entry = next(s for s in REGISTERED_TOOL_SCHEMAS if s["name"] == "ncbi_efetch")
+    assert entry["input_schema"] == NcbiEfetchInput.model_json_schema()
+
+
+def test_registered_prefix_byte_identical_across_differing_dynamic_suffixes() -> None:
+    """The rule's own required proof (`prompt-cache-discipline.md`'s "How
+    to verify"), run against the REAL registered content rather than a
+    synthetic stand-in: a SHA-256 over the assembled prefix must be
+    identical across two requests whose dynamic suffix differs.
+    """
+    tool_schemas = list(REGISTERED_TOOL_SCHEMAS)
+
+    prefix_call_one = build_stable_prefix(tool_schemas)
+    prefix_call_two = build_stable_prefix(tool_schemas)
+
+    messages_one = _fake_messages(prefix_call_one, "current query: BRCA1 variants")
+    messages_two = _fake_messages(prefix_call_two, "current query: gene TP53 orthologs")
+
+    assert messages_one != messages_two
+    assert prefix_sha256(messages_one[0]["content"]) == prefix_sha256(
+        messages_two[0]["content"]
+    )
+    assert messages_one[0]["content"] == messages_two[0]["content"]
+
+
+def test_prefix_from_registered_tool_schemas_is_byte_identical_across_repeated_calls() -> None:
+    """Adding `ncbi_efetch` to the registry must be the ONLY prefix change
+    this ticket makes. Two independent `build_stable_prefix` calls given
+    the same registry content must produce byte-identical output, proven
+    by SHA-256 rather than `==` alone so the check matches the rule's own
+    stated verification method.
+    """
+    tool_schemas = list(REGISTERED_TOOL_SCHEMAS)
+
+    first = build_stable_prefix(tool_schemas)
+    second = build_stable_prefix(tool_schemas)
+
+    assert prefix_sha256(first) == prefix_sha256(second)
+    assert first == second
+
+
+def test_cypher_query_sorts_before_ncbi_efetch_in_the_assembled_prefix() -> None:
+    """Binding point from the ticket brief: ncbi_efetch sorts after
+    cypher_query and before ncbi_dbsnp (not yet built, so only the first
+    half of that ordering is checkable today).
+    """
+    prefix = build_stable_prefix(list(REGISTERED_TOOL_SCHEMAS))
+
+    idx_cypher_query = prefix.index('"cypher_query"')
+    idx_ncbi_efetch = prefix.index('"ncbi_efetch"')
+    assert idx_cypher_query < idx_ncbi_efetch
+
+
+def test_registered_tool_schemas_content_appears_serialized_in_the_prefix() -> None:
+    """Both registered tools' names and a piece of each one's real
+    `input_schema` content (not just the bare name) must appear in the
+    assembled prefix, proving the registry's actual schema content is
+    what gets serialized, not merely a name-only stand-in.
+    """
+    prefix = build_stable_prefix(list(REGISTERED_TOOL_SCHEMAS))
+
+    for schema in REGISTERED_TOOL_SCHEMAS:
+        serialized = json.dumps(schema, sort_keys=True)
+        assert serialized in prefix, (
+            f"expected {schema['name']!r}'s full serialized schema inside "
+            f"the tool-schema slot"
+        )

@@ -696,7 +696,7 @@ async def test_full_loop_refuses_when_the_graph_returns_nothing(
 
     # Check 1: the extraction step the loop actually calls resolves this
     # query text to the CURIE, not to nothing.
-    extracted = _extract_target_entities(query_text)
+    extracted = await _extract_target_entities(query_text)
     assert extracted == [absent_curie], (
         f"_extract_target_entities returned {extracted!r} for {query_text!r}, "
         f"expected [{absent_curie!r}]. An empty result here reproduces "
@@ -859,7 +859,8 @@ async def test_derived_value_survives_an_entity_in_the_same_row(
     )
 
 
-def test_a_curie_followed_by_punctuation_is_extracted_whole() -> None:
+@pytest.mark.asyncio
+async def test_a_curie_followed_by_punctuation_is_extracted_whole() -> None:
     """J-04: `NCBIGene:672:` is not a CURIE, and must not replace one.
 
     `:` sat inside the local-id character class, so a CURIE followed by
@@ -869,10 +870,15 @@ def test_a_curie_followed_by_punctuation_is_extracted_whole() -> None:
     empty. `source_url_for_curie` still built a host-pinned NCBI URL for
     it, so the citation gate passed a link to a dead page: host-pinning
     proves where a URL points, never that the record is real.
+
+    T-3.1-11 made `_extract_target_entities` async (live gene-symbol
+    resolution), so this test is now `async` too. It exercises only the
+    verbatim-CURIE path (`_CURIE_IN_TEXT_PATTERN`), which makes no
+    network call either way, so this stays a fast, offline test.
     """
     from system_03_search_agent.core.graph import _extract_target_entities
 
-    entities = _extract_target_entities(
+    entities = await _extract_target_entities(
         "Compare NCBIGene:7157 and NCBIGene:672: how many variants?"
     )
 
@@ -881,7 +887,9 @@ def test_a_curie_followed_by_punctuation_is_extracted_whole() -> None:
         f"a trailing colon survived extraction: {entities}"
     )
     # Internal punctuation is legitimate in a local id and must be kept.
-    assert _extract_target_entities("see MedGen:C0031485 today") == ["MedGen:C0031485"]
+    assert await _extract_target_entities("see MedGen:C0031485 today") == [
+        "MedGen:C0031485"
+    ]
 
 
 @pytest.mark.asyncio

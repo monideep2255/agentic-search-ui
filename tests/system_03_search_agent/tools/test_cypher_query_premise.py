@@ -167,7 +167,7 @@ async def _ask(question: str, row_limit: int = 100) -> Any:
         CypherQueryInput(
             query_intent=question,
             query_class="lookup",
-            target_entities=_extract_target_entities(question),
+            target_entities=await _extract_target_entities(question),
             row_limit=row_limit,
         ),
     )

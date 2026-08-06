@@ -96,6 +96,29 @@ def _no_op_daily_caps(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cost_control, "check_system_daily_cost_cap", _system_check)
 
 
+# T-3.1-11 replaced the one-entry `_KNOWN_GENE_SYMBOL_CURIES` seed table with
+# a live `ncbi_efetch` lookup (`graph_module.resolve_symbol_to_curie`). This
+# file's whole point is the graph's routing and event-emission logic, not
+# NCBI's live behavior (that is `test_ncbi_efetch_premise.py`'s job), and
+# `_GRAPH_ANSWERABLE_QUERY_TEXT` below names BRCA1 in dozens of tests here,
+# so an autouse stand-in keeps every one of them offline and fast, the same
+# reason `_no_op_daily_caps` above exists. Patched on the module object
+# (`graph_module.resolve_symbol_to_curie`), never on a local alias, because
+# that is the exact name `_resolve_query_entities` calls at call time.
+_TEST_KNOWN_GENE_SYMBOL_CURIES: dict[str, str] = {
+    "BRCA1": "NCBIGene:672",
+    "TP53": "NCBIGene:7157",
+}
+
+
+@pytest.fixture(autouse=True)
+def _stub_symbol_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _fake_resolve_symbol_to_curie(symbol: str, **kwargs: object) -> str | None:
+        return _TEST_KNOWN_GENE_SYMBOL_CURIES.get(symbol.strip().upper())
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _fake_resolve_symbol_to_curie)
+
+
 # Matches a rendered findings line without assuming its internal shape.
 # An earlier version parsed "field: value" and broke silently the moment
 # `render_findings_block` started naming the record type, because a
@@ -2006,3 +2029,192 @@ def test_genuine_disease_names_keep_their_confidence(value: str) -> None:
         f"{value!r} is a genuine name and was flagged as a vocabulary "
         "artifact, which downgrades a correct record's confidence"
     )
+
+
+# ---------------------------------------------------------------------------
+# T-3.1-11 / F-3.1-01: live gene-symbol resolution replaced the one-entry
+# `_KNOWN_GENE_SYMBOL_CURIES` seed table, and the candidate filter that
+# must run before any live call so ordinary English words never fire one.
+# T-3.1-13 / F-2.1-B10: an unresolvable symbol refuses before the graph is
+# ever reached.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_candidate_filter_never_calls_resolution_for_stopwords(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.1-01, the defect this ticket both closes and must not arm.
+
+    `_GENE_SYMBOL_TOKEN_PATTERN` alone matches every 2-to-10-character word
+    in `query_text.upper()`: verified live, "What diseases are linked to
+    TP53?" yields ['WHAT','DISEASES','ARE','LINKED','TO','TP53']. Before
+    T-3.1-11 that was free against a one-entry dict; after it, each survivor
+    is a live NCBI call. This asserts the filter runs BEFORE the call, not
+    merely that the final answer looks right.
+    """
+    calls: list[str] = []
+
+    async def _counting(symbol: str, **kwargs: object) -> str | None:
+        calls.append(symbol)
+        return "NCBIGene:7157" if symbol == "TP53" else None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _counting)
+
+    resolved = await graph_module.resolve_entity_curies(
+        "What diseases are linked to TP53?"
+    )
+
+    assert calls == ["TP53"], (
+        f"expected only TP53 to reach a live lookup, got {calls!r}. Every "
+        "other token in this question is an English stopword and must be "
+        "filtered out before the network call, not after."
+    )
+    assert resolved == ["NCBIGene:7157"]
+
+
+@pytest.mark.asyncio
+async def test_candidate_filter_caps_live_lookups_at_the_ceiling(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.1-01's hard ceiling, independent of the stopword list's coverage.
+
+    Six distinct, non-stopword, ALL-CAPS-shaped tokens in one query. Even if
+    every one of them were a real candidate, `_MAX_LIVE_SYMBOL_LOOKUPS`
+    bounds the damage a stopword list that misses a filler word can do.
+    """
+    calls: list[str] = []
+
+    async def _counting(symbol: str, **kwargs: object) -> str | None:
+        calls.append(symbol)
+        return None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _counting)
+
+    await graph_module.resolve_entity_curies(
+        "Tell me about ZZQXA ZZQXB ZZQXC ZZQXD ZZQXE ZZQXF please"
+    )
+
+    assert len(calls) <= graph_module._MAX_LIVE_SYMBOL_LOOKUPS, (
+        f"resolution fired {len(calls)} live lookups ({calls!r}), over the "
+        f"{graph_module._MAX_LIVE_SYMBOL_LOOKUPS}-call ceiling"
+    )
+
+
+@pytest.mark.asyncio
+async def test_candidate_filter_does_not_reresolve_a_verbatim_curie_as_a_symbol(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.1-01's short-circuit: an identifier already resolved exactly
+    must never also be fuzzy-matched and re-looked-up as a bare symbol.
+
+    "NCBIGene:672" upper-cases to "NCBIGENE:672", and `NCBIGENE` alone
+    matches `_GENE_SYMBOL_TOKEN_PATTERN`'s bare ALL-CAPS shape. Without the
+    span-overlap check this fires a wasted (and wrong) live lookup for the
+    literal string "NCBIGENE".
+    """
+    calls: list[str] = []
+
+    async def _counting(symbol: str, **kwargs: object) -> str | None:
+        calls.append(symbol)
+        return None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _counting)
+
+    resolved = await graph_module.resolve_entity_curies(
+        "Tell me about NCBIGene:672 today"
+    )
+
+    assert "NCBIGENE" not in calls, (
+        f"the CURIE's own prefix was re-resolved as a bare symbol: {calls!r}"
+    )
+    assert resolved == ["NCBIGene:672"]
+
+
+@pytest.mark.asyncio
+async def test_unresolved_gene_symbol_refuses_before_reaching_the_graph(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """T-3.1-13 / F-2.1-B10.
+
+    Before this fix, a gene-symbol-shaped token that failed to resolve
+    still reached `cypher_query` with an empty `target_entities` list, the
+    model still wrote Cypher referencing an unbound parameter, and AGE
+    failed with an opaque `UndefinedParameter`. This asserts the stronger
+    property: `cypher_query` is never even called, no synth call is spent,
+    and the refusal names the unresolved symbol rather than blaming the
+    graph.
+    """
+
+    async def _always_unresolved(symbol: str, **kwargs: object) -> str | None:
+        return None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _always_unresolved)
+
+    cypher_query_called = {"value": False}
+
+    async def _fail_if_called(*args: object, **kwargs: object) -> None:
+        cypher_query_called["value"] = True
+        raise AssertionError("cypher_query must not be called for an unresolved entity")
+
+    monkeypatch.setattr(graph_module, "cypher_query", _fail_if_called)
+
+    query = _valid_query(text="What is ZZQXWV?")
+    events = await _run_graph(query, _valid_context())
+
+    assert cypher_query_called["value"] is False, (
+        "cypher_query was invoked for a query whose only candidate entity "
+        "never resolved"
+    )
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "refuse"
+    assert done_event.payload["total_tool_calls"] == 0
+
+    token_text = " ".join(
+        event.payload["text"] for event in events if event.type == "token"
+    )
+    assert "could not identify" in token_text.lower(), (
+        f"expected the unresolved-entity refusal wording, got: {token_text!r}"
+    )
+    assert "graph query failed" not in token_text.lower(), (
+        "an unresolved entity must not be reported as a graph failure: the "
+        "graph was never reached"
+    )
+
+    trust_signal = next(
+        event.payload for event in events if event.type == "trust_signal"
+    )
+    assert trust_signal["message"] == graph_module._UNRESOLVED_ENTITY_REFUSAL_MESSAGE
+
+
+@pytest.mark.asyncio
+async def test_a_candidate_that_resolves_rescues_a_query_with_another_that_does_not(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The refusal is narrower than "empty target_entities": at least one
+    resolved entity must still answer normally, even when a second
+    candidate in the same query never resolves.
+    """
+
+    async def _mixed(symbol: str, **kwargs: object) -> str | None:
+        return "NCBIGene:672" if symbol == "BRCA1" else None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _mixed)
+
+    resolution = await graph_module._resolve_query_entities(
+        "Compare BRCA1 and ZZQXWV: which is better studied?"
+    )
+
+    assert resolution.curies == ["NCBIGene:672"]
+    assert "ZZQXWV" in resolution.unresolved_symbols
+
+    from system_03_search_agent.core.graph import _select_planned_tool_call
+
+    planned = await _select_planned_tool_call("Compare BRCA1 and ZZQXWV", "lookup")
+    assert isinstance(planned, graph_module._PlannedToolCall), (
+        "a query with at least one resolved entity must still plan a real "
+        "cypher_query call, not refuse, even though a second candidate in "
+        "the same text never resolved"
+    )
+    assert planned.cypher_input.target_entities == ["NCBIGene:672"]

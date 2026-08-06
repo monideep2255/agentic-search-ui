@@ -106,6 +106,25 @@ def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
 
 
 @pytest.fixture(autouse=True)
+def _stub_symbol_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
+    """T-3.1-11: `_valid_body`'s default query text names BRCA1 by symbol,
+    and `core.graph.resolve_symbol_to_curie` is now a live NCBI call. This
+    file goes through `real_run`, the genuine graph loop, so without a
+    stand-in every test that keeps the default text would reach out to a
+    real external API from what is otherwise an HTTP/DB integration test.
+    Same fix `test_graph.py` and `test_run.py` apply, for the same reason.
+    """
+    from system_03_search_agent.core import graph as graph_module
+
+    known = {"BRCA1": "NCBIGene:672", "TP53": "NCBIGene:7157"}
+
+    async def _fake_resolve_symbol_to_curie(symbol: str, **kwargs: object) -> str | None:
+        return known.get(symbol.strip().upper())
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _fake_resolve_symbol_to_curie)
+
+
+@pytest.fixture(autouse=True)
 def _auth_secret(monkeypatch):
     monkeypatch.setenv("AUTH_SECRET", _TEST_AUTH_SECRET)
 
