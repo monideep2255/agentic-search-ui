@@ -106,15 +106,18 @@ flowchart LR
     K --> L[Everything else]
 ```
 
-The single box that matters right now is "gene name lookup". Everything to its left is done. Nothing to its right can be shown to anyone until it is finished, because until then the system only recognises one gene by name.
+Gene name lookup is now built, which was the box that had been blocking everything. The system no longer recognises only one gene by name; it asks the government database directly. That is the single biggest thing sprint 3.1 changed.
+
+The catch, and it is a real one: the tool was built, two reviews found twenty-seven faults in it, and the repairs were made in one pass that nobody has independently checked. So the honest status is "built and repaired, not yet verified", and the first item below exists to close exactly that gap.
 
 In order:
 
-1. Sprint 3.2, the genetic variant lookup tool. This connects to the dbSNP database and can look up variants by their rs numbers.
-2. Sprints 3.3 to 3.5, the four remaining data tools: published literature enrichment, disease outbreak data, and clinical trials.
-3. A small fix for a problem where a badly formed automatic query once overloaded our database server.
-4. A planned pause to update the written specifications with everything we have learned from actually building it.
-5. Then the remaining work: wiring the live API tools into the answer pipeline, the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
+1. An independent check of those twenty-seven repairs. Nothing else starts first. This is not a formality: on an earlier sprint the same kind of review failed four times in a row while all the automated tests were passing, so passing tests are not the evidence here.
+2. A small fix for a problem where a badly formed automatic query once overloaded our database server. This was promised for immediately after sprint 3.1, and sprint 3.1 is now done.
+3. Sprint 3.2, the genetic variant lookup tool. This connects to the dbSNP database and can look up variants by their rs numbers.
+4. Sprints 3.3 to 3.5, the four remaining data tools: published literature enrichment, disease outbreak data, and clinical trials.
+5. A planned pause to update the written specifications with everything we have learned from actually building it.
+6. Then the remaining work: wiring the live API tools into the answer pipeline, the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
 
 ## Problems we know about and are tracking
 
@@ -122,6 +125,7 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| Two independent reviews of the new lookup tool found twenty-seven faults, and all but one were repaired in a single pass. Nobody has independently checked those repairs yet. The automated tests all pass, but they were written by the same process that made the repairs, so passing tests are not proof here. Six of the faults were serious, and the worst was the tool inventing a correct-looking source link for a record that does not exist, which is the exact failure this whole project is built to prevent | The next full-strength working session, before anything else starts |
 | The gene lookup tool is built, but the step that connects it to the answer pipeline is not yet wired in. It can look up genes but cannot yet use those lookups to answer questions | A later sprint in the 3.x group |
 | A badly formed automatic query once overloaded the database server. We have limited the damage it can do, but not stopped it being written in the first place | Immediately after sprint 3.1 |
 | Three smaller gaps in the gatekeeper, where a backup layer currently covers for them | The hardening sprint near the end |

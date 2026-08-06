@@ -36,7 +36,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Write build phase 3.1's premise gate, `tests/system_03_search_agent/tools/test_ncbi_efetch_premise.py`, and watch it fail. Stage 5, blocking, primary provider only.
+> Re-review build phase 3.1's fix round. It merged as PR #22 with twenty-six findings at `fix-landed` and none confirmed by an independent role. Primary provider only. Then F-2.1-C15, then open 3.2.
 
 Everything needed to write it is already gathered. The live ground truth is in "Live ground truth captured 2026-08-04" below: TP53 resolves to 7157 confirmed by two independent endpoints, and both HTTP-200 traps are reproduced with their exact response shapes. Do not re-probe what is already pinned there.
 
@@ -58,7 +58,9 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Open build phase 3.2 (`ncbi_dbsnp`). Branch `phase/3.1-ncbi-efetch` has a pull request open with all fixes applied and the premise restated. The answer-path half (Act-step wiring, Layer 2 citation, trust gate) is carried to T-3.1-28 for a later 3.x phase. Read `tracker/phase_3.1.md` first, then `bossman-checkpoint-phase-3.1.md` for the full handoff.
+> Re-review build phase 3.1, which merged as PR #22 without the adversarial pass over its own fix round. Twenty-six findings sit at `fix-landed` in `tracker/phase_3.1.md`, meaning a commit claiming the fix has merged and nobody independent has confirmed it. Six were filed critical. Primary provider only: a review on the metered backend runs on the builder's own model and closes nothing. Then the F-2.1-C15 generation bound on `fix/c15-generation-bound`, then open 3.2.
+
+Do not open build phase 3.2 first. It depends on 3.1, and 3.1 is merged but unverified, which is a different thing from done. The re-review is what converts `fix-landed` into `closed`; until it runs, 3.2 would build on twenty-six fixes nobody checked.
 
 Eight build phases are done and merged into `main`. The first six complete the Step 6.1 prototype group; 3.0 and 3.1 are the first two Step 6.3 v1 phases:
 
@@ -82,10 +84,12 @@ Current counts, stated once here:
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
 - Premise gate, guardrail: 20 of 20
 - Premise gate, ncbi_efetch: 19 passed, 1 skipped (tunnel)
-- Decisions logged: 219
+- Decisions logged: 222
 - Learnings entries: 53, plus a retrospective
 
-Next is build phase 3.2, `ncbi_dbsnp`, the second Layer 2 tool. It depends on 3.0 and 3.1, both merged (or 3.1's PR open). The build phase 3.1 tool surface is complete: seven actions across three API families, live gene-symbol resolution, and 27 findings fixed across judge and adversary rounds. The answer-path half (Act-step wiring, Layer 2 citation, trust gate) is carried to T-3.1-28 for a later 3.x phase.
+Next in the build order is build phase 3.2, `ncbi_dbsnp`, the second Layer 2 tool, but two things come before it and both are dated. First the 3.1 re-review, then F-2.1-C15 on `fix/c15-generation-bound`, which `tracker/BOARD.md` dates to immediately after 3.1 merges and which is the finding where a generated query took the graph server down for every user.
+
+The build phase 3.1 tool surface is complete: seven actions across three API families, live gene-symbol resolution replacing the one-entry table, and twenty-seven findings raised across a judge round and an adversary round. Stated precisely, because the difference matters: twenty-six of those are `fix-landed`, meaning commit 59944bc landed 669 insertions and 32 tests claiming the fix, and no independent role has confirmed any of them. One is `carried`. None is `closed`. The answer-path half (Act-step wiring, Layer 2 citation, trust gate) is carried to T-3.1-28 for a later 3.x phase.
 
 Step 6.2 moved on 2026-08-03. It now runs AFTER the 3.x tool phases rather than between 2.2 and 3.0, because its own written reasoning names 3.x as the code its security scan most exists for, and because reconciling the frozen documents after the tool phases is better input than reconciling before them. Its security scan is separately PAUSED INDEFINITELY on cost, with one condition that turns it back on: exposure. First contact with a real user, a deploy, or a public URL triggers it, whichever comes first.
 
@@ -206,6 +210,7 @@ One decision below is still waiting on the product owner: whether `security/` st
 
 | Item | Description | Owner |
 |------|-------------|-------|
+| 3.1 re-review outstanding | Build phase 3.1 merged as PR #22 without the adversarial pass over its own fix round, which was the stated pre-merge condition. Twenty-six findings sit at `fix-landed`, six of them filed critical, including F-3.1-13 where `summary` returned a schema-valid citation for a record that does not exist. That is a direct cite-or-refuse breach, the one gate this product's trust argument rests on. The suite is green at 1571 passed and doc drift is clean, which is exactly the state build phase 2.1 held through four consecutive failing reviews | The next primary-provider session, before F-2.1-C15 and before 3.2 |
 | F-2.2-T-01-residual | A declarative injected as a comma-spliced clause inside a single wh-question still licenses its own words. Needs clause-level rather than sentence-level filtering. Pinned by a strict xfail | Step 6.2 |
 | F-2.2-A-05 | The flagship gene-disease claim classifies `low` risk, since a `Disease` endpoint row is byte-identical to an identifier-lookup row at `risk_tier_for`'s boundary. Needs the traversed edge label plumbed through `Finding` and `SynthFinding`. Guarded against a naive widen | Step 6.2 |
 | Section 8.2 matching rule | The substring branch answers whether a clause MENTIONS the cited value, never whether it is TRUE about it. The prototype closes this with two checks the spec does not describe | Step 6.2 |
