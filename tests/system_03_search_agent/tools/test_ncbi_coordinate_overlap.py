@@ -1732,3 +1732,58 @@ async def test_dbvar_free_text_list_fields_are_capped_on_both_axes() -> None:
         len(item) <= _MAX_FIELD_VALUE_CHARS + len(" [truncated]") for item in fields["variant_type"]
     )
     assert len(fields["gene_name"]) == _MAX_FIELD_LIST_ITEMS
+
+
+# ===========================================================================
+# Re-review round 1, adversarial pass (ADV-FIX2-3): dbVar's accession and
+# ClinVar's uid both come straight from the untrusted ESummary response
+# body and were interpolated into source_url unencoded, the same defect
+# F-3.1-08-residual/F-3.1-36 closed in ncbi_pubchem_actions.py the same
+# day, left standing in this sibling module.
+# ===========================================================================
+
+
+def test_dbvar_source_url_encodes_a_hostile_accession() -> None:
+    placement = ncbi_coordinate_overlap._Placement(
+        chr_start=1000, chr_end=2000, assembly="GRCh38", chromosome="1"
+    )
+    record = ncbi_coordinate_overlap._build_record(
+        db="dbvar",
+        uid="1",
+        record={"sv": "nsv1/../../../gene/7157", "assembly": "GRCh38"},
+        placement=placement,
+        requested_assembly="GRCh38",
+    )
+
+    assert record is not None
+    assert record.source_url is not None
+    assert "/../../../" not in record.source_url, (
+        f"unencoded accession let a path-traversal-shaped string reach the "
+        f"citation URL raw: {record.source_url!r}"
+    )
+    assert record.source_url.startswith(
+        "https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv1%2F..%2F..%2F..%2Fgene%2F7157/"
+    )
+
+
+def test_clinvar_source_url_encodes_a_hostile_uid() -> None:
+    placement = ncbi_coordinate_overlap._Placement(
+        chr_start=1000, chr_end=2000, assembly="GRCh38", chromosome="1"
+    )
+    record = ncbi_coordinate_overlap._build_record(
+        db="clinvar",
+        uid="1\r\nX-Injected: 1",
+        record={"accession": "VCV000000001", "assembly": "GRCh38"},
+        placement=placement,
+        requested_assembly="GRCh38",
+    )
+
+    assert record is not None
+    assert record.source_url is not None
+    assert "\r" not in record.source_url and "\n" not in record.source_url, (
+        f"unencoded uid let a raw CRLF reach the citation URL: "
+        f"{record.source_url!r}"
+    )
+    assert record.source_url.startswith(
+        "https://www.ncbi.nlm.nih.gov/clinvar/variation/1%0D%0AX-Injected%3A%201/"
+    )

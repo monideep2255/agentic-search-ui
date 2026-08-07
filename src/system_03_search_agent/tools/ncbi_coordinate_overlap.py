@@ -144,6 +144,7 @@ Depended by:
 from __future__ import annotations
 
 import logging
+import urllib.parse
 from dataclasses import dataclass
 from typing import Any, Final, Literal
 
@@ -187,6 +188,21 @@ _DEFAULT_MAX_CANDIDATES: Final[int] = 20
 #   https://www.ncbi.nlm.nih.gov/clinvar/variation/4865884/
 _DBVAR_SOURCE_URL: Final[str] = "https://www.ncbi.nlm.nih.gov/dbvar/variants/{accession}/"
 _CLINVAR_SOURCE_URL: Final[str] = "https://www.ncbi.nlm.nih.gov/clinvar/variation/{uid}/"
+
+
+def _quote_path_segment(value: str) -> str:
+    """URL-encode one path segment. `accession` and `uid` below both come
+    straight from an untrusted ESummary response body, the same shape of
+    input `ncbi_pubchem_actions._quote_path_segment` was added to encode
+    (findings F-3.1-08-residual and F-3.1-36, this fix's own re-review
+    round 1 adversarial pass, filed against this module: an unencoded
+    accession could put whitespace, a newline, `/../../`, or literal
+    markup into a citation URL). `safe=""` encodes every reserved
+    character, not just the query-string-safe subset
+    `ncbi_transport._build_query_string` uses, since this is a path
+    segment, not a query value.
+    """
+    return urllib.parse.quote(value, safe="")
 
 # F-3.1-12: per-value character cap on free text lifted out of an untrusted
 # record body. `NcbiEfetchRecord.fields` caps the field COUNT
@@ -449,7 +465,7 @@ def _build_record(
             "variant_type": record.get("dbvarvarianttypelist"),
             "gene_name": gene_names or None,
         }
-        source_url = _DBVAR_SOURCE_URL.format(accession=accession)
+        source_url = _DBVAR_SOURCE_URL.format(accession=_quote_path_segment(accession))
         record_id = accession
     else:
         accession = str(record.get("accession") or uid)
@@ -471,7 +487,7 @@ def _build_record(
             ),
             "gene_symbol": gene_symbols or None,
         }
-        source_url = _CLINVAR_SOURCE_URL.format(uid=uid)
+        source_url = _CLINVAR_SOURCE_URL.format(uid=_quote_path_segment(uid))
         record_id = accession
 
     fields = {key: value for key, value in fields.items() if value is not None}
