@@ -17,7 +17,7 @@ The second half is the one a reader will underestimate. `_KNOWN_GENE_SYMBOL_CURI
 
 The verify surface is `tests/system_03_search_agent/tools/test_ncbi_efetch_premise.py`, not a suite total.
 
-## Phase status: two independent re-review rounds complete 2026-08-07, all findings closed or explicitly open on product decisions, PR pending
+## Phase status: DONE. Three independent re-review rounds complete 2026-08-07, merged as PR #23 (commit `97aec83`)
 
 Opened 2026-08-04, immediately after build phase 3.0 merged. Stage 5, the blocking premise gate, was written and watched failing on 2026-08-05 at 15 of 16, with the failure direction verified. Merged as PR #22 on 2026-08-05 at 1571 passed, 82 skipped, 1 xfailed, doc drift clean, WITHOUT an adversarial pass over its own fix round, which was the stated pre-merge condition. That was a product-owner decision of 2026-08-05, recorded rather than hidden: twenty-two findings were fixed on the fixer's word and no independent role had confirmed any of them.
 
@@ -31,7 +31,7 @@ Net: 40 of 42 numbered findings are `closed`, F-3.1-04 is correctly `carried`, a
 
 Gates as of the last commit on `fix/3.1-rereview-round1-critical-regressions`: `pytest -q` 1715 passed, 82 skipped, 1 xfailed. `ruff check src/ tests/` finds the same 4 errors present before this round started and confirmed unrelated (pre-existing `PYI034`/`SIM117` in one test file's log-capture helper, untouched by any commit here). `python tracker/check_doc_drift.py --check` still flags stale test counts in `AGENTS.md`, `CLAUDE.md`, and `requirements/phase_6/Continuation_prompt.md`, addressed separately.
 
-Not yet done: a third independent re-review of fix round 2 itself, and opening the pull request. Per this same day's own lesson, closing this phase on the strength of two same-day self-verifications, however thorough, repeats exactly the pattern that produced round 1's two critical regressions. The PR should carry this table as its description and get a genuinely independent look before merge, even though every fix already shipped with a live reproduction.
+Done: a fourth independent reviewer, dispatched specifically because every fix so far had been verified in the same session that wrote it, checked PR #23 fresh against live NCBI and returned APPROVE, with three new minor findings (F-3.1-50, F-3.1-51, plus one already-disclosed as F-3.1-46), none blocking. Merged as commit `97aec83`, phase branch deleted. Full account in "Final independent review, PR #23" below.
 
 ## Scale, stated at the top because it changes how this phase should run
 
@@ -208,6 +208,16 @@ Round 2's adversary filed several more findings, all minor severity, none live-e
 | F-3.1-47 | `_normalize_chromosome("chr")` (the bare prefix, no chromosome after it) returns `"CHR"` rather than failing closed, silently bypassing the F-3.1-35 blank-chromosome guard and putting a nonsense `CHR[CH]` term on the wire | Step 6.2 |
 | F-3.1-48 | Hyphenated approved gene symbols (`HLA-DRB1`, `MT-CO1`) split into two bogus tokens at the hyphen and burn two live-lookup slots for nothing, since neither half alone is a real symbol. Same class of gene-recognition trade-off as F-3.1-41/F-3.1-42, pre-existing rather than introduced this round | Step 6.2, alongside F-3.1-41/42 |
 | F-3.1-49 | `ncbi_datasets_actions.py` builds `NcbiEfetchRecord` with no `try/except ValidationError` around `gene_id`/`accession`, the same gap F-3.1-34 closed on the PubChem side. An over-length `gene_id` or an `accession` producing a `source_url` over 300 chars would raise out of `dataset_report` | Step 6.2 |
+| F-3.1-50 | Found by the final independent reviewer on PR #23. `ncbi_datasets_actions._cap_field_value` (new in this round) returns values uncapped past depth 6 and has no item-count bound, unlike the reference `ncbi_eutils_actions._cap_value` it was modeled on (100-item / 40-key / 4000-char caps). Live-reachable divergence: TP53's real `gene_ontology.biological_processes` already has 117 items, past the reference's 100-item bound. F-3.1-12's "closed" line overclaimed coverage for this one module. Not live-exploitable today: `act_node` dispatches only `cypher_query`, `ncbi_efetch`'s sole production caller reads three scalar keys and discards the rest, so nothing uncapped here reaches a model prompt yet. Becomes load-bearing the moment build phase 3.2 or later wires `ncbi_efetch` into `act_node` | Before `ncbi_efetch` is wired into `act_node` (3.2 or later) |
+| F-3.1-51 | Found by the final independent reviewer on PR #23. `_retry_after_hint`'s docstring says it applies "for a 429/503", but only the 429 branch of `http_status_error_message` actually calls it; a live 503 gets an actionable message with no numeric retry estimate. Precision loss, not a retry-safety violation: the 503 message still tells the next step to back off, just without a number. `http_status_error_message` itself has zero direct tests | Step 6.2 |
+
+## Final independent review, PR #23, 2026-08-07: APPROVE
+
+A fourth fresh-context reviewer, dispatched specifically because every fix on this branch had so far been verified in the same session that wrote it, the exact pattern that produced this phase's two original critical regressions. Verdict: APPROVE, merged as commit `97aec83`.
+
+Confirmed independently, not by trusting any commit message: gene-symbol resolution (BRCA1, TP53, cross-species TRP53/mouse) and the alias-rejection fix (HG38, MRI, CAN, ALL all correctly return `None` now) both live against real NCBI; field-tag scoping emits syntax byte-identical to a live control; `main` is genuinely broken today on both counts, so merging was strictly an improvement; the full suite independently re-run at 1715 passed; the same 4 pre-existing ruff errors, none introduced by this branch; every one of the 12 test assertions removed across this round was replaced by something stricter, none weakened; 10 "closed" ledger entries spot-checked against current code; F-3.1-41 and F-3.1-42 confirmed genuinely still open, not silently resolved. An additional 17-case sweep for false positives the alias fix might introduce (C#orf# symbols, hyphenated symbols, lowercase input, mouse orthologs) found none.
+
+Three new minor findings filed as F-3.1-50 and F-3.1-51 above (a third, the coordinate_overlap cap gap, was independently found already disclosed as F-3.1-46). None blocks merge: all three are in code no production path can reach yet, since `ncbi_efetch` is registered but not dispatched by `act_node`.
 
 ## Judge round 1, 2026-08-05: FAIL
 

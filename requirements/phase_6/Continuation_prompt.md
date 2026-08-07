@@ -36,9 +36,9 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Open the pull request for `fix/3.1-rereview-round1-critical-regressions`, and get one more independent re-review of it before merging. Everything on that branch already has a live reproduction in its own commit message, but every commit was written and self-verified in the same session that wrote it. Primary provider only. Then F-2.1-C15, then open 3.2.
+> Build phase 3.1 is DONE. Its outstanding re-review debt closed via PR #23 (commit `97aec83`) on 2026-08-07, after three independent re-review rounds, the last one by a reviewer dispatched specifically to avoid trusting a same-session self-check. Next: the F-2.1-C15 generation bound on `fix/c15-generation-bound`, then open 3.2.
 
-Full detail on what that branch fixes, and the two things deliberately left as open product decisions rather than fixed unilaterally, is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07.
+Full detail on what PR #23 fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07.
 
 ### Step 3: how a phase runs across sessions
 
@@ -58,13 +58,11 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Open the pull request for `fix/3.1-rereview-round1-critical-regressions` and get an independent re-review of it before merging. Then the F-2.1-C15 generation bound on `fix/c15-generation-bound`, then open 3.2.
+> Build phase 3.1 is DONE. Merged as PR #23 (commit `97aec83`) on 2026-08-07. Next: the F-2.1-C15 generation bound on `fix/c15-generation-bound`, then open 3.2.
 
-Build phase 3.1 merged as PR #22 on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap is now closed, in two rounds, both 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, and a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, all now fixed. Full account: `tracker/phase_3.1.md`'s Findings table and the fourteen commits on `fix/3.1-rereview-round1-critical-regressions`.
+Build phase 3.1 merged as PR #22 on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
-What is NOT done: every one of those fixes was verified in the same session that wrote it. No PR has been opened yet, and nobody outside this run of sessions has looked at the diff. Do not treat "verified live, with reproductions" as equivalent to "independently reviewed" when deciding whether 3.2 is safe to start; those are the same two different things this whole saga has been about. Two things are also deliberately left open rather than fixed: whether the stopword list should exclude entries that are themselves real gene symbols, and what happens when a gene is mentioned in lowercase. Both are product decisions, detailed in `tracker/phase_3.1.md` as F-3.1-41 and F-3.1-42.
-
-Do not open build phase 3.2 first. It depends on 3.1, and 3.1's fixes are unmerged and unreviewed by anyone outside this session, which is a different thing from done.
+Two things were deliberately left open rather than fixed, both genuine product decisions, not bugs: whether the stopword list should exclude entries that are themselves real gene symbols (F-3.1-41), and what happens when a gene is mentioned in lowercase (F-3.1-42). Three more minor, non-blocking findings from the final review are carried to before `ncbi_efetch` gets wired into `act_node` (F-3.1-50, F-3.1-51, and F-3.1-46 already tracked).
 
 Eight build phases are done and merged into `main`. The first six complete the Step 6.1 prototype group; 3.0 and 3.1 are the first two Step 6.3 v1 phases:
 
@@ -214,7 +212,9 @@ One decision below is still waiting on the product owner: whether `security/` st
 
 | Item | Description | Owner |
 |------|-------------|-------|
-| 3.1 fix branch needs a PR and an outside review | Two independent re-review rounds ran 2026-08-07 (detailed in `tracker/phase_3.1.md`), closing all but two findings (both genuine product decisions, F-3.1-41/42, not bugs). Every fix carries a live reproduction in its commit message on `fix/3.1-rereview-round1-critical-regressions`, but every one of those reproductions was also written and checked in the same session that wrote the fix. No PR is open yet and nobody outside this run of sessions has looked at the diff | The next primary-provider session, before F-2.1-C15 and before 3.2 |
+| F-3.1-41: stopword list vs. real gene symbols | Product decision, not a bug. Detailed in `tracker/phase_3.1.md` | Whenever the product owner decides |
+| F-3.1-42: lowercase gene mentions fall through silently | Product decision, not a bug. Detailed in `tracker/phase_3.1.md` | Whenever the product owner decides |
+| F-3.1-50, F-3.1-51, F-3.1-46: minor gaps in code `act_node` cannot reach yet | Filed by the final independent review on PR #23. None live-exploitable until `ncbi_efetch` is wired into `act_node` | Before `ncbi_efetch` is wired into `act_node` (3.2 or later) |
 | F-2.2-T-01-residual | A declarative injected as a comma-spliced clause inside a single wh-question still licenses its own words. Needs clause-level rather than sentence-level filtering. Pinned by a strict xfail | Step 6.2 |
 | F-2.2-A-05 | The flagship gene-disease claim classifies `low` risk, since a `Disease` endpoint row is byte-identical to an identifier-lookup row at `risk_tier_for`'s boundary. Needs the traversed edge label plumbed through `Finding` and `SynthFinding`. Guarded against a naive widen | Step 6.2 |
 | Section 8.2 matching rule | The substring branch answers whether a clause MENTIONS the cited value, never whether it is TRUE about it. The prototype closes this with two checks the spec does not describe | Step 6.2 |
