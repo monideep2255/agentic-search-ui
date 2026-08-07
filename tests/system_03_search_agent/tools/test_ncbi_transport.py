@@ -939,6 +939,82 @@ async def test_execute_get_wait_budget_is_shared_across_attempts_not_reissued_pe
 
 
 @pytest.mark.asyncio
+async def test_execute_get_wait_budget_is_not_charged_for_request_or_backoff_time(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Re-review round 1, adversarial pass (ADV-FIX2-6): F-3.1-37's own
+    fix shared the wait budget by WALL-CLOCK DEADLINE, which charges the
+    ceiling for the HTTP request's own elapsed time and the backoff
+    sleep, not only time spent actually waiting for the pool. With the
+    common case `wait_ceiling_s == timeout_s`, a first attempt that
+    times out has, by construction, already consumed the entire
+    deadline before the retry's own acquisition ever runs, so the retry
+    always got ~0.0s of pool-wait budget in exactly the case a retry
+    exists for: recovering from a timeout.
+
+    Scenario: a 15s timeout on attempt 0, wait_ceiling_s of only 1.0s
+    (deliberately far smaller than timeout_s, the shape this bug hit
+    hardest), a 1s backoff, then a pool that genuinely needs a 0.5s wait
+    for attempt 1. The declared 1.0s ceiling comfortably covers a 0.5s
+    pool wait; only wall-clock-deadline double-charging could make this
+    fail. Before this fix: DID NOT RAISE was the wrong outcome to hope
+    for, since the bug's failure mode is the OPPOSITE of the F-3.1-22
+    scenario above, a retry that fails fast when it should not have to.
+    """
+    clock, fake_time, advancing_sleep = _make_fake_clock()
+    monkeypatch.setenv("NCBI_EUTILS_RPS", "1.0")
+    ncbi_transport.reset_rate_limiters_for_tests()
+    limiter = ncbi_transport.get_rate_limiter("eutils")
+
+    would_be_response = httpx.Response(200, json={"esearchresult": {"count": "1"}})
+    calls: list[float] = []
+
+    async def _get_advancing_time_then_saturating_pool(
+        url: str, timeout: float | None = None
+    ) -> httpx.Response:
+        calls.append(clock["now"])
+        if len(calls) == 1:
+            # The request itself takes the full 15s timeout to fail, the
+            # same wall-clock cost a real ConnectTimeout has.
+            clock["now"] += 15.0
+            # While this call was blocked, another caller reserved the
+            # pool's next slot for 0.5s after the retry actually runs
+            # (the 1.0s backoff below still has to happen first), so
+            # attempt 1's own acquisition has a real, non-zero wait to
+            # do, not one that has already silently elapsed by the time
+            # it runs.
+            limiter._next_available = clock["now"] + 1.0 + 0.5
+            raise httpx.ConnectTimeout("simulated timeout")
+        return would_be_response
+
+    class _FunctionClient:
+        def __init__(self, get_fn: Any) -> None:
+            self._get_fn = get_fn
+
+        async def get(self, url: str, timeout: float | None = None) -> httpx.Response:
+            return await self._get_fn(url, timeout=timeout)
+
+    output = await ncbi_transport.execute_get(
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+        {"db": "gene", "term": "TP53"},
+        family="eutils",
+        wait_ceiling_s=1.0,
+        timeout_s=15.0,
+        backoff_s=1.0,
+        client=_FunctionClient(_get_advancing_time_then_saturating_pool),
+        sleep_fn=advancing_sleep,
+        time_fn=fake_time,
+    )
+
+    assert output is would_be_response, (
+        "the retry must succeed: its own 1.0s wait ceiling easily covers "
+        "the 0.5s the pool genuinely needs, and must not be starved by "
+        "the unrelated 15s the failed first request and its backoff cost"
+    )
+    assert len(calls) == 2, "the retry must actually be attempted, not failed fast"
+
+
+@pytest.mark.asyncio
 async def test_execute_get_retry_blocked_by_budget_keeps_the_first_failure_as_cause(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

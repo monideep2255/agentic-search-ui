@@ -1105,22 +1105,40 @@ async def _execute_with_retry(
     `wait_budget_s`, so one call could wait up to twice the ceiling it
     declared. `.claude/rules/tool-call-budgets.md` ties the wait ceiling
     to the calling query's remaining latency budget, and a budget that
-    silently doubles under retry is not a budget. The ceiling is
-    therefore converted here into ONE deadline for the whole call, and
-    each acquisition is handed only `deadline - now`. A first attempt
-    that waits 1.0s against a 1.5s ceiling leaves the retry 0.5s, and a
-    retry that cannot be scheduled inside what remains fails fast rather
-    than waiting a second full ceiling.
+    silently doubles under retry is not a budget.
+
+    Re-review round 1, adversarial pass (2026-08-07): F-3.1-37's own fix
+    shared the budget by wall-clock DEADLINE (`deadline = time_fn() +
+    wait_budget_s`, each acquisition handed `deadline - now`), which
+    charges the ceiling for the HTTP request's own elapsed time and the
+    backoff sleep, not only time actually spent waiting for the pool.
+    This function's docstring (and `tool-call-budgets.md`) both scope the
+    ceiling to POOL wait specifically. With the common case
+    `wait_ceiling_s == timeout_s`, a first attempt that times out has, by
+    construction, already consumed the entire wall-clock deadline before
+    the retry's acquisition ever runs, so the retry is handed
+    approximately 0.0s of wait budget every time a timeout is exactly the
+    reason a retry is needed - silently defeating the F-3.1-22 fix it was
+    meant to preserve, in precisely the case that fix exists for. Fixed
+    by tracking `wait_spent`, incremented only by the time actually spent
+    inside `limiter.acquire`, never by the request or backoff time
+    surrounding it. A first attempt that waits 1.0s against a 1.5s
+    ceiling leaves the retry 0.5s of POOL wait regardless of how long the
+    request itself then takes, and a retry that cannot be scheduled
+    inside what remains fails fast rather than waiting a second full
+    ceiling.
     """
     host = _host_of(url)
     last_exc: Exception | None = None
-    deadline = time_fn() + wait_budget_s
+    wait_spent = 0.0
 
     for attempt_index in range(2):
-        remaining_wait_budget = max(0.0, deadline - time_fn())
+        remaining_wait_budget = max(0.0, wait_budget_s - wait_spent)
+        acquire_started = time_fn()
         try:
             await limiter.acquire(remaining_wait_budget, time_fn=time_fn, sleep_fn=sleep_fn)
         except TransportRateLimitedError as rate_exc:
+            wait_spent += time_fn() - acquire_started
             if last_exc is None:
                 raise
             # A retry that cannot be scheduled inside the call's remaining
@@ -1134,6 +1152,7 @@ async def _execute_with_retry(
                 family, host, remaining_wait_budget, type(last_exc).__name__,
             )
             raise rate_exc from last_exc
+        wait_spent += time_fn() - acquire_started
         try:
             response = await active_client.get(url, timeout=timeout_s)
         except _TRANSIENT_TIMEOUT_EXCEPTIONS as exc:
