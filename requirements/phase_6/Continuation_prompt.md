@@ -36,9 +36,9 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Re-review build phase 3.1's fix round. It merged as PR #22 with twenty-six findings at `fix-landed` and none confirmed by an independent role. Primary provider only. Then F-2.1-C15, then open 3.2.
+> Open the pull request for `fix/3.1-rereview-round1-critical-regressions`, and get one more independent re-review of it before merging. Everything on that branch already has a live reproduction in its own commit message, but every commit was written and self-verified in the same session that wrote it. Primary provider only. Then F-2.1-C15, then open 3.2.
 
-Everything needed to write it is already gathered. The live ground truth is in "Live ground truth captured 2026-08-04" below: TP53 resolves to 7157 confirmed by two independent endpoints, and both HTTP-200 traps are reproduced with their exact response shapes. Do not re-probe what is already pinned there.
+Full detail on what that branch fixes, and the two things deliberately left as open product decisions rather than fixed unilaterally, is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07.
 
 ### Step 3: how a phase runs across sessions
 
@@ -58,9 +58,13 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Re-review build phase 3.1, which merged as PR #22 without the adversarial pass over its own fix round. Twenty-six findings sit at `fix-landed` in `tracker/phase_3.1.md`, meaning a commit claiming the fix has merged and nobody independent has confirmed it. Six were filed critical. Primary provider only: a review on the metered backend runs on the builder's own model and closes nothing. Then the F-2.1-C15 generation bound on `fix/c15-generation-bound`, then open 3.2.
+> Open the pull request for `fix/3.1-rereview-round1-critical-regressions` and get an independent re-review of it before merging. Then the F-2.1-C15 generation bound on `fix/c15-generation-bound`, then open 3.2.
 
-Do not open build phase 3.2 first. It depends on 3.1, and 3.1 is merged but unverified, which is a different thing from done. The re-review is what converts `fix-landed` into `closed`; until it runs, 3.2 would build on twenty-six fixes nobody checked.
+Build phase 3.1 merged as PR #22 on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap is now closed, in two rounds, both 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, and a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, all now fixed. Full account: `tracker/phase_3.1.md`'s Findings table and the fourteen commits on `fix/3.1-rereview-round1-critical-regressions`.
+
+What is NOT done: every one of those fixes was verified in the same session that wrote it. No PR has been opened yet, and nobody outside this run of sessions has looked at the diff. Do not treat "verified live, with reproductions" as equivalent to "independently reviewed" when deciding whether 3.2 is safe to start; those are the same two different things this whole saga has been about. Two things are also deliberately left open rather than fixed: whether the stopword list should exclude entries that are themselves real gene symbols, and what happens when a gene is mentioned in lowercase. Both are product decisions, detailed in `tracker/phase_3.1.md` as F-3.1-41 and F-3.1-42.
+
+Do not open build phase 3.2 first. It depends on 3.1, and 3.1's fixes are unmerged and unreviewed by anyone outside this session, which is a different thing from done.
 
 Eight build phases are done and merged into `main`. The first six complete the Step 6.1 prototype group; 3.0 and 3.1 are the first two Step 6.3 v1 phases:
 
@@ -73,11 +77,11 @@ Eight build phases are done and merged into `main`. The first six complete the S
 | 2.1 | cypher_query over Layer 1, first live graph access | #15 |
 | 2.2 | Deterministic cite-or-refuse, Layer 1 provenance, the first trust signal | #18 |
 | 3.0 | The full Section 10 guardrail, replacing the passthrough stub | #19 |
-| 3.1 | ncbi_efetch, the first Layer 2 tool: seven actions across three API families, live gene-symbol resolution replacing the one-entry hardcoded table | PR open on `phase/3.1-ncbi-efetch`, not yet merged |
+| 3.1 | ncbi_efetch, the first Layer 2 tool: seven actions across three API families, live gene-symbol resolution replacing the one-entry hardcoded table | Merged as PR #22 on 2026-08-05. Its fix round is separately re-reviewed and re-fixed twice on `fix/3.1-rereview-round1-critical-regressions`, PR not yet opened |
 
 Current counts, stated once here:
 
-- Python tests: 1654
+- Python tests: 1798
 - Frontend tests: 120
 - Playwright end-to-end tests: 3
 - Premise gate, cypher_query: 9 of 9
@@ -210,7 +214,7 @@ One decision below is still waiting on the product owner: whether `security/` st
 
 | Item | Description | Owner |
 |------|-------------|-------|
-| 3.1 re-review outstanding | Build phase 3.1 merged as PR #22 without the adversarial pass over its own fix round, which was the stated pre-merge condition. Twenty-six findings sit at `fix-landed`, six of them filed critical, including F-3.1-13 where `summary` returned a schema-valid citation for a record that does not exist. That is a direct cite-or-refuse breach, the one gate this product's trust argument rests on. The suite is green at 1571 passed and doc drift is clean, which is exactly the state build phase 2.1 held through four consecutive failing reviews | The next primary-provider session, before F-2.1-C15 and before 3.2 |
+| 3.1 fix branch needs a PR and an outside review | Two independent re-review rounds ran 2026-08-07 (detailed in `tracker/phase_3.1.md`), closing all but two findings (both genuine product decisions, F-3.1-41/42, not bugs). Every fix carries a live reproduction in its commit message on `fix/3.1-rereview-round1-critical-regressions`, but every one of those reproductions was also written and checked in the same session that wrote the fix. No PR is open yet and nobody outside this run of sessions has looked at the diff | The next primary-provider session, before F-2.1-C15 and before 3.2 |
 | F-2.2-T-01-residual | A declarative injected as a comma-spliced clause inside a single wh-question still licenses its own words. Needs clause-level rather than sentence-level filtering. Pinned by a strict xfail | Step 6.2 |
 | F-2.2-A-05 | The flagship gene-disease claim classifies `low` risk, since a `Disease` endpoint row is byte-identical to an identifier-lookup row at `risk_tier_for`'s boundary. Needs the traversed edge label plumbed through `Finding` and `SynthFinding`. Guarded against a naive widen | Step 6.2 |
 | Section 8.2 matching rule | The substring branch answers whether a clause MENTIONS the cited value, never whether it is TRUE about it. The prototype closes this with two checks the spec does not describe | Step 6.2 |
@@ -255,4 +259,4 @@ If a different agent takes over, read the "Running this project with a different
 
 One operational note that cost real time on 2026-08-03 and is not obvious from any other file: this machine's network dropped three times in one session, killing two premise-gate runs and three review agents, and every failure they produced looked like a code defect at first glance. Before diagnosing any model-dependent failure, check reachability with `curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v1/models`. An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all. A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-08-05.
+Last updated: 2026-08-07.
