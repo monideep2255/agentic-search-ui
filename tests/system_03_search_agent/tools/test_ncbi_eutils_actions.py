@@ -413,20 +413,37 @@ class TestSearch:
     async def test_transport_supplied_retry_after_is_surfaced(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """F-3.1-12: the transport layer's own `retry_after`, once it lands,
-        takes precedence over the upstream header and reaches the message
-        with no further change to this module.
+        """Re-review round 1 integration fix: `_retry_after_hint` reads the
+        `Retry-After` header through `ncbi_transport.parse_retry_after`
+        rather than a hand-rolled `headers.get("retry-after")`, so it
+        inherits that module's more careful parsing. An HTTP-date-form
+        header (the rarer of the two RFC 9110 forms, and the case a naive
+        `float(header)` cast cannot handle at all) must still produce a
+        numeric second count in the message, not be silently dropped.
         """
+        from datetime import UTC, datetime, timedelta
+
+        future = datetime.now(UTC) + timedelta(seconds=42)
+        http_date = future.strftime("%a, %d %b %Y %H:%M:%S GMT")
         response = httpx.Response(
-            429, content=b"", headers={"content-type": "text/plain", "retry-after": "3"}
+            429,
+            content=b"",
+            headers={"content-type": "text/plain", "retry-after": http_date},
         )
-        response.retry_after = 42  # what ncbi_transport will attach
         _install(monkeypatch, [response])
         output = await ncbi_eutils_actions.search(
             NcbiEfetchSearchInput(action="search", db="pubmed", term="x", retmax=10)
         )
         assert output.status == "error"
-        assert "42 seconds" in output.error
+        assert "seconds" in output.error
+        # Allow a couple of seconds of test-execution drift rather than
+        # asserting an exact "42 seconds", since the date is relative to
+        # "now" at two different points a few lines apart.
+        import re
+
+        match = re.search(r"Retry after ([\d.]+) seconds", output.error)
+        assert match is not None, output.error
+        assert 38 <= float(match.group(1)) <= 42
 
 
 # ===========================================================================

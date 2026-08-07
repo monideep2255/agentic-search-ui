@@ -585,29 +585,28 @@ def _empty_output(action: str) -> NcbiEfetchOutput:
 def _retry_after_hint(response: Any) -> str:
     """Render the retry delay for a 429, or an empty string when unknown.
 
-    Integration point for the transport layer's own `retry_after` value
-    (`ncbi_transport`, built in parallel with this module). Two sources are
-    read, in order of preference, and the first one that yields a value wins:
-
-    1. `response.retry_after`, the attribute the transport layer attaches
-       once its rate-limit plumbing lands. Reading it defensively via
-       `getattr` means this module needs no change when it appears, and
-       keeps working while it does not exist yet.
-    2. The upstream `Retry-After` HTTP header, which E-utilities may send on
-       its own and which needs no transport-layer coordination at all.
-
-    With neither present the caller falls back to the generic backoff
-    language, which is still actionable, just not numeric.
+    Reads the upstream `Retry-After` header through `ncbi_transport`'s own
+    parser (`parse_retry_after`), which handles the numeric-seconds
+    form, the rarer HTTP-date form, and rejects `nan`/`inf`/malformed values
+    rather than rendering them verbatim into the message. Re-review round 1
+    integration note: an earlier draft of this function read
+    `response.retry_after` via `getattr` on the assumption the transport
+    layer would attach that attribute to the response object; it never did,
+    and the cruder `headers.get("retry-after")` fallback that draft also
+    carried worked for the common case but duplicated logic
+    `ncbi_transport` already implements more carefully. This calls that
+    implementation directly instead of maintaining two parsers.
     """
-    candidate = getattr(response, "retry_after", None)
-    if candidate is None:
-        headers = getattr(response, "headers", None)
-        if headers is not None:
-            candidate = headers.get("retry-after")
+    headers = getattr(response, "headers", None)
+    candidate = ncbi_transport.parse_retry_after(headers) if headers is not None else None
     if candidate is None:
         return ""
-    text = str(candidate).strip()
-    if not text or len(text) > 40:
+    # Render a whole-second value without a trailing ".0": parse_retry_after
+    # always returns a float (it may need to represent a fractional wait),
+    # but NCBI's own Retry-After header is almost always a bare integer, and
+    # "Retry after 7.0 seconds" reads as a rendering artifact, not a signal.
+    text = f"{candidate:g}"
+    if len(text) > 40:
         return ""
     return f" Retry after {text} seconds."
 
