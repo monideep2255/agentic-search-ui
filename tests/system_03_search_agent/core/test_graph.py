@@ -2102,6 +2102,90 @@ async def test_candidate_filter_caps_live_lookups_at_the_ceiling(
 
 
 @pytest.mark.asyncio
+async def test_corf_family_gene_symbols_are_attempted_despite_lowercase_orf(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Re-review round 1 adversarial finding NEW-1, and the fix's own root
+    cause: the all-caps `_GENE_SYMBOL_TOKEN_PATTERN` cannot match HGNC's
+    "C#orf#" nomenclature (C9orf72, C4orf54, ...), since the lowercase
+    "orf" is how the name is officially written, not a casing mistake.
+    This regressed against the PRE-fix behavior, which happened to catch
+    these by accident because it uppercased everything first.
+    """
+    calls: list[str] = []
+
+    async def _counting(symbol: str, **kwargs: object) -> str | None:
+        calls.append(symbol)
+        return "NCBIGene:203228" if symbol == "C9orf72" else None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _counting)
+
+    resolved = await graph_module.resolve_entity_curies("What does C9orf72 do?")
+
+    assert calls == ["C9orf72"], (
+        f"expected C9orf72 to reach a live lookup as a gene-symbol "
+        f"candidate, got {calls!r}"
+    )
+    assert resolved == ["NCBIGene:203228"]
+
+
+@pytest.mark.asyncio
+async def test_corf_and_all_caps_candidates_interleave_in_query_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The two token patterns are merged by POSITION, not by pattern, so a
+    C#orf# gene appearing before an all-caps acronym in the query is tried
+    first, matching what a reader would expect "in query order" to mean.
+    """
+    calls: list[str] = []
+
+    async def _counting(symbol: str, **kwargs: object) -> str | None:
+        calls.append(symbol)
+        return None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _counting)
+
+    await graph_module.resolve_entity_curies(
+        "Is C9orf72 linked to ALS in the same way as TP53?"
+    )
+
+    assert calls == ["C9orf72", "TP53"], (
+        f"expected query-order interleaving of C9orf72 then TP53 (ALS is a "
+        f"stopword), got {calls!r}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_repeated_symbol_does_not_consume_a_second_budget_slot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Re-review round 1 adversarial finding ADV-FIX2-8: the same token
+    appearing three times used to consume three of the three live-lookup
+    slots, even though the 2nd and 3rd occurrences only ever repeat the
+    1st's live call. That left no slot for a second, genuinely different
+    gene later in the same query. The cap is on DISTINCT candidates.
+    """
+    calls: list[str] = []
+
+    async def _counting(symbol: str, **kwargs: object) -> str | None:
+        calls.append(symbol)
+        return "NCBIGene:7157" if symbol == "TP53" else "NCBIGene:3845"
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _counting)
+
+    resolved = await graph_module.resolve_entity_curies(
+        "Does TP53 status, TP53 expression and TP53 methylation affect KRAS signaling?"
+    )
+
+    assert calls == ["TP53", "KRAS"], (
+        f"expected TP53 tried once (deduplicated) and KRAS tried second, "
+        f"got {calls!r}; a repeated token must not consume more than one "
+        f"budget slot"
+    )
+    assert resolved == ["NCBIGene:7157", "NCBIGene:3845"]
+
+
+@pytest.mark.asyncio
 async def test_candidate_filter_does_not_reresolve_a_verbatim_curie_as_a_symbol(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

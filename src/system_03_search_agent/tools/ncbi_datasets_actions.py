@@ -159,6 +159,53 @@ _GENOME_REPORT_TOP_LEVEL_FIELDS: Final[tuple[str, ...]] = (
 )
 
 
+# Per-value character cap on free text copied out of a Datasets v2 report.
+# `NcbiEfetchRecord.fields` caps the property COUNT (maxProperties 40) and
+# nothing else, so the cap on any single value's LENGTH lives here, the same
+# split, and the same 4000-character bound, `ncbi_eutils_actions._cap_text`
+# already uses. Part of the multi-agent pipeline gate's "bounded context
+# items" requirement (finding F-3.1-12): a free-text `description`, or a
+# long `synonyms` list, must not be able to crowd out a prompt on its own.
+_MAX_FIELD_VALUE_CHARS: Final[int] = 4000
+
+# Depth bound on the recursive value cap below. `gene_ontology`,
+# `assembly_stats`, and `chromosomes` are nested structures, so the walk
+# recurses, and the bound stops a deeply nested hostile body from recursing
+# without limit.
+_MAX_FIELD_VALUE_DEPTH: Final[int] = 6
+
+
+def _cap_text(value: str) -> str:
+    """Hard character cap on one untrusted free-text value.
+
+    Mirrors `ncbi_eutils_actions._cap_text`. Duplicated locally rather than
+    imported so neither Layer 2 module reaches across into the other's
+    extraction path; the two caps are deliberately the same number.
+    """
+    if len(value) <= _MAX_FIELD_VALUE_CHARS:
+        return value
+    return value[:_MAX_FIELD_VALUE_CHARS] + " [truncated]"
+
+
+def _cap_field_value(value: Any, depth: int = 0) -> Any:
+    """Apply `_cap_text` to every string inside one extracted field value.
+
+    The allowlisted Datasets v2 fields include plain strings
+    (`description`, `taxname`), string lists (`synonyms`, `omim_ids`), and
+    nested objects (`gene_ontology`, `assembly_stats`), so the walk covers
+    all three rather than capping only top-level strings.
+    """
+    if isinstance(value, str):
+        return _cap_text(value)
+    if depth >= _MAX_FIELD_VALUE_DEPTH:
+        return value
+    if isinstance(value, list):
+        return [_cap_field_value(item, depth + 1) for item in value]
+    if isinstance(value, dict):
+        return {key: _cap_field_value(item, depth + 1) for key, item in value.items()}
+    return value
+
+
 def _quote_path_segment(value: str) -> str:
     """URL-encode one path segment. Never a raw f-string interpolation.
 
@@ -218,19 +265,27 @@ def _select_endpoint(action_input: NcbiEfetchDatasetReportInput) -> tuple[str | 
 
 
 def _extract_gene_fields(gene_obj: Mapping[str, Any]) -> dict[str, Any]:
-    return {key: gene_obj[key] for key in _GENE_REPORT_FIELDS if key in gene_obj}
+    return {
+        key: _cap_field_value(gene_obj[key]) for key in _GENE_REPORT_FIELDS if key in gene_obj
+    }
 
 
 def _extract_genome_fields(report: Mapping[str, Any]) -> dict[str, Any]:
     fields: dict[str, Any] = {
-        key: report[key] for key in _GENOME_REPORT_TOP_LEVEL_FIELDS if key in report
+        key: _cap_field_value(report[key])
+        for key in _GENOME_REPORT_TOP_LEVEL_FIELDS
+        if key in report
     }
     assembly_info = report.get("assembly_info")
     if isinstance(assembly_info, dict):
         if "assembly_level" in assembly_info:
-            fields["assembly_info.assembly_level"] = assembly_info["assembly_level"]
+            fields["assembly_info.assembly_level"] = _cap_field_value(
+                assembly_info["assembly_level"]
+            )
         if "assembly_name" in assembly_info:
-            fields["assembly_info.assembly_name"] = assembly_info["assembly_name"]
+            fields["assembly_info.assembly_name"] = _cap_field_value(
+                assembly_info["assembly_name"]
+            )
     return fields
 
 

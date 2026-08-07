@@ -16,12 +16,19 @@ somehow did.
 
 What this file proves:
 
-    Finding 2 (CRITICAL, re-review). A confirmed non-resolution (both
-    Datasets and ESearch answered and neither found the symbol) is
-    cached; a transient failure (a `status == "error"` from either call,
-    modeling a timeout, connection failure, 5xx, or rate limit) is never
-    cached, so the identical symbol is retried live on the next call
-    rather than replaying a stale outage forever.
+    F-3.1-28 (CRITICAL, re-review round 1). The taxon-aware cache key is
+    used for the cache and nowhere else. It used to be passed into the
+    uncached helper as the symbol, so every live lookup asked NCBI for a
+    gene literally named "BRCA1:human" and every gene-symbol resolution
+    in the system returned None.
+
+    Finding 2 (CRITICAL, re-review) and F-3.1-26 (re-review round 1). A
+    confirmed non-resolution (both Datasets and ESearch answered and
+    neither found the symbol) is cached; a transient failure on EITHER
+    leg (a `status == "error"`, modeling a timeout, connection failure,
+    5xx, or rate limit) is never cached, so the identical symbol is
+    retried live on the next call rather than replaying a stale outage
+    forever.
 
     Finding 5 (MAJOR, re-review). `dataset_report` returning more than
     one record is ambiguous and must never be resolved by taking
@@ -96,8 +103,25 @@ def _search_output(*, status: str = "ok", idlist: list[str] | None = None) -> Nc
     )
 
 
-def _dataset_record(*, gene_id: str, taxname: str = "Homo sapiens") -> NcbiEfetchRecord:
-    return NcbiEfetchRecord(id=gene_id, db="gene", fields={"gene_id": gene_id, "taxname": taxname})
+def _dataset_record(
+    *, gene_id: str | None, taxname: str = "Homo sapiens", symbol: str | None = None
+) -> NcbiEfetchRecord:
+    """`symbol` stubs the field re-review round 1's adversarial pass added
+    a check against: the Datasets `gene/symbol/{symbol}/taxon/{taxon}`
+    endpoint matches on gene aliases too, not only the exact official
+    symbol (live-verified: `gene/symbol/HG38/taxon/human` returns gene_id
+    8549, whose own `symbol` field is `"LGR5"`, not `"HG38"`), so a
+    single Datasets record is only trusted when its own `symbol` field
+    matches what was searched for. Pass a MISMATCHED `symbol` to test the
+    fall-through-to-ESearch rejection path directly; the default `None`
+    means "test does not care about this field" and simply omits it,
+    which correctly fails the match check (the same as an ambiguous or
+    gene_id-less record already falls through).
+    """
+    fields: dict[str, Any] = {"gene_id": gene_id, "taxname": taxname}
+    if symbol is not None:
+        fields["symbol"] = symbol
+    return NcbiEfetchRecord(id=gene_id, db="gene", fields=fields)
 
 
 def _install_fake_ncbi_efetch(
@@ -105,31 +129,140 @@ def _install_fake_ncbi_efetch(
     *,
     dataset_report: NcbiEfetchOutput,
     search: NcbiEfetchOutput | None = None,
+    summary: NcbiEfetchOutput | None = None,
 ) -> list[str]:
-    """Patches `graph_module.ncbi_efetch` to answer `dataset_report` and
-    `search` actions with the two canned outputs, and returns the list of
-    actions actually called, in order, so a test can assert whether the
-    ESearch fallback fired at all.
+    """Patches `graph_module.ncbi_efetch` to answer `dataset_report`,
+    `search` and `summary` actions with canned outputs, and returns the
+    list of actions actually called, in order, so a test can assert
+    whether the ESearch fallback (or the ESummary confirmation past it)
+    fired at all.
+
+    `summary` stubs the ESummary alias-confirmation call re-review round
+    1's adversarial pass added after a single-id ESearch match: NCBI's
+    `[sym]` tag matches on alias/synonym tables too, so an "unambiguous"
+    one-id ESearch result can still be the WRONG gene (live-verified:
+    `HG38[sym]` resolves to LGR5, `MRI[sym]` to CYREN), and the fix
+    confirms the returned record's own official symbol before trusting
+    the id. When `summary` is not given, this fake auto-confirms: it
+    tracks the symbol from whichever `dataset_report` or `search` request
+    most recently passed through and echoes it back as the record's
+    `name`, so a test that is not exercising the verification step itself
+    does not need to know the step exists. Pass an explicit `summary` to
+    test the rejection path (an alias match, or ESummary itself failing).
     """
     calls: list[str] = []
+    last_symbol: list[str] = []
 
     async def _fake_ncbi_efetch(tool_input: Any) -> NcbiEfetchOutput:
         action = tool_input.root.action
         calls.append(action)
         if action == "dataset_report":
+            if tool_input.root.symbol:
+                last_symbol.append(tool_input.root.symbol)
             return dataset_report
         if action == "search":
             assert search is not None, "test did not expect the ESearch fallback to fire"
+            last_symbol.append(tool_input.root.term.split("[sym]")[0])
             return search
+        if action == "summary":
+            if summary is not None:
+                return summary
+            assert last_symbol, (
+                "a summary confirmation request arrived with no prior "
+                "dataset_report or search request captured to confirm it "
+                "against; this fake cannot auto-confirm without one"
+            )
+            gene_id = tool_input.root.ids[0]
+            return NcbiEfetchOutput(
+                status="ok",
+                action="summary",
+                records=[
+                    NcbiEfetchRecord(
+                        id=gene_id, db="gene", fields={"name": last_symbol[-1]}
+                    )
+                ],
+                record_count=1,
+                total_available=1,
+                truncated=False,
+            )
         raise AssertionError(f"unexpected ncbi_efetch action {action!r} in this test")
 
     monkeypatch.setattr(graph_module, "ncbi_efetch", _fake_ncbi_efetch)
     return calls
 
 
+def _summary_output(*, status: str = "ok", name: str | None = None, gene_id: str = "1") -> NcbiEfetchOutput:
+    """A canned `summary` response for testing the ESummary alias
+    confirmation directly (the rejection path, where `name` deliberately
+    does not match the symbol that was searched for).
+    """
+    records: list[NcbiEfetchRecord] = []
+    if name is not None:
+        records = [NcbiEfetchRecord(id=gene_id, db="gene", fields={"name": name})]
+    return NcbiEfetchOutput(
+        status=status,
+        action="summary",
+        records=records,
+        record_count=len(records),
+        total_available=len(records),
+        truncated=False,
+        error="simulated summary failure" if status == "error" else None,
+    )
+
+
 # ===========================================================================
-# Finding 2 (CRITICAL, re-review): confirmed-negative caching vs
-# transient-failure caching.
+# F-3.1-28 (CRITICAL, re-review round 1): the cache key is a cache key, and
+# never the value put on the wire.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_the_symbol_sent_to_ncbi_is_the_symbol_not_the_cache_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.1-28's exact repro, asserted on the request rather than on the
+    answer.
+
+    `resolve_symbol_to_curie` composes a taxon-aware cache key,
+    "BRCA1:human", and used to pass THAT into the uncached helper as the
+    symbol. Both live calls then asked NCBI for a gene literally named
+    "BRCA1:human": the Datasets `symbol` parameter and the ESearch
+    "BRCA1:human[sym]" term. No such gene exists, so every gene-symbol
+    resolution in the system returned None.
+
+    Asserting on the outbound request is deliberate. A test that only
+    checked the returned CURIE would pass the moment a fake responds to
+    any symbol at all, which is precisely how this defect survived a
+    green suite.
+    """
+    dataset_calls: list[tuple[str | None, str | None]] = []
+    search_terms: list[str] = []
+
+    async def _recording_ncbi_efetch(tool_input: Any) -> NcbiEfetchOutput:
+        root = tool_input.root
+        if root.action == "dataset_report":
+            dataset_calls.append((root.symbol, root.taxon))
+            return _dataset_report_output(status="empty")
+        search_terms.append(root.term)
+        return _search_output(status="empty", idlist=[])
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _recording_ncbi_efetch)
+
+    await graph_module.resolve_symbol_to_curie("  brca1  ", taxon="Human")
+
+    assert dataset_calls == [("BRCA1", "human")], (
+        f"the Datasets call must carry the normalized SYMBOL and the taxon as "
+        f"two separate values, got {dataset_calls!r}"
+    )
+    assert search_terms == ["BRCA1[sym] AND human[orgn]"], (
+        f"the ESearch term must be built from the symbol alone, got "
+        f"{search_terms!r}"
+    )
+
+
+# ===========================================================================
+# Finding 2 (CRITICAL, re-review) and F-3.1-26 (re-review round 1):
+# confirmed-negative caching vs transient-failure caching, on BOTH legs.
 # ===========================================================================
 
 
@@ -183,7 +316,9 @@ async def test_transient_outage_is_never_cached_and_retries_on_the_next_call(
     # NCBI recovers: swap in a fake that answers for real.
     calls_after_recovery = _install_fake_ncbi_efetch(
         monkeypatch,
-        dataset_report=_dataset_report_output(records=[_dataset_record(gene_id="7157")]),
+        dataset_report=_dataset_report_output(
+            records=[_dataset_record(gene_id="7157", symbol="TP53")]
+        ),
     )
 
     after_recovery = await graph_module.resolve_symbol_to_curie("TP53")
@@ -195,13 +330,25 @@ async def test_transient_outage_is_never_cached_and_retries_on_the_next_call(
 
 
 @pytest.mark.asyncio
-async def test_datasets_error_falling_back_to_a_successful_esearch_is_cached(
+async def test_a_datasets_error_is_never_cached_even_when_esearch_answers(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """When Datasets errors but the ESearch fallback genuinely succeeds
-    with an unambiguous match, the overall result is a confirmed
-    resolution and must be cached: only the LAST branch to decide
-    matters for cacheability, not every branch along the way.
+    """F-3.1-26 (reopened at re-review round 1). This test previously
+    asserted the OPPOSITE, that a Datasets error still gets cached as
+    long as ESearch succeeded, on the reasoning that only the last branch
+    to decide matters. That reasoning contradicts the property both
+    `_SYMBOL_CURIE_CACHE` and `_resolve_symbol_to_curie_uncached` claim in
+    their own comments: that a cached value means BOTH Datasets and
+    ESearch answered. A Datasets timeout is not an answer.
+
+    The consequence of the old behavior is Finding 2's defect one leg
+    over: during a partial NCBI outage where Datasets is down and ESearch
+    returns nothing, the symbol is cached as a confirmed absence and stays
+    unresolvable for the life of the process even after Datasets recovers.
+
+    Both arms are asserted here, because the ESearch-found-something arm
+    is the one the old test got wrong and the ESearch-found-nothing arm is
+    the one that actually corrupts an answer.
     """
     calls = _install_fake_ncbi_efetch(
         monkeypatch,
@@ -210,9 +357,42 @@ async def test_datasets_error_falling_back_to_a_successful_esearch_is_cached(
     )
 
     result = await graph_module.resolve_symbol_to_curie("BRCA1")
-    assert result == "NCBIGene:672"
-    assert calls == ["dataset_report", "search"]
-    assert graph_module._SYMBOL_CURIE_CACHE.get("BRCA1:human") == "NCBIGene:672"
+    assert result == "NCBIGene:672", "the ESearch answer is still returned to the caller"
+    assert calls == ["dataset_report", "search", "summary"], (
+        "a single-id ESearch match must be confirmed against ESummary "
+        "before being trusted (re-review round 1 adversarial finding)"
+    )
+    assert "BRCA1:human" not in graph_module._SYMBOL_CURIE_CACHE, (
+        "a leg that errored means the result is not a confirmed answer from "
+        "both APIs, so it must not be written to a process-lifetime cache"
+    )
+
+    # The arm that actually corrupts an answer: Datasets errors, ESearch
+    # genuinely finds nothing. That is NOT a confirmed absence.
+    _install_fake_ncbi_efetch(
+        monkeypatch,
+        dataset_report=_dataset_report_output(status="error"),
+        search=_search_output(status="empty", idlist=[]),
+    )
+
+    missing = await graph_module.resolve_symbol_to_curie("EGFR")
+    assert missing is None
+    assert "EGFR:human" not in graph_module._SYMBOL_CURIE_CACHE, (
+        "a zero-hit ESearch behind an ERRORED Datasets call is a partial "
+        "outage, not a confirmed non-resolution, and caching it makes the "
+        "symbol permanently unresolvable"
+    )
+
+    # Datasets recovers: the same symbol must be retried live, not served
+    # from a cached outage.
+    calls_after_recovery = _install_fake_ncbi_efetch(
+        monkeypatch,
+        dataset_report=_dataset_report_output(
+            records=[_dataset_record(gene_id="1956", symbol="EGFR")]
+        ),
+    )
+    assert await graph_module.resolve_symbol_to_curie("EGFR") == "NCBIGene:1956"
+    assert calls_after_recovery == ["dataset_report"]
 
 
 @pytest.mark.asyncio
@@ -254,7 +434,9 @@ async def test_single_dataset_report_record_resolves_directly(
     """
     calls = _install_fake_ncbi_efetch(
         monkeypatch,
-        dataset_report=_dataset_report_output(records=[_dataset_record(gene_id="7157")]),
+        dataset_report=_dataset_report_output(
+            records=[_dataset_record(gene_id="7157", symbol="TP53")]
+        ),
     )
 
     result = await graph_module.resolve_symbol_to_curie("TP53")
@@ -288,9 +470,10 @@ async def test_multiple_dataset_report_records_falls_through_to_esearch(
     )
 
     result = await graph_module.resolve_symbol_to_curie("AMBIGUOUSSYMBOL")
-    assert calls == ["dataset_report", "search"], (
+    assert calls == ["dataset_report", "search", "summary"], (
         "an ambiguous Datasets response must fall through to the ESearch path, "
-        "never resolve directly off an arbitrary records[0]"
+        "never resolve directly off an arbitrary records[0], and the single "
+        "id ESearch then finds must still be confirmed against ESummary"
     )
     assert result == "NCBIGene:672", (
         f"expected the ESearch fallback's unambiguous answer, got {result!r}, which is "
@@ -340,7 +523,7 @@ async def test_dataset_report_record_missing_gene_id_falls_through_to_esearch(
     )
 
     result = await graph_module.resolve_symbol_to_curie("MOUSEONLYSYMBOL")
-    assert calls == ["dataset_report", "search"]
+    assert calls == ["dataset_report", "search", "summary"]
     assert result == "NCBIGene:672"
 
 
@@ -358,7 +541,9 @@ async def test_non_human_taxon_resolves_directly_from_datasets(
     calls = _install_fake_ncbi_efetch(
         monkeypatch,
         dataset_report=_dataset_report_output(
-            records=[_dataset_record(gene_id="22059", taxname="Mus musculus")]
+            records=[
+                _dataset_record(gene_id="22059", taxname="Mus musculus", symbol="TRP53")
+            ]
         ),
         search=_search_output(status="ok", idlist=["7157"]),
     )
@@ -385,7 +570,7 @@ async def test_cache_key_includes_taxon(
     _install_fake_ncbi_efetch(
         monkeypatch,
         dataset_report=_dataset_report_output(
-            records=[_dataset_record(gene_id="672", taxname="Homo sapiens")]
+            records=[_dataset_record(gene_id="672", taxname="Homo sapiens", symbol="BRCA1")]
         ),
     )
     await graph_module.resolve_symbol_to_curie("BRCA1", taxon="human")
@@ -394,4 +579,120 @@ async def test_cache_key_includes_taxon(
     )
     assert "BRCA1:mouse" not in graph_module._SYMBOL_CURIE_CACHE, (
         "BRCA1 resolved for human must not be cached for mouse"
+    )
+
+
+# ===========================================================================
+# Re-review round 1, adversarial pass (2026-08-07): a single-id ESearch
+# match is not proof of an exact symbol match. `[sym]` also indexes gene
+# aliases and synonyms, so an "unambiguous" one-id result can be the WRONG
+# gene entirely. Live-verified: `HG38[sym] AND human[orgn]` returns exactly
+# one id, and that gene's real official symbol is LGR5, not HG38.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_an_alias_match_is_rejected_not_trusted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The exact live-verified case: ESearch returns one id for a `[sym]`
+    query, but that gene's own official symbol is a completely different
+    string (an alias/synonym table hit, not an exact match). This must
+    refuse, never fabricate a CURIE for the wrong gene.
+    """
+    calls = _install_fake_ncbi_efetch(
+        monkeypatch,
+        dataset_report=_dataset_report_output(status="empty"),
+        search=_search_output(status="ok", idlist=["8549"]),
+        summary=_summary_output(name="LGR5", gene_id="8549"),
+    )
+
+    result = await graph_module.resolve_symbol_to_curie("HG38")
+
+    assert result is None, (
+        "an alias-table match (HG38[sym] -> LGR5) must never be returned "
+        "as if it were an exact symbol match"
+    )
+    assert calls == ["dataset_report", "search", "summary"]
+
+
+@pytest.mark.asyncio
+async def test_a_datasets_alias_match_falls_through_to_esearch_not_trusted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The SAME alias-matching defect exists on the Datasets
+    `gene/symbol/{symbol}/taxon/{taxon}` endpoint, which runs FIRST, so
+    the ESearch-side fix alone never fires for a symbol Datasets resolves
+    (live-verified: `gene/symbol/HG38/taxon/human` returns gene_id 8549,
+    `symbol` field `"LGR5"`, not `"HG38"`). A Datasets record whose own
+    `symbol` field does not match must fall through to the ESearch path
+    exactly like an ambiguous or gene_id-less record already does, not
+    resolve directly off the mismatched record.
+    """
+    calls = _install_fake_ncbi_efetch(
+        monkeypatch,
+        dataset_report=_dataset_report_output(
+            records=[_dataset_record(gene_id="8549", symbol="LGR5")]
+        ),
+        search=_search_output(status="ok", idlist=["8549"]),
+        summary=_summary_output(name="LGR5", gene_id="8549"),
+    )
+
+    result = await graph_module.resolve_symbol_to_curie("HG38")
+
+    assert result is None, (
+        "a Datasets alias match (HG38 -> LGR5) must fall through to "
+        "ESearch, which must also reject it, not resolve directly"
+    )
+    assert calls == ["dataset_report", "search", "summary"], (
+        "a symbol mismatch on the Datasets record must fall through to "
+        "the ESearch path, the same as an ambiguous or gene_id-less record"
+    )
+
+
+@pytest.mark.asyncio
+async def test_an_alias_match_rejection_is_still_cacheable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A confirmed alias mismatch is a real, stable answer (both APIs
+    answered; ESearch's match was checked and rejected), not a transient
+    failure, so it is safe to cache like any other confirmed non-resolution.
+    """
+    _install_fake_ncbi_efetch(
+        monkeypatch,
+        dataset_report=_dataset_report_output(status="empty"),
+        search=_search_output(status="ok", idlist=["78996"]),
+        summary=_summary_output(name="CYREN", gene_id="78996"),
+    )
+
+    await graph_module.resolve_symbol_to_curie("MRI")
+
+    assert "MRI:human" in graph_module._SYMBOL_CURIE_CACHE, (
+        "a confirmed alias mismatch is a real answer and should be cached"
+    )
+    assert graph_module._SYMBOL_CURIE_CACHE["MRI:human"] is None
+
+
+@pytest.mark.asyncio
+async def test_esummary_confirmation_failure_is_not_cached(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If ESummary itself fails (transient error) while confirming an
+    ESearch match, that is not a confirmed answer about the symbol and
+    must not be cached, the same rule Finding 2 and F-3.1-26 apply to a
+    Datasets or ESearch leg failing.
+    """
+    _install_fake_ncbi_efetch(
+        monkeypatch,
+        dataset_report=_dataset_report_output(status="empty"),
+        search=_search_output(status="ok", idlist=["672"]),
+        summary=_summary_output(status="error"),
+    )
+
+    result = await graph_module.resolve_symbol_to_curie("BRCA1")
+
+    assert result is None
+    assert "BRCA1:human" not in graph_module._SYMBOL_CURIE_CACHE, (
+        "an ESummary confirmation failure is a transient outage, not a "
+        "confirmed mismatch, and must not poison the cache"
     )

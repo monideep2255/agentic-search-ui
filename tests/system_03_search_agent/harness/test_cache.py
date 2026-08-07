@@ -19,12 +19,16 @@ from system_03_search_agent.harness.cache import (
     _BIOLINK_CONCEPT_SCHEMA,
     _GRAPH_SCHEMA_END,
     _GRAPH_SCHEMA_START,
+    _TOOL_REGISTRY_FINGERPRINTS,
     _TOOL_SCHEMAS_END,
     _TOOL_SCHEMAS_START,
     REGISTERED_TOOL_SCHEMAS,
     SYSTEM_INSTRUCTIONS,
+    TOOL_REGISTRY_VERSION,
     build_stable_prefix,
     prefix_sha256,
+    tool_registry_fingerprint,
+    verify_tool_registry_version,
 )
 
 # ---------------------------------------------------------------------------
@@ -412,3 +416,158 @@ def test_registered_tool_schemas_content_appears_serialized_in_the_prefix() -> N
             f"expected {schema['name']!r}'s full serialized schema inside "
             f"the tool-schema slot"
         )
+
+
+# ---------------------------------------------------------------------------
+# F-3.1-11 (reopened): the tool-registry contract-version gate.
+#
+# `system-design-patterns` pattern 10: "a tool-registry change, adding or
+# removing a tool, is coordinated with a contract-version bump. Never
+# silent." Before these tests, `TOOL_REGISTRY_VERSION` was a string nothing
+# imported, nothing tested, and nothing enforced, so build phase 3.2 could
+# have registered `ncbi_dbsnp` with the version still reading "v2" and no
+# check anywhere would have failed.
+#
+# The two expectations below are hardcoded on purpose. Registering the next
+# tool must break this file, forcing the version, the fingerprint ledger in
+# `cache.py`, and these literals to be edited together in one conscious
+# change. Updating only the literals to make a failure go away is the
+# reward-hacking move `goal-contracts` forbids: it re-weakens the check
+# instead of doing the coordination the check exists to force.
+#
+# Coverage this gate deliberately omits (goal-contracts, "a verify surface
+# must state its own coverage"): membership only, never a tool's
+# `input_schema` content. A new field on `NcbiEfetchInput` moves the prefix
+# bytes but adds no tool, so it is not a registry-contract event and this
+# gate stays green for it by design. The byte-equality tests above own that
+# case.
+# ---------------------------------------------------------------------------
+
+EXPECTED_TOOL_REGISTRY_VERSION = "v2"
+EXPECTED_TOOL_REGISTRY_FINGERPRINT = "99358f2c0c86"  # cypher_query, ncbi_efetch
+
+_FAKE_TOOL_SCHEMA = {
+    "name": "ncbi_dbsnp",
+    "description": "A tool that is not registered yet.",
+    "input_schema": {"type": "object", "properties": {}},
+}
+
+
+def test_tool_registry_version_and_fingerprint_are_both_pinned() -> None:
+    """The gate itself: the live registry's membership fingerprint and the
+    declared contract version must both match what this file pins. Adding
+    or removing a tool changes the fingerprint and fails here until
+    `TOOL_REGISTRY_VERSION` is bumped and these literals are updated with
+    it.
+    """
+    assert TOOL_REGISTRY_VERSION == EXPECTED_TOOL_REGISTRY_VERSION, (
+        f"TOOL_REGISTRY_VERSION is {TOOL_REGISTRY_VERSION!r}, expected "
+        f"{EXPECTED_TOOL_REGISTRY_VERSION!r}. If the registered tool set "
+        f"genuinely changed, update both literals in this file in the same "
+        f"change as the bump."
+    )
+    assert tool_registry_fingerprint() == EXPECTED_TOOL_REGISTRY_FINGERPRINT, (
+        f"the registered tool set changed: it now fingerprints as "
+        f"{tool_registry_fingerprint()!r} over "
+        f"{[s['name'] for s in REGISTERED_TOOL_SCHEMAS]!r}. Bump "
+        f"TOOL_REGISTRY_VERSION, add the new row to "
+        f"_TOOL_REGISTRY_FINGERPRINTS, and update both literals here."
+    )
+    assert (
+        _TOOL_REGISTRY_FINGERPRINTS[EXPECTED_TOOL_REGISTRY_VERSION]
+        == EXPECTED_TOOL_REGISTRY_FINGERPRINT
+    )
+
+
+def test_live_registry_passes_the_version_gate() -> None:
+    """The shipped registry and its declared version agree, which is also
+    what the import-time call in `cache.py` asserts: if this ever stopped
+    holding, importing the module would raise before any test ran.
+    """
+    verify_tool_registry_version()
+
+
+def test_adding_a_tool_without_bumping_the_version_raises() -> None:
+    """The proof the gate is real rather than decorative. A registry with a
+    third tool, still claiming version "v2", must fail loudly.
+    """
+    with pytest.raises(RuntimeError) as excinfo:
+        verify_tool_registry_version(
+            tool_schemas=(*REGISTERED_TOOL_SCHEMAS, _FAKE_TOOL_SCHEMA),
+            version=TOOL_REGISTRY_VERSION,
+        )
+
+    message = str(excinfo.value)
+    assert "without a contract-version bump" in message
+    assert "ncbi_dbsnp" in message
+    assert "Bump TOOL_REGISTRY_VERSION" in message
+
+
+def test_removing_a_tool_without_bumping_the_version_raises() -> None:
+    """Pattern 10 names removal as well as addition, so the gate must fire
+    in both directions, not only when the registry grows.
+    """
+    with pytest.raises(RuntimeError, match="without a contract-version bump"):
+        verify_tool_registry_version(
+            tool_schemas=REGISTERED_TOOL_SCHEMAS[:1],
+            version=TOOL_REGISTRY_VERSION,
+        )
+
+
+def test_bumping_the_version_without_changing_the_registry_raises() -> None:
+    """Coordination runs both ways: an unchanged registry claiming a
+    different declared version is just as silent a contract lie as a
+    changed registry claiming the old one.
+    """
+    with pytest.raises(RuntimeError, match="without a contract-version bump"):
+        verify_tool_registry_version(
+            tool_schemas=REGISTERED_TOOL_SCHEMAS,
+            version="v1",
+        )
+
+
+def test_an_undeclared_version_raises_with_the_ledger_row_to_add() -> None:
+    """Bumping the version without adding its ledger row leaves the new
+    version unpinned, so the gate refuses it and prints the exact row.
+    """
+    with pytest.raises(RuntimeError) as excinfo:
+        verify_tool_registry_version(
+            tool_schemas=REGISTERED_TOOL_SCHEMAS,
+            version="v99",
+        )
+
+    message = str(excinfo.value)
+    assert "no row in _TOOL_REGISTRY_FINGERPRINTS" in message
+    assert EXPECTED_TOOL_REGISTRY_FINGERPRINT in message
+
+
+def test_every_ledger_row_pins_a_distinct_fingerprint() -> None:
+    """Two versions mapping to the same fingerprint would mean one of them
+    was declared without a real membership change, which makes the ledger
+    unable to distinguish them.
+    """
+    fingerprints = list(_TOOL_REGISTRY_FINGERPRINTS.values())
+    assert len(fingerprints) == len(set(fingerprints))
+    assert TOOL_REGISTRY_VERSION in _TOOL_REGISTRY_FINGERPRINTS
+
+
+def test_fingerprint_depends_on_membership_not_written_order() -> None:
+    """The fingerprint sorts names before hashing, so re-writing the tuple
+    in a different order is not a contract event. Only membership is.
+    """
+    forward = tool_registry_fingerprint(REGISTERED_TOOL_SCHEMAS)
+    reversed_order = tool_registry_fingerprint(tuple(reversed(REGISTERED_TOOL_SCHEMAS)))
+    assert forward == reversed_order == EXPECTED_TOOL_REGISTRY_FINGERPRINT
+
+
+def test_fingerprint_ignores_input_schema_and_description_content() -> None:
+    """The declared coverage boundary, asserted rather than only written in
+    a comment: editing a tool's description or input schema does not move
+    the registry fingerprint, because that is not adding or removing a
+    tool. The prefix byte-equality tests above own that case instead.
+    """
+    edited = tuple(
+        {**schema, "description": "edited", "input_schema": {"type": "object"}}
+        for schema in REGISTERED_TOOL_SCHEMAS
+    )
+    assert tool_registry_fingerprint(edited) == EXPECTED_TOOL_REGISTRY_FINGERPRINT

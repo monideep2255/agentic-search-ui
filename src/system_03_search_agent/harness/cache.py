@@ -56,12 +56,22 @@ this note used to record, that `cypher_query` had been live since build
 phase 2.1 and still never reached the tool-schema slot. This module only
 builds the fixed, alphabetically-ordered content; `core.graph` owns
 threading it into the live call.
+
+Registry contract gate (F-3.1-11, reopened): `TOOL_REGISTRY_VERSION`,
+`_TOOL_REGISTRY_FINGERPRINTS`, `tool_registry_fingerprint`, and
+`verify_tool_registry_version` together make pattern 10's "never silent"
+rule enforced rather than documented. `verify_tool_registry_version()`
+runs at import time, so registering a tool without bumping the version
+raises a `RuntimeError` naming the exact three-file edit needed. See the
+comment block above `TOOL_REGISTRY_VERSION` for what the gate covers and
+what it deliberately does not.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping, Sequence
 from typing import Any, Final
 
 from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
@@ -152,9 +162,43 @@ def _build_tool_schema_section(tool_schemas: list[dict] | None) -> str:
 # must bump this version, per system-design-patterns pattern 10: a tool-
 # registry change is coordinated with a contract-version bump, never silent.
 # Currently v2: cypher_query (v1) + ncbi_efetch (v2).
+#
+# F-3.1-11 (reopened): the version above was decorative until this ledger
+# existed. Nothing imported it, nothing tested it, and build phase 3.2 could
+# have added `ncbi_dbsnp` with the string still reading "v2" and no check
+# anywhere would have noticed, which is exactly the silent registry change
+# pattern 10 forbids. `_TOOL_REGISTRY_FINGERPRINTS` pins each declared
+# version to the fingerprint of the tool-name set that version means, and
+# `verify_tool_registry_version()` runs at import time, so a membership
+# change with a stale version raises before the module finishes loading
+# rather than passing quietly. The ledger is append-only: a new version gets
+# a new row, an existing row is never rewritten to make a mismatch go away,
+# since rewriting the row is the reward-hacking move that turns the gate
+# back into a comment. `tests/system_03_search_agent/harness/test_cache.py`
+# hardcodes both the expected version string and the expected fingerprint,
+# so the next person to register a tool must edit the version, the ledger,
+# and the test together, consciously, in one change.
+#
+# Scope of what this gate covers, stated so its hole is arguable rather than
+# assumed (goal-contracts, "a verify surface must state its own coverage"):
+# the fingerprint is computed over the registered tool NAMES only, which is
+# precisely the membership change pattern 10 governs (adding or removing a
+# tool). It deliberately does NOT cover a tool's own `input_schema` content:
+# a pydantic model field added to `NcbiEfetchInput` changes the prefix bytes
+# and therefore the prompt cache, but it does not add or remove a tool, so
+# it is not a registry-contract event. The prefix byte-equality assertions
+# elsewhere in this module's tests own that case.
 # ---------------------------------------------------------------------------
 
 TOOL_REGISTRY_VERSION: Final[str] = "v2"
+
+# Append-only. One row per contract version the tool registry has ever
+# declared, mapping that version to `tool_registry_fingerprint()` over the
+# tool-name set it means. Never rewrite an existing row.
+_TOOL_REGISTRY_FINGERPRINTS: Final[dict[str, str]] = {
+    "v1": "5f0ef0d584b9",  # cypher_query
+    "v2": "99358f2c0c86",  # cypher_query, ncbi_efetch
+}
 
 REGISTERED_TOOL_SCHEMAS: Final[tuple[dict[str, Any], ...]] = (
     {
@@ -184,6 +228,90 @@ REGISTERED_TOOL_SCHEMAS: Final[tuple[dict[str, Any], ...]] = (
         "input_schema": NcbiEfetchInput.model_json_schema(),
     },
 )
+
+
+def tool_registry_fingerprint(
+    tool_schemas: Sequence[Mapping[str, Any]] = REGISTERED_TOOL_SCHEMAS,
+) -> str:
+    """Return a stable 12-hex-character fingerprint of a registry's membership.
+
+    Computed over the sorted tool names alone, joined by newlines and
+    SHA-256'd, so the value is independent of the order the tuple happens
+    to be written in and of any later edit to a tool's `input_schema` or
+    `description`. Two registries with the same set of tool names always
+    fingerprint identically; adding or removing a single tool always
+    changes the value. That is the exact granularity
+    `system-design-patterns` pattern 10 governs.
+
+    Args:
+        tool_schemas: The registry to fingerprint. Defaults to the live
+            `REGISTERED_TOOL_SCHEMAS`, so a caller checking the shipped
+            registry passes nothing; tests pass a constructed registry to
+            prove the gate fires on a change.
+
+    Returns:
+        The first 12 characters of the hex SHA-256 digest.
+    """
+    names = sorted(str(schema.get("name", "")) for schema in tool_schemas)
+    return hashlib.sha256("\n".join(names).encode("utf-8")).hexdigest()[:12]
+
+
+def verify_tool_registry_version(
+    tool_schemas: Sequence[Mapping[str, Any]] = REGISTERED_TOOL_SCHEMAS,
+    version: str = TOOL_REGISTRY_VERSION,
+) -> None:
+    """Raise unless `version` is the declared contract version for `tool_schemas`.
+
+    The enforcement half of `system-design-patterns` pattern 10: "a tool-
+    registry change, adding or removing a tool, is coordinated with a
+    contract-version bump. Never silent." Called at import time below, so
+    a registry whose membership drifted from its declared version fails
+    the process rather than shipping a stale version string.
+
+    Args:
+        tool_schemas: The registry to check. Defaults to the live one.
+        version: The contract version claimed for it. Defaults to
+            `TOOL_REGISTRY_VERSION`.
+
+    Raises:
+        RuntimeError: When `version` has no row in
+            `_TOOL_REGISTRY_FINGERPRINTS`, or when the registry's actual
+            fingerprint is not the one that row pins. The message names
+            the next action, not just the failure, since the reader may be
+            an agent mid-build (production-standards, retry-safety gate).
+    """
+    expected = _TOOL_REGISTRY_FINGERPRINTS.get(version)
+    actual = tool_registry_fingerprint(tool_schemas)
+    names = sorted(str(schema.get("name", "")) for schema in tool_schemas)
+
+    if expected is None:
+        raise RuntimeError(
+            f"TOOL_REGISTRY_VERSION is {version!r}, which has no row in "
+            f"_TOOL_REGISTRY_FINGERPRINTS. Add the row "
+            f'{version!r}: "{actual}"  # {", ".join(names)} '
+            f"and update the hardcoded expectations in "
+            f"tests/system_03_search_agent/harness/test_cache.py."
+        )
+
+    if actual != expected:
+        raise RuntimeError(
+            f"the registered tool set changed without a contract-version "
+            f"bump (system-design-patterns pattern 10: never silent). "
+            f"TOOL_REGISTRY_VERSION is {version!r}, whose declared "
+            f"fingerprint is {expected!r}, but REGISTERED_TOOL_SCHEMAS now "
+            f'fingerprints as "{actual}" over [{", ".join(names)}]. Bump '
+            f"TOOL_REGISTRY_VERSION to the next version, add that version "
+            f'to _TOOL_REGISTRY_FINGERPRINTS as "{actual}", and update the '
+            f"hardcoded expectations in "
+            f"tests/system_03_search_agent/harness/test_cache.py. Do not "
+            f"rewrite an existing fingerprint row to silence this."
+        )
+
+
+# Import-time enforcement, not a comment that hopes. A tool added to the
+# registry without a matching version bump fails here, before any caller
+# can assemble a prefix from a registry whose contract version lies.
+verify_tool_registry_version()
 
 
 # ---------------------------------------------------------------------------

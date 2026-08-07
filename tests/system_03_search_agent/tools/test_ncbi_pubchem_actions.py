@@ -26,9 +26,21 @@ What this file proves, mapped to the ticket's acceptance:
       body shape fails closed to `error` rather than a fabricated `ok`.
     - A hostile `value` (for both `cid` and `name` lookups) and a hostile
       `properties` entry are URL-encoded before reaching the request path.
-    - `source_url` is always `None`, per the documented host-pattern
-      conflict: PubChem's own record host does not satisfy
-      `NCBI_EFETCH_RECORD_URL_PATTERN`.
+    - `source_url` is a real PubChem record URL, not `None`:
+      `NCBI_EFETCH_RECORD_URL_PATTERN` names the `pubchem.` subdomain, and
+      the CID is URL-encoded on its way into the path, so a hostile or
+      malformed CID from the response body cannot put whitespace, a
+      newline, a path separator, or literal markup into a citation URL.
+    - A response that violates this tool's own output schema (an over-long
+      id, more than 40 properties) fails closed to `error`, never raising
+      `pydantic.ValidationError` out of the tool's public boundary.
+    - Truncation is disclosed honestly on the name path: resolved CIDs
+      dropped by the fan-out cap, or by being non-scalar, are reported via
+      `truncated` and `total_available`.
+    - An unrecognized 2xx property body fails closed to `error` on BOTH the
+      cid path and the name path, not just one.
+    - Free-text values extracted from a record body carry a per-value
+      character cap.
 
 Depends on:
     - system_03_search_agent.tools.ncbi_pubchem_actions (module under test)
@@ -42,6 +54,7 @@ Writes:
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import httpx
@@ -339,3 +352,270 @@ async def test_hostile_cid_value_is_url_encoded() -> None:
     called_url = client.calls[0]["url"]
     assert "/../" not in called_url
     assert "%2F" in called_url
+
+
+# ===========================================================================
+# F-3.1-08-residual / F-3.1-36: the CID inside source_url is untrusted
+# response-body content and must be encoded, not f-string interpolated.
+# ===========================================================================
+
+
+@pytest.mark.parametrize(
+    ("hostile_cid", "forbidden"),
+    [
+        ("22/../../../evil", "/../"),
+        ("22 44", " "),
+        ("22\n44", "\n"),
+        ("<script>x</script>", "<script>"),
+        ("22?next=https://evil.example", "?"),
+        ("22#frag", "#"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_hostile_cid_in_response_body_is_encoded_in_source_url(
+    hostile_cid: str, forbidden: str
+) -> None:
+    """A malformed or hostile `CID` in the PubChem RESPONSE must not reach
+    the citation URL raw. The value comes from the network, not the caller,
+    so encoding it is not optional.
+    """
+    body = json.dumps(
+        {"PropertyTable": {"Properties": [{"CID": hostile_cid, "MolecularFormula": "C9H8O4"}]}}
+    )
+    client = _FakeClient([httpx.Response(200, text=body)])
+    action_input = NcbiEfetchPubchemPropertyInput(
+        action="pubchem_property", lookup_type="cid", value="2244"
+    )
+
+    output = await ncbi_pubchem_actions.pubchem_property(action_input, client=client)
+
+    assert output.status == "ok"
+    source_url = output.records[0].source_url
+    assert source_url is not None
+    assert source_url.startswith("https://pubchem.ncbi.nlm.nih.gov/compound/")
+    assert forbidden not in source_url, (
+        f"raw hostile content survived into the citation URL: {source_url!r}"
+    )
+    assert hostile_cid not in source_url
+
+
+@pytest.mark.asyncio
+async def test_wellformed_cid_still_produces_a_readable_source_url() -> None:
+    """Encoding must not mangle the ordinary case."""
+    body = '{"PropertyTable":{"Properties":[{"CID":2244,"MolecularFormula":"C9H8O4"}]}}'
+    client = _FakeClient([httpx.Response(200, text=body)])
+    action_input = NcbiEfetchPubchemPropertyInput(
+        action="pubchem_property", lookup_type="cid", value="2244"
+    )
+
+    output = await ncbi_pubchem_actions.pubchem_property(action_input, client=client)
+
+    assert output.records[0].source_url == "https://pubchem.ncbi.nlm.nih.gov/compound/2244"
+
+
+# ===========================================================================
+# F-3.1-34: a schema-violating response fails closed, never raises out of
+# the tool's public boundary.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_over_forty_properties_fails_closed_instead_of_raising() -> None:
+    """`NcbiEfetchRecord.fields` caps at 40 properties. A response carrying
+    41 used to raise `pydantic.ValidationError` straight out of
+    `pubchem_property`.
+    """
+    entry: dict[str, Any] = {"CID": 2244}
+    entry.update({f"Prop{index}": "x" for index in range(45)})
+    body = json.dumps({"PropertyTable": {"Properties": [entry]}})
+    client = _FakeClient([httpx.Response(200, text=body)])
+    action_input = NcbiEfetchPubchemPropertyInput(
+        action="pubchem_property", lookup_type="cid", value="2244"
+    )
+
+    output = await ncbi_pubchem_actions.pubchem_property(action_input, client=client)
+
+    assert output.status == "error"
+    assert output.error is not None
+    assert not output.records
+
+
+@pytest.mark.asyncio
+async def test_over_long_cid_fails_closed_instead_of_raising() -> None:
+    """`NcbiEfetchRecord.id` caps at 30 characters, and `source_url` at 300."""
+    body = json.dumps({"PropertyTable": {"Properties": [{"CID": "9" * 400}]}})
+    client = _FakeClient([httpx.Response(200, text=body)])
+    action_input = NcbiEfetchPubchemPropertyInput(
+        action="pubchem_property", lookup_type="cid", value="2244"
+    )
+
+    output = await ncbi_pubchem_actions.pubchem_property(action_input, client=client)
+
+    assert output.status == "error"
+    assert output.error is not None
+    assert len(output.error) <= 500
+
+
+# ===========================================================================
+# F-3.1-12: per-value character cap on extracted free text.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_over_long_property_value_is_capped() -> None:
+    body = json.dumps({"PropertyTable": {"Properties": [{"CID": 2244, "IUPACName": "a" * 9000}]}})
+    client = _FakeClient([httpx.Response(200, text=body)])
+    action_input = NcbiEfetchPubchemPropertyInput(
+        action="pubchem_property", lookup_type="cid", value="2244"
+    )
+
+    output = await ncbi_pubchem_actions.pubchem_property(action_input, client=client)
+
+    assert output.status == "ok"
+    value = output.records[0].fields["IUPACName"]
+    assert len(value) < 9000
+    assert value.endswith("[truncated]")
+
+
+# ===========================================================================
+# F-3.1-21 (re-review): honest truncation disclosure on the name path.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_name_lookup_discloses_cids_dropped_by_the_fanout_cap() -> None:
+    """40 resolved CIDs, only `_MAX_NAME_RESOLVED_CIDS` fetched. The caller
+    must be able to see that the rest were dropped.
+    """
+    resolve_body = json.dumps({"IdentifierList": {"CID": list(range(1, 41))}})
+    property_bodies = [
+        httpx.Response(
+            200,
+            text=json.dumps({"PropertyTable": {"Properties": [{"CID": cid}]}}),
+        )
+        for cid in range(1, ncbi_pubchem_actions._MAX_NAME_RESOLVED_CIDS + 1)
+    ]
+    client = _FakeClient([httpx.Response(200, text=resolve_body), *property_bodies])
+    action_input = NcbiEfetchPubchemPropertyInput(
+        action="pubchem_property", lookup_type="name", value="ambiguouschemical"
+    )
+
+    output = await ncbi_pubchem_actions.pubchem_property(action_input, client=client)
+
+    assert output.status == "ok"
+    assert output.record_count == ncbi_pubchem_actions._MAX_NAME_RESOLVED_CIDS
+    assert output.truncated is True, "40 resolved CIDs, 5 fetched, must not report truncated=False"
+    assert output.total_available == 40
+
+
+@pytest.mark.asyncio
+async def test_name_lookup_within_the_cap_reports_no_truncation() -> None:
+    """The disclosure must not fire when nothing was actually dropped."""
+    resolve_body = json.dumps({"IdentifierList": {"CID": [2244, 2245]}})
+    property_bodies = [
+        httpx.Response(200, text=json.dumps({"PropertyTable": {"Properties": [{"CID": cid}]}}))
+        for cid in (2244, 2245)
+    ]
+    client = _FakeClient([httpx.Response(200, text=resolve_body), *property_bodies])
+    action_input = NcbiEfetchPubchemPropertyInput(
+        action="pubchem_property", lookup_type="name", value="aspirin"
+    )
+
+    output = await ncbi_pubchem_actions.pubchem_property(action_input, client=client)
+
+    assert output.status == "ok"
+    assert output.truncated is False
+    assert output.total_available is None
+
+
+@pytest.mark.asyncio
+async def test_name_lookup_discloses_a_silently_dropped_non_scalar_cid() -> None:
+    """A minority of non-scalar entries is tolerated but must be counted in
+    the disclosure, never silently swallowed (F-3.1-34, part 2).
+    """
+    resolve_body = json.dumps({"IdentifierList": {"CID": [2244, {"nested": 1}, 2245]}})
+    property_bodies = [
+        httpx.Response(200, text=json.dumps({"PropertyTable": {"Properties": [{"CID": cid}]}}))
+        for cid in (2244, 2245)
+    ]
+    client = _FakeClient([httpx.Response(200, text=resolve_body), *property_bodies])
+    action_input = NcbiEfetchPubchemPropertyInput(
+        action="pubchem_property", lookup_type="name", value="partlymalformed"
+    )
+
+    output = await ncbi_pubchem_actions.pubchem_property(action_input, client=client)
+
+    assert output.status == "ok"
+    assert output.truncated is True
+    assert output.total_available == 3, "the dropped non-scalar entry must be disclosed"
+
+
+@pytest.mark.asyncio
+async def test_majority_non_scalar_cid_list_fails_closed() -> None:
+    """A body where most entries are unusable is malformed, not odd."""
+    resolve_body = json.dumps({"IdentifierList": {"CID": [2244, {"a": 1}, None, [1], {"b": 2}]}})
+    client = _FakeClient([httpx.Response(200, text=resolve_body)])
+    action_input = NcbiEfetchPubchemPropertyInput(
+        action="pubchem_property", lookup_type="name", value="malformed"
+    )
+
+    output = await ncbi_pubchem_actions.pubchem_property(action_input, client=client)
+
+    assert output.status == "error"
+    assert output.error is not None
+    assert len(client.calls) == 1, "a malformed resolution must not fan out to property fetches"
+
+
+# ===========================================================================
+# F-3.1-21 (re-review): the unrecognized-body verdict is the same on both
+# paths.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_unrecognized_2xx_property_body_on_the_name_path_is_error() -> None:
+    """The cid path already fails closed on this exact shape. The name path
+    used to report it as `empty`, which reads to the caller as "nothing
+    matched" instead of "this API no longer looks like what we verified".
+    """
+    resolve_body = '{"IdentifierList":{"CID":[2244]}}'
+    client = _FakeClient(
+        [
+            httpx.Response(200, text=resolve_body),
+            httpx.Response(200, text='{"somethingUnexpected": true}'),
+        ]
+    )
+    action_input = NcbiEfetchPubchemPropertyInput(
+        action="pubchem_property", lookup_type="name", value="aspirin"
+    )
+
+    output = await ncbi_pubchem_actions.pubchem_property(action_input, client=client)
+
+    assert output.status == "error", (
+        f"the name path must fail closed on an unrecognized 2xx body exactly "
+        f"as the cid path does, got {output.status!r}"
+    )
+    assert output.error is not None
+    assert not output.records
+
+
+@pytest.mark.asyncio
+async def test_genuinely_empty_property_table_on_the_name_path_is_still_empty() -> None:
+    """The fix above must not turn a well-formed zero-result answer into an
+    error: `{"PropertyTable": {"Properties": []}}` is recognized and empty.
+    """
+    resolve_body = '{"IdentifierList":{"CID":[2244]}}'
+    client = _FakeClient(
+        [
+            httpx.Response(200, text=resolve_body),
+            httpx.Response(200, text='{"PropertyTable":{"Properties":[]}}'),
+        ]
+    )
+    action_input = NcbiEfetchPubchemPropertyInput(
+        action="pubchem_property", lookup_type="name", value="aspirin"
+    )
+
+    output = await ncbi_pubchem_actions.pubchem_property(action_input, client=client)
+
+    assert output.status == "empty"
+    assert not output.records

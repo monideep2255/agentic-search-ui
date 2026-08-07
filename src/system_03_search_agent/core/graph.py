@@ -304,8 +304,8 @@ widening it:
       `gene/symbol/{symbol}/taxon/{taxon}` first (one call, and it
       confirms the organism, per the same ortholog lesson build phase 2.1
       already paid for once), falling back to ESearch on `db=gene` with
-      `{symbol}[sym] AND human[orgn]` when Datasets returns anything
-      other than a clean, single, human match. Every call goes through
+      `{symbol}[sym] AND {taxon}[orgn]` when Datasets returns anything
+      other than a clean, single match for that taxon. Every call goes through
       `ncbi_efetch`, never a second HTTP path. Results are cached
       in-process for the life of the run (`_SYMBOL_CURIE_CACHE`): a
       symbol-to-CURIE mapping is about as stable as data gets, and this
@@ -317,17 +317,23 @@ widening it:
       entities` (the name `_select_planned_tool_call` and `write_node`
       already called) is now a thin async alias for this function, kept
       so neither call site needed renaming, only awaiting.
-    - F-3.1-01: arming T-3.1-11 without a filter turns the existing
-      `_GENE_SYMBOL_TOKEN_PATTERN` scan, matched against
-      `query_text.upper()` and therefore matching every 2-to-10-character
-      word, into up to one live NCBI call per word in the query.
-      `_SYMBOL_CANDIDATE_STOPWORDS` drops common English and domain
-      filler words before any network call, a verbatim CURIE match's own
-      text span is excluded from the symbol scan so an identifier already
-      resolved exactly is never also fuzzy-matched, and
-      `_MAX_LIVE_SYMBOL_LOOKUPS` (3) hard-caps live calls per query
-      regardless of how complete the stopword list is. Case 14 of the
-      premise gate pins the cap.
+    - F-3.1-01 / F-3.1-14: arming T-3.1-11 without a filter turns the
+      `_GENE_SYMBOL_TOKEN_PATTERN` scan into up to one live NCBI call per
+      word in the query. Three layers now stand in front of that, in
+      order of how much work each does. First, the pattern runs against
+      the ORIGINAL query text, so a token qualifies only when it is
+      already written in a gene symbol's conventional all-caps shape;
+      this is the primary filter and it replaces a roughly 330-entry
+      stopword list that could only ever be as complete as the last
+      defect someone noticed. Second, a short
+      `_SYMBOL_CANDIDATE_STOPWORDS` list catches the residue the shape
+      heuristic cannot see (clinical acronyms, capitalized assembly
+      builds), and a verbatim CURIE match's own text span is excluded so
+      an identifier already resolved exactly is never also fuzzy-matched.
+      Third, `_MAX_LIVE_SYMBOL_LOOKUPS` (3) hard-caps live calls per
+      query regardless of what the first two layers let through. Case 14
+      of the premise gate asserts a real gene is actually attempted, not
+      merely that the cap holds.
     - T-3.1-13/F-2.1-B10: before this fix, a gene-symbol-shaped token
       that failed to resolve still reached `cypher_query` with an empty
       `target_entities` list, the model still wrote Cypher referencing an
@@ -366,6 +372,7 @@ widening it:
 
 from __future__ import annotations
 
+import itertools
 import re
 import time
 import uuid
@@ -922,105 +929,98 @@ _CURIE_IN_TEXT_PATTERN = re.compile(
 
 # An ALL-CAPS alphanumeric token, 2 to 10 characters: the shape a live
 # gene-symbol candidate must have before it is worth a network call.
-# Matched against `query_text.upper()`, so it matches every 2-to-10-
-# character word in the query, not just symbols (F-3.1-01). See
-# `_SYMBOL_CANDIDATE_STOPWORDS` and `_gene_symbol_candidates` below for
-# the filter that runs before any candidate this pattern finds reaches
-# `resolve_symbol_to_curie`.
+#
+# F-3.1-01 / F-3.1-14 (reopened at re-review round 1): this pattern is
+# matched against the ORIGINAL query text, never against
+# `query_text.upper()`. Uppercasing first erases the one signal that
+# separates a gene symbol from an ordinary English word, since a gene
+# symbol is conventionally WRITTEN in caps (TP53, EGFR, ALK, KRAS) while
+# "small", "molecule" and "inhibitors" are not. With the case signal
+# erased, every 2-to-10-character word in the query became a candidate,
+# and the only thing standing between an English question and one live
+# NCBI call per word was a hand-maintained stopword list whose own
+# comment admitted it needed extending every time a new failing word was
+# observed in production. That is a filter at the wrong layer: it can
+# only ever be as complete as the last defect someone noticed.
+#
+# The shape heuristic is the primary filter now. A candidate must already
+# be written the way a gene symbol is written. Deliberately NOT "contains
+# a digit", which readmits exactly the noise class F-3.1-30 reported:
+# `hg38`, `type2` and `covid19` all carry digits and none of them is
+# written in a gene symbol's case. `GRCh38` fails for the same reason (a
+# lowercase letter inside the token).
+#
+# Matching against the original text also removes a latent span bug: the
+# CURIE scan below runs on the original text, so token spans taken from
+# an uppercased copy were only accidentally aligned with it. They diverge
+# on any character whose upper-case form has a different length (Python's
+# `"ß".upper()` is `"SS"`), which silently shifts every span after it.
 _GENE_SYMBOL_TOKEN_PATTERN = re.compile(r"\b[A-Z][A-Z0-9]{1,9}\b")
 
-# F-3.1-01: common English function words plus domain filler words that
-# would otherwise pass `_GENE_SYMBOL_TOKEN_PATTERN`'s bare ALL-CAPS shape
-# check and each cost one live NCBI call. Verified live: "What diseases
-# are linked to TP53?" yields ['WHAT','DISEASES','ARE','LINKED','TO',
-# 'TP53'] from the pattern alone. Deliberately over-inclusive rather than
-# a precise part-of-speech filter, since a false exclusion here (a real
-# gene symbol that happens to collide with a stopword, none currently
-# known in this list) costs a missed resolution, while a false inclusion
-# costs a wasted network call bounded by `_MAX_LIVE_SYMBOL_LOOKUPS`
-# regardless. Not exhaustive; extend it when a new filler word is
-# observed reaching a live call in practice.
+# HGNC's "C#orf#" nomenclature (Chromosome # Open Reading Frame #, e.g.
+# C9orf72, C4orf54) is a genuinely mixed-case official gene-symbol family,
+# hundreds of approved symbols wide, and it is invisible to the all-caps
+# pattern above by design: the lowercase "orf" is not a case mistake, it
+# is how HGNC writes the name. Found during re-review round 1's own
+# independent verification of the fix that introduced
+# `_GENE_SYMBOL_TOKEN_PATTERN` (2026-08-07): the case-preserving shape
+# heuristic that correctly excludes ordinary English also, as an
+# unintended side effect, excluded this entire real nomenclature family,
+# a genuine regression against the PRE-fix (uppercase-everything)
+# behavior, which happened to catch these by accident. This is a second,
+# narrow, case-sensitive shape (a specific letter-digit-letters-digit
+# template, not "any mixed case"), so it does not reopen the general
+# problem the primary pattern exists to solve.
+_CORF_GENE_TOKEN_PATTERN = re.compile(r"\bC\d{1,2}orf\d{1,3}\b")
+
+# F-3.1-01 / F-3.1-14 / F-3.1-31: a SHORT defense-in-depth list, no
+# longer the primary filter.
+#
+# Before re-review round 1 this held roughly 330 entries and did the real
+# work, because the pattern above ran against uppercased text and matched
+# every word. The case-preserving shape heuristic above now does that
+# work, so what is left here is only the residue the shape heuristic
+# cannot see: tokens genuinely written in caps that are still not gene
+# symbols. Two classes, and nothing else belongs here.
+#
+#   1. Clinical and general acronyms a user writes in caps beside a real
+#      gene ("In ADHD, PTSD and OCD cohorts, is TP53 mutated?"). Without
+#      these three, that question spends all three lookups before TP53.
+#   2. Assembly, build and coordinate noise when typed in caps (HG38,
+#      GRCH38). Lowercase spellings are already excluded by shape; this
+#      covers the capitalized ones (F-3.1-30).
+#
+# The short function-word set exists for one case only: a query typed
+# entirely in capitals, where the shape signal carries no information at
+# all. It is not a general English filter and must not grow into one.
+#
+# F-3.1-31: "LARGE" was removed. It is a real human gene, NCBIGene:9215
+# (LARGE xylosyl- and glucuronyltransferase 1), and a permanent blacklist
+# entry is a permanent, silent refusal to ever resolve it. Every entry
+# below was checked the same way, and "SARS" was deliberately NOT added
+# for exactly this reason: it was the approved HGNC symbol for seryl-tRNA
+# synthetase 1 until that gene was renamed SARS1. When in doubt, leave a
+# token OUT of this list: a wasted lookup is bounded by
+# `_MAX_LIVE_SYMBOL_LOOKUPS`, a blacklisted real gene is unbounded.
 _SYMBOL_CANDIDATE_STOPWORDS: frozenset[str] = frozenset(
     {
-        # function / question words
-        "WHAT", "WHICH", "WHO", "WHOM", "WHOSE", "WHERE", "WHEN", "WHY", "HOW",
-        "IS", "ARE", "WAS", "WERE", "BE", "BEEN", "BEING", "AM",
-        "DO", "DOES", "DID", "DOING", "DONE",
-        "HAS", "HAVE", "HAD", "HAVING",
-        "WILL", "WOULD", "SHALL", "SHOULD", "CAN", "COULD", "MAY", "MIGHT", "MUST",
-        "THE", "A", "AN", "AND", "OR", "NOR", "BUT", "SO", "IF", "THEN", "ELSE",
-        "TO", "OF", "IN", "ON", "AT", "BY", "FOR", "WITH", "FROM", "AS", "ABOUT",
-        "INTO", "OVER", "UNDER", "BETWEEN", "AMONG", "THROUGH", "DURING",
-        "BEFORE", "AFTER", "ABOVE", "BELOW", "UP", "DOWN", "OUT", "OFF", "AGAIN",
-        "THIS", "THAT", "THESE", "THOSE", "IT", "ITS", "EACH", "EVERY", "ALL",
-        "ANY", "SOME", "NO", "NOT", "ONLY", "OWN", "SAME", "SUCH", "MORE",
-        "MOST", "OTHER", "FEW", "TOO", "VERY", "JUST", "ALSO", "THAN",
-        "ONE", "TWO", "THREE", "MANY", "MUCH",
-        # domain filler: not a symbol shape a `dataset_report`/ESearch
-        # lookup would ever confirm, and asking anyway is a wasted call.
-        "LINKED", "LINK", "LINKS", "RELATED", "RELATE", "RELATES",
-        "ASSOCIATED", "ASSOCIATE", "ASSOCIATES", "ASSOCIATION", "ASSOCIATIONS",
-        "DISEASE", "DISEASES", "DISORDER", "DISORDERS", "CONDITION", "CONDITIONS",
-        "GENE", "GENES", "GENETIC", "GENOME", "GENOMES",
-        "PROTEIN", "PROTEINS", "MUTATION", "MUTATIONS", "VARIANT", "VARIANTS",
-        "EVIDENCE", "SUPPORTS", "SUPPORT", "SUPPORTED",
-        "CAUSE", "CAUSES", "CAUSED", "CAUSING",
-        "RISK", "RISKS", "FACTOR", "FACTORS",
-        "SYMPTOM", "SYMPTOMS", "TREATMENT", "TREATMENTS", "TREAT", "TREATS",
-        "PATIENT", "PATIENTS", "HUMAN", "HUMANS",
-        "STUDY", "STUDIES", "RESEARCH", "PAPER", "PAPERS", "ARTICLE", "ARTICLES",
-        "SHOW", "SHOWS", "SHOWN", "KNOWN", "KNOW", "TELL", "GIVE", "GIVEN",
-        "LIST", "LISTS", "FIND", "FINDS", "LOOK", "LOOKS", "SEE", "SEES",
-        "MEAN", "MEANS", "MEANING", "EXPLAIN", "EXPLAINS", "DESCRIBE",
-        "COMPARE", "COMPARES", "COMPARED",
-        "TIMES", "TYPE", "TYPES", "KIND", "KINDS",
-        "PART", "PARTS", "ROLE", "ROLES", "USE", "USES", "USED", "USING",
-        "NEW", "OLD", "GOOD", "BAD", "BETTER", "WORSE", "BEST", "WORST",
-        "QUESTION", "QUESTIONS", "ANSWER", "ANSWERS",
-        # F-3.1-14 (adversary finding 2, CRITICAL): ordinary English words
-        # observed consuming the live-lookup budget before the real gene
-        # symbol in the query is ever tried. Adding these to the stopword
-        # list is not the complete fix (the digit-priority heuristic in
-        # _resolve_query_entities is), but a stopword still costs nothing
-        # and a missed symbol costs a resolution.
-        "SMALL", "LARGE", "BIG", "LITTLE", "HIGH", "LOW", "LONG", "SHORT",
-        "MOLECULE", "MOLECULES", "INHIBITOR", "INHIBITORS", "INHIBIT",
-        "BLOCK", "BLOCKS", "BLOCKED", "BLOCKING",
-        "MUTANT", "MUTANTS", "LUNG", "LUNGS", "CHRONIC", "SMOKING",
-        "INCREASE", "INCREASES", "INCREASED", "INCREASING",
-        "DECREASE", "DECREASES", "DECREASED", "DECREASING",
-        "FREQUENCY", "FREQUENCIES",
-        "LEVEL", "LEVELS", "RATE", "RATES", "CHANGE", "CHANGES", "CHANGED",
-        "COHORT", "COHORTS", "SAMPLE", "SAMPLES", "GROUP", "GROUPS",
-        "FUSION", "FUSIONS", "REARRANGEMENT", "REARRANGEMENTS",
-        "EXPRESSION", "EXPRESSED", "EXPRESSES", "EXPRESSING",
-        "PATHWAY", "PATHWAYS", "SIGNALING", "SIGNALLING",
-        "RECEPTOR", "RECEPTORS", "LIGAND", "LIGANDS",
-        "TARGET", "TARGETS", "TARGETED", "TARGETING",
-        "DRUG", "DRUGS", "THERAPY", "THERAPIES",
-        "RESISTANCE", "RESISTANT", "SENSITIVE", "SENSITIVITY",
-        "RESPONSE", "RESPONSES", "OUTCOME", "OUTCOMES",
-        "CLINICAL", "TRIAL", "TRIALS", "EFFECT", "EFFECTS",
-        "ACTIVITY", "ACTIVITIES", "FUNCTION", "FUNCTIONS",
-        "MECHANISM", "MECHANISMS", "REGULATION", "REGULATES", "REGULATED",
-        "BIOMARKER", "BIOMARKERS", "PROGNOSIS", "PROGNOSTIC",
-        "DIAGNOSIS", "DIAGNOSTIC", "SCREENING", "DETECTION",
-        "ONSET", "PROGRESSION", "SEVERITY", "SURVIVAL",
-        "POPULATION", "POPULATIONS", "INDIVIDUAL", "INDIVIDUALS",
-        "ANALYSIS", "ANALYSES", "DATA", "RESULTS", "FINDINGS",
-        "REPORT", "REPORTS", "REPORTED", "REVIEW", "REVIEWS",
-        "META", "SYSTEMATIC", "OBSERVATIONAL", "COHORT",
-        "CELL", "CELLS", "TISSUE", "TISSUES", "BLOOD", "SERUM", "PLASMA",
-        "CANCER", "CANCERS", "TUMOR", "TUMORS", "TUMOUR", "TUMOURS",
+        # Clinical and disease acronyms. None is an approved human gene
+        # symbol.
         "ADHD", "PTSD", "OCD", "COPD", "ALS", "SLE", "IBD", "CKD",
-        "NORMAL", "ABNORMAL", "POSITIVE", "NEGATIVE",
-        "TOTAL", "OVERALL", "SPECIFIC",
-        "FIRST", "SECOND", "THIRD", "LAST", "NEXT", "PREVIOUS",
-        "MAJOR", "MINOR", "SIGNIFICANT", "IMPORTANT", "COMMON", "RARE",
-        "PRIMARY", "SECONDARY", "POTENTIAL", "POSSIBLE",
-        "CURRENT", "RECENT", "EARLY", "LATE", "ADVANCED",
-        "FULL", "PARTIAL", "COMPLETE", "INCOMPLETE",
-        "DOES", "DID", "DOING", "DONE",
+        "HIV", "AIDS", "COVID", "MRSA",
+        # Assembly, build and coordinate noise (F-3.1-30), capitalized.
+        "HG18", "HG19", "HG38", "GRCH37", "GRCH38", "CHR",
+        # Method and organization acronyms.
+        "DNA", "RNA", "PCR", "NGS", "WGS", "WES", "SNP", "GWAS", "CRISPR",
+        "MRI", "FDA", "NIH", "NCBI", "WHO", "USA",
+        # Function words, for an all-capitals query only, where the shape
+        # heuristic above has no case signal to read.
+        # "WHO" is not repeated here: it is already listed above as an
+        # organization acronym, and a duplicate set member is a ruff B033.
+        "WHAT", "WHICH", "WHY", "HOW", "WHEN", "WHERE",
+        "IS", "ARE", "WAS", "WERE", "DO", "DOES", "DID", "CAN", "COULD",
+        "THE", "AND", "OR", "TO", "OF", "IN", "ON", "FOR", "WITH", "FROM",
+        "ABOUT", "THAT", "THIS", "NOT", "ALL", "ANY",
     }
 )
 
@@ -1034,10 +1034,12 @@ _MAX_LIVE_SYMBOL_LOOKUPS = 3
 # per query is the right cost/staleness trade. This is a resolution-
 # result cache, not the prompt-cache stable prefix
 # `prompt-cache-discipline.md` governs, so that rule does not apply to
-# it. Keyed on the upper-cased symbol; `None` is a valid cached value,
-# but ONLY when it is a genuinely confirmed non-resolution (both Datasets
-# and ESearch answered and neither found the symbol), never when the
-# lookup could not be completed at all. Distinguished from "not yet
+# it. Keyed on the upper-cased symbol and the lower-cased taxon; `None`
+# is a valid cached value, but ONLY when it is a genuinely confirmed
+# non-resolution (both Datasets and ESearch answered and neither found
+# the symbol), never when the lookup could not be completed at all.
+# `_resolve_symbol_to_curie_uncached` enforces that claim on BOTH legs,
+# not just the ESearch one (F-3.1-26). Distinguished from "not yet
 # looked up" by key presence, not by the value's truthiness.
 #
 # Finding 2 (CRITICAL, re-review, 2026-08-05): before this fix, EVERY
@@ -1077,14 +1079,17 @@ async def resolve_symbol_to_curie(symbol: str, *, taxon: str = "human") -> str |
     1. NCBI Datasets v2, `dataset_report` with `report_type="gene"`. One
        call resolves a symbol straight to a `gene_id`, and its response
        carries `taxname`, so the organism is confirmed in the same round
-       trip. Requiring `taxname == "Homo sapiens"` here is deliberate,
-       not incidental: build phase 2.1's flagship failure was a query
-       that silently answered from a non-human ortholog, and skipping
-       this check would reopen exactly that class of defect one layer
-       up, in resolution rather than in query generation.
-    2. ESearch on `db="gene"` with `term="{symbol}[sym] AND human[orgn]"`,
-       tried only when Datasets does not return a clean single human
-       match (a bad symbol is a live-verified HTTP 200 with an empty
+       trip. The check is that `taxname` is present, not that it reads
+       "Homo sapiens" (F-3.1-17): the endpoint already filtered on the
+       caller's `taxon`, so a record that comes back with a taxname IS
+       the requested organism, and pinning the string to human discarded
+       correct non-human results. Build phase 2.1's ortholog failure is
+       still guarded, one step earlier: the organism is chosen by the
+       caller's `taxon` argument, which defaults to human, rather than
+       inferred from whatever the API happened to return.
+    2. ESearch on `db="gene"` with `term="{symbol}[sym] AND {taxon}[orgn]"`,
+       tried only when Datasets does not return a clean single match for
+       that taxon (a bad symbol is a live-verified HTTP 200 with an empty
        body there, not an error, so this is the expected path for an
        unresolvable symbol, not a failure path). Only an UNAMBIGUOUS
        single id is accepted; zero or multiple ids resolve to `None`
@@ -1105,11 +1110,24 @@ async def resolve_symbol_to_curie(symbol: str, *, taxon: str = "human") -> str |
     rate limit, is never cached, so the next query for the same symbol
     retries the live lookup rather than replaying a stale outage.
     """
-    cache_key = f"{symbol.strip().upper()}:{taxon.strip().lower()}"
+    # F-3.1-28 (CRITICAL, re-review round 1): `cache_key` is a CACHE KEY, and
+    # nothing else. It used to be passed straight into
+    # `_resolve_symbol_to_curie_uncached` as the symbol, which put the composed
+    # string on the wire as the NCBI `symbol` parameter and the `[sym]` ESearch
+    # term, so every live lookup asked NCBI for a gene literally named
+    # "BRCA1:human". No such gene exists, so EVERY gene-symbol resolution in
+    # the system returned None. The uncached helper takes the normalized symbol
+    # and the normalized taxon as two separate values, exactly as it always
+    # should have.
+    normalized_symbol = symbol.strip().upper()
+    normalized_taxon = taxon.strip().lower()
+    cache_key = f"{normalized_symbol}:{normalized_taxon}"
     if cache_key in _SYMBOL_CURIE_CACHE:
         return _SYMBOL_CURIE_CACHE[cache_key]
 
-    curie, cacheable = await _resolve_symbol_to_curie_uncached(cache_key, taxon)
+    curie, cacheable = await _resolve_symbol_to_curie_uncached(
+        normalized_symbol, normalized_taxon
+    )
     if cacheable:
         _SYMBOL_CURIE_CACHE[cache_key] = curie
     return curie
@@ -1118,10 +1136,21 @@ async def resolve_symbol_to_curie(symbol: str, *, taxon: str = "human") -> str |
 async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> tuple[str | None, bool]:
     """Returns `(curie, cacheable)`.
 
-    `cacheable` is `True` only when the `None` (or resolved) result is a
-    genuine, confirmed answer the live APIs actually gave, never when a
-    branch had to give up because a call errored out. See Finding 2's
+    `cacheable` is `True` only when BOTH legs, the Datasets attempt and
+    the ESearch attempt, answered without erroring. See Finding 2's
     account above `_SYMBOL_CURIE_CACHE`'s declaration.
+
+    F-3.1-26 (reopened at re-review round 1): this used to branch on
+    `search_output.status` alone, while the comments on both this
+    function and `_SYMBOL_CURIE_CACHE` claimed a cached `None` meant
+    "both Datasets and ESearch answered and neither found the symbol". A
+    Datasets timeout followed by a zero-hit ESearch was therefore cached
+    forever as a confirmed absence, which is the same permanent-stale-
+    outage defect Finding 2 was filed for, one leg over. The comment
+    claimed a property the code did not have, the exact pattern
+    `self-eval-loop` warns about, so the property is now enforced by the
+    code and asserted by
+    `tests/system_03_search_agent/core/test_resolve_symbol_to_curie.py`.
     """
     dataset_output = await ncbi_efetch(
         NcbiEfetchInput.model_validate(
@@ -1154,8 +1183,34 @@ async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> tuple[st
         # the caller-supplied taxon, so a result with a non-empty taxname
         # is the correct species. Requiring exactly "Homo sapiens" is
         # build phase 2.1's ortholog failure re-created one layer up.
-        if gene_id and taxname:
+        #
+        # Re-review round 1, adversarial pass (2026-08-07): the Datasets
+        # `gene/symbol/{symbol}/taxon/{taxon}` endpoint has the identical
+        # alias-matching behavior the ESearch fallback below was just
+        # fixed for, and it runs FIRST, so the ESearch-side fix alone
+        # never fired for a symbol Datasets resolves. Live-verified:
+        # `gene/symbol/HG38/taxon/human` returns gene_id 8549 whose own
+        # `symbol` field is `"LGR5"`, not `"HG38"`. Datasets already
+        # returns the confirmed symbol in the same response, no second
+        # call needed here (unlike the ESearch fallback, which has to ask
+        # ESummary separately). A mismatch falls through to the ESearch
+        # path below rather than refusing immediately, the same as an
+        # ambiguous or gene_id-less Datasets response already does; the
+        # ESearch fallback's own confirmation step is the second,
+        # independent check on whatever it finds.
+        official_symbol = fields.get("symbol")
+        symbol_confirmed = (
+            isinstance(official_symbol, str)
+            and official_symbol.strip().upper() == symbol.strip().upper()
+        )
+        if gene_id and taxname and symbol_confirmed:
             return f"NCBIGene:{gene_id}", True
+
+    # F-3.1-26: the Datasets leg's own outcome survives past this point.
+    # Reaching the ESearch fallback means Datasets did not resolve the
+    # symbol, but "did not resolve" and "could not answer" are different
+    # facts and only the first one is cacheable.
+    dataset_errored = dataset_output.status == "error"
 
     search_output = await ncbi_efetch(
         NcbiEfetchInput.model_validate(
@@ -1173,21 +1228,68 @@ async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> tuple[st
         # the next query for the same symbol must retry live rather than
         # replaying a stale outage forever.
         return None, False
+
+    # Both legs answered without erroring, so whatever they said is a real
+    # answer about the symbol rather than an artifact of an outage.
+    cacheable = not dataset_errored
+
     if search_output.status != "ok" or not search_output.records:
         # A genuine zero-hit search (status "empty", or "ok" with no
-        # records): both APIs answered and neither found the symbol. A
-        # confirmed non-resolution, safe to cache.
-        return None, True
+        # records).
+        return None, cacheable
 
     idlist = search_output.records[0].fields.get("idlist")
     if not isinstance(idlist, list) or len(idlist) != 1:
         # Zero hits, or an ambiguous multi-id match: never fabricate a
-        # CURIE by guessing among candidates. Both are confirmed answers
-        # from a successful call, safe to cache.
-        return None, True
+        # CURIE by guessing among candidates.
+        return None, cacheable
 
     gene_id = idlist[0]
-    return (f"NCBIGene:{gene_id}", True) if gene_id else (None, True)
+    if not gene_id:
+        return None, cacheable
+
+    # Re-review round 1, adversarial pass (2026-08-07): a `[sym]`-tagged
+    # ESearch match is not proof the returned gene's OWN official symbol
+    # is the one searched for. NCBI's gene database indexes `[sym]`
+    # against alias and synonym tables too, not only the approved symbol,
+    # so a single-hit "unambiguous" match can still be the WRONG gene
+    # entirely. Live-verified: `HG38[sym] AND human[orgn]` returns
+    # exactly one id, and that gene's real official symbol is LGR5, not
+    # HG38; `MRI[sym]` resolves the same way to CYREN, `CAN[sym]` to
+    # NUP214, `ALL[sym]` to BCR. The `len(idlist) != 1` guard above
+    # catches multiple candidates, never a single wrong one. This is
+    # exactly the fabricated-citation shape T-3.1-13/F-2.1-B10 exists to
+    # prevent, just one layer upstream of where that ticket looked: a
+    # confidently WRONG gene id can reach `cypher_query` as a real,
+    # resolved CURIE, not merely an unresolved one. Confirm the returned
+    # record's own official symbol before trusting the id.
+    summary_output = await ncbi_efetch(
+        NcbiEfetchInput.model_validate(
+            {"action": "summary", "db": "gene", "ids": [gene_id]}
+        )
+    )
+    if summary_output.status != "ok" or not summary_output.records:
+        # The id ESearch just returned could not be confirmed by
+        # ESummary: an inconclusive answer (a transient failure, or a
+        # genuinely empty record for an id ESearch just gave us), not a
+        # confirmed mismatch. Caught by this fix's own test: reusing the
+        # earlier legs' `cacheable` here would let an ESummary outage
+        # poison the cache with a permanent false negative, the exact
+        # Finding 2 / F-3.1-26 shape one confirmation step later.
+        return None, False
+
+    official_symbol = summary_output.records[0].fields.get("name")
+    if (
+        not isinstance(official_symbol, str)
+        or official_symbol.strip().upper() != symbol.strip().upper()
+    ):
+        # A real gene, but not the one searched for: a CONFIRMED alias or
+        # synonym match, not an exact symbol match. This is a definitive
+        # answer (ESummary genuinely reported this id's real symbol), so
+        # it is cacheable subject to the earlier legs' own status.
+        return None, cacheable
+
+    return f"NCBIGene:{gene_id}", cacheable
 
 
 def _span_overlaps_any(span: tuple[int, int], spans: list[tuple[int, int]]) -> bool:
@@ -1223,14 +1325,17 @@ async def _resolve_query_entities(query_text: str) -> _EntityResolution:
 
     1. A CURIE the caller already typed verbatim, matched against
        `_CURIE_IN_TEXT_PATTERN`, taken as given. No network call.
-    2. An ALL-CAPS token matched against `_GENE_SYMBOL_TOKEN_PATTERN`,
-       filtered through `_SYMBOL_CANDIDATE_STOPWORDS` and de-duplicated
-       against any span a verbatim CURIE match already covers (F-3.1-01:
-       an identifier already resolved exactly is never also fuzzy-
-       matched as a bare symbol), then resolved live via
-       `resolve_symbol_to_curie`, capped at `_MAX_LIVE_SYMBOL_LOOKUPS`
-       live calls regardless of how many candidates survive filtering
-       (T-3.1-11, replacing `_KNOWN_GENE_SYMBOL_CURIES`).
+    2. A token matched against `_GENE_SYMBOL_TOKEN_PATTERN` in the
+       ORIGINAL query text, so it must already be written in a gene
+       symbol's conventional all-caps shape to qualify at all (F-3.1-01,
+       F-3.1-14). Survivors are filtered through the short
+       `_SYMBOL_CANDIDATE_STOPWORDS` list, de-duplicated against any span
+       a verbatim CURIE match already covers (an identifier already
+       resolved exactly is never also fuzzy-matched as a bare symbol),
+       then resolved live via `resolve_symbol_to_curie` in query order,
+       capped at `_MAX_LIVE_SYMBOL_LOOKUPS` live calls regardless of how
+       many candidates survive filtering (T-3.1-11, replacing
+       `_KNOWN_GENE_SYMBOL_CURIES`).
 
     A candidate that resolves to nothing contributes nothing to `curies`
     but is recorded in `unresolved_symbols`: this function never guesses
@@ -1256,32 +1361,59 @@ async def _resolve_query_entities(query_text: str) -> _EntityResolution:
             found.append(curie)
 
     unresolved: list[str] = []
-    live_lookups = 0
 
-    # F-3.1-14 (adversary finding 2, CRITICAL): collect ALL non-stopword
-    # candidates first, then sort them so digit-containing tokens (which
-    # are more likely to be real gene symbols: TP53, BRCA1, ROS1) are
-    # tried before pure-alpha tokens (CHRONIC, SMOKING, MOLECULE). Without
-    # this sort, the first N tokens in query order win, and the real gene
-    # symbol is often later in the query.
-    candidates: list[tuple[str, tuple[int, int]]] = []
-    for token_match in _GENE_SYMBOL_TOKEN_PATTERN.finditer(query_text.upper()):
+    # F-3.1-14 / F-3.1-01, re-review round 1: candidates come from the
+    # ORIGINAL query text, so a token only qualifies when it is ALREADY
+    # written the way a gene symbol is written. See
+    # `_GENE_SYMBOL_TOKEN_PATTERN` for why the case signal is the filter
+    # and the stopword list is only defense-in-depth.
+    #
+    # F-3.1-30: the digit-priority sort that used to run here is GONE. It
+    # was added to rescue a real symbol from a budget consumed by ordinary
+    # words, a problem the case heuristic now removes at the source, and
+    # it caused its own regression: over uppercased text, assembly builds
+    # and disease-type numbers (`hg38`, `type2`, `covid19`) all carried
+    # digits, so they outranked case-marked real symbols like KRAS for the
+    # same three-call budget. Candidates are tried in QUERY ORDER, which
+    # cannot promote noise above a symbol the user actually wrote.
+    # Re-review round 1: two patterns, merged and re-sorted into query
+    # order, not appended as a second pass. `_CORF_GENE_TOKEN_PATTERN`'s
+    # matches must interleave with the primary pattern's by POSITION, not
+    # come after all of them, or a C#orf# gene appearing before an
+    # all-caps acronym in the query text would be tried second instead of
+    # first, silently reordering what the budget slices.
+    all_token_matches = sorted(
+        itertools.chain(
+            _GENE_SYMBOL_TOKEN_PATTERN.finditer(query_text),
+            _CORF_GENE_TOKEN_PATTERN.finditer(query_text),
+        ),
+        key=lambda m: m.start(),
+    )
+    candidates: list[str] = []
+    candidates_seen: set[str] = set()
+    for token_match in all_token_matches:
         token = token_match.group(0)
         if token in _SYMBOL_CANDIDATE_STOPWORDS:
             continue
         if _span_overlaps_any(token_match.span(), matched_spans):
             continue
-        candidates.append((token, token_match.span()))
+        # ADV-FIX2-8 (re-review round 1 adversarial pass): a repeated
+        # token used to consume a budget slot on every occurrence, so
+        # "TP53, TP53 and TP53" left no slot for a real second gene in
+        # the same query even though the 2nd and 3rd repeats only ever
+        # hit the resolution cache. De-duplicate the candidate list
+        # itself, not just the resolved result: the cap is on DISTINCT
+        # live-lookup-worthy symbols, per `_MAX_LIVE_SYMBOL_LOOKUPS`'s own
+        # docstring ("hard-caps live calls"), not on token occurrences.
+        if token in candidates_seen:
+            continue
+        candidates_seen.add(token)
+        candidates.append(token)
 
-    # Sort: digit-containing tokens first (primary key False = 0, pure-alpha
-    # = 1), then by query order within each group (secondary key).
-    candidates.sort(key=lambda item: (not any(ch.isdigit() for ch in item[0]), item[1][0]))
-
-    for token, _token_span in candidates:
-        if live_lookups >= _MAX_LIVE_SYMBOL_LOOKUPS:
-            break
-
-        live_lookups += 1
+    # The budget is applied by slicing the candidate list rather than by
+    # counting inside the loop, so the cap holds by construction: there is
+    # no counter a later edit can forget to increment on some branch.
+    for token in candidates[:_MAX_LIVE_SYMBOL_LOOKUPS]:
         curie = await resolve_symbol_to_curie(token)
         if curie is not None:
             if curie not in seen:

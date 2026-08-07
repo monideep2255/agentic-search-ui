@@ -33,8 +33,31 @@ What this file proves, mapped to T-3.1-02's acceptance:
     - The rate limiter fails fast, with an actionable message naming the
       family and a retry hint, when a call would exceed its queue depth
       or its own wait ceiling, rather than joining an unbounded wait.
+      Both real limiter-produced messages are asserted to carry that
+      retry hint, not only a hand-built stand-in string (F-3.1-32).
+    - The wait ceiling is a budget for the WHOLE call, spent across both
+      attempts, never re-issued in full to a retry (F-3.1-37). Driven by
+      a fake clock so the doubling is observable rather than inferred.
+    - A server-stated `Retry-After` on a 429 or 503 is parsed (numeric
+      seconds and the rarer HTTP-date form), surfaced to the caller, and
+      preferred over the fixed backoff constant for this module's own one
+      retry, bounded so a huge value cannot park the call (F-3.1-19).
     - NCBI_API_KEY's value never reaches a log record or an exception
       string, on both the success and the failure path.
+
+What this file deliberately does NOT cover, per `goal-contracts`'s
+"a verify surface must state its own coverage":
+
+    - Real network behavior of any endpoint. Every case stops at the HTTP
+      client boundary; live coverage is `test_ncbi_efetch_premise.py`.
+    - Concurrency beyond the single controlled interleaving in the
+      queue-depth test. Multi-waiter fairness and ordering under the FIFO
+      queue are not exercised.
+    - Any action module's use of these results. Whether
+      `ncbi_eutils_actions` actually reads `retry_after_for_response`
+      into its 429 error text is that module's test's job, not this
+      file's; this file proves only that the value is produced and
+      reachable.
 
 Depends on:
     - system_03_search_agent.tools.ncbi_transport (the module under test)
@@ -49,6 +72,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import UTC
 from typing import Any
 
 import httpx
@@ -650,7 +674,7 @@ class _DirectLogCapture:
         self._level = level
         self.records: list[logging.LogRecord] = []
 
-    def __enter__(self) -> "_DirectLogCapture":
+    def __enter__(self) -> _DirectLogCapture:
         outer = self
 
         class _Handler(logging.Handler):
@@ -730,13 +754,75 @@ async def test_api_key_value_never_appears_in_log_or_exception_on_failure(
 
 
 def test_rate_limited_error_message_never_needs_a_secret_to_be_actionable() -> None:
-    """Sanity check on the error text itself: names the family and a next step."""
+    """Sanity check on the error text itself: names the family and a next step.
+
+    F-3.1-32: the `retry` assertion below was deleted during an earlier fix
+    round with no replacement, while this file's own docstring kept
+    claiming it checked "an actionable message naming the family and a
+    retry hint". It is restored here, and
+    `test_rate_limiter_real_failure_messages_always_carry_a_retry_hint`
+    below extends the same check to the messages the limiter ACTUALLY
+    produces, since a hand-built string can drift from the real one
+    without either test noticing.
+    """
     error = ncbi_transport.TransportRateLimitedError(
         "eutils rate pool queue is full (15 already waiting), retry after the queue drains",
         family="eutils",
         retry_after=0.33,
     )
     assert "eutils" in str(error)
+    assert "retry" in str(error).lower()
+
+
+@pytest.mark.asyncio
+async def test_rate_limiter_real_failure_messages_always_carry_a_retry_hint() -> None:
+    """Both real fail-fast paths, not a hand-built stand-in (F-3.1-32).
+
+    `.claude/rules/tool-call-budgets.md`: a rate-limited error is an
+    instruction to the next agent step, so every message the limiter can
+    emit must name the saturated family, carry a numeric `retry_after`,
+    and say what to do next.
+    """
+    clock = {"now": 0.0}
+
+    def frozen_time() -> float:
+        return clock["now"]
+
+    # Path 1: the wait ceiling is exceeded.
+    ceiling_limiter = ncbi_transport.RateLimiter(
+        requests_per_second=0.01, queue_depth=30, family="eutils"
+    )
+    await ceiling_limiter.acquire(1000.0, time_fn=frozen_time, sleep_fn=_no_sleep)
+    with pytest.raises(ncbi_transport.TransportRateLimitedError) as ceiling_exc:
+        await ceiling_limiter.acquire(1.0, time_fn=frozen_time, sleep_fn=_no_sleep)
+
+    assert "eutils" in str(ceiling_exc.value)
+    assert "retry" in str(ceiling_exc.value).lower()
+    assert ceiling_exc.value.retry_after > 0
+
+    # Path 2: the bounded queue is full.
+    queue_limiter = ncbi_transport.RateLimiter(
+        requests_per_second=1.0, queue_depth=1, family="pubchem"
+    )
+    release = asyncio.Event()
+
+    async def controlled_sleep(_seconds: float) -> None:
+        await release.wait()
+
+    await queue_limiter.acquire(10.0, time_fn=frozen_time, sleep_fn=controlled_sleep)
+    occupant = asyncio.ensure_future(
+        queue_limiter.acquire(10.0, time_fn=frozen_time, sleep_fn=controlled_sleep)
+    )
+    await asyncio.sleep(0)
+    try:
+        with pytest.raises(ncbi_transport.TransportRateLimitedError) as queue_exc:
+            await queue_limiter.acquire(10.0, time_fn=frozen_time, sleep_fn=controlled_sleep)
+        assert "pubchem" in str(queue_exc.value)
+        assert "retry" in str(queue_exc.value).lower()
+        assert queue_exc.value.retry_after > 0
+    finally:
+        release.set()
+        await occupant
 
 
 # ===========================================================================
@@ -761,3 +847,461 @@ def test_build_query_string_encodes_ampersand_and_equals() -> None:
     assert "%26retstart" in result, (
         f"the & in the term value must be percent-encoded as %26, got {result!r}"
     )
+
+
+# ===========================================================================
+# F-3.1-37: the wait ceiling is one budget for the whole call (MAJOR).
+# ===========================================================================
+
+
+def _make_fake_clock() -> tuple[dict[str, float], Any, Any]:
+    """A clock the test drives by hand, plus a sleep that advances it.
+
+    Real elapsed time is what draws down a wait budget in production, so a
+    test that asserts anything about that budget has to be able to see time
+    pass. `_no_sleep` cannot: it returns instantly and leaves the clock
+    where it was, which is exactly why a doubled budget was invisible to
+    every existing test in this file.
+    """
+    clock = {"now": 0.0}
+
+    def fake_time() -> float:
+        return clock["now"]
+
+    async def advancing_sleep(seconds: float) -> None:
+        clock["now"] += seconds
+
+    return clock, fake_time, advancing_sleep
+
+
+@pytest.mark.asyncio
+async def test_execute_get_wait_budget_is_shared_across_attempts_not_reissued_per_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.1-37 reproduction, with a fake clock.
+
+    F-3.1-22's fix moved `limiter.acquire` inside the retry loop, which was
+    correct (a retry must not escape the pool) but handed each attempt its
+    own full copy of `wait_ceiling_s`. A call declaring a 1.5s wait budget
+    could then wait 1.0s before its first request and another 1.0s before
+    its retry: 2.0s total against a 1.5s ceiling.
+    `.claude/rules/tool-call-budgets.md` ties that ceiling to the calling
+    query's remaining latency budget, so a budget that silently doubles
+    under retry is not a budget.
+
+    The scenario: the eutils pool is paced at 1 request/second and already
+    has a call scheduled at t=1.0, so it is saturated. The call under test
+    declares a 1.5s wait budget and gets a 503 on its first attempt.
+
+        attempt 0: waits 1.0s for the pool (inside the 1.5s budget), gets
+                   a 503, backs off 0s.
+        attempt 1: only 0.5s of budget is left, but the pool's next free
+                   slot is 1.0s away, so it must fail fast.
+
+    Before the fix, attempt 1 received a fresh 1.5s ceiling, waited another
+    full 1.0s, and returned a 200 after 2.0s of waiting. This test therefore
+    fails loudly (DID NOT RAISE, and 2 client calls) against the old code.
+    """
+    monkeypatch.setenv("NCBI_EUTILS_RPS", "1.0")
+    ncbi_transport.reset_rate_limiters_for_tests()
+
+    clock, fake_time, advancing_sleep = _make_fake_clock()
+
+    limiter = ncbi_transport.get_rate_limiter("eutils")
+    # Saturate the pool: this consumes the t=0 slot with no wait of its own
+    # and pushes the next free slot to t=1.0.
+    await limiter.acquire(10.0, time_fn=fake_time, sleep_fn=advancing_sleep)
+    assert clock["now"] == 0.0, "priming the pool must not itself consume clock time"
+
+    transient = httpx.Response(503, text="overloaded")
+    would_be_second = httpx.Response(200, json={"esearchresult": {"count": "1"}})
+    client = _FakeClient([transient, would_be_second])
+
+    with pytest.raises(ncbi_transport.TransportRateLimitedError) as exc_info:
+        await ncbi_transport.execute_get(
+            "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+            {"db": "gene", "term": "TP53"},
+            family="eutils",
+            wait_ceiling_s=1.5,
+            backoff_s=0.0,
+            client=client,
+            sleep_fn=advancing_sleep,
+            time_fn=fake_time,
+        )
+
+    assert exc_info.value.family == "eutils"
+    assert len(client.calls) == 1, (
+        "the retry must never be issued once the call's shared wait budget is spent"
+    )
+    assert clock["now"] <= 1.5, (
+        f"total wait must stay inside the declared 1.5s ceiling, spent {clock['now']}s"
+    )
+
+
+@pytest.mark.asyncio
+async def test_execute_get_wait_budget_is_not_charged_for_request_or_backoff_time(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Re-review round 1, adversarial pass (ADV-FIX2-6): F-3.1-37's own
+    fix shared the wait budget by WALL-CLOCK DEADLINE, which charges the
+    ceiling for the HTTP request's own elapsed time and the backoff
+    sleep, not only time spent actually waiting for the pool. With the
+    common case `wait_ceiling_s == timeout_s`, a first attempt that
+    times out has, by construction, already consumed the entire
+    deadline before the retry's own acquisition ever runs, so the retry
+    always got ~0.0s of pool-wait budget in exactly the case a retry
+    exists for: recovering from a timeout.
+
+    Scenario: a 15s timeout on attempt 0, wait_ceiling_s of only 1.0s
+    (deliberately far smaller than timeout_s, the shape this bug hit
+    hardest), a 1s backoff, then a pool that genuinely needs a 0.5s wait
+    for attempt 1. The declared 1.0s ceiling comfortably covers a 0.5s
+    pool wait; only wall-clock-deadline double-charging could make this
+    fail. Before this fix: DID NOT RAISE was the wrong outcome to hope
+    for, since the bug's failure mode is the OPPOSITE of the F-3.1-22
+    scenario above, a retry that fails fast when it should not have to.
+    """
+    clock, fake_time, advancing_sleep = _make_fake_clock()
+    monkeypatch.setenv("NCBI_EUTILS_RPS", "1.0")
+    ncbi_transport.reset_rate_limiters_for_tests()
+    limiter = ncbi_transport.get_rate_limiter("eutils")
+
+    would_be_response = httpx.Response(200, json={"esearchresult": {"count": "1"}})
+    calls: list[float] = []
+
+    async def _get_advancing_time_then_saturating_pool(
+        url: str, timeout: float | None = None
+    ) -> httpx.Response:
+        calls.append(clock["now"])
+        if len(calls) == 1:
+            # The request itself takes the full 15s timeout to fail, the
+            # same wall-clock cost a real ConnectTimeout has.
+            clock["now"] += 15.0
+            # While this call was blocked, another caller reserved the
+            # pool's next slot for 0.5s after the retry actually runs
+            # (the 1.0s backoff below still has to happen first), so
+            # attempt 1's own acquisition has a real, non-zero wait to
+            # do, not one that has already silently elapsed by the time
+            # it runs.
+            limiter._next_available = clock["now"] + 1.0 + 0.5
+            raise httpx.ConnectTimeout("simulated timeout")
+        return would_be_response
+
+    class _FunctionClient:
+        def __init__(self, get_fn: Any) -> None:
+            self._get_fn = get_fn
+
+        async def get(self, url: str, timeout: float | None = None) -> httpx.Response:
+            return await self._get_fn(url, timeout=timeout)
+
+    output = await ncbi_transport.execute_get(
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+        {"db": "gene", "term": "TP53"},
+        family="eutils",
+        wait_ceiling_s=1.0,
+        timeout_s=15.0,
+        backoff_s=1.0,
+        client=_FunctionClient(_get_advancing_time_then_saturating_pool),
+        sleep_fn=advancing_sleep,
+        time_fn=fake_time,
+    )
+
+    assert output is would_be_response, (
+        "the retry must succeed: its own 1.0s wait ceiling easily covers "
+        "the 0.5s the pool genuinely needs, and must not be starved by "
+        "the unrelated 15s the failed first request and its backoff cost"
+    )
+    assert len(calls) == 2, "the retry must actually be attempted, not failed fast"
+
+
+@pytest.mark.asyncio
+async def test_execute_get_retry_blocked_by_budget_keeps_the_first_failure_as_cause(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Failing fast on the retry must not erase why the retry was needed.
+
+    The first attempt timed out. The retry could not be scheduled inside
+    what was left of the wait budget. The raised TransportRateLimitedError
+    is correct and actionable, and the underlying ReadTimeout is chained
+    onto it rather than replaced by it, so "it timed out, then could not be
+    retried in budget" is still recoverable from the raised error.
+    """
+    monkeypatch.setenv("NCBI_EUTILS_RPS", "1.0")
+    ncbi_transport.reset_rate_limiters_for_tests()
+
+    _clock, fake_time, advancing_sleep = _make_fake_clock()
+
+    limiter = ncbi_transport.get_rate_limiter("eutils")
+    await limiter.acquire(10.0, time_fn=fake_time, sleep_fn=advancing_sleep)
+
+    client = _FakeClient([httpx.ReadTimeout("slow"), httpx.ReadTimeout("never reached")])
+
+    with pytest.raises(ncbi_transport.TransportRateLimitedError) as exc_info:
+        await ncbi_transport.execute_get(
+            "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+            {"db": "gene", "term": "TP53"},
+            family="eutils",
+            wait_ceiling_s=1.5,
+            backoff_s=0.0,
+            client=client,
+            sleep_fn=advancing_sleep,
+            time_fn=fake_time,
+        )
+
+    assert isinstance(exc_info.value.__cause__, httpx.ReadTimeout)
+    assert len(client.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_execute_get_still_retries_when_the_shared_budget_covers_both_waits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The other arm: a shared budget must not break a retry that genuinely fits.
+
+    Same saturated pool, same two 1.0s waits, but a 2.5s budget this time.
+    A fix that simply refused every second acquisition would pass the test
+    above and destroy the retry path, so this pins the admit side of the
+    boundary the way the guardrail phase's premise gate pins its own.
+    """
+    monkeypatch.setenv("NCBI_EUTILS_RPS", "1.0")
+    ncbi_transport.reset_rate_limiters_for_tests()
+
+    clock, fake_time, advancing_sleep = _make_fake_clock()
+
+    limiter = ncbi_transport.get_rate_limiter("eutils")
+    await limiter.acquire(10.0, time_fn=fake_time, sleep_fn=advancing_sleep)
+
+    transient = httpx.Response(503, text="overloaded")
+    ok_response = httpx.Response(200, json={"esearchresult": {"count": "1"}})
+    client = _FakeClient([transient, ok_response])
+
+    response = await ncbi_transport.execute_get(
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+        {"db": "gene", "term": "TP53"},
+        family="eutils",
+        wait_ceiling_s=2.5,
+        backoff_s=0.0,
+        client=client,
+        sleep_fn=advancing_sleep,
+        time_fn=fake_time,
+    )
+
+    assert response is ok_response
+    assert len(client.calls) == 2
+    assert clock["now"] <= 2.5
+
+
+# ===========================================================================
+# F-3.1-19 (reopened): a numeric retry_after from a real server 429/503.
+# ===========================================================================
+
+
+def test_parse_retry_after_reads_numeric_seconds() -> None:
+    assert ncbi_transport.parse_retry_after({"Retry-After": "30"}) == 30.0
+
+
+def test_parse_retry_after_header_name_is_case_insensitive() -> None:
+    assert ncbi_transport.parse_retry_after({"retry-after": "12"}) == 12.0
+    assert ncbi_transport.parse_retry_after({"RETRY-AFTER": "12"}) == 12.0
+
+
+def test_parse_retry_after_absent_header_returns_the_default() -> None:
+    assert ncbi_transport.parse_retry_after({}) is None
+    assert ncbi_transport.parse_retry_after({}, default=1.0) == 1.0
+
+
+def test_parse_retry_after_unparseable_value_returns_the_default() -> None:
+    assert ncbi_transport.parse_retry_after({"Retry-After": "soon"}, default=2.0) == 2.0
+    assert ncbi_transport.parse_retry_after({"Retry-After": "   "}, default=2.0) == 2.0
+
+
+def test_parse_retry_after_rejects_nan_and_infinity() -> None:
+    """float() accepts "nan" and "inf"; either would poison every downstream compare."""
+    assert ncbi_transport.parse_retry_after({"Retry-After": "nan"}, default=1.0) == 1.0
+    assert ncbi_transport.parse_retry_after({"Retry-After": "inf"}, default=1.0) == 1.0
+    assert ncbi_transport.parse_retry_after({"Retry-After": "-inf"}, default=1.0) == 1.0
+
+
+def test_parse_retry_after_negative_seconds_clamp_to_zero() -> None:
+    assert ncbi_transport.parse_retry_after({"Retry-After": "-5"}) == 0.0
+
+
+def test_parse_retry_after_accepts_the_http_date_form() -> None:
+    """The rarer absolute form, converted to a delay relative to now."""
+    import email.utils
+    from datetime import datetime, timedelta
+
+    when = datetime.now(UTC) + timedelta(seconds=45)
+    parsed = ncbi_transport.parse_retry_after({"Retry-After": email.utils.format_datetime(when)})
+
+    assert parsed is not None
+    assert parsed == pytest.approx(45.0, abs=5.0)
+
+
+def test_parse_retry_after_past_http_date_clamps_to_zero() -> None:
+    import email.utils
+    from datetime import datetime, timedelta
+
+    when = datetime.now(UTC) - timedelta(seconds=600)
+    parsed = ncbi_transport.parse_retry_after({"Retry-After": email.utils.format_datetime(when)})
+
+    assert parsed == 0.0
+
+
+def test_retry_after_for_response_surfaces_the_server_value() -> None:
+    response = httpx.Response(429, text="slow down", headers={"Retry-After": "30"})
+    assert ncbi_transport.retry_after_for_response(response) == 30.0
+
+
+def test_retry_after_for_response_falls_back_to_the_backoff_budget() -> None:
+    response = httpx.Response(429, text="slow down")
+    assert ncbi_transport.retry_after_for_response(response) == ncbi_transport.DEFAULT_BACKOFF_S
+
+
+def test_status_coded_429_carries_the_server_retry_after() -> None:
+    result = ncbi_transport.classify_status_coded_response(
+        http_status=429,
+        text='{"message": "too many requests"}',
+        headers={"Retry-After": "30"},
+    )
+    assert result.status == "error"
+    assert result.retry_after == 30.0
+
+
+def test_status_coded_503_carries_the_server_retry_after() -> None:
+    result = ncbi_transport.classify_status_coded_response(
+        http_status=503,
+        text='{"message": "service unavailable"}',
+        headers={"Retry-After": "7"},
+    )
+    assert result.retry_after == 7.0
+
+
+def test_status_coded_non_rate_limit_status_never_carries_a_retry_after() -> None:
+    """A 400 with a stray Retry-After is not a rate limit; do not tell the agent to wait."""
+    result = ncbi_transport.classify_status_coded_response(
+        http_status=400,
+        text='{"message": "no gene found for symbol"}',
+        headers={"Retry-After": "30"},
+    )
+    assert result.status == "error"
+    assert result.retry_after is None
+
+
+def test_status_coded_headers_stay_optional_and_default_to_no_retry_after() -> None:
+    result = ncbi_transport.classify_status_coded_response(
+        http_status=429, text='{"message": "too many requests"}'
+    )
+    assert result.status == "error"
+    assert result.retry_after is None
+
+
+@pytest.mark.asyncio
+async def test_execute_get_429_leaves_a_numeric_retry_after_reachable_by_the_caller() -> None:
+    """F-3.1-19 reproduction: a stubbed 429 carrying `Retry-After: 30`.
+
+    Before this fix, no numeric `retry_after` was produced from a real
+    server 429 anywhere in this module: `TransportRateLimitedError` only
+    ever carried this module's OWN client-side throttle estimate, and a
+    429 the server actually sent reached the caller as a bare
+    `httpx.Response` with nothing read off it.
+
+    Two things are asserted, matching the two halves of the interface:
+
+        the caller can turn the returned response into the number 30
+        (this is what `ncbi_eutils_actions._get_or_error` wires into its
+        429 error text), and
+
+        this module's own one retry waited on the server's value rather
+        than its fixed 1.0s backoff constant, capped at
+        `_MAX_BACKOFF_FROM_RETRY_AFTER_S` so a large header value cannot
+        park the call past its own timeout budget.
+    """
+    rate_limited = httpx.Response(429, text="slow down", headers={"Retry-After": "30"})
+    client = _FakeClient([rate_limited, rate_limited])
+    slept: list[float] = []
+
+    async def recording_sleep(seconds: float) -> None:
+        slept.append(seconds)
+
+    response = await ncbi_transport.execute_get(
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+        {"db": "gene", "term": "TP53"},
+        family="eutils",
+        client=client,
+        sleep_fn=recording_sleep,
+    )
+
+    assert response.status_code == 429
+    assert len(client.calls) == 2
+    assert ncbi_transport.retry_after_for_response(response) == 30.0
+    assert slept[0] == pytest.approx(ncbi_transport._MAX_BACKOFF_FROM_RETRY_AFTER_S)
+
+
+@pytest.mark.asyncio
+async def test_execute_get_honors_a_small_server_retry_after_verbatim() -> None:
+    """Under the cap, the server's number is used exactly, not the fixed backoff."""
+    rate_limited = httpx.Response(503, text="busy", headers={"Retry-After": "3"})
+    ok_response = httpx.Response(200, json={"esearchresult": {"count": "1"}})
+    client = _FakeClient([rate_limited, ok_response])
+    slept: list[float] = []
+
+    async def recording_sleep(seconds: float) -> None:
+        slept.append(seconds)
+
+    await ncbi_transport.execute_get(
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+        {"db": "gene", "term": "TP53"},
+        family="eutils",
+        backoff_s=1.0,
+        client=client,
+        sleep_fn=recording_sleep,
+    )
+
+    assert slept[0] == pytest.approx(3.0)
+
+
+@pytest.mark.asyncio
+async def test_execute_get_never_retries_sooner_than_its_own_backoff() -> None:
+    """A server asking for 0s must not shorten this module's own pacing floor."""
+    rate_limited = httpx.Response(503, text="busy", headers={"Retry-After": "0"})
+    ok_response = httpx.Response(200, json={"esearchresult": {"count": "1"}})
+    client = _FakeClient([rate_limited, ok_response])
+    slept: list[float] = []
+
+    async def recording_sleep(seconds: float) -> None:
+        slept.append(seconds)
+
+    await ncbi_transport.execute_get(
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+        {"db": "gene", "term": "TP53"},
+        family="eutils",
+        backoff_s=1.0,
+        client=client,
+        sleep_fn=recording_sleep,
+    )
+
+    assert slept[0] == pytest.approx(1.0)
+
+
+@pytest.mark.asyncio
+async def test_execute_get_uses_the_fixed_backoff_when_no_retry_after_is_sent() -> None:
+    """The unchanged path: no header, no behavior change from before F-3.1-19."""
+    transient = httpx.Response(500, text="upstream hiccup")
+    ok_response = httpx.Response(200, json={"esearchresult": {"count": "1"}})
+    client = _FakeClient([transient, ok_response])
+    slept: list[float] = []
+
+    async def recording_sleep(seconds: float) -> None:
+        slept.append(seconds)
+
+    await ncbi_transport.execute_get(
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+        {"db": "gene", "term": "TP53"},
+        family="eutils",
+        backoff_s=1.0,
+        client=client,
+        sleep_fn=recording_sleep,
+    )
+
+    assert slept[0] == pytest.approx(1.0)
