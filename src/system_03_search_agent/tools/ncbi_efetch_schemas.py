@@ -128,7 +128,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator, model_validator
 
 # Section 6.2 output schema's maxProperties bound on a record's `fields`
 # object (line 917). Wider than cypher_query's 30 because a `summary`
@@ -258,6 +258,19 @@ class NcbiEfetchCoordinateOverlapInput(BaseModel):
     ESearch coarse-prefilter stage (Section 6.2's coordinate-overlap
     procedure, steps 1-4). This model does not and cannot enforce that; it
     only pins the shape of the request.
+
+    F-3.1-12: the window's own two constraints DO belong here, and until
+    2026-08-07 they lived only as `if` statements inside
+    `ncbi_coordinate_overlap.coordinate_overlap`. That left the generated
+    JSON schema saying nothing at all about `start` and `end`, so the plan
+    tier reading the tool schema got no signal that a window must be
+    non-negative and forward-ordered, and only learned it by getting an
+    error back. `ge=0` is expressible in JSON Schema directly and appears
+    as `minimum: 0` on both fields. The cross-field `start <= end`
+    relation is not expressible in standard JSON Schema, so it is enforced
+    by the `model_validator` below and stated in the field descriptions,
+    which DO reach the generated schema. The runtime checks in the tool
+    remain as defense in depth.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -265,9 +278,32 @@ class NcbiEfetchCoordinateOverlapInput(BaseModel):
     action: Literal["coordinate_overlap"]
     db: Literal["dbvar", "clinvar"]
     chromosome: Annotated[str, Field(max_length=5)]
-    start: int
-    end: int
+    start: Annotated[
+        int,
+        Field(ge=0, description="Window start, 0-based or 1-based per assembly. Must be <= end."),
+    ]
+    end: Annotated[
+        int,
+        Field(ge=0, description="Window end. Must be >= start; an inverted window is rejected."),
+    ]
     assembly: Literal["GRCh37", "GRCh38"]
+
+    @model_validator(mode="after")
+    def _window_is_forward_ordered(self) -> NcbiEfetchCoordinateOverlapInput:
+        """Reject an inverted window before any network call is planned.
+
+        The message deliberately mirrors the tool's own runtime error text
+        so the two paths read the same to whoever is debugging: an
+        inverted window is never a valid query, and the next step is to
+        retry with `start <= end`, not to retry unchanged.
+        """
+        if self.start > self.end:
+            raise ValueError(
+                f"coordinate_overlap window start ({self.start}) is after end "
+                f"({self.end}). An inverted window is never a valid query; "
+                f"retry with start <= end."
+            )
+        return self
 
 
 class NcbiEfetchDatasetReportInput(BaseModel):
@@ -393,6 +429,17 @@ class NcbiEfetchOutput(BaseModel):
     disagree on how `ok`/`empty`/`error` map to HTTP status and response
     body, so this model only pins the OUTPUT shape; the classification logic
     itself belongs to `ncbi_efetch.py`, not this schema.
+
+    `candidates_checked` (F-3.1-24, reopened) is the one field here that
+    Section 6.2 does not print. It is a new OPTIONAL field defaulting to
+    None, which is an additive change and therefore v1-compatible under
+    `system-design-patterns` pattern 10: no existing field is removed and
+    no existing field changes meaning. It exists because
+    `coordinate_overlap` alone has three genuinely different counts, how
+    many matched the coarse search, how many were examined, and how many
+    survived the overlap predicate, and folding the first two into one
+    number produced an output that contradicted itself. Filed for the Step
+    6.2 spec reconciliation alongside F-3.1-03.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -405,5 +452,18 @@ class NcbiEfetchOutput(BaseModel):
     ] = Field(default_factory=list)
     record_count: int
     total_available: int | None = None
+    candidates_checked: Annotated[
+        int | None,
+        Field(
+            default=None,
+            ge=0,
+            description=(
+                "How many upstream candidates this call actually examined, when that "
+                "differs from both record_count and total_available. Set only by "
+                "coordinate_overlap, which place-checks a bounded slice of what the "
+                "coarse ESearch prefilter matched; None on every other action."
+            ),
+        ),
+    ] = None
     truncated: bool
     error: Annotated[str | None, Field(default=None, max_length=500)] = None

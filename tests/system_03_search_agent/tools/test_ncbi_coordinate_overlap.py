@@ -992,10 +992,14 @@ async def test_esummary_error_body_is_error() -> None:
 
 @pytest.mark.asyncio
 async def test_truncated_and_total_available_are_set_when_more_candidates_exist() -> None:
-    """F-3.1-24: total_available is now the number of candidates actually
-    place-checked, not the coarse ESearch prefilter count. The ESearch count
-    (500) is larger than the candidates actually returned (1), so truncated
-    is True, and total_available reports the honest candidate count.
+    """F-3.1-24 (reopened): `total_available` reports what the coarse
+    ESearch prefilter matched (500), `candidates_checked` reports how many
+    were actually place-checked (1), and `truncated` says matches exist
+    that this call never looked at.
+
+    The previous fix collapsed both into the checked count, which threw
+    away a meaningful ClinVar figure and made `total_available ==
+    record_count` reachable alongside `truncated is True`.
     """
     client = _FakeClient(
         [
@@ -1010,11 +1014,98 @@ async def test_truncated_and_total_available_are_set_when_more_candidates_exist(
         _input(start=1_000_000, end=1_100_000, assembly="GRCh38"), client=client, max_candidates=1
     )
 
-    assert output.total_available == 1, (
-        "total_available must report the number of candidates actually "
-        "checked, not the coarse ESearch prefilter count"
+    assert output.total_available == 500, (
+        "total_available must report how many the coarse prefilter matched, "
+        "which is the same meaning the `search` action gives the field"
     )
+    assert output.candidates_checked == 1, (
+        "candidates_checked must report how many were actually place-checked"
+    )
+    assert output.record_count == 1
     assert output.truncated is True
+    assert output.total_available != output.record_count, (
+        "truncated must never coexist with total_available == record_count"
+    )
+
+
+@pytest.mark.asyncio
+async def test_truncated_is_false_when_every_match_was_checked_and_returned() -> None:
+    """F-3.1-24 (reopened), the self-contradiction reproduction.
+
+    Live shape that exposed it: 20 matched, 20 checked, 20 returned, and
+    the output still said `truncated is True` while `total_available ==
+    record_count`. Nothing was truncated, so nothing may say it was.
+    """
+    ids = [str(n) for n in range(1, 21)]
+    client = _FakeClient(
+        [
+            _esearch_response(count=20, ids=ids),
+            _dbvar_esummary_response(
+                {
+                    uid: _dbvar_record(
+                        uid=uid,
+                        sv=f"nsv{uid}",
+                        placements=[(1_050_000, 1_050_100, "GRCh38", "2")],
+                    )
+                    for uid in ids
+                }
+            ),
+        ]
+    )
+
+    output = await ncbi_coordinate_overlap.coordinate_overlap(
+        _input(chromosome="2", start=1_000_000, end=1_100_000, assembly="GRCh38"),
+        client=client,
+        max_candidates=20,
+    )
+
+    assert output.record_count == 20
+    assert output.candidates_checked == 20
+    assert output.total_available == 20
+    assert output.truncated is False, (
+        "everything the prefilter matched was checked and returned, so "
+        "nothing was truncated"
+    )
+
+
+@pytest.mark.asyncio
+async def test_truncated_never_coexists_with_total_available_equal_to_record_count() -> None:
+    """The invariant itself, exercised across every count relationship the
+    procedure can produce: no candidates dropped, some dropped by the
+    overlap predicate, and more matched than checked.
+    """
+    scenarios = [
+        # (esearch count, ids returned, overlapping placement per record)
+        (3, ["1", "2", "3"], True),
+        (3, ["1", "2", "3"], False),
+        (99, ["1", "2", "3"], True),
+        (99, ["1", "2", "3"], False),
+    ]
+    for count, ids, overlapping in scenarios:
+        placement = (1_050_000, 1_050_100, "GRCh38") if overlapping else (9_000_000, 9_000_100, "GRCh38")
+        client = _FakeClient(
+            [
+                _esearch_response(count=count, ids=ids),
+                _dbvar_esummary_response(
+                    {uid: _dbvar_record(uid=uid, sv=f"nsv{uid}", placements=[placement]) for uid in ids}
+                ),
+            ]
+        )
+
+        output = await ncbi_coordinate_overlap.coordinate_overlap(
+            _input(start=1_000_000, end=1_100_000, assembly="GRCh38"),
+            client=client,
+            max_candidates=len(ids),
+        )
+
+        assert not (output.truncated and output.total_available == output.record_count), (
+            f"self-contradictory output for count={count} ids={len(ids)} "
+            f"overlapping={overlapping}: total_available="
+            f"{output.total_available} record_count={output.record_count} "
+            f"truncated={output.truncated}"
+        )
+        assert output.candidates_checked is not None
+        assert output.record_count <= output.candidates_checked <= (output.total_available or 0)
 
 
 @pytest.mark.asyncio
@@ -1033,6 +1124,7 @@ async def test_not_truncated_when_all_candidates_were_examined() -> None:
     )
 
     assert output.total_available == 1
+    assert output.candidates_checked == 1
     assert output.truncated is False
 
 
@@ -1206,8 +1298,22 @@ async def test_esummary_connection_error_returns_an_actionable_error_and_keeps_t
 
 class TestChromosomeNormalization:
     """F-3.1-15: _normalize_chromosome and _build_search_term must normalize
-    chr-prefixed and MT/M variants before the ESearch query, and
-    _chromosome_matches must compare the normalized forms.
+    chr-prefixed, zero-padded, and MT/M variants before the ESearch query,
+    and _chromosome_matches must compare the normalized forms.
+
+    What this class exercises: `chr`-prefixed spellings in every casing,
+    zero-padded numeric spellings, the M/MT mitochondrial pair, the empty
+    and whitespace-only degenerate cases, and the `"chr"`-with-no-suffix
+    edge. What it deliberately does not exercise: non-human chromosome
+    labels, unplaced-scaffold accessions such as `GL000192.1`, and the
+    `chrUn_*` family, none of which the dbVar/ClinVar `[CH]`/`[CHR]`
+    indexes were verified against in this ticket.
+
+    The zero-padded rows exist because the original parametrization
+    omitted exactly the spelling that was broken, which is how the
+    regression survived a green suite. Live 2026-08-07 on dbVar chr1
+    GRCh38 1,000,000 to 1,100,000: `"1"` and `"chr1"` each returned 17
+    genuine overlaps, `"01"` returned status=empty.
     """
 
     @pytest.mark.parametrize(
@@ -1226,6 +1332,18 @@ class TestChromosomeNormalization:
             ("chrM", "MT"),
             ("chr", "CHR"),       # edge case: "chr" with nothing after
             ("CHR", "CHR"),       # "CHR" is not the prefix "chr" (different case)
+            # F-3.1-15 (reopened): zero-padded numeric spellings.
+            ("01", "1"),
+            ("001", "1"),
+            ("007", "7"),
+            ("017", "17"),
+            ("chr01", "1"),
+            ("CHR017", "17"),
+            (" 01 ", "1"),
+            ("0", "0"),           # a lone zero must not collapse to ""
+            ("000", "0"),
+            ("22", "22"),         # an unpadded multi-digit label is untouched
+            ("0X", "0X"),         # non-numeric: leading zero is NOT stripped
         ],
     )
     def test_normalize_chromosome(self, raw: str, expected: str) -> None:
@@ -1245,6 +1363,19 @@ class TestChromosomeNormalization:
             ("chrMT", "mt", True),
             ("1", "2", False),
             ("X", "Y", False),
+            # F-3.1-15 (reopened): zero-padded spellings compare equal.
+            ("01", "1", True),
+            ("1", "01", True),
+            ("chr01", "1", True),
+            ("017", "17", True),
+            ("007", "7", True),
+            ("01", "2", False),
+            # F-3.1-35: a blank on either side fails CLOSED.
+            ("", "1", False),
+            ("1", "", False),
+            ("", "", False),
+            ("   ", "", False),
+            ("", "   ", False),
         ],
     )
     def test_chromosome_matches(self, a: str, b: str, expected: bool) -> None:
@@ -1261,6 +1392,12 @@ class TestChromosomeNormalization:
             ("Chr1", "1[CH]"),
             ("chrM", "MT[CH]"),
             ("M", "MT[CH]"),
+            # F-3.1-15 (reopened): the padded spelling must NOT reach the
+            # wire. Live: `01[CH] AND ...` counts 0, `1[CH] AND ...` counts
+            # 1892.
+            ("01", "1[CH]"),
+            ("001", "1[CH]"),
+            ("chr01", "1[CH]"),
         ],
     )
     def test_build_search_term_normalizes_chromosome(
@@ -1276,7 +1413,254 @@ class TestChromosomeNormalization:
             end=1_100_000,
             assembly="GRCh38",
         )
-        assert expected_chromosome_in_term in term, (
-            f"search term for chromosome {chromosome!r} must contain "
+        # startswith, not `in`: `"1[CH]" in "01[CH] AND ..."` is True, so a
+        # substring check would pass on exactly the zero-padded spelling
+        # this parametrization was extended to catch.
+        assert term.startswith(expected_chromosome_in_term), (
+            f"search term for chromosome {chromosome!r} must START with "
             f"{expected_chromosome_in_term!r}, got {term!r}"
         )
+
+    @pytest.mark.asyncio
+    async def test_zero_padded_chromosome_reaches_the_same_records_as_the_bare_form(
+        self,
+    ) -> None:
+        """F-3.1-15 (reopened), end to end: '1', 'chr1' and '01' must all
+        produce the same non-empty result for the same window.
+
+        The dbVar ESummary placement below is tagged chromosome '1'. Before
+        the leading-zero strip, '01' went on the wire un-normalized (live:
+        `01[CH] AND ...` counts 0 while `1[CH] AND ...` counts 1892), and
+        even had the search returned candidates, `_chromosome_matches('1',
+        '01')` was False, so the post-filter would have dropped every one.
+        """
+        outputs = []
+        for spelling in ("1", "chr1", "01"):
+            client = _FakeClient(
+                [
+                    _esearch_response(count=1, ids=["1"]),
+                    _dbvar_esummary_response(
+                        {
+                            "1": _dbvar_record(
+                                uid="1",
+                                sv="nsv1",
+                                placements=[(1_050_000, 1_050_100, "GRCh38", "1")],
+                            )
+                        }
+                    ),
+                ]
+            )
+            output = await ncbi_coordinate_overlap.coordinate_overlap(
+                _input(chromosome=spelling, start=1_000_000, end=1_100_000, assembly="GRCh38"),
+                client=client,
+            )
+            assert client.calls[0]["url"].count("term=1%5BCH%5D") == 1, (
+                f"spelling {spelling!r} must send the bare '1' on the wire, "
+                f"got {client.calls[0]['url']!r}"
+            )
+            outputs.append(output)
+
+        assert all(o.status == "ok" for o in outputs), [o.status for o in outputs]
+        assert all(o.record_count == 1 for o in outputs), [o.record_count for o in outputs]
+        assert len({tuple(r.id for r in o.records) for o in outputs}) == 1, (
+            "'1', 'chr1' and '01' must return the identical record set"
+        )
+
+    @pytest.mark.asyncio
+    async def test_zero_padded_clinvar_chromosome_matches_the_bare_form(self) -> None:
+        """F-3.1-15 (reopened), the ClinVar half. Live: '17' returned 20
+        records for the TP53 window, '017' returned status=empty.
+        """
+        outputs = []
+        for spelling in ("17", "017"):
+            client = _FakeClient(
+                [
+                    _esearch_response(count=1, ids=["9"]),
+                    _clinvar_esummary_response(
+                        {
+                            "9": _clinvar_record(
+                                uid="9",
+                                accession="VCV000000009",
+                                title="NM_000546.6(TP53):c.1035T>C (p.Thr345=)",
+                                placements=[(7_670_670, 7_670_680, "GRCh38")],
+                            )
+                        }
+                    ),
+                ]
+            )
+            output = await ncbi_coordinate_overlap.coordinate_overlap(
+                _input(
+                    db="clinvar",
+                    chromosome=spelling,
+                    start=7_670_000,
+                    end=7_671_000,
+                    assembly="GRCh38",
+                ),
+                client=client,
+            )
+            assert client.calls[0]["url"].count("term=17%5BCHR%5D") == 1, (
+                f"spelling {spelling!r} must send the bare '17' on the wire, "
+                f"got {client.calls[0]['url']!r}"
+            )
+            outputs.append(output)
+
+        assert all(o.status == "ok" for o in outputs), [o.status for o in outputs]
+        assert len({tuple(r.id for r in o.records) for o in outputs}) == 1
+
+
+# ===========================================================================
+# Blank chromosome fails CLOSED (F-3.1-35).
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_placement_with_no_chromosome_never_matches_a_blank_request() -> None:
+    """F-3.1-35: a placement whose `chr` key is missing and a caller
+    chromosome of "" both normalize to "". Comparing those for equality
+    reported a match, reopening F-3.1-02's failure shape (a match asserted
+    without any real chromosome comparison). The request must be refused
+    before the wire, and even if it were not, the post-filter must not
+    match.
+    """
+    from system_03_search_agent.tools.ncbi_coordinate_overlap import _chromosome_matches
+
+    placement_without_chr = {"chr_start": 1_050_000, "chr_end": 1_050_100, "assembly": "GRCh38"}
+    record = {
+        "uid": "1",
+        "sv": "nsv1",
+        "dbvarplacementlist": [placement_without_chr],
+        "dbvarvarianttypelist": ["copy number variation"],
+        "dbvargenelist": [],
+    }
+    extracted = ncbi_coordinate_overlap._extract_placements("dbvar", record)
+    assert extracted, "the placement must still be extracted, only the MATCH may fail"
+    assert extracted[0].chromosome == ""
+    assert _chromosome_matches(extracted[0].chromosome, "") is False, (
+        "a placement with no chromosome must never match a blank request"
+    )
+
+    client = _FakeClient(
+        [
+            _esearch_response(count=1, ids=["1"]),
+            _dbvar_esummary_response({"1": record}),
+        ]
+    )
+    output = await ncbi_coordinate_overlap.coordinate_overlap(
+        _input(chromosome="", start=1_000_000, end=1_100_000, assembly="GRCh38"), client=client
+    )
+
+    assert output.status == "error"
+    assert output.record_count == 0
+    assert output.error is not None
+    assert "blank chromosome" in output.error
+    assert not client.calls, "a blank chromosome must never reach the network"
+
+
+@pytest.mark.asyncio
+async def test_placement_with_no_chromosome_is_dropped_for_a_real_request() -> None:
+    """The same fail-closed rule from the other side: a real chromosome was
+    requested and the placement carries none, so it is dropped rather than
+    admitted on its coordinates alone.
+    """
+    record = {
+        "uid": "1",
+        "sv": "nsv1",
+        "dbvarplacementlist": [
+            {"chr": "", "chr_start": 1_050_000, "chr_end": 1_050_100, "assembly": "GRCh38"}
+        ],
+        "dbvarvarianttypelist": ["copy number variation"],
+        "dbvargenelist": [],
+    }
+    client = _FakeClient(
+        [
+            _esearch_response(count=1, ids=["1"]),
+            _dbvar_esummary_response({"1": record}),
+        ]
+    )
+
+    output = await ncbi_coordinate_overlap.coordinate_overlap(
+        _input(chromosome="1", start=1_000_000, end=1_100_000, assembly="GRCh38"), client=client
+    )
+
+    assert output.status == "empty"
+    assert output.record_count == 0
+
+
+# ===========================================================================
+# Per-value character cap on untrusted free text (F-3.1-12).
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_clinvar_free_text_fields_are_length_capped() -> None:
+    """F-3.1-12: `NcbiEfetchRecord.fields` caps the field COUNT, never any
+    one value's length, so a hostile or merely enormous ClinVar `title` or
+    germline classification `description` would flow into the Write step's
+    context uncapped. Same `_cap_text` bound the other five actions use.
+    """
+    from system_03_search_agent.tools.ncbi_coordinate_overlap import _MAX_FIELD_VALUE_CHARS
+
+    record = _clinvar_record(
+        uid="9",
+        accession="VCV000000009",
+        title="T" * (_MAX_FIELD_VALUE_CHARS * 3),
+        placements=[(7_670_670, 7_670_680, "GRCh38")],
+        gene_symbol="TP53",
+    )
+    record["germline_classification"] = {"description": "D" * (_MAX_FIELD_VALUE_CHARS * 2)}
+
+    client = _FakeClient(
+        [
+            _esearch_response(count=1, ids=["9"]),
+            _clinvar_esummary_response({"9": record}),
+        ]
+    )
+
+    output = await ncbi_coordinate_overlap.coordinate_overlap(
+        _input(db="clinvar", chromosome="17", start=7_670_000, end=7_671_000, assembly="GRCh38"),
+        client=client,
+    )
+
+    assert output.status == "ok"
+    fields = output.records[0].fields
+    for key in ("title", "germline_classification"):
+        assert len(fields[key]) <= _MAX_FIELD_VALUE_CHARS + len(" [truncated]"), (
+            f"{key} was not length-capped: {len(fields[key])} chars"
+        )
+        assert fields[key].endswith(" [truncated]")
+
+
+@pytest.mark.asyncio
+async def test_dbvar_free_text_list_fields_are_capped_on_both_axes() -> None:
+    """A list is capped on item count and per-item length alike: a thousand
+    short strings blows the context budget exactly as one long string does.
+    """
+    from system_03_search_agent.tools.ncbi_coordinate_overlap import (
+        _MAX_FIELD_LIST_ITEMS,
+        _MAX_FIELD_VALUE_CHARS,
+    )
+
+    record = _dbvar_record(uid="1", sv="nsv1", placements=[(1_050_000, 1_050_100, "GRCh38")])
+    record["dbvarvarianttypelist"] = ["V" * (_MAX_FIELD_VALUE_CHARS * 2)] * (
+        _MAX_FIELD_LIST_ITEMS * 3
+    )
+    record["dbvargenelist"] = [{"id": n, "name": "G" * 10} for n in range(_MAX_FIELD_LIST_ITEMS * 3)]
+
+    client = _FakeClient(
+        [
+            _esearch_response(count=1, ids=["1"]),
+            _dbvar_esummary_response({"1": record}),
+        ]
+    )
+
+    output = await ncbi_coordinate_overlap.coordinate_overlap(
+        _input(start=1_000_000, end=1_100_000, assembly="GRCh38"), client=client
+    )
+
+    assert output.status == "ok"
+    fields = output.records[0].fields
+    assert len(fields["variant_type"]) == _MAX_FIELD_LIST_ITEMS
+    assert all(
+        len(item) <= _MAX_FIELD_VALUE_CHARS + len(" [truncated]") for item in fields["variant_type"]
+    )
+    assert len(fields["gene_name"]) == _MAX_FIELD_LIST_ITEMS

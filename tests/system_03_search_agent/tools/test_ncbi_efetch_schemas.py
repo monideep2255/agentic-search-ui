@@ -822,3 +822,108 @@ def test_output_rejects_null_truncated() -> None:
             record_count=0,
             truncated=None,  # type: ignore[arg-type]
         )
+
+
+# ---------------------------------------------------------------------------
+# The coordinate window is constrained at the SCHEMA layer (F-3.1-12), so
+# the plan tier reading the generated JSON schema sees the constraint
+# instead of learning it from an error.
+# ---------------------------------------------------------------------------
+
+
+def test_coordinate_overlap_json_schema_declares_a_minimum_on_start_and_end() -> None:
+    """The F-3.1-27 fix originally landed as an `if` inside the tool body,
+    which left `start`/`end` completely unconstrained in the generated JSON
+    schema. `ge=0` is expressible in JSON Schema and must appear.
+    """
+    schema = NcbiEfetchCoordinateOverlapInput.model_json_schema()
+    for field in ("start", "end"):
+        assert schema["properties"][field].get("minimum") == 0, (
+            f"{field} carries no minimum in the generated JSON schema: "
+            f"{schema['properties'][field]!r}"
+        )
+
+
+def test_coordinate_overlap_json_schema_states_the_start_le_end_relation() -> None:
+    """`start <= end` is a cross-field relation standard JSON Schema cannot
+    express, so it is stated in the field descriptions, which DO reach the
+    generated schema the plan tier reads.
+    """
+    schema = NcbiEfetchCoordinateOverlapInput.model_json_schema()
+    descriptions = " ".join(
+        schema["properties"][field].get("description", "") for field in ("start", "end")
+    )
+    assert "<= end" in descriptions and ">= start" in descriptions, (
+        f"the ordering constraint is not stated in the schema: {descriptions!r}"
+    )
+
+
+def test_coordinate_overlap_rejects_an_inverted_window() -> None:
+    """The original F-3.1-27 reproduction: start=2000, end=1000."""
+    with pytest.raises(ValidationError) as excinfo:
+        NcbiEfetchInput.model_validate({**COORDINATE_OVERLAP_DICT, "start": 2000, "end": 1000})
+
+    message = str(excinfo.value)
+    assert "inverted window" in message, message
+    assert "start <= end" in message, message
+
+
+def test_coordinate_overlap_rejects_an_inverted_window_on_the_branch_model() -> None:
+    with pytest.raises(ValidationError):
+        NcbiEfetchCoordinateOverlapInput.model_validate(
+            {**COORDINATE_OVERLAP_DICT, "start": 2000, "end": 1000}
+        )
+
+
+@pytest.mark.parametrize("field", ["start", "end"])
+def test_coordinate_overlap_rejects_a_negative_coordinate(field: str) -> None:
+    with pytest.raises(ValidationError):
+        NcbiEfetchInput.model_validate({**COORDINATE_OVERLAP_DICT, field: -1})
+
+
+def test_coordinate_overlap_accepts_a_zero_length_window() -> None:
+    """`start == end` is a single-base window, not an inverted one, and
+    stays valid: the overlap predicate itself is inclusive on both ends.
+    """
+    validated = NcbiEfetchInput.model_validate(
+        {**COORDINATE_OVERLAP_DICT, "start": 1000, "end": 1000}
+    )
+    assert validated.root.start == validated.root.end == 1000
+
+
+# ---------------------------------------------------------------------------
+# candidates_checked (F-3.1-24, reopened): an additive optional output
+# field, so every pre-existing output shape still validates unchanged.
+# ---------------------------------------------------------------------------
+
+
+def test_output_candidates_checked_defaults_to_none() -> None:
+    output = NcbiEfetchOutput(
+        status="ok", action="search", records=[], record_count=0, truncated=False
+    )
+    assert output.candidates_checked is None
+
+
+def test_output_accepts_candidates_checked() -> None:
+    output = NcbiEfetchOutput(
+        status="ok",
+        action="coordinate_overlap",
+        records=[],
+        record_count=0,
+        total_available=500,
+        candidates_checked=20,
+        truncated=True,
+    )
+    assert output.candidates_checked == 20
+
+
+def test_output_rejects_negative_candidates_checked() -> None:
+    with pytest.raises(ValidationError):
+        NcbiEfetchOutput(
+            status="ok",
+            action="coordinate_overlap",
+            records=[],
+            record_count=0,
+            candidates_checked=-1,
+            truncated=False,
+        )

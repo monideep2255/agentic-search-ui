@@ -41,8 +41,12 @@ overlap in this window AND must never surface `nsv7855404`.
    `retmax` is capped at `max_candidates` so the tool never place-checks an
    unbounded candidate set; `esearchresult.count` (the TOTAL match count,
    independent of `retmax`) is carried into the output's `total_available`,
-   and `truncated` is set honestly whenever `count` exceeds the number of
-   ids actually returned.
+   the number of ids actually place-checked is carried into
+   `candidates_checked`, and `truncated` is set honestly whenever `count`
+   exceeds the checked count. The two counts are reported separately
+   because they answer different questions and collapsing them into one
+   made the output self-contradictory (F-3.1-24, reopened; see the
+   comment block at the assignment for the full account).
 2. ESummary every candidate id, in exactly ONE batched call (comma-joined
    ids), never one call per candidate. Batching is what keeps this
    procedure inside the "no unthrottled burst" instruction from the ticket
@@ -183,6 +187,53 @@ _DEFAULT_MAX_CANDIDATES: Final[int] = 20
 _DBVAR_SOURCE_URL: Final[str] = "https://www.ncbi.nlm.nih.gov/dbvar/variants/{accession}/"
 _CLINVAR_SOURCE_URL: Final[str] = "https://www.ncbi.nlm.nih.gov/clinvar/variation/{uid}/"
 
+# F-3.1-12: per-value character cap on free text lifted out of an untrusted
+# record body. `NcbiEfetchRecord.fields` caps the field COUNT
+# (`maxProperties: 40`), never any one value's length, so the length cap
+# lives here, exactly as `ncbi_eutils_actions._cap_text` does it for the
+# other five actions. The constant matches that module's
+# `_MAX_FIELD_VALUE_CHARS` deliberately. It is redeclared rather than
+# imported because `ncbi_eutils_actions` and this module are siblings with
+# no dependency between them today, and adding one to share a four-line
+# helper would couple two action families for no gain.
+_MAX_FIELD_VALUE_CHARS: Final[int] = 4000
+
+
+_MAX_FIELD_LIST_ITEMS: Final[int] = 40
+
+
+def _cap_text(value: str) -> str:
+    """Hard character cap on untrusted free text pulled from a record body."""
+    if len(value) <= _MAX_FIELD_VALUE_CHARS:
+        return value
+    return value[:_MAX_FIELD_VALUE_CHARS] + " [truncated]"
+
+
+def _cap_field_values(fields: dict[str, Any]) -> dict[str, Any]:
+    """Apply `_cap_text` to every free-text value reaching `fields`.
+
+    Every value in this module's `fields` dicts is lifted straight out of
+    an ESummary body, so all of them are untrusted: ClinVar's `title` and
+    germline classification `description`, dbVar's variant-type and gene
+    name lists, and even the placement's own `chr` and `assembly` strings.
+    A list is capped on both axes, item count and per-item length, since a
+    thousand short strings blows the context budget exactly as one long
+    string does. Integers pass through untouched: `chr_start` and
+    `chr_end` are already `int`-coerced in `_Placement`.
+    """
+    capped: dict[str, Any] = {}
+    for key, value in fields.items():
+        if isinstance(value, str):
+            capped[key] = _cap_text(value)
+        elif isinstance(value, list):
+            capped[key] = [
+                _cap_text(item) if isinstance(item, str) else item
+                for item in value[:_MAX_FIELD_LIST_ITEMS]
+            ]
+        else:
+            capped[key] = value
+    return capped
+
 
 @dataclass(frozen=True)
 class _Placement:
@@ -255,6 +306,19 @@ def _normalize_chromosome(value: str) -> str:
     (mitochondrial), since both appear in dbVar placements and the raw
     caller value may use either. Without this, `_chromosome_matches('MT',
     'M')` was False, silently dropping mitochondrial results.
+
+    F-3.1-15 (reopened): also strips leading zeros from an all-digit
+    label, so `"01"` folds to `"1"` and `"007"` to `"7"`. Verified live
+    2026-08-07 on the module's own canonical window (dbVar chr1 GRCh38
+    1,000,000 to 1,100,000): `"1"` and `"chr1"` each returned 17 genuine
+    overlaps while `"01"` returned `status=empty`, because the un-stripped
+    `"01"` went on the wire and the Entrez index does not match it
+    (`01[CH] AND ...` counts 0, `1[CH] AND ...` counts 1892). ClinVar
+    failed the same way on `"017"` versus `"17"`. The strip is applied
+    only when the remainder is entirely digits, so a non-numeric label
+    such as `"X"` or `"MT"` is never touched, and an all-zero label such
+    as `"0"` folds to `"0"` rather than to the empty string, which
+    `_chromosome_matches` would otherwise treat as a fail-closed miss.
     """
     stripped = value.strip()
     if stripped[:3].lower() == "chr":
@@ -265,6 +329,10 @@ def _normalize_chromosome(value: str) -> str:
         # rather than silently returning an empty string.
         return value.strip().upper()
     result = stripped.upper()
+    if result.isdigit():
+        # `or "0"` keeps "0" and "000" from collapsing to "", which would
+        # be indistinguishable from a missing chromosome.
+        result = result.lstrip("0") or "0"
     if result == "M":
         result = "MT"
     return result
@@ -280,8 +348,21 @@ def _chromosome_matches(placement_chromosome: str, requested: str) -> bool:
     candidate whose ONLY placement was on a different chromosome than
     requested could still be returned as an "overlap" if its numeric range
     happened to coincide.
+
+    F-3.1-35: fails CLOSED on a blank value on either side. A placement
+    whose `chr` key is missing or empty normalizes to `""`, and so does a
+    caller-supplied `chromosome` of `""` (the schema caps the field's
+    length but sets no `min_length`). Comparing those two for equality
+    returned True, which is F-3.1-02's exact failure shape again: a record
+    with no real chromosome data reported as a chromosome match. There is
+    no safe direction of failure here other than refusing to match, since
+    a match asserts a fact neither side actually supplied.
     """
-    return _normalize_chromosome(placement_chromosome) == _normalize_chromosome(requested)
+    normalized_placement = _normalize_chromosome(placement_chromosome)
+    normalized_requested = _normalize_chromosome(requested)
+    if not normalized_placement or not normalized_requested:
+        return False
+    return normalized_placement == normalized_requested
 
 
 def _overlaps(placement: _Placement, start: int, end: int) -> bool:
@@ -393,6 +474,7 @@ def _build_record(
         record_id = accession
 
     fields = {key: value for key, value in fields.items() if value is not None}
+    fields = _cap_field_values(fields)
 
     try:
         return NcbiEfetchRecord(id=record_id, db=db, fields=fields, source_url=source_url)
@@ -407,26 +489,38 @@ def _build_record(
         return None
 
 
-def _error_output(message: str, *, total_available: int | None = None) -> NcbiEfetchOutput:
+def _error_output(
+    message: str,
+    *,
+    total_available: int | None = None,
+    candidates_checked: int | None = None,
+) -> NcbiEfetchOutput:
     return NcbiEfetchOutput(
         status="error",
         action="coordinate_overlap",
         records=[],
         record_count=0,
         total_available=total_available,
+        candidates_checked=candidates_checked,
         truncated=False,
         error=message[:500],
     )
 
 
-def _empty_output(*, total_available: int = 0) -> NcbiEfetchOutput:
+def _empty_output(
+    *,
+    total_available: int = 0,
+    candidates_checked: int = 0,
+    truncated: bool = False,
+) -> NcbiEfetchOutput:
     return NcbiEfetchOutput(
         status="empty",
         action="coordinate_overlap",
         records=[],
         record_count=0,
         total_available=total_available,
-        truncated=False,
+        candidates_checked=candidates_checked,
+        truncated=truncated,
     )
 
 
@@ -456,9 +550,26 @@ async def coordinate_overlap(
     end = input_model.end
     assembly = input_model.assembly
 
+    # F-3.1-35: a blank chromosome cannot produce a real chromosome
+    # comparison, so it never reaches the wire. `_chromosome_matches`
+    # already fails closed on it, which would make every candidate drop
+    # silently; saying so here costs one branch and gives the Act step
+    # something it can act on instead of an unexplained empty result.
+    if not _normalize_chromosome(chromosome):
+        return _error_output(
+            f"coordinate_overlap was given a blank chromosome ({chromosome!r}). "
+            f"A placement cannot be verified without one; retry with a real "
+            f"chromosome label such as '1', 'X', or 'MT'."
+        )
+
     # F-3.1-27 (adversary finding 15, MINOR): validate the coordinate window
     # before any network call. An inverted, negative, or zero-length window
     # produces a term that either matches nothing or matches everything.
+    # F-3.1-12: `NcbiEfetchCoordinateOverlapInput` now carries the same two
+    # constraints as a schema-level `Field(ge=0)` plus a `model_validator`,
+    # so the plan tier sees them in the generated JSON schema. These runtime
+    # checks stay as defense in depth, for a caller that constructs the
+    # dataclass-shaped input by another route.
     if start > end:
         return _error_output(
             f"coordinate_overlap window start ({start}) is after end ({end}). "
@@ -517,15 +628,49 @@ async def coordinate_overlap(
         esearch_count = len(candidate_ids)
 
     if not candidate_ids:
-        return _empty_output(total_available=0)
+        # An empty idlist alongside a non-zero count means the ESearch index
+        # disagreed with itself (the same shape `search` records as
+        # F-3.1-26). Report the count rather than zeroing it, and flag the
+        # result truncated, since matches exist that this call never saw.
+        return _empty_output(
+            total_available=esearch_count,
+            candidates_checked=0,
+            truncated=esearch_count > 0,
+        )
 
-    # F-3.1-24 (adversary finding 12, MAJOR): total_available is the number
-    # of candidates actually place-checked, not the coarse ESearch prefilter
-    # count the module itself documents as unreliable. The ESearch count
-    # includes wrong-assembly and wrong-chromosome matches that the five-step
-    # procedure exists to filter out.
-    total_available = len(candidate_ids)
-    truncated = esearch_count > len(candidate_ids)
+    # F-3.1-24 (reopened): the two counts below answer two different
+    # questions and both are reported, because collapsing them into one
+    # number made the output contradict itself.
+    #
+    #   total_available   how many records the coarse ESearch prefilter
+    #                     matched, whether or not their placement has been
+    #                     confirmed. This is the same meaning `search` in
+    #                     ncbi_eutils_actions gives the field (ESearch's
+    #                     own `count`), so a reader does not have to know
+    #                     which action produced the output to read it.
+    #   candidates_checked  how many of those this call actually pulled
+    #                     placements for and ran the step-4 predicate
+    #                     against, bounded by `max_candidates`.
+    #
+    # The first fix for this finding set `total_available` to the checked
+    # count, which made `total_available == record_count` coexist with
+    # `truncated is True` (live: dbVar chr2, 20 checked, 20 returned, still
+    # flagged truncated), a self-contradiction, and it discarded a
+    # genuinely meaningful number on ClinVar, whose position index is
+    # single-assembly and whose count is therefore not the coarse
+    # cross-assembly figure dbVar's is.
+    #
+    # `truncated` stays keyed to the CHECKED set, not to `record_count`:
+    # truncation means "there are matches this call never looked at", which
+    # is a different fact from "some candidates were checked and correctly
+    # rejected by the overlap predicate". The rejected ones are not
+    # truncated, they are answered. Since `record_count <=
+    # candidates_checked <= total_available` always holds, `truncated`
+    # implies `total_available > record_count`, so the contradictory pair
+    # is unreachable by construction.
+    total_available = esearch_count
+    candidates_checked = len(candidate_ids)
+    truncated = esearch_count > candidates_checked
 
     try:
         summary_response = await execute_get(
@@ -542,12 +687,14 @@ async def coordinate_overlap(
             f"the {exc.family} pool, retry after {exc.retry_after:.1f}s or with fewer "
             f"candidates",
             total_available=total_available,
+            candidates_checked=candidates_checked,
         )
     except (TransportTimeoutError, TransportConnectionError) as exc:
         return _error_output(
             f"coordinate_overlap ESummary placement fetch for {db} failed: {exc}. Retry "
             f"with fewer candidates or a narrower window.",
             total_available=total_available,
+            candidates_checked=candidates_checked,
         )
 
     summary_result = classify_eutils_response(
@@ -561,6 +708,7 @@ async def coordinate_overlap(
             f"{summary_result.error_message}. The ESearch prefilter's candidate ids "
             f"could not be resolved to placements.",
             total_available=total_available,
+            candidates_checked=candidates_checked,
         )
 
     summary_body = summary_result.body if isinstance(summary_result.body, dict) else {}
@@ -620,5 +768,6 @@ async def coordinate_overlap(
         records=records,
         record_count=len(records),
         total_available=total_available,
+        candidates_checked=candidates_checked,
         truncated=truncated,
     )
