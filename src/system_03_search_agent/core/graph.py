@@ -372,6 +372,7 @@ widening it:
 
 from __future__ import annotations
 
+import itertools
 import re
 import time
 import uuid
@@ -956,6 +957,22 @@ _CURIE_IN_TEXT_PATTERN = re.compile(
 # `"ß".upper()` is `"SS"`), which silently shifts every span after it.
 _GENE_SYMBOL_TOKEN_PATTERN = re.compile(r"\b[A-Z][A-Z0-9]{1,9}\b")
 
+# HGNC's "C#orf#" nomenclature (Chromosome # Open Reading Frame #, e.g.
+# C9orf72, C4orf54) is a genuinely mixed-case official gene-symbol family,
+# hundreds of approved symbols wide, and it is invisible to the all-caps
+# pattern above by design: the lowercase "orf" is not a case mistake, it
+# is how HGNC writes the name. Found during re-review round 1's own
+# independent verification of the fix that introduced
+# `_GENE_SYMBOL_TOKEN_PATTERN` (2026-08-07): the case-preserving shape
+# heuristic that correctly excludes ordinary English also, as an
+# unintended side effect, excluded this entire real nomenclature family,
+# a genuine regression against the PRE-fix (uppercase-everything)
+# behavior, which happened to catch these by accident. This is a second,
+# narrow, case-sensitive shape (a specific letter-digit-letters-digit
+# template, not "any mixed case"), so it does not reopen the general
+# problem the primary pattern exists to solve.
+_CORF_GENE_TOKEN_PATTERN = re.compile(r"\bC\d{1,2}orf\d{1,3}\b")
+
 # F-3.1-01 / F-3.1-14 / F-3.1-31: a SHORT defense-in-depth list, no
 # longer the primary filter.
 #
@@ -1295,13 +1312,38 @@ async def _resolve_query_entities(query_text: str) -> _EntityResolution:
     # digits, so they outranked case-marked real symbols like KRAS for the
     # same three-call budget. Candidates are tried in QUERY ORDER, which
     # cannot promote noise above a symbol the user actually wrote.
+    # Re-review round 1: two patterns, merged and re-sorted into query
+    # order, not appended as a second pass. `_CORF_GENE_TOKEN_PATTERN`'s
+    # matches must interleave with the primary pattern's by POSITION, not
+    # come after all of them, or a C#orf# gene appearing before an
+    # all-caps acronym in the query text would be tried second instead of
+    # first, silently reordering what the budget slices.
+    all_token_matches = sorted(
+        itertools.chain(
+            _GENE_SYMBOL_TOKEN_PATTERN.finditer(query_text),
+            _CORF_GENE_TOKEN_PATTERN.finditer(query_text),
+        ),
+        key=lambda m: m.start(),
+    )
     candidates: list[str] = []
-    for token_match in _GENE_SYMBOL_TOKEN_PATTERN.finditer(query_text):
+    candidates_seen: set[str] = set()
+    for token_match in all_token_matches:
         token = token_match.group(0)
         if token in _SYMBOL_CANDIDATE_STOPWORDS:
             continue
         if _span_overlaps_any(token_match.span(), matched_spans):
             continue
+        # ADV-FIX2-8 (re-review round 1 adversarial pass): a repeated
+        # token used to consume a budget slot on every occurrence, so
+        # "TP53, TP53 and TP53" left no slot for a real second gene in
+        # the same query even though the 2nd and 3rd repeats only ever
+        # hit the resolution cache. De-duplicate the candidate list
+        # itself, not just the resolved result: the cap is on DISTINCT
+        # live-lookup-worthy symbols, per `_MAX_LIVE_SYMBOL_LOOKUPS`'s own
+        # docstring ("hard-caps live calls"), not on token occurrences.
+        if token in candidates_seen:
+            continue
+        candidates_seen.add(token)
         candidates.append(token)
 
     # The budget is applied by slicing the candidate list rather than by
