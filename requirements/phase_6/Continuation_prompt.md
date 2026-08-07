@@ -75,7 +75,7 @@ Eight build phases are done and merged into `main`. The first six complete the S
 | 2.1 | cypher_query over Layer 1, first live graph access | #15 |
 | 2.2 | Deterministic cite-or-refuse, Layer 1 provenance, the first trust signal | #18 |
 | 3.0 | The full Section 10 guardrail, replacing the passthrough stub | #19 |
-| 3.1 | ncbi_efetch, the first Layer 2 tool: seven actions across three API families, live gene-symbol resolution replacing the one-entry hardcoded table | Merged as PR #22 on 2026-08-05. Its fix round is separately re-reviewed and re-fixed twice on `fix/3.1-rereview-round1-critical-regressions`, PR not yet opened |
+| 3.1 | ncbi_efetch, the first Layer 2 tool: seven actions across three API families, live gene-symbol resolution replacing the one-entry hardcoded table | Merged as PR #22 on 2026-08-05, PR #23 on 2026-08-07 |
 
 Current counts, stated once here:
 
@@ -86,12 +86,12 @@ Current counts, stated once here:
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
 - Premise gate, guardrail: 20 of 20
 - Premise gate, ncbi_efetch: 19 passed, 1 skipped (tunnel)
-- Decisions logged: 222
+- Decisions logged: 225
 - Learnings entries: 53, plus a retrospective
 
-Next in the build order is build phase 3.2, `ncbi_dbsnp`, the second Layer 2 tool, but two things come before it and both are dated. First the 3.1 re-review, then F-2.1-C15 on `fix/c15-generation-bound`, which `tracker/BOARD.md` dates to immediately after 3.1 merges and which is the finding where a generated query took the graph server down for every user.
+Next in the build order is build phase 3.2, `ncbi_dbsnp`, the second Layer 2 tool, but one thing comes before it and is dated: F-2.1-C15 on `fix/c15-generation-bound`, which `tracker/BOARD.md` dates to immediately after 3.1 merges and which is the finding where a generated query took the graph server down for every user.
 
-The build phase 3.1 tool surface is complete: seven actions across three API families, live gene-symbol resolution replacing the one-entry table, and twenty-seven findings raised across a judge round and an adversary round. Stated precisely, because the difference matters: twenty-six of those are `fix-landed`, meaning commit 59944bc landed 669 insertions and 32 tests claiming the fix, and no independent role has confirmed any of them. One is `carried`. None is `closed`. The answer-path half (Act-step wiring, Layer 2 citation, trust gate) is carried to T-3.1-28 for a later 3.x phase.
+The build phase 3.1 tool surface is complete and its findings are settled: 40 of 42 numbered findings closed, F-3.1-04 carried to T-3.1-28 (the answer-path half: Act-step wiring, Layer 2 citation, trust gate), and exactly two left open on genuine product decisions, F-3.1-41 and F-3.1-42, detailed in `tracker/phase_3.1.md`.
 
 Step 6.2 moved on 2026-08-03. It now runs AFTER the 3.x tool phases rather than between 2.2 and 3.0, because its own written reasoning names 3.x as the code its security scan most exists for, and because reconciling the frozen documents after the tool phases is better input than reconciling before them. Its security scan is separately PAUSED INDEFINITELY on cost, with one condition that turns it back on: exposure. First contact with a real user, a deploy, or a public URL triggers it, whichever comes first.
 
@@ -161,29 +161,25 @@ Two tickets did not land and are carried, both on `tracker/BOARD.md` with dated 
 
 ## Build phase 3.1, done
 
-Fix round applied 2026-08-05 on the alternate backend, pull request open on `phase/3.1-ncbi-efetch`, not yet merged. The answer-path half (Act-step wiring, Layer 2 citation, trust gate) is carried to T-3.1-28 by the product owner's decision.
+Merged as PR #22 on 2026-08-05, then closed out fully via PR #23 on 2026-08-07 after its outstanding re-review debt was paid off. The answer-path half (Act-step wiring, Layer 2 citation, trust gate) is carried to T-3.1-28 by the product owner's decision.
 
-What shipped: the `ncbi_efetch` tool, seven actions across three API families. E-utilities body-inspecting actions (search, summary, fetch, link), Datasets v2 gene/genome reports (status-coded), PubChem PUG REST property lookup (status-coded), and a five-step dbVar/ClinVar coordinate-overlap procedure with live-verified chromosome normalization. Live gene-symbol resolution via NCBI Datasets v2 and ESearch, replacing the one-entry hardcoded table. The premise gate: 19 passed, 1 skipped (tunnel).
+What shipped: the `ncbi_efetch` tool, seven actions across three API families. E-utilities body-inspecting actions (search, summary, fetch, link), Datasets v2 gene/genome reports (status-coded), PubChem PUG REST property lookup (status-coded), and a five-step dbVar/ClinVar coordinate-overlap procedure with live-verified chromosome normalization. Live gene-symbol resolution via NCBI Datasets v2 and ESearch, replacing the one-entry hardcoded table.
 
-Release gate outcome:
+PR #22 merged without the adversarial pass over its own fix round, the stated pre-merge condition, a recorded product-owner decision. PR #23 is that gap closed, across three re-review rounds run 2026-08-07:
 
-| Gate | Result |
-|------|--------|
-| Premise gate | 19 passed, 1 skipped (tunnel-gated case 16) |
-| Python suite | 1571 passed, 82 skipped, 1 xfailed |
-| `ruff check src/` | Clean |
-| Judge round 1 | FAIL, 11 findings. 5 fixed and verified |
-| Adversary round 1 | 15 findings, 5 critical. All 15 fixed |
-| Fix round | 27 findings fixed across both rounds. 21 patches applied |
-| Doc drift | 0 stale, 0 structural |
-| Re-review | NOT RUN (fixer cannot close own findings; needs a primary-provider session) |
+| Round | Result |
+|-------|--------|
+| 1: six fresh-context reviewers, one per file cluster plus an adversary | FAIL. 11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical (gene-symbol resolution completely broken; a field-tag fix using invalid Entrez syntax) |
+| Fix round: six parallel builders in isolated worktrees | Closed nearly all of round 1's findings. Integrating their branches surfaced two cross-file seams no single builder could see alone |
+| 2: three more fresh-context reviewers, live against NCBI | Found a genuine soundness gap neither round caught: NCBI's `[sym]` tag and the Datasets symbol endpoint both match on gene aliases, so an "unambiguous" match could silently return a confidently WRONG gene. Also a pre-existing bug that left one round-1 critical fix unreachable in production, a second URL-encoding gap, and a regression in round 2's own wait-budget fix. All fixed same-day |
+| Final: one more fresh-context reviewer, dispatched specifically to avoid trusting same-session self-verification | APPROVE. Live re-confirmed both critical fixes and the alias-matching fix, re-ran the full gate suite independently, confirmed no test assertion was weakened, spot-checked 10 closed findings. Three new minor non-blocking findings filed. Merged as commit `97aec83` |
 
-The phase's premise was restated to what 3.1 actually delivers rather than silently edited to match the current state. The original premise's first half (the answer-path) is carried to T-3.1-28.
+Final release gate: 1798 Python tests (1715 passed, 82 skipped, 1 xfailed), `ruff check src/ tests/` at the same 4 pre-existing errors this branch found and confirmed unrelated, doc drift clean, premise gate 19 passed / 1 skipped (tunnel-gated case 16). Full per-finding detail, all 42 numbered findings, and the final reviewer's evidence: `tracker/phase_3.1.md`.
 
 Transferable lessons for the remaining tool phases:
-- Capture fixtures from live responses, never author them from a reading of the docs. Two of the criticals were hidden by fixtures hand-written from documentation, which tested the author's belief rather than the interface.
-- A tool that talks to a live external API needs an adversary who probes the actual API, not just a judge who reads the code. Every critical came from the gap between what the API actually returns and what someone believed it returns.
-- The E-utilities body-versus-status trap is real and must be structurally enforced, not just documented. The two classifiers have deliberately different signatures so a misuse is a TypeError at the call site.
+- Capture fixtures from live responses, never author them from a reading of the docs. Two of round 1's criticals were hidden by fixtures hand-written from documentation, which tested the author's belief rather than the interface; the same pattern reappeared inside a FIX round's own new test fixtures during round 2.
+- A tool that talks to a live external API needs an adversary who probes the actual API, not just a judge who reads the code. Every critical, in both the original phase and its fix round, came from the gap between what the API actually returns and what someone believed it returns.
+- A same-session self-check is not an independent review, however thorough. Measured 3-for-3 this same day: the original merge, the six-builder fix round, and two of the lead's own individual patches each had a real defect only a fresh pass caught. Budget for the fresh pass, every time, not just once per phase.
 
 ## What build phase 3.2 delivers
 

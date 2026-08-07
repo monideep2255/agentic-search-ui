@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-08-05.
+Kick-off: 2026-05-06. Last updated: 2026-08-07.
 
 ## Status at a glance
 
@@ -14,10 +14,10 @@ Kick-off: 2026-05-06. Last updated: 2026-08-05.
 | Phase 3: PRD | Complete, PRD locked (2026-07-22) |
 | Phase 4: technical specification | Complete, all steps 4.0 to 4.4 done (2026-07-25) |
 | Phase 5: system and tooling updates | Complete, all steps 5.1 to 5.4 (2026-07-26) |
-| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE, all six build phases merged. Step 6.3 (build v1) underway. Build phases 1.0 to 3.0 merged as PRs #5, #6, #9, #12, #15, #18, #19. Build phase 3.1 (`ncbi_efetch`, the first Layer 2 tool) merged as PR #22, with the premise restated and the answer-path half (Act-step wiring, Layer 2 citation, trust gate) carried to T-3.1-28. It merged without the adversarial pass over its own fix round, so twenty-six of its twenty-seven findings are `fix-landed` rather than closed. Next up, in this order: re-review 3.1, then F-2.1-C15, then open build phase 3.2, `ncbi_dbsnp`. Step 6.2 moved to run after the 3.x tool phases, and its security scan is paused indefinitely on cost |
+| Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE, all six build phases merged. Step 6.3 (build v1) underway. Build phases 1.0 to 3.0 merged as PRs #5, #6, #9, #12, #15, #18, #19. Build phase 3.1 (`ncbi_efetch`, the first Layer 2 tool) merged as PR #22, with the premise restated and the answer-path half (Act-step wiring, Layer 2 citation, trust gate) carried to T-3.1-28. It merged without the adversarial pass over its own fix round; that debt was fully closed via three independent re-review rounds and a fix round, merged as PR #23. 40 of 42 numbered findings closed, two left open on genuine product decisions (F-3.1-41, F-3.1-42). Next up, in this order: F-2.1-C15, then open build phase 3.2, `ncbi_dbsnp`. Step 6.2 moved to run after the 3.x tool phases, and its security scan is paused indefinitely on cost |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 222 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 225 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -775,6 +775,14 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+- 2026-08-07: Build phase 3.1's outstanding re-review debt closed, merged as PR #23 (commit `97aec83`). PR #22 (2026-08-05) had merged without the adversarial pass over its own fix round, the stated pre-merge condition; this is that gap closed, across three independent re-review rounds run the same day.
+  - Round 1, six fresh-context reviewers (five by file cluster, one adversary): FAIL. 11 of 26 fix-landed findings closed clean, 15 reopened, and 9 new defects the fix round introduced itself, two CRITICAL: gene-symbol resolution completely broken (a taxon-aware refactor left the cache key on the wire instead of the symbol) and a field-tag fix using invalid Entrez syntax that actively unscoped searches.
+  - Fix round: six parallel builders in isolated worktrees closed nearly all of round 1's findings. Integrating their branches surfaced two cross-file seams no single builder could see alone (a `retry_after` value neither side wired up; an HTTP-status guard that landed in one file but not its sibling).
+  - Round 2, three more fresh-context reviewers live against NCBI: found a soundness gap neither round caught, the most serious finding of the day. NCBI's `[sym]` tag and the Datasets symbol endpoint both match on gene ALIASES, not only the exact approved symbol, so an "unambiguous" single-id match could silently return a confidently WRONG gene (`HG38[sym]` resolved to a real but wrong gene, `LGR5`). Also found a pre-existing bug that left one round-1 critical fix unreachable in production (EInfo's real response shape was never handled), a second URL-encoding gap in a sibling file, and a regression in round 2's own wait-budget fix. All fixed the same day; the two highest-stakes fixes were mutation-tested, reverted to confirm the new test fails, then restored, rather than trusted on a single pass.
+  - Final round, one more fresh-context reviewer dispatched specifically because every fix so far had only been checked in the same session that wrote it: APPROVE. Independently re-verified both critical fixes and the alias-matching fix live against NCBI, confirmed `main` was genuinely broken pre-merge, re-ran the full gate suite, confirmed no test assertion was weakened across the whole round, spot-checked ten closed findings, and confirmed the two deliberately-open findings were genuinely still open. Filed three new minor, non-blocking findings, none reachable in production since `ncbi_efetch` is not yet wired into `act_node`.
+  - Net: 40 of 42 numbered findings closed, F-3.1-04 correctly carried, two left open on genuine product decisions rather than resolved unilaterally (F-3.1-41: should acronym-shaped gene symbols stay stopword-blocked; F-3.1-42: should a lowercase gene mention get a fallback). Final gate: 1798 Python tests (1715 passed, 82 skipped, 1 xfailed), doc drift clean, premise gate 19 of 20 live (1 skip, tunnel-gated). Four decisions logged in `DECISIONS.md`. Full per-finding detail: `tracker/phase_3.1.md`.
+  - The transferable lesson: a same-session self-check is not an independent review, however thorough. Measured 3-for-3 this same day, the original merge, the six-builder fix round, and two of the lead's own individual patches each had a real defect only a fresh pass caught.
 
 - 2026-08-04, later the same day: Added a metered alternate model backend to the build harness, scoped by role. A build-process change only. No product code, no requirement, and no locked document is affected.
   - Why: the primary provider's weekly limit stops the build outright, and build phase 3.1 is open with the innovation-board date on 2026-08-26. Swapping the model behind an unchanged Claude Code CLI keeps the five security hooks, the permission engine, the rules, the skills and the sub-agents intact, since all of those belong to the CLI rather than to the model. `CLAUDE.md`'s portability section is about losing the CLI, which this deliberately does not do.
