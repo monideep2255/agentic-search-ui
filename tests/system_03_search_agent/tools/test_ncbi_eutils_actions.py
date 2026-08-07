@@ -100,14 +100,27 @@ def _install(monkeypatch: pytest.MonkeyPatch, items: list[httpx.Response | Excep
 
 _EINFO_GENE_FIELDS = {
     "einforesult": {
-        "dbinfo": {
-            "dbname": "gene",
-            "fieldlist": [
-                {"name": "SYM", "fullname": "Symbol"},
-                {"name": "ORGN", "fullname": "Organism"},
-                {"name": "GENE", "fullname": "Gene Name"},
-            ],
-        }
+        # Re-review round 1, adversarial pass (2026-08-07): live EInfo
+        # wraps dbinfo in a ONE-ELEMENT LIST, not a bare dict, and its
+        # `db=gene` fieldlist has NO entry whose abbreviation is "SYM" (the
+        # closest is "GENE", fullname "Gene Name", description "Symbol or
+        # symbols of the gene"). The previous fixture invented both the
+        # dict shape and a "SYM" entry that live NCBI never returns, which
+        # is exactly how this module's own field-tag validation shipped
+        # broken against every real EInfo response: the tests it was
+        # supposed to satisfy were testing the author's belief about the
+        # shape, not the shape NCBI actually sends. `sym` still validates
+        # correctly below via `_EINFO_HIDDEN_VALID_FIELDS`, the same
+        # supplement production code uses for this exact gap.
+        "dbinfo": [
+            {
+                "dbname": "gene",
+                "fieldlist": [
+                    {"name": "ORGN", "fullname": "Organism"},
+                    {"name": "GENE", "fullname": "Gene Name"},
+                ],
+            }
+        ]
     }
 }
 

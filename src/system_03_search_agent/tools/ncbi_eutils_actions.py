@@ -252,6 +252,19 @@ def reset_einfo_cache_for_tests() -> None:
     _einfo_field_cache.clear()
 
 
+# Re-review round 1 (2026-08-07): tags live-verified to work against real
+# Entrez that EInfo's own fieldlist does not list for that db. Keyed by db,
+# lowercased. `db=gene`'s "sym" is the only entry today because it is the
+# only tag this module's code and docs actually use; this is not an
+# attempt to enumerate every hidden tag EInfo omits for every database.
+# Extend it only after live-verifying a new tag the same way: confirm the
+# querytranslation echoes the tag back (not silently dropped to All
+# Fields) and the result count matches a known-good control.
+_EINFO_HIDDEN_VALID_FIELDS: Final[dict[str, frozenset[str]]] = {
+    "gene": frozenset({"sym"}),
+}
+
+
 async def _get_einfo_fields(db: str) -> frozenset[str]:
     """Return the lowercased set of real EInfo field names for `db`.
 
@@ -286,7 +299,24 @@ async def _get_einfo_fields(db: str) -> frozenset[str]:
             raise EInfoUnavailableError(
                 f"EInfo response for db {db!r} is not valid JSON, cannot validate field_tags"
             ) from exc
-        dbinfo = body.get("einforesult", {}).get("dbinfo") if isinstance(body, dict) else None
+        # Re-review round 1, adversarial pass (2026-08-07): live EInfo
+        # returns `einforesult.dbinfo` as a ONE-ELEMENT LIST, not a dict,
+        # for every db probed (gene, pubmed, clinvar). The dict check
+        # below rejected every real EInfo response unconditionally, so
+        # `_reject_unknown_field_tags` never validated a single field tag
+        # against a live field list; every `field_tags` call failed
+        # closed on "cannot validate", including this module's own
+        # canonical `[sym]` example. `field_tags` has no production
+        # caller as of this fix, so the practical exposure was zero, but
+        # the premise gate's own field_tags case (15) was passing for the
+        # wrong reason: the rejection it asserts was true, just not
+        # because of the property it claims to test.
+        einforesult = body.get("einforesult", {}) if isinstance(body, dict) else {}
+        dbinfo_raw = einforesult.get("dbinfo")
+        if isinstance(dbinfo_raw, list):
+            dbinfo = dbinfo_raw[0] if dbinfo_raw else None
+        else:
+            dbinfo = dbinfo_raw
         if not isinstance(dbinfo, dict):
             raise EInfoUnavailableError(
                 f"EInfo response for db {db!r} has no einforesult.dbinfo, "
@@ -302,6 +332,23 @@ async def _get_einfo_fields(db: str) -> frozenset[str]:
             for entry in field_list
             if isinstance(entry, dict) and "name" in entry
         )
+        # EInfo's own fieldlist is not a complete list of every tag NCBI's
+        # query parser accepts. Live-verified: `BRCA1[sym] AND human[orgn]`
+        # scopes correctly (querytranslation echoes `[sym]` back verbatim,
+        # count 1, matching `BRCA1[gene]`), but no entry in `db=gene`'s
+        # EInfo fieldlist has abbreviation SYM; the closest entries are
+        # GENE ("Gene Name", description "Symbol or symbols of the gene")
+        # and PREF ("Preferred Symbol"). `sym` is a real, working, legacy
+        # Entrez tag EInfo simply does not advertise. Validating against
+        # EInfo alone would over-reject it, the exact "no safe direction
+        # of failure" mistake build phase 3.0's guardrail premise gate
+        # was built to catch, just at the field-tag layer instead of the
+        # admission layer. Supplement with a small, explicitly-labeled
+        # allowlist of tags known to work despite EInfo's silence on
+        # them. This is deliberately NOT a general fix for every hidden
+        # Entrez tag EInfo might omit for every db; it closes the one gap
+        # this module's own code and docs actually depend on.
+        names = names | (_EINFO_HIDDEN_VALID_FIELDS.get(db, frozenset()))
         _einfo_field_cache[db] = names
         return names
 
