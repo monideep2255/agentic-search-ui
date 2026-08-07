@@ -16,12 +16,19 @@ somehow did.
 
 What this file proves:
 
-    Finding 2 (CRITICAL, re-review). A confirmed non-resolution (both
-    Datasets and ESearch answered and neither found the symbol) is
-    cached; a transient failure (a `status == "error"` from either call,
-    modeling a timeout, connection failure, 5xx, or rate limit) is never
-    cached, so the identical symbol is retried live on the next call
-    rather than replaying a stale outage forever.
+    F-3.1-28 (CRITICAL, re-review round 1). The taxon-aware cache key is
+    used for the cache and nowhere else. It used to be passed into the
+    uncached helper as the symbol, so every live lookup asked NCBI for a
+    gene literally named "BRCA1:human" and every gene-symbol resolution
+    in the system returned None.
+
+    Finding 2 (CRITICAL, re-review) and F-3.1-26 (re-review round 1). A
+    confirmed non-resolution (both Datasets and ESearch answered and
+    neither found the symbol) is cached; a transient failure on EITHER
+    leg (a `status == "error"`, modeling a timeout, connection failure,
+    5xx, or rate limit) is never cached, so the identical symbol is
+    retried live on the next call rather than replaying a stale outage
+    forever.
 
     Finding 5 (MAJOR, re-review). `dataset_report` returning more than
     one record is ambiguous and must never be resolved by taking
@@ -128,8 +135,58 @@ def _install_fake_ncbi_efetch(
 
 
 # ===========================================================================
-# Finding 2 (CRITICAL, re-review): confirmed-negative caching vs
-# transient-failure caching.
+# F-3.1-28 (CRITICAL, re-review round 1): the cache key is a cache key, and
+# never the value put on the wire.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_the_symbol_sent_to_ncbi_is_the_symbol_not_the_cache_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.1-28's exact repro, asserted on the request rather than on the
+    answer.
+
+    `resolve_symbol_to_curie` composes a taxon-aware cache key,
+    "BRCA1:human", and used to pass THAT into the uncached helper as the
+    symbol. Both live calls then asked NCBI for a gene literally named
+    "BRCA1:human": the Datasets `symbol` parameter and the ESearch
+    "BRCA1:human[sym]" term. No such gene exists, so every gene-symbol
+    resolution in the system returned None.
+
+    Asserting on the outbound request is deliberate. A test that only
+    checked the returned CURIE would pass the moment a fake responds to
+    any symbol at all, which is precisely how this defect survived a
+    green suite.
+    """
+    dataset_calls: list[tuple[str | None, str | None]] = []
+    search_terms: list[str] = []
+
+    async def _recording_ncbi_efetch(tool_input: Any) -> NcbiEfetchOutput:
+        root = tool_input.root
+        if root.action == "dataset_report":
+            dataset_calls.append((root.symbol, root.taxon))
+            return _dataset_report_output(status="empty")
+        search_terms.append(root.term)
+        return _search_output(status="empty", idlist=[])
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _recording_ncbi_efetch)
+
+    await graph_module.resolve_symbol_to_curie("  brca1  ", taxon="Human")
+
+    assert dataset_calls == [("BRCA1", "human")], (
+        f"the Datasets call must carry the normalized SYMBOL and the taxon as "
+        f"two separate values, got {dataset_calls!r}"
+    )
+    assert search_terms == ["BRCA1[sym] AND human[orgn]"], (
+        f"the ESearch term must be built from the symbol alone, got "
+        f"{search_terms!r}"
+    )
+
+
+# ===========================================================================
+# Finding 2 (CRITICAL, re-review) and F-3.1-26 (re-review round 1):
+# confirmed-negative caching vs transient-failure caching, on BOTH legs.
 # ===========================================================================
 
 
@@ -195,13 +252,25 @@ async def test_transient_outage_is_never_cached_and_retries_on_the_next_call(
 
 
 @pytest.mark.asyncio
-async def test_datasets_error_falling_back_to_a_successful_esearch_is_cached(
+async def test_a_datasets_error_is_never_cached_even_when_esearch_answers(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """When Datasets errors but the ESearch fallback genuinely succeeds
-    with an unambiguous match, the overall result is a confirmed
-    resolution and must be cached: only the LAST branch to decide
-    matters for cacheability, not every branch along the way.
+    """F-3.1-26 (reopened at re-review round 1). This test previously
+    asserted the OPPOSITE, that a Datasets error still gets cached as
+    long as ESearch succeeded, on the reasoning that only the last branch
+    to decide matters. That reasoning contradicts the property both
+    `_SYMBOL_CURIE_CACHE` and `_resolve_symbol_to_curie_uncached` claim in
+    their own comments: that a cached value means BOTH Datasets and
+    ESearch answered. A Datasets timeout is not an answer.
+
+    The consequence of the old behavior is Finding 2's defect one leg
+    over: during a partial NCBI outage where Datasets is down and ESearch
+    returns nothing, the symbol is cached as a confirmed absence and stays
+    unresolvable for the life of the process even after Datasets recovers.
+
+    Both arms are asserted here, because the ESearch-found-something arm
+    is the one the old test got wrong and the ESearch-found-nothing arm is
+    the one that actually corrupts an answer.
     """
     calls = _install_fake_ncbi_efetch(
         monkeypatch,
@@ -210,9 +279,37 @@ async def test_datasets_error_falling_back_to_a_successful_esearch_is_cached(
     )
 
     result = await graph_module.resolve_symbol_to_curie("BRCA1")
-    assert result == "NCBIGene:672"
+    assert result == "NCBIGene:672", "the ESearch answer is still returned to the caller"
     assert calls == ["dataset_report", "search"]
-    assert graph_module._SYMBOL_CURIE_CACHE.get("BRCA1:human") == "NCBIGene:672"
+    assert "BRCA1:human" not in graph_module._SYMBOL_CURIE_CACHE, (
+        "a leg that errored means the result is not a confirmed answer from "
+        "both APIs, so it must not be written to a process-lifetime cache"
+    )
+
+    # The arm that actually corrupts an answer: Datasets errors, ESearch
+    # genuinely finds nothing. That is NOT a confirmed absence.
+    _install_fake_ncbi_efetch(
+        monkeypatch,
+        dataset_report=_dataset_report_output(status="error"),
+        search=_search_output(status="empty", idlist=[]),
+    )
+
+    missing = await graph_module.resolve_symbol_to_curie("EGFR")
+    assert missing is None
+    assert "EGFR:human" not in graph_module._SYMBOL_CURIE_CACHE, (
+        "a zero-hit ESearch behind an ERRORED Datasets call is a partial "
+        "outage, not a confirmed non-resolution, and caching it makes the "
+        "symbol permanently unresolvable"
+    )
+
+    # Datasets recovers: the same symbol must be retried live, not served
+    # from a cached outage.
+    calls_after_recovery = _install_fake_ncbi_efetch(
+        monkeypatch,
+        dataset_report=_dataset_report_output(records=[_dataset_record(gene_id="1956")]),
+    )
+    assert await graph_module.resolve_symbol_to_curie("EGFR") == "NCBIGene:1956"
+    assert calls_after_recovery == ["dataset_report"]
 
 
 @pytest.mark.asyncio

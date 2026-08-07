@@ -856,21 +856,30 @@ async def test_13_an_unresolvable_symbol_refuses_rather_than_errors() -> None:
 
 @premise_gate
 @pytest.mark.asyncio
-async def test_14_resolution_does_not_fire_one_call_per_word() -> None:
-    """Case 14. Rewritten 2026-08-05 after the F-3.1-14 fix landed.
+async def test_14_the_real_gene_is_actually_attempted_among_ordinary_words() -> None:
+    """Case 14. Rewritten twice, and the second rewrite is the point.
 
-    The original version of this case asserted `len(calls) <= 3` and passed
-    while the behavior was wrong: the stopword list was incomplete and the
-    digit-priority heuristic did not exist, so ordinary English words consumed
-    the lookup budget before the real gene symbol was ever tried. The adversary
-    found this: "In ADHD, PTSD and OCD cohorts, is TP53 mutated?" never tried
-    TP53, and "Does chronic smoking increase EGFR mutation frequency?" never
-    tried EGFR.
+    Version 1 asserted `len(calls) <= 3` and stayed green while the behavior
+    was wrong, because a bounded budget says nothing about WHICH lookups the
+    budget was spent on. `return []` scores perfectly on that assertion and
+    resolves no gene at all. The adversary found what the bound could not:
+    "In ADHD, PTSD and OCD cohorts, is TP53 mutated?" never tried TP53, and
+    "Does chronic smoking increase EGFR mutation frequency?" never tried EGFR,
+    both inside a passing three-call ceiling.
 
-    The fix added a digit-priority sort (digit-containing tokens first) and
-    expanded the stopword list. This case now asserts the EXACT number of
-    lookups for a query with one real gene symbol and many ordinary English
-    words: exactly one lookup, for TP53, not one per word.
+    Version 2 asserted exactly one lookup on a query whose only capitalized
+    token was already the gene, so it could not distinguish the fix from the
+    defect either: it never contained a competing candidate.
+
+    This version asserts the property the finding actually asked for: in a
+    question stuffed with ordinary English words AND with all-caps clinical
+    acronyms that compete for the same lookup budget, the real gene symbol is
+    ATTEMPTED and RESOLVES. The budget assertion stays, secondary, because a
+    bound alone was already proven to be the wrong primary check.
+
+    The three acronyms are deliberately placed BEFORE the gene in the
+    sentence, so a query-order scan with no shape heuristic spends all three
+    lookups before reaching TP53.
     """
     from system_03_search_agent.core import graph as graph_module
 
@@ -883,20 +892,26 @@ async def test_14_resolution_does_not_fire_one_call_per_word() -> None:
 
     graph_module.resolve_symbol_to_curie = _counting  # type: ignore[assignment]
     try:
-        await graph_module.resolve_entity_curies(
-            "What diseases are linked to TP53 and what evidence supports each?"
+        resolved = await graph_module.resolve_entity_curies(
+            "In ADHD, PTSD and OCD cohorts, is TP53 mutated?"
         )
     finally:
         graph_module.resolve_symbol_to_curie = original  # type: ignore[assignment]
 
-    assert len(calls) == 1, (
-        f"resolution must fire exactly 1 lookup for a query with one real "
-        f"gene symbol and many ordinary English words, got {len(calls)} "
-        f"({calls!r}). Every ordinary English word must be filtered out "
-        f"BEFORE the network call, not after."
+    assert "TP53" in calls, (
+        f"the real gene symbol in the question was never even attempted; the "
+        f"lookups actually spent were {calls!r}. A bounded lookup count is not "
+        f"the property under test: a run that resolves nothing at all also "
+        f"satisfies the bound."
     )
-    assert calls[0] == "TP53", (
-        f"the one lookup must be for TP53, not {calls[0]!r}"
+    assert TP53_CURIE in resolved, (
+        f"TP53 was attempted but did not resolve to {TP53_CURIE}. Got "
+        f"{resolved!r} from a live Layer 2 lookup."
+    )
+    assert len(calls) <= graph_module._MAX_LIVE_SYMBOL_LOOKUPS, (
+        f"resolution fired {len(calls)} live lookups ({calls!r}), over the "
+        f"{graph_module._MAX_LIVE_SYMBOL_LOOKUPS}-call ceiling. Ordinary words "
+        f"must be filtered out BEFORE the network call, not after."
     )
 
 
