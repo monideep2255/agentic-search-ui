@@ -1183,7 +1183,27 @@ async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> tuple[st
         # the caller-supplied taxon, so a result with a non-empty taxname
         # is the correct species. Requiring exactly "Homo sapiens" is
         # build phase 2.1's ortholog failure re-created one layer up.
-        if gene_id and taxname:
+        #
+        # Re-review round 1, adversarial pass (2026-08-07): the Datasets
+        # `gene/symbol/{symbol}/taxon/{taxon}` endpoint has the identical
+        # alias-matching behavior the ESearch fallback below was just
+        # fixed for, and it runs FIRST, so the ESearch-side fix alone
+        # never fired for a symbol Datasets resolves. Live-verified:
+        # `gene/symbol/HG38/taxon/human` returns gene_id 8549 whose own
+        # `symbol` field is `"LGR5"`, not `"HG38"`. Datasets already
+        # returns the confirmed symbol in the same response, no second
+        # call needed here (unlike the ESearch fallback, which has to ask
+        # ESummary separately). A mismatch falls through to the ESearch
+        # path below rather than refusing immediately, the same as an
+        # ambiguous or gene_id-less Datasets response already does; the
+        # ESearch fallback's own confirmation step is the second,
+        # independent check on whatever it finds.
+        official_symbol = fields.get("symbol")
+        symbol_confirmed = (
+            isinstance(official_symbol, str)
+            and official_symbol.strip().upper() == symbol.strip().upper()
+        )
+        if gene_id and taxname and symbol_confirmed:
             return f"NCBIGene:{gene_id}", True
 
     # F-3.1-26: the Datasets leg's own outcome survives past this point.
@@ -1225,7 +1245,51 @@ async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> tuple[st
         return None, cacheable
 
     gene_id = idlist[0]
-    return (f"NCBIGene:{gene_id}", cacheable) if gene_id else (None, cacheable)
+    if not gene_id:
+        return None, cacheable
+
+    # Re-review round 1, adversarial pass (2026-08-07): a `[sym]`-tagged
+    # ESearch match is not proof the returned gene's OWN official symbol
+    # is the one searched for. NCBI's gene database indexes `[sym]`
+    # against alias and synonym tables too, not only the approved symbol,
+    # so a single-hit "unambiguous" match can still be the WRONG gene
+    # entirely. Live-verified: `HG38[sym] AND human[orgn]` returns
+    # exactly one id, and that gene's real official symbol is LGR5, not
+    # HG38; `MRI[sym]` resolves the same way to CYREN, `CAN[sym]` to
+    # NUP214, `ALL[sym]` to BCR. The `len(idlist) != 1` guard above
+    # catches multiple candidates, never a single wrong one. This is
+    # exactly the fabricated-citation shape T-3.1-13/F-2.1-B10 exists to
+    # prevent, just one layer upstream of where that ticket looked: a
+    # confidently WRONG gene id can reach `cypher_query` as a real,
+    # resolved CURIE, not merely an unresolved one. Confirm the returned
+    # record's own official symbol before trusting the id.
+    summary_output = await ncbi_efetch(
+        NcbiEfetchInput.model_validate(
+            {"action": "summary", "db": "gene", "ids": [gene_id]}
+        )
+    )
+    if summary_output.status != "ok" or not summary_output.records:
+        # The id ESearch just returned could not be confirmed by
+        # ESummary: an inconclusive answer (a transient failure, or a
+        # genuinely empty record for an id ESearch just gave us), not a
+        # confirmed mismatch. Caught by this fix's own test: reusing the
+        # earlier legs' `cacheable` here would let an ESummary outage
+        # poison the cache with a permanent false negative, the exact
+        # Finding 2 / F-3.1-26 shape one confirmation step later.
+        return None, False
+
+    official_symbol = summary_output.records[0].fields.get("name")
+    if (
+        not isinstance(official_symbol, str)
+        or official_symbol.strip().upper() != symbol.strip().upper()
+    ):
+        # A real gene, but not the one searched for: a CONFIRMED alias or
+        # synonym match, not an exact symbol match. This is a definitive
+        # answer (ESummary genuinely reported this id's real symbol), so
+        # it is cacheable subject to the earlier legs' own status.
+        return None, cacheable
+
+    return f"NCBIGene:{gene_id}", cacheable
 
 
 def _span_overlaps_any(span: tuple[int, int], spans: list[tuple[int, int]]) -> bool:
