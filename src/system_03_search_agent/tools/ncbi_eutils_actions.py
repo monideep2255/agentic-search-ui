@@ -99,20 +99,31 @@ scalar, per the one confirmed drift point in
 assumes a shape for it beyond "present or absent", it is passed through
 unmodified.
 
-A SPEC GAP, FLAGGED RATHER THAN SILENTLY WORKED AROUND: Section 6.2's
-`SummaryDb` enum (`ncbi_efetch_schemas.py`) names 12 databases, but its own
-verified-fields table (line 946-957) names field sets for only 8 of them.
-`bioproject`, `biosample`, `assembly`, `gds` are schema-legal `summary`
-targets with no documented field list at all. Separately, the table's
-`sra` row ("22 ESearch-indexed fields... plus EFetch sample attributes")
-describes ESearch field TAGS and EFetch attributes, not ESummary JSON
-response keys, so it cannot be read as an ESummary extraction list either.
-Both cases fall through to `_generic_summary_fields` below: the full raw
-per-uid object, capped at the schema's `maxProperties: 40`, rather than
-guessing a subset nobody has verified. This is a real, load-bearing
-decision for this ticket's report, not a hypothetical: any `summary` call
-against `bioproject`, `biosample`, `assembly`, `gds`, or `sra` runs on the
-generic path, unverified.
+A SPEC GAP, NOW CLOSED WITH LIVE-PROBED FIELD LISTS RATHER THAN A RAW
+PASSTHROUGH: Section 6.2's `SummaryDb` enum (`ncbi_efetch_schemas.py`) names
+12 databases, but its own verified-fields table (line 946-957) names field
+sets for only 8 of them. `bioproject`, `biosample`, `assembly`, `gds` are
+schema-legal `summary` targets with no documented field list at all.
+Separately, the table's `sra` row ("22 ESearch-indexed fields... plus EFetch
+sample attributes") describes ESearch field TAGS and EFetch attributes, not
+ESummary JSON response keys, so it cannot be read as an ESummary extraction
+list either.
+
+All five used to fall through to `_generic_summary_fields`, which copied
+every response key. F-3.1-10 (reopened) closed that: each now carries a real
+allowlist in `_SUMMARY_FIELDS_BY_DB`, chosen from the keys a live ESummary
+call actually returns for that db, probed while writing the fix. A count cap
+of 40 keys was never a field filter, and four of the five return fewer than
+40 keys anyway, so the cap never engaged and the passthrough was total. The
+allowlists are live-probed for key presence and shape, not semantically
+verified field by field, which puts them at the same trust tier as the
+`dbvar`/`omim`/`medgen`/`gtr` rows above rather than at the `gene` row's.
+
+As a result every one of `SummaryDb`'s 12 databases is allowlisted, and the
+`summary` action never reaches `_generic_summary_fields`. That function's
+one remaining caller is `_extract_generic_fetch_records`, the unverified
+EFetch fallback, where the response shape is unknown by definition and there
+is nothing to allowlist against.
 
 Record-page URL templates (`_RECORD_URL_TEMPLATES`): only `pubmed` and
 `gene` are exercised by the premise gate (case 4 checks `pubmed` directly by
@@ -188,6 +199,13 @@ _MAX_FIELD_VALUE_CHARS: Final[int] = 4000
 
 _MAX_RECORDS_RETURNED: Final[int] = 100
 
+# Bounds for `_cap_value`'s walk through nested dicts and lists. A nested
+# container beyond this depth is collapsed to a capped string rather than
+# walked further, so a deeply self-nested payload can neither exhaust the
+# stack nor carry uncapped text past the per-value cap.
+_MAX_NESTING_DEPTH: Final[int] = 6
+_MAX_NESTED_ITEMS: Final[int] = 100
+
 
 class EInfoUnavailableError(Exception):
     """The EInfo field list for a db could not be fetched or parsed.
@@ -197,6 +215,23 @@ class EInfoUnavailableError(Exception):
     validate", which fails closed to status: "error" rather than silently
     admitting an unvalidated tag.
     """
+
+
+class EInfoStatusError(EInfoUnavailableError):
+    """EInfo answered with a transient or client-error HTTP status.
+
+    F-3.1-19 remainder: `_get_einfo_fields` never read `response.status_code`,
+    so a 429 or 503 on the EInfo hop surfaced as "could not validate
+    field_tags", which points the next agent step at rewriting the request
+    when the correct next action is a backoff and retry. This subclass
+    carries the already-actionable message built by
+    `_http_status_error_message`, so `_reject_unknown_field_tags` can pass it
+    through verbatim instead of burying it inside a validation wrapper.
+    """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.actionable_message = message
 
 
 # ---------------------------------------------------------------------------
@@ -237,6 +272,14 @@ async def _get_einfo_fields(db: str) -> frozenset[str]:
             family="eutils",
             include_api_key=True,
         )
+        # F-3.1-19 remainder: the EInfo hop reads its status code through the
+        # same mapping every other call site uses. Without this a 429 or 503
+        # here fell through to the JSON parse below and surfaced as "could
+        # not validate field_tags", which tells the next agent step to rewrite
+        # its request when the correct action is to back off and retry.
+        status_message = _http_status_error_message("EInfo", response)
+        if status_message is not None:
+            raise EInfoStatusError(status_message)
         try:
             body = json.loads(response.text)
         except (json.JSONDecodeError, ValueError) as exc:
@@ -276,6 +319,14 @@ async def _reject_unknown_field_tags(db: str, field_tags: list[str]) -> str | No
         return None
     try:
         valid_fields = await _get_einfo_fields(db)
+    except EInfoStatusError as exc:
+        # Already actionable and already names the correct next action
+        # (back off and retry, or fix the request). Do not re-wrap it in the
+        # "could not validate" language below, which would bury it.
+        return (
+            f"{exc.actionable_message} field_tags could not be validated against "
+            f"the EInfo field list for db {db!r}, so this request was never sent."
+        )
     except (EInfoUnavailableError, ncbi_transport.TransportError) as exc:
         return (
             f"could not validate field_tags against the EInfo field list for db {db!r} "
@@ -293,30 +344,92 @@ async def _reject_unknown_field_tags(db: str, field_tags: list[str]) -> str | No
     return None
 
 
-def _apply_field_tags(term: str, field_tags: list[str]) -> str:
-    """Scope `term` to specific ESearch fields, once every tag has validated clean.
+# An ATOMIC Entrez term: one token carrying no whitespace, no parenthesis,
+# no square bracket and no quote. Entrez only applies a field tag correctly
+# to a term of this shape (see `_apply_field_tags`). Excluding `[` and `]`
+# also closes the escape route where a term ends its own scoping construct
+# and opens a new one, e.g. `BRCA1] OR cancer[titl`.
+_ATOMIC_TERM_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[^\s()\[\]\"']+$")
 
-    Builder decision, not pinned by the premise gate (case 15 only pins the
-    rejection path; no case exercises a valid, non-empty field_tags list).
-    Each tag becomes `(term)[tag]`, OR-joined and parenthesized when more than
-    one is given, so the caller's free-text term is matched only within the
-    named field(s) rather than E-utilities' own default (a broad, unscoped
-    search across every indexed field). An empty field_tags list, the
-    common case (see case 1, whose term already embeds its own `[sym]`/
-    `[orgn]` tags directly), leaves `term` untouched.
+# A field tag is an EInfo field NAME (`SYM`, `ORGN`, `TITL`), already
+# validated against the live field list before this function runs. Re-checked
+# here as defense in depth, so a tag can never carry a bracket that would
+# break out of the `term[tag]` construct it is being placed into.
+_FIELD_TAG_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
 
-    F-3.1-23 (adversary finding 11, MAJOR): the term is now parenthesized
-    before the tag is applied. Without this, `_apply_field_tags("BRCA1 AND
-    cancer", ["sym"])` produced `"BRCA1 AND cancer[sym]"`, which scopes
-    only the last token, while BRCA1 runs unscoped across every indexed
-    field. The correct form is `"(BRCA1 AND cancer)[sym]"`.
+_FIELD_TAG_SCOPING_ERROR: Final[str] = (
+    "field_tags scoping is only supported for a single-token term, because "
+    "Entrez applies a field tag to an atomic term and NOT to a parenthesized "
+    "boolean group: `(BRCA1 AND cancer)[sym]` is parsed as `BRCA1[All Fields] "
+    "AND sym[All Fields] AND cancer[All Fields]`, which silently unscopes the "
+    "search instead of narrowing it. This request was never sent. Retry with "
+    "field_tags omitted and the tags written inline in the term itself "
+    "(e.g. `BRCA1[sym] AND cancer[titl]`), or with a single-token term."
+)
+
+
+def _apply_field_tags(term: str, field_tags: list[str]) -> tuple[str | None, str | None]:
+    """Scope `term` to specific ESearch fields, or refuse. Returns (term, error).
+
+    Exactly one element of the returned pair is ever non-None: a scoped term
+    on success, an actionable error message on refusal. An empty field_tags
+    list, the common case (see premise gate case 1, whose term already embeds
+    its own `[sym]`/`[orgn]` tags directly), returns `term` untouched.
+
+    F-3.1-29 / F-3.1-23, and why the previous two attempts were both wrong.
+
+    The original code appended the tag bare: `_apply_field_tags("BRCA1 AND
+    cancer", ["sym"])` produced `"BRCA1 AND cancer[sym]"`, scoping only the
+    last token while `BRCA1` ran unscoped. F-3.1-23's fix wrapped the term in
+    parentheses instead, `"(BRCA1 AND cancer)[sym]"`. That is not valid Entrez
+    syntax and is strictly worse, because it unscopes the ONE token that had
+    been scoped before. Live-verified against real ESearch on db=gene:
+
+        term=BRCA1[sym] AND human[orgn]    -> count 1,     idlist ["672"]
+            querytranslation: BRCA1[sym] AND "Homo sapiens"[Organism]
+        term=(BRCA1)[sym] AND human[orgn]  -> count 190,   first id "1956"
+            querytranslation: BRCA1[All Fields] AND sym[All Fields] AND ...
+
+    Entrez does not apply a tag to a parenthesized group. It reads the group
+    and the tag as two separate unscoped ANDed terms, and the literal word
+    "sym" becomes a free-text search term of its own. The flagship symbol
+    lookup then ranks a wrong gene (1956, EGFR) above the intended one (672,
+    BRCA1). An unscoped wrong answer that still cites cleanly is exactly the
+    failure class this repo treats as worse than a crash.
+
+    The root fix, therefore, is that Entrez scopes a field tag correctly ONLY
+    against an atomic term. Both correct forms are live-verified:
+
+        _apply_field_tags("BRCA1", ["sym"])          -> "BRCA1[sym]"
+            live count 660, querytranslation: BRCA1[sym]        (scoped)
+        _apply_field_tags("BRCA1", ["sym", "gene"])  -> "(BRCA1[sym] OR BRCA1[gene])"
+            live count 660, querytranslation: BRCA1[sym] OR BRCA1[gene]  (scoped)
+
+    For a genuinely multi-token or boolean term there is no way to scope the
+    whole expression to one field without tagging each atomic sub-term
+    individually, which means parsing the caller's Boolean structure. Getting
+    that subtly wrong reproduces the same silent-misscoping wrong answer, so
+    this fails closed instead of guessing: `field_tags` is populated nowhere
+    in production code today (only `NcbiEfetchSearchInput` declares it), so
+    refusing costs no shipped behavior, while guessing costs correctness on
+    the one query shape this tool exists to get right.
     """
     if not field_tags:
-        return term
+        return term, None
+    if _ATOMIC_TERM_PATTERN.match(term) is None:
+        return None, _FIELD_TAG_SCOPING_ERROR
+    unsafe = [tag for tag in field_tags if _FIELD_TAG_PATTERN.match(tag) is None]
+    if unsafe:
+        return None, (
+            f"field_tags {unsafe!r} are not well-formed EInfo field names "
+            f"(letters, digits, underscore and hyphen only), so they cannot be "
+            f"safely placed into a `term[tag]` construct. This request was never "
+            f"sent. Retry with a real field name for this db, or omit field_tags."
+        )
     if len(field_tags) == 1:
-        return f"({term})[{field_tags[0]}]"
-    clauses = " OR ".join(f"({term})[{tag}]" for tag in field_tags)
-    return f"({clauses})"
+        return f"{term}[{field_tags[0]}]", None
+    clauses = " OR ".join(f"{term}[{tag}]" for tag in field_tags)
+    return f"({clauses})", None
 
 
 # ---------------------------------------------------------------------------
@@ -408,6 +521,44 @@ def _cap_text(value: str) -> str:
     return value[:_MAX_FIELD_VALUE_CHARS] + " [truncated]"
 
 
+def _cap_value(value: Any, depth: int = 0) -> Any:
+    """Apply `_cap_text` recursively through nested dicts and lists.
+
+    F-3.1-10 (reopened): the previous fix capped TOP-LEVEL string values
+    only, so a hostile 50,000-character string nested one level down inside
+    a dict or a list bypassed the cap entirely and flowed to the model
+    uncapped. Every ESummary response this module passes through carries
+    nested structure (clinvar's `variation_set` and `germline_classification`
+    are objects, assembly's `busco` and `synonym` are objects, gds's
+    `samples` is a list of objects), so nesting is the normal shape here,
+    not an exotic one. `production-standards`'s bounded-context-items gate
+    requires the cap to be enforced before injection, which means it has to
+    follow the data wherever it actually lives.
+
+    Three bounds, all fail-closed:
+        - every string, at any depth, is capped by `_cap_text`
+        - a nested dict keeps at most `_MAX_RECORD_FIELDS` keys, a nested
+          list at most `_MAX_NESTED_ITEMS` items
+        - recursion stops at `_MAX_NESTING_DEPTH` and collapses whatever
+          remains to a capped string, so a deeply self-nested payload can
+          neither exhaust the stack nor smuggle uncapped text past the cap
+    """
+    if isinstance(value, str):
+        return _cap_text(value)
+    if value is None or isinstance(value, (int, float, bool)):
+        return value
+    if depth >= _MAX_NESTING_DEPTH:
+        return _cap_text(str(value))
+    if isinstance(value, dict):
+        return {
+            str(key): _cap_value(item, depth + 1)
+            for key, item in list(value.items())[:_MAX_RECORD_FIELDS]
+        }
+    if isinstance(value, (list, tuple)):
+        return [_cap_value(item, depth + 1) for item in list(value)[:_MAX_NESTED_ITEMS]]
+    return _cap_text(str(value))
+
+
 def _truncate_error(message: str | None) -> str:
     if not message:
         return "the upstream API returned an error with no message"
@@ -431,6 +582,72 @@ def _empty_output(action: str) -> NcbiEfetchOutput:
     )
 
 
+def _retry_after_hint(response: Any) -> str:
+    """Render the retry delay for a 429, or an empty string when unknown.
+
+    Integration point for the transport layer's own `retry_after` value
+    (`ncbi_transport`, built in parallel with this module). Two sources are
+    read, in order of preference, and the first one that yields a value wins:
+
+    1. `response.retry_after`, the attribute the transport layer attaches
+       once its rate-limit plumbing lands. Reading it defensively via
+       `getattr` means this module needs no change when it appears, and
+       keeps working while it does not exist yet.
+    2. The upstream `Retry-After` HTTP header, which E-utilities may send on
+       its own and which needs no transport-layer coordination at all.
+
+    With neither present the caller falls back to the generic backoff
+    language, which is still actionable, just not numeric.
+    """
+    candidate = getattr(response, "retry_after", None)
+    if candidate is None:
+        headers = getattr(response, "headers", None)
+        if headers is not None:
+            candidate = headers.get("retry-after")
+    if candidate is None:
+        return ""
+    text = str(candidate).strip()
+    if not text or len(text) > 40:
+        return ""
+    return f" Retry after {text} seconds."
+
+
+def _http_status_error_message(source: str, response: Any) -> str | None:
+    """Map a non-success HTTP status to an actionable message, or None if fine.
+
+    F-3.1-19 (adversary finding 7, MAJOR): HTTP status codes were never read
+    on the E-utilities path, so a 429 or 503 was reported as "unparseable
+    body" (pointing the next step at rewriting the request) instead of as a
+    rate-limit or server error (pointing the next step at backing off and
+    retrying).
+
+    F-3.1-19 remainder: the original fix lived inline in `_get_or_error`, so
+    it covered `search`, `summary`, `fetch` and `link` but not the EInfo hop
+    in `_get_einfo_fields`, which reads no status code at all. Extracting the
+    mapping into this one function is what lets both call sites share it, so
+    a 429 on the EInfo hop now reads as a rate limit rather than as
+    "could not validate field_tags".
+    """
+    status_code = getattr(response, "status_code", 200)
+    if status_code == 429:
+        return (
+            f"{source} returned HTTP 429 (rate limited). Retry after a backoff; "
+            f"if this recurs, reduce the request rate."
+            f"{_retry_after_hint(response)}"
+        )
+    if status_code >= 500:
+        return (
+            f"{source} returned HTTP {status_code} (server error). Retry after a "
+            f"backoff; if this recurs, the NCBI service may be degraded."
+        )
+    if status_code >= 400:
+        return (
+            f"{source} returned HTTP {status_code}. The request may be malformed; "
+            f"verify the parameters and retry."
+        )
+    return None
+
+
 async def _get_or_error(
     action: str, url: str, params: dict[str, Any]
 ) -> ncbi_transport.ClassificationResult | NcbiEfetchOutput:
@@ -438,14 +655,8 @@ async def _get_or_error(
 
     Callers check `isinstance(result, NcbiEfetchOutput)` to detect the
     transport-failure short circuit versus a genuine ClassificationResult.
-
-    F-3.1-19 (adversary finding 7, MAJOR): HTTP status codes were never read
-    on the E-utilities path, so a 429 or 503 was reported as "unparseable
-    body" (pointing the next step at rewriting the request) instead of as a
-    rate-limit or server error (pointing the next step at backing off and
-    retrying). The fix checks the status BEFORE the body classifier, so a
-    transient status code produces an actionable error message with the
-    correct next action.
+    The status check runs BEFORE the body classifier, so a transient status
+    code produces an actionable error message with the correct next action.
     """
     try:
         response = await ncbi_transport.execute_get(
@@ -453,25 +664,9 @@ async def _get_or_error(
         )
     except ncbi_transport.TransportError as exc:
         return _error_output(action, str(exc))
-    if response.status_code == 429:
-        return _error_output(
-            action,
-            f"E-utilities returned HTTP 429 (rate limited). Retry after a "
-            f"backoff; if this recurs, reduce the request rate.",
-        )
-    if response.status_code >= 500:
-        return _error_output(
-            action,
-            f"E-utilities returned HTTP {response.status_code} (server error). "
-            f"Retry after a backoff; if this recurs, the NCBI service may be "
-            f"degraded.",
-        )
-    if response.status_code >= 400:
-        return _error_output(
-            action,
-            f"E-utilities returned HTTP {response.status_code}. The request "
-            f"may be malformed; verify the parameters and retry.",
-        )
+    status_message = _http_status_error_message("E-utilities", response)
+    if status_message is not None:
+        return _error_output(action, status_message)
     return ncbi_transport.classify_eutils_response(
         content_type=response.headers.get("content-type", ""), text=response.text
     )
@@ -488,9 +683,15 @@ async def search(params: NcbiEfetchSearchInput) -> NcbiEfetchOutput:
     if tag_error is not None:
         return _error_output("search", tag_error)
 
+    scoped_term, scoping_error = _apply_field_tags(params.term, params.field_tags)
+    if scoping_error is not None:
+        # F-3.1-29: fail closed rather than send a term whose field tag would
+        # silently unscope the search. No request is issued.
+        return _error_output("search", scoping_error)
+
     request_params: dict[str, Any] = {
         "db": params.db,
-        "term": _apply_field_tags(params.term, params.field_tags),
+        "term": scoped_term,
         "retmode": "json",
         "retmax": params.retmax,
     }
@@ -511,9 +712,15 @@ async def search(params: NcbiEfetchSearchInput) -> NcbiEfetchOutput:
     # F-3.1-25 (adversary finding 13, MINOR): cap the idlist to the same
     # _MAX_RECORDS_RETURNED bound records uses, so a 500-id search result
     # cannot bypass the NcbiEfetchRecord list's max_length=100 cap through
-    # the single aggregate record's fields.
+    # the single aggregate record's fields. `retmax` is caller-controlled and
+    # accepts up to 500 (ncbi_efetch_schemas.py), so this is reachable with
+    # ordinary input, not only a hostile server.
     capped_idlist = idlist[:_MAX_RECORDS_RETURNED]
-    fields: dict[str, Any] = {"idlist": capped_idlist}
+    id_count = len(capped_idlist)
+    # `idlist_count` states the ID-population size inside this record
+    # explicitly, so the two units in this output can never be confused for
+    # one another (see the record_count note below).
+    fields: dict[str, Any] = {"idlist": capped_idlist, "idlist_count": id_count}
     if params.use_history:
         if "webenv" in envelope:
             fields["webenv"] = envelope["webenv"]
@@ -528,8 +735,7 @@ async def search(params: NcbiEfetchSearchInput) -> NcbiEfetchOutput:
         except (TypeError, ValueError):
             total_available = None
 
-    record_count = len(capped_idlist)
-    truncated = total_available is not None and total_available > record_count
+    truncated = total_available is not None and total_available > id_count
 
     # F-3.1-26 (adversary finding 14, MINOR): a non-zero count with an empty
     # idlist means the ESearch index disagrees with itself. This can happen
@@ -545,11 +751,24 @@ async def search(params: NcbiEfetchSearchInput) -> NcbiEfetchOutput:
             f"the search term or database may need narrowing.",
         )
 
+    # F-3.1-25 (reopened): `record_count` now means the same thing in every
+    # action of this module, "how many record objects are in `records`". It
+    # previously reported `len(idlist)` here while `len(records)` was 1, so
+    # the one action that returns an aggregate record was also the one action
+    # measuring `record_count` in a different unit from the other three. A
+    # consumer comparing `record_count` against `len(output.records)` across
+    # actions read a phantom 24-record discrepancy on any multi-id search.
+    #
+    # The ID population is still reported, in its own units and never mixed
+    # with the record units: `total_available` is ESearch's own total-hit
+    # count, `truncated` compares it against the ids actually returned, and
+    # `fields["idlist_count"]` states how many ids this record carries.
+    records = [NcbiEfetchRecord(db=params.db, fields=_cap_fields(fields))]
     return NcbiEfetchOutput(
         status="ok",
         action="search",
-        records=[NcbiEfetchRecord(db=params.db, fields=_cap_fields(fields))],
-        record_count=record_count,
+        records=records,
+        record_count=len(records),
         total_available=total_available,
         truncated=truncated,
     )
@@ -587,31 +806,78 @@ _SUMMARY_FIELDS_BY_DB: Final[dict[str, tuple[str, ...]]] = {
         "accession", "testname", "genelist", "conditionlist",
         "analyticalvalidity", "clinicalvalidity", "offerer",
     ),
+    # ------------------------------------------------------------------
+    # F-3.1-10 (reopened): the five databases below had NO allowlist at all
+    # and fell through to `_generic_summary_fields`, which copied every
+    # response key. A count cap of 40 keys is not a field filter: it bounds
+    # how much untrusted external content reaches the model, not WHICH
+    # content, and four of these five return fewer than 40 keys anyway, so
+    # the cap never engaged and the passthrough was total.
+    #
+    # Section 6.2's table documents no field list for these (the module
+    # docstring's "spec gap" note), so each set below was chosen from the
+    # keys a LIVE ESummary call actually returns for that db, probed against
+    # eutils.ncbi.nlm.nih.gov while writing this fix. They are selected for
+    # being identifying or descriptive, and deliberately EXCLUDE the large
+    # opaque blobs each db carries (assembly's `meta`, ~1.9 KB of packed
+    # markup, and biosample's `sampledata`, ~2 KB of submitter-authored XML),
+    # which are the highest-volume untrusted-content fields in the response
+    # and carry the least citable value.
+    #
+    # Trust level: live-probed for KEY PRESENCE and shape in this ticket, on
+    # one representative uid per db. Not semantically verified field by
+    # field, and not promised stable by any locked spec. Treat as the same
+    # trust tier as the `dbvar`/`omim`/`medgen`/`gtr` rows above.
+    # ------------------------------------------------------------------
+    "bioproject": (
+        "project_acc", "project_title", "project_description", "project_type",
+        "project_data_type", "project_target_scope", "organism_name",
+        "sequencing_status", "registration_date", "submitter_organization",
+        "taxid",
+    ),
+    "biosample": (
+        "accession", "title", "organism", "taxonomy", "infraspecies",
+        "sourcesample", "package", "organization", "publicationdate",
+        "modificationdate",
+    ),
+    "assembly": (
+        "assemblyaccession", "assemblyname", "assemblystatus", "assemblytype",
+        "organism", "speciesname", "taxid", "biosampleaccn", "coverage",
+        "refseq_category", "releaselevel", "submitterorganization",
+        "submissiondate", "lastupdatedate",
+    ),
+    "gds": (
+        "accession", "title", "summary", "taxon", "entrytype", "gdstype",
+        "gpl", "gse", "pdat", "n_samples", "bioproject",
+    ),
+    # sra packs its payload into a handful of markup-bearing string fields
+    # rather than flat scalars. They are the only substantive content the
+    # response carries, so they are allowlisted and lean entirely on
+    # `_cap_value` for their bound.
+    "sra": ("expxml", "runs", "createdate", "updatedate"),
 }
 
 
 def _generic_summary_fields(entry: dict[str, Any]) -> dict[str, Any]:
-    """Fallback for a db with no verified field list: bioproject, biosample,
-    assembly, gds (undocumented in Section 6.2's table) and sra (the
-    table's row describes ESearch field tags, not ESummary JSON keys; see
-    the module docstring's "spec gap" note). Passes the raw per-uid object
-    through, minus the redundant `uid` key, rather than guessing a subset
-    nobody has verified.
+    """Last-resort passthrough for a payload with no allowlist at all.
 
-    F-3.1-10 (judge finding 10, MAJOR): string values are now capped per
-    _cap_text, since this is the default extraction path for five databases
-    and every non-XML fetch. Without a per-value cap, untrusted external
-    content (abstracts, free-text descriptions, narrative fields) flows
-    toward the model unbounded.
+    After the F-3.1-10 reopen, every one of `SummaryDb`'s 12 databases has
+    an entry in `_SUMMARY_FIELDS_BY_DB`, so the `summary` action never
+    reaches this function. Its one remaining caller is
+    `_extract_generic_fetch_records`, the unverified EFetch fallback, where
+    the response shape is by definition unknown and there is nothing to
+    allowlist against.
+
+    Values are capped with `_cap_value`, which recurses through nested dicts
+    and lists. The previous fix used `_cap_text` on top-level strings only,
+    so a hostile 50,000-character value nested one level down bypassed the
+    cap completely.
     """
     result: dict[str, Any] = {}
     for key, value in entry.items():
         if key == "uid":
             continue
-        if isinstance(value, str):
-            result[key] = _cap_text(value)
-        else:
-            result[key] = value
+        result[str(key)] = _cap_value(value)
     return result
 
 
@@ -655,7 +921,15 @@ async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
             if not has_content:
                 continue
         if known_fields is not None:
-            extracted = {name: entry[name] for name in known_fields if name in entry}
+            # F-3.1-10 (reopened): the allowlisted path needs the per-value
+            # cap too, not just the generic fallback. Several allowlisted
+            # fields are nested objects built from untrusted external content
+            # (clinvar's `variation_set` and `germline_classification`,
+            # assembly's `busco` and `synonym`, gds's `samples`), so an
+            # allowlisted KEY is not the same as a bounded VALUE.
+            extracted = {
+                name: _cap_value(entry[name]) for name in known_fields if name in entry
+            }
         else:
             extracted = _generic_summary_fields(entry)
         records.append(
@@ -747,6 +1021,42 @@ def _extract_generic_fetch_records(db: str, body: Any) -> list[NcbiEfetchRecord]
     return [NcbiEfetchRecord(db=db, fields=_cap_fields(_generic_summary_fields(body)))]
 
 
+def _is_unextractable_summary_body(body: Any, rettype: str, retmode: str) -> bool:
+    """True when an EFetch body is ESummary-shaped and cannot be split per record.
+
+    F-3.1-20 (reopened): the original guard was scoped to `params.db ==
+    "pubmed"`, but `FetchDb` names eight databases and every one of them
+    reproduces the identical defect on the SCHEMA DEFAULTS
+    (`rettype="docsum"`, `retmode="json"`). Live-verified against real EFetch
+    while writing this fix: `db=pubmed&id=21376230`, `db=gene&id=672` and
+    `db=clinvar&id=12345` all return the same envelope,
+    `{"header": ..., "result": {"uids": [...], "<uid>": {...}}}`. On the
+    seven non-pubmed databases that body fell through to
+    `_extract_generic_fetch_records`, producing ONE record holding the entire
+    multi-record payload with `id=None`, `source_url=None`, and
+    `record_count` misreported as 1, all at `status="ok"`. An uncited blob
+    presented as a successful answer is precisely what the cite-or-refuse
+    gate exists to stop.
+
+    Two independent arms, so neither has to be exactly right on its own:
+
+    1. Shape: a dict body whose `result` is a dict carrying `uids`. This is
+       the ESummary envelope itself, and it catches the case regardless of
+       which db, rettype or retmode produced it, including a server that
+       answers with a summary body for parameters that did not ask for one.
+    2. Parameters: the `rettype="docsum"`, `retmode="json"` default pair with
+       any dict body. This catches a docsum JSON response whose envelope
+       drifts from the shape above, so an upstream rename of `uids` degrades
+       to a refusal rather than back to a fabricated blob.
+    """
+    if not isinstance(body, dict):
+        return False
+    if rettype == "docsum" and retmode == "json":
+        return True
+    result = body.get("result")
+    return isinstance(result, dict) and "uids" in result
+
+
 async def fetch(params: NcbiEfetchFetchInput) -> NcbiEfetchOutput:
     """EFetch: `db=<db>&id=<ids>&rettype=&retmode=`."""
     request_params = {
@@ -769,25 +1079,16 @@ async def fetch(params: NcbiEfetchFetchInput) -> NcbiEfetchOutput:
 
     if params.db == "pubmed" and isinstance(result.body, ElementTree.Element):
         records = _extract_pubmed_articles(result.body)
-    elif (
-        params.db == "pubmed"
-        and params.retmode == "json"
-        and params.rettype == "docsum"
-        and isinstance(result.body, dict)
-    ):
-        # F-3.1-20 (adversary finding 8, MAJOR): the default rettype/docsum
-        # retmode/json returns ESummary-shaped JSON. The generic extractor
-        # builds one aggregate record with the entire multi-record payload,
-        # uncited and uncapped. Instead of silently returning a blob that
-        # passes the cite-or-refuse gate as ok, fail with an actionable
-        # message telling the caller to use retmode=xml, which is the only
-        # verified per-id extraction path.
+    elif _is_unextractable_summary_body(result.body, params.rettype, params.retmode):
         return _error_output(
             "fetch",
-            f"fetch db=pubmed rettype=docsum retmode=json is not supported for "
-            f"per-record extraction. Retry with rettype=abstract retmode=xml "
-            f"(the only live-verified per-id EFetch path for pubmed), or "
-            f"use the summary action if you only need ESummary fields.",
+            f"fetch db={params.db} rettype={params.rettype} retmode={params.retmode} "
+            f"returned an ESummary-shaped multi-record JSON body, which this tool "
+            f"cannot split into per-record citations: the generic extractor would "
+            f"collapse every record into one aggregate blob with no id and no "
+            f"source_url. Retry with the summary action for ESummary fields, or, "
+            f"for db=pubmed only, with rettype=abstract retmode=xml (the one "
+            f"live-verified per-id EFetch path).",
         )
     else:
         records = _extract_generic_fetch_records(params.db, result.body)
