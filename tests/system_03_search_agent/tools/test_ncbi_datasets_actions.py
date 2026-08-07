@@ -48,6 +48,7 @@ Writes:
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import httpx
@@ -446,3 +447,89 @@ async def test_hostile_accession_is_url_encoded() -> None:
     called_url = client.calls[0]["url"]
     assert "%2F" in called_url
     assert called_url.count("genome/accession/") == 1
+
+
+# ===========================================================================
+# F-3.1-12: per-value character cap on extracted free text.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_over_long_gene_description_is_capped() -> None:
+    """`NcbiEfetchRecord.fields` caps the property COUNT, not any one
+    value's length, so an unbounded free-text `description` would otherwise
+    flow downstream whole. See `_cap_text` in the module under test.
+    """
+    body = json.dumps(
+        {"reports": [{"gene": {"gene_id": "7157", "symbol": "TP53", "description": "d" * 9000}}]}
+    )
+    client = _FakeClient([httpx.Response(200, text=body)])
+    action_input = NcbiEfetchDatasetReportInput(
+        action="dataset_report", report_type="gene", gene_id="7157"
+    )
+
+    output = await ncbi_datasets_actions.dataset_report(action_input, client=client)
+
+    assert output.status == "ok"
+    description = output.records[0].fields["description"]
+    assert len(description) < 9000
+    assert description.endswith("[truncated]")
+
+
+@pytest.mark.asyncio
+async def test_over_long_string_inside_a_nested_gene_field_is_capped() -> None:
+    """The cap walks lists and nested objects, not only top-level strings:
+    `synonyms` is a string list and `gene_ontology` is a nested object.
+    """
+    body = json.dumps(
+        {
+            "reports": [
+                {
+                    "gene": {
+                        "gene_id": "7157",
+                        "synonyms": ["s" * 9000],
+                        "gene_ontology": {"molecular_functions": [{"name": "m" * 9000}]},
+                    }
+                }
+            ]
+        }
+    )
+    client = _FakeClient([httpx.Response(200, text=body)])
+    action_input = NcbiEfetchDatasetReportInput(
+        action="dataset_report", report_type="gene", gene_id="7157"
+    )
+
+    output = await ncbi_datasets_actions.dataset_report(action_input, client=client)
+
+    assert output.status == "ok"
+    fields = output.records[0].fields
+    assert fields["synonyms"][0].endswith("[truncated]")
+    nested = fields["gene_ontology"]["molecular_functions"][0]["name"]
+    assert nested.endswith("[truncated]")
+
+
+@pytest.mark.asyncio
+async def test_over_long_genome_assembly_name_is_capped() -> None:
+    body = json.dumps(
+        {
+            "reports": [
+                {
+                    "accession": "GCF_000001405.40",
+                    "assembly_info": {
+                        "assembly_name": "a" * 9000,
+                        "assembly_level": "Chromosome",
+                    },
+                }
+            ]
+        }
+    )
+    client = _FakeClient([httpx.Response(200, text=body)])
+    action_input = NcbiEfetchDatasetReportInput(
+        action="dataset_report", report_type="genome", accession="GCF_000001405.40"
+    )
+
+    output = await ncbi_datasets_actions.dataset_report(action_input, client=client)
+
+    assert output.status == "ok"
+    assert output.records[0].fields["assembly_info.assembly_name"].endswith("[truncated]")
+    assert output.records[0].fields["assembly_info.assembly_level"] == "Chromosome"
