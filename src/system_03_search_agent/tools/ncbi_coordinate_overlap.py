@@ -161,6 +161,7 @@ from system_03_search_agent.tools.ncbi_transport import (
     TransportTimeoutError,
     classify_eutils_response,
     execute_get,
+    http_status_error_message,
 )
 
 logger = logging.getLogger(__name__)
@@ -604,6 +605,22 @@ async def coordinate_overlap(
             f"failed: {exc}. Retry with a narrower window or fewer candidates."
         )
 
+    # Re-review round 1 (2026-08-07): a second, independent verification
+    # pass on the E-utilities status-code fix (F-3.1-19) found the gap the
+    # first pass left. classify_eutils_response is deliberately status-blind
+    # (body only, see its own module docstring); ncbi_eutils_actions.py grew
+    # a status check in front of it, but this module shares the same
+    # transport and the same classifier at this hop and never got one, so a
+    # live 429 or 503 here fell straight through to a body-parse failure
+    # ("neither recognizable JSON nor XML") instead of an actionable
+    # rate-limit or server-error message. Reproduced live before this fix.
+    status_message = http_status_error_message(
+        f"coordinate_overlap ESearch prefilter for {db} chr{chromosome}:{start}-{end}",
+        search_response,
+    )
+    if status_message is not None:
+        return _error_output(status_message)
+
     search_result = classify_eutils_response(
         content_type=search_response.headers.get("content-type", ""),
         text=search_response.text,
@@ -693,6 +710,18 @@ async def coordinate_overlap(
         return _error_output(
             f"coordinate_overlap ESummary placement fetch for {db} failed: {exc}. Retry "
             f"with fewer candidates or a narrower window.",
+            total_available=total_available,
+            candidates_checked=candidates_checked,
+        )
+
+    # Re-review round 1 (2026-08-07): same gap as the ESearch hop above,
+    # here on the ESummary placement fetch.
+    status_message = http_status_error_message(
+        f"coordinate_overlap ESummary placement fetch for {db}", summary_response
+    )
+    if status_message is not None:
+        return _error_output(
+            status_message,
             total_available=total_available,
             candidates_checked=candidates_checked,
         )

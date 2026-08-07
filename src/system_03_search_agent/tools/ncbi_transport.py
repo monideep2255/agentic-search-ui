@@ -406,11 +406,9 @@ def retry_after_for_response(
 ) -> float:
     """The caller-facing form of `parse_retry_after`: always returns a number.
 
-    This is the interface an action module uses on the E-utilities path,
-    where `classify_eutils_response` deliberately never sees an HTTP
-    status and so can never populate `ClassificationResult.retry_after`
-    itself. A caller that has already decided a response is a 429 or a 503
-    calls this to turn it into an actionable wait:
+    Available for a caller that has already decided a response is a 429
+    or a 503 and needs a guaranteed wait estimate rather than an optional
+    one, for example to actually schedule a retry:
 
         if response.status_code == 429:
             wait = ncbi_transport.retry_after_for_response(response)
@@ -419,9 +417,94 @@ def retry_after_for_response(
     retry itself would have used, so an absent or unparseable header
     yields a sane number rather than `None` for a caller that must state
     one.
+
+    As of re-review round 1 (2026-08-07) no production call site actually
+    uses this function; `http_status_error_message`'s user-facing message
+    deliberately uses `parse_retry_after` instead (see `_retry_after_hint`'s
+    docstring for why: this function's guaranteed-a-number contract is
+    wrong for rendering a message someone reads, where "the server did not
+    say" must stay distinguishable from a real value). This function is
+    kept for a caller that genuinely needs the guaranteed-number contract,
+    such as computing an actual sleep duration; do not read its presence
+    here as evidence it is wired into the request path.
     """
     parsed = parse_retry_after(response.headers)
     return default if parsed is None else parsed
+
+
+def http_status_error_message(source: str, response: httpx.Response) -> str | None:
+    """Map a non-success HTTP status to an actionable message, or None if fine.
+
+    Re-review round 1 (2026-08-07): this function used to live in
+    `ncbi_eutils_actions.py`, private and single-caller. A second,
+    independent verification pass on that fix found the gap the first fix
+    round left: `ncbi_coordinate_overlap.py` shares the same eutils
+    transport and the same deliberately status-blind `classify_eutils_response`
+    (below) at two of its own hops (ESearch and ESummary), and never
+    picked up the status-code check `ncbi_eutils_actions.py` got. A 429 or
+    503 there still told the next agent step to rewrite the chromosome and
+    coordinate window, exactly the wrong-direction retry advice
+    `production-standards.md`'s retry-safety gate forbids. Moving the
+    check here, to the transport module every eutils-backed action already
+    imports, is what lets every call site share ONE mapping instead of
+    each file growing (or forgetting to grow) its own copy. This is the
+    same lesson as `parse_retry_after` two functions above: a helper two
+    files both need belongs in the shared module, not duplicated per
+    caller.
+
+    `source` names the caller for the message ("E-utilities", "EInfo",
+    "coordinate_overlap ESearch prefilter", etc.); the mapping itself does
+    not vary by caller.
+    """
+    status_code = getattr(response, "status_code", 200)
+    if status_code == 429:
+        return (
+            f"{source} returned HTTP 429 (rate limited). Retry after a backoff; "
+            f"if this recurs, reduce the request rate."
+            f"{_retry_after_hint(response)}"
+        )
+    if status_code >= 500:
+        return (
+            f"{source} returned HTTP {status_code} (server error). Retry after a "
+            f"backoff; if this recurs, the NCBI service may be degraded."
+        )
+    if status_code >= 400:
+        return (
+            f"{source} returned HTTP {status_code}. The request may be malformed; "
+            f"verify the parameters and retry."
+        )
+    return None
+
+
+def _retry_after_hint(response: httpx.Response) -> str:
+    """Render the retry delay for a 429/503, or "" when the server didn't say.
+
+    Deliberately calls `parse_retry_after` (which returns `None` on a
+    missing or unparseable header), not `retry_after_for_response` (which
+    always returns a number via `DEFAULT_BACKOFF_S`). An in-code retry uses
+    that default because it has to sleep for SOME duration either way; a
+    message shown to a caller must not present that fallback as if the
+    server had stated it; "Retry after 1 seconds" when NCBI said nothing is
+    a fabricated-looking number, not an actionable one. A caught bug during
+    re-review round 1's own integration fix (2026-08-07): the first draft
+    of this function called `retry_after_for_response` and silently turned
+    "we don't know" into a confidently wrong "1 second" on every
+    header-less 429, exactly the kind of small, plausible mistake this
+    round's re-review process exists to catch before it ships a second
+    time.
+    """
+    candidate = parse_retry_after(response.headers)
+    if candidate is None:
+        return ""
+    # Render a whole-second value without a trailing ".0": the parser
+    # always returns a float (it may need to represent a fractional wait),
+    # but NCBI's own Retry-After header is almost always a bare integer,
+    # and "Retry after 7.0 seconds" reads as a rendering artifact, not a
+    # signal worth a decimal point.
+    text = f"{candidate:g}"
+    if len(text) > 40:
+        return ""
+    return f" Retry after {text} seconds."
 
 
 # ---------------------------------------------------------------------------

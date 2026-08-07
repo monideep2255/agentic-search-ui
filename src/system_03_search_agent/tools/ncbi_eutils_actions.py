@@ -225,7 +225,7 @@ class EInfoStatusError(EInfoUnavailableError):
     field_tags", which points the next agent step at rewriting the request
     when the correct next action is a backoff and retry. This subclass
     carries the already-actionable message built by
-    `_http_status_error_message`, so `_reject_unknown_field_tags` can pass it
+    `ncbi_transport.http_status_error_message`, so `_reject_unknown_field_tags` can pass it
     through verbatim instead of burying it inside a validation wrapper.
     """
 
@@ -277,7 +277,7 @@ async def _get_einfo_fields(db: str) -> frozenset[str]:
         # here fell through to the JSON parse below and surfaced as "could
         # not validate field_tags", which tells the next agent step to rewrite
         # its request when the correct action is to back off and retry.
-        status_message = _http_status_error_message("EInfo", response)
+        status_message = ncbi_transport.http_status_error_message("EInfo", response)
         if status_message is not None:
             raise EInfoStatusError(status_message)
         try:
@@ -582,71 +582,6 @@ def _empty_output(action: str) -> NcbiEfetchOutput:
     )
 
 
-def _retry_after_hint(response: Any) -> str:
-    """Render the retry delay for a 429, or an empty string when unknown.
-
-    Reads the upstream `Retry-After` header through `ncbi_transport`'s own
-    parser (`parse_retry_after`), which handles the numeric-seconds
-    form, the rarer HTTP-date form, and rejects `nan`/`inf`/malformed values
-    rather than rendering them verbatim into the message. Re-review round 1
-    integration note: an earlier draft of this function read
-    `response.retry_after` via `getattr` on the assumption the transport
-    layer would attach that attribute to the response object; it never did,
-    and the cruder `headers.get("retry-after")` fallback that draft also
-    carried worked for the common case but duplicated logic
-    `ncbi_transport` already implements more carefully. This calls that
-    implementation directly instead of maintaining two parsers.
-    """
-    headers = getattr(response, "headers", None)
-    candidate = ncbi_transport.parse_retry_after(headers) if headers is not None else None
-    if candidate is None:
-        return ""
-    # Render a whole-second value without a trailing ".0": parse_retry_after
-    # always returns a float (it may need to represent a fractional wait),
-    # but NCBI's own Retry-After header is almost always a bare integer, and
-    # "Retry after 7.0 seconds" reads as a rendering artifact, not a signal.
-    text = f"{candidate:g}"
-    if len(text) > 40:
-        return ""
-    return f" Retry after {text} seconds."
-
-
-def _http_status_error_message(source: str, response: Any) -> str | None:
-    """Map a non-success HTTP status to an actionable message, or None if fine.
-
-    F-3.1-19 (adversary finding 7, MAJOR): HTTP status codes were never read
-    on the E-utilities path, so a 429 or 503 was reported as "unparseable
-    body" (pointing the next step at rewriting the request) instead of as a
-    rate-limit or server error (pointing the next step at backing off and
-    retrying).
-
-    F-3.1-19 remainder: the original fix lived inline in `_get_or_error`, so
-    it covered `search`, `summary`, `fetch` and `link` but not the EInfo hop
-    in `_get_einfo_fields`, which reads no status code at all. Extracting the
-    mapping into this one function is what lets both call sites share it, so
-    a 429 on the EInfo hop now reads as a rate limit rather than as
-    "could not validate field_tags".
-    """
-    status_code = getattr(response, "status_code", 200)
-    if status_code == 429:
-        return (
-            f"{source} returned HTTP 429 (rate limited). Retry after a backoff; "
-            f"if this recurs, reduce the request rate."
-            f"{_retry_after_hint(response)}"
-        )
-    if status_code >= 500:
-        return (
-            f"{source} returned HTTP {status_code} (server error). Retry after a "
-            f"backoff; if this recurs, the NCBI service may be degraded."
-        )
-    if status_code >= 400:
-        return (
-            f"{source} returned HTTP {status_code}. The request may be malformed; "
-            f"verify the parameters and retry."
-        )
-    return None
-
-
 async def _get_or_error(
     action: str, url: str, params: dict[str, Any]
 ) -> ncbi_transport.ClassificationResult | NcbiEfetchOutput:
@@ -663,7 +598,7 @@ async def _get_or_error(
         )
     except ncbi_transport.TransportError as exc:
         return _error_output(action, str(exc))
-    status_message = _http_status_error_message("E-utilities", response)
+    status_message = ncbi_transport.http_status_error_message("E-utilities", response)
     if status_message is not None:
         return _error_output(action, status_message)
     return ncbi_transport.classify_eutils_response(

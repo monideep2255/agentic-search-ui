@@ -1251,6 +1251,74 @@ async def test_esearch_rate_limited_returns_an_actionable_error(monkeypatch: pyt
 
 
 @pytest.mark.asyncio
+async def test_esearch_server_side_429_is_a_rate_limit_not_a_body_parse_failure() -> None:
+    """Re-review round 1 (2026-08-07), cross-file gap: `classify_eutils_response`
+    is deliberately status-blind (body only), and `ncbi_eutils_actions.py`
+    grew a status-code guard in front of it for exactly this reason. This
+    module shares the same transport and the same classifier at the same
+    kind of hop and had no such guard, so a real NCBI 429 (an HTTP status,
+    not a `TransportRateLimitedError` the client-side limiter raises) fell
+    straight through `classify_eutils_response` as an unparseable body and
+    was reported as "returned an error ... refusing to guess its meaning",
+    which tells the next agent step to rewrite the chromosome and
+    coordinate window when the correct action is to back off and retry.
+    Live-reproduced with the real live-shaped body before this fix landed.
+    """
+    def _make_429() -> httpx.Response:
+        return httpx.Response(
+            429,
+            content=b"API rate limit exceeded",
+            headers={"content-type": "text/plain", "retry-after": "30"},
+        )
+
+    # ncbi_transport retries a transient status (429/500/502/503/504) once
+    # automatically; both attempts return the same 429 here so the retry
+    # exhausts and the final response is still the one under test.
+    client = _FakeClient([_make_429(), _make_429()])
+
+    output = await ncbi_coordinate_overlap.coordinate_overlap(
+        _input(start=1_000_000, end=1_100_000, assembly="GRCh38"), client=client
+    )
+
+    assert output.status == "error"
+    assert output.error is not None
+    assert "429" in output.error
+    assert "rate limited" in output.error
+    assert "Retry after 30 seconds" in output.error
+    assert "verify the chromosome" not in output.error, (
+        "a 429 must not surface as a request-was-malformed message; that "
+        "tells the next agent step to rewrite its query instead of backing off"
+    )
+
+
+@pytest.mark.asyncio
+async def test_esummary_server_side_503_is_a_server_error_not_a_body_parse_failure() -> None:
+    """Same gap as the ESearch hop above, on the ESummary placement fetch."""
+    def _make_503() -> httpx.Response:
+        return httpx.Response(
+            503, content=b"Service Unavailable", headers={"content-type": "text/plain"}
+        )
+
+    esearch_response = _esearch_response(count=1, ids=["12345"])
+    # One automatic retry on a transient status, same reasoning as the 429
+    # test above.
+    client = _FakeClient([esearch_response, _make_503(), _make_503()])
+
+    output = await ncbi_coordinate_overlap.coordinate_overlap(
+        _input(start=1_000_000, end=1_100_000, assembly="GRCh38"), client=client
+    )
+
+    assert output.status == "error"
+    assert output.error is not None
+    assert "503" in output.error
+    assert "server error" in output.error
+    assert "verify the chromosome" not in output.error
+    # The candidate count already known before the failure is still
+    # reported, per this module's own error-output contract.
+    assert output.candidates_checked == 1
+
+
+@pytest.mark.asyncio
 async def test_esearch_timeout_returns_an_actionable_error(monkeypatch: pytest.MonkeyPatch) -> None:
     async def _raise_timeout(*args: Any, **kwargs: Any) -> httpx.Response:
         raise ncbi_transport.TransportTimeoutError("eutils.ncbi.nlm.nih.gov timed out after 15.0s")
