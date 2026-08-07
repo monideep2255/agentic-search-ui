@@ -61,6 +61,29 @@ unbounded one. A call that would exceed the queue depth cap or its own
 wait ceiling fails fast with `TransportRateLimitedError`, carrying
 `retry_after` and the saturated family name, per the same rule.
 
+The wait ceiling is a budget for the WHOLE `execute_get` call, not for
+each attempt inside it (F-3.1-37). `execute_get` acquires the pool once
+per attempt, so a naive per-attempt ceiling would let one call wait up to
+twice its declared budget across the first attempt and its retry.
+`_execute_with_retry` therefore converts the ceiling into a single
+deadline at call start and hands each acquisition only what is left of
+it, so the total scheduling wait for one call never exceeds the ceiling
+the caller declared, however many attempts it took.
+
+There are two independent sources of a `retry_after` value, and both are
+surfaced (F-3.1-19):
+
+    Client-side: this module's own limiter refused to schedule the call.
+    `TransportRateLimitedError.retry_after` carries the estimate.
+
+    Server-side: NCBI itself answered 429 or 503 and may state a
+    `Retry-After` response header. `parse_retry_after` and
+    `retry_after_for_response` read it (numeric seconds, or the rarer
+    HTTP-date form), `classify_status_coded_response` puts it on
+    `ClassificationResult.retry_after` for the status-coded families,
+    and `_execute_with_retry` prefers it over the fixed backoff when
+    deciding how long to wait before its one retry.
+
 ## What this module deliberately does NOT do
 
 It does not know the field names inside an ESearch, ESummary, ELink, or
@@ -186,13 +209,16 @@ Depended by:
 from __future__ import annotations
 
 import asyncio
+import email.utils
 import json
 import logging
+import math
 import os
 import time
 import urllib.parse
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, Final, Literal
 from xml.etree import ElementTree
 
@@ -223,6 +249,21 @@ RATE_LIMIT_FAMILIES: Final[tuple[RateLimitFamily, ...]] = ("eutils", "datasets",
 _ENV_NCBI_API_KEY: Final[str] = "NCBI_API_KEY"
 
 _TRANSIENT_STATUS_CODES: Final[frozenset[int]] = frozenset({429, 500, 502, 503, 504})
+
+# The two statuses for which HTTP defines a `Retry-After` response header.
+_RETRY_AFTER_STATUS_CODES: Final[frozenset[int]] = frozenset({429, 503})
+
+_RETRY_AFTER_HEADER: Final[str] = "retry-after"
+
+# A server-stated `Retry-After` is surfaced to the caller in full, however
+# large it is, because that is the honest estimate the next agent step
+# needs. What this module will itself SLEEP on before its one retry is
+# capped here: a call carries a 15s per-call timeout budget
+# (`.claude/rules/tool-call-budgets.md`), so honoring an unbounded, or
+# hostile, header value inside the call would blow that budget rather than
+# fail fast. Beyond the cap the retry uses the cap and the caller is left
+# to decide from the surfaced value whether to come back later.
+_MAX_BACKOFF_FROM_RETRY_AFTER_S: Final[float] = 5.0
 
 # httpx.TimeoutException is the base for all four; kept explicit for a
 # clearer typed-error mapping (timeout vs connection failure) below.
@@ -276,11 +317,111 @@ class ClassificationResult:
     unparseable or irrelevant to the verdict. Callers that need the parsed
     content (an action module extracting fields) read it from here instead
     of re-parsing the raw text a second time.
+
+    `retry_after` is the server-stated wait in seconds, populated only when
+    the response was a 429 or 503 that carried a parseable `Retry-After`
+    header (F-3.1-19). It is `None` on every other outcome, including a
+    429 or 503 with no such header: `None` means "the server did not say",
+    never "retry immediately". Its client-side twin is
+    `TransportRateLimitedError.retry_after`, which this module produces on
+    its own when a call cannot be scheduled at all.
     """
 
     status: Literal["ok", "empty", "error"]
     error_message: str | None = None
     body: Any = None
+    retry_after: float | None = None
+
+
+# ---------------------------------------------------------------------------
+# Server-stated Retry-After. The other half of `retry_after` (F-3.1-19).
+# ---------------------------------------------------------------------------
+
+
+def parse_retry_after(
+    headers: Mapping[str, str], *, default: float | None = None
+) -> float | None:
+    """Read a `Retry-After` response header into a wait in seconds.
+
+    F-3.1-19 (adversary finding 7, reopened): before this, the only
+    `retry_after` this module could ever produce came from its OWN
+    client-side throttle. A real NCBI 429 or 503, the case where the
+    server is the authority on how long to wait, produced no numeric
+    estimate anywhere, so a `rate_limited` error reaching the Act step
+    carried no actionable number, which
+    `.claude/rules/tool-call-budgets.md` requires.
+
+    Two header forms are accepted, per RFC 9110 section 10.2.3:
+
+        delay-seconds: the common form NCBI sends, a bare integer such as
+            `Retry-After: 30`. Parsed as a float so a fractional value
+            (non-standard, but harmless) is not silently dropped.
+
+        HTTP-date: the rarer absolute form, parsed with the stdlib's
+            `email.utils.parsedate_to_datetime` and converted to a delay
+            relative to now. A date already in the past clamps to 0.0
+            rather than going negative.
+
+    Returns `default` (itself `None` unless the caller supplies one) when
+    the header is absent, empty, or unparseable. Never raises: an
+    unreadable header from an upstream this module does not control is a
+    missing hint, not a failure of the call it belongs to.
+    """
+    raw: str | None = None
+    for key, value in headers.items():
+        if key.lower() == _RETRY_AFTER_HEADER:
+            raw = value
+            break
+    if raw is None:
+        return default
+
+    candidate = raw.strip()
+    if not candidate:
+        return default
+
+    try:
+        seconds = float(candidate)
+    except (TypeError, ValueError):
+        seconds = None
+    if seconds is not None:
+        # Reject nan/inf, which float() happily accepts from "nan"/"inf"
+        # and which would poison every downstream min()/max() comparison.
+        if not math.isfinite(seconds):
+            return default
+        return max(0.0, seconds)
+
+    try:
+        when = email.utils.parsedate_to_datetime(candidate)
+    except (TypeError, ValueError):
+        return default
+    if when is None:
+        return default
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)
+    return max(0.0, (when - datetime.now(UTC)).total_seconds())
+
+
+def retry_after_for_response(
+    response: httpx.Response, *, default: float = DEFAULT_BACKOFF_S
+) -> float:
+    """The caller-facing form of `parse_retry_after`: always returns a number.
+
+    This is the interface an action module uses on the E-utilities path,
+    where `classify_eutils_response` deliberately never sees an HTTP
+    status and so can never populate `ClassificationResult.retry_after`
+    itself. A caller that has already decided a response is a 429 or a 503
+    calls this to turn it into an actionable wait:
+
+        if response.status_code == 429:
+            wait = ncbi_transport.retry_after_for_response(response)
+
+    `default` is this module's own backoff budget, the same value the
+    retry itself would have used, so an absent or unparseable header
+    yields a sane number rather than `None` for a caller that must state
+    one.
+    """
+    parsed = parse_retry_after(response.headers)
+    return default if parsed is None else parsed
 
 
 # ---------------------------------------------------------------------------
@@ -494,7 +635,9 @@ def _classify_eutils_xml(text: str) -> ClassificationResult:
 # ---------------------------------------------------------------------------
 
 
-def classify_status_coded_response(*, http_status: int, text: str) -> ClassificationResult:
+def classify_status_coded_response(
+    *, http_status: int, text: str, headers: Mapping[str, str] | None = None
+) -> ClassificationResult:
     """Classify a Datasets v2 or PubChem response. Deliberately takes no content_type.
 
     Both APIs return proper HTTP status codes, the opposite convention
@@ -510,14 +653,24 @@ def classify_status_coded_response(*, http_status: int, text: str) -> Classifica
     tool's `"empty"` output status is the calling action module's job, the
     same way `cypher_query` treats zero graph rows as `"empty"` at the
     tool layer rather than inside `graph_connection.execute_cypher`.
+
+    `headers` is optional and never supplies the verdict either: its only
+    job is to carry a server-stated `Retry-After` onto the result for a
+    429 or 503, so a rate-limited or overloaded upstream reaches the Act
+    step with an actionable number attached (F-3.1-19). Omitting it
+    leaves `retry_after` as `None`, exactly as before.
     """
     body = _try_parse_json(text)
     if 200 <= http_status < 300:
         return ClassificationResult(status="ok", body=body)
+    retry_after: float | None = None
+    if headers is not None and http_status in _RETRY_AFTER_STATUS_CODES:
+        retry_after = parse_retry_after(headers)
     return ClassificationResult(
         status="error",
         error_message=_extract_status_coded_error_message(body, http_status),
         body=body,
+        retry_after=retry_after,
     )
 
 
@@ -762,9 +915,23 @@ async def execute_get(
 ) -> httpx.Response:
     """Execute one GET against an NCBI-family host: rate-limited, timed out, retried once.
 
-    Rate limiting happens before the request is attempted at all, per
-    `family`'s pool (`get_rate_limiter`); a saturated pool raises
-    `TransportRateLimitedError` without ever reaching the network.
+    Rate limiting happens before EVERY attempt, per `family`'s pool
+    (`get_rate_limiter`), so a retry can never escape the throttle its
+    first attempt was subject to (F-3.1-22). On the first attempt a
+    saturated pool therefore raises `TransportRateLimitedError` without
+    ever reaching the network; on the retry it raises after the first
+    request has already gone out and failed transiently, so this error
+    does not by itself imply zero network contact. When it fires on a
+    retry, the failure that triggered that retry is attached as the
+    exception's `__cause__` and named in the accompanying log line, so
+    the original timeout or connection error is not lost.
+
+    Wait budget: `wait_ceiling_s` (defaulting to `timeout_s`) bounds the
+    total time this call may spend WAITING for its pool, across both
+    attempts together, not per attempt (F-3.1-37). It is converted to a
+    single deadline at call start, and each acquisition gets only what is
+    left of it, so two attempts can never wait twice the declared
+    ceiling.
 
     Retry: exactly one retry, and only for a TRANSIENT failure. Transient
     means a connection or timeout exception, or an HTTP 429/5xx response.
@@ -790,7 +957,8 @@ async def execute_get(
 
     Raises:
         TransportRateLimitedError: the call's family pool could not
-            schedule it within its queue depth or wait ceiling.
+            schedule it, or its retry, within its queue depth or its
+            remaining share of the whole call's wait ceiling.
         TransportTimeoutError: the call timed out on both attempts.
         TransportConnectionError: the connection failed on both attempts.
     """
@@ -808,7 +976,7 @@ async def execute_get(
     if client is not None:
         return await _execute_with_retry(
             client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s,
-            sleep_fn=sleep_fn, limiter=limiter, effective_ceiling=effective_ceiling,
+            sleep_fn=sleep_fn, limiter=limiter, wait_budget_s=effective_ceiling,
             time_fn=time_fn,
         )
 
@@ -819,7 +987,7 @@ async def execute_get(
     async with httpx.AsyncClient() as fresh_client:
         return await _execute_with_retry(
             fresh_client, url, family=family, timeout_s=timeout_s, backoff_s=backoff_s,
-            sleep_fn=sleep_fn, limiter=limiter, effective_ceiling=effective_ceiling,
+            sleep_fn=sleep_fn, limiter=limiter, wait_budget_s=effective_ceiling,
             time_fn=time_fn,
         )
 
@@ -833,7 +1001,7 @@ async def _execute_with_retry(
     backoff_s: float,
     sleep_fn: Callable[[float], Awaitable[None]],
     limiter: RateLimiter,
-    effective_ceiling: float,
+    wait_budget_s: float,
     time_fn: Callable[[], float],
 ) -> httpx.Response:
     """The timeout/retry loop itself, factored out of `execute_get`.
@@ -842,18 +1010,47 @@ async def _execute_with_retry(
     whether that client is caller-supplied or freshly opened for this
     call, without duplicating the retry logic across both branches.
 
-    F-3.1-22 (adversary finding 10, MAJOR): the rate limiter is now
+    F-3.1-22 (adversary finding 10, MAJOR): the rate limiter is
     acquired BEFORE each attempt, not once before the first attempt.
-    Before this fix, a retry issued a second HTTP request without a
+    Before that fix, a retry issued a second HTTP request without a
     second rate-limiter acquisition, so the retry escaped the throttle
     pool entirely. The moment NCBI sent a 429, the code would issue a
     second unpaced request into the pool it was being throttled out of.
+
+    F-3.1-37 (a regression introduced BY that fix, MAJOR): moving the
+    acquisition inside the loop gave each attempt its own full copy of
+    `wait_budget_s`, so one call could wait up to twice the ceiling it
+    declared. `.claude/rules/tool-call-budgets.md` ties the wait ceiling
+    to the calling query's remaining latency budget, and a budget that
+    silently doubles under retry is not a budget. The ceiling is
+    therefore converted here into ONE deadline for the whole call, and
+    each acquisition is handed only `deadline - now`. A first attempt
+    that waits 1.0s against a 1.5s ceiling leaves the retry 0.5s, and a
+    retry that cannot be scheduled inside what remains fails fast rather
+    than waiting a second full ceiling.
     """
     host = _host_of(url)
     last_exc: Exception | None = None
+    deadline = time_fn() + wait_budget_s
 
     for attempt_index in range(2):
-        await limiter.acquire(effective_ceiling, time_fn=time_fn, sleep_fn=sleep_fn)
+        remaining_wait_budget = max(0.0, deadline - time_fn())
+        try:
+            await limiter.acquire(remaining_wait_budget, time_fn=time_fn, sleep_fn=sleep_fn)
+        except TransportRateLimitedError as rate_exc:
+            if last_exc is None:
+                raise
+            # A retry that cannot be scheduled inside the call's remaining
+            # budget. Name the failure that caused the retry, and chain it,
+            # so "it timed out and then could not be retried in budget" is
+            # still recoverable from the raised error rather than replaced
+            # by it.
+            logger.warning(
+                "%s retry to %s could not be scheduled within the call's remaining "
+                "%.1fs wait budget after a %s on the first attempt",
+                family, host, remaining_wait_budget, type(last_exc).__name__,
+            )
+            raise rate_exc from last_exc
         try:
             response = await active_client.get(url, timeout=timeout_s)
         except _TRANSIENT_TIMEOUT_EXCEPTIONS as exc:
@@ -884,11 +1081,26 @@ async def _execute_with_retry(
             ) from None
         else:
             if response.status_code in _TRANSIENT_STATUS_CODES and attempt_index == 0:
+                # F-3.1-19: when the server states a Retry-After, it is the
+                # authority on how long to wait, not this module's fixed
+                # backoff constant. Honor it, floored at the fixed backoff
+                # (never retry sooner than we would have anyway) and capped
+                # at _MAX_BACKOFF_FROM_RETRY_AFTER_S so a huge or hostile
+                # header value cannot park the call past its timeout budget.
+                # The FULL parsed value stays reachable by the caller via
+                # `retry_after_for_response(response)`; only what this module
+                # itself sleeps on is capped.
+                effective_backoff = backoff_s
+                stated_retry_after = parse_retry_after(response.headers)
+                if stated_retry_after is not None:
+                    effective_backoff = min(
+                        max(stated_retry_after, backoff_s), _MAX_BACKOFF_FROM_RETRY_AFTER_S
+                    )
                 logger.warning(
                     "%s call to %s returned HTTP %d, retrying once after %.1fs backoff",
-                    family, host, response.status_code, backoff_s,
+                    family, host, response.status_code, effective_backoff,
                 )
-                await sleep_fn(backoff_s)
+                await sleep_fn(effective_backoff)
                 continue
             return response
 
