@@ -37,7 +37,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Build phase 3.2 (`ncbi_dbsnp`) is DONE. Closed on `phase/3.2-ncbi-dbsnp` on 2026-08-08 after six full review passes. Next: build phase 3.3, `pubtator_annotate` and `litvar2_lookup`.
+> Build phase 3.2 (`ncbi_dbsnp`) is DONE. Merged as PR #25 on 2026-08-08 after six full review passes. Next: build phase 3.3, `pubtator_annotate` and `litvar2_lookup`.
 
 Full detail on what PR #23 (build phase 3.1's re-review debt) fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07. Full detail on the F-2.1-C15 fix, including the bypass a fresh-context review found in its own first version before merge and the second review that confirmed the fix, is `tracker/fix_c15_generation_bound.md`.
 
@@ -59,15 +59,15 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Build phase 3.2 (`ncbi_dbsnp`) is DONE. Closed on `phase/3.2-ncbi-dbsnp` on 2026-08-08 after six full review passes. Next: build phase 3.3, `pubtator_annotate` and `litvar2_lookup`.
+> Build phase 3.2 (`ncbi_dbsnp`) is DONE. Merged as PR #25 on 2026-08-08 after six full review passes. Next: build phase 3.3, `pubtator_annotate` and `litvar2_lookup`.
 
-Build phase 3.1 merged as PR #22 on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
+Build phase 3.1 merged as PR #22 (superseded by PR #23) on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
 Two things were deliberately left open rather than fixed, both genuine product decisions, not bugs: whether the stopword list should exclude entries that are themselves real gene symbols (F-3.1-41), and what happens when a gene is mentioned in lowercase (F-3.1-42). Three more minor, non-blocking findings from the final review are carried to before `ncbi_efetch` gets wired into `act_node` (F-3.1-50, F-3.1-51, and F-3.1-46 already tracked).
 
 F-2.1-C15's generation half, the finding where a generated query took the graph server down for every user, closed on `fix/c15-generation-bound` the same day: `validate_cypher` now rejects any generated Cypher carrying a variable-length relationship pattern (`[:orthologous_to*]` or similar) before execution, the mechanism behind the original OOM. The existing `_MEMORY_GUARD_SQL` session-level mitigation is unchanged. This fix's own first version, sliced from the existing relationship-hop regex, was itself found bypassable by a fresh-context adversarial review before merge: a nested bracket (a list-valued property) alongside the variable-length spec defeated it, the same non-nesting-regex defect class already fixed once in this file for node patterns (F-2.1-A9) and never generalized to relationship hops. Rebuilt as a standalone, wildcard-free pattern matched directly against the quote-masked query string, independent of the hop regex entirely. A second independent review confirmed the bypass closed, found no new one, checked for ReDoS (none), and found one narrow, non-blocking gap against full Cypher grammar unreachable by this system's actual generation, documented rather than fixed. F-2.2-01 (a separate, lower-severity generation flake, roughly 1 run in 10) was deliberately left open rather than folded into the same branch, per the ticket's own allowed alternative. Full account: `tracker/fix_c15_generation_bound.md`.
 
-Eight build phases are done and merged into `main`. The first six complete the Step 6.1 prototype group; 3.0 and 3.1 are the first two Step 6.3 v1 phases:
+Nine build phases are done and merged into `main`. The first six complete the Step 6.1 prototype group; 3.0, 3.1, and 3.2 are the first three Step 6.3 v1 phases:
 
 | Phase | Delivered | PR |
 |-------|-----------|-----|
@@ -79,6 +79,7 @@ Eight build phases are done and merged into `main`. The first six complete the S
 | 2.2 | Deterministic cite-or-refuse, Layer 1 provenance, the first trust signal | #18 |
 | 3.0 | The full Section 10 guardrail, replacing the passthrough stub | #19 |
 | 3.1 | ncbi_efetch, the first Layer 2 tool: seven actions across three API families, live gene-symbol resolution replacing the one-entry hardcoded table | Merged as PR #22 on 2026-08-05, PR #23 on 2026-08-07 |
+| 3.2 | ncbi_dbsnp, the second Layer 2 tool: Variation Services normalization plus dbSNP ESummary clinical and population data, six review passes | #25 |
 
 Current counts, stated once here:
 
@@ -93,7 +94,7 @@ Current counts, stated once here:
 - Decisions logged: 230
 - Learnings entries: 54, plus a retrospective
 
-Build phase 3.2, `ncbi_dbsnp`, closed on `phase/3.2-ncbi-dbsnp` on 2026-08-08 after six full review passes (see "Build phase 3.2, done" below). The standard skill chain, release-workflow then ship, is what actually opens the pull request and merges it into `main`, so this file does not yet claim a PR number for it. Next in the build order is build phase 3.3, `pubtator_annotate` and `litvar2_lookup`, the two Layer 3 enrichment tools.
+Build phase 3.2, `ncbi_dbsnp`, closed on `phase/3.2-ncbi-dbsnp` and merged as PR #25 on 2026-08-08 after six full review passes (see "Build phase 3.2, done" below). Next in the build order is build phase 3.3, `pubtator_annotate` and `litvar2_lookup`, the two Layer 3 enrichment tools.
 
 The build phase 3.1 tool surface is complete and its findings are settled: 40 of 42 numbered findings closed, F-3.1-04 carried to T-3.1-28 (the answer-path half: Act-step wiring, Layer 2 citation, trust gate), and exactly two left open on genuine product decisions, F-3.1-41 and F-3.1-42, detailed in `tracker/phase_3.1.md`.
 
@@ -187,7 +188,7 @@ Transferable lessons for the remaining tool phases:
 
 ## Build phase 3.2, done
 
-Closed 2026-08-08 on `phase/3.2-ncbi-dbsnp` after six full review passes: a blocking premise gate written and watched failing first, an adversary round, a judge round (FAIL), a fix round, an independent fresh-context re-review of that fix round, and a second fix round. No PR number is recorded here; per this section's own convention that gap is stated rather than guessed, and the standard skill chain (release-workflow, ship) is what actually opens and merges the pull request.
+Closed 2026-08-08 on `phase/3.2-ncbi-dbsnp`, merged as PR #25, after six full review passes: a blocking premise gate written and watched failing first, an adversary round, a judge round (FAIL), a fix round, an independent fresh-context re-review of that fix round, and a second fix round.
 
 What shipped: the `ncbi_dbsnp` tool, variant normalization and dbSNP record retrieval over two sequential API families, NCBI Variation Services (primary, canonical SPDI normalization) and dbSNP ESummary via E-utilities (secondary, clinical and population fields). A new `variation` rate-limit family (~1 req/s, its own pool, separate from `eutils`) landed in `tools/ncbi_transport.py`. Registered into the tool schema and the stable prompt prefix, `TOOL_REGISTRY_VERSION` bumped v2 to v3 (now `cypher_query`, `ncbi_dbsnp`, `ncbi_efetch`). As with 3.1, whether the tool is dispatched as an answer-bearing tool from `act_node` is the same open product-owner scope decision carried to T-3.1-28; this phase delivers the tool itself, not the wiring.
 

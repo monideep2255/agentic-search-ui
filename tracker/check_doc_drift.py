@@ -439,9 +439,26 @@ def compute_phase_branches() -> dict[str, str]:
 
 
 def compute_merged_pr_numbers() -> Fact:
+    """Merged PR number per phase, taking the max across TWO branch shapes.
+
+    A phase's declared BOARD.md branch (`phase/N.M-description`) covers the
+    normal case. It misses a phase that needed a SECOND branch to fully
+    close: build phase 3.1 merged as PR #22 from `phase/3.1-ncbi-efetch`,
+    then its re-review debt closed separately as PR #23 from
+    `fix/3.1-rereview-round1-critical-regressions`, a branch name
+    `board_branches` has never heard of. `git-workflow.md`'s own naming
+    convention for exactly this case is `fix/N.M-description`, phase-id
+    prefixed, so it is matched directly by phase id here rather than by a
+    declared branch string, and unioned with the declared-branch PR, taking
+    the max of whichever fired. Found live 2026-08-08 checkpointing build
+    phase 3.2, when this fact reported PR #22 for phase 3.1 while every
+    other document in the repo, correctly, says PR #23.
+    """
     source = (
         "git log --merges --pretty=format:%s, matched against BOARD.md's "
-        "declared branch name per phase (not phase number alone, see docstring)"
+        "declared branch name per phase (not phase number alone, see "
+        "compute_phase_branches's docstring), UNIONED with any "
+        "fix/N.M-description branch matched directly by phase id"
     )
     proc = _run(
         ["git", "log", "--merges", "--pretty=format:%s"],
@@ -458,19 +475,28 @@ def compute_merged_pr_numbers() -> Fact:
             True, "could not read BOARD.md's Build phases branch column",
         )
 
-    pattern = re.compile(r"Merge pull request #(\d+) from \S+/(phase/\S+)")
+    phase_pattern = re.compile(r"Merge pull request #(\d+) from \S+/(phase/\S+)")
+    fix_pattern = re.compile(r"Merge pull request #(\d+) from \S+/fix/(\d+\.\d+)-\S+")
     pr_by_branch: dict[str, int] = {}
+    pr_by_fix_phase: dict[str, int] = {}
     for line in proc.stdout.splitlines():
-        m = pattern.search(line)
-        if not m:
+        m = phase_pattern.search(line)
+        if m:
+            pr, branch = int(m.group(1)), m.group(2)
+            pr_by_branch[branch] = max(pr, pr_by_branch.get(branch, 0))
             continue
-        pr, branch = int(m.group(1)), m.group(2)
-        pr_by_branch[branch] = max(pr, pr_by_branch.get(branch, 0))
+        m = fix_pattern.search(line)
+        if m:
+            pr, phase_id = int(m.group(1)), m.group(2)
+            pr_by_fix_phase[phase_id] = max(pr, pr_by_fix_phase.get(phase_id, 0))
 
     by_phase: dict[str, int] = {}
     for phase_id, branch in board_branches.items():
-        if branch in pr_by_branch:
-            by_phase[phase_id] = pr_by_branch[branch]
+        candidates = [pr_by_branch[branch]] if branch in pr_by_branch else []
+        if phase_id in pr_by_fix_phase:
+            candidates.append(pr_by_fix_phase[phase_id])
+        if candidates:
+            by_phase[phase_id] = max(candidates)
     display = ", ".join(f"{p}=#{pr}" for p, pr in sorted(by_phase.items())) or "(none found)"
     return Fact("merged_prs", "Merged PR numbers per phase", by_phase, display, source)
 
@@ -503,7 +529,7 @@ HISTORICAL_HEADING_RE = re.compile(
 )
 HEDGE_WORD_RE = re.compile(
     r"\b(was|wrong|stale|outdated|incorrect|previously|used to|prior to|"
-    r"superseded|corrected|instead of|as measured|as of|at the)\b",
+    r"superseded|corrected|instead of|as measured|as of|at the|then)\b",
     re.IGNORECASE,
 )
 
