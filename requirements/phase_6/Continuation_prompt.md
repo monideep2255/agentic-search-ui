@@ -38,7 +38,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Build phase 3.3 (`pubtator_annotate` and `litvar2_lookup`) is DONE on branch `phase/3.3-enrichment-tools`, all review rounds closed, awaiting product-owner PR review and merge. Next once merged: build phase 3.5, `pathogen_detection` and `clinicaltrials_search`, since 3.4 depends on 3.5 as well as 3.1 to 3.3.
+> Build phase 3.3 (`pubtator_annotate` and `litvar2_lookup`) is DONE. Merged as PR #26 on 2026-08-08 after ten review rounds. Next: build phase 3.5, `pathogen_detection` and `clinicaltrials_search`, since 3.4 depends on 3.5 as well as 3.1 to 3.3.
 
 Full detail on what PR #23 (build phase 3.1's re-review debt) fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07. Full detail on the F-2.1-C15 fix, including the bypass a fresh-context review found in its own first version before merge and the second review that confirmed the fix, is `tracker/fix_c15_generation_bound.md`.
 
@@ -60,7 +60,7 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Build phase 3.3 (`pubtator_annotate` and `litvar2_lookup`) is DONE on branch `phase/3.3-enrichment-tools`, all review rounds closed, awaiting product-owner PR review and merge. Next once merged: build phase 3.5, `pathogen_detection` and `clinicaltrials_search`, since 3.4 depends on 3.5 as well as 3.1 to 3.3.
+> Build phase 3.3 (`pubtator_annotate` and `litvar2_lookup`) is DONE. Merged as PR #26 on 2026-08-08 after ten review rounds. Next: build phase 3.5, `pathogen_detection` and `clinicaltrials_search`, since 3.4 depends on 3.5 as well as 3.1 to 3.3.
 
 Build phase 3.1 merged as PR #22 (superseded by PR #23) on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
@@ -81,11 +81,11 @@ Ten build phases are done; nine are merged into `main`, and build phase 3.3 is c
 | 3.0 | The full Section 10 guardrail, replacing the passthrough stub | #19 |
 | 3.1 | ncbi_efetch, the first Layer 2 tool: seven actions across three API families, live gene-symbol resolution replacing the one-entry hardcoded table | Merged as PR #22 on 2026-08-05, PR #23 on 2026-08-07 |
 | 3.2 | ncbi_dbsnp, the second Layer 2 tool: Variation Services normalization plus dbSNP ESummary clinical and population data, six review passes | #25 |
-| 3.3 | pubtator_annotate and litvar2_lookup, the two Layer 3 enrichment tools, seven review rounds | Complete on `phase/3.3-enrichment-tools`, not yet opened as a PR |
+| 3.3 | pubtator_annotate and litvar2_lookup, the two Layer 3 enrichment tools, ten review rounds | #26 |
 
 Current counts, stated once here:
 
-- Python tests: 2092
+- Python tests: 2140
 - Frontend tests: 120
 - Playwright end-to-end tests: 3 (unverifiable in the sandbox session that closed build phase 3.3; see that phase's own section below)
 - Premise gate, cypher_query: 9 of 9
@@ -214,7 +214,7 @@ Transferable lessons, extending 3.1's list: pre-build live probing before any fi
 
 ## Build phase 3.3, done
 
-Closed 2026-08-08 on `phase/3.3-enrichment-tools`, not yet opened as a pull request, after seven review rounds: a blocking premise gate written and watched failing first (12 failed, 0 passed, every failure `ModuleNotFoundError`), a judge round (FAIL, 6 findings), a fix round, an independent fresh-context re-review of that fix round (FAIL, found a real regression the fix round introduced), a second fix round, an adversary round against the live APIs (13 findings, 1 critical, 6 major), and a third fix round. Every round's findings, closures, and carried-open dispositions are in `tracker/phase_3.3.md`'s Findings table; this section is the narrative, not the record.
+Closed 2026-08-08 on `phase/3.3-enrichment-tools`, merged as PR #26, after ten review rounds: a blocking premise gate written and watched failing first (12 failed, 0 passed, every failure `ModuleNotFoundError`), a judge round (FAIL, 6 findings), a fix round, an independent fresh-context re-review of that fix round (FAIL, found a real regression the fix round introduced), a second fix round, an adversary round against the live APIs (13 findings, 1 critical, 6 major), a third fix round, a fourth fix round closing several findings that had initially been left as documented product decisions but turned out on reconsideration to be addressable without one (a citation for `entity_lookup`, a real dbSNP citation over LitVar2's own unverifiable client-rendered UI, and disclosure parity between the two sibling tools), an independent re-review of that fourth round (FAIL, found a real regression: a multi-match result citing only its first, unrelated match as if it covered the whole answer, plus a vacuous regression test), and a fifth fix round closing both. Every round's findings, closures, and carried-open dispositions are in `tracker/phase_3.3.md`'s Findings table; this section is the narrative, not the record.
 
 What shipped: `pubtator_annotate` (PubTator3: entity normalization for free text, entity annotation on publications) and `litvar2_lookup` (LitVar2: variant-to-literature evidence), the first two Layer 3 enrichment tools and the first tools whose retrieved content is genuinely untrusted external text rather than a structured API record. Two new rate-limit families (`"pubtator"`, `"litvar2"`, 5 req/s provisional throttle each) landed in `tools/ncbi_transport.py`, alongside a shared `{"detail": ...}` error-message branch both tools' live error bodies use. Registered into the tool schema and the stable prompt prefix, `TOOL_REGISTRY_VERSION` bumped v3 to v4 (now `cypher_query`, `litvar2_lookup`, `ncbi_dbsnp`, `ncbi_efetch`, `pubtator_annotate`, alphabetical). As with 3.1 and 3.2, whether either tool is dispatched as an answer-bearing tool from `act_node` is the same open product-owner scope decision carried to T-3.1-28; this phase delivers the tools themselves, not the wiring.
 
