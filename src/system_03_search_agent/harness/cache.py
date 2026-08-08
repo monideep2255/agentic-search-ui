@@ -9,6 +9,8 @@ Depends on:
       this ticket as the eventual source of that string).
     - system_03_search_agent.tools.cypher_schemas (CypherQueryInput,
       for `REGISTERED_TOOL_SCHEMAS`'s cypher_query entry; T-3.1-12)
+    - system_03_search_agent.tools.ncbi_dbsnp_schemas (NcbiDbsnpInput,
+      for `REGISTERED_TOOL_SCHEMAS`'s ncbi_dbsnp entry; T-3.2-05)
     - system_03_search_agent.tools.ncbi_efetch_schemas (NcbiEfetchInput,
       for `REGISTERED_TOOL_SCHEMAS`'s ncbi_efetch entry; T-3.1-12)
 
@@ -75,6 +77,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any, Final
 
 from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
+from system_03_search_agent.tools.ncbi_dbsnp_schemas import NcbiDbsnpInput
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
 
 # ---------------------------------------------------------------------------
@@ -153,15 +156,18 @@ def _build_tool_schema_section(tool_schemas: list[dict] | None) -> str:
 # alphabetical order by tool name, matching obligation 2's "sorted
 # alphabetically ... and fixed in code": `_build_tool_schema_section` above
 # re-sorts by name regardless of the order this tuple is written in, so this
-# ordering is documentation of intent, not the sole enforcement point. When
-# a third tool is added, insert it in alphabetical position: `ncbi_efetch`
-# sorts after `cypher_query` and before `ncbi_dbsnp` (not yet built).
+# ordering is documentation of intent, not the sole enforcement point. As of
+# T-3.2-05, three tools are registered: `ncbi_dbsnp` sorts after
+# `cypher_query` and before `ncbi_efetch` ("ncbi_d" < "ncbi_e"). When a
+# fourth tool is added, insert it in its own alphabetical position among
+# `clinicaltrials_search`, `litvar2_lookup`, `pathogen_detection`,
+# `pubtator_annotate` (none built yet).
 #
 # F-3.1-11 (judge finding 11, MAJOR): TOOL_REGISTRY_VERSION records the
 # contract version of the registered tool set. Adding or removing a tool
 # must bump this version, per system-design-patterns pattern 10: a tool-
 # registry change is coordinated with a contract-version bump, never silent.
-# Currently v2: cypher_query (v1) + ncbi_efetch (v2).
+# Currently v3: cypher_query (v1) + ncbi_efetch (v2) + ncbi_dbsnp (v3).
 #
 # F-3.1-11 (reopened): the version above was decorative until this ledger
 # existed. Nothing imported it, nothing tested it, and build phase 3.2 could
@@ -190,7 +196,7 @@ def _build_tool_schema_section(tool_schemas: list[dict] | None) -> str:
 # elsewhere in this module's tests own that case.
 # ---------------------------------------------------------------------------
 
-TOOL_REGISTRY_VERSION: Final[str] = "v2"
+TOOL_REGISTRY_VERSION: Final[str] = "v3"
 
 # Append-only. One row per contract version the tool registry has ever
 # declared, mapping that version to `tool_registry_fingerprint()` over the
@@ -198,6 +204,7 @@ TOOL_REGISTRY_VERSION: Final[str] = "v2"
 _TOOL_REGISTRY_FINGERPRINTS: Final[dict[str, str]] = {
     "v1": "5f0ef0d584b9",  # cypher_query
     "v2": "99358f2c0c86",  # cypher_query, ncbi_efetch
+    "v3": "e5b702b50893",  # cypher_query, ncbi_dbsnp, ncbi_efetch
 }
 
 REGISTERED_TOOL_SCHEMAS: Final[tuple[dict[str, Any], ...]] = (
@@ -213,6 +220,19 @@ REGISTERED_TOOL_SCHEMAS: Final[tuple[dict[str, Any], ...]] = (
             "from NCBI Gene, ClinVar, dbVar, PubMed, and MedGen."
         ),
         "input_schema": CypherQueryInput.model_json_schema(),
+    },
+    {
+        "name": "ncbi_dbsnp",
+        "description": (
+            "Normalize a variant (rsid, HGVS expression, or SPDI) to its "
+            "canonical rsid and SPDI via NCBI Variation Services, then "
+            "fetch dbSNP clinical significance, functional consequence, "
+            "gene linkage, and population allele frequency data via "
+            "dbSNP ESummary. Use for questions about a specific known "
+            "variant not yet in the graph, or for real-time confirmation "
+            "of a graph value."
+        ),
+        "input_schema": NcbiDbsnpInput.model_json_schema(),
     },
     {
         "name": "ncbi_efetch",

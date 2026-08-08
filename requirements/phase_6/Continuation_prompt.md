@@ -10,7 +10,8 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 - [Read before opening the next phase](#read-before-opening-the-next-phase)
 - [Build phase 3.0, done](#build-phase-30-done)
 - [Build phase 3.1, done](#build-phase-31-done)
-- [What build phase 3.2 delivers](#what-build-phase-32-delivers)
+- [Build phase 3.2, done](#build-phase-32-done)
+- [What build phase 3.3 delivers](#what-build-phase-33-delivers)
 - [What Step 6.2 delivers, later](#what-step-62-delivers-later)
 - [Open items](#open-items)
 - [Handover](#handover)
@@ -36,7 +37,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> The F-2.1-C15 generation bound is DONE. Merged as PR #24 (commit `15efe57`) on 2026-08-07. Next: build phase 3.2, `ncbi_dbsnp`.
+> Build phase 3.2 (`ncbi_dbsnp`) is DONE. Closed on `phase/3.2-ncbi-dbsnp` on 2026-08-08 after six full review passes. Next: build phase 3.3, `pubtator_annotate` and `litvar2_lookup`.
 
 Full detail on what PR #23 (build phase 3.1's re-review debt) fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07. Full detail on the F-2.1-C15 fix, including the bypass a fresh-context review found in its own first version before merge and the second review that confirmed the fix, is `tracker/fix_c15_generation_bound.md`.
 
@@ -58,7 +59,7 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> The F-2.1-C15 generation bound is DONE. Merged as PR #24 (commit `15efe57`) on 2026-08-07. Next: build phase 3.2, `ncbi_dbsnp`.
+> Build phase 3.2 (`ncbi_dbsnp`) is DONE. Closed on `phase/3.2-ncbi-dbsnp` on 2026-08-08 after six full review passes. Next: build phase 3.3, `pubtator_annotate` and `litvar2_lookup`.
 
 Build phase 3.1 merged as PR #22 on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
@@ -81,17 +82,18 @@ Eight build phases are done and merged into `main`. The first six complete the S
 
 Current counts, stated once here:
 
-- Python tests: 1812
+- Python tests: 1921
 - Frontend tests: 120
 - Playwright end-to-end tests: 3
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
 - Premise gate, guardrail: 20 of 20
 - Premise gate, ncbi_efetch: 19 passed, 1 skipped (tunnel)
-- Decisions logged: 228
+- Premise gate, ncbi_dbsnp: 8 of 8, live, no tunnel-gated skip
+- Decisions logged: 230
 - Learnings entries: 54, plus a retrospective
 
-Next in the build order is build phase 3.2, `ncbi_dbsnp`, the second Layer 2 tool. The thing that came before it, F-2.1-C15 on `fix/c15-generation-bound`, is done and merged; see above.
+Build phase 3.2, `ncbi_dbsnp`, closed on `phase/3.2-ncbi-dbsnp` on 2026-08-08 after six full review passes (see "Build phase 3.2, done" below). The standard skill chain, release-workflow then ship, is what actually opens the pull request and merges it into `main`, so this file does not yet claim a PR number for it. Next in the build order is build phase 3.3, `pubtator_annotate` and `litvar2_lookup`, the two Layer 3 enrichment tools.
 
 The build phase 3.1 tool surface is complete and its findings are settled: 40 of 42 numbered findings closed, F-3.1-04 carried to T-3.1-28 (the answer-path half: Act-step wiring, Layer 2 citation, trust gate), and exactly two left open on genuine product decisions, F-3.1-41 and F-3.1-42, detailed in `tracker/phase_3.1.md`.
 
@@ -127,10 +129,10 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 In this order:
 
-1. `tracker/phase_3.2.md`. Create it by decomposing Section 6.3 of the technical specification. Read `tracker/phase_3.1.md` first for the transferable lessons: capture fixtures from live responses, never author them from a reading of the docs.
-2. `requirements/Technical_specification.md` Section 6.3, the `ncbi_dbsnp` specification, plus Section 21.1 for the rate limits. Section 25 for the build order.
-3. `docs/ncbi/Tool_implementation_mechanics.md`, the per-tool trap list. The load-bearing one for 3.2: `global_mafs` is an array, not a scalar, and the dbSNP clinical fetch runs sequentially after Variation Services normalization.
-4. `LEARNINGS.md`, filtered to the tool-phase and model-generated-output entries. `docs/build/Build_workflow_cadence.md` stage 5's blocking premise gate applies to every tool phase from 3.2 to 3.5.
+1. `tracker/phase_3.3.md`. Create it by decomposing Sections 6.4 and 6.5 of the technical specification. Read `tracker/phase_3.2.md` first for the transferable lessons: pre-build live probing before any fixture is written, and a gate's own coverage statement can itself be incomplete in the direction that turns out to matter most.
+2. `requirements/Technical_specification.md` Sections 6.4 and 6.5, the `pubtator_annotate` and `litvar2_lookup` specifications, plus Section 21.1 for the rate limits. Section 25 for the build order.
+3. `docs/ncbi/Tool_implementation_mechanics.md`, the per-tool trap list. The load-bearing ones for 3.3: PubTator3's biocjson export nests annotations under `.PubTator3[i].passages[].annotations[]`, not a flat top-level list, and the PubTator3 relations endpoint's exact path and fields are not yet live-verified, so no code may depend on it until that verification happens.
+4. `LEARNINGS.md`, filtered to the tool-phase and model-generated-output entries. `docs/build/Build_workflow_cadence.md` stage 5's blocking premise gate applies to every tool phase from 3.2 to 3.5. `production-standards`' untrusted-source-reader tier separation applies directly to 3.3, the first two tools whose retrieved content (PubMed abstracts, text-mined annotations) is genuinely untrusted external text rather than a structured API record.
 5. `docs/build/Build_velocity_post_mortem.md`, for the measured account of what the build process costs.
 
 ## Build phase 3.0, done
@@ -183,13 +185,36 @@ Transferable lessons for the remaining tool phases:
 - A tool that talks to a live external API needs an adversary who probes the actual API, not just a judge who reads the code. Every critical, in both the original phase and its fix round, came from the gap between what the API actually returns and what someone believed it returns.
 - A same-session self-check is not an independent review, however thorough. Measured 3-for-3 this same day: the original merge, the six-builder fix round, and two of the lead's own individual patches each had a real defect only a fresh pass caught. Budget for the fresh pass, every time, not just once per phase.
 
-## What build phase 3.2 delivers
+## Build phase 3.2, done
+
+Closed 2026-08-08 on `phase/3.2-ncbi-dbsnp` after six full review passes: a blocking premise gate written and watched failing first, an adversary round, a judge round (FAIL), a fix round, an independent fresh-context re-review of that fix round, and a second fix round. No PR number is recorded here; per this section's own convention that gap is stated rather than guessed, and the standard skill chain (release-workflow, ship) is what actually opens and merges the pull request.
+
+What shipped: the `ncbi_dbsnp` tool, variant normalization and dbSNP record retrieval over two sequential API families, NCBI Variation Services (primary, canonical SPDI normalization) and dbSNP ESummary via E-utilities (secondary, clinical and population fields). A new `variation` rate-limit family (~1 req/s, its own pool, separate from `eutils`) landed in `tools/ncbi_transport.py`. Registered into the tool schema and the stable prompt prefix, `TOOL_REGISTRY_VERSION` bumped v2 to v3 (now `cypher_query`, `ncbi_dbsnp`, `ncbi_efetch`). As with 3.1, whether the tool is dispatched as an answer-bearing tool from `act_node` is the same open product-owner scope decision carried to T-3.1-28; this phase delivers the tool itself, not the wiring.
+
+Pre-build live probing against Variation Services and dbSNP ESummary, before any fixture was written, surfaced two findings at design time rather than at review time: F-3.2-01 (`global_mafs[].freq` is a compound string, `"A=0.027356/137"`, not separate fields) and F-3.2-02 (`clinical_significance` and `fxn_class` are comma-separated strings in raw ESummary, not arrays). Both closed in the tool's first version, pinned by the premise gate.
+
+| Round | Result |
+|-------|--------|
+| Premise gate, written first | 8 failed, 0 passed, every failure `ModuleNotFoundError` (the correct direction, no tool code existed yet) |
+| Adversary, live against real NCBI endpoints | 14 findings, 2 critical: `_cap()` silently truncated over-length values and shipped them as `status: "ok"` (a dropped clinical term, a wrong-length variant), and a bare numeric rsid (`query_type: "rsid"`) returned a confident, cited, unrelated variant, since every integer is valid input to `refsnp/{id}` |
+| Judge, FAIL | Independently reproduced both criticals live, plus 6 new findings: the premise gate's own coverage statement omitted the two gaps that mattered most (`goal-contracts.md`'s coverage-declaration discipline), and `ClassificationResult` carried no HTTP status field, so a 429 and a 404 were indistinguishable downstream |
+| Fix round 1 | All 5 confirmed-blocking findings closed: refuse-not-truncate over silent truncation, an `rs`-prefix shape requirement at the schema layer (closes the bare-numeric-rsid gap before any network call), an `allele_role` label on population frequencies, HTTP status threaded locally into `ncbi_dbsnp.py`'s error messages |
+| Independent fresh-context re-review | 2 new findings inside the fix round's own code: the refuse-not-truncate policy refused roughly 10.4 percent of real clinically-cited variants outright, since two standard ClinVar vocabulary terms (`conflicting-interpretations-of-pathogenicity`, 44 chars; `no-classifications-from-unflagged-records`, 41 chars) exceed the locked spec's 40-char item cap; and a genuine deterministic input error (a reference-sequence mismatch, itself a 5xx) was told to the agent as "retry, may be transient," the exact opposite of the truth |
+| Fix round 2 | Both closed. The truncation fix changed from whole-call refusal to field-level withholding (`fields_withheld`), naming what was dropped rather than blocking the whole record; `spdi_canonical` stays whole-call refusal, the one field without which there is no variant identity to attach anything else to. The 5xx message now distinguishes a deterministic, permanent input rejection from a genuinely transient one |
+
+Final gates, lead-verified independently a third time: full suite 1830 passed, 90 skipped, 1 xfailed (net +29 from the phase's 1801 baseline at judge round 1), the live `ncbi_dbsnp` premise gate, 8 of 8, no tunnel-gated skip (unlike `ncbi_efetch`'s), `ruff check` clean on every file this phase touches. Every finding this phase's review found was real; zero rejected across two full review rounds. Full per-finding detail, all 16 adversary findings and 6 judge findings, and the ledger close: `tracker/phase_3.2.md`.
+
+Three spec-versus-reality gaps carried to Step 6.2, none fixed unilaterally: Section 25's build-order line for this phase names a dbVar two-step coordinate-overlap sub-tool that already shipped in build phase 3.1 as `tools/ncbi_coordinate_overlap.py`; Section 6.3 names `spdi/{spdi}/canonical_representative` as the SPDI normalization endpoint, live-confirmed broken server-side (HTTP 500 on every well-formed input tried, including NCBI's own documented example), substituted with the live-working `/spdi/{spdi}/contextual`, unverified beyond not crashing on malformed input since the premise gate's `spdi` coverage is error-path only; and the locked `clinical_significance` 40-char item cap itself, too tight for real, standard ClinVar vocabulary.
+
+Transferable lessons, extending 3.1's list: pre-build live probing before any fixture is written catches a defect class (compound-string fields, comma-joined arrays) that a fixture authored from documentation cannot, and a gate's own "not exercised" coverage statement can itself be incomplete in exactly the direction that turns out to matter most, which is why stating coverage is not the same as stating it correctly.
+
+## What build phase 3.3 delivers
 
 From Section 25:
 
-> `ncbi_dbsnp` (dbSNP REST API for rs identifiers, Variation Services for normalization, clinical significance)
+> `pubtator_annotate` and `litvar2_lookup`, each with the untrusted-source-reader tier separation (read plus one API, no write, no other tools)
 
-Depends on 3.0 and 3.1. Read `docs/ncbi/Tool_implementation_mechanics.md` for the per-tool traps: `global_mafs` is an array, not a scalar, and the clinical fetch runs sequentially after Variation Services normalization.
+Depends on 3.1. The first Layer 3 enrichment tools, and the first tools whose retrieved content is genuinely untrusted external text (PubMed abstracts, text-mined entity annotations) rather than a structured API record, so `production-standards`' multi-agent pipeline gate and its untrusted-source-reader tier separation apply directly. `PubTator3`'s relations endpoint is not yet live-verified (tracker/BOARD.md's Open items table, owner "3.3"); confirm its path and fields before shipping any code that depends on it, per production-standards' "no endpoint ships on an unverified capability."
 
 ## What Step 6.2 delivers, later
 
@@ -256,4 +281,4 @@ If a different agent takes over, read the "Running this project with a different
 
 One operational note that cost real time on 2026-08-03 and is not obvious from any other file: this machine's network dropped three times in one session, killing two premise-gate runs and three review agents, and every failure they produced looked like a code defect at first glance. Before diagnosing any model-dependent failure, check reachability with `curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v1/models`. An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all. A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-08-07.
+Last updated: 2026-08-08.

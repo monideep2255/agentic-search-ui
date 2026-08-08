@@ -44,6 +44,15 @@ What this file proves, mapped to T-3.1-02's acceptance:
       retry, bounded so a huge value cannot park the call (F-3.1-19).
     - NCBI_API_KEY's value never reaches a log record or an exception
       string, on both the success and the failure path.
+    - T-3.2-02: the `"variation"` rate-limit family (NCBI Variation
+      Services, added for `ncbi_dbsnp`) is wired the same way as the three
+      existing families: its default rate (1 req/s, the verified,
+      undisputed figure per Section 6.3 line 1078), its `NCBI_VARIATION_RPS`
+      env override, and its queue-depth cap all resolve correctly, and a
+      call exceeding either the queue depth or the wait ceiling fails fast
+      with `TransportRateLimitedError` rather than joining an unbounded
+      wait, the same property already proven for `eutils` and `pubchem`
+      above, now proven for `variation` too.
 
 What this file deliberately does NOT cover, per `goal-contracts`'s
 "a verify surface must state its own coverage":
@@ -108,6 +117,7 @@ def _reset_transport_state(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("NCBI_EUTILS_RPS", raising=False)
     monkeypatch.delenv("NCBI_DATASETS_RPS", raising=False)
     monkeypatch.delenv("NCBI_PUBCHEM_RPS", raising=False)
+    monkeypatch.delenv("NCBI_VARIATION_RPS", raising=False)
     ncbi_transport.reset_rate_limiters_for_tests()
     yield
     ncbi_transport.reset_rate_limiters_for_tests()
@@ -1305,3 +1315,131 @@ async def test_execute_get_uses_the_fixed_backoff_when_no_retry_after_is_sent() 
     )
 
     assert slept[0] == pytest.approx(1.0)
+
+
+# ===========================================================================
+# T-3.2-02: the "variation" rate-limit family (NCBI Variation Services).
+#
+# These mirror the existing eutils/pubchem coverage above (rate-limiter
+# construction, env override, queue-depth cap, fail-fast-not-unbounded-wait)
+# for the new family, per `.claude/rules/tool-call-budgets.md`'s explicit
+# requirement that every rate-limited API family carry this proof, not only
+# the ones that existed before this ticket.
+# ===========================================================================
+
+
+def test_variation_is_a_registered_rate_limit_family() -> None:
+    """RATE_LIMIT_FAMILIES and RateLimitFamily both name "variation" now."""
+    assert "variation" in ncbi_transport.RATE_LIMIT_FAMILIES
+
+
+def test_get_rate_limiter_variation_default_is_the_verified_floor() -> None:
+    """1 req/s, not the eutils/datasets/pubchem defaults, and not disputed.
+
+    Unlike eutils' 3-vs-10-vs-100 conflict, Section 6.3 line 1078 and
+    Section 21.1 both state this figure plainly with no competing number.
+    """
+    limiter = ncbi_transport.get_rate_limiter("variation")
+    assert limiter.requests_per_second == pytest.approx(1.0)
+
+
+def test_get_rate_limiter_variation_reads_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NCBI_VARIATION_RPS", "2.5")
+    ncbi_transport.reset_rate_limiters_for_tests()
+
+    limiter = ncbi_transport.get_rate_limiter("variation")
+
+    assert limiter.requests_per_second == pytest.approx(2.5)
+
+
+def test_variation_queue_depth_is_smaller_than_eutils_and_datasets() -> None:
+    """A small multiple of ~1 req/s must be a shallower queue than the
+    other families' pools, per the ticket's explicit instruction and the
+    reasoning recorded in `ncbi_transport._FAMILY_CONFIGS`."""
+    eutils_depth = ncbi_transport.get_rate_limiter("eutils")._queue_depth
+    datasets_depth = ncbi_transport.get_rate_limiter("datasets")._queue_depth
+    variation_depth = ncbi_transport.get_rate_limiter("variation")._queue_depth
+
+    assert variation_depth < eutils_depth
+    assert variation_depth < datasets_depth
+    assert variation_depth > 0
+
+
+@pytest.mark.asyncio
+async def test_rate_limiter_variation_fails_fast_when_wait_exceeds_ceiling() -> None:
+    """Same property already proven for eutils above (line ~583), now for
+    variation: a call whose computed wait would exceed its own ceiling
+    fails fast with TransportRateLimitedError rather than sleeping past it.
+    """
+    limiter = ncbi_transport.RateLimiter(requests_per_second=0.01, queue_depth=5, family="variation")
+    clock = {"now": 0.0}
+
+    def frozen_time() -> float:
+        return clock["now"]
+
+    # First call occupies the slot and pushes next_available ~100s ahead.
+    await limiter.acquire(1000.0, time_fn=frozen_time, sleep_fn=_no_sleep)
+
+    with pytest.raises(ncbi_transport.TransportRateLimitedError) as exc_info:
+        await limiter.acquire(1.0, time_fn=frozen_time, sleep_fn=_no_sleep)
+
+    assert exc_info.value.family == "variation"
+    assert exc_info.value.retry_after > 1.0
+
+
+@pytest.mark.asyncio
+async def test_rate_limiter_variation_fails_fast_when_queue_depth_exceeded() -> None:
+    """Same property already proven for pubchem above (line ~603), now for
+    variation, at variation's own (smaller) configured queue depth: once
+    the depth-N queue is full, the next call raises
+    TransportRateLimitedError instead of joining an unbounded wait, per
+    `.claude/rules/tool-call-budgets.md`.
+    """
+    queue_depth = ncbi_transport.get_rate_limiter("variation")._queue_depth
+    limiter = ncbi_transport.RateLimiter(
+        requests_per_second=1.0, queue_depth=queue_depth, family="variation"
+    )
+    clock = {"now": 0.0}
+
+    def frozen_time() -> float:
+        return clock["now"]
+
+    release = asyncio.Event()
+
+    async def controlled_sleep(_seconds: float) -> None:
+        await release.wait()
+
+    # First call: wait == 0 on a fresh limiter, completes immediately, but
+    # leaves next_available 1s ahead of the still-frozen clock so every
+    # later call in this test genuinely waits.
+    await limiter.acquire(10.0, time_fn=frozen_time, sleep_fn=controlled_sleep)
+
+    # Fill the queue to exactly its depth with calls that block on
+    # controlled_sleep until released.
+    pending = [
+        asyncio.ensure_future(limiter.acquire(10.0, time_fn=frozen_time, sleep_fn=controlled_sleep))
+        for _ in range(queue_depth)
+    ]
+    for _ in range(queue_depth):
+        await asyncio.sleep(0)  # yield so each pending call reaches its sleep_fn await
+
+    try:
+        with pytest.raises(ncbi_transport.TransportRateLimitedError) as exc_info:
+            await limiter.acquire(10.0, time_fn=frozen_time, sleep_fn=controlled_sleep)
+        assert exc_info.value.family == "variation"
+        assert "queue is full" in str(exc_info.value)
+    finally:
+        release.set()
+        await asyncio.gather(*pending)
+
+
+def test_variation_family_does_not_alter_existing_families(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Additive-only per the ticket: eutils/datasets/pubchem defaults and
+    queue depths are exactly what they were before this family was added.
+    """
+    assert ncbi_transport.get_rate_limiter("eutils").requests_per_second == pytest.approx(3.0)
+    assert ncbi_transport.get_rate_limiter("datasets").requests_per_second == pytest.approx(5.0)
+    assert ncbi_transport.get_rate_limiter("pubchem").requests_per_second == pytest.approx(5.0)
+    assert ncbi_transport.get_rate_limiter("eutils")._queue_depth == 15
+    assert ncbi_transport.get_rate_limiter("datasets")._queue_depth == 25
+    assert ncbi_transport.get_rate_limiter("pubchem")._queue_depth == 25

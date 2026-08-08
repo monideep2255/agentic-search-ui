@@ -1,4 +1,4 @@
-"""Shared HTTP transport for `ncbi_efetch` (Technical_specification.md Section 6.2).
+"""Shared HTTP transport for `ncbi_efetch` and `ncbi_dbsnp` (Technical_specification.md Section 6.2, 6.3).
 
 This module owns exactly the plumbing every `ncbi_efetch` action shares:
 request execution under a timeout with one backoff retry, a per-API-family
@@ -56,6 +56,23 @@ without a code change once the real ceiling is confirmed. Datasets v2 and
 PubChem get the rule's provisional ~5 req/s throttle for undocumented
 interactive APIs, via `NCBI_DATASETS_RPS` / `NCBI_PUBCHEM_RPS`.
 
+NCBI Variation Services (`api.ncbi.nlm.nih.gov`, added for T-3.2-02, the
+`ncbi_dbsnp` tool's primary normalization path) is a fourth family,
+`"variation"`, with its own pool, separate from all three above. Unlike
+the eutils/datasets/pubchem figures, this one is not part of the
+unresolved 3-vs-10-vs-100 E-utilities conflict: Section 6.3 line 1078 and
+Section 21.1 both state roughly 1 request/second plainly, with no
+competing figure anywhere in the source material.
+`DEFAULT_VARIATION_REQUESTS_PER_SECOND` is that verified figure,
+overridable via `NCBI_VARIATION_RPS`. It is also the tightest pool in the
+roster, which is why `ncbi_dbsnp` (Section 6.3) runs its Variation
+Services normalization call and its dbSNP ESummary clinical fetch
+strictly sequentially rather than in parallel: parallelizing against a
+~1 req/s pool would mean the second call routinely queues behind the
+first regardless, and sequential ordering is separately required anyway
+because the clinical fetch is keyed on the canonical id the normalization
+call produces.
+
 Each family's pool is a bounded FIFO wait queue (`RateLimiter`), not an
 unbounded one. A call that would exceed the queue depth cap or its own
 wait ceiling fails fast with `TransportRateLimitedError`, carrying
@@ -83,6 +100,39 @@ surfaced (F-3.1-19):
     `ClassificationResult.retry_after` for the status-coded families,
     and `_execute_with_retry` prefers it over the fixed backoff when
     deciding how long to wait before its one retry.
+
+## Resolved: classify_status_coded_response's message extraction and Variation Services
+
+Originally flagged here rather than fixed by T-3.2-02, which was scoped to
+adding the `"variation"` rate-limit family only and deliberately did not
+touch either classifier function's body. `classify_status_coded_response`
+(below) is the correct classifier for Variation Services calls, confirmed
+live by T-3.2 pre-build probes (`tracker/phase_3.2.md`): Variation
+Services returns proper HTTP status codes (404 for a nonexistent rsid,
+400 for a malformed SPDI or HGVS expression), the same status-branching
+convention as Datasets v2 and PubChem, never the E-utilities
+200-with-body pattern. So `http_status < 300` always correctly decided
+`ok` vs `error` for a Variation Services response; that half was never
+broken.
+
+What was NOT yet correct until T-3.2-04:
+`_extract_status_coded_error_message`'s body parsing, which supplies only
+the human-readable `error_message` on the `ClassificationResult`, not the
+ok/error verdict itself. It read `body["message"]` (Datasets v2's shape, a
+top-level sibling key) and fell back to `body["Fault"]["Message"]`
+(PubChem's shape). Variation Services' live-confirmed error body is
+`{"error": {"code": ..., "message": ...}}`, with `message` nested one
+level down, inside the `error` object, not at the top level. Neither of
+the first two branches matched that shape, so a Variation Services error
+response fell through to the generic `"HTTP {status} with no structured
+error body"` message: the ok/error classification was unaffected (still
+correctly `"error"`), but the specific reason ("RefSNP not found",
+"Invalid SPDI: '...'") was lost. T-3.2-04 (`ncbi_dbsnp.py`) closed this
+gap with a third, additive branch on `_extract_status_coded_error_message`
+for the nested `{"error": {"message": ...}}` shape, since a Variation-
+Services-shaped API is not unique to `ncbi_dbsnp`, and fixing it in the
+shared helper (rather than only in `ncbi_dbsnp.py`'s own code) keeps it
+fixed for any future caller of this classifier against the same shape.
 
 ## What this module deliberately does NOT do
 
@@ -189,21 +239,20 @@ Reads:
     - Environment variables: NCBI_API_KEY (the E-utilities authenticated
       pool credential; value is never logged or placed in an exception
       string, only the fact of its presence), NCBI_EUTILS_RPS,
-      NCBI_DATASETS_RPS, NCBI_PUBCHEM_RPS (rate overrides, optional)
+      NCBI_DATASETS_RPS, NCBI_PUBCHEM_RPS, NCBI_VARIATION_RPS (rate
+      overrides, optional)
 
 Writes:
     - Nothing. Outbound HTTPS requests only; no local file or database
       writes.
 
 Depended by:
-    - system_03_search_agent.tools.ncbi_eutils_actions (T-3.1-03, not yet
-      written)
-    - system_03_search_agent.tools.ncbi_datasets_actions (T-3.1-04, not
-      yet written)
-    - system_03_search_agent.tools.ncbi_pubchem_actions (T-3.1-05, not yet
-      written)
-    - system_03_search_agent.tools.ncbi_efetch (T-3.1-06/07, not yet
-      written)
+    - system_03_search_agent.tools.ncbi_eutils_actions (T-3.1-03)
+    - system_03_search_agent.tools.ncbi_datasets_actions (T-3.1-04)
+    - system_03_search_agent.tools.ncbi_pubchem_actions (T-3.1-05)
+    - system_03_search_agent.tools.ncbi_efetch (T-3.1-06/07)
+    - system_03_search_agent.tools.ncbi_dbsnp (T-3.2-04; the reason the
+      `"variation"` rate-limit family exists in this module at all)
 """
 
 from __future__ import annotations
@@ -242,9 +291,17 @@ DEFAULT_EUTILS_REQUESTS_PER_SECOND: Final[float] = 3.0
 # HTTPS APIs.
 DEFAULT_DATASETS_REQUESTS_PER_SECOND: Final[float] = 5.0
 DEFAULT_PUBCHEM_REQUESTS_PER_SECOND: Final[float] = 5.0
+# NCBI Variation Services, api.ncbi.nlm.nih.gov. Unlike the eutils figure
+# above, this is NOT part of the unresolved 3-vs-10-vs-100 conflict: Section
+# 6.3 line 1078 and Section 21.1 both state roughly 1 request/second
+# plainly, the tightest pool in the roster. Configurable via
+# NCBI_VARIATION_RPS.
+DEFAULT_VARIATION_REQUESTS_PER_SECOND: Final[float] = 1.0
 
-RateLimitFamily = Literal["eutils", "datasets", "pubchem"]
-RATE_LIMIT_FAMILIES: Final[tuple[RateLimitFamily, ...]] = ("eutils", "datasets", "pubchem")
+RateLimitFamily = Literal["eutils", "datasets", "pubchem", "variation"]
+RATE_LIMIT_FAMILIES: Final[tuple[RateLimitFamily, ...]] = (
+    "eutils", "datasets", "pubchem", "variation",
+)
 
 _ENV_NCBI_API_KEY: Final[str] = "NCBI_API_KEY"
 
@@ -773,6 +830,24 @@ def _extract_status_coded_error_message(body: Any, http_status: int) -> str:
         fault = body.get("Fault")
         if isinstance(fault, dict) and "Message" in fault:
             return str(fault["Message"])
+        # NCBI Variation Services: {"error": {"code", "message"}}, with
+        # "message" nested one level down inside the "error" object rather
+        # than at the top level (Datasets v2's shape) or inside a "Fault"
+        # sibling key (PubChem's shape). Confirmed live 2026-08-08
+        # (tracker/phase_3.2.md's pre-build probes, T-3.2-04): a nonexistent
+        # rsid returns {"error": {"code": 404, "message": "RefSNP not
+        # found"}}, a malformed SPDI or HGVS expression returns {"error":
+        # {"code": 400, "message": "Invalid SPDI: '...'"}}. This branch is
+        # checked last, after the two existing ones, so it can only ever
+        # fire when neither of their shapes matched, and it resolves the
+        # "Known gap" this module's own docstring used to flag as left for
+        # T-3.2-04: the ok/error verdict was always correct for Variation
+        # Services (it comes from `http_status` alone, above), only the
+        # human-readable reason was falling through to the generic
+        # fallback string below.
+        error_obj = body.get("error")
+        if isinstance(error_obj, dict) and "message" in error_obj:
+            return str(error_obj["message"])
     return "HTTP " + str(http_status) + " with no structured error body"
 
 
@@ -866,6 +941,18 @@ _FAMILY_CONFIGS: Final[dict[str, _FamilyConfig]] = {
     "eutils": _FamilyConfig(DEFAULT_EUTILS_REQUESTS_PER_SECOND, 15, "NCBI_EUTILS_RPS"),
     "datasets": _FamilyConfig(DEFAULT_DATASETS_REQUESTS_PER_SECOND, 25, "NCBI_DATASETS_RPS"),
     "pubchem": _FamilyConfig(DEFAULT_PUBCHEM_REQUESTS_PER_SECOND, 25, "NCBI_PUBCHEM_RPS"),
+    # `.claude/rules/tool-call-budgets.md`: queue depth is "a small multiple
+    # of the family's per-second rate". The other three families each use
+    # roughly a 5x multiple (eutils 3 req/s -> 15, datasets/pubchem 5 req/s
+    # -> 25). Applying the same 5x reasoning at variation's ~1 req/s gives 5,
+    # deliberately smaller than eutils' and datasets'/pubchem's depth: a
+    # queue this shallow against a pool this tight (1 request/second) still
+    # represents up to ~5 seconds of worst-case queued wait, which is
+    # already a meaningful fraction of this tool's own 15s-per-call (30s
+    # worst-case two-call) budget (Section 6.3), so a deeper queue here
+    # would let a caller wait past what the tool's own timeout can absorb
+    # before the pool even gets a turn.
+    "variation": _FamilyConfig(DEFAULT_VARIATION_REQUESTS_PER_SECOND, 5, "NCBI_VARIATION_RPS"),
 }
 
 _rate_limiters: dict[str, RateLimiter] = {}
