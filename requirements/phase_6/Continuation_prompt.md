@@ -88,7 +88,7 @@ Current counts, stated once here:
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
 - Premise gate, guardrail: 20 of 20
 - Premise gate, ncbi_efetch: 19 passed, 1 skipped (tunnel)
-- Decisions logged: 226
+- Decisions logged: 228
 - Learnings entries: 54, plus a retrospective
 
 Next in the build order is build phase 3.2, `ncbi_dbsnp`, the second Layer 2 tool. The thing that came before it, F-2.1-C15 on `fix/c15-generation-bound`, is done and merged; see above.

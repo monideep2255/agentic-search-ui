@@ -54,6 +54,7 @@ Concretely:
 - If the system cannot find support for something, it says so and points you somewhere else, instead of making something up.
 - Questions that are off topic, that ask for medical advice, or that try to manipulate the system are turned away before they cost anything.
 - The system can look up any gene name against the live NCBI databases, not just the one it knew about before. This was the single biggest gap, and it is now closed.
+- A dangerous kind of automatic question, one that once crashed our own database and took it offline for everyone, is now stopped before it can ever reach the database at all.
 
 ## What does not work yet
 
@@ -77,14 +78,17 @@ Each of these is a completed, reviewed, merged piece of work.
 | 2.2 | The rule that every sentence must be backed by a source, or the system refuses to answer | 2026-08-03 |
 | 3.0 | The gatekeeper that decides which questions are allowed in at all | 2026-08-04 |
 | 3.1 | The first live government API connection, and gene name lookup | 2026-08-05 |
+| Database safety fix | Stopped a specific kind of automatic question that had previously crashed our own database | 2026-08-07 |
 
-Two of these are worth understanding, because they explain how this project works.
+Three of these are worth understanding, because they explain how this project works.
 
 Sprint 2.1, the expensive lesson. We asked "which diseases are associated with BRCA1?" and got back twenty-five results. All twenty-five had real, working links to official records. Every automated test passed. And every single result was wrong: they were not diseases at all, they were similar genes in other animals. The tests could not see this, because they were checking that the plumbing worked rather than that the answer was true. Finding it took four rounds of review over four days. Everything we do now is shaped by that: before writing any new feature, we now write a test that asks whether the ANSWER is right, and we watch it fail first, so we know the test is capable of catching a lie.
 
 Sprint 3.0, the gatekeeper, and why it has two halves. A gatekeeper that refuses everything is perfectly secure and completely useless. So the tests check both directions: that bad questions get turned away, and just as importantly that good questions get through. That second half caught a real problem. An early version refused the single most important question in the whole product, "which diseases are associated with BRCA1?", because our list of biomedical words contained "disease" and the question said "diseases". One letter. No security test would ever have found that.
 
 Sprint 3.1, the check that paid for itself twice over. Gene name lookup shipped, got checked, and the check found two serious problems: the lookup was completely broken for every gene (a leftover from an unrelated fix), and a search-scoping fix was quietly returning the wrong results instead of the right ones. Both got fixed. Then, because the same team had just spent a whole day learning not to trust a fix that graded its own homework, we paid for one more check on the fix for those two problems. That last check found something worse than either original bug: for a handful of gene names, the government database was matching on a nickname instead of the real name and handing back a real gene that was simply the wrong one. Confidently, with a real-looking source link attached. That is the exact failure this whole project exists to prevent, and it was three checks deep before anyone caught it.
+
+The database safety fix, the same lesson learned twice in one afternoon. A week and a half earlier, one automatically written question had a shape our database could not handle, and it crashed the whole database for everyone using it at the time. This sprint closed that gap: the system now recognises that dangerous shape and refuses to even try running it. But the first attempt at writing that fix had a bug of its own, an obscure one, and a reviewer caught it before it ever shipped. The fix was rewritten, and a second, completely separate reviewer checked the rewrite and confirmed it actually closed the gap. The team had already learned once, on sprint 3.1, that a fix should never be trusted just because the person who wrote it says it works. This sprint proved that lesson applies even to the fix for a problem the team already understood well: knowing exactly what is wrong is not the same as writing a correct fix on the first try.
 
 ## What is next
 
@@ -100,23 +104,22 @@ flowchart LR
         D --> E[Our database, connected]
         E --> F[Every fact cited]
         F --> G[The gatekeeper]
+        G --> H[Gene name lookup]
+        H --> I[Database safety fix]
     end
-    G --> H[Gene name lookup]
-    H --> I[Database safety fix]
     I --> J[Five more data tools]
     J --> K[Update the written specs]
     K --> L[Everything else]
 ```
 
-Gene name lookup is now built AND independently checked, which was the box that had been blocking everything. The system no longer recognises only one gene by name; it asks the government database directly, and by the time three separate checks were done with it, the checking found and fixed a genuinely dangerous problem (see the sprint 3.1 story above) rather than rubber-stamping it. That is the single biggest thing sprint 3.1 changed.
+Gene name lookup is now built AND independently checked, which was the box that had been blocking everything. The system no longer recognises only one gene by name; it asks the government database directly, and by the time three separate checks were done with it, the checking found and fixed a genuinely dangerous problem (see the sprint 3.1 story above) rather than rubber-stamping it. That is the single biggest thing sprint 3.1 changed. The database safety fix that followed immediately after closed the other outstanding piece from that same period.
 
 In order:
 
-1. A small fix for a problem where a badly formed automatic query once overloaded our database server. This was promised for immediately after sprint 3.1, and sprint 3.1 is now fully done.
-2. Sprint 3.2, the genetic variant lookup tool. This connects to the dbSNP database and can look up variants by their rs numbers.
-3. Sprints 3.3 to 3.5, the four remaining data tools: published literature enrichment, disease outbreak data, and clinical trials.
-4. A planned pause to update the written specifications with everything we have learned from actually building it.
-5. Then the remaining work: wiring the live API tools into the answer pipeline, the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
+1. Sprint 3.2, the genetic variant lookup tool. This connects to the dbSNP database and can look up variants by their rs numbers.
+2. Sprints 3.3 to 3.5, the four remaining data tools: published literature enrichment, disease outbreak data, and clinical trials.
+3. A planned pause to update the written specifications with everything we have learned from actually building it.
+4. Then the remaining work: wiring the live API tools into the answer pipeline, the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
 
 ## Problems we know about and are tracking
 
@@ -126,7 +129,7 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 |-------------------------|--------------------|
 | Two small leftover gaps in the gene lookup tool, both in code the answer pipeline cannot reach yet because the pipeline doesn't use this tool yet either. Neither is a correctness risk today; both need a look before the pipeline connects to this tool | Before the answer pipeline is wired to this tool |
 | The gene lookup tool is built and checked, but the step that connects it to the answer pipeline is not yet wired in. It can look up genes but cannot yet use those lookups to answer questions | A later sprint in the 3.x group |
-| A badly formed automatic query once overloaded the database server. We have limited the damage it can do, but not stopped it being written in the first place | Immediately after sprint 3.1 |
+| A separate, smaller flake: about one time in ten, an automatically written question comes out slightly malformed in a way our database rejects outright, with no second attempt. Not dangerous, just occasionally a wasted question | Whenever we next have a working connection to measure it properly, or the specification pause |
 | Two open questions about how the gene lookup tool should handle ambiguous input: should a handful of medical abbreviations that are also real gene names stay blocked, and what should happen when someone types a gene name in lowercase. Neither is a bug, both are genuine judgment calls with real tradeoffs either way | Whenever the product owner decides |
 | Three smaller gaps in the gatekeeper, where a backup layer currently covers for them | The hardening sprint near the end |
 | Two places where the written specification and the working code disagree and need reconciling | The planned specification pause |
