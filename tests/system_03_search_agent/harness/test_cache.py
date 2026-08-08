@@ -316,17 +316,23 @@ def test_registered_tool_schemas_is_fixed_in_code_as_a_tuple() -> None:
         assert "name" in schema
 
 
-def test_registered_tool_schemas_contains_exactly_the_three_built_tools() -> None:
-    """`cypher_query`, `ncbi_dbsnp`, and `ncbi_efetch` exist as of T-3.2-05.
-    The other four names Technical_specification.md Section 4.2 reserves
-    (`clinicaltrials_search`, `litvar2_lookup`, `pathogen_detection`,
-    `pubtator_annotate`) are not yet built and must not appear here as
+def test_registered_tool_schemas_contains_exactly_the_five_built_tools() -> None:
+    """`cypher_query`, `litvar2_lookup`, `ncbi_dbsnp`, `ncbi_efetch`, and
+    `pubtator_annotate` exist as of T-3.3-07. The other two names
+    Technical_specification.md Section 4.2 reserves (`clinicaltrials_search`,
+    `pathogen_detection`) are not yet built and must not appear here as
     placeholders.
     """
     names = [schema["name"] for schema in REGISTERED_TOOL_SCHEMAS]
-    assert names == ["cypher_query", "ncbi_dbsnp", "ncbi_efetch"], (
-        f"expected exactly [cypher_query, ncbi_dbsnp, ncbi_efetch] in that order, "
-        f"got {names!r}"
+    assert names == [
+        "cypher_query",
+        "litvar2_lookup",
+        "ncbi_dbsnp",
+        "ncbi_efetch",
+        "pubtator_annotate",
+    ], (
+        f"expected exactly [cypher_query, litvar2_lookup, ncbi_dbsnp, "
+        f"ncbi_efetch, pubtator_annotate] in that order, got {names!r}"
     )
 
 
@@ -360,6 +366,22 @@ def test_registered_tool_schemas_ncbi_dbsnp_input_schema_matches_the_model() -> 
 
     entry = next(s for s in REGISTERED_TOOL_SCHEMAS if s["name"] == "ncbi_dbsnp")
     assert entry["input_schema"] == NcbiDbsnpInput.model_json_schema()
+
+
+def test_registered_tool_schemas_litvar2_lookup_input_schema_matches_the_model() -> None:
+    """Same proof as the `ncbi_efetch` test above, for T-3.3-07's `litvar2_lookup` entry."""
+    from system_03_search_agent.tools.litvar2_lookup_schemas import Litvar2LookupInput
+
+    entry = next(s for s in REGISTERED_TOOL_SCHEMAS if s["name"] == "litvar2_lookup")
+    assert entry["input_schema"] == Litvar2LookupInput.model_json_schema()
+
+
+def test_registered_tool_schemas_pubtator_annotate_input_schema_matches_the_model() -> None:
+    """Same proof as the `ncbi_efetch` test above, for T-3.3-07's `pubtator_annotate` entry."""
+    from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnotateInput
+
+    entry = next(s for s in REGISTERED_TOOL_SCHEMAS if s["name"] == "pubtator_annotate")
+    assert entry["input_schema"] == PubtatorAnnotateInput.model_json_schema()
 
 
 def test_registered_prefix_byte_identical_across_differing_dynamic_suffixes() -> None:
@@ -399,16 +421,24 @@ def test_prefix_from_registered_tool_schemas_is_byte_identical_across_repeated_c
     assert first == second
 
 
-def test_cypher_query_sorts_before_ncbi_dbsnp_sorts_before_ncbi_efetch() -> None:
-    """Binding point from the ticket brief, now fully checkable (T-3.2-05):
-    cypher_query < ncbi_dbsnp < ncbi_efetch ("ncbi_d" sorts before "ncbi_e").
+def test_registered_tools_sort_in_alphabetical_order() -> None:
+    """Binding point from the ticket brief, extended by T-3.3-07:
+    cypher_query < litvar2_lookup < ncbi_dbsnp < ncbi_efetch < pubtator_annotate.
     """
     prefix = build_stable_prefix(list(REGISTERED_TOOL_SCHEMAS))
 
     idx_cypher_query = prefix.index('"cypher_query"')
+    idx_litvar2_lookup = prefix.index('"litvar2_lookup"')
     idx_ncbi_dbsnp = prefix.index('"ncbi_dbsnp"')
     idx_ncbi_efetch = prefix.index('"ncbi_efetch"')
-    assert idx_cypher_query < idx_ncbi_dbsnp < idx_ncbi_efetch
+    idx_pubtator_annotate = prefix.index('"pubtator_annotate"')
+    assert (
+        idx_cypher_query
+        < idx_litvar2_lookup
+        < idx_ncbi_dbsnp
+        < idx_ncbi_efetch
+        < idx_pubtator_annotate
+    )
 
 
 def test_registered_tool_schemas_content_appears_serialized_in_the_prefix() -> None:
@@ -452,15 +482,17 @@ def test_registered_tool_schemas_content_appears_serialized_in_the_prefix() -> N
 # case.
 # ---------------------------------------------------------------------------
 
-EXPECTED_TOOL_REGISTRY_VERSION = "v3"
-EXPECTED_TOOL_REGISTRY_FINGERPRINT = "e5b702b50893"  # cypher_query, ncbi_dbsnp, ncbi_efetch
+EXPECTED_TOOL_REGISTRY_VERSION = "v4"
+EXPECTED_TOOL_REGISTRY_FINGERPRINT = "461384ad560f"  # cypher_query, litvar2_lookup, ncbi_dbsnp, ncbi_efetch, pubtator_annotate
 
 # `ncbi_dbsnp` was this file's "not registered yet" stand-in before T-3.2-05
-# registered it for real; `pubtator_annotate` (still unbuilt as of this
-# ticket) takes over that role so this fake schema's name cannot collide
-# with a name the live registry now actually contains.
+# registered it for real, and `pubtator_annotate` took over that role for
+# build phase 3.2 before T-3.3-07 registered IT for real too.
+# `clinicaltrials_search` (still unbuilt as of this ticket, per Section 4.2's
+# seven-tool list) takes over the role now, so this fake schema's name
+# cannot collide with a name the live registry actually contains.
 _FAKE_TOOL_SCHEMA = {
-    "name": "pubtator_annotate",
+    "name": "clinicaltrials_search",
     "description": "A tool that is not registered yet.",
     "input_schema": {"type": "object", "properties": {}},
 }
@@ -512,7 +544,7 @@ def test_adding_a_tool_without_bumping_the_version_raises() -> None:
 
     message = str(excinfo.value)
     assert "without a contract-version bump" in message
-    assert "pubtator_annotate" in message
+    assert "clinicaltrials_search" in message
     assert "Bump TOOL_REGISTRY_VERSION" in message
 
 

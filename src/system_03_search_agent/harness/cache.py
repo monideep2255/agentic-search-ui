@@ -13,6 +13,11 @@ Depends on:
       for `REGISTERED_TOOL_SCHEMAS`'s ncbi_dbsnp entry; T-3.2-05)
     - system_03_search_agent.tools.ncbi_efetch_schemas (NcbiEfetchInput,
       for `REGISTERED_TOOL_SCHEMAS`'s ncbi_efetch entry; T-3.1-12)
+    - system_03_search_agent.tools.litvar2_lookup_schemas (Litvar2LookupInput,
+      for `REGISTERED_TOOL_SCHEMAS`'s litvar2_lookup entry; T-3.3-07)
+    - system_03_search_agent.tools.pubtator_annotate_schemas
+      (PubtatorAnnotateInput, for `REGISTERED_TOOL_SCHEMAS`'s
+      pubtator_annotate entry; T-3.3-07)
 
 Reads:
     - Nothing at runtime. `SYSTEM_INSTRUCTIONS` and `_BIOLINK_CONCEPT_SCHEMA`
@@ -77,8 +82,10 @@ from collections.abc import Mapping, Sequence
 from typing import Any, Final
 
 from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
+from system_03_search_agent.tools.litvar2_lookup_schemas import Litvar2LookupInput
 from system_03_search_agent.tools.ncbi_dbsnp_schemas import NcbiDbsnpInput
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
+from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnotateInput
 
 # ---------------------------------------------------------------------------
 # Section 1: system instructions and behavioral directives.
@@ -157,17 +164,18 @@ def _build_tool_schema_section(tool_schemas: list[dict] | None) -> str:
 # alphabetically ... and fixed in code": `_build_tool_schema_section` above
 # re-sorts by name regardless of the order this tuple is written in, so this
 # ordering is documentation of intent, not the sole enforcement point. As of
-# T-3.2-05, three tools are registered: `ncbi_dbsnp` sorts after
-# `cypher_query` and before `ncbi_efetch` ("ncbi_d" < "ncbi_e"). When a
-# fourth tool is added, insert it in its own alphabetical position among
-# `clinicaltrials_search`, `litvar2_lookup`, `pathogen_detection`,
-# `pubtator_annotate` (none built yet).
+# T-3.3-07, five tools are registered, in alphabetical order: `cypher_query`,
+# `litvar2_lookup`, `ncbi_dbsnp`, `ncbi_efetch`, `pubtator_annotate`. When a
+# sixth tool is added, insert it in its own alphabetical position among
+# `clinicaltrials_search`, `pathogen_detection` (neither built yet).
 #
 # F-3.1-11 (judge finding 11, MAJOR): TOOL_REGISTRY_VERSION records the
 # contract version of the registered tool set. Adding or removing a tool
 # must bump this version, per system-design-patterns pattern 10: a tool-
 # registry change is coordinated with a contract-version bump, never silent.
-# Currently v3: cypher_query (v1) + ncbi_efetch (v2) + ncbi_dbsnp (v3).
+# Currently v4: cypher_query (v1) + ncbi_efetch (v2) + ncbi_dbsnp (v3) +
+# litvar2_lookup + pubtator_annotate (v4, T-3.3-07, both added in this build
+# phase together).
 #
 # F-3.1-11 (reopened): the version above was decorative until this ledger
 # existed. Nothing imported it, nothing tested it, and build phase 3.2 could
@@ -196,7 +204,7 @@ def _build_tool_schema_section(tool_schemas: list[dict] | None) -> str:
 # elsewhere in this module's tests own that case.
 # ---------------------------------------------------------------------------
 
-TOOL_REGISTRY_VERSION: Final[str] = "v3"
+TOOL_REGISTRY_VERSION: Final[str] = "v4"
 
 # Append-only. One row per contract version the tool registry has ever
 # declared, mapping that version to `tool_registry_fingerprint()` over the
@@ -205,6 +213,7 @@ _TOOL_REGISTRY_FINGERPRINTS: Final[dict[str, str]] = {
     "v1": "5f0ef0d584b9",  # cypher_query
     "v2": "99358f2c0c86",  # cypher_query, ncbi_efetch
     "v3": "e5b702b50893",  # cypher_query, ncbi_dbsnp, ncbi_efetch
+    "v4": "461384ad560f",  # cypher_query, litvar2_lookup, ncbi_dbsnp, ncbi_efetch, pubtator_annotate
 }
 
 REGISTERED_TOOL_SCHEMAS: Final[tuple[dict[str, Any], ...]] = (
@@ -220,6 +229,18 @@ REGISTERED_TOOL_SCHEMAS: Final[tuple[dict[str, Any], ...]] = (
             "from NCBI Gene, ClinVar, dbVar, PubMed, and MedGen."
         ),
         "input_schema": CypherQueryInput.model_json_schema(),
+    },
+    {
+        "name": "litvar2_lookup",
+        "description": (
+            "Look up a genetic variant's literature evidence via LitVar2: "
+            "resolve an rsid, HGVS expression, or variant name to its "
+            "linked genes and clinical significance, then fetch the PMIDs "
+            "of publications that mention it (capped at 50 with an honest "
+            "total count). Use for variant-to-literature questions not yet "
+            "answerable from the graph or from ncbi_dbsnp alone."
+        ),
+        "input_schema": Litvar2LookupInput.model_json_schema(),
     },
     {
         "name": "ncbi_dbsnp",
@@ -246,6 +267,17 @@ REGISTERED_TOOL_SCHEMAS: Final[tuple[dict[str, Any], ...]] = (
             "PubChem PUG REST."
         ),
         "input_schema": NcbiEfetchInput.model_json_schema(),
+    },
+    {
+        "name": "pubtator_annotate",
+        "description": (
+            "Normalize a free-text entity mention (a gene, disease, "
+            "chemical, or variant name) to its identifier via PubTator3, "
+            "or fetch the entity annotations PubTator3 has extracted from "
+            "one or more PubMed articles. Use for entity normalization or "
+            "publication-level annotation not yet in the graph."
+        ),
+        "input_schema": PubtatorAnnotateInput.model_json_schema(),
     },
 )
 
