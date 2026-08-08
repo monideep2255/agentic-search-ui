@@ -36,7 +36,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> The F-2.1-C15 generation bound is DONE on `fix/c15-generation-bound`, opened as a pull request 2026-08-07, pending user review and merge. Next: build phase 3.2, `ncbi_dbsnp`.
+> The F-2.1-C15 generation bound is DONE. Merged as PR #24 (commit `15efe57`) on 2026-08-07. Next: build phase 3.2, `ncbi_dbsnp`.
 
 Full detail on what PR #23 (build phase 3.1's re-review debt) fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07. Full detail on the F-2.1-C15 fix, including the bypass a fresh-context review found in its own first version before merge and the second review that confirmed the fix, is `tracker/fix_c15_generation_bound.md`.
 
@@ -58,7 +58,7 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> The F-2.1-C15 generation bound is DONE on `fix/c15-generation-bound`, opened as a pull request 2026-08-07, pending user review and merge. Next: build phase 3.2, `ncbi_dbsnp`.
+> The F-2.1-C15 generation bound is DONE. Merged as PR #24 (commit `15efe57`) on 2026-08-07. Next: build phase 3.2, `ncbi_dbsnp`.
 
 Build phase 3.1 merged as PR #22 on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
@@ -91,7 +91,7 @@ Current counts, stated once here:
 - Decisions logged: 226
 - Learnings entries: 54, plus a retrospective
 
-Next in the build order is build phase 3.2, `ncbi_dbsnp`, the second Layer 2 tool. The thing that came before it, F-2.1-C15 on `fix/c15-generation-bound`, is done and awaiting merge; see above.
+Next in the build order is build phase 3.2, `ncbi_dbsnp`, the second Layer 2 tool. The thing that came before it, F-2.1-C15 on `fix/c15-generation-bound`, is done and merged; see above.
 
 The build phase 3.1 tool surface is complete and its findings are settled: 40 of 42 numbered findings closed, F-3.1-04 carried to T-3.1-28 (the answer-path half: Act-step wiring, Layer 2 citation, trust gate), and exactly two left open on genuine product decisions, F-3.1-41 and F-3.1-42, detailed in `tracker/phase_3.1.md`.
 
@@ -225,7 +225,6 @@ One decision below is still waiting on the product owner: whether `security/` st
 | Env var name divergence | Section 24 names `PER_USER_DAILY_CAP_USD`; the code uses `PER_USER_DAILY_QUERY_CAP`, since it holds a query count, not dollars | Step 6.2 |
 | F-2.2-01 | Generation intermittently emits Cypher with no parentheses around node patterns, the graph rejects it, and nothing retries. Roughly 1 run in 10, last measured at build phase 2.2's open. Deliberately NOT fixed on `fix/c15-generation-bound`: the ticket's own acceptance criteria allowed either a retry or recording it as still open, and a retry would touch `cypher_query.py`'s error-handling path in the same review pass as a critical safety fix, which `tracker/fix_c15_generation_bound.md` argues against. Cannot be re-measured live from this environment (same tunnel constraint as T-3.0-07) | Step 6.2, or whenever the live graph tunnel is next reachable |
 | F-2.1-J4-02, prompt injection | The guardrail now refuses the injected-instruction shape at admission, verified by 3.0's own premise gate. The `xfail` marker itself is NOT cleared: doing so needs 2.1's gate run five consecutive times against the live graph, and the SSH tunnel cannot be opened from this environment (the Layer-7 proxy cannot tunnel raw SSH, and `block-bash-delete.sh` blocks `ssh` as an execution wrapper). Roughly ten minutes of work whenever the tunnel is reachable | T-3.0-07, environment-gated, not phase-gated |
-| F-2.1-C15, generation half | DONE, PR open. A first attempt during build phase 3.0 inverted its contract, implemented a validator rule with no analysis, and left a rule that rejected `[:orthologous_to {weight: 2*3}]` as unbounded; reverted. The fix on `fix/c15-generation-bound` rejects any variable-length relationship pattern before execution; its own first version was itself found bypassable by a fresh-context review (a nested bracket defeated it), fixed with a standalone pattern, confirmed by a second review. Full account: `tracker/fix_c15_generation_bound.md` | User review and merge of the `fix/c15-generation-bound` pull request |
 | F-3.0-01 | Section 10.5 requires refusing a write-seeking request and names no `GuardPayload.category` for it. `off_topic` is used and the real explanation lives only in the reason string. Needs either a new enum member (additive, v1-legal) or a spec amendment | Step 6.2 |
 | ADV-03, ADV-06, ADV-07 | Three guardrail defense-in-depth gaps where the Guard-tier classifier remains the covering layer: non-Latin-script injection phrases are invisible to the pre-filter's literal phrase list, the write-verb list has gaps, and `classifier.build_messages` does not escape a `</query>` in the payload. Re-homed 2026-08-04 from "the next round", which was never scheduled | 6.1 |
 | ADV-02-residual | A non-English question written in pure ASCII with no cognate and no identifier is still refused as off-topic by the pre-filter. Measured: "Welche Krankheiten sind mit dem Gen assoziiert?" A keyword allowlist cannot do language detection, and per-language vocabulary is the infinite-blocklist trap. Mitigated: the classifier now judges off-topic, and the pre-filter abstains on any non-ASCII letter or on a query containing no English function word | 6.1, with the other guardrail hardening |

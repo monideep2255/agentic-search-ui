@@ -2,7 +2,7 @@
 
 Dedicated fix, not a numbered build phase, per `tracker/BOARD.md`'s dated entry: immediately after build phase 3.1 merges, on branch `fix/c15-generation-bound`. Carries T-3.0-08's acceptance criteria, since that ticket is what named the scope when build phase 3.0 could not take it.
 
-Depends on: build phase 3.1 (done, merged as PR #23)
+Depends on: build phase 3.1 (done, merged as PR #22, its re-review debt closed via PR #23)
 Branch: `fix/c15-generation-bound`
 Source finding: `tracker/phase_2.1.md`'s F-2.1-C15 writeup, and `DECISIONS.md`'s 2026-07-31 entry
 Reference: `LEARNINGS.md`'s 2026-08-04 entry, the previous attempt at this same ticket, reverted for skipping analysis
