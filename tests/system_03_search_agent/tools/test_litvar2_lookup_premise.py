@@ -83,7 +83,14 @@ this live gate's); a `variant_search` response where every row fails to
 parse, judge round 1's F-3.3-J-02 window (live LitVar2 has no known query
 that returns a non-empty array of all-unparseable rows, so this gate
 cannot reach that shape either; covered by a mocked case in
-`test_litvar2_lookup.py` instead).
+`test_litvar2_lookup.py` instead); a `variant_search` row that parses as
+a dict but carries no genuinely identifying content at all (F-3.3-RR-01
+re-review's F-3.3-RR-02 window, e.g. a bare `{}`), which would ship as a
+content-free `status: "ok"` match under the current count-based (not
+content-based) empty-guard, since live LitVar2 has never been observed
+returning such a row and this gate only asserts behavior confirmed
+against the real API, per LEARNINGS.md row 60; see
+`litvar2_lookup.py`'s module docstring for the full disposition.
 
 Depends on:
     - system_03_search_agent.tools.litvar2_lookup (does not exist yet, by

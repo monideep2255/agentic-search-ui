@@ -107,6 +107,24 @@ item-scoped analog of `ncbi_dbsnp.py`'s whole-call refusal for
 `spdi_canonical`: without a trustworthy identity there is nothing left to
 attach the rest of that match's fields to.
 
+F-3.3-RR-02, a known, deliberately uncovered gap: the `if not matches:`
+guard in `_variant_search` (below) that decides `empty` versus `ok` is
+COUNT-based, not content-based. A raw row that parses as a dict but
+carries no `_id`/`rsid`/`name`/anything else recognizable (e.g. `{}`)
+still produces a kept `Litvar2VariantMatch` with every field `None` or
+empty, so a body of several such rows ships `status: "ok"` with content-
+free matches and a `source_url`, the same "confident success over
+nothing useful" shape F-3.3-J-02 was filed against, reached by a route
+that guard does not cover. This is NOT reachable on live LitVar2 today
+(the pre-build probes never observed a `_id`-less autocomplete row; see
+`test_litvar2_lookup_premise.py`'s coverage statement), the same
+reachability argument F-3.3-J-02 itself was filed against, and it is left
+undefended rather than fixed: tightening this guard a second time, after
+its first version already shipped one regression (F-3.3-RR-01), is a
+risk this ticket declines to take on an unreachable path. If live LitVar2
+is ever observed returning a genuinely content-free row, revisit this
+guard with a live fixture, not a guessed one, per LEARNINGS.md row 60.
+
 `pmids` truncation (`maxItems: 50`, Section 6.5) is a DIFFERENT, spec-
 authorized kind of truncation, never confused with the withhold-not-
 truncate policy above: the spec explicitly caps the array and explicitly
@@ -582,7 +600,21 @@ async def _variant_search(query: str) -> Litvar2LookupOutput:
         # identical guard for entity_lookup ("Every element failed to
         # parse as an object: treat the same as a genuine no-match rather
         # than a confident ok with an empty list").
-        return Litvar2LookupOutput(status="empty", mode="variant_search")
+        #
+        # F-3.3-RR-01: this "empty" classification must NOT come at the
+        # cost of the disclosure `_parse_variant_matches` already computed
+        # for exactly these rows. `withheld` is non-empty whenever every
+        # row was excluded rather than simply absent (a genuine `[]` body
+        # never reaches this branch at all, see the `if not body:` return
+        # above), so dropping it here would make a total-withholding
+        # response byte-identical to a genuine no-match, the same silent-
+        # loss failure class `_cap_fields_withheld`'s own docstring names
+        # for the overflow case, now closed for the all-excluded case too.
+        return Litvar2LookupOutput(
+            status="empty",
+            mode="variant_search",
+            fields_withheld=_cap_fields_withheld(withheld) if withheld else None,
+        )
 
     return Litvar2LookupOutput(
         status="ok",

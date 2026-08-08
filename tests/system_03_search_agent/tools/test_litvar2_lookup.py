@@ -340,6 +340,15 @@ async def test_all_rows_unparseable_is_empty_not_fabricated_ok(monkeypatch: pyte
     parsed content (F-3.3-J-02). Mirrors
     test_pubtator_annotate.py's equivalent all-elements-failed-to-parse
     guard for entity_lookup.
+
+    F-3.3-RR-01 regression coverage: this is the ALL-rows-excluded case,
+    not the two-row partial exclusion
+    test_over_length_identity_field_excludes_the_whole_match covers. The
+    fix round 1 guard that produced status="empty" here also discarded
+    the withheld notes for all three rows, making this response byte-
+    identical to a genuine `[]` no-match. status="empty" AND a populated,
+    row-naming fields_withheld must both hold; neither alone is correct
+    current behavior.
     """
     over_length_id = "litvar@" + ("r" * 60) + "##"
     body = [
@@ -356,12 +365,21 @@ async def test_all_rows_unparseable_is_empty_not_fabricated_ok(monkeypatch: pyte
         f"with variant_matches={output.variant_matches!r}"
     )
     assert output.variant_matches == []
+    assert output.fields_withheld is not None, (
+        "status='empty' from total exclusion must still disclose what was "
+        "withheld, never silently match a genuine no-match's fields_withheld=None"
+    )
+    assert len(output.fields_withheld) == 3
+    for i, note in enumerate(output.fields_withheld):
+        assert f"raw response entry {i}" in note
+        assert "excluded" in note
 
 
 @pytest.mark.asyncio
 async def test_all_rows_not_objects_is_empty_not_fabricated_ok(monkeypatch: pytest.MonkeyPatch) -> None:
     """Same guard, triggered via the non-dict-row exclusion path instead of
-    the over-length-identity path.
+    the over-length-identity path. F-3.3-RR-01: also asserts disclosure
+    survives on this path, same as the over-length-identity variant above.
     """
     _install(monkeypatch, [_json_response(["not-an-object", 42, None])])
 
@@ -369,6 +387,11 @@ async def test_all_rows_not_objects_is_empty_not_fabricated_ok(monkeypatch: pyte
 
     assert output.status == "empty"
     assert output.variant_matches == []
+    assert output.fields_withheld is not None
+    assert len(output.fields_withheld) == 3
+    for i, note in enumerate(output.fields_withheld):
+        assert f"raw response entry {i}" in note
+        assert "not an object" in note
 
 
 # ---------------------------------------------------------------------------
