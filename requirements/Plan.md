@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-08-07.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE, all six build phases merged. Step 6.3 (build v1) underway. Build phases 1.0 to 3.0 merged as PRs #5, #6, #9, #12, #15, #18, #19. Build phase 3.1 (`ncbi_efetch`, the first Layer 2 tool) merged as PR #22, with the premise restated and the answer-path half (Act-step wiring, Layer 2 citation, trust gate) carried to T-3.1-28. It merged without the adversarial pass over its own fix round; that debt was fully closed via three independent re-review rounds and a fix round, merged as PR #23. 40 of 42 numbered findings closed, two left open on genuine product decisions (F-3.1-41, F-3.1-42). Next up, in this order: F-2.1-C15, then open build phase 3.2, `ncbi_dbsnp`. Step 6.2 moved to run after the 3.x tool phases, and its security scan is paused indefinitely on cost |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 225 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 226 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 

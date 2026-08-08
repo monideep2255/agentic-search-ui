@@ -36,9 +36,9 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Build phase 3.1 is DONE. Its outstanding re-review debt closed via PR #23 (commit `97aec83`) on 2026-08-07, after three independent re-review rounds, the last one by a reviewer dispatched specifically to avoid trusting a same-session self-check. Next: the F-2.1-C15 generation bound on `fix/c15-generation-bound`, then open 3.2.
+> The F-2.1-C15 generation bound is DONE on `fix/c15-generation-bound`, opened as a pull request 2026-08-07, pending user review and merge. Next: build phase 3.2, `ncbi_dbsnp`.
 
-Full detail on what PR #23 fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07.
+Full detail on what PR #23 (build phase 3.1's re-review debt) fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07. Full detail on the F-2.1-C15 fix, including the bypass a fresh-context review found in its own first version before merge and the second review that confirmed the fix, is `tracker/fix_c15_generation_bound.md`.
 
 ### Step 3: how a phase runs across sessions
 
@@ -58,11 +58,13 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Build phase 3.1 is DONE. Merged as PR #23 (commit `97aec83`) on 2026-08-07. Next: the F-2.1-C15 generation bound on `fix/c15-generation-bound`, then open 3.2.
+> The F-2.1-C15 generation bound is DONE on `fix/c15-generation-bound`, opened as a pull request 2026-08-07, pending user review and merge. Next: build phase 3.2, `ncbi_dbsnp`.
 
 Build phase 3.1 merged as PR #22 on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
 Two things were deliberately left open rather than fixed, both genuine product decisions, not bugs: whether the stopword list should exclude entries that are themselves real gene symbols (F-3.1-41), and what happens when a gene is mentioned in lowercase (F-3.1-42). Three more minor, non-blocking findings from the final review are carried to before `ncbi_efetch` gets wired into `act_node` (F-3.1-50, F-3.1-51, and F-3.1-46 already tracked).
+
+F-2.1-C15's generation half, the finding where a generated query took the graph server down for every user, closed on `fix/c15-generation-bound` the same day: `validate_cypher` now rejects any generated Cypher carrying a variable-length relationship pattern (`[:orthologous_to*]` or similar) before execution, the mechanism behind the original OOM. The existing `_MEMORY_GUARD_SQL` session-level mitigation is unchanged. This fix's own first version, sliced from the existing relationship-hop regex, was itself found bypassable by a fresh-context adversarial review before merge: a nested bracket (a list-valued property) alongside the variable-length spec defeated it, the same non-nesting-regex defect class already fixed once in this file for node patterns (F-2.1-A9) and never generalized to relationship hops. Rebuilt as a standalone, wildcard-free pattern matched directly against the quote-masked query string, independent of the hop regex entirely. A second independent review confirmed the bypass closed, found no new one, checked for ReDoS (none), and found one narrow, non-blocking gap against full Cypher grammar unreachable by this system's actual generation, documented rather than fixed. F-2.2-01 (a separate, lower-severity generation flake, roughly 1 run in 10) was deliberately left open rather than folded into the same branch, per the ticket's own allowed alternative. Full account: `tracker/fix_c15_generation_bound.md`.
 
 Eight build phases are done and merged into `main`. The first six complete the Step 6.1 prototype group; 3.0 and 3.1 are the first two Step 6.3 v1 phases:
 
@@ -79,17 +81,17 @@ Eight build phases are done and merged into `main`. The first six complete the S
 
 Current counts, stated once here:
 
-- Python tests: 1798
+- Python tests: 1812
 - Frontend tests: 120
 - Playwright end-to-end tests: 3
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
 - Premise gate, guardrail: 20 of 20
 - Premise gate, ncbi_efetch: 19 passed, 1 skipped (tunnel)
-- Decisions logged: 225
-- Learnings entries: 53, plus a retrospective
+- Decisions logged: 226
+- Learnings entries: 54, plus a retrospective
 
-Next in the build order is build phase 3.2, `ncbi_dbsnp`, the second Layer 2 tool, but one thing comes before it and is dated: F-2.1-C15 on `fix/c15-generation-bound`, which `tracker/BOARD.md` dates to immediately after 3.1 merges and which is the finding where a generated query took the graph server down for every user.
+Next in the build order is build phase 3.2, `ncbi_dbsnp`, the second Layer 2 tool. The thing that came before it, F-2.1-C15 on `fix/c15-generation-bound`, is done and awaiting merge; see above.
 
 The build phase 3.1 tool surface is complete and its findings are settled: 40 of 42 numbered findings closed, F-3.1-04 carried to T-3.1-28 (the answer-path half: Act-step wiring, Layer 2 citation, trust gate), and exactly two left open on genuine product decisions, F-3.1-41 and F-3.1-42, detailed in `tracker/phase_3.1.md`.
 
@@ -174,7 +176,7 @@ PR #22 merged without the adversarial pass over its own fix round, the stated pr
 | 2: three more fresh-context reviewers, live against NCBI | Found a genuine soundness gap neither round caught: NCBI's `[sym]` tag and the Datasets symbol endpoint both match on gene aliases, so an "unambiguous" match could silently return a confidently WRONG gene. Also a pre-existing bug that left one round-1 critical fix unreachable in production, a second URL-encoding gap, and a regression in round 2's own wait-budget fix. All fixed same-day |
 | Final: one more fresh-context reviewer, dispatched specifically to avoid trusting same-session self-verification | APPROVE. Live re-confirmed both critical fixes and the alias-matching fix, re-ran the full gate suite independently, confirmed no test assertion was weakened, spot-checked 10 closed findings. Three new minor non-blocking findings filed. Merged as commit `97aec83` |
 
-Final release gate: 1798 Python tests (1715 passed, 82 skipped, 1 xfailed), `ruff check src/ tests/` at the same 4 pre-existing errors this branch found and confirmed unrelated, doc drift clean, premise gate 19 passed / 1 skipped (tunnel-gated case 16). Full per-finding detail, all 42 numbered findings, and the final reviewer's evidence: `tracker/phase_3.1.md`.
+Final release gate, as measured for PR #23: 1798 Python tests (1715 passed, 82 skipped, 1 xfailed), `ruff check src/ tests/` at the same 4 pre-existing errors this branch found and confirmed unrelated, doc drift clean, premise gate 19 passed / 1 skipped (tunnel-gated case 16). Full per-finding detail, all 42 numbered findings, and the final reviewer's evidence: `tracker/phase_3.1.md`.
 
 Transferable lessons for the remaining tool phases:
 - Capture fixtures from live responses, never author them from a reading of the docs. Two of round 1's criticals were hidden by fixtures hand-written from documentation, which tested the author's belief rather than the interface; the same pattern reappeared inside a FIX round's own new test fixtures during round 2.
@@ -221,9 +223,9 @@ One decision below is still waiting on the product owner: whether `security/` st
 | F-2.1-01 | The spec says 10 concept labels, the live graph has 11 (the eleventh is `NamedThing`) | Step 6.2 |
 | F-2.1-16 | `budget_for_step` diverges from Section 19.1's per-query-class shape, approved but unreconciled | Step 6.2 |
 | Env var name divergence | Section 24 names `PER_USER_DAILY_CAP_USD`; the code uses `PER_USER_DAILY_QUERY_CAP`, since it holds a query count, not dollars | Step 6.2 |
-| F-2.2-01 | Generation intermittently emits Cypher with no parentheses around node patterns, the graph rejects it, and nothing retries. Roughly 1 run in 10. Re-homed 2026-08-04: rides with F-2.1-C15 rather than a tool phase, since 3.1 to 3.5 never open `cypher_generation.py` | The `fix/c15-generation-bound` branch, immediately after 3.1 merges |
+| F-2.2-01 | Generation intermittently emits Cypher with no parentheses around node patterns, the graph rejects it, and nothing retries. Roughly 1 run in 10, last measured at build phase 2.2's open. Deliberately NOT fixed on `fix/c15-generation-bound`: the ticket's own acceptance criteria allowed either a retry or recording it as still open, and a retry would touch `cypher_query.py`'s error-handling path in the same review pass as a critical safety fix, which `tracker/fix_c15_generation_bound.md` argues against. Cannot be re-measured live from this environment (same tunnel constraint as T-3.0-07) | Step 6.2, or whenever the live graph tunnel is next reachable |
 | F-2.1-J4-02, prompt injection | The guardrail now refuses the injected-instruction shape at admission, verified by 3.0's own premise gate. The `xfail` marker itself is NOT cleared: doing so needs 2.1's gate run five consecutive times against the live graph, and the SSH tunnel cannot be opened from this environment (the Layer-7 proxy cannot tunnel raw SSH, and `block-bash-delete.sh` blocks `ssh` as an execution wrapper). Roughly ten minutes of work whenever the tunnel is reachable | T-3.0-07, environment-gated, not phase-gated |
-| F-2.1-C15, generation half | Nothing stops generation producing an unbounded traversal in the first place. Attempted by a builder during 3.0 which inverted its contract, implemented a validator rule with no analysis, and left a rule that rejects `[:orthologous_to {weight: 2*3}]` as unbounded. Reverted; the attempt is preserved as a diff. DATED 2026-08-04 by the product owner rather than left as an open slot, because this is the finding where a generated query took the graph server down for every user | The `fix/c15-generation-bound` branch, immediately after 3.1 merges |
+| F-2.1-C15, generation half | DONE, PR open. A first attempt during build phase 3.0 inverted its contract, implemented a validator rule with no analysis, and left a rule that rejected `[:orthologous_to {weight: 2*3}]` as unbounded; reverted. The fix on `fix/c15-generation-bound` rejects any variable-length relationship pattern before execution; its own first version was itself found bypassable by a fresh-context review (a nested bracket defeated it), fixed with a standalone pattern, confirmed by a second review. Full account: `tracker/fix_c15_generation_bound.md` | User review and merge of the `fix/c15-generation-bound` pull request |
 | F-3.0-01 | Section 10.5 requires refusing a write-seeking request and names no `GuardPayload.category` for it. `off_topic` is used and the real explanation lives only in the reason string. Needs either a new enum member (additive, v1-legal) or a spec amendment | Step 6.2 |
 | ADV-03, ADV-06, ADV-07 | Three guardrail defense-in-depth gaps where the Guard-tier classifier remains the covering layer: non-Latin-script injection phrases are invisible to the pre-filter's literal phrase list, the write-verb list has gaps, and `classifier.build_messages` does not escape a `</query>` in the payload. Re-homed 2026-08-04 from "the next round", which was never scheduled | 6.1 |
 | ADV-02-residual | A non-English question written in pure ASCII with no cognate and no identifier is still refused as off-topic by the pre-filter. Measured: "Welche Krankheiten sind mit dem Gen assoziiert?" A keyword allowlist cannot do language detection, and per-language vocabulary is the infinite-blocklist trap. Mitigated: the classifier now judges off-topic, and the pre-filter abstains on any non-ASCII letter or on a query containing no English function word | 6.1, with the other guardrail hardening |
