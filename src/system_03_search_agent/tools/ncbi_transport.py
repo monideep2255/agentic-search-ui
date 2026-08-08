@@ -253,6 +253,11 @@ Depended by:
     - system_03_search_agent.tools.ncbi_efetch (T-3.1-06/07)
     - system_03_search_agent.tools.ncbi_dbsnp (T-3.2-04; the reason the
       `"variation"` rate-limit family exists in this module at all)
+    - system_03_search_agent.tools.pubtator_annotate (T-3.3-05; the reason
+      the `"pubtator"` rate-limit family and the `{"detail": ...}` error
+      message branch exist in this module at all)
+    - system_03_search_agent.tools.litvar2_lookup (T-3.3-06; the reason the
+      `"litvar2"` rate-limit family exists in this module)
 """
 
 from __future__ import annotations
@@ -297,10 +302,21 @@ DEFAULT_PUBCHEM_REQUESTS_PER_SECOND: Final[float] = 5.0
 # plainly, the tightest pool in the roster. Configurable via
 # NCBI_VARIATION_RPS.
 DEFAULT_VARIATION_REQUESTS_PER_SECOND: Final[float] = 1.0
+# PubTator3 (T-3.3-02, ncbi_dbsnp's sibling tool for the two Layer 3
+# enrichment tools) and LitVar2 have no published numeric rate limit
+# (Section 21.1), so both get the rule's provisional ~5 req/s throttle for
+# undocumented interactive HTTPS APIs, the same treatment Datasets v2 and
+# PubChem already received. Separate pools, not shared with each other or
+# with "datasets"/"pubchem": the hosts are unrelated
+# (www.ncbi.nlm.nih.gov/research/pubtator3-api and .../litvar2-api), and a
+# shared pool would let contention on one host's calls throttle the other's
+# unnecessarily. Configurable via NCBI_PUBTATOR_RPS / NCBI_LITVAR2_RPS.
+DEFAULT_PUBTATOR_REQUESTS_PER_SECOND: Final[float] = 5.0
+DEFAULT_LITVAR2_REQUESTS_PER_SECOND: Final[float] = 5.0
 
-RateLimitFamily = Literal["eutils", "datasets", "pubchem", "variation"]
+RateLimitFamily = Literal["eutils", "datasets", "pubchem", "variation", "pubtator", "litvar2"]
 RATE_LIMIT_FAMILIES: Final[tuple[RateLimitFamily, ...]] = (
-    "eutils", "datasets", "pubchem", "variation",
+    "eutils", "datasets", "pubchem", "variation", "pubtator", "litvar2",
 )
 
 _ENV_NCBI_API_KEY: Final[str] = "NCBI_API_KEY"
@@ -848,6 +864,24 @@ def _extract_status_coded_error_message(body: Any, http_status: int) -> str:
         error_obj = body.get("error")
         if isinstance(error_obj, dict) and "message" in error_obj:
             return str(error_obj["message"])
+        # PubTator3 (annotate_publications 400) and LitVar2 (both error
+        # paths): {"detail": "..."}, a top-level string, not nested and not
+        # named "message". Confirmed live 2026-08-08 (tracker/phase_3.3.md's
+        # pre-build probes, T-3.3-02): a nonexistent-PMID biocjson export
+        # returns {"detail": "Could not retrieve publications"}; a
+        # not-found LitVar2 variant id returns {"detail": "Variant not
+        # found: ..."}. Checked last, after the three existing branches, so
+        # it only ever fires when none of their shapes matched. A caller
+        # whose empty-query 400 comes back as a bare JSON array of strings
+        # (F-3.3-02, PubTator3 entity_lookup with no query) still falls
+        # through every branch here, including this one, to the generic
+        # fallback below: that shape is deliberately not special-cased,
+        # since T-3.3-03's schema-layer minLength closes the only path a
+        # caller could reach it from in production, and a generic-but-safe
+        # message is the correct behavior for a shape no production call
+        # can trigger.
+        if "detail" in body:
+            return str(body["detail"])
     return "HTTP " + str(http_status) + " with no structured error body"
 
 
@@ -953,6 +987,11 @@ _FAMILY_CONFIGS: Final[dict[str, _FamilyConfig]] = {
     # would let a caller wait past what the tool's own timeout can absorb
     # before the pool even gets a turn.
     "variation": _FamilyConfig(DEFAULT_VARIATION_REQUESTS_PER_SECOND, 5, "NCBI_VARIATION_RPS"),
+    # Same 5x-multiple reasoning as "datasets"/"pubchem" above (5 req/s ->
+    # 25 queue depth): both new families share that provisional 5 req/s
+    # figure, so they share its queue-depth reasoning too.
+    "pubtator": _FamilyConfig(DEFAULT_PUBTATOR_REQUESTS_PER_SECOND, 25, "NCBI_PUBTATOR_RPS"),
+    "litvar2": _FamilyConfig(DEFAULT_LITVAR2_REQUESTS_PER_SECOND, 25, "NCBI_LITVAR2_RPS"),
 }
 
 _rate_limiters: dict[str, RateLimiter] = {}
