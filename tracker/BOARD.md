@@ -4,7 +4,7 @@ The index of every phase. Maintained by the `task-tracker` skill. Per-phase tick
 
 Build phases and their dependencies come from `requirements/Technical_specification.md` Section 25, which is the source of truth. This board never invents a phase.
 
-Last updated: 2026-08-07.
+Last updated: 2026-08-08.
 
 ## Status counts
 
@@ -12,11 +12,11 @@ Listed in flow order. Work moves left to right on the board, from `todo` to `don
 
 | Status | Count | Who may set it |
 |--------|-------|----------------|
-| To do | 18 | Lead |
+| To do | 16 | Lead |
 | In progress | 0 | The builder that claimed it |
 | Blocked | 0 | The builder that hit the block, reason required |
 | In review | 0 | The builder that finished |
-| Done | 13 | Judge only, never the builder |
+| Done | 15 | Judge only, never the builder |
 
 `blocked` sits mid-flow rather than on the way to done, because it is where work stalls, not a step toward finishing.
 
@@ -53,7 +53,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 3.0 | `phase/3.0-guardrail-node` | Full guardrail replacing the stub: validation, prompt-injection rejection, forbidden types, rate and cost pre-checks | 2.0 | v1 | done | refined | | | F-3.0-01 write category gap, T-3.0-07 blocked on the graph tunnel |
 | 3.1 | `phase/3.1-ncbi-efetch` | ncbi_efetch over E-utilities and Datasets API v2 | 2.0, 3.0 | v1 | done | refined | | | F-3.1-41 stopword/gene ambiguity, F-3.1-42 lowercase gene mentions |
 | 3.2 | `phase/3.2-ncbi-dbsnp` | ncbi_dbsnp over Variation Services and dbSNP ESummary (the dbVar coordinate-overlap sub-tool already shipped in 3.1, see phase file) | 3.1 | v1 | done | refined | | | F-3.2-03 spec-broken endpoint, clinical_significance cap too tight for real data, Section 25 scope-note gap, ncbi_dbsnp rsid-shape residual |
-| 3.3 | `phase/3.3-enrichment-tools` | pubtator_annotate and litvar2_lookup, each with untrusted-source-reader separation | 3.1 | v1 | todo | tech_refine | | | relations endpoint unverified |
+| 3.3 | `phase/3.3-enrichment-tools` | pubtator_annotate and litvar2_lookup, each with untrusted-source-reader separation | 3.1 | v1 | done | refined | | | relations endpoint unverified, entity_lookup citation gap, litvar2_lookup per-variant citation gap, disclosure-policy asymmetry, check_learnings_coverage.py format blind spot |
 | 3.4 | `phase/3.4-citation-trust-full` | Provenance extended to Layers 2 and 3, the two-tier risk gate, freshness and conflict resolution | 2.2, 3.1, 3.2, 3.3, 3.5 | v1 | todo | tech_refine | | eval-harness | |
 | 3.5 | `phase/3.5-pathogen-clinicaltrials-tools` | pathogen_detection and clinicaltrials_search, completing the seven-tool roster | 3.1 | v1 | todo | tech_refine | | | |
 | 4.0 | `phase/4.0-rest-sse-hardening` | The REST plus SSE adapter finalized as the public API surface | 2.2 | v1 | todo | tech_refine | | | F-1.2-01, F-1.2-02, F-1.2-03 |
@@ -81,7 +81,11 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | T-3.0-07 blocked on the graph tunnel | Clearing the F-2.1-J4-02 `xfail` needs build phase 2.1's premise gate run five consecutive times against the live graph. The SSH tunnel cannot be opened from this environment: the Layer-7 proxy cannot tunnel raw SSH, and the deletion-block hook independently blocks `ssh` as an execution wrapper. Both are working as designed. The substantive half is done, since the guardrail now refuses the injected-instruction shape at admission | Whenever the graph tunnel is reachable |
 | ADV-03/06/07 guardrail hardening | Three defense-in-depth gaps from build phase 3.0's adversary round, each one where the Guard-tier classifier remains the covering layer: non-Latin-script injection phrases are invisible to the pre-filter's literal phrase list, the write-verb list has gaps, and `classifier.build_messages` does not escape a `</query>` in the payload so a query can forge an early close. RE-HOMED 2026-08-04: previously recorded as "the next round", and no next round was scheduled | Build phase 6.1, the hardening-release pass, or an earlier second adversary round on the guardrail if one is called |
 | Golden fixture domain sign-off | Nobody is named to verify the clinical and human-variation expected answers. A wrong expected answer makes a wrong agent pass, which is the failure the gate exists to catch | Build phase 5.1 |
-| PubTator3 relations endpoint | Path and fields not live-verified | Build phase 3.3 ship |
+| PubTator3 relations endpoint | Path and fields not live-verified, deferred to a fast-follow addition once verified; `pubtator_annotate` has no `mode` for entity-pair relations (chemical-disease, gene-disease) | Step 6.2 reconciliation, or a fast-follow ticket once verified |
+| entity_lookup citation gap | `pubtator_annotate`'s `entity_lookup` mode ships no `source_url` at all (spec-bound: Section 6.4's entity item schema names no such field), while every other output surface in the tool roster cites its source. F-3.3-A-05, `tracker/phase_3.3.md` | Step 6.2 reconciliation |
+| litvar2_lookup per-variant citation gap | `litvar2_lookup`'s single top-level `source_url` cites a LitVar2 search UI parameterized by the caller's own query, not a record page for the data returned, and the 50 shipped PMIDs carry no per-PMID citation (spec-bound: Section 6.5 provides one top-level field only). F-3.3-J-06, `tracker/phase_3.3.md` | Step 6.2 reconciliation |
+| disclosure-policy asymmetry | `pubtator_annotate` withholds an over-cap field silently (`None`, no signal); `litvar2_lookup`, built in the same phase, discloses every withholding via `fields_withheld`. Both are defensible reads of their own ticket's scope; the asymmetry itself is the thing to decide. F-3.3-J-04, `tracker/phase_3.3.md` | Whenever the product owner decides |
+| check_learnings_coverage.py format blind spot | The script's `_STATUS_LINE_RE` only recognizes a narrative `### F-x: title` block with a `Severity: ... Status: word` line (phase 3.2's per-finding format). Phase 3.3's judge and adversary rounds recorded their findings in table rows (`\| F-3.3-J-01 \| closed \| ... \|`), which the script structurally cannot see, so it reported "nothing to cover" despite roughly 20 real closed findings. Not a false pass in outcome this time (LEARNINGS.md was updated by hand anyway, per LEARNINGS.md's 2026-08-08 entries), but the gate itself did not force it | Whenever the script is next touched, widen `_STATUS_LINE_RE` (or add a second pattern) to also recognize a table-row state column |
 | Whole-repo security scan, PAUSED INDEFINITELY | Paused 2026-08-03 by product-owner decision, on cost: the multi-agent scan is token-expensive and is not being funded for prototype code. This is the third and broadest of three deferrals (2026-07-27, 2026-07-28, 2026-08-03), and the reasoning has sharpened each time. The current one: the system has never been tested with a real user, the query set still needs refinement, and hardening code whose shape will change once real queries arrive pays for a surface that is still moving. What still holds while it is paused: the five hooks stay armed, `production-standards` and `ai-security-standards` gate every line written, Layer 1 is read-only by credential rather than by instruction, and `pip-audit` and `ruff` are installed and cost nothing to run. The agreed shape when it does run is ONE deep dive over the ENTIRE repository, not a commit range, so there is no baseline SHA to carry forward and nothing to forget to widen | EXPOSURE, not a phase number. First contact with a real user is the trigger: if this is deployed, given a public URL, or shown to anyone who is not the product owner, the scan runs first |
 | F-2.2-T-01-residual | A declarative injected as a comma-spliced clause inside a single wh-question still licenses its own words to the grounding pass, since it opens on a wh-word, carries no interior question mark, and is one sentence to the splitter. Neither the wh-opener rule nor the truncate-at-question-mark rule sees it. Needs clause-level rather than sentence-level filtering. The safe direction of failure: it withholds nothing, it admits one attacker-supplied clause as licensed content. Pinned by a strict xfail so it fails loudly when clause-level filtering lands | The Step 6.2 reconciliation, alongside the Section 8.2 spec decision |
 | F-2.2-A-05 | The flagship gene-disease claim classifies `low` risk, so triangulation never runs and it answers on a single origin. `risk_tier_for` receives only the field and the row type, and a `Disease` endpoint row is byte-identical to an identifier-lookup row at that boundary, which Section 8.3.1 explicitly calls low risk. Deliberately not fixed by widening the tier tables, which would have broken the protected case. Closing it needs the traversed edge label plumbed through `Finding` and `SynthFinding`. Guarded by four tests that catch a future naive widen | The Step 6.2 reconciliation |
