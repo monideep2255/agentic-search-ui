@@ -41,6 +41,18 @@ Covers, per the ticket's explicit requirements:
       status="error", never a fabricated "ok".
     - The never-raises wrapper: an unexpected exception inside the impl is
       caught and reported as a status="error" output, not propagated.
+    - F-3.3-J-01: more than 20 withheld-field notes across a batch of
+      matches is capped, not a pydantic.ValidationError that collapses a
+      successful call into status="error"; the overflow count is named
+      explicitly, never silently dropped.
+    - F-3.3-J-02: a non-empty response where every row fails to parse (or
+      every row's identity field is excluded) classifies status="empty",
+      never a fabricated status="ok" with an empty variant_matches list.
+      A PARTIAL exclusion (some rows parse, some don't) still stays "ok".
+    - F-3.3-J-03: a fields_withheld note about a kept match is keyed to
+      that match's OUTPUT position in variant_matches, not its raw
+      response array index, so the note stays correct after an earlier
+      row is excluded and later matches shift down.
 
 Depends on:
     - system_03_search_agent.tools.litvar2_lookup (module under test)
@@ -292,18 +304,171 @@ async def test_short_clinical_significance_terms_are_unaffected(monkeypatch: pyt
 
 @pytest.mark.asyncio
 async def test_over_length_identity_field_excludes_the_whole_match(monkeypatch: pytest.MonkeyPatch) -> None:
-    """An over-cap litvar_id (an identity field) drops the whole match, never a truncated id."""
+    """An over-cap litvar_id (an identity field) drops the whole match, never a truncated id.
+
+    Two matches: raw row 0's litvar_id is over cap (excluded), raw row 1 is
+    valid (kept). Regression for F-3.3-J-02: excluding one row out of a
+    non-empty batch must NOT collapse the whole response to "empty"; a
+    partial result still ships as "ok" with the surviving match.
+    """
     over_length_id = "litvar@" + ("r" * 60) + "##"
     assert len(over_length_id) > 60
-    body = _autocomplete_body(litvar_id=over_length_id)
-    _install(monkeypatch, [_json_response(body)])
+    excluded_entry = _autocomplete_body(litvar_id=over_length_id)[0]
+    kept_entry = _autocomplete_body(litvar_id="litvar@rs999##", rsid="rs999")[0]
+    _install(monkeypatch, [_json_response([excluded_entry, kept_entry])])
 
     output = await litvar2_lookup(_variant_search_input("rs334"))
 
     assert output.status == "ok", output.error
-    assert output.variant_matches == []
+    assert len(output.variant_matches) == 1
+    assert output.variant_matches[0].rsid == "rs999"
     assert output.fields_withheld is not None
     assert any("excluded" in note for note in output.fields_withheld)
+    assert any("raw response entry 0" in note for note in output.fields_withheld)
+
+
+# ---------------------------------------------------------------------------
+# F-3.3-J-02 regression: every row failing to parse must classify "empty",
+# never a fabricated "ok" with an empty variant_matches list.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_all_rows_unparseable_is_empty_not_fabricated_ok(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A non-empty API body where every row exceeds its identity cap must
+    classify status="empty", never a confident status="ok" over zero
+    parsed content (F-3.3-J-02). Mirrors
+    test_pubtator_annotate.py's equivalent all-elements-failed-to-parse
+    guard for entity_lookup.
+    """
+    over_length_id = "litvar@" + ("r" * 60) + "##"
+    body = [
+        _autocomplete_body(litvar_id=over_length_id)[0],
+        _autocomplete_body(litvar_id=over_length_id, rsid="rs001")[0],
+        _autocomplete_body(litvar_id=over_length_id, rsid="rs002")[0],
+    ]
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await litvar2_lookup(_variant_search_input("rs334"))
+
+    assert output.status == "empty", (
+        f"expected empty when every row fails to parse, got {output.status!r} "
+        f"with variant_matches={output.variant_matches!r}"
+    )
+    assert output.variant_matches == []
+
+
+@pytest.mark.asyncio
+async def test_all_rows_not_objects_is_empty_not_fabricated_ok(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Same guard, triggered via the non-dict-row exclusion path instead of
+    the over-length-identity path.
+    """
+    _install(monkeypatch, [_json_response(["not-an-object", 42, None])])
+
+    output = await litvar2_lookup(_variant_search_input("rs334"))
+
+    assert output.status == "empty"
+    assert output.variant_matches == []
+
+
+# ---------------------------------------------------------------------------
+# F-3.3-J-01 regression: fields_withheld must stay within its schema's
+# max_length=20, honestly, never raise ValidationError and collapse a
+# successful call into status="error".
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_many_withheld_fields_are_capped_not_a_validation_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """10 matches, each with an over-length gene AND an over-length
+    clinical_significance term: 20 raw withholding events, well above the
+    20-item fields_withheld cap once earlier phases' own withheld notes are
+    considered too. Before the fix, this raised pydantic.ValidationError
+    inside _variant_search, which the outer never-raises wrapper turned
+    into status="error" over what should have been a fully successful
+    call. After the fix, the call still succeeds with a capped, honest
+    fields_withheld list.
+    """
+    # Two over-cap gene entries and two over-cap clinical_significance
+    # entries per match, six matches: 4 withholding events x 6 = 24 raw
+    # notes, above the 20-item fields_withheld cap. _MAX_VARIANT_MATCHES
+    # (10) is not the constraint being tested here, so 6 matches keeps
+    # the count safely under it while still exceeding 20 notes.
+    injected_gene_a = "x" * 31  # exceeds _MAX_GENE_CHARS (30)
+    injected_gene_b = "z" * 31
+    injected_term_a = "y" * 31  # exceeds _MAX_CLINICAL_SIG_CHARS (30)
+    injected_term_b = "w" * 31
+    entries = []
+    for i in range(6):
+        entry = _autocomplete_body(
+            litvar_id=f"litvar@rs{i}##",
+            rsid=f"rs{i}",
+            gene=[injected_gene_a, injected_gene_b],
+            clinical_significance=[injected_term_a, injected_term_b],
+        )[0]
+        entries.append(entry)
+    _install(monkeypatch, [_json_response(entries)])
+
+    output = await litvar2_lookup(_variant_search_input("rs334"))
+
+    assert output.status == "ok", (
+        f"F-3.3-J-01: expected a successful call with capped fields_withheld, "
+        f"got status={output.status!r} error={output.error!r}"
+    )
+    assert len(output.variant_matches) == 6
+    assert output.fields_withheld is not None
+    assert len(output.fields_withheld) <= 20, (
+        f"fields_withheld exceeded its own schema cap of 20: "
+        f"{len(output.fields_withheld)} items"
+    )
+    # The fact that more than 20 withholding events happened (24 raw
+    # events: 6 matches x 2 gene + 2 clinical_significance) must not be
+    # silently lost just because only 20 notes fit; the last slot names
+    # the overflow explicitly rather than the list simply being cut short.
+    assert any("more fields withheld" in note for note in output.fields_withheld), (
+        f"expected the overflow to be named explicitly, got "
+        f"{output.fields_withheld!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# F-3.3-J-03 regression: fields_withheld notes must key to the OUTPUT
+# index in variant_matches, not the raw response array's index.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_withheld_note_index_matches_output_position_after_exclusion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Raw row 0 is excluded (over-length litvar_id); raw row 1 is kept and
+    carries an over-length clinical_significance term. The kept row ends
+    up at variant_matches[0], not variant_matches[1], so its
+    fields_withheld note must say variant_matches[0], never
+    variant_matches[1] (F-3.3-J-03).
+    """
+    over_length_id = "litvar@" + ("r" * 60) + "##"
+    excluded_entry = _autocomplete_body(litvar_id=over_length_id)[0]
+    kept_entry = _autocomplete_body(
+        litvar_id="litvar@rs999##", rsid="rs999", clinical_significance=[RS334_LONG_TERM]
+    )[0]
+    _install(monkeypatch, [_json_response([excluded_entry, kept_entry])])
+
+    output = await litvar2_lookup(_variant_search_input("rs334"))
+
+    assert output.status == "ok", output.error
+    assert len(output.variant_matches) == 1
+    assert output.variant_matches[0].rsid == "rs999"
+    assert output.fields_withheld is not None
+    cs_notes = [note for note in output.fields_withheld if "clinical_significance" in note]
+    assert cs_notes, f"expected a clinical_significance withheld note, got {output.fields_withheld!r}"
+    assert all(note.startswith("variant_matches[0]") for note in cs_notes), (
+        f"expected the withheld note to reference the OUTPUT index (0), "
+        f"not the raw response index (1): {cs_notes!r}"
+    )
+    assert not any(note.startswith("variant_matches[1]") for note in cs_notes)
 
 
 # ---------------------------------------------------------------------------

@@ -181,7 +181,15 @@ _LITVAR2_BASE: Final[str] = "https://www.ncbi.nlm.nih.gov/research/litvar2-api"
 _UI_BASE: Final[str] = "https://www.ncbi.nlm.nih.gov/research/litvar2/"
 
 # Field length/count caps, mirroring litvar2_lookup_schemas.py's own
-# Field(max_length=...)/Field(max_length=...) (list) constraints exactly.
+# Field(max_length=...) (string) and Field(max_length=...) (list)
+# constraints exactly, including _MAX_FIELDS_WITHHELD_ITEMS below (added
+# closing F-3.3-J-01/F-3.3-J-05: this was the one list this module built
+# with no matching pre-construction cap, so an output withholding more
+# than 20 fields raised pydantic.ValidationError, via
+# Litvar2LookupOutput.fields_withheld's own max_length=20, instead of
+# shipping a capped, honest list. Every other list already had one:
+# _MAX_VARIANT_MATCHES, _MAX_GENE_ITEMS, _MAX_CLINICAL_SIG_ITEMS,
+# _MAX_PMIDS).
 # Pydantic raises on an over-cap value rather than truncating it, so every
 # value that could plausibly come from untrusted upstream content is
 # checked here, before construction, per production-standards.md's
@@ -201,6 +209,7 @@ _MAX_VARIANT_MATCHES: Final[int] = 10
 _MAX_GENE_ITEMS: Final[int] = 5
 _MAX_CLINICAL_SIG_ITEMS: Final[int] = 10
 _MAX_PMIDS: Final[int] = 50
+_MAX_FIELDS_WITHHELD_ITEMS: Final[int] = 20
 
 # `litvar@rs334##` -> `rs334`. Used only to build a more specific UI
 # citation for publications_lookup; a litvar_id that does not match this
@@ -234,6 +243,44 @@ def _withheld_note(text: str) -> str:
     wrong-answer risk the way truncating an actual citable field would be.
     """
     return _cap(text, _MAX_WITHHELD_NOTE_CHARS)
+
+
+def _cap_fields_withheld(notes: list[str]) -> list[str]:
+    """Cap `fields_withheld` at the schema's own `max_length=20` (F-3.3-J-01).
+
+    Every other list this module builds (`_MAX_VARIANT_MATCHES`,
+    `_MAX_GENE_ITEMS`, `_MAX_CLINICAL_SIG_ITEMS`, `_MAX_PMIDS`) is capped
+    BEFORE it reaches an output constructor. `fields_withheld` was the one
+    exception: `Litvar2LookupOutput.fields_withheld` enforces
+    `max_length=20` and pydantic RAISES on an over-cap list rather than
+    truncating it, so an uncapped `fields_withheld` could turn a fully
+    successful upstream response into a fabricated `status: "error"` (the
+    outer never-raises wrapper in `litvar2_lookup` catches the resulting
+    `ValidationError` and reports it as an unexpected-exception refusal,
+    the more the tool legitimately withholds the more likely it is to
+    refuse everything).
+
+    Silently dropping the overflow notes here would be a second instance
+    of the exact silent-truncation failure class this whole ticket exists
+    to avoid (F-3.2-A-01, F-3.3-03): the fact that MORE than 20 fields
+    were withheld would be lost with no signal at all. So when there are
+    more than `_MAX_FIELDS_WITHHELD_ITEMS` notes, the first
+    `_MAX_FIELDS_WITHHELD_ITEMS - 1` notes ship unchanged and the final
+    slot is replaced with a summary naming how many additional notes did
+    not fit, rather than simply cutting the list at the cap and staying
+    silent about the rest.
+    """
+    if len(notes) <= _MAX_FIELDS_WITHHELD_ITEMS:
+        return notes
+    kept = notes[: _MAX_FIELDS_WITHHELD_ITEMS - 1]
+    overflow = len(notes) - len(kept)
+    kept.append(
+        _withheld_note(
+            f"...and {overflow} more fields withheld (the withholding count "
+            f"exceeded the {_MAX_FIELDS_WITHHELD_ITEMS}-item disclosure cap)"
+        )
+    )
+    return kept
 
 
 def _build_source_url(identifier: str | None) -> str | None:
@@ -312,6 +359,11 @@ def _parse_clinical_significance(raw: Any, match_index: int) -> tuple[list[str],
     (LitVar2's own `data_clinical_significance` field is present on some
     autocomplete rows and absent on others, live-confirmed) returns `([],
     [])`, never an error: an absent field is a fact, not a failure.
+
+    `match_index` (F-3.3-J-03) is the OUTPUT position this match will
+    occupy in the final `variant_matches` list, never the raw response
+    array's own enumeration index: see `_parse_variant_matches`'s
+    docstring for why the two can differ once any match is excluded.
     """
     if not isinstance(raw, list):
         return [], []
@@ -339,7 +391,12 @@ def _parse_clinical_significance(raw: Any, match_index: int) -> tuple[list[str],
 
 
 def _parse_gene(raw: Any, match_index: int) -> tuple[list[str], list[str]]:
-    """Cap `gene` to its item-length and list-count limits. Same withhold-per-item policy as clinical_significance."""
+    """Cap `gene` to its item-length and list-count limits. Same withhold-per-item policy as clinical_significance.
+
+    `match_index` (F-3.3-J-03) is the OUTPUT position this match will
+    occupy in `variant_matches`, not the raw response array's index. See
+    `_parse_variant_matches`'s docstring.
+    """
     if not isinstance(raw, list):
         return [], []
     kept: list[str] = []
@@ -356,7 +413,9 @@ def _parse_gene(raw: Any, match_index: int) -> tuple[list[str], list[str]]:
     return kept, withheld
 
 
-def _parse_variant_match(raw: Any, index: int) -> tuple[Litvar2VariantMatch | None, list[str]]:
+def _parse_variant_match(
+    raw: Any, raw_index: int, output_index: int
+) -> tuple[Litvar2VariantMatch | None, list[str]]:
     """Build one `Litvar2VariantMatch` from a raw autocomplete row, or exclude it.
 
     Returns `(match_or_None, withheld_notes)`. `match` is `None` only when
@@ -366,9 +425,22 @@ def _parse_variant_match(raw: Any, index: int) -> tuple[Litvar2VariantMatch | No
     identity. Every other over-cap field (`gene`, `name`, `hgvs`,
     `clinical_significance`) is withheld at the field or item level while
     the rest of the match still ships.
+
+    F-3.3-J-03: `raw_index` and `output_index` are deliberately two
+    different numbers. `raw_index` is this row's position in the raw
+    response array, used ONLY to describe an excluded match (one that
+    never occupies any position in `variant_matches`, since it was never
+    appended). `output_index` is the position this match WILL occupy in
+    the final `variant_matches` output list if it is kept, i.e. how many
+    matches have already been kept before this one; every field-level
+    note about a KEPT match (`gene`, `name`, `hgvs`,
+    `clinical_significance`) is keyed to `output_index`, so
+    `variant_matches[i]` in a `fields_withheld` note always refers to a
+    position that actually exists in the returned array, even after an
+    earlier row was excluded and every later kept match shifted down.
     """
     if not isinstance(raw, dict):
-        return None, [_withheld_note(f"variant_matches[{index}]: not an object, excluded")]
+        return None, [_withheld_note(f"raw response entry {raw_index}: not an object, excluded")]
 
     withheld: list[str] = []
 
@@ -377,7 +449,7 @@ def _parse_variant_match(raw: Any, index: int) -> tuple[Litvar2VariantMatch | No
     if litvar_id is not None and len(litvar_id) > _MAX_LITVAR_ID_CHARS:
         return None, [
             _withheld_note(
-                f"variant_matches[{index}]: excluded, litvar_id "
+                f"raw response entry {raw_index}: excluded, litvar_id "
                 f"{len(litvar_id)} chars exceeds {_MAX_LITVAR_ID_CHARS} cap"
             )
         ]
@@ -387,19 +459,19 @@ def _parse_variant_match(raw: Any, index: int) -> tuple[Litvar2VariantMatch | No
     if rsid is not None and len(rsid) > _MAX_RSID_CHARS:
         return None, [
             _withheld_note(
-                f"variant_matches[{index}]: excluded, rsid "
+                f"raw response entry {raw_index}: excluded, rsid "
                 f"{len(rsid)} chars exceeds {_MAX_RSID_CHARS} cap"
             )
         ]
 
-    gene, gene_withheld = _parse_gene(raw.get("gene"), index)
+    gene, gene_withheld = _parse_gene(raw.get("gene"), output_index)
     withheld.extend(gene_withheld)
 
     name_raw = raw.get("name")
     name: str | None = None
     if isinstance(name_raw, str):
         if len(name_raw) > _MAX_NAME_CHARS:
-            withheld.append(_withheld_note(f"variant_matches[{index}].name: {name_raw}"))
+            withheld.append(_withheld_note(f"variant_matches[{output_index}].name: {name_raw}"))
         else:
             name = name_raw
 
@@ -407,7 +479,7 @@ def _parse_variant_match(raw: Any, index: int) -> tuple[Litvar2VariantMatch | No
     hgvs: str | None = None
     if isinstance(hgvs_raw, str):
         if len(hgvs_raw) > _MAX_HGVS_CHARS:
-            withheld.append(_withheld_note(f"variant_matches[{index}].hgvs: {hgvs_raw}"))
+            withheld.append(_withheld_note(f"variant_matches[{output_index}].hgvs: {hgvs_raw}"))
         else:
             hgvs = hgvs_raw
 
@@ -415,7 +487,7 @@ def _parse_variant_match(raw: Any, index: int) -> tuple[Litvar2VariantMatch | No
     pmids_count = pmids_count_raw if isinstance(pmids_count_raw, int) and pmids_count_raw >= 0 else 0
 
     clinical_significance, cs_withheld = _parse_clinical_significance(
-        raw.get("data_clinical_significance"), index
+        raw.get("data_clinical_significance"), output_index
     )
     withheld.extend(cs_withheld)
 
@@ -441,11 +513,21 @@ def _parse_variant_matches(raw_list: list[Any]) -> tuple[list[Litvar2VariantMatc
     silently not returned. This module does not invent an unauthorized
     additive field for that count; only `fields_withheld` (F-3.3-03) is
     this ticket's authorized addition.
+
+    F-3.3-J-03: `output_index`, the position a match will occupy in
+    `matches` if kept, is computed as `len(matches)` BEFORE that match is
+    appended, i.e. the count of matches already kept. This is what lets
+    `_parse_variant_match`'s field-level notes stay correct after an
+    earlier row is excluded: the row's `raw_index` in the source array and
+    its eventual `output_index` in `variant_matches` diverge the moment
+    any row is excluded, and only `output_index` is ever a valid position
+    to cite in a `fields_withheld` note about `variant_matches[i]`.
     """
     matches: list[Litvar2VariantMatch] = []
     withheld: list[str] = []
-    for i, item in enumerate(raw_list[:_MAX_VARIANT_MATCHES]):
-        match, item_withheld = _parse_variant_match(item, i)
+    for raw_index, item in enumerate(raw_list[:_MAX_VARIANT_MATCHES]):
+        output_index = len(matches)
+        match, item_withheld = _parse_variant_match(item, raw_index, output_index)
         withheld.extend(item_withheld)
         if match is not None:
             matches.append(match)
@@ -487,12 +569,27 @@ async def _variant_search(query: str) -> Litvar2LookupOutput:
         return Litvar2LookupOutput(status="empty", mode="variant_search")
 
     matches, withheld = _parse_variant_matches(body)
+    if not matches:
+        # F-3.3-J-02: the API body was non-empty, but every row either
+        # failed to parse as an object or had its identity field
+        # (litvar_id/rsid) excluded for exceeding its cap, so nothing
+        # usable actually survived. Shipping status="ok" here with an
+        # empty variant_matches would be a confident success over zero
+        # content, exactly the fabricated-success shape the phase premise
+        # forbids (line 12 of tracker/phase_3.3.md: "A no-match query is
+        # classified `empty`, not fabricated as `ok`"). Treat it as a
+        # genuine no-match instead, mirroring pubtator_annotate.py's
+        # identical guard for entity_lookup ("Every element failed to
+        # parse as an object: treat the same as a genuine no-match rather
+        # than a confident ok with an empty list").
+        return Litvar2LookupOutput(status="empty", mode="variant_search")
+
     return Litvar2LookupOutput(
         status="ok",
         mode="variant_search",
         variant_matches=matches,
         source_url=_build_source_url(query),
-        fields_withheld=withheld or None,
+        fields_withheld=_cap_fields_withheld(withheld) if withheld else None,
     )
 
 

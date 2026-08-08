@@ -73,7 +73,21 @@ schema-layer `minLength: 1` this phase adds makes it unreachable from a
 schema-valid call, so this gate does not attempt to reach it either);
 concurrent load against the new `"pubtator"` rate-limit family's actual 5
 req/s pacing (a `RateLimiter` unit test's job, not this gate's, which runs
-sequentially).
+sequentially); a response where more than one field is withheld (set to
+`None`) within the same call, e.g. both `entities[].name` and
+`annotations[].identifier` over-cap at once, judge round 1's F-3.3-J-01
+window on the sibling `litvar2_lookup` tool (there a count cap on the
+`fields_withheld` list; here there is no such list, but the untested shape
+is the same: several withheld fields landing together in one response,
+not exercised live or by any mocked case in `test_pubtator_annotate.py`
+today); a response where every `entity_lookup` element fails to parse
+(every array item is a non-object) in a single non-empty call, judge round
+1's F-3.3-J-02 window on the sibling tool. `pubtator_annotate.py:280-284`
+guards this case in code and it is not exercised by this live gate against
+real data; it is also not exercised by any mocked case in
+`test_pubtator_annotate.py` today, so this specific shape has zero test
+coverage of any kind, live or mocked, named here rather than left silently
+absent.
 
 Depends on:
     - system_03_search_agent.tools.pubtator_annotate (does not exist yet, by

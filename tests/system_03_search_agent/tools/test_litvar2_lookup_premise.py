@@ -67,11 +67,23 @@ own coverage")
 Exercises: both modes, the `ok`/`empty` split for `variant_search`, the
 `ok`/`error` split for `publications_lookup`, the `maxItems: 50` truncation
 with an honest `total_pmids`, the F-3.3-03 withhold-not-truncate path, and
-the encoding trap as a behavioral assertion. Does NOT exercise: the
-zero-PMID `publications_lookup` case (structurally unreachable via this
-tool's own two-step flow, per the pre-build probe; documented here rather
-than silently absent); concurrent load against the new `"litvar2"`
-rate-limit family's actual 5 req/s pacing (a `RateLimiter` unit test's job).
+the encoding trap as a behavioral assertion. Case 3 also asserts the
+withheld note's INDEX matches the withheld term's actual position in
+`variant_matches`, not merely that the note contains the right term
+(F-3.3-J-03). Does NOT exercise: the zero-PMID `publications_lookup` case
+(structurally unreachable via this tool's own two-step flow, per the
+pre-build probe; documented here rather than silently absent); concurrent
+load against the new `"litvar2"` rate-limit family's actual 5 req/s pacing
+(a `RateLimiter` unit test's job); a response withholding MORE THAN ONE
+field in the same call, judge round 1's F-3.3-J-01 window (`fields_withheld`
+exceeding its own 20-item schema cap; live rs334 data never produces more
+than a handful of withheld notes, so this gate cannot reach that shape
+without a scripted response, which is `test_litvar2_lookup.py`'s job, not
+this live gate's); a `variant_search` response where every row fails to
+parse, judge round 1's F-3.3-J-02 window (live LitVar2 has no known query
+that returns a non-empty array of all-unparseable rows, so this gate
+cannot reach that shape either; covered by a mocked case in
+`test_litvar2_lookup.py` instead).
 
 Depends on:
     - system_03_search_agent.tools.litvar2_lookup (does not exist yet, by
@@ -188,9 +200,12 @@ async def test_03_long_clinical_significance_term_is_withheld_not_truncated() ->
     output = await _run({"mode": "variant_search", "query": RS334})
 
     assert output.status == "ok", f"expected ok, got {output.status}: {output.error}"
-    rs334_matches = [m for m in output.variant_matches if m.rsid == RS334]
-    assert rs334_matches, "expected rs334 among the matches"
-    terms = rs334_matches[0].clinical_significance or []
+    rs334_indexed = [
+        (i, m) for i, m in enumerate(output.variant_matches) if m.rsid == RS334
+    ]
+    assert rs334_indexed, "expected rs334 among the matches"
+    rs334_index, rs334_match = rs334_indexed[0]
+    terms = rs334_match.clinical_significance or []
     for term in terms:
         assert len(term) <= 30, (
             f"F-3.3-03: {term!r} ({len(term)} chars) exceeds the 30-char cap "
@@ -206,6 +221,22 @@ async def test_03_long_clinical_significance_term_is_withheld_not_truncated() ->
     assert any(RS334_LONG_CLINICAL_TERM in field for field in (output.fields_withheld or [])), (
         f"F-3.3-03: expected the over-length term to be named in "
         f"fields_withheld, got {output.fields_withheld!r}"
+    )
+    # F-3.3-J-03: the note must key to rs334's own OUTPUT position in
+    # variant_matches (whatever it actually is, since other matches may
+    # sort before it), never an assumed or raw-response index. A note
+    # naming the wrong index would silently point a caller at some other
+    # match's data.
+    expected_prefix = f"variant_matches[{rs334_index}].clinical_significance"
+    matching_notes = [
+        note
+        for note in (output.fields_withheld or [])
+        if RS334_LONG_CLINICAL_TERM in note
+    ]
+    assert matching_notes, "expected at least one fields_withheld note naming the long term"
+    assert all(note.startswith(expected_prefix) for note in matching_notes), (
+        f"F-3.3-J-03: expected the withheld note to key to rs334's actual "
+        f"output index ({rs334_index}), got {matching_notes!r}"
     )
 
 
