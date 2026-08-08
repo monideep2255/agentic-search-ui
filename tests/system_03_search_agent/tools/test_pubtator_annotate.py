@@ -547,6 +547,31 @@ async def test_f_3_3_a_05_entity_source_url_none_when_db_id_is_withheld(
     assert entity.source_url is None, "source_url must not be built from a withheld db_id"
 
 
+@pytest.mark.asyncio
+async def test_f_3_3_rr2_03_entity_source_url_none_when_db_id_is_empty_string(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.3-RR2-03 regression: `db_id=""` is falsy, not `None`, and the old
+    `db_id is None` guard let it through, building
+    `https://www.ncbi.nlm.nih.gov/gene/` (live-confirmed HTTP 200, the NCBI
+    Gene database homepage, not a record) as if it were a real citation.
+    `db_id=""` must produce `source_url=None`, matching
+    `litvar2_lookup._build_source_url`'s own `if not identifier` guard for
+    the sibling tool.
+    """
+    body = [{"_id": "@GENE_X", "db": "ncbi_gene", "db_id": "", "name": "X"}]
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="entity_lookup", query="x", limit=5)
+    )
+
+    assert output.status == "ok"
+    entity = output.entities[0]
+    assert entity.db_id == "", "an empty db_id is not itself withheld, only unusable for a URL"
+    assert entity.source_url is None, "source_url must not be built from an empty db_id"
+
+
 # ---------------------------------------------------------------------------
 # annotate_publications
 # ---------------------------------------------------------------------------
@@ -807,6 +832,87 @@ async def test_f_3_3_j_04_annotation_withheld_note_keys_to_output_positions_acro
     assert output.publications[0].annotations[0].name == "BRCA1"
     assert output.publications[1].annotations[0].name is None
     assert output.fields_withheld == [f"publications[1].annotations[0].name: {over_length_name}"]
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_rr2_02_pub_index_keys_to_output_position_when_first_document_is_excluded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.3-RR2-02 regression. The test above cannot distinguish `pub_index`
+    (the OUTPUT position) from a raw enumerate index, because both of its
+    fixture documents are KEPT, so the two numbers are identical by
+    construction. This fixture excludes the FIRST raw document (no
+    extractable `id`) so the SECOND, kept document lands at raw array
+    position 1 but OUTPUT position 0: the disclosure note must name
+    `publications[0]`, never `publications[1]`.
+
+    Verified this test actually fails on the bug it targets: temporarily
+    reverting `pub_index = len(publications)` (pubtator_annotate.py) back
+    to the raw `enumerate` index makes this test fail with
+    `publications[1].annotations[0].name: ...`, confirmed by hand before
+    this test was finalized (see the fix round's report for the exact
+    revert-and-rerun transcript).
+    """
+    doc_a = _publication_doc("34083286")
+    del doc_a["id"]  # no extractable pmid: _parse_publication excludes this document entirely
+    over_length_name = "N" * 105  # exceeds the 100-char annotation name cap
+    doc_b = _publication_doc("11111111", gene_identifier="99")
+    doc_b["passages"][0]["annotations"][0]["infons"]["name"] = over_length_name
+    body = {"PubTator3": [doc_a, doc_b]}
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="annotate_publications", pmids=["34083286", "11111111"])
+    )
+
+    assert output.status == "ok", output.error
+    assert len(output.publications) == 1
+    assert output.publications[0].pmid == "11111111"
+    assert output.publications[0].annotations[0].name is None
+    assert output.fields_withheld == [f"publications[0].annotations[0].name: {over_length_name}"]
+    # The excluded document is unidentifiable to the caller by pmid at all
+    # (no extractable id), so it is not requested-but-missing in the
+    # pmids_not_found sense either; the caller's actual "34083286" request
+    # still resolved to nothing, which the transport-level pmids_not_found
+    # diff reports separately.
+    assert "34083286" in output.pmids_not_found
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_rr2_02_ann_index_keys_to_output_position_when_first_annotation_row_is_excluded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.3-RR2-02 regression, the `ann_index` half. Within ONE kept
+    publication, the raw `annotations` array's first row is excluded (its
+    `infons` is not an object, so `_parse_annotation` returns `None`), so
+    the SECOND, kept annotation lands at raw array position 1 but OUTPUT
+    position 0: the disclosure note must name `annotations[0]`, never
+    `annotations[1]`.
+
+    Verified this test actually fails on the bug it targets: temporarily
+    reverting `ann_index = len(annotations)` back to the raw `enumerate`
+    index makes this test fail with `annotations[1].name: ...`, confirmed
+    by hand before this test was finalized (see the fix round's report for
+    the exact revert-and-rerun transcript).
+    """
+    doc = _publication_doc("34083286")
+    over_length_name = "N" * 105  # exceeds the 100-char annotation name cap
+    excluded_row: dict[str, Any] = {"id": "x", "infons": "not-an-object"}
+    kept_row = doc["passages"][0]["annotations"][0]
+    kept_row["infons"]["name"] = over_length_name
+    doc["passages"][0]["annotations"] = [excluded_row, kept_row]
+    body = {"PubTator3": [doc]}
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="annotate_publications", pmids=["34083286"])
+    )
+
+    assert output.status == "ok", output.error
+    assert len(output.publications) == 1
+    assert len(output.publications[0].annotations) == 1
+    assert output.publications[0].annotations[0].name is None
+    assert output.fields_withheld == [f"publications[0].annotations[0].name: {over_length_name}"]
 
 
 # ---------------------------------------------------------------------------

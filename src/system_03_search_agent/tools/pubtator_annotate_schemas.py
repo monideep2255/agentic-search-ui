@@ -208,20 +208,33 @@ in build phase 3.2, `litvar2_lookup` earlier in this same phase), so the
 two sibling Layer 3 tools now agree.
 
 `fields_withheld` mirrors `litvar2_lookup_schemas.Litvar2LookupOutput.
-fields_withheld` exactly: `list[str] | None`, `max_length=20` items,
-`max_length=150` per item, defaulting to `None`. `pubtator_annotate.py`'s
-own `_cap_fields_withheld` mirrors `litvar2_lookup.py`'s function of the
-same name, including its overflow-summary behavior (F-3.3-J-01's
-precedent: silently dropping overflow notes would itself be a
-silent-truncation failure, so a list of more than 20 notes ships 19
-unchanged plus one summary note naming how many more did not fit, rather
-than a bare truncation). Every note names the withheld field by its OUTPUT
-position, e.g. `"entities[2].description: <original value>"` or
+fields_withheld`'s SHAPE exactly: `list[str] | None`, `max_length=20`
+items, `max_length=150` per item, defaulting to `None`.
+`pubtator_annotate.py`'s own `_cap_fields_withheld` mirrors
+`litvar2_lookup.py`'s function of the same name, including its
+overflow-summary behavior (F-3.3-J-01's precedent: silently dropping
+overflow notes would itself be a silent-truncation failure, so a list of
+more than 20 notes ships 19 unchanged plus one summary note naming how
+many more did not fit, rather than a bare truncation). Every note names
+the withheld field by its OUTPUT position, e.g.
+`"entities[2].description: <original value>"` or
 `"publications[0].annotations[3].name: <original value>"`, never a raw
 response index, following the F-3.3-J-03 indexing discipline
 `litvar2_lookup.py` already established: a raw row that fails to parse is
 skipped entirely and never occupies an output position, so only the
 output-position index stays correct after any such skip.
+
+NOT MIRRORED (F-3.3-RR2-04, fix round 5, a documentation-honesty
+correction): `litvar2_lookup`'s own `fields_withheld` also relabels a
+wholly EXCLUDED raw response row (`"raw response entry N: excluded"`),
+which is what lets a caller tell an all-excluded body apart from a genuine
+no-match. This field covers only withheld FIELDS inside a KEPT item; a
+document or annotation row `pubtator_annotate.py` drops entirely
+contributes no note here at all. This is the same gap design decision 6
+above named for per-item field withholding, now stated precisely for
+whole-item exclusion rather than left implied by an "exactly" claim that
+overstated the parity with `litvar2_lookup`. Not reachable on data
+observed live to date; see F-3.3-RR2-04 in `tracker/phase_3.3.md`.
 
 Design decision 10, `PubtatorPublication.total_annotations` (F-3.3-A-12,
 added 2026-08-08, fix round 4). `annotations` is capped at

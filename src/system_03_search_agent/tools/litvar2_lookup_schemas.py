@@ -170,6 +170,19 @@ unchanged, for the NON-rsid-keyed case (an internal composite id like
 F-3.3-A-10's scope rather than closing it, since no better citation is
 available for that shape today.
 
+NARROWED, 2026-08-08 (F-3.3-RR2-01, fix round 5), for `variant_search`
+only: "whenever an rsid is available" above overstated it for a
+multi-match result. `variant_search` returns up to 10 matches under one
+top-level `source_url`, so a dbSNP page built from `matches[0]` alone
+covers only that one match while the field reads as a citation for the
+whole response; live-reproduced with `query="334"` returning 5 matches
+across 5 genes and a `source_url` naming only the first. The dbSNP
+preference for `variant_search` now applies only when `variant_matches`
+has exactly one entry (an unambiguous result); two or more matches fall
+back to the search-UI citation, honestly scoped to the whole query again.
+`publications_lookup`'s own preference is UNCHANGED and was never
+ambiguous: `litvar_id` always names exactly one variant by construction.
+
 Depends on:
     - Nothing repo-local. `NCBI_LITVAR2_RECORD_URL_PATTERN` is defined
       here, not imported from `ncbi_dbsnp_schemas.py`,
@@ -367,7 +380,21 @@ class Litvar2LookupOutput(BaseModel):
     total_pmids: Annotated[int, Field(ge=0)] = 0
     source_url: Annotated[
         str | None,
-        Field(default=None, max_length=200, pattern=NCBI_LITVAR2_RECORD_URL_PATTERN),
+        Field(
+            default=None,
+            max_length=200,
+            pattern=NCBI_LITVAR2_RECORD_URL_PATTERN,
+            description=(
+                "A single citation for the whole result. For "
+                "variant_search, this is the sole match's own dbSNP "
+                "record page ONLY when variant_matches has exactly one "
+                "entry (an unambiguous result, F-3.3-RR2-01); for two or "
+                "more matches it is the LitVar2 search UI page for the "
+                "whole query instead, never a per-match citation. For "
+                "publications_lookup it always names the one variant "
+                "litvar_id itself identifies."
+            ),
+        ),
     ] = None
     error: Annotated[str | None, Field(default=None, max_length=500)] = None
     fields_withheld: Annotated[

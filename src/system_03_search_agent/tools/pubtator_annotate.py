@@ -85,11 +85,24 @@ resulting notes up to `PubtatorAnnotateOutput.fields_withheld`
 (`pubtator_annotate_schemas.py`'s design decision 9), a `list[str] | None`
 naming every withheld field by its OUTPUT position, e.g.
 `"entities[2].description: <original value>"` or
-`"publications[0].annotations[3].name: <original value>"`, mirroring
-`litvar2_lookup_schemas.Litvar2LookupOutput.fields_withheld` exactly,
-including its 20-item cap and overflow-summary behavior
-(`_cap_fields_withheld` below mirrors `litvar2_lookup.py`'s function of the
-same name).
+`"publications[0].annotations[3].name: <original value>"`. This mirrors
+`litvar2_lookup_schemas.Litvar2LookupOutput.fields_withheld`'s 20-item cap
+and overflow-summary behavior exactly (`_cap_fields_withheld` below
+mirrors `litvar2_lookup.py`'s function of the same name), but NOT its full
+scope (F-3.3-RR2-04, fix round 5, a documentation-honesty correction, not
+a behavior change): `litvar2_lookup`'s `fields_withheld` also relabels a
+wholly EXCLUDED raw response row (`"raw response entry N: excluded"`),
+distinguishing an all-excluded body from a genuine no-match. This module's
+`fields_withheld` covers only withheld FIELDS inside a KEPT item; a
+document or annotation row this module drops entirely (no extractable
+`id`, or an over-cap `pmid`) contributes no note of any kind, the same gap
+design decision 6 in `pubtator_annotate_schemas.py` originally named for
+per-item field withholding, now surviving for whole-item exclusion even
+after design decision 9 closed the field-level half. Not reachable on live
+data observed to date (every `.PubTator3[]` document seen carries a
+well-formed `id`), which is why this asymmetry shipped rather than being
+treated as a blocker; see F-3.3-RR2-04 in `tracker/phase_3.3.md` for the
+full disposition.
 
 `pmids_not_found` (top-level, F-3.3-01) remains a SEPARATE, dedicated
 disclosure signal, not folded into `fields_withheld`: it names REQUESTED
@@ -431,8 +444,17 @@ def _entity_source_url(db: str | None, db_id: str | None) -> str | None:
     type it has not verified live. See
     `pubtator_annotate_schemas.py`'s design decision 8 for the full
     coverage statement.
+
+    F-3.3-RR2-03, fix round 5: guards a FALSY `db_id`, not only `None`. An
+    empty string (or, before URL-encoding, a value like `".."`) previously
+    passed the `db_id is None` check and built a citation resolving to a
+    generic NCBI landing page under HTTP 200 (live-confirmed:
+    `db_id=""` built `https://www.ncbi.nlm.nih.gov/gene/`, the NCBI Gene
+    homepage, not a record), a citation that looks valid but names nothing.
+    `litvar2_lookup._build_source_url` already guards this exact shape
+    with `if not identifier`; this mirrors that discipline.
     """
-    if db_id is None:
+    if not db_id:
         return None
     if db == "ncbi_gene":
         url = f"https://www.ncbi.nlm.nih.gov/gene/{urllib.parse.quote(db_id, safe='')}"

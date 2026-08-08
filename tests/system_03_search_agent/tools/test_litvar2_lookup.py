@@ -880,6 +880,96 @@ async def test_publications_lookup_source_url_falls_back_to_ui_when_rsid_shape_i
 
 
 # ---------------------------------------------------------------------------
+# F-3.3-RR2-01 regression: variant_search's source_url must not narrow to
+# the top match's own dbSNP page when the result is AMBIGUOUS (2+ matches).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_source_url_falls_back_to_ui_page_for_a_multi_match_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Live repro this pins: query="334" returned 5 unrelated matches (BDNF,
+    APOE, CFTR, TARDBP, and a non-rsid entry), and fix round 4's source_url
+    named only the FIRST match's own dbSNP page, a real, authoritative page
+    that does not cover the other four returned matches at all. With 2+
+    matches, even when every one of them carries a real rsid,
+    source_url must fall back to the LitVar2 UI citation (honestly scoped
+    to the whole query), never a per-match dbSNP page.
+    """
+    bdnf = _autocomplete_body(litvar_id="litvar@rs6265##", rsid="rs6265", name="Val66Met")[0]
+    apoe = _autocomplete_body(litvar_id="litvar@rs429358##", rsid="rs429358", name="c.388T>C")[0]
+    _install(monkeypatch, [_json_response([bdnf, apoe])])
+
+    output = await litvar2_lookup(_variant_search_input("334"))
+
+    assert output.status == "ok", output.error
+    assert len(output.variant_matches) == 2
+    assert output.source_url == "https://www.ncbi.nlm.nih.gov/research/litvar2/?query=334"
+    assert output.source_url is not None
+    assert "/snp/" not in output.source_url
+
+
+@pytest.mark.asyncio
+async def test_source_url_still_prefers_dbsnp_page_for_an_unambiguous_single_match(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The other direction of the same fix: a genuinely single-match result
+    (query="rs334") is unambiguous, so the dbSNP preference from fix round 4
+    still applies, unchanged.
+    """
+    _install(monkeypatch, [_json_response(_autocomplete_body(rsid="rs334"))])
+
+    output = await litvar2_lookup(_variant_search_input("rs334"))
+
+    assert output.status == "ok", output.error
+    assert len(output.variant_matches) == 1
+    assert output.source_url == "https://www.ncbi.nlm.nih.gov/snp/rs334"
+
+
+# ---------------------------------------------------------------------------
+# F-3.3-RR2-05 regression: _RSID_SHAPE_PATTERN must reject a trailing
+# newline and non-ASCII (Unicode) digit characters, not merely "looks like
+# rs + digits" under Python's default $ and \d semantics.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_source_url_falls_back_to_ui_when_rsid_has_a_trailing_newline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`$` matches immediately before a trailing newline, not only at the
+    true end of string; a naive `^rs\\d+$` pattern would let "rs334\\n"
+    through and build a URL LitVar2 itself 400s on
+    (`.../snp/rs334%0A`, live-confirmed). Must fall back to the UI citation
+    instead.
+    """
+    _install(monkeypatch, [_json_response(_autocomplete_body(rsid="rs334\n"))])
+
+    output = await litvar2_lookup(_variant_search_input("rs334"))
+
+    assert output.status == "ok", output.error
+    assert output.source_url == "https://www.ncbi.nlm.nih.gov/research/litvar2/?query=rs334"
+
+
+@pytest.mark.asyncio
+async def test_source_url_falls_back_to_ui_when_rsid_has_unicode_digits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Python's `\\d` in a `str` pattern is Unicode-aware, not ASCII-only, so
+    Arabic-Indic digits ("١٢٣") would pass a naive `^rs\\d+$` pattern and
+    build a URL LitVar2 itself 404s on. Must fall back to the UI citation
+    instead.
+    """
+    _install(monkeypatch, [_json_response(_autocomplete_body(rsid="rs١٢٣"))])
+
+    output = await litvar2_lookup(_variant_search_input("rs123"))
+
+    assert output.status == "ok", output.error
+    assert output.source_url == "https://www.ncbi.nlm.nih.gov/research/litvar2/?query=rs123"
+
+
+# ---------------------------------------------------------------------------
 # Untrusted content: crafted free-text fields reach the output inertly.
 # ---------------------------------------------------------------------------
 

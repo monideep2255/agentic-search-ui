@@ -126,6 +126,25 @@ the `litvar@rs.../##` shape (an internal composite id like
 F-3.3-A-10's remaining scope to that non-rsid-keyed case rather than
 closing it: no better citation target is available for that shape today.
 
+NARROWED FOR `variant_search`'S MULTI-MATCH CASE, 2026-08-08 (F-3.3-RR2-01,
+fix round 5): the paragraph above undersold a real difference between the
+two modes. `publications_lookup` always names exactly one variant by
+construction (`litvar_id` is a single identifier), so its dbSNP preference
+is unambiguous by construction and is UNCHANGED by this fix. `variant_search`
+can return up to `_MAX_VARIANT_MATCHES` (10) matches, and Section 6.5
+provides only one top-level `source_url` for the WHOLE result set, never a
+per-match citation. Building that one citation from `matches[0]` alone, as
+fix round 4 did, is a real, authoritative-looking dbSNP page that covers
+only one of potentially several unrelated returned matches: live-reproduced,
+`query="334"` returned 5 matches spanning 5 different genes (BDNF, APOE,
+CFTR, TARDBP, and a non-rsid entry) and a `source_url` naming only the
+first (BDNF's rs6265), with four of the five returned matches absent from
+that page entirely. `_source_url_for_variant_search` below now prefers the
+dbSNP page only when `variant_matches` has EXACTLY ONE entry, i.e. the
+result is unambiguous; two or more matches fall back to
+`_build_source_url(query)`, the LitVar2 UI citation, honestly scoped to the
+whole query again, the same fallback this tool used before fix round 4.
+
 ## Withholding, not truncating (F-3.3-03)
 
 `_parse_clinical_significance` drops (never truncates) any individual
@@ -327,7 +346,16 @@ _RSID_FROM_LITVAR_ID: Final[re.Pattern[str]] = re.compile(r"^litvar@(.+?)##$")
 # are upstream-controlled strings), so a value that does not look like a
 # real rsid falls back to the LitVar2 UI citation rather than being used
 # to build a `/snp/{value}` URL whose target this module cannot vouch for.
-_RSID_SHAPE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^rs\d+$")
+#
+# F-3.3-RR2-05, fix round 5: `^rs\d+$` admitted two shapes that are not
+# real rsids. `$` matches immediately before a trailing newline, not only
+# at the true end of string, so `"rs334\n"` passed and built
+# `.../snp/rs334%0A` (live-confirmed HTTP 400). `\d` in a Unicode `str` is
+# Unicode-aware, not ASCII-only, so `"rs١٢٣"` (Arabic-Indic digits) also
+# passed and built a URL LitVar2 itself 404s on. `\A...\Z` anchors to the
+# true start and end of the string (no trailing-newline exception the way
+# `$` has), and `[0-9]` matches only ASCII digits, closing both gaps.
+_RSID_SHAPE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\Ars[0-9]+\Z")
 
 
 def _quote_path_segment(value: str) -> str:
@@ -465,20 +493,37 @@ def _build_source_url_for_litvar_id(litvar_id: str) -> str | None:
 
 
 def _source_url_for_variant_search(query: str, matches: list[Litvar2VariantMatch]) -> str | None:
-    """The `variant_search` citation: prefer the top match's own dbSNP page.
+    """The `variant_search` citation: prefer the sole match's own dbSNP page,
+    but ONLY when the result is unambiguous (F-3.3-RR2-01, fix round 5).
 
-    F-3.3-J-06/F-3.3-A-10, fix round 4: when the top-ranked match carries a
-    real `rsid` (LitVar2's own `rsid` response field, already parsed and
-    capped onto `Litvar2VariantMatch.rsid`), that rsid is a genuinely
-    better citation than the LitVar2 search UI parameterized by the
-    caller's own `query`. Falls back to `_build_source_url(query)`,
-    UNCHANGED from before this fix, whenever there are no matches, the top
-    match carries no `rsid`, or the rsid fails `_RSID_SHAPE_PATTERN` (or
-    somehow fails `_snp_url_for_rsid`'s own defense-in-depth checks): this
-    module never leaves a `variant_search` result uncited just because the
-    preferred citation path did not apply.
+    F-3.3-J-06/F-3.3-A-10, fix round 4 originally preferred `matches[0]`'s
+    `rsid` whenever it was present, regardless of how many matches were
+    returned. That is wrong for a multi-match result: `variant_search` can
+    return up to 10 matches, Section 6.5 provides exactly one top-level
+    `source_url` for the WHOLE result set (never a per-match citation), and
+    a dbSNP page built from `matches[0]` alone is a real, authoritative
+    page that covers only that one match. Live-reproduced (F-3.3-RR2-01):
+    `query="334"` returned 5 matches across 5 different genes, and the
+    fix-round-4 citation named only the first (BDNF's rs334), with the
+    other four matches absent from that page entirely, silently narrowing
+    scope from "the whole query" (the old LitVar2 UI citation) to "one of
+    several returned matches", without disclosing the narrowing anywhere.
+
+    So the dbSNP preference now applies only when `matches` has EXACTLY
+    ONE entry and that entry carries a real `rsid`: an unambiguous result
+    where the single citation and the single returned match are the same
+    thing. Falls back to `_build_source_url(query)`, the LitVar2 UI
+    citation honestly scoped to the whole query, whenever there are zero
+    matches, two or more matches, or the sole match carries no `rsid` (or
+    the rsid fails `_RSID_SHAPE_PATTERN`, or somehow fails
+    `_snp_url_for_rsid`'s own defense-in-depth checks): this module never
+    leaves a `variant_search` result uncited just because the preferred
+    citation path did not apply. `publications_lookup`'s own citation
+    logic (`_build_source_url_for_litvar_id`) is not implicated by this
+    fix: `litvar_id` there always names exactly one variant by
+    construction, so its dbSNP preference was already unambiguous.
     """
-    if matches and matches[0].rsid:
+    if len(matches) == 1 and matches[0].rsid:
         snp_url = _snp_url_for_rsid(matches[0].rsid)
         if snp_url is not None:
             return snp_url
