@@ -313,10 +313,21 @@ DEFAULT_VARIATION_REQUESTS_PER_SECOND: Final[float] = 1.0
 # unnecessarily. Configurable via NCBI_PUBTATOR_RPS / NCBI_LITVAR2_RPS.
 DEFAULT_PUBTATOR_REQUESTS_PER_SECOND: Final[float] = 5.0
 DEFAULT_LITVAR2_REQUESTS_PER_SECOND: Final[float] = 5.0
+# ClinicalTrials.gov API v2 (T-3.5-02, clinicaltrials_search's only Layer 3
+# call). No published numeric rate limit (Section 21.1), same provisional
+# ~5 req/s throttle as pubtator/litvar2/datasets/pubchem. Its own family,
+# not shared with any NCBI-hosted family: clinicaltrials.gov is not an
+# ncbi.nlm.nih.gov subdomain, so contention on an NCBI host must never
+# throttle this call and vice versa. Configurable via NCBI_CLINICALTRIALS_RPS
+# (named for consistency with this module's other env vars, even though the
+# host itself is not NCBI).
+DEFAULT_CLINICALTRIALS_REQUESTS_PER_SECOND: Final[float] = 5.0
 
-RateLimitFamily = Literal["eutils", "datasets", "pubchem", "variation", "pubtator", "litvar2"]
+RateLimitFamily = Literal[
+    "eutils", "datasets", "pubchem", "variation", "pubtator", "litvar2", "clinicaltrials"
+]
 RATE_LIMIT_FAMILIES: Final[tuple[RateLimitFamily, ...]] = (
-    "eutils", "datasets", "pubchem", "variation", "pubtator", "litvar2",
+    "eutils", "datasets", "pubchem", "variation", "pubtator", "litvar2", "clinicaltrials",
 )
 
 _ENV_NCBI_API_KEY: Final[str] = "NCBI_API_KEY"
@@ -992,6 +1003,11 @@ _FAMILY_CONFIGS: Final[dict[str, _FamilyConfig]] = {
     # figure, so they share its queue-depth reasoning too.
     "pubtator": _FamilyConfig(DEFAULT_PUBTATOR_REQUESTS_PER_SECOND, 25, "NCBI_PUBTATOR_RPS"),
     "litvar2": _FamilyConfig(DEFAULT_LITVAR2_REQUESTS_PER_SECOND, 25, "NCBI_LITVAR2_RPS"),
+    # Same 5x-multiple reasoning again: the provisional 5 req/s figure gets
+    # the same 25 queue depth as every other family sharing that figure.
+    "clinicaltrials": _FamilyConfig(
+        DEFAULT_CLINICALTRIALS_REQUESTS_PER_SECOND, 25, "NCBI_CLINICALTRIALS_RPS"
+    ),
 }
 
 _rate_limiters: dict[str, RateLimiter] = {}

@@ -1,0 +1,99 @@
+# Phase 3.5: pathogen_detection and clinicaltrials_search, completing the seven-tool roster
+
+Build phase 3.5 delivers `pathogen_detection` (Pathogen Detection FTP, Q5: a Salmonella isolate to its outbreak cluster, AMR genotype, and SNP-distance neighbors) and `clinicaltrials_search` (ClinicalTrials.gov API v2, Q4: the disease-to-trials path). Neither fits `ncbi_efetch`'s action set: one is versioned bulk TSV/tar.gz retrieval with snapshot pinning, not a parameterized Entrez/Datasets/PubChem call; the other is a non-`ncbi.nlm.nih.gov` host. These are the last two tools in the seven-tool roster.
+
+Depends on: build phase 3.1 (done, PR #23, merged 2026-08-07). Not 3.2 or 3.3, despite the branch table listing 3.4 before 3.5 by number; Section 25's dependency graph makes 3.4 depend on 3.5 as well as 3.1 through 3.3, so 3.5 is next.
+Branch: `phase/3.5-pathogen-clinicaltrials-tools`
+Spec: `requirements/Technical_specification.md` Section 6.6 and 6.7, with Section 21.1 for rate limits
+Reference: `docs/ncbi/Tool_implementation_mechanics.md`, `.claude/rules/tool-call-budgets.md`, `.claude/rules/ai-security-standards.md` (untrusted content), `LEARNINGS.md` build phase 3.1/3.2/3.3 entries, `tracker/phase_3.3.md`'s transferable lessons
+
+## Phase premise (the done-when)
+
+A question resolving to a real, well-known isolate or cluster (a Salmonella `biosample_acc` with known AMR genotypes and cluster membership) comes back from `pathogen_detection` with the correctly-parsed isolate metadata, correctly-parsed AMR genotype and AST phenotype lists (comma-joined strings in the raw TSV, not JSON arrays), and a `cluster_snp_neighbors` result that is honest about partial coverage rather than silently complete. A `clinicaltrials_search` question about a real condition (breast cancer, BRCA1) comes back with real NCT ids, correct status/phase/conditions fields, and a `source_url` pointing at `clinicaltrials.gov/study/`, never the API host. A snapshot or query that legitimately matches nothing is `status: "empty"`, never fabricated as `"ok"`. Every free-text field from either source (isolate metadata's `strain`/`geo_loc_name`, a trial's `brief_title`/`eligibility_summary`) is treated as untrusted content: capped, never executed as an instruction, reaching the output only through the tool's own schema.
+
+Same carry as build phases 3.1 to 3.3: whether either tool is dispatched as an answer-bearing tool from `act_node` is the open product-owner scope decision already carried to T-3.1-28. This phase delivers both tools themselves, registered into the tool schema and stable prompt prefix; `act_node` wiring is out of scope here too.
+
+The verify surface is `tests/system_03_search_agent/tools/test_pathogen_detection_premise.py` and `tests/system_03_search_agent/tools/test_clinicaltrials_search_premise.py`, not a suite total, per `tracker/phase_3.1.md`'s standing rule.
+
+## Pre-build live probes (done before any tool code, before any fixture)
+
+Per LEARNINGS.md's standing pattern (rows 60, the phase 3.2 and 3.3 retrospectives: "pre-build live probing before any fixture is written catches a defect class a fixture authored from documentation cannot"), run against the real APIs before any ticket's fixtures, 2026-08-08:
+
+| Probe | Result | What it resolves |
+|-------|--------|-------------------|
+| `GET /api/v2/studies?query.cond=BRCA1&pageSize=2` | HTTP 200, real studies, `protocolSection.identificationModule.nctId`/`briefTitle`, `statusModule.overallStatus`, a `nextPageToken` | The `ok` baseline |
+| `GET /api/v2/studies?query.cond=zzzznotarealconditionxyz123&pageSize=5` | HTTP 200, `{"studies": []}`, no `totalCount` key present at all in the default response | Confirms the documented empty-is-200 shape. See F-3.5-02: `totalCount` is NOT in the default response body |
+| `GET /api/v2/studies?query.cond=BRCA1&pageSize=1&countTotal=true` | HTTP 200, top-level `totalCount: 381`, alongside `studies` and `nextPageToken` | `totalCount` requires the undocumented-in-spec `countTotal=true` query param. Section 6.7's schema requires `total_count` in every output; the tool must always pass `countTotal=true`, never rely on the field being present by default |
+| `GET /api/v2/studies?query.cond=BRCA1&pageSize=1&fields=NCTId,BriefTitle,OverallStatus,Condition,Phase,EligibilityCriteria` | HTTP 200, confirms field names: `identificationModule.nctId`/`briefTitle`, `statusModule.overallStatus`, `conditionsModule.conditions[]`, `designModule.phases[]` (an array, not a scalar `phase` string), `eligibilityModule.eligibilityCriteria` (full free text, no server-side summarization; the spec's `eligibility_summary` field is this repo's own bounded projection, capped client-side at 500 chars, not a field the API itself returns pre-summarized) | Confirms Section 6.7's field mapping live, corrects one shape assumption: `phase` is `designModule.phases`, plural array, not a scalar |
+| Pathogen Detection FTP, `Results/Salmonella/` snapshot listing | Newest two snapshots (`PDG000000002.4179`, `.4178`) carry only `Metadata/`; `PDG000000002.4177` is the newest with `Metadata/`, `Clusters/`, and `AMR/` all present | Live-reproduces Section 6.6's own named trap (never pin to a mid-build snapshot) exactly as written, on the first snapshot listing checked |
+| `Metadata/PDG000000002.4177.metadata.tsv` header + row | Confirms `biosample_acc`, `Run`, `strain`, `serovar`, `geo_loc_name`, `collection_date`, `AMR_genotypes`, `AST_phenotypes`, `minsame`, `mindiff` all present as named. `AMR_genotypes` and `AST_phenotypes` are double-quoted comma-joined strings (`"ant(2'')-Ia,aph(3')-Ia,..."`), not JSON arrays; some rows are the bare literal `NULL` | The comma-join parsing trap, the same class as phase 3.2's `global_mafs` compound-string finding. See F-3.5-03 |
+| `AMR/PDG000000002.4177.amr.metadata.tsv` header | Byte-identical column header to `Metadata/PDG000000002.4177.metadata.tsv` | Section 6.6 frames `AMR/` as a distinct "AMRFinderPlus gene and phenotype detail" source; live, its header is the same as the main metadata file for this snapshot. A separate `AMR/` read may be redundant with `Metadata/` for the fields this tool actually needs (`AMR_genotypes`, `AST_phenotypes` are already in `Metadata/`). Documented, not treated as a defect: the procedure can read AMR fields from `Metadata/` alone and skip a second large-file fetch unless a field is found that genuinely only exists in `AMR/` |
+| `Clusters/PDG000000002.4177.reference_target.cluster_list.tsv` header + rows | `PDS_acc`, `target_acc`, `biosample_acc`, `gencoll_acc`. File size 45,329,974 bytes (~45MB), tractable to stream and filter by `PDS_acc` | Confirms the cluster-membership join key (`PDS_acc`, mapped to the schema's `pds_cluster`) and that this file, unlike SNP_distances, is a bounded, streamable size |
+| `Clusters/PDG000000002.4177.reference_target.SNP_distances.tsv`, `HEAD` | `Content-Length: 411365831837` (~411 GB), `Accept-Ranges: bytes` | CRITICAL. See F-3.5-01 below, and the 2026-08-08 DECISIONS.md entry it produced |
+| Three widely-spaced `Range` reads of `SNP_distances.tsv` (~10%, ~50%, ~90% byte offsets) | Each sampled region shows a single `PDS_acc` repeated across many consecutive rows (grouped into contiguous per-cluster blocks), but the three samples' `PDS_acc` values are not in a consistent (ascending or descending) order relative to file position | Confirms the file is grouped by cluster but not globally sorted by cluster id in a way a byte-offset binary search could exploit without a prior index. A targeted read for an arbitrary `pds_cluster` therefore cannot skip directly to its block; it must stream from the start, filtering as it goes, bounded by wall clock |
+
+### F-3.5-01: SNP_distances.tsv is ~411 GB, three orders of magnitude past a "bulk TSV"
+
+Severity: critical to the `cluster_snp_neighbors` mode's feasibility as specified. Status: filed at design time, resolved by the 2026-08-08 DECISIONS.md entry (bounded streamed scan, honest partial-coverage disposition), owned by T-3.5-05.
+
+Section 6.6 names this file only as one of four "Endpoints and fields used" rows, framed the same as the ~45MB `cluster_list.tsv` and the metadata TSVs, with no size caveat. The live file for the `Salmonella` PDG000000002.4177 snapshot is 411,365,831,837 bytes. At any realistic HTTP transfer rate this cannot be fully retrieved, let alone parsed, inside the tool's own 60-second timeout (`.claude/rules/tool-call-budgets.md`), which makes "read `SNP_distances.tsv` filtered to `max_snp_distance`" as a complete-coverage guarantee impossible to honor as literally written. The tool instead streams the file (never buffering the full body, per `system-design-patterns` rule 7's "never inline large result sets"), filtering rows to the requested `pds_cluster` as they arrive, and stops at whichever comes first: every candidate pair checked, or the wall-clock budget expiring. On a wall-clock stop before completion, the tool returns `status: "empty"` with an actionable message naming the timeout and suggesting a narrower `max_snp_distance` or a smaller/more common cluster, never a false `status: "ok"` implying the neighbor set is complete. This is a genuine spec-versus-reality gap, filed alongside phase 3.2's `spdi/canonical_representative` substitution and phase 3.3's undocumented API shapes as the same recurring class: a locked document's stated mechanism, proven infeasible or wrong against the live endpoint, resolved with the least-bad working substitute and carried to Step 6.2 rather than silently absorbed.
+
+### F-3.5-02: ClinicalTrials.gov v2's totalCount is opt-in, not default
+
+Severity: would be a silent contract violation if missed (`total_count` is `required` in Section 6.7's locked output schema). Status: filed at design time, owned by T-3.5-06.
+
+A default `GET /studies` call, with no `countTotal` parameter, omits the `totalCount` key from its response body entirely; it is not merely `0` or `null`, the key is absent. `countTotal=true` must be added to every request this tool makes, or `total_count` cannot be populated as the locked schema requires. Closed by adding `countTotal=true` unconditionally in `clinicaltrials_search.py`'s request construction; not exposed as a caller-configurable option, since the locked schema requires the field on every response.
+
+### F-3.5-03: AMR_genotypes and AST_phenotypes are comma-joined quoted strings, not arrays
+
+Severity: would ship malformed or truncated array data if parsed naively. Status: filed at design time, owned by T-3.5-05.
+
+The same class of finding as phase 3.2's `global_mafs` compound-string field and phase 3.2/3.3's comma-separated-string findings. `Metadata/*.metadata.tsv`'s `AMR_genotypes` and `AST_phenotypes` columns hold a double-quoted, comma-separated string (e.g. `"ant(2'')-Ia,aph(3')-Ia,blaTEM-1,..."`), or the bare literal `NULL` when absent, never a JSON array and never an empty string for "no data". `pathogen_detection.py`'s TSV row parser splits on `,` inside the quoted field (respecting the file's own quoting, since gene names can themselves be syntactically ambiguous only if unquoted) and treats a bare `NULL` field value as an empty list, never as a one-item list containing the string `"NULL"`.
+
+## Ticket map
+
+| Ticket | Slice | Files |
+|--------|-------|-------|
+| T-3.5-01 | The premise gates, blocking, one file per tool | `tests/system_03_search_agent/tools/test_pathogen_detection_premise.py`, `tests/system_03_search_agent/tools/test_clinicaltrials_search_premise.py` |
+| T-3.5-02 | Transport: a `"clinicaltrials"` rate-limit family in `ncbi_transport.py` (~5 req/s provisional throttle, Section 21.1's undocumented-API default); a new small streaming-FTP helper module for `pathogen_detection` (chunked `GET` with `Range` support, no full-body buffering, its own 60s-class timeout, no rate-limit pool per Section 21.1's "not a request-rate API, a bulk file transfer" framing) | `tools/ncbi_transport.py`, `tools/pathogen_ftp_transport.py` (new) |
+| T-3.5-03 | Schemas: `pathogen_detection` input/output per Section 6.6, host-pinned `source_url` pattern scoped to `/pathogens/` per the Multi-agent pipeline gate compliance table | `tools/pathogen_detection_schemas.py` (new) |
+| T-3.5-04 | Schemas: `clinicaltrials_search` input/output per Section 6.7, a NEW host-pinned `CLINICALTRIALS_HOST` pattern (`^https://(www\.)?clinicaltrials\.gov/study/`), never reusing `NCBI_RECORD_HOST` | `tools/clinicaltrials_search_schemas.py` (new) |
+| T-3.5-05 | The `pathogen_detection` tool itself: snapshot resolution (complete-snapshot check, F-3.5's mid-build trap), `isolate_lookup`, `cluster_snp_neighbors` (F-3.5-01's bounded streamed scan), AMR/AST comma-join parsing (F-3.5-03), untrusted-content tier separation (read plus the Pathogen Detection FTP host only, no write, no other tools) | `tools/pathogen_detection.py` (new) |
+| T-3.5-06 | The `clinicaltrials_search` tool itself: the `/studies` call with `countTotal=true` (F-3.5-02), field mapping including `designModule.phases` as an array, `eligibility_summary` as a client-side bounded projection of the full `eligibilityCriteria` text, untrusted-content tier separation (read plus ClinicalTrials.gov v2 only) | `tools/clinicaltrials_search.py` (new) |
+| T-3.5-07 | Tool registration: both tools into `REGISTERED_TOOL_SCHEMAS` in alphabetical position (`clinicaltrials_search` first, before `cypher_query`; `pathogen_detection` between `ncbi_efetch` and `pubtator_annotate`), `TOOL_REGISTRY_VERSION` v4 to v5, new fingerprint row, `tests/system_03_search_agent/harness/test_cache.py` updated to match | `harness/cache.py` |
+
+Depends-on chain: T-3.5-01 blocks everything (written and watched failing first). T-3.5-02 has no dependency on 03/04. T-3.5-03 and T-3.5-04 have no dependency on each other. T-3.5-05 depends on T-3.5-02 and T-3.5-03. T-3.5-06 depends on T-3.5-02 and T-3.5-04. T-3.5-07 depends on both T-3.5-05 and T-3.5-06.
+
+Dispatch plan: T-3.5-02 done by the lead directly first (small, shared, every other ticket's fixtures depend on it existing), following phase 3.2 and 3.3's identical precedent for their own shared transport tickets. T-3.5-03/05 (`pathogen_detection`, zero file overlap with the other tool) and T-3.5-04/06 (`clinicaltrials_search`) dispatch as two parallel builders once T-3.5-02 lands, each with `isolation: "worktree"` since both run concurrently against the same repo. T-3.5-07 done by the lead directly after both merge back to the phase branch.
+
+## Premise gate design
+
+To be written and watched failing before any tool code exists, per LEARNINGS.md row 43's discipline (every failure must be `ModuleNotFoundError`, never a network fault or a syntax error, or the gate is not measuring the right thing).
+
+### The arms (planned)
+
+| Arm | Cases | What it pins |
+|-----|-------|---------------|
+| ok, isolate_lookup | A real, resolvable `biosample_acc` from the pinned complete snapshot returns parsed metadata, correctly-split `amr_genotypes`/`ast_phenotypes` lists, cluster membership | The real end-to-end path for `pathogen_detection`'s first mode |
+| ok, clinicaltrials_search | `query_cond="breast cancer"` or `BRCA1` returns real NCT ids, `overall_status`, `conditions`, `phase` as a list-derived string, `total_count` populated (F-3.5-02) | The real end-to-end path for `clinicaltrials_search` |
+| empty | A nonexistent `biosample_acc`; a nonsense `query_cond` | The documented empty-is-not-error shape, live-confirmed for both tools |
+| the phase's own reason, F-3.5-01 | `cluster_snp_neighbors` against a real `pds_cluster` returns within the wall-clock budget with either a real (possibly partial, honestly labeled) neighbor set or an honest `status: "empty"` timeout disposition, never a silently-incomplete `"ok"` | Pins the bounded-scan behavior as a correctness assertion, not left implicit |
+| the phase's own reason, F-3.5-03 | A real isolate with a comma-joined `AMR_genotypes` value parses to the correct multi-item list, not a single-string blob, and a `NULL`-valued row parses to an empty list, not `["NULL"]` | Pins the comma-join and NULL-sentinel parsing as tested behavior |
+| snapshot pinning | The tool resolves to the newest COMPLETE snapshot (`Metadata`+`Clusters`+`AMR` all present), never a mid-build one with only `Metadata/` | Live-reproduces and pins Section 6.6's own named trap |
+| untrusted content | A crafted `strain`/`geo_loc_name` value, and a crafted `brief_title`/`eligibility_summary` value, are never executed and reach the output only capped, as inert data | The tier-separation and untrusted-content requirement, `ai-security-standards.md` |
+
+### Coverage, to be stated in the gate's own module docstrings per `goal-contracts.md`
+
+Will exercise: both tools' documented modes, the `ok`/`empty` split live for each, the F-3.5-01 bounded-scan disposition, the F-3.5-03 comma-join parsing, snapshot-pinning correctness, one untrusted-content assertion per tool. Will NOT exercise: `cluster_snp_neighbors` against a cluster large enough to force the wall-clock cutoff path in practice (bounded by what a live snapshot's actual cluster sizes allow to be found and verified in the time available for this phase); ClinicalTrials.gov's `page_token` pagination beyond a single page; concurrent load against the new `"clinicaltrials"` rate-limit family's actual pacing (covered by the existing `RateLimiter` unit tests, not by a gate that runs sequentially against the live API).
+
+## Findings
+
+State vocabulary per `tracker/phase_3.1.md`/`tracker/phase_3.2.md`/`tracker/phase_3.3.md` and `.claude/skills/task-tracker/SKILL.md`: `filed` / `confirmed` / `open` (a decision, not a bug) / `closed`.
+
+| ID | State | Summary |
+|----|-------|---------|
+| F-3.5-01 | filed | `SNP_distances.tsv` is ~411 GB, three orders of magnitude past a "bulk TSV". `cluster_snp_neighbors` implemented as a bounded, wall-clock-limited streamed scan with an honest partial-coverage disposition, never a false complete `"ok"`. Decision logged in `DECISIONS.md`, 2026-08-08. Owned by T-3.5-05 |
+| F-3.5-02 | filed | ClinicalTrials.gov v2's `totalCount` is opt-in (`countTotal=true`), absent from the default response body entirely. Owned by T-3.5-06, closed by always passing `countTotal=true` |
+| F-3.5-03 | filed | `AMR_genotypes`/`AST_phenotypes` are comma-joined quoted strings or the bare literal `NULL`, never JSON arrays. Owned by T-3.5-05, closed by a quote-aware comma-split parser treating bare `NULL` as an empty list |
+
+Last updated: 2026-08-08.
