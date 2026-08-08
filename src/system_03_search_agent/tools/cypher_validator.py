@@ -184,6 +184,42 @@ or any other tail this validator cannot verify). A terminal-unsafe LIMIT
 rejects the whole query with `unsafe_limit_clause` rather than silently
 producing a second, broken LIMIT clause.
 
+Known limitation closed here, F-2.1-C15: a generated query with an
+unbounded traversal took the graph server down for every user. AGE
+materializes a DISTINCT result set before LIMIT applies, so `LIMIT 100`
+being present did nothing; the mechanism was a variable-length
+relationship pattern (`[:orthologous_to*]` or similar), which forces AGE
+to consider paths of arbitrarily increasing depth. This system's own
+generation design (`schema_slice.py`) expresses every multi-hop question
+as a fixed, small integer hop count via chained, explicitly-typed MATCH
+clauses, and never asks for a variable-length range at all, so
+`_has_variable_length_relationship` rejects the whole construct, bounded
+or not, before it reaches the graph.
+
+Two things went wrong building this fix, both instructive and both
+recorded rather than smoothed over. First, a previous attempt at this
+exact ticket was reverted (`LEARNINGS.md`, 2026-08-04) for rejecting
+`[:orthologous_to {weight: 2*3}]`, ordinary arithmetic in a property map
+value, as an unbounded traversal. Second, this fix's own first version,
+built specifically to avoid that regression by slicing
+`_RELATIONSHIP_HOP_PATTERN`'s captured bracket interior at its first `{`,
+had a different, more serious gap: a fresh-context adversarial review
+found live, before merge, that `_RELATIONSHIP_HOP_PATTERN`'s bracket
+capture (a character class excluding both bracket characters, the same
+non-nesting shape F-2.1-A9 already fixed once for node patterns and
+never generalized to relationship hops)
+cannot cross a nested `[`, so a hop carrying both a `*range` spec and a
+nested bracket, for example a list-valued property,
+`[:orthologous_to*2 {tags: [$a, $b]}]`, was never matched as a hop at
+all, and the whole check never ran on it. The version in this file does
+not depend on `_RELATIONSHIP_HOP_PATTERN` or on finding a hop's true
+closing bracket: `_UNBOUNDED_TRAVERSAL_PATTERN` anchors directly on the
+literal `[` and matches only through an explicit, wildcard-free
+sub-pattern (whitespace, an optional variable name, an optional
+`:label` list) before requiring `*`, so nothing after the `*range` spec,
+nested bracket included, is ever relevant to whether it matches. Full
+analysis and the bypass reproduction: `tracker/fix_c15_generation_bound.md`.
+
 Depends on:
     - system_03_search_agent.tools.graph_schema_constants (VERTEX_LABELS,
       EDGE_LABELS, FORBIDDEN_CYPHER_CLAUSES, DEFAULT_ROW_LIMIT, MAX_ROW_LIMIT)
@@ -231,6 +267,15 @@ REASON_INVALID_ROW_LIMIT = "invalid_row_limit"
 # would produce syntactically invalid Cypher, so this rejects instead of
 # guessing.
 REASON_UNSAFE_LIMIT_CLAUSE = "unsafe_limit_clause"
+# New for F-2.1-C15: a relationship hop carrying a variable-length spec
+# (*, *n, *n..m, *n.., *..m). AGE materializes a traversal like this, and
+# DISTINCT materializes it fully, before LIMIT ever applies; one such
+# query already took the graph server down for every user. See the module
+# docstring's F-2.1-C15 paragraph and tracker/fix_c15_generation_bound.md
+# for why this system's generation never legitimately needs this
+# construct, and why rejecting it outright cannot reject a query the
+# schema-slicing design intends to support.
+REASON_UNBOUNDED_TRAVERSAL = "unbounded_traversal"
 
 # A relationship "hop": optional leading <, a dash, an optional bracket
 # group (the typed or untyped part), a dash, an optional trailing >.
@@ -610,6 +655,103 @@ def _extract_node_labels(content: str) -> list[str]:
         return []
     label_spec = head[head.index(":"):]
     return _split_label_spec(label_spec)
+
+
+# A relationship hop's opening bracket, an optional variable name, an
+# optional `:label` (with `|`-alternation), then a `*range` spec
+# (F-2.1-C15). Anchored on the literal `[` itself rather than on
+# `_RELATIONSHIP_HOP_PATTERN`'s bracket capture group, and deliberately
+# built with no `.` or `[^...]*` wildcard anywhere in it: every character
+# between the `[` and the `*` this pattern matches is accounted for by an
+# explicit, narrow sub-pattern (whitespace, a variable name, a label list),
+# never skipped over. That is what makes it immune to the nesting bypass a
+# review of the first version of this fix found live
+# (`[:orthologous_to*2 {tags: [$a, $b]}]`, which the original
+# `_RELATIONSHIP_HOP_PATTERN`-based check never even saw, because that
+# pattern's non-nesting `[^\[\]]*` bracket capture stops dead at the first
+# nested `[`, the exact defect class F-2.1-A9 already fixed once in this
+# file for node patterns via `_iter_paren_contents`, never generalized to
+# relationship hops): this pattern does not need to find the hop's true
+# closing bracket at all, so a nested `[...]` anywhere after the `*range`
+# spec is irrelevant to it. Grammar guarantee this relies on: Cypher places
+# a relationship hop's `*range` spec strictly between its label and its
+# optional `{properties}` map, and nothing else legitimately produces a
+# `[`, immediately followed by nothing but whitespace, an optional bare
+# identifier, and an optional `:label` list, immediately followed by `*`.
+# A node pattern's label is never followed by `*` (there is no repetition
+# operator for a node in Cypher), so this cannot fire on a node label.
+_UNBOUNDED_TRAVERSAL_PATTERN = re.compile(
+    r"\[\s*(?:[A-Za-z_][A-Za-z0-9_]*\s*)?"
+    r"(?::\s*[A-Za-z_][A-Za-z0-9_]*(?:\s*\|\s*[A-Za-z_][A-Za-z0-9_]*)*\s*)?"
+    r"\*\d*(?:\.\.\d*)?"
+)
+
+
+def _has_variable_length_relationship(cypher: str) -> bool:
+    """Return True when cypher contains a relationship hop carrying a
+    variable-length specifier: `*`, `*n`, `*n..m`, `*n..`, or `*..m`
+    (F-2.1-C15).
+
+    Runs `_UNBOUNDED_TRAVERSAL_PATTERN` against a quote-masked copy of
+    cypher (see `_mask_string_literals`), the same discipline
+    `_find_suspect_literal` already uses, so a `*` appearing inside a
+    string literal's own quoted content, for example a value like
+    `':orthologous_to*2'`, can never trigger a match: the whole literal,
+    quotes included, is replaced by one opaque placeholder token before
+    this pattern ever runs. Masking failure (an unterminated literal)
+    returns False here rather than treating it as suspect on its own
+    account: `_find_suspect_literal`, called later in
+    `_run_safety_checks`, already rejects an unterminated literal for the
+    more accurate `REASON_LITERAL_INTERPOLATION_SUSPECTED`, and this
+    function reporting `REASON_UNBOUNDED_TRAVERSAL` instead for the same
+    root cause would misname what actually went wrong.
+
+    Every variable-length form is rejected, not only an unbounded one
+    (bare `*`, or a range with no upper number). This system's own
+    generation design (`schema_slice.py`) expresses every multi-hop
+    question as a fixed, small integer hop count via chained,
+    explicitly-typed MATCH clauses, and never asks for or needs a
+    variable-length range of any kind, bounded or not. Distinguishing a
+    "safe" bounded range from an unbounded one would add a threshold this
+    system has no legitimate query shape to calibrate against, and no
+    finding traces a bounded range to any incident; rejecting the whole
+    construct is both simpler and has no legitimate case to false-positive
+    against, per the analysis in `tracker/fix_c15_generation_bound.md`.
+
+    History: the first version of this check computed
+    `bracket_content.split("{", 1)[0]` on `_RELATIONSHIP_HOP_PATTERN`'s
+    captured bracket interior, correctly avoiding the previous reverted
+    attempt's `{weight: 2*3}` false positive, but a fresh-context
+    adversarial review (this same branch, before merge) found it never
+    ran at all on a hop carrying a nested bracket alongside its `*range`
+    spec, since `_RELATIONSHIP_HOP_PATTERN` itself never matched that hop
+    in the first place. This version does not depend on
+    `_RELATIONSHIP_HOP_PATTERN` or on finding a hop's true closing bracket
+    at all, which is what closes that gap; see the pattern's own comment
+    above for why.
+
+    Known, deliberately unclosed gap against Cypher's full grammar, found
+    by the second review that verified the fix above: a list literal used
+    for computation rather than as a relationship pattern, for example
+    `RETURN [x * 2]`, matches `_UNBOUNDED_TRAVERSAL_PATTERN` and is
+    wrongly rejected, since a bare identifier directly followed by `*`
+    inside a `[` is exactly the shape this check exists to catch. This is
+    a real false positive against the Cypher language, not against
+    anything this system's generation can produce: `cypher_generation.py`'s
+    system prompt and `schema_slice.py`'s fixed-hop design never generate
+    a computed or arithmetic list element, only `$param` references or
+    literal arrays (`{tags: [$a, $b]}`, `WHERE g.taxon_id IN [9606,
+    10090]`), both of which validate cleanly. Left unclosed rather than
+    tightened further, because a tighter pattern would have to somehow
+    distinguish a relationship hop's `[` from an arbitrary list literal's
+    `[` without the nesting-aware parse this fix specifically avoids
+    needing, and no finding traces this shape to anything this system
+    actually generates.
+    """
+    masked = _mask_string_literals(cypher)
+    if masked is None:
+        return False
+    return _UNBOUNDED_TRAVERSAL_PATTERN.search(masked) is not None
 
 
 def _extract_edge_labels(bracket_content: str | None) -> list[str] | None:
@@ -1103,6 +1245,23 @@ def _run_safety_checks(cypher: str) -> ValidationResult | None:
                 + forbidden
                 + "'. Layer 1 access is read-only; retry generation with a "
                 "read-only query_intent."
+            ),
+            normalized_cypher=None,
+        )
+
+    if _has_variable_length_relationship(cypher):
+        return ValidationResult(
+            ok=False,
+            reason=REASON_UNBOUNDED_TRAVERSAL,
+            message=(
+                "Generated Cypher uses a variable-length relationship "
+                "pattern (for example [:edge_label*] or "
+                "[:edge_label*1..3]). AGE materializes a traversal like "
+                "this, and DISTINCT materializes it fully, before LIMIT "
+                "ever applies; a query with this shape has already "
+                "taken the graph server down for every user "
+                "(F-2.1-C15). Retry generation using a fixed number of "
+                "chained, explicitly-typed relationship hops instead."
             ),
             normalized_cypher=None,
         )
