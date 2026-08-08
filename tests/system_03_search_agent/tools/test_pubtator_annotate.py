@@ -48,6 +48,19 @@ Covers, per this ticket's explicit requirements:
       content-free transport fallback always carries actionable guidance,
       never ships the bare `"HTTP {status} with no structured error
       body"` string alone.
+    - F-3.3-J-04 (fix round 4): a withheld `entities[]` or
+      `publications[].annotations[]` field is disclosed in
+      `fields_withheld`, named by its OUTPUT position (never a raw
+      response index, even after an earlier row is skipped), and more
+      than 20 notes cap at 20 with a summary rather than raising
+      `pydantic.ValidationError` out of a fully successful call.
+    - F-3.3-A-05 (fix round 4): `entities[].source_url` is populated for
+      `db == "ncbi_gene"` and `db == "ncbi_mesh"`, `None` for every other
+      `db` value, and `None` when the underlying `db_id` was itself
+      withheld for exceeding its own cap.
+    - F-3.3-A-12 (fix round 4): `publications[].total_annotations` carries
+      the TRUE count of well-formed annotations before the `maxItems: 100`
+      cap on `annotations`, never merely `len(annotations)`.
 
 Depends on:
     - system_03_search_agent.tools.pubtator_annotate (module under test)
@@ -274,7 +287,11 @@ async def test_entity_lookup_withholds_over_length_field_not_truncate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """An over-length `name` is withheld (`None`), never a truncated real-looking value."""
-    over_length_name = "X" * 150  # exceeds the 100-char cap
+    # Exceeds the 100-char name cap, but the full "entities[0].name: <value>"
+    # note itself still fits within the 150-char fields_withheld item cap
+    # (19-char label + 110-char value = 129 chars), so this test can assert
+    # the note's exact content below rather than a truncated fragment of it.
+    over_length_name = "X" * 110
     body = [
         {
             "_id": "@GENE_TEST",
@@ -296,6 +313,10 @@ async def test_entity_lookup_withholds_over_length_field_not_truncate(
     assert output.entities[0].name is None, "over-length name must be withheld, not truncated"
     assert output.entities[0].description == "fine"
     assert output.entities[0].db_id == "1"
+    assert output.fields_withheld == [f"entities[0].name: {over_length_name}"], (
+        "F-3.3-J-04: withholding a field must disclose it, named by OUTPUT "
+        "position, mirroring litvar2_lookup's fields_withheld"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -350,6 +371,180 @@ async def test_over_length_matched_on_is_withheld_not_truncated(
     assert output.status == "ok"
     assert output.entities[0].matched_on is None, "over-length matched_on must be withheld, not truncated"
     assert output.entities[0].name == "BRCA1", "other in-cap fields on the same entity still ship"
+
+
+# ---------------------------------------------------------------------------
+# F-3.3-J-04: entities[] fields_withheld disclosure, index correctness, and
+# the 20-item overflow cap (mirroring litvar2_lookup.py's F-3.3-J-01 fix).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_j_04_fields_withheld_is_none_when_nothing_withheld(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(monkeypatch, [_json_response(_entity_autocomplete_body())])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="entity_lookup", query="BRCA1", limit=5)
+    )
+
+    assert output.status == "ok"
+    assert output.fields_withheld is None
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_j_04_withheld_note_index_matches_output_position_after_a_skipped_row(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A raw row that fails to parse (not an object) is skipped entirely and
+    never occupies an output position, so a later KEPT entity's withheld
+    field must be labeled by its OUTPUT index, not its raw array index
+    (F-3.3-J-03's discipline, applied here for pubtator_annotate).
+    """
+    over_length_name = "Z" * 110  # over the 100-char cap, still fits the 150-char note cap
+    body = [
+        "not-an-object",  # raw index 0, skipped entirely
+        {
+            "_id": "@GENE_TEST",
+            "db": "ncbi_gene",
+            "db_id": "1",
+            "name": over_length_name,  # raw index 1, output index 0
+        },
+    ]
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="entity_lookup", query="test", limit=5)
+    )
+
+    assert output.status == "ok"
+    assert len(output.entities) == 1
+    assert output.fields_withheld == [f"entities[0].name: {over_length_name}"], (
+        "the kept entity is at OUTPUT position 0, never raw position 1"
+    )
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_j_04_many_withheld_fields_are_capped_not_a_validation_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """More than 20 withheld-field notes must not raise pydantic.ValidationError
+    out of a fully successful call; the list caps at 20 with a summary note,
+    mirroring litvar2_lookup._cap_fields_withheld exactly (F-3.3-J-01's
+    precedent, applied here from the start).
+    """
+    over_length_name = "Q" * 150
+    over_length_description = "R" * 400
+    # 11 entities, each withholding both name and description: 22 notes,
+    # exceeding the 20-item cap (20 notes exactly would NOT overflow: the
+    # cap only replaces the final slot when there are MORE than 20).
+    body = [
+        {
+            "_id": f"@GENE_{i}",
+            "db": "ncbi_gene",
+            "db_id": str(i),
+            "name": over_length_name,
+            "description": over_length_description,
+        }
+        for i in range(11)
+    ]
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="entity_lookup", query="test", limit=20)
+    )
+
+    assert output.status == "ok", output.error
+    assert len(output.entities) == 11
+    assert output.fields_withheld is not None
+    assert len(output.fields_withheld) == 20, "must cap at the schema's own max_length=20"
+    assert "more fields withheld" in output.fields_withheld[-1]
+
+
+# ---------------------------------------------------------------------------
+# F-3.3-A-05: entities[].source_url, deliberately partial (ncbi_gene/
+# ncbi_mesh only).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_a_05_entity_source_url_for_ncbi_gene(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(monkeypatch, [_json_response(_entity_autocomplete_body())])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="entity_lookup", query="BRCA1", limit=5)
+    )
+
+    assert output.status == "ok"
+    gene = output.entities[0]
+    assert gene.db == "ncbi_gene"
+    assert gene.source_url == "https://www.ncbi.nlm.nih.gov/gene/672"
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_a_05_entity_source_url_for_ncbi_mesh(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    body = [
+        {
+            "_id": "@DISEASE_D001943",
+            "db": "ncbi_mesh",
+            "db_id": "D001943",
+            "name": "Breast Neoplasms",
+        }
+    ]
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="entity_lookup", query="breast cancer", limit=5)
+    )
+
+    assert output.status == "ok"
+    assert output.entities[0].source_url == "https://www.ncbi.nlm.nih.gov/mesh/D001943"
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_a_05_entity_source_url_none_for_unrecognized_db(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`db == "litvar"` (or any other value) is deliberately NOT covered:
+    this tool does not guess a URL shape it has not verified live.
+    """
+    _install(monkeypatch, [_json_response(_entity_autocomplete_body())])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="entity_lookup", query="BRCA1", limit=5)
+    )
+
+    assert output.status == "ok"
+    variant_entity = output.entities[1]
+    assert variant_entity.db == "litvar"
+    assert variant_entity.source_url is None
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_a_05_entity_source_url_none_when_db_id_is_withheld(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A source_url must never be built from a db_id that was itself
+    withheld for exceeding its own cap: there is no valid identifier left
+    to link to.
+    """
+    over_length_db_id = "1" * 40  # exceeds the 30-char db_id cap
+    body = [{"_id": "@GENE_X", "db": "ncbi_gene", "db_id": over_length_db_id, "name": "X"}]
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="entity_lookup", query="x", limit=5)
+    )
+
+    assert output.status == "ok"
+    entity = output.entities[0]
+    assert entity.db_id is None, "over-length db_id must be withheld"
+    assert entity.source_url is None, "source_url must not be built from a withheld db_id"
 
 
 # ---------------------------------------------------------------------------
@@ -581,6 +776,94 @@ async def test_annotate_publications_withholds_over_length_annotation_field(
     annotation = output.publications[0].annotations[0]
     assert annotation.identifier is None, "over-length identifier must be withheld, not truncated"
     assert annotation.type == "Gene", "other in-cap fields on the same annotation still ship"
+    assert output.fields_withheld == [
+        f"publications[0].annotations[0].identifier: {'Y' * 90}"
+    ], "F-3.3-J-04: the withholding must be disclosed, keyed to OUTPUT position"
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_j_04_annotation_withheld_note_keys_to_output_positions_across_two_publications(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two publications, each with one over-length annotation field: the
+    disclosure note for the SECOND publication's annotation must name
+    publications[1], not the raw PubTator3[] array index, and each
+    publication's own annotation index must start over at 0.
+    """
+    # Over the 100-char annotation name cap, still fits the 150-char note cap.
+    over_length_name = "N" * 105
+    doc_a = _publication_doc("34083286")
+    doc_b = _publication_doc("11111111", gene_identifier="99")
+    doc_b["passages"][0]["annotations"][0]["infons"]["name"] = over_length_name
+    body = {"PubTator3": [doc_a, doc_b]}
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="annotate_publications", pmids=["34083286", "11111111"])
+    )
+
+    assert output.status == "ok", output.error
+    assert len(output.publications) == 2
+    assert output.publications[0].annotations[0].name == "BRCA1"
+    assert output.publications[1].annotations[0].name is None
+    assert output.fields_withheld == [f"publications[1].annotations[0].name: {over_length_name}"]
+
+
+# ---------------------------------------------------------------------------
+# F-3.3-A-12: total_annotations, a companion count for the silent
+# maxItems: 100 cap on `annotations`.
+# ---------------------------------------------------------------------------
+
+
+def _many_annotations_doc(pmid: str, count: int) -> dict[str, Any]:
+    """A publication doc carrying `count` well-formed annotations, exceeding
+    _MAX_ANNOTATIONS (100) when count > 100.
+    """
+    doc = _publication_doc(pmid)
+    doc["passages"][0]["annotations"] = [
+        {
+            "id": str(i),
+            "infons": {"identifier": str(i), "type": "Gene", "name": f"gene-{i}"},
+            "text": f"gene-{i}",
+            "locations": [{"offset": i, "length": 5}],
+        }
+        for i in range(count)
+    ]
+    return doc
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_a_12_total_annotations_reflects_true_count_before_the_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    body = {"PubTator3": [_many_annotations_doc("34083286", 130)]}
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="annotate_publications", pmids=["34083286"])
+    )
+
+    assert output.status == "ok", output.error
+    pub = output.publications[0]
+    assert len(pub.annotations) == 100, "annotations must still cap at maxItems: 100"
+    assert pub.total_annotations == 130, "total_annotations must carry the TRUE pre-cap count"
+    assert pub.total_annotations != len(pub.annotations)
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_a_12_total_annotations_equals_len_when_under_the_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    body = {"PubTator3": [_publication_doc("34083286")]}
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="annotate_publications", pmids=["34083286"])
+    )
+
+    assert output.status == "ok"
+    pub = output.publications[0]
+    assert pub.total_annotations == len(pub.annotations) == 1
 
 
 @pytest.mark.asyncio

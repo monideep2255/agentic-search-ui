@@ -56,6 +56,18 @@ Covers, per the ticket's explicit requirements:
     - F-3.3-A-01/F-3.3-A-02: matched_on is populated from the upstream
       match field when present, None when absent, and withheld (not
       truncated) like any other over-length field.
+    - F-3.3-J-06/F-3.3-A-10 (fix round 4): source_url prefers a real dbSNP
+      record page (`/snp/{rsid}`) over the LitVar2 search UI whenever an
+      rsid is available, for both variant_search (the top match's own
+      `rsid` field) and publications_lookup (an rs...##-shaped litvar_id);
+      falls back to the LitVar2 UI, unchanged, when no rsid is available
+      or the extracted/reported value is not itself rsid-shaped; never
+      points at the fetch host (/research/litvar2-api/) either way.
+    - F-3.3-A-12 (fix round 4): total_variant_matches carries the TRUE
+      pre-cap count of dict-shaped raw rows, never merely
+      len(variant_matches), and a row beyond the maxItems: 10 slice
+      contributes to the count without being fully parsed or generating a
+      fields_withheld note.
 
 Depends on:
     - system_03_search_agent.tools.litvar2_lookup (module under test)
@@ -189,7 +201,12 @@ async def test_variant_search_ok_maps_fields_and_source_url(monkeypatch: pytest.
     assert match.gene == ["HBB"]
     assert match.name == "c.20A>T"
     assert match.pmids_count == 590
-    assert output.source_url == "https://www.ncbi.nlm.nih.gov/research/litvar2/?query=rs334"
+    # F-3.3-J-06/F-3.3-A-10, fix round 4: the top match carries a real rsid,
+    # so source_url prefers the real dbSNP record page over the LitVar2
+    # search UI. See test_source_url_falls_back_to_the_ui_page_when_the_top_
+    # match_has_no_rsid below for the non-rsid-keyed case.
+    assert output.source_url == "https://www.ncbi.nlm.nih.gov/snp/rs334"
+    assert output.total_variant_matches == 1
 
 
 @pytest.mark.asyncio
@@ -550,6 +567,91 @@ async def test_withheld_note_index_matches_output_position_after_exclusion(
 
 
 # ---------------------------------------------------------------------------
+# F-3.3-A-12: total_variant_matches, a companion count for the silent
+# maxItems: 10 cap on variant_matches.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_total_variant_matches_reflects_true_count_before_the_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """15 dict-shaped raw rows, only 10 of which ship in variant_matches
+    (maxItems: 10); total_variant_matches must carry the TRUE pre-cap
+    count of 15, not merely len(variant_matches).
+    """
+    body = [
+        _autocomplete_body(litvar_id=f"litvar@rs{i}##", rsid=f"rs{i}")[0] for i in range(15)
+    ]
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await litvar2_lookup(_variant_search_input("rs"))
+
+    assert output.status == "ok", output.error
+    assert len(output.variant_matches) == 10, "variant_matches must still cap at maxItems: 10"
+    assert output.total_variant_matches == 15, "total_variant_matches must carry the TRUE count"
+    assert output.total_variant_matches != len(output.variant_matches)
+
+
+@pytest.mark.asyncio
+async def test_total_variant_matches_equals_len_when_under_the_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(monkeypatch, [_json_response(_autocomplete_body())])
+
+    output = await litvar2_lookup(_variant_search_input("rs334"))
+
+    assert output.status == "ok"
+    assert output.total_variant_matches == len(output.variant_matches) == 1
+
+
+@pytest.mark.asyncio
+async def test_total_variant_matches_is_zero_on_a_genuine_no_match(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(monkeypatch, [_json_response([])])
+
+    output = await litvar2_lookup(_variant_search_input("zzznotarealvariant"))
+
+    assert output.status == "empty"
+    assert output.total_variant_matches == 0
+
+
+@pytest.mark.asyncio
+async def test_total_variant_matches_counts_dict_rows_beyond_the_cap_without_parsing_them(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A row beyond the maxItems: 10 slice must still count toward
+    total_variant_matches (a basic-type-validity count), but must NOT be
+    fully parsed or generate a fields_withheld note: this fix adds a
+    companion total count, not a companion disclosure surface for
+    cap-exceeding rows.
+    """
+    in_cap_rows = [
+        _autocomplete_body(
+            litvar_id=f"litvar@rs{i}##", rsid=f"rs{i}", clinical_significance=["benign"]
+        )[0]
+        for i in range(10)
+    ]
+    # Row 11 (beyond the cap) carries an over-length clinical_significance
+    # term; if it were fully parsed, it would generate a withheld note.
+    over_cap_row = _autocomplete_body(
+        litvar_id="litvar@rs999##", rsid="rs999", clinical_significance=[RS334_LONG_TERM]
+    )[0]
+    body = [*in_cap_rows, over_cap_row]
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await litvar2_lookup(_variant_search_input("rs"))
+
+    assert output.status == "ok", output.error
+    assert len(output.variant_matches) == 10
+    assert output.total_variant_matches == 11
+    assert output.fields_withheld is None, (
+        "a row beyond the cap must not generate a fields_withheld note"
+    )
+
+
+# ---------------------------------------------------------------------------
 # publications_lookup: ok (with truncation), empty, error.
 # ---------------------------------------------------------------------------
 
@@ -679,12 +781,17 @@ async def test_litvar_id_encoding_is_unconditional_even_if_caller_shape_looks_ra
 
 
 @pytest.mark.asyncio
-async def test_publications_lookup_source_url_uses_derived_rsid(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_publications_lookup_source_url_uses_dbsnp_page_for_rsid_keyed_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.3-J-06/F-3.3-A-10, fix round 4: an rs...##-shaped litvar_id gets
+    the real dbSNP record page, not the LitVar2 search UI.
+    """
     _install(monkeypatch, [_json_response({"pmids": [111]})])
 
     output = await litvar2_lookup(_publications_input("litvar@rs334##"))
 
-    assert output.source_url == "https://www.ncbi.nlm.nih.gov/research/litvar2/?query=rs334"
+    assert output.source_url == "https://www.ncbi.nlm.nih.gov/snp/rs334"
 
 
 @pytest.mark.asyncio
@@ -702,8 +809,8 @@ async def test_publications_lookup_source_url_falls_back_to_raw_id_when_not_rsid
 @pytest.mark.asyncio
 async def test_source_url_never_points_at_the_fetch_host(monkeypatch: pytest.MonkeyPatch) -> None:
     """The fetch-host-equals-UI-host trap (module docstring): source_url must
-    always be built from the /research/litvar2/ UI path, never
-    /research/litvar2-api/.
+    never be built from /research/litvar2-api/, regardless of which
+    citation target (dbSNP or the LitVar2 UI) this call resolves to.
     """
     _install(monkeypatch, [_json_response(_autocomplete_body())])
 
@@ -711,7 +818,65 @@ async def test_source_url_never_points_at_the_fetch_host(monkeypatch: pytest.Mon
 
     assert output.source_url is not None
     assert "litvar2-api" not in output.source_url
-    assert "/research/litvar2/" in output.source_url
+    # F-3.3-J-06, fix round 4: rs334 is rsid-keyed, so this now resolves to
+    # the dbSNP page, not the /research/litvar2/ UI path; see
+    # test_source_url_falls_back_to_the_ui_page_when_the_top_match_has_no_rsid
+    # below for a case that still exercises the UI-host branch of this
+    # same invariant.
+    assert output.source_url == "https://www.ncbi.nlm.nih.gov/snp/rs334"
+
+
+@pytest.mark.asyncio
+async def test_source_url_falls_back_to_the_ui_page_when_the_top_match_has_no_rsid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.3-J-06, fix round 4: when the top match carries no `rsid` at all,
+    source_url falls back to the LitVar2 search UI, UNCHANGED from before
+    this fix, and must still never point at the fetch host
+    (/research/litvar2-api/).
+    """
+    _install(monkeypatch, [_json_response(_autocomplete_body(rsid=None))])
+
+    output = await litvar2_lookup(_variant_search_input("rs334"))
+
+    assert output.status == "ok", output.error
+    assert output.variant_matches[0].rsid is None
+    assert output.source_url is not None
+    assert "litvar2-api" not in output.source_url
+    assert output.source_url == "https://www.ncbi.nlm.nih.gov/research/litvar2/?query=rs334"
+
+
+@pytest.mark.asyncio
+async def test_source_url_falls_back_to_the_ui_page_when_the_top_match_rsid_is_shape_invalid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A `rsid` field present but not shaped like a real rsid (untrusted
+    upstream content) must never be trusted to build a `/snp/{value}` URL;
+    this falls back to the LitVar2 UI citation instead of guessing.
+    """
+    _install(monkeypatch, [_json_response(_autocomplete_body(rsid="not-a-real-rsid"))])
+
+    output = await litvar2_lookup(_variant_search_input("rs334"))
+
+    assert output.status == "ok", output.error
+    assert output.source_url == "https://www.ncbi.nlm.nih.gov/research/litvar2/?query=rs334"
+
+
+@pytest.mark.asyncio
+async def test_publications_lookup_source_url_falls_back_to_ui_when_rsid_shape_invalid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Mirrors the variant_search case above for publications_lookup: an
+    `_RSID_FROM_LITVAR_ID` match whose captured group is not itself
+    rsid-shaped must not be trusted to build a dbSNP URL.
+    """
+    _install(monkeypatch, [_json_response({"pmids": [111]})])
+
+    output = await litvar2_lookup(_publications_input("litvar@not-a-real-rsid##"))
+
+    assert output.source_url == (
+        "https://www.ncbi.nlm.nih.gov/research/litvar2/?query=not-a-real-rsid"
+    )
 
 
 # ---------------------------------------------------------------------------

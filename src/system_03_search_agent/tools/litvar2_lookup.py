@@ -105,6 +105,27 @@ than silently assumes away; see `tracker/phase_3.3.md`'s F-3.3-A-09 and
 F-3.3-A-10 for the fuller account, including the raw-internal-id fallback
 case this same gap hides.
 
+SUPERSEDED FOR THE RSID-KEYED CASE, 2026-08-08 (F-3.3-J-06/F-3.3-A-10, fix
+round 4): the citation-quality gap above is real for the LitVar2 UI, but a
+better target was live-verified the same day:
+`https://www.ncbi.nlm.nih.gov/snp/{rsid}` is a REAL, distinct,
+server-rendered dbSNP record page, not a client-rendered shell (rs334's
+page is 243623 bytes and contains the actual record; the LitVar2 shell is
+a byte-identical 4347 bytes regardless of query). Every result this tool
+returns that carries a real `rsid` already has that identity in hand:
+`variant_search`'s own `variant_matches[0].rsid` field, or the rsid
+embedded in an `rs...##`-shaped `litvar_id` for `publications_lookup`
+(`_RSID_FROM_LITVAR_ID`, unchanged). `_snp_url_for_rsid` below builds the
+dbSNP URL in PREFERENCE to the LitVar2 UI whenever an rsid is available in
+either mode, closing F-3.3-J-06 for that common case. The LitVar2 UI
+fallback described above remains, UNCHANGED, for the narrower case where
+no rsid is available: `variant_search` when the top match carries no
+`rsid` field, and `publications_lookup` when `litvar_id` does not match
+the `litvar@rs.../##` shape (an internal composite id like
+`litvar@#672#c.5382insC`, F-3.3-A-10's own repro). This narrows
+F-3.3-A-10's remaining scope to that non-rsid-keyed case rather than
+closing it: no better citation target is available for that shape today.
+
 ## Withholding, not truncating (F-3.3-03)
 
 `_parse_clinical_significance` drops (never truncates) any individual
@@ -148,9 +169,18 @@ truncate policy above: the spec explicitly caps the array and explicitly
 provides `total_pmids` to carry the true count, so dropping items 51+ from
 `pmids` while reporting the honest total is the INTENDED design, not a
 silent-truncation bug. `variant_matches` (`maxItems: 10`) is capped the
-same authorized way, though Section 6.5 provides no companion
-"total_variant_matches" field for it; this module does not invent one
-outside its ticket's authorized additive fields (`fields_withheld` only).
+same authorized way. Section 6.5 provides no companion
+"total_variant_matches" field for it, but `total_variant_matches` is now
+this ticket's own second additive field (F-3.3-A-12, fix round 4,
+`litvar2_lookup_schemas.py`'s design decision 6): `_parse_variant_matches`
+computes it as a basic-type-validity count (a dict-shaped raw row) over
+the ENTIRE raw response array, before the `maxItems: 10` slice, mirroring
+`_parse_pmids`'s own `total_pmids` discipline exactly. It deliberately
+does NOT fully parse, or generate `fields_withheld` notes for, rows beyond
+the cap: doing so would widen the disclosure surface to rows this tool
+never actually surfaces in `variant_matches`, beyond what F-3.3-A-12
+itself asked for (a companion total count, not a companion
+withheld-notes scope).
 
 Never raises: `litvar2_lookup` (the public entry point) wraps
 `_litvar2_lookup_impl` in a `try`/`except`, the same outer-boundary pattern
@@ -285,10 +315,19 @@ _MAX_CLINICAL_SIG_ITEMS: Final[int] = 10
 _MAX_PMIDS: Final[int] = 50
 _MAX_FIELDS_WITHHELD_ITEMS: Final[int] = 20
 
-# `litvar@rs334##` -> `rs334`. Used only to build a more specific UI
-# citation for publications_lookup; a litvar_id that does not match this
-# shape falls back to being cited by its own raw text, never an error.
+# `litvar@rs334##` -> `rs334`. Used to build a more specific citation for
+# publications_lookup; a litvar_id that does not match this shape falls
+# back to being cited by its own raw text, never an error.
 _RSID_FROM_LITVAR_ID: Final[re.Pattern[str]] = re.compile(r"^litvar@(.+?)##$")
+
+# F-3.3-J-06/F-3.3-A-10, fix round 4: a shape check an extracted or
+# upstream-reported "rsid" must pass before this module trusts it enough
+# to build a dbSNP record URL from it. Untrusted content (both
+# `_RSID_FROM_LITVAR_ID`'s captured group and LitVar2's own `rsid` field
+# are upstream-controlled strings), so a value that does not look like a
+# real rsid falls back to the LitVar2 UI citation rather than being used
+# to build a `/snp/{value}` URL whose target this module cannot vouch for.
+_RSID_SHAPE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^rs\d+$")
 
 
 def _quote_path_segment(value: str) -> str:
@@ -377,11 +416,73 @@ def _build_source_url(identifier: str | None) -> str | None:
     return url
 
 
+def _snp_url_for_rsid(rsid: str) -> str | None:
+    """`https://www.ncbi.nlm.nih.gov/snp/{rsid}`, a REAL per-variant dbSNP
+    record page (F-3.3-J-06/F-3.3-A-10, fix round 4).
+
+    Live-verified 2026-08-08: unlike the LitVar2 UI's client-rendered shell
+    (F-3.3-A-09, a byte-identical 4347-byte body regardless of query), this
+    dbSNP page is genuinely distinct per rsid (rs334's page is 243623
+    bytes and contains the actual record). Only ever called with a value
+    already checked against `_RSID_SHAPE_PATTERN` by the caller, so this
+    never builds a URL from an unvalidated string; returns `None` (fail
+    closed, never raise) if that invariant is somehow violated, if the
+    resulting URL would exceed its schema cap, or if it fails the module's
+    own record-URL pattern, the same defense-in-depth discipline
+    `_build_source_url` uses for its own fixed `_UI_BASE` constant.
+    """
+    if not _RSID_SHAPE_PATTERN.match(rsid):
+        return None
+    url = "https://www.ncbi.nlm.nih.gov/snp/" + urllib.parse.quote(rsid, safe="")
+    if len(url) > _MAX_SOURCE_URL_CHARS:
+        return None
+    if re.match(NCBI_LITVAR2_RECORD_URL_PATTERN, url) is None:
+        return None
+    return url
+
+
 def _build_source_url_for_litvar_id(litvar_id: str) -> str | None:
-    """Same as `_build_source_url`, but derives the rsid from `litvar_id` first when possible."""
+    """The `publications_lookup` citation for `litvar_id`.
+
+    F-3.3-J-06/F-3.3-A-10, fix round 4: prefers a real dbSNP record page
+    (`_snp_url_for_rsid`) when `litvar_id` matches the documented
+    `litvar@rs.../##` shape, since that rsid is a genuinely better,
+    server-rendered, independently-verifiable citation target than the
+    LitVar2 search UI (see the module docstring's "source_url mapping"
+    section, "SUPERSEDED FOR THE RSID-KEYED CASE"). Falls back to
+    `_build_source_url` (the raw `litvar_id`, or the extracted group if it
+    matched the shape but was not itself rsid-shaped, e.g. a malformed
+    `snp_url` construction) for the non-rsid-keyed case, unchanged from
+    before this fix.
+    """
     match = _RSID_FROM_LITVAR_ID.match(litvar_id)
     identifier = match.group(1) if match else litvar_id
+    if match:
+        snp_url = _snp_url_for_rsid(identifier)
+        if snp_url is not None:
+            return snp_url
     return _build_source_url(identifier)
+
+
+def _source_url_for_variant_search(query: str, matches: list[Litvar2VariantMatch]) -> str | None:
+    """The `variant_search` citation: prefer the top match's own dbSNP page.
+
+    F-3.3-J-06/F-3.3-A-10, fix round 4: when the top-ranked match carries a
+    real `rsid` (LitVar2's own `rsid` response field, already parsed and
+    capped onto `Litvar2VariantMatch.rsid`), that rsid is a genuinely
+    better citation than the LitVar2 search UI parameterized by the
+    caller's own `query`. Falls back to `_build_source_url(query)`,
+    UNCHANGED from before this fix, whenever there are no matches, the top
+    match carries no `rsid`, or the rsid fails `_RSID_SHAPE_PATTERN` (or
+    somehow fails `_snp_url_for_rsid`'s own defense-in-depth checks): this
+    module never leaves a `variant_search` result uncited just because the
+    preferred citation path did not apply.
+    """
+    if matches and matches[0].rsid:
+        snp_url = _snp_url_for_rsid(matches[0].rsid)
+        if snp_url is not None:
+            return snp_url
+    return _build_source_url(query)
 
 
 def _error_output(mode: str, message: str) -> Litvar2LookupOutput:
@@ -591,16 +692,15 @@ def _parse_variant_match(
     return match, withheld
 
 
-def _parse_variant_matches(raw_list: list[Any]) -> tuple[list[Litvar2VariantMatch], list[str]]:
+def _parse_variant_matches(
+    raw_list: list[Any],
+) -> tuple[list[Litvar2VariantMatch], list[str], int]:
     """Build `variant_matches` from the raw autocomplete array, capped at `maxItems: 10`.
 
     The cap itself is spec-authorized truncation (Section 6.5's own
     `maxItems: 10`), the same kind `pmids` uses, not the withhold-not-
-    truncate policy: unlike `pmids`, Section 6.5 provides no companion
-    total-count field for `variant_matches`, so results beyond the cap are
-    silently not returned. This module does not invent an unauthorized
-    additive field for that count; only `fields_withheld` (F-3.3-03) is
-    this ticket's authorized addition.
+    truncate policy: results beyond the cap are silently not returned in
+    `variant_matches` itself.
 
     F-3.3-J-03: `output_index`, the position a match will occupy in
     `matches` if kept, is computed as `len(matches)` BEFORE that match is
@@ -610,7 +710,22 @@ def _parse_variant_matches(raw_list: list[Any]) -> tuple[list[Litvar2VariantMatc
     its eventual `output_index` in `variant_matches` diverge the moment
     any row is excluded, and only `output_index` is ever a valid position
     to cite in a `fields_withheld` note about `variant_matches[i]`.
+
+    F-3.3-A-12: the returned `total`, unlike `output_index` above, is
+    computed over the ENTIRE `raw_list`, not just the `_MAX_VARIANT_MATCHES`
+    slice, as a basic-type-validity count (a dict-shaped row), mirroring
+    `_parse_pmids`'s own `total_pmids` discipline. This is DELIBERATELY
+    cheaper than the full `_parse_variant_match` pass below: rows beyond
+    the cap are never passed to `_parse_variant_match`, so they never
+    generate a `fields_withheld` note. Widening the disclosure surface to
+    cap-exceeding rows is out of this finding's scope (a companion total
+    count, not a companion withheld-notes scope); a dict-shaped row still
+    counts toward `total` even if a full parse would have excluded it for
+    an over-length identity field or produced an all-`None` content-free
+    match (F-3.3-RR-02's own known gap), the same coarser granularity
+    `total_pmids` already accepts for its own sibling field.
     """
+    total = sum(1 for item in raw_list if isinstance(item, dict))
     matches: list[Litvar2VariantMatch] = []
     withheld: list[str] = []
     for raw_index, item in enumerate(raw_list[:_MAX_VARIANT_MATCHES]):
@@ -619,7 +734,7 @@ def _parse_variant_matches(raw_list: list[Any]) -> tuple[list[Litvar2VariantMatc
         withheld.extend(item_withheld)
         if match is not None:
             matches.append(match)
-    return matches, withheld
+    return matches, withheld, total
 
 
 async def _variant_search(query: str) -> Litvar2LookupOutput:
@@ -654,9 +769,9 @@ async def _variant_search(query: str) -> Litvar2LookupOutput:
         )
 
     if not body:
-        return Litvar2LookupOutput(status="empty", mode="variant_search")
+        return Litvar2LookupOutput(status="empty", mode="variant_search", total_variant_matches=0)
 
-    matches, withheld = _parse_variant_matches(body)
+    matches, withheld, total_variant_matches = _parse_variant_matches(body)
     if not matches:
         # F-3.3-J-02: the API body was non-empty, but every row either
         # failed to parse as an object or had its identity field
@@ -683,6 +798,7 @@ async def _variant_search(query: str) -> Litvar2LookupOutput:
         return Litvar2LookupOutput(
             status="empty",
             mode="variant_search",
+            total_variant_matches=total_variant_matches,
             fields_withheld=_cap_fields_withheld(withheld) if withheld else None,
         )
 
@@ -690,7 +806,10 @@ async def _variant_search(query: str) -> Litvar2LookupOutput:
         status="ok",
         mode="variant_search",
         variant_matches=matches,
-        source_url=_build_source_url(query),
+        total_variant_matches=total_variant_matches,
+        # F-3.3-J-06/F-3.3-A-10, fix round 4: prefer the top match's own
+        # dbSNP page over the LitVar2 search UI when an rsid is available.
+        source_url=_source_url_for_variant_search(query, matches),
         fields_withheld=_cap_fields_withheld(withheld) if withheld else None,
     )
 

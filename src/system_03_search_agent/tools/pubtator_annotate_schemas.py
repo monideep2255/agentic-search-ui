@@ -163,6 +163,82 @@ judgment call is its own reviewed decision, not folded into this one.
 policy: an over-length value is withheld (`None`) via `_withhold_if_over`,
 the same as every other `PubtatorEntity` field.
 
+Design decision 8, `PubtatorEntity.source_url` (F-3.3-A-05, added
+2026-08-08, fix round 4). `entity_lookup` mode shipped no provenance of
+any kind before this fix: `PubtatorEntity` carried resolvable, real NCBI
+identifiers (`db: "ncbi_gene", db_id: "672"`; `db: "ncbi_mesh", db_id:
+"D001943"`) with nothing linking to either record page, while
+`annotate_publications`'s sibling `PubtatorPublication.source_url` gave
+every publication its own PubMed link. Section 6.4's locked entity item
+schema names no `source_url` field, so this is an additive field, per
+`system-design-patterns` pattern 10, the same reasoning design decision 4's
+`pmids_not_found` and design decision 7's `matched_on` already used.
+
+This is DELIBERATELY PARTIAL, not full coverage of every `db` value
+PubTator3 can return. `NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN` below is
+scoped to exactly the two `db` values this phase's own live probing has
+actually observed (`ncbi_gene` -> `https://www.ncbi.nlm.nih.gov/gene/
+{db_id}`, `ncbi_mesh` -> `https://www.ncbi.nlm.nih.gov/mesh/{db_id}`), both
+live-verified 2026-08-08 as real, distinct, server-rendered NCBI record
+pages, not a shared client-rendered shell the way `litvar2_lookup`'s own
+UI citation was found to be (F-3.3-A-09): gene 672 (734671 bytes,
+containing "BRCA1") and gene 7157 (527847 bytes) return genuinely
+different content, and mesh D001943 (65216 bytes, containing "Breast
+Neoplasms") and mesh D003924 (64837 bytes) likewise. `pubtator_annotate.py`'s
+`_entity_source_url` returns `None` for every OTHER `db` value (`litvar`,
+`cvcl`, and anything else PubTator3 might return): this module does not
+guess a URL shape for a db type it has not verified live, per
+LEARNINGS.md row 60's discipline, and does not silently claim coverage it
+does not have. A future ticket that live-verifies a record-page shape for
+another `db` value can extend `_entity_source_url` and this pattern
+together, as its own reviewed change.
+
+Design decision 9, `PubtatorAnnotateOutput.fields_withheld` (F-3.3-J-04,
+added 2026-08-08, fix round 4), closing the gap design decision 6 above
+named rather than fixed. `litvar2_lookup`, built in this same phase against
+the same withhold-not-truncate precedent, ships a `fields_withheld` list
+naming every withheld field; this tool set an over-cap `entities[]` or
+`annotations[]` field to `None` with no disclosure at all. On
+reconsideration this was a scoping accident, not a considered product
+tradeoff: T-3.3-03's original authorization named exactly one additive
+field (`pmids_not_found`) because that was the finding on the table at the
+time, not because per-item disclosure was weighed and declined. This repo
+has now used the withhold-and-disclose pattern three times (`ncbi_dbsnp`
+in build phase 3.2, `litvar2_lookup` earlier in this same phase), so the
+two sibling Layer 3 tools now agree.
+
+`fields_withheld` mirrors `litvar2_lookup_schemas.Litvar2LookupOutput.
+fields_withheld` exactly: `list[str] | None`, `max_length=20` items,
+`max_length=150` per item, defaulting to `None`. `pubtator_annotate.py`'s
+own `_cap_fields_withheld` mirrors `litvar2_lookup.py`'s function of the
+same name, including its overflow-summary behavior (F-3.3-J-01's
+precedent: silently dropping overflow notes would itself be a
+silent-truncation failure, so a list of more than 20 notes ships 19
+unchanged plus one summary note naming how many more did not fit, rather
+than a bare truncation). Every note names the withheld field by its OUTPUT
+position, e.g. `"entities[2].description: <original value>"` or
+`"publications[0].annotations[3].name: <original value>"`, never a raw
+response index, following the F-3.3-J-03 indexing discipline
+`litvar2_lookup.py` already established: a raw row that fails to parse is
+skipped entirely and never occupies an output position, so only the
+output-position index stays correct after any such skip.
+
+Design decision 10, `PubtatorPublication.total_annotations` (F-3.3-A-12,
+added 2026-08-08, fix round 4). `annotations` is capped at
+`_MAX_ANNOTATIONS` (100) with no companion total, unlike this tool's own
+`pmids_not_found`/`pmids` pairing and unlike `litvar2_lookup`'s
+`pmids`/`total_pmids` pairing built in this same phase. `total_annotations`
+is an additive, optional `int` (default `0`) naming the TRUE count of
+well-formed annotation entries across every passage, computed BEFORE the
+100-item cap, mirroring `litvar2_lookup._parse_pmids`'s own `total_pmids`
+discipline: a basic-type-validity count over the full response, not merely
+`len(annotations)` after capping. Not reachable on this phase's own live
+data (five candidate PMIDs returned 0, 10, 26, 18, and 11 annotations
+against the 100 cap), the same "not reachable today" status F-3.3-A-12
+itself was filed under; shipped anyway since the fix costs nothing extra
+once `fields_withheld`'s own per-item accounting (design decision 9) is
+already threading an output-position index through this same code path.
+
 Depends on:
     - Nothing repo-local. `NCBI_PUBTATOR_RECORD_URL_PATTERN` is defined here,
       not imported from `ncbi_efetch_schemas.py` or `ncbi_dbsnp_schemas.py`,
@@ -197,6 +273,20 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel
 # scoped to `pubmed.` only.
 NCBI_PUBTATOR_RECORD_URL_PATTERN: Final = r"^https://pubmed\.ncbi\.nlm\.nih\.gov/"
 
+# entity_lookup's own record-URL pattern (F-3.3-A-05, design decision 8),
+# deliberately narrower than NCBI_PUBTATOR_RECORD_URL_PATTERN above: an
+# entity's citable record types (a gene page, a MeSH term page) are a
+# DIFFERENT NCBI record type than a PubMed publication, on a different
+# path under the SAME www.ncbi.nlm.nih.gov host, so the two patterns must
+# stay independent, the same "a broader pattern would wrongly accept the
+# wrong record type" reasoning design decision 3 above states. Scoped to
+# exactly the two db values live-verified 2026-08-08 (gene, mesh); see
+# design decision 8 in the module docstring for the full coverage
+# statement and why this is deliberately partial.
+NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN: Final = (
+    r"^https://www\.ncbi\.nlm\.nih\.gov/(gene|mesh)/"
+)
+
 _MAX_QUERY_CHARS: Final[int] = 200
 _MAX_LIMIT: Final[int] = 20
 _MAX_PMID_CHARS: Final[int] = 15
@@ -221,6 +311,11 @@ _MAX_ANNOTATION_NAME_CHARS: Final[int] = 100
 _MAX_SOURCE_URL_CHARS: Final[int] = 200
 
 _MAX_ERROR_CHARS: Final[int] = 500
+
+# F-3.3-J-04, design decision 9: per-item withholding disclosure, mirroring
+# Litvar2LookupOutput.fields_withheld's own item/list caps exactly.
+_MAX_WITHHELD_NOTE_CHARS: Final[int] = 150
+_MAX_FIELDS_WITHHELD_ITEMS: Final[int] = 20
 
 
 # ---------------------------------------------------------------------------
@@ -283,13 +378,20 @@ class PubtatorAnnotateInput(RootModel[PubtatorAnnotateMode]):
 class PubtatorEntity(BaseModel):
     """One entity match, from `entity/autocomplete`'s response array.
 
-    All seven fields are schema-optional: Section 6.4's printed item schema
-    (lines 1126-1136) carries no `required` list of its own, and
-    `matched_on` is this file's own additive field (design decision 7).
-    Each field that exceeds its own cap is withheld (set to `None`), never
-    truncated; see design decision 6 in the module docstring for why there
-    is no per-item disclosure field naming which one, unlike the top-level
-    `pmids_not_found`.
+    All seven Section-6.4-named fields are schema-optional: Section 6.4's
+    printed item schema (lines 1126-1136) carries no `required` list of its
+    own. `matched_on` (design decision 7) and `source_url` (design
+    decision 8, F-3.3-A-05) are this file's own additive fields. Each field
+    that exceeds its own cap is withheld (set to `None`), never truncated;
+    see design decision 9 in the module docstring for
+    `PubtatorAnnotateOutput.fields_withheld`, the per-item disclosure field
+    naming which one, closing the gap design decision 6 originally left
+    open.
+
+    `source_url` covers only `db == "ncbi_gene"` and `db == "ncbi_mesh"`,
+    the two db values this phase's own live probing has verified resolve to
+    a real, distinct NCBI record page; every other `db` value gets `None`.
+    See design decision 8 for the full coverage statement.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -301,6 +403,23 @@ class PubtatorEntity(BaseModel):
     name: Annotated[str | None, Field(default=None, max_length=_MAX_ENTITY_NAME_CHARS)] = None
     description: Annotated[str | None, Field(default=None, max_length=_MAX_DESCRIPTION_CHARS)] = None
     matched_on: Annotated[str | None, Field(default=None, max_length=200)] = None
+    source_url: Annotated[
+        str | None,
+        Field(
+            default=None,
+            max_length=_MAX_SOURCE_URL_CHARS,
+            pattern=NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN,
+            description=(
+                "The human-facing NCBI record page for this entity "
+                "(F-3.3-A-05). Populated only for db == 'ncbi_gene' or "
+                "db == 'ncbi_mesh', the two db values live-verified to "
+                "resolve to a real record page; None for every other db "
+                "value. Additive field, not part of the locked Section 6.4 "
+                "property set; see design decision 8 in this module's "
+                "docstring."
+            ),
+        ),
+    ] = None
 
 
 class PubtatorAnnotation(BaseModel):
@@ -346,6 +465,19 @@ class PubtatorPublication(BaseModel):
         list[PubtatorAnnotation],
         Field(default_factory=list, max_length=_MAX_ANNOTATIONS),
     ] = Field(default_factory=list)
+    total_annotations: Annotated[
+        int,
+        Field(
+            ge=0,
+            description=(
+                "The true count of well-formed annotation entries for this "
+                "publication, before the maxItems: 100 cap on `annotations` "
+                "(F-3.3-A-12). Additive field, not part of the locked "
+                "Section 6.4 property set; see design decision 10 in this "
+                "module's docstring."
+            ),
+        ),
+    ] = 0
     source_url: Annotated[
         str | None,
         Field(
@@ -395,6 +527,27 @@ class PubtatorAnnotateOutput(BaseModel):
             ),
         ),
     ] = Field(default_factory=list)
+    fields_withheld: Annotated[
+        list[Annotated[str, Field(max_length=_MAX_WITHHELD_NOTE_CHARS)]] | None,
+        Field(
+            default=None,
+            max_length=_MAX_FIELDS_WITHHELD_ITEMS,
+            description=(
+                "Names/describes entities[]/publications[].annotations[] "
+                "field values withheld because they would have exceeded "
+                "their own length cap (F-3.3-J-04), e.g. "
+                "'entities[2].description: <original value>'. A withheld "
+                "value is dropped entirely, never a truncated or shortened "
+                "value. `None` or an empty list means nothing was "
+                "withheld; callers should treat both the same way "
+                "(`output.fields_withheld or []`), the same convention "
+                "litvar2_lookup_schemas.Litvar2LookupOutput.fields_withheld "
+                "already uses. Additive field, not part of the locked "
+                "Section 6.4 property set; see design decision 9 in this "
+                "module's docstring."
+            ),
+        ),
+    ] = None
 
 
 # ---------------------------------------------------------------------------
@@ -438,5 +591,37 @@ for _sample in _REJECT_SAMPLES:
     assert re.match(NCBI_PUBTATOR_RECORD_URL_PATTERN, _sample) is None, (
         f"NCBI_PUBTATOR_RECORD_URL_PATTERN wrongly accepts a non-PubMed-record "
         f"URL: {_sample!r}"
+    )
+del _sample
+
+# NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN (F-3.3-A-05, design decision 8):
+# both accept samples are live-verified 2026-08-08 (HTTP 200, real distinct
+# content: gene/672 contains "BRCA1", mesh/D001943 contains "Breast
+# Neoplasms").
+_ENTITY_ACCEPT_SAMPLES: Final[tuple[str, ...]] = (
+    "https://www.ncbi.nlm.nih.gov/gene/672",
+    "https://www.ncbi.nlm.nih.gov/mesh/D001943",
+)
+_ENTITY_REJECT_SAMPLES: Final[tuple[str, ...]] = (
+    # A real PubMed record URL: the WRONG kind of citation for an entity
+    # (which cites a gene or MeSH page, never a publication).
+    "https://pubmed.ncbi.nlm.nih.gov/34083286/",
+    # A real dbSNP record page: also the wrong record type for this pattern.
+    "https://www.ncbi.nlm.nih.gov/snp/rs334",
+    # The PubTator3 API fetch host itself must never validate as a citation.
+    "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/entity/autocomplete/?query=BRCA1",
+    # An unrelated NCBI fetch host.
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gene&id=672",
+)
+
+for _sample in _ENTITY_ACCEPT_SAMPLES:
+    assert re.match(NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN, _sample) is not None, (
+        f"NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN wrongly rejects a valid "
+        f"gene/mesh record URL: {_sample!r}"
+    )
+for _sample in _ENTITY_REJECT_SAMPLES:
+    assert re.match(NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN, _sample) is None, (
+        f"NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN wrongly accepts a "
+        f"non-gene/mesh URL: {_sample!r}"
     )
 del _sample

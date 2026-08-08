@@ -193,6 +193,31 @@ def test_output_pmids_item_max_length_boundary() -> None:
         Litvar2LookupOutput.model_validate({**MINIMAL_OUTPUT_DICT, "pmids": ["1" * 16]})
 
 
+# ---------------------------------------------------------------------------
+# total_variant_matches: additive, F-3.3-A-12.
+# ---------------------------------------------------------------------------
+
+
+def test_output_total_variant_matches_defaults_to_zero() -> None:
+    validated = Litvar2LookupOutput.model_validate(MINIMAL_OUTPUT_DICT)
+    assert validated.total_variant_matches == 0
+
+
+def test_output_total_variant_matches_accepts_a_count_above_the_cap() -> None:
+    """The whole point of this field: it can legitimately exceed len(variant_matches)."""
+    ten = [{"litvar_id": f"litvar@rs{i}##"} for i in range(10)]
+    validated = Litvar2LookupOutput.model_validate(
+        {**MINIMAL_OUTPUT_DICT, "variant_matches": ten, "total_variant_matches": 37}
+    )
+    assert validated.total_variant_matches == 37
+    assert len(validated.variant_matches) == 10
+
+
+def test_output_total_variant_matches_negative_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        Litvar2LookupOutput.model_validate({**MINIMAL_OUTPUT_DICT, "total_variant_matches": -1})
+
+
 def test_output_source_url_accepts_matching_pattern() -> None:
     validated = Litvar2LookupOutput.model_validate(
         {**MINIMAL_OUTPUT_DICT, "source_url": "https://www.ncbi.nlm.nih.gov/research/litvar2/?query=rs334"}
@@ -343,6 +368,16 @@ def test_pattern_accepts_real_pubmed_url() -> None:
     import re
 
     assert re.match(NCBI_LITVAR2_RECORD_URL_PATTERN, "https://pubmed.ncbi.nlm.nih.gov/33593344/")
+
+
+def test_pattern_accepts_the_dbsnp_record_url() -> None:
+    """F-3.3-J-06, design decision 7: the pattern is host-only, so the new
+    /snp/{rsid} citation target litvar2_lookup.py now prefers needs no
+    change here; confirmed directly rather than assumed.
+    """
+    import re
+
+    assert re.match(NCBI_LITVAR2_RECORD_URL_PATTERN, "https://www.ncbi.nlm.nih.gov/snp/rs334")
 
 
 def test_pattern_rejects_non_ncbi_host() -> None:

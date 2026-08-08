@@ -126,6 +126,50 @@ field this module reads (see "Untrusted content" below): over-length
 values are withheld (never truncated), following the same policy `name`
 and `hgvs` already use in `_parse_variant_match`.
 
+Design decision 6, `total_variant_matches` (F-3.3-A-12, added 2026-08-08,
+fix round 4). `variant_matches` is capped at `maxItems: 10` with no
+companion total, unlike this tool's own `pmids`/`total_pmids` pairing.
+`_MAX_VARIANT_MATCHES`'s own module comment in `litvar2_lookup.py`
+previously declined to add this field on the grounds that this ticket's
+authorized additive fields named only `fields_withheld`; on
+reconsideration that was the same kind of scoping accident design decision
+9 in `pubtator_annotate_schemas.py` corrects for its sibling tool, not a
+weighed and declined tradeoff: `pmids`/`total_pmids` already establishes
+the "cap the array, disclose the true count" pattern in this exact file,
+and `total_variant_matches` is that same pattern applied to the sibling
+list. Additive, optional `int`, default `0`, per `system-design-patterns`
+pattern 10. `litvar2_lookup._parse_variant_matches` computes it as a
+basic-type-validity count (a dict-shaped row) over the ENTIRE raw
+response array, before the `maxItems: 10` slice, mirroring
+`litvar2_lookup._parse_pmids`'s own `total_pmids` discipline; it does not
+fully parse, or generate `fields_withheld` notes for, rows beyond the
+cap, so this fix does not widen the disclosure surface beyond what
+F-3.3-A-12 itself asked for.
+
+Design decision 7, the `source_url` snp-record preference for an
+rsid-keyed result (F-3.3-J-06/F-3.3-A-10, added 2026-08-08, fix round 4).
+Design decision 3 above documents why this tool's `source_url` cites
+LitVar2's own client-rendered search UI, a citation-quality gap
+(F-3.3-A-09) since that page cannot be verified to render the specific
+cited data. Live-verified 2026-08-08:
+`https://www.ncbi.nlm.nih.gov/snp/{rsid}` is a REAL, distinct,
+server-rendered dbSNP record page (243623 bytes for rs334, containing the
+actual record, not a shared shell), and every `litvar2_lookup` result
+that carries a real `rsid` (either `variant_matches[0].rsid` for
+`variant_search`, or the rsid embedded in an `rs...##`-shaped
+`litvar_id` for `publications_lookup`, extracted the same way
+`_RSID_FROM_LITVAR_ID` already did before this fix) already has that
+identity in hand. `litvar2_lookup.py`'s `_snp_url_for_rsid` builds this
+URL in preference to the search-UI fallback whenever an rsid is
+available; `NCBI_LITVAR2_RECORD_URL_PATTERN` above needs no change to
+cover it, since the pattern is host-only (design decision 3) and
+`www.ncbi.nlm.nih.gov/snp/rs334` already matches it, confirmed by this
+file's own self-verification block below. The search-UI fallback remains,
+unchanged, for the NON-rsid-keyed case (an internal composite id like
+`litvar@#672#c.5382insC`, F-3.3-A-10's own repro): this fix narrows
+F-3.3-A-10's scope rather than closing it, since no better citation is
+available for that shape today.
+
 Depends on:
     - Nothing repo-local. `NCBI_LITVAR2_RECORD_URL_PATTERN` is defined
       here, not imported from `ncbi_dbsnp_schemas.py`,
@@ -303,6 +347,19 @@ class Litvar2LookupOutput(BaseModel):
         list[Litvar2VariantMatch],
         Field(default_factory=list, max_length=10),
     ] = Field(default_factory=list)
+    total_variant_matches: Annotated[
+        int,
+        Field(
+            ge=0,
+            description=(
+                "The true count of dict-shaped rows in the raw variant_search "
+                "response, before the maxItems: 10 cap on variant_matches "
+                "(F-3.3-A-12). Additive field, not part of the locked "
+                "Section 6.5 property set; see design decision 6 in this "
+                "module's docstring."
+            ),
+        ),
+    ] = 0
     pmids: Annotated[
         list[Annotated[str, Field(max_length=15)]],
         Field(default_factory=list, max_length=50),

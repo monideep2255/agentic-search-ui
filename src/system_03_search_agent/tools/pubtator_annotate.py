@@ -60,7 +60,7 @@ probes).
    it explicitly here documents the fact rather than leaving a silent
    implicit conversion for the next reader to rediscover).
 
-## Withhold-not-truncate, and its narrower guarantee on this tool
+## Withhold-not-truncate, and its per-item disclosure (F-3.3-J-04, fix round 4)
 
 Every string field this module extracts from PubTator3's response is
 untrusted upstream content (`ai-security-standards.md`): never executed,
@@ -72,21 +72,33 @@ need truncation to fit its schema cap is instead set to `None`
 (`_withhold_if_over` below), never shortened into a real-looking-but-wrong
 value under a confident `status: "ok"`.
 
-This tool's guarantee is narrower than `ncbi_dbsnp`'s at the per-item level:
-`pubtator_annotate_schemas.py`'s design decision 5 explains why there is no
-per-item `fields_withheld`-style disclosure field on `entities[]` or
-`annotations[]` (Section 6.4's own item schemas are `additionalProperties:
-false` with no room for one, and this ticket's authorization names exactly
-one additive field, `pmids_not_found`, not a second one at item
-granularity). A withheld per-item field is silently `None`, distinguishable
-from a genuinely absent one only by re-fetching and comparing, a known,
-narrower gap than `ncbi_dbsnp` provides, flagged rather than silently
-absent.
+CORRECTED 2026-08-08 (F-3.3-J-04, fix round 4): an earlier version of this
+module set an over-cap `entities[]` or `annotations[]` field to `None`
+with no disclosure of any kind, a narrower guarantee than `litvar2_lookup`
+shipped for the sibling per-item case in the same phase. That gap was a
+scoping accident (T-3.3-03's original authorization named exactly one
+additive field, `pmids_not_found`, because that was the finding on the
+table at the time), not a considered product tradeoff, so it is closed
+here: `_withhold_if_over` now returns `(value_or_None, note_or_None)`, and
+`_parse_entity`/`_parse_annotation`/`_parse_publication` all thread the
+resulting notes up to `PubtatorAnnotateOutput.fields_withheld`
+(`pubtator_annotate_schemas.py`'s design decision 9), a `list[str] | None`
+naming every withheld field by its OUTPUT position, e.g.
+`"entities[2].description: <original value>"` or
+`"publications[0].annotations[3].name: <original value>"`, mirroring
+`litvar2_lookup_schemas.Litvar2LookupOutput.fields_withheld` exactly,
+including its 20-item cap and overflow-summary behavior
+(`_cap_fields_withheld` below mirrors `litvar2_lookup.py`'s function of the
+same name).
 
-`pmids_not_found` itself (top-level, F-3.3-01) is the one disclosure this
-tool DOES make with a dedicated signal, because it is the phase's own named
-reason for existing (`tracker/phase_3.3.md`'s F-3.3-01), not merely a
-generic overflow case.
+`pmids_not_found` (top-level, F-3.3-01) remains a SEPARATE, dedicated
+disclosure signal, not folded into `fields_withheld`: it names REQUESTED
+PMIDS the upstream API itself silently dropped from its own response, a
+different silent-drop problem than a field this tool itself declined to
+populate for exceeding a length cap. Both are additive-field disclosure
+mechanisms for a silent-drop failure mode, the same house pattern applied
+to two different silent-drop problems, per design decision 4 in
+`pubtator_annotate_schemas.py`.
 
 `error` IS untrusted content too, even though it is a diagnostic string
 this module builds rather than a value copied straight off a response
@@ -141,6 +153,40 @@ value as a returned id can never appear in `pmids_not_found`.
 string, never the canonicalized form: canonicalization is for identity
 comparison only, not for what gets disclosed.
 
+## source_url for entity_lookup, deliberately partial (F-3.3-A-05, fix round 4)
+
+`entity_lookup` mode shipped no provenance of any kind before this fix,
+while `annotate_publications`'s sibling `PubtatorPublication.source_url`
+gave every publication its own PubMed link. `_entity_source_url` below
+builds `PubtatorEntity.source_url` ONLY for `db == "ncbi_gene"` (`https://
+www.ncbi.nlm.nih.gov/gene/{db_id}`) and `db == "ncbi_mesh"` (`https://
+www.ncbi.nlm.nih.gov/mesh/{db_id}`), the two `db` values this phase's own
+live probing has actually observed and verified live 2026-08-08 as real,
+distinct, server-rendered NCBI record pages, not a shared client-rendered
+shell the way `litvar2_lookup`'s own UI citation was found to be
+(F-3.3-A-09). Every other `db` value (`litvar`, `cvcl`, and anything else
+PubTator3 might return) gets `None`: this module does not guess a URL
+shape for a db type it has not verified live, per LEARNINGS.md row 60's
+discipline, and does not silently claim coverage it does not have. See
+`pubtator_annotate_schemas.py`'s design decision 8 for the full coverage
+statement and the live-verification evidence.
+
+## total_annotations, a companion count for a pre-existing silent cap
+## (F-3.3-A-12, fix round 4)
+
+`_MAX_ANNOTATIONS` (100) capped a publication's `annotations` list with no
+companion total, unlike this tool's own `pmids_not_found`/`pmids` pairing
+and `litvar2_lookup`'s `pmids`/`total_pmids` pairing built in this same
+phase. `_parse_publication` now computes `total_annotations`, the TRUE
+count of well-formed annotation entries across every passage, before the
+100-item cap, mirroring `litvar2_lookup._parse_pmids`'s own `total_pmids`
+discipline (a basic-type-validity count over the full response, not merely
+`len(annotations)` after capping): see `_is_annotation_shaped` below. This
+does not fully parse, or generate `fields_withheld` notes for, entries
+beyond the cap, the same scope discipline `litvar2_lookup.
+_parse_variant_matches`'s own F-3.3-A-12 fix applies to
+`total_variant_matches`.
+
 Depends on:
     - system_03_search_agent.tools.ncbi_transport (T-3.3-02's `"pubtator"`
       rate-limit family and the `{"detail": ...}` error-message branch;
@@ -166,11 +212,13 @@ Depended by:
 
 from __future__ import annotations
 
+import re
 import urllib.parse
 from typing import Any, Final
 
 from system_03_search_agent.tools import ncbi_transport
 from system_03_search_agent.tools.pubtator_annotate_schemas import (
+    NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN,
     PubtatorAnnotateInput,
     PubtatorAnnotateOutput,
     PubtatorAnnotatePublicationsInput,
@@ -210,23 +258,75 @@ _MAX_ANNOTATION_IDENTIFIER_CHARS: Final[int] = 60
 _MAX_ANNOTATION_NORMALIZED_ID_CHARS: Final[int] = 60
 _MAX_ANNOTATION_BIOTYPE_CHARS: Final[int] = 20
 _MAX_ANNOTATION_NAME_CHARS: Final[int] = 100
+_MAX_SOURCE_URL_CHARS: Final[int] = 200
 
 _MAX_ERROR_CHARS: Final[int] = 500
 
+# F-3.3-J-04: per-item withholding disclosure, mirroring
+# litvar2_lookup.py's _MAX_WITHHELD_NOTE_CHARS/_MAX_FIELDS_WITHHELD_ITEMS
+# and pubtator_annotate_schemas.py's own matching Field(max_length=...)
+# constraints exactly.
+_MAX_WITHHELD_NOTE_CHARS: Final[int] = 150
+_MAX_FIELDS_WITHHELD_ITEMS: Final[int] = 20
 
-def _withhold_if_over(value: str | None, limit: int) -> str | None:
-    """Return `value` unchanged if within `limit`, else `None` (withheld).
+
+def _withheld_note(text: str) -> str:
+    """Cap a diagnostic fields_withheld entry to its schema limit (F-3.3-J-04).
+
+    Mirrors `litvar2_lookup._withheld_note` exactly: this truncates a NOTE
+    describing what was withheld, never the withheld DATA itself (which is
+    dropped entirely, not shipped in any form). A truncated note is a
+    cosmetic limitation on a diagnostic string, not a wrong-answer risk the
+    way truncating an actual citable field would be.
+    """
+    return text[:_MAX_WITHHELD_NOTE_CHARS]
+
+
+def _cap_fields_withheld(notes: list[str]) -> list[str]:
+    """Cap `fields_withheld` at the schema's own `max_length=20` (F-3.3-J-04).
+
+    Mirrors `litvar2_lookup._cap_fields_withheld` exactly, applying that
+    ticket's own F-3.3-J-01 precedent here from the start rather than
+    discovering it as a second regression: silently dropping overflow
+    notes would itself be a silent-truncation failure (the class this
+    whole module's withhold-not-truncate policy exists to avoid), so when
+    there are more than `_MAX_FIELDS_WITHHELD_ITEMS` notes, the first
+    `_MAX_FIELDS_WITHHELD_ITEMS - 1` ship unchanged and the final slot is
+    replaced with a summary naming how many additional notes did not fit.
+    """
+    if len(notes) <= _MAX_FIELDS_WITHHELD_ITEMS:
+        return notes
+    kept = notes[: _MAX_FIELDS_WITHHELD_ITEMS - 1]
+    overflow = len(notes) - len(kept)
+    kept.append(
+        _withheld_note(
+            f"...and {overflow} more fields withheld (the withholding count "
+            f"exceeded the {_MAX_FIELDS_WITHHELD_ITEMS}-item disclosure cap)"
+        )
+    )
+    return kept
+
+
+def _withhold_if_over(
+    value: str | None, limit: int, note_label: str
+) -> tuple[str | None, str | None]:
+    """Return `(value_or_None, note_or_None)`: withhold, and disclose it (F-3.3-J-04).
 
     Never truncates: a truncated string looks like a real, complete, wrong
-    value (F-3.2-A-01's original failure mode); withholding is safer even
-    without a per-item disclosure field naming which field was dropped. See
-    this module's docstring, "Withhold-not-truncate", and
-    `pubtator_annotate_schemas.py`'s design decision 5 for why no such field
-    exists at this granularity on this tool.
+    value (F-3.2-A-01's original failure mode). Now also returns a
+    disclosure note whenever a value IS withheld, naming the field by its
+    OUTPUT position (`note_label`, e.g. `f"entities[{output_index}].name"`,
+    never a raw response index, the F-3.3-J-03 indexing discipline
+    `litvar2_lookup.py` already established) and the full original value,
+    closing the gap `pubtator_annotate_schemas.py`'s design decision 6
+    originally left open: see design decision 9 there for why this tool now
+    ships the same `fields_withheld` disclosure `litvar2_lookup.py` does.
     """
     if value is None:
-        return None
-    return value if len(value) <= limit else None
+        return None, None
+    if len(value) <= limit:
+        return value, None
+    return None, _withheld_note(f"{note_label}: {value}")
 
 
 def _str_or_none(value: Any) -> str | None:
@@ -316,27 +416,95 @@ def _canonical_pmid(pmid: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _parse_entity(raw: Any) -> PubtatorEntity | None:
+def _entity_source_url(db: str | None, db_id: str | None) -> str | None:
+    """The human-facing NCBI record page for an entity_lookup result (F-3.3-A-05).
+
+    DELIBERATELY PARTIAL: only `db == "ncbi_gene"` and `db == "ncbi_mesh"`
+    build a URL, the two db values this phase's own live probing verified
+    live 2026-08-08 as real, distinct, server-rendered NCBI record pages
+    (gene 672 and gene 7157 return genuinely different content, 734671 and
+    527847 bytes respectively; mesh D001943 and D003924 likewise, 65216 and
+    64837 bytes), not a shared client-rendered shell the way
+    `litvar2_lookup`'s own UI citation was found to be (F-3.3-A-09). Every
+    other `db` value (`litvar`, `cvcl`, and anything else PubTator3 might
+    return) gets `None`: this function does not guess a URL shape for a db
+    type it has not verified live. See
+    `pubtator_annotate_schemas.py`'s design decision 8 for the full
+    coverage statement.
+    """
+    if db_id is None:
+        return None
+    if db == "ncbi_gene":
+        url = f"https://www.ncbi.nlm.nih.gov/gene/{urllib.parse.quote(db_id, safe='')}"
+    elif db == "ncbi_mesh":
+        url = f"https://www.ncbi.nlm.nih.gov/mesh/{urllib.parse.quote(db_id, safe='')}"
+    else:
+        return None
+    if len(url) > _MAX_SOURCE_URL_CHARS:
+        return None
+    if re.match(NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN, url) is None:
+        # Defense in depth, matching litvar2_lookup._build_source_url's own
+        # "fail closed to no citation rather than raise" discipline: should
+        # never actually fire since the two URL shapes above are fixed
+        # templates already verified against the pattern, but a wrong URL
+        # here must never surface as a pydantic.ValidationError out of a
+        # tool call.
+        return None
+    return url
+
+
+def _parse_entity(raw: Any, output_index: int) -> tuple[PubtatorEntity | None, list[str]]:
     """Build one `PubtatorEntity` from one element of the autocomplete array.
 
-    Returns `None`, never raises, when `raw` is not an object: fail-closed
-    by design, the same discipline `ncbi_dbsnp.py`'s own parsing functions
-    use for a response shape this module cannot make sense of.
+    Returns `(None, [])`, never raises, when `raw` is not an object:
+    fail-closed by design, the same discipline `ncbi_dbsnp.py`'s own
+    parsing functions use for a response shape this module cannot make
+    sense of.
+
+    `output_index` (F-3.3-J-04) is this entity's position in the OUTPUT
+    `entities` list if kept, i.e. how many entities have already been kept
+    before this one, never the raw response array's own index: a raw row
+    that fails to parse as an object is skipped entirely and never
+    occupies a position, so only `output_index` stays correct for every
+    field-level disclosure note about a KEPT entity, the same F-3.3-J-03
+    discipline `litvar2_lookup.py` already established.
     """
     if not isinstance(raw, dict):
-        return None
-    return PubtatorEntity(
-        pubtator_id=_withhold_if_over(_str_or_none(raw.get("_id")), _MAX_PUBTATOR_ID_CHARS),
-        biotype=_withhold_if_over(_str_or_none(raw.get("biotype")), _MAX_BIOTYPE_CHARS),
-        db=_withhold_if_over(_str_or_none(raw.get("db")), _MAX_DB_CHARS),
-        db_id=_withhold_if_over(_str_or_none(raw.get("db_id")), _MAX_DB_ID_CHARS),
-        name=_withhold_if_over(_str_or_none(raw.get("name")), _MAX_ENTITY_NAME_CHARS),
-        description=_withhold_if_over(_str_or_none(raw.get("description")), _MAX_DESCRIPTION_CHARS),
-        # F-3.3-A-01/F-3.3-A-02/F-3.3-A-03: disclose PubTator3's own
-        # relevance signal rather than discarding it. See the module
-        # docstring's "matched_on" section.
-        matched_on=_withhold_if_over(_str_or_none(raw.get("match")), _MAX_MATCHED_ON_CHARS),
+        return None, []
+
+    notes: list[str] = []
+
+    def _field(value: str | None, limit: int, label: str) -> str | None:
+        capped, note = _withhold_if_over(value, limit, f"entities[{output_index}].{label}")
+        if note is not None:
+            notes.append(note)
+        return capped
+
+    pubtator_id = _field(_str_or_none(raw.get("_id")), _MAX_PUBTATOR_ID_CHARS, "pubtator_id")
+    biotype = _field(_str_or_none(raw.get("biotype")), _MAX_BIOTYPE_CHARS, "biotype")
+    db = _field(_str_or_none(raw.get("db")), _MAX_DB_CHARS, "db")
+    db_id = _field(_str_or_none(raw.get("db_id")), _MAX_DB_ID_CHARS, "db_id")
+    name = _field(_str_or_none(raw.get("name")), _MAX_ENTITY_NAME_CHARS, "name")
+    description = _field(_str_or_none(raw.get("description")), _MAX_DESCRIPTION_CHARS, "description")
+    # F-3.3-A-01/F-3.3-A-02/F-3.3-A-03: disclose PubTator3's own relevance
+    # signal rather than discarding it. See the module docstring's
+    # "matched_on" section.
+    matched_on = _field(_str_or_none(raw.get("match")), _MAX_MATCHED_ON_CHARS, "matched_on")
+
+    entity = PubtatorEntity(
+        pubtator_id=pubtator_id,
+        biotype=biotype,
+        db=db,
+        db_id=db_id,
+        name=name,
+        description=description,
+        matched_on=matched_on,
+        # F-3.3-A-05: derived from the already-withheld db/db_id (never the
+        # raw pre-withholding values), so a db_id that was itself withheld
+        # for exceeding its own cap never contributes to a source_url.
+        source_url=_entity_source_url(db, db_id),
     )
+    return entity, notes
 
 
 async def _entity_lookup(input_data: PubtatorEntityLookupInput) -> PubtatorAnnotateOutput:
@@ -381,9 +549,12 @@ async def _entity_lookup(input_data: PubtatorEntityLookupInput) -> PubtatorAnnot
         return PubtatorAnnotateOutput(status="empty", mode="entity_lookup", entities=[])
 
     entities: list[PubtatorEntity] = []
+    all_notes: list[str] = []
     for raw in body[:_MAX_ENTITIES]:
-        parsed = _parse_entity(raw)
+        output_index = len(entities)
+        parsed, entity_notes = _parse_entity(raw, output_index)
         if parsed is not None:
+            all_notes.extend(entity_notes)
             entities.append(parsed)
 
     if not entities:
@@ -392,7 +563,12 @@ async def _entity_lookup(input_data: PubtatorEntityLookupInput) -> PubtatorAnnot
         # since nothing usable was actually extracted.
         return PubtatorAnnotateOutput(status="empty", mode="entity_lookup", entities=[])
 
-    return PubtatorAnnotateOutput(status="ok", mode="entity_lookup", entities=entities)
+    return PubtatorAnnotateOutput(
+        status="ok",
+        mode="entity_lookup",
+        entities=entities,
+        fields_withheld=_cap_fields_withheld(all_notes) if all_notes else None,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -411,7 +587,21 @@ def _extract_pmid(doc: dict[str, Any]) -> str | None:
     return _str_or_none(pmid)
 
 
-def _parse_annotation(raw: Any) -> PubtatorAnnotation | None:
+def _is_annotation_shaped(raw: Any) -> bool:
+    """Basic-type validity check for F-3.3-A-12's `total_annotations`.
+
+    A dict carrying an `infons` object, the same minimal shape
+    `_parse_annotation` itself requires before extracting anything. Used
+    ONLY to compute a total count over the FULL annotation list before the
+    `_MAX_ANNOTATIONS` cap, never to decide whether to actually parse and
+    keep an entry (that remains `_parse_annotation`'s own job).
+    """
+    return isinstance(raw, dict) and isinstance(raw.get("infons"), dict)
+
+
+def _parse_annotation(
+    raw: Any, pub_index: int, ann_index: int
+) -> tuple[PubtatorAnnotation | None, list[str]]:
     """Build one `PubtatorAnnotation` from one `passages[].annotations[]` entry.
 
     Section 6.4's endpoint table: annotation fields live inside each
@@ -420,70 +610,125 @@ def _parse_annotation(raw: Any) -> PubtatorAnnotation | None:
     Only the fields this tool's locked output schema names are extracted;
     `database`/`accession` are PubTator3-specific fields with no matching
     output slot and are intentionally not carried through.
+
+    `pub_index`/`ann_index` (F-3.3-J-04) are OUTPUT positions, the
+    publication's position in `publications[]` and this annotation's
+    position in that publication's `annotations[]`, never raw response
+    indices: a raw annotation entry that fails to parse (not a dict, or no
+    `infons` object) is skipped entirely and never occupies a position, so
+    only the OUTPUT index stays correct for a field-level disclosure note
+    about a KEPT annotation, the same F-3.3-J-03 discipline
+    `litvar2_lookup.py` already established.
     """
     if not isinstance(raw, dict):
-        return None
+        return None, []
     infons = raw.get("infons")
     if not isinstance(infons, dict):
-        return None
+        return None, []
+
+    notes: list[str] = []
+
+    def _field(value: str | None, limit: int, label: str) -> str | None:
+        capped, note = _withhold_if_over(
+            value, limit, f"publications[{pub_index}].annotations[{ann_index}].{label}"
+        )
+        if note is not None:
+            notes.append(note)
+        return capped
+
     valid = infons.get("valid")
-    return PubtatorAnnotation(
-        type=_withhold_if_over(_str_or_none(infons.get("type")), _MAX_ANNOTATION_TYPE_CHARS),
-        identifier=_withhold_if_over(
-            _str_or_none(infons.get("identifier")), _MAX_ANNOTATION_IDENTIFIER_CHARS
+    annotation = PubtatorAnnotation(
+        type=_field(_str_or_none(infons.get("type")), _MAX_ANNOTATION_TYPE_CHARS, "type"),
+        identifier=_field(
+            _str_or_none(infons.get("identifier")), _MAX_ANNOTATION_IDENTIFIER_CHARS, "identifier"
         ),
-        normalized_id=_withhold_if_over(
-            _str_or_none(infons.get("normalized_id")), _MAX_ANNOTATION_NORMALIZED_ID_CHARS
+        normalized_id=_field(
+            _str_or_none(infons.get("normalized_id")),
+            _MAX_ANNOTATION_NORMALIZED_ID_CHARS,
+            "normalized_id",
         ),
         valid=valid if isinstance(valid, bool) else None,
-        biotype=_withhold_if_over(
-            _str_or_none(infons.get("biotype")), _MAX_ANNOTATION_BIOTYPE_CHARS
+        biotype=_field(
+            _str_or_none(infons.get("biotype")), _MAX_ANNOTATION_BIOTYPE_CHARS, "biotype"
         ),
-        name=_withhold_if_over(_str_or_none(infons.get("name")), _MAX_ANNOTATION_NAME_CHARS),
+        name=_field(_str_or_none(infons.get("name")), _MAX_ANNOTATION_NAME_CHARS, "name"),
     )
+    return annotation, notes
 
 
-def _parse_publication(doc: Any) -> PubtatorPublication | None:
+def _parse_publication(doc: Any, pub_index: int) -> tuple[PubtatorPublication | None, list[str]]:
     """Unwrap one `.PubTator3[i]` document into a `PubtatorPublication`.
 
     Section 6.4's drift point: annotations live at
     `.PubTator3[i].passages[].annotations[]`, not at the document's top
-    level and not in a bare BioC shape. Returns `None`, never raises, when
-    `doc` carries no extractable `id` (the reliable PMID field, fact 1
+    level and not in a bare BioC shape. Returns `(None, [])`, never raises,
+    when `doc` carries no extractable `id` (the reliable PMID field, fact 1
     above): a document this module cannot identify cannot be matched back
     against the caller's requested `pmids` list either.
+
+    `pub_index` (F-3.3-J-04) is this publication's position in the OUTPUT
+    `publications` list if kept, never the raw `.PubTator3[]` array's own
+    index, the same F-3.3-J-03 discipline applied here for
+    `pubtator_annotate` the way `litvar2_lookup.py` already applies it for
+    `variant_matches`.
     """
     if not isinstance(doc, dict):
-        return None
+        return None, []
     pmid = _extract_pmid(doc)
     if not pmid:
-        return None
+        return None, []
 
-    annotations: list[PubtatorAnnotation] = []
     passages = doc.get("passages")
+    all_raw_annotations: list[Any] = []
     if isinstance(passages, list):
         for passage in passages:
-            if len(annotations) >= _MAX_ANNOTATIONS:
-                break
             if not isinstance(passage, dict):
                 continue
             raw_annotations = passage.get("annotations")
-            if not isinstance(raw_annotations, list):
-                continue
-            for raw_annotation in raw_annotations:
-                if len(annotations) >= _MAX_ANNOTATIONS:
-                    break
-                parsed = _parse_annotation(raw_annotation)
-                if parsed is not None:
-                    annotations.append(parsed)
+            if isinstance(raw_annotations, list):
+                all_raw_annotations.extend(raw_annotations)
 
-    capped_pmid = _withhold_if_over(pmid, _MAX_PMID_CHARS)
+    # F-3.3-A-12: total_annotations is a basic-type-validity count over
+    # EVERY raw annotation entry across every passage, computed BEFORE the
+    # maxItems: 100 cap, mirroring litvar2_lookup._parse_pmids's own
+    # total_pmids discipline. Deliberately does NOT fully parse (or
+    # generate fields_withheld notes for) entries beyond the cap: doing so
+    # would widen the disclosure surface to rows this tool never actually
+    # surfaces in `annotations`, beyond what F-3.3-A-12 asked for (a
+    # companion total count, not a companion withheld-notes scope). See
+    # litvar2_lookup._parse_variant_matches's own F-3.3-A-12 docstring for
+    # the identical reasoning applied to variant_matches/total_variant_matches.
+    total_annotations = sum(1 for raw in all_raw_annotations if _is_annotation_shaped(raw))
+
+    notes: list[str] = []
+    annotations: list[PubtatorAnnotation] = []
+    for raw_annotation in all_raw_annotations:
+        if len(annotations) >= _MAX_ANNOTATIONS:
+            break
+        ann_index = len(annotations)
+        parsed, ann_notes = _parse_annotation(raw_annotation, pub_index, ann_index)
+        if parsed is None:
+            continue
+        notes.extend(ann_notes)
+        annotations.append(parsed)
+
+    capped_pmid, pmid_note = _withhold_if_over(
+        pmid, _MAX_PMID_CHARS, f"publications[{pub_index}].pmid"
+    )
+    if pmid_note is not None:
+        notes.append(pmid_note)
     source_url = (
         f"https://pubmed.ncbi.nlm.nih.gov/{urllib.parse.quote(pmid, safe='')}/"
         if capped_pmid is not None
         else None
     )
-    return PubtatorPublication(pmid=capped_pmid, annotations=annotations, source_url=source_url)
+    publication = PubtatorPublication(
+        pmid=capped_pmid,
+        annotations=annotations,
+        total_annotations=total_annotations,
+        source_url=source_url,
+    )
+    return publication, notes
 
 
 async def _annotate_publications(
@@ -538,11 +783,21 @@ async def _annotate_publications(
 
     publications: list[PubtatorPublication] = []
     found_pmids_canonical: set[str] = set()
+    all_notes: list[str] = []
     for doc in docs[:_MAX_PUBLICATIONS]:
-        pub = _parse_publication(doc)
-        if pub is not None and pub.pmid:
-            found_pmids_canonical.add(_canonical_pmid(pub.pmid))
-            publications.append(pub)
+        pub_index = len(publications)
+        pub, pub_notes = _parse_publication(doc, pub_index)
+        if pub is None or not pub.pmid:
+            # F-3.3-J-04: a publication that never makes it into `publications`
+            # (no extractable pmid, or its pmid itself got withheld) must not
+            # contribute notes keyed to a `publications[pub_index]` position
+            # that no output publication ever occupies; the next KEPT
+            # publication reuses this same pub_index correctly only if this
+            # discarded document's own notes are dropped here, not appended.
+            continue
+        all_notes.extend(pub_notes)
+        found_pmids_canonical.add(_canonical_pmid(pub.pmid))
+        publications.append(pub)
 
     # F-3.3-A-04: diff on CANONICAL identity, not the raw requested string.
     # `pmids_not_found` still names the caller's ORIGINAL string (never the
@@ -566,6 +821,7 @@ async def _annotate_publications(
             mode="annotate_publications",
             publications=[],
             pmids_not_found=pmids_not_found,
+            fields_withheld=_cap_fields_withheld(all_notes) if all_notes else None,
         )
 
     return PubtatorAnnotateOutput(
@@ -573,6 +829,7 @@ async def _annotate_publications(
         mode="annotate_publications",
         publications=publications,
         pmids_not_found=pmids_not_found,
+        fields_withheld=_cap_fields_withheld(all_notes) if all_notes else None,
     )
 
 

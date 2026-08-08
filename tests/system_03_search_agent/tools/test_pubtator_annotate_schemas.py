@@ -17,9 +17,18 @@ strings, bounded the same as the input's own `pmids`), the additive
 `PubtatorEntity.matched_on` field (F-3.3-A-01/F-3.3-A-02/F-3.3-A-03,
 fix round 3: defaults to `None`, accepts a real value, `max_length=200`),
 `pmids.min_length=1` rejecting an empty list (F-3.3-A-06, fix round 3),
-and `NCBI_PUBTATOR_RECORD_URL_PATTERN` accepting a real
+`NCBI_PUBTATOR_RECORD_URL_PATTERN` accepting a real
 `pubmed.ncbi.nlm.nih.gov` record URL while rejecting the PubTator3 API
-fetch host and two right-host-wrong-kind-of-record NCBI URLs.
+fetch host and two right-host-wrong-kind-of-record NCBI URLs, the
+additive `PubtatorEntity.source_url` field and
+`NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN` (F-3.3-A-05, fix round 4:
+accepts a real gene/mesh record URL, rejects a pubmed/snp/fetch-host
+URL), the additive `PubtatorPublication.total_annotations` field
+(F-3.3-A-12, fix round 4: defaults to 0, accepts a count above
+`len(annotations)`, rejects a negative value), and the additive
+`PubtatorAnnotateOutput.fields_withheld` field (F-3.3-J-04, fix round 4:
+defaults to `None`, mirrors `Litvar2LookupOutput.fields_withheld`'s own
+20-item/150-char bounds exactly).
 
 What this file deliberately does NOT cover, per `goal-contracts`'s "a verify
 surface must state its own coverage": how `pubtator_annotate.py` (T-3.3-05)
@@ -37,6 +46,7 @@ import pytest
 from pydantic import ValidationError
 
 from system_03_search_agent.tools.pubtator_annotate_schemas import (
+    NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN,
     NCBI_PUBTATOR_RECORD_URL_PATTERN,
     PubtatorAnnotateInput,
     PubtatorAnnotateOutput,
@@ -408,3 +418,138 @@ def test_ncbi_pubtator_record_url_pattern_accepts_pubmed_urls(url: str) -> None:
 )
 def test_ncbi_pubtator_record_url_pattern_rejects_non_pubmed_urls(url: str) -> None:
     assert re.match(NCBI_PUBTATOR_RECORD_URL_PATTERN, url) is None
+
+
+# ---------------------------------------------------------------------------
+# PubtatorEntity.source_url: F-3.3-A-05, additive, deliberately partial
+# (ncbi_gene/ncbi_mesh only).
+# ---------------------------------------------------------------------------
+
+
+def test_entity_source_url_defaults_to_none() -> None:
+    entity = PubtatorEntity()
+    assert entity.source_url is None
+
+
+def test_entity_source_url_accepts_a_gene_record_url() -> None:
+    entity = PubtatorEntity(
+        db="ncbi_gene", db_id="672", source_url="https://www.ncbi.nlm.nih.gov/gene/672"
+    )
+    assert entity.source_url == "https://www.ncbi.nlm.nih.gov/gene/672"
+
+
+def test_entity_source_url_accepts_a_mesh_record_url() -> None:
+    entity = PubtatorEntity(
+        db="ncbi_mesh",
+        db_id="D001943",
+        source_url="https://www.ncbi.nlm.nih.gov/mesh/D001943",
+    )
+    assert entity.source_url == "https://www.ncbi.nlm.nih.gov/mesh/D001943"
+
+
+def test_entity_source_url_rejects_a_pubmed_url() -> None:
+    """The wrong kind of citation for an entity (a publication, not a gene/mesh page)."""
+    with pytest.raises(ValidationError):
+        PubtatorEntity(source_url="https://pubmed.ncbi.nlm.nih.gov/34083286/")
+
+
+def test_entity_source_url_rejects_the_fetch_host() -> None:
+    with pytest.raises(ValidationError):
+        PubtatorEntity(
+            source_url="https://www.ncbi.nlm.nih.gov/research/pubtator3-api/entity/autocomplete/?query=BRCA1"
+        )
+
+
+def test_entity_source_url_rejects_a_snp_record() -> None:
+    """A real NCBI record, but the wrong record type for this pattern."""
+    with pytest.raises(ValidationError):
+        PubtatorEntity(source_url="https://www.ncbi.nlm.nih.gov/snp/rs334")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://www.ncbi.nlm.nih.gov/gene/672",
+        "https://www.ncbi.nlm.nih.gov/mesh/D001943",
+    ],
+)
+def test_ncbi_pubtator_entity_record_url_pattern_accepts_gene_and_mesh_urls(url: str) -> None:
+    assert re.match(NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN, url) is not None
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://pubmed.ncbi.nlm.nih.gov/34083286/",
+        "https://www.ncbi.nlm.nih.gov/snp/rs334",
+        "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/entity/autocomplete/?query=BRCA1",
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gene&id=672",
+    ],
+)
+def test_ncbi_pubtator_entity_record_url_pattern_rejects_other_urls(url: str) -> None:
+    assert re.match(NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN, url) is None
+
+
+# ---------------------------------------------------------------------------
+# PubtatorPublication.total_annotations: F-3.3-A-12, additive.
+# ---------------------------------------------------------------------------
+
+
+def test_publication_total_annotations_defaults_to_zero() -> None:
+    pub = PubtatorPublication()
+    assert pub.total_annotations == 0
+
+
+def test_publication_total_annotations_accepts_a_count_above_the_cap() -> None:
+    """The whole point of this field: it can legitimately exceed len(annotations)."""
+    pub = PubtatorPublication(annotations=[PubtatorAnnotation()] * 5, total_annotations=250)
+    assert pub.total_annotations == 250
+    assert len(pub.annotations) == 5
+
+
+def test_publication_total_annotations_negative_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        PubtatorPublication(total_annotations=-1)
+
+
+# ---------------------------------------------------------------------------
+# PubtatorAnnotateOutput.fields_withheld: F-3.3-J-04, additive, mirrors
+# Litvar2LookupOutput.fields_withheld exactly (20 items, 150 chars each).
+# ---------------------------------------------------------------------------
+
+
+def test_output_fields_withheld_defaults_to_none() -> None:
+    output = PubtatorAnnotateOutput(status="ok", mode="entity_lookup")
+    assert output.fields_withheld is None
+
+
+def test_output_fields_withheld_accepts_a_note_list() -> None:
+    output = PubtatorAnnotateOutput(
+        status="ok",
+        mode="entity_lookup",
+        fields_withheld=["entities[0].description: some withheld value"],
+    )
+    assert output.fields_withheld == ["entities[0].description: some withheld value"]
+
+
+def test_output_fields_withheld_over_max_items_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        PubtatorAnnotateOutput(
+            status="ok",
+            mode="entity_lookup",
+            fields_withheld=[f"entities[{i}].name: x" for i in range(21)],
+        )
+
+
+def test_output_fields_withheld_item_over_max_length_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        PubtatorAnnotateOutput(
+            status="ok", mode="entity_lookup", fields_withheld=["n" * 151]
+        )
+
+
+def test_output_fields_withheld_item_at_max_length_validates() -> None:
+    output = PubtatorAnnotateOutput(
+        status="ok", mode="entity_lookup", fields_withheld=["n" * 150]
+    )
+    assert len(output.fields_withheld[0]) == 150
