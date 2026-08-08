@@ -16,6 +16,7 @@ from system_03_search_agent.tools.cypher_validator import (
     REASON_LITERAL_INTERPOLATION_SUSPECTED,
     REASON_MALFORMED_CYPHER,
     REASON_MISSING_EDGE_LABEL,
+    REASON_UNBOUNDED_TRAVERSAL,
     REASON_UNKNOWN_EDGE_LABEL,
     REASON_UNKNOWN_VERTEX_LABEL,
     REASON_UNSAFE_LIMIT_CLAUSE,
@@ -972,3 +973,181 @@ def test_unterminated_string_literal_is_rejected_as_suspect() -> None:
 
     assert result.ok is False
     assert result.reason == REASON_LITERAL_INTERPOLATION_SUSPECTED
+
+
+# ---------------------------------------------------------------------------
+# F-2.1-C15: a generated query with an unbounded traversal took the graph
+# server down for every user (tracker/phase_2.1.md, DECISIONS.md 2026-07-31).
+# AGE materializes a DISTINCT result set before LIMIT applies, so a
+# variable-length relationship pattern with no fixed hop count is the
+# mechanism, not the row cap. This system's own schema-slicing design
+# (schema_slice.py) only ever expresses a multi-hop question as a fixed,
+# small integer hop count via chained, explicitly-typed MATCH clauses, so a
+# `*range` relationship spec is never a construct legitimate generation
+# needs, and rejecting it outright cannot reject a query this system's
+# design intends to support. Full analysis: tracker/fix_c15_generation_bound.md.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "cypher",
+    [
+        "MATCH (g:Gene {id: $gene_id})-[:orthologous_to*]->(o:Gene) RETURN g, o",
+        "MATCH (g:Gene {id: $gene_id})-[:orthologous_to*2]->(o:Gene) RETURN g, o",
+        "MATCH (g:Gene {id: $gene_id})-[:orthologous_to*1..3]->(o:Gene) RETURN g, o",
+        "MATCH (g:Gene {id: $gene_id})-[:orthologous_to*2..]->(o:Gene) RETURN g, o",
+        "MATCH (g:Gene {id: $gene_id})-[:orthologous_to*..5]->(o:Gene) RETURN g, o",
+    ],
+    ids=[
+        "bare_star",
+        "fixed_count",
+        "closed_range",
+        "open_upper_bound",
+        "open_lower_bound",
+    ],
+)
+def test_variable_length_relationship_is_rejected_as_unbounded(cypher: str) -> None:
+    result = validate_cypher(cypher, row_limit=DEFAULT_ROW_LIMIT)
+
+    assert result.ok is False
+    assert result.reason == REASON_UNBOUNDED_TRAVERSAL
+    assert result.normalized_cypher is None
+
+
+def test_variable_length_untyped_relationship_is_rejected_as_unbounded() -> None:
+    # No edge label at all, just a variable-length spec. Would also fail
+    # REASON_MISSING_EDGE_LABEL, but the more specific, more actionable
+    # diagnosis is the unbounded traversal, since that is the shape that
+    # actually took the graph down.
+    result = validate_cypher(
+        "MATCH (g:Gene {id: $gene_id})-[*2]->(o) RETURN g, o",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_UNBOUNDED_TRAVERSAL
+
+
+def test_arithmetic_in_a_property_map_value_is_not_mistaken_for_variable_length() -> None:
+    # This is the exact regression the previous, reverted attempt at this
+    # ticket introduced (LEARNINGS.md, 2026-08-04): it rejected
+    # [:orthologous_to {weight: 2*3}] as unbounded, because 2*3 is
+    # arithmetic inside a property map value, not a relationship's
+    # *range spec. `source` is an F-2.1-A17 allowlisted internal-constant
+    # field so this case is isolated to the unbounded-traversal check
+    # alone; a caller-facing field would separately trip
+    # REASON_LITERAL_INTERPOLATION_SUSPECTED, which is correct behavior
+    # this test is not exercising.
+    result = validate_cypher(
+        "MATCH (g:Gene {id: $gene_id})-[:orthologous_to {source: 2*3}]->(o:Gene) "
+        "RETURN g, o",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is True, (
+        "arithmetic in a property map value was mistaken for a variable-"
+        f"length relationship spec: {result.reason} {result.message}"
+    )
+    assert result.reason is None
+
+
+def test_the_exact_reverted_regression_string_does_not_trip_the_unbounded_check() -> None:
+    # The literal reproduction from LEARNINGS.md. `weight` is not an
+    # allowlisted field, so this query is still expected to be rejected
+    # overall, for REASON_LITERAL_INTERPOLATION_SUSPECTED, exactly as it
+    # would be with no unbounded-traversal check in the validator at all.
+    # What must never happen again is this specific query being classified
+    # as an unbounded traversal.
+    result = validate_cypher(
+        "MATCH (g:Gene {id: $gene_id})-[:orthologous_to {weight: 2*3}]->(o:Gene) "
+        "RETURN g, o",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.reason != REASON_UNBOUNDED_TRAVERSAL, (
+        f"regressed: {result.reason} {result.message}"
+    )
+
+
+def test_variable_length_relationship_in_a_union_branch_is_still_rejected() -> None:
+    result = validate_cypher(
+        "MATCH (g:Gene {id: $gene_id}) RETURN g "
+        "UNION "
+        "MATCH (g:Gene {id: $gene_id})-[:orthologous_to*]->(o:Gene) RETURN o AS g",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is False
+    assert result.reason == REASON_UNBOUNDED_TRAVERSAL
+
+
+# ---------------------------------------------------------------------------
+# The nested-bracket bypass a fresh-context adversarial review found live in
+# this fix's own first version, before merge. The first version sliced
+# `_RELATIONSHIP_HOP_PATTERN`'s captured bracket interior at its first `{`,
+# which correctly avoided the {weight: 2*3} regression above, but that
+# pattern's non-nesting `[^\[\]]*` bracket capture never matches a hop at
+# all once a nested `[` appears inside it (a list-valued property, a list
+# literal), so the whole check silently never ran on a hop shaped this way.
+# These cases were confirmed FAILING (ok=True, no rejection) against the
+# first version before the fix in this section closed them. Full account:
+# tracker/fix_c15_generation_bound.md.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "cypher",
+    [
+        (
+            "MATCH (g:Gene {id: $gene_id})-[:orthologous_to*2 {tags: [$a, $b]}]->"
+            "(o:Gene) RETURN g, o"
+        ),
+        (
+            "MATCH (g:Gene {id: $gene_id})-[:orthologous_to* {tags: ['x', 'y']}]->"
+            "(o:Gene) RETURN g, o"
+        ),
+        (
+            "MATCH (g:Gene {id: $gene_id})-[r:orthologous_to*1..3 {tags: [$a]}]->"
+            "(o:Gene) RETURN g, o"
+        ),
+    ],
+    ids=["parameter_list", "string_list", "named_var_with_list"],
+)
+def test_variable_length_relationship_with_a_nested_bracket_is_still_rejected(
+    cypher: str,
+) -> None:
+    result = validate_cypher(cypher, row_limit=DEFAULT_ROW_LIMIT)
+
+    assert result.ok is False
+    assert result.reason == REASON_UNBOUNDED_TRAVERSAL
+
+
+def test_a_list_valued_property_with_no_variable_length_spec_still_passes() -> None:
+    # The nested-bracket fix must not become its own false positive: a
+    # fixed-hop relationship with an ordinary list-valued property, no
+    # *range spec anywhere, must still validate cleanly.
+    result = validate_cypher(
+        "MATCH (g:Gene {id: $gene_id})-[:orthologous_to {tags: [$a, $b]}]->"
+        "(o:Gene) RETURN g, o",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.ok is True
+    assert result.reason is None
+
+
+def test_star_inside_a_masked_string_literal_is_not_mistaken_for_variable_length() -> None:
+    # A string value that happens to contain a colon, a label-shaped
+    # identifier, and a star must not trigger the check either: masking
+    # replaces the whole quoted literal with one opaque token before
+    # _UNBOUNDED_TRAVERSAL_PATTERN ever runs, so its contents can never
+    # match, quote-adjacent colon included.
+    result = validate_cypher(
+        "MATCH (a:Article {source: ':orthologous_to*2'}) RETURN a",
+        row_limit=DEFAULT_ROW_LIMIT,
+    )
+
+    assert result.reason != REASON_UNBOUNDED_TRAVERSAL, (
+        f"a string literal's own content was mistaken for a relationship "
+        f"hop's variable-length spec: {result.reason} {result.message}"
+    )
