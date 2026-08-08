@@ -103,6 +103,29 @@ instruction; a caller checks truthiness (`output.fields_withheld or []`) to
 treat both the same way, the exact pattern the premise gate's own case 3
 already uses.
 
+Design decision 5, `matched_on` (F-3.3-A-01/F-3.3-A-02/F-3.3-A-03, added
+2026-08-08, fix round 3). LitVar2's `/variant/autocomplete/` response
+carries a `match` field on every row (e.g. `"Matched on all_hgvs
+<m>3344|p.V66M</m>"`, `"Matched on synonyms <m>334C</m>"`), the upstream's
+own statement of WHY a row matched the caller's query. Before this fix
+neither `litvar2_lookup.py` nor this schema carried it, so an exact
+identifier hit and a weak substring hit inside an internal composite
+string were byte-indistinguishable downstream: `query="334"` returned
+five confidently cited, wholly unrelated variants (F-3.3-A-01) with
+nothing in the output marking any of them weak. `matched_on` is an
+additive, optional `str | None` field on `Litvar2VariantMatch`, capped at
+`max_length=200` (real observed values are well under 50 chars; 200 gives
+headroom without inviting a large untrusted string into the output). This
+is a DISCLOSURE fix only: it surfaces LitVar2's own relevance signal so a
+downstream consumer (a Write step, a human, a future confidence
+heuristic) can see the actual evidence. It deliberately does NOT build a
+match-quality classifier or auto-refuse a weak match here; that judgment
+call is out of scope for this fix and belongs in its own reviewed change.
+`matched_on` is untrusted upstream content like every other free-text
+field this module reads (see "Untrusted content" below): over-length
+values are withheld (never truncated), following the same policy `name`
+and `hgvs` already use in `_parse_variant_match`.
+
 Depends on:
     - Nothing repo-local. `NCBI_LITVAR2_RECORD_URL_PATTERN` is defined
       here, not imported from `ncbi_dbsnp_schemas.py`,
@@ -231,6 +254,11 @@ class Litvar2VariantMatch(BaseModel):
     silently truncated" discipline `ncbi_dbsnp_schemas.py`'s
     `spdi_canonical` applies at the whole-call level, applied here at the
     single-item level instead.
+
+    `matched_on` (design decision 5, F-3.3-A-02) is LitVar2's own stated
+    reason this row matched the query, additive and optional, disclosure
+    only: see the module docstring for why this does not attempt to judge
+    match quality.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -248,6 +276,7 @@ class Litvar2VariantMatch(BaseModel):
         list[Annotated[str, Field(max_length=30)]],
         Field(default_factory=list, max_length=10),
     ] = Field(default_factory=list)
+    matched_on: Annotated[str | None, Field(default=None, max_length=200)] = None
 
 
 class Litvar2LookupOutput(BaseModel):

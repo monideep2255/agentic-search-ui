@@ -13,10 +13,13 @@ and all three nested item models (`PubtatorEntity`, `PubtatorAnnotation`,
 `PubtatorPublication`), the two required fields (`status`, `mode`), the
 `status` enum, `extra="forbid"` at every level, the additive
 `pmids_not_found` field (F-3.3-01: defaults to `[]`, accepts real PMID
-strings, bounded the same as the input's own `pmids`), and
-`NCBI_PUBTATOR_RECORD_URL_PATTERN` accepting a real `pubmed.ncbi.nlm.nih.gov`
-record URL while rejecting the PubTator3 API fetch host and two
-right-host-wrong-kind-of-record NCBI URLs.
+strings, bounded the same as the input's own `pmids`), the additive
+`PubtatorEntity.matched_on` field (F-3.3-A-01/F-3.3-A-02/F-3.3-A-03,
+fix round 3: defaults to `None`, accepts a real value, `max_length=200`),
+`pmids.min_length=1` rejecting an empty list (F-3.3-A-06, fix round 3),
+and `NCBI_PUBTATOR_RECORD_URL_PATTERN` accepting a real
+`pubmed.ncbi.nlm.nih.gov` record URL while rejecting the PubTator3 API
+fetch host and two right-host-wrong-kind-of-record NCBI URLs.
 
 What this file deliberately does NOT cover, per `goal-contracts`'s "a verify
 surface must state its own coverage": how `pubtator_annotate.py` (T-3.3-05)
@@ -134,6 +137,20 @@ def test_entity_lookup_limit_above_twenty_is_rejected() -> None:
 def test_entity_lookup_limit_at_twenty_validates() -> None:
     validated = PubtatorAnnotateInput(mode="entity_lookup", query="BRCA1", limit=20)
     assert validated.root.limit == 20
+
+
+def test_annotate_publications_pmids_empty_list_is_rejected() -> None:
+    """F-3.3-A-06: min_length=1 mirrors query's own minLength for the same
+    reason (an empty pmids list reaches the live API and lands on F-3.3-02's
+    undocumented bare-array error shape).
+    """
+    with pytest.raises(ValidationError):
+        PubtatorAnnotateInput(mode="annotate_publications", pmids=[])
+
+
+def test_annotate_publications_pmids_empty_list_is_rejected_via_model_validate() -> None:
+    with pytest.raises(ValidationError):
+        PubtatorAnnotateInput.model_validate({"mode": "annotate_publications", "pmids": []})
 
 
 def test_annotate_publications_pmids_at_max_items_validates() -> None:
@@ -266,6 +283,28 @@ def test_entity_description_over_max_length_is_rejected() -> None:
 def test_entity_extra_field_is_forbidden() -> None:
     with pytest.raises(ValidationError):
         PubtatorEntity(bogus="x")
+
+
+# ---------------------------------------------------------------------------
+# matched_on: additive, F-3.3-A-01/F-3.3-A-02/F-3.3-A-03 (fix round 3).
+# ---------------------------------------------------------------------------
+
+
+def test_entity_matched_on_defaults_to_none() -> None:
+    entity = PubtatorEntity()
+    assert entity.matched_on is None
+
+
+def test_entity_matched_on_accepts_a_real_value() -> None:
+    entity = PubtatorEntity(matched_on="Matched on name <m>BRCA1</m>")
+    assert entity.matched_on == "Matched on name <m>BRCA1</m>"
+
+
+def test_entity_matched_on_max_length_boundary() -> None:
+    ok = PubtatorEntity(matched_on="m" * 200)
+    assert len(ok.matched_on) == 200
+    with pytest.raises(ValidationError):
+        PubtatorEntity(matched_on="m" * 201)
 
 
 def test_output_entities_over_max_items_is_rejected() -> None:

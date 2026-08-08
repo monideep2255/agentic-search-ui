@@ -34,6 +34,20 @@ Covers, per this ticket's explicit requirements:
     - The dispatcher: `family="pubtator"` is the family every call uses, an
       unexpected exception from a mode branch is caught and reported as an
       actionable `status: "error"`, never propagated.
+    - F-3.3-A-01/F-3.3-A-02/F-3.3-A-03: `matched_on` is populated from the
+      upstream `match` field when present, `None` when absent, and
+      withheld (not truncated) like any other over-length field.
+    - F-3.3-A-04: `pmids_not_found` diffs on CANONICAL identity, not the
+      raw requested string, so a leading-zero or whitespace-padded
+      variant of a PMID that WAS returned never appears in
+      `pmids_not_found`, while a genuinely missing PMID still does, in
+      its original requested form.
+    - F-3.3-A-06/F-3.3-A-07: an empty `pmids` list is rejected at the
+      schema layer before any network call (see
+      `test_pubtator_annotate_schemas.py`); the error message for a
+      content-free transport fallback always carries actionable guidance,
+      never ships the bare `"HTTP {status} with no structured error
+      body"` string alone.
 
 Depends on:
     - system_03_search_agent.tools.pubtator_annotate (module under test)
@@ -104,27 +118,27 @@ def _install(monkeypatch: pytest.MonkeyPatch, items: list[httpx.Response | Excep
 # ---------------------------------------------------------------------------
 
 
-def _entity_autocomplete_body() -> list[dict[str, Any]]:
-    return [
-        {
-            "_id": "@GENE_BRCA1",
-            "biotype": "gene",
-            "db_id": "672",
-            "db": "ncbi_gene",
-            "name": "BRCA1",
-            "description": "All Species",
-            "match": "Matched on name <m>BRCA1</m>",
-        },
-        {
-            "_id": "@VARIANT_c.5382insC_BRCA1_human",
-            "biotype": "variant",
-            "db_id": "#672#c.5382insC",
-            "db": "litvar",
-            "name": "c.5382insC",
-            "description": "BRCA1 (human)",
-            "match": "Multiple matches",
-        },
-    ]
+def _entity_autocomplete_body(*, include_match: bool = True) -> list[dict[str, Any]]:
+    first: dict[str, Any] = {
+        "_id": "@GENE_BRCA1",
+        "biotype": "gene",
+        "db_id": "672",
+        "db": "ncbi_gene",
+        "name": "BRCA1",
+        "description": "All Species",
+    }
+    second: dict[str, Any] = {
+        "_id": "@VARIANT_c.5382insC_BRCA1_human",
+        "biotype": "variant",
+        "db_id": "#672#c.5382insC",
+        "db": "litvar",
+        "name": "c.5382insC",
+        "description": "BRCA1 (human)",
+    }
+    if include_match:
+        first["match"] = "Matched on name <m>BRCA1</m>"
+        second["match"] = "Multiple matches"
+    return [first, second]
 
 
 def _publication_doc(pmid: str = "34083286", *, gene_identifier: str = "672") -> dict[str, Any]:
@@ -229,6 +243,33 @@ async def test_entity_lookup_transport_failure_is_error(monkeypatch: pytest.Monk
 
 
 @pytest.mark.asyncio
+async def test_f_3_3_a_07_entity_lookup_content_free_fallback_gets_actionable_guidance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.3-A-07: when PubTator3's error body falls through every recognized
+    shape (here, a bare JSON array, the same F-3.3-02 shape reached live via
+    an empty query), ncbi_transport's own generic fallback
+    ("HTTP {status} with no structured error body") must never surface as
+    the WHOLE message with no next-step guidance appended.
+    """
+    _install(
+        monkeypatch,
+        [_json_response(["query is a mandatory parameter."], status_code=400)],
+    )
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="entity_lookup", query="x", limit=5)
+    )
+
+    assert output.status == "error"
+    assert output.error is not None
+    assert output.error != "HTTP 400 with no structured error body", (
+        "the bare transport fallback must never ship as the entire message"
+    )
+    assert "Retry once" in output.error, "the message must name an actionable next step"
+
+
+@pytest.mark.asyncio
 async def test_entity_lookup_withholds_over_length_field_not_truncate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -255,6 +296,60 @@ async def test_entity_lookup_withholds_over_length_field_not_truncate(
     assert output.entities[0].name is None, "over-length name must be withheld, not truncated"
     assert output.entities[0].description == "fine"
     assert output.entities[0].db_id == "1"
+
+
+# ---------------------------------------------------------------------------
+# F-3.3-A-01/F-3.3-A-02/F-3.3-A-03 regression: matched_on discloses
+# PubTator3's own relevance signal instead of silently discarding it.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_matched_on_is_populated_from_the_upstream_match_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(monkeypatch, [_json_response(_entity_autocomplete_body())])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="entity_lookup", query="BRCA1", limit=5)
+    )
+
+    assert output.status == "ok"
+    assert output.entities[0].matched_on == "Matched on name <m>BRCA1</m>"
+    assert output.entities[1].matched_on == "Multiple matches"
+
+
+@pytest.mark.asyncio
+async def test_matched_on_is_none_when_the_upstream_row_omits_match(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(monkeypatch, [_json_response(_entity_autocomplete_body(include_match=False))])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="entity_lookup", query="BRCA1", limit=5)
+    )
+
+    assert output.status == "ok"
+    assert output.entities[0].matched_on is None
+
+
+@pytest.mark.asyncio
+async def test_over_length_matched_on_is_withheld_not_truncated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    over_length_match = "Matched on synonyms <m>" + ("x" * 190) + "</m>"
+    assert len(over_length_match) > 200
+    body = _entity_autocomplete_body(include_match=False)
+    body[0]["match"] = over_length_match
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="entity_lookup", query="BRCA1", limit=5)
+    )
+
+    assert output.status == "ok"
+    assert output.entities[0].matched_on is None, "over-length matched_on must be withheld, not truncated"
+    assert output.entities[0].name == "BRCA1", "other in-cap fields on the same entity still ship"
 
 
 # ---------------------------------------------------------------------------
@@ -313,6 +408,84 @@ async def test_f_3_3_01_mixed_batch_reports_dropped_pmid_not_silent_success(
 
 
 @pytest.mark.asyncio
+async def test_f_3_3_a_04_leading_zero_pmid_is_not_reported_as_not_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.3-A-04: PubTator3 normalizes a leading zero and answers with the
+    canonical id; the diff must not report the requested (unnormalized)
+    form as missing when its canonical form was actually returned.
+    """
+    body = {"PubTator3": [_publication_doc("34083286")]}
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="annotate_publications", pmids=["034083286"])
+    )
+
+    assert output.status == "ok", output.error
+    returned_pmids = [pub.pmid for pub in output.publications]
+    assert "34083286" in returned_pmids
+    assert output.pmids_not_found == [], (
+        f"a requested id whose canonical form WAS returned must never appear "
+        f"in pmids_not_found, got {output.pmids_not_found!r}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_a_04_whitespace_padded_pmid_is_not_reported_as_not_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    body = {"PubTator3": [_publication_doc("34083286")]}
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="annotate_publications", pmids=[" 34083286"])
+    )
+
+    assert output.status == "ok", output.error
+    assert output.pmids_not_found == []
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_a_04_genuinely_missing_pmid_still_reports_not_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The identity-normalization fix must not swallow a REAL drop: a
+    nonexistent PMID with no canonical match anywhere in the response must
+    still surface in pmids_not_found, the exact F-3.3-01 case this field
+    exists for.
+    """
+    body = {"PubTator3": [_publication_doc("34083286")]}
+    _install(monkeypatch, [_json_response(body)])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="annotate_publications", pmids=["34083286", "999999999999"])
+    )
+
+    assert output.status == "ok", output.error
+    assert output.pmids_not_found == ["999999999999"]
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_a_04_pmids_not_found_reports_original_string_not_canonical_form(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Canonicalization is for identity comparison only; disclosure still
+    names the caller's original requested string, never the normalized form.
+    """
+    _install(monkeypatch, [_json_response({"PubTator3": []})])
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="annotate_publications", pmids=["099999999999"])
+    )
+
+    assert output.pmids_not_found == ["099999999999"], (
+        "a genuine miss must be disclosed in its ORIGINAL requested form, "
+        f"got {output.pmids_not_found!r}"
+    )
+
+
+@pytest.mark.asyncio
 async def test_annotate_publications_all_invalid_batch_is_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -360,6 +533,33 @@ async def test_annotate_publications_transport_failure_is_error(
 
     assert output.status == "error"
     assert "connection failed" in output.error
+
+
+@pytest.mark.asyncio
+async def test_f_3_3_a_06_and_a_07_empty_pmids_reaching_the_api_gets_actionable_guidance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.3-A-06 closes this at the schema layer (pmids=[] now raises
+    ValidationError before any network call, see
+    test_pubtator_annotate_schemas.py). This test proves the OTHER half,
+    F-3.3-A-07: even if this exact bare-array shape were ever reached
+    (e.g. a future schema change reopened the gap, or PubTator3 changes
+    what triggers it), the resulting message still carries actionable
+    guidance rather than shipping the bare transport fallback verbatim.
+    """
+    _install(
+        monkeypatch,
+        [_json_response(["pmids is a mandatory parameter."], status_code=400)],
+    )
+
+    output = await pubtator_annotate(
+        PubtatorAnnotateInput(mode="annotate_publications", pmids=["1"])
+    )
+
+    assert output.status == "error"
+    assert output.error is not None
+    assert output.error != "HTTP 400 with no structured error body"
+    assert "Retry once" in output.error
 
 
 @pytest.mark.asyncio

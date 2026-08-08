@@ -6,10 +6,13 @@ implementation of that lock: every field, length cap, enum, and pattern here
 mirrors the spec's `pubtator_annotate.input` and `pubtator_annotate.output`
 JSON schemas exactly, plus `extra="forbid"` on every model with its own field
 set so an unexpected field is rejected rather than silently dropped or passed
-through (production-standards.md's multi-agent pipeline gate), with two
-additions named explicitly by `tracker/phase_3.3.md` (T-3.3-03's own ticket
-line) and re-verified live against the real API on 2026-08-08 while writing
-this file.
+through (production-standards.md's multi-agent pipeline gate), with the
+`pmids_not_found` addition named explicitly by `tracker/phase_3.3.md`
+(T-3.3-03's own ticket line) and re-verified live against the real API on
+2026-08-08 while writing this file, plus a `min_length` tightening and a
+second additive field, `matched_on`, both added 2026-08-08 in the
+adversary-round fix that closed F-3.3-A-01/A-02/A-03/A-06 (design
+decisions 5 and 7 below).
 
 Design decision 1, the input is a 2-way discriminated union on `mode`,
 following `ncbi_efetch_schemas.py`'s documented idiom (design decision 1
@@ -106,7 +109,20 @@ PMIDS the upstream API itself silently dropped from its own response. Both
 are additive-field disclosure mechanisms for a silent-drop failure mode, the
 same house pattern applied to two different silent-drop problems.
 
-Design decision 5, per-item field withholding within `entities[]` and
+Design decision 5, `pmids.min_length: 1` (F-3.3-A-06, added 2026-08-08,
+fix round 3). Design decision 2 above closed the empty-string path on
+`entity_lookup.query` but never looked at `annotate_publications.pmids`,
+the sibling list field: `pmids` carried `max_length=20` and no
+`min_length`, so `pmids=[]` validated at the schema layer, joined to an
+empty CSV, and reached the live API, landing on the EXACT F-3.3-02
+undocumented bare-array error shape (`["pmids is a mandatory
+parameter."]`) design decision 2's own disposition claimed was fully
+closed. `min_length=1` on `pmids` mirrors the treatment `query` already
+got, for the same reason: an empty list can never resolve to a real
+batch and is a guaranteed-useless network call the schema layer can
+reject for free.
+
+Design decision 6, per-item field withholding within `entities[]` and
 `publications[].annotations[]` has no dedicated disclosure field, unlike
 `pmids_not_found` above. Section 6.4's locked item schemas for both arrays
 are `additionalProperties: false` with a fixed, small property set and no
@@ -125,6 +141,27 @@ provides at the top level, flagged here rather than silently absent, per
 future ticket that needs stronger disclosure at this granularity would add a
 new additive field the same way `pmids_not_found` was added here, as its own
 reviewed decision.
+
+Design decision 7, `matched_on` (F-3.3-A-01/F-3.3-A-02/F-3.3-A-03, added
+2026-08-08, fix round 3). PubTator3's `/entity/autocomplete/` response
+carries a `match` field on every row (e.g. `"Multiple matches"`,
+`"Matched on name <m>BRCA1</m>"`), the upstream's own statement of why a
+row matched the caller's query. Before this fix neither
+`pubtator_annotate.py` nor this schema carried it, so a real, correctly
+normalized entity resolved from an exact term and one resolved from a
+common English word (`query="the"` returning ten confidently normalized
+MeSH/Gene entities, F-3.3-A-03) were byte-indistinguishable downstream.
+`matched_on` is an additive, optional `str | None` field on
+`PubtatorEntity`, capped at `max_length=200` (mirrors
+`litvar2_lookup_schemas.Litvar2VariantMatch.matched_on`'s own cap and
+reasoning, added in the same fix round for the sibling tool). This is a
+DISCLOSURE fix only, matching design decision 6's own scope discipline:
+it surfaces PubTator3's own relevance signal, and deliberately does not
+attempt to judge match quality or auto-refuse a weak match; that
+judgment call is its own reviewed decision, not folded into this one.
+`matched_on` follows design decision 6's own withhold-not-truncate
+policy: an over-length value is withheld (`None`) via `_withhold_if_over`,
+the same as every other `PubtatorEntity` field.
 
 Depends on:
     - Nothing repo-local. `NCBI_PUBTATOR_RECORD_URL_PATTERN` is defined here,
@@ -208,14 +245,21 @@ class PubtatorEntityLookupInput(BaseModel):
 
 
 class PubtatorAnnotatePublicationsInput(BaseModel):
-    """`GET /publications/export/biocjson?pmids={csv}`. The `annotate_publications` branch."""
+    """`GET /publications/export/biocjson?pmids={csv}`. The `annotate_publications` branch.
+
+    `pmids` carries `min_length=1` (design decision 5, F-3.3-A-06): an
+    empty list is a guaranteed-useless network call that lands on
+    PubTator3's undocumented bare-array error shape (F-3.3-02), the exact
+    gap design decision 2's own `query` fix left open on this sibling
+    field.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     mode: Literal["annotate_publications"]
     pmids: Annotated[
         list[Annotated[str, Field(max_length=_MAX_PMID_CHARS)]],
-        Field(max_length=_MAX_PMIDS),
+        Field(min_length=1, max_length=_MAX_PMIDS),
     ]
 
 
@@ -239,11 +283,12 @@ class PubtatorAnnotateInput(RootModel[PubtatorAnnotateMode]):
 class PubtatorEntity(BaseModel):
     """One entity match, from `entity/autocomplete`'s response array.
 
-    All six fields are schema-optional: Section 6.4's printed item schema
-    (lines 1126-1136) carries no `required` list of its own. Each field that
-    exceeds its own cap is withheld (set to `None`), never truncated; see
-    design decision 5 in the module docstring for why there is no per-item
-    disclosure field naming which one, unlike the top-level
+    All seven fields are schema-optional: Section 6.4's printed item schema
+    (lines 1126-1136) carries no `required` list of its own, and
+    `matched_on` is this file's own additive field (design decision 7).
+    Each field that exceeds its own cap is withheld (set to `None`), never
+    truncated; see design decision 6 in the module docstring for why there
+    is no per-item disclosure field naming which one, unlike the top-level
     `pmids_not_found`.
     """
 
@@ -255,6 +300,7 @@ class PubtatorEntity(BaseModel):
     db_id: Annotated[str | None, Field(default=None, max_length=_MAX_DB_ID_CHARS)] = None
     name: Annotated[str | None, Field(default=None, max_length=_MAX_ENTITY_NAME_CHARS)] = None
     description: Annotated[str | None, Field(default=None, max_length=_MAX_DESCRIPTION_CHARS)] = None
+    matched_on: Annotated[str | None, Field(default=None, max_length=200)] = None
 
 
 class PubtatorAnnotation(BaseModel):

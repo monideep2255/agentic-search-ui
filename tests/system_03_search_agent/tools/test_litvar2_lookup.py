@@ -53,6 +53,9 @@ Covers, per the ticket's explicit requirements:
       that match's OUTPUT position in variant_matches, not its raw
       response array index, so the note stays correct after an earlier
       row is excluded and later matches shift down.
+    - F-3.3-A-01/F-3.3-A-02: matched_on is populated from the upstream
+      match field when present, None when absent, and withheld (not
+      truncated) like any other over-length field.
 
 Depends on:
     - system_03_search_agent.tools.litvar2_lookup (module under test)
@@ -144,6 +147,7 @@ def _autocomplete_body(
     pmids_count: int = 590,
     clinical_significance: list[str] | None = None,
     include_clinical_significance: bool = True,
+    match: str | None = "Matched on hgvs <m>c.20A>T</m>",
 ) -> list[dict[str, Any]]:
     entry: dict[str, Any] = {
         "_id": litvar_id,
@@ -154,6 +158,8 @@ def _autocomplete_body(
         "pmids_count": pmids_count,
         "flag_rsid_variant": True,
     }
+    if match is not None:
+        entry["match"] = match
     if include_clinical_significance:
         entry["data_clinical_significance"] = (
             clinical_significance
@@ -325,6 +331,55 @@ async def test_over_length_identity_field_excludes_the_whole_match(monkeypatch: 
     assert output.fields_withheld is not None
     assert any("excluded" in note for note in output.fields_withheld)
     assert any("raw response entry 0" in note for note in output.fields_withheld)
+
+
+# ---------------------------------------------------------------------------
+# F-3.3-A-01/F-3.3-A-02 regression: matched_on discloses LitVar2's own
+# relevance signal instead of silently discarding it.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_matched_on_is_populated_from_the_upstream_match_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(
+        monkeypatch,
+        [_json_response(_autocomplete_body(match="Matched on all_hgvs <m>3344|p.V66M</m>"))],
+    )
+
+    output = await litvar2_lookup(_variant_search_input("3344"))
+
+    assert output.status == "ok", output.error
+    assert output.variant_matches[0].matched_on == "Matched on all_hgvs <m>3344|p.V66M</m>"
+
+
+@pytest.mark.asyncio
+async def test_matched_on_is_none_when_the_upstream_row_omits_match(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install(monkeypatch, [_json_response(_autocomplete_body(match=None))])
+
+    output = await litvar2_lookup(_variant_search_input("rs334"))
+
+    assert output.status == "ok", output.error
+    assert output.variant_matches[0].matched_on is None
+
+
+@pytest.mark.asyncio
+async def test_over_length_matched_on_is_withheld_not_truncated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    over_length_match = "Matched on synonyms <m>" + ("x" * 190) + "</m>"
+    assert len(over_length_match) > 200
+    _install(monkeypatch, [_json_response(_autocomplete_body(match=over_length_match))])
+
+    output = await litvar2_lookup(_variant_search_input("rs334"))
+
+    assert output.status == "ok", output.error
+    assert output.variant_matches[0].matched_on is None
+    assert output.fields_withheld is not None
+    assert any("matched_on" in note for note in output.fields_withheld)
 
 
 # ---------------------------------------------------------------------------

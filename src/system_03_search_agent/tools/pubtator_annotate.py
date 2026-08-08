@@ -88,6 +88,59 @@ tool DOES make with a dedicated signal, because it is the phase's own named
 reason for existing (`tracker/phase_3.3.md`'s F-3.3-01), not merely a
 generic overflow case.
 
+`error` IS untrusted content too, even though it is a diagnostic string
+this module builds rather than a value copied straight off a response
+field: `_error_output`'s message can interpolate PubTator3's own
+`{"detail": ...}` echo of a caller-supplied identifier, so a crafted
+`pmids` or `query` value can round-trip into `output.error` (LitVar2's
+sibling tool reproduces this directly, F-3.3-A-08). `error` is capped at
+`_MAX_ERROR_CHARS` (500) the same as every other field this module
+withholds rather than truncates, and, like every other field this module
+reads, it is data for a downstream Write step to report or discard, never
+an instruction to execute, format as a template, or act on. 500 chars is
+kept as is rather than tightened further here: it already matches the
+cap every other tool in this repo uses for the same field, and this
+finding's fix is documentation plus the existing cap, not a new
+sanitization layer (see `tracker/phase_3.3.md`'s F-3.3-A-08 disposition
+for why a narrower cap was considered and declined).
+
+## matched_on: disclosing PubTator3's own relevance signal (F-3.3-A-01/
+## F-3.3-A-02/F-3.3-A-03, fix round 3)
+
+PubTator3's `/entity/autocomplete/` response carries a `match` field on
+every row (e.g. `"Multiple matches"`, `"Matched on name <m>BRCA1</m>"`),
+its own statement of why a row matched the caller's query. Before this
+fix `_parse_entity` never read it, so a query resolving to an exact term
+and a query resolving to a common English word (`query="the"` returning
+ten confidently normalized MeSH/Gene entities under `status: "ok"`,
+F-3.3-A-03) were indistinguishable in the output. `_parse_entity` now
+reads `raw.get("match")` into `PubtatorEntity.matched_on`
+(`pubtator_annotate_schemas.py`'s design decision 7), withheld like any
+other over-length field via `_withhold_if_over`, never truncated. This is
+a DISCLOSURE fix only: it surfaces the raw signal for a downstream
+consumer to weigh. It deliberately does not build a match-quality
+heuristic or auto-refuse a weak match; that judgment call is its own
+scoped decision, not folded into this fix.
+
+## pmids_not_found: an identity diff, not a raw-string diff (F-3.3-A-04,
+## fix round 3)
+
+The original F-3.3-01 fix computed `pmids_not_found` by comparing the
+caller's raw requested `pmids` strings against the returned PMIDs with
+exact string equality. PubTator3 itself normalizes a leading zero or
+surrounding whitespace and answers with the canonical id
+(`pmids=["034083286"]` returns the real `34083286` document), so the
+raw-string diff reported a drop that never happened, right next to the
+data proving it did not: `pmids_not_found: ["034083286"]` alongside a
+`publications` entry for that exact paper. `_canonical_pmid` below
+normalizes both sides of the diff (`str(int(pmid.strip()))`, falling back
+to the stripped-but-unparsed form on a non-numeric value rather than
+raising) before comparing, so a requested id that normalizes to the same
+value as a returned id can never appear in `pmids_not_found`.
+`pmids_not_found` itself still reports the caller's ORIGINAL requested
+string, never the canonicalized form: canonicalization is for identity
+comparison only, not for what gets disclosed.
+
 Depends on:
     - system_03_search_agent.tools.ncbi_transport (T-3.3-02's `"pubtator"`
       rate-limit family and the `{"detail": ...}` error-message branch;
@@ -147,6 +200,7 @@ _MAX_DB_CHARS: Final[int] = 20
 _MAX_DB_ID_CHARS: Final[int] = 30
 _MAX_ENTITY_NAME_CHARS: Final[int] = 100
 _MAX_DESCRIPTION_CHARS: Final[int] = 300
+_MAX_MATCHED_ON_CHARS: Final[int] = 200
 
 _MAX_PMID_CHARS: Final[int] = 15
 _MAX_PUBLICATIONS: Final[int] = 20
@@ -206,6 +260,57 @@ def _error_output(mode: str, message: str) -> PubtatorAnnotateOutput:
     )
 
 
+def _status_error_reason(error_message: str | None, http_status: int) -> str | None:
+    """`error_message`, unless it is ncbi_transport's own content-free fallback (F-3.3-A-07).
+
+    Both status-coded call sites below built their message with
+    `classification.error_message or <locally generated actionable text>`,
+    which looks like a safe fallback but is not:
+    `ncbi_transport._extract_status_coded_error_message`'s own generic
+    fallback string, `"HTTP {status} with no structured error body"`, is
+    non-empty and therefore TRUTHY, so the `or` always picked it over this
+    module's own actionable fallback text whenever PubTator3's error body
+    fell through every recognized shape (reachable live via F-3.3-A-06's
+    `pmids=[]` repro). The result was a message naming no next step at
+    all, the one violation of `production-standards.md`'s retry-safety
+    gate in this module.
+
+    Returning `None` for exactly that one generic-fallback shape restores
+    the `or` at each call site to the actionable branch it was always
+    meant to reach. Any other, genuinely PubTator3-authored reason (e.g.
+    `"Could not retrieve publications"`) passes through unchanged: that
+    text already carries real information the generic fallback does not,
+    so it is not replaced, only the content-free case is.
+    """
+    if error_message is None:
+        return None
+    if error_message == f"HTTP {http_status} with no structured error body":
+        return None
+    return error_message
+
+
+def _canonical_pmid(pmid: str) -> str:
+    """Normalize a PMID string for identity comparison only (F-3.3-A-04).
+
+    PubTator3 normalizes a leading zero or surrounding whitespace on a
+    requested PMID and answers with the canonical numeric id
+    (`pmids=["034083286"]` returns the real `34083286` document); the
+    original `pmids_not_found` diff compared raw strings, so a caller's
+    own formatting variant of a PMID that WAS found could still be
+    reported as not found, right alongside the very document that
+    disproves it. This never raises on a non-numeric value: an id that is
+    not parseable as an int has no canonical numeric form to fall to, so
+    it is compared on its stripped-but-otherwise-unparsed form instead.
+    Used ONLY to decide set membership for the diff; `pmids_not_found`
+    itself still reports the caller's original, uncanonicalized string.
+    """
+    stripped = pmid.strip()
+    try:
+        return str(int(stripped))
+    except ValueError:
+        return stripped
+
+
 # ---------------------------------------------------------------------------
 # entity_lookup: GET /entity/autocomplete/?query={text}&limit={n}
 # ---------------------------------------------------------------------------
@@ -227,6 +332,10 @@ def _parse_entity(raw: Any) -> PubtatorEntity | None:
         db_id=_withhold_if_over(_str_or_none(raw.get("db_id")), _MAX_DB_ID_CHARS),
         name=_withhold_if_over(_str_or_none(raw.get("name")), _MAX_ENTITY_NAME_CHARS),
         description=_withhold_if_over(_str_or_none(raw.get("description")), _MAX_DESCRIPTION_CHARS),
+        # F-3.3-A-01/F-3.3-A-02/F-3.3-A-03: disclose PubTator3's own
+        # relevance signal rather than discarding it. See the module
+        # docstring's "matched_on" section.
+        matched_on=_withhold_if_over(_str_or_none(raw.get("match")), _MAX_MATCHED_ON_CHARS),
     )
 
 
@@ -253,7 +362,7 @@ async def _entity_lookup(input_data: PubtatorEntityLookupInput) -> PubtatorAnnot
     if classification.status == "error":
         return _error_output(
             "entity_lookup",
-            classification.error_message
+            _status_error_reason(classification.error_message, response.status_code)
             or f"PubTator3 entity_lookup returned HTTP {response.status_code} with "
             "no structured error body. Retry once; if this recurs, PubTator3 may "
             "be degraded.",
@@ -404,7 +513,7 @@ async def _annotate_publications(
     if classification.status == "error":
         return _error_output(
             "annotate_publications",
-            classification.error_message
+            _status_error_reason(classification.error_message, response.status_code)
             or f"PubTator3 annotate_publications returned HTTP {response.status_code} "
             "with no structured error body. Retry once; if this recurs, PubTator3 "
             "may be degraded.",
@@ -428,14 +537,21 @@ async def _annotate_publications(
         )
 
     publications: list[PubtatorPublication] = []
-    found_pmids: set[str] = set()
+    found_pmids_canonical: set[str] = set()
     for doc in docs[:_MAX_PUBLICATIONS]:
         pub = _parse_publication(doc)
         if pub is not None and pub.pmid:
-            found_pmids.add(pub.pmid)
+            found_pmids_canonical.add(_canonical_pmid(pub.pmid))
             publications.append(pub)
 
-    pmids_not_found = [pmid for pmid in requested_pmids if pmid not in found_pmids]
+    # F-3.3-A-04: diff on CANONICAL identity, not the raw requested string.
+    # `pmids_not_found` still names the caller's ORIGINAL string (never the
+    # canonicalized form), since canonicalization here is only for deciding
+    # whether a requested id was actually satisfied, not for what gets
+    # disclosed.
+    pmids_not_found = [
+        pmid for pmid in requested_pmids if _canonical_pmid(pmid) not in found_pmids_canonical
+    ]
 
     if not publications:
         # A 200 response that, after parsing, yielded no identifiable

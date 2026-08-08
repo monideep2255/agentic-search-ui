@@ -9,7 +9,9 @@ the output side: every `maxLength`/`maxItems` cap actually enforced (not
 just declared) on the top-level model and the nested `Litvar2VariantMatch`
 item model, the two required fields (`status`, `mode`), the `status` enum,
 `extra="forbid"` at every level, `fields_withheld`'s `list[str] | None`
-shape and its own caps, and `NCBI_LITVAR2_RECORD_URL_PATTERN` accepting a
+shape and its own caps, the additive `Litvar2VariantMatch.matched_on` field
+(F-3.3-A-01/F-3.3-A-02, fix round 3: defaults to `None`, accepts a real
+value, `max_length=200`), and `NCBI_LITVAR2_RECORD_URL_PATTERN` accepting a
 real LitVar2/PubMed URL while rejecting a non-NCBI host and a plain-HTTP
 scheme.
 
@@ -297,6 +299,30 @@ def test_variant_match_clinical_significance_item_max_length_boundary() -> None:
     assert len(ok.clinical_significance[0]) == 30
     with pytest.raises(ValidationError):
         Litvar2VariantMatch.model_validate({"clinical_significance": ["c" * 31]})
+
+
+# ---------------------------------------------------------------------------
+# matched_on: additive, F-3.3-A-01/F-3.3-A-02 (fix round 3).
+# ---------------------------------------------------------------------------
+
+
+def test_variant_match_matched_on_defaults_to_none() -> None:
+    match = Litvar2VariantMatch.model_validate({})
+    assert match.matched_on is None
+
+
+def test_variant_match_matched_on_accepts_a_real_value() -> None:
+    match = Litvar2VariantMatch.model_validate(
+        {"matched_on": "Matched on all_hgvs <m>3344|p.V66M</m>"}
+    )
+    assert match.matched_on == "Matched on all_hgvs <m>3344|p.V66M</m>"
+
+
+def test_variant_match_matched_on_max_length_boundary() -> None:
+    ok = Litvar2VariantMatch.model_validate({"matched_on": "m" * 200})
+    assert len(ok.matched_on) == 200
+    with pytest.raises(ValidationError):
+        Litvar2VariantMatch.model_validate({"matched_on": "m" * 201})
 
 
 # ---------------------------------------------------------------------------
