@@ -3421,3 +3421,312 @@ def test_field_class_for_layer1_field_matches_real_graph_data_today() -> None:
     assert graph_module._field_class_for_layer1_field("clinical_significance") == "volatile"
     assert graph_module._field_class_for_layer1_field("CLINICAL_SIGNIFICANCE") == "volatile"
     assert graph_module._field_class_for_layer1_field("gene_coordinates") == "stable"
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-07, Section 7.2: conflict detection, wired into write_node's own
+# `ClaimTrust`/`trust_outcome` computation (`_apply_conflict_flags_to_
+# claim_trusts`), a SEPARATE path from T-3.4-06's citation-only pass above.
+# The pure-function tests below reuse the `_dual_layer_synth_finding`/
+# `_citation` helpers T-3.4-06 already defined earlier in this file, same
+# reasoning: no live, organic disagreement between a graph value and a live
+# value can be relied on to exist on any given day. The final test in this
+# section is the FULL PATH proof through `write_node` itself, mirroring
+# `test_write_builds_a_real_layer2_citation_for_a_grounded_ncbi_efetch_
+# claim`'s own construction.
+# ---------------------------------------------------------------------------
+
+
+def _claim_trust(*, citation_id: str, outcome: str, risk_tier: str = "low"):
+    from system_03_search_agent.synthesis.trust import ClaimTrust
+
+    return ClaimTrust(
+        citation_id=citation_id,
+        risk_tier=risk_tier,  # type: ignore[arg-type]
+        grounded=True,
+        triangulation="insufficient",
+        outcome=outcome,  # type: ignore[arg-type]
+    )
+
+
+def test_conflict_flags_floor_both_claims_outcome_to_flag_on_genuine_disagreement() -> None:
+    """The core Section 7.2 proof at the pure-function level: a Layer 1
+    and a Layer 2 citation share a field name and genuinely disagree.
+    BOTH claims' `ClaimTrust.outcome` move to `flag`, and every other
+    `ClaimTrust` field (risk_tier, grounded, triangulation) is untouched,
+    since Section 7.2's conflict check answers a different question than
+    Section 8.3.1/8.3.2's own risk-tier/triangulation verdict.
+    """
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1OLD.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1OLD",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+    claim_trusts = [
+        _claim_trust(citation_id="c1", outcome="answer"),
+        _claim_trust(citation_id="c2", outcome="answer"),
+    ]
+
+    result = graph_module._apply_conflict_flags_to_claim_trusts(
+        claim_trusts, [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    result_by_id = {t.citation_id: t for t in result}
+    assert result_by_id["c1"].outcome == "flag"
+    assert result_by_id["c2"].outcome == "flag"
+    # Untouched fields, both claims.
+    for citation_id in ("c1", "c2"):
+        assert result_by_id[citation_id].risk_tier == "low"
+        assert result_by_id[citation_id].grounded is True
+        assert result_by_id[citation_id].triangulation == "insufficient"
+
+
+def test_conflict_flags_never_downgrade_an_already_more_restrictive_outcome() -> None:
+    """Section 8.3.4's most-restrictive-wins rule, applied by
+    `synthesis.trust.aggregate` inside this function: a claim already at
+    `ask` (more restrictive than `flag`) must stay `ask`, never get
+    weakened to `flag`. A claim at `answer` (less restrictive) is the one
+    that actually moves.
+    """
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1OLD.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1OLD",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+    claim_trusts = [
+        _claim_trust(citation_id="c1", outcome="ask", risk_tier="high"),
+        _claim_trust(citation_id="c2", outcome="answer"),
+    ]
+
+    result = graph_module._apply_conflict_flags_to_claim_trusts(
+        claim_trusts, [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    result_by_id = {t.citation_id: t for t in result}
+    assert result_by_id["c1"].outcome == "ask", (
+        "an already more-restrictive outcome must never be weakened to flag"
+    )
+    assert result_by_id["c2"].outcome == "flag"
+
+
+def test_conflict_flags_is_a_no_op_when_the_values_agree() -> None:
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+    claim_trusts = [
+        _claim_trust(citation_id="c1", outcome="answer"),
+        _claim_trust(citation_id="c2", outcome="answer"),
+    ]
+
+    result = graph_module._apply_conflict_flags_to_claim_trusts(
+        claim_trusts, [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    result_by_id = {t.citation_id: t for t in result}
+    assert result_by_id["c1"].outcome == "answer"
+    assert result_by_id["c2"].outcome == "answer"
+
+
+def test_conflict_flags_is_a_no_op_on_a_field_name_mismatch() -> None:
+    """No synonym table, the identical rule `_layer1_layer2_field_pairs`
+    already enforces for T-3.4-06: a graph "name" and a live "symbol"
+    citation for the same entity are never paired."""
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+        claim_text="The graph records the gene as BRCA1 DNA repair associated.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="name", field_value="BRCA1 DNA repair associated",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+    claim_trusts = [
+        _claim_trust(citation_id="c1", outcome="answer"),
+        _claim_trust(citation_id="c2", outcome="answer"),
+    ]
+
+    result = graph_module._apply_conflict_flags_to_claim_trusts(
+        claim_trusts, [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    result_by_id = {t.citation_id: t for t in result}
+    assert result_by_id["c1"].outcome == "answer"
+    assert result_by_id["c2"].outcome == "answer"
+
+
+def test_conflict_flags_is_a_no_op_with_only_one_layer() -> None:
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+    }
+    claim_trusts = [_claim_trust(citation_id="c1", outcome="answer")]
+
+    result = graph_module._apply_conflict_flags_to_claim_trusts(
+        claim_trusts, [graph_citation], finding_by_citation_id
+    )
+
+    assert result[0].outcome == "answer"
+
+
+@pytest.mark.asyncio
+async def test_write_a_genuine_cross_layer_conflict_floors_both_claims_trust_outcome_at_flag(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """The FULL PATH proof this ticket's own verify surface requires: a
+    Layer 1 (`cypher_query`) and a Layer 2 (`ncbi_efetch`) finding for the
+    SAME field name (`symbol`, matching `ncbi_efetch`'s own real
+    representative-field choice for a gene report, per
+    `test_act_dispatches_both_tools_for_a_gene_anchored_dual_plan`'s own
+    assertion that `symbol` is the surviving, un-withheld field) carry
+    genuinely different values. Both survive grounding (the compliant
+    synth-narrative fixture restates every finding verbatim), so both earn
+    a citation, and both claims' `trust_signal` events must come back
+    `outcome == "flag"`, never a silent pick of one side. Mirrors
+    `test_write_builds_a_real_layer2_citation_for_a_grounded_ncbi_efetch_
+    claim`'s own construction.
+    """
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    cypher_finding = Finding(
+        call_id="cq-conflict",
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "row_count": 1,
+            "total_available": 1,
+            "truncated": False,
+            "rows": [
+                {
+                    "node_or_edge_type": "Gene",
+                    "curie": "NCBIGene:672",
+                    "fields": {"symbol": "BRCA1 legacy alias"},
+                    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+                    "graph_snapshot_version": "v1",
+                }
+            ],
+            "error": None,
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    ncbi_output = _gene_report_output(symbol="BRCA1")
+    ncbi_finding = Finding(
+        call_id="ne-conflict",
+        tool="ncbi_efetch",
+        layer="layer_2_api",
+        source="structured_pass_through",
+        structured_fields=graph_module._ncbi_efetch_output_to_structured_fields(ncbi_output),
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    state = _write_state(query, [cypher_finding, ncbi_finding])
+    state["layer2_raw_outputs"] = {"ne-conflict": ncbi_output}
+
+    write_result = await graph_module.write_node(state)
+    events = write_result["events"]
+
+    citation_events = [event for event in events if event.type == "citation"]
+    layers_cited = {c.payload["layer"] for c in citation_events}
+    assert layers_cited == {"layer_1_graph", "layer_2_api"}, (
+        "a detected conflict must never silently drop either citation"
+    )
+    assert len(citation_events) == 2
+
+    claim_trust_events = [
+        event for event in events if event.type == "trust_signal" and event.payload["scope"] == "claim"
+    ]
+    assert len(claim_trust_events) == 2
+    for event in claim_trust_events:
+        assert event.payload["outcome"] == "flag", (
+            f"a genuinely conflicting claim must report outcome=flag, got {event.payload}"
+        )
+
+    answer_trust_events = [
+        event for event in events if event.type == "trust_signal" and event.payload["scope"] == "answer"
+    ]
+    assert len(answer_trust_events) == 1
+    assert answer_trust_events[0].payload["outcome"] == "flag"
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "flag"

@@ -479,6 +479,7 @@ from system_03_search_agent.harness.harness import (
     QueryClass,
     budget_for_step,
 )
+from system_03_search_agent.synthesis.conflict_detection import detect_conflict
 from system_03_search_agent.synthesis.findings import (
     SynthFinding,
     build_synth_findings,
@@ -493,6 +494,7 @@ from system_03_search_agent.synthesis.freshness import (
     prefer_live_for_currency,
 )
 from system_03_search_agent.synthesis.grounding import (
+    GroundedClaim,
     GroundingResult,
     display_index_by_citation_id,
     run_grounding_pass,
@@ -3223,6 +3225,111 @@ def _apply_layer1_staleness_notes(
     return [updates.get(c.citation_id, c) for c in citations]
 
 
+def _finding_by_citation_id(claims: list[GroundedClaim]) -> dict[str, SynthFinding]:
+    """The first claim's finding for each citation id, deterministic.
+
+    The same setdefault-first-wins rule `_citations_from_grounded_claims`
+    already applies to its own local of the same name and shape, factored
+    out here so T-3.4-07's conflict-detection pass (below) and citation
+    building never disagree about which finding backs a citation whenever
+    one finding is cited by more than one clause.
+    """
+    out: dict[str, SynthFinding] = {}
+    for claim in claims:
+        out.setdefault(claim.finding.citation_id, claim.finding)
+    return out
+
+
+def _apply_conflict_flags_to_claim_trusts(
+    claim_trusts: list[ClaimTrust],
+    citations: list[CitationPayload],
+    finding_by_citation_id: dict[str, SynthFinding],
+) -> list[ClaimTrust]:
+    """Section 7.2: a genuine Layer 1/Layer 2 value conflict floors both
+    claims' trust outcome at `flag`.
+
+    This is the one piece of real wiring T-3.4-07 adds: `synthesis.
+    conflict_detection.detect_conflict` is a pure comparison (T-3.4-02) and
+    `_layer1_layer2_field_pairs` is T-3.4-06's own "same fact across
+    layers" pairing (reused here unchanged, never re-derived); what did not
+    exist before this function is a path from a detected conflict to the
+    SEPARATE `ClaimTrust`/`trust_outcome` computation `write_node` runs via
+    `trust_for_claims`/`aggregate`. A citations-list change alone (the
+    T-3.4-06 shape) never touches `ClaimTrust.outcome`, since the two are
+    built by two independent calls in `write_node`; this function is the
+    intersection point, called after both `claim_trusts` and `citations`
+    exist and before the answer-level `aggregate()` call, so a conflict on
+    any claim can still win the answer-level most-restrictive-wins rule.
+
+    Reuses `_layer1_layer2_field_pairs` exactly as `_apply_live_wins_for_
+    currency`/`_apply_layer1_staleness_notes` do, so a conflict is detected
+    on exactly the same pairs Section 7.1's live-wins-for-currency note
+    already annotates: T-3.4-07 does not invent a second notion of "the
+    same fact across layers". For each pair whose two values are a
+    genuine, code-detected mismatch (never a free-text diff), BOTH the
+    graph citation's and the live citation's own `ClaimTrust.outcome` are
+    floored at `flag` via `synthesis.trust.aggregate([outcome, "flag"])`,
+    which is that module's own most-restrictive-wins rule (Section 8.3.4:
+    refuse outranks ask outranks flag outranks answer). An already-`ask`-
+    or `refuse`-outcome claim is therefore left exactly as `decide()`
+    computed it; only an `answer`-outcome claim actually moves, and a
+    `flag`-outcome claim (from a different mechanism, e.g. a future one)
+    stays `flag`. Only `outcome` is touched, never `risk_tier`/`grounded`/
+    `triangulation`, which remain Section 8.3.1/8.3.2's own verdict on a
+    different question (categorical concordance) from the one this
+    function answers (are the two literal values the same fact). Both
+    citations always stay in the citations list unchanged; this function
+    only ever narrows a `ClaimTrust`'s `outcome`, it never removes or adds
+    a citation or a claim.
+
+    A no-op, returning `claim_trusts` unchanged, when no Layer 1/Layer 2
+    pair shares a field name, when a paired value is blank (nothing to
+    compare), or when every paired value already agrees (nothing to flag).
+    """
+    pairs = _layer1_layer2_field_pairs(citations, finding_by_citation_id)
+    if not pairs:
+        return claim_trusts
+
+    citation_by_id = {c.citation_id: c for c in citations}
+    conflicted_ids: set[str] = set()
+    for graph_id, live_id in pairs.values():
+        graph_finding = finding_by_citation_id[graph_id]
+        live_finding = finding_by_citation_id[live_id]
+        graph_value = graph_finding.field_value.strip()
+        live_value = live_finding.field_value.strip()
+        if not graph_value or not live_value:
+            continue  # nothing to compare, mirrors T-3.4-06's own guard
+        result = detect_conflict(
+            field=graph_finding.field,
+            graph_value=graph_value,
+            live_value=live_value,
+            graph_source_url=citation_by_id[graph_id].source_url,
+            live_source_url=citation_by_id[live_id].source_url,
+        )
+        if result.is_conflict:
+            conflicted_ids.add(graph_id)
+            conflicted_ids.add(live_id)
+
+    if not conflicted_ids:
+        return claim_trusts
+
+    updated: list[ClaimTrust] = []
+    for trust in claim_trusts:
+        if trust.citation_id not in conflicted_ids:
+            updated.append(trust)
+            continue
+        updated.append(
+            ClaimTrust(
+                citation_id=trust.citation_id,
+                risk_tier=trust.risk_tier,
+                grounded=trust.grounded,
+                triangulation=trust.triangulation,
+                outcome=aggregate([trust.outcome, "flag"]),
+            )
+        )
+    return updated
+
+
 def _layer2_citation_for_synth_finding(
     synth_finding: SynthFinding,
     findings: list[Finding],
@@ -3551,6 +3658,17 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     else:
         claim_trusts = trust_for_claims(grounding.claims, synth_findings, row_types)
         citations = _citations_from_grounded_claims(grounding, findings, layer2_raw_outputs)
+        # T-3.4-07, Section 7.2: floor a conflicted claim's outcome at
+        # `flag` AFTER citations exist (it needs their `source_url` for
+        # `ConflictResult`) and BEFORE the answer-level aggregate below, so
+        # a conflict on any claim can still win the answer-level
+        # most-restrictive-wins rule. `claim_trusts` is reassigned here
+        # rather than read into a new local, so both the per-claim and the
+        # answer-level `trust_signal` events emitted further down already
+        # reflect the floor with no separate code path to keep in sync.
+        claim_trusts = _apply_conflict_flags_to_claim_trusts(
+            claim_trusts, citations, _finding_by_citation_id(grounding.claims)
+        )
         trust_outcome = aggregate([trust.outcome for trust in claim_trusts])
 
     # `citations_capped` keeps its 2.1 meaning: the user is being shown
