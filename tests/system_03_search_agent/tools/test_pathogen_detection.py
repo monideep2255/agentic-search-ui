@@ -196,10 +196,13 @@ from system_03_search_agent.tools import pathogen_ftp_transport as transport
 from system_03_search_agent.tools.pathogen_detection import (
     _isolate_lookup,
     _parse_pathogen_list_field,
+    build_citation,
     pathogen_detection,
 )
 from system_03_search_agent.tools.pathogen_detection_schemas import (
     PathogenDetectionInput,
+    PathogenDetectionOutput,
+    PathogenIsolate,
     PathogenIsolateLookupInput,
 )
 
@@ -880,3 +883,55 @@ async def test_cluster_snp_neighbors_transport_error_on_cluster_list_read_is_cla
     assert output.error is not None
     assert "cluster_list" in output.error
     assert "defect" not in output.error.lower()
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-04: build_citation. No live network: every case constructs a valid
+# PathogenDetectionOutput directly, since build_citation is a pure function
+# over an already-fetched result, not a network caller itself.
+# ---------------------------------------------------------------------------
+
+
+def _isolate_output(**isolate_overrides: Any) -> PathogenDetectionOutput:
+    defaults: dict[str, Any] = {
+        "biosample_acc": "SAMN02384162",
+        "strain": "CVM N45392",
+        "source_url": (
+            "https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/"
+            "biosample_acc:SAMN02384162"
+        ),
+    }
+    defaults.update(isolate_overrides)
+    return PathogenDetectionOutput(
+        status="ok",
+        mode="isolate_lookup",
+        isolates=[PathogenIsolate(**defaults)],
+        isolate_count=1,
+    )
+
+
+def test_build_citation_cites_strain_field() -> None:
+    result = _isolate_output()
+
+    citation = build_citation(result, field="strain")
+
+    assert citation.evidence_kind == "primary_assertion"
+    assert citation.license == "public_domain_us_gov"
+    assert citation.assertion_confidence == "asserted"
+    assert citation.layer == "layer_2_api"
+    assert citation.source_id == "SAMN02384162"
+    assert "CVM N45392" in citation.claim_text
+
+
+def test_build_citation_skips_isolate_missing_the_field() -> None:
+    result = _isolate_output(strain=None)
+
+    with pytest.raises(ValueError, match="strain"):
+        build_citation(result, field="strain")
+
+
+def test_build_citation_raises_when_no_isolates() -> None:
+    result = PathogenDetectionOutput(status="empty", mode="isolate_lookup")
+
+    with pytest.raises(ValueError, match="isolate"):
+        build_citation(result, field="strain")

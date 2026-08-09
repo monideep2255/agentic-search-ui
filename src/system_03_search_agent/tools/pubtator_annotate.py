@@ -225,10 +225,16 @@ Depended by:
 
 from __future__ import annotations
 
+import hashlib
 import re
 import urllib.parse
 from typing import Any, Final
 
+from system_03_search_agent.contracts.events import CitationPayload
+from system_03_search_agent.synthesis.provenance_defaults import (
+    defaults_for_tool,
+    hedge_scan_confidence,
+)
 from system_03_search_agent.tools import ncbi_transport
 from system_03_search_agent.tools.pubtator_annotate_schemas import (
     NCBI_PUBTATOR_ENTITY_RECORD_URL_PATTERN,
@@ -910,3 +916,105 @@ async def pubtator_annotate(tool_input: PubtatorAnnotateInput) -> PubtatorAnnota
             f"{exc}. Retry once; if this recurs, the {mode!r} mode has a defect "
             "that needs fixing before it can be trusted.",
         )
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-04: citation-building. Section 9.2's per-tool `CitationPayload`.
+# ---------------------------------------------------------------------------
+
+
+def _mint_citation_id(prefix: str, seed: str, display_index: int) -> str:
+    """A short, deterministic-shaped citation id, mirroring `core/graph.py`'s
+    `_citation_for_row` pattern (a stable id plus a display-index suffix),
+    adapted for a tool with no `call_id` of its own: the id is minted from a
+    short hash of the real source id instead. Only needs to be non-colliding
+    within one tool's own output, not globally unique across a whole answer.
+    """
+    digest = hashlib.sha256(seed.encode("utf-8", errors="replace")).hexdigest()[:10]
+    return f"{prefix}-{digest}-{display_index}"[:64]
+
+
+def build_citation(
+    result: PubtatorAnnotateOutput, display_index: int = 1
+) -> CitationPayload:
+    """Build a Section 9.2 `CitationPayload` from a real `pubtator_annotate` result.
+
+    No `field` parameter: unlike the two Layer 2 tools, a `pubtator_
+    annotate` citation covers a whole entity or publication row, not one
+    named field of it. Prefers `result.entities` (the `entity_lookup`
+    mode's own output) when present, falling back to `result.publications`
+    (`annotate_publications`) otherwise; picks the first row carrying a
+    `source_url`, since not every entity resolves one
+    (`PubtatorEntity.source_url` only covers `db in {"ncbi_gene",
+    "ncbi_mesh"}`, per that schema's own design decision 8). Raises
+    `ValueError` with an actionable message, never returns a placeholder,
+    when nothing in the result carries a citable `source_url`.
+
+    `evidence_kind` and `license` come from
+    `provenance_defaults.defaults_for_tool("pubtator_annotate")`.
+    `assertion_confidence` is decided by `hedge_scan_confidence` against
+    the row's own real free text (an entity's `description`, or its
+    `matched_on` when no `description` was returned; a publication's own
+    annotation names, joined, when that carries any); when a row genuinely
+    carries no free text at all, this defaults to `"asserted"`, per the
+    ticket's own instruction, rather than treating an empty string as
+    "hedged" or fabricating text to scan. `population_ancestry_context` is
+    always `None`: this tool has no population or ancestry field.
+    """
+    defaults = defaults_for_tool("pubtator_annotate")
+
+    if result.entities:
+        entity = next((e for e in result.entities if e.source_url), None)
+        if entity is None:
+            raise ValueError(
+                "pubtator_annotate result carries entities but none has a "
+                "source_url; refusing to build a citation rather than "
+                "fabricate one."
+            )
+        text_for_hedge = entity.description or entity.matched_on or ""
+        confidence = hedge_scan_confidence(text_for_hedge) if text_for_hedge else "asserted"
+        source = (entity.db or "pubtator_annotate")[:128]
+        source_id = (entity.db_id or entity.pubtator_id or "unknown")[:128]
+        label = entity.name or source_id
+        detail = entity.description or entity.matched_on or ""
+        claim_text = f"{label}: {detail}".strip(": ")[:1000] or label[:1000]
+        field = "entity"
+        source_url = entity.source_url
+    elif result.publications:
+        publication = next((p for p in result.publications if p.source_url), None)
+        if publication is None:
+            raise ValueError(
+                "pubtator_annotate result carries publications but none has a "
+                "source_url; refusing to build a citation rather than "
+                "fabricate one."
+            )
+        annotation_names = [a.name for a in publication.annotations if a.name]
+        text_for_hedge = " ".join(annotation_names)
+        confidence = hedge_scan_confidence(text_for_hedge) if text_for_hedge else "asserted"
+        source = "pubmed"
+        source_id = (publication.pmid or "unknown")[:128]
+        claim_text = (
+            f"PMID {source_id}: {len(publication.annotations)} annotation(s)"
+        )[:1000]
+        field = "publication"
+        source_url = publication.source_url
+    else:
+        raise ValueError(
+            "pubtator_annotate result carries no entities and no publications "
+            "to cite."
+        )
+
+    return CitationPayload(
+        citation_id=_mint_citation_id("pubtator", source_id, display_index),
+        display_index=display_index,
+        source=source,
+        source_id=source_id,
+        source_url=source_url,
+        layer="layer_3_enrichment",
+        field=field,
+        claim_text=claim_text,
+        evidence_kind=defaults["evidence_kind"],
+        assertion_confidence=confidence,
+        population_ancestry_context=None,
+        license=defaults["license"],
+    )

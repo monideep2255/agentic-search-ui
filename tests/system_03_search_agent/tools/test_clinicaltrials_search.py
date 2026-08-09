@@ -65,11 +65,18 @@ import json
 from typing import Any
 
 import httpx
+import pydantic
 import pytest
 
 from system_03_search_agent.tools import clinicaltrials_search as clinicaltrials_search_module
-from system_03_search_agent.tools.clinicaltrials_search import clinicaltrials_search
-from system_03_search_agent.tools.clinicaltrials_search_schemas import ClinicalTrialsSearchInput
+from system_03_search_agent.tools.clinicaltrials_search import (
+    build_citation,
+    clinicaltrials_search,
+)
+from system_03_search_agent.tools.clinicaltrials_search_schemas import (
+    ClinicalTrialsSearchInput,
+    ClinicalTrialsStudy,
+)
 
 
 def _json_response(body: Any, *, status_code: int = 200) -> httpx.Response:
@@ -536,3 +543,49 @@ async def test_unexpected_exception_is_caught_and_reported(monkeypatch: pytest.M
     output = await clinicaltrials_search(_search_input())
     assert output.status == "error"
     assert "unexpected" in output.error.lower()
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-04: build_citation. No live network: every case constructs a valid
+# ClinicalTrialsStudy directly, since build_citation is a pure function over
+# one already-fetched study, not a network caller itself.
+# ---------------------------------------------------------------------------
+
+
+def test_build_citation_raises_when_no_source_url() -> None:
+    study = ClinicalTrialsStudy(nct_id="NCT01230346", brief_title="A trial")
+
+    with pytest.raises(ValueError, match="source_url"):
+        build_citation(study)
+
+
+def test_build_citation_hits_the_ncbi_only_citationpayload_host_pattern() -> None:
+    """KNOWN BLOCKER, reported rather than worked around (T-3.4-04).
+
+    `CitationPayload.source_url` (`contracts/events.py`) is pattern-locked
+    to `^https://([A-Za-z0-9-]+\\.)*ncbi\\.nlm\\.nih\\.gov/`, but this
+    tool's own citable record host is `clinicaltrials.gov`, a genuinely
+    different domain (`clinicaltrials_search_schemas.py`'s own
+    `CLINICALTRIALS_HOST` pattern and module docstring name this exact
+    trap for THIS tool's output schema; nothing there extends
+    `CitationPayload` itself to accommodate a non-NCBI host).
+    `build_citation`'s own logic here is correct: it resolves a real,
+    honest `source_url`, `evidence_kind`, `license`, and `claim_text` from
+    `study`, and every field it builds is genuine, non-fabricated data.
+    The failure below is `CitationPayload`'s own construction rejecting a
+    real ClinicalTrials.gov URL, not a defect in this module.
+    `contracts/events.py` is outside this ticket's six-tool-file scope; see
+    `tracker/phase_3.4.md`'s Findings for the full report. This test
+    exists so a future fix to `CitationPayload`'s host pattern shows up
+    here as a newly failing assertion (this test would then need
+    updating), rather than the gap going unnoticed.
+    """
+    study = ClinicalTrialsStudy(
+        nct_id="NCT01230346",
+        brief_title="Culturally-Informed Counseling in Latinas",
+        overall_status="COMPLETED",
+        source_url="https://clinicaltrials.gov/study/NCT01230346",
+    )
+
+    with pytest.raises(pydantic.ValidationError, match="source_url"):
+        build_citation(study)

@@ -92,8 +92,12 @@ import pydantic
 import pytest
 
 from system_03_search_agent.tools import ncbi_dbsnp as ncbi_dbsnp_module
-from system_03_search_agent.tools.ncbi_dbsnp import ncbi_dbsnp
-from system_03_search_agent.tools.ncbi_dbsnp_schemas import NcbiDbsnpInput
+from system_03_search_agent.tools.ncbi_dbsnp import build_citation, ncbi_dbsnp
+from system_03_search_agent.tools.ncbi_dbsnp_schemas import (
+    NcbiDbsnpInput,
+    NcbiDbsnpOutput,
+    NcbiDbsnpPopulationFrequency,
+)
 
 
 def _json_response(body: dict[str, Any], *, status_code: int = 200) -> httpx.Response:
@@ -1097,3 +1101,80 @@ async def test_unexpected_exception_is_caught_and_classified(monkeypatch: pytest
 
     assert output.status == "error"
     assert "KeyError" in output.error
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-04: build_citation. No live network: every case constructs a valid
+# NcbiDbsnpOutput directly, since build_citation is a pure function over an
+# already-fetched result, not a network caller itself.
+# ---------------------------------------------------------------------------
+
+
+def _ok_output(**overrides: Any) -> NcbiDbsnpOutput:
+    defaults: dict[str, Any] = {
+        "status": "ok",
+        "rsid": "rs334",
+        "spdi_canonical": "NC_000011.10:5227001:T:A",
+        "clinical_significance": ["pathogenic", "risk-factor"],
+        "population_frequencies": [
+            NcbiDbsnpPopulationFrequency(population="TOPMED", allele="A", frequency=0.1),
+            NcbiDbsnpPopulationFrequency(population="GnomAD_exomes", allele="T", frequency=0.9),
+        ],
+        "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334",
+    }
+    defaults.update(overrides)
+    return NcbiDbsnpOutput(**defaults)
+
+
+def test_build_citation_clinical_significance_uses_first_term_confidence() -> None:
+    # "uncertain_significance" (23 chars) fits NcbiDbsnpOutput's own 40-char
+    # item cap; the two genuinely "contested" ClinVar terms
+    # (conflicting_interpretations_of_pathogenicity,
+    # no_classifications_from_unflagged_records) both exceed that cap and so
+    # can never appear in a schema-valid clinical_significance list at all
+    # (F-3.2-A-15's own withhold-not-truncate finding), making "hedged" the
+    # reachable confidence tier to exercise here, not "contested".
+    result = _ok_output(clinical_significance=["uncertain_significance"])
+
+    citation = build_citation(result, field="clinical_significance")
+
+    assert citation.assertion_confidence == "hedged"
+    assert citation.evidence_kind == "primary_assertion"
+    assert citation.license == "public_domain_us_gov"
+    assert citation.layer == "layer_2_api"
+    assert citation.source_url == "https://www.ncbi.nlm.nih.gov/snp/rs334"
+    assert citation.population_ancestry_context == (
+        "Population frequency data reported for: TOPMED, GnomAD_exomes"
+    )
+
+
+def test_build_citation_other_field_defaults_to_asserted() -> None:
+    result = _ok_output()
+
+    citation = build_citation(result, field="spdi_canonical")
+
+    assert citation.assertion_confidence == "asserted"
+    assert citation.field == "spdi_canonical"
+    assert "NC_000011.10:5227001:T:A" in citation.claim_text
+
+
+def test_build_citation_no_population_data_gives_none_context() -> None:
+    result = _ok_output(population_frequencies=[])
+
+    citation = build_citation(result, field="clinical_significance")
+
+    assert citation.population_ancestry_context is None
+
+
+def test_build_citation_raises_when_no_source_url() -> None:
+    result = _ok_output(source_url=None)
+
+    with pytest.raises(ValueError, match="source_url"):
+        build_citation(result, field="clinical_significance")
+
+
+def test_build_citation_raises_when_clinical_significance_empty() -> None:
+    result = _ok_output(clinical_significance=[])
+
+    with pytest.raises(ValueError, match="clinical_significance"):
+        build_citation(result, field="clinical_significance")

@@ -84,8 +84,14 @@ import pytest
 
 from system_03_search_agent.tools import ncbi_transport
 from system_03_search_agent.tools import pubtator_annotate as pubtator_annotate_module
-from system_03_search_agent.tools.pubtator_annotate import pubtator_annotate
-from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnotateInput
+from system_03_search_agent.tools.pubtator_annotate import build_citation, pubtator_annotate
+from system_03_search_agent.tools.pubtator_annotate_schemas import (
+    PubtatorAnnotateInput,
+    PubtatorAnnotateOutput,
+    PubtatorAnnotation,
+    PubtatorEntity,
+    PubtatorPublication,
+)
 
 
 def _json_response(body: Any, *, status_code: int = 200) -> httpx.Response:
@@ -1031,3 +1037,74 @@ async def test_dispatcher_wraps_unexpected_exception_as_error(
     assert output.mode == "entity_lookup"
     assert "RuntimeError" in output.error
     assert "simulated defect" in output.error
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-04: build_citation. No live network: every case constructs a valid
+# PubtatorAnnotateOutput directly, since build_citation is a pure function
+# over an already-fetched result, not a network caller itself.
+# ---------------------------------------------------------------------------
+
+
+def test_build_citation_prefers_entities_and_scans_description_for_hedges() -> None:
+    result = PubtatorAnnotateOutput(
+        status="ok",
+        mode="entity_lookup",
+        entities=[
+            PubtatorEntity(
+                pubtator_id="@GENE_672",
+                db="ncbi_gene",
+                db_id="672",
+                name="BRCA1",
+                description="This gene may be associated with breast cancer risk.",
+                source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+            )
+        ],
+    )
+
+    citation = build_citation(result)
+
+    assert citation.assertion_confidence == "hedged"
+    assert citation.evidence_kind == "literature_mention"
+    assert citation.license == "publisher_copyright_abstract_only"
+    assert citation.layer == "layer_3_enrichment"
+    assert citation.source_id == "672"
+    assert citation.source_url == "https://www.ncbi.nlm.nih.gov/gene/672"
+
+
+def test_build_citation_falls_back_to_publications_when_no_entities() -> None:
+    result = PubtatorAnnotateOutput(
+        status="ok",
+        mode="annotate_publications",
+        publications=[
+            PubtatorPublication(
+                pmid="34083286",
+                annotations=[PubtatorAnnotation(type="Gene", name="BRCA1")],
+                source_url="https://pubmed.ncbi.nlm.nih.gov/34083286/",
+            )
+        ],
+    )
+
+    citation = build_citation(result)
+
+    assert citation.field == "publication"
+    assert citation.source_id == "34083286"
+    assert citation.assertion_confidence == "asserted"
+
+
+def test_build_citation_skips_entity_with_no_source_url() -> None:
+    result = PubtatorAnnotateOutput(
+        status="ok",
+        mode="entity_lookup",
+        entities=[PubtatorEntity(name="the", db="litvar", db_id="x")],
+    )
+
+    with pytest.raises(ValueError, match="source_url"):
+        build_citation(result)
+
+
+def test_build_citation_raises_when_nothing_to_cite() -> None:
+    result = PubtatorAnnotateOutput(status="empty", mode="entity_lookup")
+
+    with pytest.raises(ValueError, match="entities"):
+        build_citation(result)

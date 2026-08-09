@@ -177,6 +177,7 @@ Depended by:
 
 from __future__ import annotations
 
+import hashlib
 import re
 import time
 from typing import Final
@@ -184,6 +185,8 @@ from urllib.parse import quote
 
 import httpx
 
+from system_03_search_agent.contracts.events import CitationPayload
+from system_03_search_agent.synthesis.provenance_defaults import defaults_for_tool
 from system_03_search_agent.tools import pathogen_ftp_transport
 from system_03_search_agent.tools.pathogen_detection_schemas import (
     PATHOGEN_SOURCE_URL_PATTERN,
@@ -1127,3 +1130,80 @@ async def pathogen_detection(input_data: PathogenDetectionInput) -> PathogenDete
             f"returning a classified result: {exc}. Retry once; if this recurs, this "
             "tool has a defect that needs fixing before it can be trusted.",
         )
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-04: citation-building. Section 9.2's per-tool `CitationPayload`.
+# ---------------------------------------------------------------------------
+
+
+def _mint_citation_id(prefix: str, seed: str, display_index: int) -> str:
+    """A short, deterministic-shaped citation id, mirroring `core/graph.py`'s
+    `_citation_for_row` pattern (a stable id plus a display-index suffix),
+    adapted for a tool with no `call_id` of its own: the id is minted from a
+    short hash of the real source id instead. Only needs to be non-colliding
+    within one tool's own output, not globally unique across a whole answer.
+    """
+    digest = hashlib.sha256(seed.encode("utf-8", errors="replace")).hexdigest()[:10]
+    return f"{prefix}-{digest}-{display_index}"[:64]
+
+
+def build_citation(
+    result: PathogenDetectionOutput, field: str, display_index: int = 1
+) -> CitationPayload:
+    """Build a Section 9.2 `CitationPayload` from a real `pathogen_detection` result.
+
+    Cites the first isolate carrying both a `source_url` and a real value
+    for `field`. Raises `ValueError` with an actionable message, never
+    returns a placeholder, when no isolate qualifies.
+
+    `evidence_kind` and `license` come from
+    `provenance_defaults.defaults_for_tool("pathogen_detection")`, which
+    resolves to `"primary_assertion"`/`"public_domain_us_gov"`: structured
+    NCBI-hosted isolate/AMR metadata, not text-mined literature. `assertion_
+    confidence` is always `"asserted"`: this tool's fields (strain, serovar,
+    AMR genotype/phenotype calls) are structured lab-submitted metadata, not
+    ClinVar-shaped clinical vocabulary. `population_ancestry_context` is
+    always `None`: this tool has no human population or ancestry field
+    (`geo_loc_name` names a sample's geography, not a population/ancestry
+    group, and is not repurposed as one here).
+
+    `layer="layer_2_api"` is a deliberate classification call, not the
+    Layer 3 default a bulk-enrichment-shaped tool might suggest: Pathogen
+    Detection is an NCBI-native bulk data source (the FTP snapshot tree),
+    not one of the four enrichment APIs CLAUDE.md names for Layer 3
+    (PubTator3, LitVar2, LitSense, ClinicalTrials.gov). Logged in
+    DECISIONS.md and `tracker/phase_3.4.md` per T-3.4-04's own instruction,
+    since it is a non-obvious call, not a mechanical one.
+    """
+    for isolate in result.isolates:
+        if not isolate.source_url:
+            continue
+        value = getattr(isolate, field, None)
+        if value in (None, "", []):
+            continue
+        defaults = defaults_for_tool("pathogen_detection")
+        value_repr = ", ".join(str(item) for item in value) if isinstance(value, list) else str(value)
+        source_id = (isolate.biosample_acc or "unknown")[:128]
+        claim_text = f"NCBI Pathogen Detection isolate {source_id}: {field}={value_repr}"[:1000]
+
+        return CitationPayload(
+            citation_id=_mint_citation_id("pathogen", source_id, display_index),
+            display_index=display_index,
+            source="pathogen_detection"[:128],
+            source_id=source_id,
+            source_url=isolate.source_url,
+            layer="layer_2_api",
+            field=field[:128],
+            claim_text=claim_text,
+            evidence_kind=defaults["evidence_kind"],
+            assertion_confidence="asserted",
+            population_ancestry_context=None,
+            license=defaults["license"],
+        )
+
+    raise ValueError(
+        f"pathogen_detection result carries no isolate with both a source_url "
+        f"and a real value for field {field!r}; refusing to build a citation "
+        "rather than fabricate one."
+    )
