@@ -12,7 +12,8 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 - [Build phase 3.1, done](#build-phase-31-done)
 - [Build phase 3.2, done](#build-phase-32-done)
 - [Build phase 3.3, done](#build-phase-33-done)
-- [What build phase 3.5 delivers](#what-build-phase-35-delivers)
+- [Build phase 3.5, done](#build-phase-35-done)
+- [What build phase 3.4 delivers](#what-build-phase-34-delivers)
 - [What Step 6.2 delivers, later](#what-step-62-delivers-later)
 - [Open items](#open-items)
 - [Handover](#handover)
@@ -38,7 +39,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Build phase 3.3 (`pubtator_annotate` and `litvar2_lookup`) is DONE. Merged as PR #26 on 2026-08-08 after ten review rounds. Next: build phase 3.5, `pathogen_detection` and `clinicaltrials_search`, since 3.4 depends on 3.5 as well as 3.1 to 3.3.
+> Build phase 3.5 (`pathogen_detection` and `clinicaltrials_search`) is DONE, completing the seven-tool roster. Closed 2026-08-08 after a judge round and an adversary round that found the judge round's own fix had introduced two new critical regressions, both closed and live re-verified. Next: build phase 3.4 (citation trust extended to Layers 2 and 3, the two-tier risk gate, data freshness and conflict resolution), now unblocked since Section 25's dependency on 2.2 and 3.1 through 3.5 is fully merged.
 
 Full detail on what PR #23 (build phase 3.1's re-review debt) fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07. Full detail on the F-2.1-C15 fix, including the bypass a fresh-context review found in its own first version before merge and the second review that confirmed the fix, is `tracker/fix_c15_generation_bound.md`.
 
@@ -60,7 +61,7 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Build phase 3.3 (`pubtator_annotate` and `litvar2_lookup`) is DONE. Merged as PR #26 on 2026-08-08 after ten review rounds. Next: build phase 3.5, `pathogen_detection` and `clinicaltrials_search`, since 3.4 depends on 3.5 as well as 3.1 to 3.3.
+> Build phase 3.5 (`pathogen_detection` and `clinicaltrials_search`) is DONE, completing the seven-tool roster. Closed 2026-08-08 after a judge round and an adversary round that found the judge round's own fix had introduced two new critical regressions, both closed and live re-verified. Next: build phase 3.4 (citation trust extended to Layers 2 and 3, the two-tier risk gate, data freshness and conflict resolution), now unblocked since Section 25's dependency on 2.2 and 3.1 through 3.5 is fully merged.
 
 Build phase 3.1 merged as PR #22 (superseded by PR #23) on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
@@ -68,7 +69,7 @@ Two things were deliberately left open rather than fixed, both genuine product d
 
 F-2.1-C15's generation half, the finding where a generated query took the graph server down for every user, closed on `fix/c15-generation-bound` the same day: `validate_cypher` now rejects any generated Cypher carrying a variable-length relationship pattern (`[:orthologous_to*]` or similar) before execution, the mechanism behind the original OOM. The existing `_MEMORY_GUARD_SQL` session-level mitigation is unchanged. This fix's own first version, sliced from the existing relationship-hop regex, was itself found bypassable by a fresh-context adversarial review before merge: a nested bracket (a list-valued property) alongside the variable-length spec defeated it, the same non-nesting-regex defect class already fixed once in this file for node patterns (F-2.1-A9) and never generalized to relationship hops. Rebuilt as a standalone, wildcard-free pattern matched directly against the quote-masked query string, independent of the hop regex entirely. A second independent review confirmed the bypass closed, found no new one, checked for ReDoS (none), and found one narrow, non-blocking gap against full Cypher grammar unreachable by this system's actual generation, documented rather than fixed. F-2.2-01 (a separate, lower-severity generation flake, roughly 1 run in 10) was deliberately left open rather than folded into the same branch, per the ticket's own allowed alternative. Full account: `tracker/fix_c15_generation_bound.md`.
 
-Ten build phases are done, all ten merged into `main`. The first six complete the Step 6.1 prototype group; 3.0, 3.1, 3.2, and 3.3 are the first four Step 6.3 v1 phases:
+Eleven build phases are done, all eleven merged into `main`. The first six complete the Step 6.1 prototype group; 3.0 through 3.5 are the first five Step 6.3 v1 phases:
 
 | Phase | Delivered | PR |
 |-------|-----------|-----|
@@ -82,22 +83,25 @@ Ten build phases are done, all ten merged into `main`. The first six complete th
 | 3.1 | ncbi_efetch, the first Layer 2 tool: seven actions across three API families, live gene-symbol resolution replacing the one-entry hardcoded table | Merged as PR #22 on 2026-08-05, PR #23 on 2026-08-07 |
 | 3.2 | ncbi_dbsnp, the second Layer 2 tool: Variation Services normalization plus dbSNP ESummary clinical and population data, six review passes | #25 |
 | 3.3 | pubtator_annotate and litvar2_lookup, the two Layer 3 enrichment tools, ten review rounds | #26 |
+| 3.5 | pathogen_detection and clinicaltrials_search, completing the seven-tool roster. A judge round and an adversary round that found the judge round's own fix had introduced two new critical regressions of the identical shape, both closed and live re-verified | Merged on `phase/3.5-pathogen-clinicaltrials-tools` |
 
 Current counts, stated once here:
 
-- Python tests: 2140
+- Python tests: 2331 (2220 passed, 110 skipped, 1 xfailed)
 - Frontend tests: 120
-- Playwright end-to-end tests: 3 (unverifiable in the sandbox session that closed build phase 3.3; see that phase's own section below)
+- Playwright end-to-end tests: 3 (unverifiable in this and the prior session; a webServer-orchestration timeout unrelated to any file either phase touched, confirmed by starting the dev server directly, HTTP 200)
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
 - Premise gate, guardrail: 20 of 20
 - Premise gate, ncbi_efetch: 19 passed, 1 skipped (tunnel)
 - Premise gate, ncbi_dbsnp: 8 of 8, live, no tunnel-gated skip
 - Premise gate, pubtator_annotate + litvar2_lookup: 12 of 12, live, no tunnel-gated skip
-- Decisions logged: 232
-- Learnings entries: 56, plus a retrospective
+- Premise gate, pathogen_detection: 5 of 5, live, no tunnel-gated skip
+- Premise gate, clinicaltrials_search: 3 of 3, live, no tunnel-gated skip
+- Decisions logged: 235
+- Learnings entries: 59, plus a retrospective
 
-Build phase 3.3, `pubtator_annotate` and `litvar2_lookup`, closed 2026-08-08 on `phase/3.3-enrichment-tools`, merged as PR #26, after ten review rounds (see "Build phase 3.3, done" below). Next in the build order is build phase 3.5, `pathogen_detection` and `clinicaltrials_search`, not 3.4: Section 25's dependency graph makes 3.4 depend on 3.1 through 3.3 AND 3.5, so 3.5 is the phase whose dependencies are actually satisfied first.
+Build phase 3.5, `pathogen_detection` and `clinicaltrials_search`, closed 2026-08-08 on `phase/3.5-pathogen-clinicaltrials-tools`, completing the seven-tool roster (see "Build phase 3.5, done" below). Next in the build order is build phase 3.4, citation trust extended to Layers 2 and 3: Section 25's dependency graph named it as depending on 2.2 and 3.1 through 3.5, all of which are now merged, so 3.4 is the phase whose dependencies are finally all satisfied.
 
 The build phase 3.1 tool surface is complete and its findings are settled: 40 of 42 numbered findings closed, F-3.1-04 carried to T-3.1-28 (the answer-path half: Act-step wiring, Layer 2 citation, trust gate), and exactly two left open on genuine product decisions, F-3.1-41 and F-3.1-42, detailed in `tracker/phase_3.1.md`.
 
@@ -133,10 +137,10 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 In this order:
 
-1. `tracker/phase_3.5.md`. Create it by decomposing Sections 6.6 and 6.7 of the technical specification. Read `tracker/phase_3.3.md` first for the transferable lessons: pre-build live probing before any fixture is written; a gate's own coverage statement can itself be incomplete in the direction that turns out to matter most; and check whether either API volunteers a relevance/match/confidence signal on a search-style endpoint before shipping a tool that discards it (LEARNINGS.md's 2026-08-08 entry, the direct cost of not checking this on build phase 3.3).
-2. `requirements/Technical_specification.md` Sections 6.6 and 6.7, the `pathogen_detection` and `clinicaltrials_search` specifications, plus Section 21.1 for the rate limits. Section 25 for the build order (3.5 depends on 3.1 only, not on 3.2 or 3.3, despite its number).
-3. `docs/ncbi/Tool_implementation_mechanics.md`, the per-tool trap list. The load-bearing ones for 3.5: `pathogen_detection`'s snapshot-pinning traps (never pin to a mid-build snapshot, never treat a newer snapshot appearing as an error, never stream a full TSV into agent context), and `clinicaltrials_search`'s own host-pinned `source_url` pattern, which must never reuse `NCBI_RECORD_HOST` since `clinicaltrials.gov` is not an NCBI subdomain.
-4. `LEARNINGS.md`, filtered to the tool-phase and model-generated-output entries, now including the 2026-08-08 match-confidence-discarded entry and the fix-round-regression entry from build phase 3.3. `docs/build/Build_workflow_cadence.md` stage 5's blocking premise gate applies to every tool phase from 3.2 to 3.5, this is the last one it applies to. `production-standards`' untrusted-source-reader tier separation applied directly to 3.3's two tools; confirm whether `pathogen_detection`'s bulk TSV content and `clinicaltrials_search`'s sponsor-submitted free text carry the same untrusted-content requirement before assuming either tool is exempt.
+1. `tracker/phase_3.5.md` in full, most importantly its "Judge round" and "Adversary round" sections. The load-bearing lesson build phase 3.4 must not repeat: a fix for a discard-real-data defect can itself reintroduce the identical defect one call downstream, and only live re-verification against a real repro case (not the mocked unit suite, which stayed green through two real regressions) catches it. Build phase 3.4 touches provenance and the trust gate directly, the same risk class.
+2. `requirements/Technical_specification.md` Section 9 (the provenance type's four added fields for Layer 2/3), Section 7 (layer authority, freshness, and conflict resolution, already partly implemented per `production-standards.md`'s "Layer authority, freshness, and degradation gate"), and Section 25's own line for build phase 3.4: provenance extended to Layers 2 and 3, the two-tier risk gate (standard cite-or-refuse versus a higher-stakes substantiation-and-triangulation gate), data freshness and conflict resolution.
+3. The two carried spec-versus-reality gaps most directly relevant to this phase: Section 8.2's matching rule (open item below, whether the substring-mention check the prototype uses actually proves a clause is TRUE about a cited value, not just that it mentions it) and F-2.2-A-05 (the flagship gene-disease claim classifying `low` risk since a `Disease` endpoint row is indistinguishable from an identifier lookup at the current boundary; this phase's two-tier risk gate is exactly where that gets a real fix).
+4. `LEARNINGS.md`, filtered to the trust-gate, provenance, and fix-regression entries, now including the 2026-08-08 rows from build phase 3.5 (the worktree-dispatch-before-commit gap, the model-id-guard collision, and the discard-real-data-one-layer-downstream retrospective).
 5. `docs/build/Build_velocity_post_mortem.md`, for the measured account of what the build process costs.
 
 ## Build phase 3.0, done
@@ -233,13 +237,38 @@ Final gates, lead-verified independently: full suite 2037 passed, 102 skipped, 1
 
 Full per-finding detail, every judge, re-review, adversary, and fix-round finding with file:line citations: `tracker/phase_3.3.md`.
 
-## What build phase 3.5 delivers
+## Build phase 3.5, done
+
+Closed 2026-08-08 on `phase/3.5-pathogen-clinicaltrials-tools`, completing the seven-tool roster: `pathogen_detection` (bulk isolate, cluster, and AMR-genotype access over the NCBI Pathogen Detection FTP snapshot tree, Section 6.6) and `clinicaltrials_search` (the disease-to-trials path over ClinicalTrials.gov API v2, Section 6.7). A new `"clinicaltrials"` rate-limit family landed in `tools/ncbi_transport.py`; a new streaming-only FTP transport module, `tools/pathogen_ftp_transport.py`, was built for the pathogen tool, since bulk FTP retrieval shares no HTTP-status-coded convention with any prior tool. Registered into the tool schema and the stable prompt prefix, `TOOL_REGISTRY_VERSION` bumped v4 to v5 (now all seven tools, alphabetical). As with every prior tool phase, whether either tool is dispatched as an answer-bearing tool from `act_node` is the same open product-owner scope decision carried to T-3.1-28; this phase delivers the tools themselves, not the wiring.
+
+Pre-build live probing found the phase's own binding constraint before any tool code existed: the Salmonella `SNP_distances.tsv` snapshot file measured roughly 411 GB, three orders of magnitude past a normal bulk TSV, ruling out a full download and forcing a wall-clock-bounded streamed scan instead (decision logged in DECISIONS.md, 2026-08-08).
+
+A dispatch-ordering gap cost a real fix-and-reconcile pass, now recorded in `LEARNINGS.md`: two worktree-isolated builders were dispatched before the lead's own shared prerequisites (the transport module, both premise gates) were committed to the phase branch, so neither builder's worktree could see them. One builder read outside its own worktree to work around it; the other correctly refused to fabricate the missing dependency and flagged every resulting assumption instead. The lead reconciled both against the real, now-committed files and live data after the fact.
+
+| Round | Result |
+|-------|--------|
+| Judge round | FAIL. One critical: the streaming transport's early-exit logic assumed a filter key is always unique per row, so a shared cluster id stopped the scan after its first matching row and reported an incomplete 4-member cluster as a complete 2-member one. Plus three majors (an unbounded 120-second wait on an optional enrichment step, three of four network read sites reporting a routine snapshot rotation as an unclassified tool defect, stale module docstrings still describing the dispatch-ordering accident as the shipped state) and two minors |
+| Fix round 1 | All findings closed, lead-verified with a live premise gate pass, 8 of 8 |
+| Adversary round, live against real NCBI/ClinicalTrials.gov endpoints | 15 findings, TWO NEW criticals, both regressions the judge round's own fix introduced, both coexisting with the green judge verdict and the passing premise gate: `cluster_snp_neighbors` could no longer ever return a successful result at all (the fix's own early-exit removal had no fallback, so a cutoff scan always discarded what it had already found); `clinicaltrials_search` pagination errored on every second page, since ClinicalTrials.gov omits its total-count field from every paginated response regardless of what the first fix assumed |
+| Fix round 2 | Both criticals closed, plus 3 more majors and 2 minors. Live re-verified against the adversary's own exact repro case |
+| Live re-verification | Found the cluster_snp_neighbors fix incomplete: an upstream scan step was consuming the entire shared deadline, starving its own mandatory follow-up read of any budget one call downstream, so the tool still returned an empty result even after the first half of the fix landed |
+| Fix round 2b | Closed by reserving a fixed slice of the shared budget for the mandatory follow-up read, regardless of how long the upstream scan runs. Live re-verified a second time: exact match to the adversary's own hand-computed ground truth |
+
+Two majors and five moderate-or-minor adversary findings were deliberately carried open rather than fixed this round, each with its own named reason in `tracker/phase_3.5.md`: a query-syntax-parsing risk (`query_cond` is parsed as an Essie expression, so a term containing `NOT` can silently invert a search), an undisclosed weak-match shape reproducing phase 3.3's own finding on a different tool, a status value overloaded for two different meanings, a spec-locked `overall_status` enum narrower than the live API's real values, and others.
+
+Final gates, lead-verified independently: full suite 2331 Python tests (2220 passed, 110 skipped, 1 xfailed, up from the phase's 2140 baseline), both live premise gates re-confirmed multiple times across both fix rounds (pathogen_detection 5 of 5, clinicaltrials_search 3 of 3, no tunnel-gated skip on either), `ruff check` clean on every file this phase touched. Frontend suite unaffected (no frontend files touched this phase); Playwright's webServer orchestration hit the same pre-existing, already-documented timeout from build phase 3.3, confirmed unrelated by starting the dev server directly (HTTP 200).
+
+Full per-finding detail, every judge, adversary, and fix-round finding with file:line citations: `tracker/phase_3.5.md`.
+
+The transferable lesson, the sharpest one this phase produced: a fix for a discard-real-data defect is exactly the kind of change most likely to reintroduce the identical defect one layer over, since the fixer's attention is on the one call site the finding named, not on every other call site sharing the same resource-exhaustion shape. Only live re-verification against the adversary's own repro case, re-run after every round of changes, caught both regressions here; a fully green mocked test suite caught neither.
+
+## What build phase 3.4 delivers
 
 From Section 25:
 
-> `pathogen_detection` (Pathogen Detection FTP, Q5) and `clinicaltrials_search` (ClinicalTrials.gov v2, Q4), each with its own timeout and snapshot or cache semantics, completing the seven-tool roster
+> Provenance extended to Layer 2 and 3 (the four added fields), the two-tier risk gate (standard cite-or-refuse versus the higher-stakes substantiation-and-triangulation gate), data freshness and conflict resolution
 
-Depends on 3.1 (done). Not 3.4: Section 25's dependency graph makes 3.4 depend on 3.1 through 3.3 AND 3.5, so 3.5 is next, not 3.4, even though the branch table lists 3.4 by number before 3.5. The last two tools in the seven-tool roster. `pathogen_detection` is a genuinely different access pattern from every tool built so far: bulk FTP retrieval with snapshot pinning (Section 6.6), not a parameterized HTTPS call, so `tools/ncbi_transport.py`'s `execute_get`/rate-limiter machinery does not apply to it directly. `clinicaltrials_search` is Section 6.7, a non-`ncbi.nlm.nih.gov` host (`clinicaltrials.gov`), so it needs its own host-pinned `source_url` pattern per the "reusing the NCBI host-pinned source_url regex" trap in `docs/ncbi/Tool_implementation_mechanics.md`, never `NCBI_RECORD_HOST` or any of this repo's other per-tool patterns. Read `tracker/phase_3.3.md`'s transferable lessons before opening this phase: pre-build live probing before any fixture is written, and check whether either of these two APIs volunteers a relevance/match/confidence signal on its own search-style endpoints the way PubTator3 and LitVar2 both did (LEARNINGS.md's 2026-08-08 entry) before shipping a tool that discards it.
+Depends on 2.2, 3.1, 3.2, 3.3, 3.5, all merged. The last prerequisite phase before the delivery-surface and observability build phases (4.0 onward). Two open items below are directly this phase's job to resolve, not carry further: Section 8.2's matching rule (whether the substring-mention check the prototype uses proves a clause is TRUE about a cited value, not just that it mentions it) and F-2.2-A-05 (the flagship gene-disease claim classifying `low` risk since a `Disease` endpoint row is indistinguishable from an identifier lookup at the current boundary, exactly what a real two-tier risk gate should fix). Read `tracker/phase_3.5.md`'s transferable lesson before opening this phase: a fix touching the trust or provenance path deserves live re-verification against a real repro case after every round, not just a green mocked suite, since this phase's whole subject is the mechanism that decides whether an answer is trustworthy enough to show.
 
 ## What Step 6.2 delivers, later
 
@@ -289,6 +318,13 @@ One decision below is still waiting on the product owner: whether `security/` st
 | F-3.3-A-11: cross-tool id-shape mismatch | `pubtator_annotate`'s `db_id` for a `litvar`-sourced entity and `litvar2_lookup`'s expected `litvar_id` are shaped differently; a plan-tier model could pass one tool's output into the other's input and get a 400. Not reachable until `act_node` wiring (T-3.1-28) | T-3.1-28, when either tool is wired into `act_node` |
 | F-3.3-A-12: undisclosed annotation/variant_matches truncation | `_MAX_ANNOTATIONS` and `_MAX_VARIANT_MATCHES` cap silently, with no companion total field, unlike `pmids`'s honest `total_pmids`. Not reachable on live data sampled this phase (max observed: 26 of 100, 5 of 10) | Whenever live data actually produces this shape |
 | F-3.3-A-13: asymmetric batch-failure disposition | One malformed (non-numeric) PMID fails an `annotate_publications` batch closed with no partial result, while a numeric-but-nonexistent PMID in the same position preserves the rest of the batch (F-3.3-01's own disposition). Undocumented asymmetry, safe direction (refuses, does not fabricate) | Whenever the product owner decides |
+| F-3.5-A-03: clinicaltrials_search query syntax risk | `query_cond` is parsed as an Essie expression, not a literal phrase, so a real clinical term containing `NOT` silently returns the exact inverse of what was asked, `status: "ok"`, confidently cited. Live-proven arithmetic (`Carcinoma` 27,619 minus `Carcinoma Otherwise Specified` 31 equals `Carcinoma NOT Otherwise Specified` 27,588). Needs either escaping caller text or disclosing the parsing risk in the schema | Step 6.2 or a future fix round |
+| F-3.5-A-07: clinicaltrials_search weak-match shape | The phase 3.3 weak-match shape (F-3.3-A-01/02/03) reproduces here undisclosed: `query_cond="5"`/`"the"`/`"a"` all return confident, wholly generic citations, and the tool never sends `sort=@relevance`. Unlike phase 3.3's fix, ClinicalTrials.gov's `/studies` endpoint does not appear to return a per-result relevance score to disclose the same way; a real fix needs a result-ordering decision, not just a disclosure field | Step 6.2 or a future fix round |
+| F-3.5-A-09: pathogen_detection empty overloaded | `status: "empty"` still means both "genuinely absent" and "the wall clock ran out", distinguishable only via the free-text `error` field. Partially mitigated by the cluster_snp_neighbors fix (a cutoff that found real matches now returns `ok`, not `empty`), but the two remaining cases have no distinct machine-readable signal. A schema-level fix is a locked-schema change | Step 6.2 |
+| F-3.5-A-10: pathogen_detection dead cluster_list read | `_cluster_snp_neighbors`'s `cluster_list.tsv` membership check is unconditionally overwritten before use once the SNP scan's own results are known, so its only surviving effect is an existence check while consuming real time from the already budget-starved shared deadline | Whenever the product owner decides |
+| F-3.5-A-11: pathogen_detection latent distance-column fallback | `_SNP_DISTANCES_DISTANCE_COLUMN_CANDIDATES`'s fallback to `delta_positions_unambiguous` is a genuinely different metric, not a synonym, and live sampling shows the two routinely disagree. Not observed firing on ~9,400 sampled rows; documented as a defense-in-depth-only risk | Whenever live data actually produces this shape |
+| F-3.5-A-12: clinicaltrials_search overall_status enum gap | The locked 6-value input enum (Section 6.7 line 1378) is narrower than the live API's 12 real values (`WITHDRAWN`, `SUSPENDED`, `ENROLLING_BY_INVITATION`, and others), so a caller filtering on a value the API itself returned in a result gets a `ValidationError`. Same class as phase 3.2's carried Section 6.3 gaps | Step 6.2 |
+| F-3.5-A-14: clinicaltrials_search punctuation error message | An unbalanced-punctuation `query_cond` (a stray closing paren) is correctly classified as a permanent HTTP 400 rejection, but the message gives no hint that punctuation is the likely cause | Whenever the product owner decides |
 | F-2.2-06 | A truncated answer discloses the cut but not its scale on a listing query, since `total_available` is None for that shape. Upstream of the Write step | 3.x, whichever phase touches `cypher_query`'s totals |
 | F-2.1-A5-05 | `mentioned_in` from BRCA1 costs 27 seconds forward plus the full budget reversed, despite being indexed, anchored, and LIMIT 25. Described, deliberately not reproduced | 3.x |
 | F-06 | 2 of 6 model calls per query bypass the stable prompt prefix, a cost inefficiency, not a correctness defect. The Write step's own call is not one of them as of 2.2 | 4.0 |
