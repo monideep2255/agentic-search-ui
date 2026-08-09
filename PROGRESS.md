@@ -57,14 +57,18 @@ Concretely:
 - A dangerous kind of automatic question, one that once crashed our own database and took it offline for everyone, is now stopped before it can ever reach the database at all.
 - The system can now look up a genetic variant by its standard identifier (an "rs number", the way scientists refer to a specific spot in the genome) and get back its normalized coordinates, how clinically significant it is, and how common it is across different population groups.
 - The system can now look up what a published research paper says about a gene, disease, or chemical, and separately look up what has been written in the scientific literature about a specific genetic variant.
+- The system can now look up a bacterial sample (a "biosample", the way labs track which food-poisoning outbreak a sample came from) and get back its lab metadata, which antibiotics it resists, and which other samples belong to the same outbreak cluster and how closely related they are genetically.
+- The system can now search for clinical trials by disease or condition and get back real trial identifiers, their recruitment status, and a bounded summary of who can enroll.
+
+All six live-government-API connections the plan called for are now built. That is every planned data source.
 
 ## What does not work yet
 
-The honest headline: the system can now look up genes, genetic variants, research literature, and named entities, but it cannot yet use any of those lookups to answer a question.
+The honest headline: the system can now look up genes, genetic variants, research literature, named entities, disease outbreaks, and clinical trials, but it cannot yet use any of those lookups to answer a question.
 
-All four lookup tools built so far can translate a name or an identifier into real, verified data by asking the live government APIs. But the step that connects any of them to the actual question-answering pipeline is not yet wired in. Every tool is built and independently checked, and the last piece that connects them to the answer path is carried to a later sprint.
+All six lookup tools built so far can translate a name or an identifier into real, verified data by asking the live government APIs. But the step that connects any of them to the actual question-answering pipeline is not yet wired in. Every tool is built and independently checked, and the last piece that connects them to the answer path is carried to a later sprint.
 
-Also not built yet: the connections to the two remaining live government APIs (disease outbreak data and clinical trials, so those two topics still cannot be answered), saved history, and anything to do with hosting it somewhere other than a laptop.
+Also not built yet: saved history, the other ways to access the system besides the web page, and anything to do with hosting it somewhere other than a laptop.
 
 ## The story so far, sprint by sprint
 
@@ -83,8 +87,9 @@ Each of these is a completed, reviewed, merged piece of work.
 | Database safety fix | Stopped a specific kind of automatic question that had previously crashed our own database | 2026-08-07 |
 | 3.2 | The second live government API connection: genetic variant lookup by rs number | 2026-08-08 |
 | 3.3 | The third and fourth live government API connections: published research literature lookup, and research-literature lookup for a specific genetic variant | 2026-08-08 |
+| 3.5 | The fifth and sixth live government API connections: disease outbreak lookup and clinical trials search, completing every planned data source | 2026-08-08 |
 
-Five of these are worth understanding, because they explain how this project works.
+Six of these are worth understanding, because they explain how this project works.
 
 Sprint 2.1, the expensive lesson. We asked "which diseases are associated with BRCA1?" and got back twenty-five results. All twenty-five had real, working links to official records. Every automated test passed. And every single result was wrong: they were not diseases at all, they were similar genes in other animals. The tests could not see this, because they were checking that the plumbing worked rather than that the answer was true. Finding it took four rounds of review over four days. Everything we do now is shaped by that: before writing any new feature, we now write a test that asks whether the ANSWER is right, and we watch it fail first, so we know the test is capable of catching a lie.
 
@@ -97,6 +102,8 @@ The database safety fix, the same lesson learned twice in one afternoon. A week 
 Sprint 3.2, the variant lookup tool, and the fix that broke something new twice. Building this tool found two serious problems early: it silently cut off values that were too long instead of saying so (imagine a lab report where a long diagnosis just gets chopped off mid-word with no note that anything is missing), and if you typed in a plain number instead of a real variant identifier, the system would confidently return real information about a completely different, unrelated variant. Both got fixed. Then, exactly as happened on sprint 3.1, a separate check on the fix itself found the fix had its own problems: the "stop cutting things off" fix turned out to reject roughly one in ten real, clinically important variants outright, including some of the most well known ones in medicine, because the fix refused the whole answer rather than just leaving out the one piece that was too long. And a second fix, meant to correctly tell the system "this failure is temporary, try again" versus "this input is simply wrong, do not retry," was doing the opposite of what it claimed for one common kind of failure. Both were fixed a second time and checked a third time before anyone trusted them. The lesson, now proven on two sprints in a row: a fix for a bug deserves MORE scrutiny than new code, not less, because the fix is the newest, least-tested thing in the whole system.
 
 Sprint 3.3, the literature lookup tools, and the confidently wrong answer that both tools gave at once. Both new tools ask a government search service for a match and hand back whatever comes back as a real result. Late in review, someone tried typing in a bare number, "334", instead of a real identifier. Both tools cheerfully returned real, official-looking, fully cited answers about five completely unrelated things. Separately, typing in an ordinary word like "the" returned ten confidently matched, real medical terms that had nothing to do with the word "the". Nothing was broken about the individual records returned. Both were real entries from the government's own database. The problem was that the government service itself already flags a weak, "closest guess" style match differently from an exact one, and our tools were throwing that flag away before anyone downstream ever saw it. It is now kept and passed along. This is the single most important find of this sprint, because it is exactly the failure this whole project exists to prevent: not a crash, not an error message, a fully cited, entirely wrong answer delivered with total confidence. It was also found by deliberately typing hostile and strange things into the finished tools, not by any planned test, which is why that kind of adversarial poking is now a standing step for every tool going forward, not an occasional extra.
+
+Sprint 3.5, the last two data tools, and the fix that broke the thing it just fixed, twice. This sprint's outbreak-cluster lookup reads a government file that turned out to be about 400 times bigger than a normal file its own size class: roughly 411 gigabytes, for one bacterial species. The tool has to read that file a little at a time and give up gracefully if it runs out of time, rather than trying to load the whole thing. The first version had a real, serious bug: it stopped reading after finding just the FIRST matching entry, then confidently reported that as the complete answer, when a real outbreak cluster of four related samples was quietly reported as having only two. That got caught and fixed, checked, and passed a full re-test. Then a second, deliberately hostile round of testing found something worse: the FIX ITSELF had broken the tool a different way. In closing the "stops too early and lies" bug, the fix removed the only thing that let the tool stop at all, so now it could never successfully finish AT ALL, not even on the exact same real outbreak cluster it had gotten wrong before. It failed silently, reporting "nothing found" instead of a wrong answer, which is safer but still wrong. That got fixed too, and a live re-check on that same real outbreak cluster still came back empty. It took a THIRD look to find the actual remaining problem: the fix that made the tool patient enough to find every real match had also made it so patient it ran out of time before ever getting to the last, quick step that turns the matches into a proper labeled result. A dedicated slice of time was reserved for that last step no matter how long the earlier steps take, and only then did a live check on the real outbreak cluster come back with the exact right answer: four related samples, with the exact genetic distances a human reviewer had worked out by hand as the ground truth to check against. Three real bugs, each one only found by actually running the finished tool against the real government service and checking the ANSWER, not by trusting that the tests still said "green".
 
 ## What is next
 
@@ -116,17 +123,18 @@ flowchart LR
         H --> I[Database safety fix]
         I --> Iv[Variant lookup]
         Iv --> Lit[Literature lookup, two tools]
+        Lit --> Out[Outbreak + trials lookup]
     end
-    Lit --> J[Two more data tools]
-    J --> K[Update the written specs]
+    Out --> M[Wire tools into the answer pipeline]
+    M --> K[Update the written specs]
     K --> L[Everything else]
 ```
 
-Gene name lookup, variant lookup, and now both literature lookup tools are all built AND independently checked. Four data tools out of the six live-API connections planned are done; two remain. Each one has gone through the same pattern: build it, find real problems in review, fix them, and find MORE problems in the fix itself before trusting it. That pattern held again on sprint 3.3 (see the story above), the third sprint in a row it has held, which is the strongest evidence yet that the review process is catching real things and not just adding ceremony.
+Every planned data lookup tool, all six live-API connections, is now built AND independently checked. Each one has gone through the same pattern: build it, find real problems in review, fix them, and find MORE problems in the fix itself before trusting it. That pattern held for a THIRD time within sprint 3.5 alone, three separate real bugs in a row, each one only in the fix for the bug before it (see the story above), the strongest evidence yet that the review process is catching real things and not just adding ceremony.
 
 In order:
 
-1. Sprint 3.5, the two remaining data tools: disease outbreak data and clinical trials. (Sprint 3.4 comes after 3.5 despite the number, since it needs all five other data-tool sprints finished first.)
+1. Wiring the trust-and-citation rules to also cover the five newer lookup tools (right now that safety check only covers our own database and the very first live government connection), and the decision-making step that decides which tool to use for which question and how much to trust each one's answer.
 2. A planned pause to update the written specifications with everything we have learned from actually building it.
 3. Then the remaining work: wiring the live API tools into the answer pipeline, the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
 
@@ -147,6 +155,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 | Similarly, if you type in a plain number that happens to belong to something else (say, a gene's own catalog number) formatted to look like a variant identifier, the variant tool will honestly report which identifier it actually looked up, but that identifier is still the wrong one for what you meant | Whenever the product owner decides it needs closing |
 | One government lookup the variant tool relies on has been broken on the government's own side since before we started building against it, for every input we have tried. We found a working substitute, but have not yet proven the substitute behaves identically for every case | The planned specification pause |
 | The written specification sets a length limit on one clinical field that is too short for real medical terms. Rather than silently cut those terms off or quietly ignore the limit, the tool now says plainly "some information was left out because it was too long to fit" whenever this happens, about one time in ten for that particular field. Raising the limit itself needs a product decision, since it means changing a written specification | The planned specification pause, or an earlier product-owner decision |
+| The clinical trials search tool understands its search box as a small command language, not plain text, so a real medical term containing the word "NOT" (a standard way doctors write "not otherwise specified") can silently search for the exact OPPOSITE of what was typed, with a confident, cited, wrong-shaped result. Not yet fixed | Whenever the product owner decides |
+| The clinical trials search tool has the same weak-match problem the literature tools had in an earlier sprint (see sprint 3.3's story): a bare number or a common word like "the" returns confident, real-looking, but essentially meaningless results, and this tool does not yet have anywhere to disclose that the match was weak the way the literature tools now do | Whenever the product owner decides |
+| The clinical trials search tool can reject a status word (like "withdrawn" or "suspended") that the same government service just handed back as a real answer a moment earlier, because our own written specification lists fewer status words than the government service actually uses | The planned specification pause |
 | Three smaller gaps in the gatekeeper, where a backup layer currently covers for them | The hardening sprint near the end |
 | Three places where the written specification and the working code disagree and need reconciling, including one written plan that described a piece of work as still needed when it had actually already been finished in an earlier sprint | The planned specification pause |
 | One test is switched off because checking it needs a connection to our server that we cannot open from the current setup | Whenever that connection is available, about ten minutes of work |

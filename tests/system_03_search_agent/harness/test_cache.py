@@ -316,23 +316,26 @@ def test_registered_tool_schemas_is_fixed_in_code_as_a_tuple() -> None:
         assert "name" in schema
 
 
-def test_registered_tool_schemas_contains_exactly_the_five_built_tools() -> None:
-    """`cypher_query`, `litvar2_lookup`, `ncbi_dbsnp`, `ncbi_efetch`, and
-    `pubtator_annotate` exist as of T-3.3-07. The other two names
-    Technical_specification.md Section 4.2 reserves (`clinicaltrials_search`,
-    `pathogen_detection`) are not yet built and must not appear here as
-    placeholders.
+def test_registered_tool_schemas_contains_exactly_the_seven_built_tools() -> None:
+    """As of T-3.5-07 all seven tools Technical_specification.md Section 4.2
+    names are built and registered: `clinicaltrials_search`, `cypher_query`,
+    `litvar2_lookup`, `ncbi_dbsnp`, `ncbi_efetch`, `pathogen_detection`,
+    `pubtator_annotate`, in that exact alphabetical order. This is the
+    complete roster; no name is reserved-but-unbuilt anymore.
     """
     names = [schema["name"] for schema in REGISTERED_TOOL_SCHEMAS]
     assert names == [
+        "clinicaltrials_search",
         "cypher_query",
         "litvar2_lookup",
         "ncbi_dbsnp",
         "ncbi_efetch",
+        "pathogen_detection",
         "pubtator_annotate",
     ], (
-        f"expected exactly [cypher_query, litvar2_lookup, ncbi_dbsnp, "
-        f"ncbi_efetch, pubtator_annotate] in that order, got {names!r}"
+        f"expected exactly [clinicaltrials_search, cypher_query, "
+        f"litvar2_lookup, ncbi_dbsnp, ncbi_efetch, pathogen_detection, "
+        f"pubtator_annotate] in that order, got {names!r}"
     )
 
 
@@ -382,6 +385,24 @@ def test_registered_tool_schemas_pubtator_annotate_input_schema_matches_the_mode
 
     entry = next(s for s in REGISTERED_TOOL_SCHEMAS if s["name"] == "pubtator_annotate")
     assert entry["input_schema"] == PubtatorAnnotateInput.model_json_schema()
+
+
+def test_registered_tool_schemas_clinicaltrials_search_input_schema_matches_the_model() -> None:
+    """Same proof as the `ncbi_efetch` test above, for T-3.5-07's `clinicaltrials_search` entry."""
+    from system_03_search_agent.tools.clinicaltrials_search_schemas import (
+        ClinicalTrialsSearchInput,
+    )
+
+    entry = next(s for s in REGISTERED_TOOL_SCHEMAS if s["name"] == "clinicaltrials_search")
+    assert entry["input_schema"] == ClinicalTrialsSearchInput.model_json_schema()
+
+
+def test_registered_tool_schemas_pathogen_detection_input_schema_matches_the_model() -> None:
+    """Same proof as the `ncbi_efetch` test above, for T-3.5-07's `pathogen_detection` entry."""
+    from system_03_search_agent.tools.pathogen_detection_schemas import PathogenDetectionInput
+
+    entry = next(s for s in REGISTERED_TOOL_SCHEMAS if s["name"] == "pathogen_detection")
+    assert entry["input_schema"] == PathogenDetectionInput.model_json_schema()
 
 
 def test_registered_prefix_byte_identical_across_differing_dynamic_suffixes() -> None:
@@ -482,18 +503,20 @@ def test_registered_tool_schemas_content_appears_serialized_in_the_prefix() -> N
 # case.
 # ---------------------------------------------------------------------------
 
-EXPECTED_TOOL_REGISTRY_VERSION = "v4"
-EXPECTED_TOOL_REGISTRY_FINGERPRINT = "461384ad560f"  # cypher_query, litvar2_lookup, ncbi_dbsnp, ncbi_efetch, pubtator_annotate
+EXPECTED_TOOL_REGISTRY_VERSION = "v5"
+EXPECTED_TOOL_REGISTRY_FINGERPRINT = "01b8f65e2eed"  # + clinicaltrials_search, pathogen_detection (the full seven-tool roster)
 
 # `ncbi_dbsnp` was this file's "not registered yet" stand-in before T-3.2-05
-# registered it for real, and `pubtator_annotate` took over that role for
-# build phase 3.2 before T-3.3-07 registered IT for real too.
-# `clinicaltrials_search` (still unbuilt as of this ticket, per Section 4.2's
-# seven-tool list) takes over the role now, so this fake schema's name
-# cannot collide with a name the live registry actually contains.
+# registered it for real, `pubtator_annotate` took over that role for build
+# phase 3.2 before T-3.3-07 registered it for real too, and
+# `clinicaltrials_search` took over after that before T-3.5-07 registered
+# it for real as well. As of T-3.5-07 all seven names Section 4.2 names are
+# live, so this fake schema uses a name outside that set entirely, one that
+# can never collide with a future real registration drawn from the locked
+# seven-tool list.
 _FAKE_TOOL_SCHEMA = {
-    "name": "clinicaltrials_search",
-    "description": "A tool that is not registered yet.",
+    "name": "not_a_registered_tool",
+    "description": "A tool that is not registered and never will be.",
     "input_schema": {"type": "object", "properties": {}},
 }
 
@@ -544,7 +567,7 @@ def test_adding_a_tool_without_bumping_the_version_raises() -> None:
 
     message = str(excinfo.value)
     assert "without a contract-version bump" in message
-    assert "clinicaltrials_search" in message
+    assert "not_a_registered_tool" in message
     assert "Bump TOOL_REGISTRY_VERSION" in message
 
 
