@@ -2869,12 +2869,16 @@ def _citations_from_grounded_claims(
         claim_text = claim_text_by_citation_id[citation_id][:1000]
 
         if synth_finding.tool == "ncbi_efetch":
-            citations.append(
-                _layer2_citation_for_synth_finding(
-                    synth_finding, findings, layer2_raw_outputs, citation_id,
-                    display_index, claim_text,
-                )
+            # F-3.4-T05-04: None means this one claim could not be built
+            # into a valid CitationPayload (both of the builder's own
+            # construction attempts failed); it is skipped rather than
+            # appended, never a crash. See that function's own docstring.
+            layer2_citation = _layer2_citation_for_synth_finding(
+                synth_finding, findings, layer2_raw_outputs, citation_id,
+                display_index, claim_text,
             )
+            if layer2_citation is not None:
+                citations.append(layer2_citation)
             continue
 
         curie = (
@@ -2940,7 +2944,7 @@ def _layer2_citation_for_synth_finding(
     citation_id: str,
     display_index: int,
     claim_text: str,
-) -> CitationPayload:
+) -> CitationPayload | None:
     """Build the final `CitationPayload` for a grounded `ncbi_efetch` claim.
 
     Uses T-3.4-04's own `tools.ncbi_efetch.build_layer2_citation`, never a
@@ -2977,6 +2981,43 @@ def _layer2_citation_for_synth_finding(
     future refactor breaking that invariant, never fabricates a value, and
     is exercised directly by its own unit test rather than left untested
     because the live path should never take it.
+
+    F-3.4-T05-04: returns `None`, never raises, when NEITHER construction
+    can produce a valid `CitationPayload`. Both the primary path (via
+    `build_layer2_citation`) and this function's own defensive fallback
+    build a `CitationPayload` from an `ncbi_efetch` record's real
+    `source_url`, which is validated only against `NcbiEfetchRecord`'s own,
+    deliberately wider pattern (Section 6.2 requires `omim.org` to
+    validate there; see `ncbi_efetch_schemas.py`'s "design decision 3"),
+    never against `CitationPayload`'s narrower `NCBI_SOURCE_URL_PATTERN`,
+    which has no `omim.org` alternative. A completely valid, schema-
+    conformant `ncbi_efetch` record can therefore still fail `CitationPayload`
+    construction. Before this fix that failure was only half-handled: the
+    primary attempt's `pydantic.ValidationError` (a `ValueError` subclass)
+    was caught exactly like `build_layer2_citation`'s own deliberate
+    "nothing citable" `ValueError`, but the fallback then rebuilt a
+    `CitationPayload` from the very same `synth_finding.source_url`, which
+    fails the identical validation, uncaught: the one construction this
+    docstring already called "a safety net" was not itself safe, and the
+    resulting `pydantic.ValidationError` escaped this function, `write_node`,
+    and `compiled_graph.ainvoke` entirely, surfacing only as `core.run.run`'s
+    generic, unlogged "failed unexpectedly" refusal. Confirmed live-
+    reachable in general (not through this ticket's own fixed `dataset_
+    report`/`gene` dispatch, which always emits an `ncbi.nlm.nih.gov/gene/`
+    `source_url` and so never triggers this specific pattern gap) by direct
+    unit reproduction with a real, schema-valid OMIM-sourced record. Both
+    construction attempts are now guarded the same way: a caught failure of
+    either kind means this one claim cannot be honestly cited, so this
+    function returns `None` rather than crash the whole answer, matching
+    `build_layer2_citation`'s own "refuse to fabricate, never crash"
+    discipline. The caller, `_citations_from_grounded_claims`, skips a
+    `None` result: the claim's `trust_signal` still emits (Section 8.3's
+    per-claim verdict does not depend on a citation actually existing to
+    attach to), and any `[N]` marker for it in the narrative simply
+    resolves to no citation, the same graceful-degradation shape
+    `_narrative_chunks` already tolerates for any display index missing
+    from `citations`. Full account: `tracker/phase_3.4.md`'s F-3.4-T05-04
+    entry, `DECISIONS.md`.
     """
     raw_output: NcbiEfetchOutput | None = None
     for finding in findings:
@@ -3001,27 +3042,46 @@ def _layer2_citation_for_synth_finding(
                 update={"citation_id": citation_id, "claim_text": claim_text}
             )
         except ValueError:
-            # The field the grounded clause cited could not be re-resolved
-            # against the raw record. Should not happen: synth_finding.
-            # field was itself read off that same record's fields dict.
-            # Fall through rather than let a citation-building defect
-            # become a crash mid-write.
+            # Either `build_layer2_citation`'s own deliberate "nothing
+            # citable" refusal (the field the grounded clause cited could
+            # not be re-resolved against the raw record; should not
+            # happen, since synth_finding.field was itself read off that
+            # same record's fields dict) or a `pydantic.ValidationError`
+            # from its own `CitationPayload` construction (F-3.4-T05-04:
+            # a schema-valid record whose `source_url` nonetheless fails
+            # `CitationPayload`'s narrower pattern, e.g. `omim.org`). Fall
+            # through to the defensive construction below rather than let
+            # either become a crash mid-write.
             pass
 
-    return CitationPayload(
-        citation_id=citation_id,
-        display_index=display_index,
-        source=synth_finding.tool[:128],
-        source_id=(synth_finding.curie or "unknown")[:128],
-        source_url=synth_finding.source_url,
-        layer=synth_finding.layer,  # type: ignore[arg-type]
-        field=synth_finding.field[:128],
-        claim_text=claim_text,
-        evidence_kind="primary_assertion",
-        assertion_confidence="asserted",
-        population_ancestry_context=None,
-        license="public_domain_us_gov",
-    )
+    try:
+        return CitationPayload(
+            citation_id=citation_id,
+            display_index=display_index,
+            source=synth_finding.tool[:128],
+            source_id=(synth_finding.curie or "unknown")[:128],
+            source_url=synth_finding.source_url,
+            layer=synth_finding.layer,  # type: ignore[arg-type]
+            field=synth_finding.field[:128],
+            claim_text=claim_text,
+            evidence_kind="primary_assertion",
+            assertion_confidence="asserted",
+            population_ancestry_context=None,
+            license="public_domain_us_gov",
+        )
+    except ValueError:
+        # F-3.4-T05-04: this is the last construction attempt this
+        # function has. Every field here already comes from a real,
+        # already-validated `SynthFinding`/schema value (see the fields
+        # this is built from), so the only realistic way this still
+        # fails is the same source_url pattern gap the primary attempt's
+        # catch above documents. There is no further fallback to try:
+        # this one claim goes uncited rather than crashing the whole
+        # answer (production-standards.md's graceful-degradation gate;
+        # cite-or-refuse already tolerates a claim with no honest
+        # citation far better than it tolerates an uncaught exception
+        # that discards every other citation and the narrative with it).
+        return None
 
 
 # One `token` event per sentence rather than per answer. Section 6 of

@@ -2723,6 +2723,93 @@ def test_layer2_citation_falls_back_gracefully_when_the_raw_output_is_missing() 
 
 
 # ---------------------------------------------------------------------------
+# F-3.4-T05-04, found by independent re-verification of T-3.4-05: a
+# schema-valid ncbi_efetch record whose source_url is an OMIM record
+# (NcbiEfetchRecord's own pattern deliberately allows omim.org, Section
+# 6.2's "design decision 3") fails CitationPayload's narrower
+# NCBI_SOURCE_URL_PATTERN, which has no omim.org alternative. Before the
+# fix, the primary build_layer2_citation attempt's ValidationError was
+# caught, but the defensive fallback below it rebuilt a CitationPayload
+# from the same offending source_url and raised the identical
+# ValidationError uncaught, escaping write_node entirely. This is the
+# deterministic, non-live reproduction of that crash and its fix: neither
+# construction attempt may ever let an exception escape this function.
+# ---------------------------------------------------------------------------
+
+
+def test_layer2_citation_returns_none_rather_than_crash_on_an_omim_source_url() -> None:
+    """F-3.4-T05-04: an OMIM-sourced ncbi_efetch record is schema-valid at
+    the tool level (NcbiEfetchRecord.source_url's pattern allows
+    omim.org), but CitationPayload's own NCBI_SOURCE_URL_PATTERN does not.
+    Neither the primary build_layer2_citation attempt nor this function's
+    own fallback can honestly cite it, and both must fail closed to
+    `None`, never an uncaught pydantic.ValidationError.
+    """
+    from system_03_search_agent.harness.coordinator_worker import Finding
+    from system_03_search_agent.synthesis.findings import SynthFinding
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    record = NcbiEfetchRecord(
+        id="113705",
+        db="omim",
+        fields={"title": "BREAST CANCER 1 GENE; BRCA1"},
+        source_url="https://omim.org/entry/113705",
+    )
+    raw_output = NcbiEfetchOutput(
+        status="ok",
+        action="dataset_report",
+        records=[record],
+        record_count=1,
+        total_available=None,
+        truncated=False,
+    )
+    synth_finding = SynthFinding(
+        ref_index=1,
+        citation_id="ne-omim-1",
+        layer="layer_2_api",
+        tool="ncbi_efetch",
+        field="title",
+        field_value="BREAST CANCER 1 GENE; BRCA1",
+        source_url="https://omim.org/entry/113705",
+    )
+    ncbi_finding = Finding(
+        call_id="ne-omim",
+        tool="ncbi_efetch",
+        layer="layer_2_api",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "rows": [{
+                "curie": "",
+                "node_or_edge_type": "omim",
+                "fields": {"title": "BREAST CANCER 1 GENE; BRCA1"},
+                "source_url": "https://omim.org/entry/113705",
+            }],
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    citation = graph_module._layer2_citation_for_synth_finding(
+        synth_finding,
+        [ncbi_finding],
+        {"ne-omim": raw_output},
+        "ne-omim-1",
+        1,
+        "the gene is BRCA1",
+    )
+
+    assert citation is None, (
+        "an OMIM-sourced record must fail closed to no citation, never "
+        f"crash or fabricate one; got {citation!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # F-3.4-T05-01, live-found while re-verifying T-3.4-03 against the flagship
 # question after T-3.4-05 landed: a "derived" sibling row sharing the same
 # (source_url, curie) identity as its origin entity row could silently
