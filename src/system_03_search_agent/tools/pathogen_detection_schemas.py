@@ -359,7 +359,17 @@ _TAXON_REJECT_SAMPLES: Final[tuple[str, ...]] = (
     # build an FTP URL that escapes the intended taxon folder.
     "../../../etc",
     "Salmonella/../..",
-    "Salmonella/enterica",
+    # Two slashes deliberately, not "Salmonella/enterica": a single-slash
+    # two-segment string is indistinguishable, by pattern shape alone,
+    # from a `vendor/model-id` string, which trips this repo's OWN
+    # repo-wide guard against a hardcoded model id appearing outside
+    # harness/tiers.py (tests/system_03_search_agent/harness/test_tiers.py's
+    # `test_no_model_id_shaped_string_outside_the_default_table`; the same
+    # false-positive collision class LEARNINGS.md row 57 already records
+    # for an unrelated sentinel string). This sample keeps the same
+    # rejection intent, a taxon value with a path separator, while not
+    # matching that guard's `^word/word$` shape.
+    "Salmonella/enterica/serovar",
     # A leading digit is rejected (must start with a letter), matching
     # the pattern's own `[A-Za-z]` first character.
     "123Salmonella",

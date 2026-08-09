@@ -18,6 +18,12 @@ Depends on:
     - system_03_search_agent.tools.pubtator_annotate_schemas
       (PubtatorAnnotateInput, for `REGISTERED_TOOL_SCHEMAS`'s
       pubtator_annotate entry; T-3.3-07)
+    - system_03_search_agent.tools.clinicaltrials_search_schemas
+      (ClinicalTrialsSearchInput, for `REGISTERED_TOOL_SCHEMAS`'s
+      clinicaltrials_search entry; T-3.5-07)
+    - system_03_search_agent.tools.pathogen_detection_schemas
+      (PathogenDetectionInput, for `REGISTERED_TOOL_SCHEMAS`'s
+      pathogen_detection entry; T-3.5-07)
 
 Reads:
     - Nothing at runtime. `SYSTEM_INSTRUCTIONS` and `_BIOLINK_CONCEPT_SCHEMA`
@@ -81,10 +87,14 @@ import json
 from collections.abc import Mapping, Sequence
 from typing import Any, Final
 
+from system_03_search_agent.tools.clinicaltrials_search_schemas import (
+    ClinicalTrialsSearchInput,
+)
 from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
 from system_03_search_agent.tools.litvar2_lookup_schemas import Litvar2LookupInput
 from system_03_search_agent.tools.ncbi_dbsnp_schemas import NcbiDbsnpInput
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
+from system_03_search_agent.tools.pathogen_detection_schemas import PathogenDetectionInput
 from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnotateInput
 
 # ---------------------------------------------------------------------------
@@ -145,10 +155,10 @@ def _build_tool_schema_section(tool_schemas: list[dict] | None) -> str:
 # `Technical_specification.md` Section 4.2 names the eventual registry:
 # "tool schemas for the seven registered tools, frozen and deterministically
 # sorted by tool name (clinicaltrials_search, cypher_query, litvar2_lookup,
-# ncbi_dbsnp, ncbi_efetch, pathogen_detection, pubtator_annotate)". Two of
-# those seven tools exist in this repo as of this ticket; the other five are
-# added here, one tuple entry at a time, as each one's own build phase lands.
-# Never assembled from a live directory scan or an import-time registry
+# ncbi_dbsnp, ncbi_efetch, pathogen_detection, pubtator_annotate)". As of
+# T-3.5-07 all seven tools in that named set are registered below, the full
+# roster the technical specification describes. Never assembled from a live
+# directory scan or an import-time registry
 # discovery mechanism: prompt-cache-discipline.md obligation 3 forbids a
 # per-request source for anything in the stable prefix, and a scan-based
 # registry would still be exactly that even though today's inputs (imported
@@ -164,18 +174,21 @@ def _build_tool_schema_section(tool_schemas: list[dict] | None) -> str:
 # alphabetically ... and fixed in code": `_build_tool_schema_section` above
 # re-sorts by name regardless of the order this tuple is written in, so this
 # ordering is documentation of intent, not the sole enforcement point. As of
-# T-3.3-07, five tools are registered, in alphabetical order: `cypher_query`,
-# `litvar2_lookup`, `ncbi_dbsnp`, `ncbi_efetch`, `pubtator_annotate`. When a
-# sixth tool is added, insert it in its own alphabetical position among
-# `clinicaltrials_search`, `pathogen_detection` (neither built yet).
+# T-3.5-07, all seven tools are registered, in alphabetical order:
+# `clinicaltrials_search`, `cypher_query`, `litvar2_lookup`, `ncbi_dbsnp`,
+# `ncbi_efetch`, `pathogen_detection`, `pubtator_annotate`. This is the full
+# seven-tool roster the technical specification names; the next change to
+# this tuple is expected to be a schema edit on an existing tool, not a new
+# tool, unless the roster itself changes.
 #
 # F-3.1-11 (judge finding 11, MAJOR): TOOL_REGISTRY_VERSION records the
 # contract version of the registered tool set. Adding or removing a tool
 # must bump this version, per system-design-patterns pattern 10: a tool-
 # registry change is coordinated with a contract-version bump, never silent.
-# Currently v4: cypher_query (v1) + ncbi_efetch (v2) + ncbi_dbsnp (v3) +
-# litvar2_lookup + pubtator_annotate (v4, T-3.3-07, both added in this build
-# phase together).
+# Currently v5: cypher_query (v1) + ncbi_efetch (v2) + ncbi_dbsnp (v3) +
+# litvar2_lookup + pubtator_annotate (v4) + clinicaltrials_search +
+# pathogen_detection (v5, T-3.5-07, both added in this build phase together,
+# completing the seven-tool roster).
 #
 # F-3.1-11 (reopened): the version above was decorative until this ledger
 # existed. Nothing imported it, nothing tested it, and build phase 3.2 could
@@ -204,7 +217,7 @@ def _build_tool_schema_section(tool_schemas: list[dict] | None) -> str:
 # elsewhere in this module's tests own that case.
 # ---------------------------------------------------------------------------
 
-TOOL_REGISTRY_VERSION: Final[str] = "v4"
+TOOL_REGISTRY_VERSION: Final[str] = "v5"
 
 # Append-only. One row per contract version the tool registry has ever
 # declared, mapping that version to `tool_registry_fingerprint()` over the
@@ -214,9 +227,22 @@ _TOOL_REGISTRY_FINGERPRINTS: Final[dict[str, str]] = {
     "v2": "99358f2c0c86",  # cypher_query, ncbi_efetch
     "v3": "e5b702b50893",  # cypher_query, ncbi_dbsnp, ncbi_efetch
     "v4": "461384ad560f",  # cypher_query, litvar2_lookup, ncbi_dbsnp, ncbi_efetch, pubtator_annotate
+    "v5": "01b8f65e2eed",  # + clinicaltrials_search, pathogen_detection (the full seven-tool roster)
 }
 
 REGISTERED_TOOL_SCHEMAS: Final[tuple[dict[str, Any], ...]] = (
+    {
+        "name": "clinicaltrials_search",
+        "description": (
+            "Search ClinicalTrials.gov for studies matching a condition, "
+            "free-text term, or intervention, optionally filtered by "
+            "recruitment status. Returns real NCT ids, titles, status, "
+            "conditions, phase, and a bounded eligibility summary, each "
+            "citing the study's own clinicaltrials.gov record page. Use "
+            "for disease-to-trials questions the graph does not cover."
+        ),
+        "input_schema": ClinicalTrialsSearchInput.model_json_schema(),
+    },
     {
         "name": "cypher_query",
         "description": (
@@ -267,6 +293,19 @@ REGISTERED_TOOL_SCHEMAS: Final[tuple[dict[str, Any], ...]] = (
             "PubChem PUG REST."
         ),
         "input_schema": NcbiEfetchInput.model_json_schema(),
+    },
+    {
+        "name": "pathogen_detection",
+        "description": (
+            "Bulk access to the NCBI Pathogen Detection PDG snapshot tree "
+            "for a bacterial isolate (currently Salmonella): look up an "
+            "isolate's metadata, AMR genotype, and AST phenotype by "
+            "BioSample accession, or find isolates within a given SNP "
+            "distance of others in the same outbreak cluster. Use for "
+            "outbreak-cluster and antimicrobial-resistance questions the "
+            "graph does not cover."
+        ),
+        "input_schema": PathogenDetectionInput.model_json_schema(),
     },
     {
         "name": "pubtator_annotate",
