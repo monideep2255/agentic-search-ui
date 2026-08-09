@@ -16,6 +16,17 @@ citation builder:
         volatile, 90 days stable) and applies to Layer 1 only; Layer 2 and
         Layer 3 have no staleness threshold at all, since their Redis TTLs
         are a cache-cost lever, never a data-age claim.
+        `graph_snapshot_date_from_version` (T-3.4-06) is the bridge between
+        `is_stale`'s bare-date argument and the real `graph_snapshot_
+        version` label every Layer 1 citation actually carries, which is
+        not itself a bare date (see that function's own docstring). Wired
+        by `core.graph`'s citation-assembly code, T-3.4-06's own scope;
+        confirmed live against the real graph that no real Layer 1 field
+        this repo's ingest returns matches `VOLATILE_FIELD_EXAMPLES` or
+        `STABLE_FIELD_EXAMPLES` today (F-3.4-T06-01, `tracker/
+        phase_3.4.md`), so this check is real, tested, and wired, but does
+        not fire against any live citation until a richer per-domain
+        ingest exists to give it a field to classify.
 
 Section 7.2 (conflict detection) is a separate module,
 `synthesis.conflict_detection`, since it is a comparison between two values
@@ -34,6 +45,7 @@ Writes:
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import Literal
@@ -68,6 +80,61 @@ def _parse_date(value: str) -> date:
         raise ValueError(
             f"graph_snapshot_date {value!r} is not a parseable date"
         ) from exc
+
+
+_TRAILING_DATE_PATTERN = re.compile(r"(\d{4}-\d{2}-\d{2})$")
+_EMBEDDED_DATE_PATTERN = re.compile(r"(\d{4}-\d{2}-\d{2})")
+
+
+def graph_snapshot_date_from_version(version: str) -> str | None:
+    """Best-effort extraction of a real calendar date out of a
+    `graph_snapshot_version` label, for `is_stale`'s `graph_snapshot_date`
+    argument. Returns `None`, never a fabricated date, when nothing in
+    `version` is actually a parseable date.
+
+    T-3.4-06 (live-confirmed against the real graph, 2026-08-09): the
+    running default (`cypher_query.py`'s `_DEFAULT_GRAPH_SNAPSHOT_VERSION`,
+    `"ncbi_kg_v1_2026-04-22"`) is not itself a bare date, so `is_stale`
+    called directly against it via `_parse_date` raises. It IS a real date
+    trailing a Hetzner disaster-recovery snapshot label
+    (`docs/data-engineering/Knowledge_graph_on_server_reference.md`
+    section P names the same snapshot, `ncbi_kg_v1_2026-04-22`, as a VM
+    disk backup taken around the same time as the graph load, not a
+    dedicated data-ingestion timestamp field). Three tries, in order,
+    first match wins, each strictly narrower than the last so a
+    false-positive substring match is never preferred over a more
+    specific one:
+
+    1. The whole value is a bare `YYYY-MM-DD` or ISO timestamp
+       (`_parse_date`'s existing, unit-tested contract, unchanged).
+    2. A `YYYY-MM-DD` substring at the very END of the value (today's one
+       observed convention: `{name}_v{n}_{YYYY-MM-DD}`).
+    3. A `YYYY-MM-DD` substring anywhere in the value, as a last resort.
+
+    This is a heuristic tied to one observed naming convention, not a
+    schema-guaranteed contract: nothing validates `GRAPH_SNAPSHOT_VERSION`
+    against a pattern (`cypher_schemas.CypherQueryRow.graph_snapshot_
+    version` is `Field(max_length=40)`, no `pattern=`), so an operator is
+    free to set the env var to a value with no embedded date at all, and
+    this function honestly returns `None` for that case rather than
+    guessing. See `tracker/phase_3.4.md`'s F-3.4-T06-01 for the fuller
+    account of why Section 7.4's staleness check does not fire against any
+    real Layer 1 citation in this graph's current data (a separate,
+    field-class gap this function does not touch).
+    """
+    try:
+        return _parse_date(version).isoformat()
+    except ValueError:
+        pass
+    for pattern in (_TRAILING_DATE_PATTERN, _EMBEDDED_DATE_PATTERN):
+        match = pattern.search(version)
+        if match is None:
+            continue
+        try:
+            return date.fromisoformat(match.group(1)).isoformat()
+        except ValueError:
+            continue
+    return None
 
 
 def is_stale(field_class: FieldClass, graph_snapshot_date: str) -> bool:

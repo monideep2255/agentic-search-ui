@@ -40,6 +40,13 @@ Depends on:
       T-3.1-11's live Layer 2 entity resolution
       (`resolve_symbol_to_curie`, below) routes every gene-symbol lookup
       through this tool, never a second HTTP path.
+    - system_03_search_agent.synthesis.freshness (prefer_live_for_currency,
+      is_stale, graph_snapshot_date_from_version, VOLATILE_FIELD_EXAMPLES,
+      STABLE_FIELD_EXAMPLES, FieldClass): T-3.4-06, Section 7.1
+      (live-wins-for-currency) and Section 7.4 (staleness) wired into
+      `_citations_from_grounded_claims`'s post-processing pass. See that
+      function's own docstring and F-3.4-T06-01 for why 7.4 does not fire
+      against any real Layer 1 citation today.
 
 Reads:
     - Nothing at import time beyond the modules above. USER_DB_URL and the
@@ -435,6 +442,7 @@ import itertools
 import re
 import time
 import uuid
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal
@@ -475,6 +483,14 @@ from system_03_search_agent.synthesis.findings import (
     SynthFinding,
     build_synth_findings,
     build_synth_messages,
+)
+from system_03_search_agent.synthesis.freshness import (
+    STABLE_FIELD_EXAMPLES,
+    VOLATILE_FIELD_EXAMPLES,
+    FieldClass,
+    graph_snapshot_date_from_version,
+    is_stale,
+    prefer_live_for_currency,
 )
 from system_03_search_agent.synthesis.grounding import (
     GroundingResult,
@@ -2914,6 +2930,14 @@ def _citations_from_grounded_claims(
                 license="public_domain_us_gov",
             )
         )
+
+    # T-3.4-06, Section 7.1 and 7.4: a post-processing pass over the fully
+    # built citations list, never woven into the loop above. Both
+    # functions are no-ops unless a Layer 1/Layer 2 field-name pairing
+    # exists (see each one's own docstring for exactly when that is
+    # true today).
+    citations = _apply_live_wins_for_currency(citations, finding_by_citation_id)
+    citations = _apply_layer1_staleness_notes(citations, finding_by_citation_id, findings)
     return citations
 
 
@@ -2935,6 +2959,268 @@ def _curie_for_citation(
             if str(row.get("source_url") or "") == synth_finding.source_url:
                 return str(row.get("curie") or "")
     return ""
+
+
+def _graph_snapshot_version_for_citation(
+    citation_id: str, findings: list[Finding], synth_finding: SynthFinding
+) -> str | None:
+    """Recover the `graph_snapshot_version` of the row a Layer 1 finding was
+    built from, the same `source_url`-identity lookup `_curie_for_citation`
+    already uses. `SynthFinding` has no slot for `graph_snapshot_version`
+    itself (Section 8.1's schema does not carry it), so this is the only
+    path T-3.4-06's staleness check has back to it.
+
+    Returns `None`, never a fabricated version string, when no matching
+    row can be found. Should not happen for a real `layer_1_graph`
+    finding, since every Layer 1 row `cypher_provenance.to_output_row`
+    produces carries this key; a defensive `None` here reads as
+    "staleness not determined", never "assume fresh".
+    """
+    for finding in findings:
+        fields = finding.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        for row in fields.get("rows", []):
+            if str(row.get("source_url") or "") == synth_finding.source_url:
+                version = row.get("graph_snapshot_version")
+                return str(version) if version else None
+    return None
+
+
+_VOLATILE_FIELD_NAMES = {name.casefold() for name in VOLATILE_FIELD_EXAMPLES}
+_STABLE_FIELD_NAMES = {name.casefold() for name in STABLE_FIELD_EXAMPLES}
+
+
+def _field_class_for_layer1_field(field_name: str) -> FieldClass | None:
+    """Section 7.4: which staleness table a Layer 1 field belongs to.
+
+    T-3.4-06, F-3.4-T06-01: matched against `freshness.VOLATILE_FIELD_
+    EXAMPLES`/`STABLE_FIELD_EXAMPLES` by exact, case-insensitive field
+    name, never guessed or inferred from the field's value; a synonym
+    table (aliasing e.g. "clinical_significance" to some other real field
+    name) would be exactly the kind of guess production-standards.md
+    forbids for a staleness verdict.
+
+    Confirmed live against the real graph (2026-08-09, 200-row samples
+    across Gene, SequenceVariant, and Disease vertices): every Layer 1
+    vertex this repo's ingest returns carries the identical generic
+    BioLink-normalized property set (`id`, `name`, `xrefs`, `source`,
+    `agent_type`, `source_url`, `knowledge_level`), never a
+    `clinical_significance`, `review_status`, `gtr_test_status`,
+    `gene_coordinates`, `chromosome_location`, or `taxonomy` key.
+    `VOLATILE_FIELD_EXAMPLES`/`STABLE_FIELD_EXAMPLES` name fields Section
+    7.4 assumes a richer, per-domain ingest would carry; this ingest
+    normalized every vertex label down to one shared shape instead, so
+    this function returns `None` for every real Layer 1 citation this
+    repo can build today. It is real, unit-tested code, not dead code
+    kept for appearances: it activates the moment Systems 1/2 preserve a
+    domain-specific property on ingest. Full account: F-3.4-T06-01,
+    `tracker/phase_3.4.md`.
+    """
+    normalized = field_name.strip().casefold()
+    if normalized in _VOLATILE_FIELD_NAMES:
+        return "volatile"
+    if normalized in _STABLE_FIELD_NAMES:
+        return "stable"
+    return None
+
+
+def _layer1_layer2_field_pairs(
+    citations: list[CitationPayload],
+    finding_by_citation_id: dict[str, SynthFinding],
+) -> dict[str, tuple[str, str]]:
+    """Group this answer's citations by normalized field name; for each
+    field name where BOTH a Layer 1 and a Layer 2 citation exist, return
+    the `(graph_citation_id, live_citation_id)` pair. Deterministic
+    (citation_id sort order) when more than one candidate citation exists
+    on either side of a field name.
+
+    "Same field name" (case-insensitive, exact match) is this ticket's own
+    judged, deliberately narrow signal for "the same fact" across layers
+    (T-3.4-06's own brief: "same field name, same subject entity/CURIE, is
+    the natural signal"). A Layer 2 finding never carries a CURIE
+    (`_ncbi_efetch_output_to_structured_fields` stamps it empty on
+    purpose, by design), and T-3.4-05's dual-dispatch design only ever
+    anchors one entity per query, so "same subject entity" already holds
+    for every citation in a dual-layer answer; field name is the one
+    remaining, real, non-guessed discriminator left to check. No synonym
+    table (e.g. the graph's "name" aliased to `ncbi_efetch`'s "symbol"):
+    guessing that two differently-named fields describe the same fact is
+    exactly the kind of guess production-standards.md forbids, so this
+    pairing simply does not fire on a real field-name mismatch between
+    layers, which is the honest outcome here, not a defect.
+    """
+    by_field: dict[str, list[str]] = defaultdict(list)
+    for citation in citations:
+        finding = finding_by_citation_id.get(citation.citation_id)
+        if finding is None:
+            continue
+        by_field[finding.field.strip().casefold()].append(citation.citation_id)
+
+    pairs: dict[str, tuple[str, str]] = {}
+    for field_key, citation_ids in by_field.items():
+        graph_id = next(
+            (
+                cid for cid in sorted(citation_ids)
+                if finding_by_citation_id[cid].layer == "layer_1_graph"
+            ),
+            None,
+        )
+        live_id = next(
+            (
+                cid for cid in sorted(citation_ids)
+                if finding_by_citation_id[cid].layer == "layer_2_api"
+            ),
+            None,
+        )
+        if graph_id is not None and live_id is not None:
+            pairs[field_key] = (graph_id, live_id)
+    return pairs
+
+
+def _apply_live_wins_for_currency(
+    citations: list[CitationPayload],
+    finding_by_citation_id: dict[str, SynthFinding],
+) -> list[CitationPayload]:
+    """Section 7.1: "Live API wins for currency."
+
+    Scope, deliberately narrow (T-3.4-06): this never rewrites Synth's own
+    generated narrative text (`grounding.narrative`), which is model
+    output produced before this citation-assembly step runs and is out of
+    this ticket's file scope to alter (`synthesis/grounding.py` needs no
+    change for this phase, per this phase's own research brief; a prompt-
+    side change to force the model itself to prefer the live value would
+    carry the same broad blast radius F-3.4-T05-04 already declined to
+    risk under time pressure). What this DOES control is the one thing
+    genuinely inside `core.graph`'s citation-assembly path: the per-
+    citation `claim_text` a reader sees attached to each `[N]` marker.
+
+    When a Layer 1 and a Layer 2 citation in this same answer share a
+    field name (`_layer1_layer2_field_pairs`) and their underlying values
+    genuinely differ, the live citation's `claim_text` is left exactly as
+    the grounding pass produced it (it already describes the live value),
+    and the graph citation's `claim_text` gains one short, deterministic,
+    factual sentence naming the live citation as more current. Both
+    citations are always returned, every other field unchanged (Section
+    7.1: "Both cited... disagreement never silently drops one side").
+
+    A no-op, returning `citations` unchanged, when no Layer 1/Layer 2 pair
+    shares a field name, or a paired value is blank, or the paired values
+    already agree (nothing to referee).
+    """
+    pairs = _layer1_layer2_field_pairs(citations, finding_by_citation_id)
+    if not pairs:
+        return citations
+
+    by_id = {c.citation_id: c for c in citations}
+    updates: dict[str, CitationPayload] = {}
+    for graph_id, live_id in pairs.values():
+        graph_finding = finding_by_citation_id[graph_id]
+        live_finding = finding_by_citation_id[live_id]
+        graph_value = graph_finding.field_value.strip()
+        live_value = live_finding.field_value.strip()
+        if not graph_value or not live_value:
+            continue
+        if graph_value.casefold() == live_value.casefold():
+            continue  # Section 7.1: nothing to referee when they agree.
+
+        resolution = prefer_live_for_currency(graph_value, live_value)
+        graph_citation = updates.get(graph_id, by_id[graph_id])
+        live_citation = by_id[live_id]
+        note = (
+            f" A live NCBI value for this field is more current per "
+            f"Section 7.1 ({resolution.current_value!r}); see citation "
+            f"[{live_citation.display_index}]."
+        )
+        updates[graph_id] = graph_citation.model_copy(
+            update={"claim_text": (graph_citation.claim_text + note)[:1000]}
+        )
+
+    if not updates:
+        return citations
+    return [updates.get(c.citation_id, c) for c in citations]
+
+
+def _apply_layer1_staleness_notes(
+    citations: list[CitationPayload],
+    finding_by_citation_id: dict[str, SynthFinding],
+    findings: list[Finding],
+) -> list[CitationPayload]:
+    """Section 7.4: staleness auto-cross-verify.
+
+    For each `layer_1_graph` citation whose field resolves to a known
+    `FieldClass` (`_field_class_for_layer1_field`) AND whose row's
+    `graph_snapshot_version` yields a real, parseable date
+    (`freshness.graph_snapshot_date_from_version`) AND that date is past
+    Section 7.4's threshold for that class (`is_stale`), the citation's
+    `claim_text` gains one deterministic note. When a same-field Layer 2
+    citation also exists in this answer (`_layer1_layer2_field_pairs`,
+    the exact mechanism T-3.4-05's dual dispatch makes possible), the note
+    names it as the live cross-check Section 7.4 specifies. When no such
+    pairing exists, the note says so honestly rather than implying a
+    cross-check happened: `write_node` has no mechanism to originate a
+    NEW Act-tier tool call from this point in the pipeline, only to note
+    when one Act already dispatched happens to cover the same field.
+
+    F-3.4-T06-01 (live-confirmed 2026-08-09): every real Layer 1 citation
+    this graph can produce today has `_field_class_for_layer1_field`
+    return `None`, so this note never fires against live data yet; it is
+    unit-tested directly against constructed `Finding`/`SynthFinding` data
+    instead, per this ticket's verify surface, and is ready to activate
+    the moment a real field-class signal exists in the graph's ingest.
+    """
+    pairs_by_graph_id = {
+        graph_id: live_id
+        for graph_id, live_id in _layer1_layer2_field_pairs(
+            citations, finding_by_citation_id
+        ).values()
+    }
+    by_id = {c.citation_id: c for c in citations}
+    updates: dict[str, CitationPayload] = {}
+
+    for citation in citations:
+        if citation.layer != "layer_1_graph":
+            continue
+        finding = finding_by_citation_id.get(citation.citation_id)
+        if finding is None:
+            continue
+        field_class = _field_class_for_layer1_field(finding.field)
+        if field_class is None:
+            continue
+        snapshot_version = _graph_snapshot_version_for_citation(
+            citation.citation_id, findings, finding
+        )
+        if snapshot_version is None:
+            continue
+        snapshot_date = graph_snapshot_date_from_version(snapshot_version)
+        if snapshot_date is None:
+            continue
+        if not is_stale(field_class, snapshot_date):
+            continue
+
+        live_id = pairs_by_graph_id.get(citation.citation_id)
+        if live_id is not None:
+            live_citation = by_id[live_id]
+            note = (
+                f" This graph snapshot is past its Section 7.4 staleness "
+                f"threshold for this field and has been auto-cross-"
+                f"verified against a live NCBI value; see citation "
+                f"[{live_citation.display_index}]."
+            )
+        else:
+            note = (
+                " This graph snapshot is past its Section 7.4 staleness "
+                "threshold for this field; no live cross-check was "
+                "dispatched for this query."
+            )
+        base = updates.get(citation.citation_id, citation)
+        updates[citation.citation_id] = base.model_copy(
+            update={"claim_text": (base.claim_text + note)[:1000]}
+        )
+
+    if not updates:
+        return citations
+    return [updates.get(c.citation_id, c) for c in citations]
 
 
 def _layer2_citation_for_synth_finding(

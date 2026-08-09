@@ -2985,3 +2985,439 @@ def test_ok_finding_was_truncated_still_true_for_a_genuine_layer_1_truncation() 
     ]
 
     assert graph_module._ok_finding_was_truncated(findings) is True
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-06, Section 7.1: live-wins-for-currency, wired into
+# _citations_from_grounded_claims's post-processing pass
+# (_apply_live_wins_for_currency). Deterministic and mocked at the
+# SynthFinding/CitationPayload construction level, matching this file's own
+# F-3.4-T05-04 tests above: no live, organic disagreement between a graph
+# value and a live value can be relied on to exist on any given day, the
+# same reasoning the premise gate's own P1/P3 docstrings give for testing
+# this shape directly rather than hoping for an organic live sample.
+# ---------------------------------------------------------------------------
+
+
+def _dual_layer_synth_finding(
+    *, citation_id: str, layer: str, tool: str, field: str, field_value: str, source_url: str,
+):
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    return SynthFinding(
+        ref_index=1,
+        citation_id=citation_id,
+        layer=layer,
+        tool=tool,
+        field=field,
+        field_value=field_value,
+        source_url=source_url,
+    )
+
+
+def _citation(
+    *, citation_id: str, display_index: int, layer: str, field: str, claim_text: str, source_url: str,
+):
+    from system_03_search_agent.contracts.events import CitationPayload
+
+    return CitationPayload(
+        citation_id=citation_id,
+        display_index=display_index,
+        source="test",
+        source_id="test-id",
+        source_url=source_url,
+        layer=layer,
+        field=field,
+        claim_text=claim_text,
+        evidence_kind="primary_assertion",
+        assertion_confidence="asserted",
+        population_ancestry_context=None,
+        license="public_domain_us_gov",
+    )
+
+
+def test_live_wins_for_currency_annotates_the_graph_citation_on_disagreement() -> None:
+    """The core Section 7.1 proof: a Layer 1 and a Layer 2 citation share a
+    field name and genuinely disagree. The live citation's claim_text is
+    left untouched (it already describes the live value); the graph
+    citation's claim_text gains a deterministic note naming the live value
+    as current. BOTH citations stay in the returned list, every other
+    field unchanged (Section 7.1: "Both cited... disagreement never
+    silently drops one side").
+    """
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1OLD.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1OLD",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+
+    result = graph_module._apply_live_wins_for_currency(
+        [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    assert len(result) == 2, "both citations must stay in the returned list"
+    result_by_id = {c.citation_id: c for c in result}
+
+    live_result = result_by_id["c2"]
+    assert live_result.claim_text == live_citation.claim_text, (
+        "the live citation's claim_text is never rewritten"
+    )
+
+    graph_result = result_by_id["c1"]
+    assert graph_result.claim_text != graph_citation.claim_text, (
+        "the graph citation must gain a deterministic framing note"
+    )
+    assert graph_result.claim_text.startswith(graph_citation.claim_text), (
+        "the original claim_text is preserved, only appended to"
+    )
+    assert "BRCA1" in graph_result.claim_text
+    assert "more current" in graph_result.claim_text
+    assert "[2]" in graph_result.claim_text, (
+        "the note must point at the live citation's own display_index"
+    )
+    # Every other field is untouched.
+    assert graph_result.citation_id == "c1"
+    assert graph_result.display_index == 1
+    assert graph_result.source_url == graph_citation.source_url
+    assert graph_result.license == graph_citation.license
+
+
+def test_live_wins_for_currency_is_a_no_op_when_the_values_agree() -> None:
+    """Section 7.1's own text: nothing to referee when the two values
+    already agree."""
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+
+    result = graph_module._apply_live_wins_for_currency(
+        [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    assert result[0].claim_text == graph_citation.claim_text
+    assert result[1].claim_text == live_citation.claim_text
+
+
+def test_live_wins_for_currency_is_a_no_op_on_a_field_name_mismatch() -> None:
+    """No synonym table: a graph "name" and a live "symbol" citation for
+    the same entity are never paired, even though a human reader would
+    recognize them as the same fact. See `_layer1_layer2_field_pairs`'s
+    own docstring for why this is the honest, narrow, non-guessing scope
+    T-3.4-06 chose, and why it means this hook does not fire on the exact
+    field-name pair the flagship BRCA1 dual-layer question produces live
+    today (graph "name" vs. `ncbi_efetch` "symbol").
+    """
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+        claim_text="The graph records the gene as BRCA1 DNA repair associated.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="name", field_value="BRCA1 DNA repair associated",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+
+    result = graph_module._apply_live_wins_for_currency(
+        [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    assert result[0].claim_text == graph_citation.claim_text
+    assert result[1].claim_text == live_citation.claim_text
+
+
+def test_live_wins_for_currency_is_a_no_op_with_only_one_layer() -> None:
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+    }
+
+    result = graph_module._apply_live_wins_for_currency([graph_citation], finding_by_citation_id)
+    assert result == [graph_citation]
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-06, Section 7.4: staleness auto-cross-verify
+# (_apply_layer1_staleness_notes). F-3.4-T06-01 (live-confirmed against the
+# real graph, 2026-08-09): no real Layer 1 field this repo's ingest returns
+# matches VOLATILE_FIELD_EXAMPLES/STABLE_FIELD_EXAMPLES today (every vertex
+# label carries the identical generic id/name/xrefs/source/agent_type/
+# source_url/knowledge_level property set; see `_field_class_for_layer1_
+# field`'s own docstring). These tests construct a field name that DOES
+# match to prove the wiring itself is correct and ready; the last two tests
+# below prove it stays silent, not fabricated, against today's real shape.
+# ---------------------------------------------------------------------------
+
+
+def _layer1_finding_with_snapshot(
+    *, call_id: str, source_url: str, snapshot_version: str, field: str, value: str,
+):
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    return Finding(
+        call_id=call_id,
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "rows": [
+                {
+                    "node_or_edge_type": "SequenceVariant",
+                    "curie": "ClinVar:37314",
+                    "fields": {field: value},
+                    "source_url": source_url,
+                    "graph_snapshot_version": snapshot_version,
+                }
+            ],
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+
+def _old_snapshot_version(days: int) -> str:
+    from datetime import UTC, datetime, timedelta
+
+    return f"ncbi_kg_v1_{(datetime.now(tz=UTC).date() - timedelta(days=days)).isoformat()}"
+
+
+def test_layer1_staleness_note_fires_when_the_field_class_resolves_and_is_stale() -> None:
+    source_url = "https://www.ncbi.nlm.nih.gov/clinvar/variation/37314"
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph",
+        field="clinical_significance",
+        claim_text="ClinVar:37314 clinical_significance=Pathogenic.",
+        source_url=source_url,
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="clinical_significance", field_value="Pathogenic",
+            source_url=source_url,
+        ),
+    }
+    findings = [
+        _layer1_finding_with_snapshot(
+            call_id="cq-1", source_url=source_url, snapshot_version=_old_snapshot_version(45),
+            field="clinical_significance", value="Pathogenic",
+        )
+    ]
+
+    result = graph_module._apply_layer1_staleness_notes(
+        [graph_citation], finding_by_citation_id, findings
+    )
+
+    assert len(result) == 1
+    assert result[0].claim_text != graph_citation.claim_text
+    assert "staleness threshold" in result[0].claim_text
+    assert "no live cross-check was dispatched" in result[0].claim_text
+
+
+def test_layer1_staleness_note_names_the_paired_live_citation_when_one_exists() -> None:
+    source_url = "https://www.ncbi.nlm.nih.gov/clinvar/variation/37314"
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph",
+        field="clinical_significance",
+        claim_text="ClinVar:37314 clinical_significance=Pathogenic.",
+        source_url=source_url,
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api",
+        field="clinical_significance",
+        claim_text="The live ClinVar record states clinical_significance=Pathogenic.",
+        source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/37314/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="clinical_significance", field_value="Pathogenic",
+            source_url=source_url,
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="clinical_significance", field_value="Pathogenic",
+            source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/37314/",
+        ),
+    }
+    findings = [
+        _layer1_finding_with_snapshot(
+            call_id="cq-1", source_url=source_url, snapshot_version=_old_snapshot_version(45),
+            field="clinical_significance", value="Pathogenic",
+        )
+    ]
+
+    result = graph_module._apply_layer1_staleness_notes(
+        [graph_citation, live_citation], finding_by_citation_id, findings
+    )
+    result_by_id = {c.citation_id: c for c in result}
+    assert "auto-cross-verified" in result_by_id["c1"].claim_text
+    assert "[2]" in result_by_id["c1"].claim_text
+    assert result_by_id["c2"].claim_text == live_citation.claim_text
+
+
+def test_layer1_staleness_note_does_not_fire_when_fresh() -> None:
+    source_url = "https://www.ncbi.nlm.nih.gov/clinvar/variation/37314"
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph",
+        field="clinical_significance",
+        claim_text="ClinVar:37314 clinical_significance=Pathogenic.",
+        source_url=source_url,
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="clinical_significance", field_value="Pathogenic",
+            source_url=source_url,
+        ),
+    }
+    findings = [
+        _layer1_finding_with_snapshot(
+            call_id="cq-1", source_url=source_url, snapshot_version=_old_snapshot_version(5),
+            field="clinical_significance", value="Pathogenic",
+        )
+    ]
+
+    result = graph_module._apply_layer1_staleness_notes(
+        [graph_citation], finding_by_citation_id, findings
+    )
+    assert result[0].claim_text == graph_citation.claim_text
+
+
+def test_layer1_staleness_note_does_not_fire_on_an_unresolved_field_class() -> None:
+    """F-3.4-T06-01: this is the real, live production shape today. Every
+    Layer 1 citation this repo can build carries a generic field name
+    ("name" among the fixed seven generic keys), never a VOLATILE_FIELD_
+    EXAMPLES/STABLE_FIELD_EXAMPLES member, so this must never fire against
+    real data, confirmed here with a snapshot old enough that it would
+    fire if the field class resolved.
+    """
+    source_url = "https://www.ncbi.nlm.nih.gov/gene/672"
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+        claim_text="NCBIGene:672 name=BRCA1 DNA repair associated.",
+        source_url=source_url,
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="name", field_value="BRCA1 DNA repair associated",
+            source_url=source_url,
+        ),
+    }
+    findings = [
+        _layer1_finding_with_snapshot(
+            call_id="cq-1", source_url=source_url, snapshot_version=_old_snapshot_version(45),
+            field="name", value="BRCA1 DNA repair associated",
+        )
+    ]
+
+    result = graph_module._apply_layer1_staleness_notes(
+        [graph_citation], finding_by_citation_id, findings
+    )
+    assert result[0].claim_text == graph_citation.claim_text
+
+
+def test_layer1_staleness_note_does_not_fire_on_an_unparseable_snapshot_version() -> None:
+    source_url = "https://www.ncbi.nlm.nih.gov/clinvar/variation/37314"
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph",
+        field="clinical_significance",
+        claim_text="ClinVar:37314 clinical_significance=Pathogenic.",
+        source_url=source_url,
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="clinical_significance", field_value="Pathogenic",
+            source_url=source_url,
+        ),
+    }
+    findings = [
+        _layer1_finding_with_snapshot(
+            call_id="cq-1", source_url=source_url, snapshot_version="prod-snapshot-42",
+            field="clinical_significance", value="Pathogenic",
+        )
+    ]
+
+    result = graph_module._apply_layer1_staleness_notes(
+        [graph_citation], finding_by_citation_id, findings
+    )
+    assert result[0].claim_text == graph_citation.claim_text, (
+        "must never fabricate a staleness verdict against an unparseable "
+        "snapshot version"
+    )
+
+
+def test_field_class_for_layer1_field_matches_real_graph_data_today() -> None:
+    """F-3.4-T06-01's own finding, enforced as a regression test: as of
+    the live probe this finding is based on (2026-08-09, 200-row samples
+    across Gene, SequenceVariant, and Disease), no real field this graph's
+    ingest returns resolves to a known field class."""
+    assert graph_module._field_class_for_layer1_field("name") is None
+    assert graph_module._field_class_for_layer1_field("id") is None
+    assert graph_module._field_class_for_layer1_field("source") is None
+    assert graph_module._field_class_for_layer1_field("xrefs") is None
+    assert graph_module._field_class_for_layer1_field("agent_type") is None
+    assert graph_module._field_class_for_layer1_field("knowledge_level") is None
+    # But the wiring itself is real and correct for the day a field like
+    # this exists in the graph's ingest:
+    assert graph_module._field_class_for_layer1_field("clinical_significance") == "volatile"
+    assert graph_module._field_class_for_layer1_field("CLINICAL_SIGNIFICANCE") == "volatile"
+    assert graph_module._field_class_for_layer1_field("gene_coordinates") == "stable"
