@@ -12,11 +12,11 @@ Listed in flow order. Work moves left to right on the board, from `todo` to `don
 
 | Status | Count | Who may set it |
 |--------|-------|----------------|
-| To do | 16 | Lead |
+| To do | 15 | Lead |
 | In progress | 0 | The builder that claimed it |
 | Blocked | 0 | The builder that hit the block, reason required |
 | In review | 0 | The builder that finished |
-| Done | 15 | Judge only, never the builder |
+| Done | 16 | Judge only, never the builder |
 
 `blocked` sits mid-flow rather than on the way to done, because it is where work stalls, not a step toward finishing.
 
@@ -55,7 +55,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 3.2 | `phase/3.2-ncbi-dbsnp` | ncbi_dbsnp over Variation Services and dbSNP ESummary (the dbVar coordinate-overlap sub-tool already shipped in 3.1, see phase file) | 3.1 | v1 | done | refined | | | F-3.2-03 spec-broken endpoint, clinical_significance cap too tight for real data, Section 25 scope-note gap, ncbi_dbsnp rsid-shape residual |
 | 3.3 | `phase/3.3-enrichment-tools` | pubtator_annotate and litvar2_lookup, each with untrusted-source-reader separation | 3.1 | v1 | done | refined | | | relations endpoint unverified, entity_lookup citation gap, litvar2_lookup per-variant citation gap, disclosure-policy asymmetry, check_learnings_coverage.py format blind spot |
 | 3.4 | `phase/3.4-citation-trust-full` | Provenance extended to Layers 2 and 3, the two-tier risk gate, freshness and conflict resolution | 2.2, 3.1, 3.2, 3.3, 3.5 | v1 | todo | tech_refine | | eval-harness | |
-| 3.5 | `phase/3.5-pathogen-clinicaltrials-tools` | pathogen_detection and clinicaltrials_search, completing the seven-tool roster | 3.1 | v1 | todo | tech_refine | | | |
+| 3.5 | `phase/3.5-pathogen-clinicaltrials-tools` | pathogen_detection and clinicaltrials_search, completing the seven-tool roster (PR #27) | 3.1 | v1 | done | refined | | | F-3.5-A-03 query-syntax risk, F-3.5-A-07 weak-match undisclosed, F-3.5-A-09 empty overloaded, F-3.5-A-12 overall_status enum gap, F-3.5-10 conditions truncation |
 | 4.0 | `phase/4.0-rest-sse-hardening` | The REST plus SSE adapter finalized as the public API surface | 2.2 | v1 | todo | tech_refine | | | F-1.2-01, F-1.2-02, F-1.2-03 |
 | 4.1 | `phase/4.1-mcp-server` | Outbound-only MCP server wrapping the same tool functions | 3.4 | v1 | todo | tech_refine | | | |
 | 4.2 | `phase/4.2-cli-adapter` | Thin CLI client over the REST API | 4.0 | v1 | todo | tech_refine | | | |
@@ -99,6 +99,11 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | F-3.2-03 spec-broken endpoint | Section 6.3 names `spdi/{spdi}/canonical_representative` as the SPDI normalization endpoint; live-confirmed broken server-side (HTTP 500 on every well-formed input, including NCBI's own documented example). `ncbi_dbsnp.py` substitutes the live-working `/spdi/{spdi}/contextual`, unverified beyond the error path since the premise gate's `spdi` coverage is malformed-input only. Full detail: `tracker/phase_3.2.md` | Step 6.2 reconciliation |
 | clinical_significance cap too tight for real data | Section 6.3's locked 40-char item cap rejects standard, common ClinVar vocabulary (`conflicting-interpretations-of-pathogenicity`, 44 chars), measured at ~10.4 percent of a live 800-record clinical sample. Mitigated without deviating from the locked spec: the tool discloses via a new `fields_withheld` output field rather than silently truncating or discarding the whole answer. Raising the cap itself remains a product-owner decision | Step 6.2 reconciliation |
 | ncbi_dbsnp rsid-shape residual | A bare foreign numeric identifier prefixed with `rs` (e.g. a Gene ID typed as `rs3043`) still resolves to a confident, but honestly self-labeled, wrong variant; narrower than the original F-3.2-A-02 shape since the output truthfully names which rsid was actually fetched. Full detail: `tracker/phase_3.2.md` | Whenever the product owner decides it needs closing |
+| F-3.5-A-03 clinicaltrials_search query-syntax risk | `query_cond` is parsed as an Essie expression, not a literal phrase: a real clinical term containing `NOT` (standard oncology shorthand, "not otherwise specified") silently returns the exact inverse of what was asked, `status: "ok"`, confidently cited. Live-proven arithmetic in `tracker/phase_3.5.md`. Not fixed this round: needs either escaping caller text or disclosing the parsing risk in the schema, a scope decision past the round that found it | Step 6.2 reconciliation, or a future fix round |
+| F-3.5-A-07 clinicaltrials_search weak-match undisclosed | The phase 3.3 weak-match shape (bare numbers, common words returning confident but generic citations) reproduces here undisclosed. Unlike phase 3.3's fix, ClinicalTrials.gov's `/studies` endpoint does not appear to return a per-result relevance score to disclose the same way; closing it needs a result-ordering decision (`sort=@relevance`), not just an additive field | Step 6.2 reconciliation, or a future fix round |
+| F-3.5-A-09 pathogen_detection empty overloaded | `status: "empty"` still means both "genuinely absent" and "the wall clock ran out", distinguishable only via the free-text `error` field. Partially mitigated by this round's fix (a cutoff that found real matches now returns `ok`, not `empty`), but the two remaining cases have no distinct machine-readable signal. A schema-level fix is a locked-schema change | Step 6.2 reconciliation |
+| F-3.5-A-12 clinicaltrials_search overall_status enum gap | The locked 6-value input enum (Section 6.7 line 1378) is narrower than the live API's 12 real values (`WITHDRAWN`, `SUSPENDED`, `ENROLLING_BY_INVITATION`, and others), so a caller filtering on a value the API itself just returned in a result gets a `ValidationError`. Same class as phase 3.2's carried Section 6.3 gaps | Step 6.2 reconciliation |
+| F-3.5-10 clinicaltrials_search conditions truncation | `conditions` items are silently truncated (`_cap`) rather than withheld-and-disclosed the way `ncbi_dbsnp`/`litvar2_lookup` treat an over-cap controlled-vocabulary term. Lower blast radius than those two (a display field, not the sole fact a claim rests on); whether to spend a new schema field on this tool for it is a product decision | Whenever the product owner decides |
 
 ## Visualizing this board
 
