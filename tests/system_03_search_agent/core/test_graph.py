@@ -119,6 +119,40 @@ def _stub_symbol_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _fake_resolve_symbol_to_curie)
 
 
+# T-3.4-05/T-3.1-28: `plan_node` now dispatches a second, Layer 2
+# `ncbi_efetch` call alongside `cypher_query` whenever a resolved target
+# entity is Gene-shaped, and `_GRAPH_ANSWERABLE_QUERY_TEXT` below names
+# BRCA1 (a Gene) in dozens of tests in this file, the identical reason
+# `_stub_symbol_resolution` above exists. Default to a genuine, empty
+# (never fabricated) `NcbiEfetchOutput`: `status="empty"` contributes
+# nothing to `build_synth_findings`/citations/trust (both skip any finding
+# whose status is not "ok"), so every pre-T-3.4-05 assertion about
+# citation counts, trust signals, or narrative content is unaffected; only
+# `total_tool_calls`/`tool_calls` counts for a Gene-anchored query grow,
+# which the specific tests affected by that assert on directly. A test
+# that needs a real ("ok") Layer 2 result overrides this with its own
+# `monkeypatch.setattr(graph_module, "ncbi_efetch", ...)`.
+_EMPTY_NCBI_EFETCH_OUTPUT_KWARGS: dict[str, object] = {
+    "status": "empty",
+    "action": "dataset_report",
+    "records": [],
+    "record_count": 0,
+    "total_available": None,
+    "truncated": False,
+    "error": None,
+}
+
+
+@pytest.fixture(autouse=True)
+def _stub_ncbi_efetch_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchOutput
+
+    async def _fake_ncbi_efetch(tool_input: object, **kwargs: object) -> NcbiEfetchOutput:
+        return NcbiEfetchOutput(**_EMPTY_NCBI_EFETCH_OUTPUT_KWARGS)
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _fake_ncbi_efetch)
+
+
 # Matches a rendered findings line without assuming its internal shape.
 # An earlier version parsed "field: value" and broke silently the moment
 # `render_findings_block` started naming the record type, because a
@@ -550,7 +584,11 @@ async def test_done_event_trust_outcome_is_refuse_when_the_tool_call_errors() ->
     done_event = events[-1]
     assert done_event.type == "done"
     assert done_event.payload["trust_outcome"] == "refuse"
-    assert done_event.payload["total_tool_calls"] == 1
+    # T-3.4-05: BRCA1 also dispatches a second, Layer 2 ncbi_efetch call
+    # (the autouse `_stub_ncbi_efetch_dispatch` fixture stubs it to a
+    # genuine "empty" result), so two tool calls are now attempted, not
+    # one; the cypher_query call still errors exactly as before.
+    assert done_event.payload["total_tool_calls"] == 2
 
     citation_events = [event for event in events if event.type == "citation"]
     assert citation_events == [], "an errored tool call must never produce a citation"
@@ -618,7 +656,11 @@ async def test_done_event_trust_outcome_is_answer_with_a_real_citation_when_the_
     done_event = events[-1]
     assert done_event.type == "done"
     assert done_event.payload["trust_outcome"] == "answer"
-    assert done_event.payload["total_tool_calls"] == 1
+    # T-3.4-05: BRCA1 also dispatches a second, Layer 2 ncbi_efetch call
+    # (the autouse `_stub_ncbi_efetch_dispatch` fixture stubs it to a
+    # genuine "empty" result, which contributes no citation), so two tool
+    # calls are now attempted, not one.
+    assert done_event.payload["total_tool_calls"] == 2
 
 
 # ---------------------------------------------------------------------------
@@ -1628,9 +1670,15 @@ async def test_plan_selects_cypher_query_for_a_graph_answerable_query() -> None:
 
     plan_event = next(event for event in events if event.type == "plan")
     tool_calls = plan_event.payload["tool_calls"]
-    assert len(tool_calls) == 1
+    # T-3.4-05: BRCA1 resolves to a Gene CURIE, so plan_node also selects
+    # ncbi_efetch as a second, Layer 2 answer-bearing call; see
+    # test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query below
+    # for the dedicated test of that behavior.
+    assert len(tool_calls) == 2
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
+    assert tool_calls[1]["tool"] == "ncbi_efetch"
+    assert tool_calls[1]["layer"] == "layer_2_api"
 
 
 @pytest.mark.asyncio
@@ -1658,9 +1706,16 @@ async def test_act_executes_the_selected_cypher_query_call(
 
     assert len(calls) == 1
     tool_calls, results = calls[0]
-    assert len(tool_calls) == 1
-    assert len(results) == 1
-    assert results[0].contains_untrusted_free_text is False  # a Cypher row is structured data
+    # T-3.4-05: BRCA1 also dispatches a second, Layer 2 ncbi_efetch call
+    # (stubbed to a genuine "empty" result by the autouse
+    # `_stub_ncbi_efetch_dispatch` fixture), so two paired (tool_call,
+    # result) entries reach coordinator_worker_execute now, not one.
+    assert len(tool_calls) == 2
+    assert len(results) == 2
+    assert tool_calls[0].tool == "cypher_query"
+    assert tool_calls[1].tool == "ncbi_efetch"
+    for result in results:
+        assert result.contains_untrusted_free_text is False  # structured data, never free text
 
     done_event = events[-1]
     assert done_event.type == "done"
@@ -2383,3 +2438,463 @@ def test_node_or_edge_type_by_citation_id_falls_back_with_no_traversed_edge() ->
     result = graph_module._node_or_edge_type_by_citation_id([finding], [synth])
 
     assert result["cid-1"] == "Disease"
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-05, closing T-3.1-28: `act_node` dispatches `ncbi_efetch` as a
+# second, answer-bearing Layer 2 tool call alongside `cypher_query`,
+# exactly when a resolved target entity is Gene-shaped.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query() -> None:
+    """The one condition this ticket wires: a resolved Gene CURIE among
+    cypher_query's own target_entities also selects a second, Layer 2
+    ncbi_efetch call. The cypher call stays first (write_node's refusal
+    branch depends on `tool_calls[0]` being the cypher call), and the
+    ncbi_efetch input targets the exact same gene.
+    """
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = await _run_graph(query, _valid_context())
+
+    plan_event = next(event for event in events if event.type == "plan")
+    tool_calls = plan_event.payload["tool_calls"]
+    assert len(tool_calls) == 2
+    assert tool_calls[0]["tool"] == "cypher_query"
+    assert tool_calls[0]["layer"] == "layer_1_graph"
+    assert tool_calls[1]["tool"] == "ncbi_efetch"
+    assert tool_calls[1]["layer"] == "layer_2_api"
+
+
+@pytest.mark.asyncio
+async def test_plan_selects_only_cypher_query_for_a_disease_anchored_query() -> None:
+    """The negative case: a query anchored on a non-Gene CURIE (a Disease,
+    named verbatim) must never also dispatch ncbi_efetch. This is the
+    boundary `.claude/rules/v1-scope-boundary.md`'s spirit and this
+    ticket's own instructions both name explicitly: one tool, one
+    condition, never a general planner.
+    """
+    query = _valid_query(text="Tell me about MedGen:C0346153")
+    events = await _run_graph(query, _valid_context())
+
+    plan_event = next(event for event in events if event.type == "plan")
+    tool_calls = plan_event.payload["tool_calls"]
+    assert len(tool_calls) == 1
+    assert tool_calls[0]["tool"] == "cypher_query"
+
+
+def test_first_gene_curie_finds_the_first_gene_shaped_entity() -> None:
+    assert graph_module._first_gene_curie(["NCBIGene:672"]) == "NCBIGene:672"
+    assert (
+        graph_module._first_gene_curie(["MedGen:C0346153", "NCBIGene:672"])
+        == "NCBIGene:672"
+    )
+
+
+def test_first_gene_curie_returns_none_for_no_gene_entity() -> None:
+    assert graph_module._first_gene_curie([]) is None
+    assert graph_module._first_gene_curie(["MedGen:C0346153"]) is None
+
+
+def test_build_planned_ncbi_efetch_call_targets_the_gene_by_id() -> None:
+    planned = graph_module._build_planned_ncbi_efetch_call("NCBIGene:672")
+    assert planned.tool_call.tool == "ncbi_efetch"
+    assert planned.tool_call.layer == "layer_2_api"
+    assert planned.ncbi_efetch_input.root.action == "dataset_report"
+    assert planned.ncbi_efetch_input.root.report_type == "gene"
+    assert planned.ncbi_efetch_input.root.gene_id == "672"
+
+
+def _gene_report_output(
+    *, gene_id: str = "672", symbol: str = "BRCA1", status: str = "ok"
+):
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    return NcbiEfetchOutput(
+        status=status,
+        action="dataset_report",
+        records=(
+            [
+                NcbiEfetchRecord(
+                    id=gene_id,
+                    db="gene",
+                    fields={
+                        "gene_id": gene_id,
+                        "symbol": symbol,
+                        "description": "BRCA1 DNA repair associated",
+                    },
+                    source_url=f"https://www.ncbi.nlm.nih.gov/gene/{gene_id}/",
+                )
+            ]
+            if status == "ok"
+            else []
+        ),
+        record_count=1 if status == "ok" else 0,
+        total_available=1 if status == "ok" else None,
+        truncated=False,
+        error=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_act_dispatches_both_tools_for_a_gene_anchored_dual_plan(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A hand-built dual plan (bypassing plan_node's own detection, the
+    same direct-`act_node` pattern the F-2.1-C13 tests above use): act
+    dispatches BOTH the cypher_query and the ncbi_efetch call, builds one
+    Finding per tool, and stashes the real, typed `NcbiEfetchOutput` in
+    `layer2_raw_outputs`, keyed by the ncbi_efetch call's own call_id.
+    """
+    cypher_output = CypherQueryOutput(
+        status="ok",
+        row_count=1,
+        total_available=1,
+        truncated=False,
+        rows=[
+            CypherQueryRow(
+                node_or_edge_type="Gene",
+                curie="NCBIGene:672",
+                fields={"name": "BRCA1 DNA repair associated"},
+                source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+                graph_snapshot_version="v1",
+            ),
+        ],
+        error=None,
+    )
+
+    async def _fake_cypher_query(harness: object, cypher_input: object) -> CypherQueryOutput:
+        return cypher_output
+
+    ncbi_output = _gene_report_output()
+
+    async def _fake_ncbi_efetch(tool_input: object, **kwargs: object):
+        return ncbi_output
+
+    monkeypatch.setattr(graph_module, "cypher_query", _fake_cypher_query)
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _fake_ncbi_efetch)
+
+    harness = harness_module.Harness(trace_id="test-trace-dual-dispatch")
+    cypher_planned = graph_module._PlannedToolCall(
+        tool_call=ToolCall(tool="cypher_query", call_id="cq-dual", layer="layer_1_graph"),
+        cypher_input=CypherQueryInput(
+            query_intent="official gene symbol for NCBIGene:672",
+            query_class="lookup",
+            target_entities=["NCBIGene:672"],
+            row_limit=100,
+        ),
+    )
+    ncbi_planned = graph_module._build_planned_ncbi_efetch_call("NCBIGene:672")
+
+    act_state = {
+        "harness": harness,
+        "query": _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT),
+        "query_class": "lookup",
+        "tool_calls": [cypher_planned, ncbi_planned],
+    }
+    act_result = await graph_module.act_node(act_state)
+
+    findings = act_result["findings"]
+    assert len(findings) == 2
+    assert {f.tool for f in findings} == {"cypher_query", "ncbi_efetch"}
+
+    ncbi_finding = next(f for f in findings if f.tool == "ncbi_efetch")
+    assert ncbi_finding.layer == "layer_2_api"
+    assert ncbi_finding.structured_fields["status"] == "ok"
+    assert ncbi_finding.structured_fields["rows"][0]["fields"]["symbol"] == "BRCA1"
+    assert "gene_id" not in ncbi_finding.structured_fields["rows"][0]["fields"], (
+        "the record's own identity field must not outrank a real fact "
+        "(the gene symbol) for representative-field selection"
+    )
+
+    layer2_raw_outputs = act_result["layer2_raw_outputs"]
+    assert layer2_raw_outputs[ncbi_planned.tool_call.call_id] is ncbi_output
+
+
+@pytest.mark.asyncio
+async def test_write_builds_a_real_layer2_citation_for_a_grounded_ncbi_efetch_claim(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """The write_node half: a grounded claim built from an `ncbi_efetch`
+    finding is cited via T-3.4-04's `build_layer2_citation`, carrying that
+    tool's own real Section 9.2 provenance, not the Layer 1 literals.
+    """
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    cypher_finding = Finding(
+        call_id="cq-dual",
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "row_count": 1,
+            "total_available": 1,
+            "truncated": False,
+            "rows": [
+                {
+                    "node_or_edge_type": "Gene",
+                    "curie": "NCBIGene:672",
+                    "fields": {"name": "BRCA1 DNA repair associated"},
+                    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+                    "graph_snapshot_version": "v1",
+                }
+            ],
+            "error": None,
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    ncbi_output = _gene_report_output()
+    ncbi_finding = Finding(
+        call_id="ne-dual",
+        tool="ncbi_efetch",
+        layer="layer_2_api",
+        source="structured_pass_through",
+        structured_fields=graph_module._ncbi_efetch_output_to_structured_fields(ncbi_output),
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    state = _write_state(query, [cypher_finding, ncbi_finding])
+    state["layer2_raw_outputs"] = {"ne-dual": ncbi_output}
+
+    write_result = await graph_module.write_node(state)
+    events = write_result["events"]
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "answer"
+
+    citation_events = [event for event in events if event.type == "citation"]
+    layers_cited = {c.payload["layer"] for c in citation_events}
+    assert "layer_1_graph" in layers_cited
+    assert "layer_2_api" in layers_cited, (
+        "the grounded ncbi_efetch claim must earn a real Layer 2 citation"
+    )
+
+    layer2_citation = next(c.payload for c in citation_events if c.payload["layer"] == "layer_2_api")
+    assert layer2_citation["evidence_kind"] == "primary_assertion"
+    assert layer2_citation["assertion_confidence"] == "asserted"
+    assert layer2_citation["license"] == "public_domain_us_gov"
+    assert layer2_citation["license"] != "unspecified"
+    assert layer2_citation["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/672/"
+    # The grounded clause itself, not build_layer2_citation's own
+    # machine-built claim_text: the override this function applies.
+    assert "BRCA1" in layer2_citation["claim_text"]
+
+
+def test_layer2_citation_falls_back_gracefully_when_the_raw_output_is_missing() -> None:
+    """Defensive path: `_layer2_citation_for_synth_finding` must never
+    crash or fabricate a value when `layer2_raw_outputs` does not carry
+    the finding's raw output (should not happen in production; a future
+    refactor could still break the invariant that guarantees it).
+    """
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    synth_finding = SynthFinding(
+        ref_index=1,
+        citation_id="ne-missing-1",
+        layer="layer_2_api",
+        tool="ncbi_efetch",
+        field="symbol",
+        field_value="BRCA1",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+
+    citation = graph_module._layer2_citation_for_synth_finding(
+        synth_finding, [], {}, "ne-missing-1", 1, "The gene symbol is BRCA1 [1]."
+    )
+
+    assert citation.citation_id == "ne-missing-1"
+    assert citation.layer == "layer_2_api"
+    assert citation.license == "public_domain_us_gov"
+    assert citation.license != "unspecified"
+    assert citation.evidence_kind
+    assert citation.assertion_confidence
+    assert citation.claim_text == "The gene symbol is BRCA1 [1]."
+
+
+# ---------------------------------------------------------------------------
+# F-3.4-T05-01, live-found while re-verifying T-3.4-03 against the flagship
+# question after T-3.4-05 landed: a "derived" sibling row sharing the same
+# (source_url, curie) identity as its origin entity row could silently
+# overwrite that row's correctly-threaded traversed_edge_type, misclassifying
+# a high-risk claim low again. Reproduced live via a real `RETURN d, d.id`
+# Cypher shape; this is the deterministic, order-independent regression test.
+# ---------------------------------------------------------------------------
+
+
+def test_node_or_edge_type_by_citation_id_survives_a_derived_sibling_row_after() -> None:
+    """A `RETURN d, d.id` shape produces a real `Disease` row AND a
+    "derived" row for the same disease, sharing one `(source_url, curie)`
+    identity. When the derived row is iterated AFTER the real one, its
+    empty type must never overwrite the real row's traversed edge label.
+    """
+    url = "https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+    finding = _finding_with_rows(
+        [
+            {
+                "node_or_edge_type": "Disease",
+                "curie": "MedGen:C0346153",
+                "source_url": url,
+                "traversed_edge_type": "gene_associated_with_condition",
+            },
+            {
+                "node_or_edge_type": "derived",
+                "curie": "MedGen:C0346153",
+                "source_url": url,
+                "traversed_edge_type": None,
+            },
+        ]
+    )
+    synth = _synth_finding("cid-1", url)
+
+    result = graph_module._node_or_edge_type_by_citation_id([finding], [synth])
+
+    assert result["cid-1"] == "gene_associated_with_condition"
+
+
+def test_node_or_edge_type_by_citation_id_survives_a_derived_sibling_row_before() -> None:
+    """The same collision, order reversed: the derived row is iterated
+    BEFORE the real row. The fix is order-independent, so the outcome must
+    be identical either way.
+    """
+    url = "https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+    finding = _finding_with_rows(
+        [
+            {
+                "node_or_edge_type": "derived",
+                "curie": "MedGen:C0346153",
+                "source_url": url,
+                "traversed_edge_type": None,
+            },
+            {
+                "node_or_edge_type": "Disease",
+                "curie": "MedGen:C0346153",
+                "source_url": url,
+                "traversed_edge_type": "gene_associated_with_condition",
+            },
+        ]
+    )
+    synth = _synth_finding("cid-1", url)
+
+    result = graph_module._node_or_edge_type_by_citation_id([finding], [synth])
+
+    assert result["cid-1"] == "gene_associated_with_condition"
+
+
+# ---------------------------------------------------------------------------
+# F-3.4-T05-02, live-found while re-verifying the build phase 2.2 grounding
+# gate after T-3.4-05 landed: `_known_total_available`/`_ok_finding_was_
+# truncated` used to read across EVERY "ok" finding regardless of tool, so
+# an ncbi_efetch finding's own total_available=None (the normal, non-
+# paginated case) poisoned the whole aggregate to None even when
+# cypher_query's own total_available was known.
+# ---------------------------------------------------------------------------
+
+
+def _ncbi_efetch_finding(*, total_available, truncated: bool = False):
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    return Finding(
+        call_id="ne-1",
+        tool="ncbi_efetch",
+        layer="layer_2_api",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "row_count": 1,
+            "total_available": total_available,
+            "truncated": truncated,
+            "rows": [
+                {
+                    "curie": "",
+                    "node_or_edge_type": "gene",
+                    "fields": {"symbol": "BRCA1"},
+                    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672/",
+                }
+            ],
+            "error": None,
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+
+def _cypher_finding(*, total_available, truncated: bool = False, row_count: int = 4):
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    return Finding(
+        call_id="cq-1",
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "row_count": row_count,
+            "total_available": total_available,
+            "truncated": truncated,
+            "rows": [],
+            "error": None,
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+
+def test_known_total_available_ignores_a_layer_2_findings_own_none() -> None:
+    """A dispatched ncbi_efetch finding's own total_available=None (the
+    normal, non-paginated case) must never poison a KNOWN Layer 1 total
+    into an unknowable one.
+    """
+    findings = [
+        _cypher_finding(total_available=6, truncated=True, row_count=4),
+        _ncbi_efetch_finding(total_available=None),
+    ]
+
+    assert graph_module._known_total_available(findings) == 6
+
+
+def test_known_total_available_still_returns_none_for_a_genuinely_unknown_layer_1_total() -> None:
+    """The pre-existing behavior for Layer 1's own unknown total (a UNION
+    or aliased DISTINCT `cypher_query._fetch_true_total` abstained on)
+    must be unchanged: still None, Layer 2 involved or not.
+    """
+    findings = [
+        _cypher_finding(total_available=None, truncated=True, row_count=4),
+        _ncbi_efetch_finding(total_available=None),
+    ]
+
+    assert graph_module._known_total_available(findings) is None
+
+
+def test_ok_finding_was_truncated_ignores_a_layer_2_findings_own_flag() -> None:
+    """A Layer 2 tool's own `truncated` (whether THAT call's own result
+    list was paginated) must never flag the Layer 1 graph answer as
+    truncated; that is a different question with a different answer.
+    """
+    findings = [
+        _cypher_finding(total_available=4, truncated=False, row_count=4),
+        _ncbi_efetch_finding(total_available=None, truncated=True),
+    ]
+
+    assert graph_module._ok_finding_was_truncated(findings) is False
+
+
+def test_ok_finding_was_truncated_still_true_for_a_genuine_layer_1_truncation() -> None:
+    findings = [
+        _cypher_finding(total_available=6, truncated=True, row_count=4),
+        _ncbi_efetch_finding(total_available=None, truncated=False),
+    ]
+
+    assert graph_module._ok_finding_was_truncated(findings) is True

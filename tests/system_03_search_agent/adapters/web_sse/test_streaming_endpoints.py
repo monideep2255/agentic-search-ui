@@ -135,6 +135,34 @@ def _stub_symbol_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _stub_ncbi_efetch_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """T-3.4-05/T-3.1-28: `plan_node` now also dispatches a second, Layer 2
+    `ncbi_efetch` call whenever a resolved target entity is Gene-shaped,
+    and `_create_body`'s default query text names BRCA1 (a Gene) by
+    symbol. Same rationale as `_stub_symbol_resolution` above: without a
+    stand-in, this file's real graph loop would reach out to
+    `api.ncbi.nlm.nih.gov` for real. Stubbed to a genuine, never-fabricated
+    "empty" result, which contributes no citation or trust signal, so no
+    pre-existing assertion here is affected.
+    """
+    from system_03_search_agent.core import graph as graph_module
+    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchOutput
+
+    async def _fake_ncbi_efetch(tool_input: object, **kwargs: object) -> NcbiEfetchOutput:
+        return NcbiEfetchOutput(
+            status="empty",
+            action="dataset_report",
+            records=[],
+            record_count=0,
+            total_available=None,
+            truncated=False,
+            error=None,
+        )
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _fake_ncbi_efetch)
+
+
+@pytest.fixture(autouse=True)
 def _auth_secret(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AUTH_SECRET", _TEST_AUTH_SECRET)
 

@@ -107,6 +107,26 @@ Field lifecycle:
             not the same thing: "no gene mentioned" answers normally,
             "a gene-shaped token was mentioned and NCBI does not know it"
             refuses.
+        layer2_raw_outputs: set by `act` (T-3.4-05/T-3.1-28), the real,
+            typed Layer 2 tool output (currently only ever `NcbiEfetchOutput`,
+            this phase's one wired Layer 2 tool) behind each dispatched
+            Layer 2 `ToolCall`, keyed by that call's `call_id`. Exists
+            because `act` also shapes that same output into the generic,
+            tool-agnostic pseudo-row dict every `Finding.structured_fields`
+            carries (so `build_synth_findings` and the rest of the
+            grounding pipeline need no tool-specific branching), and that
+            shaping is lossy in the other direction: `write` needs the
+            ORIGINAL typed output back to build a real Section 9.2 Layer 2
+            citation via a tool's own `build_layer2_citation`-shaped
+            function, and reconstructing a validated Pydantic model by
+            hand from the generic dict it was flattened into would be
+            strictly worse than never having flattened it in the first
+            place. Unset or empty means no Layer 2 tool was dispatched
+            this query, which is the common case: `core/graph.py`'s
+            `_citations_from_grounded_claims` falls back to a generic,
+            tool-agnostic citation construction whenever a Layer 2 claim's
+            raw output cannot be found here, so a missing entry degrades
+            rather than crashes.
 """
 
 from __future__ import annotations
@@ -141,3 +161,4 @@ class GraphState(TypedDict, total=False):
     daily_cap_declined: bool
     guard_refused: bool
     unresolved_entity_symbols: list[str]
+    layer2_raw_outputs: dict[str, Any]

@@ -51,8 +51,17 @@ def _stub(field_name: str, field_value: Any, is_suspect: bool = False) -> Any:
     """A `pick_representative_field` stand-in that ignores the row's real
     `fields` dict and always returns the fixed tuple under test, the same
     injection pattern `test_required_paths.py` already uses.
+
+    Accepts and ignores `**kwargs`: T-3.4-05 (F-3.4-T05-03) gave the real
+    `pick_representative_field` an `apply_vocabulary_artifact_check`
+    keyword, forwarded unconditionally by `build_synth_findings` whenever
+    a `Finding.layer` is known (every fixture in this file uses
+    `layer="layer_1_graph"`). This stub stands in for that real signature
+    in `TestBuildSynthFindingsNeverShipsADegenerateValue`'s tests, which
+    call `build_synth_findings` directly rather than `_citable_value_for_
+    row`, so it must tolerate the same keyword the real function does.
     """
-    return lambda fields: (field_name, field_value, is_suspect)
+    return lambda fields, **kwargs: (field_name, field_value, is_suspect)
 
 
 def _row(curie: str = _CURIE) -> dict[str, Any]:

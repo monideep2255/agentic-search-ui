@@ -105,6 +105,34 @@ def _stub_symbol_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _stub_ncbi_efetch_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """T-3.4-05/T-3.1-28: see test_graph.py's identical fixture docstring
+    for the rationale. `_GRAPH_ANSWERABLE_QUERY_TEXT` below also names
+    BRCA1, so `plan_node` also dispatches a second, Layer 2 `ncbi_efetch`
+    call for the tests below; stubbed to a genuine, never-fabricated
+    "empty" result by default, which `build_synth_findings`/citations/
+    trust all skip (only a "ok" finding contributes), so no pre-existing
+    assertion about citations, trust signals, or narrative content here is
+    affected.
+    """
+    from system_03_search_agent.core import graph as graph_module
+    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchOutput
+
+    async def _fake_ncbi_efetch(tool_input: object, **kwargs: object) -> NcbiEfetchOutput:
+        return NcbiEfetchOutput(
+            status="empty",
+            action="dataset_report",
+            records=[],
+            record_count=0,
+            total_available=None,
+            truncated=False,
+            error=None,
+        )
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _fake_ncbi_efetch)
+
+
+@pytest.fixture(autouse=True)
 def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     # T-3.0-06: dispatches per tier. See `tests/system_03_search_agent/
     # model_stub.py` for why a single fixed response stopped working the
@@ -295,12 +323,16 @@ async def test_run_dispatches_the_selected_tool_call_for_a_graph_answerable_quer
 
     plan_event = next(event for event in events if event.type == "plan")
     tool_calls = plan_event.payload["tool_calls"]
-    assert len(tool_calls) == 1
+    # T-3.4-05: BRCA1 resolves to a Gene CURIE, so plan_node also selects
+    # ncbi_efetch as a second, Layer 2 call (stubbed to a genuine "empty"
+    # result by the autouse `_stub_ncbi_efetch_dispatch` fixture).
+    assert len(tool_calls) == 2
     assert tool_calls[0]["tool"] == "cypher_query"
+    assert tool_calls[1]["tool"] == "ncbi_efetch"
 
     done_event = events[-1]
     assert done_event.type == "done"
-    assert done_event.payload["total_tool_calls"] == 1
+    assert done_event.payload["total_tool_calls"] == 2
     assert done_event.payload["trust_outcome"] == "refuse"
 
     for event in events:
@@ -316,12 +348,14 @@ async def test_run_streaming_dispatches_the_selected_tool_call_for_a_graph_answe
 
     plan_event = next(event for event in events if event.type == "plan")
     tool_calls = plan_event.payload["tool_calls"]
-    assert len(tool_calls) == 1
+    # T-3.4-05: see the sibling test_run_ (non-streaming) test above.
+    assert len(tool_calls) == 2
     assert tool_calls[0]["tool"] == "cypher_query"
+    assert tool_calls[1]["tool"] == "ncbi_efetch"
 
     done_event = events[-1]
     assert done_event.type == "done"
-    assert done_event.payload["total_tool_calls"] == 1
+    assert done_event.payload["total_tool_calls"] == 2
     assert done_event.payload["trust_outcome"] == "refuse"
 
     for event in events:
