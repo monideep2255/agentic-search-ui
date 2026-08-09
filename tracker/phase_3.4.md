@@ -43,6 +43,13 @@ What is genuinely missing: per-tool provenance defaults and citation-building fo
 
 Dispatch plan: T-3.4-01 (lead, directly, blocking, watched failing first). T-3.4-02 (lead, directly, small shared prerequisite, mirroring 3.5's T-3.5-02 precedent) and T-3.4-04 (one builder, worktree-isolated, zero file overlap with anything else) run in parallel once T-3.4-01 is confirmed failing. T-3.4-03, T-3.4-05, T-3.4-06, T-3.4-07 form a sequential chain through `core/graph.py` and dispatch one at a time in the shared checkout (no concurrent writer to that file), each only after its dependency has landed on the phase branch, per the worktree-isolation policy's own carve-out: "Sole builder in a phase, no concurrency: shared checkout... a worktree costs setup time for no benefit."
 
+## Progress
+
+- T-3.4-01 (premise gate): done. `tests/system_03_search_agent/synthesis/test_citation_trust_full_premise.py`, 10 cases, watched failing 2026-08-09: 4 full-loop cases fail on real missing behavior (Layer 2 absent from a dual-layer question, F-2.2-A-05 live-reproduced, `triangulated` stuck at `None`), 6 fail on `ModuleNotFoundError`/`ImportError` for functionality no ticket has built yet. No syntax or fixture error in the gate itself.
+- T-3.4-02 (shared provenance + freshness modules): done. `synthesis/provenance_defaults.py`, `synthesis/freshness.py`, 56 unit tests, all passing. Includes the ClinVar `clinical_significance` term to `assertion_confidence` table and the free-text hedge lexicon Section 9.2 names.
+- T-3.4-07's pure-function half (conflict detection): done ahead of its dependency order, since it is small and self-contained. `synthesis/conflict_detection.py`, 6 unit tests passing. `write_node`'s own integration (routing a detected conflict to the `flag` trust outcome) is unbuilt; that half stays scoped to T-3.4-07.
+- T-3.4-03, T-3.4-04, T-3.4-05, T-3.4-06, and T-3.4-07's `write_node` integration half: not started.
+
 ## Findings
 
 State vocabulary per prior phase files: `filed` / `confirmed` / `open` (a decision, not a bug) / `closed`.

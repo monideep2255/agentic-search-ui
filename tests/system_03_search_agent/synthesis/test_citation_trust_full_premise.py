@@ -110,6 +110,7 @@ import os
 import re
 import socket
 import uuid
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -388,7 +389,6 @@ async def test_the_flagship_gene_disease_claim_is_high_risk_and_triangulates() -
 @live_only
 @pytest.mark.asyncio
 async def test_a_genuine_cross_layer_conflict_is_detected_and_flagged() -> None:
-    from system_03_search_agent.core.graph import _extract_target_entities
     from system_03_search_agent.synthesis.conflict_detection import detect_conflict
     from system_03_search_agent.tools.cypher_query import cypher_query
     from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
@@ -449,14 +449,15 @@ async def test_a_genuine_cross_layer_conflict_is_detected_and_flagged() -> None:
 @live_only
 @pytest.mark.asyncio
 async def test_a_stale_volatile_field_auto_cross_verifies_against_live_layer_2() -> None:
-    from datetime import date, timedelta
+    from datetime import datetime, timedelta
 
     from system_03_search_agent.synthesis.freshness import is_stale
     from system_03_search_agent.tools.ncbi_efetch import ncbi_efetch
     from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
 
-    old_snapshot = (date.today() - timedelta(days=45)).isoformat()
-    recent_snapshot = (date.today() - timedelta(days=5)).isoformat()
+    _today = datetime.now(tz=UTC).date()
+    old_snapshot = (_today - timedelta(days=45)).isoformat()
+    recent_snapshot = (_today - timedelta(days=5)).isoformat()
 
     assert is_stale(field_class="volatile", graph_snapshot_date=old_snapshot) is True, (
         "a 45-day-old snapshot must read stale for a volatile field class "
