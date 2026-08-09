@@ -1331,3 +1331,96 @@ def test_a_projection_mixed_with_an_aggregate_is_still_not_attributed() -> None:
     )
 
     assert _derived_source_curie(params, mixed) is None
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-03, closing F-2.2-A-05: `_traversed_edge_type_by_column` reads the
+# traversed edge label straight off the already-validated Cypher text, so
+# `risk_tier_for` can be handed the edge (`gene_associated_with_condition`)
+# rather than only the `Disease` endpoint's bare node type. This must never
+# widen a bare identifier lookup, and must decline rather than guess on an
+# ambiguous multi-hop shape.
+# ---------------------------------------------------------------------------
+
+
+def test_traversed_edge_type_by_column_reads_the_flagship_querys_own_shape() -> None:
+    """The exact Cypher `cypher_generation` produces live for "which
+    diseases are associated with BRCA1?" (verified against the live graph
+    2026-08-09, see tracker/phase_3.4.md's T-3.4-03 entry): a one-hop
+    `gene_associated_with_condition` traversal returning the Disease
+    endpoint as `c0` and a derived projection as `c1`."""
+    from system_03_search_agent.tools.cypher_query import _traversed_edge_type_by_column
+
+    cypher = (
+        "MATCH (g:Gene {id: $e_NCBIGene_672})"
+        "-[:gene_associated_with_condition]->(d:Disease)\n"
+        "RETURN d, d.name LIMIT 100"
+    )
+
+    assert _traversed_edge_type_by_column(cypher) == {"c0": "gene_associated_with_condition"}, (
+        "the Disease column (c0, the bare variable d) must resolve to the "
+        "one edge label that touches d in this query; the projection "
+        "column (c1, d.name) is not a bare variable and must not appear"
+    )
+
+
+def test_traversed_edge_type_by_column_handles_the_edge_returned_directly() -> None:
+    """When the query returns the relationship variable itself, the column
+    holding it also resolves to that edge's own label."""
+    from system_03_search_agent.tools.cypher_query import _traversed_edge_type_by_column
+
+    cypher = (
+        "MATCH (g:Gene {id: $e_NCBIGene_672})"
+        "-[r:gene_associated_with_condition]->(d:Disease) RETURN g, r, d"
+    )
+
+    result = _traversed_edge_type_by_column(cypher)
+    assert result == {
+        "c0": "gene_associated_with_condition",
+        "c1": "gene_associated_with_condition",
+        "c2": "gene_associated_with_condition",
+    }
+
+
+def test_traversed_edge_type_by_column_is_empty_for_a_bare_identifier_lookup() -> None:
+    """The exact case F-2.2-A-05 must not regress on: no relationship in
+    the query at all, so no column may resolve to any edge label."""
+    from system_03_search_agent.tools.cypher_query import _traversed_edge_type_by_column
+
+    cypher = "MATCH (d:Disease {id: $e_MedGen_C0346153}) RETURN d"
+
+    assert _traversed_edge_type_by_column(cypher) == {}
+
+
+def test_traversed_edge_type_by_column_declines_an_ambiguous_multi_hop_variable() -> None:
+    """A variable touched by two distinct edge labels is ambiguous, and
+    this function must decline rather than guess which one the caller
+    means; guessing here is exactly the kind of naive widening
+    goal-contracts.md and this ticket both forbid."""
+    from system_03_search_agent.tools.cypher_query import _traversed_edge_type_by_column
+
+    cypher = (
+        "MATCH (g:Gene {id: $e_NCBIGene_672})"
+        "-[:gene_associated_with_condition]->(d:Disease)"
+        "-[:has_phenotype]->(p:PhenotypicFeature) RETURN d, p"
+    )
+
+    result = _traversed_edge_type_by_column(cypher)
+    assert "c0" not in result, (
+        "d is touched by both gene_associated_with_condition and "
+        "has_phenotype; this function must not pick one"
+    )
+    assert result.get("c1") == "has_phenotype", (
+        "p is touched by exactly one edge label and should still resolve"
+    )
+
+
+def test_traversed_edge_type_by_column_ignores_an_unknown_relationship_label() -> None:
+    """A label this function extracts from the Cypher text but that is not
+    one of the graph's own real edge labels must never be surfaced: it
+    would be a stray or hallucinated label, not a citable graph fact."""
+    from system_03_search_agent.tools.cypher_query import _traversed_edge_type_by_column
+
+    cypher = "MATCH (g:Gene {id: $e_1})-[:not_a_real_edge_label]->(d:Disease) RETURN d"
+
+    assert _traversed_edge_type_by_column(cypher) == {}

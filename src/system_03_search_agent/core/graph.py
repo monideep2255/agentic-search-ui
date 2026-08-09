@@ -2396,6 +2396,20 @@ def _node_or_edge_type_by_citation_id(
     Without this, `gene_associated_with_condition` edges, the graph's own
     mechanistic gene-to-disease mapping and a Section 8.3.1 high-risk row,
     would classify `low` and answer confidently on a single origin.
+
+    T-3.4-03, closing F-2.2-A-05: a row's `traversed_edge_type`
+    (`cypher_schemas.CypherQueryRow`, additive since this ticket) is
+    preferred over the row's own `node_or_edge_type` whenever a query's
+    Cypher text pinned it unambiguously (`cypher_query.
+    _traversed_edge_type_by_column`). A `Disease` row reached through
+    `-[:gene_associated_with_condition]->` therefore hands `risk_tier_for`
+    the edge label, the Section 8.3.1 high-risk row it actually is, rather
+    than the endpoint's bare node type. A row with no traversed edge
+    (`traversed_edge_type` absent or empty, the bare-identifier-lookup
+    case, and every row from any tool other than `cypher_query`) falls
+    through to the previous behavior unchanged, so this is additive: it
+    never turns a low-risk row high, only ever recovers a high-risk row
+    that used to be misread as low.
     """
     by_identity: dict[tuple[str, str], str] = {}
     for finding in findings:
@@ -2407,7 +2421,7 @@ def _node_or_edge_type_by_citation_id(
             if not source_url:
                 continue
             by_identity[(source_url, str(row.get("curie") or ""))] = str(
-                row.get("node_or_edge_type") or ""
+                row.get("traversed_edge_type") or row.get("node_or_edge_type") or ""
             )
 
     out: dict[str, str] = {}

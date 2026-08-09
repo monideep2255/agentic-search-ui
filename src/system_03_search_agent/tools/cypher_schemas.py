@@ -95,6 +95,21 @@ class CypherQueryRow(BaseModel):
     ] = None
     graph_snapshot_version: Annotated[str, Field(max_length=40)]
 
+    # T-3.4-03, closing F-2.2-A-05: an additive field, one code-level
+    # extension beyond Section 6.1's locked JSON schema, the same pattern
+    # findings F-3.2-01 and F-3.3-01 already used for a spec-versus-reality
+    # gap (`.claude/rules/v1-scope-boundary.md` and system-design-patterns.md
+    # pattern 10: within v1, a new OPTIONAL field is additive, never a
+    # breaking change). None when the row is a bare identifier lookup, an
+    # aggregate, or a projection, or when the traversed edge could not be
+    # determined unambiguously from the generated Cypher; never guessed.
+    # `synthesis/trust.py`'s `risk_tier_for` cannot distinguish a real
+    # `gene_associated_with_condition` traversal from a bare `Disease`
+    # lookup from `node_or_edge_type` alone, since both endpoints carry the
+    # identical node label. This field carries the missing signal without
+    # widening the risk table itself.
+    traversed_edge_type: Annotated[str | None, Field(default=None, max_length=50)] = None
+
     @field_validator("fields")
     @classmethod
     def _cap_fields_count(cls, value: dict[str, Any]) -> dict[str, Any]:

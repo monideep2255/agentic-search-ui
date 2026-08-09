@@ -2302,3 +2302,84 @@ async def test_a_candidate_that_resolves_rescues_a_query_with_another_that_does_
         "the same text never resolved"
     )
     assert planned.cypher_input.target_entities == ["NCBIGene:672"]
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-03, closing F-2.2-A-05: `_node_or_edge_type_by_citation_id` prefers
+# a row's `traversed_edge_type` over its bare `node_or_edge_type` whenever
+# the Cypher pinned one, and falls back unchanged otherwise.
+# ---------------------------------------------------------------------------
+
+
+def _finding_with_rows(rows: list[dict]):
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    return Finding(
+        call_id="call-1",
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={"status": "ok", "rows": rows},
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+
+def _synth_finding(citation_id: str, source_url: str):
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    return SynthFinding(
+        ref_index=1,
+        citation_id=citation_id,
+        layer="layer_1_graph",
+        tool="cypher_query",
+        field="curie",
+        field_value="MedGen:C0346153",
+        source_url=source_url,
+        curie_fallback=False,
+    )
+
+
+def test_node_or_edge_type_by_citation_id_prefers_the_traversed_edge_type() -> None:
+    """The flagship shape: a `Disease` row reached through a real
+    `gene_associated_with_condition` traversal must hand the trust layer
+    the edge label, not the endpoint's bare node type."""
+    url = "https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+    finding = _finding_with_rows(
+        [
+            {
+                "node_or_edge_type": "Disease",
+                "curie": "MedGen:C0346153",
+                "source_url": url,
+                "traversed_edge_type": "gene_associated_with_condition",
+            }
+        ]
+    )
+    synth = _synth_finding("cid-1", url)
+
+    result = graph_module._node_or_edge_type_by_citation_id([finding], [synth])
+
+    assert result["cid-1"] == "gene_associated_with_condition"
+
+
+def test_node_or_edge_type_by_citation_id_falls_back_with_no_traversed_edge() -> None:
+    """The bare identifier lookup case: no `traversed_edge_type` on the
+    row, so the previous behavior (the row's own node type) is unchanged.
+    This is what keeps the four `synthesis/trust.py` guard tests honest:
+    nothing here may ever turn a real bare lookup high risk."""
+    url = "https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+    finding = _finding_with_rows(
+        [
+            {
+                "node_or_edge_type": "Disease",
+                "curie": "MedGen:C0346153",
+                "source_url": url,
+            }
+        ]
+    )
+    synth = _synth_finding("cid-1", url)
+
+    result = graph_module._node_or_edge_type_by_citation_id([finding], [synth])
+
+    assert result["cid-1"] == "Disease"

@@ -239,63 +239,47 @@ def risk_tier_for(field: str, node_or_edge_type: str = "") -> RiskTier:
     through the aggregation rule below, and train a reader to ignore the
     signal precisely when it means something.
 
-    ## F-2.2-A-05: an open gap, recorded rather than papered over
+    ## F-2.2-A-05: closed by T-3.4-03, not by widening this table
 
     The system's flagship question, "which diseases are associated with
     BRCA1?", returns `Disease` NODES (the `gene_associated_with_condition`
     edge's endpoint), not the edge itself. That is exactly Section
-    8.3.1's "OMIM phenotype-gene mechanistic or causal mapping" row, and it
-    still classifies `low` here, because `node_or_edge_type` for that row
-    is `"Disease"`, which is not in `_HIGH_RISK_RELATIONSHIP_TOKENS_
-    CANONICAL` on purpose (see below).
-
-    This function's only inputs are `field` and `node_or_edge_type`, one
-    claim's finding and the row type it came from (per the docstring
-    above, and per `trust_for_claims`'s call site in `write_node`, which
-    supplies `node_or_edge_type` from `graph.py`'s
-    `_node_or_edge_type_by_citation_id`, itself built only from the row's
-    own `node_or_edge_type` field). Neither input, nor anything upstream
-    of them, carries which edge (if any) connected the query's anchor
-    entity to this row. `cypher_provenance.to_output_row` builds a
-    `CypherQueryRow` with exactly `node_or_edge_type`, `curie`, `fields`,
-    `source_url`, `graph_snapshot_version`; the traversed relationship
-    label is never captured, so it cannot reach this function no matter
-    how the row type is compared.
-
-    That gap is real and this function cannot close it by itself. A row
-    typed `Disease` is ALSO what a bare identifier lookup returns
+    8.3.1's "OMIM phenotype-gene mechanistic or causal mapping" row, and a
+    row typed `Disease` is ALSO what a bare identifier lookup returns
     (`MATCH (d:Disease {curie: $c}) RETURN d`, no relationship at all),
     which Section 8.3.1's own table calls out as low risk ("Identifier
     lookups... cross-reference resolution"). Per `graph_schema_constants.
-    EDGE_ENDPOINTS`, `Disease` is the endpoint of exactly two edges in
-    this graph, `gene_associated_with_condition` (as target) and
-    `has_phenotype` (as source), plus the no-edge bare-lookup case above;
-    the row carries no signal distinguishing any of the three. Widening
-    `node_or_edge_type == "disease"` to `high` unconditionally would
-    correctly catch the flagship question and incorrectly catch every
-    plain "what is MedGen:C0346153" lookup too, misclassifying a case
-    Section 8.3.1 explicitly names as low risk. That is the false
-    positive `.claude/rules/goal-contracts.md` and this ticket both warn
-    against manufacturing, not a hypothetical one: it is the identical
-    failure shape defect 1 was verified NOT to have, reintroduced through
-    a different table.
+    EDGE_ENDPOINTS`, `Disease` is the endpoint of exactly two edges in this
+    graph, `gene_associated_with_condition` (as target) and `has_phenotype`
+    (as source), plus the no-edge bare-lookup case above; `node_or_edge_type`
+    alone carries no signal distinguishing any of the three. Widening
+    `node_or_edge_type == "disease"` to `high` unconditionally in this
+    table would correctly catch the flagship question and incorrectly
+    catch every plain "what is MedGen:C0346153" lookup too, misclassifying
+    a case Section 8.3.1 explicitly names as low risk: the exact false
+    positive `.claude/rules/goal-contracts.md` warns against manufacturing.
+    That is why this table is still exactly what it was; nothing here
+    changed to close this finding.
 
-    Closing this for real needs the traversed edge label (or an
-    equivalent "why was this row included" signal) carried from the
-    Cypher row through `Finding`, `SynthFinding`, and
-    `_node_or_edge_type_by_citation_id` to this call, which touches
-    `cypher_provenance.py`, `core/graph.py`, and possibly
-    `cypher_query.py`, none of which this ticket's two-file scope
-    (`synthesis/trust.py` and its test file) may edit. Until that
-    plumbing lands, a high-risk gene-disease claim reached through the
-    Disease endpoint answers with full confidence on one source rather
-    than asking, which is the module docstring's stated, deliberate
-    trade for build phase 2.2: "That is not a stub... the graph-only
-    path... yields `ask`, not `answer`" describes the edge-row path,
-    which works; the endpoint-row path is the residual case that trade
-    does not yet cover. Filed here rather than silently worked around,
-    per this ticket's instruction that an honest recorded finding beats a
-    wrong classification.
+    This function's only inputs remain `field` and `node_or_edge_type`, one
+    claim's finding and the row type it came from. What changed is what the
+    caller now puts INTO `node_or_edge_type`: T-3.4-03 threads the
+    traversed edge label from the generated Cypher's own MATCH text (never
+    the model, never a runtime projection) through `cypher_provenance.
+    to_output_rows` and a new, additive, optional `CypherQueryRow.
+    traversed_edge_type` field
+    (`cypher_query._traversed_edge_type_by_column`), and `graph.py`'s
+    `_node_or_edge_type_by_citation_id` now prefers that field over the
+    row's bare `node_or_edge_type` whenever the Cypher text pinned it
+    unambiguously. The flagship question's `Disease` rows therefore reach
+    this function with `node_or_edge_type="gene_associated_with_condition"`,
+    which IS in `_HIGH_RISK_RELATIONSHIP_TOKENS_CANONICAL`, and classify
+    `high` without this table changing at all. A bare identifier lookup
+    has no traversed edge to thread, so the caller falls back to the row's
+    own `node_or_edge_type` ("Disease", "MedGen", ...) exactly as before,
+    and still classifies `low`: the four pre-existing guard tests below
+    assert precisely that this table was never touched. Full account:
+    `tracker/phase_3.4.md`'s T-3.4-03 entry.
     """
     field_token = _canonical(field)
     type_token = _canonical(node_or_edge_type)

@@ -917,3 +917,71 @@ def test_to_output_rows_collapses_a_path_edge_attributed_to_its_own_path_vertex(
         "the surviving row must be traceable to endpoint attribution, not "
         "presented as if it had its own independent citation"
     )
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-03, closing F-2.2-A-05: `traversed_edge_type_by_column` threads the
+# edge label the caller determined from the Cypher text onto the entity row
+# it describes, only for a column that decoded to exactly one entity.
+# ---------------------------------------------------------------------------
+
+
+def test_to_output_rows_attaches_the_traversed_edge_type_to_its_column() -> None:
+    raw_row = {
+        "c0": (
+            '{"id": 2, "label": "Disease", "properties": '
+            '{"id": "MedGen:C0346153", "name": "disease"}}::vertex'
+        ),
+    }
+
+    rows = to_output_rows(
+        raw_row,
+        snapshot_version="2026-07-01",
+        traversed_edge_type_by_column={"c0": "gene_associated_with_condition"},
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["traversed_edge_type"] == "gene_associated_with_condition"
+
+
+def test_to_output_rows_leaves_traversed_edge_type_none_when_not_supplied() -> None:
+    """The bare identifier lookup case: no map entry, no attachment, the
+    same output shape this function always produced before T-3.4-03."""
+    raw_row = {
+        "result": (
+            '{"id": 2, "label": "Disease", "properties": '
+            '{"id": "MedGen:C0346153", "name": "disease"}}::vertex'
+        )
+    }
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert len(rows) == 1
+    assert rows[0]["traversed_edge_type"] is None
+
+
+def test_to_output_rows_never_attaches_traversed_edge_type_to_a_path_column() -> None:
+    """A path column can decode to more than one entity, so which of them
+    the traversed label describes is ambiguous; T-3.4-03's own
+    `to_output_rows` docstring requires this to stay unattached rather
+    than guess."""
+    raw_row = {
+        "result": (
+            "["
+            '{"id": 1, "label": "Gene", "properties": {"id": "NCBIGene:672"}}, '
+            '{"id": 5, "label": "is_sequence_variant_of", "start_id": 1, '
+            '"end_id": 2, "properties": {"id": "ClinVar:999999"}}, '
+            '{"id": 2, "label": "SequenceVariant", "properties": '
+            '{"id": "ClinVar:17660"}}'
+            "]::path"
+        )
+    }
+
+    rows = to_output_rows(
+        raw_row,
+        snapshot_version="2026-07-01",
+        traversed_edge_type_by_column={"result": "gene_associated_with_condition"},
+    )
+
+    assert len(rows) == 3
+    assert all(row["traversed_edge_type"] is None for row in rows)
