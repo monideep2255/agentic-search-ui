@@ -66,8 +66,7 @@ Exercised here:
 - Per-tool provenance defaults, live, for all six Layer 2/3 tools: real API
   call, real citation-building function, asserted `evidence_kind` and
   `license` per Section 9.2's table, and never `"unspecified"` (P5-P10).
-- An `assembly` field on a coordinate/sequence-bearing citation, live,
-  correct or honestly `None` (P11).
+- No tool's default table entry ships an unspecified license (P11).
 
 Deliberately NOT exercised, each with the reason:
 
@@ -88,6 +87,14 @@ Deliberately NOT exercised, each with the reason:
 - `assertion_confidence == "contested"`. Driven by a ClinVar `review_status`
   value this phase's live samples did not happen to surface; the `hedged`
   and `asserted` branches are both reached (P1, P6).
+- `AsOfMarker.assembly` on a real coordinate/sequence-bearing citation.
+  `assembly` lives on the separate `AsOfMarker` (Section 7.3), never on
+  `CitationPayload` itself; wiring `resolve_assembly` into any tool's real
+  citation-building call site is T-3.4-06's job, not T-3.4-04's, so this
+  gate does not exercise it. An earlier version of this file asserted
+  `citation.assembly` directly against a `CitationPayload`-shaped return
+  value, which was a design error in the gate: no ticket was ever going to
+  build that shape. Corrected before any builder could be misled by it.
 - Cost, latency, and concurrency of a two-tool query. Owned by build phases
   6.0 and 6.1.
 
@@ -507,7 +514,19 @@ async def test_ncbi_efetch_citation_defaults_to_primary_assertion() -> None:
 
 @live_only
 @pytest.mark.asyncio
-async def test_ncbi_dbsnp_citation_carries_full_provenance_and_a_resolvable_assembly() -> None:
+async def test_ncbi_dbsnp_citation_carries_full_provenance() -> None:
+    """T-3.4-04's scope only: the four `CitationPayload` fields.
+
+    `assembly` is deliberately NOT asserted here. It lives on the separate
+    `AsOfMarker` (Section 7.3), joined to a citation by `citation_id`, never
+    a field on `CitationPayload` itself (see `synthesis/freshness.py`'s
+    module docstring). An earlier version of this test asserted
+    `citation.assembly` directly, which was a real design error in this
+    gate, not in the code it grades: it assumed a shape `CitationPayload`
+    was never meant to have. T-3.4-06's own test coverage is where an
+    `AsOfMarker`'s `assembly` field gets exercised, once that ticket wires
+    `resolve_assembly` into a real tool call site.
+    """
     from system_03_search_agent.tools.ncbi_dbsnp import build_citation, ncbi_dbsnp
     from system_03_search_agent.tools.ncbi_dbsnp_schemas import NcbiDbsnpInput
 
@@ -518,10 +537,6 @@ async def test_ncbi_dbsnp_citation_carries_full_provenance_and_a_resolvable_asse
     citation = build_citation(result, field="clinical_significance")
     assert citation.evidence_kind == "primary_assertion", citation
     assert citation.license != _UNSPECIFIED_LICENSE, citation
-    assert citation.assembly in ("GRCh37", "GRCh38", None), (
-        f"assembly must be a real value or an honest None, never silently "
-        f"absent from the citation object entirely: {citation}"
-    )
 
 
 @live_only
