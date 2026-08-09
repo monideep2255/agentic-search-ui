@@ -65,7 +65,6 @@ import json
 from typing import Any
 
 import httpx
-import pydantic
 import pytest
 
 from system_03_search_agent.tools import clinicaltrials_search as clinicaltrials_search_module
@@ -559,26 +558,22 @@ def test_build_citation_raises_when_no_source_url() -> None:
         build_citation(study)
 
 
-def test_build_citation_hits_the_ncbi_only_citationpayload_host_pattern() -> None:
-    """KNOWN BLOCKER, reported rather than worked around (T-3.4-04).
+def test_build_citation_accepts_a_real_clinicaltrials_gov_url() -> None:
+    """F-3.4-T04-03, CLOSED. Was a known blocker, reported rather than
+    worked around at T-3.4-04's own commit (`fd0ac03`): `CitationPayload.
+    source_url` (`contracts/events.py`) was pattern-locked to
+    `ncbi.nlm.nih.gov` only, so a genuine `clinicaltrials.gov` citation,
+    the correct output of `build_citation` below, was rejected by
+    `CitationPayload`'s own construction, not by a defect in this module.
 
-    `CitationPayload.source_url` (`contracts/events.py`) is pattern-locked
-    to `^https://([A-Za-z0-9-]+\\.)*ncbi\\.nlm\\.nih\\.gov/`, but this
-    tool's own citable record host is `clinicaltrials.gov`, a genuinely
-    different domain (`clinicaltrials_search_schemas.py`'s own
-    `CLINICALTRIALS_HOST` pattern and module docstring name this exact
-    trap for THIS tool's output schema; nothing there extends
-    `CitationPayload` itself to accommodate a non-NCBI host).
-    `build_citation`'s own logic here is correct: it resolves a real,
-    honest `source_url`, `evidence_kind`, `license`, and `claim_text` from
-    `study`, and every field it builds is genuine, non-fabricated data.
-    The failure below is `CitationPayload`'s own construction rejecting a
-    real ClinicalTrials.gov URL, not a defect in this module.
-    `contracts/events.py` is outside this ticket's six-tool-file scope; see
-    `tracker/phase_3.4.md`'s Findings for the full report. This test
-    exists so a future fix to `CitationPayload`'s host pattern shows up
-    here as a newly failing assertion (this test would then need
-    updating), rather than the gap going unnoticed.
+    `contracts/events.py`'s `NCBI_SOURCE_URL_PATTERN` now also accepts
+    `(www.)?clinicaltrials.gov/study/`, matching `clinicaltrials_search_
+    schemas.CLINICALTRIALS_HOST` exactly (see `tests/system_03_search_
+    agent/contracts/test_events.py`'s own coverage of the widened
+    pattern, including that the API host `/api/v2/studies/...` and a
+    spoofed subdomain both still correctly reject). This test now asserts
+    the fix: `build_citation` returns a valid, fully-populated citation
+    for a real ClinicalTrials.gov study.
     """
     study = ClinicalTrialsStudy(
         nct_id="NCT01230346",
@@ -587,5 +582,8 @@ def test_build_citation_hits_the_ncbi_only_citationpayload_host_pattern() -> Non
         source_url="https://clinicaltrials.gov/study/NCT01230346",
     )
 
-    with pytest.raises(pydantic.ValidationError, match="source_url"):
-        build_citation(study)
+    citation = build_citation(study)
+
+    assert citation.source_url == "https://clinicaltrials.gov/study/NCT01230346"
+    assert citation.evidence_kind == "external_annotation"
+    assert citation.license == "public_domain_us_gov"

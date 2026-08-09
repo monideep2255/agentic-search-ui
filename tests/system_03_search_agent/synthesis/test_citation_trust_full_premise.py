@@ -531,7 +531,7 @@ async def test_ncbi_dbsnp_citation_carries_full_provenance() -> None:
     from system_03_search_agent.tools.ncbi_dbsnp_schemas import NcbiDbsnpInput
 
     result = await ncbi_dbsnp(
-        NcbiDbsnpInput(query_type="rsid", query_value=KNOWN_CLINVAR_RSID)
+        NcbiDbsnpInput(query_type="rsid", query=KNOWN_CLINVAR_RSID)
     )
     assert result.status == "ok", f"live ncbi_dbsnp call failed: {result}"
     citation = build_citation(result, field="clinical_significance")
@@ -564,7 +564,7 @@ async def test_pubtator_and_litvar2_citations_default_to_literature_mention() ->
     assert pubtator_citation.license != _UNSPECIFIED_LICENSE, pubtator_citation
 
     litvar2_result = await litvar2_lookup(
-        Litvar2LookupInput(query=KNOWN_CLINVAR_RSID)
+        Litvar2LookupInput(mode="variant_search", query=KNOWN_CLINVAR_RSID)
     )
     assert litvar2_result.status == "ok", f"live litvar2 call failed: {litvar2_result}"
     litvar2_citation = litvar2_build_citation(litvar2_result)
