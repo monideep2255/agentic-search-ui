@@ -1,129 +1,118 @@
 """pathogen_detection: bulk Salmonella isolate/cluster/AMR access over the
 NCBI Pathogen Detection PDG snapshot tree (T-3.5-05).
 
-READ THIS FIRST: the prerequisite artifacts this build task described as
-already in place do not exist anywhere in this worktree. There is no
-`tracker/phase_3.5.md` (no phase premise, no pre-build live probes beyond
-what the dispatching task quoted inline as F-3.5-01/F-3.5-03), and, most
-importantly for THIS module specifically, no
-`pathogen_ftp_transport.py` at all: the module this tool is supposed to
-`import` and consume. `git log` on this worktree's branch
-(`phase/3.5-pathogen-clinicaltrials-tools`) shows zero commits beyond
-`main`'s tip; the transport module, the tracker file, and the premise gate
-test were never committed here. This module is therefore written directly
-against the EXACT function signatures the dispatching task quoted
-verbatim (`resolve_complete_snapshot(taxon, *, client,
-base_url=PATHOGEN_FTP_BASE) -> str`, `stream_filtered_tsv_rows(url, *,
-key_column, key_values, deadline, client, max_matches=None) ->
-TsvScanResult`, `PathogenSnapshotUnavailableError`,
-`PathogenDeadlineExceededError`, `DEFAULT_TIMEOUT_S = 60.0`), not against
-a file this worktree could actually read. Every choice beyond that literal
-contract is a documented, flagged assumption, listed below, made necessary
-by the missing module rather than a live-verified fact. This is the
-opposite of `.claude/rules/attack-the-constraint.md`'s "read the input
-first" discipline by necessity: the input (the real transport module) does
-not exist to read. The dispatching task's own instructions anticipate
-exactly this kind of gap for the premise gate file ("if it is genuinely
-wrong, stop and report the exact discrepancy instead of weakening the
-check") and this module extends the same discipline to its own upstream
-dependency: it does not fabricate `pathogen_ftp_transport.py` (explicitly
-out of this ticket's file ownership and explicitly described as
-pre-built), and it does not pretend the gaps below are verified when they
-are not.
+This module went through three drafts before it was correct, each with a
+real finding that changed the code, not just the prose. The short version,
+for anyone reading this file rather than the tracker: trust the CODE below
+and this docstring's account of it; do not trust any comment elsewhere
+that talks about a "worktree" or "missing prerequisites", since that
+described a transient dispatch-ordering accident during the build, not a
+property of the shipped module. Full narrative: `tracker/phase_3.5.md`
+(findings F-3.5-01 through F-3.5-09) and `LEARNINGS.md`'s 2026-08-08 rows.
 
-Flagged assumptions, for the phase lead to confirm or correct once the
-real `pathogen_ftp_transport.py` lands:
+Design decisions, live-verified against the real API and the real
+`pathogen_ftp_transport.py` (not guessed):
 
-1. ASYNC, not sync. The task's quoted signatures carry no explicit `async`
-   marker, but every other Layer 2 tool in this repo
-   (`ncbi_transport.execute_get`, every action module under
-   `system_03_search_agent/tools/ncbi_*_actions.py`) uses
-   `httpx.AsyncClient`, opened fresh per call with `async with` rather
-   than a module-level singleton (`ncbi_transport.py`'s own "Client
-   lifetime, not a singleton" comment: a shared client can outlive, and be
-   reused from a different event loop than, the one it was created on).
-   This module follows that house convention: both
-   `pathogen_ftp_transport` functions are called with `await`, and the
-   `client` argument is a fresh `httpx.AsyncClient()` opened once per
-   `pathogen_detection` call and reused across every FTP read that one
-   call makes (never a caller-crossing singleton). If the real module
-   turns out to be synchronous, every `await` here becomes a no-op
-   removal, a small, mechanical diff.
+1. ASYNC throughout, matching every other Layer 2 tool in this repo
+   (`ncbi_transport.execute_get`): `pathogen_ftp_transport`'s functions
+   are `await`ed, and `client` is a fresh `httpx.AsyncClient()` opened
+   once per `pathogen_detection` call and reused across every FTP read
+   that call makes, never a caller-crossing singleton.
 
-2. `deadline` is a `time.monotonic()`-comparable float. The dispatching
-   task's own wording ("a shared wall-clock deadline (`time.monotonic() +
-   budget`)") states this directly, so this is the least speculative
-   assumption in this module.
+2. `deadline` is a `time.monotonic()`-comparable float, computed ONCE per
+   invocation in `_pathogen_detection_impl` and threaded through every FTP
+   read that invocation makes (F-3.5-01's own shared-budget requirement).
 
-3. The TSV column names used as `key_column` values and as dict keys on
-   the rows `stream_filtered_tsv_rows` returns. Three of these are
-   directly stated, not guessed: `biosample_acc` (Section 6.6's own
-   Metadata source-file table row), and `PDS_acc` as the SNP_distances.tsv
-   filter column (the dispatching task's F-3.5-01 summary states this
-   verbatim: "filtering rows by `PDS_acc`"). The rest, most importantly
-   the cluster_list.tsv cluster-id column name and the SNP_distances.tsv
-   pairwise-partner and numeric-distance column names, are NOT stated
-   anywhere this module could read, since the pre-build live probes that
-   would normally have pinned them (`tracker/phase_3.5.md`) do not exist
-   in this worktree. `_first_present` below tries a short list of
-   plausible candidate names per field, chosen from Section 6.6's own
-   prose and this repo's naming conventions elsewhere, and quietly moves
-   on (never fabricates a value) when none of the candidates are present
-   on a row. This is the single largest unverified surface in this
-   module; see `_index_snp_distances`'s own docstring for exactly what it
-   does and does not guarantee. It cannot be closed without either the
-   real live probes or the real transport module's own live-fetched TSV
-   header, neither of which exists in this worktree.
+3. TSV column names, live-verified 2026-08-08 against the real Salmonella
+   snapshot tree: `biosample_acc` (Metadata's key column), `PDS_acc`
+   (cluster_list.tsv's and SNP_distances.tsv's cluster-id column, shared
+   by every row in a cluster, never unique per row), and
+   `biosample_acc_1`/`biosample_acc_2`/`compatible_distance`
+   (SNP_distances.tsv's pairwise columns; see `_index_snp_distances`'s own
+   docstring). `_first_present`'s candidate-list fallback exists only as
+   defense in depth against a future column rename, not because the real
+   names were unknown when this shipped.
 
-4. The per-invocation wall-clock budget, `_TOTAL_BUDGET_S`. `
-   .claude/rules/tool-call-budgets.md` locks the FLOOR ("60 seconds or
-   more") but not an exact figure for a whole invocation that, per the
-   dispatching task's own F-3.5-01 instruction, shares ONE deadline across
-   up to three sequential FTP reads (snapshot resolution, cluster_list,
-   SNP_distances, sometimes also a Metadata read keyed on multiple
-   accessions). 120 seconds, twice the documented floor, is this module's
-   own chosen value, asserted against the floor at import time
-   (`assert _TOTAL_BUDGET_S >= pathogen_ftp_transport.DEFAULT_TIMEOUT_S`)
-   so a future change to the floor cannot silently put this module out of
-   compliance with its own governing rule.
+4. The per-invocation wall-clock budget, `_TOTAL_BUDGET_S = 120.0`
+   (`.claude/rules/tool-call-budgets.md` locks a 60-second-or-more FLOOR,
+   asserted against at import time), shared across every MANDATORY FTP
+   read one invocation makes. `isolate_lookup`'s own SNP-neighbor
+   enrichment is a separate, smaller, best-effort sub-budget
+   (`_ISOLATE_LOOKUP_ENRICHMENT_BUDGET_S`, see its own comment): a caller
+   asking for one isolate's metadata should not routinely wait the full
+   120 seconds for a step this ticket's own acceptance criteria call
+   optional (F-3.5-07).
 
-5. RESOLVED by the lead after this module's first draft, live-verified
-   2026-08-08 (F-3.5-04, `tracker/phase_3.5.md`): `source_url` for an
-   isolate is `https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/
-   biosample_acc:{biosample_acc}`, confirmed reachable (HTTP 200) and
-   satisfies the locked Section 6.6 host-and-path pattern. It is a
-   CLIENT-RENDERED single-page app, the same architecture LitVar2's own
-   citation UI was found to be (`tracker/phase_3.3.md`'s F-3.3-A-09): the
-   URL fragment after `#` is never sent to or read by the server, so this
-   page and `https://www.ncbi.nlm.nih.gov/pathogens/isolates` with no
-   fragment at all return byte-identical bodies (differing only in a
-   per-request `ncbi_phid` session tracking value). HTTP 200 confirms the
-   isolate browser itself is reachable, not that a specific
-   `biosample_acc` renders on load; whether the client-side app actually
-   pre-populates the search from the fragment was not verified (the same
-   scope F-3.3-A-09 stopped at). Documented honestly rather than
-   overclaimed, per that finding's own precedent.
+5. `source_url` for an isolate,
+   `https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/
+   biosample_acc:{biosample_acc}`, live-confirmed reachable (HTTP 200,
+   F-3.5-04) and satisfies the locked Section 6.6 host-and-path pattern.
+   It is a CLIENT-RENDERED single-page app, the same architecture
+   LitVar2's own citation UI was found to be (`tracker/phase_3.3.md`'s
+   F-3.3-A-09): the URL fragment after `#` is never sent to or read by the
+   server, so this page and the fragment-free base URL return
+   byte-identical bodies (differing only in a per-request `ncbi_phid`
+   session-tracking value). HTTP 200 confirms the isolate browser itself
+   is reachable, not that a specific `biosample_acc` renders on load;
+   whether the client-side app pre-populates the search from the fragment
+   was not verified (the same scope F-3.3-A-09 stopped at).
 
-## The three findings this module implements (per the dispatching task)
+## The findings this module implements
 
 F-3.5-01 (critical, deadline discipline): `cluster_snp_neighbors` streams
 `Clusters/*.reference_target.SNP_distances.tsv` (~411 GB) via
 `pathogen_ftp_transport.stream_filtered_tsv_rows`, filtered by `PDS_acc`,
 bounded by ONE shared `deadline` computed once per invocation
 (`_pathogen_detection_impl`) and threaded through every FTP read that
-invocation makes. `_deadline_exceeded_output` is the single place a
-deadline cutoff becomes an output: always `status: "empty"` with an
-actionable message naming the timeout and suggesting a narrower
-`max_snp_distance` or a more specific cluster, NEVER a silently-partial
-`status: "ok"`. Both `TsvScanResult.truncated_by_deadline` (checked after
-every scan) and a fail-fast check BEFORE starting a scan whose remaining
-budget is already zero or negative feed this same path.
+invocation makes. A deadline cutoff that found genuine matches before it
+fired returns `status: "ok"` with `truncated: true`, using whatever was
+found rather than discarding it (F-3.5-A-01 corrected the first version
+of this, which discarded real matches through `_deadline_exceeded_output`
+whenever the scan was cut short at all). `_deadline_exceeded_output`
+itself is reached only when a cutoff found NOTHING in the portion
+scanned: always `status: "empty"` with an actionable message that no
+longer suggests a narrower filter can help (F-3.5-A-13: the constraint is
+the file's size, not the query's specificity), never fabricated as a
+confirmed absence. Both `TsvScanResult.truncated_by_deadline` (checked
+after every scan) and a fail-fast check BEFORE starting a scan whose
+remaining budget is already zero or negative feed this same path.
 
 F-3.5-03 (comma-join/NULL parsing): `_parse_pathogen_list_field` strips a
 double-quoted comma-join (`"ant(2'')-Ia,aph(3')-Ia,blaTEM-1"`) into a real
 `list[str]`, and treats the bare literal `NULL` (or an empty/whitespace
 value) as `[]`, never as `["NULL"]`. Applied to `AMR_genotypes` and
 `AST_phenotypes` uniformly.
+
+F-3.5-06 (critical, judge round 2026-08-08): the first shipped version of
+this module's SNP_distances reads, and of `stream_filtered_tsv_rows`
+itself, silently stopped after the FIRST row matching a `PDS_acc` filter
+value and reported the result as complete (`truncated: false`), because
+the transport's early-exit logic assumed every filter key is unique per
+row. `PDS_acc` is shared by every row in a cluster; live-reproduced,
+`cluster_snp_neighbors` reported 2 of 4 real neighbors for a genuine
+cluster, confidently, as `status: "ok"`. Closed by adding
+`one_row_per_key: bool` to `stream_filtered_tsv_rows` (default `False`:
+collect every matching row, the correct behavior for a shared-value
+filter), setting it explicitly `True` only at the two call sites in this
+module that filter by a genuinely unique key (`biosample_acc` in
+Metadata), and giving `isolate_lookup`'s best-effort enrichment its own
+bounded sub-budget so it no longer burns the whole invocation on a scan
+that, pre-fix, could never terminate early. Full account:
+`tracker/phase_3.5.md`, `pathogen_ftp_transport.py`'s own docstring on
+`stream_filtered_tsv_rows`.
+
+F-3.5-08 (minor): an unknown `taxon` let an `httpx.HTTPStatusError`
+escape `resolve_complete_snapshot` uncaught, landing on this module's
+last-resort catch-all as an "unexpected error" rather than the
+`PathogenSnapshotUnavailableError` Section 6.6 itself specifies for this
+exact condition. Closed in `pathogen_ftp_transport.py`.
+
+F-3.5-09 (minor): `_deadline_exceeded_output` dropped `pdg_snapshot` even
+when the snapshot had already been resolved before the deadline fired,
+leaving a caller unable to tell which snapshot version a timed-out call
+was even attempting against. Closed by threading `snapshot` through every
+call site; every one already has the value in scope by construction,
+since resolution always happens before any read that could time out.
 
 The snapshot-pinning trap (Section 6.6 / Tool_implementation_mechanics.md):
 every FTP read in this module goes through
@@ -226,6 +215,35 @@ assert _TOTAL_BUDGET_S >= pathogen_ftp_transport.DEFAULT_TIMEOUT_S, (
 
 _MAX_ISOLATES: Final[int] = 100
 _DEFAULT_ISOLATE_LOOKUP_SNP_DISTANCE: Final[int] = 5
+
+# F-3.5-07 (judge round, 2026-08-08): the SNP-neighbor half of
+# isolate_lookup's best-effort cluster enrichment is genuinely optional
+# (this ticket's own explicit allowance), but before this cap it silently
+# spent the ENTIRE remaining _TOTAL_BUDGET_S scanning toward the shared
+# invocation deadline, since a PDS_acc-filtered SNP_distances.tsv scan has
+# no other natural stopping point once one_row_per_key=False (the fix for
+# the critical single-row bug this same round found). A caller asking for
+# one isolate's basic metadata should not routinely wait 120 seconds for
+# an enrichment step whose own governing rule already calls it optional.
+# This sub-budget is local to that one best-effort step; every mandatory
+# read in this module still draws against the full shared `deadline`.
+_ISOLATE_LOOKUP_ENRICHMENT_BUDGET_S: Final[float] = 20.0
+
+# F-3.5-A-01 fix round 2 (adversary re-verification, 2026-08-08): live
+# re-verification of the F-3.5-A-01 fix found a SECOND instance of the
+# same discard-real-data shape, one call later. The SNP_distances scan
+# alone can legitimately consume the entire remaining `deadline` (it has
+# no natural early exit against a 411 GB file), which left ZERO time for
+# the follow-up metadata read that turns found `(biosample_acc,
+# snp_distance)` pairs into actual isolate records with strain/serovar/
+# etc. Live-reproduced: a real cluster (PDS000080425.1) that DID find
+# neighbors in the SNP_distances scan still returned status: "empty",
+# because the metadata read's own `_remaining(deadline) <= 0` fired
+# immediately afterward. Reserving a fixed slice of the budget for that
+# final read, carved out of the SNP_distances scan's own deadline rather
+# than the shared one, guarantees the metadata step always gets a real
+# chance to run when there is anything to look up.
+_CLUSTER_METADATA_READ_RESERVE_S: Final[float] = 20.0
 
 # Field caps, mirroring pathogen_detection_schemas.py's own Field(max_length=...)
 # constraints exactly, checked here BEFORE construction so an over-cap
@@ -582,23 +600,40 @@ def _index_snp_distances(
     return result
 
 
-def _deadline_exceeded_output(mode: str, stage: str) -> PathogenDetectionOutput:
-    """F-3.5-01: a deadline cutoff before a scan completes is always
-    status: "empty" with an actionable message, never a silently-partial
-    status: "ok".
+def _deadline_exceeded_output(
+    mode: str, stage: str, *, snapshot: str | None = None
+) -> PathogenDetectionOutput:
+    """A deadline cutoff with NOTHING usable found in the portion actually
+    scanned is `status: "empty"` with an actionable message, never
+    fabricated as a confirmed absence. As of the F-3.5-A-01 fix
+    (adversary round, 2026-08-08), this function is reached only when a
+    scan was cut short AND produced zero qualifying rows; a scan cut
+    short that DID find real matches now returns `status: "ok"` with
+    `truncated: true` instead (see `_cluster_snp_neighbors`/
+    `_isolate_lookup`), never discarded through this path.
+
+    `snapshot`: every call site in this module already knows which
+    snapshot it resolved to by the time a deadline can fire (resolution
+    happens first, in `_pathogen_detection_impl`), so this is never an
+    extra FTP read, only threading a value the caller already has
+    (F-3.5-09, judge round 2026-08-08).
     """
     return PathogenDetectionOutput(
         status="empty",
         mode=mode,
+        pdg_snapshot=_cap(snapshot, _MAX_SNAPSHOT_CHARS) if snapshot else None,
         isolate_count=0,
         total_available=0,
         truncated=True,
         error=_cap(
             f"pathogen_detection's {_TOTAL_BUDGET_S:.0f}s shared wall-clock budget was "
-            f"exhausted during the {stage} step before the scan completed. This is not a "
-            "partial answer; nothing returned here should be treated as complete. Retry "
-            "with a narrower max_snp_distance, a more specific pds_cluster or "
-            "biosample_acc, or during a period of lower FTP load.",
+            f"exhausted during the {stage} step, and no qualifying result was found in "
+            "the portion of the file actually scanned before the cutoff. This does NOT "
+            "mean nothing exists; it means the scan did not reach far enough into the "
+            "file to find it (F-3.5-A-13: a narrower max_snp_distance, pds_cluster, or "
+            "biosample_acc does not help, since the constraint is the source file's "
+            "size, not the query's specificity). Retrying may land on a warmer network "
+            "path and scan further, but is not guaranteed to complete.",
             _MAX_ERROR_CHARS,
         ),
     )
@@ -615,6 +650,48 @@ def _error_output(mode: str, message: str) -> PathogenDetectionOutput:
     )
 
 
+def _transport_error_output(
+    mode: str, stage: str, exc: Exception, *, snapshot: str | None = None
+) -> PathogenDetectionOutput:
+    """F-3.5-A-06 (adversary round, 2026-08-08): a transport-layer failure on
+    a bulk-file read (an HTTP error status, or a header that does not
+    contain the expected filter column) is a genuine, classifiable
+    condition, most often the underlying tree rotating a snapshot mid-call
+    (Section 6.6: it updates on its own build cadence, not the tool's
+    request cadence), not a tool defect. F-3.5-08 classified this
+    correctly for `resolve_complete_snapshot` alone; this is the same
+    treatment for the three MANDATORY bulk-file reads
+    (`_isolate_lookup`'s metadata read, `_cluster_snp_neighbors`'s
+    cluster_list/SNP_distances/metadata reads), which previously let
+    `httpx.HTTPStatusError`/`PathogenTransportError` escape uncaught to
+    the tool's own last-resort catch-all, reported to the agent as "this
+    tool has a defect that needs fixing before it can be trusted" for a
+    routine, retryable condition.
+    """
+    if isinstance(exc, httpx.HTTPStatusError):
+        detail = (
+            f"the {stage} step received HTTP {exc.response.status_code} while "
+            "reading a bulk snapshot file. This can be a routine snapshot "
+            "rotation (the underlying tree updates on its own build cadence, "
+            "independent of this call), not necessarily a defect; retry once, "
+            "and if it recurs consistently for the same taxon, the snapshot "
+            "pin may need to be re-resolved."
+        )
+    elif isinstance(exc, pathogen_ftp_transport.PathogenTransportError):
+        detail = f"the {stage} step could not parse the source file: {exc}"
+    else:
+        detail = f"the {stage} step failed unexpectedly: {exc}"
+    return PathogenDetectionOutput(
+        status="error",
+        mode=mode,
+        pdg_snapshot=_cap(snapshot, _MAX_SNAPSHOT_CHARS) if snapshot else None,
+        isolate_count=0,
+        total_available=0,
+        truncated=False,
+        error=_cap(detail, _MAX_ERROR_CHARS),
+    )
+
+
 async def _isolate_lookup(
     action: PathogenIsolateLookupInput,
     snapshot: str,
@@ -623,7 +700,7 @@ async def _isolate_lookup(
     client: httpx.AsyncClient,
 ) -> PathogenDetectionOutput:
     if _remaining(deadline) <= 0:
-        return _deadline_exceeded_output(action.mode, "isolate_lookup metadata read")
+        return _deadline_exceeded_output(action.mode, "isolate_lookup metadata read", snapshot=snapshot)
 
     try:
         metadata_scan = await pathogen_ftp_transport.stream_filtered_tsv_rows(
@@ -633,12 +710,15 @@ async def _isolate_lookup(
             deadline=deadline,
             client=client,
             max_matches=1,
+            one_row_per_key=True,  # biosample_acc is unique per row in Metadata
         )
     except pathogen_ftp_transport.PathogenDeadlineExceededError:
-        return _deadline_exceeded_output(action.mode, "isolate_lookup metadata read")
+        return _deadline_exceeded_output(action.mode, "isolate_lookup metadata read", snapshot=snapshot)
+    except (httpx.HTTPStatusError, pathogen_ftp_transport.PathogenTransportError) as exc:
+        return _transport_error_output(action.mode, "isolate_lookup metadata read", exc, snapshot=snapshot)
 
     if metadata_scan.truncated_by_deadline:
-        return _deadline_exceeded_output(action.mode, "isolate_lookup metadata read")
+        return _deadline_exceeded_output(action.mode, "isolate_lookup metadata read", snapshot=snapshot)
 
     if not metadata_scan.rows:
         return PathogenDetectionOutput(
@@ -665,15 +745,22 @@ async def _isolate_lookup(
     # explicitly authorized as optional.
     cluster_id: str | None = None
     snp_distance: int | None = None
-    if _remaining(deadline) > 0:
+    # F-3.5-07: this whole enrichment step gets its own, much smaller
+    # sub-budget rather than drawing on the full shared `deadline` (see
+    # _ISOLATE_LOOKUP_ENRICHMENT_BUDGET_S's own comment). Never later than
+    # the real invocation deadline, so it still shortens under a tight
+    # remaining budget rather than overshooting it.
+    enrichment_deadline = min(deadline, time.monotonic() + _ISOLATE_LOOKUP_ENRICHMENT_BUDGET_S)
+    if _remaining(enrichment_deadline) > 0:
         try:
             cluster_scan = await pathogen_ftp_transport.stream_filtered_tsv_rows(
                 _cluster_list_url(taxon, snapshot),
                 key_column=_CLUSTER_LIST_KEY_COLUMN,
                 key_values={action.biosample_acc},
-                deadline=deadline,
+                deadline=enrichment_deadline,
                 client=client,
                 max_matches=1,
+                one_row_per_key=True,  # biosample_acc is unique per row in cluster_list.tsv
             )
             if cluster_scan.rows and not cluster_scan.truncated_by_deadline:
                 cluster_id = _first_present(
@@ -682,27 +769,43 @@ async def _isolate_lookup(
         except Exception:  # noqa: BLE001 - deliberately broad, see comment above
             cluster_id = None
 
-    if cluster_id and _remaining(deadline) > 0:
+    if cluster_id and _remaining(enrichment_deadline) > 0:
         try:
             snp_scan = await pathogen_ftp_transport.stream_filtered_tsv_rows(
                 _snp_distances_url(taxon, snapshot),
                 key_column=_SNP_DISTANCES_CLUSTER_COLUMN,
                 key_values={cluster_id},
-                deadline=deadline,
+                deadline=enrichment_deadline,
                 client=client,
+                # one_row_per_key=False (the default): PDS_acc is shared by
+                # every pairwise row in this isolate's cluster, so a
+                # one-row-per-key scan would silently stop at the first
+                # row, which is the exact critical defect this round fixed.
             )
-            if not snp_scan.truncated_by_deadline:
-                # anchor_biosamples={action.biosample_acc}: the returned
-                # dict is keyed by the OTHER side of each qualifying pair
-                # (the neighbor), never by the anchor's own accession, so
-                # this isolate's own nearest-neighbor distance is the
-                # SMALLEST value in the dict, not a lookup by its own id.
-                distances = _index_snp_distances(
-                    snp_scan.rows,
-                    {action.biosample_acc},
-                    _DEFAULT_ISOLATE_LOOKUP_SNP_DISTANCE,
-                )
-                snp_distance = min(distances.values()) if distances else None
+            # F-3.5-A-05 (adversary round, 2026-08-08): this 20-second
+            # sub-budget can essentially never reach EOF on a 411 GB file
+            # (F-3.5-01), so `truncated_by_deadline` is true on nearly
+            # every real call. Skipping the parse whenever it is true (the
+            # original condition here) meant `snp_distance` was
+            # structurally always None, the same discard-real-data
+            # regression F-3.5-A-01 found in cluster_snp_neighbors. Parse
+            # whatever rows the sub-budget DID collect regardless of
+            # truncation; a partial scan can still genuinely find this
+            # isolate's nearest neighbor, and finding none in the portion
+            # scanned is honestly reported as None either way (this field
+            # is documented as best-effort, never a completeness claim).
+            #
+            # anchor_biosamples={action.biosample_acc}: the returned dict
+            # is keyed by the OTHER side of each qualifying pair (the
+            # neighbor), never by the anchor's own accession, so this
+            # isolate's own nearest-neighbor distance is the SMALLEST
+            # value in the dict, not a lookup by its own id.
+            distances = _index_snp_distances(
+                snp_scan.rows,
+                {action.biosample_acc},
+                _DEFAULT_ISOLATE_LOOKUP_SNP_DISTANCE,
+            )
+            snp_distance = min(distances.values()) if distances else None
         except Exception:  # noqa: BLE001 - deliberately broad, see comment above
             snp_distance = None
 
@@ -744,7 +847,7 @@ async def _cluster_snp_neighbors(
     client: httpx.AsyncClient,
 ) -> PathogenDetectionOutput:
     if _remaining(deadline) <= 0:
-        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors cluster_list read")
+        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors cluster_list read", snapshot=snapshot)
 
     try:
         cluster_scan = await pathogen_ftp_transport.stream_filtered_tsv_rows(
@@ -753,12 +856,17 @@ async def _cluster_snp_neighbors(
             key_values={action.pds_cluster},
             deadline=deadline,
             client=client,
+            # one_row_per_key=False (the default): every isolate in this
+            # cluster shares the same PDS_acc, so this must collect every
+            # member row, never stop at the first one (F-3.5-06).
         )
     except pathogen_ftp_transport.PathogenDeadlineExceededError:
-        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors cluster_list read")
+        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors cluster_list read", snapshot=snapshot)
+    except (httpx.HTTPStatusError, pathogen_ftp_transport.PathogenTransportError) as exc:
+        return _transport_error_output(action.mode, "cluster_snp_neighbors cluster_list read", exc, snapshot=snapshot)
 
     if cluster_scan.truncated_by_deadline:
-        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors cluster_list read")
+        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors cluster_list read", snapshot=snapshot)
 
     if not cluster_scan.rows:
         return PathogenDetectionOutput(
@@ -787,25 +895,48 @@ async def _cluster_snp_neighbors(
         )
 
     if _remaining(deadline) <= 0:
-        return _deadline_exceeded_output(
-            action.mode, "cluster_snp_neighbors SNP_distances read"
-        )
+        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors SNP_distances read", snapshot=snapshot)
+    # F-3.5-A-01 fix round 2: reserve a fixed slice of the shared deadline
+    # for the metadata read that must follow this scan (see
+    # _CLUSTER_METADATA_READ_RESERVE_S's own comment). This scan's own
+    # deadline is capped below the real one; the metadata read afterward
+    # still uses the real, un-reserved `deadline`.
+    snp_scan_deadline = deadline - _CLUSTER_METADATA_READ_RESERVE_S
+    if snp_scan_deadline <= time.monotonic():
+        # Not enough budget left to reserve anything meaningful for the
+        # metadata read; skip straight to the honest timeout disposition
+        # rather than running a scan that cannot leave time for its own
+        # follow-up read to matter.
+        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors SNP_distances read", snapshot=snapshot)
     try:
         snp_scan = await pathogen_ftp_transport.stream_filtered_tsv_rows(
             _snp_distances_url(taxon, snapshot),
             key_column=_SNP_DISTANCES_CLUSTER_COLUMN,
             key_values={action.pds_cluster},
-            deadline=deadline,
+            deadline=snp_scan_deadline,
             client=client,
+            # one_row_per_key=False (the default): every pairwise row for
+            # this cluster shares the same PDS_acc. The critical defect
+            # this round's judge round found (F-3.5-06) was exactly this
+            # call stopping after the FIRST such row and reporting the
+            # (incomplete) result as complete.
         )
     except pathogen_ftp_transport.PathogenDeadlineExceededError:
-        return _deadline_exceeded_output(
-            action.mode, "cluster_snp_neighbors SNP_distances read"
-        )
-    if snp_scan.truncated_by_deadline:
-        return _deadline_exceeded_output(
-            action.mode, "cluster_snp_neighbors SNP_distances read"
-        )
+        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors SNP_distances read", snapshot=snapshot)
+    except (httpx.HTTPStatusError, pathogen_ftp_transport.PathogenTransportError) as exc:
+        return _transport_error_output(action.mode, "cluster_snp_neighbors SNP_distances read", exc, snapshot=snapshot)
+    # F-3.5-A-01 (adversary round, 2026-08-08): SNP_distances.tsv has no
+    # reachable EOF within this tool's budget (411 GB, F-3.5-01), so
+    # `truncated_by_deadline` is true on essentially every real call. The
+    # F-3.5-06 fix's own early return here on that condition discarded
+    # rows the scan HAD already found and correctly parsed, so
+    # cluster_snp_neighbors could never return status: "ok" at all, a
+    # 100% false-negative regression on the phase's own headline
+    # capability. `deadline` is honestly bounded, not "complete", but
+    # whatever it found before the cutoff is real and usable: use it, and
+    # disclose the cutoff through `truncated` (the output field that
+    # exists for exactly this), never through discarding the answer.
+    deadline_hit = snp_scan.truncated_by_deadline
     # anchor_biosamples=None: every row already qualifies by construction,
     # since both sides were filtered to this cluster's PDS_acc upstream
     # (F-3.5-01, see _index_snp_distances's own docstring for why this
@@ -820,6 +951,14 @@ async def _cluster_snp_neighbors(
     # status="ok" response carries a real, in-budget snp_distance).
     neighbor_biosamples = set(distances.keys())
     if not neighbor_biosamples:
+        if deadline_hit:
+            # F-3.5-A-09: distinguish "the scan finished and genuinely
+            # found nothing" from "the scan was cut off before finding
+            # anything", both of which are status: "empty" but mean
+            # different things to a caller deciding whether to retry.
+            return _deadline_exceeded_output(
+                action.mode, "cluster_snp_neighbors SNP_distances read", snapshot=snapshot
+            )
         return PathogenDetectionOutput(
             status="empty",
             mode=action.mode,
@@ -836,7 +975,7 @@ async def _cluster_snp_neighbors(
     total_available = len(neighbor_biosamples)
 
     if _remaining(deadline) <= 0:
-        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors metadata read")
+        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors metadata read", snapshot=snapshot)
     try:
         metadata_scan = await pathogen_ftp_transport.stream_filtered_tsv_rows(
             _metadata_url(taxon, snapshot),
@@ -845,11 +984,18 @@ async def _cluster_snp_neighbors(
             deadline=deadline,
             client=client,
             max_matches=_MAX_ISOLATES,
+            one_row_per_key=True,  # biosample_acc is unique per row in Metadata
         )
     except pathogen_ftp_transport.PathogenDeadlineExceededError:
-        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors metadata read")
-    if metadata_scan.truncated_by_deadline:
-        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors metadata read")
+        return _deadline_exceeded_output(action.mode, "cluster_snp_neighbors metadata read", snapshot=snapshot)
+    except (httpx.HTTPStatusError, pathogen_ftp_transport.PathogenTransportError) as exc:
+        return _transport_error_output(action.mode, "cluster_snp_neighbors metadata read", exc, snapshot=snapshot)
+    # Same F-3.5-A-01 principle: a metadata scan cut short still returns
+    # real rows for whichever neighbors it reached before the deadline.
+    # Building isolates from those rows (never discarding them) is what
+    # the `truncated`/`total_available` fields on the final output exist
+    # to disclose honestly.
+    deadline_hit = deadline_hit or metadata_scan.truncated_by_deadline
 
     isolates: list[PathogenIsolate] = []
     withheld_all: list[str] = []
@@ -865,7 +1011,7 @@ async def _cluster_snp_neighbors(
         if isolate is not None:
             isolates.append(isolate)
 
-    truncated = len(isolates) < total_available
+    truncated = deadline_hit or len(isolates) < total_available
     if not isolates:
         return PathogenDetectionOutput(
             status="empty",
@@ -924,10 +1070,16 @@ async def _pathogen_detection_impl(input_data: PathogenDetectionInput) -> Pathog
                 taxon, client=client
             )
         except pathogen_ftp_transport.PathogenSnapshotUnavailableError as exc:
+            # F-3.5-A-15 (adversary round, 2026-08-08): `exc`'s own message
+            # already ends in a period (see PathogenSnapshotUnavailableError's
+            # raise sites in pathogen_ftp_transport.py), so appending
+            # ". Verify..." directly produced a doubled period, live-
+            # reproduced on all three taxon error paths. A space, not a
+            # period, joins the two sentences.
             return _error_output(
                 action.mode,
                 f"No complete Pathogen Detection snapshot is available for taxon "
-                f"{taxon!r}: {exc}. Verify the taxon name (for example 'Salmonella') "
+                f"{taxon!r}: {exc} Verify the taxon name (for example 'Salmonella') "
                 "or try again later once NCBI's snapshot build for this taxon completes.",
             )
 

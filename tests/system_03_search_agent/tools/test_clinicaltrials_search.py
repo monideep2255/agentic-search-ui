@@ -224,6 +224,45 @@ async def test_non_integer_total_count_is_error(monkeypatch: pytest.MonkeyPatch)
     assert output.status == "error"
 
 
+@pytest.mark.asyncio
+async def test_missing_total_count_on_a_continuation_call_falls_back_not_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.5-A-02 (adversary round, 2026-08-08) regression test:
+    ClinicalTrials.gov omits totalCount from every page-2-and-later
+    response, live-confirmed, even with countTotal=true sent. A
+    page_token-carrying call must NOT error on that; it must fall back to
+    this page's own study_count, so a next_page_token the tool itself
+    emitted is actually usable. The pre-fix version of this code treated
+    ANY missing totalCount as a fatal contract surprise, which made every
+    real pagination sequence dead on arrival.
+    """
+    _install(
+        monkeypatch,
+        [_json_response({"studies": [_raw_study(), _raw_study(nct_id="NCT00000102")]})],
+    )
+    output = await clinicaltrials_search(_search_input(page_token="some-real-cursor-token"))
+
+    assert output.status == "ok", output.error
+    assert output.study_count == 2
+    assert output.total_count == 2, "must fall back to this page's own study_count, never error"
+
+
+@pytest.mark.asyncio
+async def test_page_size_sent_to_api_is_capped_at_max_studies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """F-3.5-A-04 (adversary round, 2026-08-08) regression test: requesting
+    a page_size above this tool's own 50-study output cap must not ask the
+    API for more than 50, since the API's own next_page_token would then
+    resume past studies this tool silently dropped, permanently losing
+    them. Live-confirmed: page_size=100 dropped studies 51-100 and the
+    cursor resumed at study 101.
+    """
+    scripted = _install(monkeypatch, [_json_response({"studies": [], "totalCount": 0})])
+    await clinicaltrials_search(_search_input(page_size=100))
+
+    assert scripted.calls[0]["params"]["pageSize"] == 50
+
+
 # ---------------------------------------------------------------------------
 # designModule.phases: array, never a scalar.
 # ---------------------------------------------------------------------------

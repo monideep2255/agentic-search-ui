@@ -1,36 +1,22 @@
 """Unit tests for `pathogen_detection` (T-3.5-05).
 
-READ THIS FIRST, same warning as `pathogen_detection.py`'s own module
-docstring: this worktree carries no `pathogen_ftp_transport.py` (the
-streaming HTTPS transport this tool consumes) and no
-`tests/system_03_search_agent/tools/test_pathogen_detection_premise.py`
-(the locked live-integration contract this build task described as
-already written). Neither exists anywhere in this worktree's git history
-on branch `phase/3.5-pathogen-clinicaltrials-tools` at the time this file
-was written.
-
-Because `pathogen_ftp_transport.py` genuinely does not exist on disk,
-`pathogen_detection.py`'s own module-level
-`from system_03_search_agent.tools import pathogen_ftp_transport` cannot
-succeed against the real filesystem. The block immediately below installs
-a minimal placeholder module into `sys.modules` under that exact dotted
-name, ONLY IF the real module is not importable, so that
-`pathogen_detection.py` can be imported at all in this environment. This
-is standard, narrowly-scoped test scaffolding (the same shape as
-registering a fake module for an optional/plugin dependency), not a
-production artifact: it is never written to disk, it lives only in this
-test file, and every individual test still installs its OWN scripted
+The real `pathogen_ftp_transport.py` exists and is imported below in the
+normal case; the `try`/`except ModuleNotFoundError` block that follows
+installs a minimal placeholder module into `sys.modules` ONLY as a defensive
+fallback should that import ever fail (mirroring how an optional/plugin
+dependency is stubbed for a test run), never as evidence about this repo's
+actual state. Every individual test still installs its OWN scripted
 behavior via `monkeypatch.setattr` on whichever module object (real or
 placeholder) ended up bound as `pathogen_detection.pathogen_ftp_transport`,
 exactly the same `monkeypatch.setattr(module.dependency, "func",
 scripted)` pattern `test_litvar2_lookup.py` already uses for
-`ncbi_transport.execute_get`. When the real `pathogen_ftp_transport.py`
-eventually lands in this repo, the `try` branch below picks it up
-automatically and the placeholder branch never runs; no change to this
-file is needed for that transition, only re-verification that the real
-module's `TsvScanResult`/exception classes and function signatures still
-match what every test below assumes (see `pathogen_detection.py`'s own
-"Flagged assumptions" section for the full list).
+`ncbi_transport.execute_get`. `pathogen_ftp_transport.py`'s OWN behavior
+(the scan and matching logic itself, including the real bug a judge round
+found there, F-3.5-06) is covered by
+`tests/system_03_search_agent/tools/test_pathogen_ftp_transport.py`, not
+by anything in this file: every fixture here scripts a `TsvScanResult`
+directly, so this file proves `pathogen_detection.py`'s handling of a
+GIVEN transport result, never the transport's own correctness.
 
 No live network anywhere in this file, mirroring
 `test_litvar2_lookup.py`'s own house convention. Live network coverage of
@@ -93,23 +79,15 @@ This file exercises:
 
 This file deliberately does NOT exercise, and states the gap rather than
 silently omitting it:
-    - Whether the real, live NCBI Pathogen Detection FTP tree actually
-      matches the TSV column names this module guesses at (see
-      `pathogen_detection.py`'s own "Flagged assumptions" item 3). Every
-      TSV row fixture in this file is HAND-CONSTRUCTED to match this
-      module's own column-name assumptions, so a passing test here proves
-      internal consistency between `pathogen_detection.py` and this test
-      file, not correctness against the real upstream file format. Closing
-      this gap needs either the real `pathogen_ftp_transport.py` fetching
-      a real header row, or the live pre-build probes
-      `tracker/phase_3.5.md` would normally have recorded; neither exists
-      in this worktree.
-    - Whether `resolve_complete_snapshot`/`stream_filtered_tsv_rows` are
-      genuinely `async def` in the real module (this file's placeholder
-      assumes so, per `pathogen_detection.py`'s own "Flagged assumptions"
-      item 1; every mock installed below is an `async def`, so a
-      synchronous real implementation would need this file's mocks
-      adjusted, a mechanical change).
+    - `pathogen_ftp_transport.py`'s own scan and row-matching behavior:
+      every TSV row fixture here is a HAND-CONSTRUCTED `TsvScanResult`,
+      scripted directly, never produced by a real (or even a fake) HTTP
+      stream. A passing test here proves `pathogen_detection.py` handles a
+      GIVEN transport result correctly; it says nothing about whether the
+      transport itself produces the right result from real bytes on the
+      wire. That is `test_pathogen_ftp_transport.py`'s job, added
+      specifically because this gap let a critical defect (F-3.5-06)
+      through a fully green run of this file.
     - Whole-invocation timing against a real slow/large file; the deadline
       tests here simulate exhaustion by constructing an already-past
       `time.monotonic()` value or by scripting `truncated_by_deadline=True`
@@ -122,7 +100,7 @@ Depends on:
       constructing valid inputs
     - system_03_search_agent.tools.pathogen_ftp_transport, real if
       importable, otherwise a test-local placeholder installed into
-      sys.modules by this file (see the warning above)
+      sys.modules by this file (defensive fallback only, see above)
 
 Writes:
     - Nothing.
@@ -135,6 +113,7 @@ import time
 import types
 from typing import Any
 
+import httpx
 import pytest
 
 _TRANSPORT_MODULE_NAME = "system_03_search_agent.tools.pathogen_ftp_transport"
@@ -251,6 +230,7 @@ class _ScriptedTsvReads:
         deadline: float,
         client: Any,
         max_matches: int | None = None,
+        one_row_per_key: bool = False,
     ) -> TsvScanResult:
         self.calls.append(
             {
@@ -259,6 +239,7 @@ class _ScriptedTsvReads:
                 "key_values": set(key_values),
                 "deadline": deadline,
                 "max_matches": max_matches,
+                "one_row_per_key": one_row_per_key,
             }
         )
         if not self._items:
@@ -412,6 +393,49 @@ async def test_isolate_lookup_ok_parses_amr_and_ast_correctly(monkeypatch: pytes
 
 
 @pytest.mark.asyncio
+async def test_isolate_lookup_snp_distance_populated_even_when_scan_truncated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.5-A-05 (adversary round, 2026-08-08) regression test: the
+    best-effort enrichment's SNP_distances scan reports
+    truncated_by_deadline=True (its own 20s sub-budget could not reach
+    EOF, F-3.5-07) but DID find this isolate's own pairwise row before the
+    cutoff. snp_distance must be populated from it, never left None just
+    because the scan as a whole did not finish. The pre-fix version of
+    this code skipped the parse entirely whenever truncated_by_deadline
+    was True, which was true on essentially every real call.
+    """
+    _install_snapshot(monkeypatch)
+    metadata_row = _metadata_row()
+    cluster_row = {"biosample_acc": "SAMN02147118", "PDS_acc": "PDS000012345.1"}
+    snp_row = {
+        "PDS_acc": "PDS000012345.1",
+        "biosample_acc_1": "SAMN02147118",
+        "biosample_acc_2": "SAMN00999999",
+        "compatible_distance": "3",
+    }
+    _install_reads(
+        monkeypatch,
+        [
+            TsvScanResult([metadata_row]),  # Metadata read
+            TsvScanResult([cluster_row]),  # cluster_list read (best-effort)
+            # SNP_distances (best-effort): cut off by the 20s sub-budget,
+            # but this row was already collected before the cutoff.
+            TsvScanResult([snp_row], truncated_by_deadline=True),
+        ],
+    )
+
+    output = await pathogen_detection(_isolate_lookup_input())
+
+    assert output.status == "ok", output.error
+    isolate = output.isolates[0]
+    assert isolate.snp_distance == 3, (
+        "a truncated best-effort scan that DID find this isolate's own row "
+        "must populate snp_distance, not leave it None"
+    )
+
+
+@pytest.mark.asyncio
 async def test_isolate_lookup_ok_even_when_cluster_enrichment_fails(monkeypatch: pytest.MonkeyPatch) -> None:
     """The ticket's own explicit allowance: SNP-neighbor enrichment for
     isolate_lookup may be best-effort. A failure there must never take
@@ -540,13 +564,13 @@ async def test_cluster_snp_neighbors_empty_when_no_members(monkeypatch: pytest.M
 
 
 @pytest.mark.asyncio
-async def test_cluster_snp_neighbors_deadline_already_exhausted_before_snp_read(
+async def test_cluster_snp_neighbors_truncated_scan_with_no_matches_is_empty(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cluster_list succeeds, but the SNP_distances read's own scan result
-    reports truncated_by_deadline=True: status must be "empty" with an
-    actionable message, never a partial "ok" citing whatever distances
-    happened to be found before the cutoff.
+    reports truncated_by_deadline=True AND found nothing parseable in the
+    portion scanned (this row has none of the real pairwise columns):
+    status must be "empty" with an actionable message.
     """
     _install_snapshot(monkeypatch)
     cluster_rows = [{"biosample_acc": "SAMN00000001", "PDS_acc": "PDS000012345.1"}]
@@ -554,7 +578,7 @@ async def test_cluster_snp_neighbors_deadline_already_exhausted_before_snp_read(
         monkeypatch,
         [
             TsvScanResult(cluster_rows),  # cluster_list read: fine
-            TsvScanResult([{"distance": "1"}], truncated_by_deadline=True),  # SNP_distances: cut off
+            TsvScanResult([{"distance": "1"}], truncated_by_deadline=True),  # SNP_distances: cut off, unparseable
         ],
     )
 
@@ -564,6 +588,56 @@ async def test_cluster_snp_neighbors_deadline_already_exhausted_before_snp_read(
     assert output.truncated is True
     assert output.error is not None
     assert "budget" in output.error.lower() or "deadline" in output.error.lower() or "timeout" in output.error.lower() or "120" in output.error
+
+
+@pytest.mark.asyncio
+async def test_cluster_snp_neighbors_truncated_scan_with_real_matches_is_ok(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.5-A-01 (adversary round, 2026-08-08) regression test: a scan cut
+    short by the deadline that DID find real, parseable neighbors must
+    return status "ok" with those neighbors and truncated=True, never
+    discard them through the deadline-exceeded path. The pre-fix version
+    of this code returned status "empty" here unconditionally whenever
+    truncated_by_deadline was True, regardless of what was actually found.
+    """
+    _install_snapshot(monkeypatch)
+    cluster_rows = [
+        {"biosample_acc": "SAMN00000001", "PDS_acc": "PDS000012345.1"},
+        {"biosample_acc": "SAMN00000002", "PDS_acc": "PDS000012345.1"},
+    ]
+    snp_rows = [
+        {
+            "PDS_acc": "PDS000012345.1",
+            "biosample_acc_1": "SAMN00000001",
+            "biosample_acc_2": "SAMN00000002",
+            "compatible_distance": "2",
+        },
+    ]
+    metadata_rows = [
+        _metadata_row("SAMN00000001", amr_genotypes=None, ast_phenotypes=None),
+        _metadata_row("SAMN00000002", amr_genotypes=None, ast_phenotypes=None),
+    ]
+    _install_reads(
+        monkeypatch,
+        [
+            TsvScanResult(cluster_rows),  # cluster_list read: fine, not truncated
+            # SNP_distances: the deadline fired AFTER these rows were
+            # already collected. truncated_by_deadline=True must NOT
+            # discard them.
+            TsvScanResult(snp_rows, truncated_by_deadline=True),
+            TsvScanResult(metadata_rows),  # metadata read: fine
+        ],
+    )
+
+    output = await pathogen_detection(_cluster_input(max_snp_distance=5))
+
+    assert output.status == "ok", output.error
+    assert output.truncated is True, "a scan cut short must disclose truncated=True even on ok"
+    assert output.isolate_count == 2
+    by_biosample = {isolate.biosample_acc: isolate for isolate in output.isolates}
+    assert by_biosample["SAMN00000001"].snp_distance == 2
+    assert by_biosample["SAMN00000002"].snp_distance == 2
 
 
 @pytest.mark.asyncio
@@ -755,3 +829,54 @@ async def test_unexpected_exception_is_caught_and_reported_as_error(monkeypatch:
     assert output.status == "error"
     assert output.error is not None
     assert "RuntimeError" in output.error or "unexpected" in output.error.lower()
+
+
+# ---------------------------------------------------------------------------
+# F-3.5-A-06 (adversary round, 2026-08-08): a transport-layer failure on a
+# MANDATORY bulk-file read (an HTTP error status, or a header shape the
+# transport cannot parse) must be classified via _transport_error_output,
+# never let escape to the generic "raised an unexpected error, this tool
+# has a defect" catch-all a routine snapshot rotation should never trigger.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_isolate_lookup_http_status_error_on_metadata_read_is_classified(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_snapshot(monkeypatch)
+    request = httpx.Request("GET", "https://ftp.ncbi.nlm.nih.gov/x.tsv")
+    response = httpx.Response(404, request=request)
+    _install_reads(
+        monkeypatch,
+        [httpx.HTTPStatusError("404", request=request, response=response)],
+    )
+
+    output = await pathogen_detection(_isolate_lookup_input())
+
+    assert output.status == "error"
+    assert output.error is not None
+    assert "404" in output.error
+    assert "raised an unexpected" not in output.error.lower(), (
+        "a classified HTTP error must not read as the generic "
+        "unexpected-exception catch-all message"
+    )
+    assert "rotation" in output.error.lower() or "retry" in output.error.lower()
+
+
+@pytest.mark.asyncio
+async def test_cluster_snp_neighbors_transport_error_on_cluster_list_read_is_classified(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_snapshot(monkeypatch)
+    _install_reads(
+        monkeypatch,
+        [transport.PathogenTransportError("Column 'PDS_acc' not found in header: ['other']")],
+    )
+
+    output = await pathogen_detection(_cluster_input())
+
+    assert output.status == "error"
+    assert output.error is not None
+    assert "cluster_list" in output.error
+    assert "defect" not in output.error.lower()

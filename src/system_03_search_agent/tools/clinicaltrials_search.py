@@ -29,6 +29,32 @@ routine empty-result shape (a genuine empty result still carries
 `totalCount: 0`, confirmed live, and is handled by the ordinary `status:
 "empty"` path below, not this defensive branch).
 
+CORRECTED, F-3.5-A-02 (adversary round, 2026-08-08): the theory above was
+wrong for one real request shape. `countTotal=true` guarantees `totalCount`
+on a FIRST page (no `pageToken`), live-confirmed, but ClinicalTrials.gov
+omits it from EVERY page-2-and-later response regardless, live-confirmed
+across multiple real cursors. The original fail-closed branch could not
+tell that apart from a genuine contract anomaly, so it fired on every
+paginated call and made every `next_page_token` this tool ever emitted
+unusable. `_clinicaltrials_search_impl` now treats a missing `totalCount`
+as the defensive failure above ONLY when `page_token` was not supplied;
+on a continuation call it falls back to that page's own `study_count` as
+`total_count`, a deliberately conservative floor ("at least this many"),
+never a fabricated number.
+
+## F-3.5-A-04: pageSize sent to the API is capped at _MAX_STUDIES, not the caller's raw page_size
+
+`ClinicalTrialsSearchInput.page_size` allows up to 100 (Section 6.7), but
+`_MAX_STUDIES` (50) is this tool's own output cap. The first version of
+this tool requested the caller's raw `page_size` from the API but only
+returned the first `_MAX_STUDIES` of them, while the API's own
+`nextPageToken` pointed past the FULL requested page, so studies between
+`_MAX_STUDIES` and the raw `page_size` were silently unreachable forever
+(live-confirmed: `page_size=100` dropped studies 51 to 100, and the
+returned cursor resumed at study 101). Sending `min(page_size,
+_MAX_STUDIES)` to the API keeps its cursor and this tool's own truncation
+point identical.
+
 ## designModule.phases is an array, never a scalar phase string
 
 Also live-confirmed 2026-08-08: `designModule.phases` is a JSON array
@@ -205,7 +231,23 @@ def _join_phases(raw_phases: Any) -> str | None:
 
 
 def _parse_conditions(raw_conditions: Any) -> list[str]:
-    """`conditionsModule.conditions` capped to item length and list-count limits."""
+    """`conditionsModule.conditions` capped to item length and list-count limits.
+
+    F-3.5-10 (minor, judge round 2026-08-08, deliberately carried open
+    rather than fixed here): an over-length condition name is silently
+    TRUNCATED (`_cap`), not withheld-and-disclosed the way
+    `ncbi_dbsnp`/`litvar2_lookup` treat an over-cap controlled-vocabulary
+    term (F-3.2-A-01, F-3.3-03). A truncated condition name can still read
+    as a real, different, shorter term. This is a smaller-blast-radius
+    case than those two: `conditions` is a display/context field on a
+    citation whose own identity (`nct_id`) and link (`source_url`) are
+    unaffected, never the sole fact a claim rests on the way a variant's
+    `clinical_significance` was. Whether to spend a new schema field
+    (`fields_withheld`) on this tool for a lower-stakes field is a product
+    decision this fix round's own scope does not cover; recorded here so
+    the gap is visible rather than silently absent, per
+    `goal-contracts.md`'s "a verify surface must state its own coverage".
+    """
     if not isinstance(raw_conditions, list):
         return []
     kept: list[str] = []
@@ -228,6 +270,19 @@ def _build_source_url(nct_id: str) -> str | None:
     is already checked by the caller, the same defense-in-depth discipline
     `litvar2_lookup._build_source_url` uses for its own fixed base
     constant.
+
+    F-3.5-A-08 (adversary round, 2026-08-08), disclosed honestly rather
+    than left silent: `clinicaltrials.gov/study/{nctId}` is a
+    client-rendered SPA. Live-confirmed, a real NCT id and a fabricated
+    one (`NCT99999999`) both return HTTP 200 with byte-identical bodies
+    containing neither id nor server-rendered study content. HTTP 200
+    confirms the study page itself is reachable, not that this specific
+    `nctId` renders on load; whether the client-side app pre-populates
+    from the path segment was not verified. Same property, same
+    disclosure discipline `pathogen_detection.py` documents for its own
+    isolate citation (F-3.5-04) and `tracker/phase_3.3.md` filed as
+    F-3.3-A-09 for LitVar2's UI citation; this tool shipped the identical
+    property undocumented in its first version.
     """
     url = _STUDY_RECORD_BASE + urllib.parse.quote(nct_id, safe="")
     if len(url) > _MAX_SOURCE_URL_CHARS:
@@ -376,7 +431,17 @@ async def _clinicaltrials_search_impl(
         # F-3.5-02: always requested, never a caller-configurable option.
         # See the module docstring's F-3.5-02 section for why.
         "countTotal": "true",
-        "pageSize": tool_input.page_size,
+        # F-3.5-A-04 (adversary round, 2026-08-08): never ask the API for
+        # more studies than this tool will actually return. The schema
+        # allows page_size up to 100, but `_MAX_STUDIES` caps the output
+        # at 50; requesting the caller's raw page_size let the API's own
+        # cursor (`nextPageToken`) advance past studies this tool silently
+        # dropped, permanently skipping them on the next page. Capping the
+        # REQUEST at `_MAX_STUDIES` keeps the API's cursor and this tool's
+        # own truncation point identical, so `truncated: true` plus
+        # `next_page_token` always resumes exactly where the returned
+        # `studies` list left off.
+        "pageSize": min(tool_input.page_size, _MAX_STUDIES),
     }
     if tool_input.query_term:
         params["query.term"] = tool_input.query_term
@@ -421,8 +486,19 @@ async def _clinicaltrials_search_impl(
             "its meaning. Retry once; if this recurs, report it."
         )
 
-    total_count = _extract_total_count(body)
-    if total_count is None:
+    raw_total_count = _extract_total_count(body)
+    # F-3.5-A-02 (adversary round, 2026-08-08): ClinicalTrials.gov omits
+    # totalCount from every page-2-and-later response even with
+    # countTotal=true sent on every request, live-confirmed. F-3.5-02's
+    # original fail-closed branch treated ANY missing totalCount as a
+    # genuine contract anomaly, which made every paginated call return
+    # status: "error", so a next_page_token the tool itself emitted was
+    # never actually usable. A missing totalCount on a first-page call
+    # (no page_token supplied) is still a genuine anomaly, since that is
+    # exactly the request shape F-3.5-02 verified guarantees the field;
+    # only a CONTINUATION call (page_token supplied) gets the documented,
+    # expected-missing treatment below.
+    if raw_total_count is None and not tool_input.page_token:
         return _error_output(
             "ClinicalTrials.gov omitted totalCount even though countTotal=true was "
             "sent (F-3.5-02), refusing to guess the true total. Retry once; if this "
@@ -439,7 +515,7 @@ async def _clinicaltrials_search_impl(
             status="empty",
             studies=[],
             study_count=0,
-            total_count=total_count,
+            total_count=raw_total_count if raw_total_count is not None else 0,
             next_page_token=next_page_token,
             truncated=False,
         )
@@ -466,10 +542,19 @@ async def _clinicaltrials_search_impl(
             status="empty",
             studies=[],
             study_count=0,
-            total_count=total_count,
+            total_count=raw_total_count if raw_total_count is not None else 0,
             next_page_token=next_page_token,
             truncated=truncated,
         )
+
+    # F-3.5-A-02: on a continuation call where the API omitted totalCount,
+    # fall back to this page's own study_count rather than erroring. This
+    # is a deliberately conservative floor, never a fabricated number
+    # larger than what is actually returned: `total_count` on a page-2+
+    # response therefore means "at least this many", not "exactly this
+    # many", the same honest-degradation shape F-3.5-10 documents for
+    # `conditions` truncation.
+    total_count = raw_total_count if raw_total_count is not None else len(studies)
 
     return ClinicalTrialsSearchOutput(
         status="ok",
