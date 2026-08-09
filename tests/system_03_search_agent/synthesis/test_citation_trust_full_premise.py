@@ -328,11 +328,22 @@ async def test_a_dual_layer_question_dispatches_and_cites_both_layers() -> None:
     property of Synth's own sampling variance, not a defect this file can
     fix by retrying harder, and forcing a higher single-run rate would
     need a Write-step prompt change with its own broad blast radius,
-    genuinely out of this ticket's scope. If every one of the 8 attempts
-    fails, the failure below shows the LAST attempt's full detail, and
-    that is a real signal something changed, not sampling noise: at a
-    true 25% base rate, an 8-for-8 miss has under a 0.002% chance of
-    happening by chance alone.
+    genuinely out of this ticket's scope.
+
+    F-3.4-J-02, CORRECTED: an earlier version of this docstring and the
+    assertion message below both claimed an 8-for-8 miss has "under a
+    0.002% chance of happening by chance alone." That figure is wrong,
+    caught by an independent judge round, and the error was a real one,
+    not a typo: 0.002% (0.25**8) is the chance all 8 attempts SUCCEED,
+    the wrong tail entirely. The chance all 8 attempts FAIL at the
+    measured ~25% per-run success rate is 0.75**8 ≈ 10.0%, not ~0.002%.
+    An 8-for-8 miss is therefore a real signal worth investigating, not
+    noise to ignore, but it is NOT by itself strong statistical proof of
+    a regression the way the original wording claimed: roughly 1 in 10
+    fully-passing runs of this exact suite will still hit it by pure
+    sampling variance. Corroborate with the other 9 gate cases and a
+    manual live re-check before concluding a regression from this
+    assertion alone.
     """
     max_attempts = 8
     answer: Answer | None = None
@@ -353,9 +364,12 @@ async def test_a_dual_layer_question_dispatches_and_cites_both_layers() -> None:
     )
     assert "layer_2_api" in layers, (
         f"no Layer 2 citation across all {max_attempts} attempts; at the "
-        f"measured ~25% per-run base rate this has under a 0.002% chance "
-        f"of happening by sampling variance alone, so treat this as a real "
-        f"regression, not a flake. Last attempt shown below."
+        f"measured ~25% per-run base rate this has roughly a 10% chance "
+        f"of happening by sampling variance alone (0.75**8), so it is "
+        f"worth investigating but is not by itself definitive proof of a "
+        f"regression. Corroborate with the other 9 gate cases and a "
+        f"manual live re-check before concluding a regression. Last "
+        f"attempt shown below."
         f"{answer.describe()}"
     )
 
