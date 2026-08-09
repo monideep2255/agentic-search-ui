@@ -396,6 +396,7 @@ async def test_the_flagship_gene_disease_claim_is_high_risk_and_triangulates() -
 @live_only
 @pytest.mark.asyncio
 async def test_a_genuine_cross_layer_conflict_is_detected_and_flagged() -> None:
+    from system_03_search_agent.harness.harness import Harness
     from system_03_search_agent.synthesis.conflict_detection import detect_conflict
     from system_03_search_agent.tools.cypher_query import cypher_query
     from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
@@ -403,11 +404,12 @@ async def test_a_genuine_cross_layer_conflict_is_detected_and_flagged() -> None:
     from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
 
     graph_result = await cypher_query(
+        Harness(trace_id="premise-gate-3.4-p3"),
         CypherQueryInput(
             query_intent=f"official symbol of {BRCA1}",
             query_class="lookup",
             target_entities=[BRCA1],
-        )
+        ),
     )
     live_result = await ncbi_efetch(
         NcbiEfetchInput(
@@ -424,7 +426,7 @@ async def test_a_genuine_cross_layer_conflict_is_detected_and_flagged() -> None:
         graph_value=BRCA1_SYMBOL,
         live_value="A_DELIBERATELY_WRONG_SYMBOL_FOR_THIS_TEST",
         graph_source_url=graph_result.rows[0].source_url if graph_result.rows else None,
-        live_source_url=live_result.fields.get("source_url"),
+        live_source_url=live_result.records[0].source_url if live_result.records else None,
     )
     assert conflict.is_conflict is True, (
         f"two genuinely different values for the same field on the same "
@@ -440,7 +442,7 @@ async def test_a_genuine_cross_layer_conflict_is_detected_and_flagged() -> None:
         graph_value=BRCA1_SYMBOL,
         live_value=BRCA1_SYMBOL,
         graph_source_url=graph_result.rows[0].source_url if graph_result.rows else None,
-        live_source_url=live_result.fields.get("source_url"),
+        live_source_url=live_result.records[0].source_url if live_result.records else None,
     )
     assert agreement.is_conflict is False, (
         f"two identical values were reported as a conflict: {agreement}"
