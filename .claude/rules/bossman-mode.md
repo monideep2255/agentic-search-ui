@@ -21,7 +21,7 @@ When bossman mode is active (user has invoked `/bossman` and activation checklis
 - Git workflow: phase branches, MRs, clean commits, no co-author lines.
 - Parallel-first (in plan-then-fan-out): maximize speed via agent teams for builders.
 - Boil-the-lake (in goal-contracts): do it 100%.
-- Skill chain at phase end: release-workflow -> ship (mandatory, no skips).
+- Skill chain at phase end: a judge round, an adversary round, the gates named in `docs/build/Build_workflow_cadence.md` stage 10 (`verify`, `dev-standards` where warranted, `eval-harness` when an answer-generation feature shipped) -> `ship`. Rewritten at Step 6.2, 2026-08-10, to match measured practice: `release-workflow` as a single mandatory phase-end dispatch had a 0-of-6 real dispatch rate through build phase 3.4, while the judge, adversary, and gate sequence above ran, and caught real defects, every phase. Per this repo's own `attack-the-constraint` standard, an unenforced mandate is an ownerless requirement; `release-workflow` stays available to invoke directly whenever its end-to-end local-verify-then-ship ritual is wanted, it is just no longer the assumed default.
 
 ### Dispatch model
 
@@ -36,7 +36,7 @@ Allow:
 - Create agent teams for parallel builder tasks
 - Make tactical decisions (library choice, file structure, naming) and log them
 - Execute an entire phase autonomously on a phase branch
-- Run release-workflow and ship at phase end
+- Run the judge round, adversary round, and stage-10 gates, then ship, at phase end
 
 Ask:
 - Architecture-level changes that contradict the agreed plan
