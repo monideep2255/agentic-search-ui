@@ -239,25 +239,24 @@ def screen(text: str) -> GuardVerdict | None:
     Like `prefilter.screen`, this never returns an admitting verdict. Passing
     Section 10.5 is one condition of admission, not admission itself.
 
-    ## A known contract gap, recorded rather than papered over
+    ## F-3.0-01, resolved at Step 6.2 (2026-08-10)
 
-    Section 10.5 requires refusing a write-seeking request but names no
-    `GuardPayload.category` for it, and the contract's six members
-    (`contracts/events.py`) contain nothing write-shaped. `off_topic` is used
-    below because it is the closest member the contract can actually express
-    and because a write request genuinely is outside what this system does.
+    Section 10.5 requires refusing a write-seeking request, and until this
+    reconciliation the contract's six `GuardPayload.category` members named
+    nothing write-shaped, so this refusal shipped under the closest
+    available member, `off_topic`, which was not a good fit: a caller
+    switching on `category` alone could not distinguish "ask me about
+    biology instead" from "I cannot write to the graph", even though the
+    user-facing reason string always carried the real explanation.
 
-    It is not a good fit. The user-facing reason string carries the real
-    explanation, so nothing misleading reaches a reader, but a caller
-    switching on `category` alone cannot distinguish "ask me about biology
-    instead" from "I cannot write to the graph". Resolving this needs either
-    a new enum member (an additive, v1-legal contract change per
-    `system-design-patterns` rule 10) or a spec amendment, and that decision
-    belongs to the Step 6.2 reconciliation rather than to this module.
-    Tracked as a finding in `tracker/phase_3.0.md`.
+    Product-owner decision: add `write_seeking` as a new
+    `GuardPayload.category` member, an additive, v1-legal contract change
+    per `system-design-patterns` rule 10, rather than amend the spec text to
+    excuse the `off_topic` reuse. Tracked as a finding in
+    `tracker/phase_3.0.md`.
     """
     if seeks_write(text):
-        return refused("off_topic", _WRITE_REFUSAL_REASON)
+        return refused("write_seeking", _WRITE_REFUSAL_REASON)
     if seeks_verdict(text):
         return refused("medical_advice", _VERDICT_REFUSAL_REASON)
     return None

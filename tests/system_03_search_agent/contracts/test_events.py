@@ -202,7 +202,15 @@ class TestGuardPayload:
 
     @pytest.mark.parametrize(
         "category",
-        ["ok", "off_topic", "medical_advice", "injection", "rate_limited", "cost_capped"],
+        [
+            "ok",
+            "off_topic",
+            "medical_advice",
+            "injection",
+            "rate_limited",
+            "cost_capped",
+            "write_seeking",
+        ],
     )
     def test_every_category_accepted(self, category: str) -> None:
         payload = GuardPayload(passed=False, category=category, reason=None)

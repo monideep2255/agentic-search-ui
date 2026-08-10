@@ -687,6 +687,28 @@ async def test_publications_lookup_under_cap_reports_matching_total(monkeypatch:
 
 
 @pytest.mark.asyncio
+async def test_publications_lookup_pmid_source_urls_match_pmids_one_to_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.3-J-06 (Step 6.2, 2026-08-10): `pmid_source_urls` is a parallel
+    array to `pmids`, same order, same length, one canonical PubMed URL
+    each.
+    """
+    raw_pmids = [111, 222, 333]
+    _install(monkeypatch, [_json_response({"pmids": raw_pmids})])
+
+    output = await litvar2_lookup(_publications_input("litvar@rs334##"))
+
+    assert output.status == "ok", output.error
+    assert len(output.pmid_source_urls) == len(output.pmids)
+    assert output.pmid_source_urls == [
+        "https://pubmed.ncbi.nlm.nih.gov/111/",
+        "https://pubmed.ncbi.nlm.nih.gov/222/",
+        "https://pubmed.ncbi.nlm.nih.gov/333/",
+    ]
+
+
+@pytest.mark.asyncio
 async def test_publications_lookup_zero_pmids_is_empty(monkeypatch: pytest.MonkeyPatch) -> None:
     _install(monkeypatch, [_json_response({"pmids": []})])
 
@@ -912,6 +934,29 @@ async def test_source_url_falls_back_to_ui_page_for_a_multi_match_result(
     assert output.source_url == "https://www.ncbi.nlm.nih.gov/research/litvar2/?query=334"
     assert output.source_url is not None
     assert "/snp/" not in output.source_url
+
+
+@pytest.mark.asyncio
+async def test_each_match_carries_its_own_source_url_even_in_a_multi_match_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-3.3-J-06 (Step 6.2, 2026-08-10): the per-match `source_url` field is
+    additive to the output-level one tested above, and is NOT gated to the
+    single-match case. Same fixture as the multi-match test above: even
+    though the output-level `source_url` correctly falls back to the UI
+    page (no single citation can cover both matches), each match still
+    gets its own real dbSNP page, since it cites only itself.
+    """
+    bdnf = _autocomplete_body(litvar_id="litvar@rs6265##", rsid="rs6265", name="Val66Met")[0]
+    apoe = _autocomplete_body(litvar_id="litvar@rs429358##", rsid="rs429358", name="c.388T>C")[0]
+    _install(monkeypatch, [_json_response([bdnf, apoe])])
+
+    output = await litvar2_lookup(_variant_search_input("334"))
+
+    assert output.status == "ok", output.error
+    assert len(output.variant_matches) == 2
+    assert output.variant_matches[0].source_url == "https://www.ncbi.nlm.nih.gov/snp/rs6265"
+    assert output.variant_matches[1].source_url == "https://www.ncbi.nlm.nih.gov/snp/rs429358"
 
 
 @pytest.mark.asyncio

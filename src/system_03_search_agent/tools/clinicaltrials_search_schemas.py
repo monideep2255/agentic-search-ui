@@ -136,7 +136,14 @@ class ClinicalTrialsSearchInput(BaseModel):
         Field(
             min_length=1,
             max_length=200,
-            description="condition or disease phrase, maps to query.cond",
+            description=(
+                "condition or disease phrase, maps to query.cond. Parsed by "
+                "ClinicalTrials.gov as an Essie search expression, not a "
+                "literal phrase: a condition name containing AND, OR, or NOT "
+                "(e.g. \"Carcinoma NOT Otherwise Specified\") is interpreted "
+                "as a boolean operator and can silently return the logical "
+                "inverse of the intended search (F-3.5-A-03)."
+            ),
         ),
     ]
     query_term: Annotated[

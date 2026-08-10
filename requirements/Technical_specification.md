@@ -292,7 +292,10 @@ Payload shapes. This is the canonical definition for every event type. Sections 
 ```json
 // guard
 { "passed": true, "category": "ok", "reason": null }
-// category enum: ok, off_topic, medical_advice, injection, rate_limited, cost_capped
+// category enum: ok, off_topic, medical_advice, injection, rate_limited, cost_capped, write_seeking
+// write_seeking added at Step 6.2 (finding F-3.0-01, additive per system-design-patterns rule 10):
+// Section 10.5 requires refusing a write-seeking request, and until this reconciliation the enum
+// named nothing write-shaped, so the refusal shipped under off_topic, the closest available member.
 
 // think
 {
@@ -1131,7 +1134,8 @@ Output schema:
           "db": {"type": "string", "maxLength": 20},
           "db_id": {"type": "string", "maxLength": 30},
           "name": {"type": "string", "maxLength": 100},
-          "description": {"type": "string", "maxLength": 300}
+          "description": {"type": "string", "maxLength": 300},
+          "source_url": {"type": "string", "maxLength": 200}
         }
       }
     },
@@ -1170,7 +1174,7 @@ Output schema:
 
 Endpoints and fields used:
 
-- Entity lookup: `GET /entity/autocomplete/?query={text}&limit={n}` returns `_id` (the PubTator entity id), `biotype`, `db`, `db_id` (the bridge to the NCBI database id, for example `ncbi_gene` 672), `name`, `description`.
+- Entity lookup: `GET /entity/autocomplete/?query={text}&limit={n}` returns `_id` (the PubTator entity id), `biotype`, `db`, `db_id` (the bridge to the NCBI database id, for example `ncbi_gene` 672), `name`, `description`. Each entity's `source_url` is populated only for the two verified db types with a confirmed live record-page shape (`ncbi_gene`, `ncbi_mesh`), `None` for every other `db` value; widened into this schema at Step 6.2 (finding F-3.3-A-05) to match code shipped in build phase 3.3, since the field was already emitted beyond what the locked schema legally allowed. Widening further to cover `litvar`/`cvcl` db types needs their record-page URL shapes live-verified first, not attempted here.
 - Annotate publications: `GET /publications/export/biocjson?pmids={csv}` returns a top-level `{"PubTator3": [...]}` object (a drift point, not a bare BioC document). Annotations live at `.PubTator3[i].passages[].annotations[]`, each with an `infons` object: `type`, `identifier`, `normalized_id` (nullable), `valid`, `biotype`, `database`, `accession`, `name`. A relations endpoint exists for entity-pair relations (chemical-disease, gene-disease); its exact path and fields were not live-verified in the capability sheet and are flagged as an open item for a fast-follow addition once verified.
 
 Error and empty behavior: entity lookup on a no-match query returns `[]` with HTTP 200, this is the Layer 3 cite-or-refuse empty signal, mapped to `status: "empty"`. The biocjson export on a nonexistent PMID returns HTTP 400 with `{"detail": "Could not retrieve publications"}`, mapped to `status: "error"` with the `detail` string as the message, unlike E-utilities' 200-with-body pattern.
@@ -1233,17 +1237,21 @@ Output schema:
           "name": {"type": "string", "maxLength": 60},
           "hgvs": {"type": "string", "maxLength": 80},
           "pmids_count": {"type": "integer"},
-          "clinical_significance": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 30}}
+          "clinical_significance": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 30}},
+          "source_url": {"type": "string", "maxLength": 200}
         }
       }
     },
     "pmids": {"type": "array", "maxItems": 50, "items": {"type": "string", "maxLength": 15}},
+    "pmid_source_urls": {"type": "array", "maxItems": 50, "items": {"type": "string", "maxLength": 60}},
     "total_pmids": {"type": "integer"},
     "source_url": {"type": "string", "maxLength": 200, "pattern": "^https://(www\\.|pubmed\\.)?ncbi\\.nlm\\.nih\\.gov/"},
     "error": {"type": "string", "maxLength": 500}
   }
 }
 ```
+
+Two fields widened into this schema at Step 6.2 (finding F-3.3-J-06), since the single top-level `source_url` this section originally provided cannot cite a multi-match `variant_search` result or an individual `publications_lookup` PMID: `variant_matches[].source_url`, this match's own dbSNP record page, populated for every match carrying a real rsid regardless of how many matches the result has (the output-level `source_url` stays gated to the single-match case, since it is one field for the whole result set); and `pmid_source_urls`, one canonical PubMed URL per entry in `pmids`, same order, same length, the same shape `pubtator_annotate` already ships per publication.
 
 Endpoints and fields used:
 

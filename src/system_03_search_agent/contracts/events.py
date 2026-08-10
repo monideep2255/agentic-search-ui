@@ -65,7 +65,13 @@ class GuardPayload(BaseModel):
 
     passed: bool
     category: Literal[
-        "ok", "off_topic", "medical_advice", "injection", "rate_limited", "cost_capped"
+        "ok",
+        "off_topic",
+        "medical_advice",
+        "injection",
+        "rate_limited",
+        "cost_capped",
+        "write_seeking",
     ]
     reason: str | None = Field(None, max_length=256)
 

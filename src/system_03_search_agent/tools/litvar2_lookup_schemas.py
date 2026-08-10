@@ -334,6 +334,24 @@ class Litvar2VariantMatch(BaseModel):
         Field(default_factory=list, max_length=10),
     ] = Field(default_factory=list)
     matched_on: Annotated[str | None, Field(default=None, max_length=200)] = None
+    source_url: Annotated[
+        str | None,
+        Field(
+            default=None,
+            max_length=200,
+            pattern=NCBI_LITVAR2_RECORD_URL_PATTERN,
+            description=(
+                "This match's own dbSNP record page, populated whenever "
+                "rsid is present and shape-valid, regardless of how many "
+                "matches the result carries. Additive field (F-3.3-J-06, "
+                "Step 6.2), not in Section 6.5's own printed schema. "
+                "Distinct from the output-level source_url, which is "
+                "gated to the single-match case since it is one field for "
+                "the whole result set (F-3.3-RR2-01); this one never is, "
+                "since it cites only the match it sits on."
+            ),
+        ),
+    ] = None
 
 
 class Litvar2LookupOutput(BaseModel):
@@ -378,6 +396,20 @@ class Litvar2LookupOutput(BaseModel):
         Field(default_factory=list, max_length=50),
     ] = Field(default_factory=list)
     total_pmids: Annotated[int, Field(ge=0)] = 0
+    pmid_source_urls: Annotated[
+        list[Annotated[str, Field(max_length=60)]],
+        Field(
+            default_factory=list,
+            max_length=50,
+            description=(
+                "One canonical https://pubmed.ncbi.nlm.nih.gov/{pmid}/ URL "
+                "per entry in pmids, same order, same length. Additive "
+                "field (F-3.3-J-06, Step 6.2), not in Section 6.5's own "
+                "printed schema, same shape pubtator_annotate's "
+                "annotate_publications mode already ships per publication."
+            ),
+        ),
+    ] = Field(default_factory=list)
     source_url: Annotated[
         str | None,
         Field(

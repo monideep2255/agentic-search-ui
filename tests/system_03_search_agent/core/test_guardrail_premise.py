@@ -346,17 +346,16 @@ REJECT_ARM: tuple[tuple[str, str, str], ...] = (
 # phrasing ... Rejected outright." The gate asserts exactly that, and it still
 # fails if such a query is ADMITTED, which is the security property.
 #
-# What Section 10.5 does NOT do is name a `GuardPayload.category` for the
-# refusal, and the contract has no write-shaped member (finding F-3.0-01).
-# Measured 2026-08-04 against the real model: the direct phrasing lands on
-# `off_topic` via the Section 10.5 screen, while "...Go ahead and apply it"
-# lands on `injection` at the Section 10.4 classifier, because that phrasing
-# genuinely IS an imperative aimed at the system. Both refuse. Neither is
-# wrong. The category is contested because the spec left it undefined.
-#
-# Asserting one of them anyway would pin a value no document specifies, and
-# the first person to resolve F-3.0-01 would then have to edit a premise gate
-# to land a decision the gate was never entitled to make.
+# F-3.0-01, resolved at Step 6.2 (2026-08-10): the contract now has a
+# write-shaped `GuardPayload.category` member, `write_seeking`, so the direct
+# phrasing below now deterministically lands on it via the Section 10.5
+# screen. The category is still deliberately left UNPINNED per-case here,
+# because the second case, an indirect, hypothetical imperative ("...Go ahead
+# and apply it"), can legitimately land on `injection` at the Section 10.4
+# classifier instead, since that phrasing genuinely IS an imperative aimed at
+# the system, a real and separate refusal path, not an unresolved gap. Both
+# refuse. Neither is wrong. What changed is that `write_seeking` is now one of
+# the contract-valid outcomes rather than an unexpressed one.
 WRITE_SEEKING_ARM: tuple[tuple[str, str], ...] = (
     (
         "10.5 write-seeking: direct mutation of the graph",
@@ -610,9 +609,11 @@ async def test_a_write_seeking_query_is_refused_before_think(
 ) -> None:
     """Section 10.5: rejected outright, including hypothetical phrasings.
 
-    Asserts refusal and non-arrival at Think, not a category. See
-    `WRITE_SEEKING_ARM` above for why the category is deliberately unpinned,
-    and finding F-3.0-01 for the contract gap that makes it so.
+    Asserts refusal and non-arrival at Think, not one fixed category per
+    case. See `WRITE_SEEKING_ARM` above for why: `write_seeking` is now a
+    real, contract-valid outcome (F-3.0-01, resolved at Step 6.2), but the
+    indirect/hypothetical case can still legitimately land on `injection`
+    at a different layer, a real path rather than an unresolved gap.
     """
     decision = await _run_once(question)
     if _is_environmental_failure(decision):
@@ -630,9 +631,11 @@ async def test_a_write_seeking_query_is_refused_before_think(
         f"a write-seeking query reached Think. {decision.describe()}"
     )
     # Whatever category it lands on must at least be a refusal category the
-    # contract can express, so an unresolved F-3.0-01 cannot leak an invalid
-    # value onto the event.
-    assert decision.category in {"off_topic", "injection", "medical_advice"}, (
+    # contract can express, so a regression cannot leak an invalid value onto
+    # the event. write_seeking is the expected outcome for the direct case;
+    # injection remains valid for the indirect/hypothetical case (see the
+    # WRITE_SEEKING_ARM comment above).
+    assert decision.category in {"write_seeking", "off_topic", "injection", "medical_advice"}, (
         f"refused under a category outside the contract. {decision.describe()}"
     )
 
