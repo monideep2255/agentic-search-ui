@@ -2,7 +2,7 @@
 
 A plain-language update on what this project is, what works today, and what comes next. No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-08.
+Last updated: 2026-08-10.
 
 ## Table of contents
 
@@ -62,11 +62,15 @@ Concretely:
 
 All six live-government-API connections the plan called for are now built. That is every planned data source.
 
+- For the first time, a question about a gene can pull an answer from BOTH our own database and a live government record at once, in the same answer, each fact carrying its own separate link back to where it came from. This is the first time the system has ever combined two sources in one answer.
+- Every citation, from any of the seven sources, now carries the same four pieces of trust information: what kind of evidence it is, how confident the source itself is in the claim, what population the data covers if relevant, and what usage rights apply to it. Previously only our own database's citations carried this.
+- The system's highest-stakes example question, "which diseases are associated with BRCA1?", is now correctly flagged as needing extra scrutiny. Before this sprint, a quirk in how the answer was assembled meant this exact question, the one the whole trust system is built around, was being waved through as routine instead.
+- If a live government record and our own database disagree about the same fact, the system now notices and says so, rather than silently picking one and hiding the disagreement.
+- If a piece of information from our own database is old enough to be worth double-checking, the system is now built to automatically verify it against the live government record before repeating it as current. This machinery is real and tested, but our own database does not yet store the specific kind of detail it needs to check against, so it has nothing to actually fire on yet (see below).
+
 ## What does not work yet
 
-The honest headline: the system can now look up genes, genetic variants, research literature, named entities, disease outbreaks, and clinical trials, but it cannot yet use any of those lookups to answer a question.
-
-All six lookup tools built so far can translate a name or an identifier into real, verified data by asking the live government APIs. But the step that connects any of them to the actual question-answering pipeline is not yet wired in. Every tool is built and independently checked, and the last piece that connects them to the answer path is carried to a later sprint.
+The honest headline: one of the six newer lookup tools, gene lookup, can now be used together with our own database to answer a question. The other five, genetic variants, research literature (two tools), disease outbreaks, and clinical trials, still cannot: they can each translate a name or identifier into real, verified data, but nothing yet connects them to the actual question-answering pipeline.
 
 Also not built yet: saved history, the other ways to access the system besides the web page, and anything to do with hosting it somewhere other than a laptop.
 
@@ -88,8 +92,9 @@ Each of these is a completed, reviewed, merged piece of work.
 | 3.2 | The second live government API connection: genetic variant lookup by rs number | 2026-08-08 |
 | 3.3 | The third and fourth live government API connections: published research literature lookup, and research-literature lookup for a specific genetic variant | 2026-08-08 |
 | 3.5 | The fifth and sixth live government API connections: disease outbreak lookup and clinical trials search, completing every planned data source | 2026-08-08 |
+| 3.4 | Extended the trust-and-citation rules to cover all six newer lookup tools, and connected gene lookup to the answer pipeline for real, the first tool to be wired all the way through | 2026-08-10 |
 
-Six of these are worth understanding, because they explain how this project works.
+Seven of these are worth understanding, because they explain how this project works.
 
 Sprint 2.1, the expensive lesson. We asked "which diseases are associated with BRCA1?" and got back twenty-five results. All twenty-five had real, working links to official records. Every automated test passed. And every single result was wrong: they were not diseases at all, they were similar genes in other animals. The tests could not see this, because they were checking that the plumbing worked rather than that the answer was true. Finding it took four rounds of review over four days. Everything we do now is shaped by that: before writing any new feature, we now write a test that asks whether the ANSWER is right, and we watch it fail first, so we know the test is capable of catching a lie.
 
@@ -104,6 +109,8 @@ Sprint 3.2, the variant lookup tool, and the fix that broke something new twice.
 Sprint 3.3, the literature lookup tools, and the confidently wrong answer that both tools gave at once. Both new tools ask a government search service for a match and hand back whatever comes back as a real result. Late in review, someone tried typing in a bare number, "334", instead of a real identifier. Both tools cheerfully returned real, official-looking, fully cited answers about five completely unrelated things. Separately, typing in an ordinary word like "the" returned ten confidently matched, real medical terms that had nothing to do with the word "the". Nothing was broken about the individual records returned. Both were real entries from the government's own database. The problem was that the government service itself already flags a weak, "closest guess" style match differently from an exact one, and our tools were throwing that flag away before anyone downstream ever saw it. It is now kept and passed along. This is the single most important find of this sprint, because it is exactly the failure this whole project exists to prevent: not a crash, not an error message, a fully cited, entirely wrong answer delivered with total confidence. It was also found by deliberately typing hostile and strange things into the finished tools, not by any planned test, which is why that kind of adversarial poking is now a standing step for every tool going forward, not an occasional extra.
 
 Sprint 3.5, the last two data tools, and the fix that broke the thing it just fixed, twice. This sprint's outbreak-cluster lookup reads a government file that turned out to be about 400 times bigger than a normal file its own size class: roughly 411 gigabytes, for one bacterial species. The tool has to read that file a little at a time and give up gracefully if it runs out of time, rather than trying to load the whole thing. The first version had a real, serious bug: it stopped reading after finding just the FIRST matching entry, then confidently reported that as the complete answer, when a real outbreak cluster of four related samples was quietly reported as having only two. That got caught and fixed, checked, and passed a full re-test. Then a second, deliberately hostile round of testing found something worse: the FIX ITSELF had broken the tool a different way. In closing the "stops too early and lies" bug, the fix removed the only thing that let the tool stop at all, so now it could never successfully finish AT ALL, not even on the exact same real outbreak cluster it had gotten wrong before. It failed silently, reporting "nothing found" instead of a wrong answer, which is safer but still wrong. That got fixed too, and a live re-check on that same real outbreak cluster still came back empty. It took a THIRD look to find the actual remaining problem: the fix that made the tool patient enough to find every real match had also made it so patient it ran out of time before ever getting to the last, quick step that turns the matches into a proper labeled result. A dedicated slice of time was reserved for that last step no matter how long the earlier steps take, and only then did a live check on the real outbreak cluster come back with the exact right answer: four related samples, with the exact genetic distances a human reviewer had worked out by hand as the ground truth to check against. Three real bugs, each one only found by actually running the finished tool against the real government service and checking the ANSWER, not by trusting that the tests still said "green".
+
+Sprint 3.4, the trust system's own final exam, and the two-gene question that gave a confidently incomplete answer. This was the sprint that connected everything: extending the trust-and-citation rules to all six lookup tools, teaching the system to notice when two sources disagree, and, for the first time, actually letting gene lookup contribute to a real answer alongside our own database. Building and checking it in the ordinary way went well: two rounds of review, a handful of real bugs found and fixed, all closed cleanly. Then a deliberately hostile round of testing tried something nobody had tried before: asking about two different genes in a single question. Two times out of three, the system answered fluently, cited its one source correctly, and never mentioned the second gene at all, reporting itself as a complete, trustworthy answer the whole time. Nothing was technically wrong with the sentence it wrote. It simply never tried to cover the rest of the question, and said nothing about that. This is exactly the failure this whole project exists to prevent: not a crash, not a wrong fact, a confident answer that quietly does less than it claims. It is fixed now: the system checks whether every named subject in a multi-part question actually got an answer, and if not, it downgrades its own confidence and says plainly which part it could not cover. Fixing that turned up a second problem in the same area: the check meant to catch our own database and a live government record disagreeing about the same gene had never actually been able to compare them in practice, because the two sources describe a gene's identity slightly differently (a full name versus a short symbol) and the check required an exact match. It now understands that the two are the same kind of fact. A few smaller, lower-priority gaps were found and deliberately left for later, each with a written reason why leaving it was the right call for now, not an oversight.
 
 ## What is next
 
@@ -124,19 +131,20 @@ flowchart LR
         I --> Iv[Variant lookup]
         Iv --> Lit[Literature lookup, two tools]
         Lit --> Out[Outbreak + trials lookup]
+        Out --> Tr[Trust rules cover all tools, gene lookup wired in]
     end
-    Out --> M[Wire tools into the answer pipeline]
-    M --> K[Update the written specs]
-    K --> L[Everything else]
+    Tr --> K[Update the written specs]
+    K --> Wire[Wire the other five tools into the answer pipeline]
+    Wire --> L[Everything else]
 ```
 
-Every planned data lookup tool, all six live-API connections, is now built AND independently checked. Each one has gone through the same pattern: build it, find real problems in review, fix them, and find MORE problems in the fix itself before trusting it. That pattern held for a THIRD time within sprint 3.5 alone, three separate real bugs in a row, each one only in the fix for the bug before it (see the story above), the strongest evidence yet that the review process is catching real things and not just adding ceremony.
+Every planned data lookup tool, all six live-API connections, is now built AND independently checked, and the trust-and-citation rules now cover all of them. Each tool went through the same pattern: build it, find real problems in review, fix them, and find MORE problems in the fix itself before trusting it. Sprint 3.4 held that pattern too, and pushed it one step further: its hostile testing round found a real problem (the two-gene question, see the story above) that no planned test had ever thought to try, only deliberate, adversarial poking at the finished system.
 
 In order:
 
-1. Wiring the trust-and-citation rules to also cover the five newer lookup tools (right now that safety check only covers our own database and the very first live government connection), and the decision-making step that decides which tool to use for which question and how much to trust each one's answer.
-2. A planned pause to update the written specifications with everything we have learned from actually building it.
-3. Then the remaining work: wiring the live API tools into the answer pipeline, the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
+1. A planned pause to update the written specifications with everything we have learned from actually building all six tools and the trust system.
+2. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in this sprint.
+3. Then the remaining work: the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
 
 ## Problems we know about and are tracking
 
@@ -144,8 +152,11 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
-| Two small leftover gaps in the gene lookup tool, both in code the answer pipeline cannot reach yet because the pipeline doesn't use this tool yet either. Neither is a correctness risk today; both need a look before the pipeline connects to this tool | Before the answer pipeline is wired to this tool |
-| None of the four lookup tools built so far (gene names, genetic variants, and now research literature two ways) is connected to the answer pipeline yet. All four can look up real data but cannot yet use those lookups to answer a question | A later sprint in the 3.x group |
+| Two small leftover gaps in the gene lookup tool, found in an earlier sprint before the answer pipeline used this tool at all. Now that this sprint actually connected the tool, these need a fresh look to confirm whether either is now something a real question could actually trigger | The planned specification pause |
+| Five of the six lookup tools (genetic variants, both research-literature tools, disease outbreaks, and clinical trials) are still not connected to the answer pipeline. Each can look up real data but cannot yet use that lookup to answer a question. Gene lookup is the one exception, connected this sprint | A later sprint |
+| If two live sources describe the same fact in genuinely different words for the same fact, not just a different name for the same gene, the system has one narrow safety check for the one specific case found so far (a real value versus a wildly wrong one for the same field) but has not been tested against every way two sources might phrase the same fact differently | Whenever a future check finds a new case |
+| The system is now built to automatically double-check an old, possibly-outdated fact from our own database against the live government record before repeating it as current, but our own database does not yet store the specific kind of detail (how old a particular fact is, field by field) this check needs to know when to fire, so in practice it never runs yet. This is a gap in the earlier database-building work, not in this system | Whenever the earlier database-building work stores that detail, or the planned specification pause |
+| One narrow path in the gatekeeper, if it ever hits a specific rare internal error, shows a generic "something went wrong" message instead of the real reason, a leftover bug from an earlier sprint noticed by accident while building this one. Not otherwise reachable in normal use | The planned specification pause |
 | The two new literature lookup tools disagree with each other about whether to tell you when they had to hide part of an answer for being too long. One says so, the other stays quiet. Neither is wrong exactly, they were built by different people making a reasonable call about the same open question, but having two different answers to the same question in one product needs a single decision | Whenever the product owner decides |
 | One of the two literature lookup tools gives you a name-lookup result (say, confirming a term really is a recognized gene) with no link back to where that confirmation came from, even though the underlying record does have a real, findable page. Its sibling mode links every result; this one does not | The planned specification pause |
 | The variant-literature tool's link for a specific variant points to a general search page rather than a page about that exact variant, and when it returns a list of up to 590 related papers, none of the individual papers gets its own link (its sibling tool does give every paper its own link) | The planned specification pause |
