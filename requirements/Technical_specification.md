@@ -3010,6 +3010,22 @@ This section references the `eval-harness` skill and `requirements/Evaluation_pl
 | Retry safety | Idempotency of any tool the Act step may retry | Unit | None | Merge-blocking on tools that write or mutate state |
 | Agent answer quality | Eval harness pass@k and pass^k against the golden dataset | Eval, code-graded then model-graded then human-flagged | Full loop, real APIs, real LLM calls | Milestone gate, not every PR |
 
+### Premise gates: the phase-opening test that must be seen failing first
+
+Folded back into this locked spec via the Step 6.2 reconciliation, 2026-08-10. The requirement itself was decided earlier, 2026-08-01 (`DECISIONS.md`), forced by build phase 2.1's own failure (`LEARNINGS.md`'s phase 2.1 retrospective). Section 25's build order was locked and could not gain a new ticket mid-build when this was discovered, so the requirement lived only in `docs/build/Build_workflow_cadence.md` stage 5 and the `task-tracker` skill until now. That document stays the living, detailed version; this section is the spec-level record of the requirement so it is not spec-invisible.
+
+Every build phase whose deliverable is model-generated output (a Cypher-generating tool, a synthesized answer, a classifier) opens with a premise gate before any other ticket is worked, and the gate must be seen failing before it is trusted. Watching it fail first is what proves it can fail at all: a gate written after the code it grades is written against behavior that already exists, and tends to encode that behavior as correct rather than test it.
+
+A premise gate has five properties, each one a direct response to a measured failure in build phase 2.1, which passed a fully green suite while answering 3 of 8 real questions correctly, the worst case returning twenty-five non-human orthologs for "which diseases are associated with BRCA1?" under `status="ok"`, every row carrying a real, resolving citation:
+
+- Does not mock the model. A mocked test supplies a query someone already knows is correct and cannot see a generation defect.
+- Asserts on the meaning of the answer, not its shape. "Rows came back" and "every row is cited" both passed on the wrong answer above.
+- Pins ground truth read from the live source, so "correct" is checkable rather than plausible.
+- Runs the way production runs. A first draft of build phase 2.1's own gate hand-picked an input production does not send and scored 8 of 9; sending the same stub value production actually emits scored 3 of 9. A gate handed a better input than production sends is a fixture, not a gate.
+- States its own coverage: which shapes of question it exercises and which it omits. Build phase 2.1's gate could not see a defect making every two-hop question unanswerable, because all nine of its own questions were one hop from a single anchor type. A gate with an unstated blind spot inherits the blind spot of the code it grades.
+
+This property currently applies to build phase 2.2 and every tool phase from 3.1 onward, per Section 25's build order, and to any future phase whose deliverable is model-generated output.
+
 ### Unit tests
 
 Unit tests cover everything that does not need a network call to prove correct: the Guardrail's Pydantic models and rejection rules, each tool's request-building and response-parsing logic against recorded fixtures, the Write step's deterministic grounding logic, and the FastAPI route handlers with mocked tool calls.
