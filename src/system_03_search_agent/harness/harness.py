@@ -565,10 +565,20 @@ class Harness:
                 error_class = _classify_exception(exc)
                 if error_class == "transient" and attempt < max_attempts:
                     continue
+                # F-3.4-A-07: the internal message carries str(exc), the
+                # provider's own error text (e.g. an OpenRouter 402
+                # affordability message), not just the exception type name.
+                # This never reaches the end user: _STEP_ERROR_END_USER_MESSAGES
+                # (graph.py, F-2.0-12) stays the deliberately generic
+                # client-facing string regardless of error_class. Without
+                # this, an "unexpected"-classed provider error (never
+                # auto-retried, unlike "transient") was root-caused only by
+                # live manual reproduction, since nothing else surfaced or
+                # logged the real cause.
                 raise HarnessCallError(
                     f"call_tier failed for tier {tier!r} (model {model_id!r}) "
                     f"after {attempt} attempt(s): {error_class} error "
-                    f"({type(exc).__name__})",
+                    f"({type(exc).__name__}): {exc}",
                     error_class=error_class,
                 ) from exc
             else:

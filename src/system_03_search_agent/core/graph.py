@@ -784,6 +784,8 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
         # and it does not.
         return {
             "step_error": {
+                "fatal": True,
+                "scope": "step",
                 "source": "guardrail",
                 "error_class": "recoverable",
                 "message": str(exc)[:256],
