@@ -567,13 +567,14 @@ async def test_cluster_snp_neighbors_empty_when_no_members(monkeypatch: pytest.M
 
 
 @pytest.mark.asyncio
-async def test_cluster_snp_neighbors_truncated_scan_with_no_matches_is_empty(
+async def test_cluster_snp_neighbors_truncated_scan_with_no_matches_is_timeout(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cluster_list succeeds, but the SNP_distances read's own scan result
     reports truncated_by_deadline=True AND found nothing parseable in the
     portion scanned (this row has none of the real pairwise columns):
-    status must be "empty" with an actionable message.
+    status must be "timeout" (F-3.5-A-09, Step 6.2: was "empty" before this
+    reconciliation) with an actionable message.
     """
     _install_snapshot(monkeypatch)
     cluster_rows = [{"biosample_acc": "SAMN00000001", "PDS_acc": "PDS000012345.1"}]
@@ -587,7 +588,7 @@ async def test_cluster_snp_neighbors_truncated_scan_with_no_matches_is_empty(
 
     output = await pathogen_detection(_cluster_input())
 
-    assert output.status == "empty"
+    assert output.status == "timeout"
     assert output.truncated is True
     assert output.error is not None
     assert "budget" in output.error.lower() or "deadline" in output.error.lower() or "timeout" in output.error.lower() or "120" in output.error
@@ -649,7 +650,8 @@ async def test_cluster_snp_neighbors_deadline_exceeded_error_raised_by_transport
 ) -> None:
     """PathogenDeadlineExceededError raised mid-scan (rather than reported
     via TsvScanResult.truncated_by_deadline) is caught the same way:
-    status "empty", never propagated as an unhandled exception and never
+    status "timeout" (F-3.5-A-09, Step 6.2: was "empty" before this
+    reconciliation), never propagated as an unhandled exception and never
     reported as "ok".
     """
     _install_snapshot(monkeypatch)
@@ -660,7 +662,7 @@ async def test_cluster_snp_neighbors_deadline_exceeded_error_raised_by_transport
 
     output = await pathogen_detection(_cluster_input())
 
-    assert output.status == "empty"
+    assert output.status == "timeout"
     assert output.truncated is True
     assert output.error is not None
 
@@ -669,7 +671,8 @@ async def test_cluster_snp_neighbors_deadline_exceeded_error_raised_by_transport
 async def test_isolate_lookup_deadline_already_expired_before_any_read(monkeypatch: pytest.MonkeyPatch) -> None:
     """A deadline that is already in the past before the metadata read even
     starts (the fail-fast check `_remaining(deadline) <= 0`) never issues
-    the read at all, and resolves to "empty", not "ok".
+    the read at all, and resolves to "timeout" (F-3.5-A-09, Step 6.2: was
+    "empty" before this reconciliation), not "ok".
     """
     _install_snapshot(monkeypatch)
     action = PathogenIsolateLookupInput(
@@ -680,7 +683,7 @@ async def test_isolate_lookup_deadline_already_expired_before_any_read(monkeypat
     already_past_deadline = time.monotonic() - 1.0
     output = await _isolate_lookup(action, "PDG000000002.4157", "Salmonella", already_past_deadline, client=object())
 
-    assert output.status == "empty"
+    assert output.status == "timeout"
     assert output.truncated is True
     assert scripted.calls == []
 

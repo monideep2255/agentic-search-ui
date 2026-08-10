@@ -1306,7 +1306,7 @@ Output schema:
   "required": ["status", "mode", "isolates", "isolate_count", "truncated"],
   "additionalProperties": false,
   "properties": {
-    "status": {"type": "string", "enum": ["ok", "empty", "error"]},
+    "status": {"type": "string", "enum": ["ok", "empty", "error", "timeout"]},
     "mode": {"type": "string", "maxLength": 25},
     "pdg_snapshot": {"type": "string", "maxLength": 30, "description": "the pinned complete snapshot this result came from, e.g. PDG000000002.4157"},
     "isolates": {
@@ -1360,6 +1360,7 @@ Procedure:
 Error and empty behavior:
 
 - `biosample_acc` or `pds_cluster` not found in the pinned snapshot: `status: "empty"`, a structured empty and the Layer 2 cite-or-refuse trigger for this tool, since a bulk file read carries no HTTP-status success signal the way Entrez does.
+- The shared wall-clock budget runs out before the scan reaches a qualifying row: `status: "timeout"`, a fourth enum value distinct from `status: "empty"`, added at Step 6.2 (finding F-3.5-A-09). Before this, both cases shipped as `status: "empty"`, distinguishable only by parsing the free-text `error` field, since a genuinely absent record and a cutoff scan mean different things to a caller deciding whether to retry: a cutoff is worth retrying with more budget, a genuine absence is not.
 - The snapshot directory is unreachable or incomplete for `taxon`: `status: "error"`, message names the taxon and the snapshot version it could not resolve.
 - A newer complete snapshot appearing since the last check is never surfaced as an error: Section 4.3 already fixes the caching rule (cached until a newer complete PDG snapshot is pinned, re-checked daily), so the tool silently re-pins on its next daily check.
 
@@ -1380,10 +1381,10 @@ Input schema:
   "required": ["query_cond"],
   "additionalProperties": false,
   "properties": {
-    "query_cond": {"type": "string", "maxLength": 200, "description": "condition or disease phrase, maps to query.cond"},
+    "query_cond": {"type": "string", "maxLength": 200, "description": "condition or disease phrase, maps to query.cond. Parsed by ClinicalTrials.gov as an Essie search expression, not a literal phrase: a condition name containing AND, OR, or NOT (e.g. \"Carcinoma NOT Otherwise Specified\") is interpreted as a boolean operator and can silently return the logical inverse of the intended search (F-3.5-A-03, disclosed at Step 6.2)"},
     "query_term": {"type": "string", "maxLength": 200, "description": "free text, maps to query.term"},
     "query_intr": {"type": "string", "maxLength": 200, "description": "intervention, maps to query.intr"},
-    "overall_status": {"type": "string", "enum": ["RECRUITING", "COMPLETED", "TERMINATED", "ACTIVE_NOT_RECRUITING", "NOT_YET_RECRUITING", "UNKNOWN"]},
+    "overall_status": {"type": "string", "enum": ["RECRUITING", "COMPLETED", "TERMINATED", "ACTIVE_NOT_RECRUITING", "NOT_YET_RECRUITING", "UNKNOWN", "WITHDRAWN", "ENROLLING_BY_INVITATION", "SUSPENDED", "WITHHELD", "NO_LONGER_AVAILABLE", "AVAILABLE", "APPROVED_FOR_MARKETING", "TEMPORARILY_NOT_AVAILABLE"]},
     "page_size": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20},
     "page_token": {"type": "string", "maxLength": 200}
   }

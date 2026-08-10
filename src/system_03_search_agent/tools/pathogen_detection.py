@@ -607,13 +607,20 @@ def _deadline_exceeded_output(
     mode: str, stage: str, *, snapshot: str | None = None
 ) -> PathogenDetectionOutput:
     """A deadline cutoff with NOTHING usable found in the portion actually
-    scanned is `status: "empty"` with an actionable message, never
+    scanned is `status: "timeout"` with an actionable message, never
     fabricated as a confirmed absence. As of the F-3.5-A-01 fix
     (adversary round, 2026-08-08), this function is reached only when a
     scan was cut short AND produced zero qualifying rows; a scan cut
     short that DID find real matches now returns `status: "ok"` with
     `truncated: true` instead (see `_cluster_snp_neighbors`/
     `_isolate_lookup`), never discarded through this path.
+
+    `status: "timeout"` (F-3.5-A-09, Step 6.2, 2026-08-10): this used to
+    ship as `status: "empty"`, indistinguishable from a genuine
+    no-such-record short of parsing the free-text `error` field below. A
+    cutoff is worth retrying with more budget; a genuine absence is not,
+    so a caller needs the two told apart structurally, not by string
+    matching.
 
     `snapshot`: every call site in this module already knows which
     snapshot it resolved to by the time a deadline can fire (resolution
@@ -622,7 +629,7 @@ def _deadline_exceeded_output(
     (F-3.5-09, judge round 2026-08-08).
     """
     return PathogenDetectionOutput(
-        status="empty",
+        status="timeout",
         mode=mode,
         pdg_snapshot=_cap(snapshot, _MAX_SNAPSHOT_CHARS) if snapshot else None,
         isolate_count=0,

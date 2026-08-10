@@ -112,6 +112,19 @@ def test_page_token_over_max_length_is_rejected() -> None:
         "ACTIVE_NOT_RECRUITING",
         "NOT_YET_RECRUITING",
         "UNKNOWN",
+        # F-3.5-A-12 (Step 6.2, 2026-08-10): 8 more values, live-confirmed
+        # via GET /api/v2/stats/field/values?fields=OverallStatus
+        # (uniqueValuesCount: 14, all 14 present with a nonzero
+        # studiesCount). Filtering on one of these, a value the live API
+        # itself returns, used to raise a ValidationError.
+        "WITHDRAWN",
+        "ENROLLING_BY_INVITATION",
+        "SUSPENDED",
+        "WITHHELD",
+        "NO_LONGER_AVAILABLE",
+        "AVAILABLE",
+        "APPROVED_FOR_MARKETING",
+        "TEMPORARILY_NOT_AVAILABLE",
     ],
 )
 def test_every_documented_overall_status_value_is_accepted(status: str) -> None:
