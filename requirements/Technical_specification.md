@@ -3121,7 +3121,7 @@ Secrets never appear in logs or exception strings, per `ai-security-standards.md
 
 ### CI and CD
 
-CI runs on every pull request. CD runs only on merge to `main`. The two are separate concerns, and the security-scan milestone below is neither: it is a human ritual gate, not an automated CI step.
+CI runs on every pull request. CD runs only on merge to `develop`. The two are separate concerns, and the security-scan milestone below is neither: it is a human ritual gate, not an automated CI step.
 
 Merge-blocking gates, in order:
 
@@ -3138,7 +3138,7 @@ Merge-blocking gates, in order:
 | 9 | Required-path tests | `test_cite_or_refuse_compliance`, `test_zero_retrieval_refusal` (Section 23) | Yes, part of gate 4, called out because they are never skippable |
 | 10 | Accessibility check | WCAG 2.1 AA reasonable-effort check | Yes, on UI-touching PRs only |
 
-CD: Railway's native GitHub integration watches `main` only. A merge to `main` triggers an automatic build and deploy of `search-agent-api` and `search-agent-web`. Phase branches (`phase/N.M-description`, per `git-workflow.md`) never auto-deploy, so a half-finished phase never reaches a live environment. Rollback is redeploying the previous Railway build from its deploy history.
+CD: Railway's native GitHub integration watches `develop` only. A merge to `develop` triggers an automatic build and deploy of `search-agent-api` and `search-agent-web`. Phase branches (`phase/N.M-description`, per `git-workflow.md`) never auto-deploy, so a half-finished phase never reaches a live environment. Rollback is redeploying the previous Railway build from its deploy history.
 
 The security-scan milestone: this is not an automated CI block. Decision 2026-07-23 explicitly rejected enforcing it as a CI gate, because `claude-security` delivers human-reviewed patch files, not a pass or fail signal, and an automated block would misrepresent a step that needs a human to approve each patch before it applies. Instead, it is `release-workflow` Step 3 and a checkbox in the pull request template, run before a release or before opening a pull request, documented in `docs/Claude_security_plugin_usage.md`. The always-on `security-guidance` plugin covers the per-change layer continuously; `claude-security` is the deep audit a milestone earns.
 

@@ -55,7 +55,7 @@ Every answer must trace back to specific records in NCBI databases. Functions th
 
 ## 4. Commit hygiene
 
-- Work on phase branches, never directly on `main`. Build phases use `phase/N.M-description` from tech spec Section 25, other work uses a type prefix such as `chore/short-description`. One PR per phase, merged into `main` after review.
+- Work on phase branches, never directly on `develop`. Build phases use `phase/N.M-description` from tech spec Section 25, other work uses a type prefix such as `chore/short-description`. One PR per phase, merged into `develop` after review.
 - Commit messages in sentence case, descriptive, no emoji.
 - One logical change per commit.
 - Never add `Co-Authored-By` lines. Project rule.

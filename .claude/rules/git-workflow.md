@@ -8,12 +8,12 @@ alwaysApply: true
 
 ### Which work gets a branch
 
-Not everything does. Decided 2026-07-26, after four planning phases went straight to `main` while this rule said otherwise. The rule now matches the practice instead of contradicting it.
+Not everything does. Decided 2026-07-26, after four planning phases went straight to `develop` while this rule said otherwise. The rule now matches the practice instead of contradicting it.
 
 | Work | Branch and MR | Why |
 |------|---------------|-----|
 | Build phases, Plan.md Phase 6 onward | Required | Real code, where review catches things the product owner cannot see from the conversation |
-| Planning phases, Plan.md Phases 1 to 5 | Not required, direct to `main` is fine | The product owner was in the conversation as the documents were written, so a PR re-reviews something already reviewed |
+| Planning phases, Plan.md Phases 1 to 5 | Not required, direct to `develop` is fine | The product owner was in the conversation as the documents were written, so a PR re-reviews something already reviewed |
 | Anything touching `.claude/`, hooks, or settings | Required regardless of phase | The security layer, and the one place a silent change is most expensive |
 | A change the product owner asks to see before it lands | Required, on request | Their call overrides the table |
 
@@ -21,7 +21,7 @@ Phase 5 itself shipped as a branch and an MR because it rewrote the harness and 
 
 ### Branch model
 
-For work that gets a branch, work on it rather than directly on `main`. One branch per bossman phase.
+For work that gets a branch, work on it rather than directly on `develop`. One branch per bossman phase.
 
 Branch naming: `phase/N.M-short-description`
 
@@ -43,7 +43,7 @@ MR flow:
 1. Push the phase branch: `git push -u origin phase/N.M-description`
 2. Create PR/MR with deliverables checklist from `requirements/Plan.md`
 3. User reviews and approves
-4. Merge into `main` (no squash, preserve commit history)
+4. Merge into `develop` (no squash, preserve commit history)
 5. Delete the phase branch after merge
 
 Do not start the next phase branch until the current MR is merged or the user says to proceed.
