@@ -1,6 +1,6 @@
 ---
 name: phase-checkpoint
-description: "Sync planning or build documentation at a phase boundary: after closing a planning sub-phase or full phase (Plan.md Phases 2 to 5), or after a build phase's pull request merges to main (Plan.md Phase 6 onward, one checkpoint per merged build phase). Appends new decisions to DECISIONS.md and refreshes the mode-appropriate artifacts: the planning session doc, meeting note, and phase continuation prompt in planning mode, or the Phase 6 continuation prompt and Plan.md status in build mode. Distinct from /ship, which commits and pushes to GitHub: this updates the planning artifacts and runs before /ship, and never touches git. Distinct from /release, which is the local-verify-then-ship ritual for code changes."
+description: "Sync planning or build documentation at a phase boundary: after closing a planning sub-phase or full phase (Plan.md Phases 2 to 5), or after a build phase's pull request merges to develop (Plan.md Phase 6 onward, one checkpoint per merged build phase). Appends new decisions to DECISIONS.md and refreshes the mode-appropriate artifacts: the planning session doc, meeting note, and phase continuation prompt in planning mode, or the Phase 6 continuation prompt and Plan.md status in build mode. Distinct from /ship, which commits and pushes to GitHub: this updates the planning artifacts and runs before /ship, and never touches git. Distinct from /release, which is the local-verify-then-ship ritual for code changes."
 scope: project
 depends_on:
   - requirements/Plan.md
@@ -26,7 +26,7 @@ The steps differ by which side of Plan.md Phase 6 the checkpoint falls on. Deter
 | | Planning-phase checkpoint | Build-phase checkpoint |
 |---|---|---|
 | Applies to | Plan.md Phases 2 to 5 | Plan.md Phase 6 onward, one run per merged build phase (1.0, 1.1, 1.2, ...) |
-| Trigger | Finishing a sub-phase (2.3) or a full phase | A build phase's PR merges to `main` |
+| Trigger | Finishing a sub-phase (2.3) or a full phase | A build phase's PR merges to `develop` |
 | Session doc | `requirements/phase_N/Session_<Month>_<Day>.md`, updated | N/A. `tracker/phase_N.M.md` already carries the ticket-by-ticket record, evidence, and history, written during the build itself, not at checkpoint time |
 | Meeting note | `requirements/meetings/YYYY-MM-DD_Phase_N_steps_X-Y.md`, created or updated | N/A. No meeting-note convention exists for build execution; `LEARNINGS.md` plays the equivalent "what happened" role |
 | Continuation prompt | `requirements/phase_N/Continuation_prompt.md`, one file per planning phase | `requirements/phase_6/Continuation_prompt.md`, one file spanning all of Phase 6, refreshed after every merged build phase, not created per sub-phase |
@@ -58,7 +58,7 @@ This is why Step 4 and Step 5 below say refresh and update, not add a new sectio
 ## When to run
 
 - Planning-phase checkpoint: after finishing a sub-phase (for example 2.3) or a full phase during requirements planning (Plan.md Phases 2 to 5).
-- Build-phase checkpoint: after a build phase's pull request merges to `main` (Plan.md Phase 6 onward).
+- Build-phase checkpoint: after a build phase's pull request merges to `develop` (Plan.md Phase 6 onward).
 - Invoke explicitly with `/phase-checkpoint`. Do not auto-run. Whether a sub-phase or a build phase is actually done is a judgment the user makes, not a mechanical trigger.
 
 ## Inputs the skill needs

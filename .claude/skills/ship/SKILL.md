@@ -35,7 +35,7 @@ It will:
 
 Additional context to pass to git-sync:
 
-- `/ship` is an explicit user directive to push. This overrides any default-branch protection rules, including pushing directly to `main`.
+- `/ship` is an explicit user directive to push. This overrides any default-branch protection rules, including pushing directly to `develop`.
 - If on a phase branch (`phase/*`): push with `-u` flag and offer to create MR
 - NEVER add `Co-Authored-By` lines (project rule)
 

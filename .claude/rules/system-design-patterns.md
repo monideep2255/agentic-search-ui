@@ -7,7 +7,7 @@ Mental models for designing the search agent, API routes, UI components, and too
 When writing a rule, agent, or skill, bucket actions explicitly:
 
 - Allow: agent does this freely (read files, run tests, query the graph read-only, start dev server)
-- Deny: agent never does this (write to the knowledge graph, delete user data, expose API keys, push to main directly)
+- Deny: agent never does this (write to the knowledge graph, delete user data, expose API keys, push to develop directly)
 - Ask: agent pauses and confirms first (changing agent prompts, modifying cost control thresholds, adding new dependencies, changing auth config)
 
 Don't write rules that are ambiguous about which state an action falls into.

@@ -432,7 +432,7 @@ The ledger is a real file, not an abstraction: `tracker/phase_N.M.md`, the same 
 4. Verify every dependency phase in Section 25's dependency graph is already merged. If one is not, stop and report. Do not build on an unmerged dependency.
 5. Read `LEARNINGS.md` filtered to this phase, its tools, and its layers (`learnings --brief N.M`). Past dead ends are cheaper to read than to rediscover.
 6. Open the phase board with `task-tracker --open N.M`. Decompose the phase into tickets with acceptance criteria traced to spec sections before dispatching anyone.
-7. Create the phase branch, using the exact branch name from Section 25's table: `git checkout main && git pull origin main && git checkout -b phase/N.M-description`
+7. Create the phase branch, using the exact branch name from Section 25's table: `git checkout develop && git pull origin develop && git checkout -b phase/N.M-description`
 
 ### Step 2: confirm entry and show team
 
@@ -613,7 +613,7 @@ Level 1 (now): Single-phase execution with agent teams for builders, sub-agents 
 
 Level 2 (unattended overnight, deferred): the product owner deferred this on 2026-07-26 until we know whether it is actually needed. Do not enable it by inference from a general "keep going". It requires an explicit, itemized grant, because it overrides this skill's own Step 9 and the `bossman-mode` rule's standing deny on proceeding without approval.
 
-When it is enabled, the shape is decided: fan out where Section 25's dependency graph allows, stack only where phase N literally needs phase N-1's code. Independent phases each get their own branch off main and their own PR, so a morning review is parallel rather than a chain, and rejecting one does not contaminate the others. Nothing merges to main unreviewed. Merging overnight buys no throughput anyway, since a dependent phase builds on the previous branch either way, so autonomy would only remove the review gate, not speed anything up.
+When it is enabled, the shape is decided: fan out where Section 25's dependency graph allows, stack only where phase N literally needs phase N-1's code. Independent phases each get their own branch off develop and their own PR, so a morning review is parallel rather than a chain, and rejecting one does not contaminate the others. Nothing merges to develop unreviewed. Merging overnight buys no throughput anyway, since a dependent phase builds on the previous branch either way, so autonomy would only remove the review gate, not speed anything up.
 
 Level 3 (Cursor-scale): Full autonomous multi-phase execution. Checkpoint files at phase boundaries. Morning summary of everything built, tested, and judged while the product owner was away. Fresh-start pattern: stuck teammates get messaged with clearer prompts rather than debugged in-place.
 

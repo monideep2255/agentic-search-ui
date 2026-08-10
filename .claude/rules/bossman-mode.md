@@ -47,7 +47,7 @@ Ask:
 Deny:
 - Proceeding to the next phase without user MR approval
 - Ignoring a blocker by guessing
-- Pushing to main directly (push to phase branch only, merge via MR), except through the sanctioned /ship release chain at phase end, where ship/SKILL.md's explicit user directive overrides this and permits pushing directly to main
+- Pushing to develop directly (push to phase branch only, merge via MR), except through the sanctioned /ship release chain at phase end, where ship/SKILL.md's explicit user directive overrides this and permits pushing directly to develop
 
 ### When bossman mode is NOT active
 

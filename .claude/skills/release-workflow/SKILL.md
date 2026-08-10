@@ -7,7 +7,7 @@ description: End-to-end release workflow for System 3 changes. Verifies locally,
 
 What "release" means in this repo:
 
-- A feature or fix has been written, tested, and is ready to land on `main`.
+- A feature or fix has been written, tested, and is ready to land on `develop`.
 - The dev server starts and basic smoke tests pass.
 - Docs and `DECISIONS.md` are in sync.
 
