@@ -137,7 +137,7 @@ flowchart LR
         Out --> Tr[Trust rules cover all tools, gene lookup wired in]
         Tr --> Sp[Specification pause, found the question-understanding gap]
     end
-    Sp --> Dec{Question-understanding gap: fix now, alongside, or its own sprint?}
+    Sp --> Dec[Question-understanding gap: given a home, a later sprint, not fixed yet]
     Dec --> Wire[Wire the other five tools into the answer pipeline]
     Wire --> L[Everything else]
 ```
@@ -148,7 +148,7 @@ The planned specification pause (updating the written plans with everything lear
 
 In order, now:
 
-1. A decision on the question-understanding gap: whether it gets built before the next sprint starts, alongside it, or as its own dedicated piece of work. Nobody currently owns it.
+1. The question-understanding gap now has a home: a specific future sprint, later than the next several, will build the real fix. It is not being rushed in early, and nothing in the next few sprints depends on it being fixed first.
 2. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
 3. Then the remaining work: the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
 
@@ -158,7 +158,7 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
-| The step that is supposed to understand what a question is actually asking has never been built past a placeholder (see "What does not work yet" above). The single biggest known problem right now | Nobody owns it yet. A decision is needed on whether it blocks the next sprint, runs alongside it, or gets its own dedicated sprint |
+| The step that is supposed to understand what a question is actually asking has never been built past a placeholder (see "What does not work yet" above). The single biggest known problem right now | Given a home: a specific future sprint, later than the next several. It will not be rushed in early, and nothing else waits on it |
 | One of the two small leftover gaps in the gene lookup tool (a missing length limit on one nested list) turned out to be real and already reachable by a real question, once this sprint's specification pause looked again; it is fixed. The other (an unusual input shape inside a different lookup path) is still not reachable by anything today, so it was left alone | Fixed |
 | Five of the six lookup tools (genetic variants, both research-literature tools, disease outbreaks, and clinical trials) are still not connected to the answer pipeline. Each can look up real data but cannot yet use that lookup to answer a question. Gene lookup is the one exception, connected in an earlier sprint | A later sprint |
 | If two live sources describe the same fact in genuinely different words for the same fact, not just a different name for the same gene, the system has one narrow safety check for the one specific case found so far (a real value versus a wildly wrong one for the same field) but has not been tested against every way two sources might phrase the same fact differently | Whenever a future check finds a new case |
