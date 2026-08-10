@@ -561,7 +561,13 @@ def http_status_error_message(source: str, response: httpx.Response) -> str | No
 
 
 def _retry_after_hint(response: httpx.Response) -> str:
-    """Render the retry delay for a 429/503, or "" when the server didn't say.
+    """Render the retry delay for a 429, or "" when the server didn't say.
+
+    F-3.1-51 (Step 6.2, 2026-08-10): corrected from "429/503", which
+    overclaimed coverage this function never had. Only the 429 branch of
+    `http_status_error_message` calls this; the >=500 branch's message
+    already gives an actionable direction ("retry after a backoff") without
+    a specific number, which satisfies the retry-safety gate on its own.
 
     Deliberately calls `parse_retry_after` (which returns `None` on a
     missing or unparseable header), not `retry_after_for_response` (which
