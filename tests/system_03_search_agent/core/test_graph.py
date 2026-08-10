@@ -119,6 +119,40 @@ def _stub_symbol_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _fake_resolve_symbol_to_curie)
 
 
+# T-3.4-05/T-3.1-28: `plan_node` now dispatches a second, Layer 2
+# `ncbi_efetch` call alongside `cypher_query` whenever a resolved target
+# entity is Gene-shaped, and `_GRAPH_ANSWERABLE_QUERY_TEXT` below names
+# BRCA1 (a Gene) in dozens of tests in this file, the identical reason
+# `_stub_symbol_resolution` above exists. Default to a genuine, empty
+# (never fabricated) `NcbiEfetchOutput`: `status="empty"` contributes
+# nothing to `build_synth_findings`/citations/trust (both skip any finding
+# whose status is not "ok"), so every pre-T-3.4-05 assertion about
+# citation counts, trust signals, or narrative content is unaffected; only
+# `total_tool_calls`/`tool_calls` counts for a Gene-anchored query grow,
+# which the specific tests affected by that assert on directly. A test
+# that needs a real ("ok") Layer 2 result overrides this with its own
+# `monkeypatch.setattr(graph_module, "ncbi_efetch", ...)`.
+_EMPTY_NCBI_EFETCH_OUTPUT_KWARGS: dict[str, object] = {
+    "status": "empty",
+    "action": "dataset_report",
+    "records": [],
+    "record_count": 0,
+    "total_available": None,
+    "truncated": False,
+    "error": None,
+}
+
+
+@pytest.fixture(autouse=True)
+def _stub_ncbi_efetch_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchOutput
+
+    async def _fake_ncbi_efetch(tool_input: object, **kwargs: object) -> NcbiEfetchOutput:
+        return NcbiEfetchOutput(**_EMPTY_NCBI_EFETCH_OUTPUT_KWARGS)
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _fake_ncbi_efetch)
+
+
 # Matches a rendered findings line without assuming its internal shape.
 # An earlier version parsed "field: value" and broke silently the moment
 # `render_findings_block` started naming the record type, because a
@@ -550,7 +584,11 @@ async def test_done_event_trust_outcome_is_refuse_when_the_tool_call_errors() ->
     done_event = events[-1]
     assert done_event.type == "done"
     assert done_event.payload["trust_outcome"] == "refuse"
-    assert done_event.payload["total_tool_calls"] == 1
+    # T-3.4-05: BRCA1 also dispatches a second, Layer 2 ncbi_efetch call
+    # (the autouse `_stub_ncbi_efetch_dispatch` fixture stubs it to a
+    # genuine "empty" result), so two tool calls are now attempted, not
+    # one; the cypher_query call still errors exactly as before.
+    assert done_event.payload["total_tool_calls"] == 2
 
     citation_events = [event for event in events if event.type == "citation"]
     assert citation_events == [], "an errored tool call must never produce a citation"
@@ -618,7 +656,11 @@ async def test_done_event_trust_outcome_is_answer_with_a_real_citation_when_the_
     done_event = events[-1]
     assert done_event.type == "done"
     assert done_event.payload["trust_outcome"] == "answer"
-    assert done_event.payload["total_tool_calls"] == 1
+    # T-3.4-05: BRCA1 also dispatches a second, Layer 2 ncbi_efetch call
+    # (the autouse `_stub_ncbi_efetch_dispatch` fixture stubs it to a
+    # genuine "empty" result, which contributes no citation), so two tool
+    # calls are now attempted, not one.
+    assert done_event.payload["total_tool_calls"] == 2
 
 
 # ---------------------------------------------------------------------------
@@ -1628,9 +1670,15 @@ async def test_plan_selects_cypher_query_for_a_graph_answerable_query() -> None:
 
     plan_event = next(event for event in events if event.type == "plan")
     tool_calls = plan_event.payload["tool_calls"]
-    assert len(tool_calls) == 1
+    # T-3.4-05: BRCA1 resolves to a Gene CURIE, so plan_node also selects
+    # ncbi_efetch as a second, Layer 2 answer-bearing call; see
+    # test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query below
+    # for the dedicated test of that behavior.
+    assert len(tool_calls) == 2
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
+    assert tool_calls[1]["tool"] == "ncbi_efetch"
+    assert tool_calls[1]["layer"] == "layer_2_api"
 
 
 @pytest.mark.asyncio
@@ -1658,9 +1706,16 @@ async def test_act_executes_the_selected_cypher_query_call(
 
     assert len(calls) == 1
     tool_calls, results = calls[0]
-    assert len(tool_calls) == 1
-    assert len(results) == 1
-    assert results[0].contains_untrusted_free_text is False  # a Cypher row is structured data
+    # T-3.4-05: BRCA1 also dispatches a second, Layer 2 ncbi_efetch call
+    # (stubbed to a genuine "empty" result by the autouse
+    # `_stub_ncbi_efetch_dispatch` fixture), so two paired (tool_call,
+    # result) entries reach coordinator_worker_execute now, not one.
+    assert len(tool_calls) == 2
+    assert len(results) == 2
+    assert tool_calls[0].tool == "cypher_query"
+    assert tool_calls[1].tool == "ncbi_efetch"
+    for result in results:
+        assert result.contains_untrusted_free_text is False  # structured data, never free text
 
     done_event = events[-1]
     assert done_event.type == "done"
@@ -2302,3 +2357,1948 @@ async def test_a_candidate_that_resolves_rescues_a_query_with_another_that_does_
         "the same text never resolved"
     )
     assert planned.cypher_input.target_entities == ["NCBIGene:672"]
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-03, closing F-2.2-A-05: `_node_or_edge_type_by_citation_id` prefers
+# a row's `traversed_edge_type` over its bare `node_or_edge_type` whenever
+# the Cypher pinned one, and falls back unchanged otherwise.
+# ---------------------------------------------------------------------------
+
+
+def _finding_with_rows(rows: list[dict]):
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    return Finding(
+        call_id="call-1",
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={"status": "ok", "rows": rows},
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+
+def _synth_finding(citation_id: str, source_url: str):
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    return SynthFinding(
+        ref_index=1,
+        citation_id=citation_id,
+        layer="layer_1_graph",
+        tool="cypher_query",
+        field="curie",
+        field_value="MedGen:C0346153",
+        source_url=source_url,
+        curie_fallback=False,
+    )
+
+
+def test_node_or_edge_type_by_citation_id_prefers_the_traversed_edge_type() -> None:
+    """The flagship shape: a `Disease` row reached through a real
+    `gene_associated_with_condition` traversal must hand the trust layer
+    the edge label, not the endpoint's bare node type."""
+    url = "https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+    finding = _finding_with_rows(
+        [
+            {
+                "node_or_edge_type": "Disease",
+                "curie": "MedGen:C0346153",
+                "source_url": url,
+                "traversed_edge_type": "gene_associated_with_condition",
+            }
+        ]
+    )
+    synth = _synth_finding("cid-1", url)
+
+    result = graph_module._node_or_edge_type_by_citation_id([finding], [synth])
+
+    # F-3.4-A-02: the return value widened to a (row_type, ambiguous_high_
+    # risk_touch) pair; this row's own `traversed_edge_type` resolved
+    # unambiguously, so the ambiguous-touch half stays False.
+    assert result["cid-1"] == ("gene_associated_with_condition", False)
+
+
+def test_node_or_edge_type_by_citation_id_falls_back_with_no_traversed_edge() -> None:
+    """The bare identifier lookup case: no `traversed_edge_type` on the
+    row, so the previous behavior (the row's own node type) is unchanged.
+    This is what keeps the four `synthesis/trust.py` guard tests honest:
+    nothing here may ever turn a real bare lookup high risk."""
+    url = "https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+    finding = _finding_with_rows(
+        [
+            {
+                "node_or_edge_type": "Disease",
+                "curie": "MedGen:C0346153",
+                "source_url": url,
+            }
+        ]
+    )
+    synth = _synth_finding("cid-1", url)
+
+    result = graph_module._node_or_edge_type_by_citation_id([finding], [synth])
+
+    assert result["cid-1"] == ("Disease", False)
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-05, closing T-3.1-28: `act_node` dispatches `ncbi_efetch` as a
+# second, answer-bearing Layer 2 tool call alongside `cypher_query`,
+# exactly when a resolved target entity is Gene-shaped.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query() -> None:
+    """The one condition this ticket wires: a resolved Gene CURIE among
+    cypher_query's own target_entities also selects a second, Layer 2
+    ncbi_efetch call. The cypher call stays first (write_node's refusal
+    branch depends on `tool_calls[0]` being the cypher call), and the
+    ncbi_efetch input targets the exact same gene.
+    """
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = await _run_graph(query, _valid_context())
+
+    plan_event = next(event for event in events if event.type == "plan")
+    tool_calls = plan_event.payload["tool_calls"]
+    assert len(tool_calls) == 2
+    assert tool_calls[0]["tool"] == "cypher_query"
+    assert tool_calls[0]["layer"] == "layer_1_graph"
+    assert tool_calls[1]["tool"] == "ncbi_efetch"
+    assert tool_calls[1]["layer"] == "layer_2_api"
+
+
+@pytest.mark.asyncio
+async def test_plan_selects_only_cypher_query_for_a_disease_anchored_query() -> None:
+    """The negative case: a query anchored on a non-Gene CURIE (a Disease,
+    named verbatim) must never also dispatch ncbi_efetch. This is the
+    boundary `.claude/rules/v1-scope-boundary.md`'s spirit and this
+    ticket's own instructions both name explicitly: one tool, one
+    condition, never a general planner.
+    """
+    query = _valid_query(text="Tell me about MedGen:C0346153")
+    events = await _run_graph(query, _valid_context())
+
+    plan_event = next(event for event in events if event.type == "plan")
+    tool_calls = plan_event.payload["tool_calls"]
+    assert len(tool_calls) == 1
+    assert tool_calls[0]["tool"] == "cypher_query"
+
+
+def test_first_gene_curie_finds_the_first_gene_shaped_entity() -> None:
+    assert graph_module._first_gene_curie(["NCBIGene:672"]) == "NCBIGene:672"
+    assert (
+        graph_module._first_gene_curie(["MedGen:C0346153", "NCBIGene:672"])
+        == "NCBIGene:672"
+    )
+
+
+def test_first_gene_curie_returns_none_for_no_gene_entity() -> None:
+    assert graph_module._first_gene_curie([]) is None
+    assert graph_module._first_gene_curie(["MedGen:C0346153"]) is None
+
+
+def test_build_planned_ncbi_efetch_call_targets_the_gene_by_id() -> None:
+    planned = graph_module._build_planned_ncbi_efetch_call("NCBIGene:672")
+    assert planned.tool_call.tool == "ncbi_efetch"
+    assert planned.tool_call.layer == "layer_2_api"
+    assert planned.ncbi_efetch_input.root.action == "dataset_report"
+    assert planned.ncbi_efetch_input.root.report_type == "gene"
+    assert planned.ncbi_efetch_input.root.gene_id == "672"
+
+
+def _gene_report_output(
+    *, gene_id: str = "672", symbol: str = "BRCA1", status: str = "ok"
+):
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    return NcbiEfetchOutput(
+        status=status,
+        action="dataset_report",
+        records=(
+            [
+                NcbiEfetchRecord(
+                    id=gene_id,
+                    db="gene",
+                    fields={
+                        "gene_id": gene_id,
+                        "symbol": symbol,
+                        "description": "BRCA1 DNA repair associated",
+                    },
+                    source_url=f"https://www.ncbi.nlm.nih.gov/gene/{gene_id}/",
+                )
+            ]
+            if status == "ok"
+            else []
+        ),
+        record_count=1 if status == "ok" else 0,
+        total_available=1 if status == "ok" else None,
+        truncated=False,
+        error=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_act_dispatches_both_tools_for_a_gene_anchored_dual_plan(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A hand-built dual plan (bypassing plan_node's own detection, the
+    same direct-`act_node` pattern the F-2.1-C13 tests above use): act
+    dispatches BOTH the cypher_query and the ncbi_efetch call, builds one
+    Finding per tool, and stashes the real, typed `NcbiEfetchOutput` in
+    `layer2_raw_outputs`, keyed by the ncbi_efetch call's own call_id.
+    """
+    cypher_output = CypherQueryOutput(
+        status="ok",
+        row_count=1,
+        total_available=1,
+        truncated=False,
+        rows=[
+            CypherQueryRow(
+                node_or_edge_type="Gene",
+                curie="NCBIGene:672",
+                fields={"name": "BRCA1 DNA repair associated"},
+                source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+                graph_snapshot_version="v1",
+            ),
+        ],
+        error=None,
+    )
+
+    async def _fake_cypher_query(harness: object, cypher_input: object) -> CypherQueryOutput:
+        return cypher_output
+
+    ncbi_output = _gene_report_output()
+
+    async def _fake_ncbi_efetch(tool_input: object, **kwargs: object):
+        return ncbi_output
+
+    monkeypatch.setattr(graph_module, "cypher_query", _fake_cypher_query)
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _fake_ncbi_efetch)
+
+    harness = harness_module.Harness(trace_id="test-trace-dual-dispatch")
+    cypher_planned = graph_module._PlannedToolCall(
+        tool_call=ToolCall(tool="cypher_query", call_id="cq-dual", layer="layer_1_graph"),
+        cypher_input=CypherQueryInput(
+            query_intent="official gene symbol for NCBIGene:672",
+            query_class="lookup",
+            target_entities=["NCBIGene:672"],
+            row_limit=100,
+        ),
+    )
+    ncbi_planned = graph_module._build_planned_ncbi_efetch_call("NCBIGene:672")
+
+    act_state = {
+        "harness": harness,
+        "query": _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT),
+        "query_class": "lookup",
+        "tool_calls": [cypher_planned, ncbi_planned],
+    }
+    act_result = await graph_module.act_node(act_state)
+
+    findings = act_result["findings"]
+    assert len(findings) == 2
+    assert {f.tool for f in findings} == {"cypher_query", "ncbi_efetch"}
+
+    ncbi_finding = next(f for f in findings if f.tool == "ncbi_efetch")
+    assert ncbi_finding.layer == "layer_2_api"
+    assert ncbi_finding.structured_fields["status"] == "ok"
+    assert ncbi_finding.structured_fields["rows"][0]["fields"]["symbol"] == "BRCA1"
+    assert "gene_id" not in ncbi_finding.structured_fields["rows"][0]["fields"], (
+        "the record's own identity field must not outrank a real fact "
+        "(the gene symbol) for representative-field selection"
+    )
+
+    layer2_raw_outputs = act_result["layer2_raw_outputs"]
+    assert layer2_raw_outputs[ncbi_planned.tool_call.call_id] is ncbi_output
+
+
+@pytest.mark.asyncio
+async def test_write_builds_a_real_layer2_citation_for_a_grounded_ncbi_efetch_claim(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """The write_node half: a grounded claim built from an `ncbi_efetch`
+    finding is cited via T-3.4-04's `build_layer2_citation`, carrying that
+    tool's own real Section 9.2 provenance, not the Layer 1 literals.
+    """
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    cypher_finding = Finding(
+        call_id="cq-dual",
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "row_count": 1,
+            "total_available": 1,
+            "truncated": False,
+            "rows": [
+                {
+                    "node_or_edge_type": "Gene",
+                    "curie": "NCBIGene:672",
+                    "fields": {"name": "BRCA1 DNA repair associated"},
+                    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+                    "graph_snapshot_version": "v1",
+                }
+            ],
+            "error": None,
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    ncbi_output = _gene_report_output()
+    ncbi_finding = Finding(
+        call_id="ne-dual",
+        tool="ncbi_efetch",
+        layer="layer_2_api",
+        source="structured_pass_through",
+        structured_fields=graph_module._ncbi_efetch_output_to_structured_fields(ncbi_output),
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    state = _write_state(query, [cypher_finding, ncbi_finding])
+    state["layer2_raw_outputs"] = {"ne-dual": ncbi_output}
+
+    write_result = await graph_module.write_node(state)
+    events = write_result["events"]
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "answer"
+
+    citation_events = [event for event in events if event.type == "citation"]
+    layers_cited = {c.payload["layer"] for c in citation_events}
+    assert "layer_1_graph" in layers_cited
+    assert "layer_2_api" in layers_cited, (
+        "the grounded ncbi_efetch claim must earn a real Layer 2 citation"
+    )
+
+    layer2_citation = next(c.payload for c in citation_events if c.payload["layer"] == "layer_2_api")
+    assert layer2_citation["evidence_kind"] == "primary_assertion"
+    assert layer2_citation["assertion_confidence"] == "asserted"
+    assert layer2_citation["license"] == "public_domain_us_gov"
+    assert layer2_citation["license"] != "unspecified"
+    assert layer2_citation["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/672/"
+    # The grounded clause itself, not build_layer2_citation's own
+    # machine-built claim_text: the override this function applies.
+    assert "BRCA1" in layer2_citation["claim_text"]
+
+
+def test_layer2_citation_falls_back_gracefully_when_the_raw_output_is_missing() -> None:
+    """Defensive path: `_layer2_citation_for_synth_finding` must never
+    crash or fabricate a value when `layer2_raw_outputs` does not carry
+    the finding's raw output (should not happen in production; a future
+    refactor could still break the invariant that guarantees it).
+    """
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    synth_finding = SynthFinding(
+        ref_index=1,
+        citation_id="ne-missing-1",
+        layer="layer_2_api",
+        tool="ncbi_efetch",
+        field="symbol",
+        field_value="BRCA1",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+
+    citation = graph_module._layer2_citation_for_synth_finding(
+        synth_finding, [], {}, "ne-missing-1", 1, "The gene symbol is BRCA1 [1]."
+    )
+
+    assert citation.citation_id == "ne-missing-1"
+    assert citation.layer == "layer_2_api"
+    assert citation.license == "public_domain_us_gov"
+    assert citation.license != "unspecified"
+    assert citation.evidence_kind
+    assert citation.assertion_confidence
+    assert citation.claim_text == "The gene symbol is BRCA1 [1]."
+
+
+# ---------------------------------------------------------------------------
+# F-3.4-T05-04, found by independent re-verification of T-3.4-05: a
+# schema-valid ncbi_efetch record whose source_url is an OMIM record
+# (NcbiEfetchRecord's own pattern deliberately allows omim.org, Section
+# 6.2's "design decision 3") fails CitationPayload's narrower
+# NCBI_SOURCE_URL_PATTERN, which has no omim.org alternative. Before the
+# fix, the primary build_layer2_citation attempt's ValidationError was
+# caught, but the defensive fallback below it rebuilt a CitationPayload
+# from the same offending source_url and raised the identical
+# ValidationError uncaught, escaping write_node entirely. This is the
+# deterministic, non-live reproduction of that crash and its fix: neither
+# construction attempt may ever let an exception escape this function.
+# ---------------------------------------------------------------------------
+
+
+def test_layer2_citation_returns_none_rather_than_crash_on_an_omim_source_url() -> None:
+    """F-3.4-T05-04: an OMIM-sourced ncbi_efetch record is schema-valid at
+    the tool level (NcbiEfetchRecord.source_url's pattern allows
+    omim.org), but CitationPayload's own NCBI_SOURCE_URL_PATTERN does not.
+    Neither the primary build_layer2_citation attempt nor this function's
+    own fallback can honestly cite it, and both must fail closed to
+    `None`, never an uncaught pydantic.ValidationError.
+    """
+    from system_03_search_agent.harness.coordinator_worker import Finding
+    from system_03_search_agent.synthesis.findings import SynthFinding
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    record = NcbiEfetchRecord(
+        id="113705",
+        db="omim",
+        fields={"title": "BREAST CANCER 1 GENE; BRCA1"},
+        source_url="https://omim.org/entry/113705",
+    )
+    raw_output = NcbiEfetchOutput(
+        status="ok",
+        action="dataset_report",
+        records=[record],
+        record_count=1,
+        total_available=None,
+        truncated=False,
+    )
+    synth_finding = SynthFinding(
+        ref_index=1,
+        citation_id="ne-omim-1",
+        layer="layer_2_api",
+        tool="ncbi_efetch",
+        field="title",
+        field_value="BREAST CANCER 1 GENE; BRCA1",
+        source_url="https://omim.org/entry/113705",
+    )
+    ncbi_finding = Finding(
+        call_id="ne-omim",
+        tool="ncbi_efetch",
+        layer="layer_2_api",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "rows": [{
+                "curie": "",
+                "node_or_edge_type": "omim",
+                "fields": {"title": "BREAST CANCER 1 GENE; BRCA1"},
+                "source_url": "https://omim.org/entry/113705",
+            }],
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    citation = graph_module._layer2_citation_for_synth_finding(
+        synth_finding,
+        [ncbi_finding],
+        {"ne-omim": raw_output},
+        "ne-omim-1",
+        1,
+        "the gene is BRCA1",
+    )
+
+    assert citation is None, (
+        "an OMIM-sourced record must fail closed to no citation, never "
+        f"crash or fabricate one; got {citation!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# F-3.4-T05-01, live-found while re-verifying T-3.4-03 against the flagship
+# question after T-3.4-05 landed: a "derived" sibling row sharing the same
+# (source_url, curie) identity as its origin entity row could silently
+# overwrite that row's correctly-threaded traversed_edge_type, misclassifying
+# a high-risk claim low again. Reproduced live via a real `RETURN d, d.id`
+# Cypher shape; this is the deterministic, order-independent regression test.
+# ---------------------------------------------------------------------------
+
+
+def test_node_or_edge_type_by_citation_id_survives_a_derived_sibling_row_after() -> None:
+    """A `RETURN d, d.id` shape produces a real `Disease` row AND a
+    "derived" row for the same disease, sharing one `(source_url, curie)`
+    identity. When the derived row is iterated AFTER the real one, its
+    empty type must never overwrite the real row's traversed edge label.
+    """
+    url = "https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+    finding = _finding_with_rows(
+        [
+            {
+                "node_or_edge_type": "Disease",
+                "curie": "MedGen:C0346153",
+                "source_url": url,
+                "traversed_edge_type": "gene_associated_with_condition",
+            },
+            {
+                "node_or_edge_type": "derived",
+                "curie": "MedGen:C0346153",
+                "source_url": url,
+                "traversed_edge_type": None,
+            },
+        ]
+    )
+    synth = _synth_finding("cid-1", url)
+
+    result = graph_module._node_or_edge_type_by_citation_id([finding], [synth])
+
+    assert result["cid-1"] == ("gene_associated_with_condition", False)
+
+
+def test_node_or_edge_type_by_citation_id_survives_a_derived_sibling_row_before() -> None:
+    """The same collision, order reversed: the derived row is iterated
+    BEFORE the real row. The fix is order-independent, so the outcome must
+    be identical either way.
+    """
+    url = "https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+    finding = _finding_with_rows(
+        [
+            {
+                "node_or_edge_type": "derived",
+                "curie": "MedGen:C0346153",
+                "source_url": url,
+                "traversed_edge_type": None,
+            },
+            {
+                "node_or_edge_type": "Disease",
+                "curie": "MedGen:C0346153",
+                "source_url": url,
+                "traversed_edge_type": "gene_associated_with_condition",
+            },
+        ]
+    )
+    synth = _synth_finding("cid-1", url)
+
+    result = graph_module._node_or_edge_type_by_citation_id([finding], [synth])
+
+    assert result["cid-1"] == ("gene_associated_with_condition", False)
+
+
+# ---------------------------------------------------------------------------
+# F-3.4-T05-02, live-found while re-verifying the build phase 2.2 grounding
+# gate after T-3.4-05 landed: `_known_total_available`/`_ok_finding_was_
+# truncated` used to read across EVERY "ok" finding regardless of tool, so
+# an ncbi_efetch finding's own total_available=None (the normal, non-
+# paginated case) poisoned the whole aggregate to None even when
+# cypher_query's own total_available was known.
+# ---------------------------------------------------------------------------
+
+
+def _ncbi_efetch_finding(*, total_available, truncated: bool = False):
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    return Finding(
+        call_id="ne-1",
+        tool="ncbi_efetch",
+        layer="layer_2_api",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "row_count": 1,
+            "total_available": total_available,
+            "truncated": truncated,
+            "rows": [
+                {
+                    "curie": "",
+                    "node_or_edge_type": "gene",
+                    "fields": {"symbol": "BRCA1"},
+                    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672/",
+                }
+            ],
+            "error": None,
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+
+def _cypher_finding(*, total_available, truncated: bool = False, row_count: int = 4):
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    return Finding(
+        call_id="cq-1",
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "row_count": row_count,
+            "total_available": total_available,
+            "truncated": truncated,
+            "rows": [],
+            "error": None,
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+
+def test_known_total_available_ignores_a_layer_2_findings_own_none() -> None:
+    """A dispatched ncbi_efetch finding's own total_available=None (the
+    normal, non-paginated case) must never poison a KNOWN Layer 1 total
+    into an unknowable one.
+    """
+    findings = [
+        _cypher_finding(total_available=6, truncated=True, row_count=4),
+        _ncbi_efetch_finding(total_available=None),
+    ]
+
+    assert graph_module._known_total_available(findings) == 6
+
+
+def test_known_total_available_still_returns_none_for_a_genuinely_unknown_layer_1_total() -> None:
+    """The pre-existing behavior for Layer 1's own unknown total (a UNION
+    or aliased DISTINCT `cypher_query._fetch_true_total` abstained on)
+    must be unchanged: still None, Layer 2 involved or not.
+    """
+    findings = [
+        _cypher_finding(total_available=None, truncated=True, row_count=4),
+        _ncbi_efetch_finding(total_available=None),
+    ]
+
+    assert graph_module._known_total_available(findings) is None
+
+
+def test_ok_finding_was_truncated_ignores_a_layer_2_findings_own_flag() -> None:
+    """A Layer 2 tool's own `truncated` (whether THAT call's own result
+    list was paginated) must never flag the Layer 1 graph answer as
+    truncated; that is a different question with a different answer.
+    """
+    findings = [
+        _cypher_finding(total_available=4, truncated=False, row_count=4),
+        _ncbi_efetch_finding(total_available=None, truncated=True),
+    ]
+
+    assert graph_module._ok_finding_was_truncated(findings) is False
+
+
+def test_ok_finding_was_truncated_still_true_for_a_genuine_layer_1_truncation() -> None:
+    findings = [
+        _cypher_finding(total_available=6, truncated=True, row_count=4),
+        _ncbi_efetch_finding(total_available=None, truncated=False),
+    ]
+
+    assert graph_module._ok_finding_was_truncated(findings) is True
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-06, Section 7.1: live-wins-for-currency, wired into
+# _citations_from_grounded_claims's post-processing pass
+# (_apply_live_wins_for_currency). Deterministic and mocked at the
+# SynthFinding/CitationPayload construction level, matching this file's own
+# F-3.4-T05-04 tests above: no live, organic disagreement between a graph
+# value and a live value can be relied on to exist on any given day, the
+# same reasoning the premise gate's own P1/P3 docstrings give for testing
+# this shape directly rather than hoping for an organic live sample.
+# ---------------------------------------------------------------------------
+
+
+def _dual_layer_synth_finding(
+    *, citation_id: str, layer: str, tool: str, field: str, field_value: str, source_url: str,
+):
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    return SynthFinding(
+        ref_index=1,
+        citation_id=citation_id,
+        layer=layer,
+        tool=tool,
+        field=field,
+        field_value=field_value,
+        source_url=source_url,
+    )
+
+
+def _citation(
+    *, citation_id: str, display_index: int, layer: str, field: str, claim_text: str, source_url: str,
+):
+    from system_03_search_agent.contracts.events import CitationPayload
+
+    return CitationPayload(
+        citation_id=citation_id,
+        display_index=display_index,
+        source="test",
+        source_id="test-id",
+        source_url=source_url,
+        layer=layer,
+        field=field,
+        claim_text=claim_text,
+        evidence_kind="primary_assertion",
+        assertion_confidence="asserted",
+        population_ancestry_context=None,
+        license="public_domain_us_gov",
+    )
+
+
+def test_live_wins_for_currency_annotates_the_graph_citation_on_disagreement() -> None:
+    """The core Section 7.1 proof: a Layer 1 and a Layer 2 citation share a
+    field name and genuinely disagree. The live citation's claim_text is
+    left untouched (it already describes the live value); the graph
+    citation's claim_text gains a deterministic note naming the live value
+    as current. BOTH citations stay in the returned list, every other
+    field unchanged (Section 7.1: "Both cited... disagreement never
+    silently drops one side").
+    """
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1OLD.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1OLD",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+
+    result = graph_module._apply_live_wins_for_currency(
+        [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    assert len(result) == 2, "both citations must stay in the returned list"
+    result_by_id = {c.citation_id: c for c in result}
+
+    live_result = result_by_id["c2"]
+    assert live_result.claim_text == live_citation.claim_text, (
+        "the live citation's claim_text is never rewritten"
+    )
+
+    graph_result = result_by_id["c1"]
+    assert graph_result.claim_text != graph_citation.claim_text, (
+        "the graph citation must gain a deterministic framing note"
+    )
+    assert graph_result.claim_text.startswith(graph_citation.claim_text), (
+        "the original claim_text is preserved, only appended to"
+    )
+    assert "BRCA1" in graph_result.claim_text
+    assert "more current" in graph_result.claim_text
+    assert "[2]" in graph_result.claim_text, (
+        "the note must point at the live citation's own display_index"
+    )
+    # Every other field is untouched.
+    assert graph_result.citation_id == "c1"
+    assert graph_result.display_index == 1
+    assert graph_result.source_url == graph_citation.source_url
+    assert graph_result.license == graph_citation.license
+
+
+def test_live_wins_for_currency_is_a_no_op_when_the_values_agree() -> None:
+    """Section 7.1's own text: nothing to referee when the two values
+    already agree."""
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+
+    result = graph_module._apply_live_wins_for_currency(
+        [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    assert result[0].claim_text == graph_citation.claim_text
+    assert result[1].claim_text == live_citation.claim_text
+
+
+def test_live_wins_for_currency_is_a_no_op_on_a_field_name_mismatch() -> None:
+    """A graph field and a live field with no confirmed alias between them
+    (F-3.4-A-03's `_FIELD_NAME_ALIASES` carries exactly one entry, "name"
+    aliased to "symbol"; neither of these two field names is in it, and
+    they do not match each other either) are never paired, and this hook
+    stays a no-op. This is the residual "no synonym table for an
+    UNCONFIRMED pairing" behavior T-3.4-06 originally chose for every
+    field-name pair, still true for every pair except the one confirmed
+    exception F-3.4-A-03 added.
+    """
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="xrefs",
+        claim_text="The graph records cross-references for this gene.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="description",
+        claim_text="The live NCBI record describes this gene.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="xrefs", field_value="HGNC:1100",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="description", field_value="BRCA1 DNA repair associated",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+
+    result = graph_module._apply_live_wins_for_currency(
+        [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    assert result[0].claim_text == graph_citation.claim_text
+    assert result[1].claim_text == live_citation.claim_text
+
+
+def test_layer1_layer2_field_pairs_pairs_the_gene_name_and_symbol_alias() -> None:
+    """F-3.4-A-03's own direct proof: the graph's Gene "name" field and
+    `ncbi_efetch`'s Gene "symbol" field, the system's single most common
+    real dual-layer citation pair, now get paired by
+    `_layer1_layer2_field_pairs` even though their raw field names never
+    match. Before this fix, this returned `{}`."""
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="name", field_value="BRCA1 DNA repair associated",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+        claim_text="The graph records the gene as BRCA1 DNA repair associated.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+
+    result = graph_module._layer1_layer2_field_pairs(
+        [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    assert result == {"symbol": ("c1", "c2")}, (
+        "the graph's \"name\" citation and the live \"symbol\" citation "
+        f"must now pair under the alias-resolved canonical key; got {result}"
+    )
+
+
+def test_live_wins_for_currency_is_a_no_op_on_the_aliased_pair_when_compatible() -> None:
+    """F-3.4-A-03's own scenario: the graph's Gene "name"
+    ("BRCA1 DNA repair associated") and the live "symbol" ("BRCA1") ARE
+    now paired (unlike before this fix), but their values are compatible,
+    not conflicting: the live symbol is a genuine substring of the
+    graph's longer descriptive name. This must stay a no-op, the same
+    "nothing to referee when they agree" outcome Section 7.1 already
+    gives an exact-match pair, or every normal, correct dual-layer gene
+    answer in this system would gain a spurious currency note.
+    """
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+        claim_text="The graph records the gene as BRCA1 DNA repair associated.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="name", field_value="BRCA1 DNA repair associated",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+
+    result = graph_module._apply_live_wins_for_currency(
+        [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    assert result[0].claim_text == graph_citation.claim_text
+    assert result[1].claim_text == live_citation.claim_text
+
+
+def test_live_wins_for_currency_annotates_the_aliased_pair_on_genuine_disagreement() -> None:
+    """The other half of F-3.4-A-03: when the paired, aliased values
+    GENUINELY disagree (a live symbol that is NOT a substring of the
+    graph's name, the adversary's own "wildly wrong string" repro), the
+    currency note fires exactly as it already does for an exact-name
+    pair.
+    """
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+        claim_text="The graph records the gene as BRCA1 DNA repair associated.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is TP53.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="name", field_value="BRCA1 DNA repair associated",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="TP53",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+
+    result = graph_module._apply_live_wins_for_currency(
+        [graph_citation, live_citation], finding_by_citation_id
+    )
+    result_by_id = {c.citation_id: c for c in result}
+
+    assert result_by_id["c2"].claim_text == live_citation.claim_text, (
+        "the live citation's claim_text is never rewritten"
+    )
+    assert result_by_id["c1"].claim_text != graph_citation.claim_text, (
+        "a genuine disagreement on the aliased pair must still gain a "
+        "deterministic framing note"
+    )
+    assert "TP53" in result_by_id["c1"].claim_text
+    assert "more current" in result_by_id["c1"].claim_text
+
+
+def test_live_wins_for_currency_is_a_no_op_with_only_one_layer() -> None:
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+    }
+
+    result = graph_module._apply_live_wins_for_currency([graph_citation], finding_by_citation_id)
+    assert result == [graph_citation]
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-06, Section 7.4: staleness auto-cross-verify
+# (_apply_layer1_staleness_notes). F-3.4-T06-01 (live-confirmed against the
+# real graph, 2026-08-09): no real Layer 1 field this repo's ingest returns
+# matches VOLATILE_FIELD_EXAMPLES/STABLE_FIELD_EXAMPLES today (every vertex
+# label carries the identical generic id/name/xrefs/source/agent_type/
+# source_url/knowledge_level property set; see `_field_class_for_layer1_
+# field`'s own docstring). These tests construct a field name that DOES
+# match to prove the wiring itself is correct and ready; the last two tests
+# below prove it stays silent, not fabricated, against today's real shape.
+# ---------------------------------------------------------------------------
+
+
+def _layer1_finding_with_snapshot(
+    *, call_id: str, source_url: str, snapshot_version: str, field: str, value: str,
+):
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    return Finding(
+        call_id=call_id,
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "rows": [
+                {
+                    "node_or_edge_type": "SequenceVariant",
+                    "curie": "ClinVar:37314",
+                    "fields": {field: value},
+                    "source_url": source_url,
+                    "graph_snapshot_version": snapshot_version,
+                }
+            ],
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+
+def _old_snapshot_version(days: int) -> str:
+    from datetime import UTC, datetime, timedelta
+
+    return f"ncbi_kg_v1_{(datetime.now(tz=UTC).date() - timedelta(days=days)).isoformat()}"
+
+
+def test_layer1_staleness_note_fires_when_the_field_class_resolves_and_is_stale() -> None:
+    source_url = "https://www.ncbi.nlm.nih.gov/clinvar/variation/37314"
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph",
+        field="clinical_significance",
+        claim_text="ClinVar:37314 clinical_significance=Pathogenic.",
+        source_url=source_url,
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="clinical_significance", field_value="Pathogenic",
+            source_url=source_url,
+        ),
+    }
+    findings = [
+        _layer1_finding_with_snapshot(
+            call_id="cq-1", source_url=source_url, snapshot_version=_old_snapshot_version(45),
+            field="clinical_significance", value="Pathogenic",
+        )
+    ]
+
+    result = graph_module._apply_layer1_staleness_notes(
+        [graph_citation], finding_by_citation_id, findings
+    )
+
+    assert len(result) == 1
+    assert result[0].claim_text != graph_citation.claim_text
+    assert "staleness threshold" in result[0].claim_text
+    assert "no live cross-check was dispatched" in result[0].claim_text
+
+
+def test_layer1_staleness_note_names_the_paired_live_citation_when_one_exists() -> None:
+    source_url = "https://www.ncbi.nlm.nih.gov/clinvar/variation/37314"
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph",
+        field="clinical_significance",
+        claim_text="ClinVar:37314 clinical_significance=Pathogenic.",
+        source_url=source_url,
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api",
+        field="clinical_significance",
+        claim_text="The live ClinVar record states clinical_significance=Pathogenic.",
+        source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/37314/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="clinical_significance", field_value="Pathogenic",
+            source_url=source_url,
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="clinical_significance", field_value="Pathogenic",
+            source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/37314/",
+        ),
+    }
+    findings = [
+        _layer1_finding_with_snapshot(
+            call_id="cq-1", source_url=source_url, snapshot_version=_old_snapshot_version(45),
+            field="clinical_significance", value="Pathogenic",
+        )
+    ]
+
+    result = graph_module._apply_layer1_staleness_notes(
+        [graph_citation, live_citation], finding_by_citation_id, findings
+    )
+    result_by_id = {c.citation_id: c for c in result}
+    assert "auto-cross-verified" in result_by_id["c1"].claim_text
+    assert "[2]" in result_by_id["c1"].claim_text
+    assert result_by_id["c2"].claim_text == live_citation.claim_text
+
+
+def test_layer1_staleness_note_does_not_fire_when_fresh() -> None:
+    source_url = "https://www.ncbi.nlm.nih.gov/clinvar/variation/37314"
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph",
+        field="clinical_significance",
+        claim_text="ClinVar:37314 clinical_significance=Pathogenic.",
+        source_url=source_url,
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="clinical_significance", field_value="Pathogenic",
+            source_url=source_url,
+        ),
+    }
+    findings = [
+        _layer1_finding_with_snapshot(
+            call_id="cq-1", source_url=source_url, snapshot_version=_old_snapshot_version(5),
+            field="clinical_significance", value="Pathogenic",
+        )
+    ]
+
+    result = graph_module._apply_layer1_staleness_notes(
+        [graph_citation], finding_by_citation_id, findings
+    )
+    assert result[0].claim_text == graph_citation.claim_text
+
+
+def test_layer1_staleness_note_does_not_fire_on_an_unresolved_field_class() -> None:
+    """F-3.4-T06-01: this is the real, live production shape today. Every
+    Layer 1 citation this repo can build carries a generic field name
+    ("name" among the fixed seven generic keys), never a VOLATILE_FIELD_
+    EXAMPLES/STABLE_FIELD_EXAMPLES member, so this must never fire against
+    real data, confirmed here with a snapshot old enough that it would
+    fire if the field class resolved.
+    """
+    source_url = "https://www.ncbi.nlm.nih.gov/gene/672"
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+        claim_text="NCBIGene:672 name=BRCA1 DNA repair associated.",
+        source_url=source_url,
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="name", field_value="BRCA1 DNA repair associated",
+            source_url=source_url,
+        ),
+    }
+    findings = [
+        _layer1_finding_with_snapshot(
+            call_id="cq-1", source_url=source_url, snapshot_version=_old_snapshot_version(45),
+            field="name", value="BRCA1 DNA repair associated",
+        )
+    ]
+
+    result = graph_module._apply_layer1_staleness_notes(
+        [graph_citation], finding_by_citation_id, findings
+    )
+    assert result[0].claim_text == graph_citation.claim_text
+
+
+def test_layer1_staleness_note_does_not_fire_on_an_unparseable_snapshot_version() -> None:
+    source_url = "https://www.ncbi.nlm.nih.gov/clinvar/variation/37314"
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph",
+        field="clinical_significance",
+        claim_text="ClinVar:37314 clinical_significance=Pathogenic.",
+        source_url=source_url,
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="clinical_significance", field_value="Pathogenic",
+            source_url=source_url,
+        ),
+    }
+    findings = [
+        _layer1_finding_with_snapshot(
+            call_id="cq-1", source_url=source_url, snapshot_version="prod-snapshot-42",
+            field="clinical_significance", value="Pathogenic",
+        )
+    ]
+
+    result = graph_module._apply_layer1_staleness_notes(
+        [graph_citation], finding_by_citation_id, findings
+    )
+    assert result[0].claim_text == graph_citation.claim_text, (
+        "must never fabricate a staleness verdict against an unparseable "
+        "snapshot version"
+    )
+
+
+def test_field_class_for_layer1_field_matches_real_graph_data_today() -> None:
+    """F-3.4-T06-01's own finding, enforced as a regression test: as of
+    the live probe this finding is based on (2026-08-09, 200-row samples
+    across Gene, SequenceVariant, and Disease), no real field this graph's
+    ingest returns resolves to a known field class."""
+    assert graph_module._field_class_for_layer1_field("name") is None
+    assert graph_module._field_class_for_layer1_field("id") is None
+    assert graph_module._field_class_for_layer1_field("source") is None
+    assert graph_module._field_class_for_layer1_field("xrefs") is None
+    assert graph_module._field_class_for_layer1_field("agent_type") is None
+    assert graph_module._field_class_for_layer1_field("knowledge_level") is None
+    # But the wiring itself is real and correct for the day a field like
+    # this exists in the graph's ingest:
+    assert graph_module._field_class_for_layer1_field("clinical_significance") == "volatile"
+    assert graph_module._field_class_for_layer1_field("CLINICAL_SIGNIFICANCE") == "volatile"
+    assert graph_module._field_class_for_layer1_field("gene_coordinates") == "stable"
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-07, Section 7.2: conflict detection, wired into write_node's own
+# `ClaimTrust`/`trust_outcome` computation (`_apply_conflict_flags_to_
+# claim_trusts`), a SEPARATE path from T-3.4-06's citation-only pass above.
+# The pure-function tests below reuse the `_dual_layer_synth_finding`/
+# `_citation` helpers T-3.4-06 already defined earlier in this file, same
+# reasoning: no live, organic disagreement between a graph value and a live
+# value can be relied on to exist on any given day. The final test in this
+# section is the FULL PATH proof through `write_node` itself, mirroring
+# `test_write_builds_a_real_layer2_citation_for_a_grounded_ncbi_efetch_
+# claim`'s own construction.
+# ---------------------------------------------------------------------------
+
+
+def _claim_trust(*, citation_id: str, outcome: str, risk_tier: str = "low"):
+    from system_03_search_agent.synthesis.trust import ClaimTrust
+
+    return ClaimTrust(
+        citation_id=citation_id,
+        risk_tier=risk_tier,  # type: ignore[arg-type]
+        grounded=True,
+        triangulation="insufficient",
+        outcome=outcome,  # type: ignore[arg-type]
+    )
+
+
+def test_conflict_flags_floor_both_claims_outcome_to_flag_on_genuine_disagreement() -> None:
+    """The core Section 7.2 proof at the pure-function level: a Layer 1
+    and a Layer 2 citation share a field name and genuinely disagree.
+    BOTH claims' `ClaimTrust.outcome` move to `flag`, and every other
+    `ClaimTrust` field (risk_tier, grounded, triangulation) is untouched,
+    since Section 7.2's conflict check answers a different question than
+    Section 8.3.1/8.3.2's own risk-tier/triangulation verdict.
+    """
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1OLD.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1OLD",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+    claim_trusts = [
+        _claim_trust(citation_id="c1", outcome="answer"),
+        _claim_trust(citation_id="c2", outcome="answer"),
+    ]
+
+    result = graph_module._apply_conflict_flags_to_claim_trusts(
+        claim_trusts, [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    result_by_id = {t.citation_id: t for t in result}
+    assert result_by_id["c1"].outcome == "flag"
+    assert result_by_id["c2"].outcome == "flag"
+    # Untouched fields, both claims.
+    for citation_id in ("c1", "c2"):
+        assert result_by_id[citation_id].risk_tier == "low"
+        assert result_by_id[citation_id].grounded is True
+        assert result_by_id[citation_id].triangulation == "insufficient"
+
+
+def test_conflict_flags_never_downgrade_an_already_more_restrictive_outcome() -> None:
+    """Section 8.3.4's most-restrictive-wins rule, applied by
+    `synthesis.trust.aggregate` inside this function: a claim already at
+    `ask` (more restrictive than `flag`) must stay `ask`, never get
+    weakened to `flag`. A claim at `answer` (less restrictive) is the one
+    that actually moves.
+    """
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1OLD.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1OLD",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+    claim_trusts = [
+        _claim_trust(citation_id="c1", outcome="ask", risk_tier="high"),
+        _claim_trust(citation_id="c2", outcome="answer"),
+    ]
+
+    result = graph_module._apply_conflict_flags_to_claim_trusts(
+        claim_trusts, [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    result_by_id = {t.citation_id: t for t in result}
+    assert result_by_id["c1"].outcome == "ask", (
+        "an already more-restrictive outcome must never be weakened to flag"
+    )
+    assert result_by_id["c2"].outcome == "flag"
+
+
+def test_conflict_flags_is_a_no_op_when_the_values_agree() -> None:
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+    claim_trusts = [
+        _claim_trust(citation_id="c1", outcome="answer"),
+        _claim_trust(citation_id="c2", outcome="answer"),
+    ]
+
+    result = graph_module._apply_conflict_flags_to_claim_trusts(
+        claim_trusts, [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    result_by_id = {t.citation_id: t for t in result}
+    assert result_by_id["c1"].outcome == "answer"
+    assert result_by_id["c2"].outcome == "answer"
+
+
+def test_conflict_flags_is_a_no_op_on_a_field_name_mismatch() -> None:
+    """The identical rule `_layer1_layer2_field_pairs` enforces (T-3.4-06,
+    F-3.4-A-03): a graph field and a live field with no confirmed alias
+    between them and no exact match are never paired, so this stays a
+    no-op."""
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="xrefs",
+        claim_text="The graph records cross-references for this gene.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="description",
+        claim_text="The live NCBI record describes this gene.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="xrefs", field_value="HGNC:1100",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="description", field_value="BRCA1 DNA repair associated",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+    claim_trusts = [
+        _claim_trust(citation_id="c1", outcome="answer"),
+        _claim_trust(citation_id="c2", outcome="answer"),
+    ]
+
+    result = graph_module._apply_conflict_flags_to_claim_trusts(
+        claim_trusts, [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    result_by_id = {t.citation_id: t for t in result}
+    assert result_by_id["c1"].outcome == "answer"
+    assert result_by_id["c2"].outcome == "answer"
+
+
+def test_conflict_flags_is_a_no_op_on_the_aliased_pair_when_compatible() -> None:
+    """F-3.4-A-03: the graph's Gene "name" and the live "symbol" are now
+    paired, but a compatible pair (the live symbol is a genuine substring
+    of the graph's longer name) must never be flagged as a conflict, or
+    every normal, correct dual-layer gene answer in this system would be
+    floored to `flag` for no real disagreement."""
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+        claim_text="The graph records the gene as BRCA1 DNA repair associated.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="name", field_value="BRCA1 DNA repair associated",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+    claim_trusts = [
+        _claim_trust(citation_id="c1", outcome="answer"),
+        _claim_trust(citation_id="c2", outcome="answer"),
+    ]
+
+    result = graph_module._apply_conflict_flags_to_claim_trusts(
+        claim_trusts, [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    result_by_id = {t.citation_id: t for t in result}
+    assert result_by_id["c1"].outcome == "answer"
+    assert result_by_id["c2"].outcome == "answer"
+
+
+def test_conflict_flags_floor_both_claims_on_a_genuine_aliased_disagreement() -> None:
+    """The other half of F-3.4-A-03: a genuinely wrong live symbol (not a
+    substring of the graph's name, the adversary's own repro shape) on
+    the aliased pair must still floor both claims' outcome at `flag`,
+    exactly as an exact-name-pair disagreement already does."""
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+        claim_text="The graph records the gene as BRCA1 DNA repair associated.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    live_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="The live NCBI record states the gene symbol is TP53.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="name", field_value="BRCA1 DNA repair associated",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="TP53",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+    claim_trusts = [
+        _claim_trust(citation_id="c1", outcome="answer"),
+        _claim_trust(citation_id="c2", outcome="answer"),
+    ]
+
+    result = graph_module._apply_conflict_flags_to_claim_trusts(
+        claim_trusts, [graph_citation, live_citation], finding_by_citation_id
+    )
+
+    result_by_id = {t.citation_id: t for t in result}
+    assert result_by_id["c1"].outcome == "flag"
+    assert result_by_id["c2"].outcome == "flag"
+
+
+def test_conflict_flags_is_a_no_op_with_only_one_layer() -> None:
+    graph_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="symbol",
+        claim_text="The graph records the gene symbol as BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+    }
+    claim_trusts = [_claim_trust(citation_id="c1", outcome="answer")]
+
+    result = graph_module._apply_conflict_flags_to_claim_trusts(
+        claim_trusts, [graph_citation], finding_by_citation_id
+    )
+
+    assert result[0].outcome == "answer"
+
+
+@pytest.mark.asyncio
+async def test_write_a_genuine_cross_layer_conflict_floors_both_claims_trust_outcome_at_flag(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """The FULL PATH proof this ticket's own verify surface requires: a
+    Layer 1 (`cypher_query`) and a Layer 2 (`ncbi_efetch`) finding for the
+    SAME field name (`symbol`, matching `ncbi_efetch`'s own real
+    representative-field choice for a gene report, per
+    `test_act_dispatches_both_tools_for_a_gene_anchored_dual_plan`'s own
+    assertion that `symbol` is the surviving, un-withheld field) carry
+    genuinely different values. Both survive grounding (the compliant
+    synth-narrative fixture restates every finding verbatim), so both earn
+    a citation, and both claims' `trust_signal` events must come back
+    `outcome == "flag"`, never a silent pick of one side. Mirrors
+    `test_write_builds_a_real_layer2_citation_for_a_grounded_ncbi_efetch_
+    claim`'s own construction.
+    """
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    cypher_finding = Finding(
+        call_id="cq-conflict",
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "row_count": 1,
+            "total_available": 1,
+            "truncated": False,
+            "rows": [
+                {
+                    "node_or_edge_type": "Gene",
+                    "curie": "NCBIGene:672",
+                    "fields": {"symbol": "BRCA1 legacy alias"},
+                    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+                    "graph_snapshot_version": "v1",
+                }
+            ],
+            "error": None,
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    ncbi_output = _gene_report_output(symbol="BRCA1")
+    ncbi_finding = Finding(
+        call_id="ne-conflict",
+        tool="ncbi_efetch",
+        layer="layer_2_api",
+        source="structured_pass_through",
+        structured_fields=graph_module._ncbi_efetch_output_to_structured_fields(ncbi_output),
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    state = _write_state(query, [cypher_finding, ncbi_finding])
+    state["layer2_raw_outputs"] = {"ne-conflict": ncbi_output}
+
+    write_result = await graph_module.write_node(state)
+    events = write_result["events"]
+
+    citation_events = [event for event in events if event.type == "citation"]
+    layers_cited = {c.payload["layer"] for c in citation_events}
+    assert layers_cited == {"layer_1_graph", "layer_2_api"}, (
+        "a detected conflict must never silently drop either citation"
+    )
+    assert len(citation_events) == 2
+
+    claim_trust_events = [
+        event for event in events if event.type == "trust_signal" and event.payload["scope"] == "claim"
+    ]
+    assert len(claim_trust_events) == 2
+    for event in claim_trust_events:
+        assert event.payload["outcome"] == "flag", (
+            f"a genuinely conflicting claim must report outcome=flag, got {event.payload}"
+        )
+
+    answer_trust_events = [
+        event for event in events if event.type == "trust_signal" and event.payload["scope"] == "answer"
+    ]
+    assert len(answer_trust_events) == 1
+    assert answer_trust_events[0].payload["outcome"] == "flag"
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "flag"
+
+
+# ---------------------------------------------------------------------------
+# F-3.4-A-01: a query naming 2+ distinct target entities must never ship
+# `trust_outcome: "answer"` when the surviving citations address only a
+# strict subset of them. Live-reproduced 2026-08-09: "What are the official
+# gene symbols for NCBIGene:672 and NCBIGene:7157, confirmed against the
+# live NCBI records?" shipped a narrative discussing ONLY NCBIGene:672,
+# `trust_outcome: "answer"`, zero disclosure that NCBIGene:7157 went
+# unaddressed. Also covers the same-entity gate F-3.4-A-01's investigation
+# found `_layer1_layer2_field_pairs` needed once F-3.4-A-03's alias made
+# field-name pairing reachable in practice: a live run paired a Layer 1
+# "name" finding for TP53 against a Layer 2 "symbol" finding for BRCA1
+# purely because they shared a canonical field-name bucket, with no check
+# that they were about the same record.
+# ---------------------------------------------------------------------------
+
+
+def test_target_entities_from_tool_calls_reads_the_planned_cypher_call() -> None:
+    cypher_planned = graph_module._PlannedToolCall(
+        tool_call=ToolCall(tool="cypher_query", call_id="cq-1", layer="layer_1_graph"),
+        cypher_input=CypherQueryInput(
+            query_intent="official gene symbols",
+            query_class="lookup",
+            target_entities=["NCBIGene:672", "NCBIGene:7157"],
+            row_limit=100,
+        ),
+    )
+
+    result = graph_module._target_entities_from_tool_calls([cypher_planned])
+
+    assert result == ["NCBIGene:672", "NCBIGene:7157"]
+
+
+def test_target_entities_from_tool_calls_is_empty_with_no_planned_cypher_call() -> None:
+    """A no-tool query, or a query whose only planned call is `ncbi_efetch`
+    with no `cypher_query` sibling (should not happen per T-3.4-05's own
+    dispatch design, but this function must never guess): `[]`, never a
+    fabricated entity list."""
+    assert graph_module._target_entities_from_tool_calls([]) == []
+
+
+def test_unaddressed_target_entities_reports_the_uncited_gene() -> None:
+    """The exact live shape: two named genes, one citation, for the FIRST
+    gene only."""
+    citations = [
+        _citation(
+            citation_id="c1", display_index=1, layer="layer_2_api", field="symbol",
+            claim_text="NCBIGene:672 has the official gene symbol BRCA1.",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    ]
+
+    result = graph_module._unaddressed_target_entities(
+        ["NCBIGene:672", "NCBIGene:7157"], citations
+    )
+
+    assert result == ["NCBIGene:7157"]
+
+
+def test_unaddressed_target_entities_recognizes_a_layer2_citation_via_normalized_url() -> None:
+    """The same normalized-URL match must work when the surviving citation
+    is a Layer 2 one (a real `ncbi_efetch` gene URL carries a trailing
+    slash the graph's own URL builder never adds)."""
+    citations = [
+        _citation(
+            citation_id="c1", display_index=1, layer="layer_2_api", field="symbol",
+            claim_text="official gene symbol BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    ]
+
+    result = graph_module._unaddressed_target_entities(["NCBIGene:672"], citations)
+
+    assert result == []
+
+
+def test_unaddressed_target_entities_is_empty_when_every_entity_is_cited() -> None:
+    citations = [
+        _citation(
+            citation_id="c1", display_index=1, layer="layer_2_api", field="symbol",
+            claim_text="NCBIGene:672 has the official gene symbol BRCA1.",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+        _citation(
+            citation_id="c2", display_index=2, layer="layer_1_graph", field="name",
+            claim_text="NCBIGene:7157 has the name tumor protein p53.",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/7157",
+        ),
+    ]
+
+    result = graph_module._unaddressed_target_entities(
+        ["NCBIGene:672", "NCBIGene:7157"], citations
+    )
+
+    assert result == []
+
+
+def test_unaddressed_target_entities_reports_a_prefix_with_no_url_builder() -> None:
+    """A target entity whose prefix `source_url_for_curie` cannot map to a
+    URL at all is always reported unaddressed, never silently excluded:
+    this function must never assume coverage it cannot verify."""
+    citations = [
+        _citation(
+            citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+            claim_text="something else entirely",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+    ]
+
+    result = graph_module._unaddressed_target_entities(["GO:0003677"], citations)
+
+    assert result == ["GO:0003677"]
+
+
+def test_build_partial_answer_note_names_every_unaddressed_entity() -> None:
+    note = graph_module._build_partial_answer_note(["NCBIGene:7157"])
+    assert "NCBIGene:7157" in note
+
+    note_multi = graph_module._build_partial_answer_note(["NCBIGene:7157", "MedGen:C0346153"])
+    assert "NCBIGene:7157" in note_multi
+    assert "MedGen:C0346153" in note_multi
+
+
+def test_first_same_entity_pair_never_pairs_two_different_genes() -> None:
+    """F-3.4-A-01's own live-found regression: a Layer 1 "name" finding
+    for TP53 and a Layer 2 "symbol" finding for BRCA1 share a canonical
+    field-name bucket by coincidence. Without a same-entity check they
+    would be treated as disagreeing about "the same fact" when they are
+    two different facts about two different genes."""
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="name", field_value="tumor protein p53",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/7157",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+
+    result = graph_module._first_same_entity_pair(["c1"], ["c2"], finding_by_citation_id)
+
+    assert result is None
+
+
+def test_first_same_entity_pair_matches_the_same_gene_across_layers() -> None:
+    """The positive case: BRCA1's own graph "name" and BRCA1's own live
+    "symbol" (source_urls differing only by the trailing slash) ARE the
+    same entity and must pair."""
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="name", field_value="BRCA1 DNA repair associated",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+
+    result = graph_module._first_same_entity_pair(["c1"], ["c2"], finding_by_citation_id)
+
+    assert result == ("c1", "c2")
+
+
+def test_layer1_layer2_field_pairs_never_pairs_two_different_genes_end_to_end() -> None:
+    """The full `_layer1_layer2_field_pairs` proof, live-shaped: a Layer 1
+    "name" citation for TP53 and a Layer 2 "symbol" citation for BRCA1
+    both exist in the same answer (the live-reproduced shape) and must
+    never be paired, so neither Section 7.1's currency note, Section
+    7.2's conflict flag, nor triangulation ever compares two different
+    genes' facts as if they were one."""
+    tp53_name_citation = _citation(
+        citation_id="c1", display_index=1, layer="layer_1_graph", field="name",
+        claim_text="its record name is tumor protein p53.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/7157",
+    )
+    brca1_symbol_citation = _citation(
+        citation_id="c2", display_index=2, layer="layer_2_api", field="symbol",
+        claim_text="NCBIGene:672 has the official gene symbol BRCA1.",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+    finding_by_citation_id = {
+        "c1": _dual_layer_synth_finding(
+            citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+            field="name", field_value="tumor protein p53",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/7157",
+        ),
+        "c2": _dual_layer_synth_finding(
+            citation_id="c2", layer="layer_2_api", tool="ncbi_efetch",
+            field="symbol", field_value="BRCA1",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672/",
+        ),
+    }
+
+    result = graph_module._layer1_layer2_field_pairs(
+        [tp53_name_citation, brca1_symbol_citation], finding_by_citation_id
+    )
+
+    assert result == {}, f"two different genes' fields must never be paired; got {result}"
+
+
+@pytest.mark.asyncio
+async def test_write_floors_trust_outcome_to_ask_when_a_named_entity_is_unaddressed(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """The FULL PATH proof of the F-3.4-A-01 fix: a query names two Gene
+    CURIEs, but only the first has any citable Layer 1/Layer 2 data in
+    this answer (the same observable shape the live bug produced: Synth
+    had nothing to say about the second entity), so the compliant-synth-
+    narrative fixture's own "restate every finding" behavior naturally
+    produces a narrative that addresses only the first gene. Before this
+    fix this shipped `trust_outcome: "answer"` with no disclosure;
+    after it, `trust_outcome` must be `ask` and the narrative must carry
+    a note naming the unaddressed entity.
+    """
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    cypher_finding = Finding(
+        call_id="cq-partial",
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "row_count": 1,
+            "total_available": 1,
+            "truncated": False,
+            "rows": [
+                {
+                    "node_or_edge_type": "Gene",
+                    "curie": "NCBIGene:672",
+                    "fields": {"name": "BRCA1 DNA repair associated"},
+                    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+                    "graph_snapshot_version": "v1",
+                }
+            ],
+            "error": None,
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    state = _write_state(query, [cypher_finding])
+    state["tool_calls"] = [
+        graph_module._PlannedToolCall(
+            tool_call=ToolCall(tool="cypher_query", call_id="cq-partial", layer="layer_1_graph"),
+            cypher_input=CypherQueryInput(
+                query_intent="official gene symbols for NCBIGene:672 and NCBIGene:7157",
+                query_class="lookup",
+                target_entities=["NCBIGene:672", "NCBIGene:7157"],
+                row_limit=100,
+            ),
+        ),
+    ]
+
+    write_result = await graph_module.write_node(state)
+    events = write_result["events"]
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "ask", (
+        f"a query naming 2 entities with only 1 addressed must never ship "
+        f"'answer'; got {done_event.payload}"
+    )
+
+    narrative = "".join(e.payload["text"] for e in events if e.type == "token")
+    assert "NCBIGene:7157" in narrative, (
+        f"the disclosure note must name the unaddressed entity; got {narrative!r}"
+    )
+
+    answer_trust_events = [
+        event for event in events if event.type == "trust_signal" and event.payload["scope"] == "answer"
+    ]
+    assert len(answer_trust_events) == 1
+    assert answer_trust_events[0].payload["outcome"] == "ask"
+
+    # The one surviving claim's OWN verdict is untouched: it really is a
+    # well-grounded, low-risk, correctly-cited fact. The completeness gap
+    # is an answer-level signal, not a defect in this specific claim.
+    claim_trust_events = [
+        event for event in events if event.type == "trust_signal" and event.payload["scope"] == "claim"
+    ]
+    assert len(claim_trust_events) == 1
+    assert claim_trust_events[0].payload["outcome"] == "answer"
+
+
+@pytest.mark.asyncio
+async def test_write_stays_answer_when_every_named_entity_is_addressed(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """The negative control: two named entities, both with citable data,
+    both addressed by the narrative (the compliant fixture restates every
+    finding it is handed). `trust_outcome` must stay `answer`, and no
+    partial-answer note is emitted."""
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    cypher_finding = Finding(
+        call_id="cq-full",
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "row_count": 2,
+            "total_available": 2,
+            "truncated": False,
+            "rows": [
+                {
+                    "node_or_edge_type": "Gene",
+                    "curie": "NCBIGene:672",
+                    "fields": {"name": "BRCA1 DNA repair associated"},
+                    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+                    "graph_snapshot_version": "v1",
+                },
+                {
+                    "node_or_edge_type": "Gene",
+                    "curie": "NCBIGene:7157",
+                    "fields": {"name": "tumor protein p53"},
+                    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+                    "graph_snapshot_version": "v1",
+                },
+            ],
+            "error": None,
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    state = _write_state(query, [cypher_finding])
+    state["tool_calls"] = [
+        graph_module._PlannedToolCall(
+            tool_call=ToolCall(tool="cypher_query", call_id="cq-full", layer="layer_1_graph"),
+            cypher_input=CypherQueryInput(
+                query_intent="names for NCBIGene:672 and NCBIGene:7157",
+                query_class="lookup",
+                target_entities=["NCBIGene:672", "NCBIGene:7157"],
+                row_limit=100,
+            ),
+        ),
+    ]
+
+    write_result = await graph_module.write_node(state)
+    events = write_result["events"]
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "answer"
+
+    narrative = "".join(e.payload["text"] for e in events if e.type == "token")
+    assert "does not address" not in narrative

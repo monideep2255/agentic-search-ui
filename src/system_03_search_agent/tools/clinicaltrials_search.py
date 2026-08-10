@@ -139,10 +139,13 @@ Depended by:
 
 from __future__ import annotations
 
+import hashlib
 import re
 import urllib.parse
 from typing import Any, Final
 
+from system_03_search_agent.contracts.events import CitationPayload
+from system_03_search_agent.synthesis.provenance_defaults import defaults_for_tool
 from system_03_search_agent.tools import ncbi_transport
 from system_03_search_agent.tools.clinicaltrials_search_schemas import (
     CLINICALTRIALS_HOST,
@@ -588,3 +591,75 @@ async def clinicaltrials_search(input_data: ClinicalTrialsSearchInput) -> Clinic
             f"of returning a classified result: {exc}. Retry once; if this recurs, "
             "this tool has a defect that needs fixing before it can be trusted."
         )
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-04: citation-building. Section 9.2's per-tool `CitationPayload`.
+# ---------------------------------------------------------------------------
+
+
+def _mint_citation_id(prefix: str, seed: str, display_index: int) -> str:
+    """A short, deterministic-shaped citation id, mirroring `core/graph.py`'s
+    `_citation_for_row` pattern (a stable id plus a display-index suffix),
+    adapted for a tool with no `call_id` of its own: the id is minted from a
+    short hash of the real source id instead. Only needs to be non-colliding
+    within one tool's own output, not globally unique across a whole answer.
+    """
+    digest = hashlib.sha256(seed.encode("utf-8", errors="replace")).hexdigest()[:10]
+    return f"{prefix}-{digest}-{display_index}"[:64]
+
+
+def build_citation(study: ClinicalTrialsStudy, display_index: int = 1) -> CitationPayload:
+    """Build a Section 9.2 `CitationPayload` from ONE real `clinicaltrials_search` study.
+
+    `study` is a single item from `ClinicalTrialsSearchOutput.studies`, not
+    the whole output object: a `clinicaltrials_search` result can carry
+    several studies, and each is its own citable record with its own
+    `nct_id` and `source_url`, unlike `litvar2_lookup`'s single
+    whole-result `source_url`. Raises `ValueError` with an actionable
+    message, never returns a placeholder, when `study` carries no
+    `source_url`.
+
+    `evidence_kind` and `license` come from
+    `provenance_defaults.defaults_for_tool("clinicaltrials_search")`, which
+    resolves to `"external_annotation"`/`"public_domain_us_gov"`: a trial
+    registry record, not a primary NCBI-native assertion. `assertion_
+    confidence` is always `"asserted"`: a trial's status, phase, and
+    condition list are structured registry fields set by the study's own
+    sponsor, not a hedged literature claim. `population_ancestry_context`
+    is always `None`: this tool has no population or ancestry field.
+    """
+    if not study.source_url:
+        raise ValueError(
+            f"clinicaltrials_search study {study.nct_id!r} has no source_url; "
+            "refusing to build a citation rather than fabricate one."
+        )
+
+    defaults = defaults_for_tool("clinicaltrials_search")
+    source_id = (study.nct_id or "unknown")[:128]
+
+    detail_parts: list[str] = []
+    if study.brief_title:
+        detail_parts.append(study.brief_title)
+    if study.overall_status:
+        detail_parts.append(f"status={study.overall_status}")
+    if study.phase:
+        detail_parts.append(f"phase={study.phase}")
+    claim_text = (
+        f"{source_id}: " + "; ".join(detail_parts) if detail_parts else source_id
+    )[:1000]
+
+    return CitationPayload(
+        citation_id=_mint_citation_id("ctgov", source_id, display_index),
+        display_index=display_index,
+        source="clinicaltrials.gov"[:128],
+        source_id=source_id,
+        source_url=study.source_url,
+        layer="layer_3_enrichment",
+        field="overall_status",
+        claim_text=claim_text,
+        evidence_kind=defaults["evidence_kind"],
+        assertion_confidence="asserted",
+        population_ancestry_context=None,
+        license=defaults["license"],
+    )

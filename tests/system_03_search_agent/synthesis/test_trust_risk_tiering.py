@@ -58,6 +58,7 @@ from system_03_search_agent.synthesis.findings import SynthFinding
 from system_03_search_agent.synthesis.trust import (
     aggregate,
     decide,
+    is_high_risk_relationship_label,
     risk_tier_for,
 )
 
@@ -405,6 +406,71 @@ def test_an_ungrounded_claim_refuses_regardless_of_risk_tier() -> None:
     )
     assert result.outcome == "refuse"
     assert result.risk_tier == "high"
+
+
+# ---------------------------------------------------------------------------
+# F-3.4-A-02: `ambiguous_high_risk_touch` is a second, independent path to
+# `high`, never a change to either frozenset table above.
+# ---------------------------------------------------------------------------
+
+
+def test_is_high_risk_relationship_label_matches_the_table_exactly() -> None:
+    assert is_high_risk_relationship_label("gene_associated_with_condition") is True
+    assert is_high_risk_relationship_label("GENE_ASSOCIATED_WITH_CONDITION") is True
+    assert is_high_risk_relationship_label("has_phenotype") is False
+    assert is_high_risk_relationship_label("orthologous_to") is False
+
+
+def test_risk_tier_for_classifies_high_on_ambiguous_touch_alone() -> None:
+    """A bare node type that would otherwise classify low (the exact
+    Disease-endpoint shape F-2.2-A-05 and TestDefect2OpenFinding above
+    both name) still classifies high when the caller signals an ambiguous
+    high-risk touch, without `node_or_edge_type` ever naming an edge."""
+    assert (
+        risk_tier_for(field="curie", node_or_edge_type="Disease") == "low"
+    ), "sanity check: unchanged without the new signal"
+    assert (
+        risk_tier_for(
+            field="curie", node_or_edge_type="Disease", ambiguous_high_risk_touch=True
+        )
+        == "high"
+    )
+
+
+def test_risk_tier_for_ambiguous_touch_does_not_override_a_real_low_risk_field() -> None:
+    """The new signal is additive, an OR with the existing two checks, not
+    a replacement: it never turns a genuinely low-risk case any less
+    high-risk than it already is, and it never suppresses a case that
+    would already classify high on its own."""
+    assert (
+        risk_tier_for(
+            field="clinical_significance",
+            node_or_edge_type="",
+            ambiguous_high_risk_touch=False,
+        )
+        == "high"
+    ), "the field-token path must still work with the new kwarg at its default"
+
+
+def test_decide_threads_ambiguous_high_risk_touch_into_risk_tier_for() -> None:
+    """The `decide`-level proof: a bare Disease endpoint claim, single
+    origin, now classifies high risk and reaches `ask` (Section 8.3.3's
+    insufficient-triangulation cell) rather than `answer`, purely from the
+    ambiguous-touch signal, the same real-world effect F-2.2-A-05's own
+    `test_disease_endpoint_row_via_decide_still_answers_instead_of_asking`
+    test asserts for the UNAMBIGUOUS single-edge fix."""
+    finding = _finding(field="curie", field_value="MedGen:C0346153", curie="MedGen:C0346153")
+    result = decide(
+        citation_id="call-1",
+        field="curie",
+        node_or_edge_type="Disease",
+        grounded=True,
+        claim_finding=finding,
+        all_findings=[finding],
+        ambiguous_high_risk_touch=True,
+    )
+    assert result.risk_tier == "high"
+    assert result.outcome == "ask"
 
 
 # ---------------------------------------------------------------------------

@@ -40,6 +40,13 @@ Depends on:
       T-3.1-11's live Layer 2 entity resolution
       (`resolve_symbol_to_curie`, below) routes every gene-symbol lookup
       through this tool, never a second HTTP path.
+    - system_03_search_agent.synthesis.freshness (prefer_live_for_currency,
+      is_stale, graph_snapshot_date_from_version, VOLATILE_FIELD_EXAMPLES,
+      STABLE_FIELD_EXAMPLES, FieldClass): T-3.4-06, Section 7.1
+      (live-wins-for-currency) and Section 7.4 (staleness) wired into
+      `_citations_from_grounded_claims`'s post-processing pass. See that
+      function's own docstring and F-3.4-T06-01 for why 7.4 does not fire
+      against any real Layer 1 citation today.
 
 Reads:
     - Nothing at import time beyond the modules above. USER_DB_URL and the
@@ -368,6 +375,65 @@ widening it:
       reach the model's prompt for the first time; `cache.py`'s own
       docstring recorded this as the still-missing half since build phase
       2.1.
+
+Build phase 3.4, T-3.4-05, closing T-3.1-28 (2026-08-09): before this
+ticket, `act_node` had dispatched exactly one answer-bearing tool call
+since build phase 2.1, `cypher_query` alone; the six Layer 2/3 tools built
+across phases 3.1-3.5 were never wired into the live agent loop, a
+deliberate, repeatedly-carried scope decision. That leaves the trust
+mechanism this phase exists to build (Section 8.3.2's CONCORDANT/
+DISCORDANT triangulation) provably untestable end to end: a graph-only
+answer has exactly one independent origin by construction, so
+triangulation could only ever reach INSUFFICIENT. This ticket wires the
+first second origin, narrowly:
+
+    - `plan_node`: after `_select_planned_tool_call` returns a real
+      `_PlannedToolCall`, `_first_gene_curie` checks its already-resolved
+      `cypher_input.target_entities` for a Gene CURIE (reusing
+      `_resolve_query_entities`'s own resolution, never re-deriving
+      Gene-ness a second way). When one exists, `_build_planned_ncbi_efetch_
+      call` builds a second, `_PlannedNcbiEfetchToolCall`-shaped entry (a
+      SEPARATE dataclass from `_PlannedToolCall`, not a widened union
+      field, so `act_node`'s dispatch is a type check, never a duck-typed
+      field-presence guess), always appended second: `planned_tool_calls[0]`
+      stays the cypher call, which `write_node`'s refusal-branch fallback
+      link (`state["tool_calls"][0].cypher_input.target_entities`) already
+      depends on.
+    - `act_node`: the dispatch loop branches on `isinstance(planned,
+      _PlannedNcbiEfetchToolCall)` before the existing `cypher_query`
+      branch, which is otherwise byte-for-byte unchanged: every query that
+      does not also get a Layer 2 call sees identical behavior to before
+      this ticket. The Layer 2 branch enforces its own outer timeout
+      (`_NCBI_EFETCH_ACT_TIMEOUT_SECONDS`, sized to `ncbi_efetch`'s
+      internal 15s-plus-one-retry worst case, tool-call-budgets.md) and
+      goes through the SAME per-call cost-cap check every other dispatch
+      in the loop already does, so a second call in the same query cannot
+      bypass either control. Its real, typed `NcbiEfetchOutput` is shaped
+      into the same generic pseudo-row dict `_cypher_output_to_
+      structured_fields` already produces for `cypher_query`
+      (`_ncbi_efetch_output_to_structured_fields`), so `build_synth_
+      findings` and the rest of the grounding pipeline need no
+      tool-specific branching to turn it into a citable finding, AND
+      stashed verbatim in the new `GraphState.layer2_raw_outputs`, keyed
+      by call_id, since that shaping is lossy in the direction `write_node`
+      needs it back (see that field's own docstring).
+    - `write_node`: `_citations_from_grounded_claims` now branches per
+      grounded claim's `SynthFinding.tool`. An `ncbi_efetch`-sourced claim
+      is built by `_layer2_citation_for_synth_finding`, which recovers the
+      real `NcbiEfetchOutput` from `layer2_raw_outputs` (matched by
+      `source_url` identity, the same technique `_curie_for_citation`
+      already uses for a Layer 1 row) and calls T-3.4-04's own `tools.
+      ncbi_efetch.build_layer2_citation`, never a second, ad hoc set of
+      Layer 2 provenance literals, overriding only `citation_id`/
+      `display_index`/`claim_text` onto the result so they stay the
+      grounding pass's own values. Every other tool's claim still takes
+      the pre-existing Layer 1 path, unchanged.
+
+Deliberately NOT built here: a general "which tool for which query"
+planner (out of this ticket's scope and `v1-scope-boundary.md`'s spirit),
+dispatch for any tool other than `ncbi_efetch`, or dispatch for any
+non-Gene entity shape. Full account: `tracker/phase_3.4.md`'s T-3.4-05
+entry; the dispatch-condition design decision: `DECISIONS.md`, 2026-08-09.
 """
 
 from __future__ import annotations
@@ -376,6 +442,7 @@ import itertools
 import re
 import time
 import uuid
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal
@@ -412,12 +479,22 @@ from system_03_search_agent.harness.harness import (
     QueryClass,
     budget_for_step,
 )
+from system_03_search_agent.synthesis.conflict_detection import detect_conflict
 from system_03_search_agent.synthesis.findings import (
     SynthFinding,
     build_synth_findings,
     build_synth_messages,
 )
+from system_03_search_agent.synthesis.freshness import (
+    STABLE_FIELD_EXAMPLES,
+    VOLATILE_FIELD_EXAMPLES,
+    FieldClass,
+    graph_snapshot_date_from_version,
+    is_stale,
+    prefer_live_for_currency,
+)
 from system_03_search_agent.synthesis.grounding import (
+    GroundedClaim,
     GroundingResult,
     display_index_by_citation_id,
     run_grounding_pass,
@@ -432,6 +509,7 @@ from system_03_search_agent.synthesis.trust import (
     aggregate,
     trust_for_claims,
 )
+from system_03_search_agent.tools.cypher_provenance import source_url_for_curie
 from system_03_search_agent.tools.cypher_query import cypher_query
 from system_03_search_agent.tools.cypher_schemas import (
     CypherQueryInput,
@@ -442,8 +520,8 @@ from system_03_search_agent.tools.graph_schema_constants import (
     CURIE_PREFIXES,
     CYPHER_QUERY_TIMEOUT_SECONDS,
 )
-from system_03_search_agent.tools.ncbi_efetch import ncbi_efetch
-from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
+from system_03_search_agent.tools.ncbi_efetch import build_layer2_citation, ncbi_efetch
+from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput, NcbiEfetchOutput
 
 Message = dict[str, str]
 
@@ -879,6 +957,28 @@ class _PlannedToolCall:
 
     tool_call: ToolCall
     cypher_input: CypherQueryInput
+
+
+@dataclass(frozen=True)
+class _PlannedNcbiEfetchToolCall:
+    """T-3.4-05/T-3.1-28: pairs one Section 2.3 `ToolCall` (`tool=
+    "ncbi_efetch"`, `layer="layer_2_api"`) with the `NcbiEfetchInput` Act
+    actually executes for it.
+
+    A SEPARATE dataclass from `_PlannedToolCall` rather than widening that
+    one's `cypher_input` field into a union: `act_node`'s dispatch branches
+    on `isinstance(planned, _PlannedNcbiEfetchToolCall)` (a type check on
+    which dataclass a `planned_tool_calls[i]` actually is), never on
+    inspecting a shared field that would be populated for one tool and
+    `None` for the other. The latter is exactly the duck-typing
+    `production-standards.md`'s hardening section warns against: a type
+    check fails loudly and statically (mypy sees two distinct types), a
+    field-presence check fails silently the day a third planned-call shape
+    is added and someone forgets to guard it.
+    """
+
+    tool_call: ToolCall
+    ncbi_efetch_input: NcbiEfetchInput
 
 
 # Query texts that plainly need no graph lookup at all. Deliberately
@@ -1470,6 +1570,66 @@ class _UnresolvedEntityRefusal:
     attempted_symbols: list[str]
 
 
+# T-3.4-05/T-3.1-28: the one, narrow condition this ticket dispatches a
+# second, answer-bearing tool call for. Deliberately explicit and scoped to
+# exactly one case, not a general "which tool for which query" planner
+# (out of scope per this ticket's own instructions and
+# `v1-scope-boundary.md`'s spirit): a Gene CURIE among the entities
+# `_resolve_query_entities` already resolved for `cypher_query`'s own
+# `target_entities`. This reuses that resolution rather than re-deriving
+# Gene-ness a second way, per the ticket's explicit instruction.
+_GENE_CURIE_PREFIX = "NCBIGene"
+
+# T-3.4-05: `ncbi_efetch`'s own declared budget is 15 seconds per call with
+# one backoff retry (tool-call-budgets.md), enforced internally by
+# `ncbi_transport.execute_get` (`DEFAULT_TIMEOUT_S`/`DEFAULT_BACKOFF_S`).
+# The OUTER budget `act_node` wraps the call in must not be tighter than
+# that internal worst case (two 15s attempts plus a short backoff, roughly
+# 31s), the same discipline `CYPHER_QUERY_TIMEOUT_SECONDS` already applies
+# to the cypher_query dispatch: a caller-side timeout must never starve a
+# tool below its own declared floor. `dataset_report`'s gene-by-id branch
+# issues exactly one `execute_get` call (`ncbi_datasets_actions.
+# dataset_report`), so there is no multi-call worst case to add on top.
+_NCBI_EFETCH_ACT_TIMEOUT_SECONDS = 35.0
+
+
+def _first_gene_curie(target_entities: list[str]) -> str | None:
+    """The first Gene-shaped CURIE (`NCBIGene:...`) among already-resolved
+    target entities, or `None` when none is Gene-shaped.
+
+    `target_entities` is in query order (`_resolve_query_entities`'s own
+    contract), so "first" is deterministic and names whichever gene a
+    reader would expect a dual-layer confirmation to be about when a query
+    happens to name more than one entity.
+    """
+    for curie in target_entities:
+        if curie.startswith(f"{_GENE_CURIE_PREFIX}:"):
+            return curie
+    return None
+
+
+def _build_planned_ncbi_efetch_call(gene_curie: str) -> _PlannedNcbiEfetchToolCall:
+    """Build the second, Layer 2 planned call: an `ncbi_efetch` gene report
+    for the same Gene CURIE `cypher_query` is already querying.
+
+    `action="dataset_report"`/`report_type="gene"` is Section 6.2's
+    gene-by-id endpoint (`gene/id/{gene_id}`), the one `ncbi_efetch` action
+    this ticket's scope needs; no other action or report_type is ever
+    selected here. `gene_id` is the CURIE's local id, capped to the
+    schema's own 20-char bound (`NcbiEfetchDatasetReportInput.gene_id`).
+    """
+    gene_id = gene_curie.split(":", 1)[1][:20]
+    ncbi_efetch_input = NcbiEfetchInput(
+        action="dataset_report", report_type="gene", gene_id=gene_id
+    )
+    tool_call = ToolCall(
+        tool="ncbi_efetch",
+        call_id=f"ne-{uuid.uuid4().hex[:12]}",
+        layer="layer_2_api",
+    )
+    return _PlannedNcbiEfetchToolCall(tool_call=tool_call, ncbi_efetch_input=ncbi_efetch_input)
+
+
 async def _select_planned_tool_call(
     query_text: str, query_class: QueryClass
 ) -> _PlannedToolCall | _UnresolvedEntityRefusal | None:
@@ -1561,13 +1721,30 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             narrative="no graph-answerable content detected; no tool selected",
             tool_calls=[],
         )
-        planned_tool_calls: list[_PlannedToolCall] = []
+        planned_tool_calls: list[_PlannedToolCall | _PlannedNcbiEfetchToolCall] = []
     else:
-        plan_payload = PlanPayload(
-            narrative="selected cypher_query for a Layer 1 graph lookup",
-            tool_calls=[planned.tool_call],
-        )
         planned_tool_calls = [planned]
+        narrative = "selected cypher_query for a Layer 1 graph lookup"
+
+        # T-3.4-05/T-3.1-28: dispatch a second, answer-bearing Layer 2 call
+        # alongside cypher_query when (and only when) the query's already-
+        # resolved target entities include a Gene CURIE. `planned` is
+        # always index 0 in `planned_tool_calls`: write_node's refusal
+        # branch reads `planned_tool_calls[0].cypher_input` directly, and
+        # this ordering must hold for that to keep working.
+        gene_curie = _first_gene_curie(planned.cypher_input.target_entities)
+        if gene_curie is not None:
+            ncbi_efetch_call = _build_planned_ncbi_efetch_call(gene_curie)
+            planned_tool_calls.append(ncbi_efetch_call)
+            narrative = (
+                "selected cypher_query for a Layer 1 graph lookup and "
+                f"ncbi_efetch for a Layer 2 confirmation of {gene_curie}"
+            )
+
+        plan_payload = PlanPayload(
+            narrative=narrative,
+            tool_calls=[p.tool_call for p in planned_tool_calls],
+        )
 
     sink.emit("plan", plan_payload)
     sink.emit("cost", cost_control.build_cost_event_payload(harness, trace_id, "plan"))
@@ -1755,14 +1932,77 @@ def _rows_for_citation(rows: list[CypherQueryRow]) -> list[CypherQueryRow]:
     ]
 
 
+# T-3.4-05/T-3.1-28: raw record `fields` keys that identify a
+# `dataset_report` gene record rather than describe a fact ABOUT it.
+# Excluded only from the pseudo-row `fields` dict handed to the shared,
+# tool-agnostic `_pick_representative_field`/`build_synth_findings`
+# pipeline below (never from the RAW `NcbiEfetchRecord.fields`
+# `write_node` later hands back to `build_layer2_citation`, which reads
+# the untouched record via `layer2_raw_outputs`), so the representative-
+# field ranking prefers a fact a Layer 1 answer does not already restate
+# (the gene's official symbol) over the bare numeric id already present in
+# the question and the CURIE. Mirrors how a Layer 1 row never repeats its
+# own CURIE inside `fields` either.
+_NCBI_EFETCH_ROW_IDENTITY_FIELDS: frozenset[str] = frozenset({"gene_id"})
+
+
+def _ncbi_efetch_output_to_structured_fields(output: NcbiEfetchOutput) -> dict[str, Any]:
+    """Shape an `ncbi_efetch` result into the same generic pseudo-row shape
+    `_cypher_output_to_structured_fields` already produces for
+    `cypher_query` (`status`/`row_count`/`total_available`/`truncated`/
+    `rows`/`error`, each row carrying `curie`/`node_or_edge_type`/`fields`/
+    `source_url`), so the tool-agnostic pipeline downstream
+    (`build_synth_findings`, `_citations_from_findings`,
+    `_node_or_edge_type_by_citation_id`, `_curie_for_citation`) needs no
+    tool-specific branching of its own to turn a real `ncbi_efetch` record
+    into a citable finding.
+
+    `curie` is deliberately the empty string, never fabricated: an
+    `ncbi_efetch` record's real identity is its own `id`/`db` pair, not a
+    graph CURIE, and `_citable_value_for_row`'s CURIE-fallback branch
+    already treats an empty `curie` as "no CURIE to fall back to", which is
+    the honest state here. `source_url` and every surviving `fields` value
+    are the record's own real data, never fabricated; only
+    `_NCBI_EFETCH_ROW_IDENTITY_FIELDS` is withheld, see that constant.
+    """
+    rows = [
+        {
+            "curie": "",
+            "node_or_edge_type": record.db or "ncbi_efetch",
+            "fields": {
+                key: value
+                for key, value in record.fields.items()
+                if key not in _NCBI_EFETCH_ROW_IDENTITY_FIELDS
+            },
+            "source_url": record.source_url,
+        }
+        for record in output.records
+    ]
+    return {
+        "status": output.status,
+        "row_count": len(rows),
+        "total_available": output.total_available,
+        "truncated": output.truncated,
+        "rows": rows,
+        "error": output.error,
+    }
+
+
 async def act_node(state: GraphState) -> dict[str, Any]:
     harness = state["harness"]
     trace_id = state["query"].trace_id
     query_class: QueryClass = state.get("query_class", "lookup")
-    planned_tool_calls: list[_PlannedToolCall] = state.get("tool_calls", [])
+    planned_tool_calls: list[_PlannedToolCall | _PlannedNcbiEfetchToolCall] = state.get(
+        "tool_calls", []
+    )
 
     tool_calls: list[ToolCall] = []
     results: list[ToolExecutionResult] = []
+    # T-3.4-05: the real, typed output behind each dispatched Layer 2
+    # call, keyed by its call_id. See GraphState.layer2_raw_outputs'
+    # docstring for why write_node needs this rather than reconstructing
+    # a validated model from the generic structured_fields dict below.
+    layer2_raw_outputs: dict[str, NcbiEfetchOutput] = {}
     cap_exceeded = False
 
     for planned in planned_tool_calls:
@@ -1771,7 +2011,8 @@ async def act_node(state: GraphState) -> dict[str, Any]:
         # call that would breach the cap is never issued at all: it is
         # excluded from both tool_calls and results (never a placeholder
         # pair), so the two lists coordinator_worker_execute requires to
-        # stay paired 1:1 never drift apart.
+        # stay paired 1:1 never drift apart. Applies identically to
+        # whichever tool this planned call is for.
         try:
             cost_control.check_per_query_cap(harness, trace_id, "plan")
         except cost_control.QueryCapExceededError:
@@ -1779,6 +2020,44 @@ async def act_node(state: GraphState) -> dict[str, Any]:
             break
 
         tool_calls.append(planned.tool_call)
+
+        if isinstance(planned, _PlannedNcbiEfetchToolCall):
+            # T-3.4-05/T-3.1-28: the second, Layer 2 dispatch. A type
+            # check on the planned call, never a duck-typed inspection of
+            # a field that might be absent on the other shape (see
+            # `_PlannedNcbiEfetchToolCall`'s own docstring).
+            try:
+                ncbi_efetch_output: NcbiEfetchOutput = await harness.enforce_timeout(
+                    "act",
+                    ncbi_efetch(planned.ncbi_efetch_input),
+                    _NCBI_EFETCH_ACT_TIMEOUT_SECONDS,
+                )
+            except HarnessCallError:
+                results.append(
+                    ToolExecutionResult(
+                        contains_untrusted_free_text=False,
+                        structured_fields={
+                            "status": "error",
+                            "error": (
+                                "ncbi_efetch call did not complete within its "
+                                "per-step timeout budget"
+                            ),
+                        },
+                    )
+                )
+                continue
+
+            layer2_raw_outputs[planned.tool_call.call_id] = ncbi_efetch_output
+            results.append(
+                ToolExecutionResult(
+                    contains_untrusted_free_text=False,
+                    structured_fields=_ncbi_efetch_output_to_structured_fields(
+                        ncbi_efetch_output
+                    ),
+                )
+            )
+            continue
+
         try:
             # F-05 fix: cypher_query's own declared budget
             # (CYPHER_QUERY_TIMEOUT_SECONDS, 30s, tool-call-budgets.md)
@@ -1852,7 +2131,15 @@ async def act_node(state: GraphState) -> dict[str, Any]:
     # A5/F-02 fix: the real Finding list now survives into GraphState
     # (not just its length), so write_node can read what Act actually
     # found instead of fabricating trust_outcome="answer" over nothing.
-    result: dict[str, Any] = {"findings_count": len(findings), "findings": findings}
+    result: dict[str, Any] = {
+        "findings_count": len(findings),
+        "findings": findings,
+        # T-3.4-05: empty for the common single-tool query; write_node
+        # falls back to a generic citation construction when a Layer 2
+        # claim's raw output is not found here (see GraphState's docstring
+        # and `_citations_from_grounded_claims`).
+        "layer2_raw_outputs": layer2_raw_outputs,
+    }
     if cap_exceeded:
         # Section 19.1: the query still ships an answer, a partial one,
         # ready with whatever findings already exist; write_node already
@@ -2049,10 +2336,43 @@ def _vocabulary_artifact_fields(fields: dict[str, Any]) -> list[str]:
 
 def _pick_representative_field(
     fields: dict[str, Any],
+    *,
+    apply_vocabulary_artifact_check: bool = True,
 ) -> tuple[str, Any, bool] | tuple[None, None, bool]:
     """Pick one field off a row to ground a citation's `claim_text` in,
     and report whether the picked value looks like a vocabulary-token
     parse artifact rather than a genuine field value.
+
+    T-3.4-05, live-found while re-verifying build phase 2.2's grounding
+    gate after this ticket's own change (F-3.4-T05-03):
+    `apply_vocabulary_artifact_check` (default `True`, unchanged behavior
+    for every existing caller) lets a Layer 2/3 caller opt OUT of the
+    vocabulary-artifact check entirely. `_is_vocabulary_token_artifact`
+    was built and tuned for one specific defect (a MedGen ETL leak that
+    writes a source-vocabulary CODE such as "MeSH" or "SNOMEDCT_US" into a
+    Layer 1 `Disease`/`OntologyClass` row's `name` field), and its shape
+    rule (short and plausibly a real abbreviation, versus longer and
+    fully upper-case) cannot distinguish that defect from an entirely
+    unrelated, entirely legitimate short all-caps code: a gene symbol.
+    Live-reproduced: `_is_vocabulary_token_artifact("BRCA1")` is `True`
+    (5 characters, past `_MAX_PLAUSIBLE_ABBREVIATION_CHARS`), which
+    silently deprioritized `ncbi_efetch`'s real, correct `symbol` field
+    behind `description` (a field whose value routinely duplicates the
+    graph's own Layer 1 `name` text verbatim), pushing the model toward a
+    redundant pair of findings and, in live testing, sometimes toward a
+    hedging sentence about the Layer 2 finding that the grounding pass
+    then correctly stripped as unmatched, since it made no citable claim.
+    This is not a case for widening or narrowing
+    `_MAX_PLAUSIBLE_ABBREVIATION_CHARS`, since that constant is
+    specifically calibrated against real, confirmed MedGen leaks
+    (`SNOMEDCT_US`, `MONDO`) that a wider threshold would let straight
+    through; the fix is scope, not sensitivity. A row's real
+    `node_or_edge_type` never coincides with an ETL leak either, since the
+    defect is specific to Layer 1's own ingest pipeline, so a Layer 2/3
+    caller (`synthesis/findings.py`'s `build_synth_findings`, keyed on
+    `finding.layer`) passes `apply_vocabulary_artifact_check=False`; every
+    Layer 1 caller, including `_citation_for_row` below (unchanged), keeps
+    the check exactly as it always ran.
 
     Deterministic, never a model judgment: prefer a `name` field when
     present (the most human-readable field most rows carry), else the
@@ -2087,6 +2407,8 @@ def _pick_representative_field(
         return None, None, False
 
     def _is_artifact(value: Any) -> bool:
+        if not apply_vocabulary_artifact_check:
+            return False
         return isinstance(value, str) and _is_vocabulary_token_artifact(value)
 
     def _is_blank(value: Any) -> bool:
@@ -2240,17 +2562,32 @@ def _ok_finding_was_truncated(findings: list[Finding]) -> bool:
     `"reader"`-sourced finding (`structured_fields is None`) is never
     meaningful, since that path has no `structured_fields` to have cut in
     the first place.
+
+    T-3.4-05, live-found while re-verifying the earlier build phase 2.2
+    grounding gate after this ticket's own change (F-3.4-T05-02): also
+    scoped to `layer == "layer_1_graph"`. `truncated` here means one
+    specific thing, Section 6.1's `row_limit`/byte-ceiling cut on THIS
+    query's graph rows, the shape the whole truncation-note mechanism
+    below exists to acknowledge. A Layer 2 tool's own `truncated` flag
+    (`ncbi_efetch`'s `NcbiEfetchOutput.truncated`, whether that ONE API
+    call's own result list was itself paginated) is a real signal, but it
+    answers a different question, and unioning it in here would flag "the
+    graph answer is incomplete" over a Layer 2 call's own, unrelated
+    pagination state. No Layer 2/3 tool's truncation is dropped by this
+    scoping, since none is read anywhere yet; it is only kept OUT of a
+    signal it was never true of.
     """
     return any(
         finding.truncated or bool(finding.structured_fields.get("truncated"))
         for finding in findings
         if finding.structured_fields is not None
         and finding.structured_fields.get("status") == "ok"
+        and finding.layer == "layer_1_graph"
     )
 
 
 def _known_total_available(findings: list[Finding]) -> int | None:
-    """Sum `total_available` across this query's `"ok"` findings.
+    """Sum `total_available` across this query's `"ok"` Layer 1 findings.
 
     Returns `None` when any contributing finding's own `total_available`
     is unknown (`cypher_query._fetch_true_total` abstained rather than
@@ -2258,12 +2595,33 @@ def _known_total_available(findings: list[Finding]) -> int | None:
     summing a known figure with an unknown one is not itself a knowable
     total. A caller reading `None` states scale honestly as "more than
     shown, exact total unavailable" rather than fabricating a number.
+
+    T-3.4-05, live-found while re-verifying the earlier build phase 2.2
+    grounding gate after this ticket's own change (F-3.4-T05-02): scoped
+    to `layer == "layer_1_graph"`, the same fix and the same reasoning as
+    `_ok_finding_was_truncated` just above. Before this fix, a Gene-
+    anchored query that also dispatched `ncbi_efetch` (T-3.4-05's own
+    second call) downgraded EVERY truncated Layer 1 answer's note from the
+    informative "showing N of KNOWN-M" wording to the vaguer "exact total
+    not available" wording, because `NcbiEfetchOutput.total_available` is
+    `None` for a normal (non-paginated) `dataset_report` call
+    (`ncbi_datasets_actions.dataset_report`: `total_available=len(records)
+    if truncated else None`) and this function returned `None` the moment
+    ANY contributing finding's own value was `None`, regardless of which
+    tool it came from. `total_available` on an `ncbi_efetch` finding
+    answers "was THIS call's own result list paginated", not "how many
+    graph rows does this answer draw from"; summing the two was a category
+    error the single-tool design never had to name, not merely a rare
+    coincidence T-3.4-05 happened to trigger. Live-reproduced: the
+    flagship "which diseases" question's own truncation note read "the
+    exact total is not available for this query" on a run where cypher_
+    query's own total_available was, in fact, known.
     """
     total = 0
     saw_any = False
     for finding in findings:
         fields = finding.structured_fields
-        if fields is None or fields.get("status") != "ok":
+        if fields is None or fields.get("status") != "ok" or finding.layer != "layer_1_graph":
             continue
         saw_any = True
         available = fields.get("total_available")
@@ -2271,6 +2629,87 @@ def _known_total_available(findings: list[Finding]) -> int | None:
             return None
         total += available
     return total if saw_any else None
+
+
+def _target_entities_from_tool_calls(tool_calls: list[Any]) -> list[str]:
+    """The CURIEs `plan_node` resolved for this query, read from the
+    planned `cypher_query` call's own `CypherQueryInput.target_entities`.
+
+    F-3.4-A-01: this is the one place `write_node` can learn what the
+    QUESTION named, as opposed to what Act happened to fetch or what
+    Synth happened to write about. `_resolve_query_entities` (plan_node)
+    already does the real work of extracting and resolving every CURIE a
+    multi-entity question names; this function only reads its already-
+    computed result back out of state, the same reuse-not-re-derive
+    discipline the refusal branch above already applies to the identical
+    field for its own fallback link. Returns `[]` when no `cypher_query`
+    call was planned (nothing named, or a no-tool query), never guessed.
+    """
+    for planned in tool_calls:
+        cypher_input = getattr(planned, "cypher_input", None)
+        if cypher_input is not None:
+            return list(cypher_input.target_entities)
+    return []
+
+
+def _unaddressed_target_entities(
+    target_entities: list[str], citations: list[CitationPayload]
+) -> list[str]:
+    """Which of `target_entities` earned NO surviving citation in this
+    answer, in the order they were named.
+
+    F-3.4-A-01: a two-gene question ("what are the official gene symbols
+    for NCBIGene:672 and NCBIGene:7157") live-reproduced `cypher_query`
+    correctly fetching BOTH genes' rows and Synth's own narrative
+    discussing only the first, with `trust_outcome: "answer"`, the clean
+    "nothing to flag" state, giving no signal that half the question went
+    unaddressed. Every individual sentence WAS honestly cited; the
+    ANSWER as a whole answered a narrower question than the one asked.
+    This is a completeness check, a different question from Section
+    8.3's risk/grounding/triangulation verdict on each surviving claim,
+    which stays exactly as accurate as it already was.
+
+    An entity counts as addressed when ANY surviving citation's
+    `source_url`, once normalized (`_normalized_citation_source_url`,
+    the same trailing-slash-insensitive comparison F-3.4-A-01's own
+    same-entity pairing fix uses), matches that entity's own canonical
+    record URL (`source_url_for_curie`). This works identically for a
+    Layer 1 citation (built from the graph's own row) and a Layer 2
+    citation (`ncbi_efetch`, anchored to exactly one of the named
+    entities), with no per-layer branching: both layers' URL builders
+    resolve to the same normalized string for the same real record.
+
+    A target entity whose CURIE prefix `source_url_for_curie` cannot map
+    to a URL at all (a prefix outside the nine documented mappings) is
+    always reported unaddressed rather than silently excluded from the
+    check: this function never assumes coverage it cannot verify.
+    """
+    expected_by_entity = {
+        entity: _normalized_citation_source_url(source_url_for_curie(entity))
+        for entity in target_entities
+    }
+    cited_urls = {
+        _normalized_citation_source_url(citation.source_url) for citation in citations
+    }
+    cited_urls.discard("")
+    return [
+        entity
+        for entity in target_entities
+        if not expected_by_entity[entity] or expected_by_entity[entity] not in cited_urls
+    ]
+
+
+def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
+    """F-3.4-A-01: state which named entities this answer does NOT cover,
+    the same "name the scale, not just that a cut happened" discipline
+    `_build_truncated_answer_note` already uses for a row-count cut.
+    """
+    listed = ", ".join(unaddressed_entities)
+    return (
+        f"Note: this answer does not address the following entities named "
+        f"in the question: {listed}. Ask about them individually for a "
+        f"complete answer."
+    )
 
 
 def _build_truncated_answer_note(shown: int, total_available: int | None) -> str:
@@ -2382,8 +2821,9 @@ def _response_text(response: Any) -> str:
 
 def _node_or_edge_type_by_citation_id(
     findings: list[Finding], synth_findings: list[SynthFinding]
-) -> dict[str, str]:
-    """Map each finding's `citation_id` to the graph row type behind it.
+) -> dict[str, tuple[str, bool]]:
+    """Map each finding's `citation_id` to the graph row type behind it,
+    paired with F-3.4-A-02's weaker "ambiguous high-risk touch" signal.
 
     Section 8.3.1 classifies risk on the source field OR the relationship
     type, and `SynthFinding` deliberately carries only the seven Section
@@ -2396,8 +2836,64 @@ def _node_or_edge_type_by_citation_id(
     Without this, `gene_associated_with_condition` edges, the graph's own
     mechanistic gene-to-disease mapping and a Section 8.3.1 high-risk row,
     would classify `low` and answer confidently on a single origin.
+
+    T-3.4-03, closing F-2.2-A-05: a row's `traversed_edge_type`
+    (`cypher_schemas.CypherQueryRow`, additive since this ticket) is
+    preferred over the row's own `node_or_edge_type` whenever a query's
+    Cypher text pinned it unambiguously (`cypher_query.
+    _traversed_edge_type_by_column`). A `Disease` row reached through
+    `-[:gene_associated_with_condition]->` therefore hands `risk_tier_for`
+    the edge label, the Section 8.3.1 high-risk row it actually is, rather
+    than the endpoint's bare node type. A row with no traversed edge
+    (`traversed_edge_type` absent or empty, the bare-identifier-lookup
+    case, and every row from any tool other than `cypher_query`) falls
+    through to the previous behavior unchanged, so this is additive: it
+    never turns a low-risk row high, only ever recovers a high-risk row
+    that used to be misread as low.
+
+    T-3.4-05, live-found while re-verifying T-3.4-03 against the flagship
+    question after this ticket's own change (F-3.4-T05-01): a Cypher shape
+    that projects a bare scalar column ALONGSIDE the entity, for example
+    `RETURN d, d.id`, produces a second "derived" row sharing the exact
+    same `(source_url, curie)` identity as the real `Disease` row
+    (`cypher_provenance`'s own derived-value path). Both rows land in the
+    SAME `by_identity` dict under the SAME key, and a plain unconditional
+    assignment on each iteration made whichever row was iterated LAST win,
+    with no ordering guarantee between the two: when the derived row (which
+    carries no `traversed_edge_type` of its own, `None`, and a bare
+    `node_or_edge_type` of `"derived"`) happened to be iterated after the
+    real entity row, its empty value silently overwrote the correctly
+    threaded `"gene_associated_with_condition"` edge label, and the claim
+    misclassified `low` again, with T-3.4-03's own fix never having
+    regressed at all: `_traversed_edge_type_by_column` still threaded the
+    edge label onto the real row correctly the entire time. Live-reproduced
+    twice in a row against the real graph and a real model
+    (`RETURN d, d.id` and, on retry, the identical shape recurring), and
+    NOT reproducible by calling `cypher_query` directly against a Cypher
+    shape with no derived column (`RETURN d, d.name`) at all: this is a
+    dict-collision bug in THIS function, not a regression in T-3.4-03's own
+    mechanism, and not caused by anything T-3.4-05 dispatches (reproduces
+    with `ncbi_efetch` never called). Fixed by never letting a "derived" or
+    empty-typed row's entry overwrite an already-informative one for the
+    same identity, regardless of which one is iterated first: a value once
+    known to be a real traversed edge or node type is never discarded for
+    a less-informative duplicate of the same record.
+
+    F-3.4-A-02: the return type widened from a bare `str` to a
+    `(row_type, ambiguous_high_risk_touch)` pair. `ambiguous_high_risk_
+    touch` reads a row's `ambiguous_high_risk_edge_touch` bool
+    (`cypher_schemas.CypherQueryRow`, additive since this fix,
+    `cypher_query._ambiguous_high_risk_edge_touch_by_column`), which is
+    set only when `row_type`'s own source (`traversed_edge_type`) was
+    left unresolved because the variable was touched by 2+ distinct edge
+    labels, at least one of which is a real, known Section 8.3.1
+    high-risk edge. The SAME identity-keyed dedup and the SAME F-3.4-T05-
+    01 "informative wins" rule apply to this second signal, independently
+    of the first: a duplicate row's `False` never overwrites an already-
+    `True` value for the same identity, order-independent, since `True`
+    is strictly more informative here too.
     """
-    by_identity: dict[tuple[str, str], str] = {}
+    by_identity: dict[tuple[str, str], tuple[str, bool]] = {}
     for finding in findings:
         fields = finding.structured_fields
         if fields is None or fields.get("status") != "ok":
@@ -2406,24 +2902,44 @@ def _node_or_edge_type_by_citation_id(
             source_url = str(row.get("source_url") or "")
             if not source_url:
                 continue
-            by_identity[(source_url, str(row.get("curie") or ""))] = str(
-                row.get("node_or_edge_type") or ""
+            identity = (source_url, str(row.get("curie") or ""))
+            row_type = str(
+                row.get("traversed_edge_type") or row.get("node_or_edge_type") or ""
             )
+            ambiguous_touch = bool(row.get("ambiguous_high_risk_edge_touch") or False)
+            if identity in by_identity:
+                existing_type, existing_ambiguous = by_identity[identity]
+                # F-3.4-T05-01: a less-informative duplicate of an
+                # already-seen record (a "derived" sibling row, or a row
+                # with no type at all) must never overwrite a real entry
+                # this identity already earned. Order-independent:
+                # whichever row (the real entity or its derived sibling)
+                # is iterated first, the real value wins. Applied here to
+                # both signals independently: `row_type` keeps its own
+                # rule unchanged, and `ambiguous_touch` uses OR, since
+                # `True` is strictly more informative than `False`
+                # regardless of which row is iterated first or second.
+                if row_type in ("", "derived"):
+                    row_type = existing_type
+                ambiguous_touch = existing_ambiguous or ambiguous_touch
+            by_identity[identity] = (row_type, ambiguous_touch)
 
-    out: dict[str, str] = {}
+    out: dict[str, tuple[str, bool]] = {}
     for synth_finding in synth_findings:
-        for (source_url, curie), row_type in by_identity.items():
+        for (source_url, curie), value in by_identity.items():
             if source_url != synth_finding.source_url:
                 continue
             if synth_finding.curie_fallback and curie != synth_finding.field_value:
                 continue
-            out[synth_finding.citation_id] = row_type
+            out[synth_finding.citation_id] = value
             break
     return out
 
 
 def _citations_from_grounded_claims(
-    grounding: GroundingResult, findings: list[Finding]
+    grounding: GroundingResult,
+    findings: list[Finding],
+    layer2_raw_outputs: dict[str, NcbiEfetchOutput] | None = None,
 ) -> list[CitationPayload]:
     """Build one `CitationPayload` per surviving grounded claim.
 
@@ -2444,7 +2960,17 @@ def _citations_from_grounded_claims(
     `_citations_from_findings` is deliberately left in place: it is the
     reader for the truncation and cap accounting, and several 2.1 tests
     assert on it directly.
+
+    T-3.4-05/T-3.1-28: a grounded claim built from an `ncbi_efetch` finding
+    (`synth_finding.tool == "ncbi_efetch"`) is built by
+    `_layer2_citation_for_synth_finding`, a real Section 9.2 Layer 2
+    citation via that tool's own `build_layer2_citation`, never the Layer
+    1 literals below. This is written to stay extensible: a future Layer
+    2/3 tool adds its own branch here (or its own `_layerN_citation_for_
+    synth_finding`-shaped helper) rather than widening the `cypher_query`
+    literals to cover a case they were never true of.
     """
+    layer2_raw_outputs = layer2_raw_outputs or {}
     display_slots = display_index_by_citation_id(grounding)
     suspect_by_citation_id = {
         claim.finding.citation_id: claim.finding.value_is_suspect
@@ -2464,6 +2990,21 @@ def _citations_from_grounded_claims(
     citations: list[CitationPayload] = []
     for citation_id, display_index in sorted(display_slots.items(), key=lambda kv: kv[1]):
         synth_finding = finding_by_citation_id[citation_id]
+        claim_text = claim_text_by_citation_id[citation_id][:1000]
+
+        if synth_finding.tool == "ncbi_efetch":
+            # F-3.4-T05-04: None means this one claim could not be built
+            # into a valid CitationPayload (both of the builder's own
+            # construction attempts failed); it is skipped rather than
+            # appended, never a crash. See that function's own docstring.
+            layer2_citation = _layer2_citation_for_synth_finding(
+                synth_finding, findings, layer2_raw_outputs, citation_id,
+                display_index, claim_text,
+            )
+            if layer2_citation is not None:
+                citations.append(layer2_citation)
+            continue
+
         curie = (
             synth_finding.field_value
             if synth_finding.curie_fallback
@@ -2479,7 +3020,7 @@ def _citations_from_grounded_claims(
                 source_url=synth_finding.source_url,
                 layer=synth_finding.layer,  # type: ignore[arg-type]
                 field=synth_finding.field[:128],
-                claim_text=claim_text_by_citation_id[citation_id][:1000],
+                claim_text=claim_text,
                 # Section 9.2's per-tool static defaults for a cypher_query
                 # graph property: a value copied from an NCBI-native record,
                 # which is a US federal government work.
@@ -2497,6 +3038,14 @@ def _citations_from_grounded_claims(
                 license="public_domain_us_gov",
             )
         )
+
+    # T-3.4-06, Section 7.1 and 7.4: a post-processing pass over the fully
+    # built citations list, never woven into the loop above. Both
+    # functions are no-ops unless a Layer 1/Layer 2 field-name pairing
+    # exists (see each one's own docstring for exactly when that is
+    # true today).
+    citations = _apply_live_wins_for_currency(citations, finding_by_citation_id)
+    citations = _apply_layer1_staleness_notes(citations, finding_by_citation_id, findings)
     return citations
 
 
@@ -2518,6 +3067,725 @@ def _curie_for_citation(
             if str(row.get("source_url") or "") == synth_finding.source_url:
                 return str(row.get("curie") or "")
     return ""
+
+
+def _graph_snapshot_version_for_citation(
+    citation_id: str, findings: list[Finding], synth_finding: SynthFinding
+) -> str | None:
+    """Recover the `graph_snapshot_version` of the row a Layer 1 finding was
+    built from, the same `source_url`-identity lookup `_curie_for_citation`
+    already uses. `SynthFinding` has no slot for `graph_snapshot_version`
+    itself (Section 8.1's schema does not carry it), so this is the only
+    path T-3.4-06's staleness check has back to it.
+
+    Returns `None`, never a fabricated version string, when no matching
+    row can be found. Should not happen for a real `layer_1_graph`
+    finding, since every Layer 1 row `cypher_provenance.to_output_row`
+    produces carries this key; a defensive `None` here reads as
+    "staleness not determined", never "assume fresh".
+    """
+    for finding in findings:
+        fields = finding.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        for row in fields.get("rows", []):
+            if str(row.get("source_url") or "") == synth_finding.source_url:
+                version = row.get("graph_snapshot_version")
+                return str(version) if version else None
+    return None
+
+
+_VOLATILE_FIELD_NAMES = {name.casefold() for name in VOLATILE_FIELD_EXAMPLES}
+_STABLE_FIELD_NAMES = {name.casefold() for name in STABLE_FIELD_EXAMPLES}
+
+
+def _field_class_for_layer1_field(field_name: str) -> FieldClass | None:
+    """Section 7.4: which staleness table a Layer 1 field belongs to.
+
+    T-3.4-06, F-3.4-T06-01: matched against `freshness.VOLATILE_FIELD_
+    EXAMPLES`/`STABLE_FIELD_EXAMPLES` by exact, case-insensitive field
+    name, never guessed or inferred from the field's value; a synonym
+    table (aliasing e.g. "clinical_significance" to some other real field
+    name) would be exactly the kind of guess production-standards.md
+    forbids for a staleness verdict.
+
+    Confirmed live against the real graph (2026-08-09, 200-row samples
+    across Gene, SequenceVariant, and Disease vertices): every Layer 1
+    vertex this repo's ingest returns carries the identical generic
+    BioLink-normalized property set (`id`, `name`, `xrefs`, `source`,
+    `agent_type`, `source_url`, `knowledge_level`), never a
+    `clinical_significance`, `review_status`, `gtr_test_status`,
+    `gene_coordinates`, `chromosome_location`, or `taxonomy` key.
+    `VOLATILE_FIELD_EXAMPLES`/`STABLE_FIELD_EXAMPLES` name fields Section
+    7.4 assumes a richer, per-domain ingest would carry; this ingest
+    normalized every vertex label down to one shared shape instead, so
+    this function returns `None` for every real Layer 1 citation this
+    repo can build today. It is real, unit-tested code, not dead code
+    kept for appearances: it activates the moment Systems 1/2 preserve a
+    domain-specific property on ingest. Full account: F-3.4-T06-01,
+    `tracker/phase_3.4.md`.
+    """
+    normalized = field_name.strip().casefold()
+    if normalized in _VOLATILE_FIELD_NAMES:
+        return "volatile"
+    if normalized in _STABLE_FIELD_NAMES:
+        return "stable"
+    return None
+
+
+# F-3.4-A-03: an explicit, small, versioned table of SPECIFIC, confirmed
+# field-name pairs this system's own tools actually produce for the same
+# underlying fact under two different names, keyed and valued by the
+# already-casefolded field name. Deliberately NOT a synonym-guessing
+# heuristic or a fuzzy/similarity matcher: every entry here traces to a
+# live-confirmed pairing, the same "an explicit table beats a guessed
+# heuristic" discipline `provenance_defaults.py`'s per-tool table and the
+# ClinVar term table already use elsewhere in this repo.
+#
+# "name" -> "symbol": the graph's generic BioLink-normalized Gene `name`
+# property (e.g. "BRCA1 DNA repair associated") and `ncbi_efetch`'s own
+# Gene report `symbol` field (e.g. "BRCA1") describe the same fact, a
+# gene's own identifying label, under two different field names. This is
+# the system's own single most common dual-layer citation pair: T-3.4-05's
+# Act-step dual dispatch anchors on a Gene CURIE only, and every real Layer
+# 1 vertex this graph's ingest returns carries `name` as its one
+# identifying-label field (F-3.4-T06-01's live-confirmed property set: no
+# vertex label carries any richer, domain-specific field today).
+#
+# Checked for a second pair (F-3.4-A-03's own instruction) against every
+# other Layer 2/3 citation builder this phase built (`ncbi_dbsnp`,
+# `pubtator_annotate`, `litvar2_lookup`, `pathogen_detection`,
+# `clinicaltrials_search`): none of their real field names (`clinical_
+# significance`, `population_frequencies`, extracted-relationship text,
+# `amr_genotype`, `brief_title`, ...) collide, under any confirmed alias,
+# with the one Layer 1 field name this graph's ingest actually produces
+# (`name`; `id`/`xrefs`/`source`/`agent_type`/`knowledge_level` have no
+# live Layer 2/3 counterpart either), and none of those five tools is
+# currently dispatched as a second, answer-bearing origin from Act at all
+# (only `ncbi_efetch` is, per T-3.4-05's own scope), so a second entry
+# would have no real pairing to confirm against today. One entry is a
+# legitimate, complete fix for the case F-3.4-A-03 actually found; add a
+# new entry only when a specific, confirmed pair from a real dual-layer
+# answer needs one, never speculatively.
+_FIELD_NAME_ALIASES: dict[str, str] = {
+    "name": "symbol",
+}
+
+
+def _canonical_layer_field_name(field_name: str) -> str:
+    """Casefold a `SynthFinding.field` name and resolve it through F-3.4-
+    A-03's small alias table, so `_layer1_layer2_field_pairs` groups two
+    differently-named-but-confirmed-synonymous fields (Layer 1's `name`
+    and `ncbi_efetch`'s `symbol`) under one shared bucket key. A field name
+    with no table entry canonicalizes to itself, exactly the prior
+    exact-match-only behavior.
+    """
+    normalized = field_name.strip().casefold()
+    return _FIELD_NAME_ALIASES.get(normalized, normalized)
+
+
+def _paired_field_values_agree(
+    graph_field: str, live_field: str, graph_value: str, live_value: str
+) -> bool:
+    """Whether a Layer 1/Layer 2 paired value counts as agreement, for
+    Section 7.1's "nothing to referee when they agree" check and Section
+    7.2's conflict check alike, both of which call this so the two
+    mechanisms can never disagree about what "the same fact" means for the
+    identical pair.
+
+    Exact match after casefold and whitespace-collapse (the identical
+    normalization `synthesis.conflict_detection._normalize` already
+    applies) is always agreement, unchanged from before F-3.4-A-03, for
+    EVERY pair, aliased or not.
+
+    F-3.4-A-03's one alias pair (Layer 1's `name` aliased to Layer 2's own
+    `symbol`) needs a second, still fully deterministic rule on top of
+    exact match, not instead of it: the live value's own short-form
+    symbol ("BRCA1") is routinely a SUBSTRING of the graph's longer
+    descriptive name ("BRCA1 DNA repair associated") by construction of
+    what those two fields actually contain, a live-confirmed pattern, not
+    a coincidence. Treating that containment as a "conflict" would flag
+    every single normal, correct dual-layer gene-identity answer this
+    system's own flagship question produces, which is not what Section
+    7.1/7.2 exist to warn a reader about.
+
+    Critically, this second rule fires ONLY when `graph_field` and
+    `live_field` genuinely differ (this pair exists BECAUSE of the alias
+    table, not because the two field names were already identical): a
+    real regression caught in this fix's own test run had `graph_field ==
+    live_field == "symbol"` with values `"BRCA1OLD"` (graph) versus
+    `"BRCA1"` (live), a genuine typo-shaped disagreement between two
+    IDENTICALLY NAMED fields, where `"brca1"` is trivially a substring of
+    `"brca1old"`. Gating on `graph_field != live_field` closes that hole:
+    an exact-name pair is never eligible for the containment exception,
+    only a pair that only exists via aliasing is, so this can never mask
+    a genuine disagreement on an ordinary same-named field. A live value
+    that is NOT contained in the graph value (a wildly wrong symbol, the
+    adversary's own F-3.4-A-03 repro) still correctly disagrees either
+    way. This is a single, explicit, documented special case, never a
+    general fuzzy or similarity comparison: `synthesis.conflict_detection.
+    detect_conflict` itself is untouched and still exact-match-only for
+    every field, aliased or not.
+    """
+    normalized_graph = " ".join(str(graph_value).split()).casefold()
+    normalized_live = " ".join(str(live_value).split()).casefold()
+    if normalized_graph == normalized_live:
+        return True
+    aliased_pair = graph_field.strip().casefold() != live_field.strip().casefold()
+    return (
+        aliased_pair
+        and _canonical_layer_field_name(graph_field) == "symbol"
+        and bool(normalized_live)
+        and normalized_live in normalized_graph
+    )
+
+
+def _normalized_citation_source_url(source_url: str | None) -> str:
+    """Normalize a citation's `source_url` for a same-entity comparison.
+
+    F-3.4-A-01/A-03: a real Layer 1 gene URL and its Layer 2 counterpart
+    for the IDENTICAL gene differ only by a trailing slash by construction
+    of two independent URL builders (`cypher_provenance.py`'s
+    `"https://www.ncbi.nlm.nih.gov/gene/" + local_id`, no trailing slash,
+    versus `ncbi_datasets_actions.py`'s own gene/genome builders, which
+    append one), live-confirmed 2026-08-09 against the real BRCA1 gene
+    page from both layers in the same answer. Lowercased and trailing-
+    slash-stripped, nothing else: still an exact comparison after
+    normalization, never a fuzzy or partial match.
+    """
+    return (source_url or "").strip().rstrip("/").casefold()
+
+
+def _first_same_entity_pair(
+    graph_ids: list[str],
+    live_ids: list[str],
+    finding_by_citation_id: dict[str, SynthFinding],
+) -> tuple[str, str] | None:
+    """The first `(graph_id, live_id)` pair, in deterministic sorted
+    order on each side, whose `source_url` identifies the SAME real-world
+    record once normalized (`_normalized_citation_source_url`). `None`
+    when no candidate pair in this field-name bucket is about the same
+    entity, or when either side's `source_url` is blank (nothing to
+    confirm identity against, never guessed).
+
+    F-3.4-A-01: live-found while investigating a two-gene question
+    ("what are the official gene symbols for NCBIGene:672 and
+    NCBIGene:7157"). `_layer1_layer2_field_pairs`'s own original design
+    (T-3.4-06) grouped purely by field name and picked the
+    first-sorted citation on each side, resting on the stated assumption
+    that "same subject entity already holds for every citation in a
+    dual-layer answer" because T-3.4-05's dual dispatch anchors on one
+    entity. That assumption is FALSE for a multi-entity question: Layer 1
+    genuinely returns rows for every named entity, while Layer 2 (`ncbi_
+    efetch`) only ever covers the first. A live run reproduced the
+    consequence directly: a Layer 1 "name" finding for TP53
+    (NCBIGene:7157) and a Layer 2 "symbol" finding for BRCA1
+    (NCBIGene:672) shared this function's field-name bucket by pure
+    coincidence and, before this check, would have been treated as
+    disagreeing about "the same fact" when they are not the same fact's
+    two sides at all, they are two different facts about two different
+    genes. Section 7's mechanisms exist to compare a graph value and a
+    live value for the SAME record; comparing across records is a
+    different bug, not something Section 7.1/7.2 or triangulation are
+    meant to detect, and is exactly what this same-entity gate closes.
+    """
+    for graph_id in graph_ids:
+        graph_url = _normalized_citation_source_url(
+            finding_by_citation_id[graph_id].source_url
+        )
+        if not graph_url:
+            continue
+        for live_id in live_ids:
+            if _normalized_citation_source_url(
+                finding_by_citation_id[live_id].source_url
+            ) == graph_url:
+                return graph_id, live_id
+    return None
+
+
+def _layer1_layer2_field_pairs(
+    citations: list[CitationPayload],
+    finding_by_citation_id: dict[str, SynthFinding],
+) -> dict[str, tuple[str, str]]:
+    """Group this answer's citations by normalized, alias-resolved field
+    name; for each field name where BOTH a Layer 1 and a Layer 2 citation
+    about the SAME entity exist, return the `(graph_citation_id,
+    live_citation_id)` pair. Deterministic (citation_id sort order) when
+    more than one candidate citation exists on either side of a field
+    name.
+
+    "Same field name" (case-insensitive, exact match after alias
+    resolution) is this ticket's own judged, deliberately narrow signal
+    for "the same fact" across layers (T-3.4-06's own brief: "same field
+    name, same subject entity/CURIE, is the natural signal"). Field name
+    is only HALF of that brief, though: F-3.4-A-01 found the other half,
+    "same subject entity", was assumed true rather than actually checked,
+    an assumption that holds for a single-entity dual-layer answer but
+    breaks for a multi-entity one. `_first_same_entity_pair` (above) is
+    the real check, comparing normalized `source_url`, the one real,
+    per-record identity signal available on both a Layer 1 and a Layer 2
+    citation alike (a Layer 2 finding never carries a CURIE, by design;
+    see `_ncbi_efetch_output_to_structured_fields`'s own docstring).
+
+    F-3.4-A-03: `_FIELD_NAME_ALIASES` (below) is the one narrow exception
+    to "exact match" on field NAME. T-3.4-06 originally declined ANY
+    synonym table on the reasoning that guessing two differently-named
+    fields describe the same fact is exactly the kind of guess
+    production-standards.md forbids, and that reasoning still holds for
+    an UNCONFIRMED pairing. But the graph's Gene `name` field ("BRCA1 DNA
+    repair associated") and `ncbi_efetch`'s own Gene `symbol` field
+    ("BRCA1") are not a guess: they are the system's own single most
+    common, live-confirmed dual-layer citation pair (T-3.4-05 anchors its
+    Act-step dual dispatch on a Gene CURIE only, and `ncbi_efetch`'s
+    gene-report fields include `symbol` but never a literal `"name"`
+    key), and with NO alias every mechanism this function feeds, Section
+    7.1 (live-wins-for-currency), Section 7.2 (conflict detection), and
+    `synthesis.trust.triangulate()`, silently never engages for it.
+    `_FIELD_NAME_ALIASES` is deliberately small, explicit, and versioned,
+    the same discipline `provenance_defaults.py`'s per-tool table already
+    uses, never a fuzzy or similarity-based match: only a SPECIFIC,
+    confirmed field pair this system's own tools actually produce may be
+    added to it.
+    """
+    by_field: dict[str, list[str]] = defaultdict(list)
+    for citation in citations:
+        finding = finding_by_citation_id.get(citation.citation_id)
+        if finding is None:
+            continue
+        by_field[_canonical_layer_field_name(finding.field)].append(citation.citation_id)
+
+    pairs: dict[str, tuple[str, str]] = {}
+    for field_key, citation_ids in by_field.items():
+        graph_ids = sorted(
+            cid for cid in citation_ids
+            if finding_by_citation_id[cid].layer == "layer_1_graph"
+        )
+        live_ids = sorted(
+            cid for cid in citation_ids
+            if finding_by_citation_id[cid].layer == "layer_2_api"
+        )
+        matched = _first_same_entity_pair(graph_ids, live_ids, finding_by_citation_id)
+        if matched is not None:
+            pairs[field_key] = matched
+    return pairs
+
+
+def _apply_live_wins_for_currency(
+    citations: list[CitationPayload],
+    finding_by_citation_id: dict[str, SynthFinding],
+) -> list[CitationPayload]:
+    """Section 7.1: "Live API wins for currency."
+
+    Scope, deliberately narrow (T-3.4-06): this never rewrites Synth's own
+    generated narrative text (`grounding.narrative`), which is model
+    output produced before this citation-assembly step runs and is out of
+    this ticket's file scope to alter (`synthesis/grounding.py` needs no
+    change for this phase, per this phase's own research brief; a prompt-
+    side change to force the model itself to prefer the live value would
+    carry the same broad blast radius F-3.4-T05-04 already declined to
+    risk under time pressure). What this DOES control is the one thing
+    genuinely inside `core.graph`'s citation-assembly path: the per-
+    citation `claim_text` a reader sees attached to each `[N]` marker.
+
+    When a Layer 1 and a Layer 2 citation in this same answer share a
+    field name (`_layer1_layer2_field_pairs`) and their underlying values
+    genuinely differ, the live citation's `claim_text` is left exactly as
+    the grounding pass produced it (it already describes the live value),
+    and the graph citation's `claim_text` gains one short, deterministic,
+    factual sentence naming the live citation as more current. Both
+    citations are always returned, every other field unchanged (Section
+    7.1: "Both cited... disagreement never silently drops one side").
+
+    A no-op, returning `citations` unchanged, when no Layer 1/Layer 2 pair
+    shares a field name, or a paired value is blank, or the paired values
+    already agree (nothing to referee).
+    """
+    pairs = _layer1_layer2_field_pairs(citations, finding_by_citation_id)
+    if not pairs:
+        return citations
+
+    by_id = {c.citation_id: c for c in citations}
+    updates: dict[str, CitationPayload] = {}
+    for graph_id, live_id in pairs.values():
+        graph_finding = finding_by_citation_id[graph_id]
+        live_finding = finding_by_citation_id[live_id]
+        graph_value = graph_finding.field_value.strip()
+        live_value = live_finding.field_value.strip()
+        if not graph_value or not live_value:
+            continue
+        if _paired_field_values_agree(
+            graph_finding.field, live_finding.field, graph_value, live_value
+        ):
+            continue  # Section 7.1: nothing to referee when they agree.
+
+        resolution = prefer_live_for_currency(graph_value, live_value)
+        graph_citation = updates.get(graph_id, by_id[graph_id])
+        live_citation = by_id[live_id]
+        note = (
+            f" A live NCBI value for this field is more current per "
+            f"Section 7.1 ({resolution.current_value!r}); see citation "
+            f"[{live_citation.display_index}]."
+        )
+        updates[graph_id] = graph_citation.model_copy(
+            update={"claim_text": (graph_citation.claim_text + note)[:1000]}
+        )
+
+    if not updates:
+        return citations
+    return [updates.get(c.citation_id, c) for c in citations]
+
+
+def _apply_layer1_staleness_notes(
+    citations: list[CitationPayload],
+    finding_by_citation_id: dict[str, SynthFinding],
+    findings: list[Finding],
+) -> list[CitationPayload]:
+    """Section 7.4: staleness auto-cross-verify.
+
+    For each `layer_1_graph` citation whose field resolves to a known
+    `FieldClass` (`_field_class_for_layer1_field`) AND whose row's
+    `graph_snapshot_version` yields a real, parseable date
+    (`freshness.graph_snapshot_date_from_version`) AND that date is past
+    Section 7.4's threshold for that class (`is_stale`), the citation's
+    `claim_text` gains one deterministic note. When a same-field Layer 2
+    citation also exists in this answer (`_layer1_layer2_field_pairs`,
+    the exact mechanism T-3.4-05's dual dispatch makes possible), the note
+    names it as the live cross-check Section 7.4 specifies. When no such
+    pairing exists, the note says so honestly rather than implying a
+    cross-check happened: `write_node` has no mechanism to originate a
+    NEW Act-tier tool call from this point in the pipeline, only to note
+    when one Act already dispatched happens to cover the same field.
+
+    F-3.4-T06-01 (live-confirmed 2026-08-09): every real Layer 1 citation
+    this graph can produce today has `_field_class_for_layer1_field`
+    return `None`, so this note never fires against live data yet; it is
+    unit-tested directly against constructed `Finding`/`SynthFinding` data
+    instead, per this ticket's verify surface, and is ready to activate
+    the moment a real field-class signal exists in the graph's ingest.
+    """
+    pairs_by_graph_id = {
+        graph_id: live_id
+        for graph_id, live_id in _layer1_layer2_field_pairs(
+            citations, finding_by_citation_id
+        ).values()
+    }
+    by_id = {c.citation_id: c for c in citations}
+    updates: dict[str, CitationPayload] = {}
+
+    for citation in citations:
+        if citation.layer != "layer_1_graph":
+            continue
+        finding = finding_by_citation_id.get(citation.citation_id)
+        if finding is None:
+            continue
+        field_class = _field_class_for_layer1_field(finding.field)
+        if field_class is None:
+            continue
+        snapshot_version = _graph_snapshot_version_for_citation(
+            citation.citation_id, findings, finding
+        )
+        if snapshot_version is None:
+            continue
+        snapshot_date = graph_snapshot_date_from_version(snapshot_version)
+        if snapshot_date is None:
+            continue
+        if not is_stale(field_class, snapshot_date):
+            continue
+
+        live_id = pairs_by_graph_id.get(citation.citation_id)
+        if live_id is not None:
+            live_citation = by_id[live_id]
+            note = (
+                f" This graph snapshot is past its Section 7.4 staleness "
+                f"threshold for this field and has been auto-cross-"
+                f"verified against a live NCBI value; see citation "
+                f"[{live_citation.display_index}]."
+            )
+        else:
+            note = (
+                " This graph snapshot is past its Section 7.4 staleness "
+                "threshold for this field; no live cross-check was "
+                "dispatched for this query."
+            )
+        base = updates.get(citation.citation_id, citation)
+        updates[citation.citation_id] = base.model_copy(
+            update={"claim_text": (base.claim_text + note)[:1000]}
+        )
+
+    if not updates:
+        return citations
+    return [updates.get(c.citation_id, c) for c in citations]
+
+
+def _finding_by_citation_id(claims: list[GroundedClaim]) -> dict[str, SynthFinding]:
+    """The first claim's finding for each citation id, deterministic.
+
+    The same setdefault-first-wins rule `_citations_from_grounded_claims`
+    already applies to its own local of the same name and shape, factored
+    out here so T-3.4-07's conflict-detection pass (below) and citation
+    building never disagree about which finding backs a citation whenever
+    one finding is cited by more than one clause.
+    """
+    out: dict[str, SynthFinding] = {}
+    for claim in claims:
+        out.setdefault(claim.finding.citation_id, claim.finding)
+    return out
+
+
+def _apply_conflict_flags_to_claim_trusts(
+    claim_trusts: list[ClaimTrust],
+    citations: list[CitationPayload],
+    finding_by_citation_id: dict[str, SynthFinding],
+) -> list[ClaimTrust]:
+    """Section 7.2: a genuine Layer 1/Layer 2 value conflict floors both
+    claims' trust outcome at `flag`.
+
+    This is the one piece of real wiring T-3.4-07 adds: `synthesis.
+    conflict_detection.detect_conflict` is a pure comparison (T-3.4-02) and
+    `_layer1_layer2_field_pairs` is T-3.4-06's own "same fact across
+    layers" pairing (reused here unchanged, never re-derived); what did not
+    exist before this function is a path from a detected conflict to the
+    SEPARATE `ClaimTrust`/`trust_outcome` computation `write_node` runs via
+    `trust_for_claims`/`aggregate`. A citations-list change alone (the
+    T-3.4-06 shape) never touches `ClaimTrust.outcome`, since the two are
+    built by two independent calls in `write_node`; this function is the
+    intersection point, called after both `claim_trusts` and `citations`
+    exist and before the answer-level `aggregate()` call, so a conflict on
+    any claim can still win the answer-level most-restrictive-wins rule.
+
+    Reuses `_layer1_layer2_field_pairs` exactly as `_apply_live_wins_for_
+    currency`/`_apply_layer1_staleness_notes` do, so a conflict is detected
+    on exactly the same pairs Section 7.1's live-wins-for-currency note
+    already annotates: T-3.4-07 does not invent a second notion of "the
+    same fact across layers". For each pair whose two values are a
+    genuine, code-detected mismatch (never a free-text diff), BOTH the
+    graph citation's and the live citation's own `ClaimTrust.outcome` are
+    floored at `flag` via `synthesis.trust.aggregate([outcome, "flag"])`,
+    which is that module's own most-restrictive-wins rule (Section 8.3.4:
+    refuse outranks ask outranks flag outranks answer). An already-`ask`-
+    or `refuse`-outcome claim is therefore left exactly as `decide()`
+    computed it; only an `answer`-outcome claim actually moves, and a
+    `flag`-outcome claim (from a different mechanism, e.g. a future one)
+    stays `flag`. Only `outcome` is touched, never `risk_tier`/`grounded`/
+    `triangulation`, which remain Section 8.3.1/8.3.2's own verdict on a
+    different question (categorical concordance) from the one this
+    function answers (are the two literal values the same fact). Both
+    citations always stay in the citations list unchanged; this function
+    only ever narrows a `ClaimTrust`'s `outcome`, it never removes or adds
+    a citation or a claim.
+
+    A no-op, returning `claim_trusts` unchanged, when no Layer 1/Layer 2
+    pair shares a field name, when a paired value is blank (nothing to
+    compare), or when every paired value already agrees (nothing to flag).
+    """
+    pairs = _layer1_layer2_field_pairs(citations, finding_by_citation_id)
+    if not pairs:
+        return claim_trusts
+
+    citation_by_id = {c.citation_id: c for c in citations}
+    conflicted_ids: set[str] = set()
+    for graph_id, live_id in pairs.values():
+        graph_finding = finding_by_citation_id[graph_id]
+        live_finding = finding_by_citation_id[live_id]
+        graph_value = graph_finding.field_value.strip()
+        live_value = live_finding.field_value.strip()
+        if not graph_value or not live_value:
+            continue  # nothing to compare, mirrors T-3.4-06's own guard
+        # F-3.4-A-03: `_paired_field_values_agree` is the SAME agreement
+        # check `_apply_live_wins_for_currency` uses, so the two
+        # mechanisms can never disagree about what counts as "the same
+        # fact" for an identical pair. For every EXACT-field-name pair
+        # (`graph_finding.field == live_finding.field`) this is byte-
+        # identical to `detect_conflict`'s own normalization (same
+        # casefold-and-collapse rule), so `detect_conflict` below is
+        # still the actual, reused source of truth for `is_conflict` in
+        # that case, unchanged from before this fix. The one thing this
+        # pre-check adds is a narrow escape hatch for F-3.4-A-03's one
+        # ALIASED pair (`graph_finding.field != live_finding.field`,
+        # i.e. "name" paired against "symbol"): a graph name that
+        # genuinely CONTAINS the live symbol is agreement, not a conflict
+        # `detect_conflict`'s own exact-match-only contract would
+        # otherwise flag on every normal, correct dual-layer answer.
+        if _paired_field_values_agree(
+            graph_finding.field, live_finding.field, graph_value, live_value
+        ):
+            continue
+        result = detect_conflict(
+            field=graph_finding.field,
+            graph_value=graph_value,
+            live_value=live_value,
+            graph_source_url=citation_by_id[graph_id].source_url,
+            live_source_url=citation_by_id[live_id].source_url,
+        )
+        if result.is_conflict:
+            conflicted_ids.add(graph_id)
+            conflicted_ids.add(live_id)
+
+    if not conflicted_ids:
+        return claim_trusts
+
+    updated: list[ClaimTrust] = []
+    for trust in claim_trusts:
+        if trust.citation_id not in conflicted_ids:
+            updated.append(trust)
+            continue
+        updated.append(
+            ClaimTrust(
+                citation_id=trust.citation_id,
+                risk_tier=trust.risk_tier,
+                grounded=trust.grounded,
+                triangulation=trust.triangulation,
+                outcome=aggregate([trust.outcome, "flag"]),
+            )
+        )
+    return updated
+
+
+def _layer2_citation_for_synth_finding(
+    synth_finding: SynthFinding,
+    findings: list[Finding],
+    layer2_raw_outputs: dict[str, NcbiEfetchOutput],
+    citation_id: str,
+    display_index: int,
+    claim_text: str,
+) -> CitationPayload | None:
+    """Build the final `CitationPayload` for a grounded `ncbi_efetch` claim.
+
+    Uses T-3.4-04's own `tools.ncbi_efetch.build_layer2_citation`, never a
+    second, ad hoc set of Layer 2 provenance literals: `evidence_kind` and
+    `license` come from `provenance_defaults.defaults_for_tool
+    ("ncbi_efetch")`, `assertion_confidence` from that function's own
+    ClinVar-shaped-field check, exactly as every other `ncbi_efetch`
+    citation this repo builds (T-3.4-04's own six-tool premise coverage).
+
+    `build_layer2_citation` needs the tool's own real, typed
+    `NcbiEfetchOutput`, not the generic pseudo-row dict
+    `_ncbi_efetch_output_to_structured_fields` produced for the shared
+    grounding pipeline; `act_node` stashed that original object in
+    `GraphState.layer2_raw_outputs`, keyed by the originating `Finding.
+    call_id`, exactly so this lookup never has to reconstruct a validated
+    Pydantic model by hand out of a plain dict. The matching `Finding` (and
+    therefore its `call_id`) is recovered the same way `_curie_for_citation`
+    already recovers a Layer 1 row's CURIE: by `source_url` identity, the
+    one value both the pseudo-row and the real record agree on.
+
+    `citation_id`, `display_index` and `claim_text` are overridden onto the
+    result: they belong to the grounding pass, which already computed them
+    identically for every other citation `_citations_from_grounded_claims`
+    returns, and `build_layer2_citation`'s own `claim_text` is built for a
+    caller with no grounded narrative to quote, which `write_node` has.
+
+    Falls back to a generic, tool-agnostic construction (the identical
+    literals a Layer 1 citation already uses; T-3.4-04 confirmed
+    `ncbi_efetch`'s own `provenance_defaults` entry matches them exactly)
+    only in the defensive case that the raw output cannot be found, or
+    `build_layer2_citation` cannot re-resolve the cited field against it.
+    Neither should be reachable given how `act_node` and `build_synth_
+    findings` construct their inputs; this is a safety net against a
+    future refactor breaking that invariant, never fabricates a value, and
+    is exercised directly by its own unit test rather than left untested
+    because the live path should never take it.
+
+    F-3.4-T05-04: returns `None`, never raises, when NEITHER construction
+    can produce a valid `CitationPayload`. Both the primary path (via
+    `build_layer2_citation`) and this function's own defensive fallback
+    build a `CitationPayload` from an `ncbi_efetch` record's real
+    `source_url`, which is validated only against `NcbiEfetchRecord`'s own,
+    deliberately wider pattern (Section 6.2 requires `omim.org` to
+    validate there; see `ncbi_efetch_schemas.py`'s "design decision 3"),
+    never against `CitationPayload`'s narrower `NCBI_SOURCE_URL_PATTERN`,
+    which has no `omim.org` alternative. A completely valid, schema-
+    conformant `ncbi_efetch` record can therefore still fail `CitationPayload`
+    construction. Before this fix that failure was only half-handled: the
+    primary attempt's `pydantic.ValidationError` (a `ValueError` subclass)
+    was caught exactly like `build_layer2_citation`'s own deliberate
+    "nothing citable" `ValueError`, but the fallback then rebuilt a
+    `CitationPayload` from the very same `synth_finding.source_url`, which
+    fails the identical validation, uncaught: the one construction this
+    docstring already called "a safety net" was not itself safe, and the
+    resulting `pydantic.ValidationError` escaped this function, `write_node`,
+    and `compiled_graph.ainvoke` entirely, surfacing only as `core.run.run`'s
+    generic, unlogged "failed unexpectedly" refusal. Confirmed live-
+    reachable in general (not through this ticket's own fixed `dataset_
+    report`/`gene` dispatch, which always emits an `ncbi.nlm.nih.gov/gene/`
+    `source_url` and so never triggers this specific pattern gap) by direct
+    unit reproduction with a real, schema-valid OMIM-sourced record. Both
+    construction attempts are now guarded the same way: a caught failure of
+    either kind means this one claim cannot be honestly cited, so this
+    function returns `None` rather than crash the whole answer, matching
+    `build_layer2_citation`'s own "refuse to fabricate, never crash"
+    discipline. The caller, `_citations_from_grounded_claims`, skips a
+    `None` result: the claim's `trust_signal` still emits (Section 8.3's
+    per-claim verdict does not depend on a citation actually existing to
+    attach to), and any `[N]` marker for it in the narrative simply
+    resolves to no citation, the same graceful-degradation shape
+    `_narrative_chunks` already tolerates for any display index missing
+    from `citations`. Full account: `tracker/phase_3.4.md`'s F-3.4-T05-04
+    entry, `DECISIONS.md`.
+    """
+    raw_output: NcbiEfetchOutput | None = None
+    for finding in findings:
+        if finding.tool != "ncbi_efetch":
+            continue
+        fields = finding.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        for row in fields.get("rows", []):
+            if str(row.get("source_url") or "") == synth_finding.source_url:
+                raw_output = layer2_raw_outputs.get(finding.call_id)
+                break
+        if raw_output is not None:
+            break
+
+    if raw_output is not None:
+        try:
+            base_citation = build_layer2_citation(
+                raw_output, field=synth_finding.field, display_index=display_index
+            )
+            return base_citation.model_copy(
+                update={"citation_id": citation_id, "claim_text": claim_text}
+            )
+        except ValueError:
+            # Either `build_layer2_citation`'s own deliberate "nothing
+            # citable" refusal (the field the grounded clause cited could
+            # not be re-resolved against the raw record; should not
+            # happen, since synth_finding.field was itself read off that
+            # same record's fields dict) or a `pydantic.ValidationError`
+            # from its own `CitationPayload` construction (F-3.4-T05-04:
+            # a schema-valid record whose `source_url` nonetheless fails
+            # `CitationPayload`'s narrower pattern, e.g. `omim.org`). Fall
+            # through to the defensive construction below rather than let
+            # either become a crash mid-write.
+            pass
+
+    try:
+        return CitationPayload(
+            citation_id=citation_id,
+            display_index=display_index,
+            source=synth_finding.tool[:128],
+            source_id=(synth_finding.curie or "unknown")[:128],
+            source_url=synth_finding.source_url,
+            layer=synth_finding.layer,  # type: ignore[arg-type]
+            field=synth_finding.field[:128],
+            claim_text=claim_text,
+            evidence_kind="primary_assertion",
+            assertion_confidence="asserted",
+            population_ancestry_context=None,
+            license="public_domain_us_gov",
+        )
+    except ValueError:
+        # F-3.4-T05-04: this is the last construction attempt this
+        # function has. Every field here already comes from a real,
+        # already-validated `SynthFinding`/schema value (see the fields
+        # this is built from), so the only realistic way this still
+        # fails is the same source_url pattern gap the primary attempt's
+        # catch above documents. There is no further fallback to try:
+        # this one claim goes uncited rather than crashing the whole
+        # answer (production-standards.md's graceful-degradation gate;
+        # cite-or-refuse already tolerates a claim with no honest
+        # citation far better than it tolerates an uncaught exception
+        # that discards every other citation and the narrative with it).
+        return None
 
 
 # One `token` event per sentence rather than per answer. Section 6 of
@@ -2562,6 +3830,9 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     elapsed_ms = _elapsed_ms(state)
     total_tool_calls = state.get("findings_count", 0)
     findings: list[Finding] = state.get("findings", [])
+    # T-3.4-05: empty for the common single-tool query; see GraphState's
+    # docstring and `_citations_from_grounded_claims`.
+    layer2_raw_outputs: dict[str, NcbiEfetchOutput] = state.get("layer2_raw_outputs", {})
 
     step_error = state.get("step_error")
     if step_error is not None:
@@ -2697,8 +3968,46 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         trust_outcome: TrustOutcome = "answer"
     else:
         claim_trusts = trust_for_claims(grounding.claims, synth_findings, row_types)
-        citations = _citations_from_grounded_claims(grounding, findings)
+        citations = _citations_from_grounded_claims(grounding, findings, layer2_raw_outputs)
+        # T-3.4-07, Section 7.2: floor a conflicted claim's outcome at
+        # `flag` AFTER citations exist (it needs their `source_url` for
+        # `ConflictResult`) and BEFORE the answer-level aggregate below, so
+        # a conflict on any claim can still win the answer-level
+        # most-restrictive-wins rule. `claim_trusts` is reassigned here
+        # rather than read into a new local, so both the per-claim and the
+        # answer-level `trust_signal` events emitted further down already
+        # reflect the floor with no separate code path to keep in sync.
+        claim_trusts = _apply_conflict_flags_to_claim_trusts(
+            claim_trusts, citations, _finding_by_citation_id(grounding.claims)
+        )
         trust_outcome = aggregate([trust.outcome for trust in claim_trusts])
+
+    # F-3.4-A-01: a completeness check, a different question from
+    # everything Section 8.3 above just computed. Every claim above may
+    # be perfectly grounded, low risk, and honestly cited, and the ANSWER
+    # can still cover only a strict subset of the entities the question
+    # named (live-confirmed: a two-gene question whose narrative
+    # discussed only the first gene shipped `trust_outcome: "answer"`,
+    # the clean "nothing to flag" state, with zero disclosure that half
+    # the question went unanswered). Only checked for a 2-or-more-entity
+    # question: a single-entity query has nothing to be "partial" about,
+    # and this must never fire on `tool_outcome == "no_tool"`, where
+    # `target_entities` is always `[]` anyway (no `cypher_query` call was
+    # planned). Floors `trust_outcome` at `ask` (Section 8.3.4's own
+    # most-restrictive-wins rule, `aggregate`, the same mechanism T-3.4-
+    # 07's conflict check already uses to floor at `flag`), never
+    # weakens an already-more-restrictive `refuse`. The per-claim trust_
+    # signals below are left exactly as `decide()` computed them: no
+    # individual claim is at fault, so no individual claim's own verdict
+    # changes, only the answer-level aggregate and the disclosure note.
+    partial_answer_note: str | None = None
+    if trust_outcome != "refuse":
+        target_entities = _target_entities_from_tool_calls(state.get("tool_calls", []))
+        if len(target_entities) >= 2:
+            unaddressed = _unaddressed_target_entities(target_entities, citations)
+            if unaddressed:
+                trust_outcome = aggregate([trust_outcome, "ask"])
+                partial_answer_note = _build_partial_answer_note(unaddressed)
 
     # `citations_capped` keeps its 2.1 meaning: the user is being shown
     # fewer facts than exist. Its two sources are now the findings cap
@@ -2852,6 +4161,9 @@ async def write_node(state: GraphState) -> dict[str, Any]:
 
         if truncation_note is not None:
             sink.emit("token", TokenPayload(text=truncation_note, marker_ids=[]))
+
+        if partial_answer_note is not None:
+            sink.emit("token", TokenPayload(text=partial_answer_note, marker_ids=[]))
 
         for citation in citations:
             sink.emit("citation", citation)

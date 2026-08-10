@@ -195,6 +195,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from system_03_search_agent.harness import cost_control
+from system_03_search_agent.synthesis.trust import is_high_risk_relationship_label
 from system_03_search_agent.tools.agtype import parse_agtype
 from system_03_search_agent.tools.cypher_generation import (
     CypherGenerationError,
@@ -211,6 +212,7 @@ from system_03_search_agent.tools.cypher_validator import ValidationResult, vali
 from system_03_search_agent.tools.graph_connection import GraphError, execute_cypher
 from system_03_search_agent.tools.graph_schema_constants import (
     CYPHER_QUERY_TIMEOUT_SECONDS,
+    EDGE_LABELS,
     LABEL_CURIE_PREFIXES,
 )
 from system_03_search_agent.tools.schema_slice import build_schema_slice
@@ -1391,6 +1393,7 @@ def _cap_shaped_row(shaped: dict[str, Any]) -> dict[str, Any]:
     fields = shaped.get("fields") or {}
     if len(fields) > _MAX_ROW_FIELDS:
         fields = dict(list(fields.items())[:_MAX_ROW_FIELDS])
+    traversed_edge_type = shaped.get("traversed_edge_type")
     return {
         "node_or_edge_type": str(shaped.get("node_or_edge_type", ""))[
             :_MAX_NODE_OR_EDGE_TYPE_CHARS
@@ -1401,6 +1404,20 @@ def _cap_shaped_row(shaped: dict[str, Any]) -> dict[str, Any]:
         "graph_snapshot_version": str(shaped.get("graph_snapshot_version", ""))[
             :_MAX_SNAPSHOT_VERSION_CHARS
         ],
+        # T-3.4-03: additive, optional (see cypher_schemas.CypherQueryRow).
+        # Capped the same width as node_or_edge_type since it is drawn from
+        # the same graph_schema_constants.EDGE_LABELS vocabulary.
+        "traversed_edge_type": (
+            str(traversed_edge_type)[:_MAX_NODE_OR_EDGE_TYPE_CHARS]
+            if traversed_edge_type
+            else None
+        ),
+        # F-3.4-A-02: additive, optional bool (see
+        # cypher_schemas.CypherQueryRow). No length cap needed; it is
+        # coerced to a plain bool, never a free-form value.
+        "ambiguous_high_risk_edge_touch": bool(
+            shaped.get("ambiguous_high_risk_edge_touch") or False
+        ),
     }
 
 
@@ -1516,6 +1533,222 @@ def _derived_source_curie(
     if len(params) != 1:
         return None
     return next(iter(params.values()))
+
+
+# T-3.4-03, closing F-2.2-A-05. `synthesis/trust.py`'s `risk_tier_for` can
+# only see the field name and the row's `node_or_edge_type`, and a `Disease`
+# row is byte-identical there whether it came from
+# `(g:Gene)-[:gene_associated_with_condition]->(d:Disease) RETURN d` (a
+# Section 8.3.1 high-risk mechanistic mapping) or `MATCH (d:Disease {id:
+# $e}) RETURN d` (a bare identifier lookup, Section 8.3.1's own low-risk
+# row). The two are genuinely indistinguishable from the row alone, and the
+# distinguishing fact, which edge (if any) the query traversed to reach
+# this row, is present in the query TEXT the whole time; it is simply never
+# projected. Rather than asking the generation prompt to add a
+# `type(r) AS ...` projection to every relevant query (a prompt change with
+# its own regression surface, and outside this ticket's file scope), this
+# reads the label directly off the already-validated Cypher, the same
+# static-analysis style `_anchored_variables` and its siblings already use
+# above.
+#
+# A node token, e.g. `(g:Gene {id: $e})` or `(d:Disease)`. Property maps use
+# `{}`, not `()`, so a bare `[^()]*` does not need to track nested
+# parentheses for the patterns this generator produces. A relationship
+# token, e.g. `-[:gene_associated_with_condition]->` or
+# `<-[:has_phenotype]-`, with its direction arrows kept as part of the
+# token so a node's two neighbors in the token stream are always adjacent
+# node tokens, never another relationship token.
+_MATCH_TOKEN_PATTERN = re.compile(r"(?P<node>\([^()]*\))|(?P<rel>(?:<-|-)\[[^\]]*\](?:->|-))")
+
+# The first `:label` inside a relationship token's brackets. `[r:LABEL]` and
+# `[:LABEL]` both match; a relationship variable name, when present, sits
+# before the colon and is skipped over by the lazy `[^\]]*?`.
+_REL_LABEL_PATTERN = re.compile(r"\[[^\]]*?:\s*([A-Za-z_][A-Za-z0-9_]*)")
+
+# A relationship token's OWN variable name, `r` in `[r:gene_associated_
+# with_condition]`. Absent in `[:gene_associated_with_condition]`, the
+# shape this ticket's live probe found the generator actually produces
+# (finding via `tracker/phase_3.4.md`'s T-3.4-03 entry); handled anyway so
+# a query that does bind and RETURN the relationship variable resolves its
+# own column too, not just its two endpoint nodes.
+_REL_VAR_PATTERN = re.compile(r"\[\s*([A-Za-z_][A-Za-z0-9_]*)\s*:")
+
+_KNOWN_EDGE_LABELS: frozenset[str] = frozenset(EDGE_LABELS)
+
+
+def _edge_labels_by_variable(cypher: str) -> dict[str, set[str]]:
+    """Map each MATCH-pattern node or relationship variable to the edge
+    label(s) touching it.
+
+    Walks every MATCH/OPTIONAL MATCH clause's comma-separated patterns as a
+    flat token stream (node, relationship, node, relationship, ...,
+    node), so a relationship token's two graph-adjacent endpoints are
+    always the token immediately before and immediately after it,
+    regardless of chain length. A relationship token's own bound variable
+    (`r` in `[r:gene_associated_with_condition]`), when the query names
+    one, maps to that edge's own label too, so a query that RETURNs the
+    relationship variable directly resolves its own column, not only its
+    two endpoint nodes. A variable touched by more than one distinct edge
+    label anywhere in the query (a multi-hop chain, or the same variable
+    reused across separate MATCH clauses) collects every label it saw; the
+    caller decides what to do with an ambiguous set, this function never
+    picks one.
+
+    Never a Cypher parser: the same bounded, regex-level approximation
+    `_anchored_variables` and its neighbors already use for this module's
+    other static checks, scoped to what this generator's own output shape
+    needs, not to arbitrary user-authored Cypher.
+    """
+    labels_by_var: dict[str, set[str]] = {}
+    for clause in _MATCH_CLAUSE_PATTERN.findall(cypher):
+        for pattern in _split_top_level_items(clause):
+            tokens = [
+                (match.lastgroup, match.group())
+                for match in _MATCH_TOKEN_PATTERN.finditer(pattern)
+            ]
+            for index, (kind, text) in enumerate(tokens):
+                if kind != "rel":
+                    continue
+                label_match = _REL_LABEL_PATTERN.search(text)
+                if label_match is None:
+                    continue
+                label = label_match.group(1)
+                rel_var_match = _REL_VAR_PATTERN.search(text)
+                if rel_var_match is not None:
+                    rel_var = rel_var_match.group(1)
+                    if rel_var.lower() not in _CYPHER_KEYWORDS:
+                        labels_by_var.setdefault(rel_var, set()).add(label)
+                for neighbor_index in (index - 1, index + 1):
+                    if not 0 <= neighbor_index < len(tokens):
+                        continue
+                    neighbor_kind, neighbor_text = tokens[neighbor_index]
+                    if neighbor_kind != "node":
+                        continue
+                    var_match = _VAR_IN_NODE_PATTERN.search(neighbor_text)
+                    if var_match is None:
+                        continue
+                    var = var_match.group(1)
+                    if var.lower() in _CYPHER_KEYWORDS:
+                        continue
+                    labels_by_var.setdefault(var, set()).add(label)
+    return labels_by_var
+
+
+def _returned_variable_by_column(cypher: str) -> dict[str, str]:
+    """Map each RETURN column's positional name to its bare matched variable.
+
+    Only a column whose RETURN item is nothing but a matched variable
+    (`d`, or `d AS disease` with the alias stripped first, or `DISTINCT d`
+    on the first item with the DISTINCT keyword stripped first) is
+    included. `d.name`, `count(v)`, and any other expression carry no
+    single variable identity for this purpose and are simply absent from
+    the map, the same "when ambiguous, do not guess" posture
+    `_unanchored_returned_variables` and its neighbors already take.
+    """
+    segment = _return_items_segment(cypher)
+    if not segment.strip():
+        return {}
+
+    var_by_column: dict[str, str] = {}
+    for index, item in enumerate(_split_top_level_items(segment)[:_MAX_RETURN_COLUMNS]):
+        stripped = item.strip()
+        distinct_match = _DISTINCT_PREFIX_PATTERN.match(stripped)
+        if distinct_match is not None:
+            stripped = stripped[distinct_match.end() :].strip()
+        alias_match = _ALIAS_PATTERN.search(stripped)
+        expr = stripped[: alias_match.start()].strip() if alias_match is not None else stripped
+        if not expr:
+            continue
+        if _IDENTIFIER_PATTERN.fullmatch(expr) and expr.lower() not in _CYPHER_KEYWORDS:
+            var_by_column[f"c{index}"] = expr
+    return var_by_column
+
+
+def _traversed_edge_type_by_column(cypher: str) -> dict[str, str]:
+    """Map each RETURN column to the single edge label its traversal used.
+
+    Combines `_returned_variable_by_column` (which column names which
+    matched variable) with `_edge_labels_by_variable` (which edge label(s)
+    touch that variable anywhere in the query). A column is included only
+    when its variable is touched by EXACTLY one distinct, graph-real edge
+    label (`_KNOWN_EDGE_LABELS`, the same `EDGE_LABELS` constant
+    `cypher_validator` and `schema_slice` already treat as the graph's own
+    fixed label set): zero touches means a bare identifier lookup, and more
+    than one touch means a multi-hop or reused-variable shape this
+    conservative reading declines to disambiguate, never guesses. Either
+    way the caller's row keeps `traversed_edge_type=None`, identical to
+    this fix's absence, never a widened or invented classification.
+    """
+    var_by_column = _returned_variable_by_column(cypher)
+    if not var_by_column:
+        return {}
+    labels_by_var = _edge_labels_by_variable(cypher)
+
+    result: dict[str, str] = {}
+    for column, var in var_by_column.items():
+        labels = labels_by_var.get(var)
+        if not labels or len(labels) != 1:
+            continue
+        (label,) = labels
+        if label not in _KNOWN_EDGE_LABELS:
+            continue
+        result[column] = label
+    return result
+
+
+def _ambiguous_high_risk_edge_touch_by_column(cypher: str) -> frozenset[str]:
+    """Columns whose RETURNed variable is touched by 2+ distinct edge
+    labels, where at least one of those labels is BOTH a real graph edge
+    (`_KNOWN_EDGE_LABELS`) and a Section 8.3.1 high-risk relationship
+    (`synthesis.trust.is_high_risk_relationship_label`).
+
+    F-3.4-A-02: `_traversed_edge_type_by_column` above correctly declines
+    to guess a single label when a variable is touched by more than one
+    distinct edge, for example a `Disease` column reached by both the
+    high-risk `gene_associated_with_condition` edge and an unrelated
+    `has_phenotype` edge in the same two-hop query
+    (`MATCH (g:Gene)-[:gene_associated_with_condition]->(d:Disease)
+    MATCH (d)-[:has_phenotype]->(p:PhenotypicFeature) RETURN d, p`). That
+    conservatism is correct on its own terms, but its consequence is that
+    the column then carries NO traversed edge type at all, so
+    `risk_tier_for` falls back to the bare `Disease` node type and
+    reopens F-2.2-A-05, the exact misclassification this phase's flagship
+    fix exists to close, one hop past the pinned single-hop case.
+
+    This function is the fix's other half. It answers a strictly weaker
+    question than `_traversed_edge_type_by_column` does, and never the
+    same one: not "which edge touched this variable" (still undecided,
+    on purpose), only "was a real, known high-risk edge among the
+    candidates". A column can appear in the result of at most one of
+    these two functions, never both: `_traversed_edge_type_by_column`
+    already resolves the `len(labels) == 1` case outright, so this
+    function only ever looks at `len(labels) >= 2`.
+
+    Only a label already confirmed real (`_KNOWN_EDGE_LABELS`) counts
+    toward "high risk", the same safety property `_traversed_edge_type_
+    by_column` already enforces: a stray or hallucinated label sitting
+    alongside a real one must never itself be trusted to carry meaning,
+    even when a genuine high-risk edge is also present. Never widens
+    `synthesis.trust`'s risk table; this is a read-only membership check
+    against the exact frozenset that table already is.
+    """
+    var_by_column = _returned_variable_by_column(cypher)
+    if not var_by_column:
+        return frozenset()
+    labels_by_var = _edge_labels_by_variable(cypher)
+
+    result: set[str] = set()
+    for column, var in var_by_column.items():
+        labels = labels_by_var.get(var)
+        if not labels or len(labels) < 2:
+            continue  # unambiguous or untouched: _traversed_edge_type_by_column's territory
+        if any(
+            label in _KNOWN_EDGE_LABELS and is_high_risk_relationship_label(label)
+            for label in labels
+        ):
+            result.add(column)
+    return frozenset(result)
+
 
 async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> CypherQueryOutput:
     start = time.monotonic()
@@ -1702,6 +1935,17 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
 
     snapshot_version = _graph_snapshot_version()
     column_labels = column_labels_for(normalized_cypher)
+    # T-3.4-03, closing F-2.2-A-05: computed once per query, from the
+    # already-validated Cypher text, never per row. See
+    # `_traversed_edge_type_by_column`'s own docstring for why this is safe
+    # against widening a bare identifier lookup to high risk.
+    traversed_edge_type_by_column = _traversed_edge_type_by_column(normalized_cypher)
+    # F-3.4-A-02: the ambiguous-but-high-risk companion signal, also
+    # computed once per query from the same already-validated Cypher text.
+    # See `_ambiguous_high_risk_edge_touch_by_column`'s own docstring.
+    ambiguous_high_risk_edge_touch_by_column = _ambiguous_high_risk_edge_touch_by_column(
+        normalized_cypher
+    )
     mapped_rows: list[CypherQueryRow] = []
     for raw_row in rows:
         for shaped_row in to_output_rows(
@@ -1729,6 +1973,13 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             # F-2.1-J09: carry the RETURN aliases so a derived value
             # reaches the Write step named, not as a positional `c0`.
             column_labels=column_labels,
+            # T-3.4-03: carry the traversed edge label, when one was
+            # unambiguously determined, onto the entity row it describes.
+            traversed_edge_type_by_column=traversed_edge_type_by_column,
+            # F-3.4-A-02: carry the weaker "a high-risk edge was among the
+            # ambiguous candidates" signal onto the same entity row, only
+            # ever set when T-3.4-03's own signal above was not.
+            ambiguous_high_risk_edge_touch_by_column=ambiguous_high_risk_edge_touch_by_column,
         ):
             if not shaped_row.get("source_url"):
                 # Finding F-2.1-A1's cite-or-refuse corollary: an entity

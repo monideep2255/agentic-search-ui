@@ -91,8 +91,12 @@ import httpx
 import pytest
 
 from system_03_search_agent.tools import litvar2_lookup as litvar2_lookup_module
-from system_03_search_agent.tools.litvar2_lookup import litvar2_lookup
-from system_03_search_agent.tools.litvar2_lookup_schemas import Litvar2LookupInput
+from system_03_search_agent.tools.litvar2_lookup import build_citation, litvar2_lookup
+from system_03_search_agent.tools.litvar2_lookup_schemas import (
+    Litvar2LookupInput,
+    Litvar2LookupOutput,
+    Litvar2VariantMatch,
+)
 
 
 def _json_response(body: Any, *, status_code: int = 200) -> httpx.Response:
@@ -1036,3 +1040,69 @@ async def test_unexpected_exception_is_caught_and_reported_not_raised(
 
     assert output.status == "error"
     assert output.error and "RuntimeError" in output.error
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-04: build_citation. No live network: every case constructs a valid
+# Litvar2LookupOutput directly, since build_citation is a pure function over
+# an already-fetched result, not a network caller itself.
+# ---------------------------------------------------------------------------
+
+
+def test_build_citation_uses_first_match_and_hedge_scans_matched_on() -> None:
+    result = Litvar2LookupOutput(
+        status="ok",
+        mode="variant_search",
+        variant_matches=[
+            Litvar2VariantMatch(
+                rsid="rs334",
+                name="HBB p.Glu7Val",
+                clinical_significance=["pathogenic"],
+                matched_on="This may be a weak match on synonyms",
+            )
+        ],
+        source_url="https://www.ncbi.nlm.nih.gov/snp/rs334",
+    )
+
+    citation = build_citation(result)
+
+    assert citation.assertion_confidence == "hedged"
+    assert citation.evidence_kind == "literature_mention"
+    assert citation.license == "publisher_copyright_abstract_only"
+    assert citation.layer == "layer_3_enrichment"
+    assert citation.source_id == "rs334"
+
+
+def test_build_citation_asserted_when_no_hedge_language() -> None:
+    result = Litvar2LookupOutput(
+        status="ok",
+        mode="variant_search",
+        variant_matches=[
+            Litvar2VariantMatch(rsid="rs334", clinical_significance=["pathogenic"])
+        ],
+        source_url="https://www.ncbi.nlm.nih.gov/snp/rs334",
+    )
+
+    citation = build_citation(result)
+
+    assert citation.assertion_confidence == "asserted"
+
+
+def test_build_citation_no_variant_matches_still_asserted() -> None:
+    result = Litvar2LookupOutput(
+        status="ok",
+        mode="publications_lookup",
+        source_url="https://www.ncbi.nlm.nih.gov/snp/rs334",
+    )
+
+    citation = build_citation(result)
+
+    assert citation.assertion_confidence == "asserted"
+    assert citation.field == "variant"
+
+
+def test_build_citation_raises_when_no_source_url() -> None:
+    result = Litvar2LookupOutput(status="ok", mode="variant_search")
+
+    with pytest.raises(ValueError, match="source_url"):
+        build_citation(result)

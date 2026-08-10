@@ -192,6 +192,35 @@ def test_row_rejects_null_curie() -> None:
         CypherQueryRow(**_row_kwargs(curie=None))
 
 
+def test_row_traversed_edge_type_defaults_to_none() -> None:
+    """T-3.4-03: additive field, absent by default, so every row shape
+    from before this ticket still constructs unchanged."""
+    row = CypherQueryRow(**_row_kwargs())
+    assert row.traversed_edge_type is None
+
+
+def test_row_accepts_traversed_edge_type() -> None:
+    row = CypherQueryRow(**_row_kwargs(traversed_edge_type="gene_associated_with_condition"))
+    assert row.traversed_edge_type == "gene_associated_with_condition"
+
+
+def test_row_rejects_oversized_traversed_edge_type() -> None:
+    with pytest.raises(ValidationError):
+        CypherQueryRow(**_row_kwargs(traversed_edge_type="x" * 51))
+
+
+def test_row_ambiguous_high_risk_edge_touch_defaults_to_false() -> None:
+    """F-3.4-A-02: additive field, `False` by default, so every row shape
+    from before this fix still constructs unchanged."""
+    row = CypherQueryRow(**_row_kwargs())
+    assert row.ambiguous_high_risk_edge_touch is False
+
+
+def test_row_accepts_ambiguous_high_risk_edge_touch() -> None:
+    row = CypherQueryRow(**_row_kwargs(ambiguous_high_risk_edge_touch=True))
+    assert row.ambiguous_high_risk_edge_touch is True
+
+
 # ---------------------------------------------------------------------------
 # CypherQueryOutput
 # ---------------------------------------------------------------------------

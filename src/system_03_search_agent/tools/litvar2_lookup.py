@@ -281,10 +281,16 @@ Depended by:
 
 from __future__ import annotations
 
+import hashlib
 import re
 import urllib.parse
 from typing import Any, Final
 
+from system_03_search_agent.contracts.events import CitationPayload
+from system_03_search_agent.synthesis.provenance_defaults import (
+    defaults_for_tool,
+    hedge_scan_confidence,
+)
 from system_03_search_agent.tools import ncbi_transport
 from system_03_search_agent.tools.litvar2_lookup_schemas import (
     NCBI_LITVAR2_RECORD_URL_PATTERN,
@@ -987,3 +993,82 @@ async def litvar2_lookup(input_data: Litvar2LookupInput) -> Litvar2LookupOutput:
             f"returning a classified result: {exc}. Retry once; if this recurs, this "
             "tool has a defect that needs fixing before it can be trusted.",
         )
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-04: citation-building. Section 9.2's per-tool `CitationPayload`.
+# ---------------------------------------------------------------------------
+
+
+def _mint_citation_id(prefix: str, seed: str, display_index: int) -> str:
+    """A short, deterministic-shaped citation id, mirroring `core/graph.py`'s
+    `_citation_for_row` pattern (a stable id plus a display-index suffix),
+    adapted for a tool with no `call_id` of its own: the id is minted from a
+    short hash of the real source id instead. Only needs to be non-colliding
+    within one tool's own output, not globally unique across a whole answer.
+    """
+    digest = hashlib.sha256(seed.encode("utf-8", errors="replace")).hexdigest()[:10]
+    return f"{prefix}-{digest}-{display_index}"[:64]
+
+
+def build_citation(
+    result: Litvar2LookupOutput, display_index: int = 1
+) -> CitationPayload:
+    """Build a Section 9.2 `CitationPayload` from a real `litvar2_lookup` result.
+
+    No `field` parameter: `Litvar2LookupOutput.source_url` is already a
+    single citation for the whole result (Section 6.5), never a per-match
+    field, so there is no separate field to name. Raises `ValueError` with
+    an actionable message, never returns a placeholder, when `result`
+    carries no `source_url`.
+
+    `evidence_kind` and `license` come from
+    `provenance_defaults.defaults_for_tool("litvar2_lookup")`, the same
+    approach `pubtator_annotate.build_citation` uses for its sibling Layer 3
+    tool. `assertion_confidence` is decided by `hedge_scan_confidence`
+    against the result's own real free text: the first variant match's
+    `clinical_significance` terms plus its `matched_on` text, when
+    `variant_matches` is non-empty; defaults to `"asserted"` when there is
+    no free text to scan (an empty `variant_matches`, e.g. a
+    `publications_lookup` result). `population_ancestry_context` is always
+    `None`: this tool has no population or ancestry field.
+    """
+    if not result.source_url:
+        raise ValueError(
+            f"litvar2_lookup result (mode={result.mode!r}) has no source_url; "
+            "refusing to build a citation rather than fabricate one."
+        )
+
+    defaults = defaults_for_tool("litvar2_lookup")
+
+    if result.variant_matches:
+        match = result.variant_matches[0]
+        source_id = (match.rsid or match.litvar_id or "unknown")[:128]
+        text_parts = list(match.clinical_significance)
+        if match.matched_on:
+            text_parts.append(match.matched_on)
+        text_for_hedge = " ".join(text_parts)
+        confidence = hedge_scan_confidence(text_for_hedge) if text_for_hedge else "asserted"
+        significance = ", ".join(match.clinical_significance) or "none reported"
+        claim_text = f"{match.name or source_id}: clinical_significance={significance}"[:1000]
+        field = "clinical_significance"
+    else:
+        source_id = "unknown"
+        confidence = "asserted"
+        claim_text = f"litvar2_lookup ({result.mode}): no variant matches parsed"[:1000]
+        field = "variant"
+
+    return CitationPayload(
+        citation_id=_mint_citation_id("litvar2", source_id, display_index),
+        display_index=display_index,
+        source="litvar2"[:128],
+        source_id=source_id,
+        source_url=result.source_url,
+        layer="layer_3_enrichment",
+        field=field,
+        claim_text=claim_text,
+        evidence_kind=defaults["evidence_kind"],
+        assertion_confidence=confidence,
+        population_ancestry_context=None,
+        license=defaults["license"],
+    )

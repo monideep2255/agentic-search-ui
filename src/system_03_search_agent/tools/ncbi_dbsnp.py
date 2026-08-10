@@ -352,12 +352,18 @@ Depended by:
 
 from __future__ import annotations
 
+import hashlib
 import re
 import urllib.parse
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from typing import Any, Final, Literal
 
+from system_03_search_agent.contracts.events import CitationPayload
+from system_03_search_agent.synthesis.provenance_defaults import (
+    clinvar_term_confidence,
+    defaults_for_tool,
+)
 from system_03_search_agent.tools import ncbi_transport
 from system_03_search_agent.tools.ncbi_dbsnp_schemas import (
     NCBI_DBSNP_RECORD_URL_PATTERN,
@@ -1574,3 +1580,103 @@ async def ncbi_dbsnp(tool_input: NcbiDbsnpInput) -> NcbiDbsnpOutput:
             f"returning a classified result: {exc}. Retry once; if this recurs, "
             "this tool has a defect that needs fixing before it can be trusted.",
         )
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-04: citation-building. Section 9.2's per-tool `CitationPayload`.
+# ---------------------------------------------------------------------------
+
+
+def _mint_citation_id(prefix: str, seed: str, display_index: int) -> str:
+    """A short, deterministic-shaped citation id, mirroring `core/graph.py`'s
+    `_citation_for_row` pattern (a stable id plus a display-index suffix),
+    adapted for a tool with no `call_id` of its own: the id is minted from a
+    short hash of the real source id instead. Only needs to be non-colliding
+    within one tool's own output, not globally unique across a whole answer.
+    """
+    digest = hashlib.sha256(seed.encode("utf-8", errors="replace")).hexdigest()[:10]
+    return f"{prefix}-{digest}-{display_index}"[:64]
+
+
+def _population_ancestry_context(result: NcbiDbsnpOutput) -> str | None:
+    """A short, honest summary of which populations `population_frequencies`
+    actually reports data for, or `None` when there is nothing to report.
+
+    Never fabricates an ancestry group: dbSNP's `global_mafs` names
+    contributing STUDIES/populations (e.g. "1000Genomes", "TOPMED", "ALFA"),
+    not a normalized ancestry taxonomy, so this states exactly what the
+    tool's own real data carries, capped to the schema's own 256-char limit
+    on `CitationPayload.population_ancestry_context`.
+    """
+    names = [pf.population for pf in result.population_frequencies if pf.population]
+    if not names:
+        return None
+    unique_names = list(dict.fromkeys(names))
+    context = "Population frequency data reported for: " + ", ".join(unique_names)
+    return context[:256]
+
+
+def build_citation(
+    result: NcbiDbsnpOutput, field: str, display_index: int = 1
+) -> CitationPayload:
+    """Build a Section 9.2 `CitationPayload` from a real `ncbi_dbsnp` result.
+
+    Raises `ValueError` with an actionable message, never returns a
+    placeholder, when `result` carries no `source_url` (nothing to cite,
+    per production-standards.md's cite-or-refuse gate) or no real value for
+    `field`.
+
+    `evidence_kind` and `license` come from
+    `provenance_defaults.defaults_for_tool("ncbi_dbsnp")`. `assertion_
+    confidence`: when `field == "clinical_significance"`,
+    `clinvar_term_confidence` decides it from the first reported term (a
+    `list[str]` per this tool's own schema); every other field defaults to
+    `"asserted"`, this tool's structured, non-hedged data. `population_
+    ancestry_context` reports the real population labels
+    `population_frequencies` carries, or an honest `None` when it carries
+    none; it is NEVER an `assembly` field, which belongs on the separate
+    `AsOfMarker` (Section 7.3, T-3.4-06's own scope), not on
+    `CitationPayload`.
+    """
+    if not result.source_url:
+        raise ValueError(
+            f"ncbi_dbsnp result for rsid {result.rsid!r} has no source_url; "
+            "refusing to build a citation rather than fabricate one."
+        )
+
+    defaults = defaults_for_tool("ncbi_dbsnp")
+    if field == "clinical_significance":
+        if not result.clinical_significance:
+            raise ValueError(
+                f"ncbi_dbsnp result for rsid {result.rsid!r} has no "
+                "clinical_significance values to cite."
+            )
+        confidence = clinvar_term_confidence(result.clinical_significance[0])
+        value_repr = ", ".join(result.clinical_significance)
+    else:
+        value = getattr(result, field, None)
+        if value in (None, "", []):
+            raise ValueError(
+                f"ncbi_dbsnp result for rsid {result.rsid!r} has no real value "
+                f"for field {field!r} to cite; refusing to fabricate one."
+            )
+        confidence = "asserted"
+        value_repr = ", ".join(str(item) for item in value) if isinstance(value, list) else str(value)
+
+    source_id = (result.rsid or "unknown")[:128]
+    claim_text = f"dbSNP {source_id}: {field}={value_repr}"[:1000]
+
+    return CitationPayload(
+        citation_id=_mint_citation_id("ncbidbsnp", source_id, display_index),
+        display_index=display_index,
+        source="dbsnp"[:128],
+        source_id=source_id,
+        source_url=result.source_url,
+        layer="layer_2_api",
+        field=field[:128],
+        claim_text=claim_text,
+        evidence_kind=defaults["evidence_kind"],
+        assertion_confidence=confidence,
+        population_ancestry_context=_population_ancestry_context(result),
+        license=defaults["license"],
+    )

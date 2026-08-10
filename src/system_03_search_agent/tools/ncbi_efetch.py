@@ -67,6 +67,14 @@ Depended by:
 
 from __future__ import annotations
 
+import hashlib
+from typing import Any
+
+from system_03_search_agent.contracts.events import CitationPayload
+from system_03_search_agent.synthesis.provenance_defaults import (
+    clinvar_term_confidence,
+    defaults_for_tool,
+)
 from system_03_search_agent.tools.ncbi_coordinate_overlap import coordinate_overlap
 from system_03_search_agent.tools.ncbi_datasets_actions import dataset_report
 from system_03_search_agent.tools.ncbi_efetch_schemas import (
@@ -78,6 +86,129 @@ from system_03_search_agent.tools.ncbi_pubchem_actions import pubchem_property
 
 _MAX_ERROR_CHARS = 500
 _MAX_ACTION_CHARS = 20
+
+# T-3.4-04: a logical/semantic field name a caller cites (e.g. "official_
+# symbol", the name `core/graph.py` already uses for this exact concept at
+# line 1201) does not always match the raw dict key a given action's
+# `NcbiEfetchRecord.fields` actually carries (`_extract_gene_fields` in
+# `ncbi_datasets_actions.py` names it "symbol"). This alias table bridges
+# the two without renaming either side: the raw key stays what the action
+# module already produces, the logical name stays what a caller (this
+# ticket's own premise gate, `core/graph.py`) already uses.
+_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
+    "official_symbol": ("symbol",),
+    # coordinate_overlap's ClinVar branch (ncbi_coordinate_overlap.py) names
+    # its ClinVar-vocabulary field "germline_classification", never
+    # "clinical_significance"; both logical names resolve to it here.
+    "clinical_significance": ("germline_classification", "clinical_significance"),
+}
+
+# Raw `fields` keys whose value is itself a ClinVar clinical_significance-
+# shaped vocabulary term, per T-3.4-04's own instruction: "asserted" is the
+# default for this tool's structured, non-clinical-vocabulary fields,
+# UNLESS the cited field is itself one of these.
+_CLINVAR_SHAPED_RAW_FIELDS = frozenset({"clinical_significance", "germline_classification"})
+
+
+def _resolve_citable_field(
+    fields: dict[str, Any], field: str
+) -> tuple[str, Any] | None:
+    """Find `field`'s real value in a record's `fields` dict, by alias if needed.
+
+    Returns `(raw_key, value)` for the first candidate (the logical name
+    itself, then its known aliases in `_FIELD_ALIASES`) that is present and
+    non-empty, or `None` when no candidate resolves. Never fabricates a
+    value: a `field` this record's `fields` dict genuinely has nothing for
+    resolves to `None`, for the caller to refuse on, not to a guessed
+    substitute.
+    """
+    candidates = (field, *_FIELD_ALIASES.get(field, ()))
+    for candidate in candidates:
+        value = fields.get(candidate)
+        if value not in (None, "", []):
+            return candidate, value
+    return None
+
+
+def _mint_citation_id(prefix: str, seed: str, display_index: int) -> str:
+    """A short, deterministic-shaped citation id, mirroring `core/graph.py`'s
+    `_citation_for_row` pattern (a stable id plus a display-index suffix),
+    adapted for a tool with no `call_id` of its own: the id is minted from a
+    short hash of the real source id instead. Only needs to be non-colliding
+    within one tool's own output, not globally unique across a whole answer.
+    """
+    digest = hashlib.sha256(seed.encode("utf-8", errors="replace")).hexdigest()[:10]
+    return f"{prefix}-{digest}-{display_index}"[:64]
+
+
+def build_layer2_citation(
+    result: NcbiEfetchOutput, field: str, display_index: int = 1
+) -> CitationPayload:
+    """Build a Section 9.2 `CitationPayload` from a real `ncbi_efetch` result.
+
+    `field` is the logical field name being cited (e.g. `"official_symbol"`,
+    `"clinical_significance"`), resolved against the cited record's real
+    `fields` dict via `_resolve_citable_field`, never fabricated. Raises
+    `ValueError` with an actionable message, never returns a placeholder or
+    a partially-fabricated citation, when the result carries no record with
+    both a `source_url` and a resolvable value for `field`: per production-
+    standards.md's cite-or-refuse gate, an uncitable result has nothing this
+    function may honestly build a citation from.
+
+    `evidence_kind` and `license` come from
+    `provenance_defaults.defaults_for_tool("ncbi_efetch")`, never
+    hardcoded here a second time. `assertion_confidence` defaults to
+    `"asserted"` for this tool's structured, non-clinical-vocabulary fields
+    (gene reports, PubChem properties, dbVar/ClinVar coordinate overlaps),
+    EXCEPT when the resolved raw field is itself a ClinVar
+    `clinical_significance`-shaped value (`_CLINVAR_SHAPED_RAW_FIELDS`,
+    reachable via `coordinate_overlap`'s ClinVar branch), in which case
+    `clinvar_term_confidence` decides it instead.
+    `population_ancestry_context` is always `None`: this tool has no
+    population or ancestry field to honestly report one from.
+    """
+    citable_record = next((record for record in result.records if record.source_url), None)
+    if citable_record is None:
+        raise ValueError(
+            "ncbi_efetch result carries no record with a source_url; refusing to "
+            "build a citation rather than fabricate one. Retry with an action/"
+            "input that returns a citable record."
+        )
+    resolved = _resolve_citable_field(citable_record.fields, field)
+    if resolved is None:
+        raise ValueError(
+            f"ncbi_efetch record {citable_record.id!r} has no real value for "
+            f"logical field {field!r} (or its known aliases); available fields: "
+            f"{sorted(citable_record.fields)}. Refusing to fabricate a citation "
+            "for a field this record does not carry."
+        )
+    raw_key, value = resolved
+
+    defaults = defaults_for_tool("ncbi_efetch")
+    confidence = (
+        clinvar_term_confidence(str(value))
+        if raw_key in _CLINVAR_SHAPED_RAW_FIELDS
+        else "asserted"
+    )
+
+    source = (citable_record.db or "ncbi_efetch")[:128]
+    source_id = (citable_record.id or "unknown")[:128]
+    claim_text = f"{source} {source_id}: {field}={value}"[:1000]
+
+    return CitationPayload(
+        citation_id=_mint_citation_id("ncbief", source_id, display_index),
+        display_index=display_index,
+        source=source,
+        source_id=source_id,
+        source_url=citable_record.source_url,
+        layer="layer_2_api",
+        field=field[:128],
+        claim_text=claim_text,
+        evidence_kind=defaults["evidence_kind"],
+        assertion_confidence=confidence,
+        population_ancestry_context=None,
+        license=defaults["license"],
+    )
 
 
 def _error_output(action: str, message: str) -> NcbiEfetchOutput:

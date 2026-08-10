@@ -45,10 +45,11 @@ from typing import Any
 import pytest
 
 from system_03_search_agent.tools import ncbi_efetch as ncbi_efetch_module
-from system_03_search_agent.tools.ncbi_efetch import ncbi_efetch
+from system_03_search_agent.tools.ncbi_efetch import build_layer2_citation, ncbi_efetch
 from system_03_search_agent.tools.ncbi_efetch_schemas import (
     NcbiEfetchInput,
     NcbiEfetchOutput,
+    NcbiEfetchRecord,
 )
 
 # ---------------------------------------------------------------------------
@@ -323,3 +324,76 @@ async def test_tool_input_root_access_failure_returns_error_not_raise() -> None:
 
     assert result.status == "error"
     assert result.error is not None
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-04: build_layer2_citation. No live network: every case constructs a
+# valid NcbiEfetchOutput directly, since build_layer2_citation is a pure
+# function over an already-fetched result, not a network caller itself.
+# ---------------------------------------------------------------------------
+
+
+def _gene_result(fields: dict[str, Any], source_url: str | None) -> NcbiEfetchOutput:
+    return NcbiEfetchOutput(
+        status="ok",
+        action="dataset_report",
+        records=[
+            NcbiEfetchRecord(id="672", db="gene", fields=fields, source_url=source_url)
+        ],
+        record_count=1,
+        truncated=False,
+    )
+
+
+def test_build_layer2_citation_resolves_official_symbol_alias() -> None:
+    """The gate calls this with field="official_symbol", a logical name that
+    is never the raw key `_extract_gene_fields` actually produces ("symbol").
+    The alias table must bridge the two without fabricating a value.
+    """
+    result = _gene_result(
+        {"gene_id": "672", "symbol": "BRCA1"},
+        "https://www.ncbi.nlm.nih.gov/gene/672/",
+    )
+
+    citation = build_layer2_citation(result, field="official_symbol")
+
+    assert citation.field == "official_symbol"
+    assert "BRCA1" in citation.claim_text
+    assert citation.evidence_kind == "primary_assertion"
+    assert citation.assertion_confidence == "asserted"
+    assert citation.license == "public_domain_us_gov"
+    assert citation.source_url == "https://www.ncbi.nlm.nih.gov/gene/672/"
+    assert citation.layer == "layer_2_api"
+    assert citation.population_ancestry_context is None
+    assert citation.display_index == 1
+
+
+def test_build_layer2_citation_uses_clinvar_confidence_for_clinvar_shaped_field() -> None:
+    """coordinate_overlap's ClinVar branch names its field
+    "germline_classification"; a "contested" ClinVar term must lower
+    assertion_confidence, never default to "asserted" like a plain field.
+    """
+    result = _gene_result(
+        {"germline_classification": "conflicting_interpretations_of_pathogenicity"},
+        "https://www.ncbi.nlm.nih.gov/clinvar/variation/12345/",
+    )
+
+    citation = build_layer2_citation(result, field="clinical_significance")
+
+    assert citation.assertion_confidence == "contested"
+
+
+def test_build_layer2_citation_raises_when_no_record_has_a_source_url() -> None:
+    result = _gene_result({"symbol": "BRCA1"}, source_url=None)
+
+    with pytest.raises(ValueError, match="source_url"):
+        build_layer2_citation(result, field="official_symbol")
+
+
+def test_build_layer2_citation_raises_when_field_not_present() -> None:
+    result = _gene_result(
+        {"gene_id": "672"}, "https://www.ncbi.nlm.nih.gov/gene/672/"
+    )
+
+    with pytest.raises(ValueError, match="official_symbol"):
+        build_layer2_citation(result, field="official_symbol")

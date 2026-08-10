@@ -43,10 +43,21 @@ Layer = Literal["layer_1_graph", "layer_2_api", "layer_3_enrichment"]
 # its value from the same trust vocabulary.
 TrustOutcome = Literal["answer", "flag", "ask", "refuse"]
 
-# Host-pinned placeholder for citation.source_url. The real Section 9.3
-# regex is refined in a later phase; this only enforces an ncbi.nlm.nih.gov
-# subdomain under https.
-NCBI_SOURCE_URL_PATTERN = r"^https://([A-Za-z0-9-]+\.)*ncbi\.nlm\.nih\.gov/"
+# Host-pinned pattern for citation.source_url, per Section 9.3's per-tool
+# host table. Build phase 3.4: widened from an NCBI-only pattern (this
+# constant's name is kept, only local to this file, for minimal blast
+# radius) to also accept clinicaltrials.gov/study/, since `clinicaltrials_
+# search` citations are a genuinely different host, never
+# ncbi.nlm.nih.gov (`tools/clinicaltrials_search_schemas.CLINICALTRIALS_
+# HOST`, copied verbatim here rather than imported, since `contracts/`
+# does not depend on `tools/`). Every other Layer 2/3 tool this phase
+# wires (ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup,
+# pathogen_detection) cites an ncbi.nlm.nih.gov-family host, so the first
+# alternative alone still covers them.
+NCBI_SOURCE_URL_PATTERN = (
+    r"^https://(?:([A-Za-z0-9-]+\.)*ncbi\.nlm\.nih\.gov/"
+    r"|(?:www\.)?clinicaltrials\.gov/study/)"
+)
 
 
 class GuardPayload(BaseModel):

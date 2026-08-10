@@ -68,8 +68,14 @@ import httpx
 import pytest
 
 from system_03_search_agent.tools import clinicaltrials_search as clinicaltrials_search_module
-from system_03_search_agent.tools.clinicaltrials_search import clinicaltrials_search
-from system_03_search_agent.tools.clinicaltrials_search_schemas import ClinicalTrialsSearchInput
+from system_03_search_agent.tools.clinicaltrials_search import (
+    build_citation,
+    clinicaltrials_search,
+)
+from system_03_search_agent.tools.clinicaltrials_search_schemas import (
+    ClinicalTrialsSearchInput,
+    ClinicalTrialsStudy,
+)
 
 
 def _json_response(body: Any, *, status_code: int = 200) -> httpx.Response:
@@ -536,3 +542,48 @@ async def test_unexpected_exception_is_caught_and_reported(monkeypatch: pytest.M
     output = await clinicaltrials_search(_search_input())
     assert output.status == "error"
     assert "unexpected" in output.error.lower()
+
+
+# ---------------------------------------------------------------------------
+# T-3.4-04: build_citation. No live network: every case constructs a valid
+# ClinicalTrialsStudy directly, since build_citation is a pure function over
+# one already-fetched study, not a network caller itself.
+# ---------------------------------------------------------------------------
+
+
+def test_build_citation_raises_when_no_source_url() -> None:
+    study = ClinicalTrialsStudy(nct_id="NCT01230346", brief_title="A trial")
+
+    with pytest.raises(ValueError, match="source_url"):
+        build_citation(study)
+
+
+def test_build_citation_accepts_a_real_clinicaltrials_gov_url() -> None:
+    """F-3.4-T04-03, CLOSED. Was a known blocker, reported rather than
+    worked around at T-3.4-04's own commit (`fd0ac03`): `CitationPayload.
+    source_url` (`contracts/events.py`) was pattern-locked to
+    `ncbi.nlm.nih.gov` only, so a genuine `clinicaltrials.gov` citation,
+    the correct output of `build_citation` below, was rejected by
+    `CitationPayload`'s own construction, not by a defect in this module.
+
+    `contracts/events.py`'s `NCBI_SOURCE_URL_PATTERN` now also accepts
+    `(www.)?clinicaltrials.gov/study/`, matching `clinicaltrials_search_
+    schemas.CLINICALTRIALS_HOST` exactly (see `tests/system_03_search_
+    agent/contracts/test_events.py`'s own coverage of the widened
+    pattern, including that the API host `/api/v2/studies/...` and a
+    spoofed subdomain both still correctly reject). This test now asserts
+    the fix: `build_citation` returns a valid, fully-populated citation
+    for a real ClinicalTrials.gov study.
+    """
+    study = ClinicalTrialsStudy(
+        nct_id="NCT01230346",
+        brief_title="Culturally-Informed Counseling in Latinas",
+        overall_status="COMPLETED",
+        source_url="https://clinicaltrials.gov/study/NCT01230346",
+    )
+
+    citation = build_citation(study)
+
+    assert citation.source_url == "https://clinicaltrials.gov/study/NCT01230346"
+    assert citation.evidence_kind == "external_annotation"
+    assert citation.license == "public_domain_us_gov"

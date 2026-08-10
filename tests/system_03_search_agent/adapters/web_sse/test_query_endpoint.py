@@ -125,6 +125,36 @@ def _stub_symbol_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _stub_ncbi_efetch_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """T-3.4-05/T-3.1-28: `plan_node` now also dispatches a second, Layer 2
+    `ncbi_efetch` call whenever a resolved target entity is Gene-shaped,
+    and `_valid_body`'s default query text names BRCA1 (a Gene) by
+    symbol. Same rationale and fix as `_stub_symbol_resolution` above:
+    without a stand-in, every test that keeps the default text would
+    reach out to a real external API from what is otherwise an HTTP/DB
+    integration test. Stubbed to a genuine, never-fabricated "empty"
+    result, which `build_synth_findings`/citations/trust all skip (only
+    an "ok" finding contributes), so no pre-existing assertion here is
+    affected.
+    """
+    from system_03_search_agent.core import graph as graph_module
+    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchOutput
+
+    async def _fake_ncbi_efetch(tool_input: object, **kwargs: object) -> NcbiEfetchOutput:
+        return NcbiEfetchOutput(
+            status="empty",
+            action="dataset_report",
+            records=[],
+            record_count=0,
+            total_available=None,
+            truncated=False,
+            error=None,
+        )
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _fake_ncbi_efetch)
+
+
+@pytest.fixture(autouse=True)
 def _auth_secret(monkeypatch):
     monkeypatch.setenv("AUTH_SECRET", _TEST_AUTH_SECRET)
 

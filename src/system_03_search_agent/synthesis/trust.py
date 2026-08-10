@@ -226,7 +226,30 @@ class ClaimTrust:
         return self.triangulation == "concordant"
 
 
-def risk_tier_for(field: str, node_or_edge_type: str = "") -> RiskTier:
+def is_high_risk_relationship_label(label: str) -> bool:
+    """Whether a single edge/relationship label is one of Section 8.3.1's
+    high-risk relationship tokens (`_HIGH_RISK_RELATIONSHIP_TOKENS_
+    CANONICAL`), canonicalized the same way `risk_tier_for` already
+    compares `node_or_edge_type`.
+
+    F-3.4-A-02: exposed as a read-only membership check so a caller that
+    already knows a RETURNed variable is touched by MULTIPLE distinct
+    edge labels (the ambiguous case `cypher_query._traversed_edge_type_
+    by_column` deliberately declines to guess a single label for) can
+    still ask "is at least one of the candidates high risk", without ever
+    asserting to this module which specific one it was. Never widens the
+    table itself: this is the exact same frozenset `risk_tier_for`
+    already consults, exposed for a second caller to read.
+    """
+    return _canonical(label) in _HIGH_RISK_RELATIONSHIP_TOKENS_CANONICAL
+
+
+def risk_tier_for(
+    field: str,
+    node_or_edge_type: str = "",
+    *,
+    ambiguous_high_risk_touch: bool = False,
+) -> RiskTier:
     """Section 8.3.1: per claim, never per query.
 
     A single answer can mix a low-stakes identifier lookup with a
@@ -239,69 +262,78 @@ def risk_tier_for(field: str, node_or_edge_type: str = "") -> RiskTier:
     through the aggregation rule below, and train a reader to ignore the
     signal precisely when it means something.
 
-    ## F-2.2-A-05: an open gap, recorded rather than papered over
+    ## F-2.2-A-05: closed by T-3.4-03, not by widening this table
 
     The system's flagship question, "which diseases are associated with
     BRCA1?", returns `Disease` NODES (the `gene_associated_with_condition`
     edge's endpoint), not the edge itself. That is exactly Section
-    8.3.1's "OMIM phenotype-gene mechanistic or causal mapping" row, and it
-    still classifies `low` here, because `node_or_edge_type` for that row
-    is `"Disease"`, which is not in `_HIGH_RISK_RELATIONSHIP_TOKENS_
-    CANONICAL` on purpose (see below).
-
-    This function's only inputs are `field` and `node_or_edge_type`, one
-    claim's finding and the row type it came from (per the docstring
-    above, and per `trust_for_claims`'s call site in `write_node`, which
-    supplies `node_or_edge_type` from `graph.py`'s
-    `_node_or_edge_type_by_citation_id`, itself built only from the row's
-    own `node_or_edge_type` field). Neither input, nor anything upstream
-    of them, carries which edge (if any) connected the query's anchor
-    entity to this row. `cypher_provenance.to_output_row` builds a
-    `CypherQueryRow` with exactly `node_or_edge_type`, `curie`, `fields`,
-    `source_url`, `graph_snapshot_version`; the traversed relationship
-    label is never captured, so it cannot reach this function no matter
-    how the row type is compared.
-
-    That gap is real and this function cannot close it by itself. A row
-    typed `Disease` is ALSO what a bare identifier lookup returns
+    8.3.1's "OMIM phenotype-gene mechanistic or causal mapping" row, and a
+    row typed `Disease` is ALSO what a bare identifier lookup returns
     (`MATCH (d:Disease {curie: $c}) RETURN d`, no relationship at all),
     which Section 8.3.1's own table calls out as low risk ("Identifier
     lookups... cross-reference resolution"). Per `graph_schema_constants.
-    EDGE_ENDPOINTS`, `Disease` is the endpoint of exactly two edges in
-    this graph, `gene_associated_with_condition` (as target) and
-    `has_phenotype` (as source), plus the no-edge bare-lookup case above;
-    the row carries no signal distinguishing any of the three. Widening
-    `node_or_edge_type == "disease"` to `high` unconditionally would
-    correctly catch the flagship question and incorrectly catch every
-    plain "what is MedGen:C0346153" lookup too, misclassifying a case
-    Section 8.3.1 explicitly names as low risk. That is the false
-    positive `.claude/rules/goal-contracts.md` and this ticket both warn
-    against manufacturing, not a hypothetical one: it is the identical
-    failure shape defect 1 was verified NOT to have, reintroduced through
-    a different table.
+    EDGE_ENDPOINTS`, `Disease` is the endpoint of exactly two edges in this
+    graph, `gene_associated_with_condition` (as target) and `has_phenotype`
+    (as source), plus the no-edge bare-lookup case above; `node_or_edge_type`
+    alone carries no signal distinguishing any of the three. Widening
+    `node_or_edge_type == "disease"` to `high` unconditionally in this
+    table would correctly catch the flagship question and incorrectly
+    catch every plain "what is MedGen:C0346153" lookup too, misclassifying
+    a case Section 8.3.1 explicitly names as low risk: the exact false
+    positive `.claude/rules/goal-contracts.md` warns against manufacturing.
+    That is why this table is still exactly what it was; nothing here
+    changed to close this finding.
 
-    Closing this for real needs the traversed edge label (or an
-    equivalent "why was this row included" signal) carried from the
-    Cypher row through `Finding`, `SynthFinding`, and
-    `_node_or_edge_type_by_citation_id` to this call, which touches
-    `cypher_provenance.py`, `core/graph.py`, and possibly
-    `cypher_query.py`, none of which this ticket's two-file scope
-    (`synthesis/trust.py` and its test file) may edit. Until that
-    plumbing lands, a high-risk gene-disease claim reached through the
-    Disease endpoint answers with full confidence on one source rather
-    than asking, which is the module docstring's stated, deliberate
-    trade for build phase 2.2: "That is not a stub... the graph-only
-    path... yields `ask`, not `answer`" describes the edge-row path,
-    which works; the endpoint-row path is the residual case that trade
-    does not yet cover. Filed here rather than silently worked around,
-    per this ticket's instruction that an honest recorded finding beats a
-    wrong classification.
+    This function's only inputs remain `field` and `node_or_edge_type`, one
+    claim's finding and the row type it came from. What changed is what the
+    caller now puts INTO `node_or_edge_type`: T-3.4-03 threads the
+    traversed edge label from the generated Cypher's own MATCH text (never
+    the model, never a runtime projection) through `cypher_provenance.
+    to_output_rows` and a new, additive, optional `CypherQueryRow.
+    traversed_edge_type` field
+    (`cypher_query._traversed_edge_type_by_column`), and `graph.py`'s
+    `_node_or_edge_type_by_citation_id` now prefers that field over the
+    row's bare `node_or_edge_type` whenever the Cypher text pinned it
+    unambiguously. The flagship question's `Disease` rows therefore reach
+    this function with `node_or_edge_type="gene_associated_with_condition"`,
+    which IS in `_HIGH_RISK_RELATIONSHIP_TOKENS_CANONICAL`, and classify
+    `high` without this table changing at all. A bare identifier lookup
+    has no traversed edge to thread, so the caller falls back to the row's
+    own `node_or_edge_type` ("Disease", "MedGen", ...) exactly as before,
+    and still classifies `low`: the four pre-existing guard tests below
+    assert precisely that this table was never touched. Full account:
+    `tracker/phase_3.4.md`'s T-3.4-03 entry.
+
+    ## F-3.4-A-02: the two-hop reopening of F-2.2-A-05, closed without
+    ## widening either table above
+
+    T-3.4-03's own conservatism has a cost: when a RETURNed variable is
+    touched by TWO OR MORE distinct edge labels (a two-hop question such
+    as "what diseases and phenotypes are associated with BRCA1?", where
+    the `Disease` column is touched by both the high-risk
+    `gene_associated_with_condition` edge and the unrelated
+    `has_phenotype` edge), `_traversed_edge_type_by_column` correctly
+    declines to guess which one applies, and the row falls all the way
+    back to its bare `node_or_edge_type` ("Disease"), reopening F-2.2-A-05
+    for the exact query shape one hop past the pinned flagship case.
+
+    `ambiguous_high_risk_touch` is the fix's other half, set only by a
+    caller (`cypher_query._ambiguous_high_risk_edge_touch_by_column`) that
+    has already confirmed, from the same Cypher text, that the touched
+    variable's candidate edges include at least one real, known high-risk
+    label. It is a strictly weaker claim than `node_or_edge_type` naming a
+    single edge outright: it never says WHICH edge, only that a high-risk
+    one was among the candidates, which is enough to classify `high`
+    without ever asserting a specific wrong label. A second, independent
+    path to `high`, not a change to either frozenset table above.
     """
     field_token = _canonical(field)
     type_token = _canonical(node_or_edge_type)
     if field_token in _HIGH_RISK_FIELD_TOKENS_CANONICAL:
         return "high"
     if type_token in _HIGH_RISK_RELATIONSHIP_TOKENS_CANONICAL:
+        return "high"
+    if ambiguous_high_risk_touch:
         return "high"
     return "low"
 
@@ -388,14 +420,23 @@ def decide(
     grounded: bool,
     claim_finding: SynthFinding | None,
     all_findings: list[SynthFinding],
+    *,
+    ambiguous_high_risk_touch: bool = False,
 ) -> ClaimTrust:
     """Run Section 8.3.1 to 8.3.3 for one claim.
 
     Grounded is the gate every other row depends on: an ungrounded claim
     refuses regardless of risk tier, and triangulation is not even
     evaluated for it, because there is nothing established to corroborate.
+
+    F-3.4-A-02: `ambiguous_high_risk_touch`, an additive keyword-only
+    argument defaulting to `False`, is threaded straight to `risk_tier_
+    for` unchanged. See that function's own docstring for what it means
+    and why it never widens the risk table.
     """
-    tier = risk_tier_for(field, node_or_edge_type)
+    tier = risk_tier_for(
+        field, node_or_edge_type, ambiguous_high_risk_touch=ambiguous_high_risk_touch
+    )
     if not grounded:
         return ClaimTrust(
             citation_id=citation_id,
@@ -448,7 +489,7 @@ def aggregate(outcomes: list[TrustOutcome], default: TrustOutcome = "refuse") ->
 def trust_for_claims(
     claims: list[GroundedClaim],
     all_findings: list[SynthFinding],
-    node_or_edge_type_by_citation_id: dict[str, str] | None = None,
+    node_or_edge_type_by_citation_id: dict[str, tuple[str, bool]] | None = None,
 ) -> list[ClaimTrust]:
     """Compute one `ClaimTrust` per surviving claim, deduped by citation.
 
@@ -456,6 +497,13 @@ def trust_for_claims(
     clauses citing the same finding share one citation. Emitting two
     trust_signal events for one `citation_id` would give a surface two
     verdicts to render on one chip.
+
+    F-3.4-A-02: `node_or_edge_type_by_citation_id`'s value widened from a
+    bare `str` to a `(node_or_edge_type, ambiguous_high_risk_touch)` pair;
+    the caller (`core.graph._node_or_edge_type_by_citation_id`) is this
+    dict's only real producer and was updated the same way. A missing
+    citation_id defaults to `("", False)`, identical in effect to the old
+    default of `""` plus no ambiguous signal.
     """
     types = node_or_edge_type_by_citation_id or {}
     seen: set[str] = set()
@@ -465,13 +513,15 @@ def trust_for_claims(
         if citation_id in seen:
             continue
         seen.add(citation_id)
+        node_or_edge_type, ambiguous_high_risk_touch = types.get(citation_id, ("", False))
         out.append(
             decide(
                 citation_id=citation_id,
                 field=claim.finding.field,
-                node_or_edge_type=types.get(citation_id, ""),
+                node_or_edge_type=node_or_edge_type,
                 grounded=True,
                 claim_finding=claim.finding,
+                ambiguous_high_risk_touch=ambiguous_high_risk_touch,
                 all_findings=all_findings,
             )
         )

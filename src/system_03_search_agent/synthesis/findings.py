@@ -183,6 +183,8 @@ _SLASHED_NA_SENTINEL = re.compile(r"^n\s*[/\\]\s*a$", re.IGNORECASE)
 def _citable_value_for_row(
     row: dict[str, Any],
     pick_representative_field: Any,
+    *,
+    apply_vocabulary_artifact_check: bool | None = None,
 ) -> tuple[str, str, bool, bool]:
     """Choose the one field and value this row can support a claim with.
 
@@ -194,10 +196,26 @@ def _citable_value_for_row(
     that function's, unchanged, and this only decides what to do with a
     flagged result. See the module docstring for why a flagged value falls
     back to the CURIE instead of being handed to Synth.
+
+    T-3.4-05 (F-3.4-T05-03): `apply_vocabulary_artifact_check` defaults to
+    `None`, meaning "let `pick_representative_field` use its own default"
+    (`core.graph._pick_representative_field`'s own default is `True`,
+    unchanged). Only forwarded as an explicit keyword when the caller
+    passes something other than `None`, so a test double standing in for
+    `pick_representative_field` with the older, single-argument signature
+    (several of this module's own tests inject exactly that) is never
+    handed a keyword argument it does not accept. `build_synth_findings`
+    below is the one real caller that passes an explicit value, keyed on
+    which layer the row came from.
     """
     curie = str(row.get("curie") or "")
     fields = row.get("fields") or {}
-    field_name, field_value, is_suspect = pick_representative_field(fields)
+    if apply_vocabulary_artifact_check is None:
+        field_name, field_value, is_suspect = pick_representative_field(fields)
+    else:
+        field_name, field_value, is_suspect = pick_representative_field(
+            fields, apply_vocabulary_artifact_check=apply_vocabulary_artifact_check
+        )
 
     # Each flag below answers the same question in a different shape: does
     # `field_value` carry a fact this row can honestly state, or only its
@@ -374,7 +392,17 @@ def build_synth_findings(
             if not source_url:
                 continue
             field_name, field_value, is_suspect, curie_fallback = _citable_value_for_row(
-                row, pick_representative_field
+                row,
+                pick_representative_field,
+                # T-3.4-05 (F-3.4-T05-03): the MedGen ETL vocabulary-
+                # artifact check is a Layer 1 ETL-defect detector; a
+                # Layer 2/3 tool's own field can never carry that specific
+                # defect, and applying the same shape rule to one (e.g. a
+                # 5-character gene symbol like "BRCA1") produces a false
+                # positive the check's own author never intended it to
+                # catch. See `core.graph._pick_representative_field`'s
+                # docstring for the live-reproduced failure this closes.
+                apply_vocabulary_artifact_check=(finding.layer == "layer_1_graph"),
             )
             if not field_name or not field_value:
                 continue

@@ -488,6 +488,51 @@ class TestCitationPayload:
         )
         assert "ncbi.nlm.nih.gov" in payload.source_url
 
+    def test_clinicaltrials_gov_study_url_accepted(self) -> None:
+        """Build phase 3.4: `clinicaltrials_search` is a genuinely
+        non-NCBI host, and its citations must not be rejected by a
+        pattern that was, until this phase, NCBI-only.
+        """
+        payload = CitationPayload(
+            **self._valid_kwargs(
+                source_url="https://clinicaltrials.gov/study/NCT00000000",
+                layer="layer_3_enrichment",
+            )
+        )
+        assert "clinicaltrials.gov" in payload.source_url
+
+    def test_clinicaltrials_gov_www_subdomain_accepted(self) -> None:
+        payload = CitationPayload(
+            **self._valid_kwargs(
+                source_url="https://www.clinicaltrials.gov/study/NCT00000000",
+                layer="layer_3_enrichment",
+            )
+        )
+        assert "clinicaltrials.gov" in payload.source_url
+
+    def test_clinicaltrials_gov_api_path_rejected(self) -> None:
+        """The API host, never a citable record: CLINICALTRIALS_HOST is
+        scoped to `/study/`, the same distinction
+        `clinicaltrials_search_schemas.py` already documents (the fetch
+        host and the citable record host share a domain but not a path).
+        """
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                **self._valid_kwargs(
+                    source_url="https://clinicaltrials.gov/api/v2/studies/NCT00000000",
+                    layer="layer_3_enrichment",
+                )
+            )
+
+    def test_clinicaltrials_gov_spoofed_subdomain_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                **self._valid_kwargs(
+                    source_url="https://clinicaltrials.gov.evil.example/study/NCT1",
+                    layer="layer_3_enrichment",
+                )
+            )
+
     def test_claim_text_over_max_length_rejected(self) -> None:
         with pytest.raises(ValidationError):
             CitationPayload(**self._valid_kwargs(claim_text="c" * 1001))
