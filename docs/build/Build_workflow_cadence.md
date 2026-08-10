@@ -4,7 +4,7 @@ The loop one build phase runs, who does each step, and which model runs it. This
 
 The loop repeats 26 times, once per build phase in `requirements/Technical_specification.md` section 25.
 
-Last updated: 2026-08-03.
+Last updated: 2026-08-10.
 
 ## Table of contents
 
