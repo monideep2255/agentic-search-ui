@@ -509,6 +509,41 @@ async def test_over_long_string_inside_a_nested_gene_field_is_capped() -> None:
 
 
 @pytest.mark.asyncio
+async def test_over_long_nested_list_is_item_count_capped() -> None:
+    """F-3.1-50 (Step 6.2, 2026-08-10): `_cap_field_value` capped every
+    string's LENGTH at any depth but never a nested list's item COUNT, so a
+    `gene_ontology.biological_processes`-shaped list (real, live-measured
+    at 117 items for TP53) reached `output.records[0].fields` uncapped.
+    Regression pinned at `_MAX_FIELD_VALUE_ITEMS` (100), mirroring
+    `ncbi_eutils_actions._MAX_NESTED_ITEMS`.
+    """
+    body = json.dumps(
+        {
+            "reports": [
+                {
+                    "gene": {
+                        "gene_id": "7157",
+                        "gene_ontology": {
+                            "biological_processes": [{"name": f"process {i}"} for i in range(117)]
+                        },
+                    }
+                }
+            ]
+        }
+    )
+    client = _FakeClient([httpx.Response(200, text=body)])
+    action_input = NcbiEfetchDatasetReportInput(
+        action="dataset_report", report_type="gene", gene_id="7157"
+    )
+
+    output = await ncbi_datasets_actions.dataset_report(action_input, client=client)
+
+    assert output.status == "ok"
+    processes = output.records[0].fields["gene_ontology"]["biological_processes"]
+    assert len(processes) == 100
+
+
+@pytest.mark.asyncio
 async def test_over_long_genome_assembly_name_is_capped() -> None:
     body = json.dumps(
         {

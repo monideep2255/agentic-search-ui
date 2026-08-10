@@ -134,7 +134,7 @@ Tier assignment per step (which model tier runs which step) is Section 3's conce
 
 | Layer | Contents | Latency | Freshness | Reached by |
 |-------|----------|---------|-----------|------------|
-| Layer 1 | AGE knowledge graph on Hetzner, 115M nodes, 693M edges, 10 concept labels, 14 edge predicates, from 5 NCBI databases | Sub-10ms typed queries | Periodic snapshot | `cypher_query`, Section 5 |
+| Layer 1 | AGE knowledge graph on Hetzner, 115M nodes, 693M edges, 11 concept labels, 14 edge predicates, from 5 NCBI databases | Sub-10ms typed queries | Periodic snapshot | `cypher_query`, Section 5 |
 | Layer 2 | Live NCBI APIs: E-utilities, Datasets API v2, Variation Services, PubChem | 100 to 500ms | Always current | `ncbi_efetch`, `ncbi_dbsnp`, Section 5 |
 | Layer 3 | Enrichment APIs: PubTator3, LitVar2, LitSense, ClinicalTrials.gov | 200ms to 2s | Always current | `pubtator_annotate`, `litvar2_lookup`, Section 5 |
 
@@ -292,7 +292,10 @@ Payload shapes. This is the canonical definition for every event type. Sections 
 ```json
 // guard
 { "passed": true, "category": "ok", "reason": null }
-// category enum: ok, off_topic, medical_advice, injection, rate_limited, cost_capped
+// category enum: ok, off_topic, medical_advice, injection, rate_limited, cost_capped, write_seeking
+// write_seeking added at Step 6.2 (finding F-3.0-01, additive per system-design-patterns rule 10):
+// Section 10.5 requires refusing a write-seeking request, and until this reconciliation the enum
+// named nothing write-shaped, so the refusal shipped under off_topic, the closest available member.
 
 // think
 {
@@ -574,12 +577,12 @@ Prefix structure for the main agent's LLM calls (Think, Plan, Write):
 
 1. System instructions and SOUL.md behavioral directives (static across every query).
 2. Tool schemas for the seven registered tools, frozen and deterministically sorted by tool name (`clinicaltrials_search`, `cypher_query`, `litvar2_lookup`, `ncbi_dbsnp`, `ncbi_efetch`, `pathogen_detection`, `pubtator_annotate`). Sorting is alphabetic and fixed in code, never re-ordered at runtime, because a reorder busts the cache exactly like a schema edit.
-3. The static graph and BioLink schema: the 10 concept labels and 14 edge predicates at the concept level, not the per-query slice. This is small and genuinely invariant across queries, which is what makes it eligible for the stable prefix.
+3. The static graph and BioLink schema: the 11 concept labels (the eleventh, `NamedThing`, is the dangling-endpoint stub the five-database merge produces, a real label the live graph carries and a generator must be able to name) and 14 edge predicates at the concept level, not the per-query slice. This is small and genuinely invariant across queries, which is what makes it eligible for the stable prefix.
 4. Dynamic suffix: the current query, resolved entities, session-memory tail (Section 14), and the structured plan.
 
 Reconciling two decisions on schema content: the 2026-05-07 schema-slicing decision (send only the relevant graph-schema portion to the LLM, not the full schema) and the 2026-07-21 Step 1.11 prompt-cache decision (the stable prefix includes "graph and BioLink schema") describe two different LLM call sites, and both hold without contradiction:
 
-- The main agent's Think or Plan call uses the static, concept-level schema (10 labels, 14 predicates) in its stable prefix, so the agent knows what is queryable without per-query variation.
+- The main agent's Think or Plan call uses the static, concept-level schema (11 labels, 14 predicates) in its stable prefix, so the agent knows what is queryable without per-query variation.
 - The `cypher_query` tool's own internal Cypher-generation call (a separate plan-tier call, Section 3.2, Section 6) has its own stable prefix (Cypher-generation instructions, few-shot examples, edge-label enforcement rules) and its own dynamic suffix, into which the query-relevant schema slice is injected. The 2026-07-21 Step 1.12 conference-learnings decision to "cache the full sliced schema upfront rather than progressively" governs this call's dynamic suffix: the whole slice is injected in one shot, not built up turn by turn.
 
 Cache-busting rules, enforced in code, not just by convention:
@@ -631,7 +634,7 @@ Every fact the agent cites comes from one of three layers. The Act step reaches 
 
 ### 5.1 Layer 1: the graph, through cypher_query
 
-Layer 1 is the AGE graph on the Hetzner CPX42 box: 115M nodes, 693M edges, 10 concept labels, 14 edge predicates, queried read-only over openCypher. The transport between System 3 and that graph changes by build phase, never the tool's interface.
+Layer 1 is the AGE graph on the Hetzner CPX42 box: 115M nodes, 693M edges, 11 concept labels, 14 edge predicates, queried read-only over openCypher. The transport between System 3 and that graph changes by build phase, never the tool's interface.
 
 | Phase | Transport | How it works | Port exposure |
 |-------|-----------|---------------|----------------|
@@ -791,7 +794,7 @@ Output schema:
 }
 ```
 
-Endpoint and fields used: the AGE graph, wrapped as `SELECT * FROM cypher('ncbi_kg', $$ ... $$, params) AS (...)`, always with an explicit edge label (never untyped `[r]`, the 2026-05-05 decision that keeps the planner off a 693M-row UNION ALL). The 10 concept labels and 14 edge predicates are enumerated in `docs/data-engineering/Knowledge_graph_on_server_reference.md`. Query parameters pass through the SQL `%s` placeholder as a JSON object, never string-interpolated into the Cypher text (production-standards query-safety gate).
+Endpoint and fields used: the AGE graph, wrapped as `SELECT * FROM cypher('ncbi_kg', $$ ... $$, params) AS (...)`, always with an explicit edge label (never untyped `[r]`, the 2026-05-05 decision that keeps the planner off a 693M-row UNION ALL). The 11 concept labels and 14 edge predicates are enumerated in `docs/data-engineering/Knowledge_graph_on_server_reference.md`. Query parameters never string-interpolate into the Cypher text (production-standards query-safety gate). They also never pass through a `%s` placeholder on the `cypher()` call's own third argument: psycopg2 substitutes `%s` client-side before the statement reaches the server, so AGE never receives a genuine bind parameter there and rejects the call outright (sqlstate 22023, finding F-2.1-02). The mechanism that actually works is `PREPARE`/`EXECUTE`: prepare a statement declaring one `agtype` parameter, execute it with the params JSON bound through psycopg2's `%s` placeholder on the `EXECUTE` call itself, then `DEALLOCATE` in a `finally` block. This is the shipped mechanism in `tools/graph_connection.py` (`_build_prepare_sql`, `_build_execute_sql`, `_build_deallocate_sql`, wired together in `execute_cypher`); see `production-examples.md` example 1 for the full before and after.
 
 Error and empty behavior:
 
@@ -1131,7 +1134,8 @@ Output schema:
           "db": {"type": "string", "maxLength": 20},
           "db_id": {"type": "string", "maxLength": 30},
           "name": {"type": "string", "maxLength": 100},
-          "description": {"type": "string", "maxLength": 300}
+          "description": {"type": "string", "maxLength": 300},
+          "source_url": {"type": "string", "maxLength": 200}
         }
       }
     },
@@ -1170,7 +1174,7 @@ Output schema:
 
 Endpoints and fields used:
 
-- Entity lookup: `GET /entity/autocomplete/?query={text}&limit={n}` returns `_id` (the PubTator entity id), `biotype`, `db`, `db_id` (the bridge to the NCBI database id, for example `ncbi_gene` 672), `name`, `description`.
+- Entity lookup: `GET /entity/autocomplete/?query={text}&limit={n}` returns `_id` (the PubTator entity id), `biotype`, `db`, `db_id` (the bridge to the NCBI database id, for example `ncbi_gene` 672), `name`, `description`. Each entity's `source_url` is populated only for the two verified db types with a confirmed live record-page shape (`ncbi_gene`, `ncbi_mesh`), `None` for every other `db` value; widened into this schema at Step 6.2 (finding F-3.3-A-05) to match code shipped in build phase 3.3, since the field was already emitted beyond what the locked schema legally allowed. Widening further to cover `litvar`/`cvcl` db types needs their record-page URL shapes live-verified first, not attempted here.
 - Annotate publications: `GET /publications/export/biocjson?pmids={csv}` returns a top-level `{"PubTator3": [...]}` object (a drift point, not a bare BioC document). Annotations live at `.PubTator3[i].passages[].annotations[]`, each with an `infons` object: `type`, `identifier`, `normalized_id` (nullable), `valid`, `biotype`, `database`, `accession`, `name`. A relations endpoint exists for entity-pair relations (chemical-disease, gene-disease); its exact path and fields were not live-verified in the capability sheet and are flagged as an open item for a fast-follow addition once verified.
 
 Error and empty behavior: entity lookup on a no-match query returns `[]` with HTTP 200, this is the Layer 3 cite-or-refuse empty signal, mapped to `status: "empty"`. The biocjson export on a nonexistent PMID returns HTTP 400 with `{"detail": "Could not retrieve publications"}`, mapped to `status: "error"` with the `detail` string as the message, unlike E-utilities' 200-with-body pattern.
@@ -1233,17 +1237,21 @@ Output schema:
           "name": {"type": "string", "maxLength": 60},
           "hgvs": {"type": "string", "maxLength": 80},
           "pmids_count": {"type": "integer"},
-          "clinical_significance": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 30}}
+          "clinical_significance": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 30}},
+          "source_url": {"type": "string", "maxLength": 200}
         }
       }
     },
     "pmids": {"type": "array", "maxItems": 50, "items": {"type": "string", "maxLength": 15}},
+    "pmid_source_urls": {"type": "array", "maxItems": 50, "items": {"type": "string", "maxLength": 60}},
     "total_pmids": {"type": "integer"},
     "source_url": {"type": "string", "maxLength": 200, "pattern": "^https://(www\\.|pubmed\\.)?ncbi\\.nlm\\.nih\\.gov/"},
     "error": {"type": "string", "maxLength": 500}
   }
 }
 ```
+
+Two fields widened into this schema at Step 6.2 (finding F-3.3-J-06), since the single top-level `source_url` this section originally provided cannot cite a multi-match `variant_search` result or an individual `publications_lookup` PMID: `variant_matches[].source_url`, this match's own dbSNP record page, populated for every match carrying a real rsid regardless of how many matches the result has (the output-level `source_url` stays gated to the single-match case, since it is one field for the whole result set); and `pmid_source_urls`, one canonical PubMed URL per entry in `pmids`, same order, same length, the same shape `pubtator_annotate` already ships per publication.
 
 Endpoints and fields used:
 
@@ -1298,7 +1306,7 @@ Output schema:
   "required": ["status", "mode", "isolates", "isolate_count", "truncated"],
   "additionalProperties": false,
   "properties": {
-    "status": {"type": "string", "enum": ["ok", "empty", "error"]},
+    "status": {"type": "string", "enum": ["ok", "empty", "error", "timeout"]},
     "mode": {"type": "string", "maxLength": 25},
     "pdg_snapshot": {"type": "string", "maxLength": 30, "description": "the pinned complete snapshot this result came from, e.g. PDG000000002.4157"},
     "isolates": {
@@ -1352,6 +1360,7 @@ Procedure:
 Error and empty behavior:
 
 - `biosample_acc` or `pds_cluster` not found in the pinned snapshot: `status: "empty"`, a structured empty and the Layer 2 cite-or-refuse trigger for this tool, since a bulk file read carries no HTTP-status success signal the way Entrez does.
+- The shared wall-clock budget runs out before the scan reaches a qualifying row: `status: "timeout"`, a fourth enum value distinct from `status: "empty"`, added at Step 6.2 (finding F-3.5-A-09). Before this, both cases shipped as `status: "empty"`, distinguishable only by parsing the free-text `error` field, since a genuinely absent record and a cutoff scan mean different things to a caller deciding whether to retry: a cutoff is worth retrying with more budget, a genuine absence is not.
 - The snapshot directory is unreachable or incomplete for `taxon`: `status: "error"`, message names the taxon and the snapshot version it could not resolve.
 - A newer complete snapshot appearing since the last check is never surfaced as an error: Section 4.3 already fixes the caching rule (cached until a newer complete PDG snapshot is pinned, re-checked daily), so the tool silently re-pins on its next daily check.
 
@@ -1372,10 +1381,10 @@ Input schema:
   "required": ["query_cond"],
   "additionalProperties": false,
   "properties": {
-    "query_cond": {"type": "string", "maxLength": 200, "description": "condition or disease phrase, maps to query.cond"},
+    "query_cond": {"type": "string", "maxLength": 200, "description": "condition or disease phrase, maps to query.cond. Parsed by ClinicalTrials.gov as an Essie search expression, not a literal phrase: a condition name containing AND, OR, or NOT (e.g. \"Carcinoma NOT Otherwise Specified\") is interpreted as a boolean operator and can silently return the logical inverse of the intended search (F-3.5-A-03, disclosed at Step 6.2)"},
     "query_term": {"type": "string", "maxLength": 200, "description": "free text, maps to query.term"},
     "query_intr": {"type": "string", "maxLength": 200, "description": "intervention, maps to query.intr"},
-    "overall_status": {"type": "string", "enum": ["RECRUITING", "COMPLETED", "TERMINATED", "ACTIVE_NOT_RECRUITING", "NOT_YET_RECRUITING", "UNKNOWN"]},
+    "overall_status": {"type": "string", "enum": ["RECRUITING", "COMPLETED", "TERMINATED", "ACTIVE_NOT_RECRUITING", "NOT_YET_RECRUITING", "UNKNOWN", "WITHDRAWN", "ENROLLING_BY_INVITATION", "SUSPENDED", "WITHHELD", "NO_LONGER_AVAILABLE", "AVAILABLE", "APPROVED_FOR_MARKETING", "TEMPORARILY_NOT_AVAILABLE"]},
     "page_size": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20},
     "page_token": {"type": "string", "maxLength": 200}
   }
@@ -2808,7 +2817,7 @@ Cost caps are safety-critical (system-design-patterns rule 4). The harness (sect
 | Per-query cap | $0.10 | one query's total LLM inference spend across guard, plan, and synth tiers | loop stops, moves early to Write with whatever tool_results already exist, answer ships as a partial cited result |
 | Per-user daily cap | 100 queries/day | one authenticated user, resets at a fixed daily boundary | new queries declined for the rest of the day |
 | System-wide daily cap | $10/day | total LLM spend across every user | system pauses accepting new queries for the day |
-| Per-step timeout | 5s lookup, 10s single-hop, 30s multi-hop, 2 minutes deep research | one Think, Plan, Act, or Write step within one query | step aborts, loop synthesizes from whatever partial results exist |
+| Per-step timeout | Two shapes, not one, corrected at Step 6.2 (finding F-2.1-16): a per-tier budget for the model-calling steps (Guardrail, Think, Plan, Write), since a classification or synthesis call's cost does not scale with query difficulty; and the query-class budget below (5s lookup, 10s single-hop, 30s multi-hop, 2 minutes deep research) applied only to Act, since a tool call's cost does. Tier budgets are themselves provisional pending build phase 7.0 model-bench re-measurement (`harness/harness.py`'s `budget_for_step` and `_TIER_STEP_BUDGET_S`) | one Think, Plan, Act, or Write step within one query | step aborts, loop synthesizes from whatever partial results exist |
 
 These are starter values (Step 1.11 decision, 2026-07-21), tunable in Phase 4 against real cost data once the system runs. Changing a value is a decision that requires explicit approval, not a silent config edit.
 
@@ -3134,7 +3143,7 @@ Every group in `env.example` maps to a Railway variable set on `search-agent-api
 | Cache | `REDIS_URL` | Auto-injected by the `search-agent-cache` addon's reference variable | |
 | Auth | `AUTH_SECRET` | Railway service variable, generated per environment | Never shared between dev and production |
 | Observability | `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`, `LANGCHAIN_TRACING_V2`, `POSTHOG_API_KEY`, `POSTHOG_HOST` | Railway service variable | |
-| Cost control | `PER_QUERY_COST_CAP_USD`, `PER_USER_DAILY_CAP_USD`, `SYSTEM_DAILY_CAP_USD`, `PER_STEP_TIMEOUT_SECONDS` | Railway service variable | Production values start from the Step 1.11 starter caps (0.10 US dollars per query, 100 queries per user per day, 10 US dollars per day system-wide), tuned from real cost data per the playbook's model-selection cadence |
+| Cost control | `PER_QUERY_COST_CAP_USD`, `PER_USER_DAILY_QUERY_CAP`, `SYSTEM_DAILY_CAP_USD`, `PER_STEP_TIMEOUT_SECONDS` | Railway service variable | Production values start from the Step 1.11 starter caps (0.10 US dollars per query, 100 queries per user per day, 10 US dollars per day system-wide), tuned from real cost data per the playbook's model-selection cadence. `PER_USER_DAILY_QUERY_CAP` holds a query count, not a dollar figure, so the shipped code deliberately named it apart from the dollar-denominated caps beside it, corrected here at Step 6.2 |
 | App config | `APP_ENV`, `PORT`, `CORS_ORIGINS`, `LOG_LEVEL` | Railway service variable, `PORT` auto-set by Railway | `APP_ENV=production`, `CORS_ORIGINS` set to the deployed `search-agent-web` URL or custom domain |
 
 Secrets never appear in logs or exception strings, per `ai-security-standards.md`. This applies to every var above at the framework level: log the var name, never its value, if a startup check needs to report a missing credential.

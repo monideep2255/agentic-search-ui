@@ -58,7 +58,8 @@ export interface GuardPayload {
     | "medical_advice"
     | "injection"
     | "rate_limited"
-    | "cost_capped";
+    | "cost_capped"
+    | "write_seeking";
   reason: string | null;
 }
 
@@ -237,9 +238,15 @@ function isGuardPayload(value: unknown): value is GuardPayload {
     isRecord(value) &&
     typeof value.passed === "boolean" &&
     typeof value.category === "string" &&
-    ["ok", "off_topic", "medical_advice", "injection", "rate_limited", "cost_capped"].includes(
-      value.category,
-    ) &&
+    [
+      "ok",
+      "off_topic",
+      "medical_advice",
+      "injection",
+      "rate_limited",
+      "cost_capped",
+      "write_seeking",
+    ].includes(value.category) &&
     isNullableString(value.reason)
   );
 }

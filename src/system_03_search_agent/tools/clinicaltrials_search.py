@@ -434,6 +434,15 @@ async def _clinicaltrials_search_impl(
         # F-3.5-02: always requested, never a caller-configurable option.
         # See the module docstring's F-3.5-02 section for why.
         "countTotal": "true",
+        # F-3.5-A-07 (Step 6.2, 2026-08-10): request relevance ordering.
+        # The /studies endpoint returns no per-result relevance score to
+        # disclose (unlike PubTator3/LitVar2's `match` field, F-3.3-A-01),
+        # so this is the only concrete lever available: it improves which
+        # studies rank first for a weak query (a bare number, a common
+        # word), it does not disclose a score, and it does not fully close
+        # the finding. Always requested, never caller-configurable, same
+        # reasoning as `countTotal` above.
+        "sort": "@relevance",
         # F-3.5-A-04 (adversary round, 2026-08-08): never ask the API for
         # more studies than this tool will actually return. The schema
         # allows page_size up to 100, but `_MAX_STUDIES` caps the output

@@ -190,13 +190,14 @@ def test_legitimate_evidence_questions_do_not_seek_a_verdict(text: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_a_write_seeking_query_maps_to_off_topic() -> None:
-    """Section 10.5's documented contract gap: no write-shaped category exists,
-    so `off_topic` is the closest fit. See the `screen()` docstring.
+def test_a_write_seeking_query_maps_to_write_seeking() -> None:
+    """F-3.0-01, resolved at Step 6.2: a write-shaped category now exists,
+    so a write-seeking refusal is no longer reported as `off_topic`. See the
+    `screen()` docstring.
     """
     verdict = screen("add a node for gene X to the graph")
     assert verdict is not None
-    assert verdict.category == "off_topic"
+    assert verdict.category == "write_seeking"
 
 
 def test_a_verdict_seeking_query_maps_to_medical_advice() -> None:
@@ -220,7 +221,7 @@ def test_write_is_checked_before_verdict() -> None:
     """
     verdict = screen("please update the pathogenic classification record")
     assert verdict is not None
-    assert verdict.category == "off_topic"
+    assert verdict.category == "write_seeking"
 
 
 # ---------------------------------------------------------------------------

@@ -288,7 +288,13 @@ class PathogenDetectionOutput(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    status: Annotated[str, Field(pattern=r"^(ok|empty|error)$")]
+    # F-3.5-A-09 (Step 6.2, 2026-08-10): "timeout" is a fourth status value,
+    # additive to Section 6.6's locked enum. Before this, a wall-clock
+    # cutoff that found nothing and a genuine no-such-record both shipped
+    # as "empty", distinguishable only by parsing the free-text `error`
+    # field; a caller deciding whether to retry needs the two told apart
+    # structurally.
+    status: Annotated[str, Field(pattern=r"^(ok|empty|error|timeout)$")]
     mode: Annotated[str, Field(max_length=25)]
     pdg_snapshot: Annotated[
         str | None,

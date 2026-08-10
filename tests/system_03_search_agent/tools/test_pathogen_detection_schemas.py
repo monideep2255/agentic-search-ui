@@ -214,7 +214,7 @@ def test_pathogen_taxon_pattern_constant_matches_field_pattern_behavior():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("status", ["ok", "empty", "error"])
+@pytest.mark.parametrize("status", ["ok", "empty", "error", "timeout"])
 def test_output_status_valid_values_accepted(status):
     output = PathogenDetectionOutput(status=status, mode="isolate_lookup")
     assert output.status == status

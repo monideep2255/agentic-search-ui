@@ -174,6 +174,18 @@ _MAX_FIELD_VALUE_CHARS: Final[int] = 4000
 # without limit.
 _MAX_FIELD_VALUE_DEPTH: Final[int] = 6
 
+# F-3.1-50 (Step 6.2, 2026-08-10): item-count bound on a nested list,
+# mirroring `ncbi_eutils_actions._MAX_NESTED_ITEMS`. The original version of
+# `_cap_field_value` below capped string LENGTH at every depth but never
+# item COUNT, so a `gene_ontology.biological_processes`-shaped list (real,
+# live-measured at 117 items for TP53) reached the synth prompt uncapped in
+# item count. Unreachable in production when this module shipped in build
+# phase 3.1 (the only caller then read three scalar keys and discarded the
+# rest); live-reachable since build phase 3.4 wired `ncbi_efetch` into
+# `act_node`, which forwards every key in a record's `fields`, not a fixed
+# subset.
+_MAX_FIELD_VALUE_ITEMS: Final[int] = 100
+
 
 def _cap_text(value: str) -> str:
     """Hard character cap on one untrusted free-text value.
@@ -194,13 +206,21 @@ def _cap_field_value(value: Any, depth: int = 0) -> Any:
     (`description`, `taxname`), string lists (`synonyms`, `omim_ids`), and
     nested objects (`gene_ontology`, `assembly_stats`), so the walk covers
     all three rather than capping only top-level strings.
+
+    Two bounds, both fail-closed (F-3.1-50, Step 6.2): a list is sliced to
+    `_MAX_FIELD_VALUE_ITEMS`, and recursion beyond `_MAX_FIELD_VALUE_DEPTH`
+    collapses whatever remains to a capped string rather than returning it
+    unwalked, mirroring `ncbi_eutils_actions._cap_value`.
     """
     if isinstance(value, str):
         return _cap_text(value)
     if depth >= _MAX_FIELD_VALUE_DEPTH:
-        return value
+        return _cap_text(str(value))
     if isinstance(value, list):
-        return [_cap_field_value(item, depth + 1) for item in value]
+        return [
+            _cap_field_value(item, depth + 1)
+            for item in value[:_MAX_FIELD_VALUE_ITEMS]
+        ]
     if isinstance(value, dict):
         return {key: _cap_field_value(item, depth + 1) for key, item in value.items()}
     return value

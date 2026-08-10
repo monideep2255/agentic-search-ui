@@ -109,6 +109,13 @@ from pydantic import BaseModel, ConfigDict, Field
 # and why this one is additionally scoped to the /study/ path segment.
 CLINICALTRIALS_HOST: Final = r"^https://(www\.)?clinicaltrials\.gov/study/"
 
+# F-3.5-A-12 (Step 6.2, 2026-08-10): widened from the 6 values Section 6.7
+# line 1411 originally locked to all 14 real values ClinicalTrials.gov's
+# API actually returns, live-confirmed via
+# `GET /api/v2/stats/field/values?fields=OverallStatus`
+# (`uniqueValuesCount: 14`, every value below present with a nonzero
+# `studiesCount`). Before this, filtering on a value the API itself
+# returned in a result (e.g. "WITHDRAWN") raised a ValidationError.
 _OverallStatus = Literal[
     "RECRUITING",
     "COMPLETED",
@@ -116,6 +123,14 @@ _OverallStatus = Literal[
     "ACTIVE_NOT_RECRUITING",
     "NOT_YET_RECRUITING",
     "UNKNOWN",
+    "WITHDRAWN",
+    "ENROLLING_BY_INVITATION",
+    "SUSPENDED",
+    "WITHHELD",
+    "NO_LONGER_AVAILABLE",
+    "AVAILABLE",
+    "APPROVED_FOR_MARKETING",
+    "TEMPORARILY_NOT_AVAILABLE",
 ]
 
 
@@ -136,7 +151,14 @@ class ClinicalTrialsSearchInput(BaseModel):
         Field(
             min_length=1,
             max_length=200,
-            description="condition or disease phrase, maps to query.cond",
+            description=(
+                "condition or disease phrase, maps to query.cond. Parsed by "
+                "ClinicalTrials.gov as an Essie search expression, not a "
+                "literal phrase: a condition name containing AND, OR, or NOT "
+                "(e.g. \"Carcinoma NOT Otherwise Specified\") is interpreted "
+                "as a boolean operator and can silently return the logical "
+                "inverse of the intended search (F-3.5-A-03)."
+            ),
         ),
     ]
     query_term: Annotated[

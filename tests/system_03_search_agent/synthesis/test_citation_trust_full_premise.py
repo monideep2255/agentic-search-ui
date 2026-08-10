@@ -54,8 +54,16 @@ Exercised here:
   query, both cited, both carrying full Section 9.1/9.2 provenance (P1).
 - F-2.2-A-05's fix, on the exact question that filed it, not a paraphrase
   (P2).
-- A real CONCORDANT or DISCORDANT triangulation verdict, not stuck at
-  INSUFFICIENT now that two origins exist (P2, same run).
+- Triangulation actually runs and produces a real verdict, not `None` (P2,
+  same run). Corrected at Step 6.2 (finding F-3.4-A-04): this does NOT
+  exercise a CONCORDANT or DISCORDANT outcome. `triangulate()` only
+  compares findings sharing the exact same field name across origins, and
+  the dual-layer pair this gate exercises shares no field name, so the
+  verdict is structurally stuck at INSUFFICIENT under the current
+  single-second-origin wiring. `ClaimTrust.triangulated` maps both
+  DISCORDANT and INSUFFICIENT to `False`, never `None`, which is why the
+  weaker "not None" assertion below was passing while this comment
+  overclaimed what it covered.
 - Section 7.2 conflict detection is exercised directly against the real
   `conflict_detection` module rather than hoping a live graph/NCBI value
   pair happens to disagree on the day this runs; see P3's own docstring for

@@ -450,6 +450,20 @@ def _build_source_url(identifier: str | None) -> str | None:
     return url
 
 
+def _pubmed_url(pmid: str) -> str:
+    """One canonical PubMed record URL for `pmid` (F-3.3-J-06, Step 6.2).
+
+    Same construction `pubtator_annotate.py` already uses for
+    `annotate_publications`'s per-publication citation. `pmid` here is
+    already schema-shape-constrained (`Litvar2LookupOutput.pmids`,
+    `max_length=15`) before this is ever called, so unlike `_snp_url_for_rsid`
+    or `_build_source_url` this never needs to fail closed to `None`: a
+    validated PMID cannot produce a URL exceeding
+    `pmid_source_urls`'s own 60-char cap.
+    """
+    return f"https://pubmed.ncbi.nlm.nih.gov/{urllib.parse.quote(pmid, safe='')}/"
+
+
 def _snp_url_for_rsid(rsid: str) -> str | None:
     """`https://www.ncbi.nlm.nih.gov/snp/{rsid}`, a REAL per-variant dbSNP
     record page (F-3.3-J-06/F-3.3-A-10, fix round 4).
@@ -730,6 +744,17 @@ def _parse_variant_match(
     )
     withheld.extend(cs_withheld)
 
+    # F-3.3-J-06 (Step 6.2, 2026-08-10): a per-match dbSNP citation,
+    # additive to Section 6.5's schema. The top-level `source_url` field
+    # (see `_source_url_for_variant_search`) is still gated to the
+    # single-match case, since Section 6.5 provides exactly one top-level
+    # field for the whole result set and a multi-match top-level citation
+    # would misrepresent scope (F-3.3-RR2-01). This field has no such
+    # constraint: each match cites only itself, so it is populated for
+    # EVERY match carrying a real rsid, regardless of how many matches
+    # the result has.
+    source_url = _snp_url_for_rsid(rsid) if rsid is not None else None
+
     match = Litvar2VariantMatch(
         litvar_id=litvar_id,
         rsid=rsid,
@@ -739,6 +764,7 @@ def _parse_variant_match(
         pmids_count=pmids_count,
         clinical_significance=clinical_significance,
         matched_on=matched_on,
+        source_url=source_url,
     )
     return match, withheld
 
@@ -941,6 +967,7 @@ async def _publications_lookup(litvar_id: str) -> Litvar2LookupOutput:
         mode="publications_lookup",
         pmids=pmids,
         total_pmids=total,
+        pmid_source_urls=[_pubmed_url(pmid) for pmid in pmids],
         source_url=_build_source_url_for_litvar_id(litvar_id),
     )
 
