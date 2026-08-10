@@ -1594,9 +1594,11 @@ Algorithm, run by the harness after Synth returns narrative text and before any 
 1. Parse the narrative for marker spans (`[1]`, `[2]`, and so on) and the clause each one is adjacent to.
 2. Resolve: does the marker's number match a `ref_index` in the findings list given to this Synth call? If not, the marker is hallucinated. Drop the clause and the marker together.
 3. Extract: the clause text bound to a resolved marker becomes the claim text.
-4. Normalize both the claim text and the finding's `field_value`: lowercase, collapse internal whitespace to a single space, strip leading and trailing punctuation.
+4. Normalize both the claim text and the finding's `field_value`: lowercase, collapse internal whitespace to a single space, strip leading and trailing punctuation, and remove a thousands separator (a comma or thin space sitting directly between two digits) so `"15,310"` and `"15310"` normalize to the same string. This last piece (finding F-2.2-05) only equates two spellings of one number; the lookaround that finds it fires solely between two digits, so it never touches a comma between words or a colon inside a CURIE, and two different numbers still fail to match. Without it, a correct, well-cited answer stating a real count was stripped and refused over a comma.
 5. Match: accept as grounded only if the normalized claim text equals the normalized field value, or one is a substring of the other. No embedding similarity, no LLM-judged closeness, no partial-credit scoring.
-6. Reject: any clause failing step 5 is stripped, marker included. The count of stripped claims is retained for the eval harness and the audit trail (11.5), never surfaced as a citation.
+5a. Number check: every standalone number in the claim text must also appear in the finding's `field_value`, in the user's own question, or in the finding's own identifying context (its CURIE and label). Step 5's substring rule accepts a claim whenever the finding's value is a substring of the (longer) claim, and that direction has a hole: an unrelated invented number can ride along on a real, matched identifier, for example a claim citing "BRCA1 has 15310 variants and 400 orthologs" where only the variant count is real. A number already present in the question or in the cited record's own identifier is not invented, since restating the subject of a question or naming the record being cited is what a readable answer does; it is only a number found in none of those three places that is treated as fabricated.
+5b. Content check: every content-bearing word in the claim, articles, copulas, and connectives excluded, must appear in the finding it cites or in the user's own question. Step 5's substring rule answers whether a clause mentions the cited value, not whether the clause is true about it, so a negation, an invented drug regimen, or a fabricated claim of causation can all ground cleanly on the strength of a correctly matched identifier alone. A small, closed allowlist treats "associated with", "related to", "linked to", and "connected to" as equivalent phrasings of the same underlying graph relationship; "causes" is deliberately excluded from that group, since a causal claim is stronger than, and different from, a correlational one, and must not ground on a relationship the finding only supports as an association.
+6. Reject: any clause failing step 5, 5a, or 5b is stripped, marker included. The count of stripped claims is retained for the eval harness and the audit trail (11.5), never surfaced as a citation.
 7. Whole-answer refuse: if stripping removes the query's core ask entirely, discard the partial narrative and return the refuse path (8.4) rather than ship a thin or misleading answer.
 
 ```python
@@ -1605,6 +1607,8 @@ def ground_claim(claim_text: str, field_value: str) -> bool:
     b = normalize(field_value)
     return a == b or a in b or b in a
 ```
+
+Steps 5a and 5b are deliberately additive rather than a replacement for step 5's match: each only ever rejects a clause step 5 would have accepted, and neither ever accepts a clause step 5 would have rejected, so together they tighten the gate without weakening it (per `goal-contracts`, the direction a verify surface is allowed to move).
 
 This check runs identically regardless of risk tier. Every answer passes 8.2 before 8.3 runs; risk tier changes what happens after grounding succeeds, not whether grounding is required.
 
