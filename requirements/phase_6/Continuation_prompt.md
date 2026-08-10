@@ -358,8 +358,10 @@ One decision below is still waiting on the product owner: whether `security/` st
 | F-1.2-01 | The run registry never evicts a completed or abandoned run | 4.0 |
 | F-1.2-02 | An abandoned client SSE connection does not halt the server-side task | 4.0 |
 | F-1.2-03 | The per-run event queue is single-consumer | 4.0 |
+| New-intake: design the MCP server stateless from the start | An intake note on MCP's 2026-07-28 spec update (moved to a stateless request/response core, rich behavior pushed into versioned extensions, auth hardened to OAuth 2.0/OIDC) landed at Step 6.2, 2026-08-10. No session state between calls, deploys as an ordinary HTTP service; align to OAuth 2.0/OIDC if this ever faces real external auth rather than a custom token scheme. Full note: `personal-os-work/NIH/Agentic-Search/Reference/system-3-brainstorming/MCP_stateless_core_extensions_and_hardened_auth.md` | 4.1 |
 | F-2.0-04 | Nothing writes `interactions` rows, so both daily cost caps read zero | 4.6 |
 | F-2.0-10 | `trace_id` is client-supplied and never server-overwritten | 4.6 |
+| New-intake: signal-based sampling for the manual feedback-loop review step | An intake note landed at Step 6.2, 2026-08-10: instead of random or longest-conversation sampling for which captured interactions a human reviews, score by signal (user had to correct the answer, a tool call looped, a refusal that should have answered) and review those first. One cited study reports 82 percent versus 54 percent informative-review yield from signal-based sampling. Applies to Decision G's manual-review stage. Full note: `personal-os-work/NIH/Agentic-Search/Reference/system/Serverless_on_prem_and_edge_designing_efficient_AI_systems.md` | 4.6, or 5.1 if the review step lands there instead |
 | Golden fixture domain sign-off | Nobody is named to verify the clinical and human-variation expected answers | 5.1 |
 | F-1.2-04 | Signup's 409 response undermines login's anti-enumeration guarantee. Pair with F-1.1-10, same defect class in the same endpoint | 6.1 |
 | Python lockfile | Every backend dependency floats on `>=`, including security-critical ones | 6.1 |
@@ -370,6 +372,7 @@ Unowned, needing an explicit decision rather than an assumed phase:
 
 - F-1.1-10, F-1.1-11's `User-Agent` half, and F-1.1-18: deferred from build phase 1.1 to 1.2, and 1.2's own ticket list never touched any of the three.
 - Auth-path logging: RFC 6819 family revocation still fires silently. Scheduled for build phase 1.2, did not happen, needs a new home.
+- New-intake: a semantic guardrail layer, not just a shape one. An intake note landed at Step 6.2, 2026-08-10, arguing today's multi-agent schema gate only checks shape (valid JSON matching the schema), never meaning, and proposing a second layer between Act and Write that validates against MeSH, Gene Ontology, and NCBI taxonomy, catching a case like "this variant is linked to the wrong organism" that passes schema validation cleanly. A plausible enhancement to Section 10's guardrail design, not scoped anywhere yet and no trigger defined. Full note: `personal-os-work/NIH/Agentic-Search/Reference/system/Ontologies_as_guardrails_for_agentic_AI.md`
 
 ## Handover
 
