@@ -195,6 +195,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from system_03_search_agent.harness import cost_control
+from system_03_search_agent.synthesis.trust import is_high_risk_relationship_label
 from system_03_search_agent.tools.agtype import parse_agtype
 from system_03_search_agent.tools.cypher_generation import (
     CypherGenerationError,
@@ -1411,6 +1412,12 @@ def _cap_shaped_row(shaped: dict[str, Any]) -> dict[str, Any]:
             if traversed_edge_type
             else None
         ),
+        # F-3.4-A-02: additive, optional bool (see
+        # cypher_schemas.CypherQueryRow). No length cap needed; it is
+        # coerced to a plain bool, never a free-form value.
+        "ambiguous_high_risk_edge_touch": bool(
+            shaped.get("ambiguous_high_risk_edge_touch") or False
+        ),
     }
 
 
@@ -1689,6 +1696,60 @@ def _traversed_edge_type_by_column(cypher: str) -> dict[str, str]:
     return result
 
 
+def _ambiguous_high_risk_edge_touch_by_column(cypher: str) -> frozenset[str]:
+    """Columns whose RETURNed variable is touched by 2+ distinct edge
+    labels, where at least one of those labels is BOTH a real graph edge
+    (`_KNOWN_EDGE_LABELS`) and a Section 8.3.1 high-risk relationship
+    (`synthesis.trust.is_high_risk_relationship_label`).
+
+    F-3.4-A-02: `_traversed_edge_type_by_column` above correctly declines
+    to guess a single label when a variable is touched by more than one
+    distinct edge, for example a `Disease` column reached by both the
+    high-risk `gene_associated_with_condition` edge and an unrelated
+    `has_phenotype` edge in the same two-hop query
+    (`MATCH (g:Gene)-[:gene_associated_with_condition]->(d:Disease)
+    MATCH (d)-[:has_phenotype]->(p:PhenotypicFeature) RETURN d, p`). That
+    conservatism is correct on its own terms, but its consequence is that
+    the column then carries NO traversed edge type at all, so
+    `risk_tier_for` falls back to the bare `Disease` node type and
+    reopens F-2.2-A-05, the exact misclassification this phase's flagship
+    fix exists to close, one hop past the pinned single-hop case.
+
+    This function is the fix's other half. It answers a strictly weaker
+    question than `_traversed_edge_type_by_column` does, and never the
+    same one: not "which edge touched this variable" (still undecided,
+    on purpose), only "was a real, known high-risk edge among the
+    candidates". A column can appear in the result of at most one of
+    these two functions, never both: `_traversed_edge_type_by_column`
+    already resolves the `len(labels) == 1` case outright, so this
+    function only ever looks at `len(labels) >= 2`.
+
+    Only a label already confirmed real (`_KNOWN_EDGE_LABELS`) counts
+    toward "high risk", the same safety property `_traversed_edge_type_
+    by_column` already enforces: a stray or hallucinated label sitting
+    alongside a real one must never itself be trusted to carry meaning,
+    even when a genuine high-risk edge is also present. Never widens
+    `synthesis.trust`'s risk table; this is a read-only membership check
+    against the exact frozenset that table already is.
+    """
+    var_by_column = _returned_variable_by_column(cypher)
+    if not var_by_column:
+        return frozenset()
+    labels_by_var = _edge_labels_by_variable(cypher)
+
+    result: set[str] = set()
+    for column, var in var_by_column.items():
+        labels = labels_by_var.get(var)
+        if not labels or len(labels) < 2:
+            continue  # unambiguous or untouched: _traversed_edge_type_by_column's territory
+        if any(
+            label in _KNOWN_EDGE_LABELS and is_high_risk_relationship_label(label)
+            for label in labels
+        ):
+            result.add(column)
+    return frozenset(result)
+
+
 async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> CypherQueryOutput:
     start = time.monotonic()
     schema_slice = build_schema_slice(tool_input.query_class.value, tool_input.target_entities)
@@ -1879,6 +1940,12 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
     # `_traversed_edge_type_by_column`'s own docstring for why this is safe
     # against widening a bare identifier lookup to high risk.
     traversed_edge_type_by_column = _traversed_edge_type_by_column(normalized_cypher)
+    # F-3.4-A-02: the ambiguous-but-high-risk companion signal, also
+    # computed once per query from the same already-validated Cypher text.
+    # See `_ambiguous_high_risk_edge_touch_by_column`'s own docstring.
+    ambiguous_high_risk_edge_touch_by_column = _ambiguous_high_risk_edge_touch_by_column(
+        normalized_cypher
+    )
     mapped_rows: list[CypherQueryRow] = []
     for raw_row in rows:
         for shaped_row in to_output_rows(
@@ -1909,6 +1976,10 @@ async def _run_pipeline(harness: HarnessLike, tool_input: CypherQueryInput) -> C
             # T-3.4-03: carry the traversed edge label, when one was
             # unambiguously determined, onto the entity row it describes.
             traversed_edge_type_by_column=traversed_edge_type_by_column,
+            # F-3.4-A-02: carry the weaker "a high-risk edge was among the
+            # ambiguous candidates" signal onto the same entity row, only
+            # ever set when T-3.4-03's own signal above was not.
+            ambiguous_high_risk_edge_touch_by_column=ambiguous_high_risk_edge_touch_by_column,
         ):
             if not shaped_row.get("source_url"):
                 # Finding F-2.1-A1's cite-or-refuse corollary: an entity

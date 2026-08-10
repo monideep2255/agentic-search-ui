@@ -226,7 +226,30 @@ class ClaimTrust:
         return self.triangulation == "concordant"
 
 
-def risk_tier_for(field: str, node_or_edge_type: str = "") -> RiskTier:
+def is_high_risk_relationship_label(label: str) -> bool:
+    """Whether a single edge/relationship label is one of Section 8.3.1's
+    high-risk relationship tokens (`_HIGH_RISK_RELATIONSHIP_TOKENS_
+    CANONICAL`), canonicalized the same way `risk_tier_for` already
+    compares `node_or_edge_type`.
+
+    F-3.4-A-02: exposed as a read-only membership check so a caller that
+    already knows a RETURNed variable is touched by MULTIPLE distinct
+    edge labels (the ambiguous case `cypher_query._traversed_edge_type_
+    by_column` deliberately declines to guess a single label for) can
+    still ask "is at least one of the candidates high risk", without ever
+    asserting to this module which specific one it was. Never widens the
+    table itself: this is the exact same frozenset `risk_tier_for`
+    already consults, exposed for a second caller to read.
+    """
+    return _canonical(label) in _HIGH_RISK_RELATIONSHIP_TOKENS_CANONICAL
+
+
+def risk_tier_for(
+    field: str,
+    node_or_edge_type: str = "",
+    *,
+    ambiguous_high_risk_touch: bool = False,
+) -> RiskTier:
     """Section 8.3.1: per claim, never per query.
 
     A single answer can mix a low-stakes identifier lookup with a
@@ -280,12 +303,37 @@ def risk_tier_for(field: str, node_or_edge_type: str = "") -> RiskTier:
     and still classifies `low`: the four pre-existing guard tests below
     assert precisely that this table was never touched. Full account:
     `tracker/phase_3.4.md`'s T-3.4-03 entry.
+
+    ## F-3.4-A-02: the two-hop reopening of F-2.2-A-05, closed without
+    ## widening either table above
+
+    T-3.4-03's own conservatism has a cost: when a RETURNed variable is
+    touched by TWO OR MORE distinct edge labels (a two-hop question such
+    as "what diseases and phenotypes are associated with BRCA1?", where
+    the `Disease` column is touched by both the high-risk
+    `gene_associated_with_condition` edge and the unrelated
+    `has_phenotype` edge), `_traversed_edge_type_by_column` correctly
+    declines to guess which one applies, and the row falls all the way
+    back to its bare `node_or_edge_type` ("Disease"), reopening F-2.2-A-05
+    for the exact query shape one hop past the pinned flagship case.
+
+    `ambiguous_high_risk_touch` is the fix's other half, set only by a
+    caller (`cypher_query._ambiguous_high_risk_edge_touch_by_column`) that
+    has already confirmed, from the same Cypher text, that the touched
+    variable's candidate edges include at least one real, known high-risk
+    label. It is a strictly weaker claim than `node_or_edge_type` naming a
+    single edge outright: it never says WHICH edge, only that a high-risk
+    one was among the candidates, which is enough to classify `high`
+    without ever asserting a specific wrong label. A second, independent
+    path to `high`, not a change to either frozenset table above.
     """
     field_token = _canonical(field)
     type_token = _canonical(node_or_edge_type)
     if field_token in _HIGH_RISK_FIELD_TOKENS_CANONICAL:
         return "high"
     if type_token in _HIGH_RISK_RELATIONSHIP_TOKENS_CANONICAL:
+        return "high"
+    if ambiguous_high_risk_touch:
         return "high"
     return "low"
 
@@ -372,14 +420,23 @@ def decide(
     grounded: bool,
     claim_finding: SynthFinding | None,
     all_findings: list[SynthFinding],
+    *,
+    ambiguous_high_risk_touch: bool = False,
 ) -> ClaimTrust:
     """Run Section 8.3.1 to 8.3.3 for one claim.
 
     Grounded is the gate every other row depends on: an ungrounded claim
     refuses regardless of risk tier, and triangulation is not even
     evaluated for it, because there is nothing established to corroborate.
+
+    F-3.4-A-02: `ambiguous_high_risk_touch`, an additive keyword-only
+    argument defaulting to `False`, is threaded straight to `risk_tier_
+    for` unchanged. See that function's own docstring for what it means
+    and why it never widens the risk table.
     """
-    tier = risk_tier_for(field, node_or_edge_type)
+    tier = risk_tier_for(
+        field, node_or_edge_type, ambiguous_high_risk_touch=ambiguous_high_risk_touch
+    )
     if not grounded:
         return ClaimTrust(
             citation_id=citation_id,
@@ -432,7 +489,7 @@ def aggregate(outcomes: list[TrustOutcome], default: TrustOutcome = "refuse") ->
 def trust_for_claims(
     claims: list[GroundedClaim],
     all_findings: list[SynthFinding],
-    node_or_edge_type_by_citation_id: dict[str, str] | None = None,
+    node_or_edge_type_by_citation_id: dict[str, tuple[str, bool]] | None = None,
 ) -> list[ClaimTrust]:
     """Compute one `ClaimTrust` per surviving claim, deduped by citation.
 
@@ -440,6 +497,13 @@ def trust_for_claims(
     clauses citing the same finding share one citation. Emitting two
     trust_signal events for one `citation_id` would give a surface two
     verdicts to render on one chip.
+
+    F-3.4-A-02: `node_or_edge_type_by_citation_id`'s value widened from a
+    bare `str` to a `(node_or_edge_type, ambiguous_high_risk_touch)` pair;
+    the caller (`core.graph._node_or_edge_type_by_citation_id`) is this
+    dict's only real producer and was updated the same way. A missing
+    citation_id defaults to `("", False)`, identical in effect to the old
+    default of `""` plus no ambiguous signal.
     """
     types = node_or_edge_type_by_citation_id or {}
     seen: set[str] = set()
@@ -449,13 +513,15 @@ def trust_for_claims(
         if citation_id in seen:
             continue
         seen.add(citation_id)
+        node_or_edge_type, ambiguous_high_risk_touch = types.get(citation_id, ("", False))
         out.append(
             decide(
                 citation_id=citation_id,
                 field=claim.finding.field,
-                node_or_edge_type=types.get(citation_id, ""),
+                node_or_edge_type=node_or_edge_type,
                 grounded=True,
                 claim_finding=claim.finding,
+                ambiguous_high_risk_touch=ambiguous_high_risk_touch,
                 all_findings=all_findings,
             )
         )

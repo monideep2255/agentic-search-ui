@@ -985,3 +985,70 @@ def test_to_output_rows_never_attaches_traversed_edge_type_to_a_path_column() ->
 
     assert len(rows) == 3
     assert all(row["traversed_edge_type"] is None for row in rows)
+
+
+# ---------------------------------------------------------------------------
+# F-3.4-A-02: `ambiguous_high_risk_edge_touch_by_column` threads the same
+# shape of signal `traversed_edge_type_by_column` does, applied with the
+# identical "only a column that decoded to exactly one entity" rule.
+# ---------------------------------------------------------------------------
+
+
+def test_to_output_rows_attaches_ambiguous_high_risk_edge_touch_to_its_column() -> None:
+    raw_row = {
+        "c0": (
+            '{"id": 2, "label": "Disease", "properties": '
+            '{"id": "MedGen:C0346153", "name": "disease"}}::vertex'
+        ),
+    }
+
+    rows = to_output_rows(
+        raw_row,
+        snapshot_version="2026-07-01",
+        ambiguous_high_risk_edge_touch_by_column=frozenset({"c0"}),
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["ambiguous_high_risk_edge_touch"] is True
+
+
+def test_to_output_rows_defaults_ambiguous_high_risk_edge_touch_to_false() -> None:
+    """No map entry, no column in it at all: the default, honest "no such
+    signal" state, the same default `CypherQueryRow` itself carries."""
+    raw_row = {
+        "result": (
+            '{"id": 2, "label": "Disease", "properties": '
+            '{"id": "MedGen:C0346153", "name": "disease"}}::vertex'
+        )
+    }
+
+    rows = to_output_rows(raw_row, snapshot_version="2026-07-01")
+
+    assert len(rows) == 1
+    assert rows[0]["ambiguous_high_risk_edge_touch"] is False
+
+
+def test_to_output_rows_never_attaches_ambiguous_high_risk_edge_touch_to_a_path_column() -> None:
+    """The same "exactly one entity" restriction as `traversed_edge_type_
+    by_column`: a path column can decode to more than one entity, so
+    which of them the ambiguous-touch signal describes is undecidable."""
+    raw_row = {
+        "result": (
+            "["
+            '{"id": 1, "label": "Gene", "properties": {"id": "NCBIGene:672"}}, '
+            '{"id": 5, "label": "is_sequence_variant_of", "start_id": 1, '
+            '"end_id": 2, "properties": {"id": "ClinVar:999999"}}, '
+            '{"id": 2, "label": "SequenceVariant", "properties": '
+            '{"id": "ClinVar:17660"}}'
+            "]::path"
+        )
+    }
+
+    rows = to_output_rows(
+        raw_row,
+        snapshot_version="2026-07-01",
+        ambiguous_high_risk_edge_touch_by_column=frozenset({"result"}),
+    )
+
+    assert len(rows) == 3
+    assert all(row["ambiguous_high_risk_edge_touch"] is False for row in rows)

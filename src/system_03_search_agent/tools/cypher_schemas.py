@@ -110,6 +110,17 @@ class CypherQueryRow(BaseModel):
     # widening the risk table itself.
     traversed_edge_type: Annotated[str | None, Field(default=None, max_length=50)] = None
 
+    # F-3.4-A-02: a second, additive, optional field alongside
+    # `traversed_edge_type` above, same v1-additive-field reasoning. When
+    # a RETURNed variable is touched by 2+ distinct edge labels,
+    # `traversed_edge_type` stays `None` on purpose (never guesses which
+    # one), and this field carries the strictly weaker signal that at
+    # least one of the ambiguous candidates was a real, known Section
+    # 8.3.1 high-risk edge (`cypher_query._ambiguous_high_risk_edge_
+    # touch_by_column`). `False` by default: the honest "no such signal"
+    # state, never treated as "confirmed low risk" by any caller.
+    ambiguous_high_risk_edge_touch: Annotated[bool, Field(default=False)] = False
+
     @field_validator("fields")
     @classmethod
     def _cap_fields_count(cls, value: dict[str, Any]) -> dict[str, Any]:

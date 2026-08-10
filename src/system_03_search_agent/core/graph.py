@@ -509,6 +509,7 @@ from system_03_search_agent.synthesis.trust import (
     aggregate,
     trust_for_claims,
 )
+from system_03_search_agent.tools.cypher_provenance import source_url_for_curie
 from system_03_search_agent.tools.cypher_query import cypher_query
 from system_03_search_agent.tools.cypher_schemas import (
     CypherQueryInput,
@@ -2630,6 +2631,87 @@ def _known_total_available(findings: list[Finding]) -> int | None:
     return total if saw_any else None
 
 
+def _target_entities_from_tool_calls(tool_calls: list[Any]) -> list[str]:
+    """The CURIEs `plan_node` resolved for this query, read from the
+    planned `cypher_query` call's own `CypherQueryInput.target_entities`.
+
+    F-3.4-A-01: this is the one place `write_node` can learn what the
+    QUESTION named, as opposed to what Act happened to fetch or what
+    Synth happened to write about. `_resolve_query_entities` (plan_node)
+    already does the real work of extracting and resolving every CURIE a
+    multi-entity question names; this function only reads its already-
+    computed result back out of state, the same reuse-not-re-derive
+    discipline the refusal branch above already applies to the identical
+    field for its own fallback link. Returns `[]` when no `cypher_query`
+    call was planned (nothing named, or a no-tool query), never guessed.
+    """
+    for planned in tool_calls:
+        cypher_input = getattr(planned, "cypher_input", None)
+        if cypher_input is not None:
+            return list(cypher_input.target_entities)
+    return []
+
+
+def _unaddressed_target_entities(
+    target_entities: list[str], citations: list[CitationPayload]
+) -> list[str]:
+    """Which of `target_entities` earned NO surviving citation in this
+    answer, in the order they were named.
+
+    F-3.4-A-01: a two-gene question ("what are the official gene symbols
+    for NCBIGene:672 and NCBIGene:7157") live-reproduced `cypher_query`
+    correctly fetching BOTH genes' rows and Synth's own narrative
+    discussing only the first, with `trust_outcome: "answer"`, the clean
+    "nothing to flag" state, giving no signal that half the question went
+    unaddressed. Every individual sentence WAS honestly cited; the
+    ANSWER as a whole answered a narrower question than the one asked.
+    This is a completeness check, a different question from Section
+    8.3's risk/grounding/triangulation verdict on each surviving claim,
+    which stays exactly as accurate as it already was.
+
+    An entity counts as addressed when ANY surviving citation's
+    `source_url`, once normalized (`_normalized_citation_source_url`,
+    the same trailing-slash-insensitive comparison F-3.4-A-01's own
+    same-entity pairing fix uses), matches that entity's own canonical
+    record URL (`source_url_for_curie`). This works identically for a
+    Layer 1 citation (built from the graph's own row) and a Layer 2
+    citation (`ncbi_efetch`, anchored to exactly one of the named
+    entities), with no per-layer branching: both layers' URL builders
+    resolve to the same normalized string for the same real record.
+
+    A target entity whose CURIE prefix `source_url_for_curie` cannot map
+    to a URL at all (a prefix outside the nine documented mappings) is
+    always reported unaddressed rather than silently excluded from the
+    check: this function never assumes coverage it cannot verify.
+    """
+    expected_by_entity = {
+        entity: _normalized_citation_source_url(source_url_for_curie(entity))
+        for entity in target_entities
+    }
+    cited_urls = {
+        _normalized_citation_source_url(citation.source_url) for citation in citations
+    }
+    cited_urls.discard("")
+    return [
+        entity
+        for entity in target_entities
+        if not expected_by_entity[entity] or expected_by_entity[entity] not in cited_urls
+    ]
+
+
+def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
+    """F-3.4-A-01: state which named entities this answer does NOT cover,
+    the same "name the scale, not just that a cut happened" discipline
+    `_build_truncated_answer_note` already uses for a row-count cut.
+    """
+    listed = ", ".join(unaddressed_entities)
+    return (
+        f"Note: this answer does not address the following entities named "
+        f"in the question: {listed}. Ask about them individually for a "
+        f"complete answer."
+    )
+
+
 def _build_truncated_answer_note(shown: int, total_available: int | None) -> str:
     """F-2.1-C12: state the scale of what is not shown, not just that a
     cut happened. "Results were truncated" said nothing when the user was
@@ -2739,8 +2821,9 @@ def _response_text(response: Any) -> str:
 
 def _node_or_edge_type_by_citation_id(
     findings: list[Finding], synth_findings: list[SynthFinding]
-) -> dict[str, str]:
-    """Map each finding's `citation_id` to the graph row type behind it.
+) -> dict[str, tuple[str, bool]]:
+    """Map each finding's `citation_id` to the graph row type behind it,
+    paired with F-3.4-A-02's weaker "ambiguous high-risk touch" signal.
 
     Section 8.3.1 classifies risk on the source field OR the relationship
     type, and `SynthFinding` deliberately carries only the seven Section
@@ -2795,8 +2878,22 @@ def _node_or_edge_type_by_citation_id(
     same identity, regardless of which one is iterated first: a value once
     known to be a real traversed edge or node type is never discarded for
     a less-informative duplicate of the same record.
+
+    F-3.4-A-02: the return type widened from a bare `str` to a
+    `(row_type, ambiguous_high_risk_touch)` pair. `ambiguous_high_risk_
+    touch` reads a row's `ambiguous_high_risk_edge_touch` bool
+    (`cypher_schemas.CypherQueryRow`, additive since this fix,
+    `cypher_query._ambiguous_high_risk_edge_touch_by_column`), which is
+    set only when `row_type`'s own source (`traversed_edge_type`) was
+    left unresolved because the variable was touched by 2+ distinct edge
+    labels, at least one of which is a real, known Section 8.3.1
+    high-risk edge. The SAME identity-keyed dedup and the SAME F-3.4-T05-
+    01 "informative wins" rule apply to this second signal, independently
+    of the first: a duplicate row's `False` never overwrites an already-
+    `True` value for the same identity, order-independent, since `True`
+    is strictly more informative here too.
     """
-    by_identity: dict[tuple[str, str], str] = {}
+    by_identity: dict[tuple[str, str], tuple[str, bool]] = {}
     for finding in findings:
         fields = finding.structured_fields
         if fields is None or fields.get("status") != "ok":
@@ -2809,23 +2906,32 @@ def _node_or_edge_type_by_citation_id(
             row_type = str(
                 row.get("traversed_edge_type") or row.get("node_or_edge_type") or ""
             )
-            # F-3.4-T05-01: a less-informative duplicate of an already-seen
-            # record (a "derived" sibling row, or a row with no type at
-            # all) must never overwrite a real entry this identity already
-            # earned. Order-independent: whichever row (the real entity or
-            # its derived sibling) is iterated first, the real value wins.
-            if identity in by_identity and row_type in ("", "derived"):
-                continue
-            by_identity[identity] = row_type
+            ambiguous_touch = bool(row.get("ambiguous_high_risk_edge_touch") or False)
+            if identity in by_identity:
+                existing_type, existing_ambiguous = by_identity[identity]
+                # F-3.4-T05-01: a less-informative duplicate of an
+                # already-seen record (a "derived" sibling row, or a row
+                # with no type at all) must never overwrite a real entry
+                # this identity already earned. Order-independent:
+                # whichever row (the real entity or its derived sibling)
+                # is iterated first, the real value wins. Applied here to
+                # both signals independently: `row_type` keeps its own
+                # rule unchanged, and `ambiguous_touch` uses OR, since
+                # `True` is strictly more informative than `False`
+                # regardless of which row is iterated first or second.
+                if row_type in ("", "derived"):
+                    row_type = existing_type
+                ambiguous_touch = existing_ambiguous or ambiguous_touch
+            by_identity[identity] = (row_type, ambiguous_touch)
 
-    out: dict[str, str] = {}
+    out: dict[str, tuple[str, bool]] = {}
     for synth_finding in synth_findings:
-        for (source_url, curie), row_type in by_identity.items():
+        for (source_url, curie), value in by_identity.items():
             if source_url != synth_finding.source_url:
                 continue
             if synth_finding.curie_fallback and curie != synth_finding.field_value:
                 continue
-            out[synth_finding.citation_id] = row_type
+            out[synth_finding.citation_id] = value
             break
     return out
 
@@ -3027,56 +3133,240 @@ def _field_class_for_layer1_field(field_name: str) -> FieldClass | None:
     return None
 
 
+# F-3.4-A-03: an explicit, small, versioned table of SPECIFIC, confirmed
+# field-name pairs this system's own tools actually produce for the same
+# underlying fact under two different names, keyed and valued by the
+# already-casefolded field name. Deliberately NOT a synonym-guessing
+# heuristic or a fuzzy/similarity matcher: every entry here traces to a
+# live-confirmed pairing, the same "an explicit table beats a guessed
+# heuristic" discipline `provenance_defaults.py`'s per-tool table and the
+# ClinVar term table already use elsewhere in this repo.
+#
+# "name" -> "symbol": the graph's generic BioLink-normalized Gene `name`
+# property (e.g. "BRCA1 DNA repair associated") and `ncbi_efetch`'s own
+# Gene report `symbol` field (e.g. "BRCA1") describe the same fact, a
+# gene's own identifying label, under two different field names. This is
+# the system's own single most common dual-layer citation pair: T-3.4-05's
+# Act-step dual dispatch anchors on a Gene CURIE only, and every real Layer
+# 1 vertex this graph's ingest returns carries `name` as its one
+# identifying-label field (F-3.4-T06-01's live-confirmed property set: no
+# vertex label carries any richer, domain-specific field today).
+#
+# Checked for a second pair (F-3.4-A-03's own instruction) against every
+# other Layer 2/3 citation builder this phase built (`ncbi_dbsnp`,
+# `pubtator_annotate`, `litvar2_lookup`, `pathogen_detection`,
+# `clinicaltrials_search`): none of their real field names (`clinical_
+# significance`, `population_frequencies`, extracted-relationship text,
+# `amr_genotype`, `brief_title`, ...) collide, under any confirmed alias,
+# with the one Layer 1 field name this graph's ingest actually produces
+# (`name`; `id`/`xrefs`/`source`/`agent_type`/`knowledge_level` have no
+# live Layer 2/3 counterpart either), and none of those five tools is
+# currently dispatched as a second, answer-bearing origin from Act at all
+# (only `ncbi_efetch` is, per T-3.4-05's own scope), so a second entry
+# would have no real pairing to confirm against today. One entry is a
+# legitimate, complete fix for the case F-3.4-A-03 actually found; add a
+# new entry only when a specific, confirmed pair from a real dual-layer
+# answer needs one, never speculatively.
+_FIELD_NAME_ALIASES: dict[str, str] = {
+    "name": "symbol",
+}
+
+
+def _canonical_layer_field_name(field_name: str) -> str:
+    """Casefold a `SynthFinding.field` name and resolve it through F-3.4-
+    A-03's small alias table, so `_layer1_layer2_field_pairs` groups two
+    differently-named-but-confirmed-synonymous fields (Layer 1's `name`
+    and `ncbi_efetch`'s `symbol`) under one shared bucket key. A field name
+    with no table entry canonicalizes to itself, exactly the prior
+    exact-match-only behavior.
+    """
+    normalized = field_name.strip().casefold()
+    return _FIELD_NAME_ALIASES.get(normalized, normalized)
+
+
+def _paired_field_values_agree(
+    graph_field: str, live_field: str, graph_value: str, live_value: str
+) -> bool:
+    """Whether a Layer 1/Layer 2 paired value counts as agreement, for
+    Section 7.1's "nothing to referee when they agree" check and Section
+    7.2's conflict check alike, both of which call this so the two
+    mechanisms can never disagree about what "the same fact" means for the
+    identical pair.
+
+    Exact match after casefold and whitespace-collapse (the identical
+    normalization `synthesis.conflict_detection._normalize` already
+    applies) is always agreement, unchanged from before F-3.4-A-03, for
+    EVERY pair, aliased or not.
+
+    F-3.4-A-03's one alias pair (Layer 1's `name` aliased to Layer 2's own
+    `symbol`) needs a second, still fully deterministic rule on top of
+    exact match, not instead of it: the live value's own short-form
+    symbol ("BRCA1") is routinely a SUBSTRING of the graph's longer
+    descriptive name ("BRCA1 DNA repair associated") by construction of
+    what those two fields actually contain, a live-confirmed pattern, not
+    a coincidence. Treating that containment as a "conflict" would flag
+    every single normal, correct dual-layer gene-identity answer this
+    system's own flagship question produces, which is not what Section
+    7.1/7.2 exist to warn a reader about.
+
+    Critically, this second rule fires ONLY when `graph_field` and
+    `live_field` genuinely differ (this pair exists BECAUSE of the alias
+    table, not because the two field names were already identical): a
+    real regression caught in this fix's own test run had `graph_field ==
+    live_field == "symbol"` with values `"BRCA1OLD"` (graph) versus
+    `"BRCA1"` (live), a genuine typo-shaped disagreement between two
+    IDENTICALLY NAMED fields, where `"brca1"` is trivially a substring of
+    `"brca1old"`. Gating on `graph_field != live_field` closes that hole:
+    an exact-name pair is never eligible for the containment exception,
+    only a pair that only exists via aliasing is, so this can never mask
+    a genuine disagreement on an ordinary same-named field. A live value
+    that is NOT contained in the graph value (a wildly wrong symbol, the
+    adversary's own F-3.4-A-03 repro) still correctly disagrees either
+    way. This is a single, explicit, documented special case, never a
+    general fuzzy or similarity comparison: `synthesis.conflict_detection.
+    detect_conflict` itself is untouched and still exact-match-only for
+    every field, aliased or not.
+    """
+    normalized_graph = " ".join(str(graph_value).split()).casefold()
+    normalized_live = " ".join(str(live_value).split()).casefold()
+    if normalized_graph == normalized_live:
+        return True
+    aliased_pair = graph_field.strip().casefold() != live_field.strip().casefold()
+    return (
+        aliased_pair
+        and _canonical_layer_field_name(graph_field) == "symbol"
+        and bool(normalized_live)
+        and normalized_live in normalized_graph
+    )
+
+
+def _normalized_citation_source_url(source_url: str | None) -> str:
+    """Normalize a citation's `source_url` for a same-entity comparison.
+
+    F-3.4-A-01/A-03: a real Layer 1 gene URL and its Layer 2 counterpart
+    for the IDENTICAL gene differ only by a trailing slash by construction
+    of two independent URL builders (`cypher_provenance.py`'s
+    `"https://www.ncbi.nlm.nih.gov/gene/" + local_id`, no trailing slash,
+    versus `ncbi_datasets_actions.py`'s own gene/genome builders, which
+    append one), live-confirmed 2026-08-09 against the real BRCA1 gene
+    page from both layers in the same answer. Lowercased and trailing-
+    slash-stripped, nothing else: still an exact comparison after
+    normalization, never a fuzzy or partial match.
+    """
+    return (source_url or "").strip().rstrip("/").casefold()
+
+
+def _first_same_entity_pair(
+    graph_ids: list[str],
+    live_ids: list[str],
+    finding_by_citation_id: dict[str, SynthFinding],
+) -> tuple[str, str] | None:
+    """The first `(graph_id, live_id)` pair, in deterministic sorted
+    order on each side, whose `source_url` identifies the SAME real-world
+    record once normalized (`_normalized_citation_source_url`). `None`
+    when no candidate pair in this field-name bucket is about the same
+    entity, or when either side's `source_url` is blank (nothing to
+    confirm identity against, never guessed).
+
+    F-3.4-A-01: live-found while investigating a two-gene question
+    ("what are the official gene symbols for NCBIGene:672 and
+    NCBIGene:7157"). `_layer1_layer2_field_pairs`'s own original design
+    (T-3.4-06) grouped purely by field name and picked the
+    first-sorted citation on each side, resting on the stated assumption
+    that "same subject entity already holds for every citation in a
+    dual-layer answer" because T-3.4-05's dual dispatch anchors on one
+    entity. That assumption is FALSE for a multi-entity question: Layer 1
+    genuinely returns rows for every named entity, while Layer 2 (`ncbi_
+    efetch`) only ever covers the first. A live run reproduced the
+    consequence directly: a Layer 1 "name" finding for TP53
+    (NCBIGene:7157) and a Layer 2 "symbol" finding for BRCA1
+    (NCBIGene:672) shared this function's field-name bucket by pure
+    coincidence and, before this check, would have been treated as
+    disagreeing about "the same fact" when they are not the same fact's
+    two sides at all, they are two different facts about two different
+    genes. Section 7's mechanisms exist to compare a graph value and a
+    live value for the SAME record; comparing across records is a
+    different bug, not something Section 7.1/7.2 or triangulation are
+    meant to detect, and is exactly what this same-entity gate closes.
+    """
+    for graph_id in graph_ids:
+        graph_url = _normalized_citation_source_url(
+            finding_by_citation_id[graph_id].source_url
+        )
+        if not graph_url:
+            continue
+        for live_id in live_ids:
+            if _normalized_citation_source_url(
+                finding_by_citation_id[live_id].source_url
+            ) == graph_url:
+                return graph_id, live_id
+    return None
+
+
 def _layer1_layer2_field_pairs(
     citations: list[CitationPayload],
     finding_by_citation_id: dict[str, SynthFinding],
 ) -> dict[str, tuple[str, str]]:
-    """Group this answer's citations by normalized field name; for each
-    field name where BOTH a Layer 1 and a Layer 2 citation exist, return
-    the `(graph_citation_id, live_citation_id)` pair. Deterministic
-    (citation_id sort order) when more than one candidate citation exists
-    on either side of a field name.
+    """Group this answer's citations by normalized, alias-resolved field
+    name; for each field name where BOTH a Layer 1 and a Layer 2 citation
+    about the SAME entity exist, return the `(graph_citation_id,
+    live_citation_id)` pair. Deterministic (citation_id sort order) when
+    more than one candidate citation exists on either side of a field
+    name.
 
-    "Same field name" (case-insensitive, exact match) is this ticket's own
-    judged, deliberately narrow signal for "the same fact" across layers
-    (T-3.4-06's own brief: "same field name, same subject entity/CURIE, is
-    the natural signal"). A Layer 2 finding never carries a CURIE
-    (`_ncbi_efetch_output_to_structured_fields` stamps it empty on
-    purpose, by design), and T-3.4-05's dual-dispatch design only ever
-    anchors one entity per query, so "same subject entity" already holds
-    for every citation in a dual-layer answer; field name is the one
-    remaining, real, non-guessed discriminator left to check. No synonym
-    table (e.g. the graph's "name" aliased to `ncbi_efetch`'s "symbol"):
-    guessing that two differently-named fields describe the same fact is
-    exactly the kind of guess production-standards.md forbids, so this
-    pairing simply does not fire on a real field-name mismatch between
-    layers, which is the honest outcome here, not a defect.
+    "Same field name" (case-insensitive, exact match after alias
+    resolution) is this ticket's own judged, deliberately narrow signal
+    for "the same fact" across layers (T-3.4-06's own brief: "same field
+    name, same subject entity/CURIE, is the natural signal"). Field name
+    is only HALF of that brief, though: F-3.4-A-01 found the other half,
+    "same subject entity", was assumed true rather than actually checked,
+    an assumption that holds for a single-entity dual-layer answer but
+    breaks for a multi-entity one. `_first_same_entity_pair` (above) is
+    the real check, comparing normalized `source_url`, the one real,
+    per-record identity signal available on both a Layer 1 and a Layer 2
+    citation alike (a Layer 2 finding never carries a CURIE, by design;
+    see `_ncbi_efetch_output_to_structured_fields`'s own docstring).
+
+    F-3.4-A-03: `_FIELD_NAME_ALIASES` (below) is the one narrow exception
+    to "exact match" on field NAME. T-3.4-06 originally declined ANY
+    synonym table on the reasoning that guessing two differently-named
+    fields describe the same fact is exactly the kind of guess
+    production-standards.md forbids, and that reasoning still holds for
+    an UNCONFIRMED pairing. But the graph's Gene `name` field ("BRCA1 DNA
+    repair associated") and `ncbi_efetch`'s own Gene `symbol` field
+    ("BRCA1") are not a guess: they are the system's own single most
+    common, live-confirmed dual-layer citation pair (T-3.4-05 anchors its
+    Act-step dual dispatch on a Gene CURIE only, and `ncbi_efetch`'s
+    gene-report fields include `symbol` but never a literal `"name"`
+    key), and with NO alias every mechanism this function feeds, Section
+    7.1 (live-wins-for-currency), Section 7.2 (conflict detection), and
+    `synthesis.trust.triangulate()`, silently never engages for it.
+    `_FIELD_NAME_ALIASES` is deliberately small, explicit, and versioned,
+    the same discipline `provenance_defaults.py`'s per-tool table already
+    uses, never a fuzzy or similarity-based match: only a SPECIFIC,
+    confirmed field pair this system's own tools actually produce may be
+    added to it.
     """
     by_field: dict[str, list[str]] = defaultdict(list)
     for citation in citations:
         finding = finding_by_citation_id.get(citation.citation_id)
         if finding is None:
             continue
-        by_field[finding.field.strip().casefold()].append(citation.citation_id)
+        by_field[_canonical_layer_field_name(finding.field)].append(citation.citation_id)
 
     pairs: dict[str, tuple[str, str]] = {}
     for field_key, citation_ids in by_field.items():
-        graph_id = next(
-            (
-                cid for cid in sorted(citation_ids)
-                if finding_by_citation_id[cid].layer == "layer_1_graph"
-            ),
-            None,
+        graph_ids = sorted(
+            cid for cid in citation_ids
+            if finding_by_citation_id[cid].layer == "layer_1_graph"
         )
-        live_id = next(
-            (
-                cid for cid in sorted(citation_ids)
-                if finding_by_citation_id[cid].layer == "layer_2_api"
-            ),
-            None,
+        live_ids = sorted(
+            cid for cid in citation_ids
+            if finding_by_citation_id[cid].layer == "layer_2_api"
         )
-        if graph_id is not None and live_id is not None:
-            pairs[field_key] = (graph_id, live_id)
+        matched = _first_same_entity_pair(graph_ids, live_ids, finding_by_citation_id)
+        if matched is not None:
+            pairs[field_key] = matched
     return pairs
 
 
@@ -3123,7 +3413,9 @@ def _apply_live_wins_for_currency(
         live_value = live_finding.field_value.strip()
         if not graph_value or not live_value:
             continue
-        if graph_value.casefold() == live_value.casefold():
+        if _paired_field_values_agree(
+            graph_finding.field, live_finding.field, graph_value, live_value
+        ):
             continue  # Section 7.1: nothing to referee when they agree.
 
         resolution = prefer_live_for_currency(graph_value, live_value)
@@ -3299,6 +3591,25 @@ def _apply_conflict_flags_to_claim_trusts(
         live_value = live_finding.field_value.strip()
         if not graph_value or not live_value:
             continue  # nothing to compare, mirrors T-3.4-06's own guard
+        # F-3.4-A-03: `_paired_field_values_agree` is the SAME agreement
+        # check `_apply_live_wins_for_currency` uses, so the two
+        # mechanisms can never disagree about what counts as "the same
+        # fact" for an identical pair. For every EXACT-field-name pair
+        # (`graph_finding.field == live_finding.field`) this is byte-
+        # identical to `detect_conflict`'s own normalization (same
+        # casefold-and-collapse rule), so `detect_conflict` below is
+        # still the actual, reused source of truth for `is_conflict` in
+        # that case, unchanged from before this fix. The one thing this
+        # pre-check adds is a narrow escape hatch for F-3.4-A-03's one
+        # ALIASED pair (`graph_finding.field != live_finding.field`,
+        # i.e. "name" paired against "symbol"): a graph name that
+        # genuinely CONTAINS the live symbol is agreement, not a conflict
+        # `detect_conflict`'s own exact-match-only contract would
+        # otherwise flag on every normal, correct dual-layer answer.
+        if _paired_field_values_agree(
+            graph_finding.field, live_finding.field, graph_value, live_value
+        ):
+            continue
         result = detect_conflict(
             field=graph_finding.field,
             graph_value=graph_value,
@@ -3671,6 +3982,33 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         )
         trust_outcome = aggregate([trust.outcome for trust in claim_trusts])
 
+    # F-3.4-A-01: a completeness check, a different question from
+    # everything Section 8.3 above just computed. Every claim above may
+    # be perfectly grounded, low risk, and honestly cited, and the ANSWER
+    # can still cover only a strict subset of the entities the question
+    # named (live-confirmed: a two-gene question whose narrative
+    # discussed only the first gene shipped `trust_outcome: "answer"`,
+    # the clean "nothing to flag" state, with zero disclosure that half
+    # the question went unanswered). Only checked for a 2-or-more-entity
+    # question: a single-entity query has nothing to be "partial" about,
+    # and this must never fire on `tool_outcome == "no_tool"`, where
+    # `target_entities` is always `[]` anyway (no `cypher_query` call was
+    # planned). Floors `trust_outcome` at `ask` (Section 8.3.4's own
+    # most-restrictive-wins rule, `aggregate`, the same mechanism T-3.4-
+    # 07's conflict check already uses to floor at `flag`), never
+    # weakens an already-more-restrictive `refuse`. The per-claim trust_
+    # signals below are left exactly as `decide()` computed them: no
+    # individual claim is at fault, so no individual claim's own verdict
+    # changes, only the answer-level aggregate and the disclosure note.
+    partial_answer_note: str | None = None
+    if trust_outcome != "refuse":
+        target_entities = _target_entities_from_tool_calls(state.get("tool_calls", []))
+        if len(target_entities) >= 2:
+            unaddressed = _unaddressed_target_entities(target_entities, citations)
+            if unaddressed:
+                trust_outcome = aggregate([trust_outcome, "ask"])
+                partial_answer_note = _build_partial_answer_note(unaddressed)
+
     # `citations_capped` keeps its 2.1 meaning: the user is being shown
     # fewer facts than exist. Its two sources are now the findings cap
     # (more citable rows than one prompt may carry) and the citation cap.
@@ -3823,6 +4161,9 @@ async def write_node(state: GraphState) -> dict[str, Any]:
 
         if truncation_note is not None:
             sink.emit("token", TokenPayload(text=truncation_note, marker_ids=[]))
+
+        if partial_answer_note is not None:
+            sink.emit("token", TokenPayload(text=partial_answer_note, marker_ids=[]))
 
         for citation in citations:
             sink.emit("citation", citation)

@@ -551,6 +551,7 @@ def _shape_entity(
     snapshot_version: str,
     endpoint_curies: dict[Any, str] | None = None,
     traversed_edge_type: str | None = None,
+    ambiguous_high_risk_edge_touch: bool = False,
 ) -> dict:
     """Shape one parsed AGE vertex or edge dict into the output row shape.
 
@@ -600,6 +601,14 @@ def _shape_entity(
     onto the shaped row unchanged; when it does not (a bare identifier
     lookup, an ambiguous or multi-hop pattern), the row carries None here,
     same as before this ticket, so a plain `Disease` lookup is unaffected.
+
+    F-3.4-A-02: `ambiguous_high_risk_edge_touch` is the same kind of
+    opaque, caller-derived hint, carried onto the shaped row unchanged.
+    Never both meaningfully set at once for the same row in practice
+    (`_ambiguous_high_risk_edge_touch_by_column` only ever fires for a
+    column `_traversed_edge_type_by_column` left unresolved), but this
+    function does not need to know that invariant to stay correct: it
+    shapes exactly what it is handed, nothing more.
     """
     node_or_edge_type = str(entity.get("label") or "")
     properties = entity.get("properties")
@@ -643,6 +652,7 @@ def _shape_entity(
         "source_url": resolved_source_url,
         "graph_snapshot_version": snapshot_version,
         "traversed_edge_type": traversed_edge_type,
+        "ambiguous_high_risk_edge_touch": ambiguous_high_risk_edge_touch,
     }
 
 
@@ -751,6 +761,7 @@ def to_output_rows(
     derived_source_curie: str | None = None,
     column_labels: dict[str, str] | None = None,
     traversed_edge_type_by_column: dict[str, str] | None = None,
+    ambiguous_high_risk_edge_touch_by_column: frozenset[str] | None = None,
 ) -> list[dict]:
     """Shape one raw AGE result row into zero or more output row shapes.
 
@@ -816,15 +827,22 @@ def to_output_rows(
     its default of None, identical to this function's behavior before this
     ticket.
 
+    F-3.4-A-02: `ambiguous_high_risk_edge_touch_by_column` is the same
+    shape of optional, caller-derived map, keyed the same way, applied
+    with the identical "only a column that decoded to exactly one entity"
+    restriction below. A column absent from this set leaves the row's
+    `ambiguous_high_risk_edge_touch` at its default of `False`.
+
     Returns:
         A list of dicts, each with exactly the keys `node_or_edge_type`,
         `curie`, `fields`, `source_url`, `graph_snapshot_version`,
-        `traversed_edge_type`, with at most one row per distinct cited
-        record. Empty when no column in `raw_row` decoded to a citable
-        vertex or edge.
+        `traversed_edge_type`, `ambiguous_high_risk_edge_touch`, with at
+        most one row per distinct cited record. Empty when no column in
+        `raw_row` decoded to a citable vertex or edge.
     """
     all_entities: list[dict[str, Any]] = []
     entity_traversed_edge_types: list[str | None] = []
+    entity_ambiguous_high_risk_touches: list[bool] = []
     derived: dict[str, Any] = {}
 
     for column, value in raw_row.items():
@@ -842,8 +860,17 @@ def to_output_rows(
                 if len(entities) == 1
                 else None
             )
+            # F-3.4-A-02: the same "exactly one entity" restriction, for
+            # the same reason: which of several path entities the
+            # ambiguous-touch signal would describe is not decidable.
+            ambiguous_high_risk_touch = (
+                column in (ambiguous_high_risk_edge_touch_by_column or frozenset())
+                if len(entities) == 1
+                else False
+            )
             all_entities.extend(entities)
             entity_traversed_edge_types.extend([edge_type] * len(entities))
+            entity_ambiguous_high_risk_touches.extend([ambiguous_high_risk_touch] * len(entities))
         elif parsed is not None:
             # F-2.1-B05. A scalar or a list is a real answer, not an absence.
             # `count(sv)`, `d.name`, `collect(m.id)` all parse to something
@@ -862,8 +889,13 @@ def to_output_rows(
 
     endpoint_curies = _endpoint_curies_by_internal_id(all_entities)
     shaped_rows = [
-        _shape_entity(entity, snapshot_version, endpoint_curies, edge_type)
-        for entity, edge_type in zip(all_entities, entity_traversed_edge_types, strict=True)
+        _shape_entity(entity, snapshot_version, endpoint_curies, edge_type, ambiguous_touch)
+        for entity, edge_type, ambiguous_touch in zip(
+            all_entities,
+            entity_traversed_edge_types,
+            entity_ambiguous_high_risk_touches,
+            strict=True,
+        )
     ]
 
     if derived:

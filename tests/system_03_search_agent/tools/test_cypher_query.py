@@ -1424,3 +1424,103 @@ def test_traversed_edge_type_by_column_ignores_an_unknown_relationship_label() -
     cypher = "MATCH (g:Gene {id: $e_1})-[:not_a_real_edge_label]->(d:Disease) RETURN d"
 
     assert _traversed_edge_type_by_column(cypher) == {}
+
+
+# ---------------------------------------------------------------------------
+# F-3.4-A-02: `_ambiguous_high_risk_edge_touch_by_column` is the fix's other
+# half. `_traversed_edge_type_by_column` above correctly declines to guess a
+# single label when a variable is touched by 2+ distinct edges; this
+# function answers the strictly weaker question "was a real, known
+# high-risk edge among the candidates", so `risk_tier_for` can still
+# classify `high` without ever asserting which specific edge it was.
+# ---------------------------------------------------------------------------
+
+
+def test_ambiguous_high_risk_edge_touch_by_column_flags_the_two_hop_disease_column() -> None:
+    """The adversary's own F-3.4-A-02 repro shape: a `Disease` column
+    touched by both the high-risk `gene_associated_with_condition` edge
+    and the unrelated `has_phenotype` edge in the same two-hop query.
+    `_traversed_edge_type_by_column` must decline to name a single edge
+    for `c0` (already covered by its own guard test above), and this
+    function must still flag `c0` as an ambiguous high-risk touch, never
+    the unambiguous `c1` column (`p`, touched by exactly one edge)."""
+    from system_03_search_agent.tools.cypher_query import (
+        _ambiguous_high_risk_edge_touch_by_column,
+        _traversed_edge_type_by_column,
+    )
+
+    cypher = (
+        "MATCH (g:Gene {id: $e_NCBIGene_672})"
+        "-[:gene_associated_with_condition]->(d:Disease)"
+        "-[:has_phenotype]->(p:PhenotypicFeature) RETURN d, p"
+    )
+
+    assert _traversed_edge_type_by_column(cypher) == {"c1": "has_phenotype"}, (
+        "sanity check: this is the exact shape the sibling guard test above "
+        "already pins; c0 (d) must stay unresolved by the unambiguous function"
+    )
+    result = _ambiguous_high_risk_edge_touch_by_column(cypher)
+    assert result == frozenset({"c0"}), (
+        "d is touched by both gene_associated_with_condition (high risk) and "
+        "has_phenotype (not high risk), so c0 must be flagged; c1 (p) is "
+        "touched by exactly one edge and is _traversed_edge_type_by_column's "
+        "own territory, never this function's"
+    )
+
+
+def test_ambiguous_high_risk_edge_touch_by_column_is_empty_when_no_high_risk_candidate() -> None:
+    """An ambiguous variable whose candidate edges are ALL low risk (no
+    `gene_associated_with_condition` among them) must never be flagged:
+    this function only ever surfaces a high-risk CANDIDATE, never widens
+    to "any ambiguity is suspicious"."""
+    from system_03_search_agent.tools.cypher_query import (
+        _ambiguous_high_risk_edge_touch_by_column,
+    )
+
+    # Two real, low-risk edges touching the same PhenotypicFeature
+    # variable: has_phenotype (as target) and orthologous_to (unrelated),
+    # neither a Section 8.3.1 high-risk relationship token.
+    cypher = (
+        "MATCH (g:Gene)-[:has_phenotype]->(p:PhenotypicFeature)"
+        "-[:orthologous_to]->(o:Gene) RETURN p"
+    )
+
+    assert _ambiguous_high_risk_edge_touch_by_column(cypher) == frozenset()
+
+
+def test_ambiguous_high_risk_edge_touch_by_column_ignores_an_unresolved_unambiguous_column() -> None:
+    """A column touched by exactly one edge label is `_traversed_edge_
+    type_by_column`'s own territory (resolved there, unambiguous), never
+    this function's, regardless of whether that one edge is high risk."""
+    from system_03_search_agent.tools.cypher_query import (
+        _ambiguous_high_risk_edge_touch_by_column,
+    )
+
+    cypher = (
+        "MATCH (g:Gene {id: $e_NCBIGene_672})"
+        "-[:gene_associated_with_condition]->(d:Disease) RETURN d"
+    )
+
+    assert _ambiguous_high_risk_edge_touch_by_column(cypher) == frozenset()
+
+
+def test_ambiguous_high_risk_edge_touch_by_column_ignores_an_unknown_label_among_candidates() -> None:
+    """A hallucinated or stray label touching the same variable as a real
+    high-risk edge must never itself be trusted to carry meaning: only a
+    label that is BOTH a real graph edge (_KNOWN_EDGE_LABELS) and high
+    risk counts. This test's shape has a real high-risk edge among the
+    candidates, so it must still flag; the guard is that an ambiguity
+    whose only "high-risk-shaped" candidate is fabricated must not."""
+    from system_03_search_agent.tools.cypher_query import (
+        _ambiguous_high_risk_edge_touch_by_column,
+    )
+
+    cypher = (
+        "MATCH (g:Gene {id: $e_1})-[:gene_associated_with_condition]->(d:Disease)"
+        "-[:not_a_real_edge_label]->(x:Disease) RETURN d"
+    )
+
+    assert _ambiguous_high_risk_edge_touch_by_column(cypher) == frozenset({"c0"}), (
+        "the real gene_associated_with_condition edge is still a genuine "
+        "high-risk candidate touching d, even alongside a fabricated label"
+    )

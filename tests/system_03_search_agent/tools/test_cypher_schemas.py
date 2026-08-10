@@ -209,6 +209,18 @@ def test_row_rejects_oversized_traversed_edge_type() -> None:
         CypherQueryRow(**_row_kwargs(traversed_edge_type="x" * 51))
 
 
+def test_row_ambiguous_high_risk_edge_touch_defaults_to_false() -> None:
+    """F-3.4-A-02: additive field, `False` by default, so every row shape
+    from before this fix still constructs unchanged."""
+    row = CypherQueryRow(**_row_kwargs())
+    assert row.ambiguous_high_risk_edge_touch is False
+
+
+def test_row_accepts_ambiguous_high_risk_edge_touch() -> None:
+    row = CypherQueryRow(**_row_kwargs(ambiguous_high_risk_edge_touch=True))
+    assert row.ambiguous_high_risk_edge_touch is True
+
+
 # ---------------------------------------------------------------------------
 # CypherQueryOutput
 # ---------------------------------------------------------------------------
