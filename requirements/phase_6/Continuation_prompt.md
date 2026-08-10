@@ -87,7 +87,7 @@ Eleven build phases are done, all eleven merged into `main`. The first six compl
 
 Current counts, stated once here:
 
-- Python tests: 2331 (2220 passed, 110 skipped, 1 xfailed)
+- Python tests: 2507 (2496 passing in the non-live-blocked configuration, 2424 passing in a plain default run)
 - Frontend tests: 120
 - Playwright end-to-end tests: 3 (unverifiable in this and the prior session; a webServer-orchestration timeout unrelated to any file either phase touched, confirmed by starting the dev server directly, HTTP 200)
 - Premise gate, cypher_query: 9 of 9
@@ -98,8 +98,8 @@ Current counts, stated once here:
 - Premise gate, pubtator_annotate + litvar2_lookup: 12 of 12, live, no tunnel-gated skip
 - Premise gate, pathogen_detection: 5 of 5, live, no tunnel-gated skip
 - Premise gate, clinicaltrials_search: 3 of 3, live, no tunnel-gated skip
-- Decisions logged: 235
-- Learnings entries: 59, plus a retrospective
+- Decisions logged: 255
+- Learnings entries: 62, plus a retrospective
 
 Build phase 3.5, `pathogen_detection` and `clinicaltrials_search`, closed 2026-08-08 on `phase/3.5-pathogen-clinicaltrials-tools`, completing the seven-tool roster (see "Build phase 3.5, done" below). Next in the build order is build phase 3.4, citation trust extended to Layers 2 and 3: Section 25's dependency graph named it as depending on 2.2 and 3.1 through 3.5, all of which are now merged, so 3.4 is the phase whose dependencies are finally all satisfied.
 
