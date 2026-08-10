@@ -576,18 +576,18 @@ Four items, all recorded with evidence in `tracker/phase_2.2.md`. Two were spec 
 
 #### Process decisions to make here
 
-Section 23's offline gate: decide whether it can be claimed at all before Layer 2 and 3 exist.
+Section 23's offline gate, DECIDED at Step 6.2, 2026-08-10: stays scheduled for build phase 5.1, not run early.
 
 - Its v1 must-pass set (Q1, Q3, Q4, Q5, Q6, Q8, Q10) spans PubMed, ClinVar, GTR, MedGen, SRA, BioProject and ClinicalTrials.
-- None of those have a tool until build phases 3.1 to 3.5.
-- Build phase 2.2 ran the citation-synthesizer component gate instead, and said so explicitly rather than claiming the full gate had passed.
-- The reconciliation should either sequence the full gate to a phase where it is runnable, or record that the component gate is what "before shipping an answer-generation feature" means for a graph-only phase.
+- None of those had a tool until build phases 3.1 to 3.5, all now merged, so this is the first point the full gate is even runnable.
+- Build phase 2.2 ran the citation-synthesizer component gate instead of the full v1 gate, and said so explicitly rather than claiming the full gate had passed; that framing holds through every answer-shipping phase since.
+- Product-owner decision: do not spend the real LLM-call cost running the 7-question version now. Build phase 5.1 already exists specifically to build the full 50-query golden dataset and wire real grading against it (Section 25); running the smaller 7-question version early would be setup work redone at 5.1, not saved work. The wait for 3.1 to 3.5 to land was correct, not a compliance gap: the gate could not have run any earlier.
 
 The build-velocity post-mortem's recommendations, `docs/build/Build_velocity_post_mortem.md`:
 
 - Its measured finding is that autonomous execution is not the cost driver, since the same harness shipped four phases in under two days.
 - The addressable waste is environmental, meaning network loss, plus one ownerless requirement.
-- That requirement: `release-workflow` is marked mandatory in `bossman-mode.md` and has a 0-of-5 real dispatch rate. Either run it or rewrite the rule to state the real practice.
+- That requirement, DECIDED at Step 6.2, 2026-08-10: `release-workflow` was marked mandatory in `bossman-mode.md` with a 0-of-6 real dispatch rate across every phase through 3.4. Product-owner decision: rewrite the rule to state the real practice (judge round, adversary round, and the gates in `docs/build/Build_workflow_cadence.md` stage 10) rather than start dispatching a skill nothing has needed. The real practice caught real defects at 0-of-6 dispatch; keeping an unenforced rule on the books erodes trust in every other rule, per this repo's own `attack-the-constraint` standard on ownerless requirements.
 
 The default-branch rename, `main` to `develop`, on GitHub and across the docs, as one change. Deferred to here on 2026-08-03 rather than done at build phase 2.2's close.
 
