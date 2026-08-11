@@ -41,7 +41,7 @@ Per `.claude/rules/attack-the-constraint.md` and this repo's standing pre-build-
 
 | Ticket | Slice | Files | Status |
 |--------|-------|-------|--------|
-| T-4.1-01 | The premise gate, blocking | `tests/system_03_search_agent/adapters/mcp/test_phase_4_1_premise.py` (new), `tests/system_03_search_agent/adapters/mcp/test_phase_4_1_production_mount.py` (new) | in-review |
+| T-4.1-01 | The premise gate, blocking | `tests/system_03_search_agent/adapters/mcp/test_phase_4_1_premise.py` (new), `tests/system_03_search_agent/adapters/mcp/test_phase_4_1_production_mount.py` (new) | done |
 | T-4.1-02 | `adapters/mcp/server.py`: `MCPServer` instantiation, `ask_biomedical_question` registered via `@server.tool(...)` against Pydantic input/output models that literally encode Section 13.2's locked schema (`Field(..., max_length=2000)` on `query`, the three-value `audience_depth` enum, `max_length=64` on `session_id` and `run_id`, `max_length=8000` on `answer`, `max_length=50` on `citations` using `contracts.events.CitationPayload` verbatim, `trust_signal` as a plain object, all four output fields required); the fold loop that iterates `RunRegistry.subscribe(run_id, after_seq=-1)` to the terminal event, discarding `think`/`plan`/`tool_start`, and assembling the final response from `token`/`tool_result`/`citation`/`trust_signal`/`done`; `streamable_http_app(stateless_http=True)` mounted into the existing FastAPI app at `/mcp` | `src/system_03_search_agent/adapters/mcp/server.py` (new), `src/system_03_search_agent/adapters/mcp/__init__.py` (new), `src/system_03_search_agent/adapters/web_sse/app.py` (mount only) | done |
 | T-4.1-03 | Auth: a `Context`-parameter tool handler reads `ctx.headers.get("authorization")`, strips the `Bearer ` prefix, and resolves a `User` via the SAME decode-then-lookup logic `auth/dependencies.py`'s `get_current_user` already uses (extracted into a small callable both the FastAPI dependency and this handler call, not duplicated). Missing, malformed, or invalid token raises `MCPError` before `create_run` is ever called, so no run and no budget is spent. `RequestContext(surface="mcp", operator_mode=False)` is constructed with `operator_mode` hard-set `False` in code, never derived from `is_operator_user`, so no MCP response can ever carry a cost field regardless of the authenticated account's allowlist status | `src/system_03_search_agent/adapters/mcp/server.py`, `src/system_03_search_agent/auth/dependencies.py` (extract the decode-then-lookup helper, no behavior change to the existing FastAPI dependency) | done |
 | T-4.1-04 | Dependency and wiring: add `mcp>=2.0` to `requirements.txt` and `pyproject.toml`; log the dependency-addition and the API-key-as-User-account scope-boundary reading to `DECISIONS.md`; confirm `list_tools()` advertises exactly one tool with no internal tool ever separately reachable | `requirements.txt`, `pyproject.toml`, `DECISIONS.md` | done |
@@ -152,10 +152,10 @@ Judge round 1, verdict FAIL, ran against `62d4e76` (the full branch, `develop..H
 
 | Finding | Severity | Status | Description |
 | --- | --- | --- | --- |
-| F-4.1-J-01 | BLOCKING (major) | fix applied, awaiting judge re-verification | Two of the premise gate's nine declared arms contain an assertion that cannot fail. `TestEventFolding` (line 642) and `TestNeverCost` (line 667) each end with `assert excluded_key not in _find_all(content, excluded_key)`. `_find_all(fragment, key)` returns the list of VALUES found under `key`, so the assertion compares a key NAME against a list of values and is true for every possible input, including a response that does leak the key. Demonstrated by the judge against the test file's own helper, verbatim: a response containing `{"citations": [{"total_cost_usd": 0.99}], "trust_signal": {"think": "internal reasoning leaked"}}` yields `_find_all(content, "total_cost_usd") -> [0.99]` and `_find_all(content, "think") -> ['internal reasoning leaked']`, and both assertions evaluate `True`, so both leaks pass undetected. The correct form is `assert _find_all(content, excluded_key) == []`. What still holds: the preceding `assert set(content.keys()) == {"answer", "citations", "trust_signal", "run_id"}` in both tests is real and does catch a TOP-LEVEL leak, and the underlying properties are genuinely true, independently confirmed by the judge inspecting the whole output model tree (`AskBiomedicalQuestionOutput`, `CitationPayload`, `TrustSignalPayload` carry zero fields matching `cost` or `cap`, and `_fold_run_to_response` never reads a cost-shaped field from any event). So this is a gate-integrity defect, not a product defect. It is nonetheless blocking, because the nested arm is precisely the half that would catch a cost or internal-event field hidden one level down inside `trust_signal` or a citation, which is the only place either could realistically hide once the top-level key set is pinned, and `.claude/rules/self-eval-loop.md` names a docstring asserting a property over an assertion that does not test it as the exact liability pattern: `TestNeverCost`'s own docstring claims it is "proving the pin, not merely a default", and no assertion in it distinguishes the pinned case from the defaulted one |
-| F-4.1-J-02 | moderate | fix applied, awaiting judge re-verification | The production mount is exercised by zero tests. `adapters/web_sse/app.py`'s `_mcp_asgi_app`, its `_lifespan`, and `app.mount("/mcp", _mcp_asgi_app)` are never driven by any test in the repo: `grep -rn '/mcp' tests/` outside the premise gate returns nothing, and the gate's `_build_test_mcp_app()` (line 305) builds a fresh FastAPI wrapper that HAND-COPIES the production recipe rather than importing it. The reason for a fresh app per call is legitimate and correctly documented (`StreamableHTTPSessionManager.run()` is one-shot per instance), but the consequence is that the shipped mount is an unverified duplicate of a verified one, free to drift, and this file's own LEARNINGS entry records that this exact recipe already failed three separate silent ways. A test asserting the production `app`'s route table actually contains a `Mount` at `/mcp` whose sub-app routes at `/`, and that `app.router.lifespan_context` is not FastAPI's default, would close it without re-entering the one-shot lifespan |
-| F-4.1-J-03 | moderate | fix applied, awaiting judge re-verification | Four defensive branches of `adapters/mcp/server.py` are entirely uncovered, and they are the branches that carry the phase premise's "all four output fields required" clause for the run shapes that never reach `write_node`. Judge-run coverage over the premise gate: `84%`, `Missing 141, 183-191, 239-241, 249-250, 261`. Line by line: 141 is the `headers is None` path; 183-191 is the whole body of `_fallback_answer_text`; 239-241 is the fatal-`error` capture; 249-250 is the synthetic answer-scope `trust_signal` fallback; 261 is the empty-answer path that invokes the fallback. Both stream fixtures (`_golden_path_stream`, `_refusal_path_stream`) emit a `token` and an answer-scope `trust_signal`, so neither fallback can ever fire. Two consequences. First, the phase's own DECISIONS.md entry justifying the synthetic trust signal names three real run shapes (`_decline_for_guardrail`, `_decline_for_daily_cap`, `write_node`'s `no_tool` branch) and no test drives any of them through the fold. Second, `_fallback_answer_text` introduces MCP-specific refusal wording, and the phase premise explicitly forbids "a weaker or different rule for this one" surface; the wording may well be correct, but it is neither tested nor compared against what any other surface renders for the same run shape |
-| F-4.1-J-04 | minor | fix applied, awaiting judge re-verification | Two packages are imported directly by shipped code and by the gate but declared nowhere. `src/system_03_search_agent/adapters/mcp/server.py:77` does `from mcp_types import INVALID_REQUEST`, and the premise gate does `import httpx2` (line 76) and `from mcp_types import CallToolResult` (line 83). Neither `mcp-types` nor `httpx2` appears in `requirements.txt` or `pyproject.toml`; both arrive only as transitive dependencies of `mcp`. Verified: `pip show mcp-types` reports version `2.0.0`, MIT, same publisher, `Required-by: mcp`. Low real risk given identical publisher and lockstep version, but a direct import of an undeclared package is a reproducibility gap under `production-standards.md`'s supply-chain gate: nothing in this repo's own dependency declaration would stop a future `mcp` release from restructuring or dropping either package, and the failure would surface as an `ImportError` in shipped code, not in a dependency resolver |
+| F-4.1-J-01 | BLOCKING (major) | closed (judge round 2) | Two of the premise gate's nine declared arms contain an assertion that cannot fail. `TestEventFolding` (line 642) and `TestNeverCost` (line 667) each end with `assert excluded_key not in _find_all(content, excluded_key)`. `_find_all(fragment, key)` returns the list of VALUES found under `key`, so the assertion compares a key NAME against a list of values and is true for every possible input, including a response that does leak the key. Demonstrated by the judge against the test file's own helper, verbatim: a response containing `{"citations": [{"total_cost_usd": 0.99}], "trust_signal": {"think": "internal reasoning leaked"}}` yields `_find_all(content, "total_cost_usd") -> [0.99]` and `_find_all(content, "think") -> ['internal reasoning leaked']`, and both assertions evaluate `True`, so both leaks pass undetected. The correct form is `assert _find_all(content, excluded_key) == []`. What still holds: the preceding `assert set(content.keys()) == {"answer", "citations", "trust_signal", "run_id"}` in both tests is real and does catch a TOP-LEVEL leak, and the underlying properties are genuinely true, independently confirmed by the judge inspecting the whole output model tree (`AskBiomedicalQuestionOutput`, `CitationPayload`, `TrustSignalPayload` carry zero fields matching `cost` or `cap`, and `_fold_run_to_response` never reads a cost-shaped field from any event). So this is a gate-integrity defect, not a product defect. It is nonetheless blocking, because the nested arm is precisely the half that would catch a cost or internal-event field hidden one level down inside `trust_signal` or a citation, which is the only place either could realistically hide once the top-level key set is pinned, and `.claude/rules/self-eval-loop.md` names a docstring asserting a property over an assertion that does not test it as the exact liability pattern: `TestNeverCost`'s own docstring claims it is "proving the pin, not merely a default", and no assertion in it distinguishes the pinned case from the defaulted one |
+| F-4.1-J-02 | moderate | closed (judge round 2) | The production mount is exercised by zero tests. `adapters/web_sse/app.py`'s `_mcp_asgi_app`, its `_lifespan`, and `app.mount("/mcp", _mcp_asgi_app)` are never driven by any test in the repo: `grep -rn '/mcp' tests/` outside the premise gate returns nothing, and the gate's `_build_test_mcp_app()` (line 305) builds a fresh FastAPI wrapper that HAND-COPIES the production recipe rather than importing it. The reason for a fresh app per call is legitimate and correctly documented (`StreamableHTTPSessionManager.run()` is one-shot per instance), but the consequence is that the shipped mount is an unverified duplicate of a verified one, free to drift, and this file's own LEARNINGS entry records that this exact recipe already failed three separate silent ways. A test asserting the production `app`'s route table actually contains a `Mount` at `/mcp` whose sub-app routes at `/`, and that `app.router.lifespan_context` is not FastAPI's default, would close it without re-entering the one-shot lifespan |
+| F-4.1-J-03 | moderate | closed (judge round 2) | Four defensive branches of `adapters/mcp/server.py` are entirely uncovered, and they are the branches that carry the phase premise's "all four output fields required" clause for the run shapes that never reach `write_node`. Judge-run coverage over the premise gate: `84%`, `Missing 141, 183-191, 239-241, 249-250, 261`. Line by line: 141 is the `headers is None` path; 183-191 is the whole body of `_fallback_answer_text`; 239-241 is the fatal-`error` capture; 249-250 is the synthetic answer-scope `trust_signal` fallback; 261 is the empty-answer path that invokes the fallback. Both stream fixtures (`_golden_path_stream`, `_refusal_path_stream`) emit a `token` and an answer-scope `trust_signal`, so neither fallback can ever fire. Two consequences. First, the phase's own DECISIONS.md entry justifying the synthetic trust signal names three real run shapes (`_decline_for_guardrail`, `_decline_for_daily_cap`, `write_node`'s `no_tool` branch) and no test drives any of them through the fold. Second, `_fallback_answer_text` introduces MCP-specific refusal wording, and the phase premise explicitly forbids "a weaker or different rule for this one" surface; the wording may well be correct, but it is neither tested nor compared against what any other surface renders for the same run shape |
+| F-4.1-J-04 | minor | closed (judge round 2) | Two packages are imported directly by shipped code and by the gate but declared nowhere. `src/system_03_search_agent/adapters/mcp/server.py:77` does `from mcp_types import INVALID_REQUEST`, and the premise gate does `import httpx2` (line 76) and `from mcp_types import CallToolResult` (line 83). Neither `mcp-types` nor `httpx2` appears in `requirements.txt` or `pyproject.toml`; both arrive only as transitive dependencies of `mcp`. Verified: `pip show mcp-types` reports version `2.0.0`, MIT, same publisher, `Required-by: mcp`. Low real risk given identical publisher and lockstep version, but a direct import of an undeclared package is a reproducibility gap under `production-standards.md`'s supply-chain gate: nothing in this repo's own dependency declaration would stop a future `mcp` release from restructuring or dropping either package, and the failure would surface as an `ImportError` in shipped code, not in a dependency resolver |
 
 ## Fix round, 2026-08-11
 
@@ -369,3 +369,160 @@ None of the four findings were fixed in this round. The finder is not the closer
 ### Ready for the adversary round?
 
 Not yet. Run the fix round first. The specific reason is F-4.1-J-01: an adversary probing this surface for a cost or internal-event leak would be checking a property whose own gate arms cannot currently detect a violation, so a clean adversary result would carry less weight than it should. Once the two assertions are corrected and the uncovered branches have arms, the adversary round has real ground to stand on. The highest-value adversary targets this round did not cover, recorded so the next round does not have to re-derive them: a run that emits no `token` event at all (the guardrail-refusal and daily-cap-decline shapes behind `_fallback_answer_text`), an answer exceeding 8000 characters or a run exceeding 50 citations (both silently truncated at `server.py:264` and `server.py:230` with no disclosure to the caller, the same shape as the carried F-4.0-A-12), a run that never terminates (the fold loop has no wall-clock bound of its own and relies entirely on the core's per-step timeouts), and a hostile `Authorization` header shape the SDK's `Context.headers` view might normalize differently from FastAPI's `Header`.
+
+## Judge review, round 2
+
+Round 2, 2026-08-11, against `311bace` (the full branch, `develop..HEAD`, which is the fix round's three commits `9bbfae9`/`7036758`/`be7049c` plus the later docs-only `311bace`): PASS.
+
+Fresh context. Did not run round 1 and did not write the fix round. Every number and every verdict below was produced independently in this session; nothing is taken from the fix round's self-report, and the one fix-round claim that did not survive a direct check is filed as a new finding rather than let stand.
+
+Scope of the PASS, stated plainly: all four round-1 findings are genuinely closed. The blocking one, F-4.1-J-01, was verified by mutation rather than by inspection or by re-running a scratch script, and the full before/after matrix is below. Two new minor findings were opened, neither blocking: one factual error inside the fix round's own evidence record, and one repo-hygiene gap.
+
+### F-4.1-J-01, the blocking one, verified by mutation
+
+The fix round's own verification was a scratch script against a reconstructed payload. That proves the helper's arithmetic, not that the shipped gate catches a shipped leak. This round did both, and then the counterfactual the fix round did not run.
+
+Step 1, the helper, against the actual current `_find_all` loaded from the actual current gate file (not a copy):
+
+```text
+=== ADVERSARIAL payload (a real nested leak; both keys MUST be caught) ===
+  key='total_cost_usd'   _find_all -> [0.99]                        old_form_passes=True  new_form_passes=False
+  key='think'            _find_all -> ['internal reasoning leaked'] old_form_passes=True  new_form_passes=False
+
+=== CLEAN golden-path-shaped payload (no key may false-positive) ===
+  all 11 keys (think, plan, tool_start, token, tool_result, guard, cost,
+  total_cost_usd, query_cost_usd, query_cap_usd, cap_fraction): new_form_passes=True
+
+=== VERDICT ===
+  new form catches the adversarial leak on both keys : True
+  old form vacuously passed the same leak on both keys: True
+  new form false positives on clean output           : none
+```
+
+Step 2, the mutation. Injected a real nested leak into production code, one level down inside `trust_signal`, exactly where round 1 argued a leak could realistically hide once the top-level key set is pinned. Two fields added to `TrustSignalPayload` in `src/system_03_search_agent/contracts/events.py`: `total_cost_usd: float = 0.99` and `think: str = "internal reasoning leaked"`. The leak therefore flowed through the real fold loop, the real MCP client session, and the real mounted app into the real response.
+
+| Gate state | Mutation | `TestEventFolding` | `TestNeverCost` | `TestGoldenPath` |
+| --- | --- | --- | --- | --- |
+| Current (fixed) form | applied | FAILED | FAILED, `assert [0.99] == []` | PASSED |
+| Old (round-1) form, restored | applied | PASSED | PASSED | PASSED |
+| Current (fixed) form | reverted | PASSED | PASSED | PASSED |
+
+Three things this proves that inspection could not. The corrected arms detect a real leak in real shipped code, not just in a reconstructed dict. The old arms missed the identical real leak (`2 passed`), so round 1's diagnosis was correct and the fix is causally the thing that closed it. And `TestGoldenPath` stayed green through the mutation, which confirms the leak is invisible to every other arm in the file, so these two arms are the only detection this property has, exactly as round 1 argued.
+
+Mutation fully reverted afterward: `git diff HEAD` is empty, and both arms re-run green (`2 passed in 4.16s`).
+
+F-4.1-J-01: closed.
+
+### F-4.1-J-02, the production mount
+
+The new file drives the real singleton, not a rebuild. Verified three ways rather than by reading the fix round's description.
+
+- `test_phase_4_1_production_mount.py:98` is `from system_03_search_agent.adapters.web_sse.app import app`, the same module-level object every other route test uses. Line 180 is `async with app.router.lifespan_context(app)`.
+- Verified at runtime that this is the production wiring and not a coincidence: `app.router.routes` contains exactly one `Mount`, at `/mcp`, and `mount.app is adapters.web_sse.app._mcp_asgi_app` evaluates `True`, so the test drives the shipped module-level sub-app singleton itself. `app.router.lifespan_context` resolves to `_merge_lifespan_context.<locals>.merged_lifespan`, not FastAPI's default, confirming the phase's own `_lifespan` is what actually gets entered.
+- The one-shot session-manager collision the split was designed to avoid does not reappear. Run three ways: the file alone (1 passed), both MCP files in one pytest session (`pytest tests/system_03_search_agent/adapters/mcp/ -v`, 20 passed), and the whole repo suite alongside every other file that imports the same `app` (green). No `RuntimeError: Task group is not initialized`, no session-manager error, in any of the three.
+
+F-4.1-J-02: closed. One minor documentation inaccuracy in the new file is filed separately as F-4.1-J2-02 below.
+
+### F-4.1-J-03, coverage and the quality of the new tests
+
+Coverage re-measured in this session, not read off the fix round's paste:
+
+```text
+$ pytest --cov=system_03_search_agent.adapters.mcp.server --cov-report=term-missing tests/system_03_search_agent/adapters/mcp/ -v
+src/system_03_search_agent/adapters/mcp/server.py      83      0   100%
+20 passed in 13.65s
+```
+
+`83 stmts, 0 miss, 100%`, up from round 1's `84%`. Every line round 1 named (141, 183-191, 239-241, 249-250, 261) is covered.
+
+The number was the easy half. The question round 1 actually raised is whether the branches are covered by realistic run shapes or by contrived direct calls at made-up arguments. Checked by reading `core/graph.py:810-892` directly and comparing field for field against the two new fixtures:
+
+| Real function | What it emits | Fixture | Match |
+| --- | --- | --- | --- |
+| `_decline_for_guardrail` | `GuardPayload(passed=False, category, reason)`, then `DonePayload(total_cost_usd=0.0, total_tool_calls=0, trust_outcome="refuse")`. No `token`. `cost` only when `charged=True` | `_guardrail_refusal_stream` | Matches; uses the `charged=False` variant, a real sub-shape, not an invented one |
+| `_decline_for_daily_cap` | `ErrorPayload(fatal=True, scope="run", source, error_class="recoverable", message, retry_after_s=0)`, then the same `done`. No `guard`, no `token` | `_daily_cap_decline_stream` | Matches field for field |
+
+So the three branches that matter most, the fatal-error capture (239-241), the synthetic answer-scope `trust_signal` fallback (248-257), and the empty-answer path (261), are driven END TO END through the real fold loop and a real MCP client call, which is the stronger of the two forms round 1 asked about. The four `TestFallbackAnswerText` cases are direct unit calls, which is appropriate: `_fallback_answer_text` is a pure string builder with no loop context, and three of the four pass real `GuardPayload`/`ErrorPayload` instances rather than contrived stand-ins. Two acknowledged weaker spots, neither worth a finding: line 141 uses a duck-typed `_CtxWithNoHeaders` stand-in rather than a real non-HTTP-transport `Context`, which is reasonable given the SDK's own docstring documents `headers` as `None` on such transports; and line 191's generic catch-all is unit-covered only, with the test's own docstring honestly declaring that no named run path in `core/graph.py` currently produces that shape, which is the coverage-declaration discipline `goal-contracts` asks for rather than a hidden gap.
+
+The second half of F-4.1-J-03, the MCP-specific refusal wording, was re-derived rather than accepted. `_decline_for_guardrail` emits no `token` event at all, so NO surface renders any answer text for that run shape: there is no other-surface wording for `_fallback_answer_text` to be inconsistent with. The MCP-specific string is therefore unavoidable rather than a weaker rule, and the clause the premise actually protects, cite-or-refuse with no fabricated citations, is now pinned directly: both new end-to-end tests assert `content["citations"] == []`.
+
+F-4.1-J-03: closed.
+
+### F-4.1-J-04, dependencies, and one fix-round claim that did not hold
+
+The fix itself is correct. `mcp-types>=2.0` and `httpx2>=2.0` are declared in both `requirements.txt` and `pyproject.toml`, floor-pinned per this repo's convention. Both import names verified live in the venv: `mcp_types.INVALID_REQUEST` resolves to `-32600` and `httpx2` imports, so the distribution name and the import name are indeed identical for both and no name-mapping error was introduced.
+
+The fix round's evidence sentence for it is wrong, though, and is filed below as F-4.1-J2-01. It states that "`pip show mcp-types` and `pip show httpx2` both report version `2.0.0`, MIT license, `Required-by: mcp`". Checked directly:
+
+| Package | Version | License | Required-by | Fix round's claim |
+| --- | --- | --- | --- | --- |
+| `mcp-types` | 2.0.0 | MIT | mcp | correct |
+| `httpx2` | 2.10.0 | BSD-3-Clause | mcp | wrong on both version and license |
+
+`httpx2` is version 2.10.0, not 2.0.0, and BSD-3-Clause, not MIT (home page `github.com/pydantic/httpx2`, author-email `tom@tomchristie.com`, that is `httpx`'s own author at Pydantic Services). The `>=2.0` floor is still satisfied by 2.10.0 and the declaration is functionally correct, which is why this is minor and not a re-open. The correct facts are already in the repo independently: commit `311bace` recorded them accurately in DECISIONS.md while clearing a typosquat alert against `httpx2`. Only the fix round's own narrative in this file is wrong, and a wrong verification sentence is exactly where the next reader stops checking.
+
+F-4.1-J-04: closed, with the correction above.
+
+### No regression, no scope drift
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Production code drift | `git diff 62d4e76..HEAD --stat -- src/` | Empty. ZERO production-code changes across the entire fix round. `T-4.1-02`, `T-4.1-03` and `T-4.1-04`'s already-`done` code is byte-identical to what round 1 approved |
+| Files changed | `git diff 62d4e76..HEAD --name-only` | Exactly seven: `DECISIONS.md`, `LEARNINGS.md`, `pyproject.toml`, `requirements.txt`, the two MCP test files, `tracker/phase_4.1.md`. Every one inside F-4.1-J-01 through J-04's scope |
+| Full repo suite | `pytest -q` | `6 failed, 2417 passed, 113 skipped, 1 xfailed in 62.31s`. Matches the fix round's claim exactly |
+| Regression identity | inspected all 6 failures | All 6 in `tests/system_03_search_agent/synthesis/test_citation_trust_full_premise.py`, every one a `LiveHttpCallInUnitSuiteError`. Develop's known live-network-opt-in baseline. `2417 = 2410 (round 1) + 7 new tests`; skip, xfail and fail counts unchanged. Zero new failures |
+| MCP suite | `pytest tests/system_03_search_agent/adapters/mcp/ -v` | `20 passed in 13.65s`, both files in one session |
+| Ruff, files touched | `ruff check` on both test files and `adapters/mcp/server.py` | `All checks passed!`, exit 0 |
+| Ruff, whole repo | `ruff check . --output-format=concise` | 17 errors, the same count round 1 recorded. Zero introduced by the fix round |
+| Doc drift | `python tracker/check_doc_drift.py --check` | `10 facts computed | 10 stale`. Expected at judge time, not a finding, same disposition as round 1: the stale values are the test, DECISIONS.md and LEARNINGS.md counts (`2517 -> 2537`, `275 -> 284`, `65 -> 68`), all three of which `/phase-checkpoint` refreshes after the judge round |
+
+### Never-cost and the single-tool surface, re-derived independently
+
+Not taken from round 1. Re-dumped in this session:
+
+- `await server.list_tools()` returns `TOOL COUNT: 1 NAMES: ['ask_biomedical_question']`. No internal tool advertised.
+- Walked the fully resolved `AskBiomedicalQuestionOutput` JSON schema tree for any key containing `cost`, `cap`, `think`, `plan`, `token` or `tool`: `NONE`. The complete field set across the whole tree is `AskBiomedicalQuestionOutput -> [answer, citations, run_id, trust_signal]`, `CitationPayload -> [assertion_confidence, citation_id, claim_text, display_index, evidence_kind, field, layer, license, population_ancestry_context, source, source_id, source_url]`, `TrustSignalPayload -> [citation_id, fallback_link, grounded, message, outcome, risk_tier, scope, triangulated]`. `required` is exactly the four output fields.
+- So the never-cost guarantee is structural, and it is now also genuinely GATED, which is the change this round verified: the mutation above proves that if a cost field ever were added one level down, `TestNeverCost` fails rather than passing green.
+
+### New findings, round 2
+
+| Finding | Severity | Status | Description |
+| --- | --- | --- | --- |
+| F-4.1-J2-01 | minor | open | The fix round's own evidence record in this file misstates a verification result. Its F-4.1-J-04 paragraph says "`pip show mcp-types` and `pip show httpx2` both report version `2.0.0`, MIT license, `Required-by: mcp`". Directly checked: `httpx2` is version `2.10.0` with `License-Expression: BSD-3-Clause`, not `2.0.0` and not MIT (`mcp-types` is correct at `2.0.0` MIT). The declared floor `httpx2>=2.0` is satisfied by `2.10.0`, so the dependency declaration itself is correct and F-4.1-J-04 still closes; what is wrong is only the sentence claiming the verification was performed and what it returned. Filed rather than silently corrected, per the finder-is-not-the-closer split, and because `self-eval-loop.md` names a confident claim sitting where nobody re-checks as its own liability pattern. Fix: correct the two values in the Fix round section, or point it at commit `311bace`'s DECISIONS.md row, which already records `httpx2` as Pydantic Services' BSD-3 package correctly |
+| F-4.1-J2-02 | minor | open | Two small hygiene items. First, `test_phase_4_1_production_mount.py`'s module docstring enumerates the test files sharing the `app` singleton (`test_health.py`, `test_streaming_endpoints.py`, `test_phase_4_0_premise.py`, `test_phase_4_1_premise.py`) and omits `tests/system_03_search_agent/auth/test_router.py:65`, which also does `TestClient(app)` on the same object. The docstring's load-bearing conclusion is nonetheless TRUE and was independently re-verified this round by grepping the whole test tree: no other file calls `app.router.lifespan_context` and no file uses `TestClient(app)` as a context manager, so the one-shot constraint holds. Only the enumeration is incomplete, and it is the list a future edit would consult before adding a fifth consumer. Second, `.coverage` is untracked and absent from `.gitignore` while this repo routinely runs `--cov`; `git-workflow.md`'s "never `git add -A` blindly" is the only thing keeping it out of a commit, and that is an instruction rather than enforcement. Fix: extend the docstring's list, and add `.coverage` to `.gitignore` |
+
+### Premise re-read, clause by clause
+
+Re-read the Phase premise paragraph after all of the above. Round 1 marked three clauses short. All three now hold, and the reason is verified rather than asserted.
+
+| Clause | Round 1 | Round 2 |
+| --- | --- | --- |
+| Valid bearer token for a dedicated `User` account calls the single advertised tool | Yes | Yes, unchanged code, `TestAuth`'s valid arm green |
+| One JSON result, never a stream | Yes | Yes, and now also proven through the REAL shipped mount end to end, not only a rebuilt copy |
+| No `think`, `plan`, or `tool_start` ever reaches the caller | Top level only; nested arm vacuous | Yes, fully. Mutation-proven: a nested `think` leak makes `TestEventFolding` fail |
+| Locked schema exactly, `CitationV1` read verbatim off `CitationPayload` | Yes | Yes, schema re-dumped independently this round |
+| Honest refusal, no fabricated citations, identical rule to every other surface | Partly; `_fallback_answer_text` untested | Yes. Both no-`token` run shapes now drive the real fold loop and assert `citations == []`, and the wording question is resolved: no other surface produces answer text for those shapes, so there is no weaker rule to be |
+| No response ever carries a cost field, `operator_mode` hard-pinned false | True in code; the arm proving it could not fail | Yes, fully. Mutation-proven: a nested `total_cost_usd` makes `TestNeverCost` fail with `assert [0.99] == []` |
+| A bad-token caller never reaches the core loop, no run, no budget | Yes | Yes, unchanged code, three spy-backed arms green |
+| `list_tools()` advertises exactly one tool, no internal tool separately reachable | Yes | Yes, re-dumped at the registry this round |
+
+Eight of eight clauses hold, and every clause is now backed by an arm that has been demonstrated capable of failing. That is the PASS.
+
+### Ticket status
+
+| Ticket | Status | Reason |
+| --- | --- | --- |
+| T-4.1-01 | done | Round 1 rejected this ticket on three grounds, and all three are closed under this round's own verification. F-4.1-J-01: the two arms now detect a real nested leak injected into production code, and the restored old form provably misses the identical leak, so the repair is causally confirmed rather than inspected. F-4.1-J-02: the shipped mount is now driven by the real `app` singleton, verified at runtime to be the same `Mount` and the same `_mcp_asgi_app` object, with no session-manager collision across three run configurations. F-4.1-J-03: `100%` coverage re-measured in this session, with the three branches that matter driven end to end by fixtures checked field for field against `core/graph.py`'s real emissions, not by contrived direct calls. The gate's coverage-exclusion statement remains present and honest |
+| T-4.1-02 | done | Unchanged since round 1 and verified byte-identical: `git diff 62d4e76..HEAD -- src/` is empty. Re-confirmed independently this round that `list_tools()` returns exactly one tool and the resolved output schema tree carries zero cost-shaped or internal-event-shaped fields |
+| T-4.1-03 | done | Unchanged since round 1 and verified byte-identical. The auth-before-`create_run` ordering and the hard-pinned `operator_mode=False` are the same lines round 1 approved, and the never-cost property they protect is now genuinely gated rather than nominally gated |
+| T-4.1-04 | done | Unchanged in substance. `mcp-types` and `httpx2` are now declared in both dependency files with the correct distribution names, verified by live import. F-4.1-J2-01 corrects the fix round's misstated version and license for `httpx2` but does not affect the declaration, which is correct |
+
+### Not fixed by the judge, deliberately
+
+Neither new finding was fixed in this round. The finder is not the closer, per `.claude/rules/self-eval-loop.md`. Both are minor, both are documentation or hygiene rather than behavior, and neither blocks the adversary round.
+
+### Ready for the adversary round?
+
+Yes. The specific blocker round 1 named is gone: the two arms that could not fail have now been demonstrated failing against a real injected leak, so an adversary probing this surface for a cost or internal-event leak is testing a property whose gate has been proven capable of detecting a violation, and a clean adversary result will carry the weight it should.
+
+Round 1's list of highest-value adversary targets still stands and is not re-derived here, with one update: the first item on it, a run that emits no `token` event at all, is now covered by `TestUngroundedRunShapesFoldCorrectly` for the two named shapes, so the adversary should push past those two rather than re-run them. The remaining unexplored targets are an answer exceeding 8000 characters or a run exceeding 50 citations (both silently truncated at `server.py:264` and `server.py:230` with no disclosure to the caller, the same shape as the carried F-4.0-A-12), a run that never terminates (`_fold_run_to_response` has no wall-clock bound of its own and relies entirely on the core's per-step timeouts), and a hostile `Authorization` header shape the SDK's `Context.headers` view might normalize differently from FastAPI's `Header`. Two more this round surfaced as worth adding: a `citation`-scoped `trust_signal` arriving with no answer-scope one, which silently produces the synthetic `risk_tier="low"` fallback regardless of what the claim-level signals said, and a run whose `done` event never arrives at all.
