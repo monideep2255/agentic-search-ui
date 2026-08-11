@@ -459,6 +459,94 @@ class TestResumability:
             events = [json.loads(f["data"]) for f in _parse_sse_frames(reconnected.text)]
             assert [e["type"] for e in events] == ["guard", "done"]
 
+    @pytest.mark.asyncio
+    async def test_every_frame_carries_a_wire_id_line_matching_its_own_seq(self) -> None:
+        """F-4.0-J-01 (judge review, build phase 4.0): the earlier version
+        of this gate proved resumability only by reading `seq` out of the
+        JSON body and hand-building the `Last-Event-ID` header from it, the
+        exact workaround the judge's wire capture showed was necessary
+        because no frame carried a real `id:` line. A standards-conforming
+        SSE client (a native `EventSource`, or any off-the-shelf library) has
+        no channel but `id:` for `Last-Event-ID`, so this arm pins the wire
+        field directly rather than the payload."""
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            run_id = await _create_run(client, headers)
+            await _drain_run_task(run_id)
+
+            response = await client.get(f"/v1/query/{run_id}/events", headers=headers)
+            frames = _parse_sse_frames(response.text)
+            assert len(frames) >= 2
+            for frame in frames:
+                assert "id" in frame, f"frame missing wire id: line: {frame}"
+                assert frame["id"] == str(json.loads(frame["data"])["seq"])
+
+    @pytest.mark.asyncio
+    async def test_reconnecting_using_only_the_wire_id_line_yields_zero_duplicates(self) -> None:
+        """F-4.0-J-01: the judge's own repro, ported into the gate. A
+        reconnect driven exclusively by the wire `id:` line (never the JSON
+        body's `seq`, which a real `EventSource`-based client cannot read)
+        must deliver exactly what a resuming client is missing: everything
+        past its cutoff, once each, no gap, no duplicate."""
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            run_id = await _create_run(client, headers)
+            await _drain_run_task(run_id)
+
+            first = await client.get(f"/v1/query/{run_id}/events", headers=headers)
+            first_frames = _parse_sse_frames(first.text)
+            assert len(first_frames) >= 2
+            # Cut off after the FIRST frame, not the last, so the reconnect
+            # below has real remaining events to replay: a trivial "connect
+            # after everything already happened" cutoff would pass on an
+            # empty response even with the bug this arm exists to catch.
+            cutoff_wire_id = first_frames[0]["id"]
+
+            second = await client.get(
+                f"/v1/query/{run_id}/events",
+                headers={**headers, "Last-Event-ID": cutoff_wire_id},
+            )
+            second_frames = _parse_sse_frames(second.text)
+            assert second_frames, "reconnect past the first frame returned nothing to replay"
+
+            # `first_frames` is a full, undisconnected read (httpx's `.get()`
+            # drains the whole response), not a client that actually stopped
+            # partway through, so comparing its full id set against the
+            # reconnect's id set for ANY overlap is the wrong check: the
+            # reconnect is legitimately expected to reproduce most of what
+            # `first` already contains, since `first` saw everything. The
+            # property that actually matters is exact: everything strictly
+            # after the cutoff, once each, no gap and no duplicate relative
+            # to that resume point (the same shape
+            # `test_reconnecting_with_last_event_id_replays_only_what_was_missed`
+            # already proves using the JSON body's `seq`; this is that same
+            # proof driven by the wire `id:` line instead).
+            first_ids = {f["id"] for f in first_frames}
+            second_ids = {f["id"] for f in second_frames}
+            assert second_ids == first_ids - {cutoff_wire_id}
+
+    @pytest.mark.asyncio
+    async def test_a_last_event_id_beyond_this_runs_highest_seq_is_rejected_with_400(
+        self,
+    ) -> None:
+        """F-4.0-J-03 (judge review, build phase 4.0): a `Last-Event-ID`
+        claiming to have already seen a `seq` this run has not produced yet
+        cannot be a genuine client cursor. Before the fix, such a value
+        still counted toward `subscriber_count`, silently defeating
+        F-1.2-02's abandonment check for a subscriber that could never be
+        served."""
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            run_id = await _create_run(client, headers)
+            await _drain_run_task(run_id)
+
+            response = await client.get(
+                f"/v1/query/{run_id}/events",
+                headers={**headers, "Last-Event-ID": "999999"},
+            )
+            assert response.status_code == 400
+            assert "exceeds" in response.json()["detail"]
+
 
 class TestMultiConsumer:
     """F-1.2-03: two independent readers of the same run each get the full

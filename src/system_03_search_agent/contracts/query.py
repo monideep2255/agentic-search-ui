@@ -30,7 +30,7 @@ class Query(BaseModel):
     session_id: str = Field(..., max_length=64)
     trace_id: str = Field(..., max_length=64)
     # T-2.0-08 (closes F-1.1-17): on the authenticated rest_sse surface
-    # (adapters/web_sse/app.py's POST /query), any client-submitted value
+    # (adapters/web_sse/app.py's POST /v1/query), any client-submitted value
     # here is advisory only. The endpoint always overwrites it with the
     # server-derived subject of the caller's verified access token before
     # this Query is passed to run(), so it is never trusted from the

@@ -1,9 +1,10 @@
 """FastAPI application entry point for the web/SSE adapter."""
 
+import logging
 import os
 import uuid
 from collections.abc import AsyncIterator
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +23,16 @@ from system_03_search_agent.harness.cost_control import (
 )
 
 app = FastAPI()
+
+logger = logging.getLogger(__name__)
+
+# F-4.0-J-06 (judge review, build phase 4.0): matches Section 13.2's own
+# `maxItems: 50` on the MCP surface's citation array. `production-
+# standards.md`'s multi-agent pipeline gate requires a cap on every array;
+# a run's own citation count is already implicitly bounded by Section 21's
+# at-most-20-tool-calls-per-query cap, so this is defense in depth, not the
+# primary bound.
+_MAX_CITATIONS_PER_RUN = 50
 
 
 def _allowed_origins() -> list[str]:
@@ -165,13 +176,13 @@ def _get_owned_run(run_id: str, current_user: User) -> RunEntry:
 async def get_v1_query_events(
     run_id: str,
     current_user: User = Depends(get_current_user),  # noqa: B008 - idiomatic FastAPI dependency injection
-    last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
+    last_event_id: str | None = Header(default=None, alias="Last-Event-ID", max_length=32),
 ) -> EventSourceResponse:
-    # Ownership check only; the entry itself is not read further here.
-    # `default_registry.subscribe` below re-resolves `run_id` against the
+    # `entry` is used below only to validate `after_seq` (F-4.0-J-03).
+    # `default_registry.subscribe` re-resolves `run_id` against the
     # registry on its own (T-4.0-02), which is also where resumability and
     # multi-consumer replay actually live now.
-    _get_owned_run(run_id, current_user)
+    entry = _get_owned_run(run_id, current_user)
 
     # T-4.0-03 (resumability, Section 13.1): a reconnecting client sends
     # back the last `seq` it saw as `Last-Event-ID` (this backend's
@@ -186,6 +197,28 @@ async def get_v1_query_events(
             after_seq = int(last_event_id)
         except ValueError:
             after_seq = -1
+
+    # F-4.0-J-03 (judge review, build phase 4.0): `after_seq` is validated
+    # against what this run has actually produced so far, using the same
+    # `entry` the ownership check above already fetched. A genuine client's
+    # `Last-Event-ID` can only ever be a `seq` this registry already
+    # emitted; a value beyond that is either a malformed header or an
+    # attempt to hold `subscriber_count` above zero indefinitely without
+    # ever receiving an event, which would silently defeat F-1.2-02's
+    # abandonment check (a run nobody can actually be served to would never
+    # be recognized as unwatched). Checked here, before `EventSourceResponse`
+    # is constructed, specifically so a rejection is a real `400` rather
+    # than an error raised after the stream has already started with `200`.
+    current_max_seq = entry.events[-1].seq if entry.events else -1
+    if after_seq > current_max_seq:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Last-Event-ID {after_seq} exceeds this run's highest emitted "
+                f"seq ({current_max_seq}); a client cannot resume past an event "
+                "this run has not produced yet"
+            ),
+        )
 
     # T-4.0-05 (Section 19.4/19.5): visibility is derived once per request,
     # purely from the authenticated caller's `OPERATOR_USER_IDS` allowlist
@@ -206,10 +239,29 @@ async def get_v1_query_events(
         # envelope's `type` and the data to the JSON payload, matching
         # Section 12.2's client-side expectation of one named event type
         # per registered listener.
+        #
+        # F-4.0-J-01 (judge review, build phase 4.0): `id` is the envelope's
+        # own `seq`, not a per-connection counter. `sse_starlette` writes
+        # this as the frame's `id:` line, which is the ONLY channel a
+        # standards-conforming SSE client (a native `EventSource`, or any
+        # off-the-shelf client library build phase 4.2's CLI might use) has
+        # for `Last-Event-ID` on reconnect; Section 2024 of the tech spec
+        # names `seq` explicitly as what `Last-Event-ID` is "keyed off".
+        # Using the envelope `seq` (not a resend-loop-local counter) is
+        # required for correctness across the cost-event filter above: a
+        # non-operator caller never sees `seq` 1, 3, 5, ... (cost events),
+        # so a per-connection counter would renumber the visible events
+        # and desync from what `subscribe(after_seq=...)` expects on the
+        # next reconnect, while the real envelope `seq` resumes correctly
+        # through that same gap.
         async for item in default_registry.subscribe(run_id, after_seq=after_seq):
             forwarded = item if is_operator else sanitize_event_for_end_user(item)
             if forwarded is not None:
-                yield {"event": forwarded.type, "data": forwarded.model_dump_json()}
+                yield {
+                    "id": str(forwarded.seq),
+                    "event": forwarded.type,
+                    "data": forwarded.model_dump_json(),
+                }
 
     return EventSourceResponse(_event_stream())
 
@@ -219,7 +271,10 @@ async def get_v1_query_events(
 # stop endpoints already enforce. No operator-mode consideration applies
 # here: `CitationPayload` carries no cost data, so there is nothing to
 # redact for either caller class.
-@app.get("/v1/query/{run_id}/citations", response_model=list[CitationPayload])
+@app.get(
+    "/v1/query/{run_id}/citations",
+    response_model=Annotated[list[CitationPayload], Field(max_length=_MAX_CITATIONS_PER_RUN)],
+)
 async def get_v1_query_citations(
     run_id: str,
     current_user: User = Depends(get_current_user),  # noqa: B008 - idiomatic FastAPI dependency injection
@@ -242,9 +297,30 @@ async def get_v1_query_citations(
     # returns an empty list here, not an error: reaching a terminal state
     # is what this endpoint gates on, not reaching the `done` event
     # specifically.
-    return [
-        CitationPayload(**event.payload) for event in entry.events if event.type == "citation"
-    ]
+    #
+    # F-4.0-J-06 (judge review, build phase 4.0): `CitationPayload` is
+    # `extra="forbid"`, so constructing it from a malformed `citation`
+    # payload would otherwise raise unhandled, turning one bad record into
+    # a 500 for the whole export. `core.write_node` is the only shipped
+    # producer of a `citation` event today and already builds this shape
+    # through `CitationPayload(...).model_dump()`, so this is not expected
+    # to fire; it exists so a future producer's bug degrades to "one
+    # citation missing, logged" rather than "the whole export breaks".
+    citations: list[CitationPayload] = []
+    for event in entry.events:
+        if event.type != "citation":
+            continue
+        try:
+            citations.append(CitationPayload(**event.payload))
+        except (TypeError, ValueError):
+            logger.warning(
+                "run %s produced a citation event whose payload does not "
+                "match CitationPayload; omitted from the export",
+                run_id,
+            )
+        if len(citations) >= _MAX_CITATIONS_PER_RUN:
+            break
+    return citations
 
 
 class StopRunResponse(BaseModel):

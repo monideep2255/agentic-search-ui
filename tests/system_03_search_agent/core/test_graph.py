@@ -1989,7 +1989,7 @@ async def test_malformed_user_id_declines_gracefully_instead_of_crashing(
 
     A non-UUID user_id used to reach `uuid.UUID(query.user_id)` unguarded
     and raise an uncaught ValueError out of the graph. Not reachable via
-    POST /query today (T-2.0-08 always supplies a real UUID), but Query
+    POST /v1/query today (T-2.0-08 always supplies a real UUID), but Query
     is the shared contract other surfaces will build on, so this must not
     crash regardless of which surface constructs the Query.
     """

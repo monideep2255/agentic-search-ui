@@ -14,12 +14,18 @@ Two read paths coexist deliberately:
 
     - `RunEntry.queue`: the original phase 1.2 mechanism, a single
       `asyncio.Queue[Event | None]` fed by the background task, drained
-      destructively by exactly one consumer until the `None` sentinel.
-      Kept unchanged so build phase 1.2's existing tests, which reach into
-      `entry.queue` directly to make internal assertions, keep working
-      without modification (`.claude/rules/goal-contracts.md`: never
-      narrow an existing verify surface as a side effect of an unrelated
-      change).
+      destructively by exactly one consumer until the `None` sentinel. As
+      of build phase 4.0, no shipped HTTP path reads it any more (`GET
+      /events` moved to `subscribe()` below); it is retained solely
+      because build phase 1.2's existing tests reach into `entry.queue`
+      directly to make internal assertions, and narrowing an existing
+      verify surface as a side effect of an unrelated change is exactly
+      what `.claude/rules/goal-contracts.md` forbids. Concretely: every
+      event is still appended here alongside `events` (see
+      `_drain_into_entry`), so the two buffers coexist and consume memory
+      together for a run's lifetime, bounded by the same eviction window;
+      this is intentional test-fixture support, not a leak (F-4.0-J-05,
+      judge review, build phase 4.0).
     - `RunEntry.events` plus `subscribe()`: the new multi-consumer,
       resumable read path this phase adds. `events` is an append-only,
       `seq`-ordered buffer of everything the run has produced so far;

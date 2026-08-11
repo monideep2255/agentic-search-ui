@@ -716,7 +716,7 @@ async def guardrail_node(state: GraphState) -> dict[str, Any]:
                     # F-2.0-13 (adversary, confirmed low, 2026-07-28): a
                     # malformed user_id (not a well-formed UUID) used to
                     # crash run() with an uncaught ValueError. Not
-                    # reachable via POST /query today, since T-2.0-08
+                    # reachable via POST /v1/query today, since T-2.0-08
                     # always overwrites user_id with the authenticated
                     # user's real UUID, but Query is the shared contract
                     # every future surface (MCP, CLI) also constructs, so
