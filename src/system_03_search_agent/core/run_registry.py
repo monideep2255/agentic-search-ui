@@ -57,18 +57,37 @@ entry):
       not a fixed clock tick. Load-scale behavior under real concurrency
       is build phase 6.0's job (`tracker/phase_4.0.md`'s stated exclusion),
       not this module's.
-    - Abandonment (F-1.2-02): a run with zero attached subscribers,
-      whether because every subscriber disconnected or because none ever
-      attached, is cancelled `abandon_grace_seconds` (default 30) after
-      the last subscriber count reaches zero, unless a new subscriber
-      attaches first. The grace period exists so a briefly dropped
-      connection (Section 13.1's own framing: "a CLI session on a flaky
-      connection or a browser tab that was backgrounded") gets a real
-      chance to reconnect before the run underneath it is killed, rather
-      than the first disconnect ending the run outright.
+    - Abandonment (F-1.2-02): a run is cancelled once its CUMULATIVE
+      unwatched time (real seconds with zero attached subscribers, summed
+      across every unwatched interval, not reset by a brief reconnect)
+      reaches `abandon_grace_seconds` (default 30). The grace period
+      exists so a briefly dropped connection (Section 13.1's own framing:
+      "a CLI session on a flaky connection or a browser tab that was
+      backgrounded") gets a real chance to reconnect before the run
+      underneath it is killed, rather than the first disconnect ending
+      the run outright. Tracking cumulative rather than resettable time
+      is a fix-round addition (F-4.0-A-01, adversary round 1): a naive
+      full-reset-on-every-reconnect timer let a churn of brief
+      attach/detach cycles under the grace window hold a run alive
+      forever, since each reconnect discarded whatever unwatched time had
+      already accumulated.
     - Multi-consumer (F-1.2-03): see `subscribe()` above; this was the
       concrete, reproduced shape of the resumability gap the phase 1.2
       Scope note had already named as deferred to this phase.
+
+    Known open gap, carried rather than fixed this round (F-4.0-A-14,
+    adversary round 1): abandonment's definition of "watched" is
+    "a subscriber is attached" (`subscriber_count > 0`), never "a
+    subscriber is actually reading". A connection that attaches and never
+    reads a byte (an idle socket, deliberate or not) holds
+    `subscriber_count` above zero forever and suppresses the check
+    entirely, which the cumulative-time fix above does not touch, since
+    it only ever counts time spent at `subscriber_count == 0`. Closing
+    this needs delivery-based liveness (each subscriber proving forward
+    progress, e.g. a per-subscriber idle-read timeout), a materially
+    bigger change than the timer-accounting fix above, and is carried to
+    `tracker/phase_4.0.md`'s Open items rather than rushed into the same
+    round that just changed this exact concurrency-sensitive method.
 
 Depends on:
     - system_03_search_agent.core.run (run_streaming)
@@ -125,7 +144,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from system_03_search_agent.contracts.events import Event
+from system_03_search_agent.contracts.events import ErrorPayload, Event
 from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core.run import run_streaming
 
@@ -179,6 +198,26 @@ class RunEntry:
     # whenever at least one subscriber is attached, or the run is already
     # finished, or no check has been scheduled yet.
     abandonment_check: asyncio.Task[None] | None = field(default=None, repr=False)
+    # F-4.0-A-01 (adversary round 1, build phase 4.0): real seconds this
+    # run has spent with zero subscribers attached, summed across every
+    # unwatched interval rather than reset by each new one.
+    # `unwatched_since` is when the CURRENT unwatched interval began, or
+    # `None` while at least one subscriber is attached. See
+    # `RunRegistry._reschedule_abandonment_check` for how these two
+    # fields close the churn bypass: cancelling and rescheduling a
+    # fresh full-length timer on every subscribe/unsubscribe let a
+    # reconnect cadence shorter than the grace window hold a run alive
+    # forever, because each reset discarded whatever unwatched time had
+    # already accumulated.
+    cumulative_unwatched_seconds: float = 0.0
+    unwatched_since: datetime | None = None
+    # F-4.0-A-04 (adversary round 1, build phase 4.0): set the moment
+    # `_drain_into_entry` observes `asyncio.CancelledError`, distinct from
+    # `finished`, which a cancellation and a normal completion both set
+    # identically. The HTTP layer reads this to disclose a cancelled run's
+    # citation export as partial rather than indistinguishable from a
+    # genuinely empty one (F-4.0-A-05).
+    cancelled: bool = False
 
 
 async def _drain_into_entry(
@@ -205,6 +244,16 @@ async def _drain_into_entry(
     `asyncio.CancelledError` here. The `finally` block still runs on a
     cancellation, so both read paths still see a clean end rather than
     hanging forever waiting for one more item that will never arrive.
+
+    F-4.0-A-04 (adversary round 1, build phase 4.0): a cancellation used
+    to reach the `finally` block below with no event of its own, so a
+    client watching the stream saw it simply stop after the last real
+    event, indistinguishable from a dropped connection. The `except`
+    clause below gives cancellation the same treatment `run_streaming()`
+    already gives a genuine internal failure: a real terminal event,
+    appended to both read paths before `finished` is set, so `subscribe`'s
+    existing terminal-event check (a fatal `error`) ends the stream on it
+    exactly as it would for any other fatal error.
     """
     entry = registry._runs[run_id]
     try:
@@ -213,9 +262,43 @@ async def _drain_into_entry(
             await entry.queue.put(event)
             async with entry.new_event:
                 entry.new_event.notify_all()
+    except asyncio.CancelledError:
+        entry.cancelled = True
+        cancellation_event = Event(
+            type="error",
+            version="v1",
+            trace_id=query.trace_id,
+            seq=len(entry.events),
+            ts=datetime.now(UTC),
+            payload=ErrorPayload(
+                fatal=True,
+                scope="run",
+                source="run_registry",
+                error_class="cancelled",
+                message="this run was stopped before it finished",
+                retry_after_s=0,
+            ).model_dump(),
+        )
+        entry.events.append(cancellation_event)
+        await entry.queue.put(cancellation_event)
+        async with entry.new_event:
+            entry.new_event.notify_all()
+        raise
     finally:
         entry.finished = True
         entry.finished_at = datetime.now(UTC)
+        # F-4.0-A-07 (adversary round 1, build phase 4.0): a pending
+        # abandonment check used to keep sleeping for up to a full grace
+        # window after the run it watches has already ended, since
+        # nothing told it the run was over until it woke up on its own
+        # and found `task.done()` true. Cancelling it here, the instant
+        # the run actually ends, removes that dangling sleeper rather
+        # than waiting for it to expire on its own; at the churn rates
+        # F-1.2-01 measured, that is the difference between a handful of
+        # live sleeping tasks and hundreds.
+        if entry.abandonment_check is not None and not entry.abandonment_check.done():
+            entry.abandonment_check.cancel()
+            entry.abandonment_check = None
         async with entry.new_event:
             entry.new_event.notify_all()
         await entry.queue.put(None)
@@ -252,18 +335,58 @@ class RunRegistry:
 
     def _reschedule_abandonment_check(self, entry: RunEntry) -> None:
         """Cancel any pending abandonment check, then schedule a fresh one
-        if `entry` currently has zero subscribers and is still running
-        (F-1.2-02). Called whenever `subscriber_count` changes and once at
-        `create_run` (a run that never gets a first subscriber is the same
-        wasted-cost shape as one that had a subscriber and lost it)."""
+        against `entry`'s TOTAL unwatched time if it currently has zero
+        subscribers and is still running (F-1.2-02). Called whenever
+        `subscriber_count` changes and once at `create_run` (a run that
+        never gets a first subscriber is the same wasted-cost shape as one
+        that had a subscriber and lost it).
+
+        F-4.0-A-01 (adversary round 1, build phase 4.0): the original
+        version of this method scheduled a brand new full-length
+        `abandon_grace_seconds` timer on every call, discarding whatever
+        unwatched time had already accumulated. A reconnect cadence
+        shorter than the grace window (attach, detach, repeat) reset the
+        clock every time and could hold a run alive forever, defeating
+        this method's entire purpose. The fix tracks cumulative real
+        unwatched seconds on the entry itself
+        (`cumulative_unwatched_seconds`, `unwatched_since`) and schedules
+        only the REMAINING budget, so a churn of brief reconnects still
+        accumulates real unwatched time between cycles and the run is
+        still cancelled once the total crosses the grace window, the same
+        outcome as if nobody had ever reconnected at all.
+        """
         if entry.abandonment_check is not None:
             entry.abandonment_check.cancel()
             entry.abandonment_check = None
-        if entry.subscriber_count == 0 and not entry.task.done():
-            entry.abandonment_check = asyncio.create_task(self._cancel_if_still_abandoned(entry.run_id))
 
-    async def _cancel_if_still_abandoned(self, run_id: str) -> None:
-        await asyncio.sleep(self._abandon_grace_seconds)
+        now = datetime.now(UTC)
+        if entry.subscriber_count > 0:
+            # Someone is attached: close out the current unwatched
+            # interval, if one was open, folding its real duration into
+            # the running total, and stop counting until the next detach.
+            if entry.unwatched_since is not None:
+                entry.cumulative_unwatched_seconds += (
+                    now - entry.unwatched_since
+                ).total_seconds()
+                entry.unwatched_since = None
+            return
+
+        if entry.task.done():
+            return
+        if entry.unwatched_since is None:
+            entry.unwatched_since = now
+        elapsed_this_interval = (now - entry.unwatched_since).total_seconds()
+        remaining = (
+            self._abandon_grace_seconds
+            - entry.cumulative_unwatched_seconds
+            - elapsed_this_interval
+        )
+        entry.abandonment_check = asyncio.create_task(
+            self._cancel_if_still_abandoned(entry.run_id, max(remaining, 0.0))
+        )
+
+    async def _cancel_if_still_abandoned(self, run_id: str, delay_seconds: float) -> None:
+        await asyncio.sleep(delay_seconds)
         entry = self._runs.get(run_id)
         if entry is None:
             return

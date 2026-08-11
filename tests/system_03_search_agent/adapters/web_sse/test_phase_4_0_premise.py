@@ -271,6 +271,52 @@ class TestAbandonment:
         assert not entry.task.cancelled()
         assert entry.task.done()  # finished normally, not cancelled
 
+    @pytest.mark.asyncio
+    async def test_rapid_churn_does_not_hold_a_run_alive_past_cumulative_grace_time(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """F-4.0-A-01 (adversary round 1, build phase 4.0): the original
+        version of `_reschedule_abandonment_check` scheduled a brand new
+        full-length grace window on every subscribe/unsubscribe, so a
+        reconnect cadence shorter than the grace window (attach,
+        immediately detach, repeat, never consuming an event) reset the
+        clock every time and held the run alive indefinitely, defeating
+        F-1.2-02's entire purpose. The fix tracks cumulative real
+        unwatched time across every interval instead of resetting it, so
+        churn no longer bypasses the check."""
+        from system_03_search_agent.core import run_registry as run_registry_module
+
+        started = asyncio.Event()
+
+        async def _fake_stream_never_finishes(query: Query, context: RequestContext):
+            yield _fake_event("guard", query.trace_id, 0)
+            started.set()
+            await asyncio.sleep(3600)
+            yield _fake_event("done", query.trace_id, 1)  # pragma: no cover - unreachable
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fake_stream_never_finishes)
+        registry = RunRegistry(retention_seconds=999.0, abandon_grace_seconds=0.3)
+
+        run_id = registry.create_run(_valid_query(), _valid_context())
+        await asyncio.wait_for(started.wait(), timeout=5.0)
+
+        # Churn: attach and immediately detach every 0.15s, well under the
+        # 0.3s grace window, never consuming more than the one already-
+        # buffered event. A naive full-reset timer would survive this
+        # forever; the cumulative-time fix should not.
+        for _ in range(12):
+            if registry.get_run(run_id).task.done():
+                break
+            subscriber = registry.subscribe(run_id, after_seq=-1)
+            await anext(subscriber)
+            await subscriber.aclose()
+            await asyncio.sleep(0.15)
+
+        entry = registry.get_run(run_id)
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(entry.task, timeout=5.0)
+        assert entry.task.cancelled()
+
 
 if not _can_connect():
     pytest.skip(
@@ -453,9 +499,13 @@ class TestResumability:
             release.set()  # the run produces its remaining event with nobody watching
             await _drain_run_task(run_id)
 
-            reconnected = await client.get(
-                f"/v1/query/{run_id}/events", headers={**headers, "Last-Event-ID": "-1"}
-            )
+            # F-4.0-A-02/A-03 fix round: `Last-Event-ID` must now be the
+            # strict digit grammar `seq` actually is (`ge=0`), so the
+            # literal string "-1" (previously honored only as a side
+            # effect of lenient `int()` parsing) is correctly rejected.
+            # Omitting the header is the real, spec-shaped way a client
+            # asks for a full replay.
+            reconnected = await client.get(f"/v1/query/{run_id}/events", headers=headers)
             events = [json.loads(f["data"]) for f in _parse_sse_frames(reconnected.text)]
             assert [e["type"] for e in events] == ["guard", "done"]
 
@@ -546,6 +596,52 @@ class TestResumability:
             )
             assert response.status_code == 400
             assert "exceeds" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_a_malformed_last_event_id_is_rejected_not_silently_full_replayed(
+        self,
+    ) -> None:
+        """F-4.0-A-02/A-03 (adversary round 1, build phase 4.0): a
+        present-but-malformed cursor used to fall back to the same
+        full-replay default as a genuinely absent header, silently
+        producing exactly the duplicate delivery the phase premise
+        forbids ("never a gap, never a duplicate"). Every shape below is
+        a cursor this run cannot honor and must be rejected the same way
+        an out-of-range one already is, never silently reinterpreted as
+        "start over"."""
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            run_id = await _create_run(client, headers)
+            await _drain_run_task(run_id)
+
+            malformed_cursors = [
+                "1_0",  # PEP 515 underscore separator, int() accepts it
+                "+3",  # explicit sign
+                "-1",  # negative, even though it is subscribe()'s own sentinel
+                "0x3",  # hex
+                "3.0",  # float
+                "inf",
+                "nan",
+                "",  # empty but present (distinct from an absent header)
+                "abc",
+            ]
+            for malformed in malformed_cursors:
+                response = await client.get(
+                    f"/v1/query/{run_id}/events",
+                    headers={**headers, "Last-Event-ID": malformed},
+                )
+                assert response.status_code == 400, (
+                    f"Last-Event-ID={malformed!r} should be rejected 400, "
+                    f"got {response.status_code}: {response.text}"
+                )
+
+            # Confirm the one legitimate case still works: a genuinely
+            # ABSENT header (not a malformed present one) is a real full
+            # replay, not an error.
+            fresh_headers = dict(headers)
+            fresh_headers.pop("Last-Event-ID", None)
+            response = await client.get(f"/v1/query/{run_id}/events", headers=fresh_headers)
+            assert response.status_code == 200
 
 
 class TestMultiConsumer:
@@ -641,7 +737,11 @@ class TestCitationsEndpoint:
 
             assert response.status_code == 409
             detail = response.json()["detail"].lower()
-            assert "not finished" in detail or "not complete" in detail
+            # F-4.0-A-06 fix round: reworded so the message never names
+            # "the done event" as the only way a run ends, since a
+            # stopped or abandonment-cancelled run does not emit one
+            # (F-4.0-A-04). "terminal state" replaces "not finished".
+            assert "terminal state" in detail or "not complete" in detail
             assert "done" in detail or "events" in detail  # names what to do next
 
             run_registry_module.default_registry.cancel_run(run_id)
@@ -665,6 +765,76 @@ class TestCitationsEndpoint:
             _other_id, other_headers = await _auth_headers(client)
             response = await client.get(f"/v1/query/{run_id}/citations", headers=other_headers)
             assert response.status_code == 403
+
+
+class TestCancellationTerminalState:
+    """F-4.0-A-04/A-05 (adversary round 1, build phase 4.0): a stopped run
+    used to end its SSE stream with no terminal event at all, and its
+    citations export was silently indistinguishable from a genuinely
+    empty one. Both are now disclosed."""
+
+    @pytest.mark.asyncio
+    async def test_a_stopped_run_emits_a_real_terminal_event_not_silence(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        started = asyncio.Event()
+
+        async def _fake_stream_never_finishes(query: Query, context: RequestContext):
+            yield _fake_event("guard", query.trace_id, 0)
+            started.set()
+            await asyncio.sleep(3600)
+            yield _fake_event("done", query.trace_id, 1)  # pragma: no cover - unreachable
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fake_stream_never_finishes)
+
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            run_id = await _create_run(client, headers)
+            await asyncio.wait_for(started.wait(), timeout=5.0)
+
+            stop_response = await client.post(f"/v1/query/{run_id}/stop", headers=headers)
+            assert stop_response.status_code == 200
+
+            entry = run_registry_module.default_registry.get_run(run_id)
+            with pytest.raises(asyncio.CancelledError):
+                await asyncio.wait_for(entry.task, timeout=5.0)
+
+            events_response = await client.get(f"/v1/query/{run_id}/events", headers=headers)
+            events = [json.loads(f["data"]) for f in _parse_sse_frames(events_response.text)]
+            assert events, "a cancelled run's replay must not be empty"
+            terminal = events[-1]
+            assert terminal["type"] == "error"
+            assert terminal["payload"]["fatal"] is True
+            assert terminal["payload"]["error_class"] == "cancelled"
+
+    @pytest.mark.asyncio
+    async def test_citations_export_discloses_cancellation_via_response_header(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        started = asyncio.Event()
+
+        async def _fake_stream_never_finishes(query: Query, context: RequestContext):
+            yield _fake_event("guard", query.trace_id, 0)
+            started.set()
+            await asyncio.sleep(3600)
+            yield _fake_event("done", query.trace_id, 1)  # pragma: no cover - unreachable
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fake_stream_never_finishes)
+
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            run_id = await _create_run(client, headers)
+            await asyncio.wait_for(started.wait(), timeout=5.0)
+
+            await client.post(f"/v1/query/{run_id}/stop", headers=headers)
+            entry = run_registry_module.default_registry.get_run(run_id)
+            with pytest.raises(asyncio.CancelledError):
+                await asyncio.wait_for(entry.task, timeout=5.0)
+
+            response = await client.get(f"/v1/query/{run_id}/citations", headers=headers)
+            assert response.status_code == 200
+            assert response.json() == []
+            assert response.headers.get("X-Run-Cancelled") == "true"
 
 
 class TestOperatorModeServerDerivation:

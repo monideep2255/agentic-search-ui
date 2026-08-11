@@ -2,11 +2,12 @@
 
 import logging
 import os
+import re
 import uuid
 from collections.abc import AsyncIterator
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sse_starlette.sse import EventSourceResponse
@@ -33,6 +34,14 @@ logger = logging.getLogger(__name__)
 # at-most-20-tool-calls-per-query cap, so this is defense in depth, not the
 # primary bound.
 _MAX_CITATIONS_PER_RUN = 50
+
+# F-4.0-A-02/A-03 (adversary round 1, build phase 4.0): the ONLY valid
+# `Last-Event-ID` shape is the digits `Event.seq` actually is (`ge=0`,
+# Section 2.2), never Python's broader integer literal grammar. `int()`
+# alone accepts `1_0` (underscore separators), `+3`, `-0`, hex, `inf`,
+# `nan`, and a float string, every one of which is a cursor no real
+# client could have produced from a wire `id:` line.
+_SEQ_CURSOR_PATTERN = re.compile(r"\d+")
 
 
 def _allowed_origins() -> list[str]:
@@ -188,15 +197,32 @@ async def get_v1_query_events(
     # back the last `seq` it saw as `Last-Event-ID` (this backend's
     # `fetch`-based SSE client, unlike a native `EventSource`, can set an
     # arbitrary request header, so no query-param fallback is needed). A
-    # missing or unparseable header falls back to -1, `subscribe`'s own
-    # "replay everything" default, since every real `seq` is `>= 0`
+    # genuinely ABSENT header means "new client, full replay",
+    # `subscribe`'s own default, since every real `seq` is `>= 0`
     # (Section 2.2).
-    after_seq = -1
-    if last_event_id is not None:
-        try:
-            after_seq = int(last_event_id)
-        except ValueError:
-            after_seq = -1
+    #
+    # F-4.0-A-02 (adversary round 1, build phase 4.0): a PRESENT but
+    # malformed header used to fall back to the same full-replay default
+    # as an absent one, silently producing exactly the duplicate delivery
+    # the phase premise forbids ("never a gap, never a duplicate"), while
+    # an out-of-range-but-well-formed cursor was correctly rejected below.
+    # Both are cursors this run cannot honor; only one was an error. A
+    # present header now must be the strict digit grammar `seq` actually
+    # is (F-4.0-A-03) or it is rejected the same way an out-of-range one
+    # is, never silently reinterpreted as "start over".
+    if last_event_id is None:
+        after_seq = -1
+    elif _SEQ_CURSOR_PATTERN.fullmatch(last_event_id):
+        after_seq = int(last_event_id)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Last-Event-ID {last_event_id!r} is not a valid seq cursor "
+                "(expected digits only); omit the header for a fresh replay "
+                "rather than sending a value this run cannot resolve"
+            ),
+        )
 
     # F-4.0-J-03 (judge review, build phase 4.0): `after_seq` is validated
     # against what this run has actually produced so far, using the same
@@ -225,6 +251,19 @@ async def get_v1_query_events(
     # membership, never from anything in the request body or headers. There
     # is no operator-related field on any request model to read here; that
     # absence is the point.
+    #
+    # F-4.0-A-08 (adversary round 1, build phase 4.0): this snapshot is
+    # deliberately per-CONNECTION, not re-checked per-event. Revoking an
+    # operator's allowlist membership mid-stream does not affect an
+    # already-open connection; it takes effect on that caller's NEXT
+    # request. This is an accepted design decision, not an oversight: the
+    # allowlist check happens once, here, rather than once per event
+    # inside `_event_stream` below, so a long deep-research stream is not
+    # paying a live env-var read on every yielded event for a revocation
+    # scenario expected to be rare. Stated explicitly because
+    # `_operator_user_ids()` (harness/cost_control.py) is itself written
+    # to be live-reloadable, which could otherwise read as a promise this
+    # call site does not keep.
     is_operator = is_operator_user(str(current_user.id))
 
     async def _event_stream() -> AsyncIterator[dict[str, str]]:
@@ -254,6 +293,17 @@ async def get_v1_query_events(
         # and desync from what `subscribe(after_seq=...)` expects on the
         # next reconnect, while the real envelope `seq` resumes correctly
         # through that same gap.
+        #
+        # F-4.0-A-09 (adversary round 1, build phase 4.0): named tradeoff,
+        # not an oversight. The gaps in a non-operator's visible `id:`
+        # sequence (0, 2, 4, ... never 1, 3, 5) disclose exactly how many
+        # `cost` events were filtered and roughly where in the pipeline
+        # each occurred, which is itself cost-adjacent metadata
+        # (harness/cost_control.py's own comment: "cost and token usage
+        # are internal-only data"). The alternative, a per-connection
+        # counter with no gaps, was rejected above for a real correctness
+        # reason (F-4.0-J-01), so this is the accepted cost of that
+        # choice, not a separate defect to fix independently.
         async for item in default_registry.subscribe(run_id, after_seq=after_seq):
             forwarded = item if is_operator else sanitize_event_for_end_user(item)
             if forwarded is not None:
@@ -277,6 +327,7 @@ async def get_v1_query_events(
 )
 async def get_v1_query_citations(
     run_id: str,
+    response: Response,
     current_user: User = Depends(get_current_user),  # noqa: B008 - idiomatic FastAPI dependency injection
 ) -> list[CitationPayload]:
     entry = _get_owned_run(run_id, current_user)
@@ -286,17 +337,49 @@ async def get_v1_query_citations(
         # (its own docstring), so `entry.finished` becoming True is the
         # only reliable terminal signal; there is no separate "failed"
         # state to special-case here.
+        #
+        # F-4.0-A-06 (adversary round 1, build phase 4.0): the message used
+        # to name "the done event" specifically, but a run that gets
+        # stopped or abandonment-cancels never emits one (see F-4.0-A-04's
+        # fix: a cancelled run's terminal event is a fatal `error`, not
+        # `done`). Reworded to name the real, complete set of ways a run
+        # ends, not just the normal-completion path.
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                "run has not finished; poll GET /v1/query/{run_id}/events "
-                "or retry this request after the done event"
+                "run has not reached a terminal state yet; poll GET "
+                "/v1/query/{run_id}/events or retry this request once the "
+                "stream ends (a done event, or a stop or cancellation)"
             ),
         )
     # A run that ended via a fatal error with no citations correctly
     # returns an empty list here, not an error: reaching a terminal state
     # is what this endpoint gates on, not reaching the `done` event
     # specifically.
+    #
+    # F-4.0-A-05 (adversary round 1, build phase 4.0): a run stopped or
+    # abandonment-cancelled partway through reaches this same terminal
+    # state (`entry.finished`) as a genuinely complete run, so its
+    # citation list, real but partial, was indistinguishable from a
+    # complete run that legitimately cited nothing. `X-Run-Cancelled`
+    # discloses the distinction as response metadata rather than changing
+    # the body's wire shape (still a bare JSON array, per Section 13.1),
+    # which build phase 4.1's MCP surface and 4.2's CLI can read without
+    # a breaking contract change.
+    if entry.cancelled:
+        response.headers["X-Run-Cancelled"] = "true"
+    #
+    # F-4.0-A-12 (adversary round 1, build phase 4.0, carried open): a
+    # separate truncation disclosure exists upstream, `core/graph.py`'s
+    # `citations_capped` (the `_MAX_CITATIONS_PER_ANSWER` cut, F-2.1-C12's
+    # honesty guarantee), but it is currently only woven into the
+    # narrative `token` text or a non-fatal refusal `error`, never onto
+    # `DonePayload`, so this endpoint (which reads only `citation`-typed
+    # events) has no field to read it from. The correct fix threads a new
+    # additive `DonePayload` field through `core/graph.py`'s several
+    # `write_node` exit branches, which deserves its own focused,
+    # separately tested change rather than a rushed addition at the tail
+    # of this round; tracked in tracker/phase_4.0.md's Open items.
     #
     # F-4.0-J-06 (judge review, build phase 4.0): `CitationPayload` is
     # `extra="forbid"`, so constructing it from a malformed `citation`
@@ -306,6 +389,7 @@ async def get_v1_query_citations(
     # through `CitationPayload(...).model_dump()`, so this is not expected
     # to fire; it exists so a future producer's bug degrades to "one
     # citation missing, logged" rather than "the whole export breaks".
+    citation_events_total = sum(1 for event in entry.events if event.type == "citation")
     citations: list[CitationPayload] = []
     for event in entry.events:
         if event.type != "citation":
@@ -320,6 +404,17 @@ async def get_v1_query_citations(
             )
         if len(citations) >= _MAX_CITATIONS_PER_RUN:
             break
+    # F-4.0-A-13 (adversary round 1, build phase 4.0): the local
+    # `_MAX_CITATIONS_PER_RUN` break above is unreachable today (verified:
+    # `core/graph.py`'s own `_MAX_CITATIONS_PER_ANSWER = 20` is the only
+    # producer and cuts well below 50), but was itself an undisclosed
+    # silent truncation, the same shape phase 3.2's `_cap()` finding was
+    # fixed for, with nothing enforcing the 2.5x margin that makes it safe
+    # today. Disclosed defensively so raising the upstream cap past 50 in
+    # a later phase degrades to "the header says so" rather than "a live
+    # silent-truncation path with no failing test".
+    if citation_events_total > _MAX_CITATIONS_PER_RUN:
+        response.headers["X-Citations-Export-Truncated"] = "true"
     return citations
 
 
