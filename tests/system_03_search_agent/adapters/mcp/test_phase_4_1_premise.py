@@ -86,6 +86,7 @@ from system_03_search_agent.contracts.events import (
     CitationPayload,
     CostPayload,
     DonePayload,
+    ErrorPayload,
     Event,
     GuardPayload,
     PlanPayload,
@@ -294,6 +295,63 @@ async def _refusal_path_stream(query: Query, context: RequestContext) -> AsyncIt
         trace_id,
         4,
         DonePayload(total_cost_usd=0.0050, total_tool_calls=1, elapsed_ms=90, trust_outcome="refuse"),
+    )
+
+
+async def _guardrail_refusal_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+    """F-4.1-J-03 (judge round 1): the exact shape `core/graph.py`'s
+    `_decline_for_guardrail` emits (verified against that function
+    directly): a `guard` event with `passed=False`, then `done` with
+    `trust_outcome="refuse"`. The graph never reaches `write_node` on this
+    path, so there is no `token` event at all, which is what makes
+    `_fallback_answer_text`'s guard-failure branch (`server.py` lines
+    183-188) and the synthetic answer-scope `trust_signal` fallback
+    (lines 248-257) the only way this run shape can produce a response.
+    """
+    trace_id = query.trace_id
+    yield _event(
+        "guard",
+        trace_id,
+        0,
+        GuardPayload(passed=False, category="off_topic", reason="not a biomedical question"),
+    )
+    yield _event(
+        "done",
+        trace_id,
+        1,
+        DonePayload(total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=15, trust_outcome="refuse"),
+    )
+
+
+async def _daily_cap_decline_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+    """F-4.1-J-03: the exact shape `core/graph.py`'s `_decline_for_daily_cap`
+    emits (verified against that function directly): a fatal `error` event,
+    then `done` with `trust_outcome="refuse"`. No `guard` event and no
+    `token` event fire on this path, so this is the run shape that reaches
+    `_fallback_answer_text`'s fatal-error branch (`server.py` lines
+    189-190), not its guard-failure branch, and it is also the only fake
+    stream in this file that exercises the fold loop's fatal-error capture
+    (`server.py` lines 239-241).
+    """
+    trace_id = query.trace_id
+    yield _event(
+        "error",
+        trace_id,
+        0,
+        ErrorPayload(
+            fatal=True,
+            scope="run",
+            source="guardrail",
+            error_class="recoverable",
+            message="daily query cap exceeded for this account",
+            retry_after_s=0,
+        ),
+    )
+    yield _event(
+        "done",
+        trace_id,
+        1,
+        DonePayload(total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=10, trust_outcome="refuse"),
     )
 
 
@@ -518,6 +576,74 @@ class TestSchemaFidelity:
         assert trust_signal_schema["type"] == "object"
 
 
+class TestFallbackAnswerText:
+    """F-4.1-J-03 (judge round 1): direct unit coverage of `server.py`'s
+    `_extract_bearer_header` (the `headers is None` branch, line 141) and
+    `_fallback_answer_text` (its whole body, lines 183-191), the two
+    smallest units the fold loop's defensive branches decompose into.
+    Needs no HTTP call, no MCP client session, and no database, so these
+    run unconditionally alongside `TestToolSurface`/`TestSchemaFidelity`
+    above.
+    """
+
+    @pytest.mark.asyncio
+    async def test_ctx_with_no_headers_attribute_value_returns_none(self) -> None:
+        """`Context.headers` returns `None` "when the transport has them"
+        is false (the SDK's own docstring, `mcpserver/context.py:279`), for
+        example a non-HTTP transport. `_extract_bearer_header` must not
+        raise on that shape and must simply report no bearer value found,
+        covers `server.py` line 141.
+        """
+        from system_03_search_agent.adapters.mcp.server import _extract_bearer_header
+
+        class _CtxWithNoHeaders:
+            headers = None
+
+        assert _extract_bearer_header(_CtxWithNoHeaders()) is None  # type: ignore[arg-type]
+
+    def test_guard_failure_produces_guard_specific_refusal_wording(self) -> None:
+        """Covers `server.py` lines 183-188: the branch used for a
+        guardrail-level refusal (`_decline_for_guardrail`'s run shape,
+        which emits no `token` event)."""
+        from system_03_search_agent.adapters.mcp.server import _fallback_answer_text
+
+        text = _fallback_answer_text(
+            guard_payload=GuardPayload(passed=False, category="off_topic", reason="not biomedical"),
+            error_payload=None,
+        )
+        assert "guardrail" in text.lower()
+        assert "not biomedical" in text
+
+    def test_fatal_error_produces_error_specific_wording(self) -> None:
+        """Covers `server.py` lines 189-190: the branch used for a fatal
+        step-level error before Write ever ran (`_decline_for_daily_cap`'s
+        run shape, which also emits no `token` event)."""
+        from system_03_search_agent.adapters.mcp.server import _fallback_answer_text
+
+        text = _fallback_answer_text(
+            guard_payload=None,
+            error_payload=ErrorPayload(
+                fatal=True,
+                scope="run",
+                source="guardrail",
+                error_class="recoverable",
+                message="daily query cap exceeded for this account",
+                retry_after_s=0,
+            ),
+        )
+        assert "daily query cap exceeded for this account" in text
+
+    def test_no_guard_and_no_error_produces_the_generic_catch_all_wording(self) -> None:
+        """Covers `server.py` line 191: the final defensive fallback for a
+        run that terminates with no `token`, no guard failure, and no
+        fatal error captured, a shape no named run path in `core/graph.py`
+        currently produces but that this function still guards against."""
+        from system_03_search_agent.adapters.mcp.server import _fallback_answer_text
+
+        text = _fallback_answer_text(guard_payload=None, error_payload=None)
+        assert text == "This query could not be completed: the run ended before producing an answer."
+
+
 # ---------------------------------------------------------------------------
 # HTTP-driven arms: golden path, refusal path, event folding, never-cost,
 # and every auth arm. Needs `search_agent_users` PostgreSQL reachable for
@@ -639,7 +765,13 @@ class TestEventFolding:
         content = result.structured_content
         assert set(content.keys()) == {"answer", "citations", "trust_signal", "run_id"}
         for excluded_key in ("think", "plan", "tool_start", "token", "tool_result", "guard", "cost"):
-            assert excluded_key not in _find_all(content, excluded_key), (
+            # F-4.1-J-01 (judge round 1): `_find_all(content, key)` returns
+            # the VALUES found under `key` anywhere in the structure, not
+            # the key names, so `excluded_key not in _find_all(...)` was
+            # comparing a key name against a list of unrelated values and
+            # could never be false. The correct check is that no value was
+            # ever found under that key at all: the list itself is empty.
+            assert _find_all(content, excluded_key) == [], (
                 f"{excluded_key!r} leaked into the folded response"
             )
 
@@ -664,7 +796,58 @@ class TestNeverCost:
         content = result.structured_content
         assert set(content.keys()) == {"answer", "citations", "trust_signal", "run_id"}
         for cost_key in ("cost", "total_cost_usd", "query_cost_usd", "query_cap_usd", "cap_fraction"):
-            assert cost_key not in _find_all(content, cost_key)
+            # F-4.1-J-01 (judge round 1): same fix as `TestEventFolding`
+            # above. `_find_all` returns values found under `cost_key`, so
+            # the assertion must check that list is empty, not that the
+            # key name string is absent from that list of values.
+            assert _find_all(content, cost_key) == []
+
+
+class TestUngroundedRunShapesFoldCorrectly:
+    """F-4.1-J-03 (judge round 1): end-to-end coverage, through the real
+    fold loop and a real MCP client call, of the two named run shapes that
+    never reach `write_node` and therefore never emit a `token` event:
+    `_decline_for_guardrail` and `_decline_for_daily_cap` (both in
+    `core/graph.py`). These are the only run shapes that exercise
+    `server.py`'s synthetic answer-scope `trust_signal` fallback (lines
+    248-257), the empty-answer path that invokes `_fallback_answer_text`
+    (line 261), and, for the daily-cap shape specifically, the fatal-error
+    capture branch (lines 239-241).
+    """
+
+    @pytest.mark.asyncio
+    async def test_guardrail_refusal_run_folds_to_a_fallback_answer(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(run_registry_module, "run_streaming", _guardrail_refusal_stream)
+        _user_id, headers = await _real_user_headers()
+
+        result = await _call_tool(headers, {"query": "what is the capital of France"})
+
+        assert result.is_error is False
+        content = result.structured_content
+        assert content["citations"] == []
+        assert "guardrail" in content["answer"].lower()
+        assert content["trust_signal"]["outcome"] == "refuse"
+        assert content["trust_signal"]["scope"] == "answer"
+        assert content["run_id"]
+
+    @pytest.mark.asyncio
+    async def test_daily_cap_decline_run_folds_to_a_fallback_answer(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(run_registry_module, "run_streaming", _daily_cap_decline_stream)
+        _user_id, headers = await _real_user_headers()
+
+        result = await _call_tool(headers, {"query": "What gene is BRCA1?"})
+
+        assert result.is_error is False
+        content = result.structured_content
+        assert content["citations"] == []
+        assert "daily query cap exceeded for this account" in content["answer"]
+        assert content["trust_signal"]["outcome"] == "refuse"
+        assert content["trust_signal"]["scope"] == "answer"
+        assert content["run_id"]
 
 
 class TestAuth:
