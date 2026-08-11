@@ -940,3 +940,35 @@ class TestLegacyQueryEndpointRemoved:
                 headers=headers,
             )
             assert response.status_code == 404
+
+
+class TestCorsExposedHeaders:
+    """F-4.0-J3-01 (judge round 3, build phase 4.0): `allow_headers`
+    governs what a browser may SEND; `expose_headers` is the separate
+    control for what it may READ back off the response. Without it, a
+    browser JS client cannot see the citations endpoint's disclosure
+    headers at all, which would silently defeat F-4.0-A-05/A-13's fixes
+    for exactly the audience (a future frontend consumer) they exist for.
+    """
+
+    @pytest.mark.asyncio
+    async def test_citation_disclosure_headers_are_exposed_to_browser_clients(
+        self,
+    ) -> None:
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            run_id = await _create_run(client, headers)
+            await _drain_run_task(run_id)
+
+            # `Access-Control-Expose-Headers` is a SIMPLE-request response
+            # header, not a preflight one: Starlette's `CORSMiddleware`
+            # only adds it to the actual response, so this is a real GET
+            # with `Origin` set, not an `OPTIONS` preflight.
+            response = await client.get(
+                f"/v1/query/{run_id}/citations",
+                headers={**headers, "Origin": "http://localhost:5173"},
+            )
+            assert response.status_code == 200
+            exposed = response.headers.get("access-control-expose-headers", "")
+            assert "X-Run-Cancelled" in exposed
+            assert "X-Citations-Export-Truncated" in exposed

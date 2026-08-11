@@ -73,6 +73,16 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
+    # F-4.0-J3-01 (judge round 3, build phase 4.0): `allow_headers` governs
+    # what a browser may SEND, a completely separate CORS control from
+    # what it may READ back off the response, which needs
+    # `expose_headers`. Without it, a browser JS client cannot see
+    # `GET /citations`'s `X-Run-Cancelled`/`X-Citations-Export-Truncated`
+    # headers at all (F-4.0-A-05/A-13's fixes this same phase), so a
+    # future frontend consumer could render a partial or truncated
+    # citation export as complete with no way to know otherwise, the
+    # exact trust-moat failure those two fixes exist to prevent.
+    expose_headers=["X-Run-Cancelled", "X-Citations-Export-Truncated"],
 )
 
 app.include_router(auth_router)
