@@ -12,8 +12,8 @@ Listed in flow order. Work moves left to right on the board, from `todo` to `don
 
 | Status | Count | Who may set it |
 |--------|-------|----------------|
-| To do | 15 | Lead |
-| In progress | 0 | The builder that claimed it |
+| To do | 14 | Lead |
+| In progress | 1 | The builder that claimed it |
 | Blocked | 0 | The builder that hit the block, reason required |
 | In review | 0 | The builder that finished |
 | Done | 16 | Judge only, never the builder |
@@ -56,7 +56,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 3.3 | `phase/3.3-enrichment-tools` | pubtator_annotate and litvar2_lookup, each with untrusted-source-reader separation | 3.1 | v1 | done | refined | | | relations endpoint unverified, disclosure-policy asymmetry, check_learnings_coverage.py format blind spot |
 | 3.4 | `phase/3.4-citation-trust-full` | Provenance extended to Layers 2 and 3, the two-tier risk gate, freshness and conflict resolution, T-3.1-28 (Act-step dispatch of a second layer) folded in (PR #28) | 2.2, 3.1, 3.2, 3.3, 3.5 | v1 | done | refined | | eval-harness | F-3.4-T06-01 staleness cannot fire against current ingest, F-3.4-A-05 staleness-note precision gap, F-3.4-A-06 URL pattern end-anchor gap (scheduled) |
 | 3.5 | `phase/3.5-pathogen-clinicaltrials-tools` | pathogen_detection and clinicaltrials_search, completing the seven-tool roster (PR #27) | 3.1 | v1 | done | refined | | | F-3.5-A-07 weak-match undisclosed (partially mitigated), F-3.5-10 conditions truncation |
-| 4.0 | `phase/4.0-rest-sse-hardening` | The REST plus SSE adapter finalized as the public API surface | 2.2 | v1 | todo | tech_refine | | | F-1.2-01, F-1.2-02, F-1.2-03 |
+| 4.0 | `phase/4.0-rest-sse-hardening` | The REST plus SSE adapter finalized as the public API surface | 2.2 | v1 | in_progress | refined | | | F-1.2-01, F-1.2-02, F-1.2-03 |
 | 4.1 | `phase/4.1-mcp-server` | Outbound-only MCP server wrapping the same tool functions | 3.4 | v1 | todo | tech_refine | | | |
 | 4.2 | `phase/4.2-cli-adapter` | Thin CLI client over the REST API | 4.0 | v1 | todo | tech_refine | | | |
 | 4.3 | `phase/4.3-graphql-api` | GraphQL surface via Strawberry, sharing auth and tools with REST | 4.0 | v1 | todo | tech_refine | | | |
