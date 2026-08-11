@@ -30,6 +30,27 @@ from system_03_search_agent.data.session import get_session
 
 _INVALID_TOKEN_DETAIL = "invalid or expired access token"
 
+# F-4.1-A-12 (adversary round 1, build phase 4.1): RFC 7235 section 2.1
+# makes the auth-scheme token case-insensitive, so `bearer`/`BEARER`/
+# `Bearer` must all be accepted equally. The single literal space
+# separating scheme from token is unchanged from before this fix; RFC
+# 7230's optional-whitespace allowance around the separator (a tab, or
+# leading whitespace before the scheme) is a separate, narrower gap the
+# same finding named and did not ask to close, carried open rather than
+# silently widened here.
+_BEARER_SCHEME_LOWER = "bearer "
+
+
+def has_bearer_scheme(authorization: str | None) -> bool:
+    """True if `authorization` starts with the `Bearer` scheme, matched
+    case-insensitively (F-4.1-A-12). Exposed as its own function, not
+    inlined into `resolve_user_from_bearer_token`, so a caller that only
+    needs the cheap, no-database shape check (`adapters/mcp/server.py`'s
+    `_authenticate_mcp_caller`, F-4.1-A-14) can run it before opening a
+    session, without a second, drifting implementation of the same check.
+    """
+    return authorization is not None and authorization.lower().startswith(_BEARER_SCHEME_LOWER)
+
 
 class InvalidBearerTokenError(Exception):
     """Raised by `resolve_user_from_bearer_token` for a missing, malformed,
@@ -63,9 +84,10 @@ def resolve_user_from_bearer_token(authorization: str | None, session: Session) 
     Raises:
         InvalidBearerTokenError: for any of the failure modes above.
     """
-    if not authorization or not authorization.startswith("Bearer "):
+    if not has_bearer_scheme(authorization):
         raise InvalidBearerTokenError(_INVALID_TOKEN_DETAIL)
-    token = authorization.removeprefix("Bearer ").strip()
+    assert authorization is not None  # narrowed by has_bearer_scheme above
+    token = authorization[len(_BEARER_SCHEME_LOWER) :].strip()
     if not token:
         raise InvalidBearerTokenError(_INVALID_TOKEN_DETAIL)
     try:
