@@ -593,38 +593,3 @@ class TestStopEndpoint:
             assert first.json()["stopped"] is True
             assert second.status_code == 200
             assert second.json()["stopped"] is True
-
-
-class TestExistingQueryEndpointIsUnaffected:
-    """T-1.2-02's acceptance criteria requires `POST /query` (the existing,
-    buffered endpoint) to be completely unaffected by this ticket. The full
-    regression suite lives in test_query_endpoint.py; this is a single
-    smoke check that the route still exists and behaves, run from this
-    file so a reviewer sees the "unaffected" claim checked in the same
-    place the new routes are defined, not just asserted in a ticket note."""
-
-    @pytest.mark.asyncio
-    async def test_post_query_still_returns_200_with_guard_and_done_events(self) -> None:
-        async with _client() as client:
-            _user_id, headers = await _auth_headers(client)
-            body = {
-                "query": {
-                    "text": "What gene is BRCA1?",
-                    "session_id": "session-1",
-                    "trace_id": "trace-1",
-                    "user_id": None,
-                    "audience_depth": "researcher",
-                },
-                "context": {
-                    "surface": "web_ui",
-                    "session_memory": None,
-                    "operator_mode": False,
-                },
-            }
-            response = await client.post("/query", json=body, headers=headers)
-
-            assert response.status_code == 200
-            events = response.json()
-            types = [event["type"] for event in events]
-            assert "guard" in types
-            assert types[-1] == "done"

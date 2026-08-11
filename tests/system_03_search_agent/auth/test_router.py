@@ -563,7 +563,10 @@ def test_me_expired_token_returns_401(client):
 
 
 # ---------------------------------------------------------------------------
-# Phase 1.0 regression: /health and /query unchanged by mounting the router.
+# Phase 1.0 regression: /health and /v1/query unchanged by mounting the
+# router. Build phase 4.0 retired the phase 1.0/2.0 buffered POST /query
+# endpoint (tracker/phase_4.0.md); this check now targets its finalized
+# successor.
 # ---------------------------------------------------------------------------
 
 
@@ -573,13 +576,13 @@ def test_health_unaffected_by_auth_router(client):
     assert response.json() == {"status": "ok"}
 
 
-def test_auth_router_does_not_shadow_query_route(client):
-    # A malformed, authenticated /query body should still 422 from the
-    # typed-event contract, not 404, proving the auth router mount left
+def test_auth_router_does_not_shadow_v1_query_route(client):
+    # A malformed, authenticated /v1/query body should still 422 from the
+    # typed request schema, not 404, proving the auth router mount left
     # routing intact. Build phase 2.0 (T-2.0-08) added an auth dependency
-    # to /query, so an unauthenticated request now 401s before body
+    # to this surface, so an unauthenticated request now 401s before body
     # validation runs; authenticate first to isolate the routing check.
     _, _, tokens = _signup_and_login(client)
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
-    response = client.post("/query", json={}, headers=headers)
+    response = client.post("/v1/query", json={}, headers=headers)
     assert response.status_code == 422
