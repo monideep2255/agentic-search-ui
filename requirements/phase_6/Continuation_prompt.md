@@ -15,6 +15,7 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 - [Build phase 3.4, done](#build-phase-34-done)
 - [Build phase 3.5, done](#build-phase-35-done)
 - [Step 6.2, done](#step-62-done)
+- [Build phase 4.0, code-complete, awaiting merge](#build-phase-40-code-complete-awaiting-merge)
 - [Open items](#open-items)
 - [Handover](#handover)
 
@@ -39,7 +40,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Step 6.2, the reconciliation pause, is DONE, closed 2026-08-10 across PRs #29 through #36, all merged to `develop` (see "Step 6.2, done" below). It ran immediately after build phase 3.4's merge, per the 2026-08-03 resequencing decision naming the 3.x tool phases as the code this reconciliation most exists for. Brought the locked PRD, tech spec, and living evaluation playbook into agreement with what the prototype and the six tool-and-trust phases taught, swept the new-intake folder, and closed every item explicitly tagged "Step 6.2" as owner in the Open items table below. An informal manual smoke test run during this reconciliation (the 7 v1 must-pass moat questions, asked directly, answers read by hand, not the formal graded eval-harness gate) surfaced one new, previously unflagged finding: F-2.0-15, `think_node`'s real query classification was never built past its build-phase-2.0 stub. Product-owner decision, 2026-08-10: build phase 4.7 is now formally F-2.0-15's home, not just its closest candidate. Step 6.2's security-scan half stays PAUSED INDEFINITELY on cost, unchanged by this reconciliation. Next: build phase 4.0, the REST plus SSE adapter hardening pass, the first of Step 6.3's remaining fourteen build phases (4.0 through 7.1), unaffected by F-2.0-15 since it depends on no real question-understanding.
+> Build phase 4.0, the REST plus SSE adapter finalized as the public API surface, is code-complete and awaiting product-owner review, not yet merged. Four judge rounds ran on `phase/4.0-rest-sse-hardening`: round 1 FAILED on two blocking findings (a missing SSE `id:` line breaking real resumability, and an unverifiable "written and watched failing first" premise-gate claim), rounds 2 through 4 each PASSED after a fix round closed what the prior round found. One adversary round ran against the live system and filed 14 real findings (4 major, 5 moderate, 5 minor); 8 are fixed and judge-confirmed, 2 are resolved by documenting them as intentional design decisions, and 4 are carried open with a named owner each on `tracker/BOARD.md` (three of the four point to build phase 6.0's rate-limiting work, one needs a `DonePayload` contract change no future phase yet owns by name). Full account: `tracker/phase_4.0.md`. Next: push the branch, open the PR, and await review and merge. Once merged, build phase 4.1 (the outbound-only MCP server) is next, the first of Step 6.3's remaining thirteen build phases (4.1 through 7.1).
 
 Full detail on what PR #23 (build phase 3.1's re-review debt) fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07. Full detail on the F-2.1-C15 fix, including the bypass a fresh-context review found in its own first version before merge and the second review that confirmed the fix, is `tracker/fix_c15_generation_bound.md`.
 
@@ -61,7 +62,7 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Step 6.2, the reconciliation pause, is DONE, closed 2026-08-10 across PRs #29 through #36, all merged to `develop` (see "Step 6.2, done" below). It ran immediately after build phase 3.4's merge, per the 2026-08-03 resequencing decision naming the 3.x tool phases as the code this reconciliation most exists for. Brought the locked PRD, tech spec, and living evaluation playbook into agreement with what the prototype and the six tool-and-trust phases taught, swept the new-intake folder, and closed every item explicitly tagged "Step 6.2" as owner in the Open items table below. An informal manual smoke test run during this reconciliation (the 7 v1 must-pass moat questions, asked directly, answers read by hand, not the formal graded eval-harness gate) surfaced one new, previously unflagged finding: F-2.0-15, `think_node`'s real query classification was never built past its build-phase-2.0 stub. Product-owner decision, 2026-08-10: build phase 4.7 is now formally F-2.0-15's home, not just its closest candidate. Step 6.2's security-scan half stays PAUSED INDEFINITELY on cost, unchanged by this reconciliation. Next: build phase 4.0, the REST plus SSE adapter hardening pass, the first of Step 6.3's remaining fourteen build phases (4.0 through 7.1), unaffected by F-2.0-15 since it depends on no real question-understanding.
+> Build phase 4.0, the REST plus SSE adapter finalized as the public API surface, is code-complete and awaiting product-owner review, not yet merged. Four judge rounds ran on `phase/4.0-rest-sse-hardening`: round 1 FAILED on two blocking findings (a missing SSE `id:` line breaking real resumability, and an unverifiable "written and watched failing first" premise-gate claim), rounds 2 through 4 each PASSED after a fix round closed what the prior round found. One adversary round ran against the live system and filed 14 real findings (4 major, 5 moderate, 5 minor); 8 are fixed and judge-confirmed, 2 are resolved by documenting them as intentional design decisions, and 4 are carried open with a named owner each on `tracker/BOARD.md` (three of the four point to build phase 6.0's rate-limiting work, one needs a `DonePayload` contract change no future phase yet owns by name). Full account: `tracker/phase_4.0.md`. Next: push the branch, open the PR, and await review and merge. Once merged, build phase 4.1 (the outbound-only MCP server) is next, the first of Step 6.3's remaining thirteen build phases (4.1 through 7.1).
 
 Build phase 3.1 merged as PR #22 (superseded by PR #23) on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
@@ -88,7 +89,7 @@ Twelve build phases are done, all twelve merged into `main`. The first six compl
 
 Current counts, stated once here:
 
-- Python tests: 2520 (2400 passing, 113 skipped, 1 xfailed, 6 failed; the 6 are `test_citation_trust_full_premise.py`'s live-network-opt-in-gated cases, confirmed not a regression via `git stash` earlier at Step 6.2, identical on the unmodified checkout)
+- Python tests: 2517 (2397 passing, 113 skipped, 1 xfailed, 6 failed; the 6 are `test_citation_trust_full_premise.py`'s live-network-opt-in-gated cases, confirmed not a regression, identical on the unmodified checkout)
 - Frontend tests: 120
 - Playwright end-to-end tests: 3 (unverifiable in this and the prior session; a webServer-orchestration timeout unrelated to any file either phase touched, confirmed by starting the dev server directly, HTTP 200)
 - Premise gate, cypher_query: 9 of 9
@@ -100,8 +101,8 @@ Current counts, stated once here:
 - Premise gate, pathogen_detection: 5 of 5, live, no tunnel-gated skip
 - Premise gate, clinicaltrials_search: 3 of 3, live, no tunnel-gated skip
 - Premise gate, citation trust full (Layer 2/3 provenance, the two-tier risk gate, freshness, conflict detection): 10 of 10, live, no tunnel-gated skip, graded pass@8 on its one Synth-sampling-sensitive case (F-3.4-T05-05)
-- Decisions logged: 270
-- Learnings entries: 63, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
+- Decisions logged: 275
+- Learnings entries: 64, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below). This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
 
@@ -137,9 +138,11 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 ## Read before opening the next phase
 
-Build phase 4.0 is a normal numbered build phase, not a reconciliation pause, so it opens the standard way, `bossman-mode`'s own Step 1: read `LEARNINGS.md` filtered to this phase (63 entries total as of Step 6.2's close, plus a retrospective), verify Section 25's dependency (2.2) is merged, then open the phase board. No bespoke reading order beyond that.
+Build phase 4.0 has not merged yet (see "State now" above): the branch is code-complete and awaiting product-owner review. Do not open build phase 4.1 until 4.0's PR actually merges to `develop`, per `bossman-mode`'s own Step 1 gate ("verify every dependency phase in Section 25's dependency graph is already merged. If one is not, stop and report").
 
-F-2.0-15 (`tracker/BOARD.md`'s Open flags table, full account in `LEARNINGS.md`'s 2026-08-10 entry), found live during Step 6.2's manual smoke test, does not affect this phase: product-owner decision, 2026-08-10, assigns it to build phase 4.7, since build phase 4.0 depends on no real question-understanding.
+Once 4.0 merges, build phase 4.1 (the outbound-only MCP server, Decision 24) opens the standard way: read `LEARNINGS.md` filtered to this phase, verify Section 25's dependency (3.4, already merged) is satisfied, then open the phase board. No bespoke reading order beyond that.
+
+F-2.0-15 (`tracker/BOARD.md`'s Open flags table, full account in `LEARNINGS.md`'s 2026-08-10 entry), found live during Step 6.2's manual smoke test, does not affect build phase 4.1 either: it is assigned to build phase 4.7, since neither 4.0 nor 4.1 depends on real question-understanding.
 
 ## Build phase 3.0, done
 
@@ -280,7 +283,7 @@ A dispatch-ordering gap cost a real fix-and-reconcile pass, now recorded in `LEA
 
 Two majors and five moderate-or-minor adversary findings were deliberately carried open rather than fixed this round, each with its own named reason in `tracker/phase_3.5.md`: a query-syntax-parsing risk (`query_cond` is parsed as an Essie expression, so a term containing `NOT` can silently invert a search), an undisclosed weak-match shape reproducing phase 3.3's own finding on a different tool, a status value overloaded for two different meanings, a spec-locked `overall_status` enum narrower than the live API's real values, and others.
 
-Final gates, lead-verified independently: full suite 2331 Python tests (2220 passed, 110 skipped, 1 xfailed, up from the phase's 2140 baseline), both live premise gates re-confirmed multiple times across both fix rounds (pathogen_detection 5 of 5, clinicaltrials_search 3 of 3, no tunnel-gated skip on either), `ruff check` clean on every file this phase touched. Frontend suite unaffected (no frontend files touched this phase); Playwright's webServer orchestration hit the same pre-existing, already-documented timeout from build phase 3.3, confirmed unrelated by starting the dev server directly (HTTP 200).
+Final gates, lead-verified independently: full suite at the time stood at 2331 Python tests (2220 passed, 110 skipped, 1 xfailed, up from the phase's 2140 baseline), both live premise gates re-confirmed multiple times across both fix rounds (pathogen_detection 5 of 5, clinicaltrials_search 3 of 3, no tunnel-gated skip on either), `ruff check` clean on every file this phase touched. Frontend suite unaffected (no frontend files touched this phase); Playwright's webServer orchestration hit the same pre-existing, already-documented timeout from build phase 3.3, confirmed unrelated by starting the dev server directly (HTTP 200).
 
 Full per-finding detail, every judge, adversary, and fix-round finding with file:line citations: `tracker/phase_3.5.md`.
 
@@ -299,6 +302,29 @@ Closed 2026-08-10, across eight PRs (#29 through #36) merged to `develop`. Ran i
 - An informal manual smoke test run against the live system (PR #36): the 7 v1 must-pass moat questions asked directly through the real FastAPI backend, real LLM calls, real NCBI APIs, answers read by hand, deliberately not the formal graded eval-harness gate (that stays deferred to build phase 5.1). The live knowledge graph was unreachable from the session that ran it (the SSH tunnel cannot be opened from a sandboxed coding session; a structural limitation, not a defect), so Layer 1 answers were read as untested-here rather than failed. Surfaced F-2.0-15: `think_node`'s real query classification was never built past its build-phase-2.0 stub (`query_class` hardcoded to `"lookup"`, entity resolution always empty), causing 4 of 7 must-pass questions to refuse outright ("I could not identify that gene," a false-positive gene-symbol guess off database names like GTR, AMR, SRA mentioned in the question) and a 5th to answer near-empty. Filed in `tracker/BOARD.md`'s Open flags table; product-owner decision, 2026-08-10, assigns it to build phase 4.7 as that phase's real deliverable, not just its closest candidate.
 
 The whole-repository security scan stays PAUSED INDEFINITELY on cost, unchanged by this reconciliation. Exposure, a deploy, a public URL, or first contact with a user who is not the product owner, is the only thing that turns it back on.
+
+## Build phase 4.0, code-complete, awaiting merge
+
+On `phase/4.0-rest-sse-hardening`, not yet pushed or opened as a PR. Depends on 2.2, already merged. Full ticket-level record, every judge and adversary finding with its evidence: `tracker/phase_4.0.md`. This section is a pointer plus current state, not a copy.
+
+What shipped: `core/run_registry.py` rebuilt with a multi-consumer, `seq`-indexed event log (closing F-1.2-03), lazy eviction past a retention window (F-1.2-01), and cumulative-unwatched-time abandonment cancellation (F-1.2-02, redesigned mid-phase after an adversary found the original timer-reset version bypassable by reconnect churn). `adapters/web_sse/app.py`'s `GET /events` gained real resumability (a wire-level SSE `id:` line, strict cursor validation), a new `GET /citations` export endpoint, and operator-mode visibility now derived purely server-side. The legacy buffered `POST /query` endpoint is removed.
+
+| Round | Verdict | What it found or confirmed |
+| --- | --- | --- |
+| Judge 1 | FAIL | 2 blocking: no SSE `id:` line (real resumability was never possible for a standards-conforming client), an unverifiable "failing-first" premise-gate claim. 5 non-blocking |
+| Fix round 1 | n/a | All 7 closed |
+| Judge 2 | PASS | Independently re-verified all 7 with live probes, not the fix round's own new tests |
+| Adversary round | 14 filed | 4 major, 5 moderate, 5 minor, all real and reproduced twice. Two root causes explained 9 of the 14: "watched" meant connected, not delivered (a churn or an idle socket could bypass abandonment), and a cancelled run was treated identically to a completed one everywhere downstream (no terminal event, an undisclosed partial citation export) |
+| Fix round 2 | n/a | 8 fixed, judge-confirmed; 2 resolved by documenting them as intentional; 4 carried open with a named owner each |
+| Judge 3 | PASS | Independently re-verified all 8 fixes with fresh live probes. Filed one new finding (a CORS `expose_headers` gap making the new disclosure headers unreadable cross-origin) and corrected the lead's own citation of `v1-scope-boundary.md` for the carried findings, which was imprecise |
+| Fix round 3 | n/a | CORS gap closed; carried-finding reasoning corrected; all four carries recorded in `tracker/BOARD.md`'s Open flags table with a named owner |
+| Judge 4 | PASS | Confirmed the CORS fix live. Filed one tracker-tooling defect (a board status typo blocking `render_board.py`), not shipped code |
+
+Test counts at close: Python suite 2517 collected (2397 passing, 113 skipped, 1 xfailed, 6 failed on the same pre-existing live-network-opt-in-gated tests every prior phase has carried, confirmed unrelated by `git diff` showing zero touched lines in that directory), this phase's own premise gate file fully green at 26 tests, frontend 120 of 120, Playwright blocked by the same pre-existing webServer-orchestration timeout documented since build phase 3.3 (confirmed environmental, not a regression, by starting the dev server directly and getting a real 200).
+
+Four adversary findings carried open, each with a named owner on `tracker/BOARD.md`'s Open flags table rather than left only in `tracker/phase_4.0.md`, per judge round 3's explicit condition (the F-2.0-15 precedent: a well-reasoned deferral with no owner fell through twelve phases): F-4.0-A-10/A-11 (unbounded run creation, and the O(n) eviction sweep's cost under it) to build phase 6.0; F-4.0-A-12 (the citations export drops the upstream truncation disclosure) to whichever phase next touches `write_node`'s `DonePayload` construction; F-4.0-A-14 (an idle socket suppresses the abandonment check) to a future round revisiting `RunRegistry` abandonment logic. One judge finding, F-4.0-J-08 (a now-stale frontend comment about the SSE `id:` field), carried to build phase 4.2 where the client actually starts consuming it.
+
+Next: push the branch, open the PR with this summary, and wait for product-owner review. Do not open build phase 4.1 until this merges.
 
 ## Open items
 
@@ -377,4 +403,4 @@ If a different agent takes over, read the "Running this project with a different
 
 One operational note that cost real time on 2026-08-03 and is not obvious from any other file: this machine's network dropped three times in one session, killing two premise-gate runs and three review agents, and every failure they produced looked like a code defect at first glance. Before diagnosing any model-dependent failure, check reachability with `curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v1/models`. An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all. A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-08-10.
+Last updated: 2026-08-11.

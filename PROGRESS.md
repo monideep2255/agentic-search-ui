@@ -2,7 +2,7 @@
 
 A plain-language update on what this project is, what works today, and what comes next. No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-10.
+Last updated: 2026-08-11.
 
 ## Table of contents
 
@@ -67,6 +67,10 @@ All six live-government-API connections the plan called for are now built. That 
 - The system's highest-stakes example question, "which diseases are associated with BRCA1?", is now correctly flagged as needing extra scrutiny. Before this sprint, a quirk in how the answer was assembled meant this exact question, the one the whole trust system is built around, was being waved through as routine instead.
 - If a live government record and our own database disagree about the same fact, the system now notices and says so, rather than silently picking one and hiding the disagreement.
 - If a piece of information from our own database is old enough to be worth double-checking, the system is now built to automatically verify it against the live government record before repeating it as current. This machinery is real and tested, but our own database does not yet store the specific kind of detail it needs to check against, so it has nothing to actually fire on yet (see below).
+- If your internet drops mid-answer and you reconnect, the system now picks up exactly where you left off, no repeated sentences, no missed ones. Before this sprint, a reconnect just started the whole answer over from the beginning.
+- Two people, or two browser tabs, can now watch the same answer being written at the same time. Before this sprint, only the first one got anything; the second one saw nothing at all.
+- A conversation nobody is actually watching now stops itself after a short wait, instead of quietly running to completion and burning resources on an answer nobody will ever read. This closes a real gap found earlier: an abandoned browser tab used to let the system keep working, unseen, until it finished on its own.
+- You can now ask for the full list of sources behind a finished answer as a single request, rather than only ever seeing them appear one at a time while the answer streams.
 
 ## What does not work yet
 
@@ -96,8 +100,9 @@ Each of these is a completed, reviewed, merged piece of work.
 | 3.5 | The fifth and sixth live government API connections: disease outbreak lookup and clinical trials search, completing every planned data source | 2026-08-08 |
 | 3.4 | Extended the trust-and-citation rules to cover all six newer lookup tools, and connected gene lookup to the answer pipeline for real, the first tool to be wired all the way through | 2026-08-10 |
 | Specification pause | Brought the written plans in line with everything learned building the six tools; cleared a backlog of small real bugs and mismatches; swept a folder of outside reading material; then, for the first time, actually asked the finished system real questions and read the answers by hand, which is what found today's headline problem | 2026-08-10 |
+| 4.0 | Finished the front door to the whole system: reconnecting after a dropped connection, two people watching the same answer at once, a stalled conversation stopping itself, and a way to fetch a finished answer's full source list in one request | 2026-08-11, awaiting a final look before it counts as fully done |
 
-Seven of these are worth understanding, because they explain how this project works.
+Eight of these are worth understanding, because they explain how this project works.
 
 Sprint 2.1, the expensive lesson. We asked "which diseases are associated with BRCA1?" and got back twenty-five results. All twenty-five had real, working links to official records. Every automated test passed. And every single result was wrong: they were not diseases at all, they were similar genes in other animals. The tests could not see this, because they were checking that the plumbing worked rather than that the answer was true. Finding it took four rounds of review over four days. Everything we do now is shaped by that: before writing any new feature, we now write a test that asks whether the ANSWER is right, and we watch it fail first, so we know the test is capable of catching a lie.
 
@@ -114,6 +119,8 @@ Sprint 3.3, the literature lookup tools, and the confidently wrong answer that b
 Sprint 3.5, the last two data tools, and the fix that broke the thing it just fixed, twice. This sprint's outbreak-cluster lookup reads a government file that turned out to be about 400 times bigger than a normal file its own size class: roughly 411 gigabytes, for one bacterial species. The tool has to read that file a little at a time and give up gracefully if it runs out of time, rather than trying to load the whole thing. The first version had a real, serious bug: it stopped reading after finding just the FIRST matching entry, then confidently reported that as the complete answer, when a real outbreak cluster of four related samples was quietly reported as having only two. That got caught and fixed, checked, and passed a full re-test. Then a second, deliberately hostile round of testing found something worse: the FIX ITSELF had broken the tool a different way. In closing the "stops too early and lies" bug, the fix removed the only thing that let the tool stop at all, so now it could never successfully finish AT ALL, not even on the exact same real outbreak cluster it had gotten wrong before. It failed silently, reporting "nothing found" instead of a wrong answer, which is safer but still wrong. That got fixed too, and a live re-check on that same real outbreak cluster still came back empty. It took a THIRD look to find the actual remaining problem: the fix that made the tool patient enough to find every real match had also made it so patient it ran out of time before ever getting to the last, quick step that turns the matches into a proper labeled result. A dedicated slice of time was reserved for that last step no matter how long the earlier steps take, and only then did a live check on the real outbreak cluster come back with the exact right answer: four related samples, with the exact genetic distances a human reviewer had worked out by hand as the ground truth to check against. Three real bugs, each one only found by actually running the finished tool against the real government service and checking the ANSWER, not by trusting that the tests still said "green".
 
 Sprint 3.4, the trust system's own final exam, and the two-gene question that gave a confidently incomplete answer. This was the sprint that connected everything: extending the trust-and-citation rules to all six lookup tools, teaching the system to notice when two sources disagree, and, for the first time, actually letting gene lookup contribute to a real answer alongside our own database. Building and checking it in the ordinary way went well: two rounds of review, a handful of real bugs found and fixed, all closed cleanly. Then a deliberately hostile round of testing tried something nobody had tried before: asking about two different genes in a single question. Two times out of three, the system answered fluently, cited its one source correctly, and never mentioned the second gene at all, reporting itself as a complete, trustworthy answer the whole time. Nothing was technically wrong with the sentence it wrote. It simply never tried to cover the rest of the question, and said nothing about that. This is exactly the failure this whole project exists to prevent: not a crash, not a wrong fact, a confident answer that quietly does less than it claims. It is fixed now: the system checks whether every named subject in a multi-part question actually got an answer, and if not, it downgrades its own confidence and says plainly which part it could not cover. Fixing that turned up a second problem in the same area: the check meant to catch our own database and a live government record disagreeing about the same gene had never actually been able to compare them in practice, because the two sources describe a gene's identity slightly differently (a full name versus a short symbol) and the check required an exact match. It now understands that the two are the same kind of fact. A few smaller, lower-priority gaps were found and deliberately left for later, each with a written reason why leaving it was the right call for now, not an oversight.
+
+Sprint 4.0, the front door, and the reconnect trick that quietly defeated its own fix. This sprint finished the one door every future way of reaching the system, a phone app, a command-line tool, another program, will eventually walk through. Building the ordinary version went the usual way: build it, review finds real problems (the reconnect feature was silently unusable by any standard tool, because of one missing line), fix them, a second reviewer confirms. Then a deliberately hostile round of testing found something nobody had tried: quickly disconnecting and reconnecting on a fast, repeating cycle, never actually reading anything. This exact trick defeated the "stop an abandoned conversation" fix from three sprints ago, keeping a conversation nobody is reading alive forever, as long as the reconnects came fast enough. It also found that a conversation someone deliberately stops now needs to say so clearly rather than just going silent, and that a partial list of sources needs to say plainly that it is partial, not look identical to a complete one. Fourteen real problems were found this way in one sitting; ten were fixed and independently re-confirmed by a fourth review, and four were deliberately left for a specific later sprint each, with the reason written down for each one rather than left unowned. The reviewer's own closing note is the throughline worth keeping: fixing one loophole is exactly when a new one is easiest to introduce, because attention is on the loophole just closed, not on every other door shaped the same way.
 
 ## What is next
 
@@ -136,21 +143,24 @@ flowchart LR
         Lit --> Out[Outbreak + trials lookup]
         Out --> Tr[Trust rules cover all tools, gene lookup wired in]
         Tr --> Sp[Specification pause, found the question-understanding gap]
+        Sp --> Door[Front door finished: reconnect, watch together, self-stopping]
     end
-    Sp --> Dec[Question-understanding gap: given a home, a later sprint, not fixed yet]
+    Door --> Dec[Question-understanding gap: given a home, a later sprint, not fixed yet]
     Dec --> Wire[Wire the other five tools into the answer pipeline]
-    Wire --> L[Everything else]
+    Wire --> Other[Other ways in: command line, other programs]
+    Other --> L[Everything else]
 ```
 
-Every planned data lookup tool, all six live-API connections, is now built AND independently checked, and the trust-and-citation rules now cover all of them. Each tool went through the same pattern: build it, find real problems in review, fix them, and find MORE problems in the fix itself before trusting it. Sprint 3.4 held that pattern too, and pushed it one step further: its hostile testing round found a real problem (the two-gene question, see the story above) that no planned test had ever thought to try, only deliberate, adversarial poking at the finished system.
+Every planned data lookup tool, all six live-API connections, is now built AND independently checked, and the trust-and-citation rules now cover all of them. Each tool went through the same pattern: build it, find real problems in review, fix them, and find MORE problems in the fix itself before trusting it. Sprint 3.4 held that pattern too, and pushed it one step further: its hostile testing round found a real problem (the two-gene question, see the story above) that no planned test had ever thought to try, only deliberate, adversarial poking at the finished system. Sprint 4.0 repeated the pattern once more on the front door itself, and its own reviewer flagged something worth remembering going forward: a fix round is exactly where the next problem is most likely to hide, because attention is on the one loophole just closed.
 
-The planned specification pause (updating the written plans with everything learned from building all six tools and the trust system) ran and finished today. It also swept a folder of outside reading material collected during the build, and it is the pause that found today's headline problem, the question-understanding gap above, by actually asking the system real questions for the first time rather than only reviewing code.
+The planned specification pause (updating the written plans with everything learned from building all six tools and the trust system) ran and finished on 2026-08-10. It also swept a folder of outside reading material collected during the build, and it is the pause that found the question-understanding gap below, by actually asking the system real questions for the first time rather than only reviewing code.
 
 In order, now:
 
-1. The question-understanding gap now has a home: a specific future sprint, later than the next several, will build the real fix. It is not being rushed in early, and nothing in the next few sprints depends on it being fixed first.
-2. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
-3. Then the remaining work: the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
+1. A final look over sprint 4.0's work before it counts as fully done and the next sprint opens.
+2. The question-understanding gap now has a home: a specific future sprint, later than the next several, will build the real fix. It is not being rushed in early, and nothing in the next few sprints depends on it being fixed first.
+3. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
+4. Then the remaining work: the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
 
 ## Problems we know about and are tracking
 
@@ -180,6 +190,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 | Three places where the written specification and the working code used to disagree, including one written plan that described a piece of work as still needed when it had actually already been finished in an earlier sprint | Fixed |
 | One test is switched off because checking it needs a connection to our server that we cannot open from the current setup | Whenever that connection is available, about ten minutes of work |
 | A full security review of the whole codebase has never been run. It is paused on cost | Before this is ever shown to anyone outside the team, or put on the internet |
+| Nothing yet stops one person from starting an enormous number of conversations very quickly. A test run started over nine thousand in under a minute with none rejected. Each one is still cleaned up properly after a while, but nothing limits how many pile up before that happens | A dedicated future sprint whose whole job is exactly this kind of speed limiting |
+| When a conversation is deliberately stopped partway through, the answer given so far is real, but there is currently no clean, general way for a future tool (like a phone app or a command-line client) to tell "this is a complete answer" apart from "this is all we got before it was cut off", beyond a plain marker on the wire | Whichever future sprint next touches how the final answer summary is put together |
+| A conversation that is watched by a connection that never actually reads anything (as opposed to one that disconnects, which is already handled) can still be kept alive indefinitely. Different from the fast-reconnect trick above, and not yet closed | A future sprint revisiting how the system decides whether anyone is still watching |
 
 That last row is the important one. None of these can affect a real person while the project runs only on a laptop with no outside users. The moment that changes, several of them stop being optional.
 
