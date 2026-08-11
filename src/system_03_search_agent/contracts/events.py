@@ -208,7 +208,13 @@ class ErrorPayload(BaseModel):
     fatal: bool
     scope: Literal["tool", "step", "run"] = Field(..., max_length=16)
     source: str = Field(..., max_length=64)
-    error_class: Literal["transient", "recoverable", "unexpected"] = Field(
+    # "cancelled" added at build phase 4.0 (F-4.0-A-04, adversary round 1):
+    # additive per system-design-patterns rule 10 (a new enum value within
+    # v1 is a non-breaking change). Distinguishes a caller-stopped or
+    # abandonment-cancelled run from the three failure-shaped classes; a
+    # cancellation is not a transient, recoverable, or unexpected error,
+    # it is the run doing exactly what it was told to do.
+    error_class: Literal["transient", "recoverable", "unexpected", "cancelled"] = Field(
         ..., max_length=16
     )
     message: str = Field(..., max_length=256)

@@ -131,7 +131,12 @@ export interface ErrorPayload {
   fatal: boolean;
   scope: "tool" | "step" | "run";
   source: string;
-  error_class: "transient" | "recoverable" | "unexpected";
+  // "cancelled" added at build phase 4.0 (F-4.0-A-04): a synthetic
+  // terminal event for a caller-stopped or abandonment-cancelled run.
+  // Keep this union in sync with contracts/events.py's ErrorPayload; the
+  // Step 6.2 F-3.0-01 fix found this exact hand-maintained-copy gap once
+  // already for a different enum on this same file's category set.
+  error_class: "transient" | "recoverable" | "unexpected" | "cancelled";
   message: string;
   retry_after_s: number;
 }
@@ -355,7 +360,7 @@ function isErrorPayload(value: unknown): value is ErrorPayload {
     (value.scope === "tool" || value.scope === "step" || value.scope === "run") &&
     typeof value.source === "string" &&
     typeof value.error_class === "string" &&
-    ["transient", "recoverable", "unexpected"].includes(value.error_class) &&
+    ["transient", "recoverable", "unexpected", "cancelled"].includes(value.error_class) &&
     typeof value.message === "string" &&
     typeof value.retry_after_s === "number"
   );
