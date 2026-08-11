@@ -69,12 +69,14 @@ from __future__ import annotations
 import os
 import uuid
 from collections.abc import AsyncIterator, Mapping
+from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
 
 import httpx2
 import pytest
 import sqlalchemy as sa
+from fastapi import FastAPI
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.exceptions import MCPError
@@ -88,9 +90,9 @@ from system_03_search_agent.contracts.events import (
     GuardPayload,
     PlanPayload,
     ThinkPayload,
+    TokenPayload,
     ToolResultPayload,
     ToolStartPayload,
-    TokenPayload,
     TrustSignalPayload,
 )
 from system_03_search_agent.contracts.query import Query, RequestContext
@@ -300,40 +302,81 @@ async def _refusal_path_stream(query: Query, context: RequestContext) -> AsyncIt
 # ---------------------------------------------------------------------------
 
 
-def _http_client(app: object, headers: Mapping[str, str] | None) -> httpx2.AsyncClient:
+def _build_test_mcp_app() -> FastAPI:
+    """Build a throwaway FastAPI app mounting the real `mcp_server`
+    singleton at `/mcp`, using the exact same recipe
+    `adapters/web_sse/app.py` uses in production: `streamable_http_path
+    ="/"`, an explicit `lifespan=` entering the sub-app's own lifespan via
+    `AsyncExitStack` (see that module's comment for why both are
+    required, and `LEARNINGS.md`'s 2026-08-11 entry for the full account).
+
+    Built fresh per call rather than reusing the production `app`
+    object's own already-mounted sub-app instance: `MCPServer.
+    streamable_http_app()` builds a brand new `StreamableHTTPSessionManager`
+    on every call, and that manager's `run()` (entered via the lifespan
+    below) may only execute once per instance for its whole lifetime, the
+    same one-shot startup/shutdown a real server's single long-lived
+    process also only does once. A production server enters it exactly
+    once and serves many requests through that one instance; this test
+    file makes many independent, isolated calls across many separate test
+    functions, so each call gets its own fresh instance instead, matching
+    the isolation every other fixture in this file already provides
+    (`run_streaming` monkeypatched fresh per test, a fresh `User` signed
+    up fresh per test). This still exercises the real, singleton
+    `mcp_server` object (the real registered tool, the real auth code
+    path via `Context.headers`), just mounted through a fresh wrapper
+    each call instead of reusing `adapters/web_sse/app.py`'s literal
+    module-level `app` object for the MCP calls specifically.
+    """
+    from system_03_search_agent.adapters.mcp.server import server as mcp_server
+
+    sub_app = mcp_server.streamable_http_app(stateless_http=True, streamable_http_path="/")
+
+    @asynccontextmanager
+    async def _test_lifespan(test_app: FastAPI) -> AsyncIterator[None]:
+        async with AsyncExitStack() as stack:
+            await stack.enter_async_context(sub_app.router.lifespan_context(sub_app))
+            yield
+
+    test_app = FastAPI(lifespan=_test_lifespan)
+    test_app.mount("/mcp", sub_app)
+    return test_app
+
+
+def _http_client(mcp_app: FastAPI, headers: Mapping[str, str] | None) -> httpx2.AsyncClient:
     return httpx2.AsyncClient(
-        transport=httpx2.ASGITransport(app=app),
+        transport=httpx2.ASGITransport(app=mcp_app),
         base_url=_BASE_URL,
         headers=dict(headers) if headers else None,
         follow_redirects=True,
     )
 
 
-async def _list_tools(app: object, headers: Mapping[str, str] | None = None) -> list[Any]:
-    async with app.router.lifespan_context(app):  # type: ignore[attr-defined]
-        async with _http_client(app, headers) as http_client:
-            async with streamable_http_client(f"{_BASE_URL}/mcp", http_client=http_client) as (
-                read,
-                write,
-            ):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    result = await session.list_tools()
-                    return list(result.tools)
+async def _list_tools(headers: Mapping[str, str] | None = None) -> list[Any]:
+    mcp_app = _build_test_mcp_app()
+    async with (
+        mcp_app.router.lifespan_context(mcp_app),
+        _http_client(mcp_app, headers) as http_client,
+        streamable_http_client(f"{_BASE_URL}/mcp", http_client=http_client) as (read, write),
+        ClientSession(read, write) as session,
+    ):
+        await session.initialize()
+        result = await session.list_tools()
+        return list(result.tools)
 
 
 async def _call_tool(
-    app: object, headers: Mapping[str, str] | None, arguments: dict[str, object]
+    headers: Mapping[str, str] | None, arguments: dict[str, object]
 ) -> CallToolResult:
-    async with app.router.lifespan_context(app):  # type: ignore[attr-defined]
-        async with _http_client(app, headers) as http_client:
-            async with streamable_http_client(f"{_BASE_URL}/mcp", http_client=http_client) as (
-                read,
-                write,
-            ):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    return await session.call_tool("ask_biomedical_question", arguments)
+    mcp_app = _build_test_mcp_app()
+    async with (
+        mcp_app.router.lifespan_context(mcp_app),
+        _http_client(mcp_app, headers) as http_client,
+        streamable_http_client(f"{_BASE_URL}/mcp", http_client=http_client) as (read, write),
+        ClientSession(read, write) as session,
+    ):
+        await session.initialize()
+        return await session.call_tool("ask_biomedical_question", arguments)
 
 
 def _find_all(schema_fragment: object, key: str) -> list[object]:
@@ -357,6 +400,34 @@ def _find_all(schema_fragment: object, key: str) -> list[object]:
 def _resolve_ref(schema: dict[str, Any], ref: str) -> dict[str, Any]:
     assert ref.startswith("#/$defs/"), ref
     return schema["$defs"][ref.removeprefix("#/$defs/")]
+
+
+async def _call_tool_expecting_mcp_error(
+    headers: Mapping[str, str] | None, arguments: dict[str, object]
+) -> MCPError:
+    """Call the tool and return the underlying `MCPError`, however many
+    `anyio.TaskGroup`-induced `BaseExceptionGroup` layers separate it from
+    the caller.
+
+    The nested `async with` chain in `_call_tool` (the SSE read loop's own
+    task group, the client session's request-dispatch task group) each
+    wrap a propagating exception in a `BaseExceptionGroup`, even for
+    exactly one underlying cause, so a bare `pytest.raises(MCPError)`
+    around the raw call does not match: the raised object's own type is
+    `ExceptionGroup`, not `MCPError`. Python 3.11's `except*` unwraps
+    however many levels of nesting exist and collects every matching leaf
+    exception, which is exactly what is needed here.
+    """
+    caught: MCPError | None = None
+    try:
+        await _call_tool(headers, arguments)
+    except* MCPError as eg:
+        matched = eg.exceptions
+        assert len(matched) == 1, matched
+        caught = matched[0]  # type: ignore[assignment]
+    if caught is None:
+        raise AssertionError("expected an MCPError, none was raised")
+    return caught
 
 
 # ---------------------------------------------------------------------------
@@ -404,7 +475,7 @@ class TestToolSurface:
         from system_03_search_agent.adapters.mcp.server import server
 
         for internal_name in _INTERNAL_TOOL_NAMES:
-            with pytest.raises(Exception):  # noqa: B017, PT011 - any rejection is correct here
+            with pytest.raises(Exception):  # noqa: B017 - any rejection is correct here
                 await server.call_tool(internal_name, {})
 
 
@@ -465,8 +536,8 @@ if not _can_connect():
         allow_module_level=True,
     )
 
-from system_03_search_agent.adapters.web_sse.app import app  # noqa: E402
-from system_03_search_agent.core import run_registry as run_registry_module  # noqa: E402
+from system_03_search_agent.adapters.web_sse.app import app
+from system_03_search_agent.core import run_registry as run_registry_module
 
 
 @pytest.fixture(autouse=True)
@@ -508,7 +579,7 @@ class TestGoldenPath:
         monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
         _user_id, headers = await _real_user_headers()
 
-        result = await _call_tool(app, headers, {"query": "What gene is BRCA1?"})
+        result = await _call_tool(headers, {"query": "What gene is BRCA1?"})
 
         assert result.is_error is False
         content = result.structured_content
@@ -540,7 +611,7 @@ class TestRefusalPath:
         monkeypatch.setattr(run_registry_module, "run_streaming", _refusal_path_stream)
         _user_id, headers = await _real_user_headers()
 
-        result = await _call_tool(app, headers, {"query": "an unanswerable question"})
+        result = await _call_tool(headers, {"query": "an unanswerable question"})
 
         assert result.is_error is False
         content = result.structured_content
@@ -562,7 +633,7 @@ class TestEventFolding:
         monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
         _user_id, headers = await _real_user_headers()
 
-        result = await _call_tool(app, headers, {"query": "What gene is BRCA1?"})
+        result = await _call_tool(headers, {"query": "What gene is BRCA1?"})
 
         assert result.is_error is False
         content = result.structured_content
@@ -587,7 +658,7 @@ class TestNeverCost:
         user_id, headers = await _real_user_headers()
         monkeypatch.setenv("OPERATOR_USER_IDS", user_id)
 
-        result = await _call_tool(app, headers, {"query": "What gene is BRCA1?"})
+        result = await _call_tool(headers, {"query": "What gene is BRCA1?"})
 
         assert result.is_error is False
         content = result.structured_content
@@ -610,8 +681,8 @@ class TestAuth:
 
         monkeypatch.setattr(run_registry_module.default_registry, "create_run", _spy_create_run)
 
-        with pytest.raises(MCPError):
-            await _call_tool(app, None, {"query": "What gene is BRCA1?"})
+        error = await _call_tool_expecting_mcp_error(None, {"query": "What gene is BRCA1?"})
+        assert error.message
 
         assert create_calls == []
 
@@ -628,10 +699,10 @@ class TestAuth:
 
         monkeypatch.setattr(run_registry_module.default_registry, "create_run", _spy_create_run)
 
-        with pytest.raises(MCPError):
-            await _call_tool(
-                app, {"Authorization": "not-a-bearer-token"}, {"query": "What gene is BRCA1?"}
-            )
+        error = await _call_tool_expecting_mcp_error(
+            {"Authorization": "not-a-bearer-token"}, {"query": "What gene is BRCA1?"}
+        )
+        assert error.message
 
         assert create_calls == []
 
@@ -648,12 +719,11 @@ class TestAuth:
 
         monkeypatch.setattr(run_registry_module.default_registry, "create_run", _spy_create_run)
 
-        with pytest.raises(MCPError):
-            await _call_tool(
-                app,
-                {"Authorization": "Bearer this.is.not-a-real-jwt"},
-                {"query": "What gene is BRCA1?"},
-            )
+        error = await _call_tool_expecting_mcp_error(
+            {"Authorization": "Bearer this.is.not-a-real-jwt"},
+            {"query": "What gene is BRCA1?"},
+        )
+        assert error.message
 
         assert create_calls == []
 
@@ -664,7 +734,7 @@ class TestAuth:
         monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
         user_id, headers = await _real_user_headers()
 
-        result = await _call_tool(app, headers, {"query": "What gene is BRCA1?"})
+        result = await _call_tool(headers, {"query": "What gene is BRCA1?"})
 
         assert result.is_error is False
         run_id = result.structured_content["run_id"]
