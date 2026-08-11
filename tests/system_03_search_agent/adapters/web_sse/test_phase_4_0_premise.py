@@ -419,9 +419,19 @@ class TestResumability:
             assert [e["seq"] for e in second_events] == expected
 
     @pytest.mark.asyncio
-    async def test_reconnect_also_receives_the_live_tail_not_only_the_buffered_history(
+    async def test_reconnect_also_receives_events_that_arrived_after_the_previous_reader_left(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Proves buffered replay covers events that arrived after a
+        previous subscriber detached, not only a snapshot taken at detach
+        time. Detaches via `RunRegistry.subscribe` directly (`.aclose()`)
+        rather than abandoning a real HTTP stream mid-flight: an httpx
+        `client.stream()` response left partially read over `ASGITransport`
+        does not reliably signal the server-side task to unwind on
+        `__aexit__`, which hung this test outright when tried (see
+        LEARNINGS.md's 2026-08-10 phase 4.0 entry). The registry-level
+        detach below is deterministic and exercises the exact same
+        buffered-replay code path `GET /events` itself calls."""
         release = asyncio.Event()
 
         async def _fake_stream(query: Query, context: RequestContext):
@@ -435,13 +445,12 @@ class TestResumability:
             _user_id, headers = await _auth_headers(client)
             run_id = await _create_run(client, headers)
 
-            async with client.stream(
-                "GET", f"/v1/query/{run_id}/events", headers=headers
-            ) as first_response:
-                async for _line in first_response.aiter_lines():
-                    break  # read just enough to know the stream is open, then abandon it
+            subscriber = run_registry_module.default_registry.subscribe(run_id, after_seq=-1)
+            first = await anext(subscriber)
+            assert first.type == "guard"
+            await subscriber.aclose()  # detach while the run is still mid-flight
 
-            release.set()  # let the run finish while nobody is actively reading
+            release.set()  # the run produces its remaining event with nobody watching
             await _drain_run_task(run_id)
 
             reconnected = await client.get(

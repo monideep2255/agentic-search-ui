@@ -5,17 +5,21 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Literal
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sse_starlette.sse import EventSourceResponse
 
 from system_03_search_agent.auth.dependencies import get_current_user
 from system_03_search_agent.auth.router import router as auth_router
+from system_03_search_agent.contracts.events import CitationPayload
 from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core.run_registry import RunEntry, RunNotFoundError, default_registry
 from system_03_search_agent.data.models import User
-from system_03_search_agent.harness.cost_control import sanitize_event_for_end_user
+from system_03_search_agent.harness.cost_control import (
+    is_operator_user,
+    sanitize_event_for_end_user,
+)
 
 app = FastAPI()
 
@@ -161,41 +165,86 @@ def _get_owned_run(run_id: str, current_user: User) -> RunEntry:
 async def get_v1_query_events(
     run_id: str,
     current_user: User = Depends(get_current_user),  # noqa: B008 - idiomatic FastAPI dependency injection
+    last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
 ) -> EventSourceResponse:
-    entry = _get_owned_run(run_id, current_user)
+    # Ownership check only; the entry itself is not read further here.
+    # `default_registry.subscribe` below re-resolves `run_id` against the
+    # registry on its own (T-4.0-02), which is also where resumability and
+    # multi-consumer replay actually live now.
+    _get_owned_run(run_id, current_user)
+
+    # T-4.0-03 (resumability, Section 13.1): a reconnecting client sends
+    # back the last `seq` it saw as `Last-Event-ID` (this backend's
+    # `fetch`-based SSE client, unlike a native `EventSource`, can set an
+    # arbitrary request header, so no query-param fallback is needed). A
+    # missing or unparseable header falls back to -1, `subscribe`'s own
+    # "replay everything" default, since every real `seq` is `>= 0`
+    # (Section 2.2).
+    after_seq = -1
+    if last_event_id is not None:
+        try:
+            after_seq = int(last_event_id)
+        except ValueError:
+            after_seq = -1
+
+    # T-4.0-05 (Section 19.4/19.5): visibility is derived once per request,
+    # purely from the authenticated caller's `OPERATOR_USER_IDS` allowlist
+    # membership, never from anything in the request body or headers. There
+    # is no operator-related field on any request model to read here; that
+    # absence is the point.
+    is_operator = is_operator_user(str(current_user.id))
 
     async def _event_stream() -> AsyncIterator[dict[str, str]]:
-        # Drains entry.queue until the None sentinel run_registry.py
-        # always pushes once the run finishes (success, internal crash
-        # fallback, or cancellation all funnel through the same sentinel;
-        # see run_registry.py's module docstring). Each real event is
-        # sanitized per-event (Section 19.4/19.5: a non-operator caller's
-        # stream never carries a `cost` event or an un-redacted
-        # `done.total_cost_usd`) before being forwarded as an SSE frame,
-        # the event name set to the envelope's `type` and the data set to
-        # the JSON payload, matching Section 12.2's client-side
-        # expectation of one named event type per registered listener.
-        #
-        # The explicit break on `done` or a fatal `error` (rather than
-        # relying only on the sentinel to end the loop) is the literal
-        # acceptance criterion ("closes the stream after done or a fatal
-        # error"): it closes the HTTP response at the moment the client
-        # has everything it needs to stop listening, without waiting on
-        # whatever the background task pushes afterward (normally just
-        # the sentinel, which would arrive next regardless).
-        while True:
-            item = await entry.queue.get()
-            if item is None:
-                return
-            sanitized = sanitize_event_for_end_user(item)
-            if sanitized is not None:
-                yield {"event": sanitized.type, "data": sanitized.model_dump_json()}
-            if item.type == "done":
-                return
-            if item.type == "error" and item.payload.get("fatal") is True:
-                return
+        # `subscribe` (T-4.0-02) yields every buffered event with
+        # `seq > after_seq` and then follows the live tail, on its own
+        # ending the generator after a `done` or a fatal `error` (or when
+        # the run finishes with neither), so no separate break condition
+        # is needed here. Each event is sanitized per-event for a
+        # non-operator caller (Section 19.4/19.5: never a `cost` event,
+        # never an un-redacted `done.total_cost_usd`); an operator caller
+        # gets every event unredacted. The event name is set to the
+        # envelope's `type` and the data to the JSON payload, matching
+        # Section 12.2's client-side expectation of one named event type
+        # per registered listener.
+        async for item in default_registry.subscribe(run_id, after_seq=after_seq):
+            forwarded = item if is_operator else sanitize_event_for_end_user(item)
+            if forwarded is not None:
+                yield {"event": forwarded.type, "data": forwarded.model_dump_json()}
 
     return EventSourceResponse(_event_stream())
+
+
+# T-4.0-04: the citations export endpoint. Reuses `_get_owned_run` for the
+# same 404 (unknown run_id) / 403 (wrong owner) ordering the events and
+# stop endpoints already enforce. No operator-mode consideration applies
+# here: `CitationPayload` carries no cost data, so there is nothing to
+# redact for either caller class.
+@app.get("/v1/query/{run_id}/citations", response_model=list[CitationPayload])
+async def get_v1_query_citations(
+    run_id: str,
+    current_user: User = Depends(get_current_user),  # noqa: B008 - idiomatic FastAPI dependency injection
+) -> list[CitationPayload]:
+    entry = _get_owned_run(run_id, current_user)
+    if not entry.finished:
+        # production-standards.md's retry-safety gate: the error says what
+        # to do next, not just what failed. `run_streaming()` never raises
+        # (its own docstring), so `entry.finished` becoming True is the
+        # only reliable terminal signal; there is no separate "failed"
+        # state to special-case here.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "run has not finished; poll GET /v1/query/{run_id}/events "
+                "or retry this request after the done event"
+            ),
+        )
+    # A run that ended via a fatal error with no citations correctly
+    # returns an empty list here, not an error: reaching a terminal state
+    # is what this endpoint gates on, not reaching the `done` event
+    # specifically.
+    return [
+        CitationPayload(**event.payload) for event in entry.events if event.type == "citation"
+    ]
 
 
 class StopRunResponse(BaseModel):
