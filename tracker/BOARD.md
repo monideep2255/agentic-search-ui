@@ -57,7 +57,7 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 3.4 | `phase/3.4-citation-trust-full` | Provenance extended to Layers 2 and 3, the two-tier risk gate, freshness and conflict resolution, T-3.1-28 (Act-step dispatch of a second layer) folded in (PR #28) | 2.2, 3.1, 3.2, 3.3, 3.5 | v1 | done | refined | | eval-harness | F-3.4-T06-01 staleness cannot fire against current ingest, F-3.4-A-05 staleness-note precision gap, F-3.4-A-06 URL pattern end-anchor gap (scheduled) |
 | 3.5 | `phase/3.5-pathogen-clinicaltrials-tools` | pathogen_detection and clinicaltrials_search, completing the seven-tool roster (PR #27) | 3.1 | v1 | done | refined | | | F-3.5-A-07 weak-match undisclosed (partially mitigated), F-3.5-10 conditions truncation |
 | 4.0 | `phase/4.0-rest-sse-hardening` | The REST plus SSE adapter finalized as the public API surface | 2.2 | v1 | done | refined | | | F-1.2-01, F-1.2-02, F-1.2-03, F-4.0-A-10/A-11 unbounded run creation, F-4.0-A-12 citations export drops the upstream truncation disclosure, F-4.0-A-14 idle-socket abandonment bypass |
-| 4.1 | `phase/4.1-mcp-server` | Outbound-only MCP server wrapping the same tool functions | 3.4 | v1 | todo | tech_refine | | | |
+| 4.1 | `phase/4.1-mcp-server` | Outbound-only MCP server wrapping the same tool functions | 3.4 | v1 | todo | refined | | | |
 | 4.2 | `phase/4.2-cli-adapter` | Thin CLI client over the REST API | 4.0 | v1 | todo | tech_refine | | | |
 | 4.3 | `phase/4.3-graphql-api` | GraphQL surface via Strawberry, sharing auth and tools with REST | 4.0 | v1 | todo | tech_refine | | | |
 | 4.4 | `phase/4.4-kgx-export` | KGX export utility, a batch job over the existing graph. No in-repo dependency, so it can land any time | | v1 | todo | tech_refine | | | |
