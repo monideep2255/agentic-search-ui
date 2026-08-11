@@ -39,12 +39,12 @@ Per `.claude/rules/attack-the-constraint.md` and this repo's standing pre-build-
 
 ## Ticket map
 
-| Ticket | Slice | Files |
-|--------|-------|-------|
-| T-4.1-01 | The premise gate, blocking | `tests/system_03_search_agent/adapters/mcp/test_phase_4_1_premise.py` (new) |
-| T-4.1-02 | `adapters/mcp/server.py`: `MCPServer` instantiation, `ask_biomedical_question` registered via `@server.tool(...)` against Pydantic input/output models that literally encode Section 13.2's locked schema (`Field(..., max_length=2000)` on `query`, the three-value `audience_depth` enum, `max_length=64` on `session_id` and `run_id`, `max_length=8000` on `answer`, `max_length=50` on `citations` using `contracts.events.CitationPayload` verbatim, `trust_signal` as a plain object, all four output fields required); the fold loop that iterates `RunRegistry.subscribe(run_id, after_seq=-1)` to the terminal event, discarding `think`/`plan`/`tool_start`, and assembling the final response from `token`/`tool_result`/`citation`/`trust_signal`/`done`; `streamable_http_app(stateless_http=True)` mounted into the existing FastAPI app at `/mcp` | `src/system_03_search_agent/adapters/mcp/server.py` (new), `src/system_03_search_agent/adapters/mcp/__init__.py` (new), `src/system_03_search_agent/adapters/web_sse/app.py` (mount only) |
-| T-4.1-03 | Auth: a `Context`-parameter tool handler reads `ctx.headers.get("authorization")`, strips the `Bearer ` prefix, and resolves a `User` via the SAME decode-then-lookup logic `auth/dependencies.py`'s `get_current_user` already uses (extracted into a small callable both the FastAPI dependency and this handler call, not duplicated). Missing, malformed, or invalid token raises `MCPError` before `create_run` is ever called, so no run and no budget is spent. `RequestContext(surface="mcp", operator_mode=False)` is constructed with `operator_mode` hard-set `False` in code, never derived from `is_operator_user`, so no MCP response can ever carry a cost field regardless of the authenticated account's allowlist status | `src/system_03_search_agent/adapters/mcp/server.py`, `src/system_03_search_agent/auth/dependencies.py` (extract the decode-then-lookup helper, no behavior change to the existing FastAPI dependency) |
-| T-4.1-04 | Dependency and wiring: add `mcp>=2.0` to `requirements.txt` and `pyproject.toml`; log the dependency-addition and the API-key-as-User-account scope-boundary reading to `DECISIONS.md`; confirm `list_tools()` advertises exactly one tool with no internal tool ever separately reachable | `requirements.txt`, `pyproject.toml`, `DECISIONS.md` |
+| Ticket | Slice | Files | Status |
+|--------|-------|-------|--------|
+| T-4.1-01 | The premise gate, blocking | `tests/system_03_search_agent/adapters/mcp/test_phase_4_1_premise.py` (new) | in-progress |
+| T-4.1-02 | `adapters/mcp/server.py`: `MCPServer` instantiation, `ask_biomedical_question` registered via `@server.tool(...)` against Pydantic input/output models that literally encode Section 13.2's locked schema (`Field(..., max_length=2000)` on `query`, the three-value `audience_depth` enum, `max_length=64` on `session_id` and `run_id`, `max_length=8000` on `answer`, `max_length=50` on `citations` using `contracts.events.CitationPayload` verbatim, `trust_signal` as a plain object, all four output fields required); the fold loop that iterates `RunRegistry.subscribe(run_id, after_seq=-1)` to the terminal event, discarding `think`/`plan`/`tool_start`, and assembling the final response from `token`/`tool_result`/`citation`/`trust_signal`/`done`; `streamable_http_app(stateless_http=True)` mounted into the existing FastAPI app at `/mcp` | `src/system_03_search_agent/adapters/mcp/server.py` (new), `src/system_03_search_agent/adapters/mcp/__init__.py` (new), `src/system_03_search_agent/adapters/web_sse/app.py` (mount only) | not-started |
+| T-4.1-03 | Auth: a `Context`-parameter tool handler reads `ctx.headers.get("authorization")`, strips the `Bearer ` prefix, and resolves a `User` via the SAME decode-then-lookup logic `auth/dependencies.py`'s `get_current_user` already uses (extracted into a small callable both the FastAPI dependency and this handler call, not duplicated). Missing, malformed, or invalid token raises `MCPError` before `create_run` is ever called, so no run and no budget is spent. `RequestContext(surface="mcp", operator_mode=False)` is constructed with `operator_mode` hard-set `False` in code, never derived from `is_operator_user`, so no MCP response can ever carry a cost field regardless of the authenticated account's allowlist status | `src/system_03_search_agent/adapters/mcp/server.py`, `src/system_03_search_agent/auth/dependencies.py` (extract the decode-then-lookup helper, no behavior change to the existing FastAPI dependency) | not-started |
+| T-4.1-04 | Dependency and wiring: add `mcp>=2.0` to `requirements.txt` and `pyproject.toml`; log the dependency-addition and the API-key-as-User-account scope-boundary reading to `DECISIONS.md`; confirm `list_tools()` advertises exactly one tool with no internal tool ever separately reachable | `requirements.txt`, `pyproject.toml`, `DECISIONS.md` | not-started |
 
 Depends-on chain: T-4.1-01 blocks everything (written and watched failing first, committed on its own before any implementation, per the corrected process F-4.0-J-02 named for future phases). T-4.1-02 is the foundation; T-4.1-03 depends on it (the tool handler it adds auth to). T-4.1-04 depends on nothing but T-4.1-01, can land alongside T-4.1-02.
 
@@ -69,6 +69,54 @@ Written and watched failing before `adapters/mcp/server.py` exists, per LEARNING
 | Schema fidelity | The tool's advertised `input_schema`/`output_schema` (as `list_tools()` reports them, derived by the SDK from the Pydantic models) match Section 13.2's locked field list and constraints: `query` maxLength 2000 required, `audience_depth` three-value enum, `session_id` maxLength 64, `answer` maxLength 8000, `citations` maxItems 50, `trust_signal` object, `run_id` maxLength 64, all four output fields required | The locked spec schema is what ships, not an approximation the SDK happened to infer |
 
 Not covered by this gate, stated per `.claude/rules/goal-contracts.md`'s coverage-declaration discipline: real interop against an external MCP host (Claude Desktop or another live MCP client), since that needs a live external tool this environment cannot drive; true multi-process behavior and load-scale concurrency across many simultaneous MCP clients, which is build phase 6.0's named rate-limiting and concurrency territory, the same carve-out build phase 4.0 already used for its own load-scale exclusion; and the OAuth 2.0/OIDC alignment the Step 6.2 new-intake note flags as a future direction, since this phase deliberately keeps the SDK's own OAuth provider machinery unwired in favor of reusing the existing bearer-JWT mechanism (see the scope-boundary note above).
+
+## Premise gate, failing-first
+
+`tests/system_03_search_agent/adapters/mcp/test_phase_4_1_premise.py` landed alone, before `adapters/mcp/server.py` existed, commit `3014dae` ("test(mcp-server): add the phase 4.1 premise gate, watched failing first"). Every arm from the design table above is present: `TestToolSurface` (2 cases plus a callability check), `TestSchemaFidelity` (2 cases), `TestGoldenPath`, `TestRefusalPath`, `TestEventFolding`, `TestNeverCost`, `TestAuth` (4 cases: missing, malformed, invalid, valid token).
+
+An early draft imported the not-yet-existing module only inside `TestToolSurface`/`TestSchemaFidelity`, while the HTTP-driven classes (`TestGoldenPath` and the rest) imported the already-existing `adapters/web_sse/app.py` at module level and only failed once they actually tried to reach `/mcp`. Against the pre-implementation baseline that surfaced as `mcp.shared.exceptions.MCPError: Not Found` (an HTTP 404 through the not-yet-mounted app), a real and accurate signal that the endpoint does not exist, but not the uniform `ModuleNotFoundError` LEARNINGS.md row 43 requires, and shaped exactly like the "network fault" the discipline exists to rule out. Fixed with an autouse fixture (`_require_mcp_server_module`) that explicitly imports `system_03_search_agent.adapters.mcp.server` before every test in the file, so every case fails the same way regardless of which path it exercises.
+
+Real run, against the corrected test file, before any implementation existed:
+
+```text
+$ pytest tests/system_03_search_agent/adapters/mcp/test_phase_4_1_premise.py -v
+============================= test session starts ==============================
+platform darwin -- Python 3.11.6, pytest-9.1.1, pluggy-1.6.0
+plugins: cov-7.1.0, asyncio-1.4.0, anyio-4.14.2, langsmith-0.10.10
+collected 13 items
+
+TestToolSurface::test_exactly_one_tool_is_advertised ERROR                 [  7%]
+TestToolSurface::test_no_internal_tool_name_is_separately_advertised ERROR [ 15%]
+TestToolSurface::test_no_internal_tool_is_separately_callable ERROR        [ 23%]
+TestSchemaFidelity::test_input_schema_matches_section_13_2 ERROR           [ 30%]
+TestSchemaFidelity::test_output_schema_matches_section_13_2 ERROR          [ 38%]
+TestGoldenPath::test_a_real_question_returns_a_grounded_cited_answer ERROR [ 46%]
+TestRefusalPath::test_a_zero_groundable_result_query_refuses_honestly ERROR[ 53%]
+TestEventFolding::test_folded_response_has_no_field_for_excluded_event_types ERROR [ 61%]
+TestNeverCost::test_an_operator_allowlisted_caller_still_gets_no_cost_field ERROR  [ 69%]
+TestAuth::test_missing_token_is_rejected_before_any_run_is_created ERROR   [ 76%]
+TestAuth::test_malformed_token_is_rejected_before_any_run_is_created ERROR [ 84%]
+TestAuth::test_invalid_token_is_rejected_before_any_run_is_created ERROR   [ 92%]
+TestAuth::test_a_valid_token_succeeds_and_the_run_is_owned_by_that_user ERROR [100%]
+
+==================================== ERRORS ====================================
+____ ERROR at setup of TestToolSurface.test_exactly_one_tool_is_advertised _____
+    @pytest.fixture(autouse=True)
+    def _require_mcp_server_module() -> None:
+        ...
+>       import system_03_search_agent.adapters.mcp.server  # noqa: F401
+E       ModuleNotFoundError: No module named 'system_03_search_agent.adapters.mcp.server'
+
+tests/system_03_search_agent/adapters/mcp/test_phase_4_1_premise.py:383: ModuleNotFoundError
+
+[... the same ModuleNotFoundError, from the same fixture, repeats for all 13 cases ...]
+
+=========================== short test summary info ============================
+ERROR (x13), same ModuleNotFoundError each time
+============================== 13 errors in 4.43s ==============================
+```
+
+13 of 13 cases failed, every failure `ModuleNotFoundError: No module named 'system_03_search_agent.adapters.mcp.server'` raised from the same autouse fixture, zero passes, zero network faults, zero fixture bugs. The `search_agent_users` PostgreSQL database was reachable this run, so the HTTP-driven classes were not skipped; they failed via the same import guard before ever attempting a request. Implementation started only after this run.
 
 ## Findings
 
