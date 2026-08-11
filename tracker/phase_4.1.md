@@ -41,10 +41,10 @@ Per `.claude/rules/attack-the-constraint.md` and this repo's standing pre-build-
 
 | Ticket | Slice | Files | Status |
 |--------|-------|-------|--------|
-| T-4.1-01 | The premise gate, blocking | `tests/system_03_search_agent/adapters/mcp/test_phase_4_1_premise.py` (new) | in-progress |
-| T-4.1-02 | `adapters/mcp/server.py`: `MCPServer` instantiation, `ask_biomedical_question` registered via `@server.tool(...)` against Pydantic input/output models that literally encode Section 13.2's locked schema (`Field(..., max_length=2000)` on `query`, the three-value `audience_depth` enum, `max_length=64` on `session_id` and `run_id`, `max_length=8000` on `answer`, `max_length=50` on `citations` using `contracts.events.CitationPayload` verbatim, `trust_signal` as a plain object, all four output fields required); the fold loop that iterates `RunRegistry.subscribe(run_id, after_seq=-1)` to the terminal event, discarding `think`/`plan`/`tool_start`, and assembling the final response from `token`/`tool_result`/`citation`/`trust_signal`/`done`; `streamable_http_app(stateless_http=True)` mounted into the existing FastAPI app at `/mcp` | `src/system_03_search_agent/adapters/mcp/server.py` (new), `src/system_03_search_agent/adapters/mcp/__init__.py` (new), `src/system_03_search_agent/adapters/web_sse/app.py` (mount only) | not-started |
-| T-4.1-03 | Auth: a `Context`-parameter tool handler reads `ctx.headers.get("authorization")`, strips the `Bearer ` prefix, and resolves a `User` via the SAME decode-then-lookup logic `auth/dependencies.py`'s `get_current_user` already uses (extracted into a small callable both the FastAPI dependency and this handler call, not duplicated). Missing, malformed, or invalid token raises `MCPError` before `create_run` is ever called, so no run and no budget is spent. `RequestContext(surface="mcp", operator_mode=False)` is constructed with `operator_mode` hard-set `False` in code, never derived from `is_operator_user`, so no MCP response can ever carry a cost field regardless of the authenticated account's allowlist status | `src/system_03_search_agent/adapters/mcp/server.py`, `src/system_03_search_agent/auth/dependencies.py` (extract the decode-then-lookup helper, no behavior change to the existing FastAPI dependency) | not-started |
-| T-4.1-04 | Dependency and wiring: add `mcp>=2.0` to `requirements.txt` and `pyproject.toml`; log the dependency-addition and the API-key-as-User-account scope-boundary reading to `DECISIONS.md`; confirm `list_tools()` advertises exactly one tool with no internal tool ever separately reachable | `requirements.txt`, `pyproject.toml`, `DECISIONS.md` | not-started |
+| T-4.1-01 | The premise gate, blocking | `tests/system_03_search_agent/adapters/mcp/test_phase_4_1_premise.py` (new) | in-review |
+| T-4.1-02 | `adapters/mcp/server.py`: `MCPServer` instantiation, `ask_biomedical_question` registered via `@server.tool(...)` against Pydantic input/output models that literally encode Section 13.2's locked schema (`Field(..., max_length=2000)` on `query`, the three-value `audience_depth` enum, `max_length=64` on `session_id` and `run_id`, `max_length=8000` on `answer`, `max_length=50` on `citations` using `contracts.events.CitationPayload` verbatim, `trust_signal` as a plain object, all four output fields required); the fold loop that iterates `RunRegistry.subscribe(run_id, after_seq=-1)` to the terminal event, discarding `think`/`plan`/`tool_start`, and assembling the final response from `token`/`tool_result`/`citation`/`trust_signal`/`done`; `streamable_http_app(stateless_http=True)` mounted into the existing FastAPI app at `/mcp` | `src/system_03_search_agent/adapters/mcp/server.py` (new), `src/system_03_search_agent/adapters/mcp/__init__.py` (new), `src/system_03_search_agent/adapters/web_sse/app.py` (mount only) | in-review |
+| T-4.1-03 | Auth: a `Context`-parameter tool handler reads `ctx.headers.get("authorization")`, strips the `Bearer ` prefix, and resolves a `User` via the SAME decode-then-lookup logic `auth/dependencies.py`'s `get_current_user` already uses (extracted into a small callable both the FastAPI dependency and this handler call, not duplicated). Missing, malformed, or invalid token raises `MCPError` before `create_run` is ever called, so no run and no budget is spent. `RequestContext(surface="mcp", operator_mode=False)` is constructed with `operator_mode` hard-set `False` in code, never derived from `is_operator_user`, so no MCP response can ever carry a cost field regardless of the authenticated account's allowlist status | `src/system_03_search_agent/adapters/mcp/server.py`, `src/system_03_search_agent/auth/dependencies.py` (extract the decode-then-lookup helper, no behavior change to the existing FastAPI dependency) | in-review |
+| T-4.1-04 | Dependency and wiring: add `mcp>=2.0` to `requirements.txt` and `pyproject.toml`; log the dependency-addition and the API-key-as-User-account scope-boundary reading to `DECISIONS.md`; confirm `list_tools()` advertises exactly one tool with no internal tool ever separately reachable | `requirements.txt`, `pyproject.toml`, `DECISIONS.md` | in-review |
 
 Depends-on chain: T-4.1-01 blocks everything (written and watched failing first, committed on its own before any implementation, per the corrected process F-4.0-J-02 named for future phases). T-4.1-02 is the foundation; T-4.1-03 depends on it (the tool handler it adds auth to). T-4.1-04 depends on nothing but T-4.1-01, can land alongside T-4.1-02.
 
@@ -117,6 +117,34 @@ ERROR (x13), same ModuleNotFoundError each time
 ```
 
 13 of 13 cases failed, every failure `ModuleNotFoundError: No module named 'system_03_search_agent.adapters.mcp.server'` raised from the same autouse fixture, zero passes, zero network faults, zero fixture bugs. The `search_agent_users` PostgreSQL database was reachable this run, so the HTTP-driven classes were not skipped; they failed via the same import guard before ever attempting a request. Implementation started only after this run.
+
+### Final passing run, after implementation (commits `631ab7a`, `699cd4c`, `6665428`, `d666066`, `dccb4d0`)
+
+Getting from 13/13 failing to 13/13 passing needed two intermediate fix rounds against the real implementation, each a genuine defect in the mount recipe or the test harness, not a premise-gate mistake: the mount needed `streamable_http_path="/"` plus an explicit `lifespan=` wiring (6 of 13 cases failed with `RuntimeError: Task group is not initialized` before this), and the test harness needed a fresh mounted app per call plus `except* MCPError` to unwrap `anyio`'s `BaseExceptionGroup` wrapping (7 of 13 cases failed for these two reasons after the mount fix). Full account of all five findings: `LEARNINGS.md`'s two 2026-08-11 entries under "Mounting the mcp==2.0.0 SDK's streamable_http_app into FastAPI silently fails three separate ways" and "Testing the mounted MCP endpoint needed two more non-obvious accommodations".
+
+```text
+$ pytest tests/system_03_search_agent/adapters/mcp/test_phase_4_1_premise.py -v
+============================= test session starts ==============================
+collected 13 items
+
+TestToolSurface::test_exactly_one_tool_is_advertised PASSED                [  7%]
+TestToolSurface::test_no_internal_tool_name_is_separately_advertised PASSED[ 15%]
+TestToolSurface::test_no_internal_tool_is_separately_callable PASSED       [ 23%]
+TestSchemaFidelity::test_input_schema_matches_section_13_2 PASSED          [ 30%]
+TestSchemaFidelity::test_output_schema_matches_section_13_2 PASSED         [ 38%]
+TestGoldenPath::test_a_real_question_returns_a_grounded_cited_answer PASSED[ 46%]
+TestRefusalPath::test_a_zero_groundable_result_query_refuses_honestly PASSED [ 53%]
+TestEventFolding::test_folded_response_has_no_field_for_excluded_event_types PASSED [ 61%]
+TestNeverCost::test_an_operator_allowlisted_caller_still_gets_no_cost_field PASSED  [ 69%]
+TestAuth::test_missing_token_is_rejected_before_any_run_is_created PASSED  [ 76%]
+TestAuth::test_malformed_token_is_rejected_before_any_run_is_created PASSED[ 84%]
+TestAuth::test_invalid_token_is_rejected_before_any_run_is_created PASSED  [ 92%]
+TestAuth::test_a_valid_token_succeeds_and_the_run_is_owned_by_that_user PASSED [100%]
+
+============================== 13 passed in 8.78s ==============================
+```
+
+Full repo suite (`pytest -q` from repo root): `6 failed, 2410 passed, 113 skipped, 1 xfailed in 66.00s`. The 6 failures are the exact same pre-existing, live-network-opt-in-gated set named in `requirements/phase_6/Continuation_prompt.md` (`test_citation_trust_full_premise.py`, every one a `LiveHttpCallInUnitSuiteError`), confirmed not a regression: develop's baseline is 2397 passing plus 113 skipped plus 1 xfailed plus 6 failed (2517 total); this run adds exactly the 13 new premise-gate tests (2410 = 2397 + 13) with the skip/xfail/fail counts unchanged. `ruff check` is clean on every file this phase touched or created.
 
 ## Findings
 
