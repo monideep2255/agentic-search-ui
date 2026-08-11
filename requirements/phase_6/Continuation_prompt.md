@@ -15,7 +15,7 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 - [Build phase 3.4, done](#build-phase-34-done)
 - [Build phase 3.5, done](#build-phase-35-done)
 - [Step 6.2, done](#step-62-done)
-- [Build phase 4.0, code-complete, awaiting merge](#build-phase-40-code-complete-awaiting-merge)
+- [Build phase 4.0, done](#build-phase-40-done)
 - [Open items](#open-items)
 - [Handover](#handover)
 
@@ -40,7 +40,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Build phase 4.0, the REST plus SSE adapter finalized as the public API surface, is code-complete and awaiting product-owner review, not yet merged. Four judge rounds ran on `phase/4.0-rest-sse-hardening`: round 1 FAILED on two blocking findings (a missing SSE `id:` line breaking real resumability, and an unverifiable "written and watched failing first" premise-gate claim), rounds 2 through 4 each PASSED after a fix round closed what the prior round found. One adversary round ran against the live system and filed 14 real findings (4 major, 5 moderate, 5 minor); 8 are fixed and judge-confirmed, 2 are resolved by documenting them as intentional design decisions, and 4 are carried open with a named owner each on `tracker/BOARD.md` (three of the four point to build phase 6.0's rate-limiting work, one needs a `DonePayload` contract change no future phase yet owns by name). Full account: `tracker/phase_4.0.md`. Next: push the branch, open the PR, and await review and merge. Once merged, build phase 4.1 (the outbound-only MCP server) is next, the first of Step 6.3's remaining thirteen build phases (4.1 through 7.1).
+> Build phase 4.0, the REST plus SSE adapter finalized as the public API surface, is DONE, merged to `develop` as PR #39, 2026-08-11. Four judge rounds ran on `phase/4.0-rest-sse-hardening`: round 1 FAILED on two blocking findings (a missing SSE `id:` line breaking real resumability, and an unverifiable "written and watched failing first" premise-gate claim), rounds 2 through 4 each PASSED after a fix round closed what the prior round found. One adversary round ran against the live system and filed 14 real findings (4 major, 5 moderate, 5 minor); 8 are fixed and judge-confirmed, 2 are resolved by documenting them as intentional design decisions, and 4 are carried open with a named owner each on `tracker/BOARD.md` (three of the four point to build phase 6.0's rate-limiting work, one needs a `DonePayload` contract change no future phase yet owns by name). Full account: `tracker/phase_4.0.md`. Next: build phase 4.1 (the outbound-only MCP server), the first of Step 6.3's remaining thirteen build phases (4.1 through 7.1).
 
 Full detail on what PR #23 (build phase 3.1's re-review debt) fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07. Full detail on the F-2.1-C15 fix, including the bypass a fresh-context review found in its own first version before merge and the second review that confirmed the fix, is `tracker/fix_c15_generation_bound.md`.
 
@@ -62,7 +62,7 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Build phase 4.0, the REST plus SSE adapter finalized as the public API surface, is code-complete and awaiting product-owner review, not yet merged. Four judge rounds ran on `phase/4.0-rest-sse-hardening`: round 1 FAILED on two blocking findings (a missing SSE `id:` line breaking real resumability, and an unverifiable "written and watched failing first" premise-gate claim), rounds 2 through 4 each PASSED after a fix round closed what the prior round found. One adversary round ran against the live system and filed 14 real findings (4 major, 5 moderate, 5 minor); 8 are fixed and judge-confirmed, 2 are resolved by documenting them as intentional design decisions, and 4 are carried open with a named owner each on `tracker/BOARD.md` (three of the four point to build phase 6.0's rate-limiting work, one needs a `DonePayload` contract change no future phase yet owns by name). Full account: `tracker/phase_4.0.md`. Next: push the branch, open the PR, and await review and merge. Once merged, build phase 4.1 (the outbound-only MCP server) is next, the first of Step 6.3's remaining thirteen build phases (4.1 through 7.1).
+> Build phase 4.0, the REST plus SSE adapter finalized as the public API surface, is DONE, merged to `develop` as PR #39, 2026-08-11. Four judge rounds ran on `phase/4.0-rest-sse-hardening`: round 1 FAILED on two blocking findings (a missing SSE `id:` line breaking real resumability, and an unverifiable "written and watched failing first" premise-gate claim), rounds 2 through 4 each PASSED after a fix round closed what the prior round found. One adversary round ran against the live system and filed 14 real findings (4 major, 5 moderate, 5 minor); 8 are fixed and judge-confirmed, 2 are resolved by documenting them as intentional design decisions, and 4 are carried open with a named owner each on `tracker/BOARD.md` (three of the four point to build phase 6.0's rate-limiting work, one needs a `DonePayload` contract change no future phase yet owns by name). Full account: `tracker/phase_4.0.md`. Next: build phase 4.1 (the outbound-only MCP server), the first of Step 6.3's remaining thirteen build phases (4.1 through 7.1).
 
 Build phase 3.1 merged as PR #22 (superseded by PR #23) on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
@@ -138,9 +138,7 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 ## Read before opening the next phase
 
-Build phase 4.0 has not merged yet (see "State now" above): the branch is code-complete and awaiting product-owner review. Do not open build phase 4.1 until 4.0's PR actually merges to `develop`, per `bossman-mode`'s own Step 1 gate ("verify every dependency phase in Section 25's dependency graph is already merged. If one is not, stop and report").
-
-Once 4.0 merges, build phase 4.1 (the outbound-only MCP server, Decision 24) opens the standard way: read `LEARNINGS.md` filtered to this phase, verify Section 25's dependency (3.4, already merged) is satisfied, then open the phase board. No bespoke reading order beyond that.
+Build phase 4.0 is merged (see "State now" above). Build phase 4.1 (the outbound-only MCP server, Decision 24) opens the standard way: read `LEARNINGS.md` filtered to this phase (65 entries as of build phase 4.0's close, plus a retrospective), verify Section 25's dependency (3.4, already merged) is satisfied, then open the phase board. No bespoke reading order beyond that.
 
 F-2.0-15 (`tracker/BOARD.md`'s Open flags table, full account in `LEARNINGS.md`'s 2026-08-10 entry), found live during Step 6.2's manual smoke test, does not affect build phase 4.1 either: it is assigned to build phase 4.7, since neither 4.0 nor 4.1 depends on real question-understanding.
 
@@ -303,9 +301,9 @@ Closed 2026-08-10, across eight PRs (#29 through #36) merged to `develop`. Ran i
 
 The whole-repository security scan stays PAUSED INDEFINITELY on cost, unchanged by this reconciliation. Exposure, a deploy, a public URL, or first contact with a user who is not the product owner, is the only thing that turns it back on.
 
-## Build phase 4.0, code-complete, awaiting merge
+## Build phase 4.0, done
 
-On `phase/4.0-rest-sse-hardening`, not yet pushed or opened as a PR. Depends on 2.2, already merged. Full ticket-level record, every judge and adversary finding with its evidence: `tracker/phase_4.0.md`. This section is a pointer plus current state, not a copy.
+Merged to `develop` as PR #39, 2026-08-11, from `phase/4.0-rest-sse-hardening`, now deleted. Depended on 2.2, already merged. Full ticket-level record, every judge and adversary finding with its evidence: `tracker/phase_4.0.md`. This section is a pointer plus current state, not a copy.
 
 What shipped: `core/run_registry.py` rebuilt with a multi-consumer, `seq`-indexed event log (closing F-1.2-03), lazy eviction past a retention window (F-1.2-01), and cumulative-unwatched-time abandonment cancellation (F-1.2-02, redesigned mid-phase after an adversary found the original timer-reset version bypassable by reconnect churn). `adapters/web_sse/app.py`'s `GET /events` gained real resumability (a wire-level SSE `id:` line, strict cursor validation), a new `GET /citations` export endpoint, and operator-mode visibility now derived purely server-side. The legacy buffered `POST /query` endpoint is removed.
 
