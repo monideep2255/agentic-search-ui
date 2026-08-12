@@ -23,6 +23,11 @@ dependencies = [
     "httpx>=0.27",
     "python-dotenv>=1.0",
     "pyyaml>=6.0",
+    "mcp>=2.0",
+    # F-4.1-J-04 (judge round 1, build phase 4.1): declared explicitly,
+    # see requirements.txt for the full rationale.
+    "mcp-types>=2.0",
+    "httpx2>=2.0",
 ]
 
 [project.optional-dependencies]

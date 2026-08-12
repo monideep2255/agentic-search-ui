@@ -24,6 +24,17 @@ argon2-cffi>=23.1
 httpx>=0.27
 sse-starlette>=2.0
 
+# Delivery surfaces
+mcp>=2.0
+# F-4.1-J-04 (judge round 1, build phase 4.1): both imported directly by
+# adapters/mcp/server.py (`mcp_types`) and by the phase 4.1 premise gate
+# (`mcp_types`, `httpx2`), previously arriving only transitively via mcp's
+# own dependency list. Declared explicitly so a future mcp release cannot
+# silently drop or restructure either and surface as an ImportError instead
+# of a resolvable dependency conflict.
+mcp-types>=2.0
+httpx2>=2.0
+
 # Config
 python-dotenv>=1.0
 pyyaml>=6.0

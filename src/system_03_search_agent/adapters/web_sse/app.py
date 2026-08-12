@@ -5,6 +5,7 @@ import os
 import re
 import uuid
 from collections.abc import AsyncIterator
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
@@ -12,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sse_starlette.sse import EventSourceResponse
 
+from system_03_search_agent.adapters.mcp.server import server as mcp_server
 from system_03_search_agent.auth.dependencies import get_current_user
 from system_03_search_agent.auth.router import router as auth_router
 from system_03_search_agent.contracts.events import CitationPayload
@@ -23,9 +25,55 @@ from system_03_search_agent.harness.cost_control import (
     sanitize_event_for_end_user,
 )
 
-app = FastAPI()
-
 logger = logging.getLogger(__name__)
+
+# Build phase 4.1 (tracker/phase_4.1.md, T-4.1-02): the outbound-only MCP
+# server, mounted as a plain Starlette sub-app at `/mcp`.
+#
+# `streamable_http_path="/"` (rather than the SDK's own default, `/mcp`)
+# is required, not cosmetic: `MCPServer.streamable_http_app()` registers
+# its one route at exactly `streamable_http_path` inside the RETURNED
+# sub-app, and that path is evaluated AFTER Starlette's `Mount("/mcp",
+# ...)` has already stripped the `/mcp` prefix. Leaving it at the SDK
+# default doubles the externally reachable path to `/mcp/mcp`. Mounting
+# at `/` here means a bare `POST /mcp` 307-redirects to `/mcp/` (Starlette
+# mount trailing-slash behavior), which every spec-compliant client
+# already follows transparently, including the SDK's own default HTTP
+# client (`create_mcp_http_client()` sets `follow_redirects=True`).
+#
+# `stateless_http=True`: each MCP request is independent, no session
+# affinity needed, matching this adapter's own request/response (not a
+# live stream) framing for `ask_biomedical_question`.
+#
+# Full account of both findings below: `LEARNINGS.md`'s 2026-08-11 entry
+# "Mounting the mcp==2.0.0 SDK's streamable_http_app into FastAPI silently
+# fails three separate ways".
+_mcp_asgi_app = mcp_server.streamable_http_app(stateless_http=True, streamable_http_path="/")
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Enter the mounted MCP sub-app's own Starlette lifespan.
+
+    `MCPServer.streamable_http_app()` initializes its session manager's
+    `anyio` task group inside ITS OWN `lifespan` context manager
+    (`lifespan=lambda app: session_manager.run()`, set internally when the
+    sub-app is built). Starlette's `Mount` does not cascade a child app's
+    lifespan into the parent's automatically: nothing in FastAPI or the
+    `mcp` SDK does this for you. Without entering it explicitly here,
+    every request to `/mcp` fails with `RuntimeError: Task group is not
+    initialized. Make sure to use run()`, in a real deployment under
+    uvicorn exactly as much as under a test client, since uvicorn only
+    ever sends the top-level ASGI `lifespan.startup` event to this outer
+    `app`, never to a mounted sub-app on its own.
+    """
+    async with AsyncExitStack() as stack:
+        await stack.enter_async_context(_mcp_asgi_app.router.lifespan_context(_mcp_asgi_app))
+        yield
+
+
+app = FastAPI(lifespan=_lifespan)
+app.mount("/mcp", _mcp_asgi_app)
 
 # F-4.0-J-06 (judge review, build phase 4.0): matches Section 13.2's own
 # `maxItems: 50` on the MCP surface's citation array. `production-

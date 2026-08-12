@@ -95,3 +95,6 @@ docs/build/multi-model-harness/
 
 # Local session artifacts, product owner only, never committed
 docs/artifacts/
+
+# Coverage runs
+.coverage
