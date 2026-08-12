@@ -4,7 +4,7 @@ The index of every phase. Maintained by the `task-tracker` skill. Per-phase tick
 
 Build phases and their dependencies come from `requirements/Technical_specification.md` Section 25, which is the source of truth. This board never invents a phase.
 
-Last updated: 2026-08-10.
+Last updated: 2026-08-11.
 
 ## Status counts
 
@@ -12,11 +12,11 @@ Listed in flow order. Work moves left to right on the board, from `todo` to `don
 
 | Status | Count | Who may set it |
 |--------|-------|----------------|
-| To do | 14 | Lead |
-| In progress | 1 | The builder that claimed it |
+| To do | 13 | Lead |
+| In progress | 0 | The builder that claimed it |
 | Blocked | 0 | The builder that hit the block, reason required |
 | In review | 0 | The builder that finished |
-| Done | 16 | Judge only, never the builder |
+| Done | 19 | Judge only, never the builder |
 
 `blocked` sits mid-flow rather than on the way to done, because it is where work stalls, not a step toward finishing.
 
@@ -57,8 +57,9 @@ The renderer enforces two rules here. A phase cannot leave `todo` unless its ref
 | 3.4 | `phase/3.4-citation-trust-full` | Provenance extended to Layers 2 and 3, the two-tier risk gate, freshness and conflict resolution, T-3.1-28 (Act-step dispatch of a second layer) folded in (PR #28) | 2.2, 3.1, 3.2, 3.3, 3.5 | v1 | done | refined | | eval-harness | F-3.4-T06-01 staleness cannot fire against current ingest, F-3.4-A-05 staleness-note precision gap, F-3.4-A-06 URL pattern end-anchor gap (scheduled) |
 | 3.5 | `phase/3.5-pathogen-clinicaltrials-tools` | pathogen_detection and clinicaltrials_search, completing the seven-tool roster (PR #27) | 3.1 | v1 | done | refined | | | F-3.5-A-07 weak-match undisclosed (partially mitigated), F-3.5-10 conditions truncation |
 | 4.0 | `phase/4.0-rest-sse-hardening` | The REST plus SSE adapter finalized as the public API surface | 2.2 | v1 | done | refined | | | F-1.2-01, F-1.2-02, F-1.2-03, F-4.0-A-10/A-11 unbounded run creation, F-4.0-A-12 citations export drops the upstream truncation disclosure, F-4.0-A-14 idle-socket abandonment bypass |
-| 4.1 | `phase/4.1-mcp-server` | Outbound-only MCP server wrapping the same tool functions | 3.4 | v1 | todo | refined | | | F-4.1-A-10 untrusted content relayed unlabelled to an agent consumer, F-4.1-A-15 caller-supplied session_id unbound to the caller, F-4.1-J3-01 raw exception stringification into an external-facing message, F-4.1-J3-02 synthetic risk_tier still asserted from nothing |
+| 4.1 | `phase/4.1-mcp-server` | Outbound-only MCP server wrapping the same tool functions | 3.4 | v1 | done | refined | | | F-4.1-A-10 untrusted content relayed unlabelled to an agent consumer, F-4.1-A-15 caller-supplied session_id unbound to the caller, F-4.1-J3-01 raw exception stringification into an external-facing message, F-4.1-J3-02 synthetic risk_tier still asserted from nothing |
 | 4.2 | `phase/4.2-cli-adapter` | Thin CLI client over the REST API | 4.0 | v1 | todo | tech_refine | | | |
+| 4.8 | `phase/4.8-web-ui-visual-design` | Web UI visual design: MUI adoption, a real theme, restyling the existing screens (auth, chat/search, streaming progress, citations) built in phase 1.2. Inserted 2026-08-11, product-owner directive, not part of the original locked build order | 1.2 | v1 | todo | tech_refine | | | |
 | 4.3 | `phase/4.3-graphql-api` | GraphQL surface via Strawberry, sharing auth and tools with REST | 4.0 | v1 | todo | tech_refine | | | |
 | 4.4 | `phase/4.4-kgx-export` | KGX export utility, a batch job over the existing graph. No in-repo dependency, so it can land any time | | v1 | todo | tech_refine | | | |
 | 4.5 | `phase/4.5-personalization-memory` | Bounded session memory, audience-level depth control, the named scientist persona. Never touches grounding | 1.2, 2.2 | v1 | todo | product_refine | product owner | playwright | |
