@@ -3224,12 +3224,15 @@ This section refines that table into `git-workflow.md`'s `phase/N.M-description`
 | 4.5 | `phase/4.5-personalization-memory` | Bounded session memory (Decision F and G), audience-level depth control, the stable named scientist persona | 1.2, 2.2 | v1 |
 | 4.6 | `phase/4.6-feedback-capture` | Real interaction capture into `interactions` (query, route, rubric outcome, citations, coverage tags, feedback, `trace_id`), the manual review ritual, hand-promotion into few-shot examples | 1.1, 3.4 | v1 |
 | 4.7 | `phase/4.7-cq-routing` | Few-shot routing seeded with the seven must-pass competency questions; query-shape routing (single-hop, multi-hop, dynamic multi-source) | 3.4 | v1 |
+| 4.8 | `phase/4.8-web-ui-visual-design` | Web UI visual design: MUI adoption, a real theme, restyling the existing screens (auth, chat/search, live streaming progress, citations) built in phase 1.2. Added 2026-08-11, product-owner directive, not part of the original locked build order (see the note below the table) | 1.2 | v1 |
 | 5.0 | `phase/5.0-observability` | LangSmith per-run tracing linked by `trace_id`, PostHog analytics, the tool-call audit log | 2.0 | v1 |
 | 5.1 | `phase/5.1-golden-dataset-eval` | The 50-query golden dataset (expanding the seven-question moat set per the playbook), eval-harness grading wired against LangSmith trace output, the cost tracking dashboard | 3.4, 5.0 | v1 |
 | 6.0 | `phase/6.0-rate-limit-concurrency` | Per-layer throttling, the concurrency queue strategy, the at-most-20-calls-per-query budget | 3.1, 3.2, 3.3, 3.5 | v1 |
 | 6.1 | `phase/6.1-hardening-release` | The full `dev-standards` six-lens pass, the CI and CD gates from Section 24 finalized, the security-scan milestone before first ship, the accessibility reasonable-effort pass | everything above | v1 |
 | 7.0 | `phase/7.0-model-bench` | Benchmark the candidate models per tier against the golden dataset, pick the tier winners | 5.1 | v1, needed before a real ship, not before the prototype |
 | 7.1 | `phase/7.1-ab-mechanism` | The online A and B randomized-routing mechanism across orchestrator-plus-planner combinations (Section 18) | 7.0, 5.0 | v1 mechanism design, but its live operation is the online complement that follows model-bench |
+
+Phase 4.8, added after build phase 4.1 closed: this table was locked at Step 4.4 and edited only at the single Step 6.2 reconciliation per the 2026-07-24 build-phase doc-review-cadence decision (`DECISIONS.md`). That reconciliation already ran and closed on 2026-08-10. Adding 4.8 now is a deliberate exception to that cadence, made directly by the product owner rather than a routine mid-build edit, logged in `DECISIONS.md`. The build order's phase numbers were never strictly execution-sequential (phase 1.2 built after 2.0 in this project's real history, per `requirements/phase_6/Continuation_prompt.md`'s own build table), so 4.8 sits as the next open number in the delivery-surfaces group and runs immediately after 4.1, before 4.2 through 4.7, none of which depend on it.
 
 ### Fast-follow disposition
 
