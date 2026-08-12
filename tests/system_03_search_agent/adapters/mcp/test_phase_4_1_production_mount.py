@@ -27,7 +27,8 @@ One-shot constraint, stated plainly: `_mcp_asgi_app` is a module-level
 singleton bound once at import time and shared by every test file that
 imports `adapters/web_sse/app.py` (`test_health.py`,
 `test_streaming_endpoints.py`, `test_phase_4_0_premise.py`,
-`test_phase_4_1_premise.py`). Its session manager's `run()` may only be
+`test_phase_4_1_premise.py`, `auth/test_router.py`). Its session
+manager's `run()` may only be
 entered once for the lifetime of the test process. This file is the one
 and only place in the repo that enters it: `test_health.py` uses
 `fastapi.testclient.TestClient(app)` WITHOUT the `with` statement (so its
