@@ -58,6 +58,46 @@ REFINEMENT = {
     "refined": ("refined", "var(--done)"),
 }
 
+# Branch-derived card titles are plain-word-capitalized (see title_from_branch
+# below), which is right for an ordinary word and wrong for an acronym or a
+# named tool. This is the correction pass: every key is matched case-
+# insensitively against each whole word in the derived title and replaced
+# with its fixed casing. Extend this table, never hand-edit board.html, when
+# a new phase's branch name introduces another acronym or named tool
+# (writing-style.md's "Acronyms and initialisms" / "Named technologies and
+# tools" rule, applied to generated titles the same as to hand-written prose).
+ACRONYM_FIXES = {
+    "mcp": "MCP",
+    "cli": "CLI",
+    "api": "API",
+    "graphql": "GraphQL",
+    "kgx": "KGX",
+    "ncbi": "NCBI",
+    "cq": "CQ",
+    "ui": "UI",
+    "sse": "SSE",
+    "rest": "REST",
+    "ab": "A/B",
+    "dbsnp": "dbSNP",
+    "efetch": "EFetch",
+}
+
+
+def title_from_branch(branch: str) -> str:
+    """Derive a card title from a `phase/N.M-description` branch name.
+
+    Sentence case per writing-style.md: the first word capitalized, the rest
+    lowercase, then ACRONYM_FIXES corrects any word that is actually an
+    acronym or a named tool rather than an ordinary word.
+    """
+    raw = branch.split("-", 1)[1].replace("-", " ") if "-" in branch else branch
+    words = raw.split(" ")
+    fixed = [ACRONYM_FIXES.get(w.lower(), w) for w in words]
+    if fixed:
+        first = fixed[0]
+        fixed[0] = first if first in ACRONYM_FIXES.values() else first[:1].upper() + first[1:]
+    return " ".join(fixed)
+
 
 @dataclass
 class AcceptanceCriterion:
@@ -247,10 +287,9 @@ def parse_board(md: str) -> dict:
                 f"phase {pid} is {status} but only {refinement}. Work does not start "
                 f"until refinement is complete."
             )
-        title = branch.split("-", 1)[1].replace("-", " ") if "-" in branch else branch
         phases.append(Phase(
             id=pid, group=group, status=status,
-            title=title[:1].upper() + title[1:],
+            title=title_from_branch(branch),
             body=delivers,
             deps=csv_cell(deps),
             gates=csv_cell(gates),

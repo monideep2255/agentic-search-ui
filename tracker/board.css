@@ -356,6 +356,8 @@
     background: var(--surface-2);
     color: var(--muted);
     white-space: nowrap;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .chip.dep::before { content: "\2190\00a0"; opacity: .65; }
@@ -364,6 +366,12 @@
     background: transparent;
     border: 1px solid var(--blocked);
     color: var(--blocked);
+    /* Flag chips carry a free-text finding description, not a short label
+       like the other chip variants, so unlike the shared .chip default
+       above they must wrap instead of forcing the card wider than its
+       column. */
+    white-space: normal;
+    overflow-wrap: break-word;
   }
 
   .chip.gate {
