@@ -34,7 +34,9 @@
  * its own blind spots:
  *
  *   Exercised:      theme token values, component structure, route
- *                   reachability without a token, stub declaration completeness.
+ *                   reachability without a token, that a signed-in question
+ *                   actually reaches createRun with its bearer token, and stub
+ *                   declaration completeness.
  *   NOT exercised:  visual fidelity (a layout can satisfy every assertion here
  *                   and still look wrong; that is the judge and adversary
  *                   rounds' job), stubbed-surface data correctness, docs prose
@@ -42,8 +44,9 @@
  *                   is Playwright's.
  */
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 /**
  * The design system is the fixture. These values are transcribed from
@@ -251,9 +254,68 @@ describe("clause 3: assembly", () => {
     // isolation while the assembled page renders none of them.
     const { default: App } = await loadApp();
     render(<App />);
+    // Scoped to the main navigation landmark rather than the whole document.
+    // This is STRICTER, not looser: it now requires the landmark to exist as
+    // well as to hold all four. The unscoped version was ambiguous because the
+    // home screen's own submit button is also called "Search", which is itself
+    // a real accessibility problem and is why the landmark is now labelled.
+    const nav = screen.getByRole("navigation", { name: /main/i });
     for (const name of [/search/i, /integrations/i, /docs/i, /about/i]) {
-      expect(screen.getByRole("button", { name })).toBeInTheDocument();
+      expect(within(nav).getByRole("button", { name })).toBeInTheDocument();
     }
+  });
+});
+
+describe("clause 3b: the assembled app is still connected to the agent", () => {
+  it("a signed-in question reaches createRun with the bearer token", async () => {
+    // ADDED after this gate let a real regression through. The first version of
+    // T-4.8-12 replaced createRun with a demo timeline: every screen rendered,
+    // navigation worked, and all 13 clauses passed, while nothing connected the
+    // interface to the agent at all. Rendering is not wiring, and a gate that
+    // only checks rendering will certify a disconnected app.
+    //
+    // This is the same shape LEARNINGS.md records for build phase 1.2 and again
+    // for `build_stable_prefix()` with zero callers: a component satisfying its
+    // own criteria while the system it belongs to does not work.
+    const api = await import("./lib/api");
+    const createRunSpy = vi
+      .spyOn(api, "createRun")
+      .mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" } as never);
+    const loginSpy = vi.spyOn(api, "login").mockResolvedValue({
+      access_token: "test-token",
+      refresh_token: "test-refresh",
+      token_type: "bearer",
+    } as never);
+    vi.spyOn(api, "openEventStream").mockReturnValue(new Promise(() => {}) as never);
+
+    const user = userEvent.setup();
+    const { default: App } = await loadApp();
+    render(<App />);
+
+    await user.click(
+      within(screen.getByRole("navigation", { name: /main/i })).getByRole("button", {
+        name: /log in/i,
+      }),
+    );
+    await user.type(screen.getByLabelText(/email/i), "person@example.com");
+    await user.type(screen.getByLabelText(/password/i), "correct horse battery staple");
+    await user.click(screen.getByRole("button", { name: /^log in$/i }));
+    await waitFor(() => expect(loginSpy).toHaveBeenCalled());
+
+    // Scoped to the main landmark: "Search" is legitimately both a navigation
+    // destination and a form action, and they are distinguishable because they
+    // sit in different landmarks. Asserting inside main is what this test
+    // means, and it is stricter than an unscoped query, not looser.
+    const main = screen.getByRole("main");
+    const field = await within(main).findByRole("textbox", { name: /question/i });
+    await user.type(field, "Which diseases are associated with BRCA1?");
+    await user.click(within(main).getByRole("button", { name: /^search$/i }));
+
+    await waitFor(() => expect(createRunSpy).toHaveBeenCalledTimes(1));
+    expect(createRunSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Which diseases are associated with BRCA1?" }),
+      "test-token",
+    );
   });
 });
 
@@ -262,7 +324,7 @@ describe("clause 4: stub registry", () => {
     // T-4.8-14. A stub nobody can find is how a placeholder ships to
     // production; this makes the set enumerable rather than discoverable.
     const { STUB_REGISTRY } = await loadRegistry();
-    const surfaces = STUB_REGISTRY.map((entry) => entry.surface);
+    const surfaces = STUB_REGISTRY.map((entry: { surface: string }) => entry.surface);
     for (const expected of [
       "persona",
       "audience-depth",
@@ -274,7 +336,7 @@ describe("clause 4: stub registry", () => {
     ]) {
       expect(surfaces).toContain(expected);
     }
-    for (const entry of STUB_REGISTRY) {
+    for (const entry of STUB_REGISTRY as { surface: string; wiredBy: string }[]) {
       expect(entry.wiredBy, `stub "${entry.surface}" has no owning phase`).toMatch(
         /^\d\.\d$/,
       );

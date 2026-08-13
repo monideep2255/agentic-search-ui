@@ -1,0 +1,268 @@
+/**
+ * The answer screen, build phase 4.8, ticket T-4.8-06.
+ *
+ * Three things here carry the product's trust argument, and none of them is
+ * decoration:
+ *
+ *   The provenance spine. One segment per claim, coloured by the layer that
+ *   backed it, borrowed from genome browser tracks so the form is native to
+ *   the audience. A grey segment means an uncited claim, visible before a word
+ *   is read. Kept always rendered rather than only on a problem, settled
+ *   2026-08-12: a track that appears solely when something is wrong is one
+ *   nobody has learned to read at the moment it matters most.
+ *
+ *   The citation chip. Layer colour on the left edge, so a reader learns where
+ *   a fact came from, and therefore how fresh it is and how it was
+ *   established, without reading the source list.
+ *
+ *   The source card. Every provenance field Section 9.1 requires, including
+ *   the licence. Dropping a field because it is fiddly is the defect the
+ *   premise gate asserts against.
+ *
+ * Source of truth: `docs/build/design/design-system/screens/answer.html`,
+ * `identity/provenance-spine.html`, `identity/citation-chip.html`,
+ * `components/source-card.html`.
+ */
+
+import { Box, Typography } from "@mui/material";
+
+import { designTokens, layerColour } from "../../theme";
+
+export type Layer = 1 | 2 | 3;
+
+export interface Claim {
+  text: string;
+  /** null means uncited: the spine must show the gap. */
+  layer: Layer | null;
+  citation: number | null;
+}
+
+export interface Source {
+  n: number;
+  layer: Layer;
+  name: string;
+  tool: string;
+  evidence: string;
+  confidence: string;
+  license: string;
+  url: string;
+}
+
+export interface TrustSignal {
+  kind: "good" | "risk" | "plain";
+  label: string;
+}
+
+export interface AnswerScreenProps {
+  question: string;
+  claims: Claim[];
+  sources: Source[];
+  meta?: string;
+  trust?: TrustSignal[];
+  /** The feedback surface, injected so this screen does not own its state. */
+  feedback?: React.ReactNode;
+}
+
+/** Monospace marks a string transcribed exactly. Gene symbols are excluded. */
+const mono = { fontFamily: "ui-monospace, monospace" } as const;
+
+export function AnswerScreen({
+  question,
+  claims,
+  sources,
+  meta,
+  trust = [],
+  feedback,
+}: AnswerScreenProps) {
+  return (
+    <Box sx={{ maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}>
+      <Box
+        sx={{
+          bgcolor: designTokens.surface,
+          border: `1px solid ${designTokens.line}`,
+          borderRadius: 1,
+          p: { xs: 2.5, sm: 3.25 },
+        }}
+      >
+        <Box sx={{ pb: 2, mb: 2.5, borderBottom: `1px solid ${designTokens.line}` }}>
+          <Typography variant="h3" component="h1">
+            {question}
+          </Typography>
+          {meta ? (
+            <Typography variant="body2" sx={{ color: designTokens.inkMuted, mt: 1 }}>
+              {meta}
+            </Typography>
+          ) : null}
+        </Box>
+
+        {/* The spine runs beside the prose, one segment per claim. */}
+        <Box sx={{ display: "grid", gridTemplateColumns: "14px 1fr", gap: 2.25 }}>
+          <Box
+            aria-hidden="true"
+            sx={{ display: "flex", flexDirection: "column", gap: 0.4, pt: 0.75 }}
+          >
+            {claims.map((claim, index) => (
+              <Box
+                key={index}
+                data-testid={`spine-segment-${index}`}
+                data-layer={claim.layer ?? "none"}
+                sx={{
+                  width: 6,
+                  mx: "auto",
+                  borderRadius: 1,
+                  flex: 1,
+                  minHeight: 46,
+                  bgcolor: layerColour(claim.layer).main,
+                }}
+              />
+            ))}
+          </Box>
+
+          <Box>
+            {claims.map((claim, index) => (
+              <Typography key={index} sx={{ mb: 1.9, maxWidth: "64ch", "&:last-child": { mb: 0 } }}>
+                {claim.text}{" "}
+                {claim.citation !== null && claim.layer !== null ? (
+                  <Box
+                    component="span"
+                    data-testid={`citation-${claim.citation}`}
+                    data-layer={claim.layer}
+                    sx={{
+                      ...mono,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 0.6,
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      lineHeight: 1.7,
+                      px: 0.75,
+                      borderRadius: 0.5,
+                      border: `1px solid ${designTokens.lineStrong}`,
+                      borderLeft: `4px solid ${layerColour(claim.layer).main}`,
+                      bgcolor: layerColour(claim.layer).wash,
+                    }}
+                  >
+                    {claim.citation}
+                  </Box>
+                ) : null}
+              </Typography>
+            ))}
+          </Box>
+        </Box>
+
+        <Typography variant="overline" component="p" sx={{ mt: 3.5, mb: 1.25, color: designTokens.inkFaint }}>
+          Sources
+        </Typography>
+
+        {sources.map((source) => {
+          const colour = layerColour(source.layer);
+          return (
+            <Box
+              key={source.n}
+              data-testid={`source-${source.n}`}
+              data-layer={source.layer}
+              sx={{
+                border: `1px solid ${designTokens.line}`,
+                borderLeft: `4px solid ${colour.main}`,
+                borderRadius: 0.5,
+                bgcolor: designTokens.surface,
+                mb: 1,
+                p: 1.75,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flexWrap: "wrap", mb: 1.25 }}>
+                <Box component="span" sx={{ ...mono, fontWeight: 700, fontSize: 12 }}>
+                  [{source.n}]
+                </Box>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {source.name}
+                </Typography>
+                <Box component="span" sx={{ ...mono, ml: "auto", fontSize: 11.5, color: designTokens.inkMuted }}>
+                  L{source.layer}
+                </Box>
+              </Box>
+
+              {/* Every field Section 9.1 requires. The licence is not optional. */}
+              <Box
+                component="dl"
+                sx={{
+                  m: 0,
+                  display: "grid",
+                  gridTemplateColumns: "auto 1fr",
+                  gap: "7px 18px",
+                  fontSize: 13,
+                }}
+              >
+                {[
+                  ["Tool", source.tool, true],
+                  ["Evidence", source.evidence, false],
+                  ["Confidence", source.confidence, false],
+                  ["License", source.license, false],
+                  ["Record", source.url, true],
+                ].map(([label, value, isToken]) => (
+                  <Box key={label as string} sx={{ display: "contents" }}>
+                    <Typography
+                      component="dt"
+                      variant="overline"
+                      sx={{ fontSize: 10.5, letterSpacing: "0.1em", color: designTokens.inkFaint }}
+                    >
+                      {label as string}
+                    </Typography>
+                    <Box
+                      component="dd"
+                      sx={{
+                        m: 0,
+                        fontSize: isToken ? 12.5 : 13,
+                        ...(isToken ? mono : {}),
+                        wordBreak: isToken ? "break-all" : "normal",
+                      }}
+                    >
+                      {value as string}
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          );
+        })}
+
+        {trust.length > 0 ? (
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2.5 }}>
+            {trust.map((signal) => {
+              const palette =
+                signal.kind === "good"
+                  ? { fg: designTokens.ok, bg: designTokens.layer2Wash, border: designTokens.ok }
+                  : signal.kind === "risk"
+                    ? { fg: designTokens.risk, bg: designTokens.riskWash, border: designTokens.risk }
+                    : { fg: designTokens.inkMuted, bg: designTokens.surfaceSunk, border: designTokens.line };
+              return (
+                <Box
+                  key={signal.label}
+                  data-testid={`trust-${signal.kind}`}
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    borderRadius: 999,
+                    px: 1.5,
+                    py: 0.5,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    color: palette.fg,
+                    bgcolor: palette.bg,
+                    border: `1px solid ${palette.border}`,
+                  }}
+                >
+                  {signal.label}
+                </Box>
+              );
+            })}
+          </Box>
+        ) : null}
+
+        {feedback}
+      </Box>
+    </Box>
+  );
+}
+
+export default AnswerScreen;
