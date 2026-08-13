@@ -57,19 +57,19 @@ Screens: landing, run, answer, wall, integrations, docs, about. Docs sub-pages: 
 |----|-------------|------------|--------|
 | T-4.8-00 | The premise gate, written first and watched failing | none | done |
 | T-4.8-01 | MUI and Emotion added, supply-chain checked per `supply-chain-security` | none | open |
-| T-4.8-02 | `theme.ts` generated from `foundations/` tokens, the single source of colour, type and spacing | 01 | open |
-| T-4.8-03 | App shell: app bar with logo, nav, persona chip and account menu; disclaimer strip; history rail; footer | 02 | open |
-| T-4.8-04 | Home screen: hero, search bar, seed chips, depth control, stats row | 02 | open |
-| T-4.8-05 | Run screen: pipeline stepper, tool chips, persona caption, stop button | 02 | open |
-| T-4.8-06 | Answer screen: provenance spine, streamed answer, citation chips, source cards, trust pills | 02 | open |
-| T-4.8-07 | Feedback surface: rating, reason chips, per-citation flag | 06 | open |
-| T-4.8-08 | Guest flow: allowance counter, soft prompt, sign-in wall | 03 | open |
-| T-4.8-09 | Follow-up question input with hints, and the history rail's contents | 03, 06 | open |
-| T-4.8-10 | Disclaimer modal and sign-in modal | 03 | open |
-| T-4.8-11 | Integrations, docs and about screens | 03 | open |
-| T-4.8-12 | Assembly: every screen wired into the real app, real routing, real SSE, landing reachable without a token | 03 to 11 | open |
+| T-4.8-02 | `theme.ts` generated from `foundations/` tokens, the single source of colour, type and spacing | 01 | done |
+| T-4.8-03 | DONE. App shell: app bar with logo, nav, persona chip and account menu; disclaimer strip; history rail; footer | 02 | done |
+| T-4.8-04 | DONE. Home screen: hero, search bar, seed chips, depth control, stats row | 02 | done |
+| T-4.8-05 | DONE. Run screen: pipeline stepper, tool chips, persona caption, stop button | 02 | done |
+| T-4.8-06 | DONE. Answer screen: provenance spine, streamed answer, citation chips, source cards, trust pills | 02 | done |
+| T-4.8-07 | DONE. Feedback surface: rating, reason chips, per-citation flag | 06 | open |
+| T-4.8-08 | DONE. Guest flow: allowance counter, soft prompt, sign-in wall | 03 | open |
+| T-4.8-09 | DONE. Follow-up question input with hints, and the history rail's contents | 03, 06 | open |
+| T-4.8-10 | DONE. Disclaimer modal and sign-in modal | 03 | open |
+| T-4.8-11 | DONE. Integrations, docs and about screens | 03 | open |
+| T-4.8-12 | DONE. Assembly: every screen wired into the real app, real routing, real SSE, landing reachable without a token | 03 to 11 | open |
 | T-4.8-13 | Accessibility pass: WCAG 2.1 AA across every screen, axe-clean | 12 | open |
-| T-4.8-14 | Stub registry: one module listing every stubbed surface and its owning phase | 07, 08, 09 | open |
+| T-4.8-14 | DONE. Stub registry: one module listing every stubbed surface and its owning phase | 07, 08, 09 | open |
 
 ### The structural change hiding in T-4.8-12
 
@@ -91,9 +91,32 @@ Surfaces this phase builds visually against a local stub, with the phase that wi
 
 ## Findings
 
-None yet. Populated by the judge and adversary rounds.
+No judge or adversary round has run yet. Everything below was found by the lead
+while building, which means none of it has been independently reviewed.
+
+| Id | What | State |
+|----|------|-------|
+| F-4.8-L-01 | The first assembly replaced `createRun` with a demo timeline. Every screen rendered, navigation worked, and all 13 gate clauses passed while nothing connected the UI to the agent. The gate asserted rendering and never wiring | Fixed. Real path restored, gate clause 3b added so it cannot regress, coverage statement corrected |
+| F-4.8-L-02 | The stub-marker gate test passed vacuously on its first run: it asserted only an absence, against an app that rendered almost nothing | Fixed. Presence assertions now run first |
+| F-4.8-L-03 | The navigation landmark was unlabelled, so "Search" in the bar and "Search" on the form were indistinguishable | Fixed. Landmark labelled, and the form action renamed to "Ask" |
+| F-4.8-L-04 | The app bar offered "Log in" while the sign-in form was already open | Fixed. `hideAuthAction` |
+| F-4.8-L-05 | Persona chip label failed WCAG AA: `inkOnNavyMute` on the chip's composited ground measures about 2.7:1 | Fixed. Raised to `inkOnNavy`, 5.4:1 |
+| F-4.8-L-06 | Scrollable `<pre>` code blocks were not keyboard-focusable, so a keyboard user could not scroll to read them | Fixed. `tabIndex`, `role`, `aria-label` |
+| F-4.8-L-07 | DESIGN SYSTEM DEFECT. `inkFaint` measures 4.73:1 on white (passes AA) but 4.31:1 on `surfaceSunk` (fails). The token is safe on one surface and unsafe on another, and nothing in the design system says so | Usage fixed; TOKEN NOT CHANGED, because the design system is frozen for this phase. Carry to the next design pass |
+| F-4.8-L-08 | PRE-EXISTING, not this phase. `GuardrailBanner`'s exhaustive category Record was missing `write_seeking`, so `tsc -b` and therefore `npm run build` had been failing on `develop` since Step 6.2 added that member. Unnoticed because no CI runs the frontend build | Fixed here incidentally. Confirmed on `develop` by stashing, not assumed |
+| F-4.8-L-09 | PRE-EXISTING, and misdiagnosed for five phases. The Playwright webServer timeout carried since build phase 3.3 as "an environment quirk" was Vite binding to `[::1]` while Playwright probes `127.0.0.1`. The earlier diagnosis tested `localhost`, which resolves to `::1` on macOS, so it confirmed a different address than the failing one | Fixed. `--host 127.0.0.1` in `playwright.config.ts`. The e2e suite runs for the first time since phase 3.3 |
+| F-4.8-L-10 | OPEN. One accessibility check still fails: "the run and answer screens are clean", on the LANDED answer screen. Mid-run is clean at 0 violations; the landed state has an unidentified violation | Open, diagnosis in progress when the phase paused |
 
 ## History
+
+- 2026-08-13, PAUSED MID-TASK at the product owner's request. Not a phase boundary. State is clean and resumable: nothing half-edited, vitest 136 of 136, typecheck clean, production build succeeds, premise gate 14 of 14. Thirteen of fifteen tickets done.
+
+  Resume here, in order:
+  1. F-4.8-L-10, the one failing accessibility check. Mid-run is clean; the landed answer screen has one unidentified violation. Reproduce with `npx playwright test e2e/accessibility.spec.ts:63`, and print the full axe node rather than trusting the list reporter, which truncates it.
+  2. Three pre-existing e2e specs in `e2e/query-stream-and-stop.spec.ts` still assert the old auth-first UI and fail. They need rewriting to the new contract the same way `App.test.tsx` was: preserve every guarantee, invert only the routing assumption.
+  3. Then the judge round, the adversary round, and the stage-10 gates.
+
+  Nothing has been independently reviewed yet. Every finding above was found by the lead, which is exactly the condition LEARNINGS.md warns about: a same-session self-check is not an independent review.
 
 - 2026-08-13: T-4.8-00 done. Premise gate written before any build code and watched failing: 13 of 13, each failure naming the ticket that owes it. Two gate-integrity problems were found and fixed while writing it, before any reviewer saw it. First, static imports of not-yet-existing modules failed the whole suite at transform time, reporting "0 tests", which proves nothing about whether the assertions can fail; imports now resolve at runtime so each clause fails on its own. Second, the stub-marker test passed vacuously on the first run, because it only asserted an ABSENCE and today's `App.tsx` renders almost nothing; presence assertions now run first, so it cannot pass until the real UI is on screen. That is the same defect shape that failed build phase 4.1's judge round 1. Existing frontend suite measured green at 120 of 120 as the baseline this phase must not break.
 - 2026-08-13: phase opened on `phase/4.8-web-ui-visual-design`. Design review closed first and its artifacts committed as `95e8f85`. Learnings recall run against frontend territory; build phase 1.2's scaffold-without-wiring entry drove T-4.8-12 into the decomposition up front rather than at the end.

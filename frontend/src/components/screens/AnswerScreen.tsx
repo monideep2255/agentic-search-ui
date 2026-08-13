@@ -61,6 +61,17 @@ export interface AnswerScreenProps {
   trust?: TrustSignal[];
   /** The feedback surface, injected so this screen does not own its state. */
   feedback?: React.ReactNode;
+  /** Rendered under the sources. The follow-up field. */
+  followUp?: React.ReactNode;
+  /**
+   * Flag a source as not supporting the claim it is attached to.
+   *
+   * This is the single most valuable signal a cite-or-refuse system can
+   * collect: it produces a labelled pair rather than an opinion, which is what
+   * the golden dataset needs. Stubbed; wired by build phase 4.6.
+   */
+  onFlagSource?: (n: number) => void;
+  flaggedSources?: number[];
 }
 
 /** Monospace marks a string transcribed exactly. Gene symbols are excluded. */
@@ -73,6 +84,9 @@ export function AnswerScreen({
   meta,
   trust = [],
   feedback,
+  followUp,
+  onFlagSource,
+  flaggedSources = [],
 }: AnswerScreenProps) {
   return (
     <Box sx={{ maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}>
@@ -180,6 +194,35 @@ export function AnswerScreen({
                 <Box component="span" sx={{ ...mono, ml: "auto", fontSize: 11.5, color: designTokens.inkMuted }}>
                   L{source.layer}
                 </Box>
+                {onFlagSource ? (
+                  <Box
+                    component="button"
+                    type="button"
+                    aria-pressed={flaggedSources.includes(source.n)}
+                    onClick={() => onFlagSource(source.n)}
+                    sx={{
+                      font: "inherit",
+                      fontSize: 11.5,
+                      px: 1,
+                      py: 0.3,
+                      borderRadius: 0.5,
+                      cursor: "pointer",
+                      border: "1px solid",
+                      borderColor: flaggedSources.includes(source.n)
+                        ? designTokens.risk
+                        : designTokens.line,
+                      color: flaggedSources.includes(source.n)
+                        ? designTokens.risk
+                        : designTokens.inkFaint,
+                      bgcolor: flaggedSources.includes(source.n)
+                        ? designTokens.riskWash
+                        : designTokens.surface,
+                      "&:hover": { color: designTokens.risk, borderColor: designTokens.risk },
+                    }}
+                  >
+                    {flaggedSources.includes(source.n) ? "Flagged" : "Flag: does not support"}
+                  </Box>
+                ) : null}
               </Box>
 
               {/* Every field Section 9.1 requires. The licence is not optional. */}
@@ -260,6 +303,7 @@ export function AnswerScreen({
         ) : null}
 
         {feedback}
+        {followUp}
       </Box>
     </Box>
   );

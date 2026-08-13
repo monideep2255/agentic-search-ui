@@ -144,8 +144,14 @@ export function HomeScreen({ onSubmit, footer }: HomeScreenProps) {
               py: 0.75,
             }}
           />
+          {/*
+            "Ask", not "Search". The navigation already has a destination
+            called Search, and two visible controls sharing an accessible name
+            is a real problem for anyone navigating by control list. It also
+            reads better against the hero's own "Ask a biomedical question".
+          */}
           <Button type="submit" variant="contained" sx={{ px: 2.25, py: 1.1, fontSize: 14 }}>
-            Search
+            Ask
           </Button>
         </Box>
 

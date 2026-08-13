@@ -309,7 +309,7 @@ describe("clause 3b: the assembled app is still connected to the agent", () => {
     const main = screen.getByRole("main");
     const field = await within(main).findByRole("textbox", { name: /question/i });
     await user.type(field, "Which diseases are associated with BRCA1?");
-    await user.click(within(main).getByRole("button", { name: /^search$/i }));
+    await user.click(within(main).getByRole("button", { name: /^ask$/i }));
 
     await waitFor(() => expect(createRunSpy).toHaveBeenCalledTimes(1));
     expect(createRunSpy).toHaveBeenCalledWith(

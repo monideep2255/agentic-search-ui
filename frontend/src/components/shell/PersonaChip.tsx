@@ -80,7 +80,12 @@ export function PersonaChip({ name, variant = "onNavy" }: PersonaChipProps) {
         border: "1px solid",
         borderColor: onNavy ? "rgba(255,255,255,.28)" : designTokens.line,
         bgcolor: onNavy ? "rgba(255,255,255,.10)" : designTokens.surface,
-        color: onNavy ? designTokens.inkOnNavyMute : designTokens.inkMuted,
+        // inkOnNavyMute (#A9C3DC) fails WCAG AA here: the chip's own
+        // translucent background composites to ~#36659E over the app bar, and
+        // that pair measures about 2.7:1 against a 4.5:1 requirement. The
+        // bright ink token measures 5.4:1 on the same ground. Caught by the
+        // e2e contrast check, not by eye.
+        color: onNavy ? designTokens.inkOnNavy : designTokens.inkMuted,
         whiteSpace: "nowrap",
       }}
     >

@@ -28,7 +28,7 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
-import { CssBaseline, ThemeProvider } from "@mui/material";
+import { Box, CssBaseline, ThemeProvider } from "@mui/material";
 
 import { theme } from "./theme";
 import { createRun } from "./lib/api";
@@ -43,6 +43,12 @@ import { AnswerScreen } from "./components/screens/AnswerScreen";
 import type { Claim, Source, TrustSignal } from "./components/screens/AnswerScreen";
 import { AboutScreen, DocsScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
 import { GuestAllowance, SignInWall } from "./components/guest/GuestAllowance";
+import { FeedbackSurface } from "./components/feedback/FeedbackSurface";
+import { FollowUp, HistoryRail } from "./components/answer/FollowUp";
+import {
+  DisclaimerModal,
+  hasAcceptedDisclaimer,
+} from "./components/shell/DisclaimerModal";
 import type { AudienceDepth } from "./components/controls/DepthControl";
 
 type SearchView =
@@ -103,6 +109,13 @@ const DEMO_TOOLS: ToolCall[] = [
   { name: "ncbi_efetch", detail: "medgen C0677776", layer: 2 },
 ];
 
+/** Canned follow-up hints. Stubbed; build phase 4.5 derives these for real. */
+const FOLLOW_UP_HINTS = [
+  "What variants cause it?",
+  "Which trials are recruiting?",
+  "What does the literature add?",
+];
+
 export function App() {
   const [screen, setScreen] = useState<ScreenName>("search");
   const [view, setView] = useState<SearchView>({ name: "home" });
@@ -110,6 +123,9 @@ export function App() {
   const [token, setToken] = useState<string | null>(null);
   const [step, setStep] = useState<StepName | null>(null);
   const [, setRunId] = useState<string | null>(null);
+  const [accepted, setAccepted] = useState(hasAcceptedDisclaimer);
+  const [history, setHistory] = useState<{ id: string; question: string }[]>([]);
+  const [flagged, setFlagged] = useState<number[]>([]);
 
   // One id for this browser session, stable across questions so they group
   // into a thread. The fallback keeps a test environment without
@@ -152,6 +168,12 @@ export function App() {
         return;
       }
       setUsed((n) => n + 1);
+      setFlagged([]);
+      setHistory((current) =>
+        current.some((item) => item.question === question)
+          ? current
+          : [{ id: `${current.length}`, question }, ...current],
+      );
       setView({ name: "run", question });
       setStep("Guard");
 
@@ -216,6 +238,19 @@ export function App() {
             sources={DEMO_SOURCES}
             trust={DEMO_TRUST}
             meta="2 tools · 2 layers · 2 sources"
+            feedback={<FeedbackSurface key={view.question} />}
+            followUp={
+              <FollowUp
+                hints={FOLLOW_UP_HINTS}
+                onAsk={(next) => void ask(next, "researcher")}
+              />
+            }
+            flaggedSources={flagged}
+            onFlagSource={(n) =>
+              setFlagged((current) =>
+                current.includes(n) ? current.filter((x) => x !== n) : [...current, n],
+              )
+            }
           />
         );
       case "wall":
@@ -252,7 +287,22 @@ export function App() {
         }}
         onSignOut={() => setToken(null)}
       >
-        {body()}
+        {!accepted ? <DisclaimerModal onAccept={() => setAccepted(true)} /> : null}
+        {screen === "search" ? (
+          <Box sx={{ display: "flex", alignItems: "stretch", minHeight: "100%" }}>
+            <HistoryRail
+              items={history}
+              activeId={view.name === "answer" || view.name === "run" ? history[0]?.id : null}
+              onOpen={(id) => {
+                const item = history.find((entry) => entry.id === id);
+                if (item) setView({ name: "answer", question: item.question });
+              }}
+            />
+            <Box sx={{ flex: 1, minWidth: 0 }}>{body()}</Box>
+          </Box>
+        ) : (
+          body()
+        )}
       </AppShell>
     </ThemeProvider>
   );

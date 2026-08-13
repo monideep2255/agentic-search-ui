@@ -61,7 +61,7 @@ async function signIn(user: ReturnType<typeof userEvent.setup>) {
 async function ask(user: ReturnType<typeof userEvent.setup>, question: string) {
   const main = mainArea();
   await user.type(main.getByRole("textbox", { name: /question/i }), question);
-  await user.click(main.getByRole("button", { name: /^search$/i }));
+  await user.click(main.getByRole("button", { name: /^ask$/i }));
 }
 
 describe("App", () => {
@@ -114,7 +114,14 @@ describe("App", () => {
 
     await ask(user, "Which diseases are associated with BRCA1?");
 
-    expect(screen.getByText("Which diseases are associated with BRCA1?")).toBeInTheDocument();
+    // Asserted as the page HEADING rather than as loose text. The question now
+    // legitimately appears twice, once as the run's heading and once in the
+    // history rail, so a bare text match is ambiguous. The heading role is the
+    // stricter assertion: it requires the run screen to have taken over the
+    // page, not merely for the string to appear somewhere.
+    expect(
+      screen.getByRole("heading", { name: "Which diseases are associated with BRCA1?" }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: /ask a biomedical question/i }),
     ).not.toBeInTheDocument();
@@ -124,7 +131,7 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(mainArea().getByRole("button", { name: /^search$/i }));
+    await user.click(mainArea().getByRole("button", { name: /^ask$/i }));
 
     expect(
       screen.getByRole("heading", { name: /ask a biomedical question/i }),

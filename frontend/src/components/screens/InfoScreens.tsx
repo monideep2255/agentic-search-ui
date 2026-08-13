@@ -54,6 +54,13 @@ function Card({ title, body, code }: { title: string; body: string; code?: strin
       {code ? (
         <Box
           component="pre"
+          // A pre with overflow-x: auto is a scrollable region, and a keyboard
+          // user cannot scroll it without being able to focus it. axe flags
+          // this as scrollable-region-focusable; the fix is a tab stop plus a
+          // name, so the region is both reachable and announced.
+          tabIndex={0}
+          role="region"
+          aria-label={`${title} example`}
           sx={{
             ...mono,
             fontSize: 11.5,
