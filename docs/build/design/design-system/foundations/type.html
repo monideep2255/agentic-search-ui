@@ -1,0 +1,46 @@
+<!-- @dsCard group="Foundations" width=880 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Type</title>
+<style>
+:root{
+  color-scheme:light;
+  --canvas:#f0f0f0; --canvas-deep:#e4e6e8; --surface:#fff; --surface-sunk:#f7f8f9;
+  --line:#d6d7d9; --line-strong:#a9aeb1;
+  --ink:#1b1b1b; --ink-muted:#565c65; --ink-faint:#71767a;
+  --ink-on-navy:#f3f6f9; --ink-on-navy-mute:#a9c3dc;
+  --navy:#112f4e; --blue:#205493; --link:#0071bc;
+  --l1:#205493; --l2:#2e8540; --l3:#4c2c92;
+  --l1-wash:#e7eef6; --l2-wash:#e6f2e8; --l3-wash:#eeeaf6;
+  --risk:#981b1e; --risk-wash:#f8e9e9; --warn:#7a5900; --warn-wash:#fdf3d9; --ok:#2e8540;
+  --sans:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --r:8px; --r-sm:4px;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:var(--canvas);color:var(--ink);
+     font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.card-title{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+     color:var(--ink-faint);margin:0 0 4px}
+.card-note{font-size:13px;color:var(--ink-muted);margin:0 0 20px;max-width:64ch}
+.stack{display:flex;flex-direction:column;gap:20px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.mono{font-family:var(--mono)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.lbl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--ink-faint)}
+.tr{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+     padding:18px 20px;display:flex;align-items:baseline;gap:20px;flex-wrap:wrap}
+.spec{font-size:11.5px;color:var(--ink-faint);margin-left:auto;white-space:nowrap}</style>
+</head><body>
+<p class="card-title">Type</p>
+<p class="card-note">Public Sans, the USWDS face. The one rule doing real work: monospace marks a string you transcribe exactly. Accessions, rsIDs, concept ids, predicate names and tool names qualify. Gene symbols, disease names, evidence kinds and licences do not, because they are read as words and mono makes a sentence stutter. Decided 2026-08-12.</p>
+<div class="stack">
+  <div class="tr"><span style="font-size:38px;font-weight:800;letter-spacing:-.028em">Ask a biomedical question</span><span class="spec mono">800 · 38px · -2.8%</span></div>
+  <div class="tr"><span style="font-size:26px;font-weight:800;letter-spacing:-.022em">Which diseases are associated with BRCA1?</span><span class="spec mono">800 · 26px · -2.2%</span></div>
+  <div class="tr"><span style="font-size:16px">BRCA1 is associated with hereditary breast and ovarian cancer syndrome, the best-characterised of its disease links.</span><span class="spec mono">400 · 16px · 1.6 · 66ch</span></div>
+  <div class="tr"><span style="font-size:13.5px;color:var(--ink-muted)">Answered from the NCBI knowledge graph and live NCBI APIs.</span><span class="spec mono">400 · 13.5px · muted</span></div>
+  <div class="tr"><span class="lbl">Sources</span><span class="spec mono">700 · 11px · +14% caps</span></div>
+  <div class="tr"><span class="mono" style="font-size:14px">cypher_query &middot; rs334 &middot; C0677776 &middot; NM_007294.4</span><span class="spec mono">mono · every identifier</span></div>
+</div>
+</body></html>

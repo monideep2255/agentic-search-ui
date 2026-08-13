@@ -1,0 +1,56 @@
+<!-- @dsCard group="Components" width=880 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Audience depth control</title>
+<style>:root{
+  color-scheme:light;
+  --canvas:#f0f0f0; --canvas-deep:#e4e6e8; --surface:#fff; --surface-sunk:#f7f8f9;
+  --line:#d6d7d9; --line-strong:#a9aeb1;
+  --ink:#1b1b1b; --ink-muted:#565c65; --ink-faint:#71767a;
+  --ink-on-navy:#f3f6f9; --ink-on-navy-mute:#a9c3dc;
+  --navy:#112f4e; --blue:#205493; --link:#0071bc;
+  --l1:#205493; --l2:#2e8540; --l3:#4c2c92;
+  --l1-wash:#e7eef6; --l2-wash:#e6f2e8; --l3-wash:#eeeaf6;
+  --risk:#981b1e; --risk-wash:#f8e9e9; --warn:#7a5900; --warn-wash:#fdf3d9; --ok:#2e8540;
+  --sans:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --r:8px; --r-sm:4px;
+}
+*{box-sizing:border-box}
+
+.card-title{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--ink-faint);margin:0 0 4px}
+.card-note{font-size:13px;color:var(--ink-muted);margin:0 0 20px;max-width:70ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:16px}
+.lbl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--ink-faint);margin:0 0 14px}
+body{padding:28px}
+.depth{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--surface)}
+.depth button{background:transparent;border:0;padding:6px 13px;font-size:12.5px;color:var(--ink-muted);cursor:pointer}
+.depth button + button{border-left:1px solid var(--line)}
+.depth button.on{background:var(--l1-wash);color:var(--l1);font-weight:700}
+.depth button:disabled{cursor:not-allowed;opacity:.5}</style></head><body>
+<p class="card-title">Audience depth control</p>
+<p class="card-note">Technical specification 12.9. Three-way, mirroring Query.audience_depth exactly: clinical_brief, researcher as the default, deep_technical. Disabled once a run is mid-stream, because the depth a run was dispatched with is locked for that run, so Write never reconciles a depth change against tokens it has already streamed. Wired in build phase 4.5.</p>
+<div class="panel" style="background:var(--navy);border-color:var(--navy)">
+<p class="lbl" style="color:var(--ink-on-navy-mute)">On the landing hero, default state</p>
+<div class="depthwrap" style="margin:0">
+  <span class="dl">Answer depth</span>
+  <div class="depth" role="group" aria-label="Audience-level depth">
+    <button type="button">Clinical brief</button>
+    <button type="button" class="on">Researcher</button>
+    <button type="button">Deep technical</button>
+  </div>
+</div></div>
+
+<div class="panel"><p class="lbl">Each selection</p>
+<div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+  <div class="depth"><button class="on">Clinical brief</button><button>Researcher</button><button>Deep technical</button></div>
+  <div class="depth"><button>Clinical brief</button><button class="on">Researcher</button><button>Deep technical</button></div>
+  <div class="depth"><button>Clinical brief</button><button>Researcher</button><button class="on">Deep technical</button></div>
+</div></div>
+
+<div class="panel"><p class="lbl">Locked, while a run is mid-stream</p>
+<div class="depth"><button disabled>Clinical brief</button><button class="on" disabled>Researcher</button><button disabled>Deep technical</button></div>
+<p style="font-size:13px;color:var(--ink-muted);margin:14px 0 0;max-width:64ch">Re-enabled when the run reaches an
+answer, or is stopped.</p></div>
+</body></html>

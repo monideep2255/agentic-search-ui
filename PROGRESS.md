@@ -2,7 +2,7 @@
 
 A plain-language update on what this project is, what works today, and what comes next. No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-11.
+Last updated: 2026-08-12.
 
 ## Table of contents
 
@@ -152,7 +152,7 @@ flowchart LR
         Sp --> Door[Front door finished: reconnect, watch together, self-stopping]
         Door --> MCP[Back door: other programs can now ask questions too]
     end
-    MCP --> Style[Give the web page a real design, next]
+    MCP --> Style[Designing the web page now, before any code]
     Style --> Dec[Question-understanding gap: given a home, a later sprint, not fixed yet]
     Dec --> Wire[Wire the other five tools into the answer pipeline]
     Wire --> Other[Other ways in: command line, saved history]
@@ -165,7 +165,11 @@ The planned specification pause (updating the written plans with everything lear
 
 In order, now:
 
-1. Making the chat page look like a real product instead of a bare, unstyled form: a proper visual design, using a well-established component library rather than building one from scratch. This sprint was just added to the plan, ahead of several already-numbered sprints that do not need it done first.
+1. Making the web page look like a real product instead of a bare, unstyled form, using a well-established set of ready-made building blocks rather than making our own from scratch. This sprint was added to the plan recently, ahead of several already-numbered sprints that do not need it done first.
+
+   No code has been written for it yet, on purpose. Everything built so far could be checked by a test that asks "is this answer true". How something looks cannot be checked that way, so the design is being settled first, before the building starts. There is now a clickable working mock-up of the whole product: you can type a question, watch it think, read the cited answer, hit the sign-in wall. It can be played with and shown to people, and it gets changed until the product owner is happy with it. Only then does the design get locked and the real code get written against it, all in one go.
+
+   The important step in that loop is the review after each round of changes, because it is where a design that shows something the system cannot actually do gets caught before anyone builds it. The first round proved the point: the mock-up named three data-lookup tools that do not exist in the real system, which would otherwise have been built as though they did.
 2. The question-understanding gap now has a home: a specific future sprint, later than the next several, will build the real fix. It is not being rushed in early, and nothing else in the next few sprints depends on it being fixed first.
 3. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
 4. Then the remaining work: the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.

@@ -1,0 +1,54 @@
+<!-- @dsCard group="Identity" width=880 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Citation chip</title>
+<style>
+:root{
+  color-scheme:light;
+  --canvas:#f0f0f0; --canvas-deep:#e4e6e8; --surface:#fff; --surface-sunk:#f7f8f9;
+  --line:#d6d7d9; --line-strong:#a9aeb1;
+  --ink:#1b1b1b; --ink-muted:#565c65; --ink-faint:#71767a;
+  --ink-on-navy:#f3f6f9; --ink-on-navy-mute:#a9c3dc;
+  --navy:#112f4e; --blue:#205493; --link:#0071bc;
+  --l1:#205493; --l2:#2e8540; --l3:#4c2c92;
+  --l1-wash:#e7eef6; --l2-wash:#e6f2e8; --l3-wash:#eeeaf6;
+  --risk:#981b1e; --risk-wash:#f8e9e9; --warn:#7a5900; --warn-wash:#fdf3d9; --ok:#2e8540;
+  --sans:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --r:8px; --r-sm:4px;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:var(--canvas);color:var(--ink);
+     font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.card-title{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+     color:var(--ink-faint);margin:0 0 4px}
+.card-note{font-size:13px;color:var(--ink-muted);margin:0 0 20px;max-width:64ch}
+.stack{display:flex;flex-direction:column;gap:20px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.mono{font-family:var(--mono)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.lbl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--ink-faint)}
+.cite{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line-strong);
+  border-left-width:4px;border-radius:var(--r-sm);padding:0 6px 0 5px;font-family:var(--mono);
+  font-size:11.5px;font-weight:600;line-height:1.7;background:var(--surface);color:var(--ink);
+  cursor:pointer;white-space:nowrap;transition:transform .14s ease}
+.cite:hover{transform:translateY(-1px)}
+.cite .src{color:var(--ink-muted);font-weight:400}
+.cite.c1{border-left-color:var(--l1);background:var(--l1-wash)}
+.cite.c2{border-left-color:var(--l2);background:var(--l2-wash)}
+.cite.c3{border-left-color:var(--l3);background:var(--l3-wash)}</style>
+</head><body>
+<p class="card-title">Citation chip</p>
+<p class="card-note">The most repeated object in the product, so it carries the most weight. Layer colour on the left edge, number in monospace, source id muted. Colour reads before the number does.</p>
+<div class="panel"><p class="lbl" style="margin:0 0 12px">Three layers</p>
+<div class="row">
+  <span class="cite c1">1 <span class="src">Gene 672</span></span>
+  <span class="cite c2">2 <span class="src">MedGen C0677776</span></span>
+  <span class="cite c3">3 <span class="src">PMID 21990134</span></span>
+</div></div>
+<div class="panel" style="margin-top:16px"><p class="lbl" style="margin:0 0 12px">In prose</p>
+<p style="margin:0;font-size:16px;max-width:66ch">BRCA1 is associated with hereditary breast and ovarian cancer syndrome, the best-characterised of its disease links <span class="cite c1">1 <span class="src">Gene 672</span></span>. Biallelic variants have also been reported in Fanconi anemia complementation group S <span class="cite c3">3 <span class="src">PMID 21990134</span></span>.</p></div>
+<div class="panel" style="margin-top:16px"><p class="lbl" style="margin:0 0 12px">Compact, no source id</p>
+<div class="row"><span class="cite c1">1</span><span class="cite c2">2</span><span class="cite c3">3</span></div></div>
+</body></html>
