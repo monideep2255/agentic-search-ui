@@ -25,6 +25,7 @@
  */
 
 import { Box, Typography } from "@mui/material";
+import { visuallyHidden } from "@mui/utils";
 
 import { designTokens, layerColour } from "../../theme";
 
@@ -34,7 +35,14 @@ export interface Claim {
   text: string;
   /** null means uncited: the spine must show the gap. */
   layer: Layer | null;
-  citation: number | null;
+  /**
+   * Every citation this claim declared, by display index.
+   *
+   * An array rather than a single number because a sentence can legitimately
+   * cite more than one source, and the previous single-value shape silently
+   * dropped the rest (F-4.8-J-14, made routine by F-4.8-A-04).
+   */
+  citations: number[];
 }
 
 export interface Source {
@@ -97,6 +105,38 @@ export interface AnswerScreenProps {
 
 /** Monospace marks a string transcribed exactly. Gene symbols are excluded. */
 const mono = { fontFamily: "ui-monospace, monospace" } as const;
+
+/**
+ * Hosts a citation may link to.
+ *
+ * F-4.8-A-24. `isCitationPayload` validates `source_url` as `typeof === "string"`
+ * and nothing more, so the adversary got `https://evil.example.com/fake-ncbi-record`
+ * and a `javascript:` URL rendered as the Record for a source labelled "NCBI
+ * Gene". That was survivable only because nothing was clickable (A-17), and
+ * making citations clickable is exactly what removes that accident of safety.
+ *
+ * `production-standards` requires a host-pinned check rather than a scheme
+ * check, and requires it on whichever side of the stack builds the link. This
+ * is that side.
+ */
+const ALLOWED_CITATION_HOSTS = [
+  "ncbi.nlm.nih.gov",
+  "www.ncbi.nlm.nih.gov",
+  "pubmed.ncbi.nlm.nih.gov",
+  "pmc.ncbi.nlm.nih.gov",
+  "clinicaltrials.gov",
+  "www.clinicaltrials.gov",
+];
+
+/** A citation URL is linkable only if it is https and on an allowed host. */
+export function isLinkableCitationUrl(raw: string): boolean {
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === "https:" && ALLOWED_CITATION_HOSTS.includes(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
 
 /**
  * A refusal, failure or cap notice.
@@ -200,6 +240,18 @@ export function AnswerScreen({
 
         {/* The spine runs beside the prose, one segment per claim. */}
         <Box sx={{ display: "grid", gridTemplateColumns: "14px 1fr", gap: 2.25 }}>
+          {/*
+            F-4.8-A-16. This was `aria-hidden`, so the provenance spine, which
+            this product's own documentation calls "visible before you read a
+            word", did not exist for assistive technology at all. Axe reported
+            zero violations the whole time, because axe cannot check whether the
+            one signal a product exists to convey is conveyed.
+
+            The visual track stays decorative; the MEANING is now carried in
+            text on each claim instead, so a cited and an uncited claim are
+            distinguishable without colour. That is WCAG 1.4.1 (use of colour),
+            which no automated rule was ever going to flag here.
+          */}
           <Box
             aria-hidden="true"
             sx={{ display: "flex", flexDirection: "column", gap: 0.4, pt: 0.75 }}
@@ -225,11 +277,20 @@ export function AnswerScreen({
             {claims.map((claim, index) => (
               <Typography key={index} sx={{ mb: 1.9, maxWidth: "64ch", "&:last-child": { mb: 0 } }}>
                 {claim.text}{" "}
-                {claim.citation !== null && claim.layer !== null ? (
+                <Box component="span" sx={visuallyHidden}>
+                  {claim.citations.length === 0
+                    ? "This sentence has no source."
+                    : `Source ${claim.citations.join(" and ")}, layer ${claim.layer}.`}
+                </Box>
+                {claim.citations.map((n, position) => (
                   <Box
+                    key={n}
                     component="span"
-                    data-testid={`citation-${claim.citation}`}
+                    data-testid={`citation-${n}`}
+                    data-claim={index}
                     data-layer={claim.layer}
+                    aria-label={`Source ${n}`}
+                    role="note"
                     sx={{
                       ...mono,
                       display: "inline-flex",
@@ -243,11 +304,12 @@ export function AnswerScreen({
                       border: `1px solid ${designTokens.lineStrong}`,
                       borderLeft: `4px solid ${layerColour(claim.layer).main}`,
                       bgcolor: layerColour(claim.layer).wash,
+                      ml: position === 0 ? 0 : 0.5,
                     }}
                   >
-                    {claim.citation}
+                    {n}
                   </Box>
-                ) : null}
+                ))}
               </Typography>
             ))}
           </Box>
@@ -355,7 +417,33 @@ export function AnswerScreen({
                         wordBreak: isToken ? "break-all" : "normal",
                       }}
                     >
-                      {value as string}
+                      {label === "Record" && isLinkableCitationUrl(value as string) ? (
+                        // A-17: every citation must link back to its source.
+                        // Previously the URL was plain text and the answer
+                        // screen contained zero anchors, so verifying a claim
+                        // meant selecting and copying a URL by hand.
+                        <Box
+                          component="a"
+                          href={value as string}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{ color: designTokens.link }}
+                        >
+                          {value as string}
+                        </Box>
+                      ) : (
+                        <>
+                          {value as string}
+                          {label === "Record" ? (
+                            <Box
+                              component="span"
+                              sx={{ display: "block", fontSize: 11.5, color: designTokens.risk }}
+                            >
+                              Not linked: this URL is not on a recognised NCBI host.
+                            </Box>
+                          ) : null}
+                        </>
+                      )}
                     </Box>
                   </Box>
                 ))}
@@ -365,7 +453,11 @@ export function AnswerScreen({
         })}
 
         {trust.length > 0 ? (
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2.5 }}>
+          <Box
+            role="status"
+            aria-label="Trust signals"
+            sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2.5 }}
+          >
             {trust.map((signal) => {
               // The "good" pill's own design-system pair fails WCAG AA: ok
               // (#2E8540) on layer2Wash (#E6F2E8) measures 4.01:1 against a

@@ -146,6 +146,47 @@ Also found in the fix round, not by the judge:
 | F-4.8-L-18 | Stopping a run navigated home, discarding everything already streamed. The phase 1.2 behaviour kept the partial result | Fixed: Stop stays on the run |
 | F-4.8-L-19 | OPEN. The e2e suite failed once in five consecutive runs and passed the other four, with no captured detail. Three clean runs are not evidence of stability, and the judge listed repeated runs as something it did not check. Likely candidates are the sign-up waits and the run-landing races, several of which use short default timeouts | OPEN, needs attribution before this is called stable |
 
+### Adversary round 1, 2026-08-13
+
+27 findings: 3 critical, 13 major, 7 moderate, 4 minor. It built a scratch hostile backend replaying the exact shapes `write_node` emits, read from the source rather than guessed, and it attributed the open flake F-4.8-L-19 rather than leaving it environmental.
+
+THE ROOT CAUSE, F-4.8-A-03. `_narrative_chunks` emits one token per sentence carrying `marker_ids`, the citation_id values that sentence cites, and its docstring states the contract outright: "A surface binds a token to its citation by that key, then looks up the number." That binding was discarded and re-derived with a `String.includes` heuristic against `claim_text`. One decision, five findings: A-01, A-04, A-06, A-07 and J-14. The premise gate could not see it because every fixture set `marker_ids: []`.
+
+This is `attack-the-constraint`'s own lesson, missed: when output is wrong, read what the component was GIVEN before debugging what it produced. The binding was on the wire.
+
+| Id | Severity | What | State |
+|----|----------|------|-------|
+| F-4.8-A-01 | critical | A citation with `claim_text: "cancer"` cited every sentence containing the word, including "Every patient with this cancer should stop chemotherapy immediately", under a "Grounded" pill with no spine gap. J-05 had rejected only the empty string | FIXED at the root by binding on `marker_ids` |
+| F-4.8-A-02 | critical | A stale `createRun` response rendered its answer under a newer question's heading. J-03's fix closed the null window, not a late response. Reachable in two clicks via the history rail | FIXED with request sequencing on a monotonic ask counter |
+| F-4.8-A-03 | critical | `marker_ids`, the wire's exact token-to-citation binding, had no production consumer | FIXED, and the gate fixtures now carry real `marker_ids` |
+| F-4.8-A-04 | major | Backend splits sentences on `[.;?!]`, frontend on `[.!?]`, so a semicolon-joined claim became one segment in the wrong layer colour | FIXED: no re-splitting, one claim per token |
+| F-4.8-A-05 | major | A real refusal rendered as two uncited claims with a "Not fully grounded" pill and the fallback link as dead text. `TrustSignalPayload.message`, `.fallback_link`, `.scope` and `.citation_id` exist in the Python contract and are absent from `lib/events.ts` | PARTIALLY FIXED: refusals now render as a notice. The missing wire fields are CARRIED, since widening the client contract is a contract change, not a UI fix |
+| F-4.8-A-06 | major | "Grounded, every claim cited" rendered directly above a grey uncited segment | FIXED at the root, plus worst-wins folding |
+| F-4.8-A-07 | major | A cited claim spanning a sentence boundary rendered entirely uncited | FIXED at the root |
+| F-4.8-A-08 | major | The medical disclaimer was bypassable by keyboard alone: no focus trap, no `inert`, all 15 controls in the tab order behind it. `aria-modal="true"` told a screen reader the background was inert while it was reachable | FIXED with a focus trap; Escape deliberately does nothing |
+| F-4.8-A-09 | major | A stream that failed to open hung the run screen silently for ever. `status` and `error` from `useAgentRun` were never read. J-12 closed this for `createRun` and left it one call downstream | FIXED |
+| F-4.8-A-10 | major | Stop never disabled after being clicked, and the stepper kept asserting live work. `deriveStopEnabled` only clears on a terminal event, which stopping prevents. `StopButton` solved it with local `hasStopped`; reusing the helper without the state reused half the answer. THIS ATTRIBUTES F-4.8-L-19 | FIXED with a stop latch. Three consecutive clean e2e runs since |
+| F-4.8-A-11 | major | Sign-out left the previous account's answer, sources, pills and history on screen, and the next account inherited the history | FIXED: sign-out clears all session state |
+| F-4.8-A-12 | major | `runId` survived sign-out, so the old run's stream was re-requested with the new account's token, producing a silent 403 | FIXED |
+| F-4.8-A-13 | major | Signing out mid-run froze the run screen asserting live work, and Stop then skipped `stopRun` because the token was gone | FIXED |
+| F-4.8-A-14 | major | The real cap path emits token + done and no error, so the cap notice could never fire and the system's own status note rendered as an uncited claim promising "the answer below" | FIXED. The first version of this fix searched for the note in the list it had just removed it from, and that bug was caught before commit |
+| F-4.8-A-15 | major | The raw backend `error.payload.message` was rendered, which `GuardrailBanner` and `CapMessage` both refuse to do on purpose; and any non-fatal error was treated as terminal | FIXED: fixed copy, and only fatal errors are terminal |
+| F-4.8-A-16 | major | The entire trust surface was invisible to a screen reader, and axe reported ZERO violations. The spine was `aria-hidden`, chips were bare spans, so a cited and an uncited claim were indistinguishable | FIXED: per-claim text provenance, named chips, a live trust region |
+| F-4.8-A-17 | moderate | No citation was a link; zero anchors on the answer screen | FIXED |
+| F-4.8-A-18 | moderate | Two citations sharing a `display_index` produced duplicate cards, keys and testids | FIXED |
+| F-4.8-A-19 | moderate | An unrecognised `risk_tier` folded DOWN to low and vanished | FIXED: unknown now outranks every known tier |
+| F-4.8-A-20 | moderate | The only account control is a button labelled "Account" whose action is sign-out, with no menu and no confirmation | CARRIED: a designed account menu is a design-system change, and the design is frozen for this phase |
+| F-4.8-A-21 | moderate | The allowance counter showed the signed-in user's count to the next anonymous visitor, then contradicted itself | FIXED |
+| F-4.8-A-22 | moderate | Follow-ups and history re-asks hardcoded "researcher", discarding the user's depth choice; and a follow-up sends an unresolvable pronoun as a standalone query | DEPTH FIXED. The pronoun half is CARRIED to 4.5, which owns session memory and is the only thing that can resolve it |
+| F-4.8-A-23 | moderate | No URL routing: no screen is shareable, bookmarkable or Back-navigable | CARRIED. Real routing is a structural change this phase's design does not specify |
+| F-4.8-A-24 | moderate | `source_url` was not host-pinned client-side; an `evil.example.com` URL rendered as an NCBI record | FIXED with an allowlist, before A-17 made links clickable |
+| F-4.8-A-25 | minor | `display_index` of 0 or -3 rendered as chips | FIXED |
+| F-4.8-A-26 | minor | Duplicate testids and React keys | FIXED with A-18 |
+| F-4.8-A-27 | minor | Navigating mid-run silently discards a completed answer | CARRIED, needs the routing of A-23 |
+| F-4.8-A-28 | minor | Backend inline `[N]` markers rendered beside the UI's own chips | FIXED: markers stripped |
+
+Six carried open: A-05's wire fields, A-20, A-22's pronoun half, A-23, A-27, and J-14 is now closed by A-03's fix. Each has a named reason above.
+
 ## History
 
 - 2026-08-13: all 15 tickets done. Premise gate 16 of 16, vitest 138 of 138, e2e 11 of 11, typecheck clean, production build succeeds. Python suite 2445 passed with 6 failures, confirmed identical on `develop` by stashing rather than assumed. Judge round dispatched with fresh context; nothing in this phase has been independently reviewed yet.

@@ -33,7 +33,7 @@
  * anonymous callers a real backend route, not restoring the demo data.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, CssBaseline, ThemeProvider } from "@mui/material";
 
 import { theme } from "./theme";
@@ -85,6 +85,29 @@ export function App() {
   const [history, setHistory] = useState<{ id: string; question: string }[]>([]);
   const [flagged, setFlagged] = useState<number[]>([]);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
+  /**
+   * The depth the user last chose (F-4.8-A-22).
+   *
+   * Follow-ups and history re-asks hardcoded "researcher", silently discarding
+   * a deep_technical or clinical_brief selection the user had made on the
+   * landing screen.
+   */
+  const [depth, setDepth] = useState<AudienceDepth>("researcher");
+  /**
+   * Monotonic ask counter, for request sequencing (F-4.8-A-02).
+   *
+   * The J-03 fix gated the view on `runId`, which closes the null window but
+   * not a STALE RESPONSE: a slow `createRun` from an abandoned question still
+   * called `setRunId` after a newer question had replaced the heading, so the
+   * adversary saw the answer to "what causes cancer" under the heading "what is
+   * BRCA1". The history rail makes that reachable with two clicks.
+   *
+   * A ref rather than state: it must be readable synchronously inside the async
+   * callback without re-rendering, and it is never rendered.
+   */
+  const askSeq = useRef(0);
+  /** True while a stopped run should stay stopped (F-4.8-A-10). */
+  const [stopped, setStopped] = useState(false);
 
   const sessionId = useMemo(
     () =>
@@ -99,7 +122,13 @@ export function App() {
 
   const signedIn = token !== null;
 
-  const { events, stop } = useAgentRun(runId, token);
+  // `status` and `error` were both discarded here (F-4.8-A-09). If the event
+  // stream failed to open at all, a 500, a malformed frame, or, realistically,
+  // a 401 from a token that expired between createRun and openEventStream, the
+  // run screen sat with five pending steps and Stop disabled, silently, for
+  // ever. F-4.8-J-12 closed exactly this hole for createRun and left the
+  // identical one a single call downstream.
+  const { events, status, error: streamError, stop } = useAgentRun(runId, token);
   const streamed = useRunView(events);
 
   /**
@@ -117,13 +146,14 @@ export function App() {
   const step: StepName | null = view.activeStep;
 
   useEffect(() => {
-    if (view.landed && searchView.name === "run") {
+    if ((view.landed || status === "error") && searchView.name === "run") {
       setSearchView({ name: "answer", question: searchView.question });
     }
-  }, [view.landed, searchView]);
+  }, [view.landed, status, searchView]);
 
   const ask = useCallback(
-    async (question: string, depth: AudienceDepth) => {
+    async (question: string, chosenDepth: AudienceDepth) => {
+      setDepth(chosenDepth);
       // F-4.8-J-01. An anonymous visitor has no token and therefore no run.
       // There is nothing truthful to show them, so they are asked to sign in
       // rather than shown something invented.
@@ -140,16 +170,22 @@ export function App() {
           ? current
           : [{ id: `${current.length}`, question }, ...current],
       );
+      const seq = ++askSeq.current;
       setRunId(null);
+      setStopped(false);
       setSearchView({ name: "run", question });
 
       try {
         const response = await createRun(
-          { text: question, audience_depth: depth, session_id: sessionId },
+          { text: question, audience_depth: chosenDepth, session_id: sessionId },
           token,
         );
+        // A-02: a newer ask started while this one was in flight. Adopting this
+        // run now would attach its answer to the newer question's heading.
+        if (seq !== askSeq.current) return;
         setRunId(response.run_id);
       } catch (error) {
+        if (seq !== askSeq.current) return;
         // F-4.8-J-12. This previously swallowed the exception and dropped the
         // user on an empty answer screen with no explanation. An error message
         // must say what happened; silence is the one unacceptable option.
@@ -183,20 +219,22 @@ export function App() {
         return (
           <RunScreen
             question={searchView.question}
-            activeStep={step}
+            activeStep={stopped ? null : step}
             reachedSteps={view.reachedSteps}
             toolCalls={view.toolCalls}
             personaName={persona}
-            stopEnabled={view.stopEnabled}
+            stopEnabled={view.stopEnabled && !stopped}
             refusal={view.refusal}
             capMessage={view.capMessage}
+            failure={streamError}
             onStop={() => {
-              // Stay on the run. Navigating home here discarded everything the
-              // run had already streamed, which punishes the user for stopping
-              // and loses partial results they may have wanted. The original
-              // phase 1.2 behaviour kept the page; the Stop button disables
-              // itself once the run is terminal, and "New search" is right
-              // there when they want to move on.
+              // A-10. `deriveStopEnabled` only goes false on a terminal event,
+              // and stopping ABORTS the stream so no terminal event ever
+              // arrives: Stop stayed enabled forever and the stepper kept
+              // asserting live work. `StopButton` solved this with local
+              // `hasStopped` state; reusing its derive helper without its state
+              // reused half the answer. This latches the other half.
+              setStopped(true);
               stop();
               if (runId && token) void stopRun(runId, token).catch(() => undefined);
             }}
@@ -217,13 +255,13 @@ export function App() {
             // build phase 3.0's guardrail was unreachable: a refused question
             // rendered as a blank page.
             refusal={view.refusal}
-            failure={dispatchError ?? view.failure}
+            failure={dispatchError ?? streamError ?? view.failure}
             capMessage={view.capMessage}
             feedback={<FeedbackSurface key={searchView.question} />}
             followUp={
               <FollowUp
                 hints={FOLLOW_UP_HINTS}
-                onAsk={(next) => void ask(next, "researcher")}
+                onAsk={(next) => void ask(next, depth)}
               />
             }
             flaggedSources={flagged}
@@ -241,11 +279,13 @@ export function App() {
         return (
           <HomeScreen
             onSubmit={ask}
-            footer={
-              signedIn || used === 0 ? null : (
-                <GuestAllowance used={used} total={FREE_SEARCHES} />
-              )
-            }
+            // F-4.8-A-21. This counted the SIGNED-IN user's searches and then
+            // showed that count to the next anonymous visitor after sign-out,
+            // and the very next ask contradicted it with "you have used your
+            // free searches". `used` is now reset on sign-out, and an anonymous
+            // visitor cannot run at all, so the honest count is always zero
+            // until build phase 6.0 provides an anonymous path.
+            footer={signedIn || used === 0 ? null : <GuestAllowance used={used} total={FREE_SEARCHES} />}
           />
         );
     }
@@ -267,7 +307,28 @@ export function App() {
           setScreen("search");
           setSearchView({ name: "signin" });
         }}
-        onSignOut={() => setToken(null)}
+        onSignOut={() => {
+          // F-4.8-A-11, A-12 and A-13. Signing out previously left the previous
+          // account's answer, source cards, trust pills and history rail on
+          // screen, and the NEXT account inherited that history. Worse,
+          // `runId` survived, so `useAgentRun` refired the old run's event
+          // stream with the new account's bearer token, producing a 403 that
+          // nothing surfaced. On a shared workstation that is a colleague's
+          // research queries and results.
+          //
+          // Everything session-scoped is cleared here, in one place, so a new
+          // sign-in starts from nothing.
+          askSeq.current += 1;
+          stop();
+          setToken(null);
+          setRunId(null);
+          setStopped(false);
+          setHistory([]);
+          setFlagged([]);
+          setDispatchError(null);
+          setUsed(0);
+          setSearchView({ name: "home" });
+        }}
       >
         {!accepted ? <DisclaimerModal onAccept={() => setAccepted(true)} /> : null}
         {screen === "search" ? (
@@ -287,7 +348,7 @@ export function App() {
               // phase 4.5's work, not something to fake here.
               onOpen={(id) => {
                 const item = history.find((entry) => entry.id === id);
-                if (item) void ask(item.question, "researcher");
+                if (item) void ask(item.question, depth);
               }}
             />
             <Box sx={{ flex: 1, minWidth: 0 }}>{body()}</Box>

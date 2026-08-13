@@ -195,7 +195,7 @@ describe("clause 2: structure", () => {
     render(
       <AnswerScreen
         question="Which diseases are associated with BRCA1?"
-        claims={[{ text: "BRCA1 is associated with HBOC.", layer: 1, citation: 1 }]}
+        claims={[{ text: "BRCA1 is associated with HBOC.", layer: 1, citations: [1] }]}
         sources={[SOURCE]}
       />,
     );
@@ -209,7 +209,7 @@ describe("clause 2: structure", () => {
     render(
       <AnswerScreen
         question="Which diseases are associated with BRCA1?"
-        claims={[{ text: "BRCA1 is associated with HBOC.", layer: 1, citation: 1 }]}
+        claims={[{ text: "BRCA1 is associated with HBOC.", layer: 1, citations: [1] }]}
         sources={[SOURCE]}
       />,
     );
@@ -226,8 +226,8 @@ describe("clause 2: structure", () => {
       <AnswerScreen
         question="Two claims"
         claims={[
-          { text: "First claim.", layer: 1, citation: 1 },
-          { text: "Second claim, uncited.", layer: null, citation: null },
+          { text: "First claim.", layer: 1, citations: [1] },
+          { text: "Second claim, uncited.", layer: null, citations: [] },
         ]}
         sources={[SOURCE]}
       />,
@@ -358,14 +358,18 @@ describe("clause 3c: the screens render from the real event stream", () => {
           truncated: false,
         },
       },
+      // Two tokens, because the backend emits ONE PER SENTENCE. The first
+      // declares its citation by citation_id in marker_ids; the second declares
+      // none and must therefore render as a gap on the spine.
       {
         type: "token",
-        payload: { text: "BRCA1 is associated with HBOC. It is also unsupported.", marker_ids: [] },
+        payload: { text: "BRCA1 is associated with HBOC [1]. ", marker_ids: ["cid-1"] },
       },
+      { type: "token", payload: { text: "It is also unsupported. ", marker_ids: [] } },
       {
         type: "citation",
         payload: {
-          citation_id: "x",
+          citation_id: "cid-1",
           display_index: 1,
           source: "NCBI Gene",
           source_id: "672",
@@ -397,8 +401,11 @@ describe("clause 3c: the screens render from the real event stream", () => {
     // The cited claim carries its citation; the uncited one carries the GAP,
     // which is the whole reason the provenance spine exists.
     expect(view.claims).toHaveLength(2);
-    expect(view.claims[0]).toMatchObject({ citation: 1, layer: 1 });
-    expect(view.claims[1]).toMatchObject({ citation: null, layer: null });
+    expect(view.claims[0]).toMatchObject({ citations: [1], layer: 1 });
+    expect(view.claims[1]).toMatchObject({ citations: [], layer: null });
+    // The backend's own inline [N] marker is stripped, because the UI renders
+    // its own chip from marker_ids and showing both produced "...HBOC [1]. 1".
+    expect(view.claims[0].text).not.toContain("[1]");
 
     // Provenance comes off the citation event, licence included.
     expect(view.sources[0]).toMatchObject({
@@ -427,30 +434,79 @@ describe("clause 3c: the screens render from the real event stream", () => {
 });
 
 describe("clause 3d: the adapter never overstates what the events said", () => {
-  it("treats an empty claim_text as matching nothing", async () => {
-    // F-4.8-J-05. `String.prototype.includes("")` is always true and the wire
-    // type puts no non-empty constraint on claim_text, so ONE citation with an
-    // empty claim_text marked EVERY sentence as cited. The judge's probe
-    // rendered "The moon is cheese." cited to NCBI Gene 672 with no spine gap.
+  it("binds a claim to its citation by marker_ids, never by matching text", async () => {
+    // F-4.8-A-03, and the root cause of four other findings. `_narrative_chunks`
+    // emits one token per sentence carrying `marker_ids`, the citation_id values
+    // that sentence cites, and its docstring states the contract: "A surface
+    // binds a token to its citation by that key, then looks up the number."
+    //
+    // That binding was discarded in favour of matching each sentence against
+    // `claim_text` with `String.includes`. This clause pins the real contract
+    // AND its counterfactual, which is what the previous version lacked: every
+    // fixture here set `marker_ids: []`, so the gate could not see the defect
+    // at all.
     const { useRunView } = await need<any>("T-4.8-12 (event adapter)", "./hooks/useRunView.ts");
+
+    const citation = (id: string, index: number, claimText: string) => ({
+      type: "citation",
+      payload: {
+        citation_id: id, display_index: index, source: "NCBI Gene", source_id: "672",
+        source_url: "https://www.ncbi.nlm.nih.gov/gene/672", layer: "layer_1_graph",
+        field: "cypher_query", claim_text: claimText, evidence_kind: "curated assertion",
+        assertion_confidence: "high", population_ancestry_context: null,
+        license: "public domain",
+      },
+    });
+
     const events = [
-      { type: "token", payload: { text: "BRCA1 causes cancer. The moon is cheese.", marker_ids: [] } },
+      // Sentence one cites cid-1. Sentence two cites NOTHING, but contains the
+      // cited sentence's claim_text as a substring, which is exactly how a
+      // dangerous fabricated claim previously acquired a citation.
+      { type: "token", payload: { text: "BRCA1 is linked to cancer [1]. ", marker_ids: ["cid-1"] } },
       {
-        type: "citation",
+        type: "token",
         payload: {
-          citation_id: "x", display_index: 1, source: "NCBI Gene", source_id: "672",
-          source_url: "https://www.ncbi.nlm.nih.gov/gene/672", layer: "layer_1_graph",
-          field: "cypher_query", claim_text: "   ", evidence_kind: "curated assertion",
-          assertion_confidence: "high", population_ancestry_context: null,
-          license: "public domain",
+          text: "Every patient with this cancer should stop chemotherapy immediately. ",
+          marker_ids: [],
         },
       },
+      citation("cid-1", 1, "cancer"),
+      { type: "done", payload: {} },
+    ];
+
+    const { result } = renderHook(() => useRunView(events));
+    const claims = result.current.claims;
+
+    expect(claims).toHaveLength(2);
+    expect(claims[0].citations).toEqual([1]);
+    // THE COUNTERFACTUAL. The uncited sentence must stay uncited even though it
+    // contains the cited claim_text verbatim.
+    expect(claims[1].citations).toEqual([]);
+    expect(claims[1].layer).toBeNull();
+  });
+
+  it("keeps every citation a claim declared, not just the first", async () => {
+    // F-4.8-J-14, which F-4.8-A-04 showed fires on ordinary semicolon-joined
+    // backend output rather than only on an edge case.
+    const { useRunView } = await need<any>("T-4.8-12 (event adapter)", "./hooks/useRunView.ts");
+    const cite = (id: string, index: number, layer: string) => ({
+      type: "citation",
+      payload: {
+        citation_id: id, display_index: index, source: "NCBI", source_id: `${index}`,
+        source_url: "https://www.ncbi.nlm.nih.gov/gene/672", layer,
+        field: "cypher_query", claim_text: "", evidence_kind: "curated assertion",
+        assertion_confidence: "high", population_ancestry_context: null,
+        license: "public domain",
+      },
+    });
+    const events = [
+      { type: "token", payload: { text: "A claim citing two sources [1][2]. ", marker_ids: ["a", "b"] } },
+      cite("a", 1, "layer_1_graph"),
+      cite("b", 2, "layer_2_api"),
       { type: "done", payload: {} },
     ];
     const { result } = renderHook(() => useRunView(events));
-    // BOTH sentences must be uncited: an unusable claim_text matches nothing,
-    // so the provenance spine keeps showing the gap it exists to show.
-    expect(result.current.claims.every((c: { citation: number | null }) => c.citation === null)).toBe(true);
+    expect(result.current.claims[0].citations).toEqual([1, 2]);
   });
 
   it("folds trust signals worst-wins rather than taking the first", async () => {

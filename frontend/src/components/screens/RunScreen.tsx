@@ -54,6 +54,8 @@ export interface RunScreenProps {
   refusal?: string | null;
   /** Cap copy, when the run stopped early on its processing budget. */
   capMessage?: string | null;
+  /** A stream-level failure, surfaced rather than left as a silent hang. */
+  failure?: string | null;
 }
 
 /**
@@ -95,6 +97,7 @@ export function RunScreen({
   stopEnabled = true,
   refusal = null,
   capMessage = null,
+  failure = null,
 }: RunScreenProps) {
   const activeIndex = activeStep ? STEPS.indexOf(activeStep) : -1;
   const reached = new Set(reachedSteps);
@@ -205,6 +208,7 @@ export function RunScreen({
         {capMessage ? (
           <Notice testId="cap-notice" tone="warn" text={capMessage} />
         ) : null}
+        {failure ? <Notice testId="run-failure" tone="warn" text={failure} /> : null}
 
         <PersonaCaption name={personaName} step={activeStep ?? null} />
 

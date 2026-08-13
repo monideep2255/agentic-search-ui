@@ -14,7 +14,7 @@
  * Not a stub. The gate is real and it blocks the app until accepted.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Button, Typography } from "@mui/material";
 
 import { designTokens } from "../../theme";
@@ -47,6 +47,66 @@ export interface DisclaimerModalProps {
 
 export function DisclaimerModal({ onAccept }: DisclaimerModalProps) {
   const [checked, setChecked] = useState(false);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * F-4.8-A-08. This modal blocked the MOUSE only.
+   *
+   * There was no focus trap and no `inert` on the background, so the entire app
+   * stayed in the tab order behind it. The adversary signed up, asked a
+   * question and read a complete cited answer using the keyboard alone, with
+   * the unaccepted disclaimer still on screen. This component's own docstring
+   * claimed "The gate is real and it blocks the app until accepted."
+   *
+   * `aria-modal="true"` made it worse rather than better: it tells a screen
+   * reader the background is inert while it was still fully reachable.
+   *
+   * The trap below is deliberately hand-rolled and small: focus moves into the
+   * dialog on mount, Tab and Shift+Tab cycle within it, and Escape does
+   * nothing, because a medical disclaimer must not be dismissible by reflex.
+   */
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const focusable = () =>
+      Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.offsetParent !== null);
+
+    focusable()[0]?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (!dialog.contains(active)) {
+        event.preventDefault();
+        first.focus();
+        return;
+      }
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
+  }, []);
 
   return (
     <Box
@@ -62,6 +122,7 @@ export function DisclaimerModal({ onAccept }: DisclaimerModalProps) {
       }}
     >
       <Box
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="disclaimer-title"

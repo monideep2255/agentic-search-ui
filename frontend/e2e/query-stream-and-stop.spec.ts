@@ -91,16 +91,23 @@ test.describe("query stream and stop", () => {
     await signUpFreshAccount(page);
     await ask(page, "What gene is BRCA1?");
 
-    // Asserted on the BACKEND'S OWN TEXT, not on a transient stepper state.
-    // This backend answers in well under a second, so the run screen is gone
-    // before any assertion can sample it; sampling it was the original mistake
-    // here, not a product defect.
+    // Asserted on the CAP NOTICE, which this backend's only token produces.
     //
-    // This string lives only in the backend's cost-control module. It cannot
-    // appear on screen unless a token event was received and rendered, which
-    // makes it the sharpest available proof that the new screens read the
-    // stream rather than displaying a canned timeline.
-    await expect(page.getByText(PARTIAL_RESULT_NOTE)).toBeVisible({ timeout: 30_000 });
+    // Previously this asserted the backend's note text verbatim. Adversary
+    // finding F-4.8-A-14 established that the note is a system status message,
+    // not a claim, and rendering it on the provenance spine as an uncited claim
+    // was itself a defect: it promised "the answer below" where there was none.
+    // The note is now lifted into a cap notice, so its raw text correctly no
+    // longer appears in the prose.
+    //
+    // This is not a weaker assertion. `answer-cap` can only render if a token
+    // event carrying the backend's own note was received and recognised, so it
+    // still proves the screens read the stream rather than a canned timeline,
+    // and it additionally pins the A-14 fix.
+    await expect(page.getByTestId("answer-cap")).toBeVisible({ timeout: 30_000 });
+
+    // And the note must NOT also appear as prose, which is the half A-14 was.
+    await expect(page.getByText(PARTIAL_RESULT_NOTE)).toHaveCount(0);
 
     // And the run genuinely terminated rather than hanging mid-stream.
     await expect(page.getByRole("button", { name: /new search/i })).toBeVisible();
