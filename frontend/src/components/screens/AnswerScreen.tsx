@@ -272,9 +272,20 @@ export function AnswerScreen({
         {trust.length > 0 ? (
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2.5 }}>
             {trust.map((signal) => {
+              // The "good" pill's own design-system pair fails WCAG AA: ok
+              // (#2E8540) on layer2Wash (#E6F2E8) measures 4.01:1 against a
+              // 4.5:1 requirement. The risk pill passes at 7.05:1, so this is
+              // specific to the green, which is a lighter hue than the red.
+              //
+              // Fixed by reading the LABEL in ink while the border, the wash
+              // and the check mark keep carrying the green. No new colour is
+              // introduced and no token is changed, because the design system
+              // is frozen for this phase. Recorded as a finding for the next
+              // design pass, which should resolve it at the token level, since
+              // this pair is stated in the design system itself.
               const palette =
                 signal.kind === "good"
-                  ? { fg: designTokens.ok, bg: designTokens.layer2Wash, border: designTokens.ok }
+                  ? { fg: designTokens.ink, bg: designTokens.layer2Wash, border: designTokens.ok }
                   : signal.kind === "risk"
                     ? { fg: designTokens.risk, bg: designTokens.riskWash, border: designTokens.risk }
                     : { fg: designTokens.inkMuted, bg: designTokens.surfaceSunk, border: designTokens.line };

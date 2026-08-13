@@ -27,11 +27,13 @@
  * declared in `stubs/registry.ts`, and the gate now asserts the real path.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, CssBaseline, ThemeProvider } from "@mui/material";
 
 import { theme } from "./theme";
-import { createRun } from "./lib/api";
+import { createRun, stopRun } from "./lib/api";
+import { useAgentRun } from "./hooks/useAgentRun";
+import { useRunView } from "./hooks/useRunView";
 import { AuthGate } from "./components/auth/AuthGate";
 import { AppShell } from "./components/shell/AppShell";
 import type { ScreenName } from "./components/shell/AppShell";
@@ -118,14 +120,16 @@ const FOLLOW_UP_HINTS = [
 
 export function App() {
   const [screen, setScreen] = useState<ScreenName>("search");
-  const [view, setView] = useState<SearchView>({ name: "home" });
+  const [searchView, setSearchView] = useState<SearchView>({ name: "home" });
   const [used, setUsed] = useState(0);
   const [token, setToken] = useState<string | null>(null);
-  const [step, setStep] = useState<StepName | null>(null);
-  const [, setRunId] = useState<string | null>(null);
+  const [runId, setRunId] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(hasAcceptedDisclaimer);
   const [history, setHistory] = useState<{ id: string; question: string }[]>([]);
   const [flagged, setFlagged] = useState<number[]>([]);
+  /** True while the current run is the anonymous, locally-rendered one. */
+  const [stubRun, setStubRun] = useState(false);
+  const [stubStep, setStubStep] = useState<StepName | null>(null);
 
   // One id for this browser session, stable across questions so they group
   // into a thread. The fallback keeps a test environment without
@@ -145,26 +149,47 @@ export function App() {
   const signedIn = token !== null;
   const remaining = Math.max(0, FREE_SEARCHES - used);
 
-  /** Walk the loop visually. Used only where no token exists to run for real. */
-  const walkLoop = useCallback((question: string) => {
-    setStep("Guard");
-    const rest: StepName[] = ["Think", "Plan", "Act", "Write"];
-    rest.forEach((next, index) => {
-      setTimeout(() => setStep(next), (index + 1) * 700);
-    });
-    setTimeout(
-      () => {
-        setStep(null);
-        setView({ name: "answer", question });
-      },
-      (rest.length + 1) * 700,
+  // The real stream. `useAgentRun` does nothing while runId or token is null,
+  // so an anonymous visitor simply never opens one.
+  const { events, stop } = useAgentRun(runId, token);
+  const view = useRunView(events);
+
+  // The run screen advances on EVENTS, never on a timer. An earlier version of
+  // this file walked the five steps on setTimeout, which looked identical on
+  // screen and reported progress the agent had not made.
+  const step: StepName | null = stubRun ? stubStep : view.activeStep;
+
+  useEffect(() => {
+    if (view.landed && searchView.name === "run" && !stubRun) {
+      setSearchView({ name: "answer", question: searchView.question });
+    }
+  }, [view.landed, searchView, stubRun]);
+
+  // The stubbed guest run has no event stream to advance it, so it walks the
+  // loop on a timer. This applies ONLY to the anonymous path: a signed-in run
+  // advances on real events, and conflating the two is what let an earlier
+  // version report progress the agent had not made.
+  useEffect(() => {
+    if (!stubRun || searchView.name !== "run") return;
+    const order: StepName[] = ["Guard", "Think", "Plan", "Act", "Write"];
+    const timers = order.map((name, index) =>
+      setTimeout(() => setStubStep(name), index * 650),
     );
-  }, []);
+    const landing = setTimeout(() => {
+      setStubStep(null);
+      setSearchView({ name: "answer", question: searchView.question });
+    }, order.length * 650);
+    return () => {
+      timers.forEach(clearTimeout);
+      clearTimeout(landing);
+    };
+  }, [stubRun, searchView]);
+
 
   const ask = useCallback(
     async (question: string, depth: AudienceDepth) => {
       if (!signedIn && remaining === 0) {
-        setView({ name: "wall" });
+        setSearchView({ name: "wall" });
         return;
       }
       setUsed((n) => n + 1);
@@ -174,34 +199,32 @@ export function App() {
           ? current
           : [{ id: `${current.length}`, question }, ...current],
       );
-      setView({ name: "run", question });
-      setStep("Guard");
+      setRunId(null);
+      setSearchView({ name: "run", question });
 
       if (!signedIn) {
-        // No token, so there is nothing real to call. The allowance that will
-        // govern anonymous runs is build phase 6.0's.
-        walkLoop(question);
+        // STUBBED, and declared as `guest-allowance` in stubs/registry.ts. An
+        // anonymous visitor has no token, so there is no authenticated endpoint
+        // to call; build phase 6.0 owns the allowance that will let them run
+        // for real. Until then the guest journey renders from local data, which
+        // is what keeps the counter, the soft prompt and the wall reachable at
+        // all. Marked here, never on screen.
+        setStubRun(true);
         return;
       }
 
-      // The real path. This is the line whose absence the first version of
-      // this file hid behind a working-looking UI.
+      setStubRun(false);
       try {
         const response = await createRun(
-          // session_id is required by the contract. One id per browser session
-          // groups a user's questions into a thread, which is what build phase
-          // 4.5's session memory reads.
           { text: question, audience_depth: depth, session_id: sessionId },
           token,
         );
         setRunId(response.run_id);
-        walkLoop(question);
       } catch {
-        setStep(null);
-        setView({ name: "answer", question });
+        setSearchView({ name: "answer", question });
       }
     },
-    [signedIn, remaining, token, sessionId, walkLoop],
+    [signedIn, remaining, token, sessionId],
   );
 
   const body = () => {
@@ -209,36 +232,40 @@ export function App() {
     if (screen === "docs") return <DocsScreen />;
     if (screen === "about") return <AboutScreen />;
 
-    switch (view.name) {
+    switch (searchView.name) {
       case "signin":
         return (
           <AuthGate
             onAuthenticated={(next: string) => {
               setToken(next);
-              setView({ name: "home" });
+              setSearchView({ name: "home" });
             }}
           />
         );
       case "run":
         return (
           <RunScreen
-            question={view.question}
+            question={searchView.question}
             activeStep={step}
-            toolCalls={step === "Act" || step === "Write" ? DEMO_TOOLS : []}
+            toolCalls={stubRun ? (step === "Act" || step === "Write" ? DEMO_TOOLS : []) : view.toolCalls}
             personaName={persona}
-            onStop={() => setView({ name: "home" })}
-            onNewSearch={() => setView({ name: "home" })}
+            onStop={() => {
+              stop();
+              if (runId && token) void stopRun(runId, token).catch(() => undefined);
+              setSearchView({ name: "home" });
+            }}
+            onNewSearch={() => setSearchView({ name: "home" })}
           />
         );
       case "answer":
         return (
           <AnswerScreen
-            question={view.question}
-            claims={DEMO_CLAIMS}
-            sources={DEMO_SOURCES}
-            trust={DEMO_TRUST}
-            meta="2 tools · 2 layers · 2 sources"
-            feedback={<FeedbackSurface key={view.question} />}
+            question={searchView.question}
+            claims={stubRun ? DEMO_CLAIMS : view.claims}
+            sources={stubRun ? DEMO_SOURCES : view.sources}
+            trust={stubRun ? DEMO_TRUST : view.trust}
+            meta={stubRun ? "2 tools · 2 layers · 2 sources" : view.meta}
+            feedback={<FeedbackSurface key={searchView.question} />}
             followUp={
               <FollowUp
                 hints={FOLLOW_UP_HINTS}
@@ -254,7 +281,7 @@ export function App() {
           />
         );
       case "wall":
-        return <SignInWall onSignIn={() => setView({ name: "signin" })} />;
+        return <SignInWall onSignIn={() => setSearchView({ name: "signin" })} />;
       default:
         return (
           <HomeScreen
@@ -276,14 +303,14 @@ export function App() {
         current={screen}
         onNavigate={(next) => {
           setScreen(next);
-          if (next === "search") setView({ name: "home" });
+          if (next === "search") setSearchView({ name: "home" });
         }}
         personaName={persona}
         signedIn={signedIn}
-        hideAuthAction={view.name === "signin" && screen === "search"}
+        hideAuthAction={searchView.name === "signin" && screen === "search"}
         onSignIn={() => {
           setScreen("search");
-          setView({ name: "signin" });
+          setSearchView({ name: "signin" });
         }}
         onSignOut={() => setToken(null)}
       >
@@ -292,10 +319,10 @@ export function App() {
           <Box sx={{ display: "flex", alignItems: "stretch", minHeight: "100%" }}>
             <HistoryRail
               items={history}
-              activeId={view.name === "answer" || view.name === "run" ? history[0]?.id : null}
+              activeId={searchView.name === "answer" || searchView.name === "run" ? history[0]?.id : null}
               onOpen={(id) => {
                 const item = history.find((entry) => entry.id === id);
-                if (item) setView({ name: "answer", question: item.question });
+                if (item) setSearchView({ name: "answer", question: item.question });
               }}
             />
             <Box sx={{ flex: 1, minWidth: 0 }}>{body()}</Box>

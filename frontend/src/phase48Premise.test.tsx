@@ -35,8 +35,9 @@
  *
  *   Exercised:      theme token values, component structure, route
  *                   reachability without a token, that a signed-in question
- *                   actually reaches createRun with its bearer token, and stub
- *                   declaration completeness.
+ *                   actually reaches createRun with its bearer token, that the
+ *                   screens RENDER FROM the resulting event stream rather than
+ *                   from a timer, and stub declaration completeness.
  *   NOT exercised:  visual fidelity (a layout can satisfy every assertion here
  *                   and still look wrong; that is the judge and adversary
  *                   rounds' job), stubbed-surface data correctness, docs prose
@@ -44,7 +45,7 @@
  *                   is Playwright's.
  */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -316,6 +317,110 @@ describe("clause 3b: the assembled app is still connected to the agent", () => {
       expect.objectContaining({ text: "Which diseases are associated with BRCA1?" }),
       "test-token",
     );
+  });
+});
+
+describe("clause 3c: the screens render from the real event stream", () => {
+  it("derives steps, tools, claims and citations from events, not from a timer", async () => {
+    // ADDED after a second regression of the same family. The assembly called
+    // createRun (so clause 3b passed) and then rendered a canned five-step walk
+    // on setTimeout, ignoring the stream entirely. The only code that consumed
+    // events lived in ChatPage, which the new routing had orphaned: a module
+    // with no callers, which is LEARNINGS.md's row 28.
+    //
+    // Asserted at the adapter rather than through the DOM, because the mapping
+    // IS the join. A DOM test would pass against a component that happened to
+    // render the right shapes from anywhere.
+    const { useRunView, layerNumber } = await need<any>(
+      "T-4.8-12 (event adapter)",
+      "./hooks/useRunView.ts",
+    );
+
+    expect(layerNumber("layer_1_graph")).toBe(1);
+    expect(layerNumber("layer_2_api")).toBe(2);
+    expect(layerNumber("layer_3_enrichment")).toBe(3);
+
+    const events = [
+      { type: "guard", payload: { passed: true, category: "ok" } },
+      { type: "think", payload: {} },
+      { type: "plan", payload: {} },
+      {
+        type: "tool_result",
+        payload: {
+          call_id: "c1",
+          tool: "cypher_query",
+          layer: "layer_1_graph",
+          status: "ok",
+          summary: "",
+          result_count: 25,
+          truncated: false,
+        },
+      },
+      {
+        type: "token",
+        payload: { text: "BRCA1 is associated with HBOC. It is also unsupported.", marker_ids: [] },
+      },
+      {
+        type: "citation",
+        payload: {
+          citation_id: "x",
+          display_index: 1,
+          source: "NCBI Gene",
+          source_id: "672",
+          source_url: "https://www.ncbi.nlm.nih.gov/gene/672",
+          layer: "layer_1_graph",
+          field: "cypher_query",
+          claim_text: "BRCA1 is associated with HBOC",
+          evidence_kind: "curated assertion",
+          assertion_confidence: "high",
+          population_ancestry_context: null,
+          license: "public domain",
+        },
+      },
+      { type: "trust_signal", payload: { outcome: "answer", risk_tier: "high", grounded: true, triangulated: null } },
+      { type: "done", payload: {} },
+    ];
+
+    const { result } = renderHook(() => useRunView(events));
+    const view = result.current;
+
+    // The run landed, so no step is live. Derived from the done event, not a clock.
+    expect(view.landed).toBe(true);
+    expect(view.activeStep).toBeNull();
+
+    // A tool chip exists because a tool event arrived, carrying its real layer.
+    expect(view.toolCalls).toHaveLength(1);
+    expect(view.toolCalls[0]).toMatchObject({ name: "cypher_query", layer: 1 });
+
+    // The cited claim carries its citation; the uncited one carries the GAP,
+    // which is the whole reason the provenance spine exists.
+    expect(view.claims).toHaveLength(2);
+    expect(view.claims[0]).toMatchObject({ citation: 1, layer: 1 });
+    expect(view.claims[1]).toMatchObject({ citation: null, layer: null });
+
+    // Provenance comes off the citation event, licence included.
+    expect(view.sources[0]).toMatchObject({
+      n: 1,
+      layer: 1,
+      evidence: "curated assertion",
+      license: "public domain",
+    });
+
+    // The trust strip reports what arrived and never manufactures a verdict.
+    expect(view.trust.map((t: { kind: string }) => t.kind)).toContain("good");
+    expect(view.trust.some((t: { label: string }) => /high/i.test(t.label))).toBe(true);
+  });
+
+  it("reports no progress when no events have arrived", async () => {
+    // The counterfactual. A timer-driven stepper advances on an empty stream;
+    // an event-driven one cannot, and that difference is the defect this
+    // clause exists to catch.
+    const { useRunView } = await need<any>("T-4.8-12 (event adapter)", "./hooks/useRunView.ts");
+    const { result } = renderHook(() => useRunView([]));
+    expect(result.current.activeStep).toBeNull();
+    expect(result.current.toolCalls).toEqual([]);
+    expect(result.current.claims).toEqual([]);
+    expect(result.current.landed).toBe(false);
   });
 });
 
