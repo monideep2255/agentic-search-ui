@@ -26,6 +26,9 @@
 import { useMemo } from "react";
 
 import type { AgentEvent, Layer } from "../lib/events";
+import { deriveStopEnabled } from "../components/chat/StopButton";
+import { CATEGORY_COPY } from "../components/chat/GuardrailBanner";
+import { isCapShapedError, CAP_MESSAGE_COPY } from "../components/chat/CapMessage";
 import type { StepName, ToolCall } from "../components/screens/RunScreen";
 import type { Claim, Source, TrustSignal } from "../components/screens/AnswerScreen";
 
@@ -44,6 +47,15 @@ export function layerNumber(layer: Layer): 1 | 2 | 3 {
 export interface RunView {
   /** The live step, or null when the run has reached a terminal event. */
   activeStep: StepName | null;
+  /**
+   * Every step the run actually reached, in order.
+   *
+   * Separate from `activeStep` because a landed run has no live step, and an
+   * earlier version rendered the whole stepper as pending once the run
+   * finished: the five steps had visibly happened and the UI then said none of
+   * them had. What a run DID is not recoverable from where it IS.
+   */
+  reachedSteps: StepName[];
   toolCalls: ToolCall[];
   claims: Claim[];
   sources: Source[];
@@ -53,6 +65,25 @@ export interface RunView {
   landed: boolean;
   /** A refusal or fatal error message, if the run produced one. */
   failure: string | null;
+  /**
+   * The guardrail's own refusal copy, when a guard event failed.
+   *
+   * Reuses `GuardrailBanner`'s reviewed table rather than paraphrasing it. That
+   * table is deliberately interpolation-free so no cost figure can ever reach a
+   * refusal message, which is a structural guarantee rather than careful
+   * wording, and reimplementing it here would quietly discard that.
+   */
+  refusal: string | null;
+  /** Cap copy, when the run stopped early on its processing budget. */
+  capMessage: string | null;
+  /**
+   * Whether Stop should still be offered.
+   *
+   * Reuses `StopButton`'s `deriveStopEnabled`, which has 19 tests behind it and
+   * disables on any terminal event. The first version of the new run screen
+   * offered Stop unconditionally, including after the run had finished.
+   */
+  stopEnabled: boolean;
 }
 
 /**
@@ -73,6 +104,13 @@ export function useRunView(events: AgentEvent[]): RunView {
     else if (has("plan")) activeStep = "Plan";
     else if (has("think")) activeStep = "Think";
     else if (has("guard")) activeStep = "Guard";
+
+    const reachedSteps: StepName[] = [];
+    if (has("guard")) reachedSteps.push("Guard");
+    if (has("think")) reachedSteps.push("Think");
+    if (has("plan")) reachedSteps.push("Plan");
+    if (has("tool_start") || has("tool_result")) reachedSteps.push("Act");
+    if (has("token")) reachedSteps.push("Write");
 
     const done = events.find((event) => event.type === "done");
     const fatal = events.find((event) => event.type === "error");
@@ -172,7 +210,30 @@ export function useRunView(events: AgentEvent[]): RunView {
         ? (fatal.payload as { message?: string }).message ?? "The run could not be completed."
         : null;
 
-    return { activeStep, toolCalls, claims, sources, trust, meta, landed, failure };
+    const failedGuard = events.find(
+      (event) => event.type === "guard" && event.payload.passed === false,
+    );
+    const refusal =
+      failedGuard && failedGuard.type === "guard"
+        ? (CATEGORY_COPY[failedGuard.payload.category] ?? CATEGORY_COPY.ok)
+        : null;
+
+    const capMessage = events.some(isCapShapedError) ? CAP_MESSAGE_COPY : null;
+
+    return {
+      activeStep,
+      reachedSteps,
+      toolCalls,
+      claims,
+      sources,
+      trust,
+      meta,
+      landed,
+      failure,
+      refusal,
+      capMessage,
+      stopEnabled: deriveStopEnabled(events),
+    };
   }, [events]);
 }
 

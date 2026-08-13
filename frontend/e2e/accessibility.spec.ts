@@ -60,6 +60,23 @@ test.describe("accessibility", () => {
     });
   }
 
+  test("the sign-in screen is clean", async ({ page }) => {
+    // ADDED after this suite missed a real defect. AuthGate rendered its own
+    // <main> while AppShell already owned one, so the sign-in screen carried
+    // two main landmarks, which is invalid. axe would have caught it; this
+    // suite simply never visited the screen. A gate that skips a screen has
+    // not checked it, however green the rest of the run looks.
+    await enterApp(page);
+    await page
+      .getByRole("navigation", { name: /main/i })
+      .getByRole("button", { name: /log in/i })
+      .click();
+    await expect(page.getByLabel("Email")).toBeVisible();
+
+    expect(await page.getByRole("main").count(), "exactly one main landmark").toBe(1);
+    expect((await analyse(page)).violations).toEqual([]);
+  });
+
   test("the run and answer screens are clean", async ({ page }) => {
     await enterApp(page);
     const main = page.getByRole("main");

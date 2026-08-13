@@ -40,6 +40,7 @@ import type { ScreenName } from "./components/shell/AppShell";
 import { drawPersona } from "./components/shell/PersonaChip";
 import { HomeScreen } from "./components/screens/HomeScreen";
 import { RunScreen } from "./components/screens/RunScreen";
+import { STEPS } from "./components/screens/RunScreen";
 import type { StepName, ToolCall } from "./components/screens/RunScreen";
 import { AnswerScreen } from "./components/screens/AnswerScreen";
 import type { Claim, Source, TrustSignal } from "./components/screens/AnswerScreen";
@@ -247,8 +248,16 @@ export function App() {
           <RunScreen
             question={searchView.question}
             activeStep={step}
+            reachedSteps={
+              stubRun
+                ? STEPS.slice(0, step ? STEPS.indexOf(step) + 1 : STEPS.length)
+                : view.reachedSteps
+            }
             toolCalls={stubRun ? (step === "Act" || step === "Write" ? DEMO_TOOLS : []) : view.toolCalls}
             personaName={persona}
+            stopEnabled={stubRun ? true : view.stopEnabled}
+            refusal={stubRun ? null : view.refusal}
+            capMessage={stubRun ? null : view.capMessage}
             onStop={() => {
               stop();
               if (runId && token) void stopRun(runId, token).catch(() => undefined);
@@ -265,6 +274,7 @@ export function App() {
             sources={stubRun ? DEMO_SOURCES : view.sources}
             trust={stubRun ? DEMO_TRUST : view.trust}
             meta={stubRun ? "2 tools · 2 layers · 2 sources" : view.meta}
+            onNewSearch={() => setSearchView({ name: "home" })}
             feedback={<FeedbackSurface key={searchView.question} />}
             followUp={
               <FollowUp

@@ -64,6 +64,14 @@ export interface AnswerScreenProps {
   /** Rendered under the sources. The follow-up field. */
   followUp?: React.ReactNode;
   /**
+   * Start a fresh search.
+   *
+   * The run screen has always offered this; the answer screen did not, so the
+   * only way back from an answer was the navigation bar. That is an
+   * inconsistency a user notices at exactly the moment they are done reading.
+   */
+  onNewSearch?: () => void;
+  /**
    * Flag a source as not supporting the claim it is attached to.
    *
    * This is the single most valuable signal a cite-or-refuse system can
@@ -85,6 +93,7 @@ export function AnswerScreen({
   trust = [],
   feedback,
   followUp,
+  onNewSearch,
   onFlagSource,
   flaggedSources = [],
 }: AnswerScreenProps) {
@@ -99,9 +108,33 @@ export function AnswerScreen({
         }}
       >
         <Box sx={{ pb: 2, mb: 2.5, borderBottom: `1px solid ${designTokens.line}` }}>
-          <Typography variant="h3" component="h1">
-            {question}
-          </Typography>
+          <Box sx={{ display: "flex", gap: 1.75, alignItems: "flex-start" }}>
+            <Typography variant="h3" component="h1" sx={{ flex: 1 }}>
+              {question}
+            </Typography>
+            {onNewSearch ? (
+              <Box
+                component="button"
+                type="button"
+                onClick={onNewSearch}
+                sx={{
+                  font: "inherit",
+                  fontSize: 12.5,
+                  px: 1.6,
+                  py: 0.6,
+                  flex: "none",
+                  borderRadius: 0.5,
+                  cursor: "pointer",
+                  color: designTokens.inkMuted,
+                  bgcolor: designTokens.surface,
+                  border: `1px solid ${designTokens.line}`,
+                  "&:hover": { borderColor: designTokens.lineStrong, color: designTokens.ink },
+                }}
+              >
+                New search
+              </Box>
+            ) : null}
+          </Box>
           {meta ? (
             <Typography variant="body2" sx={{ color: designTokens.inkMuted, mt: 1 }}>
               {meta}

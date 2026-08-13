@@ -31,23 +31,73 @@ export interface ToolCall {
 
 export interface RunScreenProps {
   question: string;
-  /** The live step, or null before the run starts. */
+  /** The live step, or null before the run starts or after it lands. */
   activeStep?: StepName | null;
+  /**
+   * Steps the run actually reached. A landed run has no live step, so without
+   * this the whole stepper would read as pending the moment it finished.
+   */
+  reachedSteps?: StepName[];
   toolCalls?: ToolCall[];
   personaName?: string;
   onStop?: () => void;
   onNewSearch?: () => void;
+  /**
+   * Whether Stop is still meaningful.
+   *
+   * Derived from the run's own events by `deriveStopEnabled`, which has 19
+   * tests behind it. An earlier version of this screen offered Stop
+   * unconditionally, including after the run had already finished.
+   */
+  stopEnabled?: boolean;
+  /** Guardrail refusal copy, when the question was turned away. */
+  refusal?: string | null;
+  /** Cap copy, when the run stopped early on its processing budget. */
+  capMessage?: string | null;
+}
+
+/**
+ * A refusal or cap notice.
+ *
+ * Deliberately plain and free of any cost figure: the copy comes from a fixed
+ * lookup table with no interpolation slot, so a dollar amount cannot reach a
+ * user-facing refusal even by accident.
+ */
+function Notice({ testId, tone, text }: { testId: string; tone: "warn"; text: string }) {
+  return (
+    <Box
+      data-testid={testId}
+      role="status"
+      sx={{
+        mt: 2.25,
+        px: 1.75,
+        py: 1.4,
+        fontSize: 13.5,
+        borderRadius: 0.5,
+        border: `1px solid ${designTokens.warn}`,
+        borderLeftWidth: 4,
+        bgcolor: tone === "warn" ? designTokens.warnWash : designTokens.surfaceSunk,
+      }}
+    >
+      {text}
+    </Box>
+  );
 }
 
 export function RunScreen({
   question,
   activeStep = "Guard",
+  reachedSteps = [],
   toolCalls = [],
   personaName = "Mendel",
   onStop,
   onNewSearch,
+  stopEnabled = true,
+  refusal = null,
+  capMessage = null,
 }: RunScreenProps) {
   const activeIndex = activeStep ? STEPS.indexOf(activeStep) : -1;
+  const reached = new Set(reachedSteps);
 
   return (
     <Box sx={{ maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}>
@@ -72,7 +122,17 @@ export function RunScreen({
           <Typography variant="h3" component="h1" sx={{ flex: 1 }}>
             {question}
           </Typography>
-          <Button onClick={onStop} sx={{ fontSize: 12.5, color: designTokens.inkMuted, border: `1px solid ${designTokens.lineStrong}`, px: 1.6, py: 0.6 }}>
+          <Button
+            onClick={onStop}
+            disabled={!stopEnabled}
+            sx={{
+              fontSize: 12.5,
+              color: designTokens.inkMuted,
+              border: `1px solid ${designTokens.lineStrong}`,
+              px: 1.6,
+              py: 0.6,
+            }}
+          >
             Stop
           </Button>
           <Button onClick={onNewSearch} sx={{ fontSize: 12.5, color: designTokens.inkMuted, border: `1px solid ${designTokens.line}`, px: 1.6, py: 0.6 }}>
@@ -82,8 +142,11 @@ export function RunScreen({
 
         <Box sx={{ display: "flex", alignItems: "flex-start" }}>
           {STEPS.map((step, index) => {
-            const done = activeIndex > index;
+            // Done if the run genuinely reached it, or if it precedes the live
+            // step. The first clause is what keeps a finished run's stepper
+            // truthful after activeStep goes null.
             const live = activeIndex === index;
+            const done = !live && (reached.has(step) || activeIndex > index);
             return (
               <Box
                 key={step}
@@ -135,6 +198,13 @@ export function RunScreen({
             );
           })}
         </Box>
+
+        {refusal ? (
+          <Notice testId="guardrail-notice" tone="warn" text={refusal} />
+        ) : null}
+        {capMessage ? (
+          <Notice testId="cap-notice" tone="warn" text={capMessage} />
+        ) : null}
 
         <PersonaCaption name={personaName} step={activeStep ?? null} />
 

@@ -281,11 +281,51 @@ def _fake_response(content: str = "ok") -> SimpleNamespace:
     )
 
 
+# Section 10.4's classification schema, exactly as `guardrail/classifier.py`
+# validates it: only `is_injection`, `is_off_topic` and `reason`, with
+# `extra="forbid"` and StrictBool, so a bare string or a stringified boolean
+# is rejected outright.
+_GUARD_ADMIT_JSON = (
+    '{"is_injection": false, "is_off_topic": false, '
+    '"confidence": 0.99, "reason": "ok"}'
+)
+
+
+def _looks_like_guard_call(blob: str) -> bool:
+    """Whether this call is the guardrail's own classification request.
+
+    Matched on the classifier's prompt markers rather than on a tier name,
+    because this helper replaces `litellm.acompletion` and never sees which
+    tier the harness resolved.
+    """
+    lowered = blob.lower()
+    return "is_injection" in lowered or "is_off_topic" in lowered
+
+
 async def _fake_acompletion(*_args: object, **kwargs: object):
     """Replaces `litellm.acompletion` for the life of this process. Never
     reaches a real model provider: the only "network" activity here is the
     marker-gated `asyncio.sleep` used to make the stop-button test's run
     genuinely still in flight when Playwright clicks Stop.
+
+    TIER-AWARE SINCE BUILD PHASE 4.8, and the reason is worth recording.
+
+    This returned the bare string "ok" for every call, which was correct when
+    written: build phase 1.2's `guardrail_node` made a throwaway Guard-tier
+    call and discarded the response. Build phase 3.0 replaced that stub with a
+    real classifier that parses the response as JSON against a strict schema,
+    and this mock was never updated, so every run through this backend has died
+    at the guard step with "the guard tier did not return valid JSON" ever
+    since.
+
+    Nobody noticed for five phases because the Playwright suite could not start
+    at all: its webServer probe waited on 127.0.0.1 while Vite bound to [::1],
+    carried as "a pre-existing environment quirk" until build phase 4.8
+    diagnosed it. Fixing that unmasked this.
+
+    The lesson worth keeping: a test double is a contract with the code it
+    stands in for, and changing that contract without updating the double
+    leaves a suite that cannot pass. A suite that cannot RUN hides it.
     """
     messages = kwargs.get("messages", [])
     blob = " ".join(
@@ -295,6 +335,8 @@ async def _fake_acompletion(*_args: object, **kwargs: object):
     )
     if _SLOW_QUERY_MARKER in blob:
         await asyncio.sleep(_SLOW_QUERY_DELAY_S)
+    if _looks_like_guard_call(blob):
+        return _fake_response(_GUARD_ADMIT_JSON)
     return _fake_response()
 
 

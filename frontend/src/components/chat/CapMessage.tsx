@@ -22,10 +22,11 @@ type ErrorEvent = Extract<AgentEvent, { type: "error" }>;
  * tool or network failure (whose `source` names the failing tool or layer,
  * not a cap) does not falsely trigger this banner.
  */
-const isCapShapedError = (event: AgentEvent): event is ErrorEvent =>
+export const isCapShapedError = (event: AgentEvent): event is ErrorEvent =>
   event.type === "error" && event.payload.fatal === false && /cap/i.test(event.payload.source);
 
-const CAP_MESSAGE_COPY = "This answer stopped early because it reached its processing budget.";
+export const CAP_MESSAGE_COPY =
+  "This answer stopped early because it reached its processing budget.";
 
 /**
  * Renders on a non-fatal, cap-shaped `error` event, per Technical_

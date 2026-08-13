@@ -88,8 +88,12 @@ export function AuthGate({ onAuthenticated }: AuthGateProps) {
   const fieldsFilled = email.length > 0 && password.length > 0;
 
   return (
-    <main className="auth-gate">
-      <h1>Sign in to search</h1>
+    // A <section>, not a <main>. Build phase 4.8 renders this inside AppShell,
+    // which owns the page's single main landmark, and two main landmarks on one
+    // page is invalid: assistive technology offers "jump to main content" and
+    // then cannot say which. Labelled so the section is announced by name.
+    <section className="auth-gate" aria-labelledby="auth-gate-title">
+      <h1 id="auth-gate-title">Sign in to search</h1>
       <div className="auth-gate__form">
         <label htmlFor={emailId}>Email</label>
         <input
@@ -131,6 +135,6 @@ export function AuthGate({ onAuthenticated }: AuthGateProps) {
           </button>
         </div>
       </div>
-    </main>
+    </section>
   );
 }

@@ -22,7 +22,7 @@ const isGuardEvent = (event: AgentEvent): event is GuardEvent => event.type === 
  * crashing or rendering nothing if it ever did, per `ai-security-
  * standards.md`'s "treat AI/upstream output as untrusted until verified".
  */
-const CATEGORY_COPY: Record<GuardPayload["category"], string> = {
+export const CATEGORY_COPY: Record<GuardPayload["category"], string> = {
   ok: "This question could not be processed. Please try rephrasing it.",
   off_topic:
     "This looks outside biomedical research. I can help with a gene, variant, pathogen, or paper question.",
