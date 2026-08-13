@@ -62,14 +62,14 @@ Screens: landing, run, answer, wall, integrations, docs, about. Docs sub-pages: 
 | T-4.8-04 | DONE. Home screen: hero, search bar, seed chips, depth control, stats row | 02 | done |
 | T-4.8-05 | DONE. Run screen: pipeline stepper, tool chips, persona caption, stop button | 02 | done |
 | T-4.8-06 | DONE. Answer screen: provenance spine, streamed answer, citation chips, source cards, trust pills | 02 | done |
-| T-4.8-07 | DONE. Feedback surface: rating, reason chips, per-citation flag | 06 | open |
-| T-4.8-08 | DONE. Guest flow: allowance counter, soft prompt, sign-in wall | 03 | open |
-| T-4.8-09 | DONE. Follow-up question input with hints, and the history rail's contents | 03, 06 | open |
-| T-4.8-10 | DONE. Disclaimer modal and sign-in modal | 03 | open |
-| T-4.8-11 | DONE. Integrations, docs and about screens | 03 | open |
-| T-4.8-12 | DONE. Assembly: every screen wired into the real app, real routing, real SSE, landing reachable without a token | 03 to 11 | open |
-| T-4.8-13 | Accessibility pass: WCAG 2.1 AA across every screen, axe-clean | 12 | open |
-| T-4.8-14 | DONE. Stub registry: one module listing every stubbed surface and its owning phase | 07, 08, 09 | open |
+| T-4.8-07 | DONE. Feedback surface: rating, reason chips, per-citation flag | 06 | done |
+| T-4.8-08 | DONE. Guest flow: allowance counter, soft prompt, sign-in wall | 03 | done |
+| T-4.8-09 | DONE. Follow-up question input with hints, and the history rail's contents | 03, 06 | done |
+| T-4.8-10 | DONE. Disclaimer modal and sign-in modal | 03 | done |
+| T-4.8-11 | DONE. Integrations, docs and about screens | 03 | done |
+| T-4.8-12 | DONE. Assembly: every screen wired into the real app, real routing, real SSE, landing reachable without a token | 03 to 11 | done |
+| T-4.8-13 | DONE. Accessibility pass: WCAG 2.1 AA across every screen, axe-clean | 12 | done |
+| T-4.8-14 | DONE. Stub registry: one module listing every stubbed surface and its owning phase | 07, 08, 09 | done |
 
 ### The structural change hiding in T-4.8-12
 
@@ -105,10 +105,19 @@ while building, which means none of it has been independently reviewed.
 | F-4.8-L-07 | DESIGN SYSTEM DEFECT. `inkFaint` measures 4.73:1 on white (passes AA) but 4.31:1 on `surfaceSunk` (fails). The token is safe on one surface and unsafe on another, and nothing in the design system says so | Usage fixed; TOKEN NOT CHANGED, because the design system is frozen for this phase. Carry to the next design pass |
 | F-4.8-L-08 | PRE-EXISTING, not this phase. `GuardrailBanner`'s exhaustive category Record was missing `write_seeking`, so `tsc -b` and therefore `npm run build` had been failing on `develop` since Step 6.2 added that member. Unnoticed because no CI runs the frontend build | Fixed here incidentally. Confirmed on `develop` by stashing, not assumed |
 | F-4.8-L-09 | PRE-EXISTING, and misdiagnosed for five phases. The Playwright webServer timeout carried since build phase 3.3 as "an environment quirk" was Vite binding to `[::1]` while Playwright probes `127.0.0.1`. The earlier diagnosis tested `localhost`, which resolves to `::1` on macOS, so it confirmed a different address than the failing one | Fixed. `--host 127.0.0.1` in `playwright.config.ts`. The e2e suite runs for the first time since phase 3.3 |
-| F-4.8-L-10 | OPEN. One accessibility check still fails: "the run and answer screens are clean", on the LANDED answer screen. Mid-run is clean at 0 violations; the landed state has an unidentified violation | Open, diagnosis in progress when the phase paused |
+| F-4.8-L-10 | The "Grounded" trust pill measured 4.01:1 against a 4.5:1 requirement: ok (#2E8540) on layer2Wash (#E6F2E8). Same family as L-07, and again stated in the design system itself | Fixed by reading the label in ink while border, wash and check mark keep the green. Token unchanged, carried to the next design pass |
+| F-4.8-L-11 | CRITICAL, and the largest of the phase. ChatPage and HomePage were orphaned by the new routing, and ChatPage was the ONLY consumer of the event stream. The new screens consumed no events: the stepper ran on setTimeout and the answer rendered constants, so the UI reported progress the agent had not made. createRun was called, so gate clause 3b passed | Fixed. `hooks/useRunView.ts` derives every screen's state from the events actually received. Gate clause 3c added, including the counterfactual that an empty stream must report no progress |
+| F-4.8-L-12 | Guardrail refusals, cap messages and stop-button enablement were dropped entirely when the routing replaced ChatPage. All three are tested build phase 1.2 behaviours | Fixed by REUSING the reviewed helpers rather than paraphrasing them. CATEGORY_COPY is deliberately interpolation-free so a cost figure can never reach a refusal message; reimplementing it would have discarded that guarantee silently |
+| F-4.8-L-13 | AuthGate rendered its own `<main>` while AppShell already owned one, so the sign-in screen carried two main landmarks, which is invalid. The accessibility suite never visited that screen, so axe never saw it | Fixed: a labelled `<section>`. The suite now covers the sign-in screen, closing the coverage gap that hid it |
+| F-4.8-L-14 | The stepper reported every step as pending once a run landed, because it tracked only the live step and a finished run has none. What a run DID was not recoverable from where it IS | Fixed. `reachedSteps` is derived from the events that actually occurred |
+| F-4.8-L-15 | The answer screen offered no way back to the landing; the run screen always had one, so the flow dead-ended exactly when a user finished reading | Fixed |
+| F-4.8-L-16 | PRE-EXISTING, and the headline of the phase. This repository has had no working end-to-end browser test since build phase 3.0. Phase 3.0 replaced the passthrough guardrail with a real classifier that parses the Guard tier response as JSON; `tests/e2e_support/mock_llm_backend.py` returns the bare string "ok", correct when written for phase 1.2. Every run through it has died at the guard step since. Invisible because phase 3.3's webServer timeout (F-4.8-L-09) meant the suite could not start at all | Fixed: the mock is tier-aware and returns a schema-valid classification. A run now streams guard, think, plan, token, done for the first time since phase 3.0. THIS CHANGE IS A TEST-DOUBLE EDIT AND IS EXPLICITLY REFERRED TO THE JUDGE, since `goal-contracts` forbids changing a check to make it pass; the argument for legitimacy is that the double had drifted from the contract it stands in for |
+| F-4.8-L-17 | OPEN, needs a product-owner decision. 10 modules remain orphaned with 36 tests exercising code the app no longer renders: AnswerStream, ChatShell, EmptyState, LoadingSkeleton, QueryInput, QueryPipelineStepper, ChatPage, HomePage. Their green tests inflate the suite's number into a claim it does not support | Open. NOT deleted, because deletion is the product owner's call under `file-protection` |
 
 ## History
 
+- 2026-08-13: all 15 tickets done. Premise gate 16 of 16, vitest 138 of 138, e2e 11 of 11, typecheck clean, production build succeeds. Python suite 2445 passed with 6 failures, confirmed identical on `develop` by stashing rather than assumed. Judge round dispatched with fresh context; nothing in this phase has been independently reviewed yet.
+- 2026-08-13, RESUMED and completed. Fixing the misdiagnosed Playwright timeout unmasked a second, older breakage: the e2e mock backend's guard response had not matched the classifier's contract since build phase 3.0, so no browser test in this repository had run green for five phases. Both are fixed and recorded as F-4.8-L-09 and F-4.8-L-16.
 - 2026-08-13, PAUSED MID-TASK at the product owner's request. Not a phase boundary. State is clean and resumable: nothing half-edited, vitest 136 of 136, typecheck clean, production build succeeds, premise gate 14 of 14. Thirteen of fifteen tickets done.
 
   Resume here, in order:
