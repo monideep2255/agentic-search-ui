@@ -87,6 +87,28 @@ export interface RunView {
 }
 
 /**
+ * The view before any run exists.
+ *
+ * Exported so a caller can render "no run yet" without inventing a shape, and
+ * specifically so `App` can discard a previous run's events the moment a new
+ * question is asked (F-4.8-J-03).
+ */
+export const EMPTY_RUN_VIEW: RunView = {
+  activeStep: null,
+  reachedSteps: [],
+  toolCalls: [],
+  claims: [],
+  sources: [],
+  trust: [],
+  meta: "",
+  landed: false,
+  failure: null,
+  refusal: null,
+  capMessage: null,
+  stopEnabled: false,
+};
+
+/**
  * Derive the run and answer views from the events received so far.
  *
  * Pure and memoised on the event array, so it recomputes only as events
@@ -166,9 +188,21 @@ export function useRunView(events: AgentEvent[]): RunView {
       .filter((text) => text.length > 0);
 
     const claims: Claim[] = sentences.map((text) => {
-      const match = events.find(
-        (event) => event.type === "citation" && text.includes(event.payload.claim_text),
-      );
+      // F-4.8-J-05. `String.prototype.includes("")` is ALWAYS true, and
+      // `claim_text` carries no non-empty constraint on the wire. One citation
+      // with an empty claim_text therefore marked every sentence in the answer
+      // as cited to it: the judge's probe rendered "The moon is cheese." cited
+      // to NCBI Gene 672, with the provenance spine showing no gap at all.
+      //
+      // That is the exact inverse of this module's purpose. An unusable
+      // claim_text must match NOTHING, so the uncited sentence stays visibly
+      // uncited, which is the whole reason the spine exists.
+      const match = events.find((event) => {
+        if (event.type !== "citation") return false;
+        const claimText = event.payload.claim_text?.trim();
+        if (!claimText) return false;
+        return text.includes(claimText);
+      });
       if (match && match.type === "citation") {
         return {
           text,
@@ -181,10 +215,35 @@ export function useRunView(events: AgentEvent[]): RunView {
 
     // Trust signals. Worst-wins is the server's job; this only renders what
     // arrived, and never manufactures a positive verdict from nothing.
-    const trustEvent = events.find((event) => event.type === "trust_signal");
+    // F-4.8-J-06. This took the FIRST trust_signal and discarded every later
+    // one, so a run whose verdict was downgraded mid-stream still displayed as
+    // fully grounded and low risk. That is precisely the critical build phase
+    // 4.1 closed at the MCP fold, reintroduced at the UI layer.
+    //
+    // Folded worst-wins instead: grounded only if EVERY signal says so, and the
+    // highest risk tier any signal reported. The previous comment here claimed
+    // "worst-wins is the server's job; this only renders what arrived", which
+    // was a property the code did not have. Per `self-eval-loop`, a comment
+    // asserting a property needs a test asserting the same property, and clause
+    // 3d now does.
+    const trustEvents = events.filter((event) => event.type === "trust_signal");
     const trust: TrustSignal[] = [];
-    if (trustEvent && trustEvent.type === "trust_signal") {
-      const payload = trustEvent.payload;
+    if (trustEvents.length > 0) {
+      const RISK_ORDER = ["low", "moderate", "medium", "high", "critical"];
+      const worstRisk = trustEvents
+        .map((event) => (event.type === "trust_signal" ? event.payload.risk_tier : "low"))
+        .reduce((worst, tier) =>
+          RISK_ORDER.indexOf(tier) > RISK_ORDER.indexOf(worst) ? tier : worst,
+        );
+      const payload = {
+        grounded: trustEvents.every(
+          (event) => event.type === "trust_signal" && event.payload.grounded,
+        ),
+        risk_tier: worstRisk,
+        triangulated: trustEvents.every(
+          (event) => event.type === "trust_signal" && event.payload.triangulated === true,
+        ),
+      };
       trust.push(
         payload.grounded
           ? { kind: "good", label: "Grounded · every claim cited" }

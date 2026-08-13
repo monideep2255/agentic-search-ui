@@ -1,30 +1,36 @@
 /**
  * The assembled app, build phase 4.8, ticket T-4.8-12.
  *
- * This is the ticket LEARNINGS.md's 2026-07-28 entry exists to force. Build
- * phase 1.2 shipped six chat components that each passed their own tests while
- * `ChatPage.tsx` stayed a placeholder wired to nothing, because no ticket owned
- * the wiring. So this one was in the decomposition from the start, and the
- * premise gate asserts assembly as its own clause.
+ * REWRITTEN in the fix round after judge findings F-4.8-J-01, J-02, J-03,
+ * J-08, J-12 and J-17. Four of those were critical and three were user-facing
+ * trust defects, so the relevant reasoning is recorded here rather than in a
+ * commit message nobody reads twice.
  *
- * THE STRUCTURAL CHANGE. The previous version rendered `AuthGate` and nothing
- * else until a token resolved, so the landing screen was unreachable for a
- * visitor without an account. The approved design makes the landing the entry
- * point with a free allowance before sign-in is required.
+ * THE RULE THIS FILE NOW FOLLOWS: nothing that looks like an answer is ever
+ * rendered from anything but the agent's own event stream. No demo claims, no
+ * demo citations, no demo trust signals, on any path, for any visitor.
  *
- * WHAT THAT CHANGE MUST NOT COST. The first version of this file replaced the
- * real `createRun` call with a demo timeline, which made every screen render
- * while quietly removing the only thing connecting the UI to the agent. The
- * premise gate passed anyway, because it asserted that the landing renders and
- * that navigation works, and never that a submitted question reaches the API.
- * That is the same defect shape LEARNINGS.md records twice: a component that
- * satisfies its own criteria while the system it belongs to does not work.
+ * What that replaced, and why it was wrong. The previous version rendered a
+ * canned BRCA1 answer for an anonymous visitor, complete with a real NCBI
+ * source URL, a full provenance card and the pill "Grounded, every claim
+ * cited", REGARDLESS OF THE QUESTION ASKED. The judge probed it with "What is
+ * the capital of the USA?" and got a confident cited answer about hereditary
+ * breast and ovarian cancer. It also bypassed build phase 3.0's guardrail
+ * completely, on the most-travelled path in the product.
  *
- * So the rule this file follows: a signed-in question takes the real path,
- * `createRun` with the bearer token and then the live event stream. Only the
- * anonymous path is stubbed, because an anonymous caller has no token to send
- * and the allowance that governs it belongs to build phase 6.0. That stub is
- * declared in `stubs/registry.ts`, and the gate now asserts the real path.
+ * The justification at the time was that a stub is "marked in code, never on
+ * screen", which is the rule this repository sets for stubbed surfaces. That
+ * rule is correct for a search counter and indefensible for answer content in
+ * a cite-or-refuse system: `production-standards`' grounding gate and
+ * CLAUDE.md's "Citations: non-negotiable" both forbid presenting a claim the
+ * agent never produced.
+ *
+ * So an anonymous visitor now meets the sign-in wall the moment they ask.
+ * The cost is real and is stated plainly for the product owner: the approved
+ * five-free-searches journey cannot be delivered until an anonymous path to
+ * the backend exists, which is build phase 6.0's. Showing the wall is honest;
+ * showing a fabricated citation is not. Reverting this decision means giving
+ * anonymous callers a real backend route, not restoring the demo data.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -33,25 +39,20 @@ import { Box, CssBaseline, ThemeProvider } from "@mui/material";
 import { theme } from "./theme";
 import { createRun, stopRun } from "./lib/api";
 import { useAgentRun } from "./hooks/useAgentRun";
-import { useRunView } from "./hooks/useRunView";
+import { useRunView, EMPTY_RUN_VIEW } from "./hooks/useRunView";
 import { AuthGate } from "./components/auth/AuthGate";
 import { AppShell } from "./components/shell/AppShell";
 import type { ScreenName } from "./components/shell/AppShell";
 import { drawPersona } from "./components/shell/PersonaChip";
 import { HomeScreen } from "./components/screens/HomeScreen";
 import { RunScreen } from "./components/screens/RunScreen";
-import { STEPS } from "./components/screens/RunScreen";
-import type { StepName, ToolCall } from "./components/screens/RunScreen";
+import type { StepName } from "./components/screens/RunScreen";
 import { AnswerScreen } from "./components/screens/AnswerScreen";
-import type { Claim, Source, TrustSignal } from "./components/screens/AnswerScreen";
 import { AboutScreen, DocsScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
 import { GuestAllowance, SignInWall } from "./components/guest/GuestAllowance";
 import { FeedbackSurface } from "./components/feedback/FeedbackSurface";
 import { FollowUp, HistoryRail } from "./components/answer/FollowUp";
-import {
-  DisclaimerModal,
-  hasAcceptedDisclaimer,
-} from "./components/shell/DisclaimerModal";
+import { DisclaimerModal, hasAcceptedDisclaimer } from "./components/shell/DisclaimerModal";
 import type { AudienceDepth } from "./components/controls/DepthControl";
 
 type SearchView =
@@ -61,58 +62,13 @@ type SearchView =
   | { name: "wall" }
   | { name: "signin" };
 
-/** The free allowance before sign-in is required. Stubbed; 6.0 enforces it. */
+/** The allowance the approved design calls for. Not yet deliverable: see the
+ *  file docstring. Kept so the counter and soft prompt stay designed and
+ *  reachable the moment build phase 6.0 provides an anonymous backend path. */
 const FREE_SEARCHES = 5;
 
-/** Every identifier below is a genuine NCBI record. */
-const DEMO_CLAIMS: Claim[] = [
-  {
-    text: "BRCA1 is associated with hereditary breast and ovarian cancer syndrome, the best-characterised of its disease links.",
-    layer: 1,
-    citation: 1,
-  },
-  {
-    text: "The current MedGen record describes an autosomal dominant inheritance pattern.",
-    layer: 2,
-    citation: 2,
-  },
-];
-
-const DEMO_SOURCES: Source[] = [
-  {
-    n: 1,
-    layer: 1,
-    name: "NCBI Gene 672 · BRCA1",
-    tool: "cypher_query",
-    evidence: "curated assertion",
-    confidence: "high",
-    license: "public domain",
-    url: "https://www.ncbi.nlm.nih.gov/gene/672",
-  },
-  {
-    n: 2,
-    layer: 2,
-    name: "MedGen C0677776 · Hereditary breast and ovarian cancer syndrome",
-    tool: "ncbi_efetch",
-    evidence: "curated record",
-    confidence: "high",
-    license: "public domain",
-    url: "https://www.ncbi.nlm.nih.gov/medgen/C0677776",
-  },
-];
-
-const DEMO_TRUST: TrustSignal[] = [
-  { kind: "good", label: "Grounded · every claim cited" },
-  { kind: "risk", label: "High-risk claim · gene to disease" },
-  { kind: "plain", label: "2 layers agreed" },
-];
-
-const DEMO_TOOLS: ToolCall[] = [
-  { name: "cypher_query", detail: "25 rows", layer: 1 },
-  { name: "ncbi_efetch", detail: "medgen C0677776", layer: 2 },
-];
-
-/** Canned follow-up hints. Stubbed; build phase 4.5 derives these for real. */
+/** Canned follow-up hints. Stubbed; build phase 4.5 derives these for real.
+ *  These are QUESTIONS, never answer content, which is why they are allowed. */
 const FOLLOW_UP_HINTS = [
   "What variants cause it?",
   "Which trials are recruiting?",
@@ -128,13 +84,8 @@ export function App() {
   const [accepted, setAccepted] = useState(hasAcceptedDisclaimer);
   const [history, setHistory] = useState<{ id: string; question: string }[]>([]);
   const [flagged, setFlagged] = useState<number[]>([]);
-  /** True while the current run is the anonymous, locally-rendered one. */
-  const [stubRun, setStubRun] = useState(false);
-  const [stubStep, setStubStep] = useState<StepName | null>(null);
+  const [dispatchError, setDispatchError] = useState<string | null>(null);
 
-  // One id for this browser session, stable across questions so they group
-  // into a thread. The fallback keeps a test environment without
-  // crypto.randomUUID from throwing.
   const sessionId = useMemo(
     () =>
       typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -143,58 +94,47 @@ export function App() {
     [],
   );
 
-  // Section 14.2: an anonymous session draws a persona and holds it for the
-  // session. Stubbed; wired by build phase 4.5 from the POST /v1/query body.
+  // Section 14.2, presentation only. Stubbed; wired by build phase 4.5.
   const persona = useMemo(() => drawPersona(0), []);
 
   const signedIn = token !== null;
-  const remaining = Math.max(0, FREE_SEARCHES - used);
 
-  // The real stream. `useAgentRun` does nothing while runId or token is null,
-  // so an anonymous visitor simply never opens one.
   const { events, stop } = useAgentRun(runId, token);
-  const view = useRunView(events);
+  const streamed = useRunView(events);
 
-  // The run screen advances on EVENTS, never on a timer. An earlier version of
-  // this file walked the five steps on setTimeout, which looked identical on
-  // screen and reported progress the agent had not made.
-  const step: StepName | null = stubRun ? stubStep : view.activeStep;
+  /**
+   * F-4.8-J-03. `useAgentRun` does not clear its buffer when `runId` goes null,
+   * so between asking a new question and `createRun` returning, the PREVIOUS
+   * run's events were still live: `landed` was still true, the answer screen
+   * opened immediately, and run one's cited answer rendered under question
+   * two's heading. The judge reproduced a claim about aspirin and COX-1 shown
+   * under "What is the treatment for scurvy?".
+   *
+   * Gating on `runId` closes that window at the point of use, without reaching
+   * into a hook other screens share.
+   */
+  const view = runId === null ? EMPTY_RUN_VIEW : streamed;
+  const step: StepName | null = view.activeStep;
 
   useEffect(() => {
-    if (view.landed && searchView.name === "run" && !stubRun) {
+    if (view.landed && searchView.name === "run") {
       setSearchView({ name: "answer", question: searchView.question });
     }
-  }, [view.landed, searchView, stubRun]);
-
-  // The stubbed guest run has no event stream to advance it, so it walks the
-  // loop on a timer. This applies ONLY to the anonymous path: a signed-in run
-  // advances on real events, and conflating the two is what let an earlier
-  // version report progress the agent had not made.
-  useEffect(() => {
-    if (!stubRun || searchView.name !== "run") return;
-    const order: StepName[] = ["Guard", "Think", "Plan", "Act", "Write"];
-    const timers = order.map((name, index) =>
-      setTimeout(() => setStubStep(name), index * 650),
-    );
-    const landing = setTimeout(() => {
-      setStubStep(null);
-      setSearchView({ name: "answer", question: searchView.question });
-    }, order.length * 650);
-    return () => {
-      timers.forEach(clearTimeout);
-      clearTimeout(landing);
-    };
-  }, [stubRun, searchView]);
-
+  }, [view.landed, searchView]);
 
   const ask = useCallback(
     async (question: string, depth: AudienceDepth) => {
-      if (!signedIn && remaining === 0) {
+      // F-4.8-J-01. An anonymous visitor has no token and therefore no run.
+      // There is nothing truthful to show them, so they are asked to sign in
+      // rather than shown something invented.
+      if (!signedIn) {
         setSearchView({ name: "wall" });
         return;
       }
+
       setUsed((n) => n + 1);
       setFlagged([]);
+      setDispatchError(null);
       setHistory((current) =>
         current.some((item) => item.question === question)
           ? current
@@ -203,29 +143,25 @@ export function App() {
       setRunId(null);
       setSearchView({ name: "run", question });
 
-      if (!signedIn) {
-        // STUBBED, and declared as `guest-allowance` in stubs/registry.ts. An
-        // anonymous visitor has no token, so there is no authenticated endpoint
-        // to call; build phase 6.0 owns the allowance that will let them run
-        // for real. Until then the guest journey renders from local data, which
-        // is what keeps the counter, the soft prompt and the wall reachable at
-        // all. Marked here, never on screen.
-        setStubRun(true);
-        return;
-      }
-
-      setStubRun(false);
       try {
         const response = await createRun(
           { text: question, audience_depth: depth, session_id: sessionId },
           token,
         );
         setRunId(response.run_id);
-      } catch {
+      } catch (error) {
+        // F-4.8-J-12. This previously swallowed the exception and dropped the
+        // user on an empty answer screen with no explanation. An error message
+        // must say what happened; silence is the one unacceptable option.
+        setDispatchError(
+          error instanceof Error && error.message
+            ? error.message
+            : "The question could not be sent. Check your connection and try again.",
+        );
         setSearchView({ name: "answer", question });
       }
     },
-    [signedIn, remaining, token, sessionId],
+    [signedIn, token, sessionId],
   );
 
   const body = () => {
@@ -248,20 +184,21 @@ export function App() {
           <RunScreen
             question={searchView.question}
             activeStep={step}
-            reachedSteps={
-              stubRun
-                ? STEPS.slice(0, step ? STEPS.indexOf(step) + 1 : STEPS.length)
-                : view.reachedSteps
-            }
-            toolCalls={stubRun ? (step === "Act" || step === "Write" ? DEMO_TOOLS : []) : view.toolCalls}
+            reachedSteps={view.reachedSteps}
+            toolCalls={view.toolCalls}
             personaName={persona}
-            stopEnabled={stubRun ? true : view.stopEnabled}
-            refusal={stubRun ? null : view.refusal}
-            capMessage={stubRun ? null : view.capMessage}
+            stopEnabled={view.stopEnabled}
+            refusal={view.refusal}
+            capMessage={view.capMessage}
             onStop={() => {
+              // Stay on the run. Navigating home here discarded everything the
+              // run had already streamed, which punishes the user for stopping
+              // and loses partial results they may have wanted. The original
+              // phase 1.2 behaviour kept the page; the Stop button disables
+              // itself once the run is terminal, and "New search" is right
+              // there when they want to move on.
               stop();
               if (runId && token) void stopRun(runId, token).catch(() => undefined);
-              setSearchView({ name: "home" });
             }}
             onNewSearch={() => setSearchView({ name: "home" })}
           />
@@ -270,11 +207,18 @@ export function App() {
         return (
           <AnswerScreen
             question={searchView.question}
-            claims={stubRun ? DEMO_CLAIMS : view.claims}
-            sources={stubRun ? DEMO_SOURCES : view.sources}
-            trust={stubRun ? DEMO_TRUST : view.trust}
-            meta={stubRun ? "2 tools · 2 layers · 2 sources" : view.meta}
-            onNewSearch={() => setSearchView({ name: "home" })}
+            claims={view.claims}
+            sources={view.sources}
+            trust={view.trust}
+            meta={view.meta}
+            // F-4.8-J-02. A refusal or a fatal error arrives with a `done` or
+            // `error` event, which lands the user here immediately. Passing
+            // these only to RunScreen meant the entire user-facing output of
+            // build phase 3.0's guardrail was unreachable: a refused question
+            // rendered as a blank page.
+            refusal={view.refusal}
+            failure={dispatchError ?? view.failure}
+            capMessage={view.capMessage}
             feedback={<FeedbackSurface key={searchView.question} />}
             followUp={
               <FollowUp
@@ -288,6 +232,7 @@ export function App() {
                 current.includes(n) ? current.filter((x) => x !== n) : [...current, n],
               )
             }
+            onNewSearch={() => setSearchView({ name: "home" })}
           />
         );
       case "wall":
@@ -329,10 +274,20 @@ export function App() {
           <Box sx={{ display: "flex", alignItems: "stretch", minHeight: "100%" }}>
             <HistoryRail
               items={history}
-              activeId={searchView.name === "answer" || searchView.name === "run" ? history[0]?.id : null}
+              activeId={
+                searchView.name === "answer" || searchView.name === "run"
+                  ? history.find((item) => item.question === searchView.question)?.id ?? null
+                  : null
+              }
+              // F-4.8-J-08. This previously switched the heading to a past
+              // question while leaving the CURRENT run's answer on screen,
+              // which is the same fabrication shape as J-03 by another route.
+              // Re-asking is the only truthful option available: this session's
+              // earlier runs are not retained, and retaining them is build
+              // phase 4.5's work, not something to fake here.
               onOpen={(id) => {
                 const item = history.find((entry) => entry.id === id);
-                if (item) setSearchView({ name: "answer", question: item.question });
+                if (item) void ask(item.question, "researcher");
               }}
             />
             <Box sx={{ flex: 1, minWidth: 0 }}>{body()}</Box>

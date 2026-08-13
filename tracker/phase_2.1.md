@@ -412,7 +412,7 @@ Acceptance criteria:
 - [x] The suite does not depend on an already-open tunnel: it either opens one or skips
 
 Evidence:
-- Fifth judge pass and fifth adversary pass, both 2026-08-01: full detail in the "Fifth judge pass" and "Fifth adversary pass" sections below, not repeated here. Summary: PREMISE PASS, the first of five reviews to return one, proved with a controlled A/B rather than accepted on trust, 5 of 6 correct on the judge's own six questions against round four's 3 of 8, and confirmed no check was weakened to reach green; the adversary filed 8 findings, all fixed or explicitly deferred with a reason. Final gates at merge: premise gate 9 of 9 on three consecutive runs, 120 frontend tests, ruff clean, pip-audit and npm audit clean, and 977 Python tests as currently measured (968 at the 2026-08-01 merge). Merged as PR #15.
+- Fifth judge pass and fifth adversary pass, both 2026-08-01: full detail in the "Fifth judge pass" and "Fifth adversary pass" sections below, not repeated here. Summary: PREMISE PASS, the first of five reviews to return one, proved with a controlled A/B rather than accepted on trust, 5 of 6 correct on the judge's own six questions against round four's 3 of 8, and confirmed no check was weakened to reach green; the adversary filed 8 findings, all fixed or explicitly deferred with a reason. Final gates at merge: premise gate 9 of 9 on three consecutive runs, 138 frontend tests as currently measured (120 at the 2026-08-01 merge), ruff clean, pip-audit and npm audit clean, and 977 Python tests as currently measured (968 at the 2026-08-01 merge). Merged as PR #15.
 
 History:
 - 2026-07-29 lead: created, scoped from Section 23

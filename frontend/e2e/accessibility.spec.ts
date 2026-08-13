@@ -20,6 +20,7 @@
  * chain surface.
  */
 
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -32,6 +33,21 @@ async function enterApp(page: import("@playwright/test").Page) {
     await dialog.getByRole("button", { name: /continue/i }).click();
     await expect(dialog).toBeHidden();
   }
+}
+
+/** Sign up, so the screens scanned below are the real ones and not a stub. */
+async function signIn(page: import("@playwright/test").Page) {
+  await enterApp(page);
+  await page
+    .getByRole("navigation", { name: /main/i })
+    .getByRole("button", { name: /log in/i })
+    .click();
+  await page.getByLabel("Email").fill(`a11y-${randomUUID()}@example.com`);
+  await page.getByLabel("Password").fill("Str0ngPassw0rd!");
+  await page.getByRole("button", { name: "Sign up" }).click();
+  await expect(
+    page.getByRole("main").getByRole("textbox", { name: /question/i }),
+  ).toBeVisible();
 }
 
 const analyse = (page: import("@playwright/test").Page) =>
@@ -78,7 +94,12 @@ test.describe("accessibility", () => {
   });
 
   test("the run and answer screens are clean", async ({ page }) => {
-    await enterApp(page);
+    // SIGNS IN, after judge finding F-4.8-J-09. This previously ran anonymous
+    // and therefore scanned the fabricated demo answer, never the real one:
+    // variable claim counts, spine gaps for uncited claims, risk-tier pills and
+    // an empty-claims state were all outside its reach while its own coverage
+    // statement claimed "every screen".
+    await signIn(page);
     const main = page.getByRole("main");
     await main.getByRole("textbox", { name: /question/i }).fill("Which diseases are associated with BRCA1?");
     await main.getByRole("button", { name: /^ask$/i }).click();
@@ -87,10 +108,13 @@ test.describe("accessibility", () => {
     await expect(page.getByText("Guard")).toBeVisible();
     expect((await analyse(page)).violations).toEqual([]);
 
-    // Landed. Asserted on the first source card rather than on a heading or a
-    // loose string: the sources label is a paragraph, not a heading, and a
-    // text match on "Grounded" would also hit the trust pill's own copy.
-    await expect(page.getByTestId("source-1")).toBeVisible({ timeout: 15_000 });
+    // Landed. Waits on the "New search" action rather than a source card: this
+    // now scans a REAL run, and this backend's only token is the cap-exceeded
+    // partial result, which carries no citations. Waiting for `source-1` waited
+    // for something the real answer legitimately does not have.
+    await expect(page.getByRole("button", { name: /new search/i })).toBeVisible({
+      timeout: 20_000,
+    });
     expect((await analyse(page)).violations).toEqual([]);
   });
 
@@ -100,6 +124,11 @@ test.describe("accessibility", () => {
     // "Log in" while the sign-in form was already open. axe does not flag
     // either, because duplicate names across landmarks are legal, so this
     // check is deliberately stricter than the standard.
+    // Checked on the LANDING and then again on the SIGN-IN screen. The comment
+    // below names two defects this guards; one of them, the app bar offering
+    // "Log in" beside an open sign-in form, can only appear on the sign-in
+    // screen, which this test never visited (F-4.8-J-10). Removing
+    // `hideAuthAction` would not have failed it.
     await enterApp(page);
 
     const names = await page.evaluate(() => {
@@ -121,10 +150,35 @@ test.describe("accessibility", () => {
         .filter((name) => name.length > 0);
     });
 
-    const seen = new Map<string, number>();
-    for (const name of names) seen.set(name, (seen.get(name) ?? 0) + 1);
-    const duplicates = [...seen.entries()].filter(([, count]) => count > 1);
+    const tally = (list: string[]) => {
+      const seen = new Map<string, number>();
+      for (const name of list) seen.set(name, (seen.get(name) ?? 0) + 1);
+      return [...seen.entries()].filter(([, count]) => count > 1);
+    };
 
-    expect(duplicates, `controls sharing a name: ${JSON.stringify(duplicates)}`).toEqual([]);
+    expect(tally(names), `landing: ${JSON.stringify(tally(names))}`).toEqual([]);
+
+    // Now the sign-in screen, where the second named defect actually lives.
+    await page
+      .getByRole("navigation", { name: /main/i })
+      .getByRole("button", { name: /log in/i })
+      .click();
+    await expect(page.getByLabel("Email")).toBeVisible();
+
+    const signInNames = await page.evaluate(() => {
+      const visible = (el: Element) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      return Array.from(document.querySelectorAll("button, a[href], input, [role=button]"))
+        .filter(visible)
+        .map((el) => (el.getAttribute("aria-label") ?? el.textContent ?? "").trim().toLowerCase())
+        .filter((name) => name.length > 0);
+    });
+
+    expect(
+      tally(signInNames),
+      `sign-in screen: ${JSON.stringify(tally(signInNames))}`,
+    ).toEqual([]);
   });
 });

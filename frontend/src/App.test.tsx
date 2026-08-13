@@ -108,23 +108,55 @@ describe("App", () => {
     expect(navArea().queryByRole("button", { name: /^log in$/i })).not.toBeInTheDocument();
   });
 
-  it("leaves the landing when a non-empty question is submitted", async () => {
+  it("leaves the landing when a signed-in user submits a question", async () => {
     const user = userEvent.setup();
     render(<App />);
+    await signIn(user);
 
     await ask(user, "Which diseases are associated with BRCA1?");
 
-    // Asserted as the page HEADING rather than as loose text. The question now
+    // Asserted as the page HEADING rather than as loose text: the question now
     // legitimately appears twice, once as the run's heading and once in the
-    // history rail, so a bare text match is ambiguous. The heading role is the
-    // stricter assertion: it requires the run screen to have taken over the
-    // page, not merely for the string to appear somewhere.
+    // history rail. The heading role requires the run screen to have taken
+    // over the page, not merely for the string to appear somewhere.
     expect(
       screen.getByRole("heading", { name: "Which diseases are associated with BRCA1?" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: /ask a biomedical question/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows an anonymous visitor the sign-in wall, never an answer", async () => {
+    // F-4.8-J-01, the phase's worst defect. An anonymous ask used to render a
+    // canned BRCA1 answer with a real NCBI source URL and the pill "Grounded,
+    // every claim cited", WHATEVER was asked. A judge reproduced it with "What
+    // is the capital of the USA?".
+    const user = userEvent.setup();
+    render(<App />);
+
+    await ask(user, "What is the capital of the USA?");
+
+    expect(screen.getByTestId("sign-in-wall")).toBeInTheDocument();
+  });
+
+  it("never shows an anonymous visitor a claim, a source or a trust signal", async () => {
+    // The COUNTERFACTUAL for J-01, and the assertion whose absence let it ship.
+    // Asserting the wall appears is not enough: what matters is that no
+    // fabricated answer content is reachable without a run behind it.
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+
+    await ask(user, "What is the capital of the USA?");
+
+    expect(screen.queryByTestId("source-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId(/^spine-segment-/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(/^citation-/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(/^trust-/)).not.toBeInTheDocument();
+    // No NCBI record URL, and no grounding claim, may appear without a run.
+    expect(container.textContent ?? "").not.toMatch(/ncbi\.nlm\.nih\.gov/i);
+    expect(container.textContent ?? "").not.toMatch(/grounded/i);
+    expect(createRunMock).not.toHaveBeenCalled();
   });
 
   it("does not leave the landing when the question is empty", async () => {
@@ -141,6 +173,7 @@ describe("App", () => {
   it("returns to the landing from a run", async () => {
     const user = userEvent.setup();
     render(<App />);
+    await signIn(user);
 
     await ask(user, "test query");
     await user.click(screen.getByRole("button", { name: /new search/i }));
@@ -169,8 +202,8 @@ describe("App", () => {
 
   it("does not call createRun for an anonymous visitor, who has no token", async () => {
     // The honest consequence of an open landing: an anonymous question cannot
-    // reach an authenticated endpoint. The allowance that will govern this is
-    // build phase 6.0's, and the surface is declared in stubs/registry.ts.
+    // reach an authenticated endpoint. Build phase 6.0 owns the anonymous path
+    // that will make the approved five-search allowance real.
     const user = userEvent.setup();
     render(<App />);
 

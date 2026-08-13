@@ -37,7 +37,9 @@
  *                   reachability without a token, that a signed-in question
  *                   actually reaches createRun with its bearer token, that the
  *                   screens RENDER FROM the resulting event stream rather than
- *                   from a timer, and stub declaration completeness.
+ *                   from a timer, that the adapter never overstates what the
+ *                   events said, that NO answer content is reachable without a
+ *                   run behind it, and stub declaration completeness.
  *   NOT exercised:  visual fidelity (a layout can satisfy every assertion here
  *                   and still look wrong; that is the judge and adversary
  *                   rounds' job), stubbed-surface data correctness, docs prose
@@ -421,6 +423,80 @@ describe("clause 3c: the screens render from the real event stream", () => {
     expect(result.current.toolCalls).toEqual([]);
     expect(result.current.claims).toEqual([]);
     expect(result.current.landed).toBe(false);
+  });
+});
+
+describe("clause 3d: the adapter never overstates what the events said", () => {
+  it("treats an empty claim_text as matching nothing", async () => {
+    // F-4.8-J-05. `String.prototype.includes("")` is always true and the wire
+    // type puts no non-empty constraint on claim_text, so ONE citation with an
+    // empty claim_text marked EVERY sentence as cited. The judge's probe
+    // rendered "The moon is cheese." cited to NCBI Gene 672 with no spine gap.
+    const { useRunView } = await need<any>("T-4.8-12 (event adapter)", "./hooks/useRunView.ts");
+    const events = [
+      { type: "token", payload: { text: "BRCA1 causes cancer. The moon is cheese.", marker_ids: [] } },
+      {
+        type: "citation",
+        payload: {
+          citation_id: "x", display_index: 1, source: "NCBI Gene", source_id: "672",
+          source_url: "https://www.ncbi.nlm.nih.gov/gene/672", layer: "layer_1_graph",
+          field: "cypher_query", claim_text: "   ", evidence_kind: "curated assertion",
+          assertion_confidence: "high", population_ancestry_context: null,
+          license: "public domain",
+        },
+      },
+      { type: "done", payload: {} },
+    ];
+    const { result } = renderHook(() => useRunView(events));
+    // BOTH sentences must be uncited: an unusable claim_text matches nothing,
+    // so the provenance spine keeps showing the gap it exists to show.
+    expect(result.current.claims.every((c: { citation: number | null }) => c.citation === null)).toBe(true);
+  });
+
+  it("folds trust signals worst-wins rather than taking the first", async () => {
+    // F-4.8-J-06. This took the FIRST trust_signal and discarded later ones, so
+    // a downgraded verdict still displayed as grounded and low risk. That is
+    // the critical build phase 4.1 closed at the MCP fold, reappearing here.
+    const { useRunView } = await need<any>("T-4.8-12 (event adapter)", "./hooks/useRunView.ts");
+    const events = [
+      { type: "trust_signal", payload: { outcome: "answer", risk_tier: "low", grounded: true, triangulated: null } },
+      { type: "trust_signal", payload: { outcome: "flag", risk_tier: "high", grounded: false, triangulated: null } },
+      { type: "done", payload: {} },
+    ];
+    const { result } = renderHook(() => useRunView(events));
+    const labels = result.current.trust.map((t: { label: string }) => t.label).join(" ");
+    expect(labels).not.toMatch(/grounded · every claim cited/i);
+    expect(labels).toMatch(/high/i);
+  });
+});
+
+describe("clause 3e: no answer content without a run behind it", () => {
+  it("an anonymous visitor is shown no claim, source, citation or trust signal", async () => {
+    // F-4.8-J-01, the phase's worst defect and the assertion whose absence let
+    // it ship. The anonymous path rendered a canned cited answer for ANY
+    // question, bypassing the phase 3.0 guardrail entirely.
+    const api = await import("./lib/api");
+    // Cleared: clause 3b spies on the same module and signs in, so its call
+    // history would otherwise leak into this assertion. Test isolation, not a
+    // weakened check: the assertion below still fails if THIS render calls it.
+    const createRunSpy = vi.spyOn(api, "createRun");
+    createRunSpy.mockClear();
+    const user = userEvent.setup();
+    const { default: App } = await loadApp();
+    const { container } = render(<App />);
+
+    const main = screen.getByRole("main");
+    await user.type(
+      within(main).getByRole("textbox", { name: /question/i }),
+      "What is the capital of the USA?",
+    );
+    await user.click(within(main).getByRole("button", { name: /^ask$/i }));
+
+    expect(screen.queryByTestId("source-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId(/^citation-/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(/^trust-/)).not.toBeInTheDocument();
+    expect(container.textContent ?? "").not.toMatch(/ncbi\.nlm\.nih\.gov/i);
+    expect(createRunSpy).not.toHaveBeenCalled();
   });
 });
 

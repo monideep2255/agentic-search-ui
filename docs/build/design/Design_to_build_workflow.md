@@ -67,7 +67,7 @@ Four assertions, in descending order of how load-bearing they are:
 - Token conformance: the MUI theme's palette must exactly equal the hex values in `foundations/colors.html`. If a builder nudges a blue, the gate fails. This is the cheapest check and it catches the most common drift.
 - Structure: a citation chip must carry a layer class. A source card must render all six provenance fields. Testable, and it catches a builder quietly dropping the license field because it was fiddly.
 - Contrast: WCAG 2.1 AA on every token pair actually used. The repository already has `@axe-core/playwright`, so this is real and automated rather than a promise to check later.
-- Visual regression: Playwright screenshots the built components against the design-system cards.
+- Assembly: every screen is reachable in the running app, a signed-in question reaches the API, and the screens render from the resulting event stream rather than from a timer. This replaced a planned visual-regression check: no screenshot test was built, and leaving the promise in place advertised a gate nothing performed. Pixel fidelity is deliberately not gated and is the judge and adversary rounds' job, which `tracker/phase_4.8.md` states in its own coverage section.
 
 So the answer to "how do the two connect" is that the design system is not documentation, it is a fixture. Bossman reads it as input and the gates read it as the expected output.
 

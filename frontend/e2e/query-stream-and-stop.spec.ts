@@ -133,19 +133,40 @@ test.describe("query stream and stop", () => {
     await expect(stop).toBeEnabled({ timeout: 30_000 });
     await stop.click();
 
-    // The server-side check. A browser-only stop would leave the run active,
-    // and the whole point of this assertion is that it does not.
+    // SERVER-SIDE PROOF. Restored after judge finding F-4.8-J-04.
+    //
+    // The rewritten version of this test polled `GET /v1/query/{run_id}`, a
+    // route that DOES NOT EXIST: it returns 404, the callback returned null,
+    // and `null !== "running"` satisfied the poll on its first iteration. The
+    // assertion passed whether or not Stop was clicked and whether or not the
+    // task was cancelled. Deleting the click above would not have failed it.
+    //
+    // `/__e2e__/run_status` is the route that exists precisely to make this
+    // provable, and `task_cancelled` is a positive assertion: it can only be
+    // true if the server-side task was genuinely cancelled. `request` is
+    // Playwright's Node-side client, never routed through the page's own
+    // AbortController, so it is not affected by the client-side stop it
+    // verifies. Polled because `Task.cancel()` takes effect at the task's next
+    // await point, not when the stop call returns.
     await expect
       .poll(
         async () => {
-          const response = await request.get(`${BACKEND_URL}/v1/query/${runId}`);
-          if (!response.ok()) return null;
-          const body = (await response.json()) as { status?: string };
-          return body.status ?? null;
+          const statusResponse = await request.get(
+            `${BACKEND_URL}/__e2e__/run_status/${runId}`,
+          );
+          const body = (await statusResponse.json()) as { task_cancelled: boolean };
+          return body.task_cancelled;
         },
-        { timeout: 30_000 },
+        { message: "server-side run task never reported cancelled", timeout: 10_000 },
       )
-      .not.toBe("running");
+      .toBe(true);
+
+    // CLIENT-SIDE PROOF, also restored. `think` needs another delayed call to
+    // reach "done", which never fires because the run was stopped right after
+    // `guard`. Waiting past that point and finding it still not done shows no
+    // further events reached this page.
+    await page.waitForTimeout(3_000);
+    await expect(page.getByTestId("step-Think")).not.toHaveAttribute("data-state", "done");
   });
 
   test("stop stops being offered once the run has finished", async ({ page }) => {
@@ -159,9 +180,31 @@ test.describe("query stream and stop", () => {
       timeout: 30_000,
     });
 
+    // F-4.8-J-07. This was wrapped in `if (await stop.count())`, and the
+    // answer screen renders no Stop button, so the body never executed:
+    // changing toBeDisabled to toBeEnabled left the test passing. Asserted
+    // unconditionally now, against the state that actually exists.
+    //
+    // The guarantee is that Stop is not OFFERED once a run is over. On the
+    // answer screen it is absent, which satisfies that; if a future change
+    // renders it there, it must be disabled.
+    // Polled rather than branched on a one-shot count(). The run screen is
+    // being replaced by the answer screen as this runs, so `count()` and the
+    // follow-up assertion can observe different frames: the button existed when
+    // counted and was gone when checked.
+    //
+    // The guarantee is simply that a finished run never offers a WORKING Stop.
+    // Absent and disabled both satisfy it; enabled does not, and this fails if
+    // it ever is.
     const stop = page.getByRole("button", { name: /^stop$/i });
-    if (await stop.count()) {
-      await expect(stop).toBeDisabled();
-    }
+    await expect
+      .poll(
+        async () => {
+          if ((await stop.count()) === 0) return "absent";
+          return (await stop.isDisabled()) ? "disabled" : "enabled";
+        },
+        { message: "a finished run still offers a working Stop", timeout: 10_000 },
+      )
+      .not.toBe("enabled");
   });
 });

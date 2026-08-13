@@ -114,6 +114,38 @@ while building, which means none of it has been independently reviewed.
 | F-4.8-L-16 | PRE-EXISTING, and the headline of the phase. This repository has had no working end-to-end browser test since build phase 3.0. Phase 3.0 replaced the passthrough guardrail with a real classifier that parses the Guard tier response as JSON; `tests/e2e_support/mock_llm_backend.py` returns the bare string "ok", correct when written for phase 1.2. Every run through it has died at the guard step since. Invisible because phase 3.3's webServer timeout (F-4.8-L-09) meant the suite could not start at all | Fixed: the mock is tier-aware and returns a schema-valid classification. A run now streams guard, think, plan, token, done for the first time since phase 3.0. THIS CHANGE IS A TEST-DOUBLE EDIT AND IS EXPLICITLY REFERRED TO THE JUDGE, since `goal-contracts` forbids changing a check to make it pass; the argument for legitimacy is that the double had drifted from the contract it stands in for |
 | F-4.8-L-17 | OPEN, needs a product-owner decision. 10 modules remain orphaned with 36 tests exercising code the app no longer renders: AnswerStream, ChatShell, EmptyState, LoadingSkeleton, QueryInput, QueryPipelineStepper, ChatPage, HomePage. Their green tests inflate the suite's number into a claim it does not support | Open. NOT deleted, because deletion is the product owner's call under `file-protection` |
 
+### Judge round 1, 2026-08-13: FAIL
+
+Fresh-context judge, 18 findings: 4 critical, 4 major, 5 moderate, 5 minor. It verified the theme independently against `colors.html` rather than trusting the gate's transcribed constants, and re-ran every gate itself.
+
+| Id | Severity | What | State |
+|----|----------|------|-------|
+| F-4.8-J-01 | critical | An anonymous visitor asking ANY question was shown a fabricated, fully-cited answer: real NCBI source URL, full provenance card, "Grounded, every claim cited". Probed with "What is the capital of the USA?" and returned a confident cited answer about hereditary breast and ovarian cancer. Bypassed the phase 3.0 guardrail entirely | FIXED. All demo answer content removed. An anonymous ask now meets the sign-in wall. Gate clause 3e added, plus a counterfactual in `App.test.tsx` |
+| F-4.8-J-02 | critical | A guardrail refusal and a fatal error both rendered as a BLANK answer screen. The refusal copy was computed correctly and passed only to `RunScreen`, unmounted by then. `grep -rn "failure"` returned zero consumers | FIXED. `AnswerScreen` renders refusal, failure and cap notices |
+| F-4.8-J-03 | critical | `setRunId(null)` did not clear the event buffer, so the previous run's cited answer rendered under the next question. Judge reproduced a COX-1 claim under "What is the treatment for scurvy?" | FIXED. The view is gated on `runId`, closing the window at the point of use |
+| F-4.8-J-04 | critical | The e2e "stop halts the run on the server" assertion could not fail: it polled `GET /v1/query/{run_id}`, which 404s, returning `null`, and `null !== "running"` passed on the first iteration. It had REPLACED a working assertion on `/__e2e__/run_status`, while the file header claimed every guarantee was preserved | FIXED. The real `task_cancelled` proof is restored, along with the client-side corroboration that was also dropped |
+| F-4.8-J-05 | major | `String.includes("")` is always true, so one citation with an empty `claim_text` marked EVERY sentence as cited. Judge rendered "The moon is cheese." cited to NCBI Gene 672 with no spine gap | FIXED, gate clause 3d |
+| F-4.8-J-06 | major | Only the FIRST `trust_signal` was read, so a downgraded verdict still displayed as grounded and low risk. The exact critical build phase 4.1 closed at the MCP fold, reintroduced at the UI layer | FIXED, folded worst-wins, gate clause 3d |
+| F-4.8-J-07 | major | The "stop stops being offered" assertion was wrapped in `if (await stop.count())` and never executed | FIXED, and made deterministic with a poll after a race was found in the first fix |
+| F-4.8-J-08 | major | The history rail switched the heading to a past question while leaving the current answer on screen | FIXED, it re-asks |
+| F-4.8-J-09 | moderate | The a11y gate only ever scanned the STUBBED answer screen while claiming to cover every screen | FIXED, it signs in and scans the real one |
+| F-4.8-J-10 | moderate | The duplicate-name check never visited the sign-in screen, the only place one of the two defects it named can appear | FIXED, it checks both screens |
+| F-4.8-J-11 | moderate | The stub registry described the counter and omitted that the anonymous path rendered a complete fabricated answer | FIXED, with the history recorded so it is not repeated |
+| F-4.8-J-12 | moderate | A `createRun` failure rendered as an empty answer screen with the exception swallowed | FIXED, the message is surfaced |
+| F-4.8-J-13 | moderate | `Design_to_build_workflow.md` promised a visual-regression gate that does not exist | FIXED, corrected to the assembly clause actually built |
+| F-4.8-J-14 | minor | A second citation on the same sentence is silently discarded | OPEN, acceptable for v1 but now declared here rather than undeclared |
+| F-4.8-J-15 | minor | The mock's new comment said three required fields where the schema has four | FIXED |
+| F-4.8-J-16 | minor | The premise gate's no-visible-stub rule blocked the honest disclosure fix for J-01 | RESOLVED by removing the fabricated content entirely, so no disclosure is needed |
+| F-4.8-J-17 | minor | The stub run reported all five steps reached before starting | RESOLVED, the stub run no longer exists |
+| F-4.8-J-18 | minor | `check_doc_drift.py --check` failed, 7 stale counts | FIXED, drift is clean |
+
+Also found in the fix round, not by the judge:
+
+| Id | What | State |
+|----|------|-------|
+| F-4.8-L-18 | Stopping a run navigated home, discarding everything already streamed. The phase 1.2 behaviour kept the partial result | Fixed: Stop stays on the run |
+| F-4.8-L-19 | OPEN. The e2e suite failed once in five consecutive runs and passed the other four, with no captured detail. Three clean runs are not evidence of stability, and the judge listed repeated runs as something it did not check. Likely candidates are the sign-up waits and the run-landing races, several of which use short default timeouts | OPEN, needs attribution before this is called stable |
+
 ## History
 
 - 2026-08-13: all 15 tickets done. Premise gate 16 of 16, vitest 138 of 138, e2e 11 of 11, typecheck clean, production build succeeds. Python suite 2445 passed with 6 failures, confirmed identical on `develop` by stashing rather than assumed. Judge round dispatched with fresh context; nothing in this phase has been independently reviewed yet.

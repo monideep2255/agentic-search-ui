@@ -282,9 +282,17 @@ def _fake_response(content: str = "ok") -> SimpleNamespace:
 
 
 # Section 10.4's classification schema, exactly as `guardrail/classifier.py`
-# validates it: only `is_injection`, `is_off_topic` and `reason`, with
-# `extra="forbid"` and StrictBool, so a bare string or a stringified boolean
-# is rejected outright.
+# validates it. FOUR required fields, not three: `is_injection` and
+# `is_off_topic` (both StrictBool, so "true" as a string is rejected),
+# `confidence` (float, 0.0 to 1.0 inclusive) and `reason` (str, max 200).
+# `extra="forbid"`, so an added field is rejected too.
+#
+# The count matters. An earlier version of this comment said "only
+# is_injection, is_off_topic and reason" while the literal below correctly
+# carried `confidence`, so a maintainer trusting the comment and removing it
+# would break every run through this backend. That is the F-2.1-J5-01 pattern
+# `classifier.py` itself warns about: a confident comment is exactly where the
+# next reader stops checking.
 _GUARD_ADMIT_JSON = (
     '{"is_injection": false, "is_off_topic": false, '
     '"confidence": 0.99, "reason": "ok"}'

@@ -91,8 +91,8 @@ Twelve build phases are done, all twelve merged into `develop` (renamed from `ma
 Current counts, stated once here:
 
 - Python tests: 2565 (2445 passing, 113 skipped, 1 xfailed, 6 failed; the 6 are `test_citation_trust_full_premise.py`'s live-network-opt-in-gated cases, confirmed not a regression, identical set carried since build phase 4.0's close)
-- Frontend tests: 120
-- Playwright end-to-end tests: 3 (unverifiable in this and the prior session; a webServer-orchestration timeout unrelated to any file either phase touched, confirmed by starting the dev server directly, HTTP 200)
+- Frontend tests: 143
+- Playwright end-to-end tests: 8 declarations, 11 executed cases, ALL PASSING as of 2026-08-13, the first green run since build phase 3.0. The previous note here said these were "unverifiable, a webServer-orchestration timeout unrelated to any file either phase touched, confirmed by starting the dev server directly, HTTP 200". That diagnosis was wrong and is corrected rather than deleted, because the way it was wrong is the lesson: the check started the server by hand and queried `localhost`, which resolves to `::1` on macOS, while Playwright probes `127.0.0.1`. Vite bound IPv6-only, so the evidence gathered proved a different address than the one failing. Behind that timeout sat a second, older breakage: the e2e mock backend's Guard-tier response had not matched the classifier's schema since build phase 3.0, so the suite would have failed even had it started. Both are fixed
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
 - Premise gate, guardrail: 20 of 20
@@ -463,4 +463,4 @@ If a different agent takes over, read the "Running this project with a different
 
 One operational note that cost real time on 2026-08-03 and is not obvious from any other file: this machine's network dropped three times in one session, killing two premise-gate runs and three review agents, and every failure they produced looked like a code defect at first glance. Before diagnosing any model-dependent failure, check reachability with `curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v1/models`. An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all. A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-08-12.
+Last updated: 2026-08-13.

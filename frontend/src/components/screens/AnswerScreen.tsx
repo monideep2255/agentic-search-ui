@@ -72,6 +72,19 @@ export interface AnswerScreenProps {
    */
   onNewSearch?: () => void;
   /**
+   * Guardrail refusal copy, when the question was turned away.
+   *
+   * F-4.8-J-02: a refusal arrives with a `done` event, which lands the user on
+   * this screen immediately, so passing it only to RunScreen rendered a refused
+   * question as a blank page. A refusal is a first-class outcome of this
+   * product, not an error state, and it must be legible.
+   */
+  refusal?: string | null;
+  /** A fatal run error, or a dispatch failure. Never rendered as silence. */
+  failure?: string | null;
+  /** Cap copy, when the run stopped early on its processing budget. */
+  capMessage?: string | null;
+  /**
    * Flag a source as not supporting the claim it is attached to.
    *
    * This is the single most valuable signal a cite-or-refuse system can
@@ -85,6 +98,42 @@ export interface AnswerScreenProps {
 /** Monospace marks a string transcribed exactly. Gene symbols are excluded. */
 const mono = { fontFamily: "ui-monospace, monospace" } as const;
 
+/**
+ * A refusal, failure or cap notice.
+ *
+ * Copy arrives already chosen from a fixed, interpolation-free table, so no
+ * cost figure can reach a user-facing refusal even by accident.
+ */
+function Notice({
+  testId,
+  tone,
+  text,
+}: {
+  testId: string;
+  tone: "warn" | "risk";
+  text: string;
+}) {
+  const warn = tone === "warn";
+  return (
+    <Box
+      data-testid={testId}
+      role="status"
+      sx={{
+        mb: 2.5,
+        px: 1.75,
+        py: 1.4,
+        fontSize: 14,
+        borderRadius: 0.5,
+        border: `1px solid ${warn ? designTokens.warn : designTokens.risk}`,
+        borderLeftWidth: 4,
+        bgcolor: warn ? designTokens.warnWash : designTokens.riskWash,
+      }}
+    >
+      {text}
+    </Box>
+  );
+}
+
 export function AnswerScreen({
   question,
   claims,
@@ -94,6 +143,9 @@ export function AnswerScreen({
   feedback,
   followUp,
   onNewSearch,
+  refusal = null,
+  failure = null,
+  capMessage = null,
   onFlagSource,
   flaggedSources = [],
 }: AnswerScreenProps) {
@@ -141,6 +193,10 @@ export function AnswerScreen({
             </Typography>
           ) : null}
         </Box>
+
+        {refusal ? <Notice testId="answer-refusal" tone="warn" text={refusal} /> : null}
+        {failure ? <Notice testId="answer-failure" tone="risk" text={failure} /> : null}
+        {capMessage ? <Notice testId="answer-cap" tone="warn" text={capMessage} /> : null}
 
         {/* The spine runs beside the prose, one segment per claim. */}
         <Box sx={{ display: "grid", gridTemplateColumns: "14px 1fr", gap: 2.25 }}>
@@ -197,9 +253,15 @@ export function AnswerScreen({
           </Box>
         </Box>
 
-        <Typography variant="overline" component="p" sx={{ mt: 3.5, mb: 1.25, color: designTokens.inkFaint }}>
-          Sources
-        </Typography>
+        {sources.length > 0 ? (
+          <Typography
+            variant="overline"
+            component="p"
+            sx={{ mt: 3.5, mb: 1.25, color: designTokens.inkFaint }}
+          >
+            Sources
+          </Typography>
+        ) : null}
 
         {sources.map((source) => {
           const colour = layerColour(source.layer);

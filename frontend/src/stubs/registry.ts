@@ -75,12 +75,19 @@ export const STUB_REGISTRY: StubEntry[] = [
   {
     surface: "guest-allowance",
     rendersToday:
-      "A five-search allowance counted in memory, resetting on reload.",
+      "NOTHING is rendered for an anonymous visitor beyond the sign-in wall. " +
+      "The allowance counter and soft prompt are built but cannot be honoured, " +
+      "because there is no anonymous path to the backend.",
     wiredBy: "6.0",
     realSource:
-      "Server-side rate limiting. The data model already supports the flow: " +
-      "interactions.user_id is nullable so a session can start anonymous and " +
-      "attach to an account at signup.",
+      "Server-side rate limiting plus an anonymous run path. The data model " +
+      "already supports the flow: interactions.user_id is nullable so a session " +
+      "can start anonymous and attach to an account at signup. " +
+      "HISTORY, recorded because it must not be repeated: this entry previously " +
+      "described only the counter, while the code rendered a complete fabricated " +
+      "answer to anonymous visitors, with real NCBI source URLs and a 'Grounded' " +
+      "trust pill, for any question asked. A registry entry that understates what " +
+      "a stub renders is worse than none, because it is read as an inventory.",
   },
   {
     surface: "kgx-export",
