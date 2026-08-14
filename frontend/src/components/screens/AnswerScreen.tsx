@@ -24,6 +24,7 @@
  * `components/source-card.html`.
  */
 
+import { Fragment } from "react";
 import { Box, Typography } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
 
@@ -244,44 +245,62 @@ export function AnswerScreen({
           <Notice key={i} testId={`answer-note-${i}`} tone="warn" text={note} />
         ))}
 
-        {/* The spine runs beside the prose, one segment per claim. */}
-        <Box sx={{ display: "grid", gridTemplateColumns: "14px 1fr", gap: 2.25 }}>
-          {/*
-            F-4.8-A-16. This was `aria-hidden`, so the provenance spine, which
-            this product's own documentation calls "visible before you read a
-            word", did not exist for assistive technology at all. Axe reported
-            zero violations the whole time, because axe cannot check whether the
-            one signal a product exists to convey is conveyed.
+        {/*
+          The provenance spine runs beside the prose, one segment per claim.
 
-            The visual track stays decorative; the MEANING is now carried in
-            text on each claim instead, so a cited and an uncited claim are
-            distinguishable without colour. That is WCAG 1.4.1 (use of colour),
-            which no automated rule was ever going to flag here.
-          */}
-          <Box
-            aria-hidden="true"
-            sx={{ display: "flex", flexDirection: "column", gap: 0.4, pt: 0.75 }}
-          >
-            {claims.map((claim, index) => (
+          Segment and claim are two cells of the SAME grid row rather than two
+          independently laid out columns, so a segment's height is driven by
+          the claim it describes and the two cannot drift apart. The earlier
+          form gave each segment `flex: 1` and a `minHeight` in a column of its
+          own, which held only while every claim happened to be one line long:
+          a two-line claim pushed the prose down while the track kept its own
+          rhythm, and by the third claim the grey uncited segment sat beside
+          the wrong sentence. A spine that points at the wrong claim is worse
+          than no spine, because it asserts a provenance that is not there.
+
+          Found by opening the application and looking at it, the same way the
+          `#root` width defect was, and for the same reason: every test here
+          asserts segment COUNT, colour and order, and none of them can see
+          that two boxes are no longer level with each other.
+        */}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "14px 1fr",
+            columnGap: 2.25,
+            rowGap: 1.9,
+            alignItems: "stretch",
+          }}
+        >
+          {claims.map((claim, index) => (
+            <Fragment key={index}>
+              {/*
+                F-4.8-A-16. This was `aria-hidden`, so the provenance spine,
+                which this product's own documentation calls "visible before
+                you read a word", did not exist for assistive technology at
+                all. Axe reported zero violations the whole time, because axe
+                cannot check whether the one signal a product exists to convey
+                is conveyed.
+
+                The visual track stays decorative; the MEANING is carried in
+                text on each claim instead, so a cited and an uncited claim are
+                distinguishable without colour. That is WCAG 1.4.1 (use of
+                colour), which no automated rule was ever going to flag here.
+              */}
               <Box
-                key={index}
+                aria-hidden="true"
                 data-testid={`spine-segment-${index}`}
                 data-layer={claim.layer ?? "none"}
                 sx={{
                   width: 6,
                   mx: "auto",
                   borderRadius: 1,
-                  flex: 1,
-                  minHeight: 46,
+                  alignSelf: "stretch",
                   bgcolor: layerColour(claim.layer).main,
                 }}
               />
-            ))}
-          </Box>
 
-          <Box>
-            {claims.map((claim, index) => (
-              <Typography key={index} sx={{ mb: 1.9, maxWidth: "64ch", "&:last-child": { mb: 0 } }}>
+              <Typography data-testid={`claim-text-${index}`} sx={{ maxWidth: "64ch" }}>
                 {claim.text}{" "}
                 <Box component="span" sx={visuallyHidden}>
                   {claim.citations.length === 0
@@ -317,8 +336,8 @@ export function AnswerScreen({
                   </Box>
                 ))}
               </Typography>
-            ))}
-          </Box>
+            </Fragment>
+          ))}
         </Box>
 
         {sources.length > 0 ? (

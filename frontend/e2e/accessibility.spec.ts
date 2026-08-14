@@ -119,6 +119,33 @@ test.describe("accessibility", () => {
     );
   });
 
+  test("the app fills the viewport rather than a leftover 720px column", async ({ page }) => {
+    // Found by LOOKING at the running app, after 147 unit tests, 17 end-to-end
+    // tests and a full WCAG pass had all stayed green through it.
+    //
+    // `#root { max-width: 720px }` was build phase 1.2's scaffold for a single
+    // centred chat column. It survived the restyle and squeezed the entire
+    // redesigned application into a 720px strip with bare canvas either side,
+    // wrapping the app bar's own wordmark onto three lines. Every screen was
+    // restyled; the container they sit in was not.
+    //
+    // This is the cheapest possible guard on the layout gap that
+    // tracker/phase_4.8.md declares as deliberately ungated. It does not check
+    // that the design is right, only that the app is not boxed into a corner
+    // of the window, which is the failure that actually happened.
+    await enterApp(page);
+
+    const { barWidth, viewportWidth } = await page.evaluate(() => ({
+      barWidth: document.querySelector("header")?.getBoundingClientRect().width ?? 0,
+      viewportWidth: window.innerWidth,
+    }));
+
+    expect(
+      barWidth / viewportWidth,
+      `the app bar spans ${Math.round((barWidth / viewportWidth) * 100)}% of the viewport`,
+    ).toBeGreaterThan(0.95);
+  });
+
   test("the landing screen is clean", async ({ page }) => {
     await enterApp(page);
     await expect(page.getByRole("heading", { name: /ask a biomedical question/i })).toBeVisible();

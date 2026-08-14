@@ -1,6 +1,34 @@
+/*
+ * Global reset.
+ *
+ * Build phase 4.8 took ownership of layout, colour and type from MUI's theme
+ * (`src/theme.ts`) and `CssBaseline`, so this file's job shrank to the few
+ * things that must be true before React mounts.
+ *
+ * TWO THINGS WERE REMOVED, and the reason is worth recording because neither
+ * was caught by any automated check in this phase.
+ *
+ * `#root { max-width: 720px; margin: 0 auto; padding: 2rem 1rem }` was build
+ * phase 1.2's scaffold, correct for a single centred chat column. It survived
+ * the restyle and squeezed the entire redesigned app into a 720px strip with
+ * bare canvas either side, wrapping the app bar's own wordmark onto three
+ * lines. Every screen was restyled and the container they sit in was not.
+ *
+ * 147 unit tests, 17 end-to-end tests and a full WCAG 2.1 AA pass all stayed
+ * green through it, because none of them looks at layout width. It was found by
+ * opening the application and looking at it. That is the gap `tracker/phase_4.8.md`
+ * declares as deliberately ungated, and it turned out to matter.
+ *
+ * `color-scheme: light dark` was the second: it invited the browser to render
+ * form controls and scrollbars dark while the theme commits to a single light
+ * palette, which is the product-owner decision of 2026-08-12 and is asserted by
+ * the premise gate at the theme level only.
+ */
+
 :root {
-  color-scheme: light dark;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* One committed light theme, matching src/theme.ts. */
+  color-scheme: light;
+  font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   line-height: 1.5;
 }
 
@@ -13,12 +41,20 @@ body {
   min-height: 100vh;
 }
 
+/*
+ * Full width. The application owns its own layout: AppShell provides the bar,
+ * the strip and the footer, and each screen centres its own content.
+ */
 #root {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
+  min-height: 100vh;
 }
 
+/*
+ * The classes below belong to build phase 1.2's chat components, which the new
+ * routing no longer renders. They are kept because those modules are still in
+ * the repository pending a deletion decision (F-4.8-L-17), and removing their
+ * styles first would leave that decision harder to reverse.
+ */
 .empty-state {
   margin-bottom: 1.5rem;
 }

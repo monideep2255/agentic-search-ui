@@ -144,6 +144,62 @@ test.describe("the trust surface", () => {
     }
   });
 
+  /*
+   * The spine's whole claim is that segment N describes claim N. Every other
+   * assertion in this file checks the segments' count, order and colour, which
+   * all stay correct while the two columns drift vertically out of register.
+   *
+   * This measures the thing those cannot see: each segment must be level with
+   * the sentence it is pointing at. The tolerance is generous on purpose, since
+   * the point is to catch a segment beside the WRONG claim, not to pin a
+   * padding value.
+   */
+  test("each spine segment stays level with the claim it describes", async ({ page }) => {
+    await signInAndScript(page);
+
+    /*
+     * Measured against the RENDERED TEXT, via a Range over the claim's own text
+     * nodes, not against the element box that holds it.
+     *
+     * The first version of this check compared the segment's box to the
+     * Typography's box. Both are cells of the same grid row, so they are level
+     * by construction and the assertion could not fail: a mutation restoring
+     * the old independent sizing passed it. Comparing against the glyphs is
+     * what makes it a measurement rather than a restatement of the layout.
+     */
+    const rows = await page.evaluate(() => {
+      const segments = [...document.querySelectorAll('[data-testid^="spine-segment-"]')];
+      const texts = [...document.querySelectorAll('[data-testid^="claim-text-"]')];
+      return segments.map((element, index) => {
+        const segment = element.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(texts[index]!);
+        const text = range.getBoundingClientRect();
+        return {
+          segmentTop: segment.top,
+          segmentBottom: segment.bottom,
+          textTop: text.top,
+          textBottom: text.bottom,
+        };
+      });
+    });
+
+    // Both sides present, and more than one, or the loop below proves nothing.
+    expect(rows.length).toBe(await page.getByTestId(/^claim-text-/).count());
+    expect(rows.length).toBeGreaterThan(1);
+
+    for (const [index, row] of rows.entries()) {
+      // The segment must SPAN the sentence it points at. A segment that has
+      // slipped onto a neighbouring claim fails one bound or the other.
+      expect(row.segmentTop, `segment ${index} starts below its claim`).toBeLessThanOrEqual(
+        row.textTop + 12,
+      );
+      expect(row.segmentBottom, `segment ${index} ends above its claim`).toBeGreaterThanOrEqual(
+        row.textBottom - 12,
+      );
+    }
+  });
+
   test("is clean under axe with a citation, a spine gap and a risk pill on screen", async ({
     page,
   }) => {

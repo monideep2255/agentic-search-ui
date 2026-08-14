@@ -212,6 +212,26 @@ The guarantee needs a real stream that really lands, which no mocked vitest harn
 
 Every new clause in this round was mutation-tested the same way, including the focus-trap check, which was watched failing before the `inert` fix landed.
 
+### Post-merge visual pass, 2026-08-13
+
+Not a review round. The product owner asked how the UI actually looks, so the application was started and screenshotted. Two defects were found by looking at it, both on `develop` after the phase had already closed green.
+
+Neither could have been caught by anything this phase built. Every check here asserts what is on screen, never where it is: presence, role, accessible name, colour token, order, count. Both defects are position defects, and they coexisted with 147 unit tests, 17 end-to-end tests, a clean typecheck, a clean production build and a full WCAG 2.1 AA pass.
+
+| Id | Severity | What | State |
+|----|----------|------|-------|
+| F-4.8-V-01 | major | Build phase 1.2's `#root { max-width: 720px }` scaffold survived the restyle, so the entire redesigned application rendered in a 720px strip with bare canvas either side and the app bar's own wordmark wrapped onto three lines. Every screen was restyled; the container they sit in was not | FIXED in `src/index.css`, plus `color-scheme: light dark`, which invited dark form controls against a single committed light palette |
+| F-4.8-V-02 | major | The provenance spine's segments and the prose ran as two independently laid out columns, the track on a fixed 46px rhythm and the prose on its own line height. They drifted apart cumulatively, so by the third claim the grey uncited segment sat beside the wrong sentence. A spine that points at the wrong claim asserts a provenance that is not there, which is worse than no spine | FIXED: segment and claim are now two cells of one grid row, so a segment's height is driven by the claim it describes and they cannot drift |
+
+Both fixes carry a mutation-tested guard, since the gap that let them through is real and will otherwise let the next one through too:
+
+- V-01: an e2e assertion that the app bar spans more than 95 percent of the viewport. Mutation-tested by restoring the 720px constraint. CAUGHT.
+- V-02: an e2e assertion that each segment vertically spans the claim it points at, measured with a Range over the claim's own text nodes. The first version of this guard compared the segment's box to the Typography's box, which are two cells of the same grid row and therefore level by construction, so it could not fail; a mutation passed it. Rewritten to measure the glyphs, then mutation-tested twice: against a displaced track (CAUGHT), and against the actual committed pre-fix component with nothing changed but the test hook (CAUGHT, at segment 1, which is where the drift starts).
+
+That is the sixth assertion-that-cannot-fail in this phase, and the fourth of mine. The pattern is now consistent enough to be predictive rather than anecdotal: an assertion written against the structure that produced the output tends to restate it. Every one of the six was caught by breaking the code and watching the clause stay green, never by reading the clause.
+
+The wider gap is stated plainly in "What the gate deliberately does not cover": nothing in this repository looks at the rendered page. That statement was written before either defect existed and correctly predicted both.
+
 ## Carried open
 
 Eight findings, each with a named owner, so none is a silent deferral.
@@ -229,6 +249,8 @@ Eight findings, each with a named owner, so none is a silent deferral.
 | F-4.8-L-17 | 10 modules remain orphaned with 36 tests exercising code the app no longer renders. Their green tests inflate the suite's number | Needs a product-owner decision on deletion, per `file-protection` |
 
 ## History
+
+- 2026-08-13: post-merge visual pass on `develop`. Two position defects found by starting the application and looking at it, F-4.8-V-01 and F-4.8-V-02, both major, both fixed with a mutation-tested guard. Neither was reachable by any check this phase built, and the phase's own gate had already declared that gap in writing.
 
 - 2026-08-13: merged to `develop` as PR #41, commit `2422131`, no squash so the eleven commits and their reasoning survive. Post-merge verification run on `develop` before pushing: vitest 147, typecheck clean, production build succeeds, doc drift clean. Remote advance proved by comparing local and remote HEAD hashes rather than trusting the push output. Phase branch deleted locally and on the remote.
 
