@@ -17,5 +17,29 @@ export default defineConfig({
     // this project's unit-test suite. Judgment call, logged in
     // DECISIONS.md.
     exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
+    /*
+     * 15s, not vitest's 5s default. Build phase 4.9.
+     *
+     * TWO causes were found, and this is only the second of them, which is
+     * worth stating because the first explanation was incomplete and the
+     * incomplete version would have looked like it worked.
+     *
+     * The first and larger cause was a leak in this phase's own gate: a
+     * `ReadableStream` left unclosed to simulate a run in flight held a reader
+     * open for the file's lifetime, and unrelated tests in other files then
+     * timed out at 15s and once at 23s. Closing it fixed six consecutive runs.
+     *
+     * The second is genuine contention. With the leak fixed but the default
+     * timeout restored, three of five full runs still failed, always on a
+     * ~5000ms timeout, always a different set, and every implicated file
+     * passed alone. This phase took the suite from 131 tests to 146 and the
+     * new ones render the whole App and stream real SSE frames through it.
+     *
+     * A deadline, not an assertion. Every check must still pass, and a genuine
+     * hang still fails the run, 15s later. Verified at six consecutive clean
+     * full runs with both fixes in place, against three failures in five
+     * without this one.
+     */
+    testTimeout: 15_000,
   },
 });

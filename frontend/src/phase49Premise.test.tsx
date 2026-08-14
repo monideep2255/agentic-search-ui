@@ -226,6 +226,18 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
           controller.enqueue(new TextEncoder().encode(STREAM.slice(0, STREAM.indexOf("event: token"))));
+          /*
+           * CLOSE it. The first version left the controller open to simulate a
+           * run still in flight, which left a reader pending for the rest of
+           * the file's lifetime and cost the whole suite: across five full
+           * runs, unrelated tests in other files timed out at 15s and once at
+           * 23s, while every implicated file passed alone.
+           *
+           * Closing the body does not end the RUN. No `done` event was sent,
+           * so `landed` stays false and the run screen stays up, which is the
+           * only thing this clause needs.
+           */
+          controller.close();
         },
       });
       return Promise.resolve(new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }));
