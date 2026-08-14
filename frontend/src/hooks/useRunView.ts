@@ -60,7 +60,7 @@ const SYSTEM_NOTE_PREFIXES = [
 
 const isSystemNote = (text: string) =>
   SYSTEM_NOTE_PREFIXES.some((prefix) => text.trimStart().startsWith(prefix));
-import type { StepName, ToolCall } from "../components/screens/RunScreen";
+import type { ReasoningStep, StepName, ToolCall } from "../components/screens/RunScreen";
 import type { Claim, Source, TrustSignal } from "../components/screens/AnswerScreen";
 
 /** The wire's layer strings, mapped to the design system's 1, 2, 3. */
@@ -92,6 +92,32 @@ export interface RunView {
   sources: Source[];
   trust: TrustSignal[];
   meta: string;
+  /**
+   * The run's own account of what it did, oldest first (F-4.8-D-10).
+   *
+   * Available while the run is live, not only once it lands, because the
+   * prototype shows it on the run screen as well as behind the answer
+   * screen's `Show work`.
+   */
+  steps: ReasoningStep[];
+  /**
+   * The terminal outcome word, from the run's own `done` event (F-4.8-D-05).
+   *
+   * The prototype's status strip leads with it: "Answered". Null until a run
+   * terminates, and null on a fatal error, which is not an outcome the strip
+   * should dress up as one.
+   */
+  outcome: string | null;
+  /** Wall-clock the run reported, in ms, from `done.elapsed_ms`. */
+  elapsedMs: number | null;
+  /**
+   * How many DISTINCT layers the run actually touched (F-4.8-D-12).
+   *
+   * Exposed as a number rather than left inside `meta`'s prose so the trust
+   * pill can state it. "Cross-checked across layers" is true of any run that
+   * touched more than one and therefore says nothing.
+   */
+  layerCount: number;
   /** True once a terminal event has arrived, so the answer screen can show. */
   landed: boolean;
   /** A refusal or fatal error message, if the run produced one. */
@@ -140,6 +166,10 @@ export const EMPTY_RUN_VIEW: RunView = {
   sources: [],
   trust: [],
   meta: "",
+  steps: [],
+  outcome: null,
+  elapsedMs: null,
+  layerCount: 0,
   landed: false,
   failure: null,
   refusal: null,
@@ -385,11 +415,96 @@ export function useRunView(events: AgentEvent[]): RunView {
         trust.push({ kind: "risk", label: `${payload.risk_tier} risk claim` });
       }
       if (payload.triangulated === true) {
-        trust.push({ kind: "plain", label: "Cross-checked across layers" });
+        // F-4.8-D-12. This read "Cross-checked across layers", which is true of
+        // any run that touched more than one and therefore tells the reader
+        // nothing. The prototype states the count, so the reader can weigh it.
+        // `layerCount` is computed below from the run's own tool calls; the
+        // pill is pushed after it exists.
+        trust.push({ kind: "plain", label: "__LAYER_COUNT__" });
       }
     }
 
+    /*
+     * The run's own account of itself (F-4.8-D-10, F-4.8-D-05).
+     *
+     * Built from the events in arrival order, so it reads as a log rather than
+     * a summary. Timings are relative to the FIRST event rather than absolute,
+     * which is what the prototype's `.tracelog` shows and the only form that
+     * means anything to a reader.
+     *
+     * The guard's line comes from `CATEGORY_COPY`, never from
+     * `guard.reason`. That field is free-form backend text, and
+     * `GuardrailBanner` and `CapMessage` both refuse to render backend message
+     * fields on purpose: Section 12.6's no-cost-figure rule can only be
+     * guaranteed by never rendering them. F-4.8-A-15 was that leak
+     * reintroduced once already. `think.narrative` and `plan.narrative` are a
+     * different thing, the agent's own narration written to be shown, and the
+     * prototype shows them.
+     */
+    const firstTs = events.length > 0 ? Date.parse(events[0]!.ts) : NaN;
+    const relative = (ts: string): string | null => {
+      const at = Date.parse(ts);
+      if (!Number.isFinite(firstTs) || !Number.isFinite(at)) return null;
+      return `${Math.max(0, (at - firstTs) / 1000).toFixed(1)}s`;
+    };
+    const steps: ReasoningStep[] = [];
+    for (const event of events) {
+      if (event.type === "guard") {
+        steps.push({
+          step: "Guard",
+          at: relative(event.ts),
+          text: CATEGORY_COPY[event.payload.category] ?? CATEGORY_COPY.ok,
+        });
+      } else if (event.type === "think" && event.payload.narrative) {
+        steps.push({ step: "Think", at: relative(event.ts), text: event.payload.narrative });
+      } else if (event.type === "plan" && event.payload.narrative) {
+        steps.push({ step: "Plan", at: relative(event.ts), text: event.payload.narrative });
+      } else if (event.type === "tool_result") {
+        steps.push({
+          step: "Act",
+          at: relative(event.ts),
+          text: `${event.payload.tool} — ${event.payload.result_count} ${
+            event.payload.result_count === 1 ? "result" : "results"
+          }`,
+        });
+      }
+    }
+
+    /*
+     * DERIVED, not read. The wire's `done` payload carries `trust_outcome`,
+     * `elapsed_ms`, `total_cost_usd` and `total_tool_calls`, and no status
+     * word at all, so the prototype's "Answered" has to come from what the run
+     * actually produced.
+     *
+     * A fatal error is deliberately NOT dressed up as an outcome, and a
+     * refusal says so rather than claiming an answer, which is the same
+     * cite-or-refuse honesty the trust pills already carry.
+     */
+    const OUTCOME_BY_TRUST: Record<string, string> = {
+      answer: "Answered",
+      flag: "Answered",
+      ask: "Needs a narrower question",
+      refuse: "Refused",
+    };
+    const outcome =
+      fatalError !== undefined
+        ? null
+        : done && done.type === "done"
+          ? (OUTCOME_BY_TRUST[done.payload.trust_outcome] ?? "Answered")
+          : null;
+    const elapsedMs =
+      done && done.type === "done" && typeof done.payload.elapsed_ms === "number"
+        ? done.payload.elapsed_ms
+        : null;
+
     const layersUsed = new Set(toolCalls.map((call) => call.layer));
+    const layerCount = layersUsed.size;
+    // Resolve the triangulation pill now that the count is known (F-4.8-D-12).
+    for (const signal of trust) {
+      if (signal.label === "__LAYER_COUNT__") {
+        signal.label = `${layerCount} ${layerCount === 1 ? "layer" : "layers"} agreed`;
+      }
+    }
     const meta = landed
       ? `${toolCalls.length} ${toolCalls.length === 1 ? "tool" : "tools"} · ` +
         `${layersUsed.size} ${layersUsed.size === 1 ? "layer" : "layers"} · ` +
@@ -450,6 +565,10 @@ export function useRunView(events: AgentEvent[]): RunView {
       sources,
       trust,
       meta,
+      steps,
+      outcome,
+      elapsedMs,
+      layerCount,
       landed,
       failure,
       refusal,

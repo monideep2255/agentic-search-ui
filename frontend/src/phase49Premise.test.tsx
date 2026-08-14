@@ -112,8 +112,19 @@ const STREAM = [
   frame(9, "citation", { citation_id: "c-1", display_index: 1, source: "NCBI Gene", source_id: "672", source_url: "https://www.ncbi.nlm.nih.gov/gene/672", layer: "layer_1_graph", field: "cypher_query", claim_text: "BRCA1 is associated with hereditary breast and ovarian cancer syndrome", evidence_kind: "curated assertion", assertion_confidence: "high", population_ancestry_context: null, license: "public domain" }),
   frame(10, "citation", { citation_id: "c-2", display_index: 2, source: "MedGen", source_id: "C0677776", source_url: "https://www.ncbi.nlm.nih.gov/medgen/C0677776", layer: "layer_2_api", field: "ncbi_efetch", claim_text: "The MedGen record describes an autosomal dominant pattern", evidence_kind: "live record", assertion_confidence: "high", population_ancestry_context: null, license: "public domain" }),
   frame(11, "citation", { citation_id: "c-3", display_index: 3, source: "PubMed", source_id: "21990134", source_url: "https://pubmed.ncbi.nlm.nih.gov/21990134/", layer: "layer_3_enrichment", field: "pubtator_annotate", claim_text: "Biallelic variants are reported in Fanconi anemia group S", evidence_kind: "literature", assertion_confidence: "moderate", population_ancestry_context: null, license: "public domain" }),
-  frame(12, "trust_signal", { outcome: "pass", risk_tier: "low", grounded: true, triangulated: true }),
-  frame(13, "done", { status: "answered", trust_outcome: "pass", elapsed_ms: 11400, truncated: false }),
+  frame(12, "trust_signal", { outcome: "answer", risk_tier: "low", grounded: true, triangulated: true }),
+  /*
+   * The REAL `done` shape, corrected 2026-08-14 while building T-4.9-01.
+   *
+   * The first version of this fixture sent `{status, trust_outcome, elapsed_ms,
+   * truncated}`, which the client's own validator REJECTS: the wire carries
+   * `total_cost_usd`, `total_tool_calls`, `elapsed_ms` and `trust_outcome`, and
+   * no status word at all. A fixture authored from a reading of the design
+   * rather than the contract is the exact failure LEARNINGS.md records twice
+   * for build phase 3.1, and it is why the answer screen rendered a schema
+   * error in the 2026-08-14 comparison screenshots.
+   */
+  frame(13, "done", { total_cost_usd: 0.0031, total_tool_calls: 3, elapsed_ms: 11400, trust_outcome: "answer" }),
 ].join("");
 
 /** A `Response` whose body streams the scripted frames, as the real one does. */
@@ -292,7 +303,7 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await landAnAnswer(user);
 
     const followUp = screen.getByTestId("follow-up");
-    const feedback = screen.getByTestId("feedback-surface");
+    const feedback = screen.getByTestId("feedback");
     expect(
       feedback.compareDocumentPosition(followUp) & Node.DOCUMENT_POSITION_PRECEDING,
     ).toBeTruthy();

@@ -281,6 +281,7 @@ export function App() {
             activeStep={stopped ? null : step}
             reachedSteps={view.reachedSteps}
             toolCalls={view.toolCalls}
+            steps={view.steps}
             personaName={persona}
             stopEnabled={view.stopEnabled && !stopped}
             refusal={view.refusal}
@@ -308,6 +309,9 @@ export function App() {
             sources={view.sources}
             trust={view.trust}
             meta={view.meta}
+            outcome={view.outcome}
+            elapsedMs={view.elapsedMs}
+            steps={view.steps}
             // F-4.8-J-02. A refusal or a fatal error arrives with a `done` or
             // `error` event, which lands the user here immediately. Passing
             // these only to RunScreen meant the entire user-facing output of
@@ -377,6 +381,9 @@ export function App() {
         personaName={persona}
         signedIn={signedIn}
         hideAuthAction={searchView.name === "signin" && screen === "search"}
+        // T-4.9-10: the account menu names the account, so the bar needs the
+        // email too, not only the rail's footer.
+        accountEmail={accountEmail ?? undefined}
         showRailToggle={railAvailable}
         railOpen={railOpen}
         onToggleRail={() => setRailOpen((open) => !open)}

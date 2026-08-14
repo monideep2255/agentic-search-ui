@@ -181,10 +181,14 @@ test.describe("the stored-searches rail collapses", () => {
   test("carries each search's own tool, layer and source counts", async ({ page }) => {
     await signInAndAsk(page);
 
-    // Wait for the run to land, which is when the counts exist at all.
-    await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
+    /*
+     * Wait for the run to LAND, which is when the counts exist at all.
+     *
+     * Waits on the answer screen's status strip, not on "New search": the run
+     * screen carries that button too, so the old wait could pass mid-run and
+     * then read a rail item that had no counts on it yet.
+     */
+    await expect(page.getByTestId("answer-meta")).toBeVisible({ timeout: 30_000 });
 
     /*
      * `.rm` in the prototype, `"3 tools · 3 layers · 3 sources"`.
@@ -195,13 +199,24 @@ test.describe("the stored-searches rail collapses", () => {
      * It is deliberately indifferent to what the counts actually are, since the
      * mock backend's run legitimately produces zeroes.
      */
-    const answerMeta = (await page.getByTestId("answer-meta").textContent())!.trim();
-    expect(answerMeta).toMatch(/tools? · .* layers? · .* sources?/);
-
+    /*
+     * INVERTED in build phase 4.9, and deliberately not relaxed.
+     *
+     * The answer screen's strip now leads with the outcome and the elapsed
+     * time before the counts (F-4.8-D-05), so it is a SUPERSET of the rail's
+     * label rather than equal to it. The guarantee is unchanged, and still
+     * cannot pass against a hardcoded label: the rail's counts must appear
+     * verbatim inside the answer's own strip, so the rail is still reading the
+     * run it belongs to.
+     */
     const railItem = page.getByTestId("history-rail").getByRole("button", {
       name: /diseases are associated with BRCA1/i,
     });
-    await expect(railItem).toContainText(answerMeta);
+    const railText = (await railItem.textContent())!.trim();
+    const counts = railText.match(/\d+ tools? · \d+ layers? · \d+ sources?/);
+    expect(counts, `the rail item carried no counts: ${railText}`).not.toBeNull();
+
+    await expect(page.getByTestId("answer-meta")).toContainText(counts![0]);
   });
 
   test("fills the landing beside a full-height rail", async ({ page }) => {

@@ -24,11 +24,13 @@
  * `components/source-card.html`.
  */
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
 
 import { designTokens, layerColour } from "../../theme";
+import type { ReasoningStep } from "./RunScreen";
+import { ReasoningLog } from "./ReasoningLog";
 
 export type Layer = 1 | 2 | 3;
 
@@ -67,6 +69,12 @@ export interface AnswerScreenProps {
   claims: Claim[];
   sources: Source[];
   meta?: string;
+  /** The run's outcome word, e.g. "Answered" (F-4.8-D-05). */
+  outcome?: string | null;
+  /** Wall-clock the run reported, in ms (F-4.8-D-05). */
+  elapsedMs?: number | null;
+  /** The run's own account of what it did, behind `Show work` (F-4.8-D-05). */
+  steps?: ReasoningStep[];
   trust?: TrustSignal[];
   /** The feedback surface, injected so this screen does not own its state. */
   feedback?: React.ReactNode;
@@ -182,6 +190,9 @@ export function AnswerScreen({
   claims,
   sources,
   meta,
+  outcome = null,
+  elapsedMs = null,
+  steps = [],
   trust = [],
   feedback,
   followUp,
@@ -193,6 +204,43 @@ export function AnswerScreen({
   onFlagSource,
   flaggedSources = [],
 }: AnswerScreenProps) {
+  /** `Show work` starts closed, as the prototype's `#workPanel` does. */
+  const [workOpen, setWorkOpen] = useState(false);
+  /*
+   * Source disclosure state, F-4.8-D-01.
+   *
+   * CONTROLLED rather than relying on `<details>`' own toggling. jsdom does not
+   * implement the activation behaviour reliably, so an uncontrolled version
+   * would render correctly in a browser and be untestable here, which is how a
+   * surface ends up with no check at all. The summary's default action is
+   * prevented so the two do not fight.
+   */
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [openSources, setOpenSources] = useState<number[]>([]);
+  const toggleSource = (n: number) =>
+    setOpenSources((current) =>
+      current.includes(n) ? current.filter((x) => x !== n) : [...current, n],
+    );
+
+  /** The prototype's `s.tag`, naming the layer rather than numbering it. */
+  const LAYER_WORD: Record<number, string> = { 1: "graph", 2: "live", 3: "literature" };
+
+  /*
+   * The chip's short label, F-4.8-D-04.
+   *
+   * The prototype's chip reads `1 Gene 672`: the index AND what it points at,
+   * so a reader can tell two citations apart without scrolling to the cards.
+   * "NCBI " is trimmed exactly as the prototype trims it; nothing else is
+   * invented, and a chip whose source is missing falls back to the bare index
+   * rather than showing a placeholder.
+   */
+  const sourceByIndex = new Map(sources.map((source) => [source.n, source]));
+  const shortLabel = (n: number): string | null => {
+    const source = sourceByIndex.get(n);
+    if (!source) return null;
+    return source.name.replace(/^NCBI\s+/i, "");
+  };
+
   return (
     <Box sx={{ maxWidth: 900, mx: "auto", px: 3, py: 3.5 }}>
       <Box
@@ -231,17 +279,82 @@ export function AnswerScreen({
               </Box>
             ) : null}
           </Box>
-          {meta ? (
-            <Typography
-              variant="body2"
-              // Hooked so a check can assert the rail's per-search counts AGREE
-              // with this line, rather than matching a literal both could get
-              // wrong independently.
-              data-testid="answer-meta"
-              sx={{ color: designTokens.inkMuted, mt: 1 }}
+          {/*
+            The status strip, F-4.8-D-05. This was the counts alone. The
+            prototype's `.summary` leads with the OUTCOME and the elapsed time,
+            then the counts, then a `Show work` disclosure that reopens the
+            run's own steps, which were otherwise unreachable once the run
+            screen was gone.
+
+            Still hooked as `answer-meta` so the rail's per-search counts can be
+            asserted to AGREE with this line rather than matching a literal both
+            could get wrong independently.
+          */}
+          {meta || outcome ? (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 1.25,
+                mt: 1.25,
+                pt: 1.25,
+                borderTop: `1px solid ${designTokens.line}`,
+                /*
+                 * NO background of its own, which is what the prototype's
+                 * `.summary` has: no rule, so it sits on the panel's white.
+                 *
+                 * The first version tinted it `surfaceSunk`, an addition the
+                 * design does not make, and that tint is what pushed the green
+                 * "✓ Answered" to 4.34:1 against a 4.5:1 requirement. Matching
+                 * the prototype and passing the gate turned out to be the same
+                 * edit, which is the argument for transcribing rather than
+                 * improvising.
+                 */
+              }}
             >
-              {meta}
-            </Typography>
+              <Typography
+                variant="body2"
+                data-testid="answer-meta"
+                sx={{ color: designTokens.inkMuted }}
+              >
+                {outcome ? (
+                  <Box
+                    component="span"
+                    sx={{ color: designTokens.ok, fontWeight: 700, mr: 0.75 }}
+                  >
+                    ✓ {outcome}
+                  </Box>
+                ) : null}
+                {elapsedMs !== null ? `${(elapsedMs / 1000).toFixed(1)}s · ` : ""}
+                {meta}
+              </Typography>
+              {steps.length > 0 ? (
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => setWorkOpen((open) => !open)}
+                  aria-expanded={workOpen}
+                  sx={{
+                    ml: "auto",
+                    font: "inherit",
+                    fontSize: 13,
+                    border: 0,
+                    bgcolor: "transparent",
+                    color: designTokens.link,
+                    cursor: "pointer",
+                    p: 0,
+                  }}
+                >
+                  {workOpen ? "Hide work ▴" : "Show work ▾"}
+                </Box>
+              ) : null}
+            </Box>
+          ) : null}
+          {workOpen && steps.length > 0 ? (
+            <Box sx={{ mt: 1.75 }}>
+              <ReasoningLog steps={steps} testId="work-panel" />
+            </Box>
           ) : null}
         </Box>
 
@@ -340,6 +453,14 @@ export function AnswerScreen({
                     }}
                   >
                     {n}
+                    {shortLabel(n) ? (
+                      <Box
+                        component="span"
+                        sx={{ color: designTokens.inkMuted, fontWeight: 400 }}
+                      >
+                        {shortLabel(n)}
+                      </Box>
+                    ) : null}
                   </Box>
                 ))}
               </Typography>
@@ -347,48 +468,154 @@ export function AnswerScreen({
           ))}
         </Box>
 
+        {/*
+          F-4.8-D-01. The sources were always expanded, every field of every
+          card at once, so a six-source answer became a wall and the sources
+          stopped being scannable. The prototype collapses them behind one
+          disclosure carrying the count, and collapses each card inside it.
+        */}
         {sources.length > 0 ? (
-          <Typography
-            variant="overline"
-            component="p"
-            sx={{ mt: 3.5, mb: 1.25, color: designTokens.inkFaint }}
+        <Box
+          component="details"
+          data-testid="sources-disclosure"
+          open={sourcesOpen}
+          sx={{ mt: 3.5 }}
+        >
+          <Box
+            component="summary"
+            onClick={(event: React.MouseEvent) => {
+              event.preventDefault();
+              setSourcesOpen((open) => !open);
+            }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              cursor: "pointer",
+              listStyle: "none",
+              mb: 1.25,
+              "&::-webkit-details-marker": { display: "none" },
+            }}
           >
-            Sources
-          </Typography>
-        ) : null}
+            <Box
+              component="span"
+              aria-hidden="true"
+              sx={{
+                fontSize: 10,
+                color: designTokens.inkFaint,
+                transform: sourcesOpen ? "rotate(90deg)" : "none",
+                transition: "transform .12s ease",
+              }}
+            >
+              ▶
+            </Box>
+            <Typography
+              variant="overline"
+              component="span"
+              sx={{ color: designTokens.inkFaint }}
+            >
+              Sources
+            </Typography>
+            <Box
+              component="span"
+              sx={{
+                ...mono,
+                fontSize: 11,
+                fontWeight: 700,
+                color: designTokens.inkMuted,
+                bgcolor: designTokens.surfaceSunk,
+                border: `1px solid ${designTokens.line}`,
+                borderRadius: 999,
+                px: 0.75,
+              }}
+            >
+              {sources.length}
+            </Box>
+          </Box>
 
         {sources.map((source) => {
           const colour = layerColour(source.layer);
           return (
             <Box
               key={source.n}
+              component="details"
               data-testid={`source-${source.n}`}
               data-layer={source.layer}
+              open={openSources.includes(source.n)}
               sx={{
                 border: `1px solid ${designTokens.line}`,
                 borderLeft: `4px solid ${colour.main}`,
                 borderRadius: 0.5,
                 bgcolor: designTokens.surface,
                 mb: 1,
-                p: 1.75,
+                px: 1.75,
+                py: 1.25,
               }}
             >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flexWrap: "wrap", mb: 1.25 }}>
+              <Box
+                component="summary"
+                onClick={(event: React.MouseEvent) => {
+                  event.preventDefault();
+                  toggleSource(source.n);
+                }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.25,
+                  flexWrap: "wrap",
+                  cursor: "pointer",
+                  listStyle: "none",
+                  "&::-webkit-details-marker": { display: "none" },
+                }}
+              >
+                <Box
+                  component="span"
+                  aria-hidden="true"
+                  sx={{
+                    fontSize: 9,
+                    color: designTokens.inkFaint,
+                    transform: openSources.includes(source.n) ? "rotate(90deg)" : "none",
+                    transition: "transform .12s ease",
+                  }}
+                >
+                  ▶
+                </Box>
                 <Box component="span" sx={{ ...mono, fontWeight: 700, fontSize: 12 }}>
                   [{source.n}]
                 </Box>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                   {source.name}
                 </Typography>
+                {/*
+                  F-4.8-D-02. This read "L1", which a reader has to already
+                  know how to decode. The prototype names the layer in words.
+                */}
                 <Box component="span" sx={{ ...mono, ml: "auto", fontSize: 11.5, color: designTokens.inkMuted }}>
-                  L{source.layer}
+                  L{source.layer} · {LAYER_WORD[source.layer] ?? "source"}
                 </Box>
+              </Box>
+
+              {/*
+                The flag control, moved OUT of the summary in build phase 4.9.
+                The prototype puts it in the summary row, and axe rightly calls
+                that `nested-interactive`: a `<summary>` with a focusable
+                descendant, WCAG 4.1.2. A card is flagged after reading it, so
+                requiring the card to be open first costs nothing. Filed as
+                F-4.9-D-13 rather than silently diverging.
+              */}
                 {onFlagSource ? (
                   <Box
                     component="button"
                     type="button"
                     aria-pressed={flaggedSources.includes(source.n)}
-                    onClick={() => onFlagSource(source.n)}
+                    onClick={(event: React.MouseEvent) => {
+                      // It lives inside the summary, as it does in the
+                      // prototype, so without this a flag click also opens or
+                      // closes the card under the user's cursor.
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onFlagSource(source.n);
+                    }}
                     sx={{
                       font: "inherit",
                       fontSize: 11.5,
@@ -412,9 +639,8 @@ export function AnswerScreen({
                     {flaggedSources.includes(source.n) ? "Flagged" : "Flag: does not support"}
                   </Box>
                 ) : null}
-              </Box>
-
-              {/* Every field Section 9.1 requires. The licence is not optional. */}
+              {/* Every field Section 9.1 requires. The licence is not optional.
+                  Inside the disclosure now, so a collapsed card is a header. */}
               <Box
                 component="dl"
                 sx={{
@@ -483,6 +709,8 @@ export function AnswerScreen({
             </Box>
           );
         })}
+        </Box>
+        ) : null}
 
         {trust.length > 0 ? (
           <Box
@@ -532,8 +760,14 @@ export function AnswerScreen({
           </Box>
         ) : null}
 
-        {feedback}
+        {/*
+          F-4.8-D-11. These were the other way round. The prototype's `#tail`
+          orders sources, verdict pills, the follow-up form, then the rating,
+          which asks "was that useful" AFTER offering the next question rather
+          than before it.
+        */}
         {followUp}
+        {feedback}
       </Box>
     </Box>
   );

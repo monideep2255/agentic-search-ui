@@ -121,7 +121,15 @@ async function signInAndScript(page: Page): Promise<void> {
   const main = page.getByRole("main");
   await main.getByRole("textbox", { name: /question/i }).fill("Which diseases are associated with BRCA1?");
   await main.getByRole("button", { name: /^search the knowledge graph$/i }).click();
-  await expect(page.getByTestId("source-1")).toBeVisible({ timeout: 30_000 });
+  /*
+   * Build phase 4.9 collapsed the sources behind a disclosure (F-4.8-D-01), as
+   * the prototype has them. Every guarantee this suite holds about a source
+   * card is unchanged; only the route to seeing one moved, so the helper opens
+   * the disclosure rather than any assertion being relaxed.
+   */
+  await expect(page.getByTestId("sources-disclosure")).toBeVisible({ timeout: 30_000 });
+  await page.getByTestId("sources-disclosure").getByText("Sources", { exact: true }).click();
+  await expect(page.getByTestId("source-1")).toBeVisible();
 }
 
 test.describe("the trust surface", () => {

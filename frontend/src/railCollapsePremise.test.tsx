@@ -95,6 +95,19 @@ const toggleName = /show or hide your searches/i;
 const collapseName = /^hide your searches$/i;
 const expandName = /^show your searches$/i;
 
+/**
+ * Sign out through the account menu.
+ *
+ * Build phase 4.9 replaced the bare "Account" button, whose only action was
+ * sign-out, with the prototype's menu (F-4.8-A-20). These clauses assert what
+ * happens to the RAIL on sign-out, and that guarantee is unchanged; only the
+ * route to signing out moved, so only the route is updated here.
+ */
+async function signOut(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
+  await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+}
+
 async function signIn(user: ReturnType<typeof userEvent.setup>) {
   await user.click(navArea().getByRole("button", { name: /log in/i }));
   await user.type(screen.getByLabelText(/email/i), "person@example.com");
@@ -195,7 +208,7 @@ describe("F-4.8-P-03: the stored-searches rail collapses", () => {
     await signInWithOneSearch(user);
     expect(screen.getByTestId("history-rail")).toBeInTheDocument();
 
-    await user.click(navArea().getByRole("button", { name: /^account$/i }));
+    await signOut(user);
 
     expect(screen.queryByTestId("history-rail")).not.toBeInTheDocument();
     expect(screen.queryByTestId("collapsed-rail")).not.toBeInTheDocument();
@@ -223,7 +236,7 @@ describe("F-4.8-P-03: the stored-searches rail collapses", () => {
     // passed vacuously on its first run. This clause must fail today.
     expect(screen.getByRole("button", { name: toggleName })).toBeInTheDocument();
 
-    await user.click(navArea().getByRole("button", { name: /^account$/i }));
+    await signOut(user);
 
     // `avail = st.loggedIn && onSearch` in the prototype. A visitor with no
     // rail must not be offered a control that toggles nothing.

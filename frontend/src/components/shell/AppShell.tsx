@@ -19,15 +19,18 @@ import { AppBar, Box, Button, IconButton, Toolbar, Typography } from "@mui/mater
 import { designTokens } from "../../theme";
 import { Logo } from "../brand/Logo";
 import { PersonaChip } from "./PersonaChip";
+import { AccountMenu } from "./AccountMenu";
 
 /** The screens reachable from the bar. */
 export type ScreenName = "search" | "integrations" | "docs" | "about";
 
 const NAV: { key: ScreenName; label: string }[] = [
+  // Order transcribed from the prototype's `.nav` (F-4.8-D-09). Docs and About
+  // were the other way round, which every membership assertion accepted.
   { key: "search", label: "Search" },
   { key: "integrations", label: "Integrations" },
-  { key: "docs", label: "Docs" },
   { key: "about", label: "About" },
+  { key: "docs", label: "Docs" },
 ];
 
 export interface AppShellProps {
@@ -177,20 +180,15 @@ export function AppShell({
             </Box>
 
             {hideAuthAction ? null : signedIn ? (
-              <Button
-                onClick={onSignOut}
-                sx={{
-                  ml: 1,
-                  fontSize: 13,
-                  color: "rgba(255,255,255,.92)",
-                  border: "1px solid rgba(255,255,255,.55)",
-                  borderRadius: 1,
-                  px: 1.5,
-                  py: 0.6,
-                }}
-              >
-                {accountEmail ?? "Account"}
-              </Button>
+              // F-4.8-A-20. This was a lone button whose only action was
+              // sign-out. The prototype's control names the account and puts
+              // sign-out inside a menu, which is both what the design says and
+              // one fewer way to lose a session by accident.
+              <AccountMenu
+                email={accountEmail ?? "your account"}
+                onSignOut={onSignOut}
+                onNavigate={(screen) => onNavigate?.(screen)}
+              />
             ) : (
               <Button
                 onClick={onSignIn}
