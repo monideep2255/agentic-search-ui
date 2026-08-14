@@ -99,7 +99,7 @@ while building, which means none of it has been independently reviewed.
 |----|------|-------|
 | F-4.8-L-01 | The first assembly replaced `createRun` with a demo timeline. Every screen rendered, navigation worked, and all 13 gate clauses passed while nothing connected the UI to the agent. The gate asserted rendering and never wiring | Fixed. Real path restored, gate clause 3b added so it cannot regress, coverage statement corrected |
 | F-4.8-L-02 | The stub-marker gate test passed vacuously on its first run: it asserted only an absence, against an app that rendered almost nothing | Fixed. Presence assertions now run first |
-| F-4.8-L-03 | The navigation landmark was unlabelled, so "Search" in the bar and "Search" on the form were indistinguishable | Fixed. Landmark labelled, and the form action renamed to "Ask" |
+| F-4.8-L-03 | The navigation landmark was unlabelled, so "Search" in the bar and "Search" on the form were indistinguishable | Fixed. Landmark labelled, and the form action renamed to "Ask". REVISED 2026-08-14: the rename overshot. The prototype's `button.go` reads "Search", and the collision lives in the ACCESSIBLE name, not the visible one, so the visible label is restored to the design's and the button carries `aria-label="Search the knowledge graph"`. WCAG 2.5.3 (Label in Name) is why that name still contains "Search": a speech-input user saying "Search" must be able to operate it. The landmark label, the other half of the original fix, is unchanged and still load-bearing |
 | F-4.8-L-04 | The app bar offered "Log in" while the sign-in form was already open | Fixed. `hideAuthAction` |
 | F-4.8-L-05 | Persona chip label failed WCAG AA: `inkOnNavyMute` on the chip's composited ground measures about 2.7:1 | Fixed. Raised to `inkOnNavy`, 5.4:1 |
 | F-4.8-L-06 | Scrollable `<pre>` code blocks were not keyboard-focusable, so a keyboard user could not scroll to read them | Fixed. `tabIndex`, `role`, `aria-label` |
@@ -113,7 +113,7 @@ while building, which means none of it has been independently reviewed.
 | F-4.8-L-14 | The stepper reported every step as pending once a run landed, because it tracked only the live step and a finished run has none. What a run DID was not recoverable from where it IS | Fixed. `reachedSteps` is derived from the events that actually occurred |
 | F-4.8-L-15 | The answer screen offered no way back to the landing; the run screen always had one, so the flow dead-ended exactly when a user finished reading | Fixed |
 | F-4.8-L-16 | PRE-EXISTING, and the headline of the phase. This repository has had no working end-to-end browser test since build phase 3.0. Phase 3.0 replaced the passthrough guardrail with a real classifier that parses the Guard tier response as JSON; `tests/e2e_support/mock_llm_backend.py` returns the bare string "ok", correct when written for phase 1.2. Every run through it has died at the guard step since. Invisible because phase 3.3's webServer timeout (F-4.8-L-09) meant the suite could not start at all | Fixed: the mock is tier-aware and returns a schema-valid classification. A run now streams guard, think, plan, token, done for the first time since phase 3.0. THIS CHANGE IS A TEST-DOUBLE EDIT AND IS EXPLICITLY REFERRED TO THE JUDGE, since `goal-contracts` forbids changing a check to make it pass; the argument for legitimacy is that the double had drifted from the contract it stands in for |
-| F-4.8-L-17 | OPEN, needs a product-owner decision. 10 modules remain orphaned with 36 tests exercising code the app no longer renders: AnswerStream, ChatShell, EmptyState, LoadingSkeleton, QueryInput, QueryPipelineStepper, ChatPage, HomePage. Their green tests inflate the suite's number into a claim it does not support | Open. NOT deleted, because deletion is the product owner's call under `file-protection` |
+| F-4.8-L-17 | CLOSED 2026-08-14, product owner approved deletion. Removed: AnswerStream, ChatShell, EmptyState, LoadingSkeleton, QueryInput, QueryPipelineStepper, ChatPage, HomePage, and their eight test files. 36 tests removed, exactly the figure this finding predicted, leaving 128. The MODULE count was wrong: this said 10, the real number is 8. A static import graph from `main.tsx` reports 10 unreachable modules, but two are live and were miscounted as dead: `setupTests.ts` (wired as vitest's `setupFiles` in `vite.config.ts`) and `stubs/registry.ts` (loaded at runtime by the premise gate's dynamic `need()` helper). Neither is reachable by static analysis, and neither is dead | Closed |
 
 ### Judge round 1, 2026-08-13: FAIL
 
@@ -338,11 +338,27 @@ The strip's surface was the clearest case of a judgment call that should not hav
 
 The per-item meta is real data, not a stub. It is the same `view.meta` string the answer screen shows, written onto the history entry when the run LANDS, since the counts do not exist before then. The e2e clause asserts the rail AGREES with the answer screen rather than matching a literal, so it cannot pass against a hardcoded label.
 
-### F-4.8-D-08, a new finding, and the one place this deliberately does not match the prototype
+### F-4.8-D-08, found here and fixed in the design the same day
 
-`.rm` is `--ink-faint` on every row in the prototype. On the active row, whose ground is `--l1-wash`, axe measures that at 3.92:1 against a 4.5:1 requirement. WCAG 2.1 AA is a merge gate in this repository, so the active row's meta steps up to `inkMuted` (5.74:1) instead.
+`.rm` is `--ink-faint` on every row in the prototype. On the active row, whose ground is `--l1-wash`, axe measured that at 3.92:1 against a 4.5:1 requirement. The code stepped the active row up to `inkMuted` as a stopgap, and the finding was filed as one design-system defect rather than a second workaround, since the same token had already been stepped up once for the rail's heading on `surfaceSunk`.
 
-This is the SECOND instance of one underlying design-system defect, and it is now filed as such rather than worked around twice: `inkFaint` is AA-safe on some of the design system's own surfaces and not on others, and nothing in the design system says which. The first instance was the heading on `surfaceSunk`, above. The token is not being changed unilaterally; the finding is for the next design pass.
+Product owner's call, 2026-08-14: fix it in the design system, not per call site. `--ink-faint` moved from `#71767A` to `#666B70`, the smallest darkening that clears AA on all three grounds the token is actually used on:
+
+| Ground | #71767A | #666B70 |
+|--------|---------|---------|
+| `--surface` (white) | 4.59, pass | 5.38, pass |
+| `surfaceSunk` #F7F8F9 | 4.32, FAIL | 5.06, pass |
+| `--l1-wash` #E7EEF6 | 3.93, FAIL | 4.60, pass |
+
+The code follows rather than leads: `theme.ts` carries the new value, the rail's conditional step-up is deleted since the reason for it is gone, and `inkFaint` is now in the premise gate's token fixture, which it was not while it was the token drifting. That omission is worth naming: a token the theme uses and the fixture does not grade is a token nothing compares to the design. Mutation-proven by reverting the theme to `#71767A` and watching the gate go red.
+
+### The push missed two thirds of the prototype, and the product owner caught it
+
+The token change was pushed to all 21 mirrored card files, `write_files` reported 21, and a read-back of `foundations/colors.html` confirmed the new value. All true. The product owner then said the prototype had not updated, and was right.
+
+`_ds_manifest.json` carries THREE prototype cards, not one: `prototype/app.html`, which the repository mirrors, plus `NCBI Agentic Search prototype.html` at the project root and `gif/frames.html`, neither of which the repository mirrors and neither of which the push touched. Both were patched from the content `get_file` returns and pushed, then read back and confirmed.
+
+The transferable form: "one-to-one mirror" was true of the paths the mirror lists and false of the project. A completeness check built by enumerating local files can only ever verify the half already known. Read the remote index and reconcile against that. Written up in `docs/build/design/Design_to_build_workflow.md` under "The mirror is partial, and the prototype exists three times", and recorded in `LEARNINGS.md`.
 
 ### Two earlier findings, now closed rather than carried
 
@@ -380,7 +396,6 @@ Eight findings, each with a named owner, so none is a silent deferral.
 | F-4.8-J-14 | Superseded and CLOSED by the `marker_ids` binding, which keeps every citation a claim declares | Closed |
 | F-4.8-R-09 | The two cap-note detection paths use different normalisations. Latent: not reachable on today's wire | Whenever either path is next touched |
 | F-4.8-R-10 | An e2e justification comment claims more than the code guarantees. The assertion is sound; the reasoning overstates why | Cosmetic, fix when next editing that file |
-| F-4.8-L-17 | 10 modules remain orphaned with 36 tests exercising code the app no longer renders. Their green tests inflate the suite's number | Needs a product-owner decision on deletion, per `file-protection` |
 
 ## History
 

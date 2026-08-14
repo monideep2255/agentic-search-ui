@@ -59,7 +59,7 @@ async function signInAndAsk(page: Page): Promise<void> {
   await main
     .getByRole("textbox", { name: /question/i })
     .fill("Which diseases are associated with BRCA1?");
-  await main.getByRole("button", { name: /^ask$/i }).click();
+  await main.getByRole("button", { name: /^search the knowledge graph$/i }).click();
   await expect(page.getByTestId("history-rail")).toBeVisible({ timeout: 30_000 });
 }
 

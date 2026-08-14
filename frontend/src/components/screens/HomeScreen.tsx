@@ -42,6 +42,23 @@ export interface HomeScreenProps {
   footer?: React.ReactNode;
 }
 
+/** The prototype's `button.go` arrow, from `#s-landing`. */
+function ArrowIcon() {
+  return (
+    <svg
+      width={13}
+      height={13}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden="true"
+    >
+      <path d="M2 8h11M9 4l4 4-4 4" />
+    </svg>
+  );
+}
+
 function SearchIcon() {
   return (
     <svg
@@ -105,10 +122,6 @@ export function HomeScreen({ onSubmit, footer }: HomeScreenProps) {
           source.
         </Typography>
 
-        <Box sx={{ mb: 2.5 }}>
-          <DepthControl value={depth} onChange={setDepth} variant="onNavy" />
-        </Box>
-
         <Box
           component="form"
           onSubmit={submit}
@@ -151,14 +164,37 @@ export function HomeScreen({ onSubmit, footer }: HomeScreenProps) {
             }}
           />
           {/*
-            "Ask", not "Search". The navigation already has a destination
-            called Search, and two visible controls sharing an accessible name
-            is a real problem for anyone navigating by control list. It also
-            reads better against the hero's own "Ask a biomedical question".
+            "Search", with the prototype's right arrow: `button.go` in
+            `#s-landing`.
+
+            This read "Ask" until 2026-08-14. The reason was real (F-4.8-L-03):
+            the nav already has a destination called Search, and two visible
+            controls sharing an accessible name is a genuine problem for anyone
+            navigating by control list, which `e2e/accessibility.spec.ts`
+            enforces. The reasoning was sound and the remedy overshot, changing
+            what the user SEES to fix a problem that lives in the accessible
+            name.
+
+            So the visible label is the design's, and the collision is resolved
+            on the accessible name instead. WCAG 2.5.3 (Label in Name) requires
+            that name to CONTAIN the visible text, or a speech-input user
+            saying "Search" cannot operate the control, which is why it is not
+            renamed to something unrelated.
           */}
-          <Button type="submit" variant="contained" sx={{ px: 2.25, py: 1.1, fontSize: 14 }}>
-            Ask
+          <Button
+            type="submit"
+            variant="contained"
+            aria-label="Search the knowledge graph"
+            sx={{ px: 2.25, py: 1.1, fontSize: 14, gap: 0.75 }}
+          >
+            Search
+            <ArrowIcon />
           </Button>
+        </Box>
+
+        {/* `.depthwrap` sits BELOW the search bar in the prototype. */}
+        <Box sx={{ mb: 2.5 }}>
+          <DepthControl value={depth} onChange={setDepth} variant="onNavy" />
         </Box>
 
         <Box

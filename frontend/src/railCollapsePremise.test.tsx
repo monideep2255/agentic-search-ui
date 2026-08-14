@@ -107,7 +107,7 @@ async function signIn(user: ReturnType<typeof userEvent.setup>) {
 async function ask(user: ReturnType<typeof userEvent.setup>, question: string) {
   const main = mainArea();
   await user.type(main.getByRole("textbox", { name: /question/i }), question);
-  await user.click(main.getByRole("button", { name: /^ask$/i }));
+  await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
 }
 
 /** Sign in and run one question, so the rail has something in it. */
@@ -161,6 +161,56 @@ describe("F-4.8-P-03: the stored-searches rail collapses", () => {
     expect(
       heading.compareDocumentPosition(rail) & Node.DOCUMENT_POSITION_PRECEDING,
     ).toBeTruthy();
+  });
+
+  /*
+   * F-4.8-P-04. The rail itself, not just its toggle.
+   *
+   * Found 2026-08-14 by screenshotting the app beside the prototype, NOT by
+   * any assertion here: the anonymous landing rendered a full rail with its
+   * empty state, where the prototype has none. The clauses below tested the
+   * TOGGLE's absence when the rail is unavailable and never the RAIL's, so a
+   * three-way render collapsed into a two-way ternary passed them all.
+   *
+   * It was latent until this same session's baseline alignment: `HistoryRail`
+   * used to return null on an empty list, which masked the ternary's else
+   * branch rendering it unconditionally. Removing that guard, correctly, per
+   * the prototype, unmasked the defect the guard had been hiding.
+   */
+  it("shows an anonymous visitor no rail at all", () => {
+    render(<App />);
+
+    // Both halves. The heading proves the landing actually rendered, so this
+    // cannot pass against a blank page.
+    expect(
+      screen.getByRole("heading", { name: /ask a biomedical question/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("history-rail")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("collapsed-rail")).not.toBeInTheDocument();
+  });
+
+  it("takes the rail away again on sign-out", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signInWithOneSearch(user);
+    expect(screen.getByTestId("history-rail")).toBeInTheDocument();
+
+    await user.click(navArea().getByRole("button", { name: /^account$/i }));
+
+    expect(screen.queryByTestId("history-rail")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("collapsed-rail")).not.toBeInTheDocument();
+  });
+
+  it("shows no rail on a screen that has none", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signInWithOneSearch(user);
+    expect(screen.getByTestId("history-rail")).toBeInTheDocument();
+
+    await user.click(navArea().getByRole("button", { name: /^about$/i }));
+
+    expect(screen.queryByTestId("history-rail")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("collapsed-rail")).not.toBeInTheDocument();
   });
 
   it("offers no toggle once the user signs out", async () => {

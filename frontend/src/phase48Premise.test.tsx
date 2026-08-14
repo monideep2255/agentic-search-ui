@@ -71,6 +71,16 @@ const DESIGN_TOKENS = {
   line: "#D6D7D9",
   ink: "#1B1B1B",
   inkMuted: "#565C65",
+  /*
+   * Added 2026-08-14 with F-4.8-D-08. This token was NOT in the fixture while
+   * it was the one drifting: it failed AA on two of the design system's own
+   * surfaces, the design was corrected from #71767A to #666B70, and nothing
+   * here would have noticed the theme keeping the old value.
+   *
+   * A token the theme uses and the fixture omits is a token the gate does not
+   * grade, which is the gap this closes rather than a new nicety.
+   */
+  inkFaint: "#666B70",
 } as const;
 
 const norm = (value: string) => value.trim().toUpperCase();
@@ -312,7 +322,7 @@ describe("clause 3b: the assembled app is still connected to the agent", () => {
     const main = screen.getByRole("main");
     const field = await within(main).findByRole("textbox", { name: /question/i });
     await user.type(field, "Which diseases are associated with BRCA1?");
-    await user.click(within(main).getByRole("button", { name: /^ask$/i }));
+    await user.click(within(main).getByRole("button", { name: /^search the knowledge graph$/i }));
 
     await waitFor(() => expect(createRunSpy).toHaveBeenCalledTimes(1));
     expect(createRunSpy).toHaveBeenCalledWith(
@@ -628,7 +638,7 @@ describe("clause 3e: no answer content without a run behind it", () => {
       within(main).getByRole("textbox", { name: /question/i }),
       "What is the capital of the USA?",
     );
-    await user.click(within(main).getByRole("button", { name: /^ask$/i }));
+    await user.click(within(main).getByRole("button", { name: /^search the knowledge graph$/i }));
 
     expect(screen.queryByTestId("source-1")).not.toBeInTheDocument();
     expect(screen.queryByTestId(/^citation-/)).not.toBeInTheDocument();

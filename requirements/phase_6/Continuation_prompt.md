@@ -43,7 +43,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Build phase 4.8, the web UI's visual design, is DONE, merged to `develop` as PR #41 on 2026-08-13, with a post-merge fix landed on `develop` as `e08c656`. All 15 tickets closed. Three independent review rounds ran and all three returned FAIL, filing 56 findings; 48 closed, 8 carried with a named owner each on `tracker/BOARD.md`. A post-merge visual pass then found 2 more, both fixed. Full account: `tracker/phase_4.8.md`, summarized under "Build phase 4.8, done" below. NEXT, and it is NOT build phase 4.2: the product owner reviewed the running application on 2026-08-13 and found three places where it does not reach the approved design system's baseline. The agreed sequence is to reach that baseline first, then modify from it. See "The next session starts here" below. Build phases 4.2 through 4.7 wait.
+> Build phase 4.8, the web UI's visual design, is DONE, closed out via PR #42 on 2026-08-14, having merged as PR #41 on 2026-08-13 with a post-merge fix landed on `develop` as `e08c656`. All 15 tickets closed. Three independent review rounds ran and all three returned FAIL, filing 56 findings; 48 closed, 8 carried with a named owner each on `tracker/BOARD.md`. A post-merge visual pass then found 2 more, both fixed. Full account: `tracker/phase_4.8.md`, summarized under "Build phase 4.8, done" below. NEXT, and it is NOT build phase 4.2: the product owner reviewed the running application on 2026-08-13 and found three places where it does not reach the approved design system's baseline. The agreed sequence is to reach that baseline first, then modify from it. See "The next session starts here" below. Build phases 4.2 through 4.7 wait.
 
 Full detail on what PR #23 (build phase 3.1's re-review debt) fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07. Full detail on the F-2.1-C15 fix, including the bypass a fresh-context review found in its own first version before merge and the second review that confirmed the fix, is `tracker/fix_c15_generation_bound.md`.
 
@@ -65,7 +65,7 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Build phase 4.8, the web UI's visual design, is DONE, merged to `develop` as PR #41 on 2026-08-13, with a post-merge fix landed on `develop` as `e08c656`. All 15 tickets closed. Three independent review rounds ran and all three returned FAIL, filing 56 findings; 48 closed, 8 carried with a named owner each on `tracker/BOARD.md`. A post-merge visual pass then found 2 more, both fixed. Full account: `tracker/phase_4.8.md`, summarized under "Build phase 4.8, done" below. NEXT, and it is NOT build phase 4.2: the product owner reviewed the running application on 2026-08-13 and found three places where it does not reach the approved design system's baseline. The agreed sequence is to reach that baseline first, then modify from it. See "The next session starts here" below. Build phases 4.2 through 4.7 wait.
+> Build phase 4.8, the web UI's visual design, is DONE, closed out via PR #42 on 2026-08-14, having merged as PR #41 on 2026-08-13 with a post-merge fix landed on `develop` as `e08c656`. All 15 tickets closed. Three independent review rounds ran and all three returned FAIL, filing 56 findings; 48 closed, 8 carried with a named owner each on `tracker/BOARD.md`. A post-merge visual pass then found 2 more, both fixed. Full account: `tracker/phase_4.8.md`, summarized under "Build phase 4.8, done" below. NEXT, and it is NOT build phase 4.2: the product owner reviewed the running application on 2026-08-13 and found three places where it does not reach the approved design system's baseline. The agreed sequence is to reach that baseline first, then modify from it. See "The next session starts here" below. Build phases 4.2 through 4.7 wait.
 
 Build phase 3.1 merged as PR #22 (superseded by PR #23) on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
@@ -93,7 +93,7 @@ Twelve build phases are done, all twelve merged into `develop` (renamed from `ma
 Current counts, stated once here:
 
 - Python tests: 2565 (2445 passing, 113 skipped, 1 xfailed, 6 failed; the 6 are `test_citation_trust_full_premise.py`'s live-network-opt-in-gated cases, confirmed not a regression, identical set carried since build phase 4.0's close)
-- Frontend tests: 164
+- Frontend tests: 134
 - Playwright end-to-end tests: 26 declarations, 29 executed cases, ALL PASSING as of 2026-08-13, the first green run since build phase 3.0. The previous note here said these were "unverifiable, a webServer-orchestration timeout unrelated to any file either phase touched, confirmed by starting the dev server directly, HTTP 200". That diagnosis was wrong and is corrected rather than deleted, because the way it was wrong is the lesson: the check started the server by hand and queried `localhost`, which resolves to `::1` on macOS, while Playwright probes `127.0.0.1`. Vite bound IPv6-only, so the evidence gathered proved a different address than the one failing. Behind that timeout sat a second, older breakage: the e2e mock backend's Guard-tier response had not matched the classifier's schema since build phase 3.0, so the suite would have failed even had it started. Both are fixed
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
@@ -106,8 +106,8 @@ Current counts, stated once here:
 - Premise gate, citation trust full (Layer 2/3 provenance, the two-tier risk gate, freshness, conflict detection): 10 of 10, live, no tunnel-gated skip, graded pass@8 on its one Synth-sampling-sensitive case (F-3.4-T05-05)
 - Premise gate, build phase 4.0's own gate (a normal test file, not one of the seven live tool gates above): 26 of 26
 - Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
-- Decisions logged: 299
-- Learnings entries: 74, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
+- Decisions logged: 305
+- Learnings entries: 76, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below). This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
 
@@ -172,10 +172,12 @@ One standing instruction that came out of this review, and it is not optional: o
 
 ## Read before opening the next phase
 
-Build phase 4.8 is merged (see "State now" above). Four of Step 6.3's six delivery surfaces remain, and none of them depends on 4.8, so the next phase is a free choice among them. Section 25's order takes 4.2 next.
+Build phase 4.8 is merged and closed out (see "State now" above). The next phase is NOT a free choice: the product owner directed on 2026-08-14 that the anonymous run path comes first, as build phase 6.0g, split out of 6.0 and pulled ahead of 4.2 to 4.7. The reasoning is in `DECISIONS.md`: until it exists, nobody can use the product without creating an account first, so it gates every demo and every new user. After it, four of Step 6.3's six delivery surfaces remain, none depending on 4.8, and Section 25's order takes 4.2.
 
 | Next up | Branch | What it delivers | Depends on |
 |---------|--------|------------------|------------|
+| 6.0g | `phase/6.0g-anonymous-run-path` | The anonymous run path and the server-side guest allowance. Split out of 6.0 and pulled forward by product-owner directive, 2026-08-14. THIS IS NEXT, ahead of 4.2 | 1.1 and 4.0, both merged |
+| 4.9 | `phase/4.9-answer-screen-fidelity` | The five answer-screen fidelity gaps against the approved design, plus F-4.8-D-08 | 4.8, merged |
 | 4.2 | `phase/4.2-cli-adapter` | A thin CLI client over the REST API | 4.0, merged |
 | 4.3 | `phase/4.3-graphql-api` | A GraphQL surface via Strawberry, sharing auth and tools with the REST surface | 4.0, merged |
 | 4.4 | `phase/4.4-kgx-export` | An export utility scoped to the existing Hetzner graph, a batch job rather than a live adapter | Layer 1 access, already exists |

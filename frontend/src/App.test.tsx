@@ -61,7 +61,7 @@ async function signIn(user: ReturnType<typeof userEvent.setup>) {
 async function ask(user: ReturnType<typeof userEvent.setup>, question: string) {
   const main = mainArea();
   await user.type(main.getByRole("textbox", { name: /question/i }), question);
-  await user.click(main.getByRole("button", { name: /^ask$/i }));
+  await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
 }
 
 describe("App", () => {
@@ -163,7 +163,7 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(mainArea().getByRole("button", { name: /^ask$/i }));
+    await user.click(mainArea().getByRole("button", { name: /^search the knowledge graph$/i }));
 
     expect(
       screen.getByRole("heading", { name: /ask a biomedical question/i }),

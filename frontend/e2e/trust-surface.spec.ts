@@ -120,7 +120,7 @@ async function signInAndScript(page: Page): Promise<void> {
 
   const main = page.getByRole("main");
   await main.getByRole("textbox", { name: /question/i }).fill("Which diseases are associated with BRCA1?");
-  await main.getByRole("button", { name: /^ask$/i }).click();
+  await main.getByRole("button", { name: /^search the knowledge graph$/i }).click();
   await expect(page.getByTestId("source-1")).toBeVisible({ timeout: 30_000 });
 }
 
