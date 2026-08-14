@@ -68,7 +68,18 @@ export default defineConfig({
       // `VITE_API_BASE_URL` points `lib/api.ts`'s fetch calls at the
       // backend's absolute URL; without it `DEFAULT_BASE_URL` defaults to
       // same-origin, which would target the Vite dev server itself.
-      command: `npm run dev -- --port ${FRONTEND_PORT} --strictPort`,
+      // `--host 127.0.0.1` is load-bearing, not tidiness. Without it Vite binds
+      // to [::1] only (IPv6 loopback), while the `url` below waits on
+      // 127.0.0.1 (IPv4 loopback), so Playwright's readiness probe never
+      // succeeds and every run dies on "Timed out waiting 30000ms from
+      // config.webServer".
+      //
+      // This is the root cause of the webServer timeout carried as a
+      // "pre-existing environment quirk" since build phase 3.3. The earlier
+      // diagnosis started the dev server by hand and got HTTP 200 from
+      // `localhost`, which resolves to ::1 on macOS, so it confirmed a
+      // different address than the one Playwright actually probes.
+      command: `npm run dev -- --port ${FRONTEND_PORT} --strictPort --host 127.0.0.1`,
       cwd: __dirname,
       env: { VITE_API_BASE_URL: BACKEND_URL },
       url: FRONTEND_URL,

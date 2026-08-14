@@ -1,0 +1,108 @@
+<!-- @dsCard group="Screens" width=980 -->
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Answer</title>
+<style>:root{
+  color-scheme:light;
+  --canvas:#f0f0f0; --canvas-deep:#e4e6e8; --surface:#fff; --surface-sunk:#f7f8f9;
+  --line:#d6d7d9; --line-strong:#a9aeb1;
+  --ink:#1b1b1b; --ink-muted:#565c65; --ink-faint:#71767a;
+  --ink-on-navy:#f3f6f9; --ink-on-navy-mute:#a9c3dc;
+  --navy:#112f4e; --blue:#205493; --link:#0071bc;
+  --l1:#205493; --l2:#2e8540; --l3:#4c2c92;
+  --l1-wash:#e7eef6; --l2-wash:#e6f2e8; --l3-wash:#eeeaf6;
+  --risk:#981b1e; --risk-wash:#f8e9e9; --warn:#7a5900; --warn-wash:#fdf3d9; --ok:#2e8540;
+  --sans:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --r:8px; --r-sm:4px;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:var(--canvas);color:var(--ink);
+     font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.card-title{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+     color:var(--ink-faint);margin:0 0 4px}
+.card-note{font-size:13px;color:var(--ink-muted);margin:0 0 20px;max-width:64ch}
+.stack{display:flex;flex-direction:column;gap:20px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.mono{font-family:var(--mono)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.lbl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--ink-faint)}
+
+.card-title{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--ink-faint);margin:0 0 4px}
+.card-note{font-size:13px;color:var(--ink-muted);margin:0 0 20px;max-width:66ch}
+.screen{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.appbar{background:var(--blue);color:#fff;display:flex;align-items:center;gap:16px;padding:0 16px;height:52px}
+.brand{font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.bm{width:21px;height:21px;flex:none;display:block}
+nav{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:13px}
+nav span{padding:6px 10px;border-radius:var(--r-sm);color:rgba(255,255,255,.86)}
+nav span.on{color:#fff;box-shadow:inset 0 -2px 0 #fff;border-radius:0}
+.login{border:1px solid rgba(255,255,255,.55);padding:5px 12px;border-radius:var(--r-sm);font-weight:600;font-size:13px;margin-left:8px}
+.strip{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:12.5px;background:var(--warn-wash);color:var(--ink);border-bottom:1px solid var(--line)}
+.body{padding:26px 24px 24px}
+.askline{padding-bottom:16px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+.q{font-size:19px;font-weight:700;letter-spacing:-.015em}
+
+.summary{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-muted);border:1px solid var(--line);border-radius:var(--r);background:var(--surface-sunk);padding:9px 14px}
+.ok{color:var(--ok);font-weight:700}
+.grid{display:grid;grid-template-columns:14px 1fr;gap:18px;margin-top:22px}
+.spine{display:flex;flex-direction:column;gap:3px;padding-top:6px}
+.spine i{display:block;width:6px;border-radius:3px;margin:0 auto;flex:none}
+.spine i.s1{background:var(--l1)}.spine i.s2{background:var(--l2)}.spine i.s3{background:var(--l3)}
+.answer p{margin:0 0 14px;font-size:16px;max-width:64ch}
+.answer p:last-child{margin-bottom:0}
+.cite{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line-strong);border-left-width:4px;border-radius:var(--r-sm);padding:0 6px 0 5px;font-family:var(--mono);font-size:11.5px;font-weight:600;line-height:1.7;background:var(--surface)}
+.cite .src{color:var(--ink-muted);font-weight:400}
+.cite.c1{border-left-color:var(--l1);background:var(--l1-wash)}
+.cite.c2{border-left-color:var(--l2);background:var(--l2-wash)}
+.cite.c3{border-left-color:var(--l3);background:var(--l3-wash)}
+.sh{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin:26px 0 10px}
+.src{border:1px solid var(--line);border-left-width:4px;border-radius:var(--r-sm);background:var(--surface);margin-bottom:8px;padding:11px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px}
+.src.c1{border-left-color:var(--l1)}.src.c2{border-left-color:var(--l2)}.src.c3{border-left-color:var(--l3)}
+.num{font-family:var(--mono);font-weight:700;font-size:12px}
+.name{font-weight:600}
+.tag{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--ink-muted)}
+.verdict{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:600;border:1px solid transparent}
+.pill.good{background:var(--l2-wash);color:var(--ok);border-color:var(--ok)}
+.pill.high{background:var(--risk-wash);color:var(--risk);border-color:var(--risk)}
+.pill.plain{background:var(--surface-sunk);color:var(--ink-muted);border-color:var(--line)}
+.fb{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-muted)}
+.fbb{width:30px;height:30px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-sm);display:inline-flex;align-items:center;justify-content:center;color:var(--ink-muted);cursor:pointer}
+</style></head><body>
+<p class="card-title">Answer</p>
+<p class="card-note">Complete. The stepper has collapsed to one line, the provenance spine runs beside the prose with one segment per claim, and the verdict strip carries the only red in the system. Gene symbols are proportional; only exactly-transcribed strings are monospace.</p>
+<div class="screen"><div class="appbar"><span class="brand"><svg class="bm" width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 Q19 5.35 12 8.7 Q5 12 12 15.3 Q19 18.65 12 22" stroke="#ffffff" stroke-width="1.9" stroke-linecap="round" fill="none"/><path d="M12 2 Q5 5.35 12 8.7 Q19 12 12 15.3 Q5 18.65 12 22" stroke="#ffffff" stroke-width="1.9" stroke-linecap="round" fill="none"/><line x1="8.6" y1="5.35" x2="15.4" y2="5.35" stroke="#cfe1f5" stroke-width="1.9" stroke-linecap="round"/><line x1="8.6" y1="12" x2="15.4" y2="12" stroke="#9fd3a8" stroke-width="1.9" stroke-linecap="round"/><line x1="8.6" y1="18.65" x2="15.4" y2="18.65" stroke="#c3b2e6" stroke-width="1.9" stroke-linecap="round"/></svg> NCBI Agentic Search</span>
+  <nav><span class="on">Search</span><span>Integrations</span><span>About</span><span class="login">Log in</span></nav></div>
+<div class="strip"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.2 15 14H1L8 1.2Zm0 4.3a.8.8 0 0 0-.8.8v3a.8.8 0 0 0 1.6 0v-3a.8.8 0 0 0-.8-.8Zm0 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z"/></svg>
+Research tool. Answers are cited to NCBI records and are not medical advice.</div>
+  <div class="body">
+    <div class="askline"><div class="q">Which diseases are associated with BRCA1?</div></div>
+    <div class="summary"><span class="ok">&#10003; Answered</span>
+      <span>11.4s &middot; 3 tools &middot; 3 layers &middot; 3 sources</span>
+      <span style="margin-left:auto;color:var(--link)">Show work &#9662;</span></div>
+
+    <div class="grid">
+      <div class="spine"><i class="s1" style="height:74px"></i><i class="s2" style="height:52px"></i><i class="s3" style="height:74px"></i></div>
+      <div class="answer">
+        <p>BRCA1 is associated with hereditary breast and ovarian cancer syndrome, the best-characterised of its disease links <span class="cite c1">1 <span class="src">Gene 672</span></span>.</p>
+        <p>The current MedGen record describes an autosomal dominant inheritance pattern <span class="cite c2">2 <span class="src">MedGen C0677776</span></span>.</p>
+        <p>Biallelic variants have also been reported in Fanconi anemia complementation group S, drawn from the literature rather than a curated record <span class="cite c3">3 <span class="src">PMID 21990134</span></span>.</p>
+      </div>
+    </div>
+
+    <p class="sh">Sources</p>
+    <div class="src c1"><span class="num">[1]</span><span class="name">NCBI Gene 672 &middot; BRCA1</span><span class="tag">L1 &middot; graph</span></div>
+    <div class="src c2"><span class="num">[2]</span><span class="name">MedGen C0677776 &middot; Hereditary breast and ovarian cancer syndrome</span><span class="tag">L2 &middot; live</span></div>
+    <div class="src c3"><span class="num">[3]</span><span class="name">PMID 21990134 &middot; Fanconi anemia complementation group S</span><span class="tag">L3 &middot; literature</span></div>
+
+    <div class="verdict">
+      <span class="pill good">&#10003; Grounded &middot; every claim cited</span>
+      <span class="pill high">High-risk claim &middot; gene to disease</span>
+      <span class="pill plain">3 layers agreed</span></div>
+
+    <div class="fb"><span>Was this answer helpful?</span>
+      <button class="fbb" type="button" aria-label="Yes"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M5.5 7 8.2 2.2a1.3 1.3 0 0 1 2.4.7V6h2.6a1.3 1.3 0 0 1 1.28 1.55l-.85 4.2A1.3 1.3 0 0 1 12.15 13H5.5z"/><rect x="1.6" y="7" width="3.9" height="6" rx=".8"/></svg></button>
+      <button class="fbb" type="button" aria-label="No"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" transform="rotate(180 8 8)"><path d="M5.5 7 8.2 2.2a1.3 1.3 0 0 1 2.4.7V6h2.6a1.3 1.3 0 0 1 1.28 1.55l-.85 4.2A1.3 1.3 0 0 1 12.15 13H5.5z"/><rect x="1.6" y="7" width="3.9" height="6" rx=".8"/></svg></button>
+    </div>
+  </div></div>
+</body></html>

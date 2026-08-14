@@ -22,7 +22,7 @@ const isGuardEvent = (event: AgentEvent): event is GuardEvent => event.type === 
  * crashing or rendering nothing if it ever did, per `ai-security-
  * standards.md`'s "treat AI/upstream output as untrusted until verified".
  */
-const CATEGORY_COPY: Record<GuardPayload["category"], string> = {
+export const CATEGORY_COPY: Record<GuardPayload["category"], string> = {
   ok: "This question could not be processed. Please try rephrasing it.",
   off_topic:
     "This looks outside biomedical research. I can help with a gene, variant, pathogen, or paper question.",
@@ -31,6 +31,19 @@ const CATEGORY_COPY: Record<GuardPayload["category"], string> = {
   injection: "That request could not be processed as a research question.",
   rate_limited: "You have reached today's question limit. Try again after (reset time).",
   cost_capped: "The system is at capacity right now. Please try again shortly.",
+  // Added in build phase 4.8, incidentally. Step 6.2 added `write_seeking` to
+  // the GuardPayload category enum (finding F-3.0-01) and recorded fixing "a
+  // second hand-maintained copy of the category set in the frontend", but this
+  // exhaustive Record was not that copy and was left missing the member. The
+  // result: `tsc -b` has been failing on develop, so `npm run build` could not
+  // succeed. It went unnoticed because no CI runs the frontend build yet, which
+  // is itself an open item for build phase 6.1.
+  //
+  // The copy follows Section 10.5's own framing: the system reads, it does not
+  // write, so a request to change data is refused by design rather than by
+  // capacity or by policy.
+  write_seeking:
+    "This system only reads from NCBI records. It cannot add, change, or remove data.",
 };
 
 /**

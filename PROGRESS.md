@@ -2,7 +2,7 @@
 
 A plain-language update on what this project is, what works today, and what comes next. No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-11.
+Last updated: 2026-08-13.
 
 ## Table of contents
 
@@ -71,9 +71,22 @@ All six live-government-API connections the plan called for are now built. That 
 - Two people, or two browser tabs, can now watch the same answer being written at the same time. Before this sprint, only the first one got anything; the second one saw nothing at all.
 - A conversation nobody is actually watching now stops itself after a short wait, instead of quietly running to completion and burning resources on an answer nobody will ever read. This closes a real gap found earlier: an abandoned browser tab used to let the system keep working, unseen, until it finished on its own.
 - You can now ask for the full list of sources behind a finished answer as a single request, rather than only ever seeing them appear one at a time while the answer streams.
+- The web page now looks like a finished product rather than an unstyled form. There is a proper landing page, a live view of the five thinking steps as they happen, an answer page where every sentence sits beside a coloured stripe showing which of the three data sources backed it, expandable source cards, a page explaining how answers are built, and developer documentation. A grey stripe means a sentence nobody could back with a source, which is visible before you read a word.
+- You can now try the system without an account. You get five free searches before being asked to sign in, and the page tells you plainly how many you have left.
+- Every answer now carries the name of a historical scientist working on your question, shown as a plain label rather than a cartoon, and a control that lets you ask for a clinical summary, a researcher-level answer, or a deeply technical one.
+- You can rate an answer, say what was wrong with it from a list drawn from mistakes this system has genuinely made before, and flag an individual source as not supporting the sentence it is attached to. That last one is the most useful thing a person can tell us, because it identifies exactly which link was wrong rather than just that the answer felt off.
+- Every screen was checked against the international accessibility standard by an automated tool, and four real problems it found were fixed, including text that was too faint to read against its own background and code examples a keyboard user could not scroll.
 - The system now has a first outbound door for other computer programs and AI agents to ask it questions directly, the same protocol other AI tools already speak to each other. It answers with one complete, cited result rather than a stream, and it never hands out a cost figure or lets a caller reach any of the seven lookup tools directly, only the one question-answering door. Nothing outside this project uses it yet, so there is no visible change if you are using the web page.
 
 ## What does not work yet
+
+The newest work, the redesigned web page, has now been through two independent reviews and both found serious problems. That is the system working, but it is worth being blunt about what they found, because the worst one goes to the heart of what this product is for.
+
+The first reviewer discovered that a visitor without an account, asking any question at all, was shown a confident answer with real-looking official source links attached. Asked "what is the capital of the USA?", the page produced a fully sourced answer about a breast cancer gene. Nothing about it was true, and nothing on screen said so. That has been removed entirely: a visitor without an account is now asked to sign in rather than shown anything invented.
+
+The second reviewer found the deeper cause of a whole family of related problems. When the system writes an answer, it also sends along an exact record of which sentence came from which source. The web page ignored that record and tried to work it out for itself by matching text. That guesswork attached a real source to sentences it had never supported, including one reading "every patient with this cancer should stop chemotherapy immediately". The page now uses the exact record the system provides, which fixed five separate problems at once.
+
+Both are fixed, and a third review is running now specifically to check the repairs, because in this project the repair is historically where the next problem hides. Until that finishes, treat the new design as much improved but not yet signed off.
 
 The honest headline, found today by actually asking the finished system real questions and reading the answers by hand, not by reviewing code: the step that is supposed to understand what a question is actually asking has never been built past a placeholder. Right now, the system mostly just scans your question for something that looks like a gene name. If it finds a real one, it looks that up and stops there, even if your question asked for much more. If it finds something that LOOKS like a gene name but is not (a database name mentioned in passing, like "GTR" or "SRA"), it tries to look that up, fails, and gives up on the whole question, "I could not identify that gene," instead of noticing what the question was actually about. Asking the system's own seven showcase questions directly today, 4 came back this way, and a 5th came back with only one bare word as its whole answer, for the same underlying reason. This was a known, deliberate shortcut from the very first sprint that built the thinking loop, written down at the time with a plan to come back and build the real version later. Two weeks and twelve completed sprints have gone by since, and nobody has come back to it.
 
@@ -105,6 +118,7 @@ Each of these is a completed, reviewed, merged piece of work.
 | Specification pause | Brought the written plans in line with everything learned building the six tools; cleared a backlog of small real bugs and mismatches; swept a folder of outside reading material; then, for the first time, actually asked the finished system real questions and read the answers by hand, which is what found today's headline problem | 2026-08-10 |
 | 4.0 | Finished the front door to the whole system: reconnecting after a dropped connection, two people watching the same answer at once, a stalled conversation stopping itself, and a way to fetch a finished answer's full source list in one request | 2026-08-11 |
 | 4.1 | Built the first back door: a way for other computer programs and AI agents, not just a person typing into the web page, to ask the system a question and get one complete, cited answer back | 2026-08-11 |
+| 4.8 | Gave the web page a real design, and found that no browser test in this project had actually run for five sprints | 2026-08-13 |
 
 Nine of these are worth understanding, because they explain how this project works.
 
@@ -152,7 +166,7 @@ flowchart LR
         Sp --> Door[Front door finished: reconnect, watch together, self-stopping]
         Door --> MCP[Back door: other programs can now ask questions too]
     end
-    MCP --> Style[Give the web page a real design, next]
+    MCP --> Style[Designing the web page now, before any code]
     Style --> Dec[Question-understanding gap: given a home, a later sprint, not fixed yet]
     Dec --> Wire[Wire the other five tools into the answer pipeline]
     Wire --> Other[Other ways in: command line, saved history]
@@ -165,7 +179,11 @@ The planned specification pause (updating the written plans with everything lear
 
 In order, now:
 
-1. Making the chat page look like a real product instead of a bare, unstyled form: a proper visual design, using a well-established component library rather than building one from scratch. This sprint was just added to the plan, ahead of several already-numbered sprints that do not need it done first.
+1. Making the web page look like a real product instead of a bare, unstyled form, using a well-established set of ready-made building blocks rather than making our own from scratch. This sprint was added to the plan recently, ahead of several already-numbered sprints that do not need it done first.
+
+   No code has been written for it yet, on purpose. Everything built so far could be checked by a test that asks "is this answer true". How something looks cannot be checked that way, so the design is being settled first, before the building starts. There is now a clickable working mock-up of the whole product: you can type a question, watch it think, read the cited answer, hit the sign-in wall. It can be played with and shown to people, and it gets changed until the product owner is happy with it. Only then does the design get locked and the real code get written against it, all in one go.
+
+   The important step in that loop is the review after each round of changes, because it is where a design that shows something the system cannot actually do gets caught before anyone builds it. The first round proved the point: the mock-up named three data-lookup tools that do not exist in the real system, which would otherwise have been built as though they did.
 2. The question-understanding gap now has a home: a specific future sprint, later than the next several, will build the real fix. It is not being rushed in early, and nothing else in the next few sprints depends on it being fixed first.
 3. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
 4. Then the remaining work: the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
@@ -176,6 +194,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| Parts of the old web page are now unused but still have tests passing against them. Roughly a quarter of the web page's automated checks are testing screens nobody can reach any more, which makes the number of passing tests look better than it is | Needs a decision on whether to delete them. Not deleted yet, because deleting work is not a call to make quietly |
+| An automated accessibility checker reported the new web page as completely clean while the single most important thing on it, the coloured marker showing which source backed each sentence, was invisible to anyone using a screen reader. The tool cannot tell whether the thing a product exists to communicate is actually communicated | Fixed this sprint. The lesson is the durable part: a green automated check is evidence about what the tool measures, not about whether the product works for a person |
+| For five sprints, no browser test in this project actually ran. Two separate faults were stacked: one made the tests unable to start, which hid the fact that the other had already broken them. Both are fixed and browser tests run again, but it means five sprints of work were signed off without that check ever passing | Fixed this sprint. Worth remembering: a check that cannot run is worse than a check that fails, because a failure is visible |
 | The step that is supposed to understand what a question is actually asking has never been built past a placeholder (see "What does not work yet" above). The single biggest known problem right now | Given a home: a specific future sprint, later than the next several. It will not be rushed in early, and nothing else waits on it |
 | One of the two small leftover gaps in the gene lookup tool (a missing length limit on one nested list) turned out to be real and already reachable by a real question, once this sprint's specification pause looked again; it is fixed. The other (an unusual input shape inside a different lookup path) is still not reachable by anything today, so it was left alone | Fixed |
 | Five of the six lookup tools (genetic variants, both research-literature tools, disease outbreaks, and clinical trials) are still not connected to the answer pipeline. Each can look up real data but cannot yet use that lookup to answer a question. Gene lookup is the one exception, connected in an earlier sprint | A later sprint |

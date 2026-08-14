@@ -5,8 +5,9 @@ How a build phase actually runs: the loop, the roles, the model tiering, and wha
 ## Table of contents
 
 - [The files, grouped by what you need](#the-files-grouped-by-what-you-need)
+- [The design segment](#the-design-segment)
 - [A folder you may see locally that is not in git](#a-folder-you-may-see-locally-that-is-not-in-git)
-- [Why these files are not in subfolders](#why-these-files-are-not-in-subfolders)
+- [Why this folder split when it did](#why-this-folder-split-when-it-did)
 
 ## The files, grouped by what you need
 
@@ -35,6 +36,18 @@ Stage 5, the premise gate, is mandatory and blocking for any phase whose deliver
 
 For failures and their fixes rather than velocity, read `LEARNINGS.md` at the repo root, in particular the build phase 2.1 retrospective. For choices between alternatives, read `DECISIONS.md`.
 
+## The design segment
+
+`design/` holds everything build phase 4.8 is built against: the clickable prototype, the 18-card component library mirrored to Claude Design, the workflow that turns a design change into React code, and the argument for why the design looks the way it does. It has its own README.
+
+| Read | For |
+|------|-----|
+| `design/README.md` | Navigating the segment, and which file answers which question |
+| `design/Design_to_build_workflow.md` | How a design change reaches the code, and what it costs before versus after a phase opens |
+| `design/design-system/prototype/app.html` | The whole product, clickable |
+
+Split out on 2026-08-12 when this folder reached its own revisit trigger, below. It is the one subdirectory here that is not documentation: `design/design-system/` is a fixture the premise gate asserts against, so treat it like a test's golden files.
+
 ## A folder you may see locally that is not in git
 
 `multi-model-harness/` holds everything for running the build on an alternate, metered model backend when the primary provider's weekly budget is exhausted. It is gitignored on purpose: it names specific providers, model identifiers and prices, which `writing-style` keeps out of tracked documentation and which would go stale within weeks. Its sibling is `docs/Claude_Code_model_fallback_setup.md`, ignored for the same reason.
@@ -58,10 +71,16 @@ What is tracked, because it governs the cadence rather than the configuration, i
 
 If you do not see that folder, nothing is wrong. It only exists on a machine where the fallback has been set up.
 
-## Why these files are not in subfolders
+## Why this folder split when it did
 
-Considered and rejected on 2026-08-04. Four documents do not need a directory tree, and the two obvious grouping candidates are the two most heavily referenced files in the folder: `Build_workflow_cadence.md` is referenced from 14 places including two premise-gate test files, and `Phase_6_execution_flow.html` from 6 including a publish script. Moving them would mean roughly 25 reference edits, with test breakage as the failure mode, to save a reader one glance at a five-line listing.
+A subfolder split was considered and rejected on 2026-08-04. A handful of documents do not need a directory tree, and the two obvious grouping candidates are the two most heavily referenced files in the folder: `Build_workflow_cadence.md` is referenced from 14 places including two premise-gate test files, and `Phase_6_execution_flow.html` from 6 including a publish script. Moving them would mean roughly 25 reference edits, with test breakage as the failure mode, to save a reader one glance at a short listing.
 
 The grouping lives in this README's headings instead, which delivers the navigability at no risk. Revisit if this folder passes roughly ten files.
 
-Last updated: 2026-08-04
+Revisited 2026-08-12 and acted on, because the trigger was met: build phase 4.8's design review pushed this folder to nine files. The split was made on the axis the content actually has, cadence versus design, not the backend-versus-frontend axis first proposed, since `docs/build` holds no backend-specific content at all and that split would have produced an empty directory.
+
+The reference-edit argument above did not block the split, it shaped it. Measured on the day: `Build_workflow_cadence.md` is referenced from 27 files including two premise-gate tests, and `Phase_6_execution_flow.html` from 7 including a publish script, so neither moved. The five files that moved into `design/` were referenced from 2 to 6 places each, all documentation, no test files.
+
+What remains at this level is four cadence documents plus this README, which is comfortably back under the trigger. Revisit again if that grows past roughly ten.
+
+Last updated: 2026-08-12

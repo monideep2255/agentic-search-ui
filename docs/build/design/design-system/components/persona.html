@@ -1,0 +1,60 @@
+<!-- @dsCard group="Components" width=880 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Named scientist persona</title>
+<style>:root{
+  color-scheme:light;
+  --canvas:#f0f0f0; --canvas-deep:#e4e6e8; --surface:#fff; --surface-sunk:#f7f8f9;
+  --line:#d6d7d9; --line-strong:#a9aeb1;
+  --ink:#1b1b1b; --ink-muted:#565c65; --ink-faint:#71767a;
+  --ink-on-navy:#f3f6f9; --ink-on-navy-mute:#a9c3dc;
+  --navy:#112f4e; --blue:#205493; --link:#0071bc;
+  --l1:#205493; --l2:#2e8540; --l3:#4c2c92;
+  --l1-wash:#e7eef6; --l2-wash:#e6f2e8; --l3-wash:#eeeaf6;
+  --risk:#981b1e; --risk-wash:#f8e9e9; --warn:#7a5900; --warn-wash:#fdf3d9; --ok:#2e8540;
+  --sans:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --r:8px; --r-sm:4px;
+}
+*{box-sizing:border-box}
+
+.card-title{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--ink-faint);margin:0 0 4px}
+.card-note{font-size:13px;color:var(--ink-muted);margin:0 0 20px;max-width:70ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:16px}
+.lbl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--ink-faint);margin:0 0 14px}
+body{padding:28px}
+/* ------------------------------------------------- persona and depth (12.7, 12.9)
+   Presentation only. The persona never changes what runs or what is asserted;
+   the depth control changes synthesis vocabulary, never grounding. */
+.persona{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);
+  background:var(--surface);border-radius:999px;padding:5px 13px 5px 7px;font-size:13px;color:var(--ink-muted)}
+.persona .pav{width:22px;height:22px;border-radius:50%;background:var(--surface-sunk);
+  border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;
+  color:var(--ink-faint);flex:none}
+.persona b{font-weight:700;color:var(--ink)}
+.persona.on-navy{border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.10);color:var(--ink-on-navy-mute)}
+.persona.on-navy .pav{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.28);color:#fff}
+.persona.on-navy b{color:#fff}
+.pcap{display:flex;align-items:center;gap:9px;margin:16px 0 0;font-size:13.5px;color:var(--ink-muted);min-height:22px}
+.pcap .pav{width:20px;height:20px;border-radius:50%;background:var(--surface-sunk);border:1px solid var(--line);
+  display:inline-flex;align-items:center;justify-content:center;color:var(--ink-faint);flex:none}
+.pcap b{font-weight:700;color:var(--ink)}</style></head><body>
+<p class="card-title">Named scientist persona</p>
+<p class="card-note">Technical specification 12.7 and 14.2. Presentation only: the persona never changes which tools run or what is asserted. A small static label and a muted icon, never an animated mascot or a cartoon avatar. Assignment is drawn once per anonymous session, or once per account for its lifetime. Wired in build phase 4.5.</p>
+<div class="panel"><p class="lbl">In the app bar, on navy</p>
+<div style="background:var(--navy);border-radius:var(--r);padding:16px 18px">
+  <span class="persona on-navy"><span class="pav"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5.2" r="2.9"/><path d="M2.6 14a5.4 5.4 0 0 1 10.8 0z"/></svg></span>Working as <b>Mendel</b></span>
+</div></div>
+
+<div class="panel"><p class="lbl">On a light surface</p>
+<span class="persona"><span class="pav"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5.2" r="2.9"/><path d="M2.6 14a5.4 5.4 0 0 1 10.8 0z"/></svg></span>Working as <b>Franklin</b></span></div>
+
+<div class="panel"><p class="lbl">The per-step caption, driven by the step's own narrative</p>
+<div class="pcap"><span class="pav"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5.2" r="2.9"/><path d="M2.6 14a5.4 5.4 0 0 1 10.8 0z"/></svg></span><span><b>Mendel</b> is checking the question is answerable and in scope</span></div>
+<div class="pcap"><span class="pav"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5.2" r="2.9"/><path d="M2.6 14a5.4 5.4 0 0 1 10.8 0z"/></svg></span><span><b>Mendel</b> is choosing which sources to read</span></div>
+<div class="pcap"><span class="pav"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5.2" r="2.9"/><path d="M2.6 14a5.4 5.4 0 0 1 10.8 0z"/></svg></span><span><b>Mendel</b> is reading the records</span></div>
+<div class="pcap"><span class="pav"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5.2" r="2.9"/><path d="M2.6 14a5.4 5.4 0 0 1 10.8 0z"/></svg></span><span><b>Mendel</b> is writing the answer, citing as it goes</span></div>
+<p style="font-size:13px;color:var(--ink-muted);margin:14px 0 0;max-width:64ch">The caption is cleared the moment a run
+finishes or is stopped, so a halted run never reads as still working.</p></div>
+</body></html>

@@ -1,0 +1,43 @@
+<!-- @dsCard group="Foundations" width=880 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Colour</title>
+<style>
+:root{
+  color-scheme:light;
+  --canvas:#f0f0f0; --canvas-deep:#e4e6e8; --surface:#fff; --surface-sunk:#f7f8f9;
+  --line:#d6d7d9; --line-strong:#a9aeb1;
+  --ink:#1b1b1b; --ink-muted:#565c65; --ink-faint:#71767a;
+  --ink-on-navy:#f3f6f9; --ink-on-navy-mute:#a9c3dc;
+  --navy:#112f4e; --blue:#205493; --link:#0071bc;
+  --l1:#205493; --l2:#2e8540; --l3:#4c2c92;
+  --l1-wash:#e7eef6; --l2-wash:#e6f2e8; --l3-wash:#eeeaf6;
+  --risk:#981b1e; --risk-wash:#f8e9e9; --warn:#7a5900; --warn-wash:#fdf3d9; --ok:#2e8540;
+  --sans:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --r:8px; --r-sm:4px;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:var(--canvas);color:var(--ink);
+     font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.card-title{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+     color:var(--ink-faint);margin:0 0 4px}
+.card-note{font-size:13px;color:var(--ink-muted);margin:0 0 20px;max-width:64ch}
+.stack{display:flex;flex-direction:column;gap:20px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.mono{font-family:var(--mono)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.lbl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--ink-faint)}
+.swatches{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.sw{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.chipc{height:54px;display:block}
+.meta{display:block;padding:10px 12px}
+.nm{font-size:12.5px;font-weight:600}
+.hx{font-size:11.5px;color:var(--ink-faint)}
+.use{font-size:11.5px;color:var(--ink-muted)}</style>
+</head><body>
+<p class="card-title">Colour</p>
+<p class="card-note">Every value is USWDS, the system NCBI is built on. Nothing invented. Red is reserved for risk and refusals and is never used as a layer or an accent.</p>
+<div class="swatches"><div class="sw"><span class="chipc" style="background:#112F4E"></span><span class="meta"><span class="nm">Navy</span><br><span class="hx mono">#112F4E</span><br><span class="use">hero ground, footer</span></span></div><div class="sw"><span class="chipc" style="background:#205493"></span><span class="meta"><span class="nm">Blue / Layer 1</span><br><span class="hx mono">#205493</span><br><span class="use">app bar, primary action, graph</span></span></div><div class="sw"><span class="chipc" style="background:#0071BC"></span><span class="meta"><span class="nm">Link</span><br><span class="hx mono">#0071BC</span><br><span class="use">links, tab indicator</span></span></div><div class="sw"><span class="chipc" style="background:#2E8540"></span><span class="meta"><span class="nm">Green / Layer 2</span><br><span class="hx mono">#2E8540</span><br><span class="use">live NCBI APIs, success</span></span></div><div class="sw"><span class="chipc" style="background:#4C2C92"></span><span class="meta"><span class="nm">Violet / Layer 3</span><br><span class="hx mono">#4C2C92</span><br><span class="use">enrichment, literature</span></span></div><div class="sw"><span class="chipc" style="background:#981B1E"></span><span class="meta"><span class="nm">Risk</span><br><span class="hx mono">#981B1E</span><br><span class="use">risk tier and refusals only</span></span></div><div class="sw"><span class="chipc" style="background:#F0F0F0;border-bottom:1px solid var(--line)"></span><span class="meta"><span class="nm">Canvas</span><br><span class="hx mono">#F0F0F0</span><br><span class="use">page ground</span></span></div><div class="sw"><span class="chipc" style="background:#FFFFFF;border-bottom:1px solid var(--line)"></span><span class="meta"><span class="nm">Surface</span><br><span class="hx mono">#FFFFFF</span><br><span class="use">cards, panels</span></span></div><div class="sw"><span class="chipc" style="background:#D6D7D9"></span><span class="meta"><span class="nm">Line</span><br><span class="hx mono">#D6D7D9</span><br><span class="use">all borders</span></span></div><div class="sw"><span class="chipc" style="background:#1B1B1B"></span><span class="meta"><span class="nm">Ink</span><br><span class="hx mono">#1B1B1B</span><br><span class="use">body text</span></span></div><div class="sw"><span class="chipc" style="background:#565C65"></span><span class="meta"><span class="nm">Ink muted</span><br><span class="hx mono">#565C65</span><br><span class="use">secondary text</span></span></div><div class="sw"><span class="chipc" style="background:#FDF3D9"></span><span class="meta"><span class="nm">Warn wash</span><br><span class="hx mono">#FDF3D9</span><br><span class="use">disclaimer strip</span></span></div></div>
+</body></html>

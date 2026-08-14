@@ -1,0 +1,303 @@
+<title>Three Layers, One Answer</title>
+
+<style>
+  /* ===================================================================
+     One committed light theme. Every colour defined on bare :root, so
+     nothing depends on a media query or a theme stamp.
+
+     This page is the ARGUMENT, not the design. It deliberately holds no
+     component reproductions: the prototype shows how the product behaves
+     and the design-system cards define what each piece looks like. Every
+     section here that could be replaced by pointing at one of those has
+     been, so there is nothing on this page that can drift.
+     =================================================================== */
+  :root {
+    color-scheme: light;
+
+    --canvas:       #f0f0f0;
+    --surface:      #ffffff;
+    --surface-sunk: #f7f8f9;
+    --line:         #d6d7d9;
+    --line-strong:  #a9aeb1;
+
+    --ink:          #1b1b1b;
+    --ink-muted:    #565c65;
+    --ink-faint:    #71767a;
+    --on-navy:      #f3f6f9;
+    --on-navy-mute: #a9c3dc;
+
+    --navy:  #112f4e;
+    --blue:  #205493;
+    --link:  #0071bc;
+
+    --l1: #205493;
+    --l2: #2e8540;
+    --l3: #4c2c92;
+    --risk: #981b1e;
+
+    --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --r: 8px;
+    --r-sm: 4px;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 0 24px; }
+  h1, h2, h3 { margin: 0; line-height: 1.15; text-wrap: balance; }
+  a { color: var(--link); }
+  .mono { font-family: var(--mono); font-size: .92em; }
+
+  :where(a, button):focus-visible {
+    outline: 3px solid var(--link); outline-offset: 2px; border-radius: var(--r-sm);
+  }
+
+  .eyebrow {
+    font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    font-weight: 700; color: var(--ink-faint); margin: 0 0 12px;
+  }
+
+  /* ------------------------------------------------------------- hero */
+  .hero {
+    background: var(--navy);
+    background-image: radial-gradient(1000px 380px at 50% -10%, rgba(32,84,147,.55), transparent 70%);
+    color: var(--on-navy);
+    padding: 84px 0 76px;
+    border-bottom: 1px solid var(--line);
+  }
+  .hero .eyebrow { color: var(--on-navy-mute); }
+  .hero h1 {
+    font-size: clamp(38px, 6.4vw, 64px);
+    font-weight: 800; letter-spacing: -.03em; margin: 0 0 20px;
+  }
+  .hero p {
+    color: var(--on-navy-mute); font-size: clamp(16px, 2vw, 19px);
+    max-width: 56ch; margin: 0 0 32px;
+  }
+  .cta {
+    display: inline-flex; align-items: center; gap: 9px;
+    background: #fff; color: var(--navy); text-decoration: none;
+    font-weight: 700; font-size: 15px;
+    padding: 12px 22px; border-radius: var(--r-sm);
+  }
+  .cta:hover { background: var(--on-navy); }
+  .cta-note { display: block; margin-top: 14px; font-size: 13px; color: var(--on-navy-mute); }
+
+  /* ---------------------------------------------------------- sections */
+  section { padding: 68px 0; }
+  section + section { border-top: 1px solid var(--line); }
+  section h2 {
+    font-size: clamp(24px, 3.1vw, 33px);
+    font-weight: 800; letter-spacing: -.022em; margin: 0 0 16px;
+  }
+  section p { max-width: 64ch; margin: 0 0 18px; }
+  section p:last-child { margin-bottom: 0; }
+  .lede { font-size: 17.5px; color: var(--ink-muted); }
+
+  /* the three colours, stated as facts rather than reproduced as a component */
+  .layerstrip {
+    display: flex; flex-wrap: wrap; gap: 10px; margin: 26px 0;
+  }
+  .lchip {
+    flex: 1 1 200px; border: 1px solid var(--line); border-radius: var(--r);
+    background: var(--surface); padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .lchip .top { display: flex; align-items: center; gap: 9px; }
+  .lchip .sw { width: 13px; height: 13px; border-radius: 3px; display: block; flex: none; }
+  .lchip .nm { font-weight: 700; font-size: 14px; }
+  .lchip .hx { font-family: var(--mono); font-size: 11.5px; color: var(--ink-faint); margin-left: auto; }
+  .lchip .wh { font-size: 13px; color: var(--ink-muted); }
+  .lchip.a .sw { background: var(--l1); } .lchip.a .hx { color: var(--l1); }
+  .lchip.b .sw { background: var(--l2); } .lchip.b .hx { color: var(--l2); }
+  .lchip.c .sw { background: var(--l3); } .lchip.c .hx { color: var(--l3); }
+
+  /* the three settled choices */
+  .choice {
+    border-left: 3px solid var(--line-strong);
+    padding: 2px 0 2px 20px;
+    margin: 0 0 30px;
+  }
+  .choice:last-child { margin-bottom: 0; }
+  .choice h3 { font-size: 18px; font-weight: 700; letter-spacing: -.015em; margin: 0 0 8px; }
+  .choice p { margin: 0 0 10px; font-size: 15.5px; }
+  .choice .verdict {
+    font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .note {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r); padding: 20px 22px; margin-top: 30px;
+  }
+  .note h3 { font-size: 15px; font-weight: 700; margin: 0 0 12px; }
+  .note ul { margin: 0; padding-left: 20px; }
+  .note li { margin-bottom: 8px; font-size: 14.5px; color: var(--ink-muted); }
+  .note li:last-child { margin-bottom: 0; }
+  .note b { font-weight: 600; color: var(--ink); }
+
+  /* ------------------------------------------------------------- close */
+  .close { background: var(--navy); color: var(--on-navy); padding: 68px 0; }
+  .close h2 { color: #fff; }
+  .close p { color: var(--on-navy-mute); }
+  .close ul { margin: 22px 0 0; padding-left: 20px; color: var(--on-navy-mute); }
+  .close li { margin-bottom: 10px; max-width: 62ch; }
+  .close b { color: #fff; font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media (max-width: 640px) { section { padding: 48px 0; } .hero { padding: 56px 0 50px; } }
+</style>
+
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Build phase 4.8 · why it looks like this</p>
+    <h1>Three layers,<br>one cited answer.</h1>
+    <p>
+      The palette is NCBI's own, so it is not where the identity comes from. The identity
+      comes from something no other answer engine has: every claim on screen carries the
+      data layer it came from, in colour, everywhere.
+    </p>
+    <a class="cta" href="https://claude.ai/code/artifact/cf4e4858-f48e-411c-924c-86c8e70f8a78">
+      Open the prototype
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4"/></svg>
+    </a>
+    <span class="cta-note">This page is the reasoning. The prototype is the product.</span>
+  </div>
+</header>
+
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">The identity</p>
+    <h2>The data layer is the design system</h2>
+    <p class="lede">
+      Every answer is assembled from three places: the knowledge graph System 1 and 2 ingest,
+      live NCBI APIs, and the enrichment APIs. Giving each one a colour turns an implementation
+      detail into the thing people recognise.
+    </p>
+    <p>
+      It earns its place because it is true rather than decorative. The colour on a citation
+      tells a reader where the fact came from, and therefore how fresh it is and how it was
+      established. A curated graph assertion and a literature co-mention are not the same kind
+      of claim, and the interface should not pretend otherwise.
+    </p>
+
+    <div class="layerstrip">
+      <div class="lchip a"><div class="top"><span class="sw"></span><span class="nm">Knowledge graph</span><span class="hx">#205493</span></div><span class="wh">A periodic snapshot. Broad and fast.</span></div>
+      <div class="lchip b"><div class="top"><span class="sw"></span><span class="nm">Live NCBI</span><span class="hx">#2E8540</span></div><span class="wh">Fetched as you ask. Narrow and current.</span></div>
+      <div class="lchip c"><div class="top"><span class="sw"></span><span class="nm">Enrichment</span><span class="hx">#4C2C92</span></div><span class="wh">Literature and trials, layered on top.</span></div>
+    </div>
+
+    <p>
+      Red is deliberately absent from that set. It is reserved for the risk tier and for
+      refusals, so a high-risk clinical claim never has to compete with a layer colour for
+      the same meaning. It is the only red in the product.
+    </p>
+  </div>
+</section>
+
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Three choices, settled 2026-08-12</p>
+    <h2>Where the boldness was spent</h2>
+    <p class="lede">
+      Every other decision in this system is restrained so that these three can carry the work.
+    </p>
+
+    <div class="choice">
+      <h3>The provenance spine</h3>
+      <p>
+        A segmented vertical track beside the answer, one segment per claim, coloured by the
+        layer that backed it. Borrowed from genome browser tracks, so the form is native to
+        the audience. It encodes real data rather than decorating: a grey segment means an
+        uncited claim, visible before a word is read.
+      </p>
+      <p>
+        It renders always, not only when something is wrong. A track that appears solely on
+        failure is unexplained noise at exactly the moment precision matters most.
+      </p>
+      <p class="verdict">Kept, always rendered</p>
+    </div>
+
+    <div class="choice">
+      <h3>One saturated surface</h3>
+      <p>
+        The landing sits on NCBI navy at full strength. Everything else is flat white on a
+        tinted canvas with hairline borders and no shadows anywhere, so cards read as documents
+        rather than app furniture.
+      </p>
+      <p>
+        This phase exists because the shipped interface was too unstyled to demo, and an
+        all-white landing risks returning to precisely that. Spending the whole boldness budget
+        in one place buys presence at no cost to institutional credibility.
+      </p>
+      <p class="verdict">Kept</p>
+    </div>
+
+    <div class="choice">
+      <h3>Monospace, narrowed</h3>
+      <p>
+        Monospace marks a string you transcribe exactly: accessions, rsIDs, concept ids,
+        predicate names, tool names, dates, record URLs. It is the one typographic rule doing
+        real work, because those are things a researcher copies and compares character by
+        character.
+      </p>
+      <p>
+        Gene symbols were removed from the rule. BRCA1 inside a sentence is read as a word,
+        and three typeface switches in three sentences breaks the line rhythm for no
+        informational gain. The test is not "is this biomedical" but "would someone compare
+        this character by character".
+      </p>
+      <p class="verdict">Kept, narrowed</p>
+    </div>
+  </div>
+</section>
+
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Where things live</p>
+    <h2>This page is not the design</h2>
+    <p class="lede">
+      It holds the reasoning and nothing else, on purpose. Everything that can be shown rather
+      than argued lives somewhere it cannot drift.
+    </p>
+    <div class="note">
+      <h3>The four artifacts</h3>
+      <ul>
+        <li><b>The prototype</b>, <span class="mono">design-system/prototype/app.html</span>. The whole product, clickable. Play with it, show it to people.</li>
+        <li><b>The component cards</b>, <span class="mono">design-system/</span>. Eighteen isolated cards. Builders build from these and the premise gate asserts against them, so these are the only ones not allowed to go stale.</li>
+        <li><b>This page.</b> The argument. Allowed to lag, because nothing is checked against it.</li>
+        <li><b>The workflow</b>, <span class="mono">Design_to_build_workflow.md</span>. How a design change travels from Claude Design into React code, and what it costs before versus after the phase opens.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<footer class="close">
+  <div class="wrap">
+    <h2>What this is betting on</h2>
+    <p>
+      That the most persuasive thing this product can show a room is not a nicer search box.
+      It is watching a question cross three data layers in eleven seconds and come back with
+      every sentence traceable to an NCBI record.
+    </p>
+    <ul>
+      <li><b>The palette is not the identity.</b> NCBI's colours are the ground everyone in this space stands on. The layer system is what makes the page ours.</li>
+      <li><b>Flat is a choice, not a shortcut.</b> No shadows on data surfaces. Depth comes from the tinted canvas and one saturated navy.</li>
+      <li><b>Motion only where it means something.</b> The pipeline animates because it is genuinely happening. Nothing else moves.</li>
+      <li><b>Every decoration is data.</b> Chip colour is the layer. Spine segments are claims. The dots are the allowance. Remove the meaning and the ornament goes with it.</li>
+    </ul>
+  </div>
+</footer>

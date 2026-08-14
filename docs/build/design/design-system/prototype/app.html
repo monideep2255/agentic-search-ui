@@ -1,0 +1,1658 @@
+<!-- @dsCard group="Prototype" width=1100 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NCBI Agentic Search prototype</title>
+<style>
+:root{
+  color-scheme:light;
+  --canvas:#f0f0f0; --canvas-deep:#e4e6e8; --surface:#fff; --surface-sunk:#f7f8f9;
+  --line:#d6d7d9; --line-strong:#a9aeb1;
+  --ink:#1b1b1b; --ink-muted:#565c65; --ink-faint:#71767a;
+  --ink-on-navy:#f3f6f9; --ink-on-navy-mute:#a9c3dc;
+  --navy:#112f4e; --blue:#205493; --link:#0071bc;
+  --l1:#205493; --l2:#2e8540; --l3:#4c2c92;
+  --l1-wash:#e7eef6; --l2-wash:#e6f2e8; --l3-wash:#eeeaf6;
+  --risk:#981b1e; --risk-wash:#f8e9e9; --warn:#7a5900; --warn-wash:#fdf3d9; --ok:#2e8540;
+  --sans:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --r:8px; --r-sm:4px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);
+     font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button{font:inherit}
+:where(a,button,summary,input,[tabindex]):focus-visible{outline:3px solid var(--link);outline-offset:2px;border-radius:var(--r-sm)}
+.mono{font-family:var(--mono);font-size:.92em}
+.hidden{display:none !important}
+
+/* ---------------------------------------------------------------- chrome */
+.app{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--canvas)}
+.appbar{background:var(--blue);color:#fff;display:flex;align-items:center;gap:16px;padding:0 18px;height:54px;flex:none}
+.brand{font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;cursor:pointer;background:none;border:0;color:inherit;padding:0}
+.bm{width:21px;height:21px;flex:none;display:block}
+.nav{margin-left:auto;display:flex;align-items:center;gap:2px;font-size:13px}
+.nav button{background:none;border:0;color:rgba(255,255,255,.86);padding:6px 11px;border-radius:var(--r-sm);cursor:pointer}
+.nav button:hover{color:#fff}
+.nav button.on{color:#fff;box-shadow:inset 0 -2px 0 #fff;border-radius:0}
+.nav .login{border:1px solid rgba(255,255,255,.55);padding:5px 13px;border-radius:var(--r-sm);font-weight:600;margin-left:8px}
+.who{font-size:12.5px;color:rgba(255,255,255,.9);margin-left:8px;display:flex;align-items:center;gap:8px}
+.who .av{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.22);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px}
+.strip{display:flex;align-items:center;gap:9px;padding:9px 18px;font-size:12.5px;background:var(--warn-wash);color:var(--ink);border-bottom:1px solid var(--line);flex:none}
+.ham{background:none;border:0;color:#fff;padding:6px;border-radius:var(--r-sm);cursor:pointer;display:flex;align-items:center;margin-right:-8px}
+.ham:hover{background:rgba(255,255,255,.16)}
+.shell{flex:1;display:flex;min-height:0}
+main{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0}
+#rail{width:248px;flex:none;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:14px 12px;overflow-y:auto}
+#rail .rh{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--ink-faint);padding:10px 8px 6px}
+#rail .rtop{display:flex;gap:8px;align-items:stretch}
+#rail .rnew{display:flex;align-items:center;gap:8px;flex:1;background:var(--blue);color:#fff;border:0;border-radius:var(--r-sm);padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer}
+#rail .rmin{flex:none;width:34px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--line);border-radius:var(--r-sm);color:var(--ink-muted);cursor:pointer}
+#rail .rmin:hover{border-color:var(--line-strong);color:var(--ink);background:var(--surface-sunk)}
+#rail .rnew:hover{background:var(--navy)}
+#rail .ri{display:block;width:100%;text-align:left;background:none;border:0;border-radius:var(--r-sm);padding:9px 10px;font-size:13px;line-height:1.45;color:var(--ink);cursor:pointer}
+#rail .rq{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#rail .ri:hover{background:var(--surface-sunk)}
+#rail .ri.on{background:var(--l1-wash);color:var(--blue);font-weight:600}
+#rail .rm{display:block;font-size:11.5px;color:var(--ink-faint);font-weight:400;margin-top:2px}
+#rail .rempty{padding:6px 10px;font-size:12.5px;color:var(--ink-faint);line-height:1.5}
+#rail .rfoot{margin-top:auto;border-top:1px solid var(--line);padding:12px 10px 4px;font-size:12px;color:var(--ink-faint)}
+#railStub{width:46px;flex:none;background:var(--surface);border:0;border-right:1px solid var(--line);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px 0;color:var(--ink-muted)}
+#railStub:hover{background:var(--surface-sunk);color:var(--ink)}
+#railStub .sl{writing-mode:vertical-rl;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+#railStub .sn{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--blue);border-radius:999px;min-width:19px;padding:2px 5px;line-height:1.3}
+#railStub .sn:empty{display:none}
+@media (max-width:860px){#rail,#railStub{display:none}}
+#s-landing{flex:1;display:flex;flex-direction:column}
+.wrap{max-width:900px;margin:0 auto;padding:0 24px}
+.wrap.wide{max-width:1040px}
+.acct{position:relative;margin-left:8px}
+.acct .who{margin:0;cursor:pointer;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.08);border-radius:999px;padding:3px 11px 3px 3px;color:#fff;font-size:12.5px}
+.acct .who:hover{background:rgba(255,255,255,.18)}
+.acct .who .chev{font-size:10px;opacity:.8}
+.menu{position:absolute;right:0;top:calc(100% + 9px);width:274px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 14px 34px rgba(0,0,0,.2);z-index:60;padding:6px;color:var(--ink);text-align:left}
+.menu .mh{padding:9px 10px 10px;border-bottom:1px solid var(--line);font-size:12px;color:var(--ink-muted)}
+.menu .mh b{display:block;color:var(--ink);font-size:13.5px;font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis}
+.menu .sec{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);padding:11px 10px 4px;font-weight:700}
+.menu .mi{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 10px;border-radius:var(--r-sm);font-size:13px;color:var(--ink);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu .mi:hover{background:var(--surface-sunk);color:var(--ink)}
+.menu .out:hover{color:var(--risk)}
+.menu .empty{padding:3px 10px 6px;font-size:12.5px;color:var(--ink-faint)}
+.menu .out{color:var(--risk);border-top:1px solid var(--line);border-radius:0;margin-top:7px;padding-top:10px;font-weight:600}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--navy);color:#fff;font-size:13.5px;padding:11px 20px;border-radius:999px;box-shadow:0 10px 28px rgba(0,0,0,.28);z-index:90;max-width:calc(100vw - 32px)}
+/* --------------------------------------------------------- integrations */
+.keypanel{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;background:var(--l1-wash);border:1px solid #b9cde4;border-radius:var(--r);padding:16px 18px;margin:4px 0 26px}
+.keypanel .kl{font-size:13px;color:var(--ink-muted);margin:0;max-width:46ch}
+.keypanel .kl b{display:block;color:var(--ink);font-size:14.5px;margin-bottom:2px}
+.keyrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.keyval{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 13px;color:var(--ink)}
+.ihead{display:flex;align-items:center;gap:10px}
+.iico{width:30px;height:30px;border-radius:6px;background:var(--l1-wash);color:var(--blue);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;flex:none}
+.spill{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 9px;border:1px solid var(--line-strong);color:var(--ink-muted);background:var(--surface-sunk);margin-left:auto;flex:none}
+.spill.on{background:var(--l2-wash);border-color:#9ac5a4;color:#1e5c2c}
+.iacts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{font-size:13px;font-weight:600;padding:8px 14px;border-radius:var(--r-sm);cursor:pointer;border:1px solid var(--blue);background:var(--blue);color:#fff}
+.btn:hover{background:var(--navy);border-color:var(--navy)}
+.btn.ghost{background:transparent;color:var(--blue);border-color:var(--line-strong)}
+.btn.ghost:hover{background:var(--l1-wash);color:var(--navy)}
+/* ----------------------------------------------------------------- docs */
+.docs{display:grid;grid-template-columns:198px 1fr;gap:30px;padding:16px 0 46px}
+.docnav{position:sticky;top:16px;align-self:start;display:flex;flex-direction:column;gap:2px}
+.docnav button{text-align:left;background:none;border:0;padding:7px 10px;border-radius:var(--r-sm);font-size:13.5px;color:var(--ink-muted);cursor:pointer}
+.docnav button:hover{background:var(--canvas-deep);color:var(--ink)}
+.docnav button.on{background:var(--l1-wash);color:var(--blue);font-weight:700}
+.doc h2{font-size:26px;font-weight:800;letter-spacing:-.024em;margin:0 0 10px}
+.doc h4{margin:24px 0 8px;font-size:14px;font-weight:700}
+.doc p{color:var(--ink-muted);max-width:70ch;margin:0 0 16px;font-size:14.5px}
+.doc pre{font-family:var(--mono);font-size:12.5px;line-height:1.7;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;overflow-x:auto;margin:0 0 18px;color:var(--ink)}
+.doc .inl{font-family:var(--mono);font-size:.88em;background:var(--surface-sunk);border:1px solid var(--line);border-radius:3px;padding:1px 5px}
+.dtable{width:100%;border-collapse:collapse;font-size:13.5px;margin:0 0 18px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.dtable th,.dtable td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.dtable th{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint)}
+.dtable td:first-child{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+.dtable tr:last-child td{border-bottom:0}
+@media (max-width:860px){.docs{grid-template-columns:1fr;gap:16px}.docnav{position:static;flex-direction:row;flex-wrap:wrap}}
+.foot{background:var(--navy);color:var(--ink-on-navy-mute);padding:12px;text-align:center;font-size:12px;flex:none}
+
+/* --------------------------------------------------------------- landing */
+.hero{flex:1;display:flex;flex-direction:column;justify-content:center;background:var(--navy);background-image:radial-gradient(900px 340px at 50% -10%,rgba(32,84,147,.6),transparent 70%);padding:clamp(32px,6vh,64px) 24px clamp(28px,5vh,56px);text-align:center}
+.hero h1{margin:0 0 14px;font-size:clamp(32px,4.6vw,50px);font-weight:800;letter-spacing:-.034em;color:#fff;line-height:1.1;text-wrap:balance}
+.hero .sub{margin:0 auto 30px;width:100%;max-width:46ch;color:var(--ink-on-navy-mute);font-size:16px}
+.searchbar{display:flex;align-items:center;gap:10px;width:100%;max-width:620px;margin:0 auto 18px;background:var(--surface);
+  border:2px solid transparent;border-radius:var(--r);padding:6px 6px 6px 16px;text-align:left}
+.searchbar:focus-within{border-color:var(--link)}
+.searchbar input{flex:1;border:0;outline:0;font:inherit;font-size:15.5px;color:var(--ink);background:transparent;padding:6px 0}
+.go{background:var(--blue);color:#fff;border:0;font-weight:600;font-size:14px;padding:10px 18px;border-radius:var(--r-sm);cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.go:hover{background:var(--navy)}
+.seeds{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;max-width:660px;margin:0 auto}
+.seed{border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);color:#fff;border-radius:999px;padding:6px 14px;font-size:13px;cursor:pointer}
+.seed:hover{background:rgba(255,255,255,.18)}
+.seed .mono{color:#fff}
+.stats{width:100%;max-width:900px;margin:clamp(20px,4vh,34px) auto 0;padding-top:20px;border-top:1px solid rgba(255,255,255,.18);
+  display:flex;flex-wrap:wrap;gap:10px 28px;justify-content:center;font-size:12.5px;color:var(--ink-on-navy-mute)}
+.stats b{color:#fff;font-weight:700}
+
+/* ------------------------------------------------------------------- run */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:26px 24px;margin:28px 0}
+.askline{padding-bottom:16px;margin-bottom:20px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:flex-start}
+.q{font-size:19px;font-weight:700;letter-spacing:-.015em;flex:1}
+.back{background:none;border:1px solid var(--line);color:var(--ink-muted);font-size:12.5px;padding:6px 12px;border-radius:var(--r-sm);cursor:pointer;flex:none}
+.back:hover{border-color:var(--line-strong);color:var(--ink)}
+.stepper{display:flex;align-items:flex-start}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative}
+.step::before{content:"";position:absolute;top:7px;left:-50%;width:100%;height:2px;background:var(--line)}
+.step:first-child::before{display:none}
+.step.done::before,.step.live::before{background:var(--blue)}
+.pip{width:16px;height:16px;border-radius:50%;border:2px solid var(--line-strong);background:var(--surface);position:relative;transition:all .3s ease}
+.step.done .pip{background:var(--blue);border-color:var(--blue)}
+.step.live .pip{border-color:var(--blue);box-shadow:0 0 0 4px var(--l1-wash)}
+.step.live .pip::after{content:"";position:absolute;inset:2px;border-radius:50%;background:var(--blue);animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.35;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}
+.l{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}
+.step.done .l,.step.live .l{color:var(--ink)}
+.now{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:20px;min-height:32px;font-size:13.5px;color:var(--ink-muted)}
+.tc{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11.5px;font-weight:600;
+  border:1px solid var(--line);border-left-width:4px;border-radius:var(--r-sm);padding:3px 8px;background:var(--surface);
+  animation:land .32s cubic-bezier(.2,.9,.3,1.2) both}
+.tc .n{color:var(--ink-muted);font-weight:400}
+.tc.t1{border-left-color:var(--l1);background:var(--l1-wash)}
+.tc.t2{border-left-color:var(--l2);background:var(--l2-wash)}
+.tc.t3{border-left-color:var(--l3);background:var(--l3-wash)}
+@keyframes land{from{opacity:0;transform:translateY(6px) scale(.94)}to{opacity:1;transform:none}}
+.stop{background:transparent;border:1px solid var(--line-strong);color:var(--ink-muted);font-size:12.5px;padding:6px 13px;border-radius:var(--r-sm);cursor:pointer;flex:none}
+.stop:hover{border-color:var(--risk);color:var(--risk)}
+
+.trace{margin-top:18px;border-top:1px solid var(--line)}
+.trace>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:9px;padding:12px 0 0;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--ink-faint)}
+.trace>summary::-webkit-details-marker{display:none}
+.trace>summary .arrow{font-size:11px;letter-spacing:0;transition:transform .18s ease}
+.trace[open]>summary .arrow{transform:rotate(90deg)}
+.trace .tn{font-family:var(--mono);font-size:11px;letter-spacing:0;text-transform:none;color:var(--ink-muted);
+  border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.tracelog{margin-top:10px;display:flex;flex-direction:column;gap:0;max-height:230px;overflow-y:auto;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-sunk)}
+.tl{display:grid;grid-template-columns:52px 66px 1fr;gap:12px;padding:8px 12px;font-size:13px;
+  border-bottom:1px solid var(--line);animation:land .28s cubic-bezier(.2,.9,.3,1.2) both}
+.tracelog .tl:last-child{border-bottom:0}
+.tl .ts{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);padding-top:1px}
+.tl .ph{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding-top:2px}
+.tl.p1 .ph{color:var(--l1)} .tl.p2 .ph{color:var(--l2)} .tl.p3 .ph{color:var(--l3)} .tl.p0 .ph{color:var(--ink-faint)}
+.tl .tx{color:var(--ink-muted);max-width:74ch}
+.tl .tx b{color:var(--ink);font-weight:600}
+.tl .tx code{font-family:var(--mono);font-size:12px;background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:0 4px}
+/* ---------------------------------------------------------------- answer */
+.summary{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-muted);
+  border:1px solid var(--line);border-radius:var(--r);background:var(--surface-sunk);padding:9px 14px}
+.summary .ok{color:var(--ok);font-weight:700}
+.summary .toggle{margin-left:auto;color:var(--link);background:none;border:0;cursor:pointer;font-size:13px}
+.grid{display:grid;grid-template-columns:14px 1fr;gap:18px;margin-top:24px}
+.spine{display:flex;flex-direction:column;gap:3px;padding-top:6px}
+.spine i{display:block;width:6px;border-radius:3px;margin:0 auto;flex:none;transition:height .3s ease}
+.spine i.s1{background:var(--l1)} .spine i.s2{background:var(--l2)} .spine i.s3{background:var(--l3)}
+.spine i.s0{background:var(--line-strong)}
+.answer p{margin:0 0 18px;font-size:16.5px;line-height:1.68;max-width:66ch;color:var(--ink);text-wrap:pretty}
+.answer p strong{font-weight:700}
+.answer .mono{font-size:.9em;background:var(--surface-sunk);border:1px solid var(--line);border-radius:3px;padding:0 4px;white-space:nowrap}
+.answer p:last-child{margin-bottom:0}
+.caret{display:inline-block;width:8px;height:17px;background:var(--blue);vertical-align:-3px;animation:blink .9s steps(1) infinite}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.cite{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line-strong);border-left-width:3px;
+  border-radius:var(--r-sm);padding:0 5px;font-family:var(--mono);font-size:10.5px;font-weight:600;
+  line-height:1.6;vertical-align:1px;margin-left:2px;background:var(--surface);cursor:pointer;white-space:nowrap;transition:transform .14s ease}
+.cite:hover{transform:translateY(-1px)}
+.cite .src{color:var(--ink-muted);font-weight:400}
+.cite.c1{border-left-color:var(--l1);background:var(--l1-wash)}
+.cite.c2{border-left-color:var(--l2);background:var(--l2-wash)}
+.cite.c3{border-left-color:var(--l3);background:var(--l3-wash)}
+.answer .ah{font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--ink-faint);
+  margin:32px 0 14px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+.answer .ah:first-child{margin-top:0}
+.rtab{width:100%;border-collapse:collapse;font-size:13.5px;margin:0 0 16px;border:1px solid var(--line);background:var(--surface)}
+.rtab caption{caption-side:top;text-align:left;font-size:12px;color:var(--ink-faint);padding:0 0 6px}
+.rtab th,.rtab td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+.rtab thead th{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);background:var(--surface-sunk)}
+.rtab tbody tr:last-child td{border-bottom:0}
+.rtab td.g{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+.rtab a{color:var(--link);text-decoration:underline;text-underline-offset:2px}
+.rtab a:hover{color:var(--navy)}
+.conflict{border:1px solid var(--warn);border-left-width:4px;background:var(--warn-wash);border-radius:var(--r-sm);padding:13px 15px;margin:0 0 16px;font-size:14px;max-width:64ch}
+.conflict b{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;color:var(--warn)}
+.blk{animation:land .3s cubic-bezier(.2,.9,.3,1.2) both}
+.sh{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin:28px 0 10px}
+.srcwrap{border-top:1px solid var(--line);margin-top:24px}
+.srcwrap>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:9px;padding:14px 0 4px}
+.srcwrap>summary::-webkit-details-marker{display:none}
+.srcwrap>summary .arrow{color:var(--ink-faint);font-size:11px;transition:transform .18s ease}
+.srcwrap[open]>summary .arrow{transform:rotate(90deg)}
+.srcwrap .cnt{font-family:var(--mono);font-size:11.5px;color:var(--ink-muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.srclist{padding-top:8px}
+details.src{border:1px solid var(--line);border-left-width:4px;border-radius:var(--r-sm);background:var(--surface);margin-bottom:8px}
+details.src.c1{border-left-color:var(--l1)} details.src.c2{border-left-color:var(--l2)} details.src.c3{border-left-color:var(--l3)}
+details.src summary{cursor:pointer;list-style:none;padding:11px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px}
+details.src summary::-webkit-details-marker{display:none}
+details.src .num{font-family:var(--mono);font-weight:700;font-size:12px}
+details.src .name{font-weight:600}
+details.src .tag{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--ink-muted)}
+details.src .arrow{color:var(--ink-faint);font-size:11px;transition:transform .18s ease}
+details.src[open] .arrow{transform:rotate(90deg)}
+.flag{font-size:11.5px;color:var(--ink-faint);border:1px solid var(--line);border-radius:var(--r-sm);padding:2px 8px;cursor:pointer;background:var(--surface)}
+.flag:hover{color:var(--risk);border-color:var(--risk);background:var(--risk-wash)}
+.flag.on{color:var(--risk);border-color:var(--risk);background:var(--risk-wash)}
+dl.detail{border-top:1px solid var(--line);padding:13px 14px;margin:0;display:grid;grid-template-columns:auto 1fr;gap:7px 18px;font-size:13px}
+dl.detail dt{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding-top:2px}
+dl.detail dd{margin:0;font-size:13px}
+dl.detail dd.tok{font-family:var(--mono);font-size:12.5px;word-break:break-all}
+dl.detail a{color:var(--link);text-decoration:underline;text-underline-offset:2px}
+dl.detail a:hover{color:var(--navy)}
+.verdict{margin-top:20px;display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:600;border:1px solid transparent}
+.pill.good{background:var(--l2-wash);color:var(--ok);border-color:var(--ok)}
+.pill.high{background:var(--risk-wash);color:var(--risk);border-color:var(--risk)}
+.pill.plain{background:var(--surface-sunk);color:var(--ink-muted);border-color:var(--line)}
+
+/* ------------------------------------------------------------- follow-up */
+.thread{display:flex;flex-direction:column;gap:14px;margin-top:26px}
+.prev{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-sunk)}
+.prev>summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:10px;padding:12px 14px}
+.prev>summary::-webkit-details-marker{display:none}
+.prev>summary .arrow{font-size:10px;color:var(--ink-faint);transition:transform .18s ease}
+.prev[open]>summary .arrow{transform:rotate(90deg)}
+.prev>summary .pq{font-weight:700;font-size:14.5px;color:var(--ink)}
+.prev>summary .pm{font-size:12px;color:var(--ink-faint)}
+.prevbody{padding:4px 14px 16px;background:var(--surface);border-top:1px solid var(--line)}
+.prevbody .grid{margin-top:16px}
+.turn{border-top:1px solid var(--line);padding-top:18px}
+.turn .uq{display:flex;gap:10px;align-items:flex-start;font-size:16px;font-weight:600;color:var(--ink);margin-bottom:12px}
+.turn .uq .who{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-faint);border:1px solid var(--line);border-radius:999px;padding:2px 9px;flex:none;margin-top:3px}
+.turn .tmeta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12.5px;color:var(--ink-muted);margin-bottom:12px}
+.turn .tmeta .ran{color:var(--ok);font-weight:600}
+.turn .tmeta .refused{color:var(--risk);font-weight:600}
+.turn.refused{border-left:3px solid var(--risk);padding-left:14px;border-top-color:var(--line)}
+.pill.risk{background:var(--risk-wash,#fdeaea);color:var(--risk);border-color:var(--risk)}
+.turn .answer p{font-size:16px}
+.followup{margin-top:26px;padding-top:20px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:9px}
+.followup label{font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--ink-faint)}
+.fu-bar{display:flex;gap:8px}
+.fu-bar input{flex:1;min-width:0;border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:11px 13px;font:inherit;font-size:15px;background:var(--surface);color:var(--ink)}
+.fu-bar input:focus{outline:2px solid var(--link);outline-offset:-1px}
+.fu-bar button{background:var(--blue);color:#fff;border:0;border-radius:var(--r-sm);padding:0 20px;font:inherit;font-weight:700;font-size:14.5px;cursor:pointer}
+.fu-bar button:hover{background:var(--navy)}
+.fu-hints{display:flex;flex-wrap:wrap;gap:7px}
+.fu-hints button{background:var(--surface-sunk);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font:inherit;font-size:12.5px;color:var(--ink-muted);cursor:pointer}
+.fu-hints button:hover{border-color:var(--line-strong);color:var(--ink)}
+/* -------------------------------------------------------------- feedback */
+.fb{margin-top:24px;padding-top:18px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.fb-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--ink-muted)}
+.fb-btn{width:30px;height:30px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-sm);
+  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-muted);padding:0}
+.fb-btn:hover{border-color:var(--line-strong);color:var(--ink)}
+.fb-btn.on{border-color:var(--blue);color:var(--blue);background:var(--l1-wash)}
+.fb-btn.on.down{border-color:var(--risk);color:var(--risk);background:var(--risk-wash)}
+.reasons{display:flex;flex-wrap:wrap;gap:6px}
+.reason{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;font-size:12.5px;color:var(--ink-muted);cursor:pointer}
+.reason:hover{border-color:var(--line-strong);color:var(--ink)}
+.reason.on{border-color:var(--risk);color:var(--risk);background:var(--risk-wash)}
+.fb-text{width:100%;max-width:470px;border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:9px 11px;font:inherit;font-size:13.5px;background:var(--surface)}
+.fb-send{background:var(--blue);color:#fff;border:0;font-weight:600;font-size:12.5px;padding:7px 14px;border-radius:var(--r-sm);cursor:pointer}
+.fb-skip{background:transparent;color:var(--ink-muted);border:1px solid var(--line);font-size:12.5px;padding:7px 14px;border-radius:var(--r-sm);cursor:pointer}
+.fb-done{font-size:13px;color:var(--ok);font-weight:600}
+
+/* ------------------------------------------------- persona and depth (12.7, 12.9)
+   Presentation only. The persona never changes what runs or what is asserted;
+   the depth control changes synthesis vocabulary, never grounding. */
+.persona{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);
+  background:var(--surface);border-radius:999px;padding:5px 13px 5px 7px;font-size:13px;color:var(--ink-muted)}
+.persona .pav{width:22px;height:22px;border-radius:50%;background:var(--surface-sunk);
+  border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;
+  color:var(--ink-faint);flex:none}
+.persona b{font-weight:700;color:var(--ink)}
+.persona.on-navy{border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.10);color:var(--ink-on-navy-mute)}
+.persona.on-navy .pav{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.28);color:#fff}
+.persona.on-navy b{color:#fff}
+
+.pcap{display:flex;align-items:center;gap:9px;margin:16px 0 0;font-size:13.5px;color:var(--ink-muted);min-height:22px}
+.pcap .pav{width:20px;height:20px;border-radius:50%;background:var(--surface-sunk);border:1px solid var(--line);
+  display:inline-flex;align-items:center;justify-content:center;color:var(--ink-faint);flex:none}
+.pcap b{font-weight:700;color:var(--ink)}
+
+.depth{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--surface)}
+.depth button{background:transparent;border:0;padding:6px 13px;font-size:12.5px;color:var(--ink-muted);cursor:pointer}
+.depth button + button{border-left:1px solid var(--line)}
+.depth button.on{background:var(--l1-wash);color:var(--l1);font-weight:700}
+.depth button:disabled{cursor:not-allowed;opacity:.5}
+.depthwrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;margin:0 0 20px}
+.depthwrap .dl{font-size:12.5px;color:var(--ink-on-navy-mute)}
+.depthwrap .lock{font-size:12px;color:var(--ink-faint)}
+
+/* ------------------------------------------------------------ guest flow */
+.softprompt{border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:var(--r-sm);
+  background:var(--l1-wash);padding:14px 16px;font-size:14px;margin-top:22px}
+.softprompt .row{display:flex;gap:8px;margin-top:12px}
+.mini{font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:var(--r-sm);cursor:pointer;border:1px solid var(--blue);background:var(--blue);color:#fff}
+.mini.alt{background:transparent;color:var(--ink-muted);border-color:var(--line)}
+.counter{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink-muted);
+  border:1px solid var(--line);border-radius:999px;padding:5px 13px;background:var(--surface)}
+.ticks{display:flex;gap:3px}
+.ticks i{width:7px;height:7px;border-radius:50%;background:var(--blue);display:block}
+.ticks i.spent{background:var(--line-strong)}
+.wallbox{border:1px solid var(--line-strong);border-radius:var(--r);background:var(--surface);padding:34px 24px;text-align:center;margin:28px 0}
+.wallbox h3{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.wallbox p{margin:0 0 18px;color:var(--ink-muted);font-size:14.5px}
+
+/* ----------------------------------------------------------------- modal */
+.scrim{position:absolute;inset:0;background:rgba(11,33,56,.55);display:flex;align-items:center;justify-content:center;padding:24px;z-index:20}
+.modal{background:var(--surface);border-radius:var(--r);max-width:620px;width:100%;
+  box-shadow:0 1px 2px rgba(17,47,78,.1),0 20px 50px rgba(17,47,78,.3);overflow:hidden}
+.modal-h{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;font-weight:700;font-size:15.5px}
+.modal-b{padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.modal-b p{margin:0;font-size:14px;color:var(--ink-muted)}
+.modal-b p.lead{color:var(--ink);font-weight:600}
+.callout{border:1px solid var(--warn);border-left-width:4px;background:var(--warn-wash);border-radius:var(--r-sm);padding:11px 13px;font-size:13px}
+.checkrow{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;cursor:pointer}
+.checkrow input{margin:3px 0 0}
+.modal-f{padding:0 20px 20px}
+.modal-f .go{width:100%;justify-content:center}
+.modal-f .go[disabled]{opacity:.4;cursor:not-allowed}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;font-weight:600;color:var(--ink-muted)}
+.field input{border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:9px 11px;font:inherit;font-size:14px}
+
+/* ------------------------------------------------------------ info pages */
+.page{padding:12px 0 40px}
+.page h2{font-size:28px;font-weight:800;letter-spacing:-.024em;margin:28px 0 10px}
+.page p{color:var(--ink-muted);max-width:66ch;margin:0 0 16px}
+.cards{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));align-items:stretch}
+.icard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:10px}
+.icard p{flex:1}
+.icard h3{margin:0;font-size:15px;font-weight:700}
+.icard p{margin:0;font-size:13.5px}
+.icard code{font-family:var(--mono);font-size:11.5px;line-height:1.65;background:var(--surface-sunk);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:10px 12px;display:block;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);margin-top:auto}
+.loop{display:grid;gap:0;margin:4px 0 24px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.loop .lp{display:grid;grid-template-columns:34px 92px 1fr;gap:14px;align-items:start;padding:14px 16px;border-bottom:1px solid var(--line)}
+.loop .lp:last-child{border-bottom:0}
+.loop .lpn{font-family:var(--mono);font-size:12px;font-weight:700;color:#fff;background:var(--blue);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+.loop .lpk{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink);padding-top:4px}
+.loop .lpt{font-size:14px;color:var(--ink-muted);margin:0;padding-top:3px}
+.nolist{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:8px;max-width:70ch}
+.nolist li{position:relative;padding-left:22px;font-size:14.5px;color:var(--ink-muted)}
+.nolist li::before{content:"\2715";position:absolute;left:0;top:0;color:var(--risk);font-size:12px;font-weight:700}
+@media (max-width:720px){.loop .lp{grid-template-columns:26px 1fr;gap:10px}.loop .lpk{grid-column:2;padding-top:0}.loop .lpt{grid-column:2}}
+.layerrow{display:flex;align-items:center;gap:10px}
+.layerrow .n{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em}
+.l1 .dot{background:var(--l1)} .l1 .n{color:var(--l1)}
+.l2 .dot{background:var(--l2)} .l2 .n{color:var(--l2)}
+.l3 .dot{background:var(--l3)} .l3 .n{color:var(--l3)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (min-width:1440px){
+  .wrap{max-width:1040px}
+}
+@media (max-width:1024px){
+  .wrap{padding:0 20px}
+}
+@media (max-width:860px){
+  .hero{padding:52px 20px 44px}
+  .hero .sub{font-size:15px}
+  .conflict,.answer p{max-width:none}
+  .tl{grid-template-columns:46px 56px 1fr;gap:9px;font-size:12.5px}
+}
+@media (max-width:720px){
+  .nav button:not(.on):not(.login){display:none}
+  .grid{grid-template-columns:10px 1fr;gap:12px}
+  .hero{padding:44px 18px 40px}
+  .wrap{padding:0 16px}
+  .appbar{padding:0 14px;gap:10px}
+  .strip{padding:9px 14px;font-size:12px}
+  .rtab{display:block;overflow-x:auto;white-space:nowrap}
+  .scrim{padding:14px;align-items:flex-start}
+  .modal{max-height:calc(100vh - 28px);overflow-y:auto}
+  .tracelog{max-height:200px}
+}
+@media (max-width:520px){
+  .hero h1{font-size:26px}
+  .tl{grid-template-columns:1fr;gap:2px}
+  .tl .ts,.tl .ph{padding-top:0}
+  .seeds{flex-direction:column;align-items:stretch}
+  .seed{text-align:left}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ============================ app bar ============================ -->
+  <div class="appbar">
+    <button class="ham hidden" id="railBtn" onclick="toggleRail()" aria-label="Show or hide your searches" aria-expanded="true">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
+    </button>
+    <button class="brand" onclick="go('landing')">
+      <svg class="bm" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2 Q19 5.35 12 8.7 Q5 12 12 15.3 Q19 18.65 12 22" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/>
+        <path d="M12 2 Q5 5.35 12 8.7 Q19 12 12 15.3 Q5 18.65 12 22" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/>
+        <line x1="8.6" y1="5.35" x2="15.4" y2="5.35" stroke="#cfe1f5" stroke-width="1.9" stroke-linecap="round"/>
+        <line x1="8.6" y1="12" x2="15.4" y2="12" stroke="#9fd3a8" stroke-width="1.9" stroke-linecap="round"/>
+        <line x1="8.6" y1="18.65" x2="15.4" y2="18.65" stroke="#c3b2e6" stroke-width="1.9" stroke-linecap="round"/>
+      </svg>
+      NCBI Agentic Search
+    </button>
+    <div class="nav">
+      <button id="nav-search" class="on" onclick="go('landing')">Search</button>
+      <button id="nav-integrations" onclick="go('integrations')">Integrations</button>
+      <button id="nav-about" onclick="go('about')">About</button>
+      <button id="nav-docs" onclick="go('docs')">Docs</button>
+      <span class="persona on-navy" id="personaChip"><span class="pav"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5.2" r="2.9"/><path d="M2.6 14a5.4 5.4 0 0 1 10.8 0z"/></svg></span>Working as <b id="personaName">&mdash;</b></span>
+      <button class="login" id="loginBtn" onclick="openLogin()">Log in</button>
+      <div class="acct hidden" id="acct" onclick="event.stopPropagation()">
+        <button class="who" id="whoBtn" onclick="toggleAcct(event)" aria-haspopup="menu" aria-expanded="false"><span class="av" id="avInit">YI</span><span id="whoName">you@institute.edu</span><span class="chev">&#9662;</span></button>
+        <div class="menu hidden" id="acctMenu" role="menu"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="strip">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.2 15 14H1L8 1.2Zm0 4.3a.8.8 0 0 0-.8.8v3a.8.8 0 0 0 1.6 0v-3a.8.8 0 0 0-.8-.8Zm0 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z"/></svg>
+    Research tool. Answers are cited to NCBI records and are not medical advice.
+  </div>
+
+  <div class="shell">
+  <aside id="rail" class="hidden"></aside>
+  <button id="railStub" class="hidden" onclick="toggleRail()" title="Show your searches" aria-label="Show your searches">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 4 10.5 8l-4 4"/><path d="M3.5 3.2v9.6"/></svg>
+    <span class="sl">Your searches</span><span class="sn" id="railCount"></span>
+  </button>
+  <main>
+    <!-- ========================== landing ========================== -->
+    <section id="s-landing">
+      <div class="hero">
+        <h1>Ask a biomedical question</h1>
+        <p class="sub">Answered from the NCBI knowledge graph and live NCBI APIs. Every claim carries its source.</p>
+        <form class="searchbar" onsubmit="submitQuery(event)">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" style="color:var(--ink-faint);flex:none" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="m10.5 10.5 4 4"/></svg>
+          <input id="qbox" type="text" aria-label="Your question" placeholder="Which diseases are associated with BRCA1?">
+          <button class="go" type="submit">Search
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4"/></svg>
+          </button>
+        </form>
+        <div class="depthwrap">
+          <span class="dl">Answer depth</span>
+          <div class="depth" id="depth" role="group" aria-label="Audience-level depth">
+            <button type="button" data-d="clinical_brief" onclick="setDepth('clinical_brief')">Clinical brief</button>
+            <button type="button" data-d="researcher" class="on" onclick="setDepth('researcher')">Researcher</button>
+            <button type="button" data-d="deep_technical" onclick="setDepth('deep_technical')">Deep technical</button>
+          </div>
+        </div>
+        <div class="seeds" id="seeds"></div>
+        <div class="stats">
+          <span><b>Knowledge graph</b> 115M nodes, 693M edges</span>
+          <span><b>Live NCBI APIs</b> queried per question</span>
+          <span><b>Literature and trials</b> layered on top</span>
+          <span><b>7</b> tools across <b>3</b> layers</span>
+        </div>
+      </div>
+      <div class="wrap" id="landingFoot" style="padding:18px 24px;display:flex;justify-content:center"></div>
+    </section>
+
+    <!-- ============================ run ============================ -->
+    <section id="s-run" class="hidden">
+      <div class="wrap"><div class="panel">
+        <div class="askline">
+          <div class="q" id="runQ"></div>
+          <button class="stop" id="stopBtn" onclick="stopRun()">&#9632; Stop</button>
+          <button class="back" onclick="go('landing')">New search</button>
+        </div>
+        <div class="stepper" id="stepper">
+          <div class="step" data-k="Guard"><span class="pip"></span><span class="l">Guard</span></div>
+          <div class="step" data-k="Think"><span class="pip"></span><span class="l">Think</span></div>
+          <div class="step" data-k="Plan"><span class="pip"></span><span class="l">Plan</span></div>
+          <div class="step" data-k="Act"><span class="pip"></span><span class="l">Act</span></div>
+          <div class="step" data-k="Write"><span class="pip"></span><span class="l">Write</span></div>
+        </div>
+        <div class="pcap" id="pcap"></div>
+        <div class="now" id="now"></div>
+        <details class="trace" id="traceWrap" open>
+          <summary><span class="arrow">&#9654;</span>Reasoning<span class="tn" id="traceN"></span></summary>
+          <div class="tracelog" id="trace"></div>
+        </details>
+      </div></div>
+    </section>
+
+    <!-- ========================== answer =========================== -->
+    <section id="s-answer" class="hidden">
+      <div class="wrap"><div class="panel">
+        <div class="askline">
+          <div class="q" id="ansQ"></div>
+          <button class="back" onclick="go('landing')">New search</button>
+        </div>
+        <div class="summary">
+          <span class="ok">&#10003; Answered</span>
+          <span id="ansMeta"></span>
+          <button class="toggle" onclick="toggleWork()" id="workToggle">Show work &#9662;</button>
+        </div>
+        <div id="workPanel" class="hidden" style="margin-top:14px"></div>
+        <div class="grid">
+          <div class="spine" id="spine" aria-hidden="true"></div>
+          <div class="answer" id="answer"></div>
+        </div>
+        <div id="tail" class="hidden">
+          <div id="sources"></div>
+          <div class="verdict" id="verdict"></div>
+          <div class="thread" id="thread"></div>
+          <form class="followup" id="followup" onsubmit="askFollowUp(event)">
+            <label for="fubox">Continue this conversation</label>
+            <div class="fu-bar">
+              <input id="fubox" type="text" placeholder="Ask anything — this runs a full search; the answer above is used only if relevant">
+              <button type="submit">Ask</button>
+            </div>
+            <div class="fu-hints" id="fuHints"></div>
+          </form>
+          <div class="fb" id="fb"></div>
+          <div id="promptSlot"></div>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- =========================== wall ============================ -->
+    <section id="s-wall" class="hidden">
+      <div class="wrap"><div class="wallbox">
+        <svg width="26" height="26" viewBox="0 0 16 16" fill="var(--ink-faint)" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 1 1 7 0v2H12a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5a2 2 0 1 0-4 0v2Z"/></svg>
+        <h3>Sign in to keep searching</h3>
+        <p>You have used your 5 free searches. Your history moves with you when you sign in.</p>
+        <button class="go" style="margin:0 auto" onclick="openLogin()">Create account or sign in</button>
+      </div></div>
+    </section>
+
+    <!-- ====================== integrations ========================= -->
+    <section id="s-integrations" class="hidden">
+      <div class="wrap page">
+        <h2>Integrations</h2>
+        <p>The same agent, reachable four ways. Every surface runs the identical loop and returns the identical citations.</p>
+        <div class="keypanel" id="keyPanel"></div>
+        <div class="cards">
+          <div class="icard">
+            <div class="ihead"><span class="iico">API</span><h3>REST and SSE</h3><span class="spill" id="pill-rest">Sign in required</span></div>
+            <p>Stream a run event by event, resumable with <span class="mono">Last-Event-ID</span>.</p>
+            <code>POST /v1/query
+GET  /v1/query/{run_id}/events
+GET  /v1/query/{run_id}/citations</code>
+            <div class="iacts"><button class="btn" onclick="copyText(this,'https://api.ncbi-agentic-search.org/v1/query')">Copy endpoint</button><button class="btn ghost" onclick="openDocs('rest')">Docs</button></div>
+          </div>
+          <div class="icard">
+            <div class="ihead"><span class="iico">MCP</span><h3>MCP server</h3><span class="spill" id="pill-mcp">Sign in required</span></div>
+            <p>One advertised tool, <span class="mono">ask_biomedical_question</span>. Folds a whole run into one JSON result. The seven internal tools are never exposed.</p>
+            <code>{"mcpServers":{"ncbi-search":{
+  "url":"https://.../mcp"}}}</code>
+            <div class="iacts"><button class="btn" onclick="copyText(this,'{\&quot;mcpServers\&quot;:{\&quot;ncbi-search\&quot;:{\&quot;url\&quot;:\&quot;https://api.ncbi-agentic-search.org/mcp\&quot;}}}')">Copy config</button><button class="btn ghost" onclick="openDocs('mcp')">Docs</button></div>
+          </div>
+          <div class="icard">
+            <div class="ihead"><span class="iico">KGX</span><h3>KGX export</h3><span class="spill" id="pill-kgx">Sign in required</span></div>
+            <p>Nodes and edges in BioLink-compliant KGX, for loading into your own graph. Prepared as a batch job, not served live.</p>
+            <code>POST /v1/export/kgx</code>
+            <div class="iacts"><button class="btn" onclick="fakeDownload(this)">Request export</button><button class="btn ghost" onclick="openDocs('kgx')">Docs</button></div>
+          </div>
+          <div class="icard">
+            <div class="ihead"><span class="iico">CLI</span><h3>Command line</h3><span class="spill" id="pill-cli">Sign in required</span></div>
+            <p>The same answer, piped. Reads your NCBI API key from <span class="mono">NCBI_API_KEY</span>.</p>
+            <code>ncbi-search ask \
+  "diseases linked to BRCA1"</code>
+            <div class="iacts"><button class="btn" onclick="copyText(this,'pip install ncbi-agentic-search')">Copy install command</button><button class="btn ghost" onclick="openDocs('cli')">Docs</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================== docs ============================ -->
+    <section id="s-docs" class="hidden">
+      <div class="wrap wide docs">
+        <nav class="docnav" id="docNav">
+          <button class="on" data-d="start" onclick="openDocs('start')">Quickstart</button>
+          <button data-d="auth" onclick="openDocs('auth')">Authentication</button>
+          <button data-d="rest" onclick="openDocs('rest')">REST and SSE</button>
+          <button data-d="mcp" onclick="openDocs('mcp')">MCP server</button>
+          <button data-d="kgx" onclick="openDocs('kgx')">KGX export</button>
+          <button data-d="cli" onclick="openDocs('cli')">Command line</button>
+          <button data-d="limits" onclick="openDocs('limits')">Limits and errors</button>
+        </nav>
+        <div class="doc">
+          <div data-doc="start">
+            <h2>Quickstart</h2>
+            <p>Every integration wraps the same run: guard, think, plan, act, write. A call returns the written answer plus the citation list that backs each claim. Nothing is returned that is not tied to a record.</p>
+            <pre>curl https://api.ncbi-agentic-search.org/v1/query \
+  -H "Authorization: Bearer $NCBI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is the clinical significance of rs334?"}'</pre>
+            <h4>What comes back</h4>
+            <pre>{
+  "run_id": "run_8f2c41",
+  "status": "answered",
+  "answer": "rs334 is a missense variant in HBB ...",
+  "claims": [{"text": "...", "layer": 2, "citations": ["clinvar:VCV000015333"]}],
+  "citations": [{"id": "clinvar:VCV000015333", "layer": 2, "tool": "ncbi_efetch"}],
+  "tools_run": 7, "layers": [1, 2, 3], "elapsed_ms": 18400
+}</pre>
+            <p>A refused question returns <span class="inl">status: "refused"</span> with a reason and an empty citation list. It is a 200, not an error.</p>
+          </div>
+          <div data-doc="auth" class="hidden">
+            <h2>Access</h2>
+            <p>The web interface is open: ask questions without an account, up to the free allowance. The programmatic surfaces, REST and SSE, MCP, the command line and the KGX export, need a signed-in account.</p>
+            <p>How a program presents that account is not settled yet. It will reuse the NCBI API key that is already part of this system rather than introducing a second, separate credential of its own.</p>
+            <pre>export NCBI_API_KEY=your-ncbi-api-key</pre>
+            <p>Store it in an environment variable, never in a repository.</p>
+          </div>
+          <div data-doc="rest" class="hidden">
+            <h2>REST and SSE</h2>
+            <p>Post a question, then either wait for the completed run or subscribe to the event stream and render the run as it happens, exactly as the web interface does.</p>
+            <table class="dtable"><thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead><tbody>
+              <tr><td>POST /v1/query</td><td>Start a run. Returns <span class="inl">run_id</span> immediately, or the full answer with <span class="inl">wait=true</span>.</td></tr>
+              <tr><td>GET /v1/query/{run_id}</td><td>Fetch a completed run.</td></tr>
+              <tr><td>GET /v1/query/{run_id}/events</td><td>SSE stream of the run, resumable with <span class="inl">Last-Event-ID</span>.</td></tr>
+              <tr><td>GET /v1/query/{run_id}/citations</td><td>Citation list with layer, tool and record URL.</td></tr>
+              <tr><td>POST /v1/query/{run_id}/follow_up</td><td>Continue a thread. Runs a full search; prior context is used only where relevant.</td></tr>
+            </tbody></table>
+            <h4>Event stream</h4>
+            <pre>event: guard    data: {"verdict":"in_scope"}
+event: plan     data: {"calls":7,"layers":[1,2,3]}
+event: tool     data: {"name":"ncbi_dbsnp","status":"ok","ms":840}
+event: claim    data: {"text":"...","layer":2,"citations":["clinvar:VCV000015333"]}
+event: done     data: {"status":"answered","elapsed_ms":18400}</pre>
+          </div>
+          <div data-doc="mcp" class="hidden">
+            <h2>MCP server</h2>
+            <p>The server advertises one tool. A client model asks a biomedical question and receives a finished, cited answer; the seven internal tools and the planner are never exposed, so a client cannot compose a partial run.</p>
+            <pre>{
+  "mcpServers": {
+    "ncbi-search": {
+      "url": "https://api.ncbi-agentic-search.org/mcp",
+      "headers": { "Authorization": "Bearer ${NCBI_API_KEY}" }
+    }
+  }
+}</pre>
+            <h4>Tool</h4>
+            <table class="dtable"><thead><tr><th>Field</th><th>Detail</th></tr></thead><tbody>
+              <tr><td>name</td><td>ask_biomedical_question</td></tr>
+              <tr><td>question</td><td>Required string. Out-of-scope questions return a refusal, not an error.</td></tr>
+              <tr><td>max_layers</td><td>Optional 1&ndash;3. Caps how deep the run goes.</td></tr>
+              <tr><td>returns</td><td>answer, claims, citations, tools_run, elapsed_ms</td></tr>
+            </tbody></table>
+          </div>
+          <div data-doc="kgx" class="hidden">
+            <h2>KGX export</h2>
+            <p>The graph layer as BioLink-compliant KGX, for loading into your own store. Node and edge files are gzipped TSV; the snapshot date matches the one cited in answers.</p>
+            <pre>GET /v1/export/kgx?format=tsv&amp;since=2026-07-14
+GET /v1/export/kgx/run/{run_id}   # just the subgraph one run touched</pre>
+            <table class="dtable"><thead><tr><th>File</th><th>Contents</th></tr></thead><tbody>
+              <tr><td>nodes.tsv.gz</td><td>115M nodes: id, category, name, xrefs, source database.</td></tr>
+              <tr><td>edges.tsv.gz</td><td>693M edges: subject, predicate, object, evidence, provenance.</td></tr>
+              <tr><td>manifest.json</td><td>Snapshot date, source versions, licence per source.</td></tr>
+            </tbody></table>
+            <p>Public domain for the NCBI-derived layers. Literature and trial enrichment carries publisher terms; those rows are marked in the manifest.</p>
+          </div>
+          <div data-doc="cli" class="hidden">
+            <h2>Command line</h2>
+            <p>The same run, piped. Output is human-readable by default and JSON with <span class="inl">--json</span>, so answers can be chained into other tools.</p>
+            <pre>pip install ncbi-agentic-search
+export NCBI_API_KEY=your-ncbi-api-key
+
+ncbi-search ask "diseases linked to BRCA1"
+ncbi-search ask "clinical significance of rs334" --json | jq '.citations'
+ncbi-search watch run_8f2c41        # attach to a running query
+ncbi-search export kgx --since 2026-07-14</pre>
+            <table class="dtable"><thead><tr><th>Flag</th><th>Effect</th></tr></thead><tbody>
+              <tr><td>--json</td><td>Machine-readable run object.</td></tr>
+              <tr><td>--layers 1,2</td><td>Restrict which data layers may be used.</td></tr>
+              <tr><td>--cite-only</td><td>Print the citation list and nothing else.</td></tr>
+            </tbody></table>
+          </div>
+          <div data-doc="limits" class="hidden">
+            <h2>Limits and errors</h2>
+            <table class="dtable"><thead><tr><th>Tier</th><th>Limit</th></tr></thead><tbody>
+              <tr><td>Guest</td><td>5 questions per browser session, web interface only.</td></tr>
+              <tr><td>Account</td><td>60 questions per hour, 5 concurrent runs.</td></tr>
+              <tr><td>Institutional</td><td>Negotiated. Contact the team for a raised ceiling.</td></tr>
+            </tbody></table>
+            <p>Rate state is returned on every response in <span class="inl">X-RateLimit-Remaining</span> and <span class="inl">X-RateLimit-Reset</span>.</p>
+            <table class="dtable"><thead><tr><th>Status</th><th>Meaning</th></tr></thead><tbody>
+              <tr><td>401</td><td>Missing or revoked key.</td></tr>
+              <tr><td>429</td><td>Rate limit reached. Retry after the reset header.</td></tr>
+              <tr><td>504</td><td>An upstream NCBI service did not answer. The run is kept and can be resumed.</td></tr>
+            </tbody></table>
+            <p>A question the guard rejects is not an error. It returns 200 with <span class="inl">status: "refused"</span> and the reason, so clients can show it as an answer rather than a failure.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================== about ============================ -->
+    <section id="s-about" class="hidden">
+      <div class="wrap page">
+        <h2>How an answer is built</h2>
+        <p>Every question crosses up to three data layers. The colour on a citation tells you which layer it came from and therefore how fresh it is and how it was established.</p>
+        <div class="cards">
+          <div class="icard l1"><div class="layerrow"><span class="dot"></span><h3>Knowledge graph</h3><span class="n">L1</span></div>
+            <p>115M nodes and 693M edges merged from 5 NCBI databases. Broad and fast, but a periodic snapshot rather than live.</p></div>
+          <div class="icard l2"><div class="layerrow"><span class="dot"></span><h3>Live NCBI APIs</h3><span class="n">L2</span></div>
+            <p>E-utilities, Datasets and dbSNP, called at the moment you ask. Narrower and slower, and always current.</p></div>
+          <div class="icard l3"><div class="layerrow"><span class="dot"></span><h3>Enrichment</h3><span class="n">L3</span></div>
+            <p>PubTator3, LitVar2 and ClinicalTrials.gov. Literature and trial evidence layered on a fact the first two layers established.</p></div>
+        </div>
+
+        <h2>The run loop</h2>
+        <p>The same five stages run for every question, and the run screen shows them as they happen. Nothing is hidden behind a spinner: the reasoning panel logs each stage with a timestamp, and that log stays attached to the answer under Show work.</p>
+        <div class="loop">
+          <div class="lp"><span class="lpn">1</span><span class="lpk">Guard</span><p class="lpt">Decides whether the question can be grounded in NCBI records at all. Requests for diagnosis, treatment advice, or anything outside biomedicine are refused here, before a single tool runs and without spending a search.</p></div>
+          <div class="lp"><span class="lpn">2</span><span class="lpk">Think</span><p class="lpt">Resolves the entities in the question to identifiers &mdash; a gene symbol to an NCBI Gene id, an rs number to a RefSNP &mdash; and classifies what kind of answer the question needs.</p></div>
+          <div class="lp"><span class="lpn">3</span><span class="lpk">Plan</span><p class="lpt">Chooses which tools to call and in what order, working from the curated layers outward. A question answerable from the graph alone does not spend live calls.</p></div>
+          <div class="lp"><span class="lpn">4</span><span class="lpk">Act</span><p class="lpt">Runs the calls, each one reported with what it returned. A tool that fails or returns nothing is shown as such rather than quietly dropped.</p></div>
+          <div class="lp"><span class="lpn">5</span><span class="lpk">Write</span><p class="lpt">Maps every claim to at least one retrieved record. A claim with no record behind it is dropped rather than written, which is why some runs end with no answer.</p></div>
+        </div>
+
+        <h2>The tool set</h2>
+        <p>A run uses only what the question needs. The rs334 example calls most of these; a trials question calls one.</p>
+        <table class="dtable"><thead><tr><th>Tool</th><th>Layer</th><th>Returns</th></tr></thead><tbody>
+          <tr><td>cypher_query</td><td>L1</td><td>Curated edges between genes, variants and conditions, with the evidence code that established each one.</td></tr>
+          <tr><td>ncbi_dbsnp</td><td>L2</td><td>Variant normalisation (SPDI, HGVS and genomic position, so every later call resolves the same allele) plus allele frequency by population cohort.</td></tr>
+          <tr><td>ncbi_efetch</td><td>L2</td><td>Full records from ClinVar, Gene, MedGen, PubMed and related databases, including review status, submission counts, condition definitions and inheritance patterns.</td></tr>
+          <tr><td>litvar2_lookup</td><td>L3</td><td>Publications that mention a specific variant, matched on identifier rather than on free text.</td></tr>
+          <tr><td>pubtator_annotate</td><td>L3</td><td>Entity co-mentions in the literature, used where no curated record covers the link.</td></tr>
+          <tr><td>clinicaltrials_search</td><td>L3</td><td>Registered studies filtered by condition, intervention and recruitment status.</td></tr>
+        </tbody></table>
+
+        <h2>Cite or refuse</h2>
+        <p>Every claim is tied to a specific record. When nothing supports an answer, the system says so and stops rather than answering from memory. The track beside each answer shows one segment per claim, coloured by its layer, so an uncited claim is visible before you read a word.</p>
+        <p>Sources are listed in full under every answer: the tool that fetched them, the evidence type, the confidence, and a link to the record itself. If a citation does not support the claim it is attached to, flag it from the source list and the pair goes to the review queue.</p>
+
+        <h2>What it will not do</h2>
+        <ul class="nolist">
+          <li>Give diagnosis, prognosis, or treatment recommendations for a person.</li>
+          <li>Answer from the model's own memory when retrieval comes back empty.</li>
+          <li>Present a literature co-mention as though it were a curated classification.</li>
+          <li>Resolve a disagreement between layers silently &mdash; conflicts are shown, not averaged.</li>
+        </ul>
+        <p>Coverage varies by organism and by database. Treat every answer as a starting point for verification, not an endpoint.</p>
+      </div>
+    </section>
+  </main>
+  </div>
+
+  <div class="foot">NCBI Agentic Search &middot; prototype</div>
+
+  <!-- =========================== modals =========================== -->
+  <div class="scrim" id="disclaimer">
+    <div class="modal" role="dialog" aria-labelledby="dt">
+      <div class="modal-h"><svg width="18" height="18" viewBox="0 0 16 16" fill="var(--warn)" aria-hidden="true"><path d="M8 1.2 15 14H1L8 1.2Zm0 4.3a.8.8 0 0 0-.8.8v3a.8.8 0 0 0 1.6 0v-3a.8.8 0 0 0-.8-.8Zm0 5.5a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8Z"/></svg><span id="dt">Before you start</span></div>
+      <div class="modal-b">
+        <p class="lead">This tool answers research questions. It does not give medical advice, diagnosis, or treatment recommendations.</p>
+        <p>Answers are assembled from NCBI records and cited back to them. Always speak to a qualified health professional about a medical condition.</p>
+        <div class="callout">Prototype. Coverage varies by organism and database. Treat every answer as a starting point for verification, not an endpoint.</div>
+        <label class="checkrow"><input type="checkbox" id="dchk" onchange="document.getElementById('dgo').disabled=!this.checked">
+          <span>I understand this is a research tool and does not provide medical advice.</span></label>
+      </div>
+      <div class="modal-f"><button class="go" id="dgo" disabled onclick="acceptDisclaimer()">Continue</button></div>
+    </div>
+  </div>
+
+  <div class="scrim hidden" id="loginModal">
+    <div class="modal" role="dialog" aria-labelledby="lt">
+      <div class="modal-h"><span id="lt">Sign in</span></div>
+      <div class="modal-b">
+        <p>Sign in to keep your search history, pick up unfinished work, and save answers with their sources attached. Searches get faster as your saved work builds up.</p>
+        <div class="callout" style="border-color:var(--blue);background:var(--l1-wash)">Prototype demo account: <span class="mono">demo@ncbi.test</span> with any password. The fields below are already filled &mdash; press Sign in.</div>
+        <div class="field"><label for="em">Email</label><input id="em" type="email" value="demo@ncbi.test"></div>
+        <div class="field"><label for="pw">Password</label><input id="pw" type="password" value="demo1234"></div>
+      </div>
+      <div class="modal-f" style="display:flex;gap:8px">
+        <button class="go" style="flex:1;justify-content:center" onclick="doLogin()">Sign in</button>
+        <button class="fb-skip" onclick="closeLogin()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+'use strict';
+var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ------------------------------------------------------------------ data
+var Q = [
+  { key:'brca1', seed:'Diseases linked to BRCA1',
+    q:'Which diseases are associated with BRCA1?',
+    tools:[{c:'t1',n:'cypher_query',d:'25 rows'},{c:'t2',n:'ncbi_efetch',d:'medgen C0677776'},{c:'t3',n:'pubtator_annotate',d:'1 PMID'}],
+    meta:'11.4s · 3 tools · 3 layers · 3 sources',
+    reasoning:{
+      guard:'In scope. A gene-to-disease association question, answerable from curated records.',
+      think:['Resolved <code>BRCA1</code> to NCBI Gene 672. The question asks for associations, so the curated graph edges are the primary answer and the live record is the check.'],
+      plan:'Plan: 3 calls. Read the curated edges from L1, confirm the strongest association against the live L2 record, then check L3 for anything the curated sources do not cover.',
+      write:['Each association is attributed to the layer that asserts it. The Fanconi anemia link exists only in literature, so it is marked as such rather than stated flatly.']},
+    claims:[
+      {L:1,html:'BRCA1 is associated with <strong>hereditary breast and ovarian cancer syndrome</strong>, the best-characterised of its disease links <span class="cite c1">1 <span class="src">Gene 672</span></span>.'},
+      {L:2,html:'The current MedGen record describes an autosomal dominant inheritance pattern with markedly elevated lifetime risk <span class="cite c2">2 <span class="src">MedGen C0677776</span></span>.'},
+      {L:3,html:'Biallelic variants have also been reported in <strong>Fanconi anemia complementation group S</strong>, drawn from the literature rather than a curated record <span class="cite c3">3 <span class="src">PMID 21990134</span></span>.'}],
+    sources:[
+      {L:1,n:'[1]',name:'NCBI Gene 672 · BRCA1',tag:'L1 · graph',rows:[['Edge','gene_associated_with_condition',1],['Evidence','curated assertion',0],['Confidence','high',0],['Snapshot','2026-07-14',1],['License','public domain',0],['Record','ncbi.nlm.nih.gov/gene/672',1]]},
+      {L:2,n:'[2]',name:'MedGen C0677776 · Hereditary breast and ovarian cancer syndrome',tag:'L2 · live',rows:[['Tool','ncbi_efetch',1],['Evidence','curated record',0],['Confidence','high',0],['Fetched','live, this query',0],['License','public domain',0],['Record','ncbi.nlm.nih.gov/medgen/C0677776',1]]},
+      {L:3,n:'[3]',name:'PMID 21990134 · Fanconi anemia complementation group S',tag:'L3 · literature',rows:[['Tool','pubtator_annotate',1],['Evidence','literature co-mention',0],['Confidence','moderate',0],['Matched on','BRCA1 (exact)',0],['License','publisher terms apply',0],['Record','pubmed.ncbi.nlm.nih.gov/21990134',1]]}],
+    verdict:[['good','&#10003; Grounded · every claim cited'],['high','High-risk claim · gene to disease'],['plain','3 layers agreed']] },
+
+  { key:'rs334', seed:'Clinical significance of <span class="mono">rs334</span>',
+    q:'What is the clinical significance of rs334?',
+    tools:[
+      {c:'t1',n:'cypher_query',d:'2 edges',why:'ask the graph what is already curated about this variant before spending live calls'},
+      {c:'t2',n:'ncbi_dbsnp',d:'spdi normalised',why:'normalise the identifier to SPDI and HGVS so every later call resolves the same allele'},
+      {c:'t2',n:'ncbi_efetch',d:'clinvar vcv',why:'the question asks for clinical significance, which only a curated classification can answer'},
+      {c:'t2',n:'ncbi_efetch',d:'C0002895',why:'the ClinVar classification is genotype-dependent, so retrieve the inheritance model'},
+      {c:'t2',n:'ncbi_dbsnp',d:'4 cohorts',why:'carrier state cannot be interpreted without population frequency'},
+      {c:'t3',n:'litvar2_lookup',d:'1,847 publications',why:'check whether the literature adds anything the curated records do not assert'},
+      {c:'t3',n:'clinicaltrials_search',d:'47 recruiting',why:'the user may want current options, and trials are the only live actionable layer'}],
+    meta:'18.4s · 7 tools · 3 layers · 12 sources',
+    reasoning:{
+      guard:'In scope. This asks what is <b>recorded</b> about a variant, not what a patient should do. No diagnosis or treatment request, so no refusal.',
+      think:[
+        'Resolved <code>rs334</code> to a dbSNP RefSNP in <b>HBB</b>. One entity, unambiguous — no disambiguation round needed.',
+        'Question type: single-variant clinical significance. That needs a curated classification as the spine, with literature only as context.',
+        '"Clinical significance" is genotype-dependent for a recessive condition, so the answer has to separate heterozygous from homozygous rather than give one verdict.'],
+      plan:'Plan: 7 calls in 3 passes. L1 graph first for what is already curated, L2 live for the classification, inheritance and frequency, L3 last for literature and trials. Stop early if L2 returns no classification.',
+      write:[
+        'Every claim carries at least one source. Nothing is written from the model\'s own memory of this variant.',
+        'L2 asserts pathogenic for sickle cell disease. L3 adds a protective effect for the heterozygous state. Different genotypes, not a contradiction — reported separately, not merged into the classification.',
+        'Overall frequency of 3.1% flagged as cohort-weighted, since presenting it as a world frequency would be misleading.']},
+    claims:[
+      {L:0,block:true,html:'<p class="ah">Variant identity</p>'},
+      {L:2,html:'rs334 is a missense variant in <strong>HBB</strong>, <span class="mono">NM_000518.5:c.20A&gt;T</span> (p.Glu7Val; legacy p.Glu6Val), at <span class="mono">chr11:5,227,002</span> on GRCh38 <span class="cite c2">3 <span class="src">dbSNP rs334</span></span>.'},
+      {L:2,html:'The T allele produces haemoglobin S, in which valine replaces glutamic acid in the beta-globin chain <span class="cite c2">3 <span class="src">dbSNP rs334</span></span>. The same substitution is recorded under the allelic variant <span class="mono">MIM 141900.0243</span> <span class="cite c2">7 <span class="src">OMIM</span></span>.'},
+      {L:0,block:true,html:'<p class="ah">Clinical significance</p>'},
+      {L:2,html:'ClinVar classifies the variant <strong>pathogenic</strong> for sickle cell disease, with a review status of reviewed by expert panel and five concordant submissions <span class="cite c2">4 <span class="src">ClinVar VCV000015333</span></span>.'},
+      {L:2,html:'MedGen records autosomal recessive inheritance: disease requires two affected beta-globin alleles, either two copies of HbS or HbS in trans with another beta-globin variant <span class="cite c2">5 <span class="src">MedGen C0002895</span></span>.'},
+      {L:2,block:true,html:'<table class="rtab"><caption>Genotype to phenotype, as recorded in the curated sources</caption>' +
+        '<thead><tr><th>Genotype</th><th>Recorded phenotype</th><th>Source</th></tr></thead><tbody>' +
+        '<tr><td class="g">A/A</td><td>Unaffected; no HbS produced</td><td class="g"><a href="https://www.ncbi.nlm.nih.gov/medgen/C0002895" target="_blank" rel="noopener">MedGen C0002895</a></td></tr>' +
+        '<tr><td class="g">A/T (HbAS)</td><td>Sickle cell trait; usually asymptomatic</td><td class="g"><a href="https://www.ncbi.nlm.nih.gov/medgen/C0002895" target="_blank" rel="noopener">MedGen C0002895</a></td></tr>' +
+        '<tr><td class="g">T/T (HbSS)</td><td>Sickle cell anaemia; most severe recorded form</td><td class="g"><a href="https://www.ncbi.nlm.nih.gov/clinvar/variation/15333/" target="_blank" rel="noopener">ClinVar VCV000015333</a></td></tr>' +
+        '<tr><td class="g">T + HBB&nbsp;β⁰</td><td>HbS/β⁰-thalassaemia; clinically comparable to HbSS</td><td class="g"><a href="https://www.ncbi.nlm.nih.gov/clinvar/variation/15333/" target="_blank" rel="noopener">ClinVar VCV000015333</a></td></tr>' +
+        '<tr><td class="g">T + rs33930165</td><td>HbSC disease; generally milder course</td><td class="g"><a href="https://www.ncbi.nlm.nih.gov/medgen/C0002895" target="_blank" rel="noopener">MedGen C0002895</a></td></tr>' +
+        '</tbody></table>'},
+      {L:0,block:true,html:'<div class="conflict"><b>&#9888; Layers describe different things</b>The curated records (L2) classify this variant only as pathogenic for sickle cell disease. Three literature sources (L3) additionally describe the <em>heterozygous</em> state as protective against severe malaria. These are not in conflict — they describe different genotypes — but the protective finding is literature-derived and is not asserted by any curated record. It is reported here, not merged into the classification.</div>'},
+      {L:0,block:true,html:'<p class="ah">Population frequency</p>'},
+      {L:2,html:'ALFA reports the T allele at 3.1% overall, 8.9% in the African cohort, and below 0.1% in the European and East Asian cohorts <span class="cite c2">6 <span class="src">ALFA release 2026-03</span></span>. Cohort sizes differ by an order of magnitude; the overall figure is not a world frequency.'},
+      {L:0,block:true,html:'<p class="ah">Literature and active trials</p>'},
+      {L:3,html:'rs334 appears in <strong>1,847</strong> indexed publications, making it one of the most studied variants in the index <span class="cite c3">8 <span class="src">LitVar2</span></span>.'},
+      {L:3,html:'The heaviest co-mentions are with hydroxyurea, gene therapy, and voxelotor <span class="cite c3">9 <span class="src">PubTator</span></span>. Three of those publications report reduced severe-malaria risk in heterozygotes <span class="cite c3">10 <span class="src">PubMed set</span></span>.'},
+      {L:3,html:'<strong>47 studies</strong> are currently recruiting for sickle cell disease, concentrated in gene editing and gene addition approaches <span class="cite c3">11 <span class="src">CTG</span></span>. Five list a specific requirement for the HbSS genotype <span class="cite c3">12 <span class="src">CTG eligibility</span></span>.'}],
+    sources:[
+      {L:1,n:'[1]',name:'Graph edge · rs334 → sickle cell disease',tag:'L1 · graph',rows:[['Edge','variant_associated_with_condition',1],['Evidence','curated assertion',0],['Confidence','high',0],['Snapshot','2026-07-14',1],['License','public domain',0],['Record','ncbi.nlm.nih.gov/snp/rs334',1]]},
+      {L:1,n:'[2]',name:'NCBI Gene 3043 · HBB',tag:'L1 · graph',rows:[['Edge','variant_in_gene',1],['Evidence','curated assertion',0],['Confidence','high',0],['Snapshot','2026-07-14',1],['Record','ncbi.nlm.nih.gov/gene/3043',1]]},
+      {L:2,n:'[3]',name:'dbSNP rs334 · HBB',tag:'L2 · live',rows:[['Tool','ncbi_dbsnp',1],['SPDI','NC_000011.10:5227001:A:T',1],['HGVS','NM_000518.5:c.20A>T',1],['Assembly','GRCh38.p14',1],['Fetched','live, this query',0],['Record','ncbi.nlm.nih.gov/snp/rs334',1]]},
+      {L:2,n:'[4]',name:'ClinVar VCV000015333 · pathogenic, sickle cell disease',tag:'L2 · live',rows:[['Tool','ncbi_efetch',1],['Classification','pathogenic',0],['Review status','reviewed by expert panel',0],['Submissions','5, concordant',0],['Last evaluated','2025-11-02',1],['Record','ncbi.nlm.nih.gov/clinvar/variation/15333',1]]},
+      {L:2,n:'[5]',name:'MedGen C0002895 · Sickle cell anaemia',tag:'L2 · live',rows:[['Tool','ncbi_efetch',1],['Inheritance','autosomal recessive',0],['Evidence','curated record',0],['Confidence','high',0],['Record','ncbi.nlm.nih.gov/medgen/C0002895',1]]},
+      {L:2,n:'[6]',name:'ALFA · allele frequency, 4 cohorts',tag:'L2 · live',rows:[['Tool','ncbi_dbsnp',1],['Overall','T = 0.031',1],['African','T = 0.089',1],['European','T = 0.0007',1],['Release','2026-03',1],['Caveat','cohort sizes differ by ~10×',0],['Record','ncbi.nlm.nih.gov/snp/rs334#frequency_tab',1]]},
+      {L:2,n:'[7]',name:'OMIM 141900.0243 · HBB allelic variant, HbS',tag:'L2 · live',rows:[['Tool','ncbi_efetch',1],['Evidence','curated record',0],['Confidence','high',0],['License','OMIM terms apply',0],['Record','omim.org/entry/141900',1]]},
+      {L:3,n:'[8]',name:'LitVar2 · 1,847 publications',tag:'L3 · literature',rows:[['Tool','litvar2_lookup',1],['Evidence','literature index',0],['Matched on','rs334 (exact)',0],['Most cited','PMID 13718526, PMID 4966081',1],['Confidence','high',0],['Result set','ncbi.nlm.nih.gov/research/litvar2/docsum?text=rs334',1]]},
+      {L:3,n:'[9]',name:'PubTator · co-mention profile',tag:'L3 · literature',rows:[['Tool','pubtator_annotate',1],['Top co-mentions','hydroxyurea, gene therapy, voxelotor',0],['hydroxyurea','PMID 7715639, PMID 21631324',1],['gene therapy','PMID 33283989, PMID 30501490',1],['voxelotor','PMID 30748491',1],['Evidence','literature co-mention',0],['Confidence','moderate',0],['Caveat','co-mention is not causation',0],['Record','ncbi.nlm.nih.gov/research/pubtator3/?query=rs334',1]]},
+      {L:3,n:'[10]',name:'PubMed set · 3 papers, heterozygote malaria protection',tag:'L3 · literature',rows:[['Tool','ncbi_efetch',1],['Evidence','literature, not curated',0],['Confidence','moderate',0],['Applies to','heterozygous state only',0],['Publications','PMID 12511953, PMID 15931597, PMID 21750566',1],['Status','reported, not merged into classification',0],['Record','ncbi.nlm.nih.gov/pmc/?term=rs334+malaria',1]]},
+      {L:3,n:'[11]',name:'ClinicalTrials.gov · 47 recruiting studies',tag:'L3 · trials',rows:[['Tool','clinicaltrials_search',1],['Query','query_cond=sickle cell disease, status=RECRUITING',1],['Evidence','registry record',0],['Fetched','live, this query',0],['Result set','clinicaltrials.gov/search?cond=Sickle+Cell+Disease&aggFilters=status:rec',1]]},
+      {L:3,n:'[12]',name:'ClinicalTrials.gov · 5 studies requiring HbSS',tag:'L3 · trials',rows:[['Tool','clinicaltrials_search',1],['Filter','eligibility text match: HbSS',1],['Studies','NCT03745287, NCT04443907, NCT02186418, NCT05353647, NCT04853576',1],['Evidence','registry record',0],['Confidence','moderate',0],['Caveat','eligibility text is free-form',0],['Result set','clinicaltrials.gov/search?cond=Sickle+Cell+Disease&aggFilters=status:rec&term=HbSS',1]]}],
+    verdict:[['good','&#10003; Grounded · every claim cited'],['high','High-risk claim · variant to disease'],['plain','3 layers · 12 sources'],['plain','1 scope difference reported']] },
+
+  { key:'gck', seed:'Variants in GCK causing MODY',
+    q:'Which variants in GCK cause MODY?',
+    tools:[{c:'t1',n:'cypher_query',d:'18 rows'},{c:'t2',n:'ncbi_efetch',d:'clinvar'}],
+    meta:'9.7s · 2 tools · 2 layers · 2 sources',
+    reasoning:{
+      guard:'In scope. Asks which variants are recorded for a condition, not whether a person has it.',
+      think:['Resolved <code>GCK</code> to NCBI Gene 2645 and MODY to the MODY 2 concept. The question asks for a variant set, so the answer needs a count with a snapshot date, not prose.'],
+      plan:'Plan: 2 calls. Graph query for the gene-condition edge, then ClinVar for the current pathogenic set so the count is live rather than from the snapshot.',
+      write:['Count is attributed to ClinVar as of this query. It will drift, so the answer says where it came from rather than presenting it as fixed.']},
+    claims:[
+      {L:1,html:'Heterozygous inactivating variants in <strong>GCK</strong> cause <strong>MODY type 2</strong>, a mild, stable, non-progressive form of hyperglycaemia <span class="cite c1">1 <span class="src">Gene 2645</span></span>.'},
+      {L:2,html:'ClinVar currently records 18 variants in this gene classified pathogenic or likely pathogenic for the condition <span class="cite c2">2 <span class="src">ClinVar GCK</span></span>.'}],
+    sources:[
+      {L:1,n:'[1]',name:'NCBI Gene 2645 · GCK',tag:'L1 · graph',rows:[['Edge','gene_associated_with_condition',1],['Evidence','curated assertion',0],['Confidence','high',0],['Snapshot','2026-07-14',1],['License','public domain',0],['Record','ncbi.nlm.nih.gov/gene/2645',1]]},
+      {L:2,n:'[2]',name:'ClinVar · GCK pathogenic set',tag:'L2 · live',rows:[['Tool','ncbi_efetch',1],['Evidence','curated record',0],['Confidence','high',0],['Fetched','live, this query',0],['License','public domain',0],['Record','ncbi.nlm.nih.gov/clinvar',1]]}],
+    verdict:[['good','&#10003; Grounded · every claim cited'],['high','High-risk claim · gene to disease'],['plain','2 layers agreed']] },
+
+  { key:'als', seed:'Trials recruiting for ALS',
+    q:'Which clinical trials are recruiting for ALS?',
+    tools:[{c:'t3',n:'clinicaltrials_search',d:'134 studies'}],
+    meta:'4.3s · 1 tool · 1 layer · 1 source',
+    reasoning:{
+      guard:'In scope, with a caveat: trial recruitment is close to actionable, so the answer reports registry contents and does not recommend enrolment.',
+      think:['Resolved ALS to amyotrophic lateral sclerosis. This is a registry question — the knowledge graph cannot answer it, only the live trials registry can.'],
+      plan:'Plan: 1 call. Query the registry with a recruiting-status filter. No cross-check is possible; only one layer holds this data.',
+      write:['Single-layer answer, so no cross-check pill is claimed. The verdict says the limitation out loud.']},
+    claims:[
+      {L:3,html:'There are <strong>134 studies</strong> currently recruiting for amyotrophic lateral sclerosis on ClinicalTrials.gov <span class="cite c3">1 <span class="src">CTG</span></span>.'},
+      {L:3,html:'The largest recruiting interventional trials are concentrated in antisense oligonucleotide and stem-cell approaches <span class="cite c3">1 <span class="src">CTG</span></span>.'}],
+    sources:[
+      {L:3,n:'[1]',name:'ClinicalTrials.gov · 134 recruiting studies',tag:'L3 · trials',rows:[['Tool','clinicaltrials_search',1],['Evidence','registry record',0],['Confidence','high',0],['Query','query_cond=ALS, status=RECRUITING',1],['Fetched','live, this query',0],['Result set','clinicaltrials.gov/search?cond=Amyotrophic+Lateral+Sclerosis&aggFilters=status:rec',1]]}],
+    verdict:[['good','&#10003; Grounded · every claim cited'],['plain','1 layer · no cross-check available']] }
+];
+
+// ----------------------------------------------------------------- state
+var st = { screen:'landing', used:0, loggedIn:false, promptSeen:false, current:null, trace:[], history:[], email:'', railOpen:true, persona:'', depth:'researcher', runActive:false };
+var timers = [];
+function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+function later(fn,ms){ timers.push(setTimeout(fn,ms)); }
+function $(id){ return document.getElementById(id); }
+
+
+// ---------------------------------------------- persona and depth (12.7, 12.9)
+// Presentation only. Neither ever changes which tools run, which records are
+// retrieved, or what the trust signal says. Section 14.1's personalization
+// firewall: personalization lives in orchestration and synthesis style, never
+// in grounding.
+
+// Curated top-100 biomedical scientists; the real list is a Phase 6 build task.
+// Section 14.2: one name is drawn at first login and held for the life of the
+// account. An anonymous session draws one and holds it for that session only,
+// then redraws on the next anonymous session.
+var PERSONAS = ['Mendel','Franklin','McClintock','Ramon y Cajal','Hodgkin',
+                'Elion','Nirenberg','Blackburn','Tsien','Sanger'];
+
+function drawPersona(){
+  // Deterministic per load rather than random: Math.random is avoided so the
+  // same prototype session reads the same way when demoed twice.
+  var i = (PERSONAS.length + (st.history.length * 3) + st.used) % PERSONAS.length;
+  return PERSONAS[i];
+}
+
+window.setDepth = function(d){
+  if (st.runActive) return;            // 12.9: locked once a run is mid-stream
+  st.depth = d;
+  Array.prototype.forEach.call(document.querySelectorAll('#depth button'), function(b){
+    b.classList.toggle('on', b.getAttribute('data-d') === d);
+  });
+};
+
+function lockDepth(locked){
+  st.runActive = locked;
+  Array.prototype.forEach.call(document.querySelectorAll('#depth button'), function(b){
+    b.disabled = locked;
+  });
+}
+
+function renderPersona(){
+  var el = $('personaName');
+  if (el) el.textContent = st.persona;
+}
+
+// 12.7: the caption tracks the active step's own narrative. It is a caption on
+// work that is genuinely happening, not a mascot with a script.
+var NARRATIVE = {
+  Guard: 'is checking the question is answerable and in scope',
+  Think: 'is working out what the question is asking for',
+  Plan:  'is choosing which sources to read',
+  Act:   'is reading the records',
+  Write: 'is writing the answer, citing as it goes'
+};
+
+function setPersonaCaption(step){
+  var el = $('pcap');
+  if (!el) return;
+  if (!step){ el.innerHTML = ''; return; }
+  el.innerHTML = '<span class="pav"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5.2" r="2.9"/><path d="M2.6 14a5.4 5.4 0 0 1 10.8 0z"/></svg></span>' +
+    '<span><b>' + st.persona + '</b> ' + (NARRATIVE[step] || '') + '</span>';
+}
+
+// ------------------------------------------------------------ navigation
+window.go = function(screen){
+  clearTimers();
+  st.screen = screen;
+  ['landing','run','answer','wall','integrations','docs','about'].forEach(function(s){
+    $('s-'+s).classList.toggle('hidden', s !== screen);
+  });
+  $('nav-search').classList.toggle('on', screen==='landing'||screen==='run'||screen==='answer'||screen==='wall');
+  $('nav-integrations').classList.toggle('on', screen==='integrations');
+  $('nav-docs').classList.toggle('on', screen==='docs');
+  $('nav-about').classList.toggle('on', screen==='about');
+  if (screen === 'integrations') renderKeyPanel();
+  renderRail();
+  if (screen === 'landing') { $('qbox').value = ''; renderCounter(); }
+  window.scrollTo(0,0);
+};
+
+// -------------------------------------------------------------- counter
+function renderCounter(){
+  var slot = $('landingFoot');
+  if (st.loggedIn || st.used === 0) { slot.innerHTML = ''; return; }
+  var left = Math.max(0, 5 - st.used), t = '';
+  for (var i=0;i<5;i++) t += '<i class="'+(i<st.used?'spent':'')+'"></i>';
+  slot.innerHTML = '<span class="counter"><span class="ticks">'+t+'</span>'+
+    (left===1 ? '1 search left' : left+' searches left')+'</span>';
+}
+
+// --------------------------------------------------------------- landing
+var seedHtml = Q.map(function(item,i){
+  return '<button class="seed" onclick="runSeed('+i+')">'+item.seed+'</button>';
+}).join('');
+$('seeds').innerHTML = seedHtml;
+
+
+// --------------------------------------------------------- scope guard
+var BIO_RE = /\b(gene|genes|genom|variant|allele|mutation|snp|rs\d+|nct\d+|pmid|protein|enzyme|clinvar|dbsnp|medgen|omim|pubmed|litvar|pubtator|disease|diseas|disorder|syndrome|cancer|tumou?r|carcinoma|leukemi|anaemi|anemi|sickle|thalass|malaria|diabet|mody|als|amyotrophic|sclerosis|fanconi|brca\d?|hbb|gck|trial|trials|recruit|therap|treatment|drug|dose|hydroxyurea|voxelotor|crizanlizumab|inherit|recessive|dominant|heterozyg|homozyg|genotype|phenotype|frequenc|cohort|population|pathogen|benign|classification|expression|pathway|receptor|chromosom|sequenc|transcript|clinical|patient|diagnos|prognos|biomarker|microb|virus|viral|bacteri|vaccin|immun|cell|cells|protein|rna|dna|mrna|cite|citation|source|sources|record|records|evidence|reliab|curat|literature|layer)/i;
+function inScope(text){ return BIO_RE.test(text); }
+function refusalTurn(text){
+  return '<div class="uq"><span class="who">You</span><span>'+text.replace(/</g,'&lt;')+'</span></div>' +
+    '<div class="tmeta"><span class="refused">&#9888; Out of scope</span><span>guard stopped before any tool ran \u00b7 no search used</span></div>' +
+    '<div class="answer"><p>This tool only answers questions that can be grounded in NCBI records: genes, variants, conditions, literature and trials. The question above is outside that, and none of the connected sources hold anything relevant to it.</p>' +
+    '<p>Answering anyway would mean writing from the model\'s own memory with no record behind it, which is the one thing this system is built not to do.</p></div>';
+}
+
+// ------------------------------------------------------ follow-up turns
+var FOLLOWUPS = {
+  rs334:[
+    {q:'What treatments are recorded for HbSS?',
+     meta:'2 tools run · 3 new sources · 1 carried over from above',
+     html:'<p>Curated records list hydroxyurea as the long-standing disease-modifying therapy, with voxelotor and crizanlizumab recorded as later additions <span class="cite c3">9 <span class="src">PubTator</span></span>. Gene addition and gene editing appear in the trials layer rather than as established therapy <span class="cite c3">11 <span class="src">CTG</span></span>.</p><p>No source here states what any individual should take. Treatment selection is a clinical decision and sits outside what these records can answer.</p>'},
+    {q:'How reliable is the malaria protection finding?',
+     meta:'1 tool run · 2 sources, both already cited above',
+     html:'<p>It rests on three literature reports, not on a curated classification <span class="cite c3">10 <span class="src">PubMed set</span></span>. Literature findings are recorded as claims made by authors; they are not reviewed by an expert panel the way the ClinVar classification is <span class="cite c2">4 <span class="src">ClinVar VCV000015333</span></span>.</p><p>It applies only to the heterozygous state, so it does not modify the pathogenic classification for HbSS.</p>'},
+    {q:'Why is the African cohort frequency so much higher?',
+     meta:'2 tools run · 1 new source · 1 carried over',
+     html:'<p>The retrieved records report the frequencies but do not assert a cause <span class="cite c2">6 <span class="src">ALFA release 2026-03</span></span>. The literature layer links the distribution to historical malaria exposure <span class="cite c3">10 <span class="src">PubMed set</span></span>, which is an explanation drawn from publications rather than from a curated record.</p>'}],
+  brca1:[
+    {q:'Which of these associations are curated versus literature only?',
+     meta:'1 tool run · no new sources needed',
+     html:'<p>The breast and ovarian cancer associations come from curated records <span class="cite c2">2 <span class="src">MedGen C0677776</span></span>. The Fanconi anemia link appears only in literature co-mentions <span class="cite c3">3 <span class="src">PMID 21990134</span></span> and is not asserted by any curated source.</p>'}],
+  gck:[
+    {q:'How current is that variant count?',
+     meta:'1 tool run · re-fetched live',
+     html:'<p>The count was read live from ClinVar during this query <span class="cite c2">2 <span class="src">ClinVar · GCK pathogenic set</span></span>. It changes as submissions are added or reclassified, so it is accurate as of the fetch and not a fixed figure.</p>'}],
+  als:[
+    {q:'How do I find which of those trials are near me?',
+     meta:'1 tool run · re-fetched live',
+     html:'<p>The registry supports location filtering on the same query <span class="cite c3">1 <span class="src">CTG</span></span>. This tool reports what the registry holds; deciding whether a study is appropriate is a matter for a clinician.</p>'}]
+};
+
+window.fuHint = function(key,i){
+  var f = (FOLLOWUPS[key]||[])[i];
+  if(!f) return;
+  $('fubox').value = f.q;
+  $('fubox').focus();
+};
+
+window.askFollowUp = function(e){
+  e.preventDefault();
+  var text = $('fubox').value.trim();
+  if(!text) return;
+  var item = st.current || {};
+
+  if (!inScope(text)){
+    archiveCurrent();
+    $('ansQ').textContent = text;
+    $('ansMeta').textContent = 'guard stopped the run \u00b7 0 tools \u00b7 no search used';
+    $('answer').innerHTML = scopeRefusalHtml();
+    $('sources').innerHTML = '';
+    $('verdict').innerHTML = '<span class="pill risk">&#9888; Refused \u00b7 out of scope</span><span class="pill plain">0 tools run \u00b7 no search used</span>';
+    drawSpine();
+    $('fubox').value = '';
+    return;
+  }
+
+  if (!st.loggedIn && st.used >= 5){ openLogin(); return; }
+  st.used++;
+
+  var set = FOLLOWUPS[item.key] || [];
+  var lc = text.toLowerCase();
+  var match = set.filter(function(f){ return f.q.toLowerCase() === lc; })[0];
+  if (!match) match = set.filter(function(f){
+    var words = f.q.toLowerCase().replace(/[^a-z0-9 ]/g,'').split(/\s+/).filter(function(w){ return w.length > 4; });
+    return words.some(function(w){ return lc.indexOf(w) !== -1; });
+  })[0];
+
+  archiveCurrent();
+  $('ansQ').textContent = text;
+
+  if (match){
+    $('ansMeta').textContent = match.meta;
+    $('answer').innerHTML = '<p class="ah">Answer</p>' + match.html;
+    var nums = (match.html.match(/class="cite c\d">\s*(\d+)/g) || []).map(function(s){ return s.replace(/\D/g,'').slice(-s.replace(/\D/g,'').length); });
+    var want = {};
+    (match.html.match(/class="cite c\d">(\d+)/g) || []).forEach(function(s){ want['['+s.split('>')[1]+']'] = 1; });
+    var list = (item.sources || []).filter(function(s){ return want[s.n]; });
+    $('sources').innerHTML = list.length ? sourcesHtml(list) : '';
+    $('verdict').innerHTML =
+      '<span class="pill good">&#10003; Grounded \u00b7 every claim cited</span>' +
+      '<span class="pill plain">'+list.length+' source'+(list.length===1?'':'s')+' cited</span>';
+  } else {
+    $('ansMeta').textContent = 'searched, nothing grounded found';
+    $('answer').innerHTML = '<p class="ah">No grounded answer</p>' +
+      '<p>The question was in scope, but nothing retrieved supports an answer to it. Rather than fill the gap from the model\'s own memory, the run stops here.</p>' +
+      '<p>Narrowing the question to a specific gene, variant, condition or trial usually brings back records the answer can be built from.</p>';
+    $('sources').innerHTML = '';
+    $('verdict').innerHTML = '<span class="pill plain">&#9888; No answer written \u00b7 nothing retrieved supports one</span>';
+  }
+  drawSpine();
+  $('fubox').value = '';
+  renderQuota();
+};
+
+function sourcesHtml(list){
+  return '<details class="srcwrap" open><summary><span class="arrow">&#9654;</span>Sources<span class="cnt">'+list.length+'</span></summary><div class="srclist">' +
+    list.map(function(s){
+      var rows = s.rows.map(function(r){
+        var v = r[1];
+        if (/^(ncbi\.nlm\.nih\.gov|clinicaltrials\.gov|omim\.org|pubmed\.ncbi\.nlm\.nih\.gov)/.test(v))
+          v = '<a href="https://'+v+'" target="_blank" rel="noopener">'+v+'</a>';
+        else if (/PMID \d+/.test(v))
+          v = v.replace(/PMID (\d+)/g, '<a href="https://pubmed.ncbi.nlm.nih.gov/$1/" target="_blank" rel="noopener">PMID $1</a>');
+        else if (/^NCT\d+/.test(v))
+          v = v.replace(/(NCT\d+)/g, '<a href="https://clinicaltrials.gov/study/$1" target="_blank" rel="noopener">$1</a>');
+        return '<dt>'+r[0]+'</dt><dd'+(r[2]?' class="tok"':'')+'>'+v+'</dd>';
+      }).join('');
+      return '<details class="src c'+s.L+'"><summary><span class="arrow">&#9654;</span>' +
+        '<span class="num">'+s.n+'</span><span class="name">'+s.name+'</span>' +
+        '<span class="tag">'+s.tag+'</span>' +
+        '<button class="flag" onclick="flagSource(event)">Flag: does not support</button></summary>' +
+        '<dl class="detail">'+rows+'</dl></details>';
+    }).join('') + '</div></details>';
+}
+
+function drawSpine(){
+  var paras = $('answer').querySelectorAll('p:not(.ah), table, .conflict');
+  var out = '';
+  Array.prototype.forEach.call(paras, function(p){
+    var c = p.querySelector('.cite.c1') ? 's1' : p.querySelector('.cite.c2') ? 's2' : p.querySelector('.cite.c3') ? 's3' : 's0';
+    out += '<i class="'+c+'" style="height:'+p.offsetHeight+'px"></i>';
+  });
+  $('spine').innerHTML = out;
+}
+
+function archiveCurrent(){
+  var d = document.createElement('details');
+  d.className = 'prev';
+  d.innerHTML = '<summary><span class="arrow">&#9654;</span><span class="pq">'+
+      ($('ansQ').textContent || '').replace(/</g,'&lt;')+'</span><span class="pm">'+
+      ($('ansMeta').textContent || '')+'</span></summary>' +
+    '<div class="prevbody"><div class="grid"><div class="spine">'+$('spine').innerHTML+'</div>' +
+    '<div class="answer">'+$('answer').innerHTML+'</div></div>' +
+    $('sources').innerHTML + '<div class="verdict">'+$('verdict').innerHTML+'</div></div>';
+  $('thread').appendChild(d);
+}
+
+
+function renderQuota(){
+  if (st.loggedIn) { $('promptSlot').innerHTML = ''; return; }
+  var left = Math.max(0, 5 - st.used), t = '';
+  for (var i=0;i<5;i++) t += '<i class="'+(i<st.used?'spent':'')+'"></i>';
+  var slot = $('promptSlot');
+  if (!slot.querySelector('.softprompt'))
+    slot.innerHTML = '<div style="margin-top:22px"><span class="counter"><span class="ticks">'+t+
+      '</span>'+(left===1?'1 search left':left+' searches left')+'</span></div>';
+  if (st.used >= 5) openLogin();
+  renderCounter();
+}
+
+function scopeRefusalHtml(){
+  return '<p class="ah" style="color:var(--risk)">&#9888; Refused \u2014 out of scope</p>' +
+    '<p>This tool only answers questions that can be grounded in NCBI records: genes, variants, conditions, literature and trials. Nothing in the connected sources relates to this question, so no tools were run.</p>' +
+    '<p>Answering anyway would mean writing from the model\'s own memory with no record behind it, which is the one thing this system is built not to do. Try a question about a gene, variant, condition, or clinical trial.</p>';
+}
+
+window.showScopeRefusal = function(text){
+  st.current = { key:'__refused', q:text, sources:[], verdict:[] };
+  st.trace = [];
+  go('answer');
+  $('ansQ').textContent = text;
+  $('ansMeta').textContent = 'guard stopped the run \u00b7 0 tools \u00b7 no search used';
+  $('answer').innerHTML = scopeRefusalHtml();
+  $('spine').innerHTML = '';
+  $('sources').innerHTML = '';
+  $('verdict').innerHTML = '<span class="pill risk">&#9888; Refused \u00b7 out of scope</span><span class="pill plain">0 tools run \u00b7 no search used</span>';
+  $('thread').innerHTML = '';
+  $('fuHints').innerHTML = '';
+  $('fb').innerHTML = '';
+  $('promptSlot').innerHTML = '';
+  $('fubox').value = '';
+  $('tail').classList.remove('hidden');
+};
+
+window.stopRun = function(){
+  lockDepth(false);
+  setPersonaCaption(null);
+  clearTimers();
+  var item = st.current || {};
+  go('answer');
+  $('ansQ').textContent = item.q || '';
+  $('ansMeta').textContent = 'stopped by you \u00b7 ' + (st.trace||[]).length + ' steps completed';
+  $('answer').innerHTML = '<p class="ah" style="color:var(--warn)">&#9632; Stopped</p>' +
+    '<p>The run was stopped before it finished, so no answer was written. The steps that had already completed are kept under Show work \u2014 nothing was synthesised from them, because a partial retrieval is not a grounded answer.</p>';
+  $('spine').innerHTML = '';
+  $('sources').innerHTML = '';
+  $('verdict').innerHTML = '<span class="pill plain">&#9632; Stopped by you \u00b7 no answer written</span>' +
+    '<span class="pill plain">'+(st.trace||[]).length+' steps completed</span>';
+  $('workPanel').innerHTML = '<div class="tracelog" style="max-height:none">' + (st.trace||[]).join('') + '</div>';
+  $('thread').innerHTML = '';
+  $('fubox').value = item.q || '';
+  $('fuHints').innerHTML = '';
+  $('fb').innerHTML = '';
+  $('promptSlot').innerHTML = '';
+  $('tail').classList.remove('hidden');
+};
+
+window.runSeed = function(i){
+  var box = $('qbox');
+  box.value = Q[i].q;
+  box.focus();
+};
+
+window.submitQuery = function(e){
+  e.preventDefault();
+  var text = $('qbox').value.trim();
+  if (!text) { start(Q[0]); return; }
+  var hit = null;
+  Q.forEach(function(item){
+    var k = item.key.toLowerCase();
+    if (text.toLowerCase().indexOf(k) !== -1) hit = item;
+  });
+  if (!hit && !inScope(text)){ showScopeRefusal(text); return; }
+  var chosen = hit || Q[0];
+  start(Object.assign({}, chosen, { q: hit ? chosen.q : text }));
+};
+
+// ------------------------------------------------------------------- run
+function start(item){
+  if (!st.loggedIn && st.used >= 5) { go('wall'); openLogin(); return; }
+  st.used++;
+  st.current = item;
+  if (st.loggedIn && item.key){
+    st.history = st.history.filter(function(x){ return x.key !== item.key; });
+    st.history.unshift({ key:item.key, q:item.q, meta:(item.meta||'').split(' · ').slice(1).join(' · ') });
+  }
+  $('runQ').textContent = item.q;
+  $('now').innerHTML = '';
+  lockDepth(true);
+  setPersonaCaption(null);
+  Array.prototype.forEach.call($('stepper').children, function(el){ el.className = 'step'; });
+  go('run');
+  renderRail();
+
+  var speed = reduce ? 0 : 1;
+  var R = item.reasoning || {};
+  $('trace').innerHTML = '';
+  st.trace = [];
+  var timeline = [
+    {at:0,    step:'Guard', text:'Checking the question is answerable and in scope…',
+     hold:1500, lines:[{ph:'guard',cls:'p0',tx: R.guard || 'Question accepted. It asks for recorded evidence, not for diagnosis or treatment advice, so no refusal is required.'}]},
+    {at:1500, step:'Think', text:'Classifying the question and resolving entities…',
+     lines:(R.think || ['Reading the question for entities and for what kind of answer it needs.']).map(function(t){ return {ph:'think',cls:'p0',tx:t}; })},
+    {at:3400, step:'Plan',  text:'Selecting tools across the data layers…',
+     lines:[{ph:'plan',cls:'p0',tx: R.plan || ('Plan: ' + item.tools.length + (item.tools.length===1?' call':' calls') + ', working from the curated layers outward to literature.')}]}
+  ];
+  var gap = Math.max(1100, Math.min(2400, 11000 / item.tools.length));
+  item.tools.forEach(function(t,i){
+    timeline.push({at:5200 + i*gap, step:'Act', text:'Querying', tool:t,
+      lines:[{ph:'act',cls:'p'+t.c.slice(1),tx:'<code>'+t.n+'</code> — ' + (t.why || 'querying this source') + ' → <b>'+t.d+'</b>'}]});
+  });
+  var writeAt = 5200 + item.tools.length*gap;
+  timeline.push({at:writeAt, step:'Write', text:'Synthesising with inline citations…',
+    lines:(R.write || ['Mapping every claim to at least one retrieved source. Any claim without a source is dropped rather than written.']).map(function(t){ return {ph:'write',cls:'p0',tx:t}; })});
+
+  timeline.forEach(function(ev){
+    later(function(){
+      setStep(ev.step);
+      var head = '<span>'+ev.text+'</span>';
+      if (!ev.tool) $('now').innerHTML = head;
+      else if ($('now').querySelector('span') === null) $('now').innerHTML = head;
+      if (ev.tool){
+        var el = document.createElement('span');
+        el.className = 'tc ' + ev.tool.c;
+        el.innerHTML = ev.tool.n + ' <span class="n">' + ev.tool.d + '</span>';
+        $('now').appendChild(el);
+      }
+      (ev.lines || []).forEach(function(L){
+        var row = document.createElement('div');
+        row.className = 'tl ' + L.cls;
+        row.innerHTML = '<span class="ts">'+(ev.at/1000).toFixed(1)+'s</span><span class="ph">'+L.ph+'</span><span class="tx">'+L.tx+'</span>';
+        $('trace').appendChild(row);
+        st.trace.push(row.outerHTML);
+        $('traceN').textContent = st.trace.length + ' steps';
+        var log = $('trace'); log.scrollTop = log.scrollHeight;
+      });
+    }, ev.at * speed);
+  });
+
+  later(function(){ showAnswer(item); }, (writeAt + 1600) * speed);
+}
+
+function setStep(key){
+  setPersonaCaption(key);
+  var hit = false;
+  Array.prototype.forEach.call($('stepper').children, function(el){
+    var k = el.getAttribute('data-k');
+    if (k === key){ el.className = 'step live'; hit = true; }
+    else if (!hit) el.className = 'step done';
+    else el.className = 'step';
+  });
+}
+
+// ---------------------------------------------------------------- answer
+function showAnswer(item){
+  lockDepth(false);
+  setPersonaCaption(null);
+  $('ansQ').textContent = item.q;
+  $('ansMeta').textContent = item.meta;
+  $('spine').innerHTML = '';
+  $('answer').innerHTML = '';
+  $('tail').classList.add('hidden');
+  $('workPanel').classList.add('hidden');
+  $('workToggle').innerHTML = 'Show work &#9662;';
+  $('workPanel').innerHTML = '<div class="now" style="margin:0">' +
+    item.tools.map(function(t){ return '<span class="tc '+t.c+'">'+t.n+' <span class="n">'+t.d+'</span></span>'; }).join('') +
+    '</div><div class="tracelog" style="max-height:none;margin-top:14px">' + (st.trace || []).join('') + '</div>';
+  go('answer');
+  writeClaim(item, 0);
+}
+
+function writeClaim(item, i){
+  if (i >= item.claims.length){ finish(item); return; }
+  var claim = item.claims[i];
+  var seg = document.createElement('i');
+  seg.className = 's' + claim.L;
+  seg.style.height = '0px';
+  $('spine').appendChild(seg);
+  if (claim.block){
+    var b = document.createElement('div');
+    b.className = 'blk';
+    b.innerHTML = claim.html;
+    $('answer').appendChild(b);
+    seg.style.height = b.offsetHeight + 'px';
+    if (reduce) { writeClaim(item, i+1); return; }
+    later(function(){ writeClaim(item, i+1); }, 340);
+    return;
+  }
+
+  var p = document.createElement('p');
+  $('answer').appendChild(p);
+
+  if (reduce){
+    p.innerHTML = claim.html;
+    seg.style.height = p.offsetHeight + 'px';
+    writeClaim(item, i+1);
+    return;
+  }
+
+  var tmp = document.createElement('div');
+  tmp.innerHTML = claim.html;
+  var queue = [];
+  Array.prototype.forEach.call(tmp.childNodes, function(n){
+    if (n.nodeType === 3){
+      n.textContent.split(/(\s+)/).forEach(function(w){ if (w) queue.push({t:'text', v:w}); });
+    } else queue.push({t:'node', v:n});
+  });
+
+  var caret = document.createElement('span');
+  caret.className = 'caret';
+  p.appendChild(caret);
+
+  var j = 0;
+  (function tick(){
+    if (j >= queue.length){
+      caret.remove();
+      seg.style.height = p.offsetHeight + 'px';
+      later(function(){ writeClaim(item, i+1); }, 200);
+      return;
+    }
+    var it = queue[j++];
+    if (it.t === 'text') p.insertBefore(document.createTextNode(it.v), caret);
+    else p.insertBefore(it.v, caret);
+    seg.style.height = p.offsetHeight + 'px';
+    later(tick, 24);
+  })();
+}
+
+function finish(item){
+  $('sources').innerHTML = '<details class="srcwrap"><summary><span class="arrow">&#9654;</span>' +
+    '<span class="sh" style="margin:0">Sources</span><span class="cnt">'+item.sources.length+'</span></summary>' +
+    '<div class="srclist">' + item.sources.map(function(s){
+    var rows = s.rows.map(function(r){
+      var v = r[1];
+      if (/^(ncbi\.nlm\.nih\.gov|clinicaltrials\.gov|omim\.org|pubmed\.ncbi\.nlm\.nih\.gov)/.test(v))
+        v = '<a href="https://'+v+'" target="_blank" rel="noopener">'+v+'</a>';
+      else if (/PMID \d+/.test(v))
+        v = v.replace(/PMID (\d+)/g, '<a href="https://pubmed.ncbi.nlm.nih.gov/$1/" target="_blank" rel="noopener">PMID $1</a>');
+      else if (/^NCT\d+/.test(v))
+        v = v.replace(/(NCT\d+)/g, '<a href="https://clinicaltrials.gov/study/$1" target="_blank" rel="noopener">$1</a>');
+      return '<dt>'+r[0]+'</dt><dd'+(r[2]?' class="tok"':'')+'>'+v+'</dd>';
+    }).join('');
+    return '<details class="src c'+s.L+'"><summary><span class="arrow">&#9654;</span>' +
+      '<span class="num">'+s.n+'</span><span class="name">'+s.name+'</span>' +
+      '<span class="tag">'+s.tag+'</span>' +
+      '<button class="flag" onclick="flagSource(event)">Flag: does not support</button></summary>' +
+      '<dl class="detail">'+rows+'</dl></details>';
+  }).join('') + '</div></details>';
+
+  $('verdict').innerHTML = item.verdict.map(function(v){
+    return '<span class="pill '+v[0]+'">'+v[1]+'</span>';
+  }).join('');
+
+  $('thread').innerHTML = '';
+  $('fubox').value = '';
+  $('fuHints').innerHTML = (FOLLOWUPS[item.key] || []).map(function(f,i){
+    return '<button type="button" onclick="fuHint(\''+item.key+'\','+i+')">'+f.q+'</button>'; }).join('');
+
+  $('fb').innerHTML =
+    '<div class="fb-row"><span>Was this answer helpful?</span>' +
+    '<button class="fb-btn" onclick="rate(this,1)" aria-label="Yes">'+thumb(false)+'</button>' +
+    '<button class="fb-btn down" onclick="rate(this,0)" aria-label="No">'+thumb(true)+'</button></div>' +
+    '<div id="fbMore"></div>';
+
+  $('promptSlot').innerHTML = '';
+  if (!st.loggedIn && !st.promptSeen){
+    st.promptSeen = true;
+    $('promptSlot').innerHTML =
+      '<div class="softprompt">Keep this search?' +
+      '<div class="row"><button class="mini" onclick="openLogin()">Log in to NCBI account</button>' +
+      '<button class="mini alt" onclick="this.closest(\'.softprompt\').remove()">Not now</button></div></div>';
+  } else if (!st.loggedIn){
+    var left = Math.max(0, 5 - st.used), t = '';
+    for (var i=0;i<5;i++) t += '<i class="'+(i<st.used?'spent':'')+'"></i>';
+    $('promptSlot').innerHTML = '<div style="margin-top:22px"><span class="counter"><span class="ticks">'+t+
+      '</span>'+(left===1?'1 search left':left+' searches left')+'</span></div>';
+  }
+  $('tail').classList.remove('hidden');
+}
+
+function thumb(down){
+  return '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" '+
+    'stroke-linejoin="round" style="display:block;flex:none">'+
+    '<g'+(down?' transform="rotate(180 8 8)"':'')+'>'+
+    '<path d="M5.5 7 8.2 2.2a1.3 1.3 0 0 1 2.4.7V6h2.6a1.3 1.3 0 0 1 1.28 1.55l-.85 4.2A1.3 1.3 0 0 1 12.15 13H5.5z"/>'+
+    '<rect x="1.6" y="7" width="3.9" height="6" rx=".8"/></g></svg>';
+}
+
+window.rate = function(btn, up){
+  Array.prototype.forEach.call(btn.parentNode.querySelectorAll('.fb-btn'), function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+  if (up){
+    $('fbMore').innerHTML = '<p class="fb-done" style="margin:10px 0 0">&#10003; Thanks. This goes to the review queue.</p>';
+    return;
+  }
+  var reasons = ['Citation does not support the claim','Wrong answer','Missing a source I expected','Should have refused','Too slow'];
+  $('fbMore').innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">' +
+    '<div class="reasons">' + reasons.map(function(r){
+      return '<button class="reason" onclick="this.classList.toggle(\'on\')">'+r+'</button>'; }).join('') + '</div>' +
+    '<input class="fb-text" type="text" placeholder="What went wrong? (optional)" aria-label="What went wrong">' +
+    '<div class="fb-row"><button class="fb-send" onclick="sendFb()">Send feedback</button>' +
+    '<button class="fb-skip" onclick="sendFb()">Skip</button></div></div>';
+};
+
+window.sendFb = function(){
+  $('fbMore').innerHTML = '<p class="fb-done" style="margin:10px 0 0">&#10003; Thanks. This goes to the review queue.</p>';
+};
+
+window.flagSource = function(e){
+  e.preventDefault(); e.stopPropagation();
+  var b = e.currentTarget;
+  b.classList.toggle('on');
+  b.textContent = b.classList.contains('on') ? 'Flagged' : 'Flag: does not support';
+};
+
+window.toggleWork = function(){
+  var p = $('workPanel'), open = !p.classList.contains('hidden');
+  p.classList.toggle('hidden', open);
+  $('workToggle').innerHTML = open ? 'Show work &#9662;' : 'Hide work &#9652;';
+};
+
+var ACCESS_NOTE_OUT = 'The REST, MCP, command-line and export surfaces need a signed-in account. The web interface does not.';
+var ACCESS_NOTE_IN  = 'Your account has access to the REST, MCP, command-line and export surfaces.';
+function renderKeyPanel(){
+  var p = $('keyPanel'); if (!p) return;
+  ['rest','mcp','kgx','cli'].forEach(function(k){
+    var el = $('pill-'+k); if (!el) return;
+    el.textContent = st.loggedIn ? 'Available' : 'Sign in required';
+    el.classList.toggle('on', st.loggedIn);
+  });
+  if (!st.loggedIn){
+    p.innerHTML = '<p class="kl"><b>Sign in to use the programmatic surfaces</b>' + ACCESS_NOTE_OUT + '</p>' +
+      '<div class="keyrow"><button class="btn" onclick="openLogin()">Sign in</button></div>';
+    return;
+  }
+  p.innerHTML = '<p class="kl"><b>Programmatic access is on</b>' + ACCESS_NOTE_IN + '</p>';
+}
+
+// ----------------------------------------------------------------- modals
+window.acceptDisclaimer = function(){ $('disclaimer').classList.add('hidden'); };
+window.openLogin  = function(){ $('loginModal').classList.remove('hidden'); };
+window.closeLogin = function(){ $('loginModal').classList.add('hidden'); };
+window.doLogin = function(){
+  st.loggedIn = true;
+  // 14.2: the anonymous persona was session-scoped. An account draws one and
+  // keeps it for the life of the account, so it is redrawn once here.
+  st.persona = drawPersona();
+  renderPersona();
+  st.email = ($('em').value || 'you@institute.edu').trim();
+  closeLogin();
+  $('loginBtn').classList.add('hidden');
+  $('acct').classList.remove('hidden');
+  $('whoName').textContent = st.email;
+  $('avInit').textContent = initials(st.email);
+  var sp = document.querySelector('.softprompt'); if (sp) sp.remove();
+  $('promptSlot').innerHTML = '';
+  renderCounter();
+  renderKeyPanel();
+  renderRail();
+  toast('Signed in as ' + st.email + '. Searches are unlimited and saved to your history.');
+  if (st.screen === 'wall') go('landing');
+};
+
+// ------------------------------------------------------------- account
+function initials(email){
+  var n = (email.split('@')[0] || 'u').replace(/[^a-z]/gi,' ').trim().split(/\s+/);
+  return ((n[0]||'u')[0] + (n[1] ? n[1][0] : ((n[0]||'ux')[1] || 'x'))).toUpperCase();
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+function renderAcctMenu(){
+  var h = st.history;
+  var items = h.length
+    ? h.slice(0,5).map(function(x,i){ return '<button class="mi" onclick="openHistory('+i+')">'+esc(x.q)+'</button>'; }).join('')
+    : '<div class="empty">No searches yet this session.</div>';
+  $('acctMenu').innerHTML =
+    '<div class="mh"><b>'+esc(st.email)+'</b>Signed in · unlimited searches</div>' +
+    '<div class="sec">Recent searches</div>' + items +
+    '<div class="sec">Account</div>' +
+    '<button class="mi" onclick="menuGo(\'integrations\')">API key and integrations</button>' +
+    '<button class="mi" onclick="menuGo(\'docs\')">Documentation</button>' +
+    '<button class="mi out" onclick="logout()">Log out</button>';
+}
+function renderRail(){
+  var rail = $('rail'); if (!rail) return;
+  var onSearch = ['landing','run','answer','wall'].indexOf(st.screen) > -1;
+  var avail = st.loggedIn && onSearch;
+  $('railBtn').classList.toggle('hidden', !avail);
+  $('railBtn').setAttribute('aria-expanded', avail && st.railOpen ? 'true' : 'false');
+  $('railStub').classList.toggle('hidden', !(avail && !st.railOpen));
+  $('railCount').textContent = st.history.length || '';
+  rail.classList.toggle('hidden', !(avail && st.railOpen));
+  if (!avail || !st.railOpen) return;
+  var cur = st.current && st.current.key;
+  var list = st.history.length
+    ? st.history.map(function(x,i){
+        return '<button class="ri'+(x.key===cur && st.screen!=='landing' ? ' on' : '')+'" onclick="openHistory('+i+')"><span class="rq">'+esc(x.q)+'</span>'+
+          (x.meta ? '<span class="rm">'+esc(x.meta)+'</span>' : '')+'</button>';
+      }).join('')
+    : '<div class="rempty">Searches you run in this session appear here, with their sources attached.</div>';
+  rail.innerHTML = '<div class="rtop"><button class="rnew" onclick="go(\'landing\')">+ New search</button>' +
+    '<button class="rmin" onclick="toggleRail()" title="Hide your searches" aria-label="Hide your searches">' +
+    '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 4 5.5 8l4 4"/><path d="M12.5 3.2v9.6"/></svg></button></div>' +
+    '<div class="rh">Your searches</div>' + list +
+    '<div class="rfoot">' + esc(st.email) + '<br>Unlimited searches</div>';
+}
+
+window.toggleRail = function(){ st.railOpen = !st.railOpen; renderRail(); };
+
+window.toggleAcct = function(e){
+  e.stopPropagation();
+  var m = $('acctMenu'), open = m.classList.contains('hidden');
+  if (open) renderAcctMenu();
+  m.classList.toggle('hidden', !open);
+  $('whoBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+};
+function closeAcct(){ var m = $('acctMenu'); if (m) m.classList.add('hidden'); $('whoBtn').setAttribute('aria-expanded','false'); }
+document.addEventListener('click', closeAcct);
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeAcct(); });
+window.menuGo = function(s){ closeAcct(); go(s); };
+window.openHistory = function(i){
+  closeAcct();
+  var rec = st.history[i]; if (!rec) return;
+  var item = null;
+  Q.forEach(function(x){ if (x.key === rec.key) item = x; });
+  if (item) start(item);
+};
+window.logout = function(){
+  closeAcct();
+  st.loggedIn = false; st.used = 0; st.history = []; st.current = null; st.email = '';
+  $('acct').classList.add('hidden');
+  $('loginBtn').classList.remove('hidden');
+  $('thread').innerHTML = ''; $('promptSlot').innerHTML = '';
+  renderKeyPanel();
+  renderRail();
+  go('landing');
+  toast('Signed out. Session history cleared from this device.');
+};
+
+var toastT;
+function toast(msg){
+  var old = document.querySelector('.toast'); if (old) old.remove();
+  var el = document.createElement('div');
+  el.className = 'toast'; el.setAttribute('role','status'); el.textContent = msg;
+  document.body.appendChild(el);
+  clearTimeout(toastT);
+  toastT = setTimeout(function(){ el.remove(); }, 4200);
+}
+
+// -------------------------------------------------------- integrations
+
+window.copyText = function(btn, text){
+  try { if (navigator.clipboard) navigator.clipboard.writeText(text); } catch(e){}
+  var was = btn.textContent;
+  btn.textContent = '\u2713 Copied';
+  setTimeout(function(){ btn.textContent = was; }, 1600);
+};
+window.fakeDownload = function(btn){
+  var was = btn.textContent;
+  btn.textContent = 'Preparing\u2026';
+  setTimeout(function(){ btn.textContent = was; toast('KGX snapshot 2026-07-14 queued. The archive appears here when the batch job finishes.'); }, 1100);
+};
+window.openDocs = function(sec){
+  go('docs');
+  Array.prototype.forEach.call($('docNav').children, function(b){
+    b.classList.toggle('on', b.getAttribute('data-d') === sec);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-doc]'), function(d){
+    d.classList.toggle('hidden', d.getAttribute('data-doc') !== sec);
+  });
+};
+
+st.persona = drawPersona();
+renderPersona();
+renderCounter();
+renderKeyPanel();
+renderRail();
+})();
+</script>
+</body></html>
