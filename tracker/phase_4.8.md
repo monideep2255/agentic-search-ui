@@ -3,7 +3,7 @@
 Branch: `phase/4.8-web-ui-visual-design`
 Depends on: 1.2 (merged)
 Opened: 2026-08-13
-Status: in progress
+Status: COMPLETE, pull request pending
 
 Deliverable, from `Technical_specification.md` Section 25: MUI adoption, a real theme, and restyling the auth, chat/search, streaming-progress and citations screens built in phase 1.2. Extended by the design review that gated this phase: the approved prototype adds screens and components beyond that line, and the phase builds all of them.
 
@@ -56,7 +56,7 @@ Screens: landing, run, answer, wall, integrations, docs, about. Docs sub-pages: 
 | Id | Deliverable | Depends on | Status |
 |----|-------------|------------|--------|
 | T-4.8-00 | The premise gate, written first and watched failing | none | done |
-| T-4.8-01 | MUI and Emotion added, supply-chain checked per `supply-chain-security` | none | open |
+| T-4.8-01 | MUI and Emotion added, supply-chain checked per `supply-chain-security` | none | done |
 | T-4.8-02 | `theme.ts` generated from `foundations/` tokens, the single source of colour, type and spacing | 01 | done |
 | T-4.8-03 | DONE. App shell: app bar with logo, nav, persona chip and account menu; disclaimer strip; history rail; footer | 02 | done |
 | T-4.8-04 | DONE. Home screen: hero, search bar, seed chips, depth control, stats row | 02 | done |
@@ -210,6 +210,22 @@ THE PART WORTH KEEPING. The gate clause written for R-01 could not fail, and nei
 The guarantee needs a real stream that really lands, which no mocked vitest harness provides, so it moved to the e2e suite where it was verified to fail with the fix disabled. The premise gate now carries an explicit pointer saying so rather than a clause that looks like coverage and is not.
 
 Every new clause in this round was mutation-tested the same way, including the focus-trap check, which was watched failing before the `inert` fix landed.
+
+## Carried open
+
+Eight findings, each with a named owner, so none is a silent deferral.
+
+| Id | What | Owner |
+|----|------|-------|
+| F-4.8-A-05 | `TrustSignalPayload.message`, `.fallback_link`, `.scope` and `.citation_id` exist in the Python contract and are absent from `lib/events.ts`, so a refusal's structured payload is validated and ignored. Section 8.4 requires a refusal to carry somewhere to go next | Whichever phase next widens the client event contract; this is a contract change, not a UI fix |
+| F-4.8-A-20 | The only account control is a button labelled "Account" whose action is sign-out, with no menu and no confirmation. T-4.8-03 named an account menu | A design pass, since the design system is frozen for this phase |
+| F-4.8-A-22 | A canned follow-up sends an unresolvable pronoun ("What variants cause it?") as a standalone backend query with no prior context | 4.5, the only phase that can resolve it, since it owns session memory |
+| F-4.8-A-23 | No URL routing: no screen is shareable, bookmarkable or Back-navigable, and a reload discards an answer | A structural change this phase's approved design does not specify |
+| F-4.8-A-27 | Navigating to Docs or About mid-run silently discards a completed answer | Depends on A-23's routing |
+| F-4.8-J-14 | Superseded and CLOSED by the `marker_ids` binding, which keeps every citation a claim declares | Closed |
+| F-4.8-R-09 | The two cap-note detection paths use different normalisations. Latent: not reachable on today's wire | Whenever either path is next touched |
+| F-4.8-R-10 | An e2e justification comment claims more than the code guarantees. The assertion is sound; the reasoning overstates why | Cosmetic, fix when next editing that file |
+| F-4.8-L-17 | 10 modules remain orphaned with 36 tests exercising code the app no longer renders. Their green tests inflate the suite's number | Needs a product-owner decision on deletion, per `file-protection` |
 
 ## History
 
