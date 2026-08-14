@@ -113,7 +113,7 @@ while building, which means none of it has been independently reviewed.
 | F-4.8-L-14 | The stepper reported every step as pending once a run landed, because it tracked only the live step and a finished run has none. What a run DID was not recoverable from where it IS | Fixed. `reachedSteps` is derived from the events that actually occurred |
 | F-4.8-L-15 | The answer screen offered no way back to the landing; the run screen always had one, so the flow dead-ended exactly when a user finished reading | Fixed |
 | F-4.8-L-16 | PRE-EXISTING, and the headline of the phase. This repository has had no working end-to-end browser test since build phase 3.0. Phase 3.0 replaced the passthrough guardrail with a real classifier that parses the Guard tier response as JSON; `tests/e2e_support/mock_llm_backend.py` returns the bare string "ok", correct when written for phase 1.2. Every run through it has died at the guard step since. Invisible because phase 3.3's webServer timeout (F-4.8-L-09) meant the suite could not start at all | Fixed: the mock is tier-aware and returns a schema-valid classification. A run now streams guard, think, plan, token, done for the first time since phase 3.0. THIS CHANGE IS A TEST-DOUBLE EDIT AND IS EXPLICITLY REFERRED TO THE JUDGE, since `goal-contracts` forbids changing a check to make it pass; the argument for legitimacy is that the double had drifted from the contract it stands in for |
-| F-4.8-L-17 | OPEN, needs a product-owner decision. 10 modules remain orphaned with 36 tests exercising code the app no longer renders: AnswerStream, ChatShell, EmptyState, LoadingSkeleton, QueryInput, QueryPipelineStepper, ChatPage, HomePage. Their green tests inflate the suite's number into a claim it does not support | Open. NOT deleted, because deletion is the product owner's call under `file-protection` |
+| F-4.8-L-17 | CLOSED 2026-08-14, product owner approved deletion. Removed: AnswerStream, ChatShell, EmptyState, LoadingSkeleton, QueryInput, QueryPipelineStepper, ChatPage, HomePage, and their eight test files. 36 tests removed, exactly the figure this finding predicted, leaving 128. The MODULE count was wrong: this said 10, the real number is 8. A static import graph from `main.tsx` reports 10 unreachable modules, but two are live and were miscounted as dead: `setupTests.ts` (wired as vitest's `setupFiles` in `vite.config.ts`) and `stubs/registry.ts` (loaded at runtime by the premise gate's dynamic `need()` helper). Neither is reachable by static analysis, and neither is dead | Closed |
 
 ### Judge round 1, 2026-08-13: FAIL
 
@@ -380,7 +380,6 @@ Eight findings, each with a named owner, so none is a silent deferral.
 | F-4.8-J-14 | Superseded and CLOSED by the `marker_ids` binding, which keeps every citation a claim declares | Closed |
 | F-4.8-R-09 | The two cap-note detection paths use different normalisations. Latent: not reachable on today's wire | Whenever either path is next touched |
 | F-4.8-R-10 | An e2e justification comment claims more than the code guarantees. The assertion is sound; the reasoning overstates why | Cosmetic, fix when next editing that file |
-| F-4.8-L-17 | 10 modules remain orphaned with 36 tests exercising code the app no longer renders. Their green tests inflate the suite's number | Needs a product-owner decision on deletion, per `file-protection` |
 
 ## History
 
