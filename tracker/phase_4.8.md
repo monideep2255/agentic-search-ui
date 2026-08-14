@@ -3,7 +3,7 @@
 Branch: `phase/4.8-web-ui-visual-design`
 Depends on: 1.2 (merged)
 Opened: 2026-08-13
-Status: COMPLETE, pull request pending
+Status: MERGED to `develop` as PR #41, 2026-08-13. Branch deleted.
 
 Deliverable, from `Technical_specification.md` Section 25: MUI adoption, a real theme, and restyling the auth, chat/search, streaming-progress and citations screens built in phase 1.2. Extended by the design review that gated this phase: the approved prototype adds screens and components beyond that line, and the phase builds all of them.
 
@@ -229,6 +229,8 @@ Eight findings, each with a named owner, so none is a silent deferral.
 | F-4.8-L-17 | 10 modules remain orphaned with 36 tests exercising code the app no longer renders. Their green tests inflate the suite's number | Needs a product-owner decision on deletion, per `file-protection` |
 
 ## History
+
+- 2026-08-13: merged to `develop` as PR #41, commit `2422131`, no squash so the eleven commits and their reasoning survive. Post-merge verification run on `develop` before pushing: vitest 147, typecheck clean, production build succeeds, doc drift clean. Remote advance proved by comparing local and remote HEAD hashes rather than trusting the push output. Phase branch deleted locally and on the remote.
 
 - 2026-08-13: all 15 tickets done. Premise gate 16 of 16, vitest 138 of 138, e2e 11 of 11, typecheck clean, production build succeeds. Python suite 2445 passed with 6 failures, confirmed identical on `develop` by stashing rather than assumed. Judge round dispatched with fresh context; nothing in this phase has been independently reviewed yet.
 - 2026-08-13, RESUMED and completed. Fixing the misdiagnosed Playwright timeout unmasked a second, older breakage: the e2e mock backend's guard response had not matched the classifier's contract since build phase 3.0, so no browser test in this repository had run green for five phases. Both are fixed and recorded as F-4.8-L-09 and F-4.8-L-16.
