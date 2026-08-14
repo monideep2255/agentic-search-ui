@@ -425,7 +425,20 @@ export function App() {
           // none, so the rail stopped where the content ended instead of
           // reaching the footer as the prototype's does.
           <Box sx={{ display: "flex", alignItems: "stretch", flex: 1, minHeight: 0 }}>
-            {railAvailable && !railOpen ? (
+            {/*
+              THREE outcomes, not two (F-4.8-P-04): no rail, the collapsed
+              strip, or the rail. This was a two-way ternary whose else branch
+              rendered the rail unconditionally, so a signed-out visitor got a
+              full rail with its empty state, which the prototype does not have.
+
+              It was invisible while `HistoryRail` returned null on an empty
+              list. Removing that guard, correctly, to match the prototype's
+              own empty state, unmasked the defect the guard had been hiding.
+              Found by screenshotting the app beside the prototype; every
+              assertion in this repository passed throughout, because they
+              checked the toggle's absence and never the rail's.
+            */}
+            {!railAvailable ? null : !railOpen ? (
               <CollapsedRail count={history.length} onExpand={() => setRailOpen(true)} />
             ) : (
             <HistoryRail
