@@ -3,14 +3,14 @@
 Branch: `phase/4.9-answer-screen-fidelity`
 Depends on: 4.8 (merged, closed out via PR #42 and PR #43)
 Opened: 2026-08-14
-Status: OPEN, PAUSED AT THE PREMISE GATE. Gate written and watched failing, 12 of 12. No build code written yet.
+Status: BUILD COMPLETE, in review. Gate 13 of 13 green, 16 mutations all red. Not yet judged or adversarially reviewed.
 
 Deliverable: close the nine fidelity gaps between the running app and the approved prototype, plus the account menu. Scheduled 2026-08-14 by product-owner decision rather than left as undated flags.
 
 ## Table of contents
 
 - [The premise](#the-premise)
-- [Where this stopped, and how to resume](#where-this-stopped-and-how-to-resume)
+- [What shipped](#what-shipped)
 - [Tickets](#tickets)
 - [What is deliberately not in this phase](#what-is-deliberately-not-in-this-phase)
 - [How these were found](#how-these-were-found)
@@ -23,41 +23,60 @@ Source of truth: `docs/build/design/design-system/prototype/app.html`, `#s-answe
 
 The gate is `frontend/src/phase49Premise.test.tsx`. Its own coverage statement names what it does not test, including the two fields the backend cannot supply.
 
-## Where this stopped, and how to resume
+## What shipped
 
-Paused at the product owner's request, at a deliberate boundary: the premise gate is written and watched failing, and NOT ONE LINE of build code exists yet. That is stage 5 of `docs/build/Build_workflow_cadence.md`, and it is the cleanest place in the cadence to stop.
+Every ticket below is done. The gate went from 12 clauses all red to 13 all green, and every clause is mutation-proven.
 
-State, verified rather than assumed:
-
-| Check | Result |
-|-------|--------|
-| Working tree | Clean. Only `phase49Premise.test.tsx` is new; `git diff develop` is empty for every other file |
-| Pre-existing suite | 134 passed, 10 files, unchanged from `develop` |
-| Full suite | 146 tests, 12 failed, 134 passed. THE 12 FAILURES ARE THIS GATE AND ARE EXPECTED |
+| Gate | Result |
+|------|--------|
+| `phase49Premise.test.tsx` | 13 of 13 |
+| Mutations | 16, every one red, one per clause plus the guard-copy regression |
+| vitest | 147 passed, three consecutive runs |
+| Playwright | 29 passed, run serially to get the true count |
 | Typecheck | Clean |
-| Stability | Three consecutive full runs at exactly 12 failed / 134 passed |
+| Production build | Succeeds |
+| Doc drift | 0 stale, 0 structural |
 
-One consequence worth knowing before it is mistaken for a clean check: `tracker/check_doc_drift.py` SKIPS the frontend test-count facts while the suite is red, because it parses vitest's "Tests N passed" line and a failing run does not print one. It reports `ok ... (2 skipped)` rather than failing. So during any phase's gate-first stage, the test counts are unverified rather than verified. `develop`'s counts are correct and untouched; nothing here needs updating until this phase goes green.
+### Three defects found by looking at the rendered screen, not by any assertion
 
-`npx vitest run` is RED on this branch, by design. A green run here would mean the gate cannot fail, which is the defect this repository has hit nine times.
+The first two are this phase's own; the third is a pre-existing trap it walked into.
 
-Resume by working the tickets below in order. Ticket T-4.9-01 is the one everything else waits on, because three separate clauses need data the view does not currently carry.
+- The reasoning log opened a PASSING run with "This question could not be processed." Its guard line was built from `CATEGORY_COPY`, which is refusal copy whose `ok` entry is a fallback, not a description of a guard that passed. Every one of the twelve clauses was already green when this was spotted in a screenshot. A thirteenth clause now asserts both halves, absence of the refusal text AND presence of the in-scope text, and is mutation-proven.
+- The status strip was given a `surfaceSunk` tint the prototype does not have, and that tint pushed the green "✓ Answered" to 4.34:1 against a 4.5:1 requirement. Removing the tint matched the prototype and fixed the contrast in the same edit, which is the argument for transcribing rather than improvising.
+- A `ReadableStream` left unclosed in this phase's own gate, to simulate a run in flight, held a reader open for the file's lifetime. Unrelated tests in other files then timed out at 15s and once at 23s while passing cleanly alone. Closing it fixed six consecutive runs.
+
+### Two deviations from the prototype, both forced by the accessibility gate
+
+Neither is a judgment call, and both are filed rather than taken silently: `F-4.9-D-13` and `F-4.9-D-14` on the board.
+
+- The prototype puts the `Flag: does not support` button inside the source card's `<summary>`. axe calls that `nested-interactive`, a summary with a focusable descendant, WCAG 4.1.2. It sits in the card body instead, so a card must be open to flag it.
+- The prototype's account avatar is `rgba(255,255,255,.22)`, which composites to #5F84B1 and puts white 11px bold text at 3.87:1. Shipped as `navy`, about 13:1.
+
+That is the THIRD instance of one underlying problem, after F-4.8-D-08's two: the design system is internally inconsistent about contrast, so "matches the design" and "passes the accessibility gate" are two checks that can disagree.
+
+### Existing checks changed, none weakened
+
+- Two rail clauses signed out through the old "Account" button, which the menu replaced. They now sign out through the menu; the guarantee about what happens to the RAIL is untouched.
+- The trust-surface helper opens the sources disclosure before asserting on a card, since cards now start collapsed.
+- The rail's counts assertion was INVERTED rather than relaxed: the answer strip is now a superset of the rail's label, so the rail's counts must appear verbatim inside the strip.
+- An accessibility locator moved from the text "Guard" to the stepper's own `step-Guard` hook, because the reasoning log names the steps too and a bare text match resolved to two elements intermittently.
+- `testTimeout` raised from vitest's 5s default to 15s. A deadline, not an assertion: with the stream leak fixed but the default restored, three of five full runs still failed on ~5000ms timeouts, always a different set, every implicated file passing alone.
 
 ## Tickets
 
 | Id | Deliverable | Finding | Depends on | Status |
 |----|-------------|---------|------------|--------|
 | T-4.9-00 | The premise gate, written first and watched failing | | none | done |
-| T-4.9-01 | `useRunView` carries the run's elapsed time, its step narratives with timings, the distinct layer count, and each citation's source identity. Three clauses below cannot pass without it, and it is the only ticket that touches the view | | 00 | todo |
-| T-4.9-02 | Nav order: Search, Integrations, About, Docs | F-4.8-D-09 | none | todo |
-| T-4.9-03 | Answer status strip: `✓ Answered · 11.4s · 3 tools · 3 layers · 3 sources`, with a `Show work ▾` disclosure reopening the run's steps | F-4.8-D-05 | 01 | todo |
-| T-4.9-04 | Run screen reasoning panel, the same detail while the run is live | F-4.8-D-10 | 01 | todo |
-| T-4.9-05 | Sources collapse: an outer disclosure closed by default with its count, and each source card independently collapsible | F-4.8-D-01 | none | todo |
-| T-4.9-06 | Source header names its layer in words: `L1 · graph`, `L2 · live`, `L3 · literature` | F-4.8-D-02 | none | todo |
-| T-4.9-07 | Citation chips carry the source identity, `1 Gene 672` rather than `1` | F-4.8-D-04 | 01 | todo |
-| T-4.9-08 | Follow-up moves above the rating, labelled `Continue this conversation` | F-4.8-D-11 | none | todo |
-| T-4.9-09 | Trust pill states the layer count, `3 layers agreed` | F-4.8-D-12 | 01 | todo |
-| T-4.9-10 | Account menu: a chip naming the account, with sign-out inside it | F-4.8-A-20 | none | todo |
+| T-4.9-01 | DONE. `useRunView` carries the run's elapsed time, its step narratives with timings, the distinct layer count, and each citation's source identity. Three clauses below cannot pass without it, and it is the only ticket that touches the view | | 00 | done |
+| T-4.9-02 | DONE. Nav order: Search, Integrations, About, Docs | F-4.8-D-09 | none | done |
+| T-4.9-03 | DONE. Answer status strip: `✓ Answered · 11.4s · 3 tools · 3 layers · 3 sources`, with a `Show work ▾` disclosure reopening the run's steps | F-4.8-D-05 | 01 | done |
+| T-4.9-04 | DONE. Run screen reasoning panel, the same detail while the run is live | F-4.8-D-10 | 01 | done |
+| T-4.9-05 | DONE. Sources collapse: an outer disclosure closed by default with its count, and each source card independently collapsible | F-4.8-D-01 | none | done |
+| T-4.9-06 | DONE. Source header names its layer in words: `L1 · graph`, `L2 · live`, `L3 · literature` | F-4.8-D-02 | none | done |
+| T-4.9-07 | DONE. Citation chips carry the source identity, `1 Gene 672` rather than `1` | F-4.8-D-04 | 01 | done |
+| T-4.9-08 | DONE. Follow-up moves above the rating, labelled `Continue this conversation` | F-4.8-D-11 | none | done |
+| T-4.9-09 | DONE. Trust pill states the layer count, `3 layers agreed` | F-4.8-D-12 | 01 | done |
+| T-4.9-10 | DONE. Account menu: a chip naming the account, with sign-out inside it | F-4.8-A-20 | none | done |
 
 Every ticket's acceptance is the matching clause in the gate, plus a mutation proving that clause can fail. The mutation step is not optional here: nine assertions-that-cannot-fail have been found in this territory already, four of them written by the lead.
 
