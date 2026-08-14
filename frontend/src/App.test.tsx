@@ -176,7 +176,11 @@ describe("App", () => {
     await signIn(user);
 
     await ask(user, "test query");
-    await user.click(screen.getByRole("button", { name: /new search/i }));
+    // EXACT, not /new search/i. The rail now carries the prototype's own
+    // "+ New search" control, so the loose regex matches two buttons. The
+    // screen's own control is the one this test means: it is asserting that
+    // leaving a RUN returns to the landing.
+    await user.click(screen.getByRole("button", { name: "New search" }));
 
     expect(
       screen.getByRole("heading", { name: /ask a biomedical question/i }),

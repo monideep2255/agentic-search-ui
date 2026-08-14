@@ -230,7 +230,13 @@ export function AppShell({
         Research tool. Answers are cited to NCBI records and are not medical advice.
       </Box>
 
-      <Box component="main" sx={{ flex: 1 }}>
+      {/*
+        A flex column, so a child that asks for `flex: 1` gets the whole
+        remaining height. Without it `<main>` has no definite height and the
+        search rail could not run the full height of the shell the way the
+        prototype's does.
+      */}
+      <Box component="main" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {children}
       </Box>
 

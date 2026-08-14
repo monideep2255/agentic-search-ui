@@ -134,6 +134,105 @@ test.describe("the stored-searches rail collapses", () => {
     expect(Math.abs(after.width - before.width)).toBeLessThanOrEqual(2);
   });
 
+  /*
+   * BASELINE ALIGNMENT against `prototype/app.html`, added 2026-08-14.
+   *
+   * These are the measurements jsdom cannot make: `#rail`'s own width and
+   * surface, and the fact that both the rail and its strip run the full height
+   * of the shell rather than stopping where the content happens to end.
+   */
+  test("matches the prototype's rail width and surface", async ({ page }) => {
+    await signInAndAsk(page);
+    const rail = page.getByTestId("history-rail");
+
+    // `#rail{width:248px; background:var(--surface)}`. The shipped rail was
+    // 240px on `surfaceSunk`, filed as F-4.8-D-06 and now closed rather than
+    // carried.
+    expect((await rail.boundingBox())!.width).toBeCloseTo(248, 0);
+    await expect(rail).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  });
+
+  test("matches the prototype's strip surface", async ({ page }) => {
+    await signInAndAsk(page);
+    await toggle(page).click();
+
+    // `#railStub{background:var(--surface)}`, the same white as the rail it
+    // replaces, so one control does not change colour as it collapses.
+    await expect(page.getByTestId("collapsed-rail")).toHaveCSS(
+      "background-color",
+      "rgb(255, 255, 255)",
+    );
+  });
+
+  test("runs the full height of the shell, open and collapsed", async ({ page }) => {
+    await signInAndAsk(page);
+    const shell = (await page.getByRole("main").boundingBox())!;
+
+    const rail = (await page.getByTestId("history-rail").boundingBox())!;
+    // The prototype's rail reaches the footer. The shipped rail stopped where
+    // the answer card ended, leaving a torn edge down the left of the page.
+    expect(rail.height).toBeCloseTo(shell.height, -1);
+
+    await toggle(page).click();
+    const strip = (await page.getByTestId("collapsed-rail").boundingBox())!;
+    expect(strip.height).toBeCloseTo(shell.height, -1);
+  });
+
+  test("carries each search's own tool, layer and source counts", async ({ page }) => {
+    await signInAndAsk(page);
+
+    // Wait for the run to land, which is when the counts exist at all.
+    await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    /*
+     * `.rm` in the prototype, `"3 tools · 3 layers · 3 sources"`.
+     *
+     * Asserted as AGREEMENT with the answer screen's own status line rather
+     * than against a literal string. A literal would pass against a hardcoded
+     * label; this can only pass if the rail is reading the run it belongs to.
+     * It is deliberately indifferent to what the counts actually are, since the
+     * mock backend's run legitimately produces zeroes.
+     */
+    const answerMeta = (await page.getByTestId("answer-meta").textContent())!.trim();
+    expect(answerMeta).toMatch(/tools? · .* layers? · .* sources?/);
+
+    const railItem = page.getByTestId("history-rail").getByRole("button", {
+      name: /diseases are associated with BRCA1/i,
+    });
+    await expect(railItem).toContainText(answerMeta);
+  });
+
+  test("fills the landing beside a full-height rail", async ({ page }) => {
+    await page.goto("/");
+    const dialog = page.getByTestId("disclaimer-modal");
+    if (await dialog.isVisible().catch(() => false)) {
+      await dialog.getByRole("checkbox").check();
+      await dialog.getByRole("button", { name: /continue/i }).click();
+    }
+    await page
+      .getByRole("navigation", { name: /main/i })
+      .getByRole("button", { name: /log in/i })
+      .click();
+    await page.getByLabel("Email").fill(`rail-${randomUUID()}@example.com`);
+    await page.getByLabel("Password").fill(TEST_PASSWORD);
+    await page.getByRole("button", { name: "Sign up" }).click();
+    await expect(page.getByTestId("history-rail")).toBeVisible({ timeout: 30_000 });
+
+    /*
+     * The prototype's landing hero runs to the footer. The shipped hero was
+     * content-height, so once the rail became full height the landing showed a
+     * white column beside a grey void.
+     *
+     * Pre-existing rather than introduced by the rail work, and only visible
+     * because of it, which is the argument for fixing it in the same pass.
+     */
+    const main = (await page.getByRole("main").boundingBox())!;
+    const hero = (await page.getByTestId("home-hero").boundingBox())!;
+    expect(hero.y + hero.height).toBeCloseTo(main.y + main.height, -1);
+  });
+
   test("hides rail and strip below the design's breakpoint", async ({ page }) => {
     await signInAndAsk(page);
     await page.setViewportSize(NARROW_VIEWPORT);

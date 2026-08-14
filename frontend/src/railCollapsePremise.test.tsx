@@ -286,6 +286,96 @@ describe("F-4.8-P-03: the stored-searches rail collapses", () => {
     );
   });
 
+  /*
+   * BASELINE ALIGNMENT, added 2026-08-14 at the product owner's direction.
+   *
+   * The first version of this fix delivered the collapse control and left three
+   * differences from the prototype in place, two of them as deliberate judgment
+   * calls (the strip's surface, and omitting the "+ New search" button the
+   * prototype pairs with the collapse control) and one filed as a gap (the
+   * empty-state rail). The instruction is that the prototype IS the baseline
+   * and those were not judgment calls to make. These clauses hold the rail to
+   * `prototype/app.html`'s own `renderRail()`.
+   */
+
+  it("carries the prototype's New search button in the rail's top row", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signInWithOneSearch(user);
+
+    const rail = screen.getByTestId("history-rail");
+    const newSearch = within(rail).getByRole("button", { name: /new search/i });
+    const heading = within(rail).getByText(/^your searches$/i);
+
+    // POSITION: `.rtop` sits ABOVE `.rh` in the prototype's markup. A button
+    // rendered below the list would satisfy a presence-only assertion.
+    expect(
+      heading.compareDocumentPosition(newSearch) & Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
+  });
+
+  it("pairs New search with the collapse control on one row, in that order", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signInWithOneSearch(user);
+
+    const rail = screen.getByTestId("history-rail");
+    const newSearch = within(rail).getByRole("button", { name: /new search/i });
+    const collapse = within(rail).getByRole("button", { name: collapseName });
+
+    expect(
+      newSearch.compareDocumentPosition(collapse) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("returns to the landing screen from the rail's New search", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signInWithOneSearch(user);
+
+    const rail = screen.getByTestId("history-rail");
+    await user.click(within(rail).getByRole("button", { name: /new search/i }));
+
+    expect(mainArea().getByRole("textbox", { name: /question/i })).toBeInTheDocument();
+  });
+
+  it("shows the rail with an empty state before the first search", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    // The prototype's `avail = st.loggedIn && onSearch` does NOT depend on
+    // history, and `renderRail` emits `.rempty` when the list is empty. The
+    // shipped rail rendered nothing at all here.
+    const rail = await screen.findByTestId("history-rail");
+    expect(within(rail).getByText(/searches you run in this session appear here/i))
+      .toBeInTheDocument();
+  });
+
+  it("offers the toggle from sign-in, before any search has been run", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    expect(within(appBar()).getByRole("button", { name: toggleName })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
+  it("names the signed-in account in the rail's footer", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signInWithOneSearch(user);
+
+    // The prototype's `.rfoot` is `esc(st.email) + '<br>Unlimited searches'`.
+    // The email is what the user typed into the gate that just authenticated
+    // them, so this is real data rather than a stub.
+    const rail = screen.getByTestId("history-rail");
+    expect(within(rail).getByText("person@example.com")).toBeInTheDocument();
+    expect(within(rail).getByText(/unlimited searches/i)).toBeInTheDocument();
+  });
+
   it("keeps the collapsed choice across a new search", async () => {
     const user = userEvent.setup();
     render(<App />);

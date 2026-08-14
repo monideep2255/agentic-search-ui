@@ -311,14 +311,60 @@ Two defects were found in the gate itself while watching it fail, before any rev
 
 The finding worth carrying past this fix: the vitest gate CANNOT see visual position. Adding `order: -1` to the content column moves the rail to the visual right of the page and every DOM-order clause stays green. That is not a hypothetical, it is mutation M9's measured result. `e2e/rail-collapse.spec.ts` exists because of it and is mutation-tested against that exact case, and the vitest gate's coverage statement now says so rather than implying it covers position.
 
-### Two fidelity differences found while doing this, filed rather than fixed
+### Baseline alignment, 2026-08-14, at the product owner's direction
 
-Both are pre-existing, both are outside the collapse control's scope, and neither is silently closed.
+The first version of this fix delivered the collapse control and left three differences from the prototype standing: two as deliberate judgment calls, one filed as a gap. The product owner's instruction is that the prototype IS the baseline and those were not calls to make. The rail is now transcribed from `prototype/app.html`'s own `renderRail()` and `#rail` CSS.
 
-| Id | What the prototype says | What ships | Note |
-|----|------------------------|-----------|------|
-| F-4.8-D-06 | `#rail` is `--surface` (white) at 248px wide | The rail is `surfaceSunk` (#F7F8F9) at 240px | The strip added here deliberately uses `surfaceSunk` to match the RAIL IT REPLACES rather than the prototype's white `#railStub`, so one control does not change colour as it collapses. Transcribing the strip literally would have made the mismatch visible instead of latent |
-| F-4.8-D-07 | The rail renders with an empty-state message when a signed-in user has no history | The rail renders nothing at all when empty | A deliberate shipped choice ("an empty rail on a first visit is furniture"), which is a reasonable call and still a difference from the approved design. Needs a product-owner decision, not a unilateral fix |
+The reason this matters beyond the pixels: `docs/build/design/Phase_4.8_prototype.html`, which the product owner named as the level to reach, is a GENERATED copy of `design-system/prototype/app.html`, differing only in the doctype wrapper `make_prototype_artifact.py` strips. There is one prototype, not two, and it is the bar.
+
+| Element | Prototype | Was shipping | Now |
+|---------|-----------|--------------|-----|
+| `#rail` surface | `--surface` (white) | `surfaceSunk` | `--surface` |
+| `#rail` width | 248px | 240px | 248px |
+| `#rail` height | Full height of the shell | Stopped where the content ended | Full height |
+| `.rtop` | `+ New search` paired with the collapse control | Collapse control only, on the heading row | Both, one row, in the prototype's order |
+| `.rh` | `--ink-faint`, 10.5px, .12em | `inkMuted` via the `overline` variant | `--ink-faint`, and see below |
+| `.ri` | `--ink`, active is `--l1-wash` + `--blue` + 600 | Inactive rows dimmed to `inkMuted` | The prototype's own values |
+| `.rm` | Per-search tool, layer and source counts | Absent | Present, and see F-4.8-D-08 |
+| `.rempty` | An empty-state message before the first search | The rail rendered nothing at all | The prototype's message, verbatim |
+| `.rfoot` | The signed-in account, then "Unlimited searches" | Absent | Present |
+| `#railStub` surface | `--surface` | `surfaceSunk` | `--surface` |
+
+Three of these are worth their own note.
+
+The heading's token and the rail's surface had to move together. The shipped rail used `inkMuted` where the prototype uses `inkFaint`, and the reason was recorded in the code: `#71767A` measures 4.73:1 on white and only 4.31:1 on `surfaceSunk`, so on a rail that had drifted to `surfaceSunk` the prototype's own token failed AA. Restoring the prototype's surface is what made restoring its token safe. Neither change is correct alone.
+
+The strip's surface was the clearest case of a judgment call that should not have been made. It was set to `surfaceSunk` to match a rail that was itself off-baseline, reasoning that one control should not change colour as it collapses. That reasoning was sound and the premise was wrong: the right move was to fix the rail, which makes both white, which is what the prototype says.
+
+The per-item meta is real data, not a stub. It is the same `view.meta` string the answer screen shows, written onto the history entry when the run LANDS, since the counts do not exist before then. The e2e clause asserts the rail AGREES with the answer screen rather than matching a literal, so it cannot pass against a hardcoded label.
+
+### F-4.8-D-08, a new finding, and the one place this deliberately does not match the prototype
+
+`.rm` is `--ink-faint` on every row in the prototype. On the active row, whose ground is `--l1-wash`, axe measures that at 3.92:1 against a 4.5:1 requirement. WCAG 2.1 AA is a merge gate in this repository, so the active row's meta steps up to `inkMuted` (5.74:1) instead.
+
+This is the SECOND instance of one underlying design-system defect, and it is now filed as such rather than worked around twice: `inkFaint` is AA-safe on some of the design system's own surfaces and not on others, and nothing in the design system says which. The first instance was the heading on `surfaceSunk`, above. The token is not being changed unilaterally; the finding is for the next design pass.
+
+### Two earlier findings, now closed rather than carried
+
+F-4.8-D-06 (the rail's surface and width) and F-4.8-D-07 (the empty rail rendering nothing) were filed in the first version of this fix as out-of-scope observations. Both are closed by the alignment above.
+
+### One pre-existing defect the rail work made visible
+
+The landing's hero was content-height where the prototype's runs to the footer. Nothing showed it while the rail stopped at the content too; once the rail ran full height, the landing showed a white column beside a grey void. Fixed in the same pass, with its own geometry clause, because it was this work that surfaced it.
+
+The chain needed three changes, not one, and each is load-bearing: `<main>` became a flex column, the search row claims `flex: 1` rather than `minHeight: "100%"` (a percentage height resolves against a parent with a definite height, and `<main>` had none), and the content column became a flex column itself so a screen inside it can claim the height the row already gives it.
+
+### Assertions proven able to fail
+
+| Gate | Clauses | Mutations |
+|------|---------|-----------|
+| `frontend/src/railCollapsePremise.test.tsx` | 17 | 15, every clause red under the one aimed at it |
+| `frontend/e2e/rail-collapse.spec.ts` | 10 | 11, all red |
+
+Three existing checks changed, none weakened:
+
+- `AuthGate.test.tsx`'s three `onAuthenticated` assertions now pin BOTH arguments, the token and the email, where they previously pinned only the token. Strictly stronger.
+- `App.test.tsx` and four e2e locators moved from `/new search/i` to an exact `"New search"`. The rail now carries the prototype's `+ New search`, so the loose regex matched two controls. The exact name selects the one each check means. The accessibility suite's "no two visible controls share an accessible name" passes, which confirms `+ New search` and `New search` are distinct names, as they are in the prototype.
 
 ## Carried open
 

@@ -232,7 +232,14 @@ export function AnswerScreen({
             ) : null}
           </Box>
           {meta ? (
-            <Typography variant="body2" sx={{ color: designTokens.inkMuted, mt: 1 }}>
+            <Typography
+              variant="body2"
+              // Hooked so a check can assert the rail's per-search counts AGREE
+              // with this line, rather than matching a literal both could get
+              // wrong independently.
+              data-testid="answer-meta"
+              sx={{ color: designTokens.inkMuted, mt: 1 }}
+            >
               {meta}
             </Typography>
           ) : null}

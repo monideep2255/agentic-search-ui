@@ -2,7 +2,17 @@ import { useId, useState } from "react";
 import { ApiError, login, signup } from "../../lib/api";
 
 interface AuthGateProps {
-  onAuthenticated: (token: string) => void;
+  /**
+   * Called once with the access token and the account's email address.
+   *
+   * The email is passed alongside the token because the rail's footer names the
+   * signed-in account (`prototype/app.html`'s `.rfoot`), and this is the one
+   * place the value is already known: it is what the user typed into the form
+   * the server has just authenticated. Sourcing it here rather than from a
+   * follow-up `GET /auth/me` avoids a second round trip for a value already in
+   * hand, and keeps it real data rather than a stub.
+   */
+  onAuthenticated: (token: string, email: string) => void;
 }
 
 type AuthMode = "login" | "signup";
@@ -55,7 +65,7 @@ export function AuthGate({ onAuthenticated }: AuthGateProps) {
       // token-acquisition call so there is exactly one path that ever
       // calls `onAuthenticated`.
       const result = await login({ email, password });
-      onAuthenticated(result.access_token);
+      onAuthenticated(result.access_token, email);
       // No `finally`/reset of `pending` on the success path: the parent
       // stops rendering this component once it holds a token (see
       // `App.tsx`), so there would be nothing left to update.

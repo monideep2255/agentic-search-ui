@@ -71,9 +71,15 @@ export function HomeScreen({ onSubmit, footer }: HomeScreenProps) {
   };
 
   return (
-    <Box>
+    // A flex column that claims the shell's remaining height, so the hero can
+    // run to the footer the way the prototype's does. Without this the hero is
+    // content-height and the landing shows a grey void below it, which only
+    // became visible once the rail beside it ran full height.
+    <Box sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       <Box
+        data-testid="home-hero"
         sx={{
+          flex: 1,
           bgcolor: designTokens.navy,
           backgroundImage:
             "radial-gradient(900px 340px at 50% -10%, rgba(32,84,147,.6), transparent 70%)",
