@@ -81,7 +81,7 @@ async function signUpFreshAccount(page: Page): Promise<void> {
 async function ask(page: Page, question: string): Promise<void> {
   const main = page.getByRole("main");
   await main.getByRole("textbox", { name: /question/i }).fill(question);
-  await main.getByRole("button", { name: /^ask$/i }).click();
+  await main.getByRole("button", { name: /^search the knowledge graph$/i }).click();
 }
 
 test.describe("query stream and stop", () => {

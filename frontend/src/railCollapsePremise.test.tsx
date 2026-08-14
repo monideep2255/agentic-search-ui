@@ -107,7 +107,7 @@ async function signIn(user: ReturnType<typeof userEvent.setup>) {
 async function ask(user: ReturnType<typeof userEvent.setup>, question: string) {
   const main = mainArea();
   await user.type(main.getByRole("textbox", { name: /question/i }), question);
-  await user.click(main.getByRole("button", { name: /^ask$/i }));
+  await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
 }
 
 /** Sign in and run one question, so the rail has something in it. */

@@ -312,7 +312,7 @@ describe("clause 3b: the assembled app is still connected to the agent", () => {
     const main = screen.getByRole("main");
     const field = await within(main).findByRole("textbox", { name: /question/i });
     await user.type(field, "Which diseases are associated with BRCA1?");
-    await user.click(within(main).getByRole("button", { name: /^ask$/i }));
+    await user.click(within(main).getByRole("button", { name: /^search the knowledge graph$/i }));
 
     await waitFor(() => expect(createRunSpy).toHaveBeenCalledTimes(1));
     expect(createRunSpy).toHaveBeenCalledWith(
@@ -628,7 +628,7 @@ describe("clause 3e: no answer content without a run behind it", () => {
       within(main).getByRole("textbox", { name: /question/i }),
       "What is the capital of the USA?",
     );
-    await user.click(within(main).getByRole("button", { name: /^ask$/i }));
+    await user.click(within(main).getByRole("button", { name: /^search the knowledge graph$/i }));
 
     expect(screen.queryByTestId("source-1")).not.toBeInTheDocument();
     expect(screen.queryByTestId(/^citation-/)).not.toBeInTheDocument();

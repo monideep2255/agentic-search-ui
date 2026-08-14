@@ -188,7 +188,7 @@ test.describe("accessibility", () => {
     await signIn(page);
     const main = page.getByRole("main");
     await main.getByRole("textbox", { name: /question/i }).fill("Which diseases are associated with BRCA1?");
-    await main.getByRole("button", { name: /^ask$/i }).click();
+    await main.getByRole("button", { name: /^search the knowledge graph$/i }).click();
 
     // Mid-run.
     await expect(page.getByText("Guard")).toBeVisible();
