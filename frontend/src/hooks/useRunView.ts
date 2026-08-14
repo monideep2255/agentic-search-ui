@@ -450,10 +450,25 @@ export function useRunView(events: AgentEvent[]): RunView {
     const steps: ReasoningStep[] = [];
     for (const event of events) {
       if (event.type === "guard") {
+        /*
+         * CATEGORY_COPY is REFUSAL copy, and its `ok` entry is a fallback
+         * ("This question could not be processed"), not a description of a
+         * guard that passed. The first version of this log used it for every
+         * guard event, so a run that sailed through the guardrail opened its
+         * own reasoning log with a refusal message. Caught by looking at the
+         * rendered screen, not by any assertion.
+         *
+         * A passing guard gets a fixed string. A failing one still gets the
+         * reviewed refusal copy, and `guard.reason` is still never rendered:
+         * it is free-form backend text, and Section 12.6's no-cost-figure rule
+         * can only be guaranteed by never rendering those fields.
+         */
         steps.push({
           step: "Guard",
           at: relative(event.ts),
-          text: CATEGORY_COPY[event.payload.category] ?? CATEGORY_COPY.ok,
+          text: event.payload.passed
+            ? "In scope. The question can be grounded in NCBI records."
+            : (CATEGORY_COPY[event.payload.category] ?? CATEGORY_COPY.ok),
         });
       } else if (event.type === "think" && event.payload.narrative) {
         steps.push({ step: "Think", at: relative(event.ts), text: event.payload.narrative });

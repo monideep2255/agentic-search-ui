@@ -216,6 +216,28 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     expect(screen.queryByTestId("work-panel")).not.toBeInTheDocument();
   });
 
+  it("does not open a passing run's log with a refusal message", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await landAnAnswer(user);
+    await user.click(screen.getByRole("button", { name: /show work/i }));
+
+    /*
+     * F-4.9-L-01, found by looking at the rendered screen after every clause
+     * here was already green.
+     *
+     * The log's guard line was built from `CATEGORY_COPY`, which is REFUSAL
+     * copy whose `ok` entry is a fallback, so a run that passed the guardrail
+     * opened its own reasoning with "This question could not be processed."
+     * Both halves are asserted: the refusal text must be absent AND the
+     * in-scope text present, since an absence-only clause passes against a
+     * panel that renders nothing.
+     */
+    const panel = screen.getByTestId("work-panel");
+    expect(panel).not.toHaveTextContent(/could not be processed/i);
+    expect(panel).toHaveTextContent(/in scope/i);
+  });
+
   // ---------------------------------------------------------------- F-4.8-D-10
   it("shows the same reasoning detail while the run is still going", async () => {
     const user = userEvent.setup();
