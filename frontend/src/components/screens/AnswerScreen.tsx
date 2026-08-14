@@ -92,6 +92,8 @@ export interface AnswerScreenProps {
   failure?: string | null;
   /** Cap copy, when the run stopped early on its processing budget. */
   capMessage?: string | null;
+  /** Disclosures the answer carried: truncation, unaddressed entities. */
+  systemNotes?: string[];
   /**
    * Flag a source as not supporting the claim it is attached to.
    *
@@ -186,6 +188,7 @@ export function AnswerScreen({
   refusal = null,
   failure = null,
   capMessage = null,
+  systemNotes = [],
   onFlagSource,
   flaggedSources = [],
 }: AnswerScreenProps) {
@@ -237,6 +240,9 @@ export function AnswerScreen({
         {refusal ? <Notice testId="answer-refusal" tone="warn" text={refusal} /> : null}
         {failure ? <Notice testId="answer-failure" tone="risk" text={failure} /> : null}
         {capMessage ? <Notice testId="answer-cap" tone="warn" text={capMessage} /> : null}
+        {systemNotes.map((note, i) => (
+          <Notice key={i} testId={`answer-note-${i}`} tone="warn" text={note} />
+        ))}
 
         {/* The spine runs beside the prose, one segment per claim. */}
         <Box sx={{ display: "grid", gridTemplateColumns: "14px 1fr", gap: 2.25 }}>

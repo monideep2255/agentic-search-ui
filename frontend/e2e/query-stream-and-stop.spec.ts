@@ -113,6 +113,35 @@ test.describe("query stream and stop", () => {
     await expect(page.getByRole("button", { name: /new search/i })).toBeVisible();
   });
 
+  test("a second question shows the run screen, not a jump to the answer", async ({ page }) => {
+    // F-4.8-R-01. `useAgentRun` reset its event buffer in an effect, which runs
+    // after commit, so a render could see the NEW run id beside the PREVIOUS
+    // run's events. `landed` was already true, the navigation effect fired, and
+    // the run screen was SKIPPED for every question after the first.
+    //
+    // That is a control loss, not a cosmetic one: the stepper, the tool chips
+    // and the STOP BUTTON are all on the run screen, and this product runs a
+    // cost-capped agent loop that a user must be able to abort.
+    //
+    // This lives here rather than in the premise gate because reproducing it
+    // needs a real stream that really lands. Two vitest attempts both produced
+    // assertions that could not fail; this one was verified to fail with the
+    // fix disabled.
+    await signUpFreshAccount(page);
+
+    await ask(page, "What gene is BRCA1?");
+    await expect(page.getByRole("button", { name: /new search/i })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // Second question, from the follow-up field on the landed answer.
+    await page.getByRole("textbox", { name: /follow-up/i }).fill("What gene is TP53?");
+    await page.getByRole("button", { name: /^ask$/i }).click();
+
+    // The run screen must actually appear. `step-Guard` exists only there.
+    await expect(page.getByTestId("step-Guard")).toBeVisible({ timeout: 10_000 });
+  });
+
   test("stop halts the run on the server, not just in the browser", async ({ page, request }) => {
     await signUpFreshAccount(page);
 

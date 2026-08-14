@@ -260,6 +260,34 @@ export function useAgentRun(runId: string | null, token: string | null): UseAgen
   const [error, setError] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
 
+  /**
+   * Discard the previous run's events DURING RENDER, not in the effect below.
+   *
+   * F-4.8-R-01. The reset used to live only in the effect, which React runs
+   * after commit, so there was a frame where `runId` was already the NEW run
+   * while `events` still held the OLD one. Every consumer deriving "has this
+   * run finished?" from the events saw the previous run's terminal event and
+   * concluded the new run was already done.
+   *
+   * In this app that meant the run screen was skipped for every question after
+   * the first: no stepper, no tool chips, and no reachable Stop button on a
+   * cost-capped agent loop. It also re-exposed the cross-account leak that
+   * clearing App-level state was supposed to close, because the buffer is not
+   * App-level state.
+   *
+   * Adjusting state during render is React's documented pattern for exactly
+   * this case (state derived from a changed prop). It re-renders immediately,
+   * before children see the inconsistent pair, so the stale frame cannot exist
+   * for ANY consumer rather than being guarded against in one of them.
+   */
+  const [lastRunId, setLastRunId] = useState<string | null>(runId);
+  if (runId !== lastRunId) {
+    setLastRunId(runId);
+    dispatch({ kind: "reset" });
+    setStatus("idle");
+    setError(null);
+  }
+
   useEffect(() => {
     if (runId === null || token === null) {
       setStatus("idle");

@@ -526,6 +526,88 @@ describe("clause 3d: the adapter never overstates what the events said", () => {
   });
 });
 
+describe("clause 3f: the fix rounds' own defects stay fixed", () => {
+  // F-4.8-R-01 IS NOT ASSERTED HERE, and the reason is recorded rather than
+  // left as a hole.
+  //
+  // The defect is that `useAgentRun` reset its buffer in an effect, so a render
+  // could observe the NEW run id beside the PREVIOUS run's events, and a
+  // consumer deriving "finished?" from events skipped the run screen entirely
+  // for every question after the first, making Stop unreachable.
+  //
+  // Two attempts to pin it here both produced assertions that could not fail,
+  // proven by mutation-testing rather than by reading them. Reading
+  // `result.current` after effects flush sees the effect's own reset; probing
+  // during render sees nothing, because a run with a mocked never-resolving
+  // stream never accumulates events to go stale in the first place.
+  //
+  // Reproducing it needs a real stream that really lands, so the assertion
+  // lives in `e2e/query-stream-and-stop.spec.ts` ("a second question shows the
+  // run screen"), where it was verified to fail with the fix disabled. Named
+  // here so this file's coverage is honest about what it does not cover, the
+  // same way colour contrast is.
+
+
+  it("applies one citation-usability rule to chips and to source cards alike", async () => {
+    // F-4.8-R-03. `sources` dropped an unusable display_index; the claim chips
+    // were built from the same events with no check, so a chip could render
+    // "[0]" with no card behind it, or point at a different citation's card.
+    const { useRunView } = await need<any>("T-4.8-12 (event adapter)", "./hooks/useRunView.ts");
+    const cite = (id: string, index: number) => ({
+      type: "citation",
+      payload: {
+        citation_id: id, display_index: index, source: "NCBI", source_id: "1",
+        source_url: "https://www.ncbi.nlm.nih.gov/gene/672", layer: "layer_1_graph",
+        field: "cypher_query", claim_text: "", evidence_kind: "curated assertion",
+        assertion_confidence: "high", population_ancestry_context: null,
+        license: "public domain",
+      },
+    });
+    const events = [
+      { type: "token", payload: { text: "A claim [0]. ", marker_ids: ["bad"] } },
+      cite("bad", 0),
+      { type: "done", payload: {} },
+    ];
+    const { result } = renderHook(() => useRunView(events));
+    // Unusable everywhere, not just in one of the two renderings.
+    expect(result.current.sources).toEqual([]);
+    expect(result.current.claims[0].citations).toEqual([]);
+  });
+
+  it("keeps every system-status note off the provenance spine, not just the cap note", async () => {
+    // F-4.8-R-04. write_node emits THREE bare status notes; the A-14 fix
+    // handled one, leaving two rendering as uncited grey claims. Both of those
+    // are disclosures, so the spine was misreporting on precisely the outputs
+    // that exist to be trustworthy.
+    const { useRunView } = await need<any>("T-4.8-12 (event adapter)", "./hooks/useRunView.ts");
+    const events = [
+      { type: "token", payload: { text: "Note: this result was truncated. Showing 20 of 15310 matching rows. ", marker_ids: [] } },
+      { type: "token", payload: { text: "Note: this answer does not address the following entities named in the question: GCK. ", marker_ids: [] } },
+      { type: "done", payload: {} },
+    ];
+    const { result } = renderHook(() => useRunView(events));
+    expect(result.current.claims).toEqual([]);
+    // Removed from the claims, but NOT discarded: they are disclosures.
+    expect(result.current.systemNotes).toHaveLength(2);
+  });
+
+  it("strips only the markers a token actually cites, never prose", async () => {
+    // F-4.8-R-05. The strip removed EVERY bracketed 1-3 digit number, so
+    // "The cohort in study [12] reported..." silently lost "[12]". A lossy,
+    // undisclosed edit of answer text is the same family as fabricating one.
+    const { useRunView } = await need<any>("T-4.8-12 (event adapter)", "./hooks/useRunView.ts");
+    const events = [
+      {
+        type: "token",
+        payload: { text: "The cohort in study [12] reported a 40 percent rate. ", marker_ids: [] },
+      },
+      { type: "done", payload: {} },
+    ];
+    const { result } = renderHook(() => useRunView(events));
+    expect(result.current.claims[0].text).toContain("[12]");
+  });
+});
+
 describe("clause 3e: no answer content without a run behind it", () => {
   it("an anonymous visitor is shown no claim, source, citation or trust signal", async () => {
     // F-4.8-J-01, the phase's worst defect and the assertion whose absence let

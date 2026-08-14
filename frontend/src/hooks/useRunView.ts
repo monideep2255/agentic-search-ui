@@ -38,6 +38,28 @@ import { isCapShapedError, CAP_MESSAGE_COPY } from "../components/chat/CapMessag
  * documented here so the two stay findable together.
  */
 const CAP_NOTE_PREFIX = "This query reached its resource limit";
+
+/**
+ * Every bare system-status note `write_node` emits as a token.
+ *
+ * F-4.8-R-04. The A-14 fix lifted ONE of these off the provenance spine and
+ * left two rendering as uncited grey claims. Both of the others are
+ * DISCLOSURES, about truncation and about an unaddressed entity, so the trust
+ * spine was misreporting on exactly the outputs that exist to be trustworthy:
+ * a fully-cited answer displayed uncited segments.
+ *
+ * These are notes ABOUT the answer, never assertions about biology, so none of
+ * them may occupy a segment. Matched on prefixes because the text is composed
+ * in Python and cannot be imported across the boundary.
+ */
+const SYSTEM_NOTE_PREFIXES = [
+  CAP_NOTE_PREFIX,
+  "Note: this result was truncated",
+  "Note: this answer does not address the following entities",
+];
+
+const isSystemNote = (text: string) =>
+  SYSTEM_NOTE_PREFIXES.some((prefix) => text.trimStart().startsWith(prefix));
 import type { StepName, ToolCall } from "../components/screens/RunScreen";
 import type { Claim, Source, TrustSignal } from "../components/screens/AnswerScreen";
 
@@ -86,6 +108,14 @@ export interface RunView {
   /** Cap copy, when the run stopped early on its processing budget. */
   capMessage: string | null;
   /**
+   * System notes the answer carried: truncation, unaddressed entities.
+   *
+   * These are DISCLOSURES about the answer, so removing them from the claim
+   * list must not mean discarding them. They are shown as notices instead,
+   * which is what they are.
+   */
+  systemNotes: string[];
+  /**
    * Whether Stop should still be offered.
    *
    * Reuses `StopButton`'s `deriveStopEnabled`, which has 19 tests behind it and
@@ -114,6 +144,7 @@ export const EMPTY_RUN_VIEW: RunView = {
   failure: null,
   refusal: null,
   capMessage: null,
+  systemNotes: [],
   stopEnabled: false,
 };
 
@@ -177,17 +208,36 @@ export function useRunView(events: AgentEvent[]): RunView {
     // same React key and the same data-testid, in two different layer colours.
     // A citation that cannot be numbered cannot be cited, so it is dropped from
     // the source list rather than shown with a nonsense label.
-    const seenIndexes = new Set<number>();
+    // F-4.8-R-03. `sources` dropped a citation whose display_index was not a
+    // usable positive integer, and deduped by index. The claim chips were built
+    // from the SAME events with neither check, so a chip could render "[0]"
+    // with no source card behind it, and a chip could point at a source card
+    // that was not the citation the wire bound it to.
+    //
+    // One index map, built once, used by both. A citation that cannot be
+    // numbered is not usable as a citation anywhere.
+    const usableIndexes = new Set<number>();
+    const citationById = new Map<string, (typeof events)[number]>();
+    for (const event of events) {
+      if (event.type !== "citation") continue;
+      const index = event.payload.display_index;
+      if (!Number.isInteger(index) || index < 1) continue;
+      if (usableIndexes.has(index)) continue;
+      usableIndexes.add(index);
+      citationById.set(event.payload.citation_id, event);
+    }
+
+    const emitted = new Set<number>();
     const sources: Source[] = [];
     for (const event of events) {
       if (event.type !== "citation") continue;
       const payload = event.payload;
       const index = payload.display_index;
-      // A citation that cannot be numbered cannot be cited, so it is dropped
-      // rather than rendered with a nonsense label.
-      if (!Number.isInteger(index) || index < 1) continue;
-      if (seenIndexes.has(index)) continue;
-      seenIndexes.add(index);
+      // Same rule as the chips above, and deliberately the same set membership:
+      // a citation is either usable everywhere or nowhere.
+      if (!citationById.has(payload.citation_id)) continue;
+      if (emitted.has(index)) continue;
+      emitted.add(index);
       sources.push({
         n: index,
         layer: layerNumber(payload.layer),
@@ -226,27 +276,51 @@ export function useRunView(events: AgentEvent[]): RunView {
     // The general lesson, which this repository's `attack-the-constraint` rule
     // already states: when a component is fed by an assembly step, read what it
     // was GIVEN before debugging what it produced. The binding was on the wire.
-    const citationById = new Map<string, (typeof events)[number]>();
-    for (const event of events) {
-      if (event.type === "citation") citationById.set(event.payload.citation_id, event);
-    }
-
     const claims: Claim[] = [];
+    const systemNotes: string[] = [];
     for (const event of events) {
       if (event.type !== "token") continue;
-      // The backend embeds its own [N] markers in the prose. The UI renders
-      // chips from marker_ids instead, so the raw markers are stripped rather
-      // than shown alongside them, which previously produced "...edge [2]. 1".
-      const text = event.payload.text.replace(/\s*\[\d{1,3}\]/g, "").trim();
-      if (!text) continue;
-
+      // R-08: a repeated marker_id must not produce a repeated chip.
+      const seenMarkers = new Set<string>();
       const cited = (event.payload.marker_ids ?? [])
+        .filter((id) => {
+          if (seenMarkers.has(id)) return false;
+          seenMarkers.add(id);
+          return true;
+        })
         .map((id) => citationById.get(id))
         .filter((match): match is NonNullable<typeof match> => match !== undefined);
 
-      // The cap note is a system status message, not an assertion about
-      // biology, so it must never occupy a segment on the provenance spine.
-      if (text.startsWith(CAP_NOTE_PREFIX)) continue;
+      // The backend embeds its own [N] markers in the prose. The UI renders
+      // chips from marker_ids instead, so the raw markers are stripped rather
+      // than shown alongside them, which previously produced "...edge [2]. 1".
+      //
+      // F-4.8-R-05. The first version stripped EVERY 1-3 digit bracketed
+      // number, so "The cohort in study [12] reported a 40 percent rate."
+      // silently became "The cohort in study reported a 40 percent rate." That
+      // is a lossy, undisclosed edit of synthesized answer text, which is the
+      // same class of defect as fabricating one.
+      //
+      // Only the numbers this token actually cites are removed, taken from its
+      // own citations rather than from a pattern. A bracketed number the
+      // backend did not emit as a marker is prose and is left alone.
+      const citedIndexes = new Set(
+        cited.map((match) => (match.type === "citation" ? match.payload.display_index : -1)),
+      );
+      const text = event.payload.text
+        .replace(/\s*\[(\d{1,3})\]/g, (whole, digits) =>
+          citedIndexes.has(Number(digits)) ? "" : whole,
+        )
+        .trim();
+      if (!text) continue;
+
+      // A system-status note is not an assertion about biology, so it must
+      // never occupy a segment on the provenance spine. Collected instead, so
+      // the disclosures are still shown, just not as claims.
+      if (isSystemNote(text)) {
+        systemNotes.push(text);
+        continue;
+      }
 
       claims.push({
         text,
@@ -380,6 +454,9 @@ export function useRunView(events: AgentEvent[]): RunView {
       failure,
       refusal,
       capMessage,
+      // The cap note is already surfaced as `capMessage`, so it is not
+      // repeated here.
+      systemNotes: systemNotes.filter((note) => !note.trimStart().startsWith(CAP_NOTE_PREFIX)),
       stopEnabled: deriveStopEnabled(events),
     };
   }, [events]);

@@ -109,13 +109,22 @@ export function App() {
   /** True while a stopped run should stay stopped (F-4.8-A-10). */
   const [stopped, setStopped] = useState(false);
 
-  const sessionId = useMemo(
-    () =>
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `session-${Date.now()}`,
-    [],
-  );
+  /**
+   * The conversation id sent with every question.
+   *
+   * F-4.8-R-02. This was `useMemo(..., [])`, so it survived sign-out: account A
+   * and account B sent the IDENTICAL session_id, which is the key the backend
+   * groups in-conversation memory under. The sign-out fix enumerated eight
+   * pieces of state and missed this one, while its own comment claimed
+   * "everything session-scoped is cleared here, in one place".
+   *
+   * It is state rather than a memo now, so signing out can mint a new one.
+   */
+  const newSessionId = () =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `session-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const [sessionId, setSessionId] = useState(newSessionId);
 
   // Section 14.2, presentation only. Stubbed; wired by build phase 4.5.
   const persona = useMemo(() => drawPersona(0), []);
@@ -327,6 +336,14 @@ export function App() {
           setFlagged([]);
           setDispatchError(null);
           setUsed(0);
+          // R-02: a new conversation, not the previous account's.
+          setSessionId(newSessionId());
+          // R-11: the next person at this workstation has not read the
+          // disclaimer, and has not chosen a depth. The modal's own docstring
+          // argues session scope precisely so a notice one person dismissed is
+          // not treated as read by the next.
+          setAccepted(false);
+          setDepth("researcher");
           setSearchView({ name: "home" });
         }}
       >
