@@ -60,6 +60,65 @@ test.describe("accessibility", () => {
     expect(results.violations).toEqual([]);
   });
 
+  test("the disclaimer gate cannot be escaped with the keyboard", async ({ page }) => {
+    // F-4.8-A-08, and F-4.8-R-06's observation that the fix had NO test
+    // anywhere and could not have a vitest one: `focusable()` filters on
+    // `offsetParent`, which is always null in jsdom, so the trap is silently
+    // inert there and a unit test would pass against a broken guard.
+    //
+    // The original defect: the modal blocked the mouse only. All fifteen app
+    // controls stayed in the tab order behind it, and the adversary signed up,
+    // asked a question and read a complete cited answer by keyboard alone with
+    // the disclaimer still on screen, while `aria-modal="true"` told a screen
+    // reader the background was inert.
+    await page.goto("/");
+    const dialog = page.getByTestId("disclaimer-modal");
+    await expect(dialog).toBeVisible();
+
+    // Tab many times. Focus must never leave the dialog.
+    const escaped: string[] = [];
+    for (let i = 0; i < 25; i += 1) {
+      await page.keyboard.press("Tab");
+      const inside = await page.evaluate(() => {
+        const modal = document.querySelector('[data-testid="disclaimer-modal"]');
+        return modal ? modal.contains(document.activeElement) : false;
+      });
+      if (!inside) {
+        escaped.push(
+          await page.evaluate(() => document.activeElement?.textContent?.trim() ?? "unknown"),
+        );
+      }
+    }
+    expect(escaped, `focus escaped the disclaimer to: ${escaped.join(", ")}`).toEqual([]);
+
+    // Shift+Tab must not escape backwards either.
+    for (let i = 0; i < 10; i += 1) {
+      await page.keyboard.press("Shift+Tab");
+    }
+    expect(
+      await page.evaluate(() => {
+        const modal = document.querySelector('[data-testid="disclaimer-modal"]');
+        return modal ? modal.contains(document.activeElement) : false;
+      }),
+    ).toBe(true);
+
+    // Escape must not dismiss a medical disclaimer by reflex.
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeVisible();
+
+    // And the app behind it must not be operable: the question field is the
+    // control the adversary reached, so it is the one asserted.
+    const reached = await page.evaluate(() => {
+      const field = document.querySelector('input[aria-label="Your question"]') as HTMLElement | null;
+      if (!field) return "absent";
+      field.focus();
+      return document.activeElement === field ? "focusable" : "blocked";
+    });
+    expect(reached, "the question field must not be reachable behind the gate").not.toBe(
+      "focusable",
+    );
+  });
+
   test("the landing screen is clean", async ({ page }) => {
     await enterApp(page);
     await expect(page.getByRole("heading", { name: /ask a biomedical question/i })).toBeVisible();

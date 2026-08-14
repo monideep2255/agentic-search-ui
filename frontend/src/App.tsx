@@ -303,6 +303,21 @@ export function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      {/*
+        F-4.8-A-08 and F-4.8-R-06. `inert` on the whole shell, not just a
+        keydown handler on the dialog.
+
+        A Tab-key trap only intercepts Tab. It does nothing about programmatic
+        focus, about a browser-chrome round trip (Ctrl+L then Shift+Tab back
+        into the page), or about a screen reader's virtual cursor, none of
+        which emit a Tab keydown. The re-review demonstrated the first of those
+        reaching the question field with the gate still up.
+
+        `inert` removes the subtree from focus, from hit-testing and from the
+        accessibility tree at once, which also makes the dialog's own
+        `aria-modal="true"` true rather than a claim.
+      */}
+      <div inert={!accepted}>
       <AppShell
         current={screen}
         onNavigate={(next) => {
@@ -347,7 +362,6 @@ export function App() {
           setSearchView({ name: "home" });
         }}
       >
-        {!accepted ? <DisclaimerModal onAccept={() => setAccepted(true)} /> : null}
         {screen === "search" ? (
           <Box sx={{ display: "flex", alignItems: "stretch", minHeight: "100%" }}>
             <HistoryRail
@@ -374,6 +388,9 @@ export function App() {
           body()
         )}
       </AppShell>
+      </div>
+      {/* Rendered OUTSIDE the inert subtree, or it would disable itself. */}
+      {!accepted ? <DisclaimerModal onAccept={() => setAccepted(true)} /> : null}
     </ThemeProvider>
   );
 }

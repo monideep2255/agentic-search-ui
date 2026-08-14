@@ -187,6 +187,30 @@ This is `attack-the-constraint`'s own lesson, missed: when output is wrong, read
 
 Six carried open: A-05's wire fields, A-20, A-22's pronoun half, A-23, A-27, and J-14 is now closed by A-03's fix. Each has a named reason above.
 
+### Re-review round, 2026-08-13: FAIL
+
+Third independent pass, aimed at the fix rounds rather than the phase. 11 findings, 1 critical, 3 major. It mutation-tested every gate clause the fix rounds added and confirmed all four can fail.
+
+| Id | Severity | What | State |
+|----|----------|------|-------|
+| F-4.8-R-01 | critical | The A-02 sequencing fix closed the null window but not the stale one. `useAgentRun` reset its buffer in an effect, which runs after commit, so a render saw the NEW run id beside the PREVIOUS run's events. The RUN SCREEN WAS SKIPPED for every question after the first: no stepper, no tool chips, no reachable Stop on a cost-capped loop. It also re-exposed the cross-account leak, because the buffer is not App-level state | FIXED at the source: the buffer resets during render, so the stale frame cannot exist for any consumer |
+| F-4.8-R-02 | major | `sessionId` survived sign-out, so two accounts sent the identical conversation key the backend groups memory under | FIXED |
+| F-4.8-R-03 | major | `display_index` was validated for source cards but not for the citation chips built from the same events | FIXED: one usability rule, used by both |
+| F-4.8-R-04 | major | The A-14 fix lifted ONE of three system-status notes off the spine; two disclosures still rendered as uncited claims | FIXED, and the notes are now shown as disclosures rather than dropped |
+| F-4.8-R-05 | moderate | The marker-stripping regex deleted every bracketed number, so "study [12]" silently lost its citation number from the prose | FIXED: only the token's own cited markers are stripped |
+| F-4.8-R-06 | moderate | The A-08 focus trap had no test anywhere, and could not have a vitest one (jsdom makes it inert). Programmatic focus still reached the app behind the gate | FIXED: the shell is `inert` while the gate is up, verified by an e2e test that was watched failing first |
+| F-4.8-R-07 | moderate | No automated check anywhere scanned an answer carrying a citation chip, source card, spine segment or trust pill, which is why A-16 survived | FIXED: `e2e/trust-surface.spec.ts` scripts a real stream and scans the result |
+| F-4.8-R-08 | minor | A repeated marker_id produced duplicate chips with a duplicate React key | FIXED |
+| F-4.8-R-09 | minor | The two cap-note detection paths used different normalisations | CARRIED: latent, not reachable on today's wire |
+| F-4.8-R-10 | minor | An e2e justification comment claimed more than the code guarantees | CARRIED: the assertion is sound, the comment overstates why |
+| F-4.8-R-11 | minor | The disclaimer and depth preference survived sign-out | FIXED |
+
+THE PART WORTH KEEPING. The gate clause written for R-01 could not fail, and neither could its rewrite. Both were caught by deliberately breaking the fix and watching the clause stay green, not by reading them. That is the fifth assertion-that-cannot-fail in this phase, and the third of mine.
+
+The guarantee needs a real stream that really lands, which no mocked vitest harness provides, so it moved to the e2e suite where it was verified to fail with the fix disabled. The premise gate now carries an explicit pointer saying so rather than a clause that looks like coverage and is not.
+
+Every new clause in this round was mutation-tested the same way, including the focus-trap check, which was watched failing before the `inert` fix landed.
+
 ## History
 
 - 2026-08-13: all 15 tickets done. Premise gate 16 of 16, vitest 138 of 138, e2e 11 of 11, typecheck clean, production build succeeds. Python suite 2445 passed with 6 failures, confirmed identical on `develop` by stashing rather than assumed. Judge round dispatched with fresh context; nothing in this phase has been independently reviewed yet.
