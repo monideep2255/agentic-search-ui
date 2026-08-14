@@ -110,7 +110,7 @@ test.describe("query stream and stop", () => {
     await expect(page.getByText(PARTIAL_RESULT_NOTE)).toHaveCount(0);
 
     // And the run genuinely terminated rather than hanging mid-stream.
-    await expect(page.getByRole("button", { name: /new search/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible();
   });
 
   test("a second question shows the run screen, not a jump to the answer", async ({ page }) => {
@@ -130,7 +130,7 @@ test.describe("query stream and stop", () => {
     await signUpFreshAccount(page);
 
     await ask(page, "What gene is BRCA1?");
-    await expect(page.getByRole("button", { name: /new search/i })).toBeVisible({
+    await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible({
       timeout: 30_000,
     });
 
@@ -212,7 +212,7 @@ test.describe("query stream and stop", () => {
     await signUpFreshAccount(page);
     await ask(page, "What gene is BRCA1?");
 
-    await expect(page.getByRole("button", { name: /new search/i })).toBeVisible({
+    await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible({
       timeout: 30_000,
     });
 

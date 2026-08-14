@@ -51,7 +51,7 @@ import { AnswerScreen } from "./components/screens/AnswerScreen";
 import { AboutScreen, DocsScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
 import { GuestAllowance, SignInWall } from "./components/guest/GuestAllowance";
 import { FeedbackSurface } from "./components/feedback/FeedbackSurface";
-import { FollowUp, HistoryRail } from "./components/answer/FollowUp";
+import { CollapsedRail, FollowUp, HistoryRail } from "./components/answer/FollowUp";
 import { DisclaimerModal, hasAcceptedDisclaimer } from "./components/shell/DisclaimerModal";
 import type { AudienceDepth } from "./components/controls/DepthControl";
 
@@ -80,9 +80,11 @@ export function App() {
   const [searchView, setSearchView] = useState<SearchView>({ name: "home" });
   const [used, setUsed] = useState(0);
   const [token, setToken] = useState<string | null>(null);
+  /** The signed-in account, named in the rail's footer (the prototype's `.rfoot`). */
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(hasAcceptedDisclaimer);
-  const [history, setHistory] = useState<{ id: string; question: string }[]>([]);
+  const [history, setHistory] = useState<{ id: string; question: string; meta?: string }[]>([]);
   const [flagged, setFlagged] = useState<number[]>([]);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   /**
@@ -108,6 +110,15 @@ export function App() {
   const askSeq = useRef(0);
   /** True while a stopped run should stay stopped (F-4.8-A-10). */
   const [stopped, setStopped] = useState(false);
+  /**
+   * Whether the stored-searches rail is open (F-4.8-P-03).
+   *
+   * Open by default, matching the prototype's `railOpen:true`. Held here rather
+   * than inside `HistoryRail`, because the collapsed state must survive the
+   * rail unmounting: the app bar's toggle and the collapsed strip both need it,
+   * and a collapse the user chose must outlive the next question.
+   */
+  const [railOpen, setRailOpen] = useState(true);
 
   /**
    * The conversation id sent with every question.
@@ -130,6 +141,21 @@ export function App() {
   const persona = useMemo(() => drawPersona(0), []);
 
   const signedIn = token !== null;
+
+  /**
+   * Whether the rail, its strip and its toggle exist at all (F-4.8-P-03).
+   *
+   * The prototype's `avail = st.loggedIn && onSearch`, transcribed. It does
+   * NOT consider the history length: the rail renders its own empty state
+   * before the first search, so the toggle is available from sign-in. An
+   * earlier version added `history.length > 0`, which matched the shipped
+   * rail's return-null-when-empty behaviour rather than the design.
+   *
+   * Computed once and used by all three controls, so the toggle can never be
+   * offered for a rail that is not there, and the strip can never appear where
+   * the rail would not have.
+   */
+  const railAvailable = signedIn && screen === "search" && searchView.name !== "signin";
 
   // `status` and `error` were both discarded here (F-4.8-A-09). If the event
   // stream failed to open at all, a 500, a malformed frame, or, realistically,
@@ -159,6 +185,29 @@ export function App() {
       setSearchView({ name: "answer", question: searchView.question });
     }
   }, [view.landed, status, searchView]);
+
+  /*
+   * The prototype's `.rm`: each rail item carries its own run's counts.
+   *
+   * Written when the run LANDS, not when the question is asked, because the
+   * counts do not exist until then. It is the same `view.meta` string the
+   * answer screen shows, taken from the run's own events, so the rail cannot
+   * disagree with the answer it points at.
+   */
+  useEffect(() => {
+    if (!view.landed || !view.meta) return;
+    const question = searchView.name === "answer" || searchView.name === "run"
+      ? searchView.question
+      : null;
+    if (question === null) return;
+    setHistory((current) =>
+      current.map((item) =>
+        item.question === question && item.meta !== view.meta
+          ? { ...item, meta: view.meta }
+          : item,
+      ),
+    );
+  }, [view.landed, view.meta, searchView]);
 
   const ask = useCallback(
     async (question: string, chosenDepth: AudienceDepth) => {
@@ -218,8 +267,9 @@ export function App() {
       case "signin":
         return (
           <AuthGate
-            onAuthenticated={(next: string) => {
+            onAuthenticated={(next: string, email: string) => {
               setToken(next);
+              setAccountEmail(email);
               setSearchView({ name: "home" });
             }}
           />
@@ -327,6 +377,9 @@ export function App() {
         personaName={persona}
         signedIn={signedIn}
         hideAuthAction={searchView.name === "signin" && screen === "search"}
+        showRailToggle={railAvailable}
+        railOpen={railOpen}
+        onToggleRail={() => setRailOpen((open) => !open)}
         onSignIn={() => {
           setScreen("search");
           setSearchView({ name: "signin" });
@@ -345,6 +398,7 @@ export function App() {
           askSeq.current += 1;
           stop();
           setToken(null);
+          setAccountEmail(null);
           setRunId(null);
           setStopped(false);
           setHistory([]);
@@ -359,11 +413,21 @@ export function App() {
           // not treated as read by the next.
           setAccepted(false);
           setDepth("researcher");
+          // P-03: the next person at this workstation did not collapse the
+          // rail, so they do not inherit a collapsed one.
+          setRailOpen(true);
           setSearchView({ name: "home" });
         }}
       >
         {screen === "search" ? (
-          <Box sx={{ display: "flex", alignItems: "stretch", minHeight: "100%" }}>
+          // `flex: 1` rather than `minHeight: "100%"`: a percentage height
+          // resolves against a parent with a definite height, and `<main>` has
+          // none, so the rail stopped where the content ended instead of
+          // reaching the footer as the prototype's does.
+          <Box sx={{ display: "flex", alignItems: "stretch", flex: 1, minHeight: 0 }}>
+            {railAvailable && !railOpen ? (
+              <CollapsedRail count={history.length} onExpand={() => setRailOpen(true)} />
+            ) : (
             <HistoryRail
               items={history}
               activeId={
@@ -381,8 +445,19 @@ export function App() {
                 const item = history.find((entry) => entry.id === id);
                 if (item) void ask(item.question, depth);
               }}
+              onCollapse={() => setRailOpen(false)}
+              onNewSearch={() => setSearchView({ name: "home" })}
+              accountEmail={accountEmail ?? undefined}
             />
-            <Box sx={{ flex: 1, minWidth: 0 }}>{body()}</Box>
+            )}
+            {/*
+              A flex COLUMN, not just a flex item. `alignItems: "stretch"` on
+              the row gives this box the full height, but a screen inside it
+              can only claim that height if this box lays its children out.
+            */}
+            <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+              {body()}
+            </Box>
           </Box>
         ) : (
           body()

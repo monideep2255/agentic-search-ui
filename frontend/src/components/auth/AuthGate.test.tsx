@@ -54,7 +54,7 @@ describe("AuthGate", () => {
     await user.type(screen.getByLabelText(/password/i), "correct horse battery staple");
     await user.click(screen.getByRole("button", { name: /^log in$/i }));
 
-    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith("test-token"));
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith("test-token", "person@example.com"));
     expect(loginMock).toHaveBeenCalledWith({
       email: "person@example.com",
       password: "correct horse battery staple",
@@ -77,7 +77,7 @@ describe("AuthGate", () => {
     await user.type(screen.getByLabelText(/password/i), "correct horse battery staple");
     await user.click(screen.getByRole("button", { name: /^sign up$/i }));
 
-    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith("test-token"));
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith("test-token", "person@example.com"));
     expect(signupMock).toHaveBeenCalledWith({
       email: "person@example.com",
       password: "correct horse battery staple",
@@ -160,6 +160,6 @@ describe("AuthGate", () => {
     // `onAuthenticated` fires with the token, not that the buttons
     // re-enable in place.
     resolveLogin?.();
-    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith("test-token"));
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledWith("test-token", "person@example.com"));
   });
 });

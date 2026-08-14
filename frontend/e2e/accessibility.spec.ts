@@ -198,7 +198,7 @@ test.describe("accessibility", () => {
     // now scans a REAL run, and this backend's only token is the cap-exceeded
     // partial result, which carries no citations. Waiting for `source-1` waited
     // for something the real answer legitimately does not have.
-    await expect(page.getByRole("button", { name: /new search/i })).toBeVisible({
+    await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible({
       timeout: 20_000,
     });
     expect((await analyse(page)).violations).toEqual([]);

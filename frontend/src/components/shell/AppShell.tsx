@@ -14,7 +14,7 @@
  */
 
 import type { ReactNode } from "react";
-import { AppBar, Box, Button, Toolbar, Typography } from "@mui/material";
+import { AppBar, Box, Button, IconButton, Toolbar, Typography } from "@mui/material";
 
 import { designTokens } from "../../theme";
 import { Logo } from "../brand/Logo";
@@ -50,6 +50,36 @@ export interface AppShellProps {
    * which is a real defect rather than a test inconvenience.
    */
   hideAuthAction?: boolean;
+  /**
+   * Show the stored-searches toggle at the far left of the bar (F-4.8-P-03).
+   *
+   * The prototype gates this on `avail = st.loggedIn && onSearch`, so the
+   * caller decides: a control that toggles a rail which is not on screen is
+   * worse than no control. Absent by default, which keeps every existing
+   * caller's bar unchanged.
+   */
+  showRailToggle?: boolean;
+  /** Whether the rail is currently open. Drives `aria-expanded`. */
+  railOpen?: boolean;
+  onToggleRail?: () => void;
+}
+
+/** The rail toggle's mark, transcribed from the prototype's `#railBtn`. */
+function RailToggleIcon() {
+  return (
+    <svg
+      width={18}
+      height={18}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M2 4h12M2 8h12M2 12h12" />
+    </svg>
+  );
 }
 
 function WarningIcon() {
@@ -70,11 +100,37 @@ export function AppShell({
   onSignIn,
   onSignOut,
   hideAuthAction = false,
+  showRailToggle = false,
+  railOpen = true,
+  onToggleRail,
 }: AppShellProps) {
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column", bgcolor: designTokens.canvas }}>
       <AppBar position="static" component="header">
         <Toolbar sx={{ minHeight: 54, gap: 2, px: { xs: 1.5, sm: 2.25 } }}>
+          {/*
+            First in the bar, left of the brand, exactly where the prototype's
+            `#railBtn` sits. `aria-expanded` carries the rail's real state, so
+            a screen reader user is told what the control will do rather than
+            having to press it to find out.
+          */}
+          {showRailToggle ? (
+            <IconButton
+              onClick={onToggleRail}
+              aria-label="Show or hide your searches"
+              aria-expanded={railOpen}
+              sx={{
+                color: "#FFFFFF",
+                p: 0.75,
+                borderRadius: 1,
+                mr: -1,
+                "&:hover": { bgcolor: "rgba(255,255,255,.16)" },
+              }}
+            >
+              <RailToggleIcon />
+            </IconButton>
+          ) : null}
+
           <Button
             onClick={() => onNavigate?.("search")}
             sx={{
@@ -174,7 +230,13 @@ export function AppShell({
         Research tool. Answers are cited to NCBI records and are not medical advice.
       </Box>
 
-      <Box component="main" sx={{ flex: 1 }}>
+      {/*
+        A flex column, so a child that asks for `flex: 1` gets the whole
+        remaining height. Without it `<main>` has no definite height and the
+        search rail could not run the full height of the shell the way the
+        prototype's does.
+      */}
+      <Box component="main" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {children}
       </Box>
 
