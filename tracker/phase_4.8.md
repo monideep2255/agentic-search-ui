@@ -266,6 +266,60 @@ F-4.8-P-01 is the one with a real open question behind it, and it must be answer
 
 Sequencing agreed with the product owner: reach the design system's baseline first, then modify from it. These three come before the five fidelity gaps above, since they concern the entry path rather than the answer's presentation.
 
+### Disposition, 2026-08-14: the open question settled, P-03 closed
+
+The open question behind F-4.8-P-01 is answered, by probing rather than by reading: the API does NOT accept a run from an unauthenticated caller, so the guest allowance is a backend dependency and not a frontend fix.
+
+Evidence, all four run endpoints called with no `Authorization` header:
+
+| Endpoint | Result |
+|----------|--------|
+| `POST /v1/query` | 401, `{"detail":"invalid or expired access token"}` |
+| `GET /v1/query/{run_id}/events` | 401, same |
+| `GET /v1/query/{run_id}/citations` | 401, same |
+| `POST /v1/query/{run_id}/stop` | 401, same |
+
+Every one takes `current_user: User = Depends(get_current_user)`, which rejects a missing header before any other check (`auth/dependencies.py`, `resolve_user_from_bearer_token`). A search across `src/` for a guest, anonymous or allowance path returns nothing outside unrelated comments.
+
+Three things that shape what happens next:
+
+- The repository already knew. `frontend/src/stubs/registry.ts` declares the `guest-allowance` surface as `wiredBy: "6.0"`, with `realSource` naming "server-side rate limiting plus an anonymous run path". The over-correction was recorded at the time, not hidden.
+- It is in v1 scope, merely unbuilt. The locked technical specification already anticipates it: `interactions.user_id` is nullable "because a session can start before login (an anonymous first query on the workspace home)" (Section 15), and Section 14.2 describes an anonymous prototype session. There is no scope-boundary question here.
+- The UI half already exists and is styled to the design card. `GuestAllowance` (the five dots) and `SignInWall` are built. Nothing is missing on screen; there is no truthful data to drive them.
+
+What a real allowance costs, priced so the deferral is an informed one rather than a shrug: a guest identity the server can trust, since the counter must be enforced server-side or it is a number a reload resets, which is the same dishonesty class judge round 1 filed; run ownership for a caller with no `users` row, which `_get_owned_run` currently derives from `current_user.id`; and a bound on anonymous run creation, already filed as F-4.0-A-10 and already owned by build phase 6.0.
+
+Product owner's call, 2026-08-14: name the dependency, deliver F-4.8-P-03 alone. F-4.8-P-01 and F-4.8-P-02 stay open with build phase 6.0 named as the owner, since 6.0 already carries both the anonymous run path and the rate limiting the allowance depends on.
+
+F-4.8-P-02 needs no independent code change and is not partially delivered here. `AppShell` already renders "Log in" at the top right of the bar for a signed-out visitor, matching `components/app-bar.html`. It is dysfunctional only because the wall intercepts the visitor first, so it closes when P-01 closes and not before.
+
+F-4.8-P-03 is CLOSED on `fix/4.8-rail-collapse-control`. All three of the prototype's parts landed: the app bar toggle (`#railBtn`), the in-rail minimise button (`.rmin`), and the 46px strip with a count that a collapsed rail leaves behind (`#railStub`). One piece of state in `App` drives all three, held above the rail because a collapsed choice must survive the rail unmounting and must outlive the next question. Availability follows the prototype's `avail = st.loggedIn && onSearch`, plus this app's existing rule that an empty rail renders nothing, so a toggle is never offered for a rail that is not on screen.
+
+### What this fix changes about how the phase checks itself
+
+The phase's standing complaint is that every check here asserts what is on screen and never where it is. That is what this fix's gate was written against, and mutation-testing measured the gap rather than assuming it.
+
+| Gate | Clauses | Mutation result |
+|------|---------|-----------------|
+| `frontend/src/railCollapsePremise.test.tsx` | 11, written first and watched failing at 10 of 11 | 9 mutations, every clause proven able to fail |
+| `frontend/e2e/rail-collapse.spec.ts` | 5, bounding-box geometry in a real browser | 5 mutations, all red |
+
+Two defects were found in the gate itself while watching it fail, before any reviewer saw it:
+
+- One clause compared the rail's position against `<main>`, when the rail is a DESCENDANT of `<main>` in this app rather than its sibling as in the prototype. `compareDocumentPosition` returns `CONTAINED_BY` there, so the clause asserted nothing. Re-anchored on the screen's own heading.
+- One clause passed vacuously by asserting only an absence, which is true of a control that was never built. It now asserts presence first and then absence after sign-out. This is the same shape that failed this phase's stub-marker test on its first run and build phase 4.1's judge round 1.
+
+The finding worth carrying past this fix: the vitest gate CANNOT see visual position. Adding `order: -1` to the content column moves the rail to the visual right of the page and every DOM-order clause stays green. That is not a hypothetical, it is mutation M9's measured result. `e2e/rail-collapse.spec.ts` exists because of it and is mutation-tested against that exact case, and the vitest gate's coverage statement now says so rather than implying it covers position.
+
+### Two fidelity differences found while doing this, filed rather than fixed
+
+Both are pre-existing, both are outside the collapse control's scope, and neither is silently closed.
+
+| Id | What the prototype says | What ships | Note |
+|----|------------------------|-----------|------|
+| F-4.8-D-06 | `#rail` is `--surface` (white) at 248px wide | The rail is `surfaceSunk` (#F7F8F9) at 240px | The strip added here deliberately uses `surfaceSunk` to match the RAIL IT REPLACES rather than the prototype's white `#railStub`, so one control does not change colour as it collapses. Transcribing the strip literally would have made the mismatch visible instead of latent |
+| F-4.8-D-07 | The rail renders with an empty-state message when a signed-in user has no history | The rail renders nothing at all when empty | A deliberate shipped choice ("an empty rail on a first visit is furniture"), which is a reasonable call and still a difference from the approved design. Needs a product-owner decision, not a unilateral fix |
+
 ## Carried open
 
 Eight findings, each with a named owner, so none is a silent deferral.

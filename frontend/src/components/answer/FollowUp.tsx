@@ -205,7 +205,14 @@ export function CollapsedRail({ count, onExpand }: CollapsedRailProps) {
         flex: "none",
         border: 0,
         borderRight: `1px solid ${designTokens.line}`,
-        bgcolor: designTokens.surface,
+        // `surfaceSunk`, matching the RAIL THIS REPLACES, not the prototype's
+        // `#railStub` which is `--surface`. The prototype makes both the rail
+        // and its strip `--surface`; the shipped rail is `surfaceSunk`, a
+        // pre-existing difference that is outside this fix's scope and is filed
+        // rather than changed here. Transcribing the strip's colour literally
+        // while the rail keeps its own would make one control change colour as
+        // it collapsed, which is a worse result than either consistent choice.
+        bgcolor: designTokens.surfaceSunk,
         color: designTokens.inkMuted,
         cursor: "pointer",
         display: { xs: "none", md: "flex" },
@@ -213,7 +220,7 @@ export function CollapsedRail({ count, onExpand }: CollapsedRailProps) {
         alignItems: "center",
         gap: 1.75,
         py: 2,
-        "&:hover": { bgcolor: designTokens.surfaceSunk, color: designTokens.ink },
+        "&:hover": { bgcolor: designTokens.canvasDeep, color: designTokens.ink },
       }}
     >
       <ExpandIcon />

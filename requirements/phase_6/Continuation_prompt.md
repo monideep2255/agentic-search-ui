@@ -93,8 +93,8 @@ Twelve build phases are done, all twelve merged into `develop` (renamed from `ma
 Current counts, stated once here:
 
 - Python tests: 2565 (2445 passing, 113 skipped, 1 xfailed, 6 failed; the 6 are `test_citation_trust_full_premise.py`'s live-network-opt-in-gated cases, confirmed not a regression, identical set carried since build phase 4.0's close)
-- Frontend tests: 147
-- Playwright end-to-end tests: 16 declarations, 19 executed cases, ALL PASSING as of 2026-08-13, the first green run since build phase 3.0. The previous note here said these were "unverifiable, a webServer-orchestration timeout unrelated to any file either phase touched, confirmed by starting the dev server directly, HTTP 200". That diagnosis was wrong and is corrected rather than deleted, because the way it was wrong is the lesson: the check started the server by hand and queried `localhost`, which resolves to `::1` on macOS, while Playwright probes `127.0.0.1`. Vite bound IPv6-only, so the evidence gathered proved a different address than the one failing. Behind that timeout sat a second, older breakage: the e2e mock backend's Guard-tier response had not matched the classifier's schema since build phase 3.0, so the suite would have failed even had it started. Both are fixed
+- Frontend tests: 158
+- Playwright end-to-end tests: 21 declarations, 24 executed cases, ALL PASSING as of 2026-08-13, the first green run since build phase 3.0. The previous note here said these were "unverifiable, a webServer-orchestration timeout unrelated to any file either phase touched, confirmed by starting the dev server directly, HTTP 200". That diagnosis was wrong and is corrected rather than deleted, because the way it was wrong is the lesson: the check started the server by hand and queried `localhost`, which resolves to `::1` on macOS, while Playwright probes `127.0.0.1`. Vite bound IPv6-only, so the evidence gathered proved a different address than the one failing. Behind that timeout sat a second, older breakage: the e2e mock backend's Guard-tier response had not matched the classifier's schema since build phase 3.0, so the suite would have failed even had it started. Both are fixed
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
 - Premise gate, guardrail: 20 of 20
@@ -107,7 +107,7 @@ Current counts, stated once here:
 - Premise gate, build phase 4.0's own gate (a normal test file, not one of the seven live tool gates above): 26 of 26
 - Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
 - Decisions logged: 299
-- Learnings entries: 71, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
+- Learnings entries: 73, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below). This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
 
@@ -145,17 +145,19 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 Agreed with the product owner on 2026-08-13, ahead of build phase 4.2. The bar is the approved design system in `docs/build/design/design-system/`: reach it, then modify from it. Full detail on each item, including how it happened: `tracker/phase_4.8.md`, "Product owner review".
 
-Three items, in this order:
+Three items, worked 2026-08-14. One closed, two reclassified as a backend dependency.
 
-1. F-4.8-P-01, the guest allowance. The approved design gives a visitor a run of free searches before asking them to sign in. The shipped app blocks every search behind sign-in.
+1. F-4.8-P-01, the guest allowance. SETTLED, and the answer is that the API does NOT accept a run from an unauthenticated caller. All four `/v1/query` endpoints return 401 with no `Authorization` header, probed rather than reasoned about, and no anonymous path exists anywhere in `src/`. So this is a backend dependency, not a frontend fix.
 
-   SETTLE THIS FIRST, do not assume it: does the API accept a run from an unauthenticated caller at all? Build phase 1.1 put auth in front of the run endpoints. If it does, this is a frontend fix. If it does not, a guest allowance backed by REAL searches needs a backend change, and that is a dependency to name rather than work around. A guest allowance backed by anything other than a real search is precisely the defect judge round 1 filed as this phase's first critical, so there is no shortcut available here.
+   Owner: build phase 6.0, which already carries both the anonymous run path and the rate limiting the allowance depends on. `frontend/src/stubs/registry.ts` already declared it that way. The UI half (the five dots, the wall) is built and styled; there is no truthful data to drive it, and a client-side counter would be the same dishonesty class judge round 1 filed. Full evidence and what a real allowance costs: `tracker/phase_4.8.md`, "Disposition, 2026-08-14".
 
-   Worth understanding before touching it: the allowance was not forgotten, it was removed. Judge round 1 found that an anonymous visitor asking any question received a fabricated, fully cited answer. The correct fix was to remove the fabricated content. What shipped removed the allowance with it, trading a product regression for a correctness fix that did not require it.
+   Worth keeping: the allowance was not forgotten, it was removed. Judge round 1 found that an anonymous visitor asking any question received a fabricated, fully cited answer. The correct fix was to remove the fabricated content. What shipped removed the allowance with it, trading a product regression for a correctness fix that did not require it.
 
-2. F-4.8-P-02, sign-in as the top-right entry point. It exists in the app bar, but a visitor only reaches it after the wall has already stopped them, so it never functions as the entry point the design intends. Follows from item 1 and is largely resolved by it.
+2. F-4.8-P-02, sign-in as the top-right entry point. Confirmed to need NO independent code change: `AppShell` already renders "Log in" at the top right for a signed-out visitor, matching the design card. It is dysfunctional only because the wall intercepts first, so it closes when item 1 closes and not before. Same owner.
 
-3. F-4.8-P-03, the hamburger on the stored-searches rail. The rail exists and holds searches; the collapse control was never built and no ticket owned it.
+3. F-4.8-P-03, the hamburger on the stored-searches rail. CLOSED on `fix/4.8-rail-collapse-control`. All three of the prototype's parts landed: the app bar toggle, the in-rail minimise button, and the 46px strip with a count. Gate written first and watched failing 10 of 11, then mutation-tested; a second geometry gate in Playwright covers the visual position the DOM-order clauses provably cannot see.
+
+   The transferable finding from that work is in `LEARNINGS.md`, 2026-08-14: a gate written specifically to fix this repository's "asserts what is on screen, never where it is" blind spot had the blind spot itself, and only a mutation revealed it. DOM order and visual order are different properties, and no jsdom test can assert the second.
 
 Then, still open from the same phase and lower priority than the three above, five design-fidelity gaps on the answer screen (F-4.8-D-01 through D-05) and the eight findings the review rounds carried. All are rows on `tracker/BOARD.md`'s Open flags table.
 
@@ -499,4 +501,4 @@ If a different agent takes over, read the "Running this project with a different
 
 One operational note that cost real time on 2026-08-03 and is not obvious from any other file: this machine's network dropped three times in one session, killing two premise-gate runs and three review agents, and every failure they produced looked like a code defect at first glance. Before diagnosing any model-dependent failure, check reachability with `curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v1/models`. An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all. A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-08-13.
+Last updated: 2026-08-14.

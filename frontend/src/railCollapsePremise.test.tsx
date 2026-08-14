@@ -39,16 +39,25 @@
  *                   what it holds; and that all three controls (app bar,
  *                   in-rail, strip) drive the same state.
  *
- *   NOT exercised:  the responsive rule. The prototype hides both the rail and
+ *   NOT exercised:  VISUAL POSITION. Every clause here reads DOM order, which
+ *                   is reading order, not layout. Mutation-testing proved this
+ *                   is a real hole rather than a theoretical one: adding
+ *                   `order: -1` to the content column moves the rail to the
+ *                   visual RIGHT of the page and every clause below stays
+ *                   green. `e2e/rail-collapse.spec.ts` measures bounding boxes
+ *                   in a real browser and is what actually catches that; it is
+ *                   mutation-tested against this exact case.
+ *
+ *                   The responsive rule. The prototype hides both the rail and
  *                   the strip under 860px via a media query, and jsdom does not
  *                   evaluate media queries, so no assertion here can tell a
- *                   working breakpoint from a broken one. That belongs in the
- *                   Playwright suite and is NOT claimed here.
+ *                   working breakpoint from a broken one. Also covered by
+ *                   `e2e/rail-collapse.spec.ts`, and NOT claimed here.
  *
- *                   Pixel fidelity: the 46px strip width, the vertical
+ *                   Pixel fidelity beyond the strip's width: the vertical
  *                   `writing-mode` label and the badge colour are transcribed
- *                   from the prototype and asserted by eye against a running
- *                   app, not by this file.
+ *                   from the prototype and checked by eye against a running
+ *                   app, not by any file.
  *
  *                   The prototype renders the rail with an empty-state message
  *                   when a signed-in user has no history, where the shipped
