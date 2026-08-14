@@ -106,7 +106,7 @@ Current counts, stated once here:
 - Premise gate, citation trust full (Layer 2/3 provenance, the two-tier risk gate, freshness, conflict detection): 10 of 10, live, no tunnel-gated skip, graded pass@8 on its one Synth-sampling-sensitive case (F-3.4-T05-05)
 - Premise gate, build phase 4.0's own gate (a normal test file, not one of the seven live tool gates above): 26 of 26
 - Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
-- Decisions logged: 299
+- Decisions logged: 305
 - Learnings entries: 74, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below). This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
@@ -172,10 +172,12 @@ One standing instruction that came out of this review, and it is not optional: o
 
 ## Read before opening the next phase
 
-Build phase 4.8 is merged (see "State now" above). Four of Step 6.3's six delivery surfaces remain, and none of them depends on 4.8, so the next phase is a free choice among them. Section 25's order takes 4.2 next.
+Build phase 4.8 is merged and closed out (see "State now" above). The next phase is NOT a free choice: the product owner directed on 2026-08-14 that the anonymous run path comes first, as build phase 6.0g, split out of 6.0 and pulled ahead of 4.2 to 4.7. The reasoning is in `DECISIONS.md`: until it exists, nobody can use the product without creating an account first, so it gates every demo and every new user. After it, four of Step 6.3's six delivery surfaces remain, none depending on 4.8, and Section 25's order takes 4.2.
 
 | Next up | Branch | What it delivers | Depends on |
 |---------|--------|------------------|------------|
+| 6.0g | `phase/6.0g-anonymous-run-path` | The anonymous run path and the server-side guest allowance. Split out of 6.0 and pulled forward by product-owner directive, 2026-08-14. THIS IS NEXT, ahead of 4.2 | 1.1 and 4.0, both merged |
+| 4.9 | `phase/4.9-answer-screen-fidelity` | The five answer-screen fidelity gaps against the approved design, plus F-4.8-D-08 | 4.8, merged |
 | 4.2 | `phase/4.2-cli-adapter` | A thin CLI client over the REST API | 4.0, merged |
 | 4.3 | `phase/4.3-graphql-api` | A GraphQL surface via Strawberry, sharing auth and tools with the REST surface | 4.0, merged |
 | 4.4 | `phase/4.4-kgx-export` | An export utility scoped to the existing Hetzner graph, a batch job rather than a live adapter | Layer 1 access, already exists |
