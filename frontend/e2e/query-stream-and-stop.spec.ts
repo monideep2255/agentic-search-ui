@@ -71,11 +71,23 @@ async function signUpFreshAccount(page: Page): Promise<void> {
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Sign up" }).click();
 
-  // The landing's question field is the next real DOM after auth resolves, so
-  // waiting for it is also the wait for the token to exist.
+  /*
+   * The landing's question field is the next real DOM after auth resolves, so
+   * waiting for it is also the wait for the token to exist.
+   *
+   * The timeout is explicit rather than the 5s default. Signup is a bcrypt
+   * hash by design, every spec in this suite creates a fresh account, and
+   * Playwright runs them across parallel workers, so several deliberately slow
+   * hashes contend. Measured 2026-08-14: this line failed roughly one full
+   * suite run in six with "element(s) not found" after 5s, and never once when
+   * its own spec ran alone.
+   *
+   * This is a deadline, not an assertion: the same element must still appear,
+   * and a genuine auth failure still fails the test, just 20s later.
+   */
   await expect(
     page.getByRole("main").getByRole("textbox", { name: /question/i }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 });
 }
 
 async function ask(page: Page, question: string): Promise<void> {

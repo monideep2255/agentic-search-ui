@@ -49,7 +49,7 @@ export const designTokens = {
   // ink
   ink: "#1B1B1B",
   inkMuted: "#565C65",
-  inkFaint: "#71767A",
+  inkFaint: "#666B70",
   inkOnNavy: "#F3F6F9",
   inkOnNavyMute: "#A9C3DC",
 

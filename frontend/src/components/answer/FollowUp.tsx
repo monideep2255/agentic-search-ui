@@ -444,21 +444,16 @@ export function HistoryRail({
                   display: "block",
                   fontSize: 11.5,
                   /*
-                   * The prototype's `.rm` is `--ink-faint` on every row. That
-                   * passes AA on the rail's white ground (4.73:1) and FAILS on
-                   * the active row's `--l1-wash` (3.92:1, measured by axe, not
-                   * assumed). WCAG 2.1 AA is a merge gate in this repository,
-                   * so the active row steps up to inkMuted (5.74:1) rather
-                   * than shipping a violation.
-                   *
-                   * This is a deviation from the prototype forced by a defect
-                   * IN the prototype, and it is the second instance of the
-                   * same one: inkFaint is AA-safe on some of the design
-                   * system's own surfaces and not others, and nothing in the
-                   * design system says so. Filed as F-4.8-D-08.
+                   * `--ink-faint` on every row, exactly as the prototype has
+                   * it. This carried a conditional step-up to inkMuted on the
+                   * active row until 2026-08-14, because the old #71767A
+                   * measured 3.92:1 on `--l1-wash` against a 4.5:1
+                   * requirement. F-4.8-D-08 fixed the token in the design
+                   * system itself (#666B70, now 4.60:1 on that same ground),
+                   * which removed the reason for the deviation, so the
+                   * deviation goes with it.
                    */
-                  color:
-                    item.id === activeId ? designTokens.inkMuted : designTokens.inkFaint,
+                  color: designTokens.inkFaint,
                   fontWeight: 400,
                   mt: "2px",
                 }}

@@ -93,6 +93,28 @@ The four artifacts, and how each one stays current:
 | `Phase_4.8_visual_design.html` | Repo, under git | Hand-maintained narrative. Shares the tokens, not the content. Allowed to lag |
 | The published artifacts | Cloud, two stable URLs | One for the prototype, one for the argument. Republished from their HTML files |
 
+### The mirror is partial, and the prototype exists three times
+
+Found 2026-08-14, the hard way. The table above says "one-to-one mirror", and that is true of the paths it lists and false of the project as a whole. `DesignSync list_files` on the Claude Design project returns paths the repository mirror does not carry:
+
+| Remote path | In the repo mirror? | What it is |
+|-------------|--------------------|------------|
+| `prototype/app.html` | Yes | The prototype card the mirror carries |
+| `NCBI Agentic Search prototype.html` | NO | A second full copy of the prototype, at the project root, its own card in the Prototype group |
+| `gif/frames.html` | NO | A third full copy, used to render the demo GIF frames, also carded under Prototype |
+| `gif/*.png`, `gif/*.gif`, `uploads/*.png` | NO | Demo GIF frames and pasted images |
+| `thumbnail.html`, `_ds_manifest.json`, `_ds_bundle.js`, `_adherence.oxlintrc.json` | NO | Project scaffolding the Design System pane generates |
+
+The consequence, and it is the reason this section exists: a token change pushed to the mirrored files leaves the two unmirrored prototype copies on the old value. The product owner then opens the Prototype group, sees a card still showing the old design, and is correctly told the change did not land. That happened on the first push of F-4.8-D-08's colour fix.
+
+So a design-system-wide change has three obligations, not one:
+
+- Push the mirrored files, the 21 cards under `brand/`, `components/`, `flows/`, `foundations/`, `identity/`, `prototype/` and `screens/`.
+- Push `NCBI Agentic Search prototype.html` and `gif/frames.html` as well, patching them from the content `DesignSync get_file` returns, since the repository has no copy to push from.
+- Read at least one file back per group afterwards and confirm the new value, rather than trusting `write_files`' own count.
+
+The check that catches this: `_ds_manifest.json` lists every card the Design System pane renders. Read it before a push and reconcile it against what is about to be written. Anything carded and not in the write plan is a copy about to go stale.
+
 One point that decides where a builder looks: builders and gates read `docs/build/design/design-system/`, the repository copy, never the Claude Design project directly. Bossman runs locally, the premise gate asserts against files on disk, and only the repository copy is under version control and reviewable in a pull request. The cloud project is where the design is authored; the repository mirror is what the build is held to.
 
 The consequence is that a design change is not real until it has been pulled. A card edited in Claude Design and not yet mirrored is invisible to every builder and every gate, and the build will correctly produce the old design.
@@ -227,4 +249,4 @@ The test is not "is this biomedical" but "would someone copy or compare this cha
 
 With these settled, the design review is complete and the phase can open on `phase/4.8-web-ui-visual-design`.
 
-Last updated: 2026-08-12
+Last updated: 2026-08-14

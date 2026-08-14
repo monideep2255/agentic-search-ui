@@ -71,6 +71,16 @@ const DESIGN_TOKENS = {
   line: "#D6D7D9",
   ink: "#1B1B1B",
   inkMuted: "#565C65",
+  /*
+   * Added 2026-08-14 with F-4.8-D-08. This token was NOT in the fixture while
+   * it was the one drifting: it failed AA on two of the design system's own
+   * surfaces, the design was corrected from #71767A to #666B70, and nothing
+   * here would have noticed the theme keeping the old value.
+   *
+   * A token the theme uses and the fixture omits is a token the gate does not
+   * grade, which is the gap this closes rather than a new nicety.
+   */
+  inkFaint: "#666B70",
 } as const;
 
 const norm = (value: string) => value.trim().toUpperCase();
