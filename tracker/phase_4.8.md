@@ -232,6 +232,40 @@ That is the sixth assertion-that-cannot-fail in this phase, and the fourth of mi
 
 The wider gap is stated plainly in "What the gate deliberately does not cover": nothing in this repository looks at the rendered page. That statement was written before either defect existed and correctly predicted both.
 
+### Design fidelity pass, 2026-08-13
+
+The product owner asked whether the design system was implemented correctly. Rather than answer from memory, the approved design system's own screens and component cards were screenshotted and compared against the running application, which is the comparison the premise gate cannot make: the gate asserts every colour token and type value against `foundations/colors.html` and fails the build on a nudged blue, but a token is not a layout and a layout is not a behaviour.
+
+What matches: the palette, the type scale, the three layer colours, the app bar, the disclaimer strip, the provenance spine, the trust pills, the feedback surface, the follow-up field, the source-card field rows and the search history rail. The compact citation-chip variant is one the card explicitly sanctions.
+
+Five gaps, all real, none of them a token drift.
+
+| Id | What the design says | What shipped |
+|----|----------------------|--------------|
+| F-4.8-D-01 | Source rows are collapsed, one expanded at a time, "click a row to open it" | Every source card is always expanded, so a six-source answer is a wall of fields and the sources stop being scannable |
+| F-4.8-D-02 | The source header names the entity and the layer in words: `[1] NCBI Gene 672 · BRCA1` on the left, `L1 · graph` on the right | `[1] NCBI Gene 672` and a bare `L1`. A reader has to already know what L1 means, which defeats the point of the layer system |
+| F-4.8-D-03 | The expanded card carries six fields including `SNAPSHOT`, the date the graph row was ingested | Five fields, no snapshot. This one has weight beyond fidelity: the freshness argument in Section 7 is what lets a reader tell a graph value from a live one, and the date is where that argument is visible |
+| F-4.8-D-04 | In prose, a citation chip carries the record id beside the number, `1 Gene 672` | The compact number-only variant everywhere. Sanctioned by the card, but it is the lesser variant, and the design uses the id-bearing one in running text |
+| F-4.8-D-05 | The status strip reads `Answered · 11.4s · 3 tools · 3 layers · 3 sources` with a `Show work` disclosure that reopens the pipeline detail | `2 tools · 2 layers · 2 sources`. No verdict word, no elapsed time, and no way to reopen the work after the run screen is gone |
+
+F-4.8-D-03's `TOOL` label, where the design says `EDGE`, is deliberate and is not counted as a gap: the design card was drawn for a graph edge, and the shipped card serves seven tools across three layers, where naming the tool is the more honest field. The missing snapshot date is the real defect in that row.
+
+None of these was caught by any check, for the same reason as F-4.8-V-01 and F-4.8-V-02: the premise gate asserts the design system's TOKENS, which is what a fixture can cheaply assert, and nothing asserts its LAYOUT or its BEHAVIOUR. A design system used as a premise-gate fixture buys less than it appears to unless something compares the rendered result to it.
+
+### Product owner review, 2026-08-13: three gaps against the design system
+
+Found by the product owner using the running application. All three are places where the built page does not reach the approved design system's baseline, which is the stated bar: meet it first, then modify from it.
+
+| Id | What the design says | What shipped | Why it happened |
+|----|----------------------|--------------|-----------------|
+| F-4.8-P-01 | A visitor gets a run of free searches, and only then is asked to sign in. The allowance is the entry experience | No search is possible at all without signing in. The sign-in wall is the first thing a visitor meets | An over-correction of judge round 1's critical finding. That finding was that an anonymous visitor received FABRICATED cited answers. The right fix was to remove the fabricated content and keep the allowance backed by real runs. What shipped removed the allowance too, which is a product regression traded for a correctness fix that did not require it |
+| F-4.8-P-02 | Sign-in sits at the top right of the app bar | Present, but reached only after the wall has already blocked the visitor, so it never functions as the top-right entry point the design intends | Follows from F-4.8-P-01 |
+| F-4.8-P-03 | Once signed in, a left rail holds stored searches, with a hamburger control to collapse it | The rail exists and holds searches; there is no hamburger, so it cannot be collapsed and does not adapt | Not built. No ticket owned the collapse control |
+
+F-4.8-P-01 is the one with a real open question behind it, and it must be answered before the fix, not assumed: whether the API accepts a run from an unauthenticated caller at all. Build phase 1.1 put auth in front of the run endpoints, so a guest allowance backed by REAL searches may need a backend change, and a guest allowance backed by anything other than real searches is the exact defect judge round 1 filed. Establish which of the two it is first. If the backend cannot serve a guest run today, that is a dependency to name, not a reason to fabricate.
+
+Sequencing agreed with the product owner: reach the design system's baseline first, then modify from it. These three come before the five fidelity gaps above, since they concern the entry path rather than the answer's presentation.
+
 ## Carried open
 
 Eight findings, each with a named owner, so none is a silent deferral.

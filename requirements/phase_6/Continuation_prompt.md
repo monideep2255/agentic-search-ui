@@ -7,6 +7,7 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 - [Start here](#start-here)
 - [State now](#state-now)
 - [Which session to open, before anything else](#which-session-to-open-before-anything-else)
+- [The next session starts here](#the-next-session-starts-here)
 - [Read before opening the next phase](#read-before-opening-the-next-phase)
 - [Build phase 3.0, done](#build-phase-30-done)
 - [Build phase 3.1, done](#build-phase-31-done)
@@ -17,6 +18,7 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 - [Step 6.2, done](#step-62-done)
 - [Build phase 4.0, done](#build-phase-40-done)
 - [Build phase 4.1, done](#build-phase-41-done)
+- [Build phase 4.8, done](#build-phase-48-done)
 - [Open items](#open-items)
 - [Handover](#handover)
 
@@ -41,7 +43,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Build phase 4.1, the outbound-only MCP server wrapping the same tool functions, is DONE, merged to `develop` as PR #40, 2026-08-11. Three judge rounds ran on `phase/4.1-mcp-server`: round 1 FAILED on a gate-integrity bug in the premise gate's own leak-detection assertions (two test assertions compared a key name against a list of values, so they could never fail), round 2 PASSED after a fix round closed it, round 3 PASSED with independent fresh-context re-verification including live counterfactual mutation testing. One adversary round ran against the live mounted app and filed 16 real findings (2 critical, 4 major, 4 moderate, 6 minor); 13 are closed, and 2 are carried open with a named owner each on `tracker/BOARD.md`: F-4.1-A-10 (untrusted third-party content relayed to an MCP agent consumer with no provenance-labeling field, a genuine product-level call) and F-4.1-A-15 (a caller-supplied `session_id` unbound to its owner, latent until build phase 4.5 or 4.6 wires a consumer). `/verify` READY, `dev-standards` READY with 0 blocking issues. Full account: `tracker/phase_4.1.md`. The same day, build phase 4.8 (Web UI visual design: MUI adoption, a real theme, restyling the auth, chat/search, streaming-progress, and citations screens built in phase 1.2) was inserted into Section 25's locked build order, a deliberate product-owner-directed exception to the Step 6.2-only edit cadence, since the shipped UI was found too unstyled to demo. Next: build phase 4.8, which depends only on 1.2 (already merged) and runs immediately before 4.2 through 4.7, none of which depend on it, the next of Step 6.3's remaining thirteen build phases (4.8, 4.2 through 4.7, 5.0 through 7.1). Build phase 4.8 (Web UI visual design) is COMPLETE, merged to `develop` as PR #41 on 2026-08-13. All 15 tickets done. Gated first by a design review that ran OUTSIDE the build cadence, since a visual deliverable has no natural failing test and the design system serves as the premise gate's fixture: the product owner iterated on a clickable prototype in Claude Design, the lead pulled and validated it, corrections went back, and an explicit approval opened the phase. Three independent review rounds ran and ALL THREE returned FAIL, filing 56 findings between them; 48 are closed and 8 carried with a named owner each. Round 1 (judge) found that an anonymous visitor asking ANY question was shown a fabricated fully-cited answer with a real NCBI source URL and a "Grounded, every claim cited" pill, bypassing the phase 3.0 guardrail on the most-travelled path. Round 2 (adversary) found the root cause of a whole family: `marker_ids`, the wire's exact token-to-citation binding, had no production consumer, and the UI re-derived it with a substring heuristic, so a citation whose claim_text was "cancer" cited every sentence containing the word. Round 3 (re-review, aimed at the fix rounds) found the previous round's own fix skipped the run screen for every question after the first, making Stop unreachable on a cost-capped loop. Two long-standing repository defects were also unmasked and fixed: the Playwright webServer timeout carried as "environmental" since build phase 3.3 was Vite binding IPv6-only against an IPv4 probe, and behind it the e2e mock backend's Guard-tier response had not matched the classifier's schema since build phase 3.0, so NO browser test in this repository had run green for five phases. Gates: premise gate 24, vitest 147, e2e 17 of 17, typecheck clean, production build succeeds, doc drift clean. Full account: `tracker/phase_4.8.md`. Next: build phase 4.2, or any of 4.3 through 4.7, none of which depend on 4.8.
+> Build phase 4.8, the web UI's visual design, is DONE, merged to `develop` as PR #41 on 2026-08-13, with a post-merge fix landed on `develop` as `e08c656`. All 15 tickets closed. Three independent review rounds ran and all three returned FAIL, filing 56 findings; 48 closed, 8 carried with a named owner each on `tracker/BOARD.md`. A post-merge visual pass then found 2 more, both fixed. Full account: `tracker/phase_4.8.md`, summarized under "Build phase 4.8, done" below. NEXT, and it is NOT build phase 4.2: the product owner reviewed the running application on 2026-08-13 and found three places where it does not reach the approved design system's baseline. The agreed sequence is to reach that baseline first, then modify from it. See "The next session starts here" below. Build phases 4.2 through 4.7 wait.
 
 Full detail on what PR #23 (build phase 3.1's re-review debt) fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07. Full detail on the F-2.1-C15 fix, including the bypass a fresh-context review found in its own first version before merge and the second review that confirmed the fix, is `tracker/fix_c15_generation_bound.md`.
 
@@ -63,7 +65,7 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Build phase 4.1, the outbound-only MCP server wrapping the same tool functions, is DONE, merged to `develop` as PR #40, 2026-08-11. Three judge rounds ran on `phase/4.1-mcp-server`: round 1 FAILED on a gate-integrity bug in the premise gate's own leak-detection assertions (two test assertions compared a key name against a list of values, so they could never fail), round 2 PASSED after a fix round closed it, round 3 PASSED with independent fresh-context re-verification including live counterfactual mutation testing. One adversary round ran against the live mounted app and filed 16 real findings (2 critical, 4 major, 4 moderate, 6 minor); 13 are closed, and 2 are carried open with a named owner each on `tracker/BOARD.md`: F-4.1-A-10 (untrusted third-party content relayed to an MCP agent consumer with no provenance-labeling field, a genuine product-level call) and F-4.1-A-15 (a caller-supplied `session_id` unbound to its owner, latent until build phase 4.5 or 4.6 wires a consumer). `/verify` READY, `dev-standards` READY with 0 blocking issues. Full account: `tracker/phase_4.1.md`. The same day, build phase 4.8 (Web UI visual design: MUI adoption, a real theme, restyling the auth, chat/search, streaming-progress, and citations screens built in phase 1.2) was inserted into Section 25's locked build order, a deliberate product-owner-directed exception to the Step 6.2-only edit cadence, since the shipped UI was found too unstyled to demo. Next: build phase 4.8, which depends only on 1.2 (already merged) and runs immediately before 4.2 through 4.7, none of which depend on it, the next of Step 6.3's remaining thirteen build phases (4.8, 4.2 through 4.7, 5.0 through 7.1). Build phase 4.8 (Web UI visual design) is COMPLETE, merged to `develop` as PR #41 on 2026-08-13. All 15 tickets done. Gated first by a design review that ran OUTSIDE the build cadence, since a visual deliverable has no natural failing test and the design system serves as the premise gate's fixture: the product owner iterated on a clickable prototype in Claude Design, the lead pulled and validated it, corrections went back, and an explicit approval opened the phase. Three independent review rounds ran and ALL THREE returned FAIL, filing 56 findings between them; 48 are closed and 8 carried with a named owner each. Round 1 (judge) found that an anonymous visitor asking ANY question was shown a fabricated fully-cited answer with a real NCBI source URL and a "Grounded, every claim cited" pill, bypassing the phase 3.0 guardrail on the most-travelled path. Round 2 (adversary) found the root cause of a whole family: `marker_ids`, the wire's exact token-to-citation binding, had no production consumer, and the UI re-derived it with a substring heuristic, so a citation whose claim_text was "cancer" cited every sentence containing the word. Round 3 (re-review, aimed at the fix rounds) found the previous round's own fix skipped the run screen for every question after the first, making Stop unreachable on a cost-capped loop. Two long-standing repository defects were also unmasked and fixed: the Playwright webServer timeout carried as "environmental" since build phase 3.3 was Vite binding IPv6-only against an IPv4 probe, and behind it the e2e mock backend's Guard-tier response had not matched the classifier's schema since build phase 3.0, so NO browser test in this repository had run green for five phases. Gates: premise gate 24, vitest 147, e2e 17 of 17, typecheck clean, production build succeeds, doc drift clean. Full account: `tracker/phase_4.8.md`. Next: build phase 4.2, or any of 4.3 through 4.7, none of which depend on 4.8.
+> Build phase 4.8, the web UI's visual design, is DONE, merged to `develop` as PR #41 on 2026-08-13, with a post-merge fix landed on `develop` as `e08c656`. All 15 tickets closed. Three independent review rounds ran and all three returned FAIL, filing 56 findings; 48 closed, 8 carried with a named owner each on `tracker/BOARD.md`. A post-merge visual pass then found 2 more, both fixed. Full account: `tracker/phase_4.8.md`, summarized under "Build phase 4.8, done" below. NEXT, and it is NOT build phase 4.2: the product owner reviewed the running application on 2026-08-13 and found three places where it does not reach the approved design system's baseline. The agreed sequence is to reach that baseline first, then modify from it. See "The next session starts here" below. Build phases 4.2 through 4.7 wait.
 
 Build phase 3.1 merged as PR #22 (superseded by PR #23) on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
@@ -104,8 +106,8 @@ Current counts, stated once here:
 - Premise gate, citation trust full (Layer 2/3 provenance, the two-tier risk gate, freshness, conflict detection): 10 of 10, live, no tunnel-gated skip, graded pass@8 on its one Synth-sampling-sensitive case (F-3.4-T05-05)
 - Premise gate, build phase 4.0's own gate (a normal test file, not one of the seven live tool gates above): 26 of 26
 - Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
-- Decisions logged: 298
-- Learnings entries: 69, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
+- Decisions logged: 299
+- Learnings entries: 71, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below). This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
 
@@ -139,47 +141,57 @@ Why this needs a separate session rather than a per-dispatch model argument: on 
 
 The capability bands and the alternate-backend column are in `docs/build/Build_workflow_cadence.md` under "Provider mapping". The three commands above are local wrappers; the model identifiers, prices and credential location behind them are deliberately not in any tracked file and live in a local, uncommitted note under `docs/build/multi-model-harness/`. If the wrappers are not on this machine, that folder will not be either, and plain `claude` is unaffected.
 
+## The next session starts here
+
+Agreed with the product owner on 2026-08-13, ahead of build phase 4.2. The bar is the approved design system in `docs/build/design/design-system/`: reach it, then modify from it. Full detail on each item, including how it happened: `tracker/phase_4.8.md`, "Product owner review".
+
+Three items, in this order:
+
+1. F-4.8-P-01, the guest allowance. The approved design gives a visitor a run of free searches before asking them to sign in. The shipped app blocks every search behind sign-in.
+
+   SETTLE THIS FIRST, do not assume it: does the API accept a run from an unauthenticated caller at all? Build phase 1.1 put auth in front of the run endpoints. If it does, this is a frontend fix. If it does not, a guest allowance backed by REAL searches needs a backend change, and that is a dependency to name rather than work around. A guest allowance backed by anything other than a real search is precisely the defect judge round 1 filed as this phase's first critical, so there is no shortcut available here.
+
+   Worth understanding before touching it: the allowance was not forgotten, it was removed. Judge round 1 found that an anonymous visitor asking any question received a fabricated, fully cited answer. The correct fix was to remove the fabricated content. What shipped removed the allowance with it, trading a product regression for a correctness fix that did not require it.
+
+2. F-4.8-P-02, sign-in as the top-right entry point. It exists in the app bar, but a visitor only reaches it after the wall has already stopped them, so it never functions as the entry point the design intends. Follows from item 1 and is largely resolved by it.
+
+3. F-4.8-P-03, the hamburger on the stored-searches rail. The rail exists and holds searches; the collapse control was never built and no ticket owned it.
+
+Then, still open from the same phase and lower priority than the three above, five design-fidelity gaps on the answer screen (F-4.8-D-01 through D-05) and the eight findings the review rounds carried. All are rows on `tracker/BOARD.md`'s Open flags table.
+
+One standing instruction that came out of this review, and it is not optional: open the application and look at it. Every automated check in this repository asserts what is on screen and never where it is, which is how two major layout defects and all three items above survived 147 unit tests, 19 browser tests, a clean production build and a full WCAG 2.1 AA pass.
+
 ## Read before opening the next phase
 
-Build phase 4.1 is merged (see "State now" above). Build phase 4.8 (Web UI visual design: MUI adoption, a real theme, restyling the phase-1.2 screens) opens next, ahead of 4.2 through 4.7, per the 2026-08-11 product-owner-directed insertion into Section 25's build order. It opens the standard way: read `LEARNINGS.md` filtered to this phase's territory (69 entries as of build phase 4.1's close, plus a retrospective), verify its one dependency (1.2, already merged) is satisfied, then open the phase board. No `tracker/phase_4.8.md` exists yet, it is created when the phase opens, and no LEARNINGS.md entries exist yet in this phase's territory (frontend styling, MUI) as of this checkpoint.
+Build phase 4.8 is merged (see "State now" above). Four of Step 6.3's six delivery surfaces remain, and none of them depends on 4.8, so the next phase is a free choice among them. Section 25's order takes 4.2 next.
 
-### The design review runs BEFORE this phase opens, and gates it
+| Next up | Branch | What it delivers | Depends on |
+|---------|--------|------------------|------------|
+| 4.2 | `phase/4.2-cli-adapter` | A thin CLI client over the REST API | 4.0, merged |
+| 4.3 | `phase/4.3-graphql-api` | A GraphQL surface via Strawberry, sharing auth and tools with the REST surface | 4.0, merged |
+| 4.4 | `phase/4.4-kgx-export` | An export utility scoped to the existing Hetzner graph, a batch job rather than a live adapter | Layer 1 access, already exists |
+| 4.5 | `phase/4.5-personalization-memory` | Bounded session memory, audience-level depth control, the stable named scientist persona | 1.2 and 2.2, both merged |
 
-This is the one structural difference between build phase 4.8 and every phase before it, so do not skip it or fold it into the phase. A visual deliverable has no natural failing test to gate on, so the design system serves as the premise gate's fixture, and a fixture that moves mid-build is not a fixture. The design therefore settles first, outside the cadence, and only then does the phase open.
+Then 4.6 (feedback capture) and 4.7 (competency-question routing, which owns F-2.0-15).
 
-The loop, agreed 2026-08-12 and recorded in `DECISIONS.md`:
+It opens the standard way, with no structural exception: read `LEARNINGS.md` filtered to the phase's territory (70 entries plus a retrospective), verify its dependencies are merged, write the premise gate and watch it fail, then build. Build phase 4.8's design-review pre-stage was specific to a visual deliverable and does not apply to any of the phases above.
 
-| Step | Who | What happens |
-|------|-----|--------------|
-| 1 | Product owner | Works in the Claude Design project "NCBI Agentic Search", on the `prototype/` card. This is the only place design changes originate |
-| 2 | Product owner | Asks for a pull |
-| 3 | Lead | Pulls with `DesignSync` into `docs/build/design/design-system/`, validates it, and reports back: what changed, what it breaks, and what the backend cannot actually deliver |
-| 4 | Lead | Pushes corrections back to Claude Design, so the next round starts from a corrected version |
-| 5 | Product owner | Iterates, and eventually gives an explicit approval |
-| 6 | Lead | Reconciles the component cards to the approved prototype, freezes the design system, opens `phase/4.8-web-ui-visual-design`, and builds everything at once |
+### Three things build phase 4.8 leaves behind
 
-Step 3 is the load-bearing one, and it is what keeps the backend and the frontend in sync rather than diverging into two separate truths. It is where a design that shows a tool the system does not have, or an answer shape the event contract cannot produce, gets caught before a builder implements it as real. It is not a rubber stamp: on the first pull it caught three tool names (`medgen_lookup`, `alfa_frequency`, `pubmed_search`) that are not in the seven-tool roster and that a builder would otherwise have built.
+- Two stubbed surfaces are now styled and visible in the UI, and their backends are owned elsewhere. The guest flow (anonymous sessions, a search allowance, history migration on login) is wired by 4.5, 4.6 and 6.0. The feedback surface (answer rating, reason chips, a per-citation "does not support" flag) is wired by 4.6, which already names it as an `interactions` field. Both are marked in `frontend/src/stubs/registry.ts`.
+- Nothing in this repository looks at the rendered page. Every frontend check asserts what is on screen, never where it is, which is how two major layout defects survived 147 unit tests, 19 end-to-end tests, a clean production build and a full WCAG 2.1 AA pass. Both were found by starting the application and looking at it. Until a visual check exists, looking at it is a real step, not a nicety.
+- There is still no CI. Two long-standing defects (a five-phase-old broken browser suite, a broken production build on `develop`) went unnoticed because nothing runs the suites except a person choosing to. Owned by build phase 6.1.
 
-Two rules that follow from the loop and are not negotiable:
+### The design loop, for any future UI work
 
-- Never push to Claude Design while the product owner has edits in flight there. A write clobbers unsaved work. Hold the push, keep the correction local, and reapply it after the next pull.
-- Never open the phase while the component cards are behind the prototype. The cards are what builders build against and what the gate asserts against, so opening early builds the previous design. The current gap is tracked in `docs/build/design/README.md` under "Open reconciliation".
+Design changes originate in the Claude Design project "NCBI Agentic Search", never in the repository. The product owner iterates on the prototype card and asks for a pull; the lead pulls with `DesignSync` into `docs/build/design/design-system/`, reports what changed and what the backend cannot deliver, and pushes corrections back; the product owner approves; only then does code change.
 
-### Then read these three, in this order, before stage 3
+Two rules from that loop that do not expire with 4.8:
 
-| Read | What it is |
-|------|-----------|
-| `docs/build/design/README.md` | The segment index, and the current reconciliation gap between the prototype and the cards. Read first |
-| `docs/build/design/Design_to_build_workflow.md` | How a visual design becomes React code here: which of the four artifacts is the source of truth, how the design system serves as the premise gate's fixture, and what a design change costs before versus after the phase opens |
-| `docs/build/design/design-system/` | The fixture itself: the clickable prototype plus 18 component cards across Brand, Foundations, Identity, Components, Screens and Flows, mirrored from Claude Design. Builders build against the cards, never the prototype |
+- Never push to Claude Design while the product owner has edits in flight there. A write clobbers unsaved work.
+- Never build against the prototype. Builders build against the component cards, and the cards must be reconciled to the prototype first.
 
-`docs/build/design/Phase_4.8_visual_design.html` is available but is not a build input. It holds the reasoning behind the design and is deliberately allowed to lag the fixture.
-
-Two scope notes carried into this phase from the design review, both deliberate and neither one moving Section 25's locked build order. The guest flow (anonymous sessions, a search allowance, history migration on login) and the feedback surface (answer rating, reason chips, a per-citation "does not support" flag) are both styled in 4.8 with their backends stubbed. The guest flow is wired by 4.5, 4.6 and 6.0, which already own those scopes; feedback is wired by 4.6, which already names it as an `interactions` field.
-
-The three design decisions that gated this phase are now settled, 2026-08-12, all recorded in `DECISIONS.md`: the provenance spine is kept and always rendered, the navy hero is kept as the single saturated surface, and the monospace-identifier rule is kept but narrowed so gene symbols stay proportional. Full statement of the narrowed rule: `Design_to_build_workflow.md`'s "Settled decisions" section.
-
-F-2.0-15 (`tracker/BOARD.md`'s Open flags table, full account in `LEARNINGS.md`'s 2026-08-10 entry), found live during Step 6.2's manual smoke test, does not affect build phase 4.8 either: it is assigned to build phase 4.7, since neither 4.1 nor 4.8 depends on real question-understanding.
+Full statement, including which of the four artifacts is the source of truth and what a design change costs before versus after a phase opens: `docs/build/design/Design_to_build_workflow.md`, indexed by `docs/build/design/README.md`.
 
 ## Build phase 3.0, done
 
@@ -383,6 +395,30 @@ Test counts at close: Python suite 2565 collected (2445 passing, 113 skipped, 1 
 Two adversary findings carried open, each with a named owner on `tracker/BOARD.md`'s Open flags table: F-4.1-A-10 (content originating in untrusted third-party sources, a PubMed abstract field reaching `citations[].claim_text` and the narrative `answer` built from it, relays to an MCP caller with no field, wrapper, or flag distinguishing relayed source text from the system's own words; no clean small fix exists, since labelling would need either a new response field or a framing convention no other surface uses, and whether the obligation runs outward when this system becomes somebody else's tool is a product-level call) to whenever the product owner decides, or build phase 6.1's hardening pass, whichever comes first; F-4.1-A-15 (a caller-supplied `session_id` passed straight into `Query` with length validation only, no check that it belongs to the authenticated `User`; harmless today since nothing reads `Query.session_id` yet, becomes a live authorization gap the moment build phase 4.5 or 4.6 wires a consumer) to build phase 4.5 or 4.6, whichever first wires a `Query.session_id` consumer, and before either ships.
 
 The same day, build phase 4.8 (Web UI visual design) was inserted into the build order immediately after this phase, ahead of 4.2 through 4.7 (see "State now" above and `DECISIONS.md`'s 2026-08-11 entries).
+
+## Build phase 4.8, done
+
+Merged to `develop` as PR #41 on 2026-08-13, plus a post-merge fix as `e08c656`. The web UI's visual design: MUI adopted, a real theme transcribed from the approved design system, and every screen built in build phase 1.2 restyled. All 15 tickets closed. Full ticket-level account, every finding and its state: `tracker/phase_4.8.md`.
+
+Gated first by a design review that ran OUTSIDE the build cadence, which is the one structural difference between this phase and every phase before it. A visual deliverable has no natural failing test, so the design system serves as the premise gate's fixture, and a fixture that moves mid-build is not a fixture. The product owner iterated on a clickable prototype in Claude Design, the lead pulled and validated it, corrections went back, and an explicit approval opened the phase.
+
+Three independent review rounds ran. ALL THREE returned FAIL, filing 56 findings between them: 48 closed, 8 carried with a named owner each on `tracker/BOARD.md`. Each round's worst defect sat inside the previous round's fix, which is the pattern the build phase 2.1 retrospective predicts.
+
+| Round | Worst finding |
+|-------|---------------|
+| 1, judge | An anonymous visitor asking ANY question was shown a fabricated, fully cited answer carrying a real NCBI source URL and a "Grounded, every claim cited" pill, bypassing the build phase 3.0 guardrail on the most-travelled path in the product |
+| 2, adversary | The root cause of a whole family: `marker_ids`, the wire's exact token-to-citation binding, had no production consumer at all, and the UI re-derived the binding with a substring heuristic, so a citation whose `claim_text` was "cancer" cited every sentence containing the word |
+| 3, re-review | Round 2's own fix skipped the run screen for every question after the first, making Stop unreachable on a cost-capped loop |
+| Post-merge visual pass | Two major layout defects found by starting the application and looking at it: the whole app rendered in a 720px strip, and the provenance spine's segments drifted out of register with the claims they describe |
+
+Two long-standing repository defects were unmasked and fixed along the way, neither of them this phase's own work:
+
+- The Playwright `webServer` timeout carried as "environmental" since build phase 3.3 was Vite binding IPv6-only against an IPv4 probe. The earlier diagnosis had queried `localhost`, which resolves differently, so the evidence gathered proved a different address than the one failing.
+- Behind it, the e2e mock backend's Guard-tier response had not matched the classifier's schema since build phase 3.0. No browser test in this repository had run green for five phases.
+
+Gates at close: premise gate 24, vitest 147, Playwright 19 executed cases, typecheck clean, production build succeeds, doc drift clean.
+
+Six assertions that could not fail were found in this phase, four of them the lead's own, every one caught by deliberately breaking the code and watching the clause stay green rather than by reading it. The generalization, now consistent enough to be predictive: an assertion written against the structure that produced the output tends to restate that structure instead of testing it.
 
 ## Open items
 
