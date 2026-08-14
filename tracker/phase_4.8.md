@@ -14,6 +14,7 @@ Deliverable, from `Technical_specification.md` Section 25: MUI adoption, a real 
 - [Tickets](#tickets)
 - [Stub registry](#stub-registry)
 - [Findings](#findings)
+- [Carried open](#carried-open)
 - [History](#history)
 
 ## The premise

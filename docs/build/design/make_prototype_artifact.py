@@ -37,7 +37,7 @@ BANNER = (
 
 
 def extract(pattern: str, text: str, what: str) -> str:
-    match = re.search(pattern, text, re.S | re.I)
+    match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
     if match is None:
         sys.exit(f"error: could not find the {what} in {SOURCE}")
     return match.group(1)

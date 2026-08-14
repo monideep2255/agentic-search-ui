@@ -102,7 +102,7 @@ body{padding:28px}
 
 
 def extract_tokens(source: str) -> str:
-    match = re.search(r"(:root\{.*?\n\})", source, re.S)
+    match = re.search(r"(:root\{.*?\n\})", source, re.DOTALL)
     if match is None:
         sys.exit("error: token block not found in the prototype")
     return match.group(1) + "\n*{box-sizing:border-box}\n"
@@ -110,7 +110,7 @@ def extract_tokens(source: str) -> str:
 
 def extract_rules(source: str, prefixes) -> str:
     """Pull every top-level CSS rule whose selector mentions one of the prefixes."""
-    style = re.search(r"<style>(.*?)</style>", source, re.S)
+    style = re.search(r"<style>(.*?)</style>", source, re.DOTALL)
     if style is None:
         sys.exit("error: style block not found")
     body = style.group(1)
@@ -119,39 +119,38 @@ def extract_rules(source: str, prefixes) -> str:
         selector = selector.strip()
         if selector.startswith(("@", ":root")):
             continue
-        if any(re.search(r"\.%s\b" % re.escape(p), selector) for p in prefixes):
-            out.append("%s{%s}" % (selector, block.strip()))
+        if any(re.search(rf"\.{re.escape(p)}\b", selector) for p in prefixes):
+            out.append(f"{selector}{{{block.strip()}}}")
     return "\n".join(out)
 
 
 def main() -> None:
     if not PROTOTYPE.exists():
-        sys.exit("error: %s does not exist" % PROTOTYPE)
+        sys.exit(f"error: {PROTOTYPE} does not exist")
     source = PROTOTYPE.read_text(encoding="utf-8")
     tokens = extract_tokens(source)
 
     for path, group, title, note, prefixes, markup, width in CARDS:
         rules = extract_rules(source, prefixes)
         if not rules:
-            sys.exit("error: no CSS matched %r for %s" % (prefixes, path))
+            sys.exit(f"error: no CSS matched {prefixes!r} for {path}")
+        body_markup = markup.replace("{ICON}", ICON)
         page = (
-            '<!-- @dsCard group="%s" width=%d -->\n'
+            f'<!-- @dsCard group="{group}" width={width} -->\n'
             "<!doctype html>\n"
             '<html lang="en"><head><meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
-            "<title>%s</title>\n"
-            "<style>%s%s%s</style></head><body>\n"
-            '<p class="card-title">%s</p>\n'
-            '<p class="card-note">%s</p>\n'
-            "%s\n</body></html>\n"
-        ) % (group, width, title, tokens, SHELL_CSS, rules, title, note,
-             markup.replace("{ICON}", ICON))
+            f"<title>{title}</title>\n"
+            f"<style>{tokens}{SHELL_CSS}{rules}</style></head><body>\n"
+            f'<p class="card-title">{title}</p>\n'
+            f'<p class="card-note">{note}</p>\n'
+            f"{body_markup}\n</body></html>\n"
+        )
 
         target = ROOT / path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(page, encoding="utf-8")
-        print("  wrote %-34s (%d CSS rules, %s bytes)"
-              % (path, rules.count("}"), format(len(page), ",")))
+        print(f"  wrote {path:<34} ({rules.count('}')} CSS rules, {len(page):,} bytes)")
 
 
 if __name__ == "__main__":
