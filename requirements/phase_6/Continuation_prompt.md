@@ -143,6 +143,18 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 ## The next session starts here
 
+RESUME BUILD PHASE 4.9, on `phase/4.9-answer-screen-fidelity`, which is PAUSED AT ITS PREMISE GATE.
+
+The gate is written and watched failing, 12 clauses all red, and NOT ONE LINE of build code exists yet. That is stage 5 of the cadence and the cleanest place in it to stop. `npx vitest run` is RED on that branch by design; a green run there would mean the gate cannot fail.
+
+Read `tracker/phase_4.9.md` first. It carries the verified state, the ten tickets in dependency order, the two prototype fields that are deliberately NOT built because the backend does not send them, and one hazard worth knowing before touching anything: this repository's mutation scripts revert with `git checkout -- frontend/src`, which destroys uncommitted work. Commit before running one.
+
+Start at T-4.9-01. It is the only ticket that touches `useRunView`, and three separate clauses cannot pass without it.
+
+After 4.9: build phase 6.0g, the anonymous run path and the server-side guest allowance. Product-owner decision, 2026-08-14. It is the only remaining item that cannot be done as frontend work, and it closes F-4.8-P-01 and F-4.8-P-02 plus the two fields 4.9 leaves out.
+
+### How build phase 4.9 came to exist
+
 Agreed with the product owner on 2026-08-13, ahead of build phase 4.2. The bar is the approved design system in `docs/build/design/design-system/`: reach it, then modify from it. Full detail on each item, including how it happened: `tracker/phase_4.8.md`, "Product owner review".
 
 Three items, worked 2026-08-14. One closed, two reclassified as a backend dependency.
