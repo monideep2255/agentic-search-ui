@@ -51,7 +51,7 @@ import { AnswerScreen } from "./components/screens/AnswerScreen";
 import { AboutScreen, DocsScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
 import { GuestAllowance, SignInWall } from "./components/guest/GuestAllowance";
 import { FeedbackSurface } from "./components/feedback/FeedbackSurface";
-import { FollowUp, HistoryRail } from "./components/answer/FollowUp";
+import { CollapsedRail, FollowUp, HistoryRail } from "./components/answer/FollowUp";
 import { DisclaimerModal, hasAcceptedDisclaimer } from "./components/shell/DisclaimerModal";
 import type { AudienceDepth } from "./components/controls/DepthControl";
 
@@ -108,6 +108,15 @@ export function App() {
   const askSeq = useRef(0);
   /** True while a stopped run should stay stopped (F-4.8-A-10). */
   const [stopped, setStopped] = useState(false);
+  /**
+   * Whether the stored-searches rail is open (F-4.8-P-03).
+   *
+   * Open by default, matching the prototype's `railOpen:true`. Held here rather
+   * than inside `HistoryRail`, because the collapsed state must survive the
+   * rail unmounting: the app bar's toggle and the collapsed strip both need it,
+   * and a collapse the user chose must outlive the next question.
+   */
+  const [railOpen, setRailOpen] = useState(true);
 
   /**
    * The conversation id sent with every question.
@@ -130,6 +139,16 @@ export function App() {
   const persona = useMemo(() => drawPersona(0), []);
 
   const signedIn = token !== null;
+
+  /**
+   * Whether the rail, its strip and its toggle exist at all (F-4.8-P-03).
+   *
+   * The prototype's `avail = st.loggedIn && onSearch`, plus this app's own
+   * existing rule that an empty rail renders nothing. Computed once and used by
+   * all three controls, so the toggle can never be offered for a rail that is
+   * not there, and the strip can never appear where the rail would not have.
+   */
+  const railAvailable = signedIn && screen === "search" && history.length > 0;
 
   // `status` and `error` were both discarded here (F-4.8-A-09). If the event
   // stream failed to open at all, a 500, a malformed frame, or, realistically,
@@ -327,6 +346,9 @@ export function App() {
         personaName={persona}
         signedIn={signedIn}
         hideAuthAction={searchView.name === "signin" && screen === "search"}
+        showRailToggle={railAvailable}
+        railOpen={railOpen}
+        onToggleRail={() => setRailOpen((open) => !open)}
         onSignIn={() => {
           setScreen("search");
           setSearchView({ name: "signin" });
@@ -359,11 +381,17 @@ export function App() {
           // not treated as read by the next.
           setAccepted(false);
           setDepth("researcher");
+          // P-03: the next person at this workstation did not collapse the
+          // rail, so they do not inherit a collapsed one.
+          setRailOpen(true);
           setSearchView({ name: "home" });
         }}
       >
         {screen === "search" ? (
           <Box sx={{ display: "flex", alignItems: "stretch", minHeight: "100%" }}>
+            {railAvailable && !railOpen ? (
+              <CollapsedRail count={history.length} onExpand={() => setRailOpen(true)} />
+            ) : (
             <HistoryRail
               items={history}
               activeId={
@@ -381,7 +409,9 @@ export function App() {
                 const item = history.find((entry) => entry.id === id);
                 if (item) void ask(item.question, depth);
               }}
+              onCollapse={() => setRailOpen(false)}
             />
+            )}
             <Box sx={{ flex: 1, minWidth: 0 }}>{body()}</Box>
           </Box>
         ) : (

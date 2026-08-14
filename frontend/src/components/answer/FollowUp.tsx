@@ -132,6 +132,124 @@ export interface HistoryRailProps {
   items: { id: string; question: string }[];
   activeId?: string | null;
   onOpen?: (id: string) => void;
+  /** Collapse the rail (F-4.8-P-03). Omitted, the in-rail control is absent. */
+  onCollapse?: () => void;
+}
+
+/** The prototype's `.rmin` chevron, pointing left, toward the collapse. */
+function CollapseIcon() {
+  return (
+    <svg
+      width={15}
+      height={15}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M9.5 4 5.5 8l4 4" />
+      <path d="M12.5 3.2v9.6" />
+    </svg>
+  );
+}
+
+/** The prototype's `#railStub` chevron, pointing right, toward the expand. */
+function ExpandIcon() {
+  return (
+    <svg
+      width={15}
+      height={15}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6.5 4 10.5 8l-4 4" />
+      <path d="M3.5 3.2v9.6" />
+    </svg>
+  );
+}
+
+export interface CollapsedRailProps {
+  /** How many searches the collapsed rail is holding. */
+  count: number;
+  onExpand?: () => void;
+}
+
+/**
+ * What a collapsed rail leaves behind: the prototype's `#railStub`.
+ *
+ * A collapsed rail that vanishes entirely gives the user nothing to aim at to
+ * get it back, and no indication that anything is being held. The strip is 46px
+ * of vertical label plus a count, which is the design's answer to both.
+ *
+ * It occupies the rail's own slot in the layout, so collapsing does not reflow
+ * the page into a different shape than expanding restores.
+ */
+export function CollapsedRail({ count, onExpand }: CollapsedRailProps) {
+  return (
+    <Box
+      component="button"
+      type="button"
+      onClick={onExpand}
+      aria-label="Show your searches"
+      data-testid="collapsed-rail"
+      sx={{
+        width: 46,
+        flex: "none",
+        border: 0,
+        borderRight: `1px solid ${designTokens.line}`,
+        bgcolor: designTokens.surface,
+        color: designTokens.inkMuted,
+        cursor: "pointer",
+        display: { xs: "none", md: "flex" },
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 1.75,
+        py: 2,
+        "&:hover": { bgcolor: designTokens.surfaceSunk, color: designTokens.ink },
+      }}
+    >
+      <ExpandIcon />
+      <Typography
+        component="span"
+        sx={{
+          writingMode: "vertical-rl",
+          fontSize: 11.5,
+          letterSpacing: ".1em",
+          textTransform: "uppercase",
+          fontWeight: 700,
+        }}
+      >
+        Your searches
+      </Typography>
+      {count > 0 ? (
+        <Box
+          component="span"
+          sx={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#FFFFFF",
+            bgcolor: designTokens.blue,
+            borderRadius: 999,
+            minWidth: 19,
+            px: 0.6,
+            py: 0.25,
+            lineHeight: 1.3,
+            textAlign: "center",
+          }}
+        >
+          {count}
+        </Box>
+      ) : null}
+    </Box>
+  );
 }
 
 /**
@@ -140,7 +258,7 @@ export interface HistoryRailProps {
  * Rendered only when there is something in it. An empty rail on a first visit
  * is furniture that makes the product look busier than it is.
  */
-export function HistoryRail({ items, activeId, onOpen }: HistoryRailProps) {
+export function HistoryRail({ items, activeId, onOpen, onCollapse }: HistoryRailProps) {
   if (items.length === 0) return null;
 
   return (
@@ -158,6 +276,14 @@ export function HistoryRail({ items, activeId, onOpen }: HistoryRailProps) {
         display: { xs: "none", md: "block" },
       }}
     >
+      {/*
+        The heading row carries the collapse control (F-4.8-P-03), the
+        prototype's `.rmin`. The prototype pairs it with a "+ New search"
+        button; that button is NOT added here, because this fix owns the
+        collapse control and nothing else, and the shipped app already offers
+        "New search" on the answer screen.
+      */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.25, px: 0.75 }}>
       <Typography
         variant="overline"
         component="p"
@@ -168,10 +294,39 @@ export function HistoryRail({ items, activeId, onOpen }: HistoryRailProps) {
         // nothing in the design system says so. Recorded as a finding for the
         // next design pass; the token itself is frozen for this phase and is
         // not being changed unilaterally here.
-        sx={{ color: designTokens.inkMuted, mb: 1.25, px: 0.75 }}
+        sx={{ color: designTokens.inkMuted, flex: 1, m: 0 }}
       >
         Your searches
       </Typography>
+        {onCollapse ? (
+          <Box
+            component="button"
+            type="button"
+            onClick={onCollapse}
+            aria-label="Hide your searches"
+            sx={{
+              flex: "none",
+              width: 28,
+              height: 28,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: "transparent",
+              border: `1px solid ${designTokens.line}`,
+              borderRadius: 0.5,
+              color: designTokens.inkMuted,
+              cursor: "pointer",
+              "&:hover": {
+                borderColor: designTokens.lineStrong,
+                color: designTokens.ink,
+                bgcolor: designTokens.surface,
+              },
+            }}
+          >
+            <CollapseIcon />
+          </Box>
+        ) : null}
+      </Box>
       {items.map((item) => (
         <Box
           key={item.id}
