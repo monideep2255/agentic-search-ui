@@ -509,10 +509,99 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await askIt(user);
 
     await screen.findByTestId("citation-1");
-    // Chip 2 points at a Layer 3 PubTator annotation. Painting it Layer 1
-    // tells the reader a text-mined co-mention is a curated graph assertion.
-    expect(screen.getByTestId("citation-1")).toHaveAttribute("data-layer", "1");
-    expect(screen.getByTestId("citation-2")).toHaveAttribute("data-layer", "3");
+    /*
+     * F-4.9-R-04. This asserted `data-layer` ALONE, which is a test hook no
+     * user meets. The two harms the finding actually named are what a reader
+     * SEES (the chip's colour) and what a screen reader HEARS, and mutations
+     * reverting each of those left this clause green. All three are asserted
+     * now, so the hook cannot stand in for the thing it is a hook for.
+     */
+    const one = screen.getByTestId("citation-1");
+    const two = screen.getByTestId("citation-2");
+    expect(one).toHaveAttribute("data-layer", "1");
+    expect(two).toHaveAttribute("data-layer", "3");
+
+    // What the reader sees: layer 1 navy versus layer 3 violet, never equal.
+    const colourOf = (el: HTMLElement) => getComputedStyle(el).borderLeftColor;
+    expect(colourOf(one)).not.toBe(colourOf(two));
+
+    // What a screen reader hears: each source named with its OWN layer.
+    const claim = screen.getByTestId("claim-text-0");
+    expect(claim).toHaveTextContent(/Source 1, layer 1/i);
+    expect(claim).toHaveTextContent(/Source 2, layer 3/i);
+  });
+
+  /*
+   * RE-REVIEW ROUND 1. Three of these are regressions the FIX round introduced,
+   * which is the pattern this repository has measured across four consecutive
+   * phases: the worst defect in a round is usually a regression in the previous
+   * round's fix.
+   */
+
+  /** A run that queries layers and cites nothing, plus a terminal event. */
+  const barren = (terminal: string) =>
+    [
+      frame(0, "guard", { passed: true, category: "ok", reason: null }),
+      frame(1, "tool_result", { call_id: "a", tool: "cypher_query", layer: "layer_1_graph", status: "ok", summary: "", result_count: 0, truncated: false }),
+      frame(2, "tool_result", { call_id: "b", tool: "ncbi_efetch", layer: "layer_2_api", status: "ok", summary: "", result_count: 0, truncated: false }),
+      frame(3, "tool_result", { call_id: "c", tool: "pubtator_annotate", layer: "layer_3_enrichment", status: "ok", summary: "", result_count: 0, truncated: false }),
+      frame(4, "token", { text: "Nothing retrieved supports an answer. ", marker_ids: [] }),
+      frame(5, "trust_signal", { outcome: "answer", risk_tier: "low", grounded: false, triangulated: true }),
+      terminal,
+    ].join("");
+
+  it("never says a number of layers agreed that cannot mean agreement (F-4.9-R-01)", async () => {
+    const user = userEvent.setup();
+    openEventStreamMock.mockImplementation(
+      serve(barren(frame(6, "done", { total_cost_usd: 0.01, total_tool_calls: 3, elapsed_ms: 5000, trust_outcome: "answer" }))),
+    );
+    render(<App />);
+    await askIt(user);
+
+    await screen.findByTestId("answer-meta");
+    /*
+     * The A-05 fix MOVED this nonsense rather than removing it: counting from
+     * tool calls gave "0 layers agreed" when citations arrived without tool
+     * results, and counting from sources gives "0 layers agreed" when tools
+     * ran and cited nothing. Agreement is only meaningful across two or more,
+     * so the pill must not appear below that.
+     */
+    expect(screen.queryByText(/0 layers agreed/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/1 layers? agreed/i)).not.toBeInTheDocument();
+  });
+
+  it("tells a user who stopped a run that they stopped it (F-4.9-R-03)", async () => {
+    const user = userEvent.setup();
+    openEventStreamMock.mockImplementation(
+      serve(barren(frame(6, "error", { fatal: true, scope: "run", source: "run_registry", error_class: "cancelled", message: "this run was stopped before it finished", retry_after_s: 0 }))),
+    );
+    render(<App />);
+    await askIt(user);
+
+    const failure = await screen.findByTestId("answer-failure");
+    // The fix round collapsed every fatal class onto one string, so a run the
+    // USER stopped told them it broke and invited them to try again.
+    expect(failure).toHaveTextContent(/stopped/i);
+    expect(failure).not.toHaveTextContent(/could not be completed/i);
+    // Still no backend text, which is what the fix was for.
+    expect(failure).not.toHaveTextContent(/\$/);
+  });
+
+  it("states what each figure in the status strip counts (F-4.9-R-02)", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await landAnAnswer(user);
+
+    /*
+     * The fix round left the strip counting tools from tool CALLS and layers
+     * from CITATIONS, so "4 tools · 2 layers" put two different bases side by
+     * side in one line with nothing to tell them apart. Each figure now names
+     * what it counts, so the pair cannot read as a contradiction.
+     */
+    const strip = screen.getByTestId("answer-meta");
+    expect(strip).toHaveTextContent(/4 tools/);
+    expect(strip).toHaveTextContent(/3 sources/);
+    expect(strip).toHaveTextContent(/from 2 layers/);
   });
 
   // ---------------------------------------------------------------- F-4.8-A-20

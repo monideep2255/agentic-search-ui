@@ -383,6 +383,13 @@ export function useRunView(events: AgentEvent[]): RunView {
     // was a property the code did not have. Per `self-eval-loop`, a comment
     // asserting a property needs a test asserting the same property, and clause
     // 3d now does.
+    /*
+     * Counted from the SOURCES, not the tool calls (F-4.9-A-05, F-4.9-A-06),
+     * and computed HERE because the trust block below needs it: a pill
+     * claiming agreement must know how many layers there were to agree.
+     */
+    const layerCountFromSources = new Set(sources.map((source) => source.layer)).size;
+
     const trustEvents = events.filter((event) => event.type === "trust_signal");
     const trust: TrustSignal[] = [];
     /*
@@ -442,7 +449,10 @@ export function useRunView(events: AgentEvent[]): RunView {
       if (payload.risk_tier && payload.risk_tier !== "low") {
         trust.push({ kind: "risk", label: `${payload.risk_tier} risk claim` });
       }
-      if (payload.triangulated === true) {
+      // R-01: "agreed" needs at least two things to agree. The A-05 fix moved
+      // the nonsense rather than removing it, so "0 layers agreed" was still
+      // reachable, now from a run that queried layers and cited nothing.
+      if (payload.triangulated === true && layerCountFromSources >= 2) {
         // F-4.8-D-12. This read "Cross-checked across layers", which is true of
         // any run that touched more than one and therefore tells the reader
         // nothing. The prototype states the count, so the reader can weigh it.
@@ -574,18 +584,28 @@ export function useRunView(events: AgentEvent[]): RunView {
      * run ran and found nothing in are still visible in the reasoning log,
      * which is where a record of work belongs.
      */
-    const layersUsed = new Set(sources.map((source) => source.layer));
-    const layerCount = layersUsed.size;
+    const layerCount = layerCountFromSources;
     // Resolve the triangulation pill now that the count is known (F-4.8-D-12).
     for (const signal of trust) {
       if (signal.label === "__LAYER_COUNT__") {
         signal.label = `${layerCount} ${layerCount === 1 ? "layer" : "layers"} agreed`;
       }
     }
+    /*
+     * Each figure NAMES what it counts (F-4.9-R-02).
+     *
+     * The tools figure counts calls the run made; the layers figure counts
+     * layers the answer actually rests on. Those are different bases, and the
+     * old wording put them side by side as bare nouns, so "4 tools · 2 layers"
+     * read as a contradiction of the reasoning log directly above it. Saying
+     * "from N layers" ties the layer count to the sources it describes.
+     */
     const meta = landed
       ? `${toolCalls.length} ${toolCalls.length === 1 ? "tool" : "tools"} · ` +
-        `${layersUsed.size} ${layersUsed.size === 1 ? "layer" : "layers"} · ` +
-        `${sources.length} ${sources.length === 1 ? "source" : "sources"}`
+        `${sources.length} ${sources.length === 1 ? "source" : "sources"}` +
+        (sources.length > 0
+          ? ` from ${layerCount} ${layerCount === 1 ? "layer" : "layers"}`
+          : "")
       : "";
 
     // F-4.8-A-15, two defects in three lines.
@@ -600,9 +620,26 @@ export function useRunView(events: AgentEvent[]): RunView {
     // NON-fatal error set `landed` and navigated the user off a still-streaming
     // run. `consumeEventStream` and `deriveStopEnabled` both treat only fatal
     // errors as terminal; this now agrees with them.
-    const failure = fatalError
-      ? "This run could not be completed. Try asking again, or rephrase the question."
-      : null;
+    /*
+     * A curated string per fatal CLASS (F-4.9-R-03).
+     *
+     * The F-4.9-A-01 fix collapsed every fatal error onto one sentence, so a
+     * run the USER stopped was told "This run could not be completed. Try
+     * asking again", which is both wrong and faintly accusatory. `error_class`
+     * is a four-value Literal on the wire (`contracts/events.py`), a closed
+     * enum carrying no free text, so branching on it keeps the no-backend-text
+     * guarantee that fix was about while restoring the distinction it lost.
+     */
+    const FATAL_COPY: Record<string, string> = {
+      cancelled: "This run was stopped before it finished, so no answer was written.",
+      transient: "This run could not be completed. Try asking again in a moment.",
+      recoverable: "This run could not be completed. Try asking again, or rephrase the question.",
+      unexpected: "This run could not be completed. Try asking again, or rephrase the question.",
+    };
+    const failure =
+      fatalError && fatalError.type === "error"
+        ? (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
+        : null;
 
     const failedGuard = events.find(
       (event) => event.type === "guard" && event.payload.passed === false,
