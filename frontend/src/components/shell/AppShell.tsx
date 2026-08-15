@@ -42,6 +42,8 @@ export interface AppShellProps {
   personaName?: string;
   signedIn?: boolean;
   accountEmail?: string;
+  /** Forwarded to `AccountMenu`'s `limitCopy` (T-4.10-09). See that prop's own docstring. */
+  accountLimitCopy?: string;
   onSignIn?: () => void;
   onSignOut?: () => void;
   /**
@@ -100,6 +102,7 @@ export function AppShell({
   personaName = "Mendel",
   signedIn = false,
   accountEmail,
+  accountLimitCopy,
   onSignIn,
   onSignOut,
   hideAuthAction = false,
@@ -188,6 +191,7 @@ export function AppShell({
                 email={accountEmail ?? "your account"}
                 onSignOut={onSignOut}
                 onNavigate={(screen) => onNavigate?.(screen)}
+                limitCopy={accountLimitCopy}
               />
             ) : (
               <Button

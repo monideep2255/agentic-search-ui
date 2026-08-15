@@ -118,6 +118,17 @@ export interface CitationPayload {
   assertion_confidence: string;
   population_ancestry_context: string | null;
   license: string;
+  // T-4.10-07 (F-4.8-D-02, F-4.8-D-03): additive, optional fields for the
+  // source card's header (entity_name) and its SNAPSHOT row
+  // (snapshot_date). Both are optional here, not just nullable, so a
+  // fixture or payload built before this phase (in either language) still
+  // type-checks and validates unchanged, per Section 2.6's additive-only
+  // rule; a real citation from the server always sends both, null when it
+  // has no real, non-fabricated value (see contracts/events.py's
+  // CitationPayload docstring for what each one means and when it is
+  // null).
+  snapshot_date?: string | null;
+  entity_name?: string | null;
 }
 
 export interface TrustSignalPayload {
@@ -339,7 +350,9 @@ function isCitationPayload(value: unknown): value is CitationPayload {
     typeof value.evidence_kind === "string" &&
     typeof value.assertion_confidence === "string" &&
     isNullableString(value.population_ancestry_context) &&
-    typeof value.license === "string"
+    typeof value.license === "string" &&
+    (value.snapshot_date === undefined || isNullableString(value.snapshot_date)) &&
+    (value.entity_name === undefined || isNullableString(value.entity_name))
   );
 }
 

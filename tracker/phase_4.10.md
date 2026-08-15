@@ -430,3 +430,31 @@ Status: confirmed, at decomposition
 Raised by: lead, stage 3
 
 The wall reads "Your history moves with you when you sign in." Nothing persists a run: the `RunRegistry` is in-memory and evicts, and the browser's list is React state. T-4.10-06 corrects the copy and migrates the live runs, which is what actually exists. Durable history is build phase 4.6's.
+
+### F-4.10-02: `snapshot_date` is a graph-snapshot proxy, not a real per-row ingestion date
+
+Status: confirmed, at T-4.10-07's investigation step
+Raised by: builder, T-4.10-07
+
+T-4.10-07's own acceptance criterion and F-4.8-D-03's text both describe the SNAPSHOT field as "the date the graph row was ingested." No such field exists: F-3.4-T06-01 (`tracker/phase_3.4.md`, live-confirmed 2026-08-09) already checked `docs/data-engineering/Knowledge_graph_on_server_reference.md` in full and found no ingest-metadata table anywhere this repo can read. What is real and threaded through every Layer 1 row (`cypher_provenance.to_output_row`'s `graph_snapshot_version`) is a Hetzner disk-snapshot label taken around the same time as the graph load, not a dedicated data-ingestion timestamp field, per `synthesis/freshness.py`'s own `graph_snapshot_date_from_version` docstring. `CitationPayload.snapshot_date` is populated from exactly that label (via the same lookup T-3.4-06's staleness check already uses), so it answers "how current is this graph snapshot," a real and useful freshness signal for Section 7's argument, but a reader should not be told it is a genuine per-row ingestion date, since that field does not exist in this graph. Not a blocker: the field is added as specified, with this caveat documented here and in `CitationPayload`'s own docstring. Worth a copy check on the shipped source card (a future ticket, not this one): the UI label should say "snapshot" or "graph snapshot," never "ingested."
+
+### F-4.10-03: an assertion was hollowed out without being edited
+
+Status: confirmed and closed, same session
+Raised by: lead, mutation-testing the phase's own frontend work
+
+`phase48Premise.test.tsx`'s clause 3e is the guard against build phase 4.8's worst defect: an anonymous visitor asking any question was shown a fabricated, fully cited answer carrying a real NCBI source URL. This phase preserved every one of that clause's assertions verbatim, and the builder's report said so accurately.
+
+Preserving them was not enough. Clause 3e reaches its assertions through a run whose stream never resolves, so the answer screen never mounts and the absence checks pass without being able to fail. Before this phase the same clause ran with the visitor sitting on the sign-in wall, and the defect it was written against DID render an answer screen, so the checks bit. Making the anonymous path real moved the scenario out from under them.
+
+Measured, not argued. A fabricated cited source was forced into `AnswerScreen`, and clause 3e passed. Two other suites caught the mutation; neither was the anonymous-fabrication guard.
+
+Closed by a new clause in `frontend/src/phase410Premise.test.tsx` that lands the run instead of hanging it, so the answer screen actually mounts. That clause needed two mutation rounds of its own before it was real:
+
+- The first mutation was inert, because sources render inside a `sources.length > 0` guard and injecting into the map could never fire on an empty list. A mutation that cannot fire proves nothing.
+- The first version of the new clause was itself vacuous, waiting on a `run-screen` testid that does not exist anywhere in this codebase, so the wait resolved instantly and the absences ran against the run screen. It now waits on `answer-meta`, an element only the answer screen renders, and goes red under the corrected mutation.
+
+Two transferable lessons, both for `LEARNINGS.md`:
+
+- An assertion can be hollowed out without being edited, by changing the state the code reaches before evaluating it. Reviewing a test file's diff cannot detect this; every line looks preserved, because every line is. Only running a mutation can. This repository already counts six assertions that could not fail; this is the first one that became unable to fail while nobody touched it.
+- A mutation that does not fire is not evidence of a passing gate, and it reads exactly like one. Before crediting a green result under mutation, confirm the mutation reached the code path at all.

@@ -28,6 +28,20 @@ export interface AccountMenuProps {
   onSignOut?: () => void;
   /** Navigate to a screen the menu links to. */
   onNavigate?: (screen: "integrations" | "docs") => void;
+  /**
+   * The account's real daily search limit, in words, e.g. "up to 100
+   * searches a day" (T-4.10-09, closing F-4.9-A-16).
+   *
+   * Built by `lib/guestSession.ts`'s `dailyLimitPhrase` from
+   * `GET /v1/allowance`, the SAME function `HistoryRail`'s footer line
+   * uses, so the two surfaces can never disagree with each other. `App.tsx`
+   * owns fetching the allowance and computing this string; this component
+   * only renders what it is given. Undefined (before the fetch resolves,
+   * or if it fails) falls back to a plain "Signed in" with no claim about
+   * a number at all, which is the honest option when the real figure is
+   * not yet known.
+   */
+  limitCopy?: string;
 }
 
 /** The prototype's `.av`: the account's first two characters, uppercased. */
@@ -35,7 +49,7 @@ function initialsOf(email: string): string {
   return email.slice(0, 2).toUpperCase();
 }
 
-export function AccountMenu({ email, onSignOut, onNavigate }: AccountMenuProps) {
+export function AccountMenu({ email, onSignOut, onNavigate, limitCopy }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -170,7 +184,15 @@ export function AccountMenu({ email, onSignOut, onNavigate }: AccountMenuProps) 
               {email}
             </Typography>
             <Typography component="span" sx={{ fontSize: 12, color: designTokens.inkMuted }}>
-              Signed in · unlimited searches
+              {/*
+                F-4.9-A-16, closed by T-4.10-09. This read "Signed in ·
+                unlimited searches" against a real, shipped, enforced
+                100/day cap (`harness/cost_control.py`). `limitCopy` is
+                built from `GET /v1/allowance`, never a second hardcoded
+                figure; "Signed in" alone (no number claim at all) is the
+                fallback while that fetch is in flight or if it fails.
+              */}
+              Signed in{limitCopy ? ` · ${limitCopy}` : ""}
             </Typography>
           </Box>
 

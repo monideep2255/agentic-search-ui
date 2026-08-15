@@ -71,19 +71,28 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
-vi.mock("./lib/api", () => ({
-  login: vi.fn(),
-  signup: vi.fn(),
-  createRun: vi.fn(),
-  openEventStream: vi.fn(),
-  stopRun: vi.fn(),
-}));
+vi.mock("./lib/api", async () => {
+  const actual = await vi.importActual<typeof import("./lib/api")>("./lib/api");
+  return {
+    ApiError: actual.ApiError,
+    login: vi.fn(),
+    signup: vi.fn(),
+    createRun: vi.fn(),
+    openEventStream: vi.fn(),
+    stopRun: vi.fn(),
+    // T-4.10-08/09: sign-in now also fetches the caller's real allowance,
+    // which the rail's footer line (below) is built from.
+    mintGuest: vi.fn(),
+    getAllowance: vi.fn(),
+  };
+});
 
-import { createRun, login, openEventStream } from "./lib/api";
+import { createRun, getAllowance, login, openEventStream } from "./lib/api";
 
 const loginMock = vi.mocked(login);
 const createRunMock = vi.mocked(createRun);
 const openEventStreamMock = vi.mocked(openEventStream);
+const getAllowanceMock = vi.mocked(getAllowance);
 
 const mainArea = () => within(screen.getByRole("main"));
 const navArea = () => within(screen.getByRole("navigation", { name: /main/i }));
@@ -135,6 +144,7 @@ describe("F-4.8-P-03: the stored-searches rail collapses", () => {
     loginMock.mockReset();
     createRunMock.mockReset();
     openEventStreamMock.mockReset();
+    getAllowanceMock.mockReset();
     loginMock.mockResolvedValue({
       access_token: "test-token",
       refresh_token: "test-refresh",
@@ -142,6 +152,10 @@ describe("F-4.8-P-03: the stored-searches rail collapses", () => {
     });
     createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
     openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    // Matches this repo's real PER_USER_DAILY_QUERY_CAP default (100/day,
+    // `harness/cost_control.py`), which is what T-4.10-09's clause below
+    // asserts the rail footer now states instead of the old "unlimited".
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
   });
 
   it("puts the toggle inside the app bar, not merely somewhere on the page", async () => {
@@ -426,17 +440,30 @@ describe("F-4.8-P-03: the stored-searches rail collapses", () => {
     );
   });
 
-  it("names the signed-in account in the rail's footer", async () => {
+  it("names the signed-in account in the rail's footer, with the real search limit", async () => {
+    // The prototype's `.rfoot` is `esc(st.email) + '<br>Unlimited searches'`.
+    // The email is real data (what the user typed into the gate that just
+    // authenticated them), which this clause still asserts unchanged.
+    //
+    // UPDATED, build phase 4.10 (T-4.10-09, closing F-4.9-A-16). "Unlimited
+    // searches" was never true: a 100/day cap is shipped and enforced
+    // (`harness/cost_control.py`). The guarantee this line protects, that
+    // the rail's footer names the account's real search standing, SURVIVES
+    // this change; only the specific (false) string it checked for does
+    // not. The real figure now comes from `GET /v1/allowance`
+    // (`getAllowanceMock`, set in `beforeEach`), fetched asynchronously at
+    // sign-in, so this assertion waits for it rather than reading it
+    // synchronously the way the old hardcoded string could.
     const user = userEvent.setup();
     render(<App />);
     await signInWithOneSearch(user);
 
-    // The prototype's `.rfoot` is `esc(st.email) + '<br>Unlimited searches'`.
-    // The email is what the user typed into the gate that just authenticated
-    // them, so this is real data rather than a stub.
     const rail = screen.getByTestId("history-rail");
     expect(within(rail).getByText("person@example.com")).toBeInTheDocument();
-    expect(within(rail).getByText(/unlimited searches/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(rail).getByText(/up to 100 searches a day/i)).toBeInTheDocument(),
+    );
+    expect(within(rail).queryByText(/unlimited searches/i)).not.toBeInTheDocument();
   });
 
   it("keeps the collapsed choice across a new search", async () => {

@@ -300,6 +300,15 @@ describe("clause 3b: the assembled app is still connected to the agent", () => {
       token_type: "bearer",
     } as never);
     vi.spyOn(api, "openEventStream").mockReturnValue(new Promise(() => {}) as never);
+    // T-4.10-08/09: signing in now fetches the caller's real allowance
+    // (`App.tsx`'s `onAuthenticated`) so the account menu can state the
+    // real daily limit instead of the old hardcoded "unlimited searches"
+    // (F-4.9-A-16). Mocked here so this clause exercises `api.login` and
+    // `api.createRun` without also making a real, unmocked network call to
+    // `GET /v1/allowance` the moment sign-in succeeds.
+    vi.spyOn(api, "getAllowance").mockResolvedValue({
+      kind: "user", used: 0, total: 100, counted: false,
+    } as never);
 
     const user = userEvent.setup();
     const { default: App } = await loadApp();
@@ -623,12 +632,33 @@ describe("clause 3e: no answer content without a run behind it", () => {
     // F-4.8-J-01, the phase's worst defect and the assertion whose absence let
     // it ship. The anonymous path rendered a canned cited answer for ANY
     // question, bypassing the phase 3.0 guardrail entirely.
+    //
+    // UPDATED, build phase 4.10 (T-4.10-08). The guarantee this clause exists
+    // to protect is UNCHANGED: no claim, source, citation or trust signal may
+    // ever appear without a real run behind it. What changed is the mechanism
+    // an anonymous visitor now reaches a run through. Before this phase there
+    // was no backend route for a caller with no account, so the only honest
+    // option was to refuse the ask outright and `createRun` was never called.
+    // Now `POST /auth/guest` and a guest bearer token on `/v1/query` are real,
+    // so an anonymous ask legitimately DOES reach `createRun` (with a guest
+    // token, never an access token). The old
+    // `expect(createRunSpy).not.toHaveBeenCalled()` line encoded "anonymous
+    // callers never reach the backend," which this phase deliberately makes
+    // false; the surrounding "no fabricated content" assertions, which this
+    // phase does NOT change, are kept exactly as they were.
     const api = await import("./lib/api");
     // Cleared: clause 3b spies on the same module and signs in, so its call
     // history would otherwise leak into this assertion. Test isolation, not a
     // weakened check: the assertion below still fails if THIS render calls it.
     const createRunSpy = vi.spyOn(api, "createRun");
     createRunSpy.mockClear();
+    createRunSpy.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" } as never);
+    vi.spyOn(api, "mintGuest").mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "g1", used: 0, total: 5,
+    } as never);
+    vi.spyOn(api, "getAllowance").mockResolvedValue({
+      kind: "guest", used: 1, total: 5, counted: true,
+    } as never);
     const user = userEvent.setup();
     const { default: App } = await loadApp();
     const { container } = render(<App />);
@@ -640,11 +670,21 @@ describe("clause 3e: no answer content without a run behind it", () => {
     );
     await user.click(within(main).getByRole("button", { name: /^search the knowledge graph$/i }));
 
+    // The run is real (createRun WAS called, with a guest token, not the
+    // absent access token), and it never lands: `openEventStream` is still
+    // the never-resolving promise clause 3b's spy left in place, so nothing
+    // this run's stream would have produced is on screen either. Both
+    // conditions together are what make the absence below meaningful rather
+    // than vacuous.
+    await waitFor(() => expect(createRunSpy).toHaveBeenCalledTimes(1));
+    expect(createRunSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "What is the capital of the USA?" }),
+      "guest-token-1",
+    );
     expect(screen.queryByTestId("source-1")).not.toBeInTheDocument();
     expect(screen.queryByTestId(/^citation-/)).not.toBeInTheDocument();
     expect(screen.queryByTestId(/^trust-/)).not.toBeInTheDocument();
     expect(container.textContent ?? "").not.toMatch(/ncbi\.nlm\.nih\.gov/i);
-    expect(createRunSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -666,8 +706,16 @@ describe("clause 4: stub registry", () => {
       expect(surfaces).toContain(expected);
     }
     for (const entry of STUB_REGISTRY as { surface: string; wiredBy: string }[]) {
+      // WIDENED, build phase 4.10. The single-digit-after-the-dot pattern
+      // this used to be (`/^\d\.\d$/`) rejected a perfectly valid phase
+      // number the moment this repo's own numbering passed 4.9: "4.10" is
+      // two digits after the dot, not one. This is the same shape of bug
+      // as a two-digit year field, caused by the checked value outliving
+      // an assumption baked into the check rather than into the data. The
+      // guarantee itself (an "N.M" phase number, not an empty string or
+      // free text) is unchanged; only the digit-count assumption is fixed.
       expect(entry.wiredBy, `stub "${entry.surface}" has no owning phase`).toMatch(
-        /^\d\.\d$/,
+        /^\d+\.\d+$/,
       );
     }
   });

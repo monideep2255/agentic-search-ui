@@ -30,19 +30,29 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
-vi.mock("./lib/api", () => ({
-  login: vi.fn(),
-  signup: vi.fn(),
-  createRun: vi.fn(),
-  openEventStream: vi.fn(),
-  stopRun: vi.fn(),
-}));
+vi.mock("./lib/api", async () => {
+  const actual = await vi.importActual<typeof import("./lib/api")>("./lib/api");
+  return {
+    ApiError: actual.ApiError,
+    login: vi.fn(),
+    signup: vi.fn(),
+    createRun: vi.fn(),
+    openEventStream: vi.fn(),
+    stopRun: vi.fn(),
+    // T-4.10-08/09. Both real for build phase 4.10: an anonymous ask mints
+    // a guest token, and sign-in fetches the caller's real allowance.
+    mintGuest: vi.fn(),
+    getAllowance: vi.fn(),
+  };
+});
 
-import { createRun, login, openEventStream } from "./lib/api";
+import { createRun, getAllowance, login, mintGuest, openEventStream } from "./lib/api";
 
 const loginMock = vi.mocked(login);
 const createRunMock = vi.mocked(createRun);
 const openEventStreamMock = vi.mocked(openEventStream);
+const mintGuestMock = vi.mocked(mintGuest);
+const getAllowanceMock = vi.mocked(getAllowance);
 
 const mainArea = () => within(screen.getByRole("main"));
 const navArea = () => within(screen.getByRole("navigation", { name: /main/i }));
@@ -69,6 +79,8 @@ describe("App", () => {
     loginMock.mockReset();
     createRunMock.mockReset();
     openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
     loginMock.mockResolvedValue({
       access_token: "test-token",
       refresh_token: "test-refresh",
@@ -76,6 +88,15 @@ describe("App", () => {
     });
     createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
     openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    // T-4.10-08/09: an anonymous ask mints a guest identity, and sign-in
+    // fetches the caller's real allowance. Defaulted here so every test
+    // that merely signs in or asks does not also have to think about
+    // these two calls; a test that cares about the exact shape overrides
+    // with its own `mockResolvedValueOnce`.
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
   });
 
   it("shows the landing screen to a visitor with no account", () => {
@@ -127,28 +148,44 @@ describe("App", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows an anonymous visitor the sign-in wall, never an answer", async () => {
-    // F-4.8-J-01, the phase's worst defect. An anonymous ask used to render a
-    // canned BRCA1 answer with a real NCBI source URL and the pill "Grounded,
-    // every claim cited", WHATEVER was asked. A judge reproduced it with "What
-    // is the capital of the USA?".
+  it("gives an anonymous visitor a real run, not the wall, on an ordinary ask", async () => {
+    // INVERTED, build phase 4.10 (T-4.10-08). Before this phase, no backend
+    // route existed for a caller with no account, so refusing outright with
+    // the wall was the only honest option, and this test asserted exactly
+    // that. `POST /auth/guest` and a guest bearer token on `/v1/query` are
+    // now real, so an anonymous ask reaches a genuine run instead: the wall
+    // is no longer shown merely because the visitor has no account (design
+    // decision 5, `tracker/phase_4.10.md`), only when the SERVER refuses
+    // with `guest_allowance_exhausted` (covered separately).
     const user = userEvent.setup();
     render(<App />);
 
     await ask(user, "What is the capital of the USA?");
 
-    expect(screen.getByTestId("sign-in-wall")).toBeInTheDocument();
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+    expect(createRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "What is the capital of the USA?" }),
+      "guest-token-1",
+    );
+    expect(screen.queryByTestId("sign-in-wall")).not.toBeInTheDocument();
   });
 
   it("never shows an anonymous visitor a claim, a source or a trust signal", async () => {
-    // The COUNTERFACTUAL for J-01, and the assertion whose absence let it ship.
-    // Asserting the wall appears is not enough: what matters is that no
-    // fabricated answer content is reachable without a run behind it.
+    // The COUNTERFACTUAL for F-4.8-J-01, and the assertion whose absence let
+    // it ship. Asserting the wall appears (the OLD mechanism) was never the
+    // point; what matters, unchanged by build phase 4.10, is that no
+    // fabricated answer content is EVER reachable without a real run's own
+    // event stream behind it. `openEventStreamMock` is a promise that never
+    // resolves (see `beforeEach`), so this run never lands and nothing it
+    // would have produced can be on screen; `createRun` now legitimately
+    // IS called, with the visitor's guest token, which is the new honest
+    // mechanism this phase built, not a regression of this guarantee.
     const user = userEvent.setup();
     const { container } = render(<App />);
 
     await ask(user, "What is the capital of the USA?");
 
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
     expect(screen.queryByTestId("source-1")).not.toBeInTheDocument();
     expect(screen.queryByTestId(/^spine-segment-/)).not.toBeInTheDocument();
     expect(screen.queryByTestId(/^citation-/)).not.toBeInTheDocument();
@@ -156,7 +193,6 @@ describe("App", () => {
     // No NCBI record URL, and no grounding claim, may appear without a run.
     expect(container.textContent ?? "").not.toMatch(/ncbi\.nlm\.nih\.gov/i);
     expect(container.textContent ?? "").not.toMatch(/grounded/i);
-    expect(createRunMock).not.toHaveBeenCalled();
   });
 
   it("does not leave the landing when the question is empty", async () => {
@@ -204,15 +240,25 @@ describe("App", () => {
     );
   });
 
-  it("does not call createRun for an anonymous visitor, who has no token", async () => {
-    // The honest consequence of an open landing: an anonymous question cannot
-    // reach an authenticated endpoint. Build phase 6.0 owns the anonymous path
-    // that will make the approved five-search allowance real.
+  it("calls createRun for an anonymous visitor, using its minted guest token", async () => {
+    // INVERTED, build phase 4.10 (T-4.10-08): the mirror image of "passes
+    // the acquired token to createRun once a question is submitted" above,
+    // for the anonymous path this phase adds. Before this phase an
+    // anonymous question could not reach an authenticated endpoint at all,
+    // because there was no token of any kind to send; the honest option was
+    // to refuse. Now there is a real anonymous bearer token (a guest token,
+    // minted lazily on this first ask), and it is that token, never the
+    // absent access token, that reaches `createRun`.
     const user = userEvent.setup();
     render(<App />);
 
     await ask(user, "Which diseases are associated with BRCA1?");
 
-    expect(createRunMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(mintGuestMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+    expect(createRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Which diseases are associated with BRCA1?" }),
+      "guest-token-1",
+    );
   });
 });

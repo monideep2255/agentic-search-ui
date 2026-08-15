@@ -1,5 +1,6 @@
 /**
- * The guest allowance, build phase 4.8, ticket T-4.8-08.
+ * The guest allowance, build phase 4.8, ticket T-4.8-08. Wired to a real,
+ * server-counted allowance in build phase 4.10, ticket T-4.10-08.
  *
  * A visitor gets a free allowance before sign-in is required. The data model
  * already supports the flow rather than this being invented at the UI layer:
@@ -11,8 +12,12 @@
  * down, and the second framing makes a research tool feel metered before the
  * user has any reason to trust it.
  *
- * STUB: the count is held in memory and resets on reload. Wired by build phase
- * 6.0, which owns rate limiting. See `stubs/registry.ts`.
+ * `used`/`total` are read from `GET /v1/allowance` (or a fresh
+ * `POST /auth/guest` response), by `App.tsx`, never counted or guessed
+ * client-side: a component-local counter here would be exactly the
+ * fabrication class build phase 4.8's judge round filed against demo answer
+ * content, one layer up. See `stubs/registry.ts`'s `guest-allowance` entry
+ * for what is real now and what still is not (durable cross-reload history).
  */
 
 import { Box, Button, Typography } from "@mui/material";
@@ -88,7 +93,19 @@ export function SignInWall({ onSignIn }: SignInWallProps) {
           Sign in to keep searching
         </Typography>
         <Typography sx={{ color: designTokens.inkMuted, mb: 2.5, fontSize: 14.5 }}>
-          You have used your free searches. Your history moves with you when you sign in.
+          {/*
+            F-4.10-01. This read "Your history moves with you when you sign
+            in," which overstated what actually happens: nothing persists a
+            run across a reload today (the run registry is in-memory and
+            evicts, and the browser's history list is React state), so
+            there is no cross-reload history to carry anywhere. What DOES
+            move, and what design decision 4 (`tracker/phase_4.10.md`)
+            actually built: the searches from THIS visit re-point to the
+            new account the moment you sign in. Durable history across a
+            reload is build phase 4.6's, tracked in `stubs/registry.ts`.
+          */}
+          You have used your free searches. The ones from this visit move with
+          you when you sign in.
         </Typography>
         <Button variant="contained" onClick={onSignIn} sx={{ px: 2.5, py: 1.1 }}>
           Create account or sign in

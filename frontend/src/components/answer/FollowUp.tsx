@@ -157,6 +157,17 @@ export interface HistoryRailProps {
   onNewSearch?: () => void;
   /** The signed-in account, named in the prototype's `.rfoot`. */
   accountEmail?: string;
+  /**
+   * The account's real daily search limit, in words (T-4.10-09, closing
+   * F-4.9-A-16: this line used to read a hardcoded "Unlimited searches"
+   * against a real, enforced 100/day cap). Built by
+   * `lib/guestSession.ts`'s `dailyLimitPhrase`, the SAME function
+   * `AccountMenu`'s menu line uses, so the two surfaces cannot disagree.
+   * `App.tsx` owns the fetch and the capitalization; this component only
+   * renders what it is given, falling back to a plain, honest "no number
+   * claimed" line while the fetch is in flight or if it fails.
+   */
+  searchLimitLabel?: string;
 }
 
 /** The prototype's `.rmin` chevron, pointing left, toward the collapse. */
@@ -300,6 +311,7 @@ export function HistoryRail({
   onCollapse,
   onNewSearch,
   accountEmail,
+  searchLimitLabel,
 }: HistoryRailProps) {
   return (
     <Box
@@ -509,7 +521,7 @@ export function HistoryRail({
             {accountEmail}
           </Box>
           <Box component="span" sx={{ display: "block" }}>
-            Unlimited searches
+            {searchLimitLabel ?? "Search limit applies"}
           </Box>
         </Box>
       ) : null}
