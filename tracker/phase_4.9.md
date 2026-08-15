@@ -91,8 +91,8 @@ The three rounds filed 47 findings. The criticals, all five majors from the re-r
 |---------|-------------|-------|
 | F-4.9-A-08 stopped run gives no terminal signal, tool chip says "running" for ever | The backend emits a purpose-built `cancelled` event that the client aborts before it can arrive. Fixing it means changing the stop path, not the answer screen | A phase that owns the run lifecycle |
 | F-4.9-A-09 the off-host citation warning is now two disclosures deep | Real, and caused by this phase's collapse. Whether a security warning may sit behind a disclosure at all is a product call, not a styling one | Product owner decision |
-| F-4.9-A-16 "unlimited searches" is false against a shipped 100/day cap | A copy change that asserts a policy. Build phase 6.0g owns the allowance and its wording | 6.0g |
-| F-4.9-A-07 failed tool calls counted as work | Needs a decision on whether the strip counts attempts or successes, which interacts with F-4.9-R-02's wording | 4.9 follow-up or 6.0g |
+| F-4.9-A-16 "unlimited searches" is false against a shipped 100/day cap | A copy change that asserts a policy. Build phase 4.10 owns the allowance and its wording | 4.10 |
+| F-4.9-A-07 failed tool calls counted as work | Needs a decision on whether the strip counts attempts or successes, which interacts with F-4.9-R-02's wording | 4.9 follow-up or 4.10 |
 | F-4.9-A-10 to A-15, A-17 to A-19 | Moderate and minor: truncation invisible, `total_tool_calls` ignored, duplicate-index citation dropped, refusal copy duplicated | A follow-up pass on the answer screen |
 | F-4.9-J-04 `L3 · trials` for a ClinicalTrials.gov source | Derivable today from the citation's own tool, and a real prototype gap this phase did not declare | 4.9 follow-up |
 | F-4.9-J-05, J-06 reasoning is a heading not a `<details>`, Show work drops the tool chips | Prototype gaps, same class as the nine this phase closed | 4.9 follow-up |
@@ -124,10 +124,10 @@ Stated so each omission is arguable rather than discovered, per `goal-contracts`
 
 | Not built | Why |
 |-----------|-----|
-| The source card's `SNAPSHOT` date | `CitationPayload` has no such field; the backend never sends it. Build phase 6.0g, which is already touching the backend, adds it. Product-owner decision, 2026-08-14: build the card now without it rather than hold the card |
+| The source card's `SNAPSHOT` date | `CitationPayload` has no such field; the backend never sends it. Build phase 4.10, which is already touching the backend, adds it. Product-owner decision, 2026-08-14: build the card now without it rather than hold the card |
 | The entity name in the source header (`NCBI Gene 672 · BRCA1`) | Same reason. `source` and `source_id` exist; the entity's own name does not |
 | The risk REASON on a high-risk pill (`High-risk claim · gene to disease`) | `risk_tier` carries the tier only. The layer-count half of F-4.8-D-12 IS in scope, since it is derivable from the run's own tool calls |
-| The guest allowance | Build phase 6.0g. It is a backend dependency, not a fidelity gap |
+| The guest allowance | Build phase 4.10. It is a backend dependency, not a fidelity gap |
 | Geometry and visual position | The gate reads DOM order, text and state. `order: -1` moves an element across the page while every DOM-order assertion stays green, measured 2026-08-14. Geometry belongs in `e2e/`, and this phase should add it there before it closes |
 
 ## How these were found
