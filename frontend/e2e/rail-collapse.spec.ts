@@ -61,6 +61,24 @@ async function signInAndAsk(page: Page): Promise<void> {
     .fill("Which diseases are associated with BRCA1?");
   await main.getByRole("button", { name: /^search the knowledge graph$/i }).click();
   await expect(page.getByTestId("history-rail")).toBeVisible({ timeout: 30_000 });
+
+  /*
+   * WAIT FOR THE RUN TO LAND before returning (F-4.9-J-03).
+   *
+   * Every clause in this file measures geometry, and this helper used to
+   * return as soon as the rail appeared, which is while the run is still
+   * streaming. Build phase 4.9 added the run screen's reasoning log, so the
+   * layout now shifts UNDER the measurement: a judge measured the content's
+   * left edge moving 111px and the shell growing from 566 to 577px mid-run.
+   *
+   * The suite was 29 of 29 twice on `develop` and 28 of 29 in two of three
+   * runs on this branch, a different geometry clause each time. The lead
+   * reported that as worker contention and was wrong; this is the mechanism.
+   *
+   * `answer-meta` exists only once the run has terminated, so waiting on it
+   * means every measurement below is taken against a settled page.
+   */
+  await expect(page.getByTestId("answer-meta")).toBeVisible({ timeout: 30_000 });
 }
 
 /** The box of the screen's own content, anchored on its heading's glyphs. */
@@ -181,10 +199,14 @@ test.describe("the stored-searches rail collapses", () => {
   test("carries each search's own tool, layer and source counts", async ({ page }) => {
     await signInAndAsk(page);
 
-    // Wait for the run to land, which is when the counts exist at all.
-    await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
+    /*
+     * Wait for the run to LAND, which is when the counts exist at all.
+     *
+     * Waits on the answer screen's status strip, not on "New search": the run
+     * screen carries that button too, so the old wait could pass mid-run and
+     * then read a rail item that had no counts on it yet.
+     */
+    await expect(page.getByTestId("answer-meta")).toBeVisible({ timeout: 30_000 });
 
     /*
      * `.rm` in the prototype, `"3 tools · 3 layers · 3 sources"`.
@@ -195,13 +217,28 @@ test.describe("the stored-searches rail collapses", () => {
      * It is deliberately indifferent to what the counts actually are, since the
      * mock backend's run legitimately produces zeroes.
      */
-    const answerMeta = (await page.getByTestId("answer-meta").textContent())!.trim();
-    expect(answerMeta).toMatch(/tools? · .* layers? · .* sources?/);
-
+    /*
+     * INVERTED in build phase 4.9, and deliberately not relaxed.
+     *
+     * The answer screen's strip now leads with the outcome and the elapsed
+     * time before the counts (F-4.8-D-05), so it is a SUPERSET of the rail's
+     * label rather than equal to it. The guarantee is unchanged, and still
+     * cannot pass against a hardcoded label: the rail's counts must appear
+     * verbatim inside the answer's own strip, so the rail is still reading the
+     * run it belongs to.
+     */
     const railItem = page.getByTestId("history-rail").getByRole("button", {
       name: /diseases are associated with BRCA1/i,
     });
-    await expect(railItem).toContainText(answerMeta);
+    const railText = (await railItem.textContent())!.trim();
+    // The wording changed in the F-4.9-R-02 fix, from three bare nouns to
+    // "N tools · N sources from N layers", so each figure states what it
+    // counts. The GUARANTEE is untouched: the rail's label must still appear
+    // verbatim inside the answer's own strip.
+    const counts = railText.match(/\d+ tools? · \d+ sources?(?: from \d+ layers?)?/);
+    expect(counts, `the rail item carried no counts: ${railText}`).not.toBeNull();
+
+    await expect(page.getByTestId("answer-meta")).toContainText(counts![0]);
   });
 
   test("fills the landing beside a full-height rail", async ({ page }) => {

@@ -41,6 +41,25 @@ export function FollowUp({ hints = [], onAsk }: FollowUpProps) {
       data-testid="follow-up"
       sx={{ mt: 3, pt: 2.25, borderTop: `1px solid ${designTokens.line}` }}
     >
+      {/*
+        The prototype's `<label for="fubox">Continue this conversation</label>`
+        (F-4.8-D-11). The form had no heading at all, so the field read as an
+        afterthought under the answer rather than the invitation it is.
+      */}
+      <Typography
+        component="p"
+        sx={{
+          fontSize: 10.5,
+          letterSpacing: ".12em",
+          textTransform: "uppercase",
+          fontWeight: 700,
+          color: designTokens.inkFaint,
+          m: 0,
+          mb: 1,
+        }}
+      >
+        Continue this conversation
+      </Typography>
       <Box
         component="form"
         onSubmit={submit}

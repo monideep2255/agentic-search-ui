@@ -190,8 +190,11 @@ test.describe("accessibility", () => {
     await main.getByRole("textbox", { name: /question/i }).fill("Which diseases are associated with BRCA1?");
     await main.getByRole("button", { name: /^search the knowledge graph$/i }).click();
 
-    // Mid-run.
-    await expect(page.getByText("Guard")).toBeVisible();
+    // Mid-run. Anchored on the STEPPER's own hook, not on the text "Guard":
+    // build phase 4.9 added the reasoning log, which names each step too, so a
+    // bare text match now resolves to two elements and trips strict mode
+    // intermittently, depending on whether the log has rendered yet.
+    await expect(page.getByTestId("step-Guard")).toBeVisible();
     expect((await analyse(page)).violations).toEqual([]);
 
     // Landed. Waits on the "New search" action rather than a source card: this

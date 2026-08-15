@@ -93,7 +93,7 @@ Twelve build phases are done, all twelve merged into `develop` (renamed from `ma
 Current counts, stated once here:
 
 - Python tests: 2565 (2445 passing, 113 skipped, 1 xfailed, 6 failed; the 6 are `test_citation_trust_full_premise.py`'s live-network-opt-in-gated cases, confirmed not a regression, identical set carried since build phase 4.0's close)
-- Frontend tests: 134
+- Frontend tests: 155
 - Playwright end-to-end tests: 26 declarations, 29 executed cases, ALL PASSING as of 2026-08-13, the first green run since build phase 3.0. The previous note here said these were "unverifiable, a webServer-orchestration timeout unrelated to any file either phase touched, confirmed by starting the dev server directly, HTTP 200". That diagnosis was wrong and is corrected rather than deleted, because the way it was wrong is the lesson: the check started the server by hand and queried `localhost`, which resolves to `::1` on macOS, while Playwright probes `127.0.0.1`. Vite bound IPv6-only, so the evidence gathered proved a different address than the one failing. Behind that timeout sat a second, older breakage: the e2e mock backend's Guard-tier response had not matched the classifier's schema since build phase 3.0, so the suite would have failed even had it started. Both are fixed
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
@@ -107,7 +107,7 @@ Current counts, stated once here:
 - Premise gate, build phase 4.0's own gate (a normal test file, not one of the seven live tool gates above): 26 of 26
 - Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
 - Decisions logged: 305
-- Learnings entries: 76, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
+- Learnings entries: 77, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below). This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
 
@@ -142,6 +142,18 @@ Why this needs a separate session rather than a per-dispatch model argument: on 
 The capability bands and the alternate-backend column are in `docs/build/Build_workflow_cadence.md` under "Provider mapping". The three commands above are local wrappers; the model identifiers, prices and credential location behind them are deliberately not in any tracked file and live in a local, uncommitted note under `docs/build/multi-model-harness/`. If the wrappers are not on this machine, that folder will not be either, and plain `claude` is unaffected.
 
 ## The next session starts here
+
+RESUME BUILD PHASE 4.9, on `phase/4.9-answer-screen-fidelity`, which is PAUSED AT ITS PREMISE GATE.
+
+The gate is written and watched failing, 12 clauses all red, and NOT ONE LINE of build code exists yet. That is stage 5 of the cadence and the cleanest place in it to stop. `npx vitest run` is RED on that branch by design; a green run there would mean the gate cannot fail.
+
+Read `tracker/phase_4.9.md` first. It carries the verified state, the ten tickets in dependency order, the two prototype fields that are deliberately NOT built because the backend does not send them, and one hazard worth knowing before touching anything: this repository's mutation scripts revert with `git checkout -- frontend/src`, which destroys uncommitted work. Commit before running one.
+
+Start at T-4.9-01. It is the only ticket that touches `useRunView`, and three separate clauses cannot pass without it.
+
+After 4.9: build phase 6.0g, the anonymous run path and the server-side guest allowance. Product-owner decision, 2026-08-14. It is the only remaining item that cannot be done as frontend work, and it closes F-4.8-P-01 and F-4.8-P-02 plus the two fields 4.9 leaves out.
+
+### How build phase 4.9 came to exist
 
 Agreed with the product owner on 2026-08-13, ahead of build phase 4.2. The bar is the approved design system in `docs/build/design/design-system/`: reach it, then modify from it. Full detail on each item, including how it happened: `tracker/phase_4.8.md`, "Product owner review".
 

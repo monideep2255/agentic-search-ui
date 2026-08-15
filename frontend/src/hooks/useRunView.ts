@@ -60,7 +60,7 @@ const SYSTEM_NOTE_PREFIXES = [
 
 const isSystemNote = (text: string) =>
   SYSTEM_NOTE_PREFIXES.some((prefix) => text.trimStart().startsWith(prefix));
-import type { StepName, ToolCall } from "../components/screens/RunScreen";
+import type { ReasoningStep, StepName, ToolCall } from "../components/screens/RunScreen";
 import type { Claim, Source, TrustSignal } from "../components/screens/AnswerScreen";
 
 /** The wire's layer strings, mapped to the design system's 1, 2, 3. */
@@ -92,6 +92,34 @@ export interface RunView {
   sources: Source[];
   trust: TrustSignal[];
   meta: string;
+  /**
+   * The run's own account of what it did, oldest first (F-4.8-D-10).
+   *
+   * Available while the run is live, not only once it lands, because the
+   * prototype shows it on the run screen as well as behind the answer
+   * screen's `Show work`.
+   */
+  steps: ReasoningStep[];
+  /**
+   * The terminal outcome word, from the run's own `done` event (F-4.8-D-05).
+   *
+   * The prototype's status strip leads with it: "Answered". Null until a run
+   * terminates, and null on a fatal error, which is not an outcome the strip
+   * should dress up as one.
+   */
+  outcome: string | null;
+  /** Wall-clock the run reported, in ms, from `done.elapsed_ms`. */
+  elapsedMs: number | null;
+  /** How the outcome word should read: a success, a caution, or a refusal. */
+  outcomeTone: "good" | "warn" | "risk" | null;
+  /**
+   * How many DISTINCT layers the run actually touched (F-4.8-D-12).
+   *
+   * Exposed as a number rather than left inside `meta`'s prose so the trust
+   * pill can state it. "Cross-checked across layers" is true of any run that
+   * touched more than one and therefore says nothing.
+   */
+  layerCount: number;
   /** True once a terminal event has arrived, so the answer screen can show. */
   landed: boolean;
   /** A refusal or fatal error message, if the run produced one. */
@@ -140,6 +168,11 @@ export const EMPTY_RUN_VIEW: RunView = {
   sources: [],
   trust: [],
   meta: "",
+  steps: [],
+  outcome: null,
+  elapsedMs: null,
+  outcomeTone: null,
+  layerCount: 0,
   landed: false,
   failure: null,
   refusal: null,
@@ -350,9 +383,41 @@ export function useRunView(events: AgentEvent[]): RunView {
     // was a property the code did not have. Per `self-eval-loop`, a comment
     // asserting a property needs a test asserting the same property, and clause
     // 3d now does.
+    /*
+     * Counted from the SOURCES, not the tool calls (F-4.9-A-05, F-4.9-A-06),
+     * and computed HERE because the trust block below needs it: a pill
+     * claiming agreement must know how many layers there were to agree.
+     */
+    const layerCountFromSources = new Set(sources.map((source) => source.layer)).size;
+
     const trustEvents = events.filter((event) => event.type === "trust_signal");
     const trust: TrustSignal[] = [];
-    if (trustEvents.length > 0) {
+    /*
+     * F-4.9-A-01 and F-4.9-A-02, both critical, both about what SILENCE means.
+     *
+     * A-01: a run that died fatally kept whatever positive verdict it had
+     * emitted before dying, so "Grounded · every claim cited" sat over a
+     * crashed, partial answer. This is build phase 4.1's closed critical, whose
+     * fix was to floor the top-level trust signal on any fatal or cancelled
+     * run, reintroduced here at the UI layer. The verdict is floored the same
+     * way, and the positive signals are dropped rather than shown alongside.
+     *
+     * A-02: a run that emitted NO trust signal at all rendered no pill at all,
+     * so a dropped or never-emitted event turned the guarded state into the
+     * unguarded one silently. In a cite-or-refuse system the absence of a
+     * grounding verdict must read as "not verified", never as no comment.
+     */
+    if (fatalError !== undefined) {
+      trust.push({
+        kind: "risk",
+        label: "Not verified · the run did not finish",
+      });
+    } else if (trustEvents.length === 0 && landed) {
+      trust.push({
+        kind: "risk",
+        label: "Not verified · no grounding check was recorded",
+      });
+    } else if (trustEvents.length > 0) {
       // F-4.8-A-19. `indexOf` returns -1 for an unknown tier, which LOST to
       // "low" at 0, so a tier the backend renames or adds would silently
       // disappear rather than show. `risk_tier` is typed as a bare string on
@@ -384,16 +449,163 @@ export function useRunView(events: AgentEvent[]): RunView {
       if (payload.risk_tier && payload.risk_tier !== "low") {
         trust.push({ kind: "risk", label: `${payload.risk_tier} risk claim` });
       }
-      if (payload.triangulated === true) {
-        trust.push({ kind: "plain", label: "Cross-checked across layers" });
+      // R-01: "agreed" needs at least two things to agree. The A-05 fix moved
+      // the nonsense rather than removing it, so "0 layers agreed" was still
+      // reachable, now from a run that queried layers and cited nothing.
+      if (payload.triangulated === true && layerCountFromSources >= 2) {
+        // F-4.8-D-12. This read "Cross-checked across layers", which is true of
+        // any run that touched more than one and therefore tells the reader
+        // nothing. The prototype states the count, so the reader can weigh it.
+        // `layerCount` is computed below from the run's own tool calls; the
+        // pill is pushed after it exists.
+        trust.push({ kind: "plain", label: "__LAYER_COUNT__" });
       }
     }
 
-    const layersUsed = new Set(toolCalls.map((call) => call.layer));
+    /*
+     * The run's own account of itself (F-4.8-D-10, F-4.8-D-05).
+     *
+     * Built from the events in arrival order, so it reads as a log rather than
+     * a summary. Timings are relative to the FIRST event rather than absolute,
+     * which is what the prototype's `.tracelog` shows and the only form that
+     * means anything to a reader.
+     *
+     * The guard's line comes from `CATEGORY_COPY`, never from
+     * `guard.reason`. That field is free-form backend text, and
+     * `GuardrailBanner` and `CapMessage` both refuse to render backend message
+     * fields on purpose: Section 12.6's no-cost-figure rule can only be
+     * guaranteed by never rendering them. F-4.8-A-15 was that leak
+     * reintroduced once already. `think.narrative` and `plan.narrative` are a
+     * different thing, the agent's own narration written to be shown, and the
+     * prototype shows them.
+     */
+    const firstTs = events.length > 0 ? Date.parse(events[0]!.ts) : NaN;
+    const relative = (ts: string): string | null => {
+      const at = Date.parse(ts);
+      if (!Number.isFinite(firstTs) || !Number.isFinite(at)) return null;
+      return `${Math.max(0, (at - firstTs) / 1000).toFixed(1)}s`;
+    };
+    const steps: ReasoningStep[] = [];
+    for (const event of events) {
+      if (event.type === "guard") {
+        /*
+         * CATEGORY_COPY is REFUSAL copy, and its `ok` entry is a fallback
+         * ("This question could not be processed"), not a description of a
+         * guard that passed. The first version of this log used it for every
+         * guard event, so a run that sailed through the guardrail opened its
+         * own reasoning log with a refusal message. Caught by looking at the
+         * rendered screen, not by any assertion.
+         *
+         * A passing guard gets a fixed string. A failing one still gets the
+         * reviewed refusal copy, and `guard.reason` is still never rendered:
+         * it is free-form backend text, and Section 12.6's no-cost-figure rule
+         * can only be guaranteed by never rendering those fields.
+         */
+        steps.push({
+          step: "Guard",
+          at: relative(event.ts),
+          text: event.payload.passed
+            ? "In scope. The question can be grounded in NCBI records."
+            : (CATEGORY_COPY[event.payload.category] ?? CATEGORY_COPY.ok),
+        });
+      } else if (event.type === "think" && event.payload.narrative) {
+        steps.push({ step: "Think", at: relative(event.ts), text: event.payload.narrative });
+      } else if (event.type === "plan" && event.payload.narrative) {
+        steps.push({ step: "Plan", at: relative(event.ts), text: event.payload.narrative });
+      } else if (event.type === "tool_result") {
+        steps.push({
+          step: "Act",
+          at: relative(event.ts),
+          text: `${event.payload.tool} — ${event.payload.result_count} ${
+            event.payload.result_count === 1 ? "result" : "results"
+          }`,
+        });
+      }
+    }
+
+    /*
+     * DERIVED, not read. The wire's `done` payload carries `trust_outcome`,
+     * `elapsed_ms`, `total_cost_usd` and `total_tool_calls`, and no status
+     * word at all, so the prototype's "Answered" has to come from what the run
+     * actually produced.
+     *
+     * A fatal error is deliberately NOT dressed up as an outcome, and a
+     * refusal says so rather than claiming an answer, which is the same
+     * cite-or-refuse honesty the trust pills already carry.
+     */
+    const OUTCOME_BY_TRUST: Record<string, string> = {
+      answer: "Answered",
+      flag: "Answered",
+      ask: "Needs a narrower question",
+      refuse: "Refused",
+    };
+    /*
+     * The AFFORDANCE each outcome deserves (F-4.9-A-03, critical).
+     *
+     * The screen rendered `✓ {outcome}` in the success green for all four, so
+     * a refusal read "✓ Refused" and an ask-back read "✓ Needs a narrower
+     * question", both ticked and both green. A green tick beside "Refused" is
+     * the single most misread pair on this screen: at a glance it says "done,
+     * fine". Carried here rather than in the component so the mapping lives
+     * beside the words it dresses.
+     */
+    const OUTCOME_TONE: Record<string, "good" | "warn" | "risk"> = {
+      answer: "good",
+      flag: "good",
+      ask: "warn",
+      refuse: "risk",
+    };
+    const outcome =
+      fatalError !== undefined
+        ? null
+        : done && done.type === "done"
+          ? (OUTCOME_BY_TRUST[done.payload.trust_outcome] ?? "Answered")
+          : null;
+    const outcomeTone =
+      fatalError !== undefined || !done || done.type !== "done"
+        ? null
+        : (OUTCOME_TONE[done.payload.trust_outcome] ?? "good");
+    const elapsedMs =
+      done && done.type === "done" && typeof done.payload.elapsed_ms === "number"
+        ? done.payload.elapsed_ms
+        : null;
+
+    /*
+     * Counted from the SOURCES, not the tool calls (F-4.9-A-05, F-4.9-A-06).
+     *
+     * Two defects came from counting tool calls. A run whose citations arrive
+     * without `tool_result` events printed "0 layers agreed" beside source
+     * cards from two different layers. And a run that queried three layers but
+     * found citations in two put "3 layers" in the status strip directly above
+     * source cards showing two, contradicting itself on one screen.
+     *
+     * "How many layers agreed" is a claim about the ANSWER's grounding, so it
+     * has to be counted from what actually grounded the answer. The tools a
+     * run ran and found nothing in are still visible in the reasoning log,
+     * which is where a record of work belongs.
+     */
+    const layerCount = layerCountFromSources;
+    // Resolve the triangulation pill now that the count is known (F-4.8-D-12).
+    for (const signal of trust) {
+      if (signal.label === "__LAYER_COUNT__") {
+        signal.label = `${layerCount} ${layerCount === 1 ? "layer" : "layers"} agreed`;
+      }
+    }
+    /*
+     * Each figure NAMES what it counts (F-4.9-R-02).
+     *
+     * The tools figure counts calls the run made; the layers figure counts
+     * layers the answer actually rests on. Those are different bases, and the
+     * old wording put them side by side as bare nouns, so "4 tools · 2 layers"
+     * read as a contradiction of the reasoning log directly above it. Saying
+     * "from N layers" ties the layer count to the sources it describes.
+     */
     const meta = landed
       ? `${toolCalls.length} ${toolCalls.length === 1 ? "tool" : "tools"} · ` +
-        `${layersUsed.size} ${layersUsed.size === 1 ? "layer" : "layers"} · ` +
-        `${sources.length} ${sources.length === 1 ? "source" : "sources"}`
+        `${sources.length} ${sources.length === 1 ? "source" : "sources"}` +
+        (sources.length > 0
+          ? ` from ${layerCount} ${layerCount === 1 ? "layer" : "layers"}`
+          : "")
       : "";
 
     // F-4.8-A-15, two defects in three lines.
@@ -408,9 +620,26 @@ export function useRunView(events: AgentEvent[]): RunView {
     // NON-fatal error set `landed` and navigated the user off a still-streaming
     // run. `consumeEventStream` and `deriveStopEnabled` both treat only fatal
     // errors as terminal; this now agrees with them.
-    const failure = fatalError
-      ? "This run could not be completed. Try asking again, or rephrase the question."
-      : null;
+    /*
+     * A curated string per fatal CLASS (F-4.9-R-03).
+     *
+     * The F-4.9-A-01 fix collapsed every fatal error onto one sentence, so a
+     * run the USER stopped was told "This run could not be completed. Try
+     * asking again", which is both wrong and faintly accusatory. `error_class`
+     * is a four-value Literal on the wire (`contracts/events.py`), a closed
+     * enum carrying no free text, so branching on it keeps the no-backend-text
+     * guarantee that fix was about while restoring the distinction it lost.
+     */
+    const FATAL_COPY: Record<string, string> = {
+      cancelled: "This run was stopped before it finished, so no answer was written.",
+      transient: "This run could not be completed. Try asking again in a moment.",
+      recoverable: "This run could not be completed. Try asking again, or rephrase the question.",
+      unexpected: "This run could not be completed. Try asking again, or rephrase the question.",
+    };
+    const failure =
+      fatalError && fatalError.type === "error"
+        ? (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
+        : null;
 
     const failedGuard = events.find(
       (event) => event.type === "guard" && event.payload.passed === false,
@@ -450,6 +679,11 @@ export function useRunView(events: AgentEvent[]): RunView {
       sources,
       trust,
       meta,
+      steps,
+      outcome,
+      outcomeTone,
+      elapsedMs,
+      layerCount,
       landed,
       failure,
       refusal,

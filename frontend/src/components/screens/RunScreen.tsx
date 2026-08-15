@@ -17,6 +17,7 @@
 import { Box, Button, Typography } from "@mui/material";
 
 import { designTokens, layerColour } from "../../theme";
+import { ReasoningLog } from "./ReasoningLog";
 import { PersonaCaption } from "../shell/PersonaChip";
 
 /** The five nodes of the agent loop, in order. Never a subset. */
@@ -29,6 +30,20 @@ export interface ToolCall {
   layer: 1 | 2 | 3;
 }
 
+/**
+ * One line of the run's own account of what it did (F-4.8-D-10).
+ *
+ * The prototype's `.tracelog`: a timestamp, the step that produced it, and the
+ * step's narrative. It is the same data behind the answer screen's `Show work`
+ * disclosure, so both render this shape rather than deriving it twice.
+ */
+export interface ReasoningStep {
+  step: StepName;
+  /** Seconds since the run's first event, e.g. "1.5s". Null when not derivable. */
+  at: string | null;
+  text: string;
+}
+
 export interface RunScreenProps {
   question: string;
   /** The live step, or null before the run starts or after it lands. */
@@ -39,6 +54,15 @@ export interface RunScreenProps {
    */
   reachedSteps?: StepName[];
   toolCalls?: ToolCall[];
+  /**
+   * The run's own account of what it did so far (F-4.8-D-10).
+   *
+   * The prototype's run screen carries a `REASONING` disclosure listing each
+   * step with its elapsed time. Without it the stepper says WHICH step is
+   * running and nothing says what any of them decided, so the agent's
+   * reasoning was unreachable while the run was live and again afterwards.
+   */
+  steps?: ReasoningStep[];
   personaName?: string;
   onStop?: () => void;
   onNewSearch?: () => void;
@@ -91,6 +115,7 @@ export function RunScreen({
   activeStep = "Guard",
   reachedSteps = [],
   toolCalls = [],
+  steps = [],
   personaName = "Mendel",
   onStop,
   onNewSearch,
@@ -246,6 +271,28 @@ export function RunScreen({
                 </Box>
               );
             })}
+          </Box>
+        ) : null}
+
+        {/* The reasoning log, F-4.8-D-10. Same component as the answer
+            screen's `Show work`, so the two cannot drift apart. */}
+        {steps.length > 0 ? (
+          <Box sx={{ mt: 2.5 }}>
+            <Typography
+              component="p"
+              sx={{
+                fontSize: 10.5,
+                letterSpacing: ".12em",
+                textTransform: "uppercase",
+                fontWeight: 700,
+                color: designTokens.inkFaint,
+                m: 0,
+                mb: 1,
+              }}
+            >
+              Reasoning
+            </Typography>
+            <ReasoningLog steps={steps} />
           </Box>
         ) : null}
       </Box>
