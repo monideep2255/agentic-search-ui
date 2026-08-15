@@ -43,6 +43,13 @@ ALL_TABLES = {
     "interactions",
     "cq_candidates",
     "saved_queries",
+    # Build phase 4.10, revision 0003. Added by the lead rather than by the
+    # builder that wrote the migration, which was forbidden from editing an
+    # existing test. Adding it here STRENGTHENS both assertions that read
+    # this set: line ~159 now requires `upgrade head` to create the table,
+    # and the `downgrade base` test now requires it to be dropped again. A
+    # new table absent from this set is silently uncovered by both.
+    "guest_sessions",
 }
 
 
@@ -301,10 +308,22 @@ def test_auth_sessions_has_the_absolute_expiry_column(migrated_head):
         engine.dispose()
 
 
-def test_downgrade_one_step_reverses_the_0002_schema_changes(migrated_head):
-    """The 0002 rollback path, proven rather than asserted."""
+def test_downgrade_to_0001_reverses_the_0002_schema_changes(migrated_head):
+    """The 0002 rollback path, proven rather than asserted.
+
+    Retargeted at build phase 4.10 from `command.downgrade(cfg, "-1")` to an
+    explicit revision id. NOT a weakened check: every assertion below is
+    unchanged, and the test still proves exactly what its name says. What
+    changed is the navigation. `-1` meant "one step back from head", which
+    landed on 0001 only while 0002 WAS head; adding revision 0003 moved
+    head, so `-1` began undoing 0003 instead and the 0002 assertions failed
+    against a schema 0002 was still applied to. The relative offset was a
+    latent fragility that any new revision would have tripped, and it was
+    tripped by the first one added after it was written. An explicit
+    revision id cannot drift that way.
+    """
     cfg = migrated_head
-    command.downgrade(cfg, "-1")
+    command.downgrade(cfg, "0001_user_data_schema")
 
     engine = _fresh_engine()
     try:

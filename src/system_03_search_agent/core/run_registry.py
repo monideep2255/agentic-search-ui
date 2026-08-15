@@ -160,6 +160,30 @@ DEFAULT_RETENTION_SECONDS = 300.0
 # the same flaky-connection framing Section 13.1 gives resumability itself.
 DEFAULT_ABANDON_GRACE_SECONDS = 30.0
 
+# T-4.10-05 (design decision 7, tracker/phase_4.10.md): the per-principal
+# concurrent-run cap that closes F-4.0-A-10. F-4.0-A-10 measured 9,615
+# runs created by ONE caller in roughly 50 seconds of bursts, with zero
+# rejections, because nothing bounded run creation at all. This constant
+# bounds concurrently ACTIVE (not yet `finished`) runs per owner_id, not a
+# cumulative rate: a legitimate caller (one browser tab, plus perhaps a
+# stray reconnect or a deliberate follow-up question fired before the
+# first answer lands) is not expected to have more than a couple of runs
+# genuinely in flight at once. 5 gives headroom above that ordinary shape
+# while still cutting the unbounded-burst pattern off completely; it is a
+# v1 engineering call, not a value derived from a load test (the real
+# per-layer throttling and concurrency-queue strategy is build phase
+# 6.0's job, tool-call-budgets.md).
+DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER = 5
+
+# A conservative, static hint, not a promise: a caller that hits this cap
+# is told to retry in a few seconds, which is comfortably longer than a
+# guard/plan/synth round trip normally takes to free a slot by finishing,
+# but this module has no per-run completion-time estimate to compute a
+# tighter number from. Genuinely transient (design decision 5): finishing
+# or stopping an existing run frees a slot immediately, unlike the guest
+# allowance's 403, which retrying can never fix.
+CONCURRENT_RUN_CAP_RETRY_AFTER_S = 5
+
 
 class RunNotFoundError(KeyError):
     """Raised by `get_run`/`cancel_run`/`subscribe` for a `run_id` this
@@ -179,6 +203,22 @@ class RunNotFoundError(KeyError):
         return f"no run registered with run_id {self.run_id!r}"
 
 
+class ConcurrentRunCapExceededError(RuntimeError):
+    """Raised by `RunRegistry.create_run` when `owner_id` already has
+    `DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER` (or the registry's configured
+    override) active runs (T-4.10-05, closes F-4.0-A-10).
+
+    Genuinely transient (design decision 5, tracker/phase_4.10.md):
+    finishing or stopping an existing run frees a slot immediately, so the
+    HTTP layer maps this to `429` with a real `Retry-After`, never the
+    guest-allowance-exhausted `403` that retrying can never fix.
+    """
+
+    def __init__(self, message: str, *, retry_after_s: int) -> None:
+        super().__init__(message)
+        self.retry_after_s = retry_after_s
+
+
 @dataclass
 class RunEntry:
     """One tracked run: its id, its owner, both read paths, and its
@@ -186,6 +226,14 @@ class RunEntry:
 
     run_id: str
     user_id: str | None
+    # T-4.10-03, design decision 2 (tracker/phase_4.10.md): the namespaced
+    # identity ("user:<uuid>" or "guest:<uuid>") every ownership
+    # comparison reads (adapters/web_sse/app.py's `_get_owned_run`).
+    # `user_id` above is left untouched, the bare registered-user UUID
+    # string or None, because it is what `is_operator_user()` and a
+    # future `interactions.user_id` write need; a namespaced string must
+    # never reach either.
+    owner_id: str
     queue: asyncio.Queue[Event | None] = field(repr=False)
     task: asyncio.Task[None] = field(repr=False)
     events: list[Event] = field(default_factory=list, repr=False)
@@ -312,10 +360,12 @@ class RunRegistry:
         *,
         retention_seconds: float = DEFAULT_RETENTION_SECONDS,
         abandon_grace_seconds: float = DEFAULT_ABANDON_GRACE_SECONDS,
+        max_active_runs_per_owner: int = DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER,
     ) -> None:
         self._runs: dict[str, RunEntry] = {}
         self._retention_seconds = retention_seconds
         self._abandon_grace_seconds = abandon_grace_seconds
+        self._max_active_runs_per_owner = max_active_runs_per_owner
 
     def _evict_expired(self) -> None:
         """Drop every run finished for longer than `retention_seconds`
@@ -393,12 +443,77 @@ class RunRegistry:
         if entry.subscriber_count == 0 and not entry.task.done():
             entry.task.cancel()
 
+    @property
+    def max_active_runs_per_owner(self) -> int:
+        """The configured concurrent-run cap this instance enforces
+        (T-4.10-05). Exposed read-only so a caller (the HTTP layer's own
+        precheck) can report or compare against the same value `create_run`
+        itself enforces, without reaching into a private attribute."""
+        return self._max_active_runs_per_owner
+
+    def count_active_runs_for_owner(self, owner_id: str) -> int:
+        """Count `owner_id`'s currently ACTIVE (not yet `finished`) runs.
+
+        T-4.10-05 (closes F-4.0-A-10): a completed run does not count
+        against the concurrent-run cap, matching F-1.2-01's own eviction
+        fix's framing of "how long", not "how many at once". Public so the
+        HTTP layer (`adapters/web_sse/app.py`'s `POST /v1/query`) can
+        check this BEFORE spending a guest's allowance (design decision
+        4/5's ordering: a refused creation must not spend), while
+        `create_run` below still enforces the cap itself as the actual
+        authority a caller cannot bypass by skipping this precheck.
+        """
+        self._evict_expired()
+        return sum(
+            1
+            for entry in self._runs.values()
+            if entry.owner_id == owner_id and not entry.finished
+        )
+
+    def reassign_owner(
+        self, *, old_owner_id: str, new_owner_id: str, new_user_id: str | None
+    ) -> int:
+        """Re-point every LIVE `RunEntry`'s `owner_id` (and `user_id`)
+        from `old_owner_id` to `new_owner_id` (T-4.10-06, design decision
+        4: migration moves what actually exists).
+
+        Nothing persists a run today (this registry is in-memory and
+        evicts, per the module docstring), so this only ever reaches runs
+        this process still holds; it is not, and does not claim to be,
+        durable cross-reload history (F-4.10-01). Idempotent by
+        construction: a run already reassigned away from `old_owner_id`
+        (or evicted) is simply not matched on a second call with the same
+        arguments, so a replayed migration is a clean no-op here too.
+
+        Cross-guest isolation (T-4.10-06 acceptance criterion) holds by
+        construction at the CALLER, not here: this method reassigns
+        exactly what `old_owner_id` names, and the caller (`auth/router.
+        py`'s `_migrate_guest_session`) builds `old_owner_id` only from
+        the `guest_id` claim decoded out of the presented token itself,
+        so a guest token can never name any owner_id but its own.
+
+        Returns:
+            The number of entries reassigned, for the caller to log.
+        """
+        reassigned = 0
+        for entry in self._runs.values():
+            if entry.owner_id == old_owner_id:
+                entry.owner_id = new_owner_id
+                entry.user_id = new_user_id
+                reassigned += 1
+        return reassigned
+
     def create_run(
-        self, query: Query, context: RequestContext, *, run_id: str | None = None
+        self,
+        query: Query,
+        context: RequestContext,
+        *,
+        run_id: str | None = None,
+        owner_id: str | None = None,
     ) -> str:
         """Mint a `run_id` (or accept a caller-provided one), start
         `run_streaming(query, context)` as a background task feeding both
-        read paths, and record `query.user_id` as the run's owner.
+        read paths, and record the run's owner.
 
         Returns the new `run_id` immediately; the background task has not
         necessarily produced any events yet by the time this returns (by
@@ -412,12 +527,62 @@ class RunRegistry:
                 `query.trace_id`, never a second, independently-minted id
                 (`trace_id`'s "single join key" role, production-
                 standards.md). Left as `None`, this method mints its own.
+            owner_id: the namespaced `user:<uuid>`/`guest:<uuid>` identity
+                every ownership comparison reads (T-4.10-03, design
+                decision 2). Callers that authenticate through
+                `get_caller` (the web_sse surface, T-4.10-03) always pass
+                this explicitly. Left as `None` for backward compatibility
+                with call sites that predate this ticket (every existing
+                test in `test_run_registry.py`/`test_phase_4_0_premise.
+                py`, and the MCP surface's own authenticated-user-only
+                path, `adapters/mcp/server.py`, T-4.1-03): this method
+                then derives `"user:<uuid>"` from `query.user_id` when one
+                is present, or a synthetic per-call unique owner_id when
+                it is not, so two independently-anonymous callers in two
+                different tests never accidentally share a concurrency
+                slot.
+
+        Raises:
+            ConcurrentRunCapExceededError: if `owner_id` (resolved or
+                derived) already has `max_active_runs_per_owner` runs
+                active. T-4.10-05, closes F-4.0-A-10.
         """
         self._evict_expired()
         resolved_run_id = run_id if run_id is not None else str(uuid.uuid4())
+        resolved_owner_id = owner_id
+        if resolved_owner_id is None:
+            resolved_owner_id = (
+                f"user:{query.user_id}" if query.user_id is not None else f"anon:{resolved_run_id}"
+            )
+
+        # T-4.10-05 (closes F-4.0-A-10): the authoritative enforcement
+        # point. Checked here, as the very first thing after resolving
+        # owner_id and before the RunEntry is constructed, so the same
+        # single-threaded, no-await-in-between atomicity this module's own
+        # docstring already documents for every other `_runs` mutation
+        # covers this check too: nothing can observe or mutate `_runs`
+        # between this count and the entry insertion below within one
+        # process. This bounds concurrently active runs; it is a distinct
+        # control from the guest allowance's own atomicity, which
+        # `data.guest_sessions.spend_one_run`'s conditional `UPDATE`
+        # guarantees independently at the database layer, and it does not
+        # (and cannot, being in-process, per this module's own stated
+        # non-coverage) close a true multi-process race, only the
+        # single-caller unbounded-burst shape F-4.0-A-10 measured.
+        active = self.count_active_runs_for_owner(resolved_owner_id)
+        if active >= self._max_active_runs_per_owner:
+            raise ConcurrentRunCapExceededError(
+                f"owner {resolved_owner_id!r} already has {active} run(s) in "
+                f"flight, at the cap of {self._max_active_runs_per_owner}; "
+                "wait for an existing run to finish, or stop one via "
+                "POST /v1/query/{run_id}/stop, then retry",
+                retry_after_s=CONCURRENT_RUN_CAP_RETRY_AFTER_S,
+            )
+
         entry = RunEntry(
             run_id=resolved_run_id,
             user_id=query.user_id,
+            owner_id=resolved_owner_id,
             queue=asyncio.Queue(),
             task=asyncio.create_task(
                 _drain_into_entry(self, resolved_run_id, query, context)

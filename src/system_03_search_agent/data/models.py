@@ -2,7 +2,9 @@
 
 Spec: Technical_specification.md Section 15 (lines 2361-2555), the six
 tables `users`, `auth_sessions`, `sessions`, `interactions`, `cq_candidates`,
-`saved_queries`.
+`saved_queries`, plus `guest_sessions` (build phase 4.10, T-4.10-02,
+design decision 3, `tracker/phase_4.10.md`), a Section 15 extension not in
+the original locked spec text.
 
 Depends on:
     - system_03_search_agent.data.base (Base)
@@ -303,4 +305,44 @@ class SavedQuery(Base):
     )
     last_run_interaction_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("interactions.id", ondelete="SET NULL"), nullable=True
+    )
+
+
+class GuestSession(Base):
+    """The `guest_sessions` table: an anonymous visitor's counted allowance.
+
+    Build phase 4.10, T-4.10-02, design decision 3
+    (`tracker/phase_4.10.md`): one row per guest identity, holding the
+    server-side count `data.guest_sessions.spend_one_run` advances with a
+    single conditional `UPDATE ... RETURNING`, never a `SELECT` followed
+    by an `UPDATE`. Distinct from `AuthSession` above, which tracks a
+    registered login's refresh-token state: this tracks a caller with no
+    `users` row at all.
+
+    `migrated_to_user_id` is set, and `revoked_at` is set in the same
+    transaction, when a guest signs up or logs in while holding a live
+    guest token (design decision 4): the guest's runs move to the new
+    account and the guest token can no longer spend. `ON DELETE SET NULL`
+    so deleting a user row never fails or cascades onto this table.
+    """
+
+    __tablename__ = "guest_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    runs_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    migrated_to_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    __table_args__ = (
+        CheckConstraint("runs_used >= 0", name="ck_guest_sessions_runs_used"),
     )

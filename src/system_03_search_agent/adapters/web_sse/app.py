@@ -11,17 +11,28 @@ from typing import Annotated, Literal
 from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
 from system_03_search_agent.adapters.mcp.server import server as mcp_server
-from system_03_search_agent.auth.dependencies import get_current_user
+from system_03_search_agent.auth.dependencies import Principal, get_caller
 from system_03_search_agent.auth.router import router as auth_router
 from system_03_search_agent.contracts.events import CitationPayload
 from system_03_search_agent.contracts.query import Query, RequestContext
-from system_03_search_agent.core.run_registry import RunEntry, RunNotFoundError, default_registry
-from system_03_search_agent.data.models import User
+from system_03_search_agent.core.run_registry import (
+    CONCURRENT_RUN_CAP_RETRY_AFTER_S,
+    ConcurrentRunCapExceededError,
+    RunEntry,
+    RunNotFoundError,
+    default_registry,
+)
+from system_03_search_agent.data.guest_sessions import FREE_RUN_ALLOWANCE, SpendState, spend_one_run
+from system_03_search_agent.data.models import GuestSession
+from system_03_search_agent.data.session import get_session
 from system_03_search_agent.harness.cost_control import (
     is_operator_user,
+    per_user_daily_query_cap,
     sanitize_event_for_end_user,
 )
 
@@ -189,6 +200,66 @@ class CreateRunResponse(BaseModel):
     persona_name: str
 
 
+# T-4.10-04 (design decision 6's wire shape): {kind, used, total, counted}.
+# `counted` is the honesty field (design decision 6): True for a guest,
+# whose count is real (guest_sessions.runs_used), False for a registered
+# caller, whose count reads a structural zero because nothing writes
+# `interactions` rows yet (F-2.0-04). Rendering an uncounted zero as a
+# count would be the same dishonesty class as the client-side counter this
+# phase removes (F-4.9-A-16).
+class AllowanceResponse(BaseModel):
+    kind: Literal["guest", "user"]
+    used: int
+    total: int
+    counted: bool
+
+
+def _guest_uuid_from_owner_id(owner_id: str) -> uuid.UUID:
+    """Extract the `guest_sessions.id` UUID out of a `"guest:<uuid>"`
+    owner_id. `Principal.owner_id` is only ever constructed by `auth.
+    dependencies.resolve_caller_from_bearer_token` out of a `decode_guest_
+    token`-verified `guest_id` claim, so this is always well-formed for a
+    Principal actually reaching this function; the ValueError path exists
+    as a defensive backstop, never expected to fire in practice.
+    """
+    return uuid.UUID(owner_id.split(":", 1)[1])
+
+
+# Rate-limit consideration (T-4.10-04 acceptance criterion, the other
+# half of the note on POST /auth/guest above): this is a read, and unlike
+# minting, it requires get_caller to have already admitted a real
+# principal (guest or registered), so an anonymous, credential-free
+# caller cannot hit it at all. One SELECT at most (guest.branch), no
+# model call. The same build-phase-6.0-owns-real-throttling deferral
+# applies; documented here rather than left unconsidered.
+@app.get("/v1/allowance", response_model=AllowanceResponse)
+def get_v1_allowance(
+    caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
+    session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI dependency injection
+) -> AllowanceResponse:
+    if caller.kind == "guest":
+        guest_uuid = _guest_uuid_from_owner_id(caller.owner_id)
+        used = session.execute(
+            select(GuestSession.runs_used).where(GuestSession.id == guest_uuid)
+        ).scalar_one_or_none()
+        # A guest whose session row cannot be found (evicted from the DB
+        # somehow, though nothing in this codebase deletes guest_sessions
+        # rows today) is reported as a fresh, uncounted zero rather than a
+        # 404/500: this endpoint's job is to describe the allowance
+        # honestly, not to re-litigate whether the token itself is valid
+        # (get_caller already gated that before this function ever runs).
+        return AllowanceResponse(
+            kind="guest", used=int(used) if used is not None else 0, total=FREE_RUN_ALLOWANCE, counted=True
+        )
+    # T-4.10-04's other acceptance criterion: `total` reads the SAME
+    # function the enforcement path reads (harness.cost_control.
+    # per_user_daily_query_cap), never a second hardcoded copy of 100.
+    # `used` is a structural zero, not a measured one (F-2.0-04: nothing
+    # writes `interactions` rows yet), so `counted=False` says so rather
+    # than presenting an uncounted zero as a real count (F-4.9-A-16).
+    return AllowanceResponse(kind="user", used=0, total=per_user_daily_query_cap(), counted=False)
+
+
 # run_id/trace_id wiring (per this ticket's instructions, made and
 # documented rather than asked about): `RunRegistry.create_run` originally
 # always minted its own `run_id` and had no way to accept one chosen
@@ -204,35 +275,133 @@ class CreateRunResponse(BaseModel):
 @app.post("/v1/query", response_model=CreateRunResponse, status_code=status.HTTP_202_ACCEPTED)
 async def post_v1_query(
     request: CreateRunRequest,
-    current_user: User = Depends(get_current_user),  # noqa: B008 - idiomatic FastAPI dependency injection
+    caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
+    session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI dependency injection
 ) -> CreateRunResponse:
+    # Ordering (T-4.10-05 x T-4.10-04, "spending at the wrong moment"):
+    # the concurrent-run cap is checked FIRST, strictly before any guest
+    # allowance is spent. This is deliberate, not incidental: the cap
+    # check is a free, in-memory, no-DB read
+    # (default_registry.count_active_runs_for_owner), while a guest's
+    # allowance is a scarce, DB-backed resource that a refused creation
+    # must never touch (this ticket's own constraint). Checking the cap
+    # first means a caller already at their concurrent-run limit never
+    # loses one of their five free searches to a request that was always
+    # going to be refused. The reverse order (spend, then discover the cap
+    # is exceeded) would require "giving back" an already-spent run, which
+    # `data.guest_sessions.spend_one_run`'s API deliberately does not
+    # offer (a decrement would reopen the exact read-then-write race its
+    # atomic UPDATE exists to avoid), so that ordering is not just worse,
+    # it is not implementable without weakening the allowance's own
+    # atomicity guarantee.
+    #
+    # `RunRegistry.create_run` below ALSO enforces this same cap
+    # internally as the actual authority (it is what `owner_id` can never
+    # bypass, per T-4.10-05's acceptance criterion that `create_run`
+    # itself refuses); the precheck here is a cost optimization layered on
+    # top of that authority, not a replacement for it. A narrow, accepted
+    # gap follows from layering the two: under a true race between two
+    # concurrent requests from the SAME caller landing between this
+    # precheck and the guest-allowance spend below, the precheck could
+    # pass for both, one could spend an allowance run, and `create_run`
+    # could still refuse it a moment later on the authoritative check.
+    # This is consistent with this phase's own stated non-coverage
+    # (multi-request races on this specific cap are out of scope; the
+    # guest allowance's OWN atomicity is unaffected and remains exact via
+    # its independent DB-level atomic UPDATE, which is the property the
+    # premise gate's concurrency arm actually tests).
+    if default_registry.count_active_runs_for_owner(caller.owner_id) >= (
+        default_registry.max_active_runs_per_owner
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "reason": "concurrent_run_cap_exceeded",
+                "message": (
+                    "you already have the maximum number of runs in flight; "
+                    "wait for an existing run to finish, or stop one via "
+                    "POST /v1/query/{run_id}/stop, then retry"
+                ),
+            },
+            headers={"Retry-After": str(CONCURRENT_RUN_CAP_RETRY_AFTER_S)},
+        )
+
+    if caller.kind == "guest":
+        guest_uuid = _guest_uuid_from_owner_id(caller.owner_id)
+        spend = spend_one_run(session, guest_uuid)
+        if spend.state is SpendState.EXHAUSTED:
+            # design decision 5: 403, never 429. The allowance is SPENT,
+            # not rate limited: retrying later does not help, so a 429
+            # with a Retry-After would be a lie the UI would repeat to the
+            # user. `guest_allowance_exhausted` is the machine-readable
+            # reason the UI branches the sign-in wall on.
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "reason": "guest_allowance_exhausted",
+                    "message": (
+                        "you have used all of your free searches; sign in or "
+                        "create an account to keep going"
+                    ),
+                },
+            )
+        if spend.state is SpendState.REVOKED_OR_UNKNOWN:
+            # This guest session was migrated (and revoked) at signup/
+            # login, or never existed. The token still decodes, so
+            # get_caller admitted it, but it is no longer a spendable
+            # identity: a 401 matches "this credential is no longer
+            # valid" more than a 403 ("you are you, but not permitted"),
+            # and the premise gate accepts either for this exact case.
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="this guest session is no longer valid",
+            )
+
     run_id = str(uuid.uuid4())
     query = Query(
         text=request.text,
         session_id=request.session_id,
         trace_id=run_id,
-        user_id=str(current_user.id),
+        user_id=caller.user_id,
         audience_depth=request.audience_depth,
     )
     context = RequestContext(surface="rest_sse")
-    default_registry.create_run(query, context, run_id=run_id)
+    try:
+        default_registry.create_run(query, context, run_id=run_id, owner_id=caller.owner_id)
+    except ConcurrentRunCapExceededError as exc:
+        # The rare race the comment above names: the precheck passed but
+        # the authoritative check inside create_run did not. Still a 429,
+        # same shape as the precheck's own rejection above.
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "reason": "concurrent_run_cap_exceeded",
+                "message": str(exc),
+            },
+            headers={"Retry-After": str(exc.retry_after_s)},
+        ) from None
     return CreateRunResponse(run_id=run_id, persona_name=_STUB_PERSONA_NAME)
 
 
-def _get_owned_run(run_id: str, current_user: User) -> RunEntry:
+def _get_owned_run(run_id: str, caller: Principal) -> RunEntry:
     """Look up `run_id` and enforce ownership, raising the HTTP errors
     T-1.2-02's acceptance criteria require: 404 for an unknown run_id
     (checked first), 403 for a run that exists but belongs to a different
-    authenticated caller. Shared by the events and stop endpoints below so
+    caller. Shared by the events, citations, and stop endpoints below so
     the same 404-before-403 ordering and the same detail strings are never
-    duplicated, and so a hardened future check applies to both call sites
+    duplicated, and so a hardened future check applies to every call site
     at once.
+
+    T-4.10-03 (design decision 2): compares `entry.owner_id` and NOTHING
+    else, the namespaced `user:<uuid>`/`guest:<uuid>` identity, so a
+    guest can never read/stop/export another guest's or any user's run,
+    and the reverse.
     """
     try:
         entry = default_registry.get_run(run_id)
     except RunNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no such run") from None
-    if entry.user_id != str(current_user.id):
+    if entry.owner_id != caller.owner_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="you do not own this run"
         )
@@ -242,14 +411,14 @@ def _get_owned_run(run_id: str, current_user: User) -> RunEntry:
 @app.get("/v1/query/{run_id}/events")
 async def get_v1_query_events(
     run_id: str,
-    current_user: User = Depends(get_current_user),  # noqa: B008 - idiomatic FastAPI dependency injection
+    caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID", max_length=32),
 ) -> EventSourceResponse:
     # `entry` is used below only to validate `after_seq` (F-4.0-J-03).
     # `default_registry.subscribe` re-resolves `run_id` against the
     # registry on its own (T-4.0-02), which is also where resumability and
     # multi-consumer replay actually live now.
-    entry = _get_owned_run(run_id, current_user)
+    entry = _get_owned_run(run_id, caller)
 
     # T-4.0-03 (resumability, Section 13.1): a reconnecting client sends
     # back the last `seq` it saw as `Last-Event-ID` (this backend's
@@ -322,7 +491,11 @@ async def get_v1_query_events(
     # `_operator_user_ids()` (harness/cost_control.py) is itself written
     # to be live-reloadable, which could otherwise read as a promise this
     # call site does not keep.
-    is_operator = is_operator_user(str(current_user.id))
+    # T-4.10-03: `caller.user_id` is None for a guest, and
+    # `is_operator_user(None)` is already required to return False (see
+    # that function's own docstring), so a guest is never an operator by
+    # construction, never by a special case here.
+    is_operator = is_operator_user(caller.user_id)
 
     async def _event_stream() -> AsyncIterator[dict[str, str]]:
         # `subscribe` (T-4.0-02) yields every buffered event with
@@ -386,9 +559,9 @@ async def get_v1_query_events(
 async def get_v1_query_citations(
     run_id: str,
     response: Response,
-    current_user: User = Depends(get_current_user),  # noqa: B008 - idiomatic FastAPI dependency injection
+    caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
 ) -> list[CitationPayload]:
-    entry = _get_owned_run(run_id, current_user)
+    entry = _get_owned_run(run_id, caller)
     if not entry.finished:
         # production-standards.md's retry-safety gate: the error says what
         # to do next, not just what failed. `run_streaming()` never raises
@@ -483,9 +656,9 @@ class StopRunResponse(BaseModel):
 @app.post("/v1/query/{run_id}/stop", response_model=StopRunResponse)
 async def post_v1_query_stop(
     run_id: str,
-    current_user: User = Depends(get_current_user),  # noqa: B008 - idiomatic FastAPI dependency injection
+    caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
 ) -> StopRunResponse:
-    _get_owned_run(run_id, current_user)
+    _get_owned_run(run_id, caller)
     # cancel_run is idempotent for a known run_id (production-standards.md
     # retry-safety gate): calling it on an already-finished or
     # already-cancelled run is a no-op, never an error, so this endpoint

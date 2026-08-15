@@ -551,6 +551,42 @@ class TestCitationPayload:
         )
         assert payload.population_ancestry_context == "European"
 
+    # T-4.10-07: snapshot_date and entity_name, both additive and optional.
+
+    def test_snapshot_date_and_entity_name_default_to_none(self) -> None:
+        """A payload built with no knowledge of these two fields (every
+        call site that predates this phase) must still validate, per
+        Section 2.6's additive-only rule and `extra="forbid"` staying in
+        force for everything else.
+        """
+        payload = CitationPayload(**self._valid_kwargs())
+        assert payload.snapshot_date is None
+        assert payload.entity_name is None
+
+    def test_snapshot_date_accepts_a_real_value(self) -> None:
+        payload = CitationPayload(**self._valid_kwargs(snapshot_date="2026-04-22"))
+        assert payload.snapshot_date == "2026-04-22"
+
+    def test_entity_name_accepts_a_real_value(self) -> None:
+        payload = CitationPayload(**self._valid_kwargs(entity_name="BRCA1"))
+        assert payload.entity_name == "BRCA1"
+
+    def test_snapshot_date_over_max_length_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            CitationPayload(**self._valid_kwargs(snapshot_date="2" * 33))
+
+    def test_entity_name_over_max_length_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            CitationPayload(**self._valid_kwargs(entity_name="n" * 257))
+
+    def test_extra_field_still_forbidden(self) -> None:
+        """The two new fields are additive, not a relaxation of
+        `extra="forbid"` for anything else: a genuinely unknown field is
+        still rejected.
+        """
+        with pytest.raises(ValidationError):
+            CitationPayload(**self._valid_kwargs(made_up_field="anything"))
+
 
 class TestTrustSignalPayload:
     def test_example_from_spec(self) -> None:

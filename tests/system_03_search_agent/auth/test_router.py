@@ -586,3 +586,209 @@ def test_auth_router_does_not_shadow_v1_query_route(client):
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
     response = client.post("/v1/query", json={}, headers=headers)
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# POST /auth/guest (T-4.10-04)
+# ---------------------------------------------------------------------------
+
+
+def _mint_guest(client: TestClient) -> tuple[str, str]:
+    """Mint a real guest through the real endpoint. Returns (guest_id, guest_token)."""
+    response = client.post("/auth/guest")
+    assert response.status_code == 201, response.text
+    body = response.json()
+    return body["guest_id"], body["guest_token"]
+
+
+def _guest_session_row(guest_id: str):
+    from system_03_search_agent.data.models import GuestSession
+
+    engine = sa.create_engine(USER_DB_URL, future=True)
+    try:
+        with Session(bind=engine, future=True) as session:
+            return session.execute(
+                select(GuestSession).where(GuestSession.id == uuid.UUID(guest_id))
+            ).scalar_one_or_none()
+    finally:
+        engine.dispose()
+
+
+def test_guest_valid_input_no_body_returns_201_with_a_fresh_allowance(client):
+    response = client.post("/auth/guest")
+    assert response.status_code == 201
+    body = response.json()
+    assert body["used"] == 0
+    assert body["total"] == 5
+    assert isinstance(body["guest_token"], str) and body["guest_token"]
+    uuid.UUID(body["guest_id"])  # raises ValueError if not a well-formed UUID
+
+
+def test_guest_invalid_input_a_body_is_tolerated_since_none_is_required(client):
+    # "It never requires a body" (T-4.10-04 acceptance criterion). A caller
+    # sending one anyway must not be treated as a hard error: no request
+    # model is declared for this endpoint, so FastAPI ignores it.
+    response = client.post("/auth/guest", json={"unexpected": "field"})
+    assert response.status_code == 201
+
+
+def test_guest_creates_a_distinct_row_and_token_on_each_call(client):
+    first_id, first_token = _mint_guest(client)
+    second_id, second_token = _mint_guest(client)
+    assert first_id != second_id
+    assert first_token != second_token
+
+
+def test_guest_row_exists_in_guest_sessions_with_zero_runs_used(client):
+    guest_id, _token = _mint_guest(client)
+    row = _guest_session_row(guest_id)
+    assert row is not None
+    assert row.runs_used == 0
+    assert row.revoked_at is None
+    assert row.migrated_to_user_id is None
+
+
+# ---------------------------------------------------------------------------
+# Migration on signup/login (T-4.10-06)
+# ---------------------------------------------------------------------------
+
+
+def test_signup_with_a_valid_guest_token_migrates_and_revokes_the_guest_session(client):
+    guest_id, guest_token = _mint_guest(client)
+    response = client.post(
+        "/auth/signup",
+        json={"email": _unique_email(), "password": "Str0ngPassw0rd!", "guest_token": guest_token},
+    )
+    assert response.status_code == 201
+    user_id = response.json()["id"]
+
+    row = _guest_session_row(guest_id)
+    assert row is not None
+    assert row.revoked_at is not None
+    assert str(row.migrated_to_user_id) == user_id
+
+
+def test_login_with_a_valid_guest_token_migrates_and_revokes_the_guest_session(client):
+    email, password, _ = _signup_and_login(client)
+    guest_id, guest_token = _mint_guest(client)
+
+    response = client.post(
+        "/auth/login", json={"email": email, "password": password, "guest_token": guest_token}
+    )
+    assert response.status_code == 200
+
+    user_row = None
+    engine = sa.create_engine(USER_DB_URL, future=True)
+    try:
+        with Session(bind=engine, future=True) as session:
+            user_row = session.execute(select(User).where(User.email == email)).scalar_one()
+    finally:
+        engine.dispose()
+
+    row = _guest_session_row(guest_id)
+    assert row is not None
+    assert row.revoked_at is not None
+    assert row.migrated_to_user_id == user_row.id
+
+
+def test_signup_with_a_malformed_guest_token_string_still_returns_201(client):
+    """T-4.10-06: authentication is the primary operation; a garbage
+    guest_token must not fail signup, only skip migration silently."""
+    response = client.post(
+        "/auth/signup",
+        json={
+            "email": _unique_email(),
+            "password": "Str0ngPassw0rd!",
+            "guest_token": "not-a-real-jwt-at-all",
+        },
+    )
+    assert response.status_code == 201
+
+
+def test_login_with_an_expired_guest_token_still_succeeds(client):
+    """The guest token is invalid/expired, not the account credentials;
+    login must still succeed, only migration is skipped."""
+    from system_03_search_agent.auth.guest import guest_signing_key
+
+    email, password, _ = _signup_and_login(client)
+    now = datetime.now(UTC)
+    expired_guest_token = jwt.encode(
+        {
+            "guest_id": str(uuid.uuid4()),
+            "typ": "guest",
+            "iat": now - timedelta(days=10),
+            "exp": now - timedelta(days=1),
+        },
+        guest_signing_key(),
+        algorithm="HS256",
+    )
+    response = client.post(
+        "/auth/login",
+        json={"email": email, "password": password, "guest_token": expired_guest_token},
+    )
+    assert response.status_code == 200
+
+
+def test_signup_with_null_guest_token_is_unaffected(client):
+    """guest_token omitted entirely: identical to every pre-existing signup
+    test in this file, restated here explicitly as this ticket's own
+    null-input case."""
+    _email, _password, response = _signup(client)
+    assert response.status_code == 201
+    assert "guest_token" not in response.json()
+
+
+def test_replaying_the_same_signup_guest_token_is_idempotent(client):
+    """T-4.10-06: replaying the same signup with the same guest token gives
+    the same end state. Modeled here as two separate account holders
+    presenting the identical already-migrated guest token: the second
+    presentation must be a harmless no-op (the row stays pointed at the
+    FIRST migration), not an error and not a silent re-migration."""
+    guest_id, guest_token = _mint_guest(client)
+
+    first_response = client.post(
+        "/auth/signup",
+        json={"email": _unique_email(), "password": "Str0ngPassw0rd!", "guest_token": guest_token},
+    )
+    assert first_response.status_code == 201
+    first_user_id = first_response.json()["id"]
+
+    second_response = client.post(
+        "/auth/signup",
+        json={"email": _unique_email(), "password": "Str0ngPassw0rd!", "guest_token": guest_token},
+    )
+    assert second_response.status_code == 201, (
+        "a replayed/already-migrated guest token must never fail signup"
+    )
+
+    row = _guest_session_row(guest_id)
+    assert row is not None
+    assert str(row.migrated_to_user_id) == first_user_id, (
+        "a replay must not re-point an already-migrated guest session to a "
+        "second account"
+    )
+
+
+def test_a_guest_tokens_migration_never_touches_another_guests_session(client):
+    """T-4.10-06: a guest token belonging to a different guest cannot
+    migrate a third party's runs/session. old_owner_id (and here,
+    migrated_to_user_id) is derived only from the presented token's own
+    guest_id claim, so guest A's session must be completely untouched by
+    a signup carrying guest B's token."""
+    guest_a_id, _guest_a_token = _mint_guest(client)
+    _guest_b_id, guest_b_token = _mint_guest(client)
+
+    response = client.post(
+        "/auth/signup",
+        json={
+            "email": _unique_email(),
+            "password": "Str0ngPassw0rd!",
+            "guest_token": guest_b_token,
+        },
+    )
+    assert response.status_code == 201
+
+    row_a = _guest_session_row(guest_a_id)
+    assert row_a is not None
+    assert row_a.revoked_at is None
+    assert row_a.migrated_to_user_id is None

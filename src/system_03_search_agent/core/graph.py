@@ -3013,6 +3013,14 @@ def _citations_from_grounded_claims(
             else _curie_for_citation(citation_id, findings, synth_finding)
         )
         prefix = curie.split(":", 1)[0] if ":" in curie else synth_finding.tool
+        # T-4.10-07: both re-derived from the same source_url-identity
+        # lookup `_curie_for_citation` and `_graph_snapshot_version_for_
+        # citation` already use. Real for a genuine Layer 1 row, honestly
+        # `None` for Layer 2/3 (no graph snapshot exists) and for a row
+        # with no `name` property or an unparseable snapshot version;
+        # never fabricated. See each function's own docstring.
+        snapshot_date = _snapshot_date_for_citation(citation_id, findings, synth_finding)
+        entity_name = _entity_name_for_citation(citation_id, findings, synth_finding)
         citations.append(
             CitationPayload(
                 citation_id=citation_id,
@@ -3038,6 +3046,8 @@ def _citations_from_grounded_claims(
                 # never inferred or guessed.
                 population_ancestry_context=None,
                 license="public_domain_us_gov",
+                snapshot_date=snapshot_date[:32] if snapshot_date else None,
+                entity_name=entity_name[:256] if entity_name else None,
             )
         )
 
@@ -3094,6 +3104,62 @@ def _graph_snapshot_version_for_citation(
             if str(row.get("source_url") or "") == synth_finding.source_url:
                 version = row.get("graph_snapshot_version")
                 return str(version) if version else None
+    return None
+
+
+def _snapshot_date_for_citation(
+    citation_id: str, findings: list[Finding], synth_finding: SynthFinding
+) -> str | None:
+    """T-4.10-07's `CitationPayload.snapshot_date`: a real calendar date
+    extracted from the row's own `graph_snapshot_version`, via the same
+    `_graph_snapshot_version_for_citation` lookup T-3.4-06's staleness
+    check already uses, composed with the same `graph_snapshot_date_
+    from_version` extractor.
+
+    Returns `None`, never a fabricated date, in every honest gap case:
+    no matching row found, the row carries no `graph_snapshot_version`
+    (true of every Layer 2/3 row, which has no graph snapshot to name),
+    or the version string carries no parseable date at all.
+    """
+    version = _graph_snapshot_version_for_citation(citation_id, findings, synth_finding)
+    if not version:
+        return None
+    return graph_snapshot_date_from_version(version)
+
+
+def _entity_name_for_citation(
+    citation_id: str, findings: list[Finding], synth_finding: SynthFinding
+) -> str | None:
+    """T-4.10-07's `CitationPayload.entity_name`: the row's own stored
+    `name` property, the same `source_url`-identity lookup `_curie_for_
+    citation` and `_graph_snapshot_version_for_citation` already use.
+
+    Returns `None`, never a fabricated name, when: no matching row is
+    found; the row's `fields` dict carries no `name` key or only a blank
+    one; or the row's `name` value is a known ETL vocabulary-token
+    artifact (`_vocabulary_artifact_fields`, F-2.1-B07: a `Disease`/
+    `OntologyClass` row's stored `name` is sometimes a source-vocabulary
+    code such as "MeSH", not a genuine name). The source header has no
+    per-field hedge indicator the way a claim's `assertion_confidence`
+    does, so a flagged value is omitted rather than shown as if it were
+    a plain, trustworthy fact.
+    """
+    for finding in findings:
+        fields = finding.structured_fields
+        if fields is None or fields.get("status") != "ok":
+            continue
+        for row in fields.get("rows", []):
+            if str(row.get("source_url") or "") != synth_finding.source_url:
+                continue
+            row_fields = row.get("fields")
+            if not isinstance(row_fields, dict):
+                return None
+            if "name" in row.get("vocabulary_artifact_fields", []):
+                return None
+            name = row_fields.get("name")
+            if isinstance(name, str) and name.strip():
+                return name.strip()
+            return None
     return None
 
 
@@ -3670,6 +3736,17 @@ def _layer2_citation_for_synth_finding(
     therefore its `call_id`) is recovered the same way `_curie_for_citation`
     already recovers a Layer 1 row's CURIE: by `source_url` identity, the
     one value both the pseudo-row and the real record agree on.
+
+    T-4.10-07: `snapshot_date` and `entity_name` are deliberately left at
+    `build_layer2_citation`'s own `None` default for every citation this
+    function returns. `snapshot_date` is correctly `None`: no graph
+    snapshot exists for a live `ncbi_efetch` call. `entity_name` is left
+    `None` here not because the data cannot exist (an `ncbi_efetch`
+    record's own fields were never inspected for this ticket's
+    investigation, scoped to the Layer 1 graph row shape per its own
+    brief) but because this function declines to guess at a shape it did
+    not verify; populating it is future work, not a defect this ticket
+    leaves unfixed.
 
     `citation_id`, `display_index` and `claim_text` are overridden onto the
     result: they belong to the grounding pass, which already computed them

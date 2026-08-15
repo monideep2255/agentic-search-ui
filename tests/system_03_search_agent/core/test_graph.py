@@ -3535,6 +3535,264 @@ def test_layer1_staleness_note_does_not_fire_on_an_unparseable_snapshot_version(
     )
 
 
+# ---------------------------------------------------------------------------
+# T-4.10-07: CitationPayload.snapshot_date and .entity_name, both additive
+# and optional. `_snapshot_date_for_citation` and `_entity_name_for_
+# citation` reuse the same source_url-identity row lookup `_curie_for_
+# citation` and `_graph_snapshot_version_for_citation` already use, so
+# these tests reuse the same `_layer1_finding_with_snapshot`/`_dual_layer_
+# synth_finding` fixtures the staleness tests above already established.
+# ---------------------------------------------------------------------------
+
+
+def _layer1_finding_with_row(
+    *, call_id: str, source_url: str, fields: dict[str, object],
+    snapshot_version: str | None = None,
+    vocabulary_artifact_fields: list[str] | None = None,
+):
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    row: dict[str, object] = {
+        "node_or_edge_type": "Gene",
+        "curie": "NCBIGene:672",
+        "fields": fields,
+        "source_url": source_url,
+    }
+    if snapshot_version is not None:
+        row["graph_snapshot_version"] = snapshot_version
+    if vocabulary_artifact_fields is not None:
+        row["vocabulary_artifact_fields"] = vocabulary_artifact_fields
+
+    return Finding(
+        call_id=call_id,
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={"status": "ok", "rows": [row]},
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+
+def test_snapshot_date_for_citation_resolves_a_real_trailing_date() -> None:
+    source_url = "https://www.ncbi.nlm.nih.gov/gene/672"
+    synth_finding = _dual_layer_synth_finding(
+        citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value="BRCA1", source_url=source_url,
+    )
+    findings = [
+        _layer1_finding_with_row(
+            call_id="cq-1", source_url=source_url, fields={"name": "BRCA1"},
+            snapshot_version="ncbi_kg_v1_2026-04-22",
+        )
+    ]
+    assert (
+        graph_module._snapshot_date_for_citation("c1", findings, synth_finding)
+        == "2026-04-22"
+    )
+
+
+def test_snapshot_date_for_citation_none_when_no_matching_row() -> None:
+    synth_finding = _dual_layer_synth_finding(
+        citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value="BRCA1",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    assert graph_module._snapshot_date_for_citation("c1", [], synth_finding) is None
+
+
+def test_snapshot_date_for_citation_none_on_unparseable_version() -> None:
+    """Never a fabricated date: a version string with no embedded date at
+    all is the honest 'cannot determine' case, matching `graph_snapshot_
+    date_from_version`'s own contract.
+    """
+    source_url = "https://www.ncbi.nlm.nih.gov/gene/672"
+    synth_finding = _dual_layer_synth_finding(
+        citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value="BRCA1", source_url=source_url,
+    )
+    findings = [
+        _layer1_finding_with_row(
+            call_id="cq-1", source_url=source_url, fields={"name": "BRCA1"},
+            snapshot_version="prod-snapshot-42",
+        )
+    ]
+    assert graph_module._snapshot_date_for_citation("c1", findings, synth_finding) is None
+
+
+def test_snapshot_date_for_citation_none_for_a_row_with_no_graph_snapshot(
+) -> None:
+    """A Layer 2/3 row normalized into the same generic row shape (see
+    `_ncbi_efetch_output_to_structured_fields`) never carries a
+    `graph_snapshot_version` key at all, since no graph snapshot exists for
+    a live API call. This is the honest `None`, not a lookup failure.
+    """
+    source_url = "https://www.ncbi.nlm.nih.gov/gene/672"
+    synth_finding = _dual_layer_synth_finding(
+        citation_id="c1", layer="layer_2_api", tool="ncbi_dbsnp",
+        field="name", field_value="BRCA1", source_url=source_url,
+    )
+    findings = [
+        _layer1_finding_with_row(
+            call_id="l2-1", source_url=source_url, fields={"name": "BRCA1"},
+            snapshot_version=None,
+        )
+    ]
+    assert graph_module._snapshot_date_for_citation("c1", findings, synth_finding) is None
+
+
+def test_entity_name_for_citation_resolves_the_row_name() -> None:
+    source_url = "https://www.ncbi.nlm.nih.gov/gene/672"
+    synth_finding = _dual_layer_synth_finding(
+        citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value="BRCA1", source_url=source_url,
+    )
+    findings = [
+        _layer1_finding_with_row(
+            call_id="cq-1", source_url=source_url,
+            fields={"name": "BRCA1 DNA repair associated"},
+        )
+    ]
+    assert (
+        graph_module._entity_name_for_citation("c1", findings, synth_finding)
+        == "BRCA1 DNA repair associated"
+    )
+
+
+def test_entity_name_for_citation_none_when_no_name_field() -> None:
+    source_url = "https://www.ncbi.nlm.nih.gov/clinvar/variation/37314"
+    synth_finding = _dual_layer_synth_finding(
+        citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+        field="clinical_significance", field_value="Pathogenic", source_url=source_url,
+    )
+    findings = [
+        _layer1_finding_with_row(
+            call_id="cq-1", source_url=source_url,
+            fields={"clinical_significance": "Pathogenic"},
+        )
+    ]
+    assert graph_module._entity_name_for_citation("c1", findings, synth_finding) is None
+
+
+def test_entity_name_for_citation_none_when_name_is_blank() -> None:
+    source_url = "https://www.ncbi.nlm.nih.gov/gene/672"
+    synth_finding = _dual_layer_synth_finding(
+        citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value="BRCA1", source_url=source_url,
+    )
+    findings = [
+        _layer1_finding_with_row(
+            call_id="cq-1", source_url=source_url, fields={"name": "   "},
+        )
+    ]
+    assert graph_module._entity_name_for_citation("c1", findings, synth_finding) is None
+
+
+def test_entity_name_for_citation_none_when_flagged_a_vocabulary_artifact() -> None:
+    """F-2.1-B07: a Disease/OntologyClass row's stored `name` is sometimes
+    a source-vocabulary code such as "MeSH", not a genuine name. The
+    source header has no per-field hedge the way a claim's assertion_
+    confidence does, so a flagged value is omitted rather than shown with
+    unwarranted confidence.
+    """
+    source_url = "https://www.ncbi.nlm.nih.gov/medgen/C0346153"
+    synth_finding = _dual_layer_synth_finding(
+        citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+        field="curie", field_value="MedGen:C0346153", source_url=source_url,
+    )
+    findings = [
+        _layer1_finding_with_row(
+            call_id="cq-1", source_url=source_url, fields={"name": "MeSH"},
+            vocabulary_artifact_fields=["name"],
+        )
+    ]
+    assert graph_module._entity_name_for_citation("c1", findings, synth_finding) is None
+
+
+def test_entity_name_for_citation_none_when_no_matching_row() -> None:
+    synth_finding = _dual_layer_synth_finding(
+        citation_id="c1", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value="BRCA1",
+        source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+    )
+    assert graph_module._entity_name_for_citation("c1", [], synth_finding) is None
+
+
+def test_citations_from_grounded_claims_populates_snapshot_date_and_entity_name(
+) -> None:
+    """End-to-end: a real Layer 1 grounded claim, run through the actual
+    live citation-building function, carries both new fields on the
+    `CitationPayload` it emits.
+    """
+    from system_03_search_agent.synthesis.findings import SynthFinding
+    from system_03_search_agent.synthesis.grounding import GroundedClaim, GroundingResult
+
+    source_url = "https://www.ncbi.nlm.nih.gov/gene/672"
+    synth_finding = SynthFinding(
+        ref_index=1, citation_id="cq-1-1", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value="BRCA1 DNA repair associated",
+        source_url=source_url, curie="NCBIGene:672", entity_type="Gene",
+    )
+    grounding = GroundingResult(
+        narrative="BRCA1 DNA repair associated [1].",
+        claims=[GroundedClaim(claim_text="BRCA1 DNA repair associated.", finding=synth_finding)],
+        stripped_count=0,
+        refused=False,
+    )
+    findings = [
+        _layer1_finding_with_row(
+            call_id="cq-1", source_url=source_url,
+            fields={"name": "BRCA1 DNA repair associated"},
+            snapshot_version="ncbi_kg_v1_2026-04-22",
+        )
+    ]
+
+    citations = graph_module._citations_from_grounded_claims(grounding, findings)
+
+    assert len(citations) == 1
+    assert citations[0].snapshot_date == "2026-04-22"
+    assert citations[0].entity_name == "BRCA1 DNA repair associated"
+
+
+def test_citations_from_grounded_claims_leaves_both_none_when_absent(
+) -> None:
+    """The honest gap case, end to end: a row with no `name` property and
+    no `graph_snapshot_version` (the Layer 2/3 shape) produces a citation
+    with both new fields `None`, never a guess.
+    """
+    from system_03_search_agent.synthesis.findings import SynthFinding
+    from system_03_search_agent.synthesis.grounding import GroundedClaim, GroundingResult
+
+    source_url = "https://www.ncbi.nlm.nih.gov/clinvar/variation/37314"
+    synth_finding = SynthFinding(
+        ref_index=1, citation_id="cq-1-1", layer="layer_1_graph", tool="cypher_query",
+        field="clinical_significance", field_value="Pathogenic",
+        source_url=source_url, curie="ClinVar:37314", entity_type="SequenceVariant",
+    )
+    grounding = GroundingResult(
+        narrative="ClinVar:37314 clinical_significance=Pathogenic [1].",
+        claims=[GroundedClaim(
+            claim_text="ClinVar:37314 clinical_significance=Pathogenic.",
+            finding=synth_finding,
+        )],
+        stripped_count=0,
+        refused=False,
+    )
+    findings = [
+        _layer1_finding_with_row(
+            call_id="cq-1", source_url=source_url,
+            fields={"clinical_significance": "Pathogenic"},
+        )
+    ]
+
+    citations = graph_module._citations_from_grounded_claims(grounding, findings)
+
+    assert len(citations) == 1
+    assert citations[0].snapshot_date is None
+    assert citations[0].entity_name is None
+
+
 def test_field_class_for_layer1_field_matches_real_graph_data_today() -> None:
     """F-3.4-T06-01's own finding, enforced as a regression test: as of
     the live probe this finding is based on (2026-08-09, 200-row samples

@@ -149,6 +149,34 @@ class CitationPayload(BaseModel):
     assertion_confidence: str = Field(..., max_length=64)
     population_ancestry_context: str | None = Field(None, max_length=256)
     license: str = Field(..., max_length=128)
+    # T-4.10-07 (F-4.8-D-02, F-4.8-D-03): two additive, optional fields for
+    # the source card's header and its SNAPSHOT row. Both default to None
+    # so every payload built before this phase still validates unchanged
+    # (Section 2.6: a new optional field is an allowed in-version change).
+    #
+    # `snapshot_date`: a real calendar date extracted from the Layer 1
+    # row's own `graph_snapshot_version` (`synthesis.freshness.
+    # graph_snapshot_date_from_version`, already live-confirmed and wired
+    # for T-3.4-06's staleness check). It is NOT a genuine per-row
+    # ingestion timestamp: F-3.4-T06-01 confirmed no such field exists
+    # anywhere this repo's ingest can read (checked live against
+    # `ag_catalog`; no ingest-metadata table is queryable). It is the
+    # closest real, non-fabricated proxy this graph has for "when was this
+    # graph data current", which is what Section 7's freshness argument
+    # needs to be visible to a reader. Left `None`, never a guess, for
+    # Layer 2/3 citations (no graph snapshot exists for a live API call)
+    # and for a Layer 1 row whose `graph_snapshot_version` carries no
+    # parseable date.
+    #
+    # `entity_name`: the citation's own record's plain-language name (e.g.
+    # a gene symbol, a disease name), read directly off the row's stored
+    # `name` property when one is present and not a known ETL vocabulary-
+    # token artifact (`core.graph._is_vocabulary_token_artifact`, F-2.1-
+    # B07). Left `None`, never a guess, when the row carries no `name`
+    # property or the value is flagged as a corrupted vocabulary-token
+    # artifact.
+    snapshot_date: str | None = Field(None, max_length=32)
+    entity_name: str | None = Field(None, max_length=256)
 
 
 class TrustSignalPayload(BaseModel):

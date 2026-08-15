@@ -593,3 +593,126 @@ class TestStopEndpoint:
             assert first.json()["stopped"] is True
             assert second.status_code == 200
             assert second.json()["stopped"] is True
+
+
+class TestAllowanceEndpoint:
+    """`GET /v1/allowance` (T-4.10-04): valid, invalid, and null input for
+    both principal classes. The guest admit/refuse shape and the exact
+    used-increments-by-one property are the phase 4.10 premise gate's job
+    (test_phase_4_10_premise.py); this class covers the input-validation
+    surface T-1.2-02's established convention requires for every endpoint.
+    """
+
+    @pytest.mark.asyncio
+    async def test_valid_input_registered_caller_reports_the_real_cap_uncounted(self) -> None:
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            response = await client.get("/v1/allowance", headers=headers)
+            assert response.status_code == 200
+            body = response.json()
+            assert body == {"kind": "user", "used": 0, "total": 100, "counted": False}
+
+    @pytest.mark.asyncio
+    async def test_valid_input_guest_caller_reports_a_real_counted_allowance(self) -> None:
+        async with _client() as client:
+            guest = await client.post("/auth/guest")
+            assert guest.status_code == 201
+            headers = {"Authorization": f"Bearer {guest.json()['guest_token']}"}
+
+            response = await client.get("/v1/allowance", headers=headers)
+            assert response.status_code == 200
+            assert response.json() == {"kind": "guest", "used": 0, "total": 5, "counted": True}
+
+    @pytest.mark.asyncio
+    async def test_invalid_input_a_tampered_token_returns_401(self) -> None:
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            tampered = headers["Authorization"][:-2] + "zz"
+            response = await client.get("/v1/allowance", headers={"Authorization": tampered})
+            assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_null_input_no_authorization_header_returns_401(self) -> None:
+        async with _client() as client:
+            response = await client.get("/v1/allowance")
+            assert response.status_code == 401
+
+
+class TestConcurrentRunCap:
+    """T-4.10-05: reproduces F-4.0-A-10's original shape (rapid repeated
+    run creation from one caller, with nothing bounding it) and asserts
+    creation is now bounded. F-4.0-A-10's own repro measured 9,615 runs
+    accepted from one account with zero rejections; this test's cap is
+    `RunRegistry.DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER` (5), several orders of
+    magnitude tighter, and the assertion is exact: the cap fires at
+    exactly that boundary, not merely "eventually rejects something".
+    """
+
+    @pytest.mark.asyncio
+    async def test_rapid_repeated_run_creation_from_one_caller_is_now_bounded(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from system_03_search_agent.core.run_registry import DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER
+
+        started = asyncio.Event()
+
+        async def _fake_stream_never_finishes(query: Query, context: RequestContext):
+            # Every created run stays ACTIVE (never `finished`) for the
+            # whole test, so count_active_runs_for_owner keeps counting
+            # every one of them, the same "still in flight" shape F-4.0-
+            # A-10's burst produced (its runs also outlived the burst
+            # window; here that is forced rather than incidental).
+            yield _fake_event("guard", query.trace_id, 0)
+            started.set()
+            await asyncio.sleep(3600)
+            yield _fake_event("done", query.trace_id, 1)  # pragma: no cover - unreachable
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fake_stream_never_finishes)
+
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            created_run_ids: list[str] = []
+
+            for i in range(DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER):
+                response = await client.post(
+                    "/v1/query", json=_create_body(session_id=f"cap-{i}"), headers=headers
+                )
+                assert response.status_code == 202, (
+                    f"run {i + 1} of {DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER} should still be "
+                    "within the concurrent-run cap"
+                )
+                created_run_ids.append(response.json()["run_id"])
+
+            over_cap = await client.post(
+                "/v1/query", json=_create_body(session_id="cap-over"), headers=headers
+            )
+            assert over_cap.status_code == 429, (
+                "F-4.0-A-10: rapid repeated run creation from one caller must "
+                "now be bounded, not accepted unconditionally"
+            )
+            body = over_cap.json()
+            assert "concurrent_run_cap_exceeded" in str(body)
+            assert "Retry-After" in over_cap.headers
+
+            # Cleanup: cancel every still-hanging background task so it does
+            # not outlive this test process.
+            for run_id in created_run_ids:
+                run_registry_module.default_registry.get_run(run_id).task.cancel()
+
+    @pytest.mark.asyncio
+    async def test_a_completed_run_does_not_count_against_the_cap(self) -> None:
+        """F-1.2-01's own fix ("how long", not "how many") and T-4.10-05's
+        acceptance criterion composed: creating and finishing
+        DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER + 1 runs one at a time (draining
+        each before the next starts) must never hit the cap, since none
+        of them are ever concurrently active."""
+        from system_03_search_agent.core.run_registry import DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER
+
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            for i in range(DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER + 3):
+                response = await client.post(
+                    "/v1/query", json=_create_body(session_id=f"seq-{i}"), headers=headers
+                )
+                assert response.status_code == 202
+                await _drain_run_task(response.json()["run_id"])

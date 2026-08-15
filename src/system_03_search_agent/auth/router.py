@@ -59,7 +59,9 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import logging
 import os
+import uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -68,8 +70,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from system_03_search_agent.auth.dependencies import get_current_user
+from system_03_search_agent.auth.guest import decode_guest_token, mint_guest_token
 from system_03_search_agent.auth.passwords import hash_password, verify_password
 from system_03_search_agent.auth.schemas import (
+    GuestTokenResponse,
     LoginRequest,
     LogoutRequest,
     LogoutResponse,
@@ -84,8 +88,12 @@ from system_03_search_agent.auth.tokens import (
     hash_refresh_token,
     mint_access_token,
 )
-from system_03_search_agent.data.models import AuthSession, User
+from system_03_search_agent.core import run_registry as run_registry_module
+from system_03_search_agent.data.guest_sessions import FREE_RUN_ALLOWANCE, create_guest_session
+from system_03_search_agent.data.models import AuthSession, GuestSession, User
 from system_03_search_agent.data.session import get_session
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -283,6 +291,74 @@ def _revoke_family_on_reuse(session: Session, raw_refresh_token: str) -> bool:
     return True
 
 
+def _migrate_guest_session(session: Session, guest_token: str | None, user: User) -> None:
+    """Best-effort: re-point a guest's LIVE runs to `user` and revoke the
+    guest session (T-4.10-06, design decision 4, `tracker/phase_4.10.md`).
+
+    NEVER raises. An absent, invalid, expired, malformed, or
+    already-migrated guest token is not an authentication failure
+    (signup/login's acceptance criterion: "authentication is the primary
+    operation; migration is best-effort and its failure is logged, never
+    fatal"), so every expected and unexpected failure mode here is caught
+    and logged, field names only, never the token value or its decoded
+    payload.
+
+    Idempotent (replaying the same signup/login with the same guest token
+    gives the same end state): the `revoked_at IS NULL` predicate below
+    means a second call with an already-migrated token matches zero rows
+    and returns as a clean no-op, never a duplicate reassignment.
+
+    Cross-guest isolation: `old_owner_id` is built ONLY from the
+    `guest_id` claim this exact token decodes to, so a guest token can
+    never migrate any runs but its own, regardless of which user account
+    presents it.
+    """
+    if not guest_token:
+        return
+    try:
+        claims = decode_guest_token(guest_token)
+        guest_uuid = uuid.UUID(claims["guest_id"])
+    except (TypeError, ValueError):
+        logger.info("guest token migration skipped: token is invalid, expired, or malformed")
+        return
+
+    try:
+        # One UPDATE sets revoked_at and migrated_to_user_id together, the
+        # same "no read-then-write" discipline data.guest_sessions.
+        # spend_one_run already uses: the guest session is never
+        # observably revoked-but-unmigrated or migrated-but-still-
+        # spendable. `revoked_at IS NULL` in the WHERE clause is what
+        # makes a replay idempotent, per this function's own docstring.
+        result = session.execute(
+            update(GuestSession)
+            .where(GuestSession.id == guest_uuid, GuestSession.revoked_at.is_(None))
+            .values(revoked_at=datetime.now(UTC), migrated_to_user_id=user.id)
+        )
+        session.commit()
+    except Exception:  # noqa: BLE001 - migration must never fail signup/login, any error included
+        # No exc_info here, deliberately: a DB exception's own string
+        # representation can embed the failed statement's bound
+        # parameters, and this codebase's discipline (production-
+        # standards.md's secrets gate) is to log field names and static
+        # messages only, never a value that could carry anything
+        # token-derived, even indirectly through an exception repr.
+        session.rollback()
+        logger.warning("guest token migration failed while updating guest_sessions")
+        return
+
+    if result.rowcount != 1:
+        # Already migrated/revoked (a replay), or the id never existed:
+        # not fatal, matching this function's best-effort contract.
+        return
+
+    reassigned = run_registry_module.default_registry.reassign_owner(
+        old_owner_id=f"guest:{claims['guest_id']}",
+        new_owner_id=f"user:{user.id}",
+        new_user_id=str(user.id),
+    )
+    logger.info("guest session migrated to a new user; %d live run(s) reassigned", reassigned)
+
+
 @router.post("/signup", response_model=SignupResponse, status_code=status.HTTP_201_CREATED)
 def signup(
     body: SignupRequest,
@@ -304,6 +380,10 @@ def signup(
         session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_EMAIL_TAKEN_DETAIL) from None
     session.refresh(user)
+    # T-4.10-06: best-effort, never fatal (see _migrate_guest_session's own
+    # docstring). Runs after the user row is already committed, so a
+    # migration-side failure can never roll back a successful signup.
+    _migrate_guest_session(session, body.guest_token, user)
     return SignupResponse(id=user.id, email=user.email)
 
 
@@ -328,6 +408,9 @@ def login(
     access_token, raw_refresh_token = _issue_session(session, user, request)
     user.last_login_at = datetime.now(UTC)
     session.commit()
+    # T-4.10-06: best-effort, never fatal, after the login itself has
+    # already succeeded and committed.
+    _migrate_guest_session(session, body.guest_token, user)
     response.headers.update(_NO_STORE_HEADERS)
     return TokenResponse(access_token=access_token, refresh_token=raw_refresh_token)
 
@@ -392,4 +475,36 @@ def me(
         email=current_user.email,
         created_at=current_user.created_at,
         last_login_at=current_user.last_login_at,
+    )
+
+
+# T-4.10-04 (design decision 1 and 6, tracker/phase_4.10.md): mints a
+# fresh guest identity. Never requires a body and never requires
+# credentials, by design: this is the FIRST call an anonymous visitor's
+# browser makes.
+#
+# Rate-limit consideration (acceptance criterion): minting a guest token
+# is an unauthenticated write, so it is named here rather than silently
+# left unconsidered. It carries no per-IP or per-caller throttle of its
+# own in this phase: the full token-bucket-plus-bounded-queue mechanism
+# `.claude/rules/tool-call-budgets.md` describes is build phase 6.0's job
+# (this phase's own "what is deliberately not in this phase" section),
+# and there is no deployed public URL yet to make an abuse path reachable
+# by anyone but the product owner. What bounds the cost of an unthrottled
+# mint today: the operation is a single small INSERT (data.guest_sessions.
+# create_guest_session), no model call and no external API, and the
+# clearable-token accepted tradeoff (TestAcceptedBehaviour in the premise
+# gate) already means a determined caller can always get a fresh
+# allowance anyway, so a missing throttle here does not open a materially
+# worse abuse path than the one already accepted by design. Documented as
+# a known, deliberate gap rather than an oversight; build phase 6.0 owns
+# closing it for real.
+@router.post("/guest", response_model=GuestTokenResponse, status_code=status.HTTP_201_CREATED)
+def create_guest(
+    session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI DI
+) -> GuestTokenResponse:
+    guest = create_guest_session(session)
+    token = mint_guest_token(str(guest.id))
+    return GuestTokenResponse(
+        guest_token=token, guest_id=guest.id, used=guest.runs_used, total=FREE_RUN_ALLOWANCE
     )
