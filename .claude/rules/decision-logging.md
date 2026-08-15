@@ -26,8 +26,10 @@ When a non-trivial choice is made between alternatives, log it to `DECISIONS.md`
 ```markdown
 | Date | Decision | Alternatives considered | Why |
 |------|----------|------------------------|-----|
-| YYYY-MM-DD | What we chose | What we didn't choose | The reason |
+| YYYY-MM-DD | What we chose | What we didn't choose | <details><summary>why</summary>The reason</details> |
 ```
+
+The `Why` cell is wrapped in a `<details>` dropdown, and every existing row follows that shape. The reasoning is the longest part of a row, a median of 538 characters, and collapsing it is what lets the table be read one line per decision. A new row that omits the wrapper is not wrong in content but breaks the scan, so match the shape.
 
 **Apply when:**
 - During planning or architecture discussions

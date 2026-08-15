@@ -31,6 +31,8 @@ Append to the table in `LEARNINGS.md`, newest last:
 
 | Date | Applies to | What broke | What was tried | What fixed it |
 |------|-----------|------------|----------------|---------------|
+
+The last two cells, `What was tried` and `What fixed it`, are each wrapped in a `<details>` dropdown, and every existing row follows that shape. Date, what it applies to, and what broke stay visible so the table scans for "have we hit this before"; the rest opens on demand. Match the shape when appending, or the table stops scanning.
 | 2026-07-26 | `cypher_query`, Layer 1 | Example: query returned rows for a gene that does not exist | Widened the WHERE clause, checked the index | Untyped relationship pattern matched across edge types. Explicit edge label required, see `docs/ncbi/Tool_implementation_mechanics.md` |
 
 Applies to: the tool, layer, build phase, or subsystem, so a future reader can filter. Tag generously; a missed tag is a missed recall.
