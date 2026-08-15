@@ -504,3 +504,21 @@ Raised by: lead, building design decision 8
 That is the same reporting-versus-enforcement mismatch F-4.10-A-03 was filed for, one level up, and it is stated here rather than left for someone to find. It is narrower than A-03 was: the guest's own numbers are true, the refusal when it comes is a truthful 429 with a real `Retry-After`, and the condition only arises on a day the whole system has hit its anonymous ceiling. It is still a promise the UI cannot keep.
 
 Owner: the next frontend ticket. Small: `App.tsx` already fetches this response and already has a wall to show.
+
+### F-4.10-R-11: the gate proved a bound existed and stayed blind to its value
+
+Status: confirmed and closed, same session
+Raised by: lead, mutation-testing the F-4.10-R-01 fix
+
+The attempt ceiling and the shared daily ceiling bound anonymous spend only TOGETHER, and only while the first is materially smaller than the second. Raise `ATTEMPT_ALLOWANCE` above the shipped `ANON_DAILY_RUN_CAP`, or drop that cap near it, and one guest token takes the whole day again, which is the denial of service F-4.10-R-01 measured at 200 pipelines in 1.68 seconds.
+
+Nothing tested that relationship, and the premise gate structurally could not. Its attack clause imports `ATTEMPT_ALLOWANCE` and scales its own daily cap to four times whatever it finds, so it verifies a bound EXISTS while remaining blind to both numbers. Measured: changing the constant from 10 to 40 left all 32 clauses green.
+
+That is the exact trap the premise gate's own header warns about, in the comment above `_EXPECTED_FREE_SEARCHES`: "a gate that reads its expected value out of the code it grades cannot catch that value being wrong." The file states the principle and imports the next constant one screen later. Neither the builder who wrote the clause nor the re-reviewer who ran 11 mutations against this phase caught it, because both were asking whether the mechanism worked.
+
+Closed by a clause over the SHIPPED defaults in `test_cost_control.py`, mutation-proven at the same value 40 that fooled the gate.
+
+Two things worth carrying:
+
+- The first version enforced the ratio inside `anon_daily_run_cap()`, which is stronger in principle: it refuses the misconfiguration rather than testing for it. It turned 7 legitimate tests red, because every clause exercising the daily ceiling sets a deliberately tiny cap to reach the boundary in a few requests. A control that forces the tests exercising a bound to stop exercising it is a bad control however much it catches, so it was reverted for the weaker one. Stated rather than quietly chosen.
+- What the shipped-defaults test does NOT catch: an operator setting a bad value in a real `.env`. Closing that needs startup-time config validation this service does not have. Owner: build phase 6.1's hardening pass.

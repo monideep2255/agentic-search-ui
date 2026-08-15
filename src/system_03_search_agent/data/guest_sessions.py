@@ -18,18 +18,27 @@ Reads:
 Writes:
     - The `guest_sessions` table: one INSERT per `create_guest_session`
       call, one conditional UPDATE per `spend_one_run` call, one conditional
-      decrement per `refund_one_run` call. All three commit
-      the session they are given, matching how `auth/router.py` manages
-      its own session's transaction boundary directly rather than through
-      a shared repository-commit helper; callers pass a session scoped to
-      one operation.
+      decrement per `refund_one_run` call.
+    - The `guest_daily_usage` table: one conditional upsert per
+      `spend_one_anonymous_run` call, and one conditional decrement per
+      `refund_one_run` call that is given a `daily_day`.
+
+    Every public function here commits (or rolls back) the session it is
+    given, matching how `auth/router.py` manages its own session's
+    transaction boundary directly rather than through a shared
+    repository-commit helper; callers pass a session scoped to one
+    operation. `spend_one_anonymous_run` and `refund_one_run` each touch
+    both tables and commit ONCE, so the two counters can never disagree
+    because one statement landed and the other did not (design decision 8's
+    constraint 1, and F-4.10-R-03, which measured that constraint being
+    violated by a function that committed twice).
 """
 
 from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from enum import Enum
 from typing import Final
 
@@ -46,9 +55,24 @@ from system_03_search_agent.data.models import GuestSession
 # `components/guest/GuestAllowance.tsx` mean.
 FREE_RUN_ALLOWANCE: Final[int] = 5
 
+# F-4.10-R-01, product-owner decision 2026-08-15: a guest gets five ANSWERS
+# and at most ten ATTEMPTS. Ten rather than five because the whole point of
+# the F-4.10-A-04 refund is that a clumsy question should not cost a visitor
+# an answer, and a ceiling equal to the answer allowance would make the
+# refund purely decorative. Ten rather than fifty because this is the only
+# per-identity bound on how much of the SHARED daily budget one anonymous
+# caller can move: at ten, draining a 200-run day needs 20 mints instead of
+# one, which is a burst the per-source mint throttle can see.
+#
+# Not an env var, deliberately, matching FREE_RUN_ALLOWANCE directly above:
+# both numbers are product decisions about what a guest gets, and a second
+# way to configure them is a second way for the wire shape, the copy and the
+# enforcement to disagree.
+ATTEMPT_ALLOWANCE: Final[int] = 10
+
 
 class SpendState(str, Enum):
-    """The three outcomes `spend_one_run` can report.
+    """The outcomes `spend_one_run` can report.
 
     Never a bare bool: a caller needs to distinguish "no allowance left"
     (the 403 `guest_allowance_exhausted` design decision 5 calls for) from
@@ -59,6 +83,16 @@ class SpendState(str, Enum):
     SPENT = "spent"
     EXHAUSTED = "exhausted"
     REVOKED_OR_UNKNOWN = "revoked_or_unknown"
+    # F-4.10-R-01, build phase 4.10. Distinct from EXHAUSTED because the two
+    # mean different things to the person reading the refusal: EXHAUSTED is
+    # "you have had your five answers", which is the sign-in wall's own
+    # sentence, while this one is "you have asked as many questions as a
+    # guest can, and most of them were refused before they were answered".
+    # Both are permanent for this identity, so both are a 403 rather than a
+    # 429 by design decision 5's reasoning (retrying never helps, so a
+    # Retry-After would be a lie the UI would repeat); they carry different
+    # machine-readable reasons so the wall can say something true for each.
+    ATTEMPTS_EXHAUSTED = "attempts_exhausted"
     # Build phase 4.10, design decision 8. Distinct from EXHAUSTED because
     # the two mean opposite things to the caller and therefore carry
     # different HTTP statuses: EXHAUSTED is this guest's own allowance,
@@ -74,13 +108,18 @@ class SpendResult:
     """The outcome of one `spend_one_run` call.
 
     `runs_used` is populated on SPENT (the new count, straight off the
-    UPDATE's own `RETURNING` clause) and on EXHAUSTED (the count at the
-    moment of refusal, so a caller can report it honestly); it is None on
-    REVOKED_OR_UNKNOWN, where there is no live count to report.
+    UPDATE's own `RETURNING` clause) and on EXHAUSTED and ATTEMPTS_EXHAUSTED
+    (the count at the moment of refusal, so a caller can report it
+    honestly); it is None on REVOKED_OR_UNKNOWN, where there is no live
+    count to report.
+
+    `attempts_used` follows the same rule for the attempt counter
+    (F-4.10-R-01) and is None wherever `runs_used` is.
     """
 
     state: SpendState
     runs_used: int | None = None
+    attempts_used: int | None = None
 
 
 def create_guest_session(session: Session) -> GuestSession:
@@ -131,18 +170,81 @@ def _validate_cap(cap: object) -> int:
     return cap
 
 
-# The single conditional spend statement design decision 3 specifies
-# verbatim. `runs_used < :cap` is evaluated against the PRE-update row, so
-# Postgres's own row-level lock on the UPDATE is what makes two concurrent
-# callers racing this statement unable to both push the count past `cap`:
-# the second waits for the first's transaction to commit, then re-evaluates
-# this WHERE clause against the row the first just wrote.
+# The single conditional spend statement design decision 3 specifies, now
+# gated on BOTH ceilings (F-4.10-R-01). Each `... < :cap` is evaluated
+# against the PRE-update row, so Postgres's own row-level lock on the UPDATE
+# is what makes two concurrent callers racing this statement unable to both
+# push either count past its ceiling: the second waits for the first's
+# transaction to commit, then re-evaluates this WHERE clause against the row
+# the first just wrote.
+#
+# BOTH counters advance in this ONE statement, and both ceilings gate it, so
+# there is no ordering between them for a concurrent caller to slip through.
+# Spending the attempt in a second statement would reopen exactly the
+# read-then-write window the single conditional UPDATE exists to close.
 _SPEND_STATEMENT = text(
     "UPDATE guest_sessions"
-    "   SET runs_used = runs_used + 1, last_seen_at = now()"
-    " WHERE id = :guest_id AND revoked_at IS NULL AND runs_used < :cap"
-    " RETURNING runs_used"
+    "   SET runs_used = runs_used + 1,"
+    "       attempts_used = attempts_used + 1,"
+    "       last_seen_at = now()"
+    " WHERE id = :guest_id AND revoked_at IS NULL"
+    "   AND runs_used < :cap AND attempts_used < :attempt_cap"
+    " RETURNING runs_used, attempts_used"
 )
+
+
+def _apply_spend(
+    session: Session,
+    guest_uuid: uuid.UUID,
+    *,
+    cap: int,
+    attempt_cap: int,
+) -> SpendResult:
+    """Run the conditional spend and classify a refusal. Commits NOTHING.
+
+    Split out of `spend_one_run` for F-4.10-R-03: design decision 8's
+    constraint 1 requires the per-guest spend and the per-day spend to
+    happen in ONE transaction, and a helper that commits cannot be composed
+    into one. `spend_one_run` below is this function plus a commit, for the
+    callers that genuinely are a single operation;
+    `spend_one_anonymous_run` composes this one with the daily statement and
+    commits once at the end.
+    """
+    spent_row = session.execute(
+        _SPEND_STATEMENT,
+        {"guest_id": guest_uuid, "cap": cap, "attempt_cap": attempt_cap},
+    ).first()
+    if spent_row is not None:
+        return SpendResult(
+            SpendState.SPENT,
+            runs_used=int(spent_row[0]),
+            attempts_used=int(spent_row[1]),
+        )
+
+    lookup_row = session.execute(
+        select(
+            GuestSession.revoked_at,
+            GuestSession.runs_used,
+            GuestSession.attempts_used,
+        ).where(GuestSession.id == guest_uuid)
+    ).first()
+    if lookup_row is None or lookup_row[0] is not None:
+        return SpendResult(SpendState.REVOKED_OR_UNKNOWN)
+    runs_used, attempts_used = int(lookup_row[1]), int(lookup_row[2])
+    # ANSWERS are checked first, and the order is a decision rather than an
+    # accident. A guest who has had all five answers is exactly the visitor
+    # the sign-in wall's own sentence describes ("you have used your free
+    # searches"), and that is the more informative and more actionable of
+    # the two refusals. ATTEMPTS_EXHAUSTED is reported only when the answer
+    # allowance is genuinely still open, which is the case the attempt
+    # ceiling was added for: a caller who only ever triggers refusals.
+    if runs_used >= cap:
+        return SpendResult(
+            SpendState.EXHAUSTED, runs_used=runs_used, attempts_used=attempts_used
+        )
+    return SpendResult(
+        SpendState.ATTEMPTS_EXHAUSTED, runs_used=runs_used, attempts_used=attempts_used
+    )
 
 
 def spend_one_run(
@@ -150,55 +252,58 @@ def spend_one_run(
     guest_id: str | uuid.UUID,
     *,
     cap: int = FREE_RUN_ALLOWANCE,
+    attempt_cap: int = ATTEMPT_ALLOWANCE,
 ) -> SpendResult:
     """Spend one run against `guest_id`'s allowance, atomically.
 
-    The spend and the cap check happen in a single conditional
+    The spend and both cap checks happen in a single conditional
     `UPDATE ... RETURNING` (design decision 3): a row comes back only when
-    the session is not revoked and its pre-update `runs_used` was still
-    under `cap`. When no row comes back, a read-only lookup classifies WHY
-    for an honest caller-facing message; that lookup runs strictly after
-    the write decision is already final and never gates it, so it cannot
-    reintroduce the read-then-write race this function exists to avoid.
+    the session is not revoked, its pre-update `runs_used` was still under
+    `cap`, and its pre-update `attempts_used` was still under
+    `attempt_cap`. When no row comes back, a read-only lookup classifies
+    WHY for an honest caller-facing message; that lookup runs strictly
+    after the write decision is already final and never gates it, so it
+    cannot reintroduce the read-then-write race this function exists to
+    avoid.
+
+    THE TWO COUNTERS ARE ASYMMETRIC, and that asymmetry is the whole of the
+    F-4.10-R-01 fix. Both advance here, on every run this identity starts.
+    Only `runs_used` is ever given back (`refund_one_run` below); the
+    attempt is permanent. So a guardrail refusal still costs the caller
+    nothing they can feel, and still costs them one of their finite chances
+    to make the system do work.
 
     Args:
         session: a session scoped to this one operation; this function
             commits it.
         guest_id: the guest session id, as a string (typically straight
             off a decoded guest token's `guest_id` claim) or a `uuid.UUID`.
-        cap: the allowance ceiling. Defaults to FREE_RUN_ALLOWANCE.
+        cap: the ANSWER allowance ceiling. Defaults to FREE_RUN_ALLOWANCE.
+        attempt_cap: the ATTEMPT ceiling, counting every run started
+            whatever its outcome. Defaults to ATTEMPT_ALLOWANCE.
 
     Returns:
-        A SpendResult: SPENT with the new count, EXHAUSTED with the count
-        at refusal, or REVOKED_OR_UNKNOWN with no count.
+        A SpendResult: SPENT with the new counts, EXHAUSTED or
+        ATTEMPTS_EXHAUSTED with the counts at refusal, or
+        REVOKED_OR_UNKNOWN with no counts.
 
     Raises:
-        TypeError: If guest_id is not a str or uuid.UUID, if cap is not an
-            int, or if session is not a Session.
-        ValueError: If guest_id is an empty or malformed string, or cap is
-            not a positive integer.
+        TypeError: If guest_id is not a str or uuid.UUID, if cap or
+            attempt_cap is not an int, or if session is not a Session.
+        ValueError: If guest_id is an empty or malformed string, or cap or
+            attempt_cap is not a positive integer.
     """
     if not isinstance(session, Session):
         raise TypeError("session must be a sqlalchemy.orm.Session")
     guest_uuid = _coerce_guest_id(guest_id)
     validated_cap = _validate_cap(cap)
+    validated_attempt_cap = _validate_cap(attempt_cap)
 
-    spent_row = session.execute(
-        _SPEND_STATEMENT, {"guest_id": guest_uuid, "cap": validated_cap}
-    ).first()
-    if spent_row is not None:
-        session.commit()
-        return SpendResult(SpendState.SPENT, runs_used=int(spent_row[0]))
-
-    lookup_row = session.execute(
-        select(GuestSession.revoked_at, GuestSession.runs_used).where(
-            GuestSession.id == guest_uuid
-        )
-    ).first()
+    result = _apply_spend(
+        session, guest_uuid, cap=validated_cap, attempt_cap=validated_attempt_cap
+    )
     session.commit()
-    if lookup_row is None or lookup_row[0] is not None:
-        return SpendResult(SpendState.REVOKED_OR_UNKNOWN)
-    return SpendResult(SpendState.EXHAUSTED, runs_used=int(lookup_row[1]))
+    return result
 
 
 # The system-wide daily spend, design decision 8. An upsert rather than an
@@ -221,39 +326,79 @@ _DAILY_SPEND_STATEMENT = text(
     " RETURNING runs_used"
 )
 
-# The compensating statement below, used when the daily ceiling refuses a run
-# whose per-guest increment already committed, and again by `refund_one_run`
-# when a run that WAS admitted turns out to produce nothing (a guardrail
-# refusal, F-4.10-A-04). Conditional on `runs_used > 0` so it can never drive
-# the count negative and trip the table's CHECK constraint, whatever else
-# touched the row in between.
+# The ANSWER refund, used by `refund_one_run` when a run that WAS admitted
+# turns out to produce nothing (a guardrail refusal, F-4.10-A-04).
+# Conditional on `runs_used > 0` so it can never drive the count negative and
+# trip the table's CHECK constraint, whatever else touched the row in
+# between.
+#
+# `attempts_used` IS DELIBERATELY ABSENT FROM THIS STATEMENT, and its absence
+# is the F-4.10-R-01 fix rather than an omission. Give the attempt back and
+# the caller is unbounded again: they never advance a counter that stops
+# them, so they can start runs until the SHARED daily budget is gone, which
+# is what took the anonymous product offline in 1.68 seconds. The answer is
+# refunded because a visitor should not be punished for one clumsy question;
+# the attempt is not, because the system must still be able to say "enough".
 _UNSPEND_STATEMENT = text(
     "UPDATE guest_sessions SET runs_used = runs_used - 1"
     " WHERE id = :guest_id AND runs_used > 0"
     " RETURNING runs_used"
 )
 
+# The SHARED daily refund (F-4.10-R-01 part B). Same `> 0` guard as the
+# statement above, for the same reason: the row's CHECK constraint must be
+# unreachable no matter what else touched it in between.
+_DAILY_UNSPEND_STATEMENT = text(
+    "UPDATE guest_daily_usage SET runs_used = runs_used - 1"
+    " WHERE day = :day AND runs_used > 0"
+    " RETURNING runs_used"
+)
 
-def refund_one_run(session: Session, guest_id: str | uuid.UUID) -> bool:
-    """Give one run back to `guest_id`'s PERSONAL allowance.
+
+def refund_one_run(
+    session: Session,
+    guest_id: str | uuid.UUID,
+    *,
+    daily_day: date | None = None,
+) -> bool:
+    """Give one ANSWER back to `guest_id`, and never an attempt.
 
     F-4.10-A-04, product-owner decision 2026-08-15: a guardrail refusal must
     not cost a visitor one of their five free searches. A first-time visitor
     who asks five off-topic questions would otherwise meet the sign-in wall
     having never received a single answer.
 
-    WHAT THIS DELIBERATELY DOES NOT TOUCH, and it is the whole point of the
-    decision rather than an omission: `guest_daily_usage`. The system-wide
-    daily counter stays advanced. A refused run still started a real pipeline
-    and, for a classifier refusal, paid for a real Guard-tier model call. If a
-    refusal cost nothing at all, an attacker could send unlimited garbage and
-    every request would be free compute, with the one ceiling that bounds
-    anonymous spend (design decision 8) never advancing to stop it. Charging
-    the DAY's budget while sparing the INDIVIDUAL is what makes "we do not
-    punish a curious visitor for one bad question" true without opening a
-    free-compute path. The two counters exist for different reasons, and this
-    is the case that proves it: one bounds a person's fair share, the other
-    bounds the system's spend.
+    F-4.10-R-01, product-owner decision the same day, is the correction that
+    made the first decision safe, and it has two halves.
+
+    The first half is what this statement does NOT touch: `attempts_used`.
+    The original refund gave back the only counter a refusable-text caller
+    ever advanced, which removed the per-identity bound entirely. Measured:
+    one guest token, minted once, started 200 paid pipelines in 1.68 seconds
+    with its own allowance still reading `used: 0` and drained the whole
+    day's anonymous budget for everyone else. The attempt is permanent, so
+    that caller now stops at ATTEMPT_ALLOWANCE.
+
+    The second half is `daily_day`. `guest_daily_usage` is the SHARED
+    ceiling, and charging it for a refusal that cost nothing is what made
+    the drain cheap. Pass `daily_day` when, and only when, the refused run
+    made NO model call: a pre-filter refusal returns before the Guard tier
+    is ever dispatched (`core/graph.py`'s `_decline_for_guardrail(...,
+    charged=False)`), so the day's budget was charged for zero dollars of
+    work. Leave it `None` for a refusal that came AFTER a real Guard-tier
+    call: that run genuinely spent money, the day's budget is what bounds
+    money, and refunding it would reopen the free-compute path the original
+    decision was written to avoid.
+
+    The day is passed in rather than computed here so the refund lands on
+    the day the run was actually CHARGED. A run refused a few seconds after
+    UTC midnight would otherwise decrement the new day's row, taking a slot
+    from the day that never charged it.
+
+    Both statements run in ONE transaction, for design decision 8's
+    constraint 1 reason applied to the reverse direction: an answer given
+    back while the day's refund failed would leave the two counters
+    disagreeing with no compensation path.
 
     Idempotent in the sense `production-standards`' retry-safety gate needs:
     the caller fires it at most once per run (see `core/run_registry.py`), and
@@ -270,20 +415,31 @@ def refund_one_run(session: Session, guest_id: str | uuid.UUID) -> bool:
         session: a session scoped to this one operation; this function
             commits it.
         guest_id: the guest session id, string or UUID.
+        daily_day: the UTC calendar day whose SHARED anonymous budget should
+            also be given back, or None to leave it charged. Pass a day only
+            for a refusal that made no model call.
 
     Returns:
-        True when a run was actually given back, False when there was
-        nothing to give back (no row, or the count was already zero).
+        True when an answer was actually given back, False when there was
+        nothing to give back (no row, or the count was already zero). The
+        daily refund is not reflected in this value: it is a different
+        counter with a different meaning, and a caller that treats "the day
+        was already at zero" as "the visitor was not refunded" would be
+        reading one fact off another.
 
     Raises:
-        TypeError: If guest_id is not a str or uuid.UUID, or session is not
-            a Session.
+        TypeError: If guest_id is not a str or uuid.UUID, if daily_day is
+            not a date, or session is not a Session.
         ValueError: If guest_id is an empty or malformed string.
     """
     if not isinstance(session, Session):
         raise TypeError("session must be a sqlalchemy.orm.Session")
+    if daily_day is not None and not isinstance(daily_day, date):
+        raise TypeError("daily_day must be a datetime.date or None")
     guest_uuid = _coerce_guest_id(guest_id)
     refunded_row = session.execute(_UNSPEND_STATEMENT, {"guest_id": guest_uuid}).first()
+    if daily_day is not None:
+        session.execute(_DAILY_UNSPEND_STATEMENT, {"day": daily_day})
     session.commit()
     return refunded_row is not None
 
@@ -293,9 +449,10 @@ def spend_one_anonymous_run(
     guest_id: str | uuid.UUID,
     *,
     cap: int = FREE_RUN_ALLOWANCE,
+    attempt_cap: int = ATTEMPT_ALLOWANCE,
     daily_cap: int,
 ) -> SpendResult:
-    """Spend one anonymous run against BOTH bounds.
+    """Spend one anonymous run against ALL THREE bounds, in ONE transaction.
 
     This is what the query endpoint calls. `spend_one_run` above is the
     per-guest primitive and is NOT sufficient on its own for the production
@@ -304,17 +461,36 @@ def spend_one_anonymous_run(
     The build phase 4.10 adversary round accepted 40 paid pipelines in 0.25
     seconds against exactly that gap (F-4.10-A-01).
 
-    The per-guest spend runs FIRST and is compensated if the daily ceiling
-    refuses, because the two orderings fail differently and only this one
-    fails safely:
+    ONE TRANSACTION, which is design decision 8's constraint 1 stated
+    verbatim: "The two spends, per-guest and per-day, happen in ONE
+    transaction. A per-guest spend that commits while the daily spend fails
+    charges a visitor for a run they never got." F-4.10-R-03 measured the
+    shipped code violating exactly that: `spend_one_run` committed its own
+    increment first, and making the daily statement raise left the guest
+    charged AND returned a 500. Nothing commits here until both statements
+    have succeeded, so a failure of either leaves the caller charged for
+    nothing.
 
-    - Per-guest first: a daily refusal reverses an increment that was never
-      charged to anyone, leaving the guest's own count untouched.
+    The per-guest spend still runs FIRST inside that transaction, and the
+    ordering argument is unchanged:
+
+    - Per-guest first: a daily refusal rolls back an increment that was
+      never charged to anyone, leaving the guest's own count untouched.
     - Daily first: a per-guest refusal would leave the SYSTEM-WIDE counter
       advanced by a run nobody was allowed to start, so a caller whose own
       allowance is spent could still burn down the day's budget for
       everyone else just by retrying. That is a denial of service handed
       out for free.
+
+    What changed with the transaction is HOW the daily refusal reverses the
+    per-guest spend: a `ROLLBACK`, not a compensating UPDATE. The
+    compensating statement could only cover the refusal case, which is why
+    a raising daily statement escaped it. A rollback covers every way the
+    second statement can fail, including a raise and a lost connection,
+    because nothing was ever committed to compensate for.
+
+    Lock ordering is always guest row then daily row, in every caller, so
+    two concurrent spends cannot deadlock on each other.
 
     `daily_cap` is keyword-only and has NO default, so the system-wide bound
     cannot be omitted by accident. Passing it is a decision written down at
@@ -322,24 +498,38 @@ def spend_one_anonymous_run(
 
     Args:
         session: a session scoped to this one operation; this function
-            commits it.
+            commits or rolls it back.
         guest_id: the guest session id, string or UUID.
-        cap: this guest's own allowance ceiling.
+        cap: this guest's own ANSWER allowance ceiling.
+        attempt_cap: this guest's ATTEMPT ceiling (F-4.10-R-01).
         daily_cap: the system-wide ceiling on anonymous runs for the current
             UTC day, from `harness.cost_control.anon_daily_run_cap`.
 
     Returns:
-        A SpendResult. SPENT carries the guest's new count. EXHAUSTED,
-        REVOKED_OR_UNKNOWN and DAILY_CAP_REACHED are all refusals, kept
-        distinct because they mean different things to the caller.
+        A SpendResult. SPENT carries the guest's new counts. EXHAUSTED,
+        ATTEMPTS_EXHAUSTED, REVOKED_OR_UNKNOWN and DAILY_CAP_REACHED are all
+        refusals, kept distinct because they mean different things to the
+        caller.
 
     Raises:
         TypeError, ValueError: as `spend_one_run`, plus for a `daily_cap`
             that is not a positive int.
     """
+    if not isinstance(session, Session):
+        raise TypeError("session must be a sqlalchemy.orm.Session")
+    guest_uuid = _coerce_guest_id(guest_id)
+    validated_cap = _validate_cap(cap)
+    validated_attempt_cap = _validate_cap(attempt_cap)
     validated_daily_cap = _validate_cap(daily_cap)
-    guest_result = spend_one_run(session, guest_id, cap=cap)
+
+    guest_result = _apply_spend(
+        session, guest_uuid, cap=validated_cap, attempt_cap=validated_attempt_cap
+    )
     if guest_result.state is not SpendState.SPENT:
+        # Nothing was written (the conditional UPDATE matched no row), so
+        # there is nothing to commit. Rolling back rather than committing
+        # ends the transaction without asserting that a write happened.
+        session.rollback()
         return guest_result
 
     # UTC, never the server's local date. A ceiling that resets at an
@@ -351,8 +541,7 @@ def spend_one_anonymous_run(
         _DAILY_SPEND_STATEMENT, {"day": today, "daily_cap": validated_daily_cap}
     ).first()
     if daily_row is None:
-        session.execute(_UNSPEND_STATEMENT, {"guest_id": _coerce_guest_id(guest_id)})
-        session.commit()
+        session.rollback()
         return SpendResult(SpendState.DAILY_CAP_REACHED)
     session.commit()
     return guest_result

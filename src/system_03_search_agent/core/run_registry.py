@@ -295,19 +295,28 @@ class RunEntry:
     # genuinely empty one (F-4.0-A-05).
     cancelled: bool = False
     # F-4.10-A-04 (adversary round 1, build phase 4.10): fired at most once,
-    # by `_drain_into_entry`, the first time this run emits a `guard` event
-    # with `passed: false`. This registry knows nothing about allowances and
-    # must not: the callback is supplied by whoever created the run (the web
-    # surface passes one only for a guest caller), so the refund policy lives
-    # at the layer that owns the allowance and this module only reports the
+    # by `_drain_into_entry`, when this run ends having refused at the
+    # guardrail. This registry knows nothing about allowances and must not:
+    # the callback is supplied by whoever created the run (the web surface
+    # passes one only for a guest caller), so the refund policy lives at the
+    # layer that owns the allowance and this module only reports the
     # observation. Set back to `None` the instant it fires, which is what
     # makes "at most once per run" structural rather than a convention.
-    on_guard_refused: Callable[[], None] | None = field(default=None, repr=False)
+    #
+    # Its one argument is `charged` (F-4.10-R-01): whether the refusal came
+    # after a real model call. See `_fire_guard_refusal_callback` for how it
+    # is observed and why it never travels on the wire.
+    on_guard_refused: Callable[[bool], None] | None = field(default=None, repr=False)
+    # The two observations `_fire_guard_refusal_callback` accumulates before
+    # it can decide. Both are internal to this process and neither is ever
+    # serialized to a client.
+    guard_refused: bool = False
+    guard_cost_observed: bool = False
 
 
 def _fire_guard_refusal_callback(entry: RunEntry, event: Event) -> None:
-    """Invoke `entry.on_guard_refused` the first time this run refuses at the
-    guardrail, then disarm it (F-4.10-A-04).
+    """Invoke `entry.on_guard_refused` once, when a run ENDS having refused
+    at the guardrail, then disarm it (F-4.10-A-04, F-4.10-R-01).
 
     WHERE A GUARD REFUSAL BECOMES OBSERVABLE, and why it is here. The
     guardrail runs inside the agent loop, long after `POST /v1/query` has
@@ -320,26 +329,64 @@ def _fire_guard_refusal_callback(entry: RunEntry, event: Event) -> None:
     rejected: it would let a caller start unbounded runs that never spend at
     all, which is a strictly worse hole than the one being closed.
 
-    A `guard` event with `passed: false` is the ONLY signal used, rather than
-    "the run produced no answer". A refusal is a judgement the system reached,
-    distinct from an error, which `_decline_for_guardrail`'s own docstring
-    already insists on; a failed run is a different question with a different
-    answer and is not in scope here.
+    A `guard` event with `passed: false` is the ONLY refusal signal used,
+    rather than "the run produced no answer". A refusal is a judgement the
+    system reached, distinct from an error, which `_decline_for_guardrail`'s
+    own docstring already insists on; a failed run is a different question
+    with a different answer and is not in scope here.
+
+    HOW `charged` REACHES THE CALLBACK WITHOUT REACHING THE GUEST
+    (F-4.10-R-01 part B). The refund policy needs to know whether the refused
+    run made a real model call, because a refusal that cost nothing must not
+    charge the shared daily budget, while one that paid for a Guard-tier call
+    must. `_decline_for_guardrail` knows: it takes `charged` as an argument
+    and emits a `cost` event if and only if it is true.
+
+    That `cost` event is the signal read here, and it is deliberately NOT a
+    new field on `GuardPayload` or on any other payload. Sections 19.4 and
+    19.5 make cost internal-only, and this phase's own premise gate asserts a
+    guest is never streamed a `cost` event; a `charged` flag on the wire
+    would tell every guest exactly which of their questions cost money, which
+    is the same cost-adjacent disclosure the sanitizer exists to prevent. A
+    `cost` event, by contrast, is already stripped for every non-operator
+    caller by `sanitize_event_for_end_user` in the SSE layer, so it reaches
+    this drain loop and stops there. `RunEntry` is on the inside; the wire is
+    not.
+
+    That is why the callback fires on `done` rather than on the `guard` event
+    itself. `_decline_for_guardrail` emits guard, then cost (only when
+    charged), then done, so `done` is the first moment both facts are known.
+    The cost of the delay is one narrow window: a run cancelled between the
+    guard event and the done event loses its refund and leaves the caller
+    charged. That is the same residue, and the same safe direction, as the
+    process-death case `post_v1_query` already documents, since the opposite
+    failure hands out free searches.
 
     Never raises. A callback that fails must not turn a correctly refused run
     into a crashed one, and the caller's own allowance is the thing at stake,
     not the run.
     """
-    callback = entry.on_guard_refused
-    if callback is None or event.type != "guard" or event.payload.get("passed") is not False:
+    if entry.on_guard_refused is None:
         return
+    if event.type == "cost":
+        # Only ever true for a run that reached a model call. A refused run
+        # emits at most this one, immediately after its guard verdict.
+        entry.guard_cost_observed = True
+        return
+    if event.type == "guard":
+        if event.payload.get("passed") is False:
+            entry.guard_refused = True
+        return
+    if event.type != "done" or not entry.guard_refused:
+        return
+    callback = entry.on_guard_refused
     # Disarm BEFORE calling, not after: a callback that raises must still
-    # have consumed its one shot, or a later `guard` event (there is none
+    # have consumed its one shot, or a later `done` event (there is none
     # today, and relying on that is how a second refund gets written) could
     # fire it again.
     entry.on_guard_refused = None
     try:
-        callback()
+        callback(entry.guard_cost_observed)
     except Exception:  # noqa: BLE001 - a refund failure must never fail the run
         # No exc_info and no interpolated values, per production-standards'
         # secrets gate: a database exception's own string can embed bound
@@ -615,7 +662,7 @@ class RunRegistry:
         *,
         run_id: str | None = None,
         owner_id: str | None = None,
-        on_guard_refused: Callable[[], None] | None = None,
+        on_guard_refused: Callable[[bool], None] | None = None,
     ) -> str:
         """Mint a `run_id` (or accept a caller-provided one), start
         `run_streaming(query, context)` as a background task feeding both
@@ -648,12 +695,17 @@ class RunRegistry:
                 different tests never accidentally share a concurrency
                 slot.
             on_guard_refused: called at most once, from the background
-                task, the first time this run emits a `guard` event with
-                `passed: false` (F-4.10-A-04). The web surface passes a
-                guest-allowance refund here; every other caller leaves it
-                `None` and nothing fires. This registry deliberately holds
-                no opinion about what a refusal should cost: it reports the
-                observation, and the layer that owns the allowance decides.
+                task, when this run ENDS having emitted a `guard` event with
+                `passed: false` (F-4.10-A-04). Its one argument is whether
+                that refusal came after a real model call (F-4.10-R-01),
+                observed from the internal `cost` event no guest is ever
+                streamed; see `_fire_guard_refusal_callback` for why the
+                flag travels this way rather than on a payload. The web
+                surface passes a guest-allowance refund here; every other
+                caller leaves it `None` and nothing fires. This registry
+                deliberately holds no opinion about what a refusal should
+                cost: it reports the observation, and the layer that owns
+                the allowance decides.
 
         Raises:
             ConcurrentRunCapExceededError: if `owner_id` (resolved or

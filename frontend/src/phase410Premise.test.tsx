@@ -43,7 +43,24 @@
  *                   copy and neither names an unenforced cap (F-4.10-A-06);
  *                   and that the sign-in wall makes no claim about carrying
  *                   searches across sign-in (F-4.10-A-07).
- *   NOT exercised:  the backend's own admission, isolation, atomicity and
+ *
+ *                   Added in fix round 2 (F-4.10-R-02): that the wall says
+ *                   something TRUE on each of its three triggers, not one
+ *                   sentence written for the first of them. The exhausted
+ *                   allowance keeps "you have used your free searches"; a
+ *                   migrated browser and a visitor at the attempt ceiling
+ *                   (F-4.10-R-01) each get their own, and neither claims a
+ *                   search was used. Both arms: the negative assertions
+ *                   alone would be satisfied by deleting the sentence, so a
+ *                   third clause requires the original wording to survive
+ *                   where it is true. The two clauses that DRIVE a migrated
+ *                   browser now read the copy as well as the testid, which
+ *                   is the specific gap that let the false sentence ship.
+ *   NOT exercised:  the wall's copy against a server that refuses with a
+ *                   reason string this client does not know; an unknown
+ *                   `reason` reaches `setDispatchError` rather than the
+ *                   wall, which is `App.tsx`'s existing fall-through. Also
+ *                   the backend's own admission, isolation, atomicity and
  *                   token-domain-separation guarantees (the backend premise
  *                   gate's job, already green); real network behaviour
  *                   (`lib/api.ts`'s functions are mocked throughout); colour
@@ -384,6 +401,109 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
       expect(wall.textContent ?? "").not.toMatch(/your history/i);
       expect(wall.textContent ?? "").not.toMatch(/from this visit/i);
     });
+
+    it("does not tell a migrated browser it used searches it may never have used", async () => {
+      // F-4.10-R-02. The clause above pins the sentence on the ONE trigger
+      // it is true for. This one drives a trigger the sign-out fix added,
+      // where it is false: this visitor asked once, signed up, signed out,
+      // and is being shown the wall having used one of five. The same wall
+      // is reachable at zero used, by a visitor who created an account
+      // without ever asking a question.
+      //
+      // The gate already drove this exact scenario ("walls a returning
+      // visitor whose guest identity was migrated") and asserted only that
+      // the wall appeared. Driving a screen without reading what it says is
+      // how three copy fixes in a row replaced one false statement with
+      // another.
+      mintGuestMock.mockResolvedValue({
+        guest_token: "guest-token-1", guest_id: "guest-1", used: 1, total: 5,
+      });
+      createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+      getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+      loginMock.mockResolvedValue({
+        access_token: "test-token", refresh_token: "r", token_type: "bearer",
+      });
+      const user = userEvent.setup();
+      render(<App />);
+
+      await ask(user, "What gene is BRCA1?");
+      await waitFor(() => expect(mintGuestMock).toHaveBeenCalledTimes(1));
+      await signInFromNav(user, "log in");
+      await waitFor(() => expect(loginMock).toHaveBeenCalledTimes(1));
+      await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
+      await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+      await ask(user, "What variants cause it?");
+
+      const wall = await screen.findByTestId("sign-in-wall");
+      expect(wall.textContent ?? "").not.toMatch(/used your free searches/i);
+      expect(wall.textContent ?? "").not.toMatch(/free searches are (spent|finished)/i);
+      // And it still says something, and something actionable: an empty or
+      // silent wall would pass every negative assertion above.
+      expect(
+        within(wall).getByText(/guest session was moved into an account/i),
+      ).toBeInTheDocument();
+      expect(
+        within(wall).getByRole("button", { name: /create account or sign in/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("does not tell a visitor at the attempt limit they used searches they never got", async () => {
+      // F-4.10-R-01's refusal reaching F-4.10-R-02's screen. This visitor
+      // asked ten questions, every one of which the guardrail refused, so
+      // every answer was refunded and they received none. "You have used
+      // your free searches" is false for them in the strongest possible
+      // sense: they used none and got none.
+      mintGuestMock.mockResolvedValue({
+        guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+      });
+      createRunMock.mockRejectedValueOnce(
+        new ApiError(
+          403,
+          "createRun failed with 403: you have asked as many questions as a guest can",
+          "guest_attempt_limit_reached",
+        ),
+      );
+      const user = userEvent.setup();
+      render(<App />);
+
+      await ask(user, "What gene is BRCA1?");
+
+      const wall = await screen.findByTestId("sign-in-wall");
+      expect(wall.textContent ?? "").not.toMatch(/used your free searches/i);
+      expect(
+        within(wall).getByText(/asked as many questions as a guest can/i),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the exhausted-allowance sentence only for the exhausted-allowance refusal", async () => {
+      // The arm that stops the fix from being made by weakening the copy to
+      // something vague enough to be true everywhere. "You have used your
+      // free searches" is the right thing to say to somebody who used their
+      // five free searches, and it must survive.
+      //
+      // Without this clause, deleting the sentence outright, or replacing
+      // all three with one hedged line, passes every negative assertion in
+      // the two clauses above.
+      mintGuestMock.mockResolvedValue({
+        guest_token: "guest-token-1", guest_id: "guest-1", used: 5, total: 5,
+      });
+      createRunMock.mockRejectedValueOnce(
+        new ApiError(
+          403,
+          "createRun failed with 403: you have used all of your free searches",
+          "guest_allowance_exhausted",
+        ),
+      );
+      const user = userEvent.setup();
+      render(<App />);
+
+      await ask(user, "What gene is BRCA1?");
+
+      const wall = await screen.findByTestId("sign-in-wall");
+      expect(within(wall).getByText(/you have used your free searches/i)).toBeInTheDocument();
+      expect(wall.textContent ?? "").not.toMatch(/moved into an account/i);
+      expect(wall.textContent ?? "").not.toMatch(/as many questions as a guest can/i);
+    });
   });
 
   describe("signing out does not hand out a fresh allowance (F-4.10-A-05)", () => {
@@ -433,7 +553,13 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
 
       await ask(user, "What variants cause it?");
 
-      expect(await screen.findByTestId("sign-in-wall")).toBeInTheDocument();
+      const wall = await screen.findByTestId("sign-in-wall");
+      expect(wall).toBeInTheDocument();
+      // F-4.10-R-02: this clause DROVE the false sentence and never read it.
+      // Every assertion it already made is unchanged and still required;
+      // this one is added, so a wall that appears with the wrong sentence
+      // can no longer satisfy the clause that creates the state.
+      expect(wall.textContent ?? "").not.toMatch(/used your free searches/i);
       expect(mintGuestMock).toHaveBeenCalledTimes(1);
       expect(createRunMock).toHaveBeenCalledTimes(1);
 
@@ -501,7 +627,12 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
 
       await ask(user, "What gene is BRCA1?");
 
-      expect(await screen.findByTestId("sign-in-wall")).toBeInTheDocument();
+      const revokedWall = await screen.findByTestId("sign-in-wall");
+      expect(revokedWall).toBeInTheDocument();
+      // The third trigger, and the third place the old single sentence was
+      // false: a revoked session says nothing about how many searches were
+      // used (F-4.10-R-02).
+      expect(revokedWall.textContent ?? "").not.toMatch(/used your free searches/i);
       expect(mintGuestMock).not.toHaveBeenCalled();
 
       // And it survives a reload. A marker that lived only in React state

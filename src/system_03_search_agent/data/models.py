@@ -339,6 +339,20 @@ class GuestSession(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
     runs_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    # F-4.10-R-01, product-owner decision 2026-08-15. The SECOND counter on
+    # this row, and the two are not redundant. `runs_used` counts ANSWERS and
+    # is refunded when the guardrail refuses, so a curious visitor is not
+    # punished for one clumsy question. `attempts_used` counts every run this
+    # identity STARTS and is never refunded, so the refund cannot leave the
+    # identity unbounded.
+    #
+    # Why that matters, measured rather than reasoned about: with only
+    # `runs_used`, one guest token minted once started 200 paid pipelines in
+    # 1.68 seconds while its own allowance still read `used: 0`, draining the
+    # whole day's anonymous budget for every other visitor. A refusal cost the
+    # caller nothing and cost everyone else a slot. This column is the
+    # per-identity bound the refund removed.
+    attempts_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     migrated_to_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
@@ -346,6 +360,7 @@ class GuestSession(Base):
 
     __table_args__ = (
         CheckConstraint("runs_used >= 0", name="ck_guest_sessions_runs_used"),
+        CheckConstraint("attempts_used >= 0", name="ck_guest_sessions_attempts_used"),
     )
 
 

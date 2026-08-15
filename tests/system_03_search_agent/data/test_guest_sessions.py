@@ -12,11 +12,25 @@ Skips cleanly (does not fail) when USER_DB_URL is unreachable, matching
 every other live-database suite in this repo.
 
 What this file covers: `create_guest_session`'s shape, `spend_one_run`'s
-three states (spent, exhausted, revoked-or-unknown), its valid/invalid/null
-input handling, and the concurrency guarantee design decision 3 exists for.
+four states (spent, exhausted, attempts-exhausted, revoked-or-unknown), its
+valid/invalid/null input handling, and the concurrency guarantee design
+decision 3 exists for.
+
+Added for F-4.10-R-01 and F-4.10-R-03: that the ATTEMPT counter advances
+with every spend and is never given back by a refund, that a caller
+refunded on every single run still stops at ATTEMPT_ALLOWANCE, that a
+refusal ordering puts a spent answer allowance ahead of a spent attempt
+allowance, that `refund_one_run` gives the SHARED daily budget back only
+when asked to, and that `spend_one_anonymous_run` leaves the guest
+completely uncharged when the daily statement RAISES rather than merely
+refuses, which is the case design decision 8's constraint 1 names and the
+shipped compensating statement could not cover.
+
 What it deliberately does not cover: HTTP-level behavior (`POST
 /auth/guest`, `GET /v1/allowance`), which is T-4.10-04's, and is exercised
-by the phase 4.10 premise gate instead.
+by the phase 4.10 premise gate instead; the daily ceiling across a UTC
+midnight boundary or across more than one process, which are the premise
+gate's own declared non-coverage for the same reasons.
 """
 
 from __future__ import annotations
@@ -25,6 +39,7 @@ import os
 import re
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, date, datetime
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
@@ -34,10 +49,14 @@ from alembic.config import Config
 from sqlalchemy.orm import sessionmaker
 
 from alembic import command
+from system_03_search_agent.data import guest_sessions as guest_sessions_module
 from system_03_search_agent.data.guest_sessions import (
+    ATTEMPT_ALLOWANCE,
     FREE_RUN_ALLOWANCE,
     SpendState,
     create_guest_session,
+    refund_one_run,
+    spend_one_anonymous_run,
     spend_one_run,
 )
 from system_03_search_agent.data.models import GuestSession
@@ -381,3 +400,326 @@ def test_the_allowance_holds_under_concurrent_spends(scratch_db_url) -> None:
         f"the allowance is not being enforced atomically"
     )
     assert len(spent) + len(exhausted) == FREE_RUN_ALLOWANCE + 1
+
+
+# ---------------------------------------------------------------------------
+# The ATTEMPT counter (F-4.10-R-01). The per-identity bound the F-4.10-A-04
+# refund removed, and the reason one guest token could drain the shared
+# anonymous day in under two seconds.
+# ---------------------------------------------------------------------------
+
+
+def test_spend_one_run_advances_the_attempt_counter_alongside_the_answer(db_session) -> None:
+    guest = create_guest_session(db_session)
+    result = spend_one_run(db_session, guest.id)
+    assert result.state == SpendState.SPENT
+    assert result.runs_used == 1
+    assert result.attempts_used == 1
+
+
+def test_spend_one_run_stores_the_attempt_count_on_the_row(db_session) -> None:
+    guest = create_guest_session(db_session)
+    for _ in range(3):
+        spend_one_run(db_session, guest.id)
+    reloaded = db_session.get(GuestSession, guest.id)
+    db_session.refresh(reloaded)
+    assert reloaded.attempts_used == 3
+
+
+def test_a_refund_gives_back_the_answer_and_never_the_attempt(db_session) -> None:
+    """The asymmetry that IS the F-4.10-R-01 fix, at the statement level.
+
+    Refunding both counters is what left a caller who only ever triggers
+    refusals completely unbounded: no counter they advanced ever stopped
+    them, so the only one still moving was the SHARED daily ceiling. This
+    clause fails the moment `_UNSPEND_STATEMENT` learns about
+    `attempts_used`.
+    """
+    guest = create_guest_session(db_session)
+    spend_one_run(db_session, guest.id)
+    assert refund_one_run(db_session, guest.id) is True
+
+    reloaded = db_session.get(GuestSession, guest.id)
+    db_session.refresh(reloaded)
+    assert reloaded.runs_used == 0, "the answer must be given back"
+    assert reloaded.attempts_used == 1, (
+        "the attempt was given back too, which removes the only per-identity "
+        "bound on a caller who sends nothing but refusable text (F-4.10-R-01)"
+    )
+
+
+def test_a_caller_who_is_refunded_every_time_still_stops_at_the_attempt_ceiling(
+    db_session,
+) -> None:
+    """R-01's attack, at the data layer: refund every single run and count.
+
+    Under the pre-fix statements this loop never terminates in any
+    meaningful sense; every spend succeeds forever because `runs_used` is
+    always back at zero by the next call.
+    """
+    guest = create_guest_session(db_session)
+    spent = 0
+    for _ in range(ATTEMPT_ALLOWANCE * 3):
+        result = spend_one_run(db_session, guest.id)
+        if result.state is not SpendState.SPENT:
+            break
+        spent += 1
+        refund_one_run(db_session, guest.id)
+
+    assert spent == ATTEMPT_ALLOWANCE, (
+        f"{spent} runs were spent by a caller refunded every time; the "
+        f"attempt ceiling of {ATTEMPT_ALLOWANCE} must bound them regardless "
+        f"of how each run ended (F-4.10-R-01)"
+    )
+    refused = spend_one_run(db_session, guest.id)
+    assert refused.state == SpendState.ATTEMPTS_EXHAUSTED
+    assert refused.attempts_used == ATTEMPT_ALLOWANCE
+    assert refused.runs_used == 0
+
+
+def test_attempts_exhausted_is_reported_only_while_answers_remain(db_session) -> None:
+    """The refusal ordering, at the one state where the two answers differ.
+
+    A guest who genuinely used all five answers is the sign-in wall's own
+    sentence, and that refusal is the more informative of the two, so it
+    wins. Getting this backwards would show "you have asked as many
+    questions as a guest can" to somebody who received five answers.
+
+    THE STATE IS BUILT DELIBERATELY, and building it wrong is how this
+    clause reads as a pass while proving nothing. A guest who simply spends
+    five answers sits at `attempts_used = 5`, well under the ceiling of ten,
+    so BOTH orderings return EXHAUSTED and inverting the code changes
+    nothing: the mutation reaches the branch and cannot alter the outcome.
+    Measured, not assumed: the inverted-ordering mutation left this file
+    with 42 of 42 passing until this clause was rewritten.
+
+    So the setup drives the guest to BOTH ceilings at once, five refunded
+    runs followed by five kept ones, which is the only state where the two
+    branches disagree.
+    """
+    guest = create_guest_session(db_session)
+    for _ in range(ATTEMPT_ALLOWANCE - FREE_RUN_ALLOWANCE):
+        assert spend_one_run(db_session, guest.id).state == SpendState.SPENT
+        refund_one_run(db_session, guest.id)
+    for _ in range(FREE_RUN_ALLOWANCE):
+        assert spend_one_run(db_session, guest.id).state == SpendState.SPENT
+
+    reloaded = db_session.get(GuestSession, guest.id)
+    db_session.refresh(reloaded)
+    assert (reloaded.runs_used, reloaded.attempts_used) == (
+        FREE_RUN_ALLOWANCE,
+        ATTEMPT_ALLOWANCE,
+    ), "the setup did not reach both ceilings, so this clause cannot tell the two orderings apart"
+
+    result = spend_one_run(db_session, guest.id)
+    assert result.state == SpendState.EXHAUSTED, (
+        "a guest with five answers delivered must be told their allowance is "
+        "spent, not that they asked too many questions"
+    )
+
+
+def test_a_revoked_session_is_reported_as_revoked_even_at_the_attempt_ceiling(
+    db_session,
+) -> None:
+    guest = create_guest_session(db_session)
+    for _ in range(ATTEMPT_ALLOWANCE):
+        spend_one_run(db_session, guest.id)
+        refund_one_run(db_session, guest.id)
+    db_session.execute(
+        sa.text("UPDATE guest_sessions SET revoked_at = now() WHERE id = :id"),
+        {"id": guest.id},
+    )
+    db_session.commit()
+    assert spend_one_run(db_session, guest.id).state == SpendState.REVOKED_OR_UNKNOWN
+
+
+def test_spend_one_run_non_positive_attempt_cap_raises_value_error(db_session) -> None:
+    guest = create_guest_session(db_session)
+    with pytest.raises(ValueError):
+        spend_one_run(db_session, guest.id, attempt_cap=0)
+
+
+def test_spend_one_run_non_int_attempt_cap_raises_type_error(db_session) -> None:
+    guest = create_guest_session(db_session)
+    with pytest.raises(TypeError):
+        spend_one_run(db_session, guest.id, attempt_cap="10")  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# refund_one_run's SHARED daily half (F-4.10-R-01 part B), and its input
+# handling.
+# ---------------------------------------------------------------------------
+
+
+def _daily_used(session, day) -> int:
+    """Today's shared anonymous count, with a missing row read as zero.
+
+    Every clause below measures a DELTA against this rather than an absolute
+    value. The scratch database is module-scoped, so `guest_daily_usage`
+    accumulates across the tests in this file; an absolute assertion would
+    pass or fail on execution order, which is the shape of green that says
+    nothing.
+    """
+    return int(
+        session.execute(
+            sa.text("SELECT runs_used FROM guest_daily_usage WHERE day = :day"), {"day": day}
+        ).scalar_one_or_none()
+        or 0
+    )
+
+
+def test_a_refund_with_a_daily_day_gives_back_the_shared_budget(db_session) -> None:
+    """Part B: a refusal that made NO model call must not charge the day.
+
+    Charging the shared ceiling for a free refusal is what made the drain
+    cheap: the caller paid nothing and everyone else lost a slot.
+    """
+    guest = create_guest_session(db_session)
+    today = datetime.now(UTC).date()
+    before = _daily_used(db_session, today)
+    spend_one_anonymous_run(db_session, guest.id, daily_cap=10_000)
+    assert _daily_used(db_session, today) == before + 1
+
+    refund_one_run(db_session, guest.id, daily_day=today)
+    assert _daily_used(db_session, today) == before, (
+        "a refusal that made no model call still cost the shared day a slot; "
+        "that is what let one caller take the anonymous product offline "
+        "(F-4.10-R-01 part B)"
+    )
+
+
+def test_a_refund_without_a_daily_day_leaves_the_shared_budget_charged(db_session) -> None:
+    """The other half, and it is not decoration.
+
+    A refusal that came after a real Guard-tier call DID spend money, the
+    day's budget is what bounds money, and refunding it there is the
+    free-compute path F-4.10-A-04's decision was right to avoid.
+    """
+    guest = create_guest_session(db_session)
+    today = datetime.now(UTC).date()
+    before = _daily_used(db_session, today)
+    spend_one_anonymous_run(db_session, guest.id, daily_cap=10_000)
+
+    refund_one_run(db_session, guest.id)
+    assert _daily_used(db_session, today) == before + 1, (
+        "a paid refusal gave the day's budget back, which makes unlimited "
+        "refusable traffic free compute"
+    )
+
+
+def test_a_daily_refund_can_never_drive_the_shared_counter_negative(db_session) -> None:
+    today = datetime.now(UTC).date()
+    guest = create_guest_session(db_session)
+    spend_one_anonymous_run(db_session, guest.id, daily_cap=10_000)
+    for _ in range(50):
+        refund_one_run(db_session, guest.id, daily_day=today)
+    assert _daily_used(db_session, today) == 0
+
+
+def test_a_daily_refund_for_an_unknown_day_is_a_clean_no_op(db_session) -> None:
+    guest = create_guest_session(db_session)
+    spend_one_run(db_session, guest.id)
+    long_ago = date(2000, 1, 1)
+    refund_one_run(db_session, guest.id, daily_day=long_ago)
+    assert _daily_used(db_session, long_ago) == 0
+
+
+def test_refund_one_run_rejects_a_non_date_daily_day(db_session) -> None:
+    guest = create_guest_session(db_session)
+    with pytest.raises(TypeError):
+        refund_one_run(db_session, guest.id, daily_day="2026-08-15")  # type: ignore[arg-type]
+
+
+def test_refund_one_run_rejects_a_malformed_guest_id(db_session) -> None:
+    with pytest.raises(ValueError):
+        refund_one_run(db_session, "not-a-uuid")
+
+
+def test_refund_one_run_rejects_a_null_guest_id(db_session) -> None:
+    with pytest.raises(TypeError):
+        refund_one_run(db_session, None)  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# spend_one_anonymous_run: ONE transaction (F-4.10-R-03, design decision 8's
+# constraint 1).
+# ---------------------------------------------------------------------------
+
+
+def test_a_daily_ceiling_refusal_leaves_the_guest_uncharged(db_session) -> None:
+    today = datetime.now(UTC).date()
+    # Put the day at a known, non-zero count first, then set the cap to
+    # exactly that. The scratch database is module-scoped, so the day's
+    # count depends on what ran before; deriving the cap from the measured
+    # count is what makes this clause independent of that ordering.
+    burner = create_guest_session(db_session)
+    assert (
+        spend_one_anonymous_run(db_session, burner.id, daily_cap=10_000).state
+        == SpendState.SPENT
+    )
+    at_ceiling = _daily_used(db_session, today)
+
+    victim = create_guest_session(db_session)
+    result = spend_one_anonymous_run(db_session, victim.id, daily_cap=at_ceiling)
+    assert result.state == SpendState.DAILY_CAP_REACHED
+
+    reloaded = db_session.get(GuestSession, victim.id)
+    db_session.refresh(reloaded)
+    assert reloaded.runs_used == 0
+    assert reloaded.attempts_used == 0, (
+        "a run the system-wide ceiling refused must not cost the visitor an "
+        "attempt either; they were never allowed to start it"
+    )
+    assert _daily_used(db_session, today) == at_ceiling
+
+
+def test_a_raising_daily_statement_leaves_the_guest_uncharged(
+    db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F-4.10-R-03, the case that had no test and no compensation path.
+
+    Design decision 8's constraint 1 is verbatim: "The two spends, per-guest
+    and per-day, happen in ONE transaction. A per-guest spend that commits
+    while the daily spend fails charges a visitor for a run they never got."
+    The shipped code committed the per-guest increment first and compensated
+    with a second statement, which covered a ceiling REFUSAL and could not
+    cover a FAILURE. The re-review measured the result: `guest runs_used
+    after the failed daily spend: 1`, plus a 500 to the caller.
+
+    The exact exception class the broken statement raises is not the point
+    and is not asserted; that the transaction never committed is.
+    """
+    guest = create_guest_session(db_session)
+    today = datetime.now(UTC).date()
+    before = _daily_used(db_session, today)
+
+    monkeypatch.setattr(
+        guest_sessions_module,
+        "_DAILY_SPEND_STATEMENT",
+        sa.text("INSERT INTO guest_daily_usage (day, runs_used) VALUES (:day, :daily_cap / 0)"),
+    )
+
+    with pytest.raises(sa.exc.DBAPIError):
+        spend_one_anonymous_run(db_session, guest.id, daily_cap=50)
+    db_session.rollback()
+
+    reloaded = db_session.get(GuestSession, guest.id)
+    db_session.refresh(reloaded)
+    assert reloaded.runs_used == 0, (
+        "the per-guest spend committed while the daily spend failed, so the "
+        "visitor lost a free search for a run they never got AND received a "
+        "500; that is exactly what constraint 1 forbids (F-4.10-R-03)"
+    )
+    assert reloaded.attempts_used == 0
+    assert _daily_used(db_session, today) == before
+
+
+def test_spend_one_anonymous_run_rejects_a_non_positive_daily_cap(db_session) -> None:
+    guest = create_guest_session(db_session)
+    with pytest.raises(ValueError):
+        spend_one_anonymous_run(db_session, guest.id, daily_cap=0)
+
+
+def test_spend_one_anonymous_run_rejects_a_null_session(db_session) -> None:
+    with pytest.raises(TypeError):
+        spend_one_anonymous_run(None, str(uuid.uuid4()), daily_cap=5)  # type: ignore[arg-type]

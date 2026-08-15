@@ -135,6 +135,16 @@ def _read_int_env(name: str) -> int:
     return value
 
 
+# How many times the per-guest attempt ceiling the shared anonymous daily
+# cap must be, at minimum (F-4.10-R-11). Ten means no single anonymous
+# identity can take more than a tenth of the day, so it takes ten
+# determined callers rather than one to deny the product to everyone else,
+# and the mint throttle is what stands in front of that. Not a magic
+# number: it is the smallest multiple at which "one caller" and "the whole
+# day" stop being the same event.
+_MIN_ANON_DAILY_CAP_MULTIPLE = 10
+
+
 def per_query_cost_cap_usd() -> float:
     """Return PER_QUERY_COST_CAP_USD (Section 19.1's $0.10 starter value)."""
     return _read_float_env("PER_QUERY_COST_CAP_USD")
@@ -154,19 +164,32 @@ def anon_daily_run_cap() -> int:
     """Return ANON_DAILY_RUN_CAP: how many runs ALL anonymous callers
     together may start in one UTC day (build phase 4.10, design decision 8).
 
-    This is the only enforced spending bound on an anonymous caller, and it
-    exists because the other two cannot reach one. `per_user_daily_query_cap`
-    is keyed on a `users` row and is skipped entirely when `user_id is None`,
-    which is every guest by design decision 2. `system_daily_cap_usd` sums
-    `interactions.cost_usd`, and nothing in `src/` writes an `Interaction`
-    row (F-2.0-04, build phase 4.6), so it reads $0.00 and can never fire.
+    This is the only enforced bound on TOTAL anonymous spend, and it exists
+    because the other two cannot reach an anonymous caller at all.
+    `per_user_daily_query_cap` is keyed on a `users` row and is skipped
+    entirely when `user_id is None`, which is every guest by design decision
+    2. `system_daily_cap_usd` sums `interactions.cost_usd`, and nothing in
+    `src/` writes an `Interaction` row (F-2.0-04, build phase 4.6), so it
+    reads $0.00 and can never fire.
 
-    The per-guest allowance is NOT a substitute. It is keyed on a guest
-    identity, and `POST /auth/guest` mints those for free, so it bounds a
-    variable the caller controls the supply of: the build phase 4.10
-    adversary round accepted 40 paid pipelines in 0.25 seconds by minting
-    one guest per run (F-4.10-A-01). This cap is keyed on the calendar day,
-    which nobody controls the supply of.
+    The per-guest ANSWER allowance is NOT a substitute. It is keyed on a
+    guest identity, and `POST /auth/guest` mints those for free, so it
+    bounds a variable the caller controls the supply of: the build phase
+    4.10 adversary round accepted 40 paid pipelines in 0.25 seconds by
+    minting one guest per run (F-4.10-A-01). This cap is keyed on the
+    calendar day, which nobody controls the supply of.
+
+    IT IS ALSO NOT A BOUND ON ONE CALLER, and this docstring used to imply
+    it was ("the only enforced spending bound on an anonymous caller").
+    F-4.10-R-01 measured the difference: because a guardrail refusal
+    refunds the answer allowance, a caller sending only refusable text
+    advanced no per-identity counter at all, so one guest token exhausted
+    this shared ceiling in 1.68 seconds and every other anonymous visitor
+    was refused for the rest of the day. The per-identity bound is
+    `ATTEMPT_ALLOWANCE` in `data/guest_sessions.py`, which counts runs
+    STARTED and is never refunded. The two are complements, not
+    substitutes: this one bounds the system's money, that one bounds any
+    single caller's share of it.
     """
     return _read_int_env("ANON_DAILY_RUN_CAP")
 

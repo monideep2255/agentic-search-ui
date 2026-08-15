@@ -41,7 +41,8 @@ export interface StopRunResponse {
  *
  * `reason` (T-4.10-08) is the machine-readable string a structured
  * `detail` object carries: `guest_allowance_exhausted`,
- * `concurrent_run_cap_exceeded`, `anon_daily_cap_reached`, or
+ * `guest_attempt_limit_reached`, `concurrent_run_cap_exceeded`,
+ * `anon_daily_cap_reached`, or
  * `guest_session_revoked` (`adapters/web_sse/app.py`'s
  * `HTTPException(..., detail={"reason": ..., "message": ...})` shape).
  * It is `undefined` when the backend returned a bare string `detail` (most
@@ -200,13 +201,19 @@ export interface AllowanceResponse {
    * `null` means nothing is blocking. Optional so a payload predating the
    * field still type-checks.
    *
+   * `guest_attempt_limit_reached` (F-4.10-R-01) is the second value: this
+   * guest has started as many runs as a guest may start, so the next query
+   * is refused 403 even though refunded answers left `used` below `total`.
+   *
    * NOT YET CONSUMED BY THE UI. Carried as F-4.10-05: until the dots read
    * it, a visitor can be shown "5 searches left" while the next query is
-   * refused 429, which is the same reporting-versus-enforcement mismatch
+   * refused, which is the same reporting-versus-enforcement mismatch
    * F-4.10-A-03 was filed for one level down. The backend is honest; the
-   * client has not been taught to ask.
+   * client has not been taught to ask. The REFUSAL itself is handled
+   * either way: `App.tsx` walls on both 403 reasons, with its own sentence
+   * for each.
    */
-  blocked_reason?: "anon_daily_cap_reached" | null;
+  blocked_reason?: "anon_daily_cap_reached" | "guest_attempt_limit_reached" | null;
 }
 
 /** `POST /auth/guest`'s response shape. */

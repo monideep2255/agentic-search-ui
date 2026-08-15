@@ -661,3 +661,68 @@ def test_filter_events_for_end_user_redaction_produces_a_schema_valid_done_event
     # the redaction produces a payload that still validates against
     # DonePayload, it does not merely delete or null out a required field.
     DonePayload.model_validate(redacted.payload)
+
+
+class TestTheTwoAnonymousCeilingsBoundSpendTogether:
+    """F-4.10-R-11 (lead, verifying the F-4.10-R-01 fix).
+
+    Neither anonymous ceiling bounds spend alone. The per-guest attempt
+    ceiling stops one identity; the shared daily ceiling stops the day. They
+    only work together, and only while the first is materially smaller than
+    the second. Raise `ATTEMPT_ALLOWANCE` above the shipped
+    `ANON_DAILY_RUN_CAP`, or drop that cap near it, and one guest token takes
+    the whole day again, which is precisely the denial of service R-01
+    measured at 200 pipelines in 1.68 seconds.
+
+    Nothing tested that relationship, and the premise gate structurally
+    could not: its attack clause imports `ATTEMPT_ALLOWANCE` and scales its
+    own daily cap to four times whatever it finds, so it proves a bound
+    EXISTS while staying blind to both values. Changing the constant from 10
+    to 40 left all 32 of its clauses green.
+
+    That is the trap the premise gate's own header warns about, in its
+    `_EXPECTED_FREE_SEARCHES` comment: "a gate that reads its expected value
+    out of the code it grades cannot catch that value being wrong." The gate
+    stated the principle and then imported the next constant one screen
+    later.
+
+    Why this is a test over the SHIPPED defaults rather than a check inside
+    `anon_daily_run_cap()`, which is where it was first written: enforcing
+    the ratio at read time makes the daily ceiling untestable, because every
+    clause that exercises it sets a deliberately tiny cap so the boundary is
+    reachable in a few requests. That version turned 7 legitimate tests red.
+    A control that forces the tests exercising a bound to stop exercising it
+    is a bad control, whatever it catches.
+
+    Stated cost of the choice, so nobody reads this as stronger than it is:
+    this catches the shipped defaults drifting, not an operator setting a
+    bad value in a real `.env`. Closing that needs a startup-time config
+    validation this service does not have. Carried in `tracker/phase_4.10.md`.
+    """
+
+    def test_the_shipped_default_daily_cap_dwarfs_the_per_guest_attempt_ceiling(self) -> None:
+        import re
+        from pathlib import Path
+
+        from system_03_search_agent.data.guest_sessions import ATTEMPT_ALLOWANCE
+        from system_03_search_agent.harness.cost_control import (
+            _MIN_ANON_DAILY_CAP_MULTIPLE,
+        )
+
+        env_example = Path(__file__).resolve().parents[3] / "env.example"
+        match = re.search(r"^ANON_DAILY_RUN_CAP=(\d+)$", env_example.read_text(), re.MULTILINE)
+        assert match is not None, (
+            "env.example must ship a concrete ANON_DAILY_RUN_CAP; it is the only "
+            "bound on total anonymous spend, and an empty value means the app "
+            "refuses every anonymous run rather than bounding it"
+        )
+        shipped_cap = int(match.group(1))
+
+        assert shipped_cap >= ATTEMPT_ALLOWANCE * _MIN_ANON_DAILY_CAP_MULTIPLE, (
+            f"the shipped ANON_DAILY_RUN_CAP ({shipped_cap}) is less than "
+            f"{_MIN_ANON_DAILY_CAP_MULTIPLE}x the per-guest attempt ceiling "
+            f"({ATTEMPT_ALLOWANCE}), so one anonymous caller could take "
+            f"{ATTEMPT_ALLOWANCE / shipped_cap:.0%} of the day's whole budget "
+            f"and deny the product to everyone else (F-4.10-R-01). Raise the "
+            f"cap, or lower ATTEMPT_ALLOWANCE."
+        )

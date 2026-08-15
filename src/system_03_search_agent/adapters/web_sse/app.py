@@ -6,7 +6,7 @@ import re
 import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from datetime import time as dt_time
 from typing import Annotated, Literal
 
@@ -30,6 +30,7 @@ from system_03_search_agent.core.run_registry import (
     default_registry,
 )
 from system_03_search_agent.data.guest_sessions import (
+    ATTEMPT_ALLOWANCE,
     FREE_RUN_ALLOWANCE,
     SpendState,
     refund_one_run,
@@ -284,7 +285,15 @@ class AllowanceResponse(BaseModel):
     #
     # None means nothing is blocking. Additive and optional, so every
     # payload built before this existed still validates (Section 2.6).
-    blocked_reason: Literal["anon_daily_cap_reached"] | None = None
+    #
+    # `guest_attempt_limit_reached` (F-4.10-R-01) is a second, additive enum
+    # value for the same reason the first one exists: the attempt ceiling is
+    # a bound the next request enforces, so a reporting path that could not
+    # name it would promise a search that request refuses. A new enum value
+    # is additive within v1 per Section 2.6.
+    blocked_reason: (
+        Literal["anon_daily_cap_reached", "guest_attempt_limit_reached"] | None
+    ) = None
 
 
 def _guest_uuid_from_owner_id(owner_id: str) -> uuid.UUID:
@@ -331,9 +340,11 @@ def get_v1_allowance(
     if caller.kind == "guest":
         guest_uuid = _guest_uuid_from_owner_id(caller.owner_id)
         row = session.execute(
-            select(GuestSession.revoked_at, GuestSession.runs_used).where(
-                GuestSession.id == guest_uuid
-            )
+            select(
+                GuestSession.revoked_at,
+                GuestSession.runs_used,
+                GuestSession.attempts_used,
+            ).where(GuestSession.id == guest_uuid)
         ).first()
         # F-4.10-A-03 / F-4.10-J-07 (adversary and judge round 1). This
         # branch used to select `runs_used` ALONE and report any result,
@@ -374,11 +385,22 @@ def get_v1_allowance(
                 GuestDailyUsage.day == datetime.now(UTC).date()
             )
         ).scalar_one_or_none()
-        blocked = (
-            "anon_daily_cap_reached"
-            if daily_used is not None and int(daily_used) >= anon_daily_run_cap()
-            else None
-        )
+        blocked: Literal["anon_daily_cap_reached", "guest_attempt_limit_reached"] | None
+        if daily_used is not None and int(daily_used) >= anon_daily_run_cap():
+            blocked = "anon_daily_cap_reached"
+        elif int(row[2]) >= ATTEMPT_ALLOWANCE and int(row[1]) < FREE_RUN_ALLOWANCE:
+            # F-4.10-R-01, and the same constraint-4 argument one bound
+            # further out: this guest has started as many runs as a guest may
+            # start, so the next request is refused 403 no matter what the
+            # dots say. The `runs_used < FREE_RUN_ALLOWANCE` half mirrors the
+            # refusal ordering in `data.guest_sessions._apply_spend`, which
+            # reports a spent ANSWER allowance first because that is the more
+            # informative refusal; reporting the two in a different order
+            # here than the enforcement path uses is how the two paths start
+            # disagreeing again.
+            blocked = "guest_attempt_limit_reached"
+        else:
+            blocked = None
         return AllowanceResponse(
             kind="guest",
             used=int(row[1]),
@@ -395,16 +417,28 @@ def get_v1_allowance(
     return AllowanceResponse(kind="user", used=0, total=per_user_daily_query_cap(), counted=False)
 
 
-def _guest_refund_callback(guest_uuid: uuid.UUID) -> Callable[[], None]:
-    """Build the zero-argument refund the run registry fires on a guardrail
-    refusal (F-4.10-A-04). See `post_v1_query` for the policy argument.
+def _guest_refund_callback(
+    guest_uuid: uuid.UUID, spend_day: date
+) -> Callable[[bool], None]:
+    """Build the refund the run registry fires when a run ends having been
+    refused at the guardrail (F-4.10-A-04, F-4.10-R-01). See `post_v1_query`
+    for the policy argument.
 
     A module-level factory rather than a closure written inline in the
-    handler, so the thing under test is a named function with one input, and
+    handler, so the thing under test is a named function with two inputs, and
     so the handler reads as policy rather than as plumbing.
+
+    `charged` is supplied by the registry and says whether the refusal came
+    after a real model call. It arrives through the registry's own internal
+    observation of a `cost` event, never through anything the guest receives:
+    see `core/run_registry.py`'s `_fire_guard_refusal_callback` for why.
+
+    `spend_day` is the UTC day this run was CHARGED to, captured when the
+    spend happened rather than recomputed here, so a refusal that lands just
+    after UTC midnight gives the slot back to the day that took it.
     """
 
-    def _refund() -> None:
+    def _refund(charged: bool) -> None:
         # A session of its own: the request-scoped session is closed long
         # before the agent loop reaches the guardrail. This is a blocking
         # psycopg2 call on the event loop thread, the same shape as
@@ -413,7 +447,11 @@ def _guest_refund_callback(guest_uuid: uuid.UUID) -> Callable[[], None]:
         # concurrent `GET /health` still answered in 0.005s). Behaviour
         # under real load is build phase 6.0's.
         with session_scope() as refund_session:
-            refund_one_run(refund_session, guest_uuid)
+            refund_one_run(
+                refund_session,
+                guest_uuid,
+                daily_day=None if charged else spend_day,
+            )
 
     return _refund
 
@@ -546,6 +584,25 @@ async def post_v1_query(
                     ),
                 },
             )
+        if spend.state is SpendState.ATTEMPTS_EXHAUSTED:
+            # F-4.10-R-01. 403 like the exhausted personal allowance above,
+            # and for design decision 5's reason: this ceiling is permanent
+            # for this identity, so a 429 with a Retry-After would be a lie
+            # the UI would repeat as "try again soon". A DISTINCT
+            # machine-readable reason, because the two mean different things
+            # to the person reading them and the sign-in wall has to say
+            # something true for each: "you have used your free searches" is
+            # false for a caller who never got an answer at all.
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "reason": "guest_attempt_limit_reached",
+                    "message": (
+                        "you have asked as many questions as a guest can; "
+                        "sign in or create an account to keep going"
+                    ),
+                },
+            )
         if spend.state is SpendState.REVOKED_OR_UNKNOWN:
             # This guest session was migrated (and revoked) at signup/
             # login, or never existed. The token still decodes, so
@@ -578,18 +635,45 @@ async def post_v1_query(
     # runs when the refusal becomes observable, in the registry's own drain
     # loop (`core/run_registry.py`'s `_fire_guard_refusal_callback`).
     #
-    # WHAT IT REFUNDS, and what it deliberately does not. Only the GUEST'S
-    # PERSONAL allowance. `guest_daily_usage`, the system-wide anonymous
-    # ceiling of design decision 8, stays advanced. A refused run still
-    # started a real pipeline and, past the free pre-filter, still paid for a
-    # real Guard-tier model call. If a refusal cost nothing at all, an
-    # attacker could send unlimited garbage and every request would be free
-    # compute, with the one ceiling that bounds anonymous spend never
-    # advancing to stop it. Charging the day's budget while sparing the
-    # individual is what makes "we do not punish a curious visitor for one
-    # bad question" true without opening a free-compute path. See
-    # `data.guest_sessions.refund_one_run` for the same argument at the
-    # statement it is enforced by.
+    # WHAT IT REFUNDS, and what it deliberately does not. F-4.10-R-01,
+    # product-owner decision 2026-08-15, corrects what this comment used to
+    # say, and the correction matters because building on the old text is
+    # what produced the critical.
+    #
+    # It used to claim a refused run "still paid for a real Guard-tier model
+    # call". That is FALSE for the cheapest refusal available:
+    # `core/graph.py:753` returns `_decline_for_guardrail(..., charged=False)`
+    # for a pre-filter verdict, before any model call at all. Combined with
+    # refunding the personal allowance, that removed the only per-identity
+    # bound: a caller sending nothing but refusable text never advanced
+    # `runs_used`, so the only counter that moved was the SHARED daily one.
+    # Measured: one guest token, minted once, started 200 paid pipelines in
+    # 1.68 seconds with its own allowance still reading `used: 0`, exhausted
+    # the whole day's anonymous budget, and a brand-new visitor asking a
+    # legitimate question was then refused 429.
+    #
+    # THREE COUNTERS NOW, and each answers a different question:
+    #
+    # - The ATTEMPT (`guest_sessions.attempts_used`) is never refunded. It is
+    #   the per-identity bound, and it is what makes the refund below safe.
+    # - The ANSWER (`guest_sessions.runs_used`) is always refunded on a
+    #   guardrail refusal. A visitor must not be pushed toward the sign-in
+    #   wall by questions that were never answered, and the guardrail catches
+    #   far more than injections: off-topic, malformed and out-of-scope
+    #   questions all land there.
+    # - The DAY (`guest_daily_usage.runs_used`) is refunded only when the
+    #   refusal made NO model call. That budget bounds SPEND, so charging it
+    #   for a refusal that spent nothing is what made the drain cheap; but a
+    #   refusal that came after a real Guard-tier call did spend money, and
+    #   refunding it there would be the free-compute path the original
+    #   decision was right to avoid.
+    #
+    # The callback learns which case it is from its `charged` argument, which
+    # the registry observes internally and which no guest ever sees. That is
+    # deliberate: Sections 19.4 and 19.5 make cost internal-only, and this
+    # phase's premise gate asserts a guest is never streamed a `cost` event,
+    # so a `charged` flag on `GuardPayload` would tell every guest which of
+    # their questions cost money.
     #
     # IF THE PROCESS DIES between the refusal and the refund, the refund is
     # lost and the guest stays charged for a run that produced nothing. That
@@ -597,8 +681,10 @@ async def post_v1_query(
     # that lands without the refusal having happened, would hand out free
     # searches. Closing the residue properly needs the durable run record
     # build phase 4.6 owns; there is nothing to reconcile against today.
-    on_guard_refused: Callable[[], None] | None = (
-        _guest_refund_callback(_guest_uuid_from_owner_id(caller.owner_id))
+    on_guard_refused: Callable[[bool], None] | None = (
+        _guest_refund_callback(
+            _guest_uuid_from_owner_id(caller.owner_id), datetime.now(UTC).date()
+        )
         if caller.kind == "guest"
         else None
     )

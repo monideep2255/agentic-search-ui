@@ -71,6 +71,7 @@ import type { StepName } from "./components/screens/RunScreen";
 import { AnswerScreen } from "./components/screens/AnswerScreen";
 import { AboutScreen, DocsScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
 import { GuestAllowance, SignInWall } from "./components/guest/GuestAllowance";
+import type { SignInWallReason } from "./components/guest/GuestAllowance";
 import { FeedbackSurface } from "./components/feedback/FeedbackSurface";
 import { CollapsedRail, FollowUp, HistoryRail } from "./components/answer/FollowUp";
 import { DisclaimerModal, hasAcceptedDisclaimer } from "./components/shell/DisclaimerModal";
@@ -80,7 +81,11 @@ type SearchView =
   | { name: "home" }
   | { name: "run"; question: string }
   | { name: "answer"; question: string }
-  | { name: "wall" }
+  // F-4.10-R-02: the wall has three triggers and they are not the same
+  // message. Carrying the reason in the view rather than deriving it at
+  // render time is what makes each sentence answerable to the state that
+  // produced it.
+  | { name: "wall"; reason: SignInWallReason }
   | { name: "signin" };
 
 /** Canned follow-up hints. Stubbed; build phase 4.5 derives these for real.
@@ -293,7 +298,13 @@ export function App() {
       // it offers. A dead-credential 401 would be a message with no next
       // step in it.
       if (!signedIn && guestToken === null && guestMigrated) {
-        setSearchView({ name: "wall" });
+        // `reason: "migrated"`, and this is the case F-4.10-R-02 named
+        // first. Nothing here says how many searches were used, because
+        // nothing here knows: this browser reaches the wall with anywhere
+        // between zero and five spent, including a visitor who created an
+        // account without ever asking a question. "You have used your free
+        // searches" was false exactly when it was shown.
+        setSearchView({ name: "wall", reason: "migrated" });
         return;
       }
       // F-4.8-J-01's rule survives unchanged (see the file docstring): no
@@ -377,10 +388,23 @@ export function App() {
         if (seq !== askSeq.current) return;
         if (error instanceof ApiError && error.status === 403 && error.reason === "guest_allowance_exhausted") {
           // Design decision 5 (`tracker/phase_4.10.md`): the wall appears
-          // ONLY on this exact server refusal, never on a client
-          // prediction and never on the concurrent-run cap's 429, which is
-          // a transient "try again shortly" handled by the branch below.
-          setSearchView({ name: "wall" });
+          // ONLY on an exact server refusal, never on a client prediction
+          // and never on the concurrent-run cap's 429, which is a transient
+          // "try again shortly" handled by the branch below.
+          //
+          // The one trigger the wall's original sentence was written for,
+          // and the one it is still true on: five answers delivered, five
+          // spent.
+          setSearchView({ name: "wall", reason: "allowance_exhausted" });
+          return;
+        }
+        if (error instanceof ApiError && error.status === 403 && error.reason === "guest_attempt_limit_reached") {
+          // F-4.10-R-01's refusal. Also a 403 and also permanent for this
+          // identity, so it is also the wall rather than a transient error,
+          // but a DIFFERENT sentence: this visitor may have had every one of
+          // their questions refused and received no answer at all, so
+          // telling them they used their free searches would be false.
+          setSearchView({ name: "wall", reason: "attempt_limit" });
           return;
         }
         if (error instanceof ApiError && error.status === 401 && !signedIn) {
@@ -399,7 +423,10 @@ export function App() {
             // is the actionable surface: signing in works right now.
             markGuestSessionMigrated();
             setGuestMigrated(true);
-            setSearchView({ name: "wall" });
+            // The same state as the pre-flight check above, reached from the
+            // server instead of from storage, so the same sentence
+            // (F-4.10-R-02). `runs_used` is equally unknown here.
+            setSearchView({ name: "wall", reason: "migrated" });
             return;
           }
           // Anything else, most realistically a guest token past its 7-day
@@ -530,7 +557,12 @@ export function App() {
           />
         );
       case "wall":
-        return <SignInWall onSignIn={() => setSearchView({ name: "signin" })} />;
+        return (
+          <SignInWall
+            reason={searchView.reason}
+            onSignIn={() => setSearchView({ name: "signin" })}
+          />
+        );
       default:
         return (
           <HomeScreen

@@ -66,13 +66,30 @@ Refuse:
   event.
 
 Cost of a refusal, `TestARefusedRunDoesNotCostTheVisitorASearch`
-(F-4.10-A-04):
+(F-4.10-A-04) and `TestOneGuestCannotTakeTheAnonymousProductOffline`
+(F-4.10-R-01):
 
-- A guardrail refusal does not spend one of the five free searches, for
+- A guardrail refusal does not spend one of the five free ANSWERS, for
   the free pre-filter refusal and for the paid post-classification one
   alike.
-- The system-wide daily budget IS still charged for that refused run, so
-  sparing the individual does not open a free-compute path.
+- It DOES spend one of the ten ATTEMPTS, always, and that one is never
+  given back. This is the per-identity bound, and its absence is what let
+  one guest token, minted once, start 200 paid pipelines in 1.68 seconds
+  and take the whole anonymous product offline for the rest of the UTC
+  day while its own allowance still read `used: 0`.
+- The system-wide daily budget is still charged for a refusal that came
+  AFTER a real Guard-tier call, so sparing the individual does not open a
+  free-compute path, and is NOT charged for a pre-filter refusal, which
+  makes no model call at all. Charging the shared budget for work that
+  never happened is the other half of what made that drain cheap.
+- One guest cannot exhaust the shared ceiling, and a fresh visitor can
+  still ask a real question after another guest's refusal loop. That is
+  the question no clause in this file asked before F-4.10-R-01, and its
+  absence is why two review rounds read the same three files without
+  seeing it.
+- None of that internal accounting reaches the guest. No `cost` event, no
+  un-redacted `done.total_cost_usd`, and no `charged` flag anywhere on
+  the wire (Sections 19.4 and 19.5).
 
 Documented, accepted behaviour, asserted here so it is on the record
 rather than discovered later by someone who assumes it is a bug:
@@ -117,13 +134,16 @@ build phase 2.1's gate had a blind spot identical to the code it graded:
   declaring it, which is the failure mode a coverage statement exists to
   prevent.
 
-  Now covered, in `TestAnonymousSpendIsBounded` and
-  `TestMintThrottleHasBothArms`: the system-wide daily ceiling on anonymous
-  runs, its distinct 429 and honest `Retry-After`, that a refused daily run
-  does not charge the guest who tried it, that `GET /v1/allowance` never
-  promises a search that ceiling would refuse, that signing in bypasses it,
-  and that the per-source mint throttle refuses a burst without refusing an
-  ordinary shared address.
+  Now covered, in `TestAnonymousSpendIsBounded`,
+  `TestMintThrottleHasBothArms` and
+  `TestOneGuestCannotTakeTheAnonymousProductOffline`: the system-wide daily
+  ceiling on anonymous runs, its distinct 429 and honest `Retry-After`, that
+  a refused daily run does not charge the guest who tried it, that
+  `GET /v1/allowance` never promises a search that ceiling would refuse,
+  that signing in bypasses it, that the per-source mint throttle refuses a
+  burst without refusing an ordinary shared address, and, from one review
+  round later, that a SINGLE identity cannot exhaust that shared ceiling
+  either.
 
 - The daily ceiling ACROSS a UTC midnight boundary, and across more than one
   process. The first would mean faking a clock, which tests the clock rather
@@ -417,6 +437,49 @@ def _reset_todays_anonymous_usage() -> None:
             )
     finally:
         engine.dispose()
+
+
+def _todays_anonymous_usage() -> int:
+    """The current UTC day's `guest_daily_usage.runs_used`, zero if no row.
+
+    Read straight from PostgreSQL rather than through `GET /v1/allowance`,
+    because the endpoint reports a boolean `blocked_reason` and this is the
+    one place a clause needs the number itself: "how much of the shared
+    budget did one caller move" is exactly the question F-4.10-R-01 was
+    filed for, and a boolean cannot answer it.
+    """
+    engine = sa.create_engine(USER_DB_URL)
+    try:
+        with engine.connect() as connection:
+            value = connection.execute(
+                sa.text("SELECT runs_used FROM guest_daily_usage WHERE day = :day"),
+                {"day": datetime.now(UTC).date()},
+            ).scalar_one_or_none()
+    finally:
+        engine.dispose()
+    return int(value or 0)
+
+
+def _attempts_used(guest_id: str) -> int:
+    """The guest's own `attempts_used` count (F-4.10-R-01).
+
+    Not on the wire, deliberately, and read from the database here for that
+    reason. `GET /v1/allowance` reports `used` (the ANSWER count, which is
+    refunded) and a `blocked_reason` (a boolean fact); the attempt count
+    itself is internal bookkeeping. A clause asserting the attempt was NOT
+    refunded has to look where it actually lives.
+    """
+    engine = sa.create_engine(USER_DB_URL)
+    try:
+        with engine.connect() as connection:
+            value = connection.execute(
+                sa.text("SELECT attempts_used FROM guest_sessions WHERE id = :id"),
+                {"id": uuid.UUID(guest_id)},
+            ).scalar_one_or_none()
+    finally:
+        engine.dispose()
+    assert value is not None, f"no guest_sessions row for {guest_id}"
+    return int(value)
 
 
 def _post_query_on_its_own_event_loop(headers: dict[str, str]) -> tuple[int, str]:
@@ -1289,27 +1352,45 @@ class TestARefusedRunDoesNotCostTheVisitorASearch:
     all land there, which is what makes this the common case rather than an
     edge one.
 
-    THE TWO COUNTERS ARE NOT THE SAME COUNTER, and this class is where that
-    is asserted rather than merely written down. The guest's PERSONAL
-    allowance is refunded; the SYSTEM-WIDE daily budget
-    (`guest_daily_usage`, design decision 8) is not. If a refusal cost
-    nothing at all, an attacker could send unlimited garbage and every
-    request would be free compute, with the one ceiling that bounds
-    anonymous spend never advancing to stop it. Two clauses, one per
-    counter, because a fix that got either half right on its own would be a
-    worse hole than the one it closed.
+    THE COUNTERS ARE NOT THE SAME COUNTER, and this class is where that is
+    asserted rather than merely written down. The guest's PERSONAL ANSWER
+    allowance is refunded. Their ATTEMPT is not, ever (F-4.10-R-01, and
+    `TestOneGuestCannotTakeTheAnonymousProductOffline` below owns that
+    half). The SYSTEM-WIDE daily budget (`guest_daily_usage`, design
+    decision 8) stays charged for a refusal that came after a real
+    Guard-tier call, which is what the clause below drives, because if a
+    PAID refusal cost nothing at all an attacker could send unlimited
+    garbage and every request would be free compute.
+
+    F-4.10-R-01 CORRECTED WHAT THIS CLASS USED TO SAY NEXT, and the
+    correction is why the phase's worst defect lived here. This docstring
+    claimed the free pre-filter refusal was charged the day's budget "the
+    same way", called that "a deliberate simplification", and argued the
+    exemption would let a caller choose the cheap refusal. Every part of
+    that was wrong in the same direction. A pre-filter refusal makes NO
+    model call (`core/graph.py:753`, `charged=False`), so the day's budget
+    bought nothing; and the caller who chooses the cheap refusal is bounded
+    by the attempt ceiling now, which is a per-identity control, rather than
+    by a shared ceiling they were being handed the power to exhaust.
 
     COVERAGE, per `goal-contracts`. Exercised: both refusal shapes (the free
-    pre-filter refusal and the paid post-classification one), the personal
-    refund, and the day's budget still advancing. NOT exercised here: that an
-    ADMITTED run still charges the guest, which is the arm that catches a
-    refund firing unconditionally; that is
+    pre-filter refusal and the paid post-classification one) sparing the
+    personal answer allowance, and the day's budget still advancing for the
+    PAID one. NOT exercised here: that an ADMITTED run still charges the
+    guest, which is the arm that catches a refund firing unconditionally;
+    that is
     `TestAdmitArm.test_the_server_reported_count_rises_by_exactly_one_per_run`
-    above, in this same file, and it is named rather than duplicated. Also
-    not exercised: a process that dies between the refusal and the refund,
-    which loses the refund and leaves the guest charged. That is the
-    deliberate safe direction (the opposite failure hands out free searches)
-    and closing it needs the durable run record build phase 4.6 owns.
+    above, in this same file, and it is named rather than duplicated.
+    Equally not exercised here: that the FREE refusal does not charge the
+    day, that the attempt is never refunded, and that one identity cannot
+    drain the shared ceiling, all three of which are
+    `TestOneGuestCannotTakeTheAnonymousProductOffline` below. Also not
+    exercised: a process that dies between the refusal and the refund, which
+    loses the refund and leaves the guest charged, and a run cancelled
+    between its guard verdict and its done event, which loses it the same
+    way. Both are the deliberate safe direction (the opposite failure hands
+    out free searches) and closing either needs the durable run record build
+    phase 4.6 owns.
     """
 
     @pytest.mark.parametrize(
@@ -1350,14 +1431,16 @@ class TestARefusedRunDoesNotCostTheVisitorASearch:
     ) -> None:
         """The half that keeps the refund from becoming a free-compute path.
 
-        Uses the PAID refusal text deliberately: that one is refused only
-        after a real Guard-tier model call has been made, so the run being
-        charged to the day's budget is charging for money actually spent, not
-        for a hypothetical. The free pre-filter refusal is charged the same
-        way, and that is a deliberate simplification: the day's counter
-        counts runs started, not dollars, and giving the cheap refusal its own
-        exemption would mean the ceiling no longer bounds a caller who can
-        choose which refusal to trigger.
+        Uses the PAID refusal text deliberately, and after F-4.10-R-01 that
+        is load-bearing rather than merely careful. This one is refused only
+        after a real Guard-tier model call has been made, so charging it to
+        the day's budget is charging for money actually spent. The FREE
+        pre-filter refusal is now explicitly NOT charged, because there was
+        nothing to charge for, and
+        `TestOneGuestCannotTakeTheAnonymousProductOffline` asserts that
+        directly. Swapping this clause's text for the free one would
+        therefore make it fail, which is the point: the two refusals cost
+        different things and the gate now knows the difference.
         """
         monkeypatch.setenv("ANON_DAILY_RUN_CAP", "1")
         _reset_todays_anonymous_usage()
@@ -1424,3 +1507,245 @@ class TestMintThrottleHasBothArms:
             f"refused; this control is defense in depth, not the bound, and the "
             f"daily ceiling is what limits spend"
         )
+
+
+class TestOneGuestCannotTakeTheAnonymousProductOffline:
+    """F-4.10-R-01, product-owner decision 2026-08-15.
+
+    THE MEASURED ATTACK, reproduced here so it can never come back. One
+    guest token, minted once, sending nothing but text the pre-filter
+    refuses: 200 paid pipelines in 1.68 seconds, that guest's own allowance
+    still reading `used: 0`, the whole day's anonymous budget gone, and a
+    brand-new visitor asking a legitimate question refused 429. It needed
+    ONE mint, so the per-source mint throttle never saw it.
+
+    WHY THE FIRST FIX MADE IT POSSIBLE. F-4.10-A-04 refunded a guest's
+    personal allowance on a guardrail refusal, for a good reason (a visitor
+    must not be pushed toward the sign-in wall by questions that were never
+    answered), and deliberately kept the shared daily counter charged, for a
+    reason that was FALSE for the cheapest refusal: `core/graph.py:753`
+    passes `charged=False` for a pre-filter verdict, so no model call
+    happens and no money is spent. The refund removed the only per-identity
+    bound, and the shared ceiling was charged for work that never occurred.
+    A refusal cost the caller nothing and cost everyone else a slot.
+
+    WHY THE OLD GATE DID NOT SEE IT.
+    `TestARefusedRunDoesNotCostTheVisitorASearch`'s coverage statement
+    declared two omissions and not this one, and
+    `TestAnonymousSpendIsBounded` treats the ceiling purely as a safety
+    property, never as an availability liability. Nothing anywhere asked
+    whether one identity could exhaust a shared ceiling. That is
+    `goal-contracts`' "a verify surface must state its own coverage"
+    failure: every leaf was audited honestly and the premise was not.
+
+    COVERAGE, per `goal-contracts`. Exercised: that the attack is bounded
+    per identity; that the bound is a distinct, machine-readable refusal;
+    that an attempt is never given back while an answer always is; that a
+    free refusal no longer charges the shared day while a paid one still
+    does (the latter in `TestARefusedRunDoesNotCostTheVisitorASearch`
+    below, named rather than duplicated); that a victim can still use the
+    product afterwards; and that none of this new internal accounting
+    reaches the guest's own event stream.
+
+    NOT exercised here: the attack from MANY minted identities, which is
+    `TestAnonymousSpendIsBounded` above and is bounded by the daily ceiling
+    plus the mint throttle rather than by the attempt counter; the attempt
+    ceiling across a UTC midnight, which does not reset and needs no clock;
+    and multi-process counting, which is this file's standing non-coverage.
+    """
+
+    @pytest.mark.asyncio
+    async def test_one_guest_token_cannot_drain_the_whole_anonymous_day(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The attack itself, run against the fix.
+
+        A daily cap deliberately larger than the attempt ceiling, so the
+        only thing that can stop this loop is the per-identity bound. With
+        the cap at or below the ceiling the clause would pass for the wrong
+        reason, reporting on the shared ceiling it is supposed to be
+        protecting.
+        """
+        from system_03_search_agent.data.guest_sessions import ATTEMPT_ALLOWANCE
+
+        daily_cap = ATTEMPT_ALLOWANCE * 4
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", str(daily_cap))
+        _reset_todays_anonymous_usage()
+
+        async with _client() as client:
+            _guest_id, headers = await _mint_guest(client)
+
+            accepted, refusals = 0, []
+            for _ in range(daily_cap + 5):
+                response = await _run_text(client, headers, _INJECTION_REFUSAL_TEXT)
+                if response.status_code == 202:
+                    accepted += 1
+                    await _drain_run_task(response.json()["run_id"])
+                else:
+                    refusals.append((response.status_code, str(response.json())))
+
+            assert accepted <= ATTEMPT_ALLOWANCE, (
+                f"one guest token started {accepted} runs against an attempt "
+                f"ceiling of {ATTEMPT_ALLOWANCE}; a refund that gives back the "
+                f"only counter a refused caller advances leaves them unbounded "
+                f"(F-4.10-R-01)"
+            )
+            assert accepted > 0, (
+                "the attack loop was refused from its very first request, so "
+                "this clause proves nothing about a bound; a guest must still "
+                "be able to ask"
+            )
+            assert refusals, "the loop was never refused at all"
+
+            # The day is what the attack was after, and it must be intact.
+            # Every refusal above was a free pre-filter one, so nothing was
+            # spent and nothing should have been charged.
+            day_used = _todays_anonymous_usage()
+            assert day_used == 0, (
+                f"one guest burned {day_used} of the day's {daily_cap} shared "
+                f"anonymous runs on refusals that made no model call at all; "
+                f"charging the shared budget for free refusals is what made "
+                f"the drain cheap (F-4.10-R-01 part B)"
+            )
+
+            # And the thing that actually matters: somebody else can still
+            # use the product.
+            _victim_id, victim_headers = await _mint_guest(client)
+            victim = await _run(client, victim_headers)
+            assert victim.status_code == 202, (
+                f"a brand-new visitor asking a legitimate question was refused "
+                f"{victim.status_code} after one other guest's refusal loop; "
+                f"that is a denial of service on this phase's entire "
+                f"deliverable"
+            )
+            await _drain_run_task(victim.json()["run_id"])
+
+    @pytest.mark.asyncio
+    async def test_the_attempt_ceiling_refuses_with_its_own_reason_and_status(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """403 with a DISTINCT reason, not a 429 and not the allowance's own.
+
+        Design decision 5's reasoning, applied to a third refusal: this one
+        is permanent for the identity, so a 429 with a `Retry-After` would
+        be a lie the UI would repeat as "try again soon". And it is not
+        `guest_allowance_exhausted`, because this visitor may have received
+        no answer at all, so the sign-in wall's own sentence would be false
+        for them.
+        """
+        from system_03_search_agent.data.guest_sessions import ATTEMPT_ALLOWANCE
+
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", str(ATTEMPT_ALLOWANCE * 10))
+        _reset_todays_anonymous_usage()
+
+        async with _client() as client:
+            _guest_id, headers = await _mint_guest(client)
+            for _ in range(ATTEMPT_ALLOWANCE):
+                response = await _run_text(client, headers, _INJECTION_REFUSAL_TEXT)
+                assert response.status_code == 202
+                await _drain_run_task(response.json()["run_id"])
+
+            refused = await _run_text(client, headers, _INJECTION_REFUSAL_TEXT)
+            assert refused.status_code == 403, (
+                "the attempt ceiling is permanent for this identity, so a 429 "
+                "would promise a recovery that never comes"
+            )
+            detail = refused.json()["detail"]
+            assert detail["reason"] == "guest_attempt_limit_reached", (
+                "collapsing this into guest_allowance_exhausted makes the "
+                "sign-in wall tell a visitor they used searches they never got"
+            )
+            assert "Retry-After" not in refused.headers
+
+            # And the reporting path agrees, which is design decision 8's
+            # constraint 4 applied to this bound: the dots must not promise a
+            # search the very next request refuses.
+            allowance = await client.get("/v1/allowance", headers=headers)
+            assert allowance.status_code == 200
+            body = allowance.json()
+            assert body["used"] == 0, (
+                "the answers were refunded, which is F-4.10-A-04's guarantee "
+                "and must survive this fix"
+            )
+            assert body["blocked_reason"] == "guest_attempt_limit_reached"
+
+    @pytest.mark.asyncio
+    async def test_a_refused_run_gives_back_the_answer_and_never_the_attempt(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Both halves of the asymmetry, in one visitor's session.
+
+        The visitor is spared (their five answers are intact after a
+        refusal), and the system is not defenceless (the attempt is gone for
+        good). A fix that got either half alone would be worse than the
+        defect: refund nothing and a curious visitor is walled having seen
+        nothing; refund both and the identity is unbounded again.
+        """
+        from system_03_search_agent.data.guest_sessions import ATTEMPT_ALLOWANCE
+
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", str(ATTEMPT_ALLOWANCE * 10))
+        _reset_todays_anonymous_usage()
+
+        async with _client() as client:
+            guest_id, headers = await _mint_guest(client)
+
+            refused = await _run_text(client, headers, _INJECTION_REFUSAL_TEXT)
+            assert refused.status_code == 202
+            run_id = refused.json()["run_id"]
+            await _drain_run_task(run_id)
+            await _assert_run_was_refused_at_the_guardrail(client, headers, run_id)
+
+            allowance = await client.get("/v1/allowance", headers=headers)
+            assert allowance.json()["used"] == 0, (
+                "the ANSWER must be given back (F-4.10-A-04); a visitor must "
+                "not be pushed toward the sign-in wall by a question that was "
+                "never answered"
+            )
+            assert _attempts_used(guest_id) == 1, (
+                "the ATTEMPT was given back as well, which is precisely the "
+                "hole F-4.10-R-01 measured: a caller who only ever triggers "
+                "refusals then advances no counter that can ever stop them"
+            )
+
+    @pytest.mark.asyncio
+    async def test_a_guest_is_never_shown_whether_their_refused_run_was_charged(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The constraint the refund's internal plumbing had to respect.
+
+        The refund policy needs to know whether a refusal came after a real
+        model call, because a free refusal must not charge the shared day
+        while a paid one must. Sections 19.4 and 19.5 make cost
+        internal-only, so that fact travels on `RunEntry` and in the
+        registry's own observation of a `cost` event, never on a payload.
+
+        Both refusal shapes are driven, because the free one is where a
+        `charged: false` flag would have been most tempting to add.
+        """
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", "10000")
+        _reset_todays_anonymous_usage()
+
+        async with _client() as client:
+            _guest_id, headers = await _mint_guest(client)
+            for text in (_INJECTION_REFUSAL_TEXT, _PAID_REFUSAL_TEXT):
+                created = await _run_text(client, headers, text)
+                assert created.status_code == 202
+                run_id = created.json()["run_id"]
+                await _drain_run_task(run_id)
+
+                events = await client.get(f"/v1/query/{run_id}/events", headers=headers)
+                assert events.status_code == 200
+                assert "event: cost" not in events.text, (
+                    "a guest was streamed a cost event for a refused run; cost "
+                    "and token usage are internal-only data (Section 19.4/19.5)"
+                )
+                assert "charged" not in events.text, (
+                    "the refund's `charged` flag reached the wire; a guest must "
+                    "never learn which of their questions cost money, which is "
+                    "why it travels on RunEntry and not on GuardPayload"
+                )
+                assert '"total_cost_usd":0.0' in events.text.replace(" ", ""), (
+                    "the done event's total_cost_usd reached this guest "
+                    "un-redacted; `_redact_done_event_for_end_user` forces it "
+                    "to 0.0 for every non-operator caller (F-2.0-05)"
+                )
