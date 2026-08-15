@@ -54,7 +54,9 @@ import {
   capitalizeFirst,
   clearPersistedGuestToken,
   dailyLimitPhrase,
+  guestSessionWasMigrated,
   loadPersistedGuestToken,
+  markGuestSessionMigrated,
   persistGuestToken,
 } from "./lib/guestSession";
 import { useAgentRun } from "./hooks/useAgentRun";
@@ -103,6 +105,22 @@ export function App() {
    * page load, including one that never asks anything.
    */
   const [guestToken, setGuestToken] = useState<string | null>(loadPersistedGuestToken);
+  /**
+   * Whether this browser has already converted a guest identity into an
+   * account (F-4.10-A-05). Seeded from storage on mount, the same way the
+   * token itself is, because it has to outlive both a reload and a
+   * sign-out to be worth anything.
+   *
+   * It exists because the token alone cannot carry the fact. A migrated
+   * guest session is revoked server-side in the same transaction, so its
+   * token is a dead credential that must not be sent again; but forgetting
+   * it entirely is what let an ordinary sign in, sign out, ask cycle mint a
+   * brand-new identity with five fresh searches, indefinitely. The token is
+   * dropped and the fact is kept. See `lib/guestSession.ts` for the full
+   * argument, including why this is an honesty control rather than a
+   * security one (the server's daily anonymous ceiling is the real bound).
+   */
+  const [guestMigrated, setGuestMigrated] = useState<boolean>(guestSessionWasMigrated);
   /**
    * The caller's own search allowance, read ONLY from `GET /v1/allowance`
    * (or the equivalent fields on a fresh `POST /auth/guest` response).
@@ -262,6 +280,22 @@ export function App() {
   const ask = useCallback(
     async (question: string, chosenDepth: AudienceDepth) => {
       setDepth(chosenDepth);
+      // F-4.10-A-05. This browser already turned its guest allowance into an
+      // account, and the server revoked that guest session when it did.
+      // Minting a fresh identity here is the hole: it is how sign in, sign
+      // out, ask five more, repeat handed out unlimited free allowances with
+      // nobody clearing anything. Checked BEFORE any state is touched, so the
+      // question never reaches the history list or the run screen for a run
+      // that is not going to start.
+      //
+      // The wall rather than an error, because the wall is the one thing the
+      // visitor can act on: signing in works immediately and is exactly what
+      // it offers. A dead-credential 401 would be a message with no next
+      // step in it.
+      if (!signedIn && guestToken === null && guestMigrated) {
+        setSearchView({ name: "wall" });
+        return;
+      }
       // F-4.8-J-01's rule survives unchanged (see the file docstring): no
       // answer content is ever rendered from anything but a real run's own
       // event stream. What changed in build phase 4.10 is that an
@@ -350,12 +384,28 @@ export function App() {
           return;
         }
         if (error instanceof ApiError && error.status === 401 && !signedIn) {
-          // The guest session this tab was holding is no longer valid
-          // (migrated-and-revoked from another tab, or simply unknown to
-          // the server). Clearing it means the NEXT ask mints a fresh one
-          // rather than repeating the same 401 forever.
+          // The guest token this tab was holding did not work. It is dropped
+          // either way, so the same 401 does not repeat forever, but WHY it
+          // failed decides what happens next, and collapsing the two was the
+          // second, independent path to a free allowance the adversary named
+          // (F-4.10-A-05).
           setGuestToken(null);
           clearPersistedGuestToken();
+          if (error.reason === "guest_session_revoked") {
+            // The server revoked this session at migration, from this tab or
+            // another one. That means the allowance was already converted
+            // into an account, so the next ask must NOT mint a fresh identity
+            // with five more searches. Remember it and show the wall, which
+            // is the actionable surface: signing in works right now.
+            markGuestSessionMigrated();
+            setGuestMigrated(true);
+            setSearchView({ name: "wall" });
+            return;
+          }
+          // Anything else, most realistically a guest token past its 7-day
+          // TTL, is not about the allowance at all, and a returning visitor
+          // must not be walled for it. The next ask mints a fresh identity,
+          // which is the behaviour that was always correct for this case.
         }
         // F-4.8-J-12. This previously swallowed the exception and dropped the
         // user on an empty answer screen with no explanation. An error message
@@ -368,7 +418,7 @@ export function App() {
         setSearchView({ name: "answer", question });
       }
     },
-    [signedIn, token, guestToken, sessionId],
+    [signedIn, token, guestToken, guestMigrated, sessionId],
   );
 
   const body = () => {
@@ -388,10 +438,20 @@ export function App() {
               // T-4.10-06: a guest session held at sign-in is migrated and
               // revoked server-side in the same request (the backend's
               // `_migrate_guest_session`), so the token this tab was
-              // holding can never spend another run. Dropping it here
-              // means a later sign-out mints a genuinely fresh guest
-              // identity instead of reusing one the server will now
-              // refuse.
+              // holding can never spend another run and must be dropped.
+              //
+              // F-4.10-A-05 corrects what this used to do NEXT, which was
+              // nothing: dropping the token also forgot that there had been
+              // one, so the sign-out below minted a fresh identity with five
+              // fresh searches, every cycle, forever. The credential goes and
+              // the fact stays. Recorded only when a guest token was actually
+              // held, since a visitor who signed in without ever asking
+              // anonymously has migrated nothing and must not be walled for
+              // it.
+              if (guestToken !== null) {
+                markGuestSessionMigrated();
+                setGuestMigrated(true);
+              }
               setGuestToken(null);
               clearPersistedGuestToken();
               setAllowance(null);
@@ -558,14 +618,22 @@ export function App() {
           // T-4.10-08: the allowance belonged to the account that just
           // signed out; the next caller (signed in or anonymous) gets its
           // own, fetched fresh, never a stale number inherited across the
-          // sign-out. By this point `guestToken` is already `null` in the
-          // ordinary flow (cleared at sign-in when a guest session
-          // migrates), but this is reset explicitly rather than assumed,
-          // matching this handler's own "everything session-scoped is
-          // cleared here, in one place" rule.
-          setGuestToken(null);
-          clearPersistedGuestToken();
+          // sign-out.
           setAllowance(null);
+          // F-4.10-A-05, product-owner decision 2026-08-15: the guest token
+          // and the migrated marker are deliberately NOT cleared here, and
+          // this is the one exception to this handler's "everything
+          // session-scoped is cleared here, in one place" rule. A guest
+          // identity is not scoped to an account session; it is scoped to
+          // the browser, and it outlives signing in and out of an account
+          // exactly as it outlives a reload. Clearing it unconditionally is
+          // what made the accepted "clearing the token gives you five more"
+          // tradeoff reachable without anyone clearing anything: sign in,
+          // sign out, ask five more, repeat. A visitor who signs out returns
+          // to the guest identity they already had, with whatever searches
+          // remained, and a visitor whose identity was migrated returns to
+          // the sign-in wall, which is the truthful answer for a session the
+          // server revoked.
           // R-02: a new conversation, not the previous account's.
           setSessionId(newSessionId());
           // R-11: the next person at this workstation has not read the

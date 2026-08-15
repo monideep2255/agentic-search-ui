@@ -29,8 +29,10 @@ export interface AccountMenuProps {
   /** Navigate to a screen the menu links to. */
   onNavigate?: (screen: "integrations" | "docs") => void;
   /**
-   * The account's real daily search limit, in words, e.g. "up to 100
-   * searches a day" (T-4.10-09, closing F-4.9-A-16).
+   * The account's real search standing, in words, e.g. "no search limit in
+   * effect yet" (T-4.10-09 closing F-4.9-A-16, corrected by F-4.10-A-06:
+   * the 100/day cap cannot fire while nothing writes `interactions`, so
+   * naming the number was false in the opposite direction).
    *
    * Built by `lib/guestSession.ts`'s `dailyLimitPhrase` from
    * `GET /v1/allowance`, the SAME function `HistoryRail`'s footer line

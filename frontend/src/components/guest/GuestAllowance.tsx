@@ -94,18 +94,35 @@ export function SignInWall({ onSignIn }: SignInWallProps) {
         </Typography>
         <Typography sx={{ color: designTokens.inkMuted, mb: 2.5, fontSize: 14.5 }}>
           {/*
-            F-4.10-01. This read "Your history moves with you when you sign
-            in," which overstated what actually happens: nothing persists a
-            run across a reload today (the run registry is in-memory and
-            evicts, and the browser's history list is React state), so
-            there is no cross-reload history to carry anywhere. What DOES
-            move, and what design decision 4 (`tracker/phase_4.10.md`)
-            actually built: the searches from THIS visit re-point to the
-            new account the moment you sign in. Durable history across a
-            reload is build phase 4.6's, tracked in `stubs/registry.ts`.
+            THE PROMISE IS GONE, not narrowed a second time (F-4.10-A-07).
+
+            F-4.10-01 narrowed "Your history moves with you when you sign in"
+            to "The ones from this visit move with you when you sign in." That
+            is still false in the one situation this component is displayed
+            in, which is the situation that matters. The wall appears on the
+            SIXTH search, so by construction the visitor has already run five,
+            and migration reaches only runs the in-memory `RunRegistry` still
+            holds: `_evict_expired` drops any run finished more than
+            `DEFAULT_RETENTION_SECONDS` (300) ago. Every search older than
+            five minutes is already gone, and the sentence promised all of
+            them. Measured with retention forced to zero: signup returns 201,
+            `reassign_owner` moves nothing, and the new account reading that
+            run gets a 404.
+
+            There is a second reason no narrower wording would have been
+            honest either. Nothing in the UI shows a migrated run: the
+            browser's history list is React state that survives sign-in in
+            the same tab whether migration happened or not, so the promise
+            has no observable referent even when the server-side move works.
+
+            Dropping it rather than qualifying it a third time. What is left
+            is true and is the only thing this screen needs to say: the free
+            searches are spent, and an account is how to keep going. Durable
+            history is build phase 4.6's, tracked in `stubs/registry.ts`, and
+            the copy can make a promise about it once there is one to keep.
           */}
-          You have used your free searches. The ones from this visit move with
-          you when you sign in.
+          You have used your free searches. Sign in or create an account to
+          keep going.
         </Typography>
         <Button variant="contained" onClick={onSignIn} sx={{ px: 2.5, py: 1.1 }}>
           Create account or sign in

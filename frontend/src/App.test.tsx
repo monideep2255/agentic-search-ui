@@ -76,6 +76,20 @@ async function ask(user: ReturnType<typeof userEvent.setup>, question: string) {
 
 describe("App", () => {
   beforeEach(() => {
+    // Each clause below is written as a separate visitor arriving at a fresh
+    // browser, and `lib/guestSession.ts` persists real state to
+    // `localStorage` (the guest token since T-4.10-08, and the migrated
+    // marker since the F-4.10-A-05 fix). jsdom keeps one storage for the
+    // whole file, so without this the anonymous-ask clauses leak a guest
+    // token into the sign-in clauses that follow them, and those in turn
+    // leak a migrated marker into the anonymous clause at the end.
+    //
+    // This is isolation, not a relaxed assertion: it was already leaking
+    // before this fix round and merely happened to be cleaned up as a side
+    // effect of the sign-in handler clearing the token, which the product
+    // owner's decision changed. `phase410Premise.test.tsx` has cleared
+    // storage in its own `beforeEach` from the start, for the same reason.
+    window.localStorage.clear();
     loginMock.mockReset();
     createRunMock.mockReset();
     openEventStreamMock.mockReset();

@@ -40,8 +40,9 @@ export interface StopRunResponse {
  * `app.py`'s `_get_owned_run` error ordering.
  *
  * `reason` (T-4.10-08) is the machine-readable string a structured
- * `detail` object carries, e.g. `guest_allowance_exhausted` or
- * `concurrent_run_cap_exceeded` (`adapters/web_sse/app.py`'s
+ * `detail` object carries: `guest_allowance_exhausted`,
+ * `concurrent_run_cap_exceeded`, `anon_daily_cap_reached`, or
+ * `guest_session_revoked` (`adapters/web_sse/app.py`'s
  * `HTTPException(..., detail={"reason": ..., "message": ...})` shape).
  * It is `undefined` when the backend returned a bare string `detail` (most
  * routes) or no parseable JSON body at all, so a caller must check for
@@ -50,6 +51,12 @@ export interface StopRunResponse {
  * two must never be treated alike (design decision 5,
  * `tracker/phase_4.10.md`: a 403 with this exact reason is the only one
  * that means "the allowance is spent, show the sign-in wall").
+ *
+ * The same distinction on 401 is what F-4.10-A-05 turns on: a 401 carrying
+ * `guest_session_revoked` means the server revoked this guest session at
+ * migration, so the client must NOT mint a fresh identity, while a bare 401
+ * (a token past its 7-day TTL, tampered, or signed with the wrong key)
+ * legitimately should.
  */
 export class ApiError extends Error {
   readonly status: number;

@@ -55,10 +55,10 @@ export function persistGuestToken(token: string): void {
  * Drop the persisted guest token. Called once a guest session has been
  * migrated at signup/login (design decision 4): the server revokes that
  * session in the same transaction, so the token this tab was holding can
- * never spend another run, and holding onto it would only produce a
- * confusing 401/403 on the NEXT anonymous ask this tab makes (after a
- * sign-out, say). Also used defensively when the server reports a guest
- * token as no longer valid for any other reason.
+ * never spend another run, and continuing to send it would only produce a
+ * 401 the user cannot act on. Always paired with `markGuestSessionMigrated`
+ * on that path, so dropping the dead credential does not also forget that
+ * this browser has already had its guest allowance.
  */
 export function clearPersistedGuestToken(): void {
   try {
@@ -68,24 +68,89 @@ export function clearPersistedGuestToken(): void {
   }
 }
 
+const GUEST_MIGRATED_STORAGE_KEY = "agentic-search-ui.guest-migrated.v1";
+
 /**
- * The real per-day search limit, in words, sourced ONLY from an
+ * Record that this browser's guest identity was converted into an account
+ * (F-4.10-A-05, product-owner decision 2026-08-15).
+ *
+ * WHY A SECOND VALUE RATHER THAN JUST KEEPING THE TOKEN. The product
+ * decision is that a visitor who signs out returns to the guest identity
+ * they already had, with whatever searches remained. For an identity that
+ * migrated, the server revoked it in the same transaction, so nothing
+ * remains and the token is a dead credential: resurrecting it would land the
+ * user on a 401 they cannot act on. The two facts therefore have to be
+ * stored separately. The token is dropped, and the fact that there WAS one
+ * is kept, so the next anonymous ask goes straight to the sign-in wall
+ * rather than minting a brand-new identity with five fresh searches.
+ *
+ * That mint is the hole this closes. `App.tsx` used to clear the guest token
+ * on sign-out AND on sign-in, so an ordinary sign in, sign out, ask five
+ * more cycle handed out an unlimited number of free allowances with no
+ * developer tools and no storage clearing involved, which is not what the
+ * 2026-08-14 "anyone who clears it gets five more" decision accepted.
+ *
+ * Deliberately never cleared by the app. Clearing browser storage still
+ * yields a fresh allowance, which IS the accepted tradeoff; the application
+ * simply no longer does it on the user's behalf.
+ */
+export function markGuestSessionMigrated(): void {
+  try {
+    window.localStorage.setItem(GUEST_MIGRATED_STORAGE_KEY, "1");
+  } catch {
+    // Storage unreachable. Degrades to the pre-fix behaviour for this tab
+    // only (a fresh identity on the next anonymous ask), never to a crash.
+    // The server-side daily ceiling on anonymous runs is the real bound;
+    // this marker is the client half of an honest UX, not a security
+    // control, and it is written down here so nobody mistakes it for one.
+  }
+}
+
+/** Whether this browser has already converted a guest identity into an account. */
+export function guestSessionWasMigrated(): boolean {
+  try {
+    return window.localStorage.getItem(GUEST_MIGRATED_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The caller's real search standing, in words, sourced ONLY from an
  * `AllowanceResponse` actually returned by `GET /v1/allowance`. `null`
  * means "not fetched yet," rendered as a statement that is honest about
  * not knowing, never as a guess.
  *
- * `counted: false` (every registered caller today, F-2.0-04: nothing
- * writes `interactions` rows yet) states the LIMIT, not a usage count,
- * because the usage count is not a real measurement yet. `counted: true`
- * (guests, and registered callers once F-2.0-04 closes) states what is
- * actually left.
+ * THE `counted: false` BRANCH, and why it no longer states a number
+ * (F-4.10-A-06). It used to render "up to 100 searches a day", which
+ * replaced one false statement with another in the opposite direction:
+ * F-4.9-A-16 killed "unlimited searches" because a 100/day cap is shipped
+ * in code, and this line then asserted that cap as a fact the system does
+ * not deliver. `check_user_daily_query_cap` counts rows in `interactions`,
+ * and nothing writes that table (F-2.0-04, build phase 4.6's to close), so
+ * the cap cannot fire and every registered caller is effectively unmetered.
+ * The server says exactly this on the wire, `counted: false`, and T-4.10-09's
+ * own acceptance criterion anticipated it: "if the honest answer is 'not
+ * counted yet', the copy says that rather than displaying an uncounted zero
+ * as a count." Reading `counted` and then stating the number anyway is
+ * consuming the honesty field as permission to be confident, which is the
+ * opposite of what it is for.
+ *
+ * So the branch states what is true: no limit is in effect. "Yet" is
+ * load-bearing rather than hedging, since the cap is real in code and
+ * starts firing the moment interaction rows exist, at which point the
+ * server flips `counted` to true and this function states the real count
+ * instead, with no copy change needed here.
+ *
+ * `counted: true` (guests today, registered callers once F-2.0-04 closes)
+ * states what is actually left.
  */
 export function dailyLimitPhrase(allowance: AllowanceResponse | null): string {
   if (allowance === null) {
-    return "checking your daily limit…";
+    return "checking your search limit…";
   }
   if (!allowance.counted) {
-    return `up to ${allowance.total} searches a day`;
+    return "no search limit in effect yet";
   }
   const left = Math.max(allowance.total - allowance.used, 0);
   return `${left} of ${allowance.total} searches left today`;

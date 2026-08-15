@@ -445,15 +445,25 @@ describe("F-4.8-P-03: the stored-searches rail collapses", () => {
     // The email is real data (what the user typed into the gate that just
     // authenticated them), which this clause still asserts unchanged.
     //
-    // UPDATED, build phase 4.10 (T-4.10-09, closing F-4.9-A-16). "Unlimited
-    // searches" was never true: a 100/day cap is shipped and enforced
-    // (`harness/cost_control.py`). The guarantee this line protects, that
-    // the rail's footer names the account's real search standing, SURVIVES
-    // this change; only the specific (false) string it checked for does
-    // not. The real figure now comes from `GET /v1/allowance`
-    // (`getAllowanceMock`, set in `beforeEach`), fetched asynchronously at
-    // sign-in, so this assertion waits for it rather than reading it
-    // synchronously the way the old hardcoded string could.
+    // UPDATED TWICE, and the guarantee is the same both times: the rail's
+    // footer names the account's REAL search standing, whatever that is.
+    //
+    // Build phase 4.10 (T-4.10-09, closing F-4.9-A-16) replaced "Unlimited
+    // searches" with "up to 100 searches a day", because a 100/day cap is
+    // shipped in `harness/cost_control.py`.
+    //
+    // The fix round (F-4.10-A-06) replaced that in turn, because it was
+    // false in the other direction: `check_user_daily_query_cap` counts rows
+    // in `interactions` and nothing writes that table (F-2.0-04), so the cap
+    // cannot fire and no limit is actually in effect. The server says so on
+    // the wire with `counted: false`, and the footer now says so too.
+    //
+    // What this clause protects is unchanged and is asserted MORE strictly
+    // than before, not less: the footer must state the real standing from
+    // the real fetch, and it must not assert EITHER false claim, the old
+    // "unlimited" one or the 100/day one. A footer that silently dropped
+    // the line entirely would fail the positive assertion, and a footer that
+    // went back to naming an unenforced number would fail the two negatives.
     const user = userEvent.setup();
     render(<App />);
     await signInWithOneSearch(user);
@@ -461,9 +471,10 @@ describe("F-4.8-P-03: the stored-searches rail collapses", () => {
     const rail = screen.getByTestId("history-rail");
     expect(within(rail).getByText("person@example.com")).toBeInTheDocument();
     await waitFor(() =>
-      expect(within(rail).getByText(/up to 100 searches a day/i)).toBeInTheDocument(),
+      expect(within(rail).getByText(/no search limit in effect yet/i)).toBeInTheDocument(),
     );
     expect(within(rail).queryByText(/unlimited searches/i)).not.toBeInTheDocument();
+    expect(within(rail).queryByText(/100 searches/i)).not.toBeInTheDocument();
   });
 
   it("keeps the collapsed choice across a new search", async () => {

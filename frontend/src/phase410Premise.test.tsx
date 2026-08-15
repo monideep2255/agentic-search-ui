@@ -32,6 +32,17 @@
  *                   absent when it is not, and the account menu and rail
  *                   footer stating the identical real limit from the same
  *                   fetch.
+ *
+ *                   Added in fix round 1: that signing out does NOT hand
+ *                   out a fresh five-search allowance (F-4.10-A-05), in both
+ *                   directions, a migrated identity is walled and a visitor
+ *                   who never had one is still admitted; that the marker
+ *                   carrying that fact survives a reload; that a 401 naming
+ *                   a revoked session walls while an ordinary expired-token
+ *                   401 still mints; that both limit surfaces state the true
+ *                   copy and neither names an unenforced cap (F-4.10-A-06);
+ *                   and that the sign-in wall makes no claim about carrying
+ *                   searches across sign-in (F-4.10-A-07).
  *   NOT exercised:  the backend's own admission, isolation, atomicity and
  *                   token-domain-separation guarantees (the backend premise
  *                   gate's job, already green); real network behaviour
@@ -296,10 +307,20 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
 
   describe("the account menu and the rail footer state the identical real limit", () => {
     it("read it from the same GET /v1/allowance fetch, not two hardcoded copies", async () => {
-      // F-4.9-A-16, closed by T-4.10-09. Both surfaces used to be a
-      // hardcoded, false "unlimited searches"; both must now show the
-      // SAME real number, from the SAME source, or one of the two is
-      // still lying.
+      // F-4.9-A-16, closed by T-4.10-09, then corrected by F-4.10-A-06.
+      //
+      // Both surfaces used to be a hardcoded, false "unlimited searches".
+      // T-4.10-09 replaced that with "up to 100 searches a day", which is
+      // false in the opposite direction: the 100/day cap counts rows in
+      // `interactions` and nothing writes that table (F-2.0-04), so it
+      // cannot fire. `counted: false` is the server saying exactly that, and
+      // the client used to read the field and then state the number anyway.
+      //
+      // The guarantee is unchanged: both surfaces state the SAME thing from
+      // the SAME fetch, or one of the two is lying. It is now checked
+      // against the true copy, and with an added negative on each surface so
+      // a regression back to naming an unenforced cap fails rather than
+      // passing.
       getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
       createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
       loginMock.mockResolvedValue({
@@ -315,11 +336,215 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
       await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
       const menu = screen.getByRole("menu");
       await waitFor(() =>
-        expect(within(menu).getByText(/up to 100 searches a day/i)).toBeInTheDocument(),
+        expect(within(menu).getByText(/no search limit in effect yet/i)).toBeInTheDocument(),
       );
+      expect(within(menu).queryByText(/100 searches/i)).not.toBeInTheDocument();
+      expect(within(menu).queryByText(/unlimited searches/i)).not.toBeInTheDocument();
 
       const rail = screen.getByTestId("history-rail");
-      expect(within(rail).getByText(/up to 100 searches a day/i)).toBeInTheDocument();
+      expect(within(rail).getByText(/no search limit in effect yet/i)).toBeInTheDocument();
+      expect(within(rail).queryByText(/100 searches/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("the sign-in wall promises only what the server delivers (F-4.10-A-07)", () => {
+    it("states the free searches are spent and makes no claim about history", async () => {
+      // The wall appears on the SIXTH search, so by construction the visitor
+      // has already run five. Migration reaches only runs the in-memory
+      // `RunRegistry` still holds, and it evicts anything finished more than
+      // `DEFAULT_RETENTION_SECONDS` (300) ago, so a promise about "the ones
+      // from this visit" covers none of the searches this screen is shown
+      // after. Nothing in the UI would show a migrated run either way: the
+      // browser's history list is React state that survives sign-in in the
+      // same tab regardless.
+      //
+      // The negative assertions are the point of this clause. A promise about
+      // carrying searches across sign-in must not come back in a third
+      // wording, so both the original ("your history moves with you") and its
+      // narrowed successor ("the ones from this visit") are named here, and
+      // so is the general shape they share.
+      mintGuestMock.mockResolvedValue({
+        guest_token: "guest-token-1", guest_id: "guest-1", used: 5, total: 5,
+      });
+      createRunMock.mockRejectedValueOnce(
+        new ApiError(
+          403,
+          "createRun failed with 403: you have used all of your free searches",
+          "guest_allowance_exhausted",
+        ),
+      );
+      const user = userEvent.setup();
+      render(<App />);
+
+      await ask(user, "What gene is BRCA1?");
+
+      const wall = await screen.findByTestId("sign-in-wall");
+      expect(within(wall).getByText(/you have used your free searches/i)).toBeInTheDocument();
+      expect(wall.textContent ?? "").not.toMatch(/move[sd]? with you/i);
+      expect(wall.textContent ?? "").not.toMatch(/your history/i);
+      expect(wall.textContent ?? "").not.toMatch(/from this visit/i);
+    });
+  });
+
+  describe("signing out does not hand out a fresh allowance (F-4.10-A-05)", () => {
+    /**
+     * The measured hole: `App.tsx` cleared the guest token on sign-out AND
+     * on sign-in, so sign in, sign out, ask five more, repeat handed out an
+     * unlimited number of free allowances with no developer tools and no
+     * storage clearing involved. The 2026-08-14 product-owner decision
+     * accepted that a person who deliberately clears their token gets five
+     * more; it did not accept that the application clears it for them.
+     *
+     * BOTH ARMS, because this control has no safe direction of failure. An
+     * app that walls every anonymous visitor forever passes the refuse arm
+     * perfectly and destroys the product, and no attack test would ever
+     * catch it. So the second clause asserts that a visitor who never
+     * converted a guest identity is still admitted normally.
+     */
+    const signedInAllowance = { kind: "user" as const, used: 0, total: 100, counted: false };
+
+    it("walls a returning visitor whose guest identity was migrated, instead of minting a new one", async () => {
+      mintGuestMock.mockResolvedValue({
+        guest_token: "guest-token-1", guest_id: "guest-1", used: 1, total: 5,
+      });
+      createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+      getAllowanceMock.mockResolvedValue(signedInAllowance);
+      loginMock.mockResolvedValue({
+        access_token: "test-token", refresh_token: "r", token_type: "bearer",
+      });
+      const user = userEvent.setup();
+      const { unmount } = render(<App />);
+
+      // Ask once anonymously, so a real guest identity exists to migrate.
+      await ask(user, "What gene is BRCA1?");
+      await waitFor(() => expect(mintGuestMock).toHaveBeenCalledTimes(1));
+
+      // Sign in: the server migrates and REVOKES that guest session.
+      await signInFromNav(user, "log in");
+      await waitFor(() =>
+        expect(loginMock).toHaveBeenCalledWith(
+          expect.objectContaining({ guest_token: "guest-token-1" }),
+        ),
+      );
+
+      // Sign out, the ordinary way, from the account menu.
+      await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
+      await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+
+      await ask(user, "What variants cause it?");
+
+      expect(await screen.findByTestId("sign-in-wall")).toBeInTheDocument();
+      expect(mintGuestMock).toHaveBeenCalledTimes(1);
+      expect(createRunMock).toHaveBeenCalledTimes(1);
+
+      // THE SAME THING AFTER A RELOAD, and this half is not decoration.
+      // Mutation-tested: with only the in-tab assertions above, restoring the
+      // old sign-out clear (drop the token, drop the marker) still passed,
+      // because React state carried the fact across the sign-out on its own
+      // and nothing forced the persisted half to be read. Remounting is what
+      // makes what sign-out wrote to storage load-bearing.
+      unmount();
+      render(<App />);
+      await ask(user, "Which trials are recruiting?");
+
+      expect(await screen.findByTestId("sign-in-wall")).toBeInTheDocument();
+      expect(mintGuestMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("still admits a visitor who signed in without ever holding a guest identity", async () => {
+      // The admit arm. Signing in from the nav bar before ever asking a
+      // question migrates nothing, so signing out must leave this browser
+      // exactly as anonymous as it was, free to mint its first guest
+      // identity. Without this, the fix above could wall everyone who ever
+      // touched the login screen and every refusal test would still pass.
+      mintGuestMock.mockResolvedValue({
+        guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+      });
+      createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+      getAllowanceMock.mockResolvedValue(signedInAllowance);
+      loginMock.mockResolvedValue({
+        access_token: "test-token", refresh_token: "r", token_type: "bearer",
+      });
+      const user = userEvent.setup();
+      render(<App />);
+
+      await signInFromNav(user, "log in");
+      await waitFor(() => expect(loginMock).toHaveBeenCalledTimes(1));
+      expect(loginMock.mock.calls[0][0]).not.toHaveProperty("guest_token");
+
+      await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
+      await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+
+      await ask(user, "What gene is BRCA1?");
+
+      await waitFor(() => expect(mintGuestMock).toHaveBeenCalledTimes(1));
+      expect(screen.queryByTestId("sign-in-wall")).not.toBeInTheDocument();
+    });
+
+    it("walls, rather than re-minting, when the server reports the guest session revoked", async () => {
+      // The second, independent path the adversary named: `ask`'s error
+      // branch cleared the guest token on ANY 401 while signed out, and
+      // `POST /v1/query` answers 401 for a revoked session, so the very
+      // refusal that ends a migrated guest's allowance caused the next ask
+      // to mint a brand-new one. The reason string is what separates this
+      // from an ordinary expired token (the clause below).
+      window.localStorage.setItem(GUEST_TOKEN_STORAGE_KEY, "revoked-token");
+      createRunMock.mockRejectedValueOnce(
+        new ApiError(
+          401,
+          "createRun failed with 401: this guest session is no longer valid",
+          "guest_session_revoked",
+        ),
+      );
+      const user = userEvent.setup();
+      const { unmount } = render(<App />);
+
+      await ask(user, "What gene is BRCA1?");
+
+      expect(await screen.findByTestId("sign-in-wall")).toBeInTheDocument();
+      expect(mintGuestMock).not.toHaveBeenCalled();
+
+      // And it survives a reload. A marker that lived only in React state
+      // would be forgotten by the next page load, which is the same hole one
+      // refresh later.
+      unmount();
+      render(<App />);
+      await ask(user, "What variants cause it?");
+
+      expect(await screen.findByTestId("sign-in-wall")).toBeInTheDocument();
+      expect(mintGuestMock).not.toHaveBeenCalled();
+    });
+
+    it("mints a fresh identity when the guest token merely expired, rather than walling", async () => {
+      // The other admit arm, and the reason the backend carries a
+      // machine-readable reason at all. A guest token past its 7-day TTL is
+      // not about the allowance, and a returning visitor must not be walled
+      // for it. A 401 with no reason is exactly that case.
+      window.localStorage.setItem(GUEST_TOKEN_STORAGE_KEY, "expired-token");
+      createRunMock
+        .mockRejectedValueOnce(
+          new ApiError(401, "createRun failed with 401: invalid or expired credentials"),
+        )
+        .mockResolvedValue({ run_id: "run-2", persona_name: "Mendel" });
+      mintGuestMock.mockResolvedValue({
+        guest_token: "guest-token-2", guest_id: "guest-2", used: 0, total: 5,
+      });
+      getAllowanceMock.mockResolvedValue({ kind: "guest", used: 1, total: 5, counted: true });
+      const user = userEvent.setup();
+      render(<App />);
+
+      await ask(user, "What gene is BRCA1?");
+      await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+      expect(screen.queryByTestId("sign-in-wall")).not.toBeInTheDocument();
+
+      await user.click(mainArea().getByRole("button", { name: /new search/i }));
+      await ask(user, "What variants cause it?");
+
+      await waitFor(() => expect(mintGuestMock).toHaveBeenCalledTimes(1));
+      expect(createRunMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ text: "What variants cause it?" }),
+        "guest-token-2",
+      );
     });
   });
 

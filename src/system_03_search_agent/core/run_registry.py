@@ -164,14 +164,17 @@ engineering call and document it:
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from system_03_search_agent.contracts.events import ErrorPayload, Event
 from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core.run import run_streaming
+
+logger = logging.getLogger(__name__)
 
 # Section 13.1: "the server buffers each run's emitted events... for the
 # run's lifetime plus five minutes". Module-level default so it is visible
@@ -291,6 +294,61 @@ class RunEntry:
     # citation export as partial rather than indistinguishable from a
     # genuinely empty one (F-4.0-A-05).
     cancelled: bool = False
+    # F-4.10-A-04 (adversary round 1, build phase 4.10): fired at most once,
+    # by `_drain_into_entry`, the first time this run emits a `guard` event
+    # with `passed: false`. This registry knows nothing about allowances and
+    # must not: the callback is supplied by whoever created the run (the web
+    # surface passes one only for a guest caller), so the refund policy lives
+    # at the layer that owns the allowance and this module only reports the
+    # observation. Set back to `None` the instant it fires, which is what
+    # makes "at most once per run" structural rather than a convention.
+    on_guard_refused: Callable[[], None] | None = field(default=None, repr=False)
+
+
+def _fire_guard_refusal_callback(entry: RunEntry, event: Event) -> None:
+    """Invoke `entry.on_guard_refused` the first time this run refuses at the
+    guardrail, then disarm it (F-4.10-A-04).
+
+    WHERE A GUARD REFUSAL BECOMES OBSERVABLE, and why it is here. The
+    guardrail runs inside the agent loop, long after `POST /v1/query` has
+    already returned `202` and already spent the caller's allowance. There is
+    no earlier point: `core/graph.py`'s `_decline_for_guardrail` emits a
+    `guard` event carrying `passed: false` and then stops the graph, and this
+    drain loop is the first thing outside the graph that sees any event at
+    all. So the compensation is a refund after the fact, never a deferred
+    charge. Moving the spend to after the guardrail was considered and
+    rejected: it would let a caller start unbounded runs that never spend at
+    all, which is a strictly worse hole than the one being closed.
+
+    A `guard` event with `passed: false` is the ONLY signal used, rather than
+    "the run produced no answer". A refusal is a judgement the system reached,
+    distinct from an error, which `_decline_for_guardrail`'s own docstring
+    already insists on; a failed run is a different question with a different
+    answer and is not in scope here.
+
+    Never raises. A callback that fails must not turn a correctly refused run
+    into a crashed one, and the caller's own allowance is the thing at stake,
+    not the run.
+    """
+    callback = entry.on_guard_refused
+    if callback is None or event.type != "guard" or event.payload.get("passed") is not False:
+        return
+    # Disarm BEFORE calling, not after: a callback that raises must still
+    # have consumed its one shot, or a later `guard` event (there is none
+    # today, and relying on that is how a second refund gets written) could
+    # fire it again.
+    entry.on_guard_refused = None
+    try:
+        callback()
+    except Exception:  # noqa: BLE001 - a refund failure must never fail the run
+        # No exc_info and no interpolated values, per production-standards'
+        # secrets gate: a database exception's own string can embed bound
+        # parameters, and the guest id is one of them.
+        logger.warning(
+            "the guard-refusal callback for run %s failed; the caller was "
+            "charged for a refused run",
+            entry.run_id,
+        )
 
 
 async def _drain_into_entry(
@@ -333,6 +391,7 @@ async def _drain_into_entry(
         async for event in run_streaming(query, context):
             entry.events.append(event)
             await entry.queue.put(event)
+            _fire_guard_refusal_callback(entry, event)
             async with entry.new_event:
                 entry.new_event.notify_all()
     except asyncio.CancelledError:
@@ -556,6 +615,7 @@ class RunRegistry:
         *,
         run_id: str | None = None,
         owner_id: str | None = None,
+        on_guard_refused: Callable[[], None] | None = None,
     ) -> str:
         """Mint a `run_id` (or accept a caller-provided one), start
         `run_streaming(query, context)` as a background task feeding both
@@ -587,6 +647,13 @@ class RunRegistry:
                 it is not, so two independently-anonymous callers in two
                 different tests never accidentally share a concurrency
                 slot.
+            on_guard_refused: called at most once, from the background
+                task, the first time this run emits a `guard` event with
+                `passed: false` (F-4.10-A-04). The web surface passes a
+                guest-allowance refund here; every other caller leaves it
+                `None` and nothing fires. This registry deliberately holds
+                no opinion about what a refusal should cost: it reports the
+                observation, and the layer that owns the allowance decides.
 
         Raises:
             ConcurrentRunCapExceededError: if `owner_id` (resolved or
@@ -633,6 +700,7 @@ class RunRegistry:
             task=asyncio.create_task(
                 _drain_into_entry(self, resolved_run_id, query, context)
             ),
+            on_guard_refused=on_guard_refused,
         )
         self._runs[resolved_run_id] = entry
         self._reschedule_abandonment_check(entry)

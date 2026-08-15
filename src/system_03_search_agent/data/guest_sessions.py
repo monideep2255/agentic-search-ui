@@ -17,7 +17,8 @@ Reads:
 
 Writes:
     - The `guest_sessions` table: one INSERT per `create_guest_session`
-      call, one conditional UPDATE per `spend_one_run` call. Both commit
+      call, one conditional UPDATE per `spend_one_run` call, one conditional
+      decrement per `refund_one_run` call. All three commit
       the session they are given, matching how `auth/router.py` manages
       its own session's transaction boundary directly rather than through
       a shared repository-commit helper; callers pass a session scoped to
@@ -220,14 +221,71 @@ _DAILY_SPEND_STATEMENT = text(
     " RETURNING runs_used"
 )
 
-# The compensating statement below, used only when the daily ceiling refuses
-# a run whose per-guest increment already committed. Conditional on
-# `runs_used > 0` so it can never drive the count negative and trip the
-# table's CHECK constraint, whatever else touched the row in between.
+# The compensating statement below, used when the daily ceiling refuses a run
+# whose per-guest increment already committed, and again by `refund_one_run`
+# when a run that WAS admitted turns out to produce nothing (a guardrail
+# refusal, F-4.10-A-04). Conditional on `runs_used > 0` so it can never drive
+# the count negative and trip the table's CHECK constraint, whatever else
+# touched the row in between.
 _UNSPEND_STATEMENT = text(
     "UPDATE guest_sessions SET runs_used = runs_used - 1"
     " WHERE id = :guest_id AND runs_used > 0"
+    " RETURNING runs_used"
 )
+
+
+def refund_one_run(session: Session, guest_id: str | uuid.UUID) -> bool:
+    """Give one run back to `guest_id`'s PERSONAL allowance.
+
+    F-4.10-A-04, product-owner decision 2026-08-15: a guardrail refusal must
+    not cost a visitor one of their five free searches. A first-time visitor
+    who asks five off-topic questions would otherwise meet the sign-in wall
+    having never received a single answer.
+
+    WHAT THIS DELIBERATELY DOES NOT TOUCH, and it is the whole point of the
+    decision rather than an omission: `guest_daily_usage`. The system-wide
+    daily counter stays advanced. A refused run still started a real pipeline
+    and, for a classifier refusal, paid for a real Guard-tier model call. If a
+    refusal cost nothing at all, an attacker could send unlimited garbage and
+    every request would be free compute, with the one ceiling that bounds
+    anonymous spend (design decision 8) never advancing to stop it. Charging
+    the DAY's budget while sparing the INDIVIDUAL is what makes "we do not
+    punish a curious visitor for one bad question" true without opening a
+    free-compute path. The two counters exist for different reasons, and this
+    is the case that proves it: one bounds a person's fair share, the other
+    bounds the system's spend.
+
+    Idempotent in the sense `production-standards`' retry-safety gate needs:
+    the caller fires it at most once per run (see `core/run_registry.py`), and
+    a call against a row already at zero matches nothing and returns False
+    rather than driving the count negative.
+
+    Not conditional on `revoked_at IS NULL`, deliberately. A session revoked
+    by migration between the spend and the refusal can never spend again, so
+    decrementing it changes nothing observable; adding the predicate would
+    only create a second definition of "live" for the reporting path and the
+    enforcement path to disagree about, which is the F-4.10-A-03 shape.
+
+    Args:
+        session: a session scoped to this one operation; this function
+            commits it.
+        guest_id: the guest session id, string or UUID.
+
+    Returns:
+        True when a run was actually given back, False when there was
+        nothing to give back (no row, or the count was already zero).
+
+    Raises:
+        TypeError: If guest_id is not a str or uuid.UUID, or session is not
+            a Session.
+        ValueError: If guest_id is an empty or malformed string.
+    """
+    if not isinstance(session, Session):
+        raise TypeError("session must be a sqlalchemy.orm.Session")
+    guest_uuid = _coerce_guest_id(guest_id)
+    refunded_row = session.execute(_UNSPEND_STATEMENT, {"guest_id": guest_uuid}).first()
+    session.commit()
+    return refunded_row is not None
 
 
 def spend_one_anonymous_run(

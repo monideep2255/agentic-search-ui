@@ -4,7 +4,7 @@ import logging
 import os
 import re
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from datetime import time as dt_time
@@ -32,10 +32,11 @@ from system_03_search_agent.core.run_registry import (
 from system_03_search_agent.data.guest_sessions import (
     FREE_RUN_ALLOWANCE,
     SpendState,
+    refund_one_run,
     spend_one_anonymous_run,
 )
 from system_03_search_agent.data.models import GuestDailyUsage, GuestSession
-from system_03_search_agent.data.session import get_session
+from system_03_search_agent.data.session import get_session, session_scope
 from system_03_search_agent.harness.cost_control import (
     anon_daily_run_cap,
     is_operator_user,
@@ -231,6 +232,20 @@ _STUB_PERSONA_NAME = "Assistant"
 # enforcement path and the reporting path answer identically (F-4.10-A-03).
 _GUEST_SESSION_NO_LONGER_VALID_DETAIL = "this guest session is no longer valid"
 
+# F-4.10-A-05, product-owner decision 2026-08-15. The 401 a revoked or
+# unknown guest session gets is now a STRUCTURED detail rather than a bare
+# string, so the client can tell it apart from every other 401 (an expired,
+# tampered, or wrong-key token, all of which `get_caller` rejects with its
+# own bare-string detail). The distinction is load-bearing for the browser:
+# a session the server revoked at migration must NOT cause the client to
+# quietly mint a fresh guest identity and hand out five more searches, while
+# an ordinary 7-day token expiry legitimately should. Without a
+# machine-readable reason the client cannot separate the two, and the
+# adversary measured that collapsing them is a second, independent path to a
+# free allowance. Additive per Section 2.6: the human-readable sentence is
+# unchanged and still travels, now under `message`.
+_GUEST_SESSION_REVOKED_REASON = "guest_session_revoked"
+
 _CONCURRENT_RUN_CAP_MESSAGE = (
     "you already have the maximum number of runs in flight; "
     "wait for an existing run to finish, or stop one via "
@@ -343,7 +358,10 @@ def get_v1_allowance(
         if row is None or row[0] is not None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=_GUEST_SESSION_NO_LONGER_VALID_DETAIL,
+                detail={
+                    "reason": _GUEST_SESSION_REVOKED_REASON,
+                    "message": _GUEST_SESSION_NO_LONGER_VALID_DETAIL,
+                },
             )
         # Design decision 8, constraint 4. The daily ceiling is read here
         # for the same reason `revoked_at` is read above: whatever would
@@ -375,6 +393,29 @@ def get_v1_allowance(
     # writes `interactions` rows yet), so `counted=False` says so rather
     # than presenting an uncounted zero as a real count (F-4.9-A-16).
     return AllowanceResponse(kind="user", used=0, total=per_user_daily_query_cap(), counted=False)
+
+
+def _guest_refund_callback(guest_uuid: uuid.UUID) -> Callable[[], None]:
+    """Build the zero-argument refund the run registry fires on a guardrail
+    refusal (F-4.10-A-04). See `post_v1_query` for the policy argument.
+
+    A module-level factory rather than a closure written inline in the
+    handler, so the thing under test is a named function with one input, and
+    so the handler reads as policy rather than as plumbing.
+    """
+
+    def _refund() -> None:
+        # A session of its own: the request-scoped session is closed long
+        # before the agent loop reaches the guardrail. This is a blocking
+        # psycopg2 call on the event loop thread, the same shape as
+        # `spend_one_anonymous_run` in the handler, and bounded by the same
+        # measurement (an adversary probe held a row lock for 4.0s while a
+        # concurrent `GET /health` still answered in 0.005s). Behaviour
+        # under real load is build phase 6.0's.
+        with session_scope() as refund_session:
+            refund_one_run(refund_session, guest_uuid)
+
+    return _refund
 
 
 # run_id/trace_id wiring (per this ticket's instructions, made and
@@ -514,8 +555,53 @@ async def post_v1_query(
             # and the premise gate accepts either for this exact case.
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=_GUEST_SESSION_NO_LONGER_VALID_DETAIL,
+                detail={
+                    "reason": _GUEST_SESSION_REVOKED_REASON,
+                    "message": _GUEST_SESSION_NO_LONGER_VALID_DETAIL,
+                },
             )
+
+    # F-4.10-A-04, product-owner decision 2026-08-15: a guardrail refusal
+    # must not cost a guest one of their five free searches. A first-time
+    # visitor who asks five off-topic questions would otherwise meet the
+    # sign-in wall having never received a single answer, and the guardrail
+    # catches far more than injections: off-topic, malformed, and
+    # out-of-scope questions all land here.
+    #
+    # THIS IS A REFUND, NOT A DEFERRED CHARGE, and the distinction is the
+    # whole design. The spend happens above, when the run is CREATED, because
+    # that is the only point at which admission can be bounded; the guardrail
+    # refuses LATER, inside the agent loop, long after this handler has
+    # returned 202. Moving the spend to after the guardrail was rejected: it
+    # would let a caller start unbounded runs that never spend at all, which
+    # is a strictly worse hole than the one being closed. So the compensation
+    # runs when the refusal becomes observable, in the registry's own drain
+    # loop (`core/run_registry.py`'s `_fire_guard_refusal_callback`).
+    #
+    # WHAT IT REFUNDS, and what it deliberately does not. Only the GUEST'S
+    # PERSONAL allowance. `guest_daily_usage`, the system-wide anonymous
+    # ceiling of design decision 8, stays advanced. A refused run still
+    # started a real pipeline and, past the free pre-filter, still paid for a
+    # real Guard-tier model call. If a refusal cost nothing at all, an
+    # attacker could send unlimited garbage and every request would be free
+    # compute, with the one ceiling that bounds anonymous spend never
+    # advancing to stop it. Charging the day's budget while sparing the
+    # individual is what makes "we do not punish a curious visitor for one
+    # bad question" true without opening a free-compute path. See
+    # `data.guest_sessions.refund_one_run` for the same argument at the
+    # statement it is enforced by.
+    #
+    # IF THE PROCESS DIES between the refusal and the refund, the refund is
+    # lost and the guest stays charged for a run that produced nothing. That
+    # is the safe direction of the two: the alternative failure, a refund
+    # that lands without the refusal having happened, would hand out free
+    # searches. Closing the residue properly needs the durable run record
+    # build phase 4.6 owns; there is nothing to reconcile against today.
+    on_guard_refused: Callable[[], None] | None = (
+        _guest_refund_callback(_guest_uuid_from_owner_id(caller.owner_id))
+        if caller.kind == "guest"
+        else None
+    )
 
     run_id = str(uuid.uuid4())
     query = Query(
@@ -527,7 +613,13 @@ async def post_v1_query(
     )
     context = RequestContext(surface="rest_sse")
     try:
-        default_registry.create_run(query, context, run_id=run_id, owner_id=caller.owner_id)
+        default_registry.create_run(
+            query,
+            context,
+            run_id=run_id,
+            owner_id=caller.owner_id,
+            on_guard_refused=on_guard_refused,
+        )
     except ConcurrentRunCapExceededError as exc:
         # The authoritative check inside create_run refused what the
         # precheck above admitted. Still a 429, and now BYTE-IDENTICAL in
