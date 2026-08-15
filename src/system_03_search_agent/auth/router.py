@@ -61,6 +61,7 @@ import hashlib
 import hmac
 import logging
 import os
+import time
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -142,6 +143,89 @@ _NO_STORE_HEADERS = {"Cache-Control": "no-store", "Pragma": "no-cache"}
 # comparable time and neither timing nor the response body discloses
 # which emails are registered. Never a real user's hash.
 _DUMMY_PASSWORD_HASH = hash_password("no-such-account-timing-parity-placeholder")
+
+
+# Design decision 8's defense-in-depth control. Explicitly NOT the bound:
+# a caller with rotating sources defeats it, which is why the system-wide
+# daily ceiling in `data.guest_sessions.spend_one_anonymous_run` exists
+# above it and is the thing that actually bounds spend. What this buys is
+# real anyway: it stops casual scripted abuse, and it fixes F-4.10-A-02,
+# where 60 concurrent unauthenticated mints exhausted the SQLAlchemy pool
+# ("QueuePool limit of size 5 overflow 10 reached") and made a REGISTERED
+# user's login take 30.1 seconds instead of 0.098. That is the cheapest
+# denial of service in the system, and it needs no allowance at all.
+_MINT_THROTTLE_WINDOW_S = 60
+# 60 per minute per source, not the 10 this was first written with.
+#
+# The first value refused the premise gate's own ADMIT arm, which is the
+# failure this repository built a two-armed gate to catch: a control that
+# refuses everyone scores perfectly against every attack test and destroys
+# the product. It would have done the same to real visitors, and to exactly
+# the ones this phase is for. Many legitimate users share one address
+# behind corporate NAT, a university network, or conference wifi, and those
+# are the rooms where an anonymous demo actually gets shown.
+#
+# Raising it costs little, because this is NOT the bound. The system-wide
+# daily ceiling is what limits spend, and it is unaffected by how many
+# identities exist. What this control has to stop is the pathological burst
+# that exhausts the connection pool: F-4.10-A-02 measured 60 CONCURRENT
+# mints taking a registered user's login from 0.098 seconds to 30.1. A
+# minute-long window at this width still cuts that flood off, while leaving
+# a shared office address far more headroom than its humans will ever use.
+_MINT_THROTTLE_MAX_PER_WINDOW = 60
+# Bounds this dict so the throttle cannot itself become the memory-growth
+# attack it prevents: a caller with many source addresses would otherwise
+# add an entry per address forever.
+_MINT_THROTTLE_MAX_TRACKED_SOURCES = 10_000
+
+
+class _MintThrottle:
+    """A fixed-window per-source counter for `POST /auth/guest`.
+
+    In-memory and therefore per-process, which is stated rather than
+    hidden: with more than one worker each holds its own window, so the
+    effective limit is the configured one times the worker count. That is
+    acceptable precisely because this is not the bound. The daily ceiling
+    is enforced in PostgreSQL and is shared across every worker.
+
+    A fixed window rather than a token bucket because the failure mode of a
+    fixed window (up to twice the rate across a window boundary) is
+    irrelevant at this control's job, and the simpler thing has fewer ways
+    to be wrong.
+    """
+
+    def __init__(self) -> None:
+        self._hits: dict[str, tuple[float, int]] = {}
+
+    def allow(self, source_key: str | None) -> bool:
+        """True if a mint from `source_key` is permitted right now.
+
+        A None key means the client address is unknown (no `request.client`,
+        or `AUTH_SECRET` unset so no hash can be computed). Such a caller is
+        ALLOWED rather than refused: this control is defense in depth, and
+        refusing every request whose source cannot be identified would turn
+        a missing header into an outage while the real bound still holds.
+        """
+        if source_key is None:
+            return True
+        now = time.monotonic()
+        window_started, count = self._hits.get(source_key, (now, 0))
+        if now - window_started >= _MINT_THROTTLE_WINDOW_S:
+            window_started, count = now, 0
+        if count >= _MINT_THROTTLE_MAX_PER_WINDOW:
+            self._hits[source_key] = (window_started, count)
+            return False
+        if source_key not in self._hits and len(self._hits) >= _MINT_THROTTLE_MAX_TRACKED_SOURCES:
+            # At capacity with a source never seen before. Drop the oldest
+            # window rather than refusing, so a flood of new sources cannot
+            # lock out a legitimate visitor by filling the table.
+            oldest = min(self._hits, key=lambda key: self._hits[key][0])
+            del self._hits[oldest]
+        self._hits[source_key] = (window_started, count + 1)
+        return True
+
+
+_mint_throttle = _MintThrottle()
 
 
 def _hash_ip(raw_ip: str | None) -> str | None:
@@ -515,26 +599,59 @@ def me(
 # credentials, by design: this is the FIRST call an anonymous visitor's
 # browser makes.
 #
-# Rate-limit consideration (acceptance criterion): minting a guest token
-# is an unauthenticated write, so it is named here rather than silently
-# left unconsidered. It carries no per-IP or per-caller throttle of its
-# own in this phase: the full token-bucket-plus-bounded-queue mechanism
-# `.claude/rules/tool-call-budgets.md` describes is build phase 6.0's job
-# (this phase's own "what is deliberately not in this phase" section),
-# and there is no deployed public URL yet to make an abuse path reachable
-# by anyone but the product owner. What bounds the cost of an unthrottled
-# mint today: the operation is a single small INSERT (data.guest_sessions.
-# create_guest_session), no model call and no external API, and the
-# clearable-token accepted tradeoff (TestAcceptedBehaviour in the premise
-# gate) already means a determined caller can always get a fresh
-# allowance anyway, so a missing throttle here does not open a materially
-# worse abuse path than the one already accepted by design. Documented as
-# a known, deliberate gap rather than an oversight; build phase 6.0 owns
-# closing it for real.
+# Rate limiting, and a correction to what this comment used to say.
+#
+# It previously argued the missing throttle was safe because "the
+# clearable-token accepted tradeoff already means a determined caller can
+# always get a fresh allowance anyway, so a missing throttle here does not
+# open a materially worse abuse path than the one already accepted by
+# design." That argument was wrong, and the adversary round measured the
+# difference (F-4.10-A-01): it conflates ONE PERSON serially clearing
+# browser storage with A SCRIPT minting identities in parallel. Minting one
+# guest per run accepted 40 paid pipelines in 0.25 seconds, 157 per second,
+# from a caller with no account. The accepted tradeoff the product owner
+# signed off on was the first of those, never the second.
+#
+# It is kept here rather than deleted because the shape of the error is
+# worth more than the correction: a real accepted risk was used to wave
+# through a much larger unaccepted one, on the strength of the two sounding
+# similar.
+#
+# Two controls now exist, and only the second is the bound. The per-source
+# fixed window immediately below stops casual scripted abuse and the pool
+# exhaustion of F-4.10-A-02. The system-wide daily ceiling in
+# `data.guest_sessions.spend_one_anonymous_run` is what actually bounds
+# spend, because it is keyed on the calendar day rather than on anything
+# the caller can mint. Build phase 6.0 still owns the full
+# token-bucket-plus-bounded-queue mechanism in
+# `.claude/rules/tool-call-budgets.md`.
 @router.post("/guest", response_model=GuestTokenResponse, status_code=status.HTTP_201_CREATED)
 def create_guest(
+    request: Request,
     session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI DI
 ) -> GuestTokenResponse:
+    # Design decision 8. The IP comes from the CONNECTION, never from an
+    # X-Forwarded-For header: a header is attacker-chosen, so throttling on
+    # one would let any caller rotate past the throttle by editing a
+    # string. Behind a real reverse proxy this needs the proxy's own
+    # real-IP configuration (uvicorn's --proxy-headers with trusted hosts,
+    # or the proxy setting the peer address); that is a DEPLOYMENT note,
+    # and deliberately not a code fallback, because a fallback that trusts
+    # the header when the connection looks proxied is a fallback an
+    # attacker can trigger.
+    client_ip = request.client.host if request.client else None
+    if not _mint_throttle.allow(_hash_ip(client_ip)):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "reason": "guest_mint_throttled",
+                "message": (
+                    "too many guest sessions requested from this source; "
+                    "wait a moment and try again"
+                ),
+            },
+            headers={"Retry-After": str(_MINT_THROTTLE_WINDOW_S)},
+        )
     guest = create_guest_session(session)
     token = mint_guest_token(str(guest.id))
     return GuestTokenResponse(

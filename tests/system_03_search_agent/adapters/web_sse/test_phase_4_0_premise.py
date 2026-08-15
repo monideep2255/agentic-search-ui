@@ -340,6 +340,7 @@ def _harness_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SYNTH_MODEL", "test-provider/synth-model")
     monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "1.0")
     monkeypatch.setenv("PER_USER_DAILY_QUERY_CAP", "100")
+    monkeypatch.setenv("ANON_DAILY_RUN_CAP", "10000")
     monkeypatch.setenv("SYSTEM_DAILY_CAP_USD", "1000000")
 
 

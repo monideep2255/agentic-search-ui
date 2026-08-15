@@ -180,6 +180,26 @@ export interface AllowanceResponse {
   used: number;
   total: number;
   counted: boolean;
+  /**
+   * Why no search is available right now, even when `used` is below `total`.
+   *
+   * Build phase 4.10, design decision 8. `used` and `total` are this
+   * caller's own true numbers; this is a separate question, because a
+   * system-wide daily ceiling on anonymous runs sits above the personal
+   * allowance. Inflating `used` to `total` was rejected on the server side:
+   * the personal count is what migrates with the caller at signup, so
+   * distorting it would corrupt something real.
+   *
+   * `null` means nothing is blocking. Optional so a payload predating the
+   * field still type-checks.
+   *
+   * NOT YET CONSUMED BY THE UI. Carried as F-4.10-05: until the dots read
+   * it, a visitor can be shown "5 searches left" while the next query is
+   * refused 429, which is the same reporting-versus-enforcement mismatch
+   * F-4.10-A-03 was filed for one level down. The backend is honest; the
+   * client has not been taught to ask.
+   */
+  blocked_reason?: "anon_daily_cap_reached" | null;
 }
 
 /** `POST /auth/guest`'s response shape. */

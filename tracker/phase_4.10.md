@@ -482,3 +482,25 @@ Two transferable lessons, both for `LEARNINGS.md`:
 
 - An assertion can be hollowed out without being edited, by changing the state the code reaches before evaluating it. Reviewing a test file's diff cannot detect this; every line looks preserved, because every line is. Only running a mutation can. This repository already counts six assertions that could not fail; this is the first one that became unable to fail while nobody touched it.
 - A mutation that does not fire is not evidence of a passing gate, and it reads exactly like one. Before crediting a green result under mutation, confirm the mutation reached the code path at all.
+
+### F-4.10-04: the mint throttle's first version refused the gate's own admit arm
+
+Status: confirmed and closed, same session
+Raised by: lead, running the gate after building design decision 8's throttle
+
+The per-source mint throttle shipped its first version at 10 mints per minute, and the premise gate's ADMIT arm went red: eleven clauses failed with `guest_mint_throttled` because the whole suite mints from one apparent source. That is not a test artifact. Many legitimate users share one address behind corporate NAT, a university network, or conference wifi, and those are exactly the rooms where an anonymous demo gets shown, so the same value would have refused real visitors.
+
+This is the phase premise happening to the phase's own author. A control with no safe direction of failure needs both arms, the arm that catches "refuses everybody" is the one no attack test will ever provide, and I had just written that sentence at the top of the gate before committing the error underneath it.
+
+Closed by raising the window to 60 per minute and adding `TestMintThrottleHasBothArms`, which asserts both directions: a pathological burst is refused, and 25 mints from one shared address are not. Both mutation-proven. Raising it costs little because this control is not the bound: the system-wide daily ceiling limits spend, and the throttle's only job is to stop the burst that exhausted the connection pool in F-4.10-A-02.
+
+### F-4.10-05: `blocked_reason` is on the wire and the UI does not read it
+
+Status: open
+Raised by: lead, building design decision 8
+
+`GET /v1/allowance` now returns `blocked_reason: "anon_daily_cap_reached"` when the system-wide daily ceiling is spent, and the backend is honest about it: constraint 4 of design decision 8 is met at the API. The frontend has the field in its type and does not render it, so the five dots can still show "5 searches left" to a visitor whose next query will be refused 429.
+
+That is the same reporting-versus-enforcement mismatch F-4.10-A-03 was filed for, one level up, and it is stated here rather than left for someone to find. It is narrower than A-03 was: the guest's own numbers are true, the refusal when it comes is a truthful 429 with a real `Retry-After`, and the condition only arises on a day the whole system has hit its anonymous ceiling. It is still a promise the UI cannot keep.
+
+Owner: the next frontend ticket. Small: `App.tsx` already fetches this response and already has a wall to show.

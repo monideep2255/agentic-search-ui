@@ -150,6 +150,27 @@ def per_user_daily_query_cap() -> int:
     return _read_int_env("PER_USER_DAILY_QUERY_CAP")
 
 
+def anon_daily_run_cap() -> int:
+    """Return ANON_DAILY_RUN_CAP: how many runs ALL anonymous callers
+    together may start in one UTC day (build phase 4.10, design decision 8).
+
+    This is the only enforced spending bound on an anonymous caller, and it
+    exists because the other two cannot reach one. `per_user_daily_query_cap`
+    is keyed on a `users` row and is skipped entirely when `user_id is None`,
+    which is every guest by design decision 2. `system_daily_cap_usd` sums
+    `interactions.cost_usd`, and nothing in `src/` writes an `Interaction`
+    row (F-2.0-04, build phase 4.6), so it reads $0.00 and can never fire.
+
+    The per-guest allowance is NOT a substitute. It is keyed on a guest
+    identity, and `POST /auth/guest` mints those for free, so it bounds a
+    variable the caller controls the supply of: the build phase 4.10
+    adversary round accepted 40 paid pipelines in 0.25 seconds by minting
+    one guest per run (F-4.10-A-01). This cap is keyed on the calendar day,
+    which nobody controls the supply of.
+    """
+    return _read_int_env("ANON_DAILY_RUN_CAP")
+
+
 def system_daily_cap_usd() -> float:
     """Return SYSTEM_DAILY_CAP_USD (Section 19.1's $10/day starter value)."""
     return _read_float_env("SYSTEM_DAILY_CAP_USD")

@@ -33,13 +33,14 @@ ascending best-effort mirror and the migration remains authoritative.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import (
     ARRAY,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -345,4 +346,36 @@ class GuestSession(Base):
 
     __table_args__ = (
         CheckConstraint("runs_used >= 0", name="ck_guest_sessions_runs_used"),
+    )
+
+
+class GuestDailyUsage(Base):
+    """The `guest_daily_usage` table: one row per UTC day, counting every
+    anonymous run the whole system has started that day.
+
+    Build phase 4.10, design decision 8 (`tracker/phase_4.10.md`), added
+    after the adversary round measured 40 paid pipelines accepted in 0.25
+    seconds from a caller with no account (F-4.10-A-01).
+
+    Why this table exists when `guest_sessions.runs_used` already counts:
+    that counter is keyed on a guest identity, and `POST /auth/guest` mints
+    identities for free, so it bounds a variable the caller controls the
+    supply of. This one is keyed on the calendar day, which nobody controls
+    the supply of, and it is therefore the only real ceiling on what an
+    anonymous caller can spend. The per-IP mint throttle in
+    `auth/router.py` sits in front of it as defense in depth, and is
+    explicitly not the bound, since a rotating source defeats it.
+
+    `day` is the primary key and is a DATE in UTC, never the server's local
+    date: a cap that resets at an operator's midnight rather than a fixed
+    one is a cap whose window silently moves with a deployment's timezone.
+    """
+
+    __tablename__ = "guest_daily_usage"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    runs_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+
+    __table_args__ = (
+        CheckConstraint("runs_used >= 0", name="ck_guest_daily_usage_runs_used"),
     )

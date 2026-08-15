@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Final
 
@@ -57,6 +58,14 @@ class SpendState(str, Enum):
     SPENT = "spent"
     EXHAUSTED = "exhausted"
     REVOKED_OR_UNKNOWN = "revoked_or_unknown"
+    # Build phase 4.10, design decision 8. Distinct from EXHAUSTED because
+    # the two mean opposite things to the caller and therefore carry
+    # different HTTP statuses: EXHAUSTED is this guest's own allowance,
+    # spent for good, and retrying never helps (403). This one is the
+    # system-wide daily ceiling on ALL anonymous runs, which resets at UTC
+    # midnight and which signing in bypasses entirely (429). Collapsing
+    # them would make one of the two messages a lie.
+    DAILY_CAP_REACHED = "daily_cap_reached"
 
 
 @dataclass(frozen=True)
@@ -189,3 +198,103 @@ def spend_one_run(
     if lookup_row is None or lookup_row[0] is not None:
         return SpendResult(SpendState.REVOKED_OR_UNKNOWN)
     return SpendResult(SpendState.EXHAUSTED, runs_used=int(lookup_row[1]))
+
+
+# The system-wide daily spend, design decision 8. An upsert rather than an
+# UPDATE, because the first anonymous run of a UTC day has no row yet, and
+# a SELECT-then-INSERT would race two callers into two INSERTs and a
+# primary-key violation. `ON CONFLICT ... DO UPDATE ... WHERE` keeps the
+# whole decision inside one statement: Postgres takes the row lock, the
+# second caller re-evaluates the WHERE against what the first just wrote,
+# and RETURNING yields a row only when the write actually happened. That is
+# the same property `_SPEND_STATEMENT` above relies on, one level up.
+#
+# The INSERT arm has no cap check and does not need one: `anon_daily_run_cap`
+# is read through `_read_int_env`, which rejects zero and negatives, so the
+# first run of a day is always within a valid cap.
+_DAILY_SPEND_STATEMENT = text(
+    "INSERT INTO guest_daily_usage (day, runs_used) VALUES (:day, 1)"
+    " ON CONFLICT (day) DO UPDATE"
+    "    SET runs_used = guest_daily_usage.runs_used + 1"
+    "  WHERE guest_daily_usage.runs_used < :daily_cap"
+    " RETURNING runs_used"
+)
+
+# The compensating statement below, used only when the daily ceiling refuses
+# a run whose per-guest increment already committed. Conditional on
+# `runs_used > 0` so it can never drive the count negative and trip the
+# table's CHECK constraint, whatever else touched the row in between.
+_UNSPEND_STATEMENT = text(
+    "UPDATE guest_sessions SET runs_used = runs_used - 1"
+    " WHERE id = :guest_id AND runs_used > 0"
+)
+
+
+def spend_one_anonymous_run(
+    session: Session,
+    guest_id: str | uuid.UUID,
+    *,
+    cap: int = FREE_RUN_ALLOWANCE,
+    daily_cap: int,
+) -> SpendResult:
+    """Spend one anonymous run against BOTH bounds.
+
+    This is what the query endpoint calls. `spend_one_run` above is the
+    per-guest primitive and is NOT sufficient on its own for the production
+    path: it bounds a guest identity, and `POST /auth/guest` mints those for
+    free, so alone it bounds a variable the caller controls the supply of.
+    The build phase 4.10 adversary round accepted 40 paid pipelines in 0.25
+    seconds against exactly that gap (F-4.10-A-01).
+
+    The per-guest spend runs FIRST and is compensated if the daily ceiling
+    refuses, because the two orderings fail differently and only this one
+    fails safely:
+
+    - Per-guest first: a daily refusal reverses an increment that was never
+      charged to anyone, leaving the guest's own count untouched.
+    - Daily first: a per-guest refusal would leave the SYSTEM-WIDE counter
+      advanced by a run nobody was allowed to start, so a caller whose own
+      allowance is spent could still burn down the day's budget for
+      everyone else just by retrying. That is a denial of service handed
+      out for free.
+
+    `daily_cap` is keyword-only and has NO default, so the system-wide bound
+    cannot be omitted by accident. Passing it is a decision written down at
+    the call site.
+
+    Args:
+        session: a session scoped to this one operation; this function
+            commits it.
+        guest_id: the guest session id, string or UUID.
+        cap: this guest's own allowance ceiling.
+        daily_cap: the system-wide ceiling on anonymous runs for the current
+            UTC day, from `harness.cost_control.anon_daily_run_cap`.
+
+    Returns:
+        A SpendResult. SPENT carries the guest's new count. EXHAUSTED,
+        REVOKED_OR_UNKNOWN and DAILY_CAP_REACHED are all refusals, kept
+        distinct because they mean different things to the caller.
+
+    Raises:
+        TypeError, ValueError: as `spend_one_run`, plus for a `daily_cap`
+            that is not a positive int.
+    """
+    validated_daily_cap = _validate_cap(daily_cap)
+    guest_result = spend_one_run(session, guest_id, cap=cap)
+    if guest_result.state is not SpendState.SPENT:
+        return guest_result
+
+    # UTC, never the server's local date. A ceiling that resets at an
+    # operator's midnight is a ceiling whose window moves with a
+    # deployment's timezone, and two hosts in different zones would
+    # disagree about which day a run belongs to.
+    today = datetime.now(UTC).date()
+    daily_row = session.execute(
+        _DAILY_SPEND_STATEMENT, {"day": today, "daily_cap": validated_daily_cap}
+    ).first()
+    if daily_row is None:
+        session.execute(_UNSPEND_STATEMENT, {"guest_id": _coerce_guest_id(guest_id)})
+        session.commit()
+        return SpendResult(SpendState.DAILY_CAP_REACHED)
+    session.commit()
+    return guest_result

@@ -6,6 +6,8 @@ import re
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
+from datetime import UTC, datetime, timedelta
+from datetime import time as dt_time
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
@@ -27,14 +29,35 @@ from system_03_search_agent.core.run_registry import (
     RunNotFoundError,
     default_registry,
 )
-from system_03_search_agent.data.guest_sessions import FREE_RUN_ALLOWANCE, SpendState, spend_one_run
-from system_03_search_agent.data.models import GuestSession
+from system_03_search_agent.data.guest_sessions import (
+    FREE_RUN_ALLOWANCE,
+    SpendState,
+    spend_one_anonymous_run,
+)
+from system_03_search_agent.data.models import GuestDailyUsage, GuestSession
 from system_03_search_agent.data.session import get_session
 from system_03_search_agent.harness.cost_control import (
+    anon_daily_run_cap,
     is_operator_user,
     per_user_daily_query_cap,
     sanitize_event_for_end_user,
 )
+
+
+def _seconds_until_utc_midnight() -> int:
+    """Seconds from now until the next UTC midnight, when the anonymous
+    daily ceiling resets (design decision 8).
+
+    A real number rather than a fixed constant, so a `Retry-After` a client
+    honors makes it wait exactly as long as it must and no longer. Floored
+    at 1: a zero would invite an immediate retry into the same refusal, and
+    a negative is meaningless in the header.
+    """
+    now = datetime.now(UTC)
+    next_midnight = datetime.combine(
+        now.date() + timedelta(days=1), dt_time.min, tzinfo=UTC
+    )
+    return max(1, int((next_midnight - now).total_seconds()))
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +255,21 @@ class AllowanceResponse(BaseModel):
     used: int
     total: int
     counted: bool
+    # Design decision 8, constraint 4. `used` and `total` stay this guest's
+    # own true numbers; this field says whether a search is actually
+    # available RIGHT NOW, which is a different question once a
+    # system-wide ceiling exists above the personal one.
+    #
+    # Reporting "2 of 5 used" while the next request returns 429 is exactly
+    # the shape F-4.10-A-03 was filed for, one level up: the reporting path
+    # and the enforcement path must agree about what is available. Solving
+    # it by inflating `used` to `total` was rejected, because that would
+    # make the personal count itself a lie, and the personal count is what
+    # migrates with the caller at signup.
+    #
+    # None means nothing is blocking. Additive and optional, so every
+    # payload built before this existed still validates (Section 2.6).
+    blocked_reason: Literal["anon_daily_cap_reached"] | None = None
 
 
 def _guest_uuid_from_owner_id(owner_id: str) -> uuid.UUID:
@@ -307,8 +345,28 @@ def get_v1_allowance(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=_GUEST_SESSION_NO_LONGER_VALID_DETAIL,
             )
+        # Design decision 8, constraint 4. The daily ceiling is read here
+        # for the same reason `revoked_at` is read above: whatever would
+        # refuse the next request has to be visible to the path that
+        # reports what is available, or the five dots promise a search that
+        # does not exist. Read-only, so it never consumes the allowance it
+        # is reporting on.
+        daily_used = session.execute(
+            select(GuestDailyUsage.runs_used).where(
+                GuestDailyUsage.day == datetime.now(UTC).date()
+            )
+        ).scalar_one_or_none()
+        blocked = (
+            "anon_daily_cap_reached"
+            if daily_used is not None and int(daily_used) >= anon_daily_run_cap()
+            else None
+        )
         return AllowanceResponse(
-            kind="guest", used=int(row[1]), total=FREE_RUN_ALLOWANCE, counted=True
+            kind="guest",
+            used=int(row[1]),
+            total=FREE_RUN_ALLOWANCE,
+            counted=True,
+            blocked_reason=blocked,
         )
     # T-4.10-04's other acceptance criterion: `total` reads the SAME
     # function the enforcement path reads (harness.cost_control.
@@ -402,7 +460,35 @@ async def post_v1_query(
 
     if caller.kind == "guest":
         guest_uuid = _guest_uuid_from_owner_id(caller.owner_id)
-        spend = spend_one_run(session, guest_uuid)
+        # design decision 8: BOTH bounds, in one call, because the per-guest
+        # allowance alone bounds a variable the caller controls the supply
+        # of. `POST /auth/guest` mints identities for free, and the phase's
+        # adversary round accepted 40 paid pipelines in 0.25 seconds by
+        # minting one guest per run (F-4.10-A-01). `daily_cap` is
+        # keyword-only with no default precisely so this call site cannot
+        # quietly lose the system-wide ceiling in a later refactor.
+        spend = spend_one_anonymous_run(
+            session, guest_uuid, daily_cap=anon_daily_run_cap()
+        )
+        if spend.state is SpendState.DAILY_CAP_REACHED:
+            # 429, not the 403 an exhausted personal allowance gets, and the
+            # difference is not cosmetic. This ceiling is genuinely
+            # transient: it resets at UTC midnight, and signing in bypasses
+            # it entirely right now. Retry-After is the real number of
+            # seconds to that reset, not a guess, so a client that honors it
+            # waits exactly as long as it needs to.
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={
+                    "reason": "anon_daily_cap_reached",
+                    "message": (
+                        "anonymous searches are at their daily limit for "
+                        "everyone right now; signing in or creating an "
+                        "account works immediately, or try again tomorrow"
+                    ),
+                },
+                headers={"Retry-After": str(_seconds_until_utc_midnight())},
+            )
         if spend.state is SpendState.EXHAUSTED:
             # design decision 5: 403, never 429. The allowance is SPENT,
             # not rate limited: retrying later does not help, so a 429

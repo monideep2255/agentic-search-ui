@@ -43,6 +43,7 @@ ALL_TABLES = {
     "interactions",
     "cq_candidates",
     "saved_queries",
+    "guest_daily_usage",
     # Build phase 4.10, revision 0003. Added by the lead rather than by the
     # builder that wrote the migration, which was forbidden from editing an
     # existing test. Adding it here STRENGTHENS both assertions that read

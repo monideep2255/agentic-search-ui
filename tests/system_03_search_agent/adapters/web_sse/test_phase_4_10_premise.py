@@ -90,8 +90,33 @@ build phase 2.1's gate had a blind spot identical to the code it graded:
   the boundary so no run is active and the cap cannot fire; the cap's own
   boundary is covered by `TestConcurrentRunCap` in
   `test_streaming_endpoints.py`, not here.
-- Device-level or IP-level abuse resistance. The clearable-token decision
-  declines it on purpose, so there is nothing here to test.
+- Device or browser FINGERPRINTING. The clearable-token decision declines
+  it on purpose, so there is nothing here to test.
+
+  This bullet used to say "device-level or IP-level abuse resistance",
+  full stop, on the grounds that the clearable-token decision had declined
+  it. That was wrong twice, and the adversary round named both (F-4.10-A-01):
+  it stated a false dichotomy, since bounding anonymous spend never required
+  fingerprinting anyone, and it repeated the same conflation the router's own
+  comment made, treating one person clearing browser storage as equivalent to
+  a script minting identities in parallel. Those differ by a measured 157
+  paid pipelines per second. The coverage claim excused the gap rather than
+  declaring it, which is the failure mode a coverage statement exists to
+  prevent.
+
+  Now covered, in `TestAnonymousSpendIsBounded` and
+  `TestMintThrottleHasBothArms`: the system-wide daily ceiling on anonymous
+  runs, its distinct 429 and honest `Retry-After`, that a refused daily run
+  does not charge the guest who tried it, that `GET /v1/allowance` never
+  promises a search that ceiling would refuse, that signing in bypasses it,
+  and that the per-source mint throttle refuses a burst without refusing an
+  ordinary shared address.
+
+- The daily ceiling ACROSS a UTC midnight boundary, and across more than one
+  process. The first would mean faking a clock, which tests the clock rather
+  than the bound; the second is the same multi-worker limit already declared
+  above. The counter itself lives in PostgreSQL and is shared, which is what
+  makes it the real bound rather than the throttle in front of it.
 - The registered 100/day cap actually firing. It cannot: nothing writes
   `interactions` rows (F-2.0-04, build phase 4.6), so the counter reads a
   structural zero. This gate asserts the allowance endpoint reports that
@@ -171,6 +196,7 @@ def _harness_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SYNTH_MODEL", "test-provider/synth-model")
     monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "1.0")
     monkeypatch.setenv("PER_USER_DAILY_QUERY_CAP", "100")
+    monkeypatch.setenv("ANON_DAILY_RUN_CAP", "10000")
     monkeypatch.setenv("SYSTEM_DAILY_CAP_USD", "1000000")
 
 
@@ -223,6 +249,25 @@ def _no_op_daily_caps(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def _auth_secret(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AUTH_SECRET", _TEST_AUTH_SECRET)
+
+
+@pytest.fixture(autouse=True)
+def _reset_mint_throttle() -> None:
+    """Clear the per-source mint throttle between tests.
+
+    The throttle is in-memory and per-process (design decision 8), so every
+    test in this file shares one window from one apparent source address.
+    Without this reset the suite throttles ITSELF part way through and the
+    admit arm starts failing, which is a false red that says nothing about
+    the product.
+
+    Reset rather than disabled: the throttle stays live inside each test, so
+    the clause that asserts a burst IS refused still exercises the real
+    control rather than a stub.
+    """
+    from system_03_search_agent.auth import router as auth_router
+
+    auth_router._mint_throttle._hits.clear()
 
 
 def _client() -> AsyncClient:
@@ -288,6 +333,30 @@ async def _drain_run_task(run_id: str) -> None:
 
 def _token_of(headers: dict[str, str]) -> str:
     return headers["Authorization"].removeprefix("Bearer ")
+
+
+def _reset_todays_anonymous_usage() -> None:
+    """Clear the current UTC day's `guest_daily_usage` row.
+
+    The system-wide ceiling (design decision 8) is deliberately global and
+    durable, which is exactly what makes it a real bound and also what makes
+    it shared state between tests: every guest run any test in this suite
+    starts advances the same row. A cap test that did not reset it would
+    pass or fail depending on what ran before it, on which calendar day, and
+    how many times the suite had been run that day.
+
+    Written as an explicit reset rather than by giving each test its own
+    day, because faking the date would test a clock and not the bound.
+    """
+    engine = sa.create_engine(USER_DB_URL)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                sa.text("DELETE FROM guest_daily_usage WHERE day = :day"),
+                {"day": datetime.now(UTC).date()},
+            )
+    finally:
+        engine.dispose()
 
 
 def _post_query_on_its_own_event_loop(headers: dict[str, str]) -> tuple[int, str]:
@@ -413,11 +482,18 @@ class TestAdmitArm:
 
             first = await client.get("/v1/allowance", headers=headers)
             assert first.status_code == 200
+            # Still an EXACT match, deliberately. Design decision 8 added
+            # `blocked_reason`, so the expected value gains it rather than
+            # the comparison being loosened to a subset check: what makes
+            # this clause worth having is that an unexpected field fails it,
+            # and a subset check would have silently accepted the new field
+            # without anyone deciding it belonged on the wire.
             assert first.json() == {
                 "kind": "guest",
                 "used": 0,
                 "total": _EXPECTED_FREE_SEARCHES,
                 "counted": True,
+                "blocked_reason": None,
             }
 
             for expected_used in range(1, _EXPECTED_FREE_SEARCHES + 1):
@@ -900,3 +976,222 @@ class TestAcceptedBehaviour:
             fresh = await client.get("/v1/allowance", headers=second_headers)
             assert fresh.status_code == 200
             assert fresh.json()["used"] == 0
+
+
+class TestAnonymousSpendIsBounded:
+    """Design decision 8: the system-wide daily ceiling on anonymous runs.
+
+    This class exists because of a measured attack, not a hypothesis.
+    F-4.10-A-01: the per-guest allowance is keyed on a guest identity, and
+    `POST /auth/guest` mints identities for free, so on its own it bounds a
+    variable the caller controls the supply of. The adversary round minted
+    one guest per run and had 40 paid pipelines accepted in 0.25 seconds,
+    157 per second, from a caller with no account, no credentials and no
+    prior state. Nothing was behind it: the per-user daily cap is skipped
+    for a caller with no `users` row, and the system-wide dollar cap sums a
+    table nothing writes (F-2.0-04).
+
+    The clause below is that attack, run against the fix.
+    """
+
+    @pytest.mark.asyncio
+    async def test_minting_a_fresh_guest_per_run_is_bounded_by_the_daily_cap(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # A small cap so the attack completes quickly. The value is not the
+        # point; that a ceiling exists at all and is keyed on something the
+        # caller cannot mint is the point.
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", "3")
+        _reset_todays_anonymous_usage()
+
+        async with _client() as client:
+            accepted, refused = 0, 0
+            reasons: set[str] = set()
+            # Ten fresh identities, one run each. Under the pre-fix code
+            # every one of these is accepted, because each new guest brings
+            # its own untouched five-run allowance.
+            for _ in range(10):
+                _guest_id, headers = await _mint_guest(client)
+                response = await _run(client, headers)
+                if response.status_code == 202:
+                    accepted += 1
+                    await _drain_run_task(response.json()["run_id"])
+                else:
+                    refused += 1
+                    reasons.add(str(response.json().get("detail", {})))
+
+            assert accepted == 3, (
+                f"{accepted} runs were accepted against a daily cap of 3; minting a "
+                f"fresh guest per run must not buy a fresh allowance each time "
+                f"(F-4.10-A-01)"
+            )
+            assert refused == 7
+            assert any("anon_daily_cap_reached" in reason for reason in reasons), (
+                "the refusal must carry its own machine-readable reason, distinct "
+                "from guest_allowance_exhausted: this ceiling is system-wide and "
+                "transient, and signing in bypasses it right now"
+            )
+
+    @pytest.mark.asyncio
+    async def test_the_daily_refusal_is_a_429_that_says_when_to_come_back(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """429, not the 403 a spent personal allowance gets.
+
+        The two refusals mean opposite things and collapsing them would make
+        one message a lie: a spent personal allowance never recovers, while
+        this one resets at UTC midnight and is bypassed by signing in
+        immediately. `Retry-After` must therefore be a real number of
+        seconds to that reset, not a constant.
+        """
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", "1")
+        _reset_todays_anonymous_usage()
+
+        async with _client() as client:
+            _first_id, first_headers = await _mint_guest(client)
+            first = await _run(client, first_headers)
+            assert first.status_code == 202
+            await _drain_run_task(first.json()["run_id"])
+
+            _second_id, second_headers = await _mint_guest(client)
+            refused = await _run(client, second_headers)
+            assert refused.status_code == 429
+            retry_after = int(refused.headers["Retry-After"])
+            assert 1 <= retry_after <= 86400, (
+                "Retry-After must be the real seconds remaining to the UTC "
+                "midnight reset, so a client that honors it waits exactly as "
+                "long as it must"
+            )
+
+    @pytest.mark.asyncio
+    async def test_a_refused_daily_run_does_not_charge_the_guests_own_allowance(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The compensating half of design decision 8's ordering argument.
+
+        The per-guest spend commits BEFORE the daily ceiling is consulted,
+        so a daily refusal must reverse it. Without that, a visitor who
+        happens to arrive on a busy day quietly loses searches they were
+        never allowed to use, and the five dots count down against runs
+        that never happened.
+        """
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", "1")
+        _reset_todays_anonymous_usage()
+
+        async with _client() as client:
+            _burner_id, burner_headers = await _mint_guest(client)
+            first = await _run(client, burner_headers)
+            assert first.status_code == 202
+            await _drain_run_task(first.json()["run_id"])
+
+            _victim_id, victim_headers = await _mint_guest(client)
+            refused = await _run(client, victim_headers)
+            assert refused.status_code == 429
+
+            allowance = await client.get("/v1/allowance", headers=victim_headers)
+            assert allowance.status_code == 200
+            assert allowance.json()["used"] == 0, (
+                "a run refused by the system-wide ceiling must not have been "
+                "charged to the guest who tried it"
+            )
+
+    @pytest.mark.asyncio
+    async def test_the_allowance_endpoint_never_promises_a_search_the_daily_cap_refuses(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Design decision 8, constraint 4, and F-4.10-A-03 one level up.
+
+        The reporting path and the enforcement path must agree about what is
+        available. `used`/`total` stay this guest's own true numbers, which
+        is why the answer is a separate field rather than an inflated count:
+        the personal count is what migrates with the caller at signup, so
+        distorting it would corrupt something real.
+        """
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", "1")
+        _reset_todays_anonymous_usage()
+
+        async with _client() as client:
+            _burner_id, burner_headers = await _mint_guest(client)
+            spent = await _run(client, burner_headers)
+            assert spent.status_code == 202
+            await _drain_run_task(spent.json()["run_id"])
+
+            _victim_id, victim_headers = await _mint_guest(client)
+            allowance = await client.get("/v1/allowance", headers=victim_headers)
+            assert allowance.status_code == 200
+            body = allowance.json()
+            # Its own numbers are true and untouched.
+            assert body["used"] == 0
+            assert body["total"] == _EXPECTED_FREE_SEARCHES
+            # And it still says, truthfully, that no search is available.
+            assert body["blocked_reason"] == "anon_daily_cap_reached", (
+                "the endpoint reported an unblocked allowance while the very "
+                "next query would be refused 429, which is exactly the defect "
+                "F-4.10-A-03 was filed for"
+            )
+
+    @pytest.mark.asyncio
+    async def test_signing_in_bypasses_the_anonymous_daily_ceiling(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The refusal message tells the caller that signing in works right
+        now. That claim has to be true, or it is the confident-wrong-answer
+        failure this system exists to avoid, delivered in a 429 body."""
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", "1")
+        _reset_todays_anonymous_usage()
+
+        async with _client() as client:
+            _burner_id, burner_headers = await _mint_guest(client)
+            spent = await _run(client, burner_headers)
+            assert spent.status_code == 202
+            await _drain_run_task(spent.json()["run_id"])
+
+            _guest_id, blocked_headers = await _mint_guest(client)
+            assert (await _run(client, blocked_headers)).status_code == 429
+
+            _user_id, user_headers = await _auth_headers(client)
+            accepted = await _run(client, user_headers)
+            assert accepted.status_code == 202, (
+                "the 429 tells the caller that signing in works immediately; a "
+                "registered caller must therefore not be subject to the "
+                "anonymous ceiling"
+            )
+            await _drain_run_task(accepted.json()["run_id"])
+
+
+class TestMintThrottleHasBothArms:
+    """The per-source mint throttle, graded the same way as everything else
+    in this file: it must refuse the burst AND admit the ordinary visitor.
+
+    Written after the throttle's first version (10 per minute) refused this
+    gate's own admit arm. That is filed as F-4.10-04, and the lesson is the
+    phase premise restated: a control with no safe direction of failure
+    needs both arms, and the arm that catches "refuses everybody" is the one
+    no attack test will ever provide.
+    """
+
+    @pytest.mark.asyncio
+    async def test_a_pathological_burst_from_one_source_is_refused(self) -> None:
+        async with _client() as client:
+            statuses = [(await client.post("/auth/guest")).status_code for _ in range(80)]
+        assert 429 in statuses, (
+            "an unbounded mint burst is what exhausted the connection pool in "
+            "F-4.10-A-02 and took a registered login from 0.098s to 30.1s"
+        )
+
+    @pytest.mark.asyncio
+    async def test_an_ordinary_shared_address_is_not_refused(self) -> None:
+        """The admit arm, and the reason this class exists.
+
+        Several people behind one office or campus address arriving within a
+        minute of each other is the ordinary case, not an attack, and it is
+        precisely the room where an anonymous demo gets shown. A throttle
+        that refuses them has destroyed the product to protect it.
+        """
+        async with _client() as client:
+            statuses = [(await client.post("/auth/guest")).status_code for _ in range(25)]
+        assert all(status == 201 for status in statuses), (
+            f"{statuses.count(429)} of 25 mints from one shared address were "
+            f"refused; this control is defense in depth, not the bound, and the "
+            f"daily ceiling is what limits spend"
+        )

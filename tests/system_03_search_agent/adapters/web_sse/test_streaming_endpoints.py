@@ -99,6 +99,7 @@ def _harness_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SYNTH_MODEL", "test-provider/synth-model")
     monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "1.0")
     monkeypatch.setenv("PER_USER_DAILY_QUERY_CAP", "100")
+    monkeypatch.setenv("ANON_DAILY_RUN_CAP", "10000")
     monkeypatch.setenv("SYSTEM_DAILY_CAP_USD", "1000000")
 
 
@@ -610,7 +611,15 @@ class TestAllowanceEndpoint:
             response = await client.get("/v1/allowance", headers=headers)
             assert response.status_code == 200
             body = response.json()
-            assert body == {"kind": "user", "used": 0, "total": 100, "counted": False}
+            # Still an EXACT match. Build phase 4.10 design decision 8
+            # added `blocked_reason`, so the expected value gains it
+            # rather than the comparison being loosened to a subset
+            # check: what makes this assertion worth having is that an
+            # unexpected field fails it.
+            assert body == {
+                "kind": "user", "used": 0, "total": 100, "counted": False,
+                "blocked_reason": None,
+            }
 
     @pytest.mark.asyncio
     async def test_valid_input_guest_caller_reports_a_real_counted_allowance(self) -> None:
@@ -621,7 +630,15 @@ class TestAllowanceEndpoint:
 
             response = await client.get("/v1/allowance", headers=headers)
             assert response.status_code == 200
-            assert response.json() == {"kind": "guest", "used": 0, "total": 5, "counted": True}
+            # Still an EXACT match. Build phase 4.10 design decision 8
+            # added `blocked_reason`, so the expected value gains it
+            # rather than the comparison being loosened to a subset
+            # check: what makes this assertion worth having is that an
+            # unexpected field fails it.
+            assert response.json() == {
+                "kind": "guest", "used": 0, "total": 5, "counted": True,
+                "blocked_reason": None,
+            }
 
     @pytest.mark.asyncio
     async def test_invalid_input_a_tampered_token_returns_401(self) -> None:
