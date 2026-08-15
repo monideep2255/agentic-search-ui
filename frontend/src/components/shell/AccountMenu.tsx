@@ -110,18 +110,14 @@ export function AccountMenu({ email, onSignOut, onNavigate }: AccountMenuProps) 
             height: 24,
             borderRadius: "50%",
             /*
-             * `navy`, not the prototype's `rgba(255,255,255,.22)`.
+             * `navy`, and the design system now says navy too.
              *
-             * That translucent white composites over the app bar's blue to
-             * #5F84B1, and white 11px bold text on it measures 3.87:1 against
-             * a 4.5:1 requirement, measured by axe rather than assumed. WCAG
-             * 2.1 AA is a merge gate here. Navy is the design system's own
-             * colour and takes the same white to about 13:1.
-             *
-             * Third instance of the same shape: the prototype is internally
-             * inconsistent about contrast, and "matches the design" and
-             * "passes the accessibility gate" are two checks that disagree.
-             * Filed as F-4.9-D-14, alongside F-4.8-D-08.
+             * This shipped as a DEVIATION (F-4.9-D-14): the prototype had
+             * `rgba(255,255,255,.22)`, which composites over the app bar's
+             * blue to #5F84B1 and puts white 11px bold text at 3.87:1 against
+             * a 4.5:1 requirement. The design-system contrast pass of
+             * 2026-08-14 fixed it at source, so code and design agree again
+             * and this is a transcription rather than a departure.
              */
             bgcolor: designTokens.navy,
             display: "inline-flex",

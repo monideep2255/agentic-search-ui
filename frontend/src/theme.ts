@@ -72,7 +72,7 @@ export const designTokens = {
   riskWash: "#F8E9E9",
   warn: "#7A5900",
   warnWash: "#FDF3D9",
-  ok: "#2E8540",
+  ok: "#276E34",
 } as const;
 
 export type DesignTokens = typeof designTokens;
