@@ -104,7 +104,10 @@ from system_03_search_agent.contracts.events import (
     TrustSignalPayload,
 )
 from system_03_search_agent.contracts.query import Query, RequestContext
-from system_03_search_agent.core.run_registry import default_registry
+from system_03_search_agent.core.run_registry import (
+    ConcurrentRunCapExceededError,
+    default_registry,
+)
 from system_03_search_agent.data.models import User
 from system_03_search_agent.data.session import session_scope
 from system_03_search_agent.synthesis.trust import aggregate
@@ -119,6 +122,31 @@ _MAX_CITATIONS = 50
 _MAX_ANSWER_LENGTH = 8000
 
 _AUTH_FAILURE_MESSAGE = "missing, malformed, or invalid bearer token"
+
+# F-4.10-J-04 / F-4.10-A-08 (judge and adversary round 1, build phase
+# 4.10). `RunRegistry.create_run` gained a per-principal concurrent-run
+# cap that phase, and this module was not touched, so its one `create_run`
+# call site could raise a bare `RuntimeError` out of a tool handler that
+# converts every other failure into a typed `MCPError` (Section 13.2's
+# whole point: every failure has a declared shape).
+#
+# The message is a fixed literal, deliberately. `ConcurrentRunCapExceeded
+# Error`'s own string embeds the internal namespaced owner id
+# (`user:<uuid>`), and `tracker/BOARD.md` records F-4.1-J3-01 against this
+# exact habit: raw exception stringification into an external-facing
+# message. The caller already knows who they are and gains nothing from
+# the internal namespacing, so nothing derived from the exception is
+# interpolated here.
+#
+# It still satisfies production-standards' retry-safety gate, which asks
+# that an error say what to do next rather than only what failed: the
+# condition is genuinely transient (finishing or stopping a run frees a
+# slot immediately), and the sentence says so.
+_RUN_CAP_MESSAGE = (
+    "you already have the maximum number of runs in flight on this account; "
+    "wait a few seconds for one to finish, or stop one on the REST/SSE "
+    "surface, then retry this call"
+)
 
 # F-4.1-A-06 (adversary round 1, fix round 2): a wall-clock bound on the
 # fold loop itself, on top of, never instead of, every per-step timeout
@@ -696,5 +724,15 @@ async def ask_biomedical_question(
     # `operator_mode=False`, and `_fold_run_to_response` above never reads
     # a cost-shaped field out of any event regardless.
     context = RequestContext(surface="mcp", operator_mode=False)
-    default_registry.create_run(query_obj, context, run_id=run_id)
+    # F-4.10-J-04 / F-4.10-A-08: the concurrent-run cap build phase 4.10
+    # added to `create_run` reaches this surface too, because with
+    # `owner_id` omitted `create_run` derives `user:<uuid>` from
+    # `query.user_id`, the same owner string the web surface builds. So a
+    # caller holding runs open in a browser tab can hit the cap here.
+    # Converted to a structured MCPError like every other failure in this
+    # handler, never allowed to escape as a bare RuntimeError.
+    try:
+        default_registry.create_run(query_obj, context, run_id=run_id)
+    except ConcurrentRunCapExceededError:
+        raise MCPError(code=INVALID_REQUEST, message=_RUN_CAP_MESSAGE) from None
     return await _fold_run_to_response(run_id)

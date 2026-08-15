@@ -316,3 +316,80 @@ class TestRunRegistryEndToEndWithTheRealGraph:
         assert events[-1].type == "done"
         assert all(event.trace_id == "trace-e2e" for event in events)
         await asyncio.wait_for(entry.task, timeout=5.0)
+
+
+class TestReassignOwnerOffTheEventLoop:
+    """F-4.10-J-03 (judge round 1, build phase 4.10).
+
+    `reassign_owner` is the only `_runs` walker that does NOT run on the
+    event loop thread: its only caller, `auth/router.py`'s
+    `_migrate_guest_session`, is reached from `POST /auth/signup` and
+    `POST /auth/login`, which are plain `def` path operations and so run
+    on an AnyIO worker thread while `create_run` keeps inserting from the
+    loop. That broke the no-lock invariant this module's docstring
+    asserted, and an unguarded `for entry in self._runs.values()` raised
+    `RuntimeError: dictionary changed size during iteration` in the
+    window.
+
+    Nothing anywhere asserted that invariant still held, which is why the
+    break was invisible. This does.
+    """
+
+    @staticmethod
+    def _bare_entry(run_id: str, owner_id: str) -> RunEntry:
+        """A `RunEntry` with no live task or loop behind it.
+
+        This test is about dict iteration, not about running a run, and
+        building a real background task would need an event loop that
+        would then also have to be shared across the two threads below,
+        which is the very thing under test.
+        """
+        return RunEntry(
+            run_id=run_id,
+            user_id=None,
+            owner_id=owner_id,
+            queue=asyncio.Queue(),
+            task=None,  # type: ignore[arg-type]
+        )
+
+    def test_reassign_owner_survives_inserts_landing_from_another_thread(self) -> None:
+        import threading
+
+        registry = RunRegistry()
+        for index in range(400):
+            run_id = f"seed-{index}"
+            registry._runs[run_id] = self._bare_entry(run_id, "guest:g1")
+
+        stop = threading.Event()
+        insert_failures: list[BaseException] = []
+
+        def _keep_inserting() -> None:
+            index = 0
+            try:
+                while not stop.is_set():
+                    run_id = f"late-{index}"
+                    registry._runs[run_id] = self._bare_entry(run_id, "guest:other")
+                    index += 1
+            except BaseException as exc:  # noqa: BLE001 - reported, never swallowed
+                insert_failures.append(exc)
+
+        inserter = threading.Thread(target=_keep_inserting, daemon=True)
+        inserter.start()
+        try:
+            for _ in range(200):
+                # Under the unguarded version this raises RuntimeError:
+                # dictionary changed size during iteration, well before
+                # 200 sweeps.
+                registry.reassign_owner(
+                    old_owner_id="guest:g1",
+                    new_owner_id="user:u1",
+                    new_user_id="u1",
+                )
+        finally:
+            stop.set()
+            inserter.join(timeout=5.0)
+
+        assert insert_failures == []
+        assert all(
+            entry.owner_id != "guest:g1" for entry in list(registry._runs.values())
+        ), "every seeded run should have been reassigned by the first sweep"

@@ -792,3 +792,65 @@ def test_a_guest_tokens_migration_never_touches_another_guests_session(client):
     assert row_a is not None
     assert row_a.revoked_at is None
     assert row_a.migrated_to_user_id is None
+
+
+def test_signup_still_returns_201_when_the_run_reassignment_raises(client, monkeypatch):
+    """F-4.10-J-03 (judge round 1): `_migrate_guest_session`'s docstring
+    said "NEVER raises" while `reassign_owner` was called OUTSIDE its
+    `try`, so a failure there became a 500 on the signup, AFTER the guest
+    session was already revoked and committed. The caller lost their
+    allowance, got no account, and a retry hit 409 on an email that was by
+    then taken.
+
+    Nothing asserted the property the docstring claimed, which is why the
+    gap survived. This asserts it: authentication is the primary
+    operation, migration is best-effort, so a raising reassignment must
+    leave signup at 201 and must still leave the guest session revoked.
+    """
+    from system_03_search_agent.core import run_registry as run_registry_module
+
+    def _boom(**_kwargs):
+        raise RuntimeError("dictionary changed size during iteration")
+
+    monkeypatch.setattr(
+        run_registry_module.default_registry, "reassign_owner", _boom
+    )
+
+    guest_id, guest_token = _mint_guest(client)
+    email = _unique_email()
+    response = client.post(
+        "/auth/signup",
+        json={"email": email, "password": "Str0ngPassw0rd!", "guest_token": guest_token},
+    )
+
+    assert response.status_code == 201, (
+        "a failure inside the best-effort migration must never fail the signup "
+        "it was attached to"
+    )
+    row = _guest_session_row(guest_id)
+    assert row is not None
+    assert row.revoked_at is not None, (
+        "the revocation committed before the reassignment ran; swallowing the "
+        "reassignment failure must not also roll that back"
+    )
+
+
+def test_login_still_succeeds_when_the_run_reassignment_raises(client, monkeypatch):
+    """F-4.10-J-03, the other caller. `login` reaches the same
+    best-effort helper and had the same exposure."""
+    from system_03_search_agent.core import run_registry as run_registry_module
+
+    def _boom(**_kwargs):
+        raise RuntimeError("dictionary changed size during iteration")
+
+    email, password, _ = _signup_and_login(client)
+    _guest_id, guest_token = _mint_guest(client)
+    monkeypatch.setattr(
+        run_registry_module.default_registry, "reassign_owner", _boom
+    )
+
+    response = client.post(
+        "/auth/login",
+        json={"email": email, "password": password, "guest_token": guest_token},
+    )
+    assert response.status_code == 200

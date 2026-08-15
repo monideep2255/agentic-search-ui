@@ -117,16 +117,41 @@ engineering call and document it:
       cancelled (production-standards.md's retry-safety gate).
     - No lock guards `RunRegistry._runs`, `RunEntry.events`, or the
       `finished`/`finished_at` fields outside of `new_event`'s own
-      protocol. Every mutation runs on the single asyncio event loop
-      thread with no `await` between a read and the write it informs, so
-      CPython's GIL makes each individual mutation atomic against another
-      coroutine interleaving mid-operation; asyncio's own cooperative
-      scheduling (a coroutine only yields control at an `await`) means a
-      concurrently-running reader can never observe a torn intermediate
-      state, only a stale one it will catch up on via the next
-      `new_event.notify_all()`. `new_event`'s lock is held only where the
-      `asyncio.Condition` API requires it (`wait_for`, `notify_all`), not
-      as a general-purpose mutex around every field access.
+      protocol. Almost every mutation runs on the single asyncio event
+      loop thread with no `await` between a read and the write it
+      informs, so CPython's GIL makes each individual mutation atomic
+      against another coroutine interleaving mid-operation; asyncio's own
+      cooperative scheduling (a coroutine only yields control at an
+      `await`) means a concurrently-running reader can never observe a
+      torn intermediate state, only a stale one it will catch up on via
+      the next `new_event.notify_all()`. `new_event`'s lock is held only
+      where the `asyncio.Condition` API requires it (`wait_for`,
+      `notify_all`), not as a general-purpose mutex around every field
+      access.
+
+      CORRECTION, build phase 4.10 fix round 1 (F-4.10-J-03): "every
+      mutation runs on the single asyncio event loop thread" became FALSE
+      the moment `reassign_owner` shipped. Its only caller is
+      `auth/router.py`'s `_migrate_guest_session`, reached from `POST
+      /auth/signup` and `POST /auth/login`, and both of those path
+      operations are plain `def`, which FastAPI dispatches to an AnyIO
+      worker thread. So `reassign_owner` mutates `_runs` entries from a
+      thread that is NOT the event loop, concurrently with `create_run`
+      inserting into the same dict from the loop, and the sentence above
+      no longer covers it. A stale read is still harmless here for the
+      same GIL reason, but an UNGUARDED `for entry in self._runs.values()`
+      is not: it raises `RuntimeError: dictionary changed size during
+      iteration` when an insert lands mid-sweep. Every method that walks
+      `_runs` (`_evict_expired`, `count_active_runs_for_owner`,
+      `reassign_owner`) therefore materialises the dict with a single
+      `list(...)`/`tuple(...)` call before walking it. That call is one
+      C-level operation, so the GIL makes it atomic against another
+      thread's insert, and the walk that follows is over a private
+      snapshot no other thread can resize. This is a bound on the ONE
+      real cross-thread shape that exists today; it is not a claim that
+      this registry is generally thread-safe, and it does not make the
+      registry safe across processes (see the eviction note above and
+      `tracker/phase_4.10.md`'s stated non-coverage).
     - The per-run queue still carries a `None` sentinel appended after the
       run's background task finishes draining `run_streaming()`, for any
       reason: normal completion, an internal crash (already converted to
@@ -372,9 +397,12 @@ class RunRegistry:
         (F-1.2-01). Swept lazily; see the module docstring for why no
         separate background sweep task exists."""
         now = datetime.now(UTC)
+        # `list(...)` first, then walk the snapshot: see the module
+        # docstring's F-4.10-J-03 correction for why walking `_runs`
+        # directly is no longer safe.
         expired = [
             run_id
-            for run_id, entry in self._runs.items()
+            for run_id, entry in list(self._runs.items())
             if entry.finished_at is not None
             and (now - entry.finished_at).total_seconds() > self._retention_seconds
         ]
@@ -464,9 +492,11 @@ class RunRegistry:
         authority a caller cannot bypass by skipping this precheck.
         """
         self._evict_expired()
+        # Snapshot before counting, per the module docstring's F-4.10-J-03
+        # correction.
         return sum(
             1
-            for entry in self._runs.values()
+            for entry in list(self._runs.values())
             if entry.owner_id == owner_id and not entry.finished
         )
 
@@ -492,11 +522,27 @@ class RunRegistry:
         the `guest_id` claim decoded out of the presented token itself,
         so a guest token can never name any owner_id but its own.
 
+        THREADING (F-4.10-J-03, build phase 4.10 fix round 1). This is the
+        one `_runs` walker that does NOT run on the event loop thread. Its
+        only caller, `auth/router.py`'s `_migrate_guest_session`, is
+        reached from `POST /auth/signup` and `POST /auth/login`, which are
+        plain `def` path operations and so run on an AnyIO worker thread,
+        concurrently with `create_run` inserting into `_runs` from the
+        loop. Walking `self._runs.values()` directly raised `RuntimeError:
+        dictionary changed size during iteration` in that window
+        (reproduced, not hypothesised). The `list(...)` below takes a
+        snapshot in one atomic C-level call first; the entries it holds
+        are the same live objects, so the reassignment still lands on real
+        runs, and a run created after the snapshot simply is not matched,
+        which is indistinguishable from one created a microsecond after
+        this method returned. See the module docstring for the full
+        correction to the no-lock invariant this broke.
+
         Returns:
             The number of entries reassigned, for the caller to log.
         """
         reassigned = 0
-        for entry in self._runs.values():
+        for entry in list(self._runs.values()):
             if entry.owner_id == old_owner_id:
                 entry.owner_id = new_owner_id
                 entry.user_id = new_user_id

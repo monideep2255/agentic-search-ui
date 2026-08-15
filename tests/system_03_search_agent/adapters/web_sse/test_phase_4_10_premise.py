@@ -39,16 +39,25 @@ Refuse:
   on rather than a bare failure.
 - A tampered guest token, a guest token signed with `AUTH_SECRET`
   directly rather than the derived key, and an expired one are each
-  rejected.
+  rejected. The `AUTH_SECRET`-signed clause forges its token for a REAL,
+  live `guest_sessions` id (F-4.10-J-01, fix round 1), so the forged
+  token differs from a legitimate one in its SIGNATURE ALONE and a 401
+  can only come from signature rejection.
 - Token confusion in both directions: a guest token is not an access
   token, and an access token is not a guest token.
 - Cross-guest isolation on all three run-scoped endpoints (events, stop,
   citations).
-- The allowance survives concurrency. Six simultaneous requests at the
-  boundary yield at most five successes, which is the property a
-  read-then-write implementation silently fails.
+- The allowance survives concurrency. With four of five spent and no run
+  active, two genuinely simultaneous requests yield exactly one success,
+  which is the property a read-then-write implementation silently fails.
+  "Genuinely simultaneous" is load-bearing and is why that clause uses
+  two OS threads with two event loops rather than `asyncio.gather`: see
+  F-4.10-J-02 and the clause's own docstring.
 - A guest whose session was migrated at signup cannot keep spending on
-  the old token.
+  the old token, AND is not still told by `GET /v1/allowance` that it has
+  searches left (F-4.10-A-03: the reporting path and the enforcement path
+  must agree on what a live session is, since `counted: true` is what the
+  five dots trust).
 - A guest is never an operator, so no guest is ever streamed a `cost`
   event.
 
@@ -73,6 +82,14 @@ build phase 2.1's gate had a blind spot identical to the code it graded:
   so a two-worker deployment is outside anything this file can observe.
   The `guest_sessions` counter is the one piece that would survive it, and
   the concurrency arm exercises it only within one process.
+- The concurrent-run cap (`DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER`) at its own
+  boundary. That cap is a SECOND, unrelated bound of the same numeric
+  value as the free allowance, and F-4.10-J-02 measured that letting the
+  two overlap is exactly what made the concurrency clause unable to fail.
+  The concurrency clause below now deliberately drains every run before
+  the boundary so no run is active and the cap cannot fire; the cap's own
+  boundary is covered by `TestConcurrentRunCap` in
+  `test_streaming_endpoints.py`, not here.
 - Device-level or IP-level abuse resistance. The clearable-token decision
   declines it on purpose, so there is nothing here to test.
 - The registered 100/day cap actually firing. It cannot: nothing writes
@@ -273,6 +290,71 @@ def _token_of(headers: dict[str, str]) -> str:
     return headers["Authorization"].removeprefix("Bearer ")
 
 
+def _post_query_on_its_own_event_loop(headers: dict[str, str]) -> tuple[int, str]:
+    """Fire one `POST /v1/query` from THIS OS thread, on a private event loop.
+
+    Why not `asyncio.gather` (F-4.10-J-02, fix round 1): `post_v1_query`
+    is `async def` but contains no `await` between the concurrent-run
+    precheck and `create_run`, and `spend_one_run` is synchronous
+    psycopg2. Two coroutines gathered on ONE event loop therefore execute
+    that whole region strictly serially, so no interleaving exists at the
+    layer a read-then-write race lives in, and a gathered clause cannot
+    fail no matter what the spend implementation does. Two OS threads with
+    two event loops is the smallest arrangement that puts two callers
+    inside `spend_one_run` at the same time, which is a precondition for
+    observing the property that clause claims to check. It is only a
+    precondition: see the clause's own docstring for the database-level
+    rendezvous that turns "at the same time" from a hope into a fact.
+
+    The run this starts is left to be cancelled when the private loop
+    closes: what is under test is the admission decision, which the
+    response status already carries, not the run's output.
+    """
+
+    async def _fire() -> tuple[int, str]:
+        async with _client() as client:
+            response = await _run(client, headers)
+            return response.status_code, response.text
+
+    return asyncio.run(_fire())
+
+
+_BLOCKED_WRITER_SQL = sa.text(
+    "SELECT count(*) FROM pg_stat_activity"
+    " WHERE wait_event_type = 'Lock'"
+    "   AND state = 'active'"
+    "   AND query ILIKE '%guest_sessions%'"
+)
+
+
+async def _await_blocked_writers(
+    engine: sa.Engine, *, expected: int, timeout_s: float = 20.0
+) -> None:
+    """Block until PostgreSQL reports `expected` backends waiting on a lock
+    against `guest_sessions`, or fail the calling clause.
+
+    This is the rendezvous the concurrency clause below uses instead of a
+    fixed sleep. Asking the database which backends are actually blocked
+    is the only way to know that both callers are simultaneously past
+    their read and pending at their write; a sleep can only guess, and a
+    guess that lands wrong turns a concurrency clause green for the wrong
+    reason, which is exactly the failure F-4.10-J-02 filed.
+    """
+    deadline = asyncio.get_running_loop().time() + timeout_s
+    observed = -1
+    while asyncio.get_running_loop().time() < deadline:
+        with engine.connect() as probe:
+            observed = int(probe.execute(_BLOCKED_WRITER_SQL).scalar_one())
+        if observed >= expected:
+            return
+        await asyncio.sleep(0.02)
+    raise AssertionError(
+        f"only {observed} of {expected} requests ever blocked writing to "
+        f"guest_sessions within {timeout_s:.0f}s, so they never actually raced; "
+        "this clause cannot report anything about atomicity until they do"
+    )
+
+
 # ---------------------------------------------------------------------------
 # ARM ONE: ADMIT. The product exists because of these.
 # ---------------------------------------------------------------------------
@@ -452,33 +534,61 @@ class TestRefuseArm:
         This test fails loudly if a later refactor "simplifies" the key
         derivation away.
 
-        HONESTY NOTE, recorded at the moment the gate was watched failing:
-        this is the ONE clause of seventeen that passed on the first run,
-        and it passed VACUOUSLY. Every request is 401 today because no
-        guest path exists at all, so the assertion cannot yet distinguish
-        "domain separation works" from "nothing works". It becomes a real
-        check the moment `POST /auth/guest` exists, and the judge should
-        re-run it against a working guest path with the derivation
-        deliberately replaced by bare `AUTH_SECRET`, and watch it go red,
-        before crediting it. A clause that has never been seen failing for
-        its own reason is not yet evidence of anything.
+        WHY THE FORGED TOKEN CARRIES A REAL GUEST ID (F-4.10-J-01, fix
+        round 1). The first version of this clause forged its token for a
+        fresh `uuid.uuid4()`, an id with no `guest_sessions` row. That id
+        is refused by `spend_one_run`'s REVOKED_OR_UNKNOWN branch with a
+        401 whether the signature verified or not, so the assertion below
+        was satisfied by a 401-shaped coincidence and could not fail: the
+        judge replaced `guest_signing_key()` with the bare secret and the
+        clause stayed green while a forged token was, in fact, being fully
+        admitted.
+
+        The fix is to remove every difference between the forged token and
+        a legitimate one EXCEPT the signature. So this clause mints a real
+        guest through `POST /auth/guest`, proves that guest is live and
+        spendable (the positive control below, without which "401" could
+        again mean something other than what this clause claims), and only
+        then forges a token carrying that same live `guest_id`, signed
+        with bare `AUTH_SECRET`. A 401 on that token can now come from one
+        place only.
         """
         import jwt
 
-        forged = jwt.encode(
-            {
-                "guest_id": str(uuid.uuid4()),
-                "typ": "guest",
-                "iat": datetime.now(UTC),
-                "exp": datetime.now(UTC) + timedelta(days=1),
-            },
-            _TEST_AUTH_SECRET,
-            algorithm="HS256",
-        )
         async with _client() as client:
-            response = await _run(client, {"Authorization": f"Bearer {forged}"})
+            guest_id, real_headers = await _mint_guest(client)
+
+            # Positive control. Without this the clause cannot distinguish
+            # "the signature was rejected" from "this guest id is not
+            # spendable", which is precisely the confusion F-4.10-J-01
+            # found.
+            live = await client.get("/v1/allowance", headers=real_headers)
+            assert live.status_code == 200, (
+                "the forged token below is only a real test of domain separation "
+                "if the guest id it carries is a live, spendable session"
+            )
+
+            forged = jwt.encode(
+                {
+                    "guest_id": guest_id,
+                    "typ": "guest",
+                    "iat": datetime.now(UTC),
+                    "exp": datetime.now(UTC) + timedelta(days=1),
+                },
+                _TEST_AUTH_SECRET,
+                algorithm="HS256",
+            )
+            forged_headers = {"Authorization": f"Bearer {forged}"}
+
+            response = await _run(client, forged_headers)
             assert response.status_code == 401, (
-                "a guest token must not be forgeable from AUTH_SECRET alone"
+                "a guest token must not be forgeable from AUTH_SECRET alone; this "
+                "token differs from a legitimate one ONLY in its signature"
+            )
+            allowance = await client.get("/v1/allowance", headers=forged_headers)
+            assert allowance.status_code == 401, (
+                "the forged token must be refused on every guest-facing route, "
+                "not only the one that spends an allowance"
             )
 
     @pytest.mark.asyncio
@@ -522,7 +632,6 @@ class TestRefuseArm:
         two token types stay distinct. The decoder can.
         """
         from system_03_search_agent.auth.guest import decode_guest_token
-
         from system_03_search_agent.auth.tokens import mint_access_token
 
         access = mint_access_token(str(uuid.uuid4()))
@@ -575,26 +684,147 @@ class TestRefuseArm:
         """The property a read-then-write implementation silently fails.
 
         Two tabs, two simultaneous requests, both observing four used and
-        both taking the fifth, is a six-search allowance available to anyone
-        who can double-click. The spend must be one conditional UPDATE.
+        both taking the fifth, is a six-search allowance available to
+        anyone who can double-click. The spend must be one conditional
+        UPDATE.
+
+        TWO THINGS THIS CLAUSE HAD TO CHANGE TO BECOME ABLE TO FAIL
+        (F-4.10-J-02, fix round 1). Both were measured, not argued.
+
+        1. It used to fire six concurrent requests from a fresh guest and
+           assert at most five were accepted. `DEFAULT_MAX_ACTIVE_RUNS_
+           PER_OWNER` (5) and `FREE_RUN_ALLOWANCE` (5) are the same
+           number, so the sixth request was refused 429 by the
+           concurrent-run cap before the allowance was ever consulted, and
+           the assertion held regardless of the spend implementation. This
+           version spends four runs SERIALLY and drains each to
+           completion, so zero runs are active when the boundary pair
+           fires and the run cap is structurally unable to reach it. The
+           assertion below is also exact (exactly one accepted, exactly
+           one refused with the allowance's own reason) rather than an
+           inequality, so a refusal arriving from the wrong control fails
+           the clause instead of satisfying it.
+
+        2. It used `asyncio.gather`, which cannot produce the race at all
+           on one event loop. See `_post_query_on_its_own_event_loop` for
+           why, and for the two-thread arrangement that replaces it.
+
+        HOW THE RACE IS MADE DETERMINISTIC, WITHOUT PATCHING ANY
+        PRODUCTION CODE. Two OS threads are necessary but not sufficient:
+        released at the start of an HTTP request, and even released inside
+        a `threading.Barrier` immediately around the spend, the GIL still
+        let the first caller finish its whole read-decide-write before the
+        second issued a single statement. Both arrangements were tried
+        against a real read-then-write mutation of `spend_one_run` and
+        both stayed GREEN, which would have made this clause a coin flip
+        at best (measured: with a barrier, the two callers' SELECTs landed
+        8ms apart and the second read the already-incremented count).
+
+        So the rendezvous is moved into the database, where it is exact. A
+        separate connection takes `SELECT ... FOR UPDATE` on this guest's
+        row and holds it. Both requests then run: a plain `SELECT` is
+        never blocked by a row lock under READ COMMITTED, so a
+        read-then-write implementation's read completes and BOTH callers
+        observe four used, while any `UPDATE` blocks on the lock. The
+        clause waits until PostgreSQL itself reports two backends blocked
+        on a lock against `guest_sessions` (never a fixed sleep) and only
+        then releases. Every caller is therefore provably past the read
+        and pending at the write at the same instant.
+
+        That makes the clause SELF-CHECKING in the way F-4.10-J-02 says a
+        gate must be: if the two requests ever stop genuinely racing, the
+        lock-waiter poll never reaches two and the clause fails on that,
+        rather than quietly passing for the wrong reason.
+
+        Under the correct atomic implementation, the second `UPDATE`
+        re-evaluates `runs_used < cap` against the row the first just
+        committed, matches nothing, and the caller is refused. Under a
+        read-then-write, both callers already decided to spend before the
+        lock was released, so both increment and the count lands at six.
         """
         async with _client() as client:
-            _guest_id, headers = await _mint_guest(client)
-            responses = await asyncio.gather(
-                *(_run(client, headers) for _ in range(_EXPECTED_FREE_SEARCHES + 1)),
-                return_exceptions=True,
+            guest_id, headers = await _mint_guest(client)
+            for spent in range(_EXPECTED_FREE_SEARCHES - 1):
+                created = await _run(client, headers)
+                assert created.status_code == 202, (
+                    f"serial run {spent + 1} was refused before the boundary was reached"
+                )
+                await _drain_run_task(created.json()["run_id"])
+
+            assert (
+                run_registry_module.default_registry.count_active_runs_for_owner(
+                    f"guest:{guest_id}"
+                )
+                == 0
+            ), (
+                "the concurrent-run cap must be structurally unable to fire during "
+                "the boundary pair below; if any run is still active this clause is "
+                "back to measuring the wrong control (F-4.10-J-02)"
             )
-            accepted = [r for r in responses if getattr(r, "status_code", None) == 202]
-            assert len(accepted) <= _EXPECTED_FREE_SEARCHES, (
-                f"{len(accepted)} of {_EXPECTED_FREE_SEARCHES + 1} concurrent requests were "
-                f"accepted; the allowance is not being spent atomically"
+
+        lock_engine = sa.create_engine(USER_DB_URL, future=True)
+        try:
+            with lock_engine.connect() as lock_connection:
+                lock_connection.execute(
+                    sa.text(
+                        "SELECT runs_used FROM guest_sessions WHERE id = :guest_id FOR UPDATE"
+                    ),
+                    {"guest_id": uuid.UUID(guest_id)},
+                )
+                pair = asyncio.gather(
+                    asyncio.to_thread(_post_query_on_its_own_event_loop, headers),
+                    asyncio.to_thread(_post_query_on_its_own_event_loop, headers),
+                )
+                rendezvous_failure: AssertionError | None = None
+                try:
+                    await _await_blocked_writers(lock_engine, expected=2)
+                except AssertionError as exc:
+                    rendezvous_failure = exc
+                finally:
+                    # Release whether or not the rendezvous was reached, so
+                    # the two in-flight requests always finish and are
+                    # always awaited below rather than left pending.
+                    lock_connection.rollback()
+                outcomes = await pair
+                if rendezvous_failure is not None:
+                    raise rendezvous_failure
+        finally:
+            lock_engine.dispose()
+
+        accepted = [outcome for outcome in outcomes if outcome[0] == 202]
+        refused = [outcome for outcome in outcomes if outcome[0] == 403]
+        assert len(accepted) == 1, (
+            f"{len(accepted)} of 2 simultaneous requests took the last free search; "
+            f"exactly one may, or the allowance is not being spent atomically. "
+            f"Statuses: {[outcome[0] for outcome in outcomes]}"
+        )
+        assert len(refused) == 1, (
+            f"the losing request must be refused with the ALLOWANCE's own 403, not "
+            f"some other control. Statuses: {[outcome[0] for outcome in outcomes]}"
+        )
+        assert "guest_allowance_exhausted" in refused[0][1]
+
+        async with _client() as client:
+            final = await client.get("/v1/allowance", headers=headers)
+            assert final.status_code == 200
+            assert final.json()["used"] == _EXPECTED_FREE_SEARCHES, (
+                "the server's own count must land on exactly the cap after the "
+                "boundary pair, never past it"
             )
-            for response in accepted:
-                await _drain_run_task(response.json()["run_id"])
 
     @pytest.mark.asyncio
     async def test_a_migrated_guest_token_cannot_keep_spending(self) -> None:
-        """Otherwise signup mints a second allowance rather than moving one."""
+        """Otherwise signup mints a second allowance rather than moving one.
+
+        F-4.10-A-03 / F-4.10-J-07 (fix round 1) added the second half: it
+        is not enough that the migrated token cannot SPEND, the allowance
+        endpoint must not go on advertising searches that token can no
+        longer use. `GET /v1/allowance` read `runs_used` alone and reported
+        `{"used": 2, "total": 5, "counted": true}` for a session the very
+        next request refused. The reporting path and the enforcement path
+        have to agree on what a live session is, because `counted: true`
+        is the field the five dots trust.
+        """
         async with _client() as client:
             _guest_id, guest_headers = await _mint_guest(client)
             created = await _run(client, guest_headers)
@@ -602,6 +832,12 @@ class TestRefuseArm:
             await _drain_run_task(created.json()["run_id"])
 
             await _auth_headers(client, guest_token=_token_of(guest_headers))
+
+            reported = await client.get("/v1/allowance", headers=guest_headers)
+            assert reported.status_code == 401, (
+                "a revoked guest session must not be described as a live, counted "
+                "allowance; that is a promise the next request breaks"
+            )
 
             after = await _run(client, guest_headers)
             assert after.status_code in (401, 403), (

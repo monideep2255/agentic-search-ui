@@ -295,13 +295,22 @@ def _migrate_guest_session(session: Session, guest_token: str | None, user: User
     """Best-effort: re-point a guest's LIVE runs to `user` and revoke the
     guest session (T-4.10-06, design decision 4, `tracker/phase_4.10.md`).
 
-    NEVER raises. An absent, invalid, expired, malformed, or
-    already-migrated guest token is not an authentication failure
-    (signup/login's acceptance criterion: "authentication is the primary
-    operation; migration is best-effort and its failure is logged, never
-    fatal"), so every expected and unexpected failure mode here is caught
-    and logged, field names only, never the token value or its decoded
-    payload.
+    Every step of the migration itself is enclosed by a `try`, and both
+    `except` blocks below log and return rather than propagate. An absent,
+    invalid, expired, malformed, or already-migrated guest token is not an
+    authentication failure (signup/login's acceptance criterion:
+    "authentication is the primary operation; migration is best-effort and
+    its failure is logged, never fatal"), and neither is a failure of the
+    database write or of the run reassignment. Everything logged is field
+    names and static text, never the token value or its decoded payload.
+
+    Stated precisely rather than as "NEVER raises", which is what this
+    docstring used to say and what F-4.10-J-03 found to be false: the
+    guarantee covers every statement inside the two `try` blocks. It does
+    not cover the handlers themselves, so a `session.rollback()` that
+    itself fails would still propagate. That residue is deliberate. A
+    connection too broken to roll back is not a condition this function
+    should paper over on its way to reporting a successful login.
 
     Idempotent (replaying the same signup/login with the same guest token
     gives the same end state): the `revoked_at IS NULL` predicate below
@@ -312,6 +321,24 @@ def _migrate_guest_session(session: Session, guest_token: str | None, user: User
     `guest_id` claim this exact token decodes to, so a guest token can
     never migrate any runs but its own, regardless of which user account
     presents it.
+
+    F-4.10-J-03 (judge round 1, build phase 4.10): "NEVER raises" was
+    false when it was first written. The `reassign_owner` call sat OUTSIDE
+    the `try` below, and it could raise: signup and login are plain `def`
+    path operations, so FastAPI runs them on an AnyIO worker thread, and
+    `reassign_owner` walked `RunRegistry._runs` there while `create_run`
+    inserted into the same dict from the event loop. The resulting
+    `RuntimeError: dictionary changed size during iteration` escaped as a
+    500 AFTER the guest session had already been revoked and committed:
+    the caller lost their allowance, got no account, and a retry hit 409
+    on an email that was now taken. The registry side is fixed at its own
+    source (`core/run_registry.py`'s snapshot-before-walk, and the
+    module-docstring correction that records why it was needed), and the
+    call is now inside the `try` as well, because a best-effort step must
+    be enclosed by the thing that makes it best-effort rather than sitting
+    next to it. `tests/system_03_search_agent/auth/test_router.py`'s
+    `test_signup_still_returns_201_when_the_run_reassignment_raises`
+    asserts the second half directly.
     """
     if not guest_token:
         return
@@ -335,6 +362,21 @@ def _migrate_guest_session(session: Session, guest_token: str | None, user: User
             .values(revoked_at=datetime.now(UTC), migrated_to_user_id=user.id)
         )
         session.commit()
+
+        if result.rowcount != 1:
+            # Already migrated/revoked (a replay), or the id never existed:
+            # not fatal, matching this function's best-effort contract.
+            return
+
+        # F-4.10-J-03: INSIDE the try, not after it. This call can raise,
+        # and by the time it runs the guest session is already revoked and
+        # committed, which is the worst possible moment to turn a signup
+        # into a 500.
+        reassigned = run_registry_module.default_registry.reassign_owner(
+            old_owner_id=f"guest:{claims['guest_id']}",
+            new_owner_id=f"user:{user.id}",
+            new_user_id=str(user.id),
+        )
     except Exception:  # noqa: BLE001 - migration must never fail signup/login, any error included
         # No exc_info here, deliberately: a DB exception's own string
         # representation can embed the failed statement's bound
@@ -343,19 +385,9 @@ def _migrate_guest_session(session: Session, guest_token: str | None, user: User
         # messages only, never a value that could carry anything
         # token-derived, even indirectly through an exception repr.
         session.rollback()
-        logger.warning("guest token migration failed while updating guest_sessions")
+        logger.warning("guest token migration failed; signup/login itself is unaffected")
         return
 
-    if result.rowcount != 1:
-        # Already migrated/revoked (a replay), or the id never existed:
-        # not fatal, matching this function's best-effort contract.
-        return
-
-    reassigned = run_registry_module.default_registry.reassign_owner(
-        old_owner_id=f"guest:{claims['guest_id']}",
-        new_owner_id=f"user:{user.id}",
-        new_user_id=str(user.id),
-    )
     logger.info("guest session migrated to a new user; %d live run(s) reassigned", reassigned)
 
 

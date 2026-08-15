@@ -43,7 +43,7 @@ import json
 import os
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -636,6 +636,87 @@ class TestAllowanceEndpoint:
         async with _client() as client:
             response = await client.get("/v1/allowance")
             assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_a_migrated_guest_session_is_never_reported_as_a_live_allowance(
+        self,
+    ) -> None:
+        """F-4.10-A-03 / F-4.10-J-07 (adversary and judge round 1).
+
+        This endpoint used to read `runs_used` alone and never `revoked_at`,
+        so a guest whose session had been migrated and revoked at signup was
+        told `{"used": 2, "total": 5, "counted": true}` and then refused 401
+        by the very next `POST /v1/query`. `counted: true` is design
+        decision 6's honesty field: it means the number is a real,
+        server-side measurement, and for a session that can no longer spend,
+        no number is. This is not cosmetic; the five dots in the UI render
+        exactly this number.
+
+        The assertion is that the REPORTING path and the ENFORCEMENT path
+        now give the same answer, checked by asking both.
+        """
+        async with _client() as client:
+            guest = await client.post("/auth/guest")
+            assert guest.status_code == 201
+            guest_token = guest.json()["guest_token"]
+            headers = {"Authorization": f"Bearer {guest_token}"}
+
+            before = await client.get("/v1/allowance", headers=headers)
+            assert before.status_code == 200, "a fresh guest must still be reported"
+
+            email = f"{uuid.uuid4()}@example.com"
+            signup = await client.post(
+                "/auth/signup",
+                json={
+                    "email": email,
+                    "password": "Str0ngPassw0rd!",
+                    "guest_token": guest_token,
+                },
+            )
+            assert signup.status_code == 201
+
+            reported = await client.get("/v1/allowance", headers=headers)
+            enforced = await client.post("/v1/query", json=_create_body(), headers=headers)
+
+            assert enforced.status_code == 401, (
+                "precondition: the migrated session must be unspendable, or this "
+                "test is not exercising the disagreement it was written for"
+            )
+            assert reported.status_code == 401, (
+                "the allowance endpoint promised searches the very next request "
+                "refused; the two paths must agree on what a live session is"
+            )
+
+    @pytest.mark.asyncio
+    async def test_an_unknown_guest_id_is_never_reported_as_five_searches_left(self) -> None:
+        """F-4.10-A-03, the second measured shape: a validly signed guest
+        token whose `guest_id` has no row at all was reported as
+        `{"used": 0, "total": 5, "counted": true}`, literally "five of five
+        left", and then refused on the first query."""
+        import jwt
+
+        from system_03_search_agent.auth.guest import guest_signing_key
+
+        orphan = jwt.encode(
+            {
+                "guest_id": str(uuid.uuid4()),
+                "typ": "guest",
+                "iat": datetime.now(UTC),
+                "exp": datetime.now(UTC) + timedelta(days=1),
+            },
+            guest_signing_key(),
+            algorithm="HS256",
+        )
+        headers = {"Authorization": f"Bearer {orphan}"}
+        async with _client() as client:
+            reported = await client.get("/v1/allowance", headers=headers)
+            enforced = await client.post("/v1/query", json=_create_body(), headers=headers)
+
+            assert enforced.status_code == 401
+            assert reported.status_code == 401, (
+                "a guest id with no session row must not be advertised as a full, "
+                "counted allowance"
+            )
 
 
 class TestConcurrentRunCap:

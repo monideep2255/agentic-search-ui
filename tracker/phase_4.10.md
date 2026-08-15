@@ -110,6 +110,30 @@ The guest token travels as a body field on signup and login rather than in the `
 
 F-4.0-A-10 names the anonymous caller, but the bound belongs on the principal, not on the anonymity. A registered user creating unbounded concurrent runs is the same resource exhaustion with a `users` row attached. One cap, read from the principal, applied at `create_run`.
 
+### 8. Anonymous spend is bounded by a daily budget, with an IP throttle in front of it
+
+Added 2026-08-15 after the adversary round, product-owner decision the same day. This is a correction to design decision 7, which was wrong in a way worth stating plainly rather than quietly amending.
+
+Decision 7 said the run-creation bound "belongs on the principal, not on the anonymity". That is true and it is not sufficient, because a guest principal costs nothing to create. `POST /auth/guest` is unauthenticated and takes no body, so keying a cap on `owner_id` keys it on a variable the caller controls the supply of. Measured by the adversary: 40 paid pipelines accepted in 0.25 seconds, 157 per second, from a caller with no account, while a single guest is correctly capped at five.
+
+Nothing was behind it. Both existing cost caps are structurally dead for a guest: `check_user_daily_query_cap` is skipped when `query.user_id is None`, which is every guest by decision 2, and `check_system_daily_cost_cap` sums `interactions.cost_usd` while nothing writes that table (F-2.0-04, build phase 4.6). So the system-wide dollar cap reads zero on every call and can never fire.
+
+The product owner's 2026-08-14 acceptance ("anyone who clears it gets five more searches") accepted a person clearing browser storage. It did not accept a script minting identities in parallel, and the router's own comment arguing the two are equivalent is the conflation this finding names.
+
+Two controls, and only one of them is the backstop:
+
+- The backstop: a system-wide daily cap on anonymous runs, `ANON_DAILY_RUN_CAP`, read through `harness/cost_control.py` the same way every other cap is, never a second hardcoded copy. It bounds total dollars regardless of how many identities exist or where they come from, which is the property the per-principal cap cannot have. A new `guest_daily_usage(day, runs_used)` row per UTC day, spent by the same single conditional `UPDATE ... RETURNING` decision 3 requires.
+- Defense in depth: a per-IP throttle on minting. It stops casual abuse and the connection-pool exhaustion of F-4.10-A-02, where 60 concurrent mints made a registered login take 30.1 seconds instead of 0.098. It is explicitly NOT the bound, because a rotating source defeats it.
+
+Four constraints on the implementation, each because getting it wrong is worse than not having it:
+
+- The two spends, per-guest and per-day, happen in ONE transaction. A per-guest spend that commits while the daily spend fails charges a visitor for a run they never got.
+- The IP comes from the connection, never from a client-supplied `X-Forwarded-For`, which an attacker sets freely. Behind a real proxy this needs the proxy's own real-IP configuration, and that is a deployment note, not a code fallback.
+- No raw IP is stored. `auth/router.py`'s existing `_hash_ip` already does keyed HMAC-SHA256 with its own domain separator; reuse it.
+- `GET /v1/allowance` must reflect the daily bound too. This is F-4.10-A-03's lesson generalized: the reporting path and the enforcement path must agree about what is available, or the five dots promise a search the next request refuses.
+
+The refusal is a 429 with `Retry-After` set to the seconds remaining until UTC midnight, and a message saying that signing in works right now. Unlike a spent per-guest allowance, this one genuinely is transient, so 429 is the honest code here where 403 was the honest code there.
+
 ## Tickets
 
 ### T-4.10-01: guest token primitives
