@@ -89,29 +89,52 @@ function frame(seq: number, type: string, payload: unknown): string {
 }
 
 /**
- * A landed run with three cited claims across all three layers.
+ * A landed run, deliberately NON-COLLINEAR on every axis this file asserts.
  *
- * Three layers on purpose: the layer-count pill and the per-source layer word
- * are both meaningless against a single-layer run.
+ * F-4.9-J-02. The first fixture had citation index == layer number == card
+ * position, and tools == layers == sources == 3. A judge re-keyed the layer
+ * word off the CARD NUMBER instead of the layer, and separately aliased the
+ * three strip counts to each other, and the gate stayed 13 of 13 green through
+ * both. A fixture whose axes agree cannot tell them apart, so it grades the
+ * shape of the code rather than its behaviour.
+ *
+ * Every axis is now distinct, and each distinction is load-bearing:
+ *
+ *   4 tool calls, 2 layers among the sources, 3 sources   no count aliases another
+ *   citation 1 is Layer 3, citation 2 is Layer 1          index never equals layer
+ *   card 1 is Layer 3, card 2 is Layer 1                  position never equals layer
+ *   two sources share Layer 3                             layer never identifies a card
+ *
+ * The 4 tool calls span three layers while only two layers produce citations,
+ * which is the ordinary shape of a run that queried somewhere and found
+ * nothing there, and is exactly the case that made the strip and the pill
+ * disagree (F-4.9-A-06).
  */
+const CIT = (id: string, index: number, source: string, sourceId: string, layer: string, tool: string, kind: string) =>
+  frame(0, "citation", {
+    citation_id: id, display_index: index, source, source_id: sourceId,
+    source_url: `https://www.ncbi.nlm.nih.gov/${sourceId}`, layer, field: tool,
+    claim_text: "x", evidence_kind: kind, assertion_confidence: "high",
+    population_ancestry_context: null, license: "public domain",
+  });
+
 const STREAM = [
   frame(0, "guard", { passed: true, category: "ok", reason: null }),
   frame(1, "think", {
     narrative: "Resolving the gene named in the question.",
-    query_class: "single_hop",
-    resolved_entities: [],
-    clarifying_question: null,
+    query_class: "single_hop", resolved_entities: [], clarifying_question: null,
   }),
   frame(2, "plan", { narrative: "Read the curated edges, then confirm live.", tool_calls: [] }),
   frame(3, "tool_result", { call_id: "c1", tool: "cypher_query", layer: "layer_1_graph", status: "ok", summary: "", result_count: 25, truncated: false }),
   frame(4, "tool_result", { call_id: "c2", tool: "ncbi_efetch", layer: "layer_2_api", status: "ok", summary: "", result_count: 1, truncated: false }),
   frame(5, "tool_result", { call_id: "c3", tool: "pubtator_annotate", layer: "layer_3_enrichment", status: "ok", summary: "", result_count: 1, truncated: false }),
-  frame(6, "token", { text: "BRCA1 is associated with hereditary breast and ovarian cancer syndrome [1]. ", marker_ids: ["c-1"] }),
-  frame(7, "token", { text: "The MedGen record describes an autosomal dominant pattern [2]. ", marker_ids: ["c-2"] }),
-  frame(8, "token", { text: "Biallelic variants are reported in Fanconi anemia group S [3]. ", marker_ids: ["c-3"] }),
-  frame(9, "citation", { citation_id: "c-1", display_index: 1, source: "NCBI Gene", source_id: "672", source_url: "https://www.ncbi.nlm.nih.gov/gene/672", layer: "layer_1_graph", field: "cypher_query", claim_text: "BRCA1 is associated with hereditary breast and ovarian cancer syndrome", evidence_kind: "curated assertion", assertion_confidence: "high", population_ancestry_context: null, license: "public domain" }),
-  frame(10, "citation", { citation_id: "c-2", display_index: 2, source: "MedGen", source_id: "C0677776", source_url: "https://www.ncbi.nlm.nih.gov/medgen/C0677776", layer: "layer_2_api", field: "ncbi_efetch", claim_text: "The MedGen record describes an autosomal dominant pattern", evidence_kind: "live record", assertion_confidence: "high", population_ancestry_context: null, license: "public domain" }),
-  frame(11, "citation", { citation_id: "c-3", display_index: 3, source: "PubMed", source_id: "21990134", source_url: "https://pubmed.ncbi.nlm.nih.gov/21990134/", layer: "layer_3_enrichment", field: "pubtator_annotate", claim_text: "Biallelic variants are reported in Fanconi anemia group S", evidence_kind: "literature", assertion_confidence: "moderate", population_ancestry_context: null, license: "public domain" }),
+  frame(6, "tool_result", { call_id: "c4", tool: "clinicaltrials_search", layer: "layer_3_enrichment", status: "ok", summary: "", result_count: 2, truncated: false }),
+  frame(7, "token", { text: "Biallelic variants are reported in Fanconi anemia group S [1]. ", marker_ids: ["k1"] }),
+  frame(8, "token", { text: "BRCA1 is associated with hereditary breast and ovarian cancer syndrome [2]. ", marker_ids: ["k2"] }),
+  frame(9, "token", { text: "A recruiting trial lists the same indication [3]. ", marker_ids: ["k3"] }),
+  CIT("k1", 1, "PubMed", "21990134", "layer_3_enrichment", "pubtator_annotate", "literature"),
+  CIT("k2", 2, "NCBI Gene", "672", "layer_1_graph", "cypher_query", "curated assertion"),
+  CIT("k3", 3, "PubMed", "31145812", "layer_3_enrichment", "pubtator_annotate", "literature"),
   frame(12, "trust_signal", { outcome: "answer", risk_tier: "low", grounded: true, triangulated: true }),
   /*
    * The REAL `done` shape, corrected 2026-08-14 while building T-4.9-01.
@@ -121,10 +144,9 @@ const STREAM = [
    * `total_cost_usd`, `total_tool_calls`, `elapsed_ms` and `trust_outcome`, and
    * no status word at all. A fixture authored from a reading of the design
    * rather than the contract is the exact failure LEARNINGS.md records twice
-   * for build phase 3.1, and it is why the answer screen rendered a schema
-   * error in the 2026-08-14 comparison screenshots.
+   * for build phase 3.1.
    */
-  frame(13, "done", { total_cost_usd: 0.0031, total_tool_calls: 3, elapsed_ms: 11400, trust_outcome: "answer" }),
+  frame(13, "done", { total_cost_usd: 0.0031, total_tool_calls: 4, elapsed_ms: 11400, trust_outcome: "answer" }),
 ].join("");
 
 /** A `Response` whose body streams the scripted frames, as the real one does. */
@@ -192,8 +214,11 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     expect(strip).toHaveTextContent(/answered/i);
     // 11400ms from the run's own `done` event, rendered as seconds.
     expect(strip).toHaveTextContent(/11\.4\s*s/i);
-    expect(strip).toHaveTextContent(/3 tools/);
-    expect(strip).toHaveTextContent(/3 layers/);
+    // Three DIFFERENT numbers (F-4.9-J-02): 4 tool calls, 2 layers that
+    // produced citations, 3 sources. Aliasing any of them to another now
+    // fails, which it did not when all three were 3.
+    expect(strip).toHaveTextContent(/4 tools/);
+    expect(strip).toHaveTextContent(/2 layers/);
     expect(strip).toHaveTextContent(/3 sources/);
   });
 
@@ -283,7 +308,13 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     const wrap = screen.getByTestId("sources-disclosure");
     expect(wrap).not.toHaveAttribute("open");
     expect(wrap).toHaveTextContent(/sources/i);
-    expect(wrap).toHaveTextContent("3");
+    /*
+     * F-4.9-J-01. This read `toHaveTextContent("3")` on the whole <details>,
+     * and the fixture's third source id is 21990134, which contains a "3". A
+     * judge DELETED the count badge outright and the gate stayed 13 of 13
+     * green. Asserted on the badge's own element now, with its exact text.
+     */
+    expect(screen.getByTestId("sources-count")).toHaveTextContent(/^3$/);
 
     await user.click(within(wrap).getByText(/^sources$/i));
     expect(wrap).toHaveAttribute("open");
@@ -299,7 +330,7 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     const two = screen.getByTestId("source-2");
     expect(one).not.toHaveAttribute("open");
 
-    await user.click(within(one).getByText(/NCBI Gene 672/));
+    await user.click(within(one).getByText(/PubMed 21990134/));
     expect(one).toHaveAttribute("open");
     // Opening one must not open its neighbour.
     expect(two).not.toHaveAttribute("open");
@@ -313,8 +344,10 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await user.click(within(screen.getByTestId("sources-disclosure")).getByText(/^sources$/i));
 
     // The prototype's `s.tag`: "L1 · graph", "L2 · live", "L3 · literature".
-    expect(screen.getByTestId("source-1")).toHaveTextContent(/L1\s*·\s*graph/i);
-    expect(screen.getByTestId("source-2")).toHaveTextContent(/L2\s*·\s*live/i);
+    // Card POSITION never equals layer here, and two cards share a layer, so
+    // a mapping keyed off the card number cannot pass (F-4.9-J-02).
+    expect(screen.getByTestId("source-1")).toHaveTextContent(/L3\s*·\s*literature/i);
+    expect(screen.getByTestId("source-2")).toHaveTextContent(/L1\s*·\s*graph/i);
     expect(screen.getByTestId("source-3")).toHaveTextContent(/L3\s*·\s*literature/i);
   });
 
@@ -325,9 +358,10 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     await landAnAnswer(user);
 
     // The prototype's id-bearing chip: the index AND what it points at.
-    const chip = screen.getByTestId("citation-1");
-    expect(chip).toHaveTextContent("1");
-    expect(chip).toHaveTextContent(/Gene\s*672/);
+    // Citation 1 is the LAYER 3 PubMed source and citation 2 is the Layer 1
+    // Gene source, so an index-keyed or position-keyed label cannot pass.
+    expect(screen.getByTestId("citation-1")).toHaveTextContent(/PubMed\s*21990134/);
+    expect(screen.getByTestId("citation-2")).toHaveTextContent(/Gene\s*672/);
   });
 
   // ---------------------------------------------------------------- F-4.8-D-11
@@ -360,7 +394,125 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     // The run used three layers, so the pill must say three. Asserted as the
     // NUMBER, since "Cross-checked across layers" is true of any run and
     // therefore says nothing.
-    expect(screen.getByTestId("trust-plain")).toHaveTextContent(/3 layers agreed/i);
+    expect(screen.getByTestId("trust-plain")).toHaveTextContent(/2 layers agreed/i);
+  });
+
+  /*
+   * ADVERSARY ROUND 1, the four criticals. Each was reproduced in code before
+   * being fixed rather than taken on the adversary's word.
+   */
+
+  /** A landed stream with one part swapped, for the clauses below. */
+  const variant = (opts: {
+    trust?: string | null;
+    guardPassed?: boolean;
+    fatal?: boolean;
+    twoLayerClaim?: boolean;
+  } = {}) => {
+    const f = [
+      frame(0, "guard", {
+        passed: opts.guardPassed !== false,
+        category: opts.guardPassed === false ? "off_topic" : "ok",
+        reason: null,
+      }),
+      frame(1, "tool_result", { call_id: "t1", tool: "cypher_query", layer: "layer_1_graph", status: "ok", summary: "", result_count: 2, truncated: false }),
+    ];
+    if (opts.twoLayerClaim) {
+      f.push(frame(2, "token", { text: "BRCA1 is associated with hereditary breast cancer [1][2]. ", marker_ids: ["k1", "k2"] }));
+      f.push(CIT("k1", 1, "NCBI Gene", "672", "layer_1_graph", "cypher_query", "curated assertion"));
+      f.push(CIT("k2", 2, "PubTator", "12345", "layer_3_enrichment", "pubtator_annotate", "literature"));
+    } else {
+      f.push(frame(2, "token", { text: "BRCA1 repairs DNA [1]. ", marker_ids: ["k1"] }));
+      f.push(CIT("k1", 1, "NCBI Gene", "672", "layer_1_graph", "cypher_query", "curated assertion"));
+    }
+    if (opts.trust !== null) {
+      f.push(frame(10, "trust_signal", { outcome: opts.trust ?? "answer", risk_tier: "low", grounded: true, triangulated: true }));
+    }
+    f.push(
+      opts.fatal
+        ? frame(11, "error", { fatal: true, scope: "run", source: "write_node", error_class: "unexpected", message: "synth tier failed after $0.019 of $0.02 spent on run r-99", retry_after_s: 0 })
+        : frame(11, "done", { total_cost_usd: 0.01, total_tool_calls: 1, elapsed_ms: 5000, trust_outcome: opts.guardPassed === false ? "refuse" : "answer" }),
+    );
+    return f.join("");
+  };
+
+  const serve = (body: string) => () => {
+    const s = new ReadableStream<Uint8Array>({
+      start(c) { c.enqueue(new TextEncoder().encode(body)); c.close(); },
+    });
+    return Promise.resolve(new Response(s, { status: 200, headers: { "content-type": "text/event-stream" } }));
+  };
+
+  async function askIt(user: ReturnType<typeof userEvent.setup>) {
+    await signIn(user);
+    const main = mainArea();
+    await user.type(main.getByRole("textbox", { name: /question/i }), "Which diseases are associated with BRCA1?");
+    await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
+  }
+
+  it("does not dress a refusal in a success tick (F-4.9-A-03)", async () => {
+    const user = userEvent.setup();
+    openEventStreamMock.mockImplementation(serve(variant({ guardPassed: false })));
+    render(<App />);
+    await askIt(user);
+
+    const strip = await screen.findByTestId("answer-meta");
+    expect(strip).toHaveTextContent(/refused/i);
+    // A green tick beside "Refused" reads as "done, fine" at a glance.
+    expect(strip).not.toHaveTextContent("✓");
+  });
+
+  it("never reports a grounding verdict the run did not give (F-4.9-A-02)", async () => {
+    const user = userEvent.setup();
+    openEventStreamMock.mockImplementation(serve(variant({ trust: null })));
+    render(<App />);
+    await askIt(user);
+
+    await screen.findByTestId("answer-meta");
+    /*
+     * In a cite-or-refuse system the ABSENCE of a grounding verdict must read
+     * as "not verified", never as silence. A dropped or never-emitted
+     * trust_signal turned the guarded state into the unguarded one.
+     */
+    expect(screen.getByTestId("trust-risk")).toHaveTextContent(/not verified/i);
+  });
+
+  it("keeps backend text and cost figures off the screen when a run dies (F-4.9-A-01)", async () => {
+    const user = userEvent.setup();
+    openEventStreamMock.mockImplementation(serve(variant({ fatal: true })));
+    render(<App />);
+    await askIt(user);
+
+    const failure = await screen.findByTestId("answer-failure");
+    expect(failure).not.toHaveTextContent(/\$0\.0/);
+    expect(failure).not.toHaveTextContent(/synth tier/i);
+    expect(failure).toHaveTextContent(/could not be completed/i);
+  });
+
+  it("floors the trust verdict when the run dies (F-4.9-A-01)", async () => {
+    const user = userEvent.setup();
+    openEventStreamMock.mockImplementation(serve(variant({ fatal: true })));
+    render(<App />);
+    await askIt(user);
+
+    await screen.findByTestId("answer-failure");
+    // The last positive verdict emitted before the crash must not survive it.
+    // This is build phase 4.1's closed critical, at the UI layer.
+    expect(screen.queryByText(/grounded · every claim cited/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId("trust-risk")).toBeInTheDocument();
+  });
+
+  it("colours each citation chip by its OWN source's layer (F-4.9-A-04)", async () => {
+    const user = userEvent.setup();
+    openEventStreamMock.mockImplementation(serve(variant({ twoLayerClaim: true })));
+    render(<App />);
+    await askIt(user);
+
+    await screen.findByTestId("citation-1");
+    // Chip 2 points at a Layer 3 PubTator annotation. Painting it Layer 1
+    // tells the reader a text-mined co-mention is a curated graph assertion.
+    expect(screen.getByTestId("citation-1")).toHaveAttribute("data-layer", "1");
+    expect(screen.getByTestId("citation-2")).toHaveAttribute("data-layer", "3");
   });
 
   // ---------------------------------------------------------------- F-4.8-A-20

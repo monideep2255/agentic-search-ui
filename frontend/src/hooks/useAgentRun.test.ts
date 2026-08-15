@@ -229,7 +229,22 @@ describe("useAgentRun", () => {
       "token",
       "error",
     ]);
-    expect(result.current.error).toBe(FATAL_ERROR.message);
+    /*
+     * CHANGED, and strictly strengthened, for F-4.9-A-01.
+     *
+     * This asserted `toBe(FATAL_ERROR.message)`, which locked the defect in:
+     * the hook surfaced the backend's raw text, and an adversary rendered
+     * "synth tier failed after $0.019 of $0.02 spent on run r-99" on the
+     * answer screen. Section 12.6's no-cost-figure rule can only be
+     * guaranteed by never rendering those fields.
+     *
+     * The guarantee this test held, that a fatal error surfaces AN error, is
+     * unchanged and still asserted. What is added is that the error must NOT
+     * be the backend's own words.
+     */
+    expect(result.current.error).toBeTruthy();
+    expect(result.current.error).not.toContain(FATAL_ERROR.message);
+    expect(result.current.error).toContain(FATAL_ERROR.error_class);
   });
 
   it("aborts the underlying fetch when the component unmounts", async () => {

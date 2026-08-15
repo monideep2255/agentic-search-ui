@@ -310,6 +310,7 @@ export function App() {
             trust={view.trust}
             meta={view.meta}
             outcome={view.outcome}
+            outcomeTone={view.outcomeTone}
             elapsedMs={view.elapsedMs}
             steps={view.steps}
             // F-4.8-J-02. A refusal or a fatal error arrives with a `done` or
@@ -318,7 +319,12 @@ export function App() {
             // build phase 3.0's guardrail was unreachable: a refused question
             // rendered as a blank page.
             refusal={view.refusal}
-            failure={dispatchError ?? streamError ?? view.failure}
+            /*
+             * `view.failure` BEFORE `streamError` (F-4.9-A-01). The other
+             * order put the raw stream error ahead of the curated string, so
+             * on the fatal path the curated one was unreachable dead code.
+             */
+            failure={dispatchError ?? view.failure ?? streamError}
             capMessage={view.capMessage}
             feedback={<FeedbackSurface key={searchView.question} />}
             followUp={

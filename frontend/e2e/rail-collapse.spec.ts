@@ -61,6 +61,24 @@ async function signInAndAsk(page: Page): Promise<void> {
     .fill("Which diseases are associated with BRCA1?");
   await main.getByRole("button", { name: /^search the knowledge graph$/i }).click();
   await expect(page.getByTestId("history-rail")).toBeVisible({ timeout: 30_000 });
+
+  /*
+   * WAIT FOR THE RUN TO LAND before returning (F-4.9-J-03).
+   *
+   * Every clause in this file measures geometry, and this helper used to
+   * return as soon as the rail appeared, which is while the run is still
+   * streaming. Build phase 4.9 added the run screen's reasoning log, so the
+   * layout now shifts UNDER the measurement: a judge measured the content's
+   * left edge moving 111px and the shell growing from 566 to 577px mid-run.
+   *
+   * The suite was 29 of 29 twice on `develop` and 28 of 29 in two of three
+   * runs on this branch, a different geometry clause each time. The lead
+   * reported that as worker contention and was wrong; this is the mechanism.
+   *
+   * `answer-meta` exists only once the run has terminated, so waiting on it
+   * means every measurement below is taken against a settled page.
+   */
+  await expect(page.getByTestId("answer-meta")).toBeVisible({ timeout: 30_000 });
 }
 
 /** The box of the screen's own content, anchored on its heading's glyphs. */

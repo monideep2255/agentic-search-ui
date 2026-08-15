@@ -110,6 +110,8 @@ export interface RunView {
   outcome: string | null;
   /** Wall-clock the run reported, in ms, from `done.elapsed_ms`. */
   elapsedMs: number | null;
+  /** How the outcome word should read: a success, a caution, or a refusal. */
+  outcomeTone: "good" | "warn" | "risk" | null;
   /**
    * How many DISTINCT layers the run actually touched (F-4.8-D-12).
    *
@@ -169,6 +171,7 @@ export const EMPTY_RUN_VIEW: RunView = {
   steps: [],
   outcome: null,
   elapsedMs: null,
+  outcomeTone: null,
   layerCount: 0,
   landed: false,
   failure: null,
@@ -382,7 +385,32 @@ export function useRunView(events: AgentEvent[]): RunView {
     // 3d now does.
     const trustEvents = events.filter((event) => event.type === "trust_signal");
     const trust: TrustSignal[] = [];
-    if (trustEvents.length > 0) {
+    /*
+     * F-4.9-A-01 and F-4.9-A-02, both critical, both about what SILENCE means.
+     *
+     * A-01: a run that died fatally kept whatever positive verdict it had
+     * emitted before dying, so "Grounded · every claim cited" sat over a
+     * crashed, partial answer. This is build phase 4.1's closed critical, whose
+     * fix was to floor the top-level trust signal on any fatal or cancelled
+     * run, reintroduced here at the UI layer. The verdict is floored the same
+     * way, and the positive signals are dropped rather than shown alongside.
+     *
+     * A-02: a run that emitted NO trust signal at all rendered no pill at all,
+     * so a dropped or never-emitted event turned the guarded state into the
+     * unguarded one silently. In a cite-or-refuse system the absence of a
+     * grounding verdict must read as "not verified", never as no comment.
+     */
+    if (fatalError !== undefined) {
+      trust.push({
+        kind: "risk",
+        label: "Not verified · the run did not finish",
+      });
+    } else if (trustEvents.length === 0 && landed) {
+      trust.push({
+        kind: "risk",
+        label: "Not verified · no grounding check was recorded",
+      });
+    } else if (trustEvents.length > 0) {
       // F-4.8-A-19. `indexOf` returns -1 for an unknown tier, which LOST to
       // "low" at 0, so a tier the backend renames or adds would silently
       // disappear rather than show. `risk_tier` is typed as a bare string on
@@ -501,18 +529,52 @@ export function useRunView(events: AgentEvent[]): RunView {
       ask: "Needs a narrower question",
       refuse: "Refused",
     };
+    /*
+     * The AFFORDANCE each outcome deserves (F-4.9-A-03, critical).
+     *
+     * The screen rendered `✓ {outcome}` in the success green for all four, so
+     * a refusal read "✓ Refused" and an ask-back read "✓ Needs a narrower
+     * question", both ticked and both green. A green tick beside "Refused" is
+     * the single most misread pair on this screen: at a glance it says "done,
+     * fine". Carried here rather than in the component so the mapping lives
+     * beside the words it dresses.
+     */
+    const OUTCOME_TONE: Record<string, "good" | "warn" | "risk"> = {
+      answer: "good",
+      flag: "good",
+      ask: "warn",
+      refuse: "risk",
+    };
     const outcome =
       fatalError !== undefined
         ? null
         : done && done.type === "done"
           ? (OUTCOME_BY_TRUST[done.payload.trust_outcome] ?? "Answered")
           : null;
+    const outcomeTone =
+      fatalError !== undefined || !done || done.type !== "done"
+        ? null
+        : (OUTCOME_TONE[done.payload.trust_outcome] ?? "good");
     const elapsedMs =
       done && done.type === "done" && typeof done.payload.elapsed_ms === "number"
         ? done.payload.elapsed_ms
         : null;
 
-    const layersUsed = new Set(toolCalls.map((call) => call.layer));
+    /*
+     * Counted from the SOURCES, not the tool calls (F-4.9-A-05, F-4.9-A-06).
+     *
+     * Two defects came from counting tool calls. A run whose citations arrive
+     * without `tool_result` events printed "0 layers agreed" beside source
+     * cards from two different layers. And a run that queried three layers but
+     * found citations in two put "3 layers" in the status strip directly above
+     * source cards showing two, contradicting itself on one screen.
+     *
+     * "How many layers agreed" is a claim about the ANSWER's grounding, so it
+     * has to be counted from what actually grounded the answer. The tools a
+     * run ran and found nothing in are still visible in the reasoning log,
+     * which is where a record of work belongs.
+     */
+    const layersUsed = new Set(sources.map((source) => source.layer));
     const layerCount = layersUsed.size;
     // Resolve the triangulation pill now that the count is known (F-4.8-D-12).
     for (const signal of trust) {
@@ -582,6 +644,7 @@ export function useRunView(events: AgentEvent[]): RunView {
       meta,
       steps,
       outcome,
+      outcomeTone,
       elapsedMs,
       layerCount,
       landed,

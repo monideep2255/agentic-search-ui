@@ -346,7 +346,22 @@ export function useAgentRun(runId: string | null, token: string | null): UseAgen
           // caller should surface (a later ticket's GuardrailBanner/
           // CapMessage read this), not merely "the stream ended".
           setStatus("error");
-          setError(finalEvent.payload.message);
+          /*
+           * F-4.9-A-01, critical. This was `setError(finalEvent.payload.message)`,
+           * which put the backend's own text on screen. An adversary produced
+           * "synth tier failed after $0.019 of $0.02 spent on run r-99",
+           * rendered verbatim on the answer screen.
+           *
+           * `useRunView` builds a fixed, interpolation-free failure string for
+           * exactly this reason, and `ReasoningLog`'s docstring says the same:
+           * Section 12.6's no-cost-figure rule can only be guaranteed by never
+           * rendering these fields. F-4.8-A-15 was this same leak, closed once
+           * already at a different call site.
+           *
+           * The error_class is kept, because it is a closed enum the UI may
+           * branch on, and it carries no free text.
+           */
+          setError(`run failed (${finalEvent.payload.error_class})`);
         } else {
           // Either a `done` event, or the stream ended (server closed
           // the connection, network EOF) without one. Both are treated

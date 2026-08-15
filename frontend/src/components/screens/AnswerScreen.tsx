@@ -73,6 +73,8 @@ export interface AnswerScreenProps {
   outcome?: string | null;
   /** Wall-clock the run reported, in ms (F-4.8-D-05). */
   elapsedMs?: number | null;
+  /** How the outcome word should read (F-4.9-A-03). */
+  outcomeTone?: "good" | "warn" | "risk" | null;
   /** The run's own account of what it did, behind `Show work` (F-4.8-D-05). */
   steps?: ReasoningStep[];
   trust?: TrustSignal[];
@@ -191,6 +193,7 @@ export function AnswerScreen({
   sources,
   meta,
   outcome = null,
+  outcomeTone = null,
   elapsedMs = null,
   steps = [],
   trust = [],
@@ -318,12 +321,27 @@ export function AnswerScreen({
                 data-testid="answer-meta"
                 sx={{ color: designTokens.inkMuted }}
               >
+                {/*
+                  F-4.9-A-03. This was `✓ {outcome}` in the success green for
+                  every outcome, so a refusal rendered "✓ Refused" and an
+                  ask-back "✓ Needs a narrower question", both ticked, both
+                  green. The glyph and the colour now follow the outcome.
+                */}
                 {outcome ? (
                   <Box
                     component="span"
-                    sx={{ color: designTokens.ok, fontWeight: 700, mr: 0.75 }}
+                    sx={{
+                      color:
+                        outcomeTone === "risk"
+                          ? designTokens.risk
+                          : outcomeTone === "warn"
+                            ? designTokens.warn
+                            : designTokens.ok,
+                      fontWeight: 700,
+                      mr: 0.75,
+                    }}
                   >
-                    ✓ {outcome}
+                    {outcomeTone === "risk" ? "⚠" : outcomeTone === "warn" ? "?" : "✓"} {outcome}
                   </Box>
                 ) : null}
                 {elapsedMs !== null ? `${(elapsedMs / 1000).toFixed(1)}s · ` : ""}
@@ -422,10 +440,18 @@ export function AnswerScreen({
 
               <Typography data-testid={`claim-text-${index}`} sx={{ maxWidth: "64ch" }}>
                 {claim.text}{" "}
+                {/*
+                  F-4.9-A-04. This announced one layer for the whole list,
+                  taken from the claim's FIRST citation, so a sentence citing a
+                  graph edge and a PubTator co-mention told a screen reader
+                  that both were layer 1. Each source now names its own.
+                */}
                 <Box component="span" sx={visuallyHidden}>
                   {claim.citations.length === 0
                     ? "This sentence has no source."
-                    : `Source ${claim.citations.join(" and ")}, layer ${claim.layer}.`}
+                    : claim.citations
+                        .map((n) => `Source ${n}, layer ${sourceByIndex.get(n)?.layer ?? claim.layer}`)
+                        .join("; ") + "."}
                 </Box>
                 {claim.citations.map((n, position) => (
                   <Box
@@ -433,7 +459,12 @@ export function AnswerScreen({
                     component="span"
                     data-testid={`citation-${n}`}
                     data-claim={index}
-                    data-layer={claim.layer}
+                    // The CITATION's own layer, not the claim's (F-4.9-A-04).
+                    // `claim.layer` is the first citation's, which is right for
+                    // the spine segment (one per claim) and wrong for a chip
+                    // (one per source): chip 2 of a graph-plus-literature claim
+                    // was painted navy while its own card read "L3 · literature".
+                    data-layer={sourceByIndex.get(n)?.layer ?? claim.layer}
                     aria-label={`Source ${n}`}
                     role="note"
                     sx={{
@@ -447,8 +478,8 @@ export function AnswerScreen({
                       px: 0.75,
                       borderRadius: 0.5,
                       border: `1px solid ${designTokens.lineStrong}`,
-                      borderLeft: `4px solid ${layerColour(claim.layer).main}`,
-                      bgcolor: layerColour(claim.layer).wash,
+                      borderLeft: `4px solid ${layerColour(sourceByIndex.get(n)?.layer ?? claim.layer).main}`,
+                      bgcolor: layerColour(sourceByIndex.get(n)?.layer ?? claim.layer).wash,
                       ml: position === 0 ? 0 : 0.5,
                     }}
                   >
@@ -518,6 +549,7 @@ export function AnswerScreen({
             </Typography>
             <Box
               component="span"
+              data-testid="sources-count"
               sx={{
                 ...mono,
                 fontSize: 11,
