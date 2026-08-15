@@ -231,7 +231,11 @@ test.describe("the stored-searches rail collapses", () => {
       name: /diseases are associated with BRCA1/i,
     });
     const railText = (await railItem.textContent())!.trim();
-    const counts = railText.match(/\d+ tools? · \d+ layers? · \d+ sources?/);
+    // The wording changed in the F-4.9-R-02 fix, from three bare nouns to
+    // "N tools · N sources from N layers", so each figure states what it
+    // counts. The GUARANTEE is untouched: the rail's label must still appear
+    // verbatim inside the answer's own strip.
+    const counts = railText.match(/\d+ tools? · \d+ sources?(?: from \d+ layers?)?/);
     expect(counts, `the rail item carried no counts: ${railText}`).not.toBeNull();
 
     await expect(page.getByTestId("answer-meta")).toContainText(counts![0]);

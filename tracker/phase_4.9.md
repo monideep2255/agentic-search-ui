@@ -3,7 +3,7 @@
 Branch: `phase/4.9-answer-screen-fidelity`
 Depends on: 4.8 (merged, closed out via PR #42 and PR #43)
 Opened: 2026-08-14
-Status: BUILD COMPLETE, in review. Gate 13 of 13 green, 16 mutations all red. Not yet judged or adversarially reviewed.
+Status: BUILD COMPLETE, THREE REVIEW ROUNDS RUN, all three returned FAIL. Gate 21 of 21 green, 15 mutations all red. A fourth round has not run.
 
 Deliverable: close the nine fidelity gaps between the running app and the approved prototype, plus the account menu. Scheduled 2026-08-14 by product-owner decision rather than left as undated flags.
 
@@ -11,6 +11,7 @@ Deliverable: close the nine fidelity gaps between the running app and the approv
 
 - [The premise](#the-premise)
 - [What shipped](#what-shipped)
+- [Review rounds](#review-rounds)
 - [Tickets](#tickets)
 - [What is deliberately not in this phase](#what-is-deliberately-not-in-this-phase)
 - [How these were found](#how-these-were-found)
@@ -29,9 +30,9 @@ Every ticket below is done. The gate went from 12 clauses all red to 13 all gree
 
 | Gate | Result |
 |------|--------|
-| `phase49Premise.test.tsx` | 13 of 13 |
-| Mutations | 16, every one red, one per clause plus the guard-copy regression |
-| vitest | 147 passed, three consecutive runs |
+| `phase49Premise.test.tsx` | 21 of 21 |
+| Mutations | 15 across the fix rounds, every one red, each against the check that owns it |
+| vitest | 155 passed |
 | Playwright | 29 passed, run serially to get the true count |
 | Typecheck | Clean |
 | Production build | Succeeds |
@@ -61,6 +62,41 @@ That is the THIRD instance of one underlying problem, after F-4.8-D-08's two: th
 - The rail's counts assertion was INVERTED rather than relaxed: the answer strip is now a superset of the rail's label, so the rail's counts must appear verbatim inside the strip.
 - An accessibility locator moved from the text "Guard" to the stepper's own `step-Guard` hook, because the reasoning log names the steps too and a bare text match resolved to two elements intermittently.
 - `testTimeout` raised from vitest's 5s default to 15s. A deadline, not an assertion: with the stream leak fixed but the default restored, three of five full runs still failed on ~5000ms timeouts, always a different set, every implicated file passing alone.
+
+## Review rounds
+
+Three rounds, all FAIL. Every finding was reproduced in code before being fixed; none was taken on a reviewer's word.
+
+| Round | Verdict | Findings |
+|-------|---------|----------|
+| Adversary 1 | | 19: 4 critical, 6 major, 6 moderate, 3 minor |
+| Judge 1 | FAIL | 14: 0 critical, 3 major, 3 moderate, 8 minor |
+| Re-review of the fix round | FAIL | 14: 0 critical, 5 major, 4 moderate, 5 minor |
+
+### What each round caught that the previous one could not
+
+The judge's two majors were about the GATE, not the product: a count assertion that read the whole `<details>` and so survived deleting the badge it was written for (the fixture's third source id, `21990134`, contains a "3"), and a fixture collinear on every axis it asserted, where citation index equalled layer equalled card position and tools equalled layers equalled sources. Rebuilding the fixture honestly then exposed two shipped defects the old one was structurally incapable of seeing.
+
+The re-review's value was almost entirely in the fix round itself: three of its five majors are regressions the fix round introduced. That is the pattern this repository has measured across four consecutive phases, and it held again.
+
+- The A-05 fix MOVED the "0 layers agreed" nonsense rather than removing it, from a run with citations and no tool results to a run with tools and no citations.
+- The A-01 fix collapsed every fatal class onto one sentence, so a run the USER stopped was told "This run could not be completed. Try asking again".
+- The A-04 clause asserted `data-layer` alone, a test hook no user meets, while mutations reverting the chip's COLOUR and its screen-reader text both left it green. Those two were the harms the finding actually named.
+
+### Findings not fixed, with a disposition each
+
+The three rounds filed 47 findings. The criticals, all five majors from the re-review, and the counting defects are closed above. The rest are recorded here so none is a silent deferral, per `task-tracker`'s raiser-never-closes rule: none of these is closed, each has an owner.
+
+| Finding | Why not now | Owner |
+|---------|-------------|-------|
+| F-4.9-A-08 stopped run gives no terminal signal, tool chip says "running" for ever | The backend emits a purpose-built `cancelled` event that the client aborts before it can arrive. Fixing it means changing the stop path, not the answer screen | A phase that owns the run lifecycle |
+| F-4.9-A-09 the off-host citation warning is now two disclosures deep | Real, and caused by this phase's collapse. Whether a security warning may sit behind a disclosure at all is a product call, not a styling one | Product owner decision |
+| F-4.9-A-16 "unlimited searches" is false against a shipped 100/day cap | A copy change that asserts a policy. Build phase 6.0g owns the allowance and its wording | 6.0g |
+| F-4.9-A-07 failed tool calls counted as work | Needs a decision on whether the strip counts attempts or successes, which interacts with F-4.9-R-02's wording | 4.9 follow-up or 6.0g |
+| F-4.9-A-10 to A-15, A-17 to A-19 | Moderate and minor: truncation invisible, `total_tool_calls` ignored, duplicate-index citation dropped, refusal copy duplicated | A follow-up pass on the answer screen |
+| F-4.9-J-04 `L3 · trials` for a ClinicalTrials.gov source | Derivable today from the citation's own tool, and a real prototype gap this phase did not declare | 4.9 follow-up |
+| F-4.9-J-05, J-06 reasoning is a heading not a `<details>`, Show work drops the tool chips | Prototype gaps, same class as the nine this phase closed | 4.9 follow-up |
+| F-4.9-J-07 to J-14, F-4.9-R-06 to R-14 | Minor and moderate, including the design-system audit's own findings | A follow-up pass |
 
 ## Tickets
 
