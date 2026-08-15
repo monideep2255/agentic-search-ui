@@ -954,6 +954,116 @@ def dedupe_slugs(slugs: list[str]) -> list[str]:
     return result
 
 
+# Files whose body is one long append-only table, and the cells that must
+# carry a `<details>` dropdown in every dated row. Both facts are load-bearing
+# for a reader: DECISIONS.md's `Why` is a median of 538 characters and
+# LEARNINGS.md's last two cells are the bulk of an entry, so an unwrapped
+# append does not merely look different, it stops the table being scannable.
+# A dated table row in either append-only file. LEARNINGS.md has one row dated
+# as a RANGE ("2026-08-10/11"), so the day part is matched loosely on purpose.
+DATED_ROW_RE = re.compile(r"^\| \d{4}-\d{2}-\d{2}")
+
+
+def split_unescaped_pipes(row: str) -> list[str]:
+    """Split a markdown table row into cells, respecting escaped pipes.
+
+    Four DECISIONS.md rows contain a literal `\|` inside a cell. Splitting on
+    every pipe shreds those rows and would make this check report phantom
+    column-count errors on content that is perfectly correct.
+    """
+    parts = re.split(r"(?<!\\)\|", row)
+    if parts and parts[0].strip() == "":
+        parts = parts[1:]
+    if parts and parts[-1].strip() == "":
+        parts = parts[:-1]
+    return parts
+
+
+COLLAPSIBLE_TABLES = {
+    "DECISIONS.md": {"header": "| Date | Decision |", "wrapped": ["Why"]},
+    "LEARNINGS.md": {"header": "| Date | Applies to |", "wrapped": ["What was tried", "What fixed it"]},
+}
+
+
+def check_append_only_table(rel: str, lines: list[str], mask: list[bool]) -> list[Finding]:
+    """Guard the two append-only tables against the two ways they actually broke.
+
+    Both failures happened on 2026-08-14 and neither was caught by anything:
+
+    1. A BLANK LINE inside the table. Markdown ends a table at the first blank
+       line, so DECISIONS.md rendered 39 of its 311 rows and the remaining 273
+       became loose text. The source still contained every row and every
+       dropdown, so every source-level check passed. The product owner found it
+       by looking at the rendered page.
+
+    2. A row MISSING its `<details>` wrapper. The next append after a format
+       change looks correct in isolation and quietly breaks the scan, which is
+       the whole reason the format is written into `decision-logging.md` and
+       the `learnings` skill. An instruction is not enforcement.
+
+    This is deliberately a STRUCTURAL check rather than a rendered one: it needs
+    no renderer and no new dependency, and it fails on exactly the two shapes
+    that have actually gone wrong rather than on a general notion of validity.
+    """
+    spec = COLLAPSIBLE_TABLES.get(rel)
+    if spec is None:
+        return []
+
+    findings: list[Finding] = []
+    header_idx = next(
+        (i for i, line in enumerate(lines) if not mask[i] and line.startswith(spec["header"])),
+        None,
+    )
+    if header_idx is None:
+        return [Finding("structural", rel, 1, f"expected an append-only table starting {spec['header']!r}, found none")]
+
+    columns = [c.strip() for c in split_unescaped_pipes(lines[header_idx])]
+    try:
+        targets = {name: columns.index(name) for name in spec["wrapped"]}
+    except ValueError as exc:
+        return [Finding("structural", rel, header_idx + 1, f"table header is missing a column this check depends on: {exc}")]
+
+    # Walk from the separator to the end of the dated rows.
+    i = header_idx + 2
+    seen_row = False
+    while i < len(lines):
+        line = lines[i]
+        if DATED_ROW_RE.match(line):
+            seen_row = True
+            cells = split_unescaped_pipes(line)
+            if len(cells) != len(columns):
+                findings.append(Finding(
+                    "structural", rel, i + 1,
+                    f"table row has {len(cells)} columns, header has {len(columns)}",
+                ))
+            else:
+                for name, idx in targets.items():
+                    if "<details>" not in cells[idx]:
+                        findings.append(Finding(
+                            "structural", rel, i + 1,
+                            f"the {name!r} cell is missing its <details> wrapper; see decision-logging.md "
+                            f"for the row shape, an unwrapped append breaks the table's scan",
+                        ))
+            i += 1
+            continue
+        if line.strip() == "":
+            # A blank line only matters if the table CONTINUES after it: that is
+            # the shape that silently truncates the rendered table.
+            j = i
+            while j < len(lines) and lines[j].strip() == "":
+                j += 1
+            if seen_row and j < len(lines) and DATED_ROW_RE.match(lines[j]):
+                findings.append(Finding(
+                    "structural", rel, i + 1,
+                    "blank line INSIDE the table: markdown ends a table here, so every row below "
+                    "renders as loose text. This is how 273 of 311 rows stopped rendering on 2026-08-14",
+                ))
+                i = j
+                continue
+        break
+    return findings
+
+
 def check_toc(rel: str, lines: list[str], mask: list[bool]) -> list[Finding]:
     findings: list[Finding] = []
     toc_idx = None
@@ -1101,6 +1211,7 @@ def scan_structural(files: list[Path], facts: dict[str, Fact]) -> list[Finding]:
         findings.extend(check_toc(rel, lines, mask))
         findings.extend(check_duplicate_phase_headings(rel, lines, mask))
         findings.extend(check_last_updated(rel, lines, mask))
+        findings.extend(check_append_only_table(rel, lines, mask))
         # "next phase" is a currency claim; a dated session/meeting capture
         # narrating what was next AT THE TIME is not one. TOC, duplicate
         # heading, and last-updated staleness are structural hygiene checks

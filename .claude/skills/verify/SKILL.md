@@ -83,7 +83,7 @@ Keep the `test -f frontend/package.json` guard for robustness, but do not treat 
 python tracker/check_doc_drift.py --check
 ```
 
-Computes the tracked counts from source (Python tests, frontend tests, Playwright tests, the premise gate, DECISIONS.md rows, LEARNINGS.md entries, open flags, build-phase statuses, merged pull request numbers) and fails when any tracked document states a stale value. It also checks structure: a table of contents that does not match its body, two sections describing the same build phase, a last-updated date older than the file's newest content, and a phase called "next" that the board marks done.
+Computes the tracked counts from source (Python tests, frontend tests, Playwright tests, the premise gate, DECISIONS.md rows, LEARNINGS.md entries, open flags, build-phase statuses, merged pull request numbers) and fails when any tracked document states a stale value. It also checks structure: a table of contents that does not match its body, two sections describing the same build phase, a last-updated date older than the file's newest content, a phase called "next" that the board marks done, and the integrity of the two append-only tables in DECISIONS.md and LEARNINGS.md (a blank line inside a table, which silently truncates it when rendered, a row missing the `<details>` wrapper its format requires, and a row whose column count does not match the header).
 
 Exit 0 is clean. A nonzero exit names each drifted document as `path:line`. Fix the document, then rerun. Never pass this check by narrowing it, and never report it as skipped when the script exists.
 
