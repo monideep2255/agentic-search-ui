@@ -628,12 +628,12 @@ export function AnswerScreen({
               </Box>
 
               {/*
-                The flag control, moved OUT of the summary in build phase 4.9.
-                The prototype puts it in the summary row, and axe rightly calls
-                that `nested-interactive`: a `<summary>` with a focusable
-                descendant, WCAG 4.1.2. A card is flagged after reading it, so
-                requiring the card to be open first costs nothing. Filed as
-                F-4.9-D-13 rather than silently diverging.
+                The flag control sits in the card BODY, not the summary row.
+                The prototype used to put it in the summary, and axe rightly
+                calls that `nested-interactive`: a `<summary>` with a focusable
+                descendant, WCAG 4.1.2. This shipped as a deviation
+                (F-4.9-D-13); the design-system focus-nesting pass of
+                2026-08-14 moved it in the design too, so the two agree.
               */}
                 {onFlagSource ? (
                   <Box
