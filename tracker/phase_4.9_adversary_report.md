@@ -21,6 +21,7 @@ The worst: F-4.9-A-01. A run that died on a fatal error mid-answer renders the b
 
 ## Table of contents
 
+- [Count by severity](#count-by-severity)
 - [Critical](#critical)
 - [Major](#major)
 - [Moderate](#moderate)
