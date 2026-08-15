@@ -3,7 +3,11 @@
 Branch: `phase/4.10-guest-allowance`
 Depends on: 1.1 (merged, PR #6), 4.0 (merged, PR #39)
 Opened: 2026-08-15
-Status: OPEN. Decomposed, premise gate written and WATCHED FAILING, 16 of 17 red. Builders not yet dispatched.
+Status: BUILD COMPLETE. Five review rounds run: a judge round (FAIL), an adversary round, three fix rounds, and a re-review (FAIL). A narrow independent verification of the newest security code is the last round. 26 findings closed including four criticals; ten carried with a named owner each, in "Carried open, with an owner each" below.
+
+Gates at close: Python 2593 passed with the 6 known live-network-gated failures carried since build phase 4.0, this phase's own gate at 32 clauses, all green, frontend 177, Playwright 30 of 30 including the full axe sweep, typecheck and production build clean, `ruff` at its 5 pre-existing errors, alembic revisions 0003 through 0005 each applied and rolled back against the live database.
+
+One number worth stating plainly, since this phase's whole argument rests on it: an anonymous caller could start 200 paid pipelines in 1.68 seconds and take the product offline for everyone else for the rest of the day. That is now 10, and the day's shared budget is untouched.
 
 Premise gate: `tests/system_03_search_agent/adapters/web_sse/test_phase_4_10_premise.py`. First run, 2026-08-15, before any implementation existed: 16 failed, 1 passed. The failures are the correct direction, `POST /auth/guest` returning 404 and no `system_03_search_agent.auth.guest` module to import. The single pass is recorded as VACUOUS in the test's own docstring: everything returns 401 today, so the domain-separation clause cannot yet tell "the derivation is right" from "nothing exists". The judge re-runs that one clause against a working guest path with the derivation replaced by bare `AUTH_SECRET` and watches it go red before crediting it.
 
@@ -18,6 +22,7 @@ Deliverable: a visitor with no account can ask a real question and get a real an
 - [Builder partition](#builder-partition)
 - [What is deliberately not in this phase](#what-is-deliberately-not-in-this-phase)
 - [Findings](#findings)
+- [Carried open, with an owner each](#carried-open-with-an-owner-each)
 
 ## The premise
 
@@ -522,3 +527,20 @@ Two things worth carrying:
 
 - The first version enforced the ratio inside `anon_daily_run_cap()`, which is stronger in principle: it refuses the misconfiguration rather than testing for it. It turned 7 legitimate tests red, because every clause exercising the daily ceiling sets a deliberately tiny cap to reach the boundary in a few requests. A control that forces the tests exercising a bound to stop exercising it is a bad control however much it catches, so it was reverted for the weaker one. Stated rather than quietly chosen.
 - What the shipped-defaults test does NOT catch: an operator setting a bad value in a real `.env`. Closing that needs startup-time config validation this service does not have. Owner: build phase 6.1's hardening pass.
+
+## Carried open, with an owner each
+
+Triaged 2026-08-15 at phase close. Nothing below is unowned, and nothing is left as "someone should look at this", which is the disposition `LEARNINGS.md` records falling through twelve phases.
+
+| Finding | What it is | Owner |
+|---------|-----------|-------|
+| F-4.10-05 | `blocked_reason` is on the wire and honest; the UI does not read it, so on a day the system hits its anonymous ceiling the dots can still show searches left before a truthful 429. Narrower than the F-4.10-A-03 it descends from: the guest's own numbers are true and the refusal is honest when it comes | The next frontend ticket. Small: `App.tsx` already fetches this response and already has a wall |
+| F-4.10-A-09 | A non-UUID `guest_id` inside a validly signed token escapes as an unhandled 500 rather than a handled rejection. Unreachable without the derived signing key, so latent rather than live. The docstring claiming a backstop was corrected; the backstop itself was not added, because where the shape check belongs (the decoder's contract, or the reader's) is a design decision, not a line to slip in under a comment fix | Build phase 6.1's hardening pass, or whichever ticket next touches `decode_guest_token`'s contract |
+| F-4.10-A-10 | The concurrent-run cap (5) equals the free allowance (5), so a guest who has spent everything can reach the 429 path and be told to wait for a run to finish, which is untrue advice for them. The two caps meaning different things while sharing a number is also what made the concurrency clause unable to fail (F-4.10-J-02) | The next backend ticket. Changing either constant fixes it; the message needs to branch on which bound was hit |
+| F-4.10-A-11 | A guest's lifetime allowance renders as "N of 5 searches left today". Nothing in the guest path has a daily boundary. The word is wrong, not the number | The next frontend ticket, with F-4.10-05. One-line branch on `allowance.kind` |
+| F-4.10-A-12 | The allowance refresh after a run is fire-and-forget, so a failed refresh leaves the dots stale in the direction that ends in a refusal rather than the direction that ends in a surprise | The next frontend ticket |
+| F-4.10-A-13 | A first-time visitor never sees the five dots at all, because minting is lazy and the footer renders only once an allowance exists. The affordance the design uses to make the offer is invisible until after the offer has been taken | Product owner: whether the dots should appear before the first ask is a design question, not a bug. It interacts with the deliberate choice not to mint on page load |
+| F-4.10-A-14 | After migration `RunEntry.user_id` is rewritten but the run's own `Query.user_id` stays `None`. Not reachable today, since nothing reads `Query.user_id` after a run starts. It becomes live the moment build phase 4.6 writes an `interactions` row from a migrated run, which would then be attributed to nobody | Build phase 4.6, and before it writes its first `interactions` row |
+| Playwright flakiness | The frontend suite disagreed with itself across three consecutive runs at its 15s timeout under load (F-4.10-R-10). A gate that fails a tenth of its cases under load is a gate that gets ignored | Build phase 6.1, with CI, since CI is where load-dependent flakiness stops being anecdotal |
+| `FollowUp.tsx` fallback | `searchLimitLabel ?? "Search limit applies"` is dead today (`App.tsx` always passes a value) and would be false if it ever rendered | The next frontend ticket, with F-4.10-05 |
+| `alembic/0004`'s docstring | Says the daily cap is "the only enforced spending bound on an anonymous caller", which stopped being true at revision 0005. Left alone deliberately: a landed migration's prose describes the state at that revision | Nobody. Recorded so the next reader knows it is stale by design rather than by neglect |
