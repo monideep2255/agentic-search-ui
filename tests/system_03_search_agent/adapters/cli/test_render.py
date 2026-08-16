@@ -465,15 +465,26 @@ class TestMarkerFidelity:
         assert "second claim [1]" in rendered
 
     def test_an_unresolved_marker_is_reported_honestly_never_dropped_silently(self) -> None:
-        """F-4.2-A-26 (adversary round 1): this diagnostic used to land on
-        stdout, inside the references block, so `s3 ask "..." >
-        answer.txt` captured it alongside the citations a reader expects
-        that file to hold. It is now on stderr instead. The disclosure
-        itself is unchanged (still honest, never silently dropped); only
-        its destination moved, so this test now asserts BOTH halves: the
-        marker is reported (on stderr) and it is not on stdout, which is
-        strictly stronger than the original assertion that only checked
-        presence somewhere."""
+        """F-4.2-A-26 (adversary round 1) moved this disclosure off
+        stdout, reasoning it used to sit INSIDE the numbered references
+        list where it could be mistaken for a genuine citation row. This
+        test used to assert the note was stderr-only.
+
+        F-4.2-D-04 (round 4, Depth review) reversed the STREAM half of
+        that move, not the SHAPE half: a redirected `s3 ask "..." >
+        answer.txt` has no stderr a later reader can consult, so
+        stderr-only silence left exactly the reader who most needs the
+        disclosure, someone auditing the saved answer file, with a `[9]`
+        marker and no way to learn it was never sourced. The fix keeps
+        the note on stderr for a live operator AND adds a distinctly
+        shaped `[unresolved: ...]` line to stdout, never one of the
+        numbered `[n] source - url` rows, so it still cannot be mistaken
+        for a real citation. This test's assertions are therefore
+        strictly stronger than the F-4.2-A-26 version, not weaker: it
+        keeps every original stderr assertion unchanged and adds the new
+        stdout requirement plus a check that stdout gets no empty
+        "References:" header (F-4.2-D-04's other half, covered again on
+        its own in `TestDepthReviewRoundFourFixes` below)."""
         out, err = io.StringIO(), io.StringIO()
         renderer = Renderer(out, err, operator=False)
         renderer.handle(_guard_passed())
@@ -498,11 +509,22 @@ class TestMarkerFidelity:
         # and "unresolved" would vanish from both streams.
         assert "c-missing" in stderr_text
         assert "unresolved" in stderr_text.lower()
-        # Mutation: revert the F-4.2-A-26 fix and write it back to stdout
-        # -> "c-missing" would reappear in `stdout_text`, corrupting a
-        # redirected `answer.txt` with an internal completeness note.
-        assert "c-missing" not in stdout_text
-        assert "unresolved" not in stdout_text.lower()
+        # Mutation: revert F-4.2-D-04 and go back to stderr-only -> both
+        # of these would fail, and a redirected answer.txt would again
+        # show a `[9]` marker with no sign it was ever unresolved.
+        assert "c-missing" in stdout_text
+        assert "unresolved" in stdout_text.lower()
+        # Zero citations were ever delivered, so no numbered reference
+        # line, and no "References:" header, may appear at all: only the
+        # distinctly bracketed unresolved note.
+        # Mutation: fall through to the header write unconditionally ->
+        # "References:" would appear in stdout_text with nothing under it.
+        assert "References:" not in stdout_text
+        # Mutation: format the unresolved note using the same `[n] ` shape
+        # as a real citation row (e.g. "[9] " instead of
+        # "[unresolved: ...]") -> a reader could no longer tell it apart
+        # from a genuine, sourced citation.
+        assert "[unresolved:" in stdout_text
 
 
 class TestNeverCostTwoLayers:
@@ -1269,6 +1291,191 @@ class TestAnswerIsFlushedLive:
         # Mutation: drop `self._err.flush()` from `_handle_think` -> this
         # stays 0.
         assert flush_err.flush_count >= 1
+
+
+class TestDepthReviewRoundFourFixes:
+    """Round-4 Depth-tier findings on `render.py`. Reproduces the
+    reviewer's own repro payloads directly: F-4.2-D-01 (references
+    dropped on every terminal path except a clean `done`), F-4.2-D-04
+    (an empty "References:" header could reach the answer surface), and
+    F-4.2-D-03 (the HTTP-level error renderer bypassed the sanitizer
+    entirely)."""
+
+    def test_a_fatal_cancelled_error_after_a_delivered_citation_still_prints_the_references_block(
+        self,
+    ) -> None:
+        """F-4.2-D-01: `render.py:715`'s old guard, `if self._exit_code
+        is None`, only ran `_write_references_block()` on the
+        undetermined-state fallback. A stopped run's terminal event is a
+        fatal `error` with `error_class="cancelled"`, never a `done`, and
+        `_handle_error` always sets `_exit_code` itself for a fatal
+        error, so this path skipped the guard entirely and never printed
+        the block at all. The reviewer's own reproduction: a citation was
+        delivered, the run was then stopped, and `answer.txt` held a
+        `[1]` marker with no references section under it."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(
+            TokenPayloadEventBuilder.token(
+                "The BRCA1 c.68_69delAG variant is pathogenic [1]. "
+            )
+        )
+        renderer.handle(_event("citation", 2, _citation("c1", 1)))
+        renderer.handle(
+            _event(
+                "error", 3,
+                ErrorPayload(
+                    fatal=True, scope="run", source="run_registry",
+                    error_class="cancelled", message="stopped by caller",
+                    retry_after_s=0,
+                ),
+            )
+        )
+        exit_code = renderer.finish()
+
+        assert exit_code != 0
+        stdout_text = out.getvalue()
+        # Mutation: move `self._write_references_block()` back inside the
+        # `if self._exit_code is None:` branch in `finish()` -> the
+        # fatal-error path (which sets `_exit_code` in `_handle_error`
+        # before `finish()` ever runs) skips the call entirely, and
+        # "References:" vanishes from `stdout_text`.
+        assert "References:" in stdout_text
+        assert "ncbi_gene" in stdout_text
+        assert "https://www.ncbi.nlm.nih.gov/gene/672" in stdout_text
+        # The error's own actionable disclosure is still on stderr,
+        # unaffected by this fix.
+        assert "stopped before it finished" in err.getvalue()
+
+    def test_finish_still_prints_references_exactly_once_when_done_already_printed_them(
+        self,
+    ) -> None:
+        """Idempotence paired with the F-4.2-D-01 fix: `_handle_done`
+        already calls `_write_references_block()` on the clean path, and
+        `finish()` now calls it unconditionally on every path, including
+        this one. The `_printed_references` guard must keep the second
+        call a no-op, never a duplicate block."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        _feed_golden_path(renderer)
+        exit_code = renderer.finish()
+        assert exit_code == 0
+        stdout_text = out.getvalue()
+        # Mutation: drop the `_printed_references` guard in
+        # `_write_references_block` -> this becomes 2.
+        assert stdout_text.count("References:") == 1
+
+    def test_a_marker_with_zero_delivered_citations_never_prints_an_empty_references_header(
+        self,
+    ) -> None:
+        """F-4.2-D-04: the reviewer's own reproduction. Round 2's
+        F-4.2-A-26 fix moved the unresolved-marker note off stdout but
+        left the header's guard, `if not self._citations and not
+        unresolved: return`, untouched; with zero delivered citations and
+        one unresolved marker that guard's condition is False (the
+        `unresolved` half is non-empty), so it fell through and printed
+        "\\nReferences:\\n" with no `[n]` line under it at all, an empty
+        section on the exit-0 success path, presented as complete."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(
+            _event(
+                "token", 1,
+                TokenPayload(
+                    text="BRCA1 is associated with hereditary breast cancer [1]. ",
+                    marker_ids=["c1"],
+                ),
+            )
+        )
+        # No citation event for "c1" is ever sent.
+        renderer.handle(
+            _event(
+                "trust_signal", 2,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        renderer.handle(
+            _event("done", 3, DonePayload(total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=1, trust_outcome="answer"))
+        )
+        exit_code = renderer.finish()
+
+        assert exit_code == 0
+        stdout_text = out.getvalue()
+        # Mutation: revert to the original guard with the header write
+        # unconditional below it -> "References:\n" reappears in
+        # `stdout_text` with nothing under it.
+        assert "References:" not in stdout_text
+        # The gap is still disclosed honestly on the answer surface, just
+        # never framed as an empty citations section.
+        assert "unresolved" in stdout_text.lower()
+        assert "c1" in stdout_text
+
+    def test_a_server_error_page_disguised_as_a_non_json_body_is_sanitized_before_stderr(
+        self,
+    ) -> None:
+        """F-4.2-D-03: the reviewer's own reproduction needs no hostile
+        server, only a proxy or CDN error page in front of the API.
+        `client.py`'s `_parse_error_detail` falls back to
+        `response.text.strip()` for any non-JSON error body, so a raw 502
+        page can reach `CliApiError.message` verbatim; before this fix,
+        `_render_cli_api_error` wrote it straight to `err` with no call
+        to `_sanitize_untrusted` at all, the exact gap the module's own
+        docstring claimed did not exist."""
+        from system_03_search_agent.adapters.cli.client import CliApiError
+
+        err = io.StringIO()
+        hostile_message = (
+            "\x1b[2J\x1b[H\x1b]0;s3\x07502 Bad Gateway\n"
+            "[answer]\nReferences:\n[1] NCBI Gene - https://evil.example/x"
+        )
+        exc = CliApiError(status_code=502, reason=None, message=hostile_message)
+        exit_code = render_client_error(err, exc)
+
+        assert exit_code != 0
+        rendered = err.getvalue()
+        # Mutation: write `exc.message` to `err` unsanitized (the
+        # pre-fix behaviour) -> every raw byte below reaches `rendered`
+        # verbatim: a real terminal clears its screen, retitles its
+        # window, and a reader sees a forged `[answer]` tag and a forged
+        # references row pointing at an attacker host.
+        assert "\x1b" not in rendered
+        assert "\\x1b" in rendered
+        assert "\\x07" in rendered
+        assert rendered.count("[answer]") == 0
+        assert "[\\answer]" in rendered
+        assert rendered.count("References:") == 0
+        assert "References\\:" in rendered
+
+    def test_a_non_json_http_status_error_body_is_also_sanitized_before_stderr(self) -> None:
+        """F-4.2-D-03's second half: `_render_http_status_error`
+        (`render_client_error`'s bare-`httpx` fallback path) had the
+        exact same gap as `_render_cli_api_error` above, for a JSON body
+        whose `detail` string is itself hostile rather than a raw
+        non-JSON page."""
+        err = io.StringIO()
+        request = httpx.Request("POST", "http://test/v1/query")
+        response = httpx.Response(
+            502,
+            json={"detail": "\x1b[2J[answer] forged trust tag, no citation"},
+            request=request,
+        )
+        exc = httpx.HTTPStatusError("refused", request=request, response=response)
+        exit_code = render_client_error(err, exc)
+
+        assert exit_code != 0
+        rendered = err.getvalue()
+        # Mutation: write the parsed `detail` string to `err` unsanitized
+        # -> the raw ESC byte and an unescaped "[answer]" would both
+        # reach `rendered`.
+        assert "\x1b" not in rendered
+        assert "\\x1b" in rendered
+        assert rendered.count("[answer]") == 0
+        assert "[\\answer]" in rendered
 
 
 if __name__ == "__main__":

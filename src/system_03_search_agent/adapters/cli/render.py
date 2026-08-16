@@ -59,7 +59,12 @@ the gate is the one that cannot be edited:
    that text reaches a terminal, an execution surface, not a display
    surface. `_sanitize_untrusted` (defined below) is the one call site
    every such field is routed through before `self._out`/`self._err`
-   writes it: it neutralizes every character in a closed set of Unicode
+   writes it (this became true of `render_client_error`'s two helpers,
+   `_render_cli_api_error` and `_render_http_status_error`, only at
+   build phase 4.2's round-4 fix, F-4.2-D-03: both wrote a server- or
+   proxy-supplied error message straight to `err` with no call to this
+   function at all before then): it neutralizes every character in a
+   closed set of Unicode
    general categories carrying no legitimate display content, `Cc`
    control bytes (which is what defeats ANSI CSI/OSC terminal-control
    sequences, since both begin with a `Cc` byte), `Cf` format characters
@@ -673,34 +678,65 @@ class Renderer:
         if not self._citations and not unresolved:
             return
 
-        self._out.write("\nReferences:\n")
-        for citation in sorted(self._citations.values(), key=lambda c: c.display_index):
-            source = _sanitize_untrusted(citation.source)
-            # `source_url` is also constrained by `contracts.events.
-            # NCBI_SOURCE_URL_PATTERN` (build phase 4.2 review, F-4.2-A-01
-            # second half: the pattern is now end-anchored to a restricted
-            # URL character class, so a control byte or embedded newline
-            # can no longer reach a validated `CitationPayload` at all).
-            # Sanitizing it here too is defense in depth, not redundancy:
-            # this function has no way to know whether the `Event` it is
-            # rendering was actually validated through that model, only
-            # that `citation.source` (unconstrained beyond `max_length`)
-            # still needs it regardless.
-            source_url = _sanitize_untrusted(citation.source_url)
-            self._out.write(f"[{citation.display_index}] {source} - {source_url}\n")
-        self._out.flush()
-        for marker_id in unresolved:
-            # Design decision 1: say so honestly rather than dropping a
-            # marker the answer text referenced but never got a citation
-            # for, rather than silently omitting it from the block.
-            # F-4.2-A-26: moved to stderr. This diagnostic used to land on
-            # stdout inside the references block, so `s3 ask "..." >
-            # answer.txt` captured an internal completeness note alongside
-            # the citations a reader expects that file to hold. The
-            # disclosure itself is kept, honest per design decision 1;
-            # only its destination moved.
-            self._err.write(f"[unresolved] marker {marker_id!r} was never sent a citation\n")
+        # F-4.2-D-04 (round 4): the "References:" header is now gated on
+        # `self._citations` alone, not on the combined `not self._citations
+        # and not unresolved` condition above (which only decides whether
+        # to bail out entirely). Round 2's F-4.2-A-26 fix moved the
+        # unresolved-marker note off stdout and onto stderr, which left
+        # this header's own guard technically satisfied (there was
+        # something to report) while having nothing left to print under
+        # it: zero delivered citations plus one or more unresolved markers
+        # used to fall through to "\nReferences:\n" with no `[n]` line
+        # under it at all, an empty section presented as complete on the
+        # exact surface the cite-or-refuse gate's refusal arm exists to
+        # police. Printing the header only when there is at least one real
+        # citation to list closes that regardless of what `unresolved`
+        # contains.
+        if self._citations:
+            self._out.write("\nReferences:\n")
+            for citation in sorted(self._citations.values(), key=lambda c: c.display_index):
+                source = _sanitize_untrusted(citation.source)
+                # `source_url` is also constrained by `contracts.events.
+                # NCBI_SOURCE_URL_PATTERN` (build phase 4.2 review, F-4.2-A-01
+                # second half: the pattern is now end-anchored to a restricted
+                # URL character class, so a control byte or embedded newline
+                # can no longer reach a validated `CitationPayload` at all).
+                # Sanitizing it here too is defense in depth, not redundancy:
+                # this function has no way to know whether the `Event` it is
+                # rendering was actually validated through that model, only
+                # that `citation.source` (unconstrained beyond `max_length`)
+                # still needs it regardless.
+                source_url = _sanitize_untrusted(citation.source_url)
+                self._out.write(f"[{citation.display_index}] {source} - {source_url}\n")
+            self._out.flush()
+
         if unresolved:
+            for marker_id in unresolved:
+                # Design decision 1: say so honestly rather than dropping a
+                # marker the answer text referenced but never got a
+                # citation for, rather than silently omitting it.
+                #
+                # F-4.2-D-04 (round 4): disclosed on BOTH streams now,
+                # reversing half of F-4.2-A-26's move. F-4.2-A-26 moved
+                # this note off stdout because it used to sit INSIDE the
+                # numbered references list, where a reader of a redirected
+                # `answer.txt` could mistake an internal completeness note
+                # for a genuine, resolved citation row. That problem was
+                # about SHAPE, not STREAM: a redirected
+                # `s3 ask "..." > answer.txt` has no other stream a later
+                # reader can consult, so stderr-only silence left the one
+                # reader who most needs the disclosure, someone auditing
+                # the answer file after the fact, with a `[n]` marker and
+                # no way to learn it was never actually sourced. The fix
+                # keeps stderr for an operator watching the run live, and
+                # also writes a distinctly shaped `[unresolved: ...]` line
+                # to stdout, a different bracket vocabulary from the
+                # numbered `[n] source - url` citation rows above, so it
+                # can never be mistaken for a genuine citation the way the
+                # pre-A-26 shape could.
+                self._out.write(f"[unresolved: marker {marker_id!r} has no citation]\n")
+                self._err.write(f"[unresolved] marker {marker_id!r} was never sent a citation\n")
+            self._out.flush()
             self._err.flush()
 
     # ------------------------------------------------------------------
@@ -725,12 +761,10 @@ class Renderer:
             # make sure that whenever `finish()` IS reached on an
             # undetermined run, the references block for whatever was
             # actually delivered gets printed, exactly like a clean
-            # `done` would have done. `_write_references_block` is
-            # idempotent (`self._printed_references` guards it), so this
-            # is safe to call even if a partial block already printed.
-            # The truncation notice itself goes to stderr, matching every
-            # other diagnostic in this renderer, and never claims a trust
-            # outcome this renderer was never told.
+            # `done` would have done. The truncation notice itself goes
+            # to stderr, matching every other diagnostic in this
+            # renderer, and never claims a trust outcome this renderer
+            # was never told.
             self._exit_code = _EXIT_FAILURE
             self._err.write(
                 "error: the run ended before a final answer was received; "
@@ -738,7 +772,29 @@ class Renderer:
                 "be partial.\n"
             )
             self._err.flush()
-            self._write_references_block()
+
+        # F-4.2-D-01 (round 4): this call used to sit ONLY inside the `if`
+        # branch above, so it only ever ran on the undetermined-state
+        # path (no terminal event reached this renderer at all). A
+        # terminal fatal `error` (`_handle_error`) sets `_exit_code`
+        # itself, on its own, before `finish()` is ever called, so that
+        # path skipped the `if` branch entirely and, unlike
+        # `_handle_done`, `_handle_error` never calls
+        # `_write_references_block` either. A stopped run is exactly this
+        # shape: its terminal event is a fatal `error` with
+        # `error_class="cancelled"`, never a `done`, so a citation
+        # delivered before the stop used to leave a `[n]` marker on
+        # stdout with no references section under it at all, the same
+        # defect J-4.2-04 named for the no-terminal-event case, but
+        # wider: every stopped run and every fatal server error, not only
+        # a dropped connection. Moving this call outside the `if` so it
+        # runs on every path fixes that. It is safe unconditionally:
+        # `_write_references_block` is idempotent
+        # (`self._printed_references` guards it, so a clean `done` that
+        # already printed it here is a no-op) and honors the
+        # guard-rejection suppression internally (F-4.2-A-27), so a
+        # rejected run still prints nothing.
+        self._write_references_block()
         return self._exit_code
 
 
@@ -815,24 +871,33 @@ def render_client_error(err: TextIO, exc: BaseException) -> int:
 
 
 def _render_cli_api_error(err: TextIO, exc: CliApiError) -> int:
-    """Renders one of `client.py`'s five typed errors. `exc.message` is
-    always the server's own already-curated, already-actionable text (see
-    `CliApiError`'s own docstring in `client.py`), never a raw exception
-    string, so it is safe to write verbatim, the same trust boundary
-    `_render_http_status_error` below already applies to a bare-httpx
-    `detail` string. `_actionable_suffix_for_status` is reused rather than
-    duplicated: it is a pure function of status code, reason, and headers,
-    and this call site has all three (`exc.status_code`, `exc.reason`, and
-    a synthesized `Retry-After` header when `exc` is a `RateLimitedError`
-    carrying `retry_after_s`), so the 429/401/403/404/409 action copy stays
-    identical to the bare-httpx path instead of drifting into a second,
-    hand-maintained copy of the same table.
+    """Renders one of `client.py`'s five typed errors.
+
+    F-4.2-D-03 (round 4): `exc.message` is NOT always the server's own
+    curated text. `CliApiError`'s own docstring in `client.py` claims it
+    is, but `client.py`'s `_parse_error_detail` falls back to
+    `response.text.strip()` for any non-JSON error body (confirmed by
+    reading that function directly), so any proxy, CDN, or captive-portal
+    error page sitting in front of the API server can reach `exc.message`
+    verbatim, with no curation and no sanitization applied anywhere
+    upstream of this call site. This function no longer trusts that
+    claim: `message` is routed through `_sanitize_untrusted` (module
+    docstring, decision 3) the same as every other untrusted field this
+    renderer writes, before it ever reaches `err`.
+    `_actionable_suffix_for_status` is reused rather than duplicated: it
+    is a pure function of status code, reason, and headers, and this call
+    site has all three (`exc.status_code`, `exc.reason`, and a
+    synthesized `Retry-After` header when `exc` is a `RateLimitedError`
+    carrying `retry_after_s`), so the 429/401/403/404/409 action copy
+    stays identical to the bare-httpx path instead of drifting into a
+    second, hand-maintained copy of the same table.
     """
     from system_03_search_agent.adapters.cli.client import RateLimitedError
 
     message = exc.message[:500] if exc.message else (
         f"the server refused the request (HTTP {exc.status_code})"
     )
+    message = _sanitize_untrusted(message)
     retry_after_s = exc.retry_after_s if isinstance(exc, RateLimitedError) else None
     headers = (
         httpx.Headers({"retry-after": str(retry_after_s)})
@@ -845,6 +910,17 @@ def _render_cli_api_error(err: TextIO, exc: CliApiError) -> int:
 
 
 def _render_http_status_error(err: TextIO, exc: httpx.HTTPStatusError) -> int:
+    """Renders a bare, untyped `httpx.HTTPStatusError` (the fallback shape
+    documented on `render_client_error` above).
+
+    F-4.2-D-03 (round 4): `detail`, whether a dict's `message` field or a
+    bare string, is parsed straight from the response body this function
+    receives, with no upstream curation guaranteed the way
+    `_render_cli_api_error`'s docstring used to (incorrectly) claim for
+    `CliApiError.message`. `message` is routed through
+    `_sanitize_untrusted` before it reaches `err`, closing the same gap
+    this function's sibling above closes.
+    """
     response = exc.response
     status_code = response.status_code
     try:
@@ -862,6 +938,7 @@ def _render_http_status_error(err: TextIO, exc: httpx.HTTPStatusError) -> int:
     else:
         reason = ""
         message = f"the server refused the request (HTTP {status_code})"
+    message = _sanitize_untrusted(message)
 
     action = _actionable_suffix_for_status(status_code, reason, response.headers)
     err.write(f"error: {message}{action}\n")
