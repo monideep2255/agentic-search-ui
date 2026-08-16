@@ -79,6 +79,7 @@ attributes, never anything `credentials.py`-specific.
 from __future__ import annotations
 
 import codecs
+import json
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -502,14 +503,65 @@ def _parse_json_body(
 # to tell an ADDITIVE, not-yet-taught event type (system-design-patterns
 # rule 10, benign, safe to skip) apart from a frame that claims to be one
 # of the types this build already knows but whose envelope or payload
-# failed to validate against it (a defect, never silently absorbed). The
-# SSE `event:` field is the discriminator, not a peek into the `data:`
-# JSON body: the real server always sets `event:` to the envelope's own
-# `type` (`adapters/web_sse/app.py`'s `_event_stream`), so it is a second,
-# transport-level channel that survives even when the `data:` body itself
-# is too corrupted to parse as JSON at all, and checking it needs no
-# second, informal JSON parser here.
+# failed to validate against it (a defect, never silently absorbed).
 _KNOWN_EVENT_TYPES: frozenset[str] = frozenset(PAYLOAD_MODEL_BY_TYPE)
+
+
+def _payload_declares_unknown_type(data: str) -> bool:
+    """F-4.2-D-02 (round-4 fix): the ONLY source of positive evidence that
+    a frame is benignly skippable, replacing the round-3 fix's SSE
+    `event:` check.
+
+    The round-3 comment this replaced claimed `event:` "survives even
+    when the `data:` body itself is too corrupted to parse as JSON at
+    all", and used it as the discriminator instead of peeking into
+    `data:`. That claim was true and beside the point: `event:` is set by
+    THE SAME SENDER as `data:` (`adapters/web_sse/app.py`'s
+    `_event_stream` writes both from the same envelope on a healthy
+    frame, but nothing downstream of that enforces they still agree once
+    a frame is corrupted or truncated), so a corrupted or missing
+    `event:` line is not evidence about whether `data:` is dangerous, it
+    is silence. `sse.py`'s own parser leaves `event_type` as `None`
+    whenever no `event:` line arrives at all (`sse.py`'s `feed`), and a
+    single invalid byte inside the `event:` line's own bytes survives as
+    a substituted U+FFFD rather than ending the stream, per F-4.2-RR-04's
+    own "replace and keep going" recovery. Both shapes reached
+    `_decode_stream_event` with an `event_type` that was never a member
+    of `_KNOWN_EVENT_TYPES`, so the round-3 `event_type in
+    _KNOWN_EVENT_TYPES` check silently classified the exact same fatal,
+    malformed payload the control case (`event: error` intact) correctly
+    rejects, as a benign, forward-compatible skip.
+
+    This function reads `data`, the SAME bytes `Event.model_validate_json`
+    already failed to validate, never `event:`. It returns `True` only
+    when `data` is independent, positive proof that the frame is a
+    well-formed envelope of a type this build has not been taught yet:
+    valid JSON, a JSON object, carrying a string `type` key whose value
+    is not in `_KNOWN_EVENT_TYPES`. That is exactly the additive,
+    forward-compatible shape system-design-patterns rule 10 protects: a
+    real new event type is well-formed JSON with an unrecognized `type`,
+    not garbage.
+
+    It returns `False`, the safe default, for everything else: `data`
+    that is not valid JSON at all, that parses to something other than a
+    JSON object, or an object with no string `type` key. `False` here
+    means the caller cannot positively establish this frame is benign, so
+    it is routed to `_synthesize_decode_failure_event` as a potential
+    fatal instead. A false alarm there costs a spurious nonzero exit; a
+    missed case costs a confident, cited answer that silently dropped a
+    fatal frame, which is the asymmetry this function is built to resolve
+    in the safe direction.
+    """
+    try:
+        parsed = json.loads(data)
+    except (ValueError, TypeError):
+        return False
+    if not isinstance(parsed, dict):
+        return False
+    declared_type = parsed.get("type")
+    if not isinstance(declared_type, str):
+        return False
+    return declared_type not in _KNOWN_EVENT_TYPES
 
 # The `trace_id` `_synthesize_decode_failure_event` stamps on a locally
 # built `error` Event: a fixed literal, never derived from anything the
@@ -755,7 +807,8 @@ class CliClient:
     ) -> Event | None:
         """Decode one SSE tuple into an `Event`, or return `None`/a
         synthesized fatal `Event` and record the failure appropriately
-        (F-4.2-A-10, hardened at the round-3 fix, F-4.2-RR-03).
+        (F-4.2-A-10, hardened at the round-3 fix F-4.2-RR-03, and again at
+        the round-4 fix F-4.2-D-02).
 
         Three distinct outcomes, not two, since round 2's own fix
         collapsed a case that needed to stay separate:
@@ -771,55 +824,79 @@ class CliClient:
                success, and `Renderer.finish()` already defaults to a
                nonzero exit whenever no terminal event ever reached it,
                which is exactly this shape.
-            2. `is_trailing=False` and the SSE `event:` field is NOT one
-               of `_KNOWN_EVENT_TYPES`: an additive, not-yet-taught type
-               (system-design-patterns rule 10). Benign. Skipped and
-               counted on `stream_skipped_frame_count`, unchanged from
-               F-4.2-A-10.
-            3. `is_trailing=False` and the SSE `event:` field IS one of
-               `_KNOWN_EVENT_TYPES`, but the envelope or payload still
-               failed to validate (malformed JSON, an `Event`-level field
-               out of shape, or a payload that does not match the
-               declared type's Section 2.3 model). This is the round-3
-               finding: this build recognizes the claimed type, so a
-               validation failure here is a genuine defect, not a
-               forward-compatibility gap, and round 2's fix silently
-               absorbed it exactly like case 2, which let a later
-               well-formed `done` report clean success over a dropped
-               fatal frame. It is no longer silently skipped: a locally
-               synthesized fatal `error` Event is returned instead
-               (`_synthesize_decode_failure_event`), routed through the
-               SAME `Event`/`ErrorPayload` models and the same
-               `render.py`/`_is_terminal_event` machinery every
+            2. `is_trailing=False` and `_payload_declares_unknown_type(data)`
+               is `True`: `data` itself, independent of the SSE `event:`
+               field, is positive proof of a well-formed envelope of an
+               additive, not-yet-taught type (system-design-patterns rule
+               10). Benign. Skipped and counted on
+               `stream_skipped_frame_count`.
+            3. `is_trailing=False` and `_payload_declares_unknown_type(data)`
+               is `False`: `data` offers no positive proof of being
+               benign, either because it fails to parse as JSON at all,
+               parses to something other than an object, has no string
+               `type` key, or DOES carry a `type` that is a member of
+               `_KNOWN_EVENT_TYPES` but still failed envelope or payload
+               validation. Every one of these is a genuine defect, not a
+               forward-compatibility gap, so it is no longer silently
+               skipped: a locally synthesized fatal `error` Event is
+               returned instead (`_synthesize_decode_failure_event`),
+               routed through the SAME `Event`/`ErrorPayload` models and
+               the same `render.py`/`_is_terminal_event` machinery every
                genuinely server-sent fatal error already uses, so this
                frame renders an actionable message, sets a nonzero exit
                code, and ends the stream, exactly like a frame that
-               explicitly claimed `type: "error"` always has. A frame
-               that literally claims `event: error` is the narrowest
-               instance of this case, not a separate one: it is already
-               "one of `_KNOWN_EVENT_TYPES`" and gets the same treatment
-               with no special-casing needed.
+               explicitly claimed `type: "error"` always has.
+
+        The classification deliberately never reads the SSE `event:`
+        field (`event_type` below is passed to
+        `_synthesize_decode_failure_event` only for the human-readable
+        message, never for this decision). F-4.2-D-02: `event:` is
+        written by the same sender as `data:`, so it can be missing
+        (`sse.py` leaves `event_type` as `None` when no `event:` line
+        arrives) or corrupted independently of whatever `data:` actually
+        contains (a single invalid byte inside `event:`'s own bytes
+        survives as a substituted U+FFFD per F-4.2-RR-04's "replace and
+        keep going" recovery, rather than ending the stream). Keying the
+        skip-or-fail decision on that field let the exact same fatal,
+        malformed payload the control case (`event: error` intact)
+        correctly rejects slip through as a benign skip whenever
+        `event:` was merely absent or garbled, letting a later
+        well-formed `done` report a false clean success. See
+        `_payload_declares_unknown_type`'s own docstring for the full
+        account.
         """
         event_type, data, seq_id = parsed
         try:
             return Event.model_validate_json(data)
         except ValidationError:
-            if not is_trailing and event_type in _KNOWN_EVENT_TYPES:
-                return self._synthesize_decode_failure_event(event_type, seq_id)
             if is_trailing:
                 self.stream_truncated = True
-            else:
+                return None
+            if _payload_declares_unknown_type(data):
                 self.stream_skipped_frame_count += 1
-            return None
+                return None
+            return self._synthesize_decode_failure_event(event_type, seq_id)
 
     def _synthesize_decode_failure_event(
-        self, claimed_type: str, seq_id: str | None
+        self, claimed_type: str | None, seq_id: str | None
     ) -> Event:
         """Builds a fatal, run-scoped `error` Event LOCALLY, never
-        received from the server, for a frame whose SSE `event:` field
-        claimed `claimed_type` (a member of `_KNOWN_EVENT_TYPES`) but
-        whose envelope or payload failed `Event.model_validate_json`
-        (F-4.2-RR-03).
+        received from the server, for a frame whose `data:` body could
+        not be positively established as benign
+        (`_payload_declares_unknown_type` returned `False`) after
+        `Event.model_validate_json` already failed on it (F-4.2-RR-03,
+        re-scoped at F-4.2-D-02).
+
+        `claimed_type` is the SSE `event:` field exactly as `sse.py`
+        parsed it (`None` when no `event:` line arrived at all, or a
+        garbled value if the line's own bytes were corrupted and
+        recovered via F-4.2-RR-04's U+FFFD substitution): it is used
+        ONLY to make the rendered message more specific when the server
+        did send a recognizable label, never to decide whether this
+        method gets called in the first place. That decision already
+        happened in `_decode_stream_event`, from `data:` alone
+        (F-4.2-D-02). A caller must not read this parameter as
+        trustworthy provenance; it is display text, not evidence.
 
         `error_class="transient"` is a deliberate choice, not the more
         obvious `"unexpected"`: `render.py`'s own fixed disclosure table
@@ -848,13 +925,17 @@ class CliClient:
         except ValueError:
             seq = 0
         seq = max(seq, 0)
+        # `None` (no `event:` line arrived) gets its own label rather
+        # than rendering the literal text "None": both are display-only,
+        # neither changes whether this method was ever called.
+        type_label = repr(claimed_type) if claimed_type is not None else "<no event: field>"
         payload = ErrorPayload(
             fatal=True,
             scope="run",
             source="cli_stream_decode",
             error_class="transient",
             message=(
-                f"the server sent a {claimed_type!r} event that this client "
+                f"the server sent a {type_label} event that this client "
                 "could not decode; the run cannot be trusted to have "
                 "completed as reported."
             )[:256],
