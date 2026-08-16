@@ -14,10 +14,10 @@ code. It never talks to the network, never reads a credential, and never
 retries anything; those are `client.py`, `credentials.py`, and `main.py`'s
 jobs. This module owns rendering only.
 
-Two design decisions worth stating up front, since Section 13.3's prose and
-the pre-committed premise gate (`tests/system_03_search_agent/adapters/cli/
-test_phase_4_2_premise.py`) pull in slightly different directions and the
-gate is the one that cannot be edited:
+Three design decisions worth stating up front, since Section 13.3's prose
+and the pre-committed premise gate (`tests/system_03_search_agent/adapters/
+cli/test_phase_4_2_premise.py`) pull in slightly different directions and
+the gate is the one that cannot be edited:
 
 1. Marker fidelity. `core/graph.py`'s `_narrative_chunks` already bakes the
    literal `[n]` text into each `token.text` sentence, using the SAME
@@ -25,12 +25,14 @@ gate is the one that cannot be edited:
    (`citation_id_by_display = {c.display_index: c.citation_id for c in
    citations}`). `token.marker_ids` is metadata for THIS renderer to use
    for completeness checking, not raw material to build a `[n]` string
-   from. So `handle()` prints `token.text` verbatim and never inserts,
-   renumbers, or removes a bracketed marker itself. It separately tracks
-   every marker id a token has referenced against every citation id a
-   `citation` event has actually delivered, and reports the honest gap (a
-   marker with no matching citation) in the references block rather than
-   silently dropping it.
+   from. So `handle()` prints `token.text` verbatim (after the
+   character-level sanitization decision 3 describes, which never touches
+   marker digits or their order) and never inserts, renumbers, or removes
+   a bracketed marker itself. It separately tracks every marker id a token
+   has referenced against every citation id a `citation` event has
+   actually delivered, and reports the honest gap (a marker with no
+   matching citation) in the references block rather than silently
+   dropping it.
 
 2. Trust-prefix placement versus true token-by-token streaming. Section
    13.3 calls the trust prefix "a one-line prefix on the answer body," and
@@ -40,13 +42,30 @@ gate is the one that cannot be edited:
    claim-level signal is in, i.e. near the end of the stream. This module
    keeps genuine live token streaming (`system-design-patterns` rule 6's
    time-to-first-token guarantee) and prints the trust-outcome tag as a
-   standalone stdout line at the point the answer-scope `trust_signal`
+   standalone stdout line (build phase 4.2 review, J-4.2-05: a leading
+   `\n` now guarantees the tag never glues to the last token's own text,
+   closing the gap between this docstring's earlier "standalone" claim and
+   what the code actually did) at the point the answer-scope `trust_signal`
    event actually arrives, which in every fixture this ticket read is
-   already immediately before `done`. `TestGoldenPath`/`TestRefusalPath`
-   in the premise gate only assert substring membership, never position,
-   so this satisfies the gate; it is flagged here, and again in this
-   ticket's final report, as a real ambiguity rather than something
-   quietly resolved one way.
+   already immediately before `done`.
+
+3. Untrusted-content sanitization (build phase 4.2 review, F-4.2-A-01,
+   critical). Every field this module writes that traces back to Layer 2
+   or Layer 3 content, an NCBI record body, a PubTator annotation, a
+   ClinicalTrials.gov study, or model narrative text assembled from any of
+   them, is untrusted external text per `ai-security-standards.md`'s
+   "treat AI output as untrusted" rule, and this module is the one place
+   that text reaches a terminal, an execution surface, not a display
+   surface. `_sanitize_untrusted` (defined below) is the one call site
+   every such field is routed through before `self._out`/`self._err`
+   writes it: it neutralizes C0/C1 control bytes (which is what defeats
+   ANSI CSI/OSC terminal-control sequences, since both begin with a C0/C1
+   control byte) into a visible escaped form, and separately escapes any
+   literal occurrence of this renderer's own closed structural vocabulary,
+   the four trust-outcome words in brackets and the references header, so
+   a hostile source cannot forge either one byte-for-byte. See
+   `_sanitize_untrusted`'s own docstring for the full threat model and the
+   two-option choice this ticket's report names.
 
 Depends on:
     - system_03_search_agent.contracts.events (Event and every Section 2.3
@@ -60,11 +79,21 @@ Reads:
 Writes:
     - The `out` and `err` `TextIO` streams passed to `Renderer.__init__`,
       and to `render_client_error`'s `err` parameter. Nothing else: no
-      file, no log, no network call.
+      file, no log, no network call. Both streams are flushed after every
+      write (F-4.2-A-07): a `TextIO` the interpreter chooses to buffer
+      would otherwise hold the first answer token, and every dim status
+      line, invisible until the process exits, defeating
+      `system-design-patterns` rule 6's time-to-first-token guarantee on
+      exactly the surface that guarantee is supposed to cover. One flush
+      per SSE-driven event write is not aggressive: the write rate is
+      already bounded by network arrival, not by CPU, so the added
+      syscall is negligible next to the latency that already separates
+      one event from the next.
 """
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, TextIO
 
 import httpx
@@ -151,6 +180,108 @@ def _error_disclosure(error_class: str) -> str:
     return _CLI_FATAL_ERROR_DISCLOSURE.get(error_class, _CLI_FATAL_ERROR_DISCLOSURE["unexpected"])
 
 
+# ----------------------------------------------------------------------
+# Untrusted-content sanitization (F-4.2-A-01, critical)
+# ----------------------------------------------------------------------
+#
+# A CLI writes to a terminal, and a terminal EXECUTES control sequences.
+# `token.text`, `citation.source`, `citation.source_url`, every narrative
+# and summary field this module prints, and `error.source` all trace back
+# to Layer 2/3 content or model output built from it, which is untrusted
+# external text per `ai-security-standards.md`. Left unescaped, a hostile
+# field can clear the screen (`\x1b[2J`), reposition the cursor, retitle
+# the window (`\x1b]0;...\x07`), conceal text (`\x1b[8m`), or overwrite an
+# already-printed line (`\r`). This is the ONE call site every such field
+# is routed through before either stream sees it.
+#
+# A second, distinct attack survives a perfect control-character
+# sanitizer alone: because `token.text` is printed close to verbatim
+# (design decision 1 above), a hostile source can still print the
+# LITERAL, printable text of this renderer's own structural output,
+# `[answer]`/`[flag]`/`[ask]`/`[refuse]` or `References:`, and have a
+# reader mistake it for the genuine trust tag or references header. Two
+# honest defences exist: mark this renderer's own structural lines so
+# they are distinguishable (for example a sentinel byte no sanitized
+# untrusted text can ever reproduce), or escape a bracket-marker-shaped
+# run inside untrusted text so it can never be byte-identical to the
+# genuine tag. This module takes the second option. The first would need
+# a literal control byte on every successful run's trust line and
+# references header, degrading the ordinary, non-adversarial case (an
+# odd glyph in front of `[answer]` on every real run, or in a redirected
+# file) to buy a property the escape approach buys without touching a
+# single byte of legitimate output. `_FORGERY_PATTERN` targets exactly
+# the closed vocabulary at risk, the four `TrustOutcome` words and the
+# references header, so it cannot false-positive on an ordinary numeric
+# citation marker like `[1]`, which design decision 1 requires this
+# module to leave untouched.
+_C0_C1_ESCAPE_EXEMPT = "\n"
+
+# The closed `TrustOutcome` vocabulary (`contracts.events.TrustOutcome`)
+# plus the references header, matched only when they appear inside
+# UNTRUSTED text. This pattern is never applied to a literal this module
+# itself writes.
+_FORGERY_PATTERN = re.compile(r"\[(answer|flag|ask|refuse)\]|References:")
+
+
+def _escape_control_bytes(text: str) -> str:
+    """Neutralize C0 (except `\\n`) and C1 control bytes into a visible,
+    printable escape form (`\\xHH`/`\\uHHHH`), never a silent deletion: a
+    reader can still see something was there, where deletion would let an
+    attacker hide content instead of merely fail to forge it. `\\n` is
+    exempt because it is common in legitimate narrative text and, on its
+    own, only moves the cursor down a line; it carries no terminal-control
+    risk the way `\\r` (line overwrite) or an ESC-led CSI/OSC sequence
+    does. This alone defeats every ANSI CSI/OSC sequence too: both begin
+    with the C0 ESC byte (0x1B) or a C1 single-byte equivalent (0x9B for
+    CSI, 0x9D for OSC), and once that lead byte is rewritten into
+    printable text, a terminal has nothing left to interpret as an escape
+    sequence.
+    """
+    out: list[str] = []
+    for ch in text:
+        code = ord(ch)
+        if ch == _C0_C1_ESCAPE_EXEMPT:
+            out.append(ch)
+        elif code < 0x20 or code == 0x7F:
+            out.append(f"\\x{code:02x}")
+        elif 0x80 <= code <= 0x9F:
+            out.append(f"\\u{code:04x}")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def _escape_forgery_markers(text: str) -> str:
+    """Escape a byte-identical copy of this renderer's own trust tag or
+    references header wherever one appears inside untrusted text, so a
+    forged occurrence can never be indistinguishable from the genuine
+    line this module itself writes. The backslash insertion is visible,
+    not a deletion, matching `_escape_control_bytes`'s convention above:
+    `[answer]` embedded in a hostile field becomes the literal text
+    `[\\answer]`, and `References:` becomes `References\\:`.
+    """
+
+    def _replace(match: re.Match[str]) -> str:
+        word = match.group(1)
+        if word is not None:
+            return f"[\\{word}]"
+        return "References\\:"
+
+    return _FORGERY_PATTERN.sub(_replace, text)
+
+
+def _sanitize_untrusted(text: str) -> str:
+    """The one function every untrusted string field is routed through
+    before this module writes it to `self._out` or `self._err`. Composes
+    the control-byte defence and the forgery defence above; order does
+    not matter between the two since neither one's output can create a
+    new match for the other (escaping a control byte never produces a
+    literal `[answer]`/`References:` substring, and escaping those words
+    never introduces a raw control byte).
+    """
+    return _escape_forgery_markers(_escape_control_bytes(text))
+
+
 class Renderer:
     """Renders one run's `Event` stream per Section 13.3's ten rules.
 
@@ -175,6 +306,13 @@ class Renderer:
         self._exit_code: int | None = None
         self._printed_trust_prefix = False
         self._printed_references = False
+        # F-4.2-A-27: once a guard rejection has fired, never let a later
+        # event (a stray `trust_signal`/`done` the server should not send
+        # after a rejection, but this renderer does not get to assume that
+        # never happens) print `[answer]` or a references block on top of
+        # it. Checked in `_write_trust_prefix` directly, defense in depth
+        # regardless of what upstream sends.
+        self._guard_rejected = False
 
     # ------------------------------------------------------------------
     # Dispatch
@@ -198,6 +336,8 @@ class Renderer:
             return
         copy = _GUARD_CATEGORY_COPY.get(payload.category, _GUARD_CATEGORY_FALLBACK)
         self._err.write(f"guard: {copy}\n")
+        self._err.flush()
+        self._guard_rejected = True
         self._exit_code = _EXIT_FAILURE
 
     def _handle_think(self, event: Event) -> None:
@@ -211,36 +351,70 @@ class Renderer:
         # renderer cannot invent a value it was never given, so the line
         # below omits the persona prefix rather than fabricate one.
         # Flagged again in this ticket's final report.
-        self._err.write(f"[think] {payload.narrative}\n")
+        narrative = _sanitize_untrusted(payload.narrative)
+        self._err.write(f"[think] {narrative}\n")
+        self._err.flush()
 
     def _handle_plan(self, event: Event) -> None:
         payload = PlanPayload.model_validate(event.payload)
-        self._err.write(f"[plan] {payload.narrative}\n")
+        narrative = _sanitize_untrusted(payload.narrative)
+        self._err.write(f"[plan] {narrative}\n")
+        self._err.flush()
 
     def _handle_tool_start(self, event: Event) -> None:
         payload = ToolStartPayload.model_validate(event.payload)
         self._err.write(f"[tool] {payload.tool} ({payload.layer}): {payload.status}\n")
+        self._err.flush()
 
     def _handle_tool_result(self, event: Event) -> None:
         payload = ToolResultPayload.model_validate(event.payload)
         truncated_note = ", truncated" if payload.truncated else ""
+        summary = _sanitize_untrusted(payload.summary)
         self._err.write(
             f"[tool] {payload.tool} ({payload.layer}): {payload.status} - "
-            f"{payload.summary} ({payload.result_count} result(s){truncated_note})\n"
+            f"{summary} ({payload.result_count} result(s){truncated_note})\n"
         )
+        self._err.flush()
 
     def _handle_token(self, event: Event) -> None:
         payload = TokenPayload.model_validate(event.payload)
-        # Verbatim: the server already baked the `[n]` markers into this
-        # text using its own citations' display_index (design decision 1).
-        # This is the only place `handle()` writes to `self._out` for
-        # answer content, matching Section 13.3's "printed to stdout as
-        # the growing answer body."
-        self._out.write(payload.text)
+        # Verbatim, after sanitization: the server already baked the
+        # `[n]` markers into this text using its own citations'
+        # display_index (design decision 1), and `_sanitize_untrusted`
+        # (design decision 3) never touches a marker digit, only C0/C1
+        # control bytes and a byte-identical forgery of this renderer's
+        # own structural vocabulary. This is the only place `handle()`
+        # writes to `self._out` for answer content, matching Section
+        # 13.3's "printed to stdout as the growing answer body." Flushed
+        # immediately (F-4.2-A-07): an unflushed stream buffers the
+        # answer until process exit, which is indistinguishable from not
+        # streaming at all from the reader's side of the pipe.
+        self._out.write(_sanitize_untrusted(payload.text))
+        self._out.flush()
         self._seen_marker_ids.update(payload.marker_ids)
 
     def _handle_citation(self, event: Event) -> None:
         payload = CitationPayload.model_validate(event.payload)
+        existing = self._citations.get(payload.citation_id)
+        if existing is not None and existing != payload:
+            # F-4.2-A-19: a second `citation` event citing an id already
+            # bound to a DIFFERENT source is a conflicting redefinition.
+            # A `[n]` marker for this id may already be visible on
+            # screen (or already written into a redirected file) by the
+            # time this arrives, so last-write-wins would point an
+            # already-printed marker at a source the reader never saw.
+            # Reject the redefinition (the first source for this id
+            # wins, matching what may already be on screen) and flag it
+            # audibly rather than accept the swap silently. A genuine
+            # duplicate (same id, identical fields) is not a conflict
+            # and is not warned about.
+            self._err.write(
+                f"warning: citation {payload.citation_id!r} was redefined "
+                "mid-run; the redefinition was ignored and the first "
+                "source for this id is kept.\n"
+            )
+            self._err.flush()
+            return
         self._citations[payload.citation_id] = payload
 
     def _handle_trust_signal(self, event: Event) -> None:
@@ -256,9 +430,21 @@ class Renderer:
         self._write_trust_prefix(payload.outcome)
 
     def _write_trust_prefix(self, outcome: TrustOutcome) -> None:
-        if self._printed_trust_prefix:
+        if self._printed_trust_prefix or self._guard_rejected:
+            # F-4.2-A-27: a guard rejection already printed its own
+            # explanation to stderr and set the exit code; never let a
+            # later `trust_signal`/`done` print `[answer]` (or any other
+            # outcome) on top of a run this renderer already knows was
+            # rejected.
             return
-        self._out.write(f"[{outcome}]\n")
+        # J-4.2-05: a leading `\n` guarantees this tag starts its own
+        # line regardless of whether the last token write ended in a
+        # newline, closing the gap between this module's own docstring
+        # claim ("a standalone stdout line") and what the code used to
+        # do (glue the tag to the end of the last token, verified at
+        # byte index 36 mid-sentence in the judge's own probe).
+        self._out.write(f"\n[{outcome}]\n")
+        self._out.flush()
         self._printed_trust_prefix = True
 
     def _handle_cost(self, event: Event) -> None:
@@ -275,6 +461,7 @@ class Renderer:
             f"[cost] ${payload.query_cost_usd:.4f} of ${payload.query_cap_usd:.2f} cap "
             f"({payload.cap_fraction:.1%}), {payload.model_tier} tier\n"
         )
+        self._err.flush()
 
     def _handle_error(self, event: Event) -> None:
         payload = ErrorPayload.model_validate(event.payload)
@@ -282,7 +469,9 @@ class Renderer:
         retry_note = (
             f" Retry in about {payload.retry_after_s}s." if payload.retry_after_s > 0 else ""
         )
-        self._err.write(f"error [{payload.source}]: {disclosure}{retry_note}\n")
+        source = _sanitize_untrusted(payload.source)
+        self._err.write(f"error [{source}]: {disclosure}{retry_note}\n")
+        self._err.flush()
 
         # Section 13.3: exits nonzero UNLESS fatal is false AND error_class
         # is transient or recoverable, in which case the retry policy (not
@@ -311,6 +500,7 @@ class Renderer:
                 f"[done] cost=${payload.total_cost_usd:.4f} "
                 f"tool_calls={payload.total_tool_calls} elapsed={payload.elapsed_ms}ms\n"
             )
+            self._err.flush()
 
         # A guard rejection or a fatal error already set a nonzero exit
         # code; a `done` event does not follow either on a well-formed
@@ -323,7 +513,12 @@ class Renderer:
     # ------------------------------------------------------------------
 
     def _write_references_block(self) -> None:
-        if self._printed_references:
+        if self._printed_references or self._guard_rejected:
+            # F-4.2-A-27: the same defense-in-depth guard as
+            # `_write_trust_prefix`. A stray `citation`/`done` arriving
+            # after a guard rejection must not print a references block
+            # on top of it either, or a rejected run would print nothing
+            # via the trust tag but still leak a "References:" block.
             return
         self._printed_references = True
 
@@ -333,12 +528,33 @@ class Renderer:
 
         self._out.write("\nReferences:\n")
         for citation in sorted(self._citations.values(), key=lambda c: c.display_index):
-            self._out.write(f"[{citation.display_index}] {citation.source} - {citation.source_url}\n")
+            source = _sanitize_untrusted(citation.source)
+            # `source_url` is also constrained by `contracts.events.
+            # NCBI_SOURCE_URL_PATTERN` (build phase 4.2 review, F-4.2-A-01
+            # second half: the pattern is now end-anchored to a restricted
+            # URL character class, so a control byte or embedded newline
+            # can no longer reach a validated `CitationPayload` at all).
+            # Sanitizing it here too is defense in depth, not redundancy:
+            # this function has no way to know whether the `Event` it is
+            # rendering was actually validated through that model, only
+            # that `citation.source` (unconstrained beyond `max_length`)
+            # still needs it regardless.
+            source_url = _sanitize_untrusted(citation.source_url)
+            self._out.write(f"[{citation.display_index}] {source} - {source_url}\n")
+        self._out.flush()
         for marker_id in unresolved:
             # Design decision 1: say so honestly rather than dropping a
             # marker the answer text referenced but never got a citation
             # for, rather than silently omitting it from the block.
-            self._out.write(f"[unresolved] marker {marker_id!r} was never sent a citation\n")
+            # F-4.2-A-26: moved to stderr. This diagnostic used to land on
+            # stdout inside the references block, so `s3 ask "..." >
+            # answer.txt` captured an internal completeness note alongside
+            # the citations a reader expects that file to hold. The
+            # disclosure itself is kept, honest per design decision 1;
+            # only its destination moved.
+            self._err.write(f"[unresolved] marker {marker_id!r} was never sent a citation\n")
+        if unresolved:
+            self._err.flush()
 
     # ------------------------------------------------------------------
     # Exit
@@ -349,7 +565,34 @@ class Renderer:
         # `error`, or a guard rejection is not a run that finished
         # cleanly, so the safe default on an otherwise-undetermined state
         # is failure, never success-by-omission.
-        return self._exit_code if self._exit_code is not None else _EXIT_FAILURE
+        if self._exit_code is None:
+            # J-4.2-04: the stream ended (interrupted, dropped connection,
+            # a crash before any terminal `done`/fatal-error/guard event)
+            # with no clean terminal state ever reaching this renderer.
+            # Whatever answer text is already on stdout can carry a `[n]`
+            # marker with no matching citation and no sign anywhere that
+            # the run was cut off; `main.py:533-535` returning without
+            # calling `finish()` at all on the interrupt path is a
+            # separate defect in that module, outside this file's
+            # ownership, but THIS renderer's own half of the fix is to
+            # make sure that whenever `finish()` IS reached on an
+            # undetermined run, the references block for whatever was
+            # actually delivered gets printed, exactly like a clean
+            # `done` would have done. `_write_references_block` is
+            # idempotent (`self._printed_references` guards it), so this
+            # is safe to call even if a partial block already printed.
+            # The truncation notice itself goes to stderr, matching every
+            # other diagnostic in this renderer, and never claims a trust
+            # outcome this renderer was never told.
+            self._exit_code = _EXIT_FAILURE
+            self._err.write(
+                "error: the run ended before a final answer was received; "
+                "any answer text above is incomplete and its citations may "
+                "be partial.\n"
+            )
+            self._err.flush()
+            self._write_references_block()
+        return self._exit_code
 
 
 # ----------------------------------------------------------------------
