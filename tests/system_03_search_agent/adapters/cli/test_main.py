@@ -32,10 +32,24 @@ import io
 import json
 import sys
 import types
+from datetime import UTC, datetime
 from typing import NamedTuple
 
 import httpx
 import pytest
+
+# Imported at module load time, before any test's `fake_modules` fixture
+# ever monkeypatches `sys.modules["system_03_search_agent.adapters.cli.
+# render"]` to a fake stand-in: this binds a stable reference to the
+# GENUINE `Renderer` class, unaffected by that later, per-test
+# monkeypatching, the same reasoning `fake_modules` itself already
+# documents for why it captures `_sanitize_untrusted` before its own
+# `monkeypatch.setitem` calls. One test below
+# (`TestAskCommand::test_ctrl_c_still_prints_the_references_block_for_a_
+# delivered_citation`) assigns this into `fake_modules.render.Renderer`
+# to exercise the real references-block logic through `main.py`'s actual
+# interrupt path, rather than `_FakeRenderer`'s marker-only stand-in.
+from system_03_search_agent.adapters.cli.render import Renderer as _RealRenderer
 
 
 class FakeCredentials(NamedTuple):
@@ -504,6 +518,58 @@ class TestLogin:
         assert "login failed" in message
 
     @pytest.mark.asyncio
+    async def test_login_non_json_content_type_header_is_sanitized_before_stderr(
+        self, main_module, fake_modules
+    ) -> None:
+        """F-4.2-V4-01, CRITICAL: a hostile or misconfigured proxy
+        answering `POST /auth/login` with a 200 whose Content-Type header
+        carries an ANSI SGR-8 (conceal) sequence used to reach stderr
+        verbatim through this branch's own `content_type` interpolation.
+        `.split(";", 1)[0].strip().lower()` is NOT a sanitizer: `strip()`
+        removes whitespace, not the ESC (0x1B) byte, and `.lower()` only
+        folds the ASCII letter range, so a lowercase `\\x1b[8m` survives
+        both untouched. This is the same gap `test_login_failure_message_
+        is_sanitized_before_reaching_stderr` above already closed for the
+        401 branch a few lines earlier in the same function; this branch
+        (the 200-but-non-JSON branch) had no `_sanitize_untrusted` call
+        at all before this fix.
+        """
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                content=b"not json",
+                headers={"content-type": "\x1b[8mapplication/json"},
+            )
+
+        http_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(handler), base_url="http://example.test"
+        )
+        out, err = io.StringIO(), io.StringIO()
+        try:
+            exit_code = await main_module.async_main(
+                ["login", "person@example.com"],
+                stdin=io.StringIO("hunter2\n"),
+                stdout=out,
+                stderr=err,
+                http_client=http_client,
+            )
+        finally:
+            await http_client.aclose()
+
+        assert exit_code == 1
+        message = err.getvalue()
+        # Mutation: interpolate the raw `content_type` variable directly
+        # (`f"...{content_type or 'none'}..."`) instead of
+        # `_sanitize_untrusted(content_type)` -- the raw ESC byte below
+        # would be present verbatim, and SGR 8 conceals everything
+        # printed after it on a real terminal until a later reset.
+        assert "\x1b" not in message
+        # The sanitizer neutralizes, it does not silently drop: the
+        # visible remainder of the header value still makes it through.
+        assert "application/json" in message
+
+    @pytest.mark.asyncio
     async def test_a_non_json_200_login_body_fails_actionably_not_a_raw_crash(
         self, main_module, fake_modules
     ) -> None:
@@ -776,6 +842,54 @@ class TestCallWithOneRefresh:
         # "unexpected error (RefreshError)" from the generic catch-all.
         assert "unexpected error" not in stderr.getvalue()
         assert "s3 login" in stderr.getvalue()
+
+    @pytest.mark.asyncio
+    async def test_refresh_error_message_is_sanitized_before_stderr(
+        self, main_module, fake_modules
+    ) -> None:
+        """F-4.2-V4-01, CRITICAL, credentials.py's own half of the same
+        finding: the real `credentials.py`'s `_refresh_and_store`
+        embeds `POST /auth/refresh`'s raw, unsanitized Content-Type
+        header into a `RefreshError` message (the identical
+        `.split(";", 1)[0].strip().lower()`-is-not-a-sanitizer gap as
+        `_run_login`'s own fix above, same header, a different module).
+        That message reaches stderr verbatim through
+        `_render_credentials_error`'s general branch, which used to write
+        `str(exc)` with no `_sanitize_untrusted` call at all. This fake
+        stands in for that real message shape with the same hostile
+        SGR-8 byte the real `credentials.py` finding used, proving the
+        RENDER boundary (main.py:`_render_credentials_error`) is where
+        this is now closed, not `credentials.py` itself, so every current
+        and future `CredentialsError` subclass is covered without a
+        matching edit over there.
+        """
+        creds = FakeCredentials(base_url="http://test", access_token="a", refresh_token="r")
+
+        hostile_message = (
+            "POST /auth/refresh returned a non-JSON response (content-type "
+            "\x1b[8mapplication/json); this indicates a server or proxy "
+            "misconfiguration, not a normal failure."
+        )
+
+        async def refresh_locked(client: object, c: FakeCredentials) -> FakeCredentials:
+            raise FakeRefreshError(hostile_message)
+
+        fake_modules.credentials.refresh_locked = refresh_locked
+
+        async def coro_factory(c: FakeCredentials) -> str:
+            raise FakeAuthExpiredError(_response(401, {"detail": "expired"}))
+
+        stderr = io.StringIO()
+        with pytest.raises(main_module._CommandError):
+            await main_module._call_with_one_refresh(
+                coro_factory, http_client=object(), creds=creds, stderr=stderr
+            )
+        message = stderr.getvalue()
+        # Mutation: `_render_credentials_error`'s general branch writes
+        # `str(exc)` directly instead of `_sanitize_untrusted(str(exc))`
+        # -- the raw ESC byte below would be present verbatim.
+        assert "\x1b" not in message
+        assert "application/json" in message
 
     @pytest.mark.asyncio
     async def test_a_session_lost_error_gets_distinct_logged_out_everywhere_wording(
@@ -1386,6 +1500,194 @@ class TestAskCommand:
 
         assert exit_code != 0
         assert stop_calls == ["run-1"]
+
+    @pytest.mark.asyncio
+    async def test_ctrl_c_still_calls_renderer_finish_and_keeps_exit_code_130(
+        self, main_module, fake_modules
+    ) -> None:
+        """F-4.2-V4-02, MAJOR: `_run_ask` used to `return outcome` directly
+        on the interrupt path without ever calling `renderer.finish()`,
+        so `Renderer.finish()`'s own undetermined-state handling
+        (J-4.2-04: printing the references block for whatever was
+        delivered, and the "run ended before a final answer" stderr
+        notice) never ran for an interrupted run. This test proves
+        `finish()` is now reached AND that its own return value (this
+        fake's distinctive, non-conventional `finish_result`) is
+        discarded in favor of the already-correct `EXIT_INTERRUPTED`
+        (130), the exact discipline the fix's own comment names: exit
+        code 130 is `_handle_interrupt_during_stream`'s call to make, not
+        `finish()`'s.
+        """
+        creds = FakeCredentials(base_url="http://test", access_token="a", refresh_token="r")
+        fake_modules.credentials.load = lambda: creds
+
+        renderer_holder: list[_FakeRenderer] = []
+
+        def make_renderer(out: object, err: object, *, operator: bool) -> _FakeRenderer:
+            renderer = _FakeRenderer(out, err, operator=operator)
+            renderer.finish_result = 7  # a distinctive, non-conventional code
+            renderer_holder.append(renderer)
+            return renderer
+
+        fake_modules.render.Renderer = make_renderer
+
+        started = asyncio.Event()
+
+        class FakeCliClient:
+            def __init__(self, http: object, c: FakeCredentials) -> None:
+                pass
+
+            async def create_run(
+                self, text: str, session_id: str, audience_depth: str
+            ) -> tuple[str, str]:
+                return "run-1", "persona"
+
+            def stream_events(self, run_id: str, *, last_event_id: str | None = None):
+                async def _gen():
+                    started.set()
+                    await asyncio.sleep(3600)
+                    yield _FakeEvent("unreachable")  # pragma: no cover
+
+                return _gen()
+
+            async def stop(self, run_id: str) -> bool:
+                return True
+
+        fake_modules.client.CliClient = FakeCliClient
+
+        interrupt_signals: asyncio.Queue[None] = asyncio.Queue()
+        task = asyncio.create_task(
+            main_module.async_main(
+                ["ask", "hi", "--session-id", "s1"],
+                stdin=io.StringIO(""),
+                stdout=io.StringIO(),
+                stderr=io.StringIO(),
+                http_client=object(),
+                interrupt_signals=interrupt_signals,
+            )
+        )
+        await asyncio.wait_for(started.wait(), timeout=5.0)
+        interrupt_signals.put_nowait(None)
+        exit_code = await asyncio.wait_for(task, timeout=5.0)
+
+        # Mutation: revert to `return outcome` with no `finish()` call on
+        # this branch -- `renderer_holder[0].finished` would be False,
+        # and (in a variant mutation that calls finish() but returns its
+        # result unmodified) the exit code would be 7, not 130.
+        assert renderer_holder[0].finished
+        assert exit_code == main_module.EXIT_INTERRUPTED
+
+    @pytest.mark.asyncio
+    async def test_ctrl_c_still_prints_the_references_block_for_a_delivered_citation(
+        self, main_module, fake_modules
+    ) -> None:
+        """F-4.2-V4-02, MAJOR, end to end with the REAL `Renderer` (not
+        `_FakeRenderer`): a delivered citation followed by Ctrl-C used to
+        leave a live `[1]` marker on stdout with no references block
+        under it and no disclosure that the run was cut off, the exact
+        scenario this finding's report reproduced against a real socket.
+        The defect was in whether `main.py` calls `renderer.finish()` at
+        all on this path, not in what `finish()` itself does once
+        called (`test_render.py` already proves the latter for the
+        general undetermined-state case, F-4.2-D-01), so this test wires
+        the genuine `render.Renderer` through `main.py`'s actual
+        interrupt path to prove the call site, not the renderer's own
+        logic.
+        """
+        from system_03_search_agent.contracts.events import CitationPayload, Event, TokenPayload
+
+        fake_modules.render.Renderer = _RealRenderer
+
+        creds = FakeCredentials(base_url="http://test", access_token="a", refresh_token="r")
+        fake_modules.credentials.load = lambda: creds
+
+        def _real_event(event_type: str, seq: int, payload) -> Event:
+            return Event(
+                type=event_type,  # type: ignore[arg-type]
+                version="v1",
+                trace_id="trace-1",
+                seq=seq,
+                ts=datetime.now(UTC),
+                payload=payload.model_dump(),
+            )
+
+        token_event = _real_event(
+            "token",
+            0,
+            TokenPayload(text="BRCA1 c.68_69del is pathogenic [1]. ", marker_ids=["1"]),
+        )
+        citation_event = _real_event(
+            "citation",
+            1,
+            CitationPayload(
+                citation_id="1",
+                display_index=1,
+                source="clinvar",
+                source_id="VCV000123",
+                source_url="https://www.ncbi.nlm.nih.gov/clinvar/VCV000123",
+                layer="layer_1_graph",
+                field="clinical_significance",
+                claim_text="pathogenic",
+                evidence_kind="direct",
+                assertion_confidence="high",
+                population_ancestry_context=None,
+                license="public-domain",
+            ),
+        )
+
+        started = asyncio.Event()
+
+        class FakeCliClient:
+            def __init__(self, http: object, c: FakeCredentials) -> None:
+                pass
+
+            async def create_run(
+                self, text: str, session_id: str, audience_depth: str
+            ) -> tuple[str, str]:
+                return "run-1", "persona"
+
+            def stream_events(self, run_id: str, *, last_event_id: str | None = None):
+                async def _gen():
+                    yield token_event
+                    yield citation_event
+                    started.set()
+                    await asyncio.sleep(3600)
+                    yield _real_event(
+                        "token", 2, TokenPayload(text="unreachable", marker_ids=[])
+                    )  # pragma: no cover
+
+                return _gen()
+
+            async def stop(self, run_id: str) -> bool:
+                return True
+
+        fake_modules.client.CliClient = FakeCliClient
+
+        interrupt_signals: asyncio.Queue[None] = asyncio.Queue()
+        out, err = io.StringIO(), io.StringIO()
+        task = asyncio.create_task(
+            main_module.async_main(
+                ["ask", "hi", "--session-id", "s1"],
+                stdin=io.StringIO(""),
+                stdout=out,
+                stderr=err,
+                http_client=object(),
+                interrupt_signals=interrupt_signals,
+            )
+        )
+        await asyncio.wait_for(started.wait(), timeout=5.0)
+        interrupt_signals.put_nowait(None)
+        exit_code = await asyncio.wait_for(task, timeout=5.0)
+
+        assert exit_code == main_module.EXIT_INTERRUPTED
+        stdout_value = out.getvalue()
+        # Mutation: revert the `_run_ask` fix (`return outcome` directly,
+        # never calling `renderer.finish()` on the interrupt branch) --
+        # stdout would carry the bare "...pathogenic [1]." claim with a
+        # live, unresolved marker and no "References:" section beneath
+        # it at all.
+        assert "References:" in stdout_value
+        assert "[1] clinvar - https://www.ncbi.nlm.nih.gov/clinvar/VCV000123" in stdout_value
 
     @pytest.mark.asyncio
     async def test_second_ctrl_c_during_a_slow_stop_returns_without_waiting_for_it(

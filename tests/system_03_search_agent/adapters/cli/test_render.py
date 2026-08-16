@@ -436,6 +436,40 @@ class TestErrorBodyShapes:
         assert exit_code != 0
         assert "server" in err.getvalue().lower()
 
+    def test_a_429s_hostile_retry_after_header_is_sanitized_before_stderr(self) -> None:
+        """F-4.2-V4-01's own sweep, a sixth instance found rather than
+        named in this ticket's brief: `_actionable_suffix_for_status`
+        interpolated a `Retry-After` response header straight into its
+        `wait_clause` with no `_sanitize_untrusted` call at all, the
+        identical unsanitized-header shape as the two named findings
+        (`main.py`'s `_run_login` and `credentials.py`'s
+        `_refresh_and_store`, both keyed on `Content-Type`). This path is
+        reached through `render_client_error`'s bare-`httpx.
+        HTTPStatusError` fallback (`_render_http_status_error`), which
+        hands `_actionable_suffix_for_status` the REAL, unparsed response
+        headers, unlike `_render_cli_api_error`'s sibling call, which
+        only ever passes an int already parsed by `client.py`'s own
+        `_parse_retry_after`.
+        """
+        err = io.StringIO()
+        request = httpx.Request("POST", "http://test/v1/query")
+        response = httpx.Response(
+            429,
+            json={"detail": {"reason": "rate_limited", "message": "too many requests"}},
+            headers={"retry-after": "\x1b[8m60"},
+            request=request,
+        )
+        exc = httpx.HTTPStatusError("refused", request=request, response=response)
+        exit_code = render_client_error(err, exc)
+        assert exit_code != 0
+        message = err.getvalue()
+        # Mutation: interpolate `headers.get("retry-after")` directly
+        # into `wait_clause` instead of
+        # `_sanitize_untrusted(retry_after)` -- the raw ESC byte below
+        # would be present verbatim.
+        assert "\x1b" not in message
+        assert "60" in message
+
 
 class TestMarkerFidelity:
     def test_token_text_is_printed_verbatim_never_renumbered(self) -> None:

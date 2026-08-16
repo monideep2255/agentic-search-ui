@@ -333,15 +333,41 @@ def _render_credentials_error(stderr: TextIO, exc: Exception) -> None:
     re-deriving what the remedy is per type.
     """
     from system_03_search_agent.adapters.cli import credentials as credentials_module
+    from system_03_search_agent.adapters.cli.render import _sanitize_untrusted
 
     if isinstance(exc, credentials_module.SessionLostError):
+        # `exc`'s explanation and remedy here are both this module's own
+        # curated text plus, at most, a local path and an `OSError`'s
+        # `type(exc).__name__`/message from a failed local write; none of
+        # it traces back to server-controlled content, unlike the
+        # `RefreshError` branch below, so no sanitization is needed on
+        # this specific message. See this function's own accounting in
+        # `_run_login`'s sibling fix (F-4.2-V4-01) for the one shape that
+        # does carry server content: a `RefreshError` raised for a
+        # non-JSON `POST /auth/refresh` response.
         stderr.write(
             f"s3: your session was logged out on every surface, not just this "
             f"command ({exc}); run 's3 login' to sign in again\n"
         )
         return
 
-    message = str(exc)
+    # F-4.2-V4-01, CRITICAL: `credentials.py`'s `_refresh_and_store`
+    # raises a `RefreshError` embedding `POST /auth/refresh`'s raw,
+    # unsanitized Content-Type header (the identical gap as `_run_login`'s
+    # own non-JSON branch above, same header, same missing sanitizer, a
+    # different module). `str(exc)` is server-reachable content the
+    # instant ANY `CredentialsError` subclass's message happens to quote
+    # response data, and this is the render boundary for every one of
+    # them, the base-class catch this function's own docstring already
+    # explains: sanitizing here, once, is what makes that true for every
+    # current and future subclass without a matching edit to
+    # credentials.py or a second, drifting sanitizer over there.
+    # `_sanitize_untrusted` is a no-op on the ordinary case (every other
+    # `CredentialsError` message today names only a status code, a mode,
+    # or a local path, none of which contains a `Cc`/`Cf`/`Cs`/`Co`
+    # character or this renderer's own structural vocabulary), so this
+    # adds no visible change for any message that was already safe.
+    message = _sanitize_untrusted(str(exc))
     remedy = getattr(exc, "remedy", None)
     if remedy and remedy not in message:
         stderr.write(f"s3: {message} {remedy}\n")
@@ -695,11 +721,23 @@ async def _run_login(
     # of the check is intentionally identical, not a different policy.
     content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
     if content_type != "application/json":
+        # F-4.2-V4-01, CRITICAL: `content_type` is a response header this
+        # module never controls, reachable pre-authentication through a
+        # user-supplied `--base-url`/`S3_BASE_URL`, and `.split(";",
+        # 1)[0].strip().lower()` is NOT a sanitizer: `strip()` removes
+        # whitespace, not the ESC (0x1B) or C1 CSI/BEL control bytes a
+        # hostile or misconfigured proxy can still put in a header value
+        # (proven reachable through httpx's own response construction; a
+        # lowercase SGR-8 conceal sequence, `\x1b[8m`, survives `.lower()`
+        # too, since only the ASCII letter range is folded). Routed
+        # through `_sanitize_untrusted` the same way `_extract_error_message`
+        # already is a few lines above (F-4.2-D-03), rather than left as
+        # the second copy of that exact gap in this same function.
         stderr.write(
             f"s3 login: the server returned a non-JSON response (content-type "
-            f"{content_type or 'none'}); this indicates a server or proxy "
-            "misconfiguration, not a normal failure. Retry, or report this "
-            "if it recurs.\n"
+            f"{_sanitize_untrusted(content_type) or 'none'}); this indicates a "
+            "server or proxy misconfiguration, not a normal failure. Retry, "
+            "or report this if it recurs.\n"
         )
         return 1
     try:
@@ -844,6 +882,27 @@ async def _run_ask(
             stderr=stderr,
         )
     if outcome is not None:
+        if outcome == EXIT_INTERRUPTED:
+            # F-4.2-V4-02, MAJOR: an interrupted run reaches a terminal
+            # state with no `done`/fatal `error`/guard event ever
+            # delivered to `renderer`, the exact undetermined-state shape
+            # `Renderer.finish()`'s own docstring (J-4.2-04) already
+            # anticipates and names this call site by number. `finish()`
+            # still has to run here, for its SIDE EFFECTS: it prints the
+            # references block for whatever citations were actually
+            # delivered before the interrupt (idempotent via
+            # `_printed_references`, so this is always this renderer's
+            # first and only call to it on this path, never a
+            # double-print), and its own "the run ended before a final
+            # answer was received" stderr notice, exactly like a dropped
+            # connection would already get. Its RETURN VALUE is discarded
+            # on purpose: `_handle_interrupt_during_stream` already
+            # proved exit code 130 is the right, conventional signal for
+            # an interrupted run, and `finish()` has no way to know this
+            # run was interrupted rather than merely truncated, so left
+            # alone it would return EXIT_FAILURE (1) instead.
+            renderer.finish()
+            return EXIT_INTERRUPTED
         return outcome
     return renderer.finish()
 

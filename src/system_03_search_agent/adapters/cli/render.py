@@ -50,34 +50,77 @@ the gate is the one that cannot be edited:
    already immediately before `done`.
 
 3. Untrusted-content sanitization (build phase 4.2 review, F-4.2-A-01,
-   critical; hardened at the round-3 fix, F-4.2-RR-01 and F-4.2-RR-02).
-   Every field this module writes that traces back to Layer 2 or Layer 3
-   content, an NCBI record body, a PubTator annotation, a
-   ClinicalTrials.gov study, or model narrative text assembled from any of
-   them, is untrusted external text per `ai-security-standards.md`'s
-   "treat AI output as untrusted" rule, and this module is the one place
-   that text reaches a terminal, an execution surface, not a display
-   surface. `_sanitize_untrusted` (defined below) is the one call site
-   every such field is routed through before `self._out`/`self._err`
-   writes it (this became true of `render_client_error`'s two helpers,
-   `_render_cli_api_error` and `_render_http_status_error`, only at
-   build phase 4.2's round-4 fix, F-4.2-D-03: both wrote a server- or
-   proxy-supplied error message straight to `err` with no call to this
-   function at all before then): it neutralizes every character in a
-   closed set of Unicode
-   general categories carrying no legitimate display content, `Cc`
-   control bytes (which is what defeats ANSI CSI/OSC terminal-control
-   sequences, since both begin with a `Cc` byte), `Cf` format characters
-   (which is what defeats a bidirectional override, since a hostile
-   source can no longer make a bidi-aware terminal display a cited claim
-   in reverse), `Cs` surrogates, and `Co` private-use code points, into a
-   visible escaped form, and separately escapes any occurrence of this
-   renderer's own closed structural vocabulary, the four trust-outcome
-   words in brackets and the references header, matched case-insensitively
-   and against fullwidth/halfwidth compatibility forms so a hostile source
-   cannot forge either one visually either. See `_sanitize_untrusted`'s
-   own docstring for the full threat model and the two-option choice this
-   ticket's report names.
+   critical; hardened at the round-3 fix, F-4.2-RR-01 and F-4.2-RR-02;
+   the claim below narrowed to precise, per round-5's sweep, F-4.2-V4-01,
+   after it was found false twice: F-4.2-D-03's own round-4 fix already
+   named `_render_cli_api_error`/`_render_http_status_error` as sites that
+   used to bypass it, and round 5 found a THIRD bypass, a `Content-Type`
+   header interpolated raw in `_run_login` and in `credentials.py`'s
+   `_refresh_and_store`, plus a fourth in `_actionable_suffix_for_status`'s
+   `Retry-After` header. A docstring claiming blanket coverage is worth
+   less than a docstring stating exactly which mechanism covers which
+   field, so this is now the latter, not a repeat of the former).
+   Every FREEFORM-TEXT field this module writes that traces back to Layer
+   2 or Layer 3 content, an NCBI record body, a PubTator annotation, a
+   ClinicalTrials.gov study, model narrative text assembled from any of
+   them, or a raw HTTP response header (a `Content-Type` or `Retry-After`
+   value this module or a sibling module never controls), is untrusted
+   external text per `ai-security-standards.md`'s "treat AI output as
+   untrusted" rule, and this module is the one place that text reaches a
+   terminal, an execution surface, not a display surface. Two distinct,
+   independently sound mechanisms cover it, and a field is protected by
+   exactly one:
+
+   a. `_sanitize_untrusted` (defined below), for every freeform string
+      this module or `main.py` interpolates directly into an f-string
+      before a `self._out`/`self._err`/`err` write: `token.text`,
+      `citation.source`, `citation.source_url`, `error.source`,
+      `think`/`plan` narrative text, `tool_result.summary`,
+      `CliApiError.message` (both `_render_cli_api_error` and
+      `_render_http_status_error`, since F-4.2-D-03), the `Content-Type`
+      header text in `main.py`'s `_run_login` and in
+      `_render_credentials_error`'s general branch (covering
+      `credentials.py`'s `RefreshError`, since F-4.2-V4-01), and the
+      `Retry-After` header text in `_actionable_suffix_for_status` (also
+      F-4.2-V4-01's sweep). It neutralizes every character in a closed
+      set of Unicode general categories carrying no legitimate display
+      content, `Cc` control bytes (which is what defeats ANSI CSI/OSC
+      terminal-control sequences, since both begin with a `Cc` byte),
+      `Cf` format characters (which is what defeats a bidirectional
+      override, since a hostile source can no longer make a bidi-aware
+      terminal display a cited claim in reverse), `Cs` surrogates, and
+      `Co` private-use code points, into a visible escaped form, and
+      separately escapes any occurrence of this renderer's own closed
+      structural vocabulary, the four trust-outcome words in brackets and
+      the references header, matched case-insensitively and against
+      fullwidth/halfwidth compatibility forms so a hostile source cannot
+      forge either one visually either. See `_sanitize_untrusted`'s own
+      docstring for the full threat model and the two-option choice this
+      ticket's report names.
+   b. Python's own `repr()` (the `!r` conversion), for the two
+      bounded-length identifier fields this module interpolates as a
+      quoted, escaped representation rather than as raw display text:
+      `citation.citation_id` (`_handle_citation`'s redefinition warning)
+      and a `marker_id` drawn from `token.marker_ids`
+      (`_write_references_block`'s unresolved-marker lines). `repr()`
+      escapes every non-printable character, `Cc` and `Cf` alike, into
+      the same visible `\\xHH`/`\\uHHHH` form `_escape_control_bytes` above
+      produces by hand, so a hostile id can never emit a raw control byte
+      or bidi override through either of these two sites; it is not a
+      gap `_sanitize_untrusted` needs to also cover, and routing an
+      already-`repr()`-safe value through it a second time would only
+      double-escape a legitimate backslash.
+
+   Every field this module handles that is NOT covered by (a) or (b) is
+   not freeform untrusted text at all: it is a closed `Literal` type
+   Pydantic validates at `Event` construction (`tool_start.tool`,
+   `tool_start.layer`, `tool_result.status`, `cost.model_tier`,
+   `trust_signal.outcome`/`done.trust_outcome`), a plain number
+   (`citation.display_index`, `cost.query_cost_usd`,
+   `done.total_cost_usd`, `done.elapsed_ms`), or a fixed literal this
+   module itself owns (`_GUARD_CATEGORY_COPY`,
+   `_CLI_FATAL_ERROR_DISCLOSURE`), never server- or Layer-2/3-supplied
+   free text, so no sanitizer applies to it.
 
 Depends on:
     - system_03_search_agent.contracts.events (Event and every Section 2.3
@@ -955,8 +998,23 @@ def _actionable_suffix_for_status(status_code: int, reason: str, headers: httpx.
     ever ships with no `message` at all.
     """
     if status_code == 429:
+        # F-4.2-V4-01's own sweep, a sixth instance of the same shape
+        # found rather than named in this ticket's brief: `headers` here
+        # can be the REAL response headers (`_render_http_status_error`'s
+        # call site, the bare-`httpx.HTTPStatusError` fallback path), not
+        # only the synthetic, already-int-parsed `Headers` object
+        # `_render_cli_api_error` builds from `RateLimitedError.
+        # retry_after_s` (itself parsed through `client.py`'s own
+        # `int(raw_value)`, which can only ever produce a plain integer
+        # or None). A raw `Retry-After` header from a hostile or
+        # misconfigured proxy is server-controlled content with no
+        # sanitizer between it and this function's `wait_clause`, the
+        # identical unsanitized-header shape as the two findings this
+        # sweep was named for. Routed through `_sanitize_untrusted` here
+        # closes it at this function's own boundary rather than at each
+        # of its two call sites separately.
         retry_after = headers.get("retry-after")
-        wait_clause = f"wait about {retry_after}s" if retry_after else "wait"
+        wait_clause = f"wait about {_sanitize_untrusted(retry_after)}s" if retry_after else "wait"
         return f" Please {wait_clause}, or sign in for a higher limit, then try again."
     if status_code == 401:
         return " Run `s3 login` to re-authenticate."
