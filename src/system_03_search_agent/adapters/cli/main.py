@@ -79,7 +79,6 @@ if TYPE_CHECKING:
     from system_03_search_agent.adapters.cli.client import CliClient
     from system_03_search_agent.adapters.cli.credentials import Credentials
     from system_03_search_agent.adapters.cli.render import Renderer
-
     from system_03_search_agent.contracts.events import Event
 
 T = TypeVar("T")
@@ -258,9 +257,8 @@ async def _call_with_one_refresh(
     ended up being used, so the caller's local `creds` stays current for
     any later call in the same command.
     """
-    from system_03_search_agent.adapters.cli.client import AuthExpiredError
-
     from system_03_search_agent.adapters.cli import credentials as credentials_module
+    from system_03_search_agent.adapters.cli.client import AuthExpiredError
 
     typed_errors = _client_typed_errors()
     non_auth_errors = tuple(err for err in typed_errors if err is not AuthExpiredError)

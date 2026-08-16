@@ -143,10 +143,10 @@ from system_03_search_agent.contracts.events import (
     GuardPayload,
     PlanPayload,
     ThinkPayload,
+    TokenPayload,
     ToolCall,
     ToolResultPayload,
     ToolStartPayload,
-    TokenPayload,
     TrustSignalPayload,
 )
 from system_03_search_agent.contracts.query import Query, RequestContext
@@ -273,10 +273,10 @@ if not _can_connect():
         allow_module_level=True,
     )
 
-from system_03_search_agent.adapters.web_sse.app import app  # noqa: E402
-from system_03_search_agent.core import run_registry as run_registry_module  # noqa: E402
-from system_03_search_agent.harness import cost_control  # noqa: E402
-from system_03_search_agent.harness import harness as harness_module  # noqa: E402
+from system_03_search_agent.adapters.web_sse.app import app
+from system_03_search_agent.core import run_registry as run_registry_module
+from system_03_search_agent.harness import cost_control
+from system_03_search_agent.harness import harness as harness_module
 
 
 @pytest.fixture(autouse=True)
@@ -407,7 +407,7 @@ async def _run_ask_main(
     return await _run_generic_main(argv, http_client, stdin_text=stdin_text)
 
 
-def _only_active_run_id_for_owner(registry: "run_registry_module.RunRegistry", owner_id: str) -> str:
+def _only_active_run_id_for_owner(registry: run_registry_module.RunRegistry, owner_id: str) -> str:
     """No public "list runs for owner" API exists on RunRegistry (only
     count_active_runs_for_owner). Reaching into `_runs` directly is the
     same private-attribute access this repo's own module docstring in
@@ -415,7 +415,7 @@ def _only_active_run_id_for_owner(registry: "run_registry_module.RunRegistry", o
     RunRegistry._runs ...")."""
     matches = [
         run_id
-        for run_id, entry in registry._runs.items()  # noqa: SLF001 - no public accessor exists
+        for run_id, entry in registry._runs.items()
         if entry.owner_id == owner_id and not entry.finished
     ]
     assert len(matches) == 1, f"expected exactly one active run for {owner_id!r}, found {matches}"
@@ -703,7 +703,7 @@ class TestRefreshRotation:
         monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
 
         async with _client() as setup_client:
-            user_id, _access_token, refresh_token = await _signup_and_login(setup_client)
+            _user_id, _access_token, refresh_token = await _signup_and_login(setup_client)
 
         creds_path = tmp_path / "credentials"
         monkeypatch.setattr(credentials_module, "CREDENTIALS_PATH", creds_path)
@@ -1147,7 +1147,7 @@ class TestCtrlC:
             base_url="http://test",
         )
         try:
-            user_id, access_token, refresh_token = await _signup_and_login(slow_client)
+            _user_id, access_token, refresh_token = await _signup_and_login(slow_client)
             _provision_credentials(monkeypatch, tmp_path, access_token=access_token, refresh_token=refresh_token)
 
             out, err = io.StringIO(), io.StringIO()
