@@ -196,3 +196,32 @@ The adversary and judge rounds file here. Single writer per state: the finder fi
 - 2026-08-16: T-4.2-06 merged. Two pre-existing packaging defects corrected: a console entry point that had never worked, and a package list carrying four phantom packages while omitting eight real ones including both existing adapters.
 - 2026-08-16: T-4.2-02 merged. Its builder found and fixed a deadlock hazard during the build, an `fcntl.flock` acquired inline across an `await` blocking the event-loop thread against its own waiter, and reported the `refresh_locked` signature error (F-4.2-02).
 - 2026-08-16: T-4.2-03 merged, 33 unit tests. Deviation from the brief on stream termination filed as F-4.2-01 rather than accepted silently.
+
+## The judge and adversary findings, filed late
+
+F-4.2-D-06 found that 40 findings never reached this ledger despite its own header saying they file here: the judge's ten `J-4.2-*` and the adversary's thirty `F-4.2-A-*`. The ledger read as 16 findings when the real number was 56. That gap is why `J-4.2-04` could be half-fixed with nothing tracking the other half, which then resurfaced twice more as `F-4.2-D-01` and `F-4.2-V4-02`.
+
+Filed here as a pointer rather than re-transcribed, because the detail already exists and duplicating it would create two records to keep in sync:
+
+| Set | Count | Where the detail lives | Disposition |
+|-----|-------|------------------------|-------------|
+| `J-4.2-01` to `J-4.2-10` | 10 | `tracker/phase_4.2_judge_report.md` | All closed across fix rounds 1 to 5 except the two carried as `F-4.2-03` and `F-4.2-04`, which are product-owner decisions recorded in `DECISIONS.md` on 2026-08-16 |
+| `F-4.2-A-01` to `F-4.2-A-30` | 30 | `tracker/phase_4.2_adversary_report.md` | The 4 critical and 12 major are closed and independently probed. The 14 minor are closed except `F-4.2-A-28`, whose zero-caller surfaces are now partly wired: `stream_skipped_frame_count` and `stream_truncated` are read and disclosed, while `fetch_citations` and `Last-Event-ID` resume remain unreached in production and are carried |
+| `F-4.2-RR-01` to `RR-06`, `D-01` to `D-06`, `V4-01` to `V4-02` | 14 | This file and `tracker/phase_4.2_rereview_report.md` | Closed except `F-4.2-RR-05`, the unreproduced signal-scope race |
+
+The process lesson, which outlives the phase: a ledger whose header claims a class of finding files there, and which nothing checks, is a ledger that will silently disagree with reality. `check_learnings_coverage.py` could not catch it either, since that script reads narrative blocks and this file records findings as table rows, the blind spot already on `tracker/BOARD.md`. Two independent mechanisms both failed to notice 40 missing rows.
+
+## Why this phase took six review rounds
+
+Recorded because the count is the finding. One premise gate, a judge round, an adversary round, an independent verification, a Depth-tier regression review, and a round-4 verification. Every one found real defects, and five of the six found their worst defect INSIDE THE PREVIOUS ROUND'S FIX.
+
+| Round | Its worst defect |
+|-------|------------------|
+| Judge | The premise's cost-suppression claim was false: `--operator` was a client flag anyone could type |
+| Adversary | Untrusted content reached a terminal unescaped, and made a dormant repo-wide flag live |
+| Verification | The round-2 sanitizer covered C0 and C1 and missed every bidirectional character |
+| Depth review | Round 3's frame classifier keyed on a sender-controlled label, and round 3's OTHER fix in the same commit made that label corruptible |
+| Round-4 verification | Round 4's D-05 fix added an unsanitized write ELEVEN LINES BELOW its own D-03 fix that sanitized one |
+| Round 5, serial | Found a sixth unsanitized site itself, on a fallback path nobody had flagged |
+
+The cause was the same every time and it is not attention: parallel agents editing code they cannot see each other touch, each individually correct. Round 5 was run deliberately as a SINGLE agent holding all the fixes at once, and it immediately found a site five parallel rounds had walked past. That is the transferable result, and it is now in `LEARNINGS.md`.
