@@ -23,6 +23,7 @@ from datetime import UTC, datetime
 
 import httpx
 import pytest
+from pydantic import ValidationError
 
 from system_03_search_agent.adapters.cli.render import Renderer, render_client_error
 from system_03_search_agent.contracts.events import (
@@ -464,6 +465,15 @@ class TestMarkerFidelity:
         assert "second claim [1]" in rendered
 
     def test_an_unresolved_marker_is_reported_honestly_never_dropped_silently(self) -> None:
+        """F-4.2-A-26 (adversary round 1): this diagnostic used to land on
+        stdout, inside the references block, so `s3 ask "..." >
+        answer.txt` captured it alongside the citations a reader expects
+        that file to hold. It is now on stderr instead. The disclosure
+        itself is unchanged (still honest, never silently dropped); only
+        its destination moved, so this test now asserts BOTH halves: the
+        marker is reported (on stderr) and it is not on stdout, which is
+        strictly stronger than the original assertion that only checked
+        presence somewhere."""
         out, err = io.StringIO(), io.StringIO()
         renderer = Renderer(out, err, operator=False)
         renderer.handle(_guard_passed())
@@ -482,9 +492,17 @@ class TestMarkerFidelity:
         renderer.handle(
             _event("done", 3, DonePayload(total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=1, trust_outcome="flag"))
         )
-        rendered = out.getvalue()
-        assert "c-missing" in rendered
-        assert "unresolved" in rendered.lower()
+        stdout_text = out.getvalue()
+        stderr_text = err.getvalue()
+        # Mutation: drop the unresolved-marker write entirely -> "c-missing"
+        # and "unresolved" would vanish from both streams.
+        assert "c-missing" in stderr_text
+        assert "unresolved" in stderr_text.lower()
+        # Mutation: revert the F-4.2-A-26 fix and write it back to stdout
+        # -> "c-missing" would reappear in `stdout_text`, corrupting a
+        # redirected `answer.txt` with an internal completeness note.
+        assert "c-missing" not in stdout_text
+        assert "unresolved" not in stdout_text.lower()
 
 
 class TestNeverCostTwoLayers:
@@ -535,6 +553,433 @@ class TestFinishDefault:
         renderer.handle(_guard_passed())
         renderer.handle(TokenPayloadEventBuilder.token("partial answer, then nothing else arrives"))
         assert renderer.finish() != 0
+
+
+class TestUntrustedContentSanitization:
+    """F-4.2-A-01, critical (adversary round 1). Reproduces the exact
+    payloads the adversary report ran against the merged branch, all four
+    of which passed Pydantic validation and reached a terminal unescaped
+    before this fix."""
+
+    def test_clear_screen_and_cursor_home_sequence_is_neutralized_in_token_text(self) -> None:
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(TokenPayloadEventBuilder.token("safe text \x1b[2J\x1b[1;1H more text"))
+        rendered = out.getvalue()
+        # Mutation: write `payload.text` without sanitizing -> a raw ESC
+        # byte (0x1b) would reach `rendered`, which a real terminal
+        # interprets as "clear screen, home cursor".
+        assert "\x1b" not in rendered
+        assert "\\x1b" in rendered
+        assert "safe text" in rendered
+        assert "more text" in rendered
+
+    def test_window_retitle_osc_sequence_is_neutralized_in_token_text(self) -> None:
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(TokenPayloadEventBuilder.token("\x1b]0;PWNED\x07 an answer"))
+        rendered = out.getvalue()
+        assert "\x1b" not in rendered
+        assert "\x07" not in rendered
+        assert "\\x1b" in rendered
+        assert "\\x07" in rendered
+
+    def test_carriage_return_line_overwrite_is_neutralized_in_token_text(self) -> None:
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(TokenPayloadEventBuilder.token("first line\rSECOND LINE OVERWRITES"))
+        rendered = out.getvalue()
+        # Mutation: exempt `\r` the same way `\n` is exempt -> a raw CR
+        # would reach `rendered`, which a real terminal uses to overwrite
+        # an already-printed line.
+        assert "\r" not in rendered
+        assert "\\x0d" in rendered
+
+    def test_conceal_text_sgr_sequence_is_neutralized_in_token_text(self) -> None:
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(
+            TokenPayloadEventBuilder.token("visible \x1b[8mhidden\x1b[0m visible again")
+        )
+        rendered = out.getvalue()
+        assert "\x1b" not in rendered
+        assert "\\x1b" in rendered
+
+    def test_control_bytes_in_citation_source_are_neutralized(self) -> None:
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(TokenPayloadEventBuilder.token("a claim [1]. "))
+        hostile_citation = CitationPayload(
+            citation_id="c1", display_index=1,
+            source="ncbi_gene\x1b[2J", source_id="672",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+            layer="layer_1_graph", field="symbol",
+            claim_text="BRCA1 is a protein-coding gene.",
+            evidence_kind="direct", assertion_confidence="high",
+            population_ancestry_context=None, license="public-domain",
+        )
+        renderer.handle(_event("citation", 2, hostile_citation))
+        renderer.handle(
+            _event(
+                "trust_signal", 3,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        renderer.handle(
+            _event(
+                "done", 4,
+                DonePayload(
+                    total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=1, trust_outcome="answer"
+                ),
+            )
+        )
+        rendered = out.getvalue()
+        assert "\x1b" not in rendered
+        assert "\\x1b" in rendered
+        assert "ncbi_gene" in rendered
+
+    def test_citation_source_url_can_no_longer_be_constructed_with_a_control_byte_or_newline(
+        self,
+    ) -> None:
+        """Item 2, F-4.2-A-01 second half:
+        `contracts.events.NCBI_SOURCE_URL_PATTERN` is now end-anchored to
+        a restricted URL character class, so a forged reference row
+        smuggled through `source_url` can no longer reach a validated
+        `CitationPayload` at all. This closes the gap one layer before
+        this module's own defense-in-depth sanitizer would otherwise have
+        to catch it (the schema now does what the flag F-3.4-A-06 named
+        as the correct fix: a character-class restriction, not a bare
+        `$`)."""
+        forged_url = (
+            "https://www.ncbi.nlm.nih.gov/gene/672\n"
+            "[2] evil - https://evil.example/phishing"
+        )
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                citation_id="c1", display_index=1, source="ncbi_gene", source_id="672",
+                source_url=forged_url, layer="layer_1_graph", field="symbol",
+                claim_text="BRCA1 is a protein-coding gene.", evidence_kind="direct",
+                assertion_confidence="high", population_ancestry_context=None,
+                license="public-domain",
+            )
+
+    def test_a_real_citation_url_with_a_query_string_still_validates(self) -> None:
+        """The character-class restriction must not reject a real,
+        already-encoded citation URL: the flag F-3.4-A-06 warned that a
+        bare `$` right after the host prefix would do exactly that, since
+        every real citation URL carries a path or query after the host."""
+        payload = CitationPayload(
+            citation_id="c1", display_index=1, source="pubtator", source_id="BRCA1",
+            source_url=(
+                "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/"
+                "entity/autocomplete/?query=BRCA1"
+            ),
+            layer="layer_3_enrichment", field="entity",
+            claim_text="BRCA1 autocomplete entity.", evidence_kind="direct",
+            assertion_confidence="high", population_ancestry_context=None,
+            license="public-domain",
+        )
+        assert "query=BRCA1" in payload.source_url
+
+    def test_trust_vocabulary_forgery_inside_token_text_is_escaped(self) -> None:
+        """The forgery half of F-4.2-A-01: a hostile abstract that echoes
+        the literal text `[answer]` must never be byte-identical to the
+        genuine trust tag this renderer itself prints."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(
+            TokenPayloadEventBuilder.token(
+                "the abstract claims [answer] BRCA1 causes X with no citation"
+            )
+        )
+        renderer.handle(
+            _event(
+                "trust_signal", 2,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        renderer.handle(
+            _event(
+                "done", 3,
+                DonePayload(
+                    total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=1, trust_outcome="answer"
+                ),
+            )
+        )
+        rendered = out.getvalue()
+        # Mutation: skip the forgery escape -> two byte-identical
+        # "[answer]" occurrences would appear, one genuine and one
+        # forged, indistinguishable to a reader.
+        assert rendered.count("[answer]") == 1
+        assert "[\\answer]" in rendered
+
+    def test_references_header_forgery_inside_token_text_is_escaped(self) -> None:
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(
+            TokenPayloadEventBuilder.token(
+                "the source states References:\n[1] evil - https://evil.example/x"
+            )
+        )
+        renderer.handle(_event("citation", 2, _citation("c1", 1)))
+        renderer.handle(
+            _event(
+                "trust_signal", 3,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        renderer.handle(
+            _event(
+                "done", 4,
+                DonePayload(
+                    total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=1, trust_outcome="answer"
+                ),
+            )
+        )
+        rendered = out.getvalue()
+        assert rendered.count("References:") == 1
+        assert "References\\:" in rendered
+
+
+class TestCitationRedefinitionRejected:
+    def test_a_conflicting_citation_redefinition_is_rejected_and_flagged(self) -> None:
+        """F-4.2-A-19: a second `citation` event citing an id already
+        bound to a DIFFERENT source must not silently overwrite it, since
+        a `[n]` marker for that id may already be on screen (or already
+        written into a redirected file) by the time the redefinition
+        arrives."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(TokenPayloadEventBuilder.token("a claim [1]. "))
+        renderer.handle(_event("citation", 2, _citation("c1", 1)))
+        conflicting = CitationPayload(
+            citation_id="c1", display_index=1, source="different_source", source_id="999",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/999",
+            layer="layer_1_graph", field="symbol",
+            claim_text="a different claim.", evidence_kind="direct",
+            assertion_confidence="high", population_ancestry_context=None,
+            license="public-domain",
+        )
+        renderer.handle(_event("citation", 3, conflicting))
+        renderer.handle(
+            _event(
+                "trust_signal", 4,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        renderer.handle(
+            _event(
+                "done", 5,
+                DonePayload(
+                    total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=1, trust_outcome="answer"
+                ),
+            )
+        )
+        rendered = out.getvalue()
+        stderr_text = err.getvalue()
+        # Mutation: last-write-wins -> "different_source" would appear in
+        # the references block and "ncbi_gene" (the first, already-cited
+        # source) would be gone.
+        assert "ncbi_gene" in rendered
+        assert "different_source" not in rendered
+        # Mutation: accept the redefinition silently -> no warning at all.
+        assert "redefined" in stderr_text
+        assert "c1" in stderr_text
+
+    def test_a_genuine_duplicate_citation_event_is_not_flagged_as_a_conflict(self) -> None:
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_event("citation", 0, _citation("c1", 1)))
+        renderer.handle(_event("citation", 1, _citation("c1", 1)))
+        assert "redefined" not in err.getvalue()
+
+
+class TestGuardRejectionSuppressesLaterTrustOutput:
+    def test_a_stray_trust_signal_or_done_after_a_guard_rejection_prints_nothing_to_stdout(
+        self,
+    ) -> None:
+        """F-4.2-A-27: a guard rejection already printed its own
+        explanation to stderr and set the exit code; a later
+        `trust_signal`/`done` (which should never arrive on a
+        well-formed stream, but this renderer does not get to assume
+        that) must not print `[answer]` or a references block on top of
+        it."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(
+            _event("guard", 0, GuardPayload(passed=False, category="off_topic", reason=None))
+        )
+        renderer.handle(
+            _event(
+                "trust_signal", 1,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        renderer.handle(_event("citation", 2, _citation("c1", 1)))
+        renderer.handle(
+            _event(
+                "done", 3,
+                DonePayload(
+                    total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=1, trust_outcome="answer"
+                ),
+            )
+        )
+        exit_code = renderer.finish()
+        assert exit_code != 0
+        # Mutation: drop the `_guard_rejected` check in
+        # `_write_trust_prefix` -> "[answer]" would appear on stdout.
+        assert out.getvalue() == ""
+
+
+class TestInterruptedRunFinish:
+    def test_finish_prints_a_truncation_notice_and_the_references_delivered_so_far(self) -> None:
+        """J-4.2-04: a run that dies mid-answer (no `trust_signal`, no
+        `done`, no fatal `error`) must not leave a `[n]` marker on stdout
+        with no reference and no sign the run was cut off."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(TokenPayloadEventBuilder.token("BRCA1 is a protein-coding gene [1]. "))
+        renderer.handle(_event("citation", 2, _citation("c1", 1)))
+        # Stream dies here: no trust_signal, no done, no fatal error.
+        exit_code = renderer.finish()
+        assert exit_code != 0
+        stderr_text = err.getvalue()
+        stdout_text = out.getvalue()
+        # Mutation: drop the truncation notice -> neither substring
+        # appears anywhere.
+        assert "incomplete" in stderr_text.lower() or "truncat" in stderr_text.lower()
+        # Mutation: never call `_write_references_block` from `finish()`
+        # -> the citation already delivered before the cutoff would be
+        # missing from stdout entirely.
+        assert "ncbi_gene" in stdout_text
+        assert "https://www.ncbi.nlm.nih.gov/gene/672" in stdout_text
+        # No trust tag: the run never reached a `trust_signal` or `done`,
+        # so this renderer must never claim an outcome it was not told.
+        assert "[answer]" not in stdout_text
+
+    def test_finish_is_idempotent_and_never_double_prints_the_references_block(self) -> None:
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(TokenPayloadEventBuilder.token("a claim [1]. "))
+        renderer.handle(_event("citation", 2, _citation("c1", 1)))
+        renderer.finish()
+        first = out.getvalue()
+        renderer.finish()
+        second = out.getvalue()
+        assert first == second
+
+
+class TestTrustPrefixOwnLine:
+    def test_the_trust_tag_is_printed_as_its_own_stdout_line_never_glued_to_the_last_token(
+        self,
+    ) -> None:
+        """J-4.2-05: the premise gate's own clause only asserted substring
+        membership, never position, so it could not tell a genuine prefix
+        apart from a suffix glued mid-line to the last token's own text
+        (measured at byte index 36, mid-sentence, no leading newline).
+        This test asserts POSITION directly."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(TokenPayloadEventBuilder.token("BRCA1 is a protein-coding gene [1]. "))
+        renderer.handle(_event("citation", 2, _citation("c1", 1)))
+        renderer.handle(
+            _event(
+                "trust_signal", 3,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        rendered = out.getvalue()
+        idx = rendered.index("[answer]")
+        # Mutation: revert to `self._out.write(f"[{outcome}]\n")` with no
+        # leading newline -> `rendered[idx - 1]` becomes the last
+        # character of the prior token's text, never "\n".
+        assert rendered[idx - 1] == "\n"
+        assert rendered[idx + len("[answer]")] == "\n"
+
+
+class _FlushTrackingStream(io.StringIO):
+    """Counts `flush()` calls so a test can prove a write reached the
+    stream's flush point on its own turn, not only that the bytes are
+    eventually correct once the whole run has completed."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.flush_count = 0
+
+    def flush(self) -> None:
+        super().flush()
+        self.flush_count += 1
+
+
+class TestAnswerIsFlushedLive:
+    def test_each_token_write_is_flushed_immediately(self) -> None:
+        """F-4.2-A-07: against a server dribbling tokens over time, the
+        first stdout byte must reach the stream's flush point on that
+        SAME write, not buffer until the process exits. Reproduced in the
+        adversary report as a first-byte time of t+2.26s against a
+        two-second server, i.e. nothing visible until the run ended."""
+        err = io.StringIO()
+        flush_out = _FlushTrackingStream()
+        renderer = Renderer(flush_out, err, operator=False)
+        renderer.handle(_guard_passed())
+        assert flush_out.flush_count == 0
+        renderer.handle(TokenPayloadEventBuilder.token("first token"))
+        # Mutation: drop `self._out.flush()` from `_handle_token` -> this
+        # stays 0 until some later, unrelated flush happens to occur.
+        assert flush_out.flush_count >= 1
+        renderer.handle(TokenPayloadEventBuilder.token(" second token"))
+        assert flush_out.flush_count >= 2
+
+    def test_stderr_status_lines_are_also_flushed_immediately(self) -> None:
+        out = io.StringIO()
+        flush_err = _FlushTrackingStream()
+        renderer = Renderer(out, flush_err, operator=False)
+        # A PASSING guard writes nothing (`_handle_guard` returns early),
+        # so no flush is expected yet; the first stderr-writing event is
+        # `think` below.
+        renderer.handle(_guard_passed())
+        assert flush_err.flush_count == 0
+        renderer.handle(
+            _event(
+                "think", 1,
+                ThinkPayload(
+                    narrative="thinking", query_class="single_hop",
+                    resolved_entities=[], clarifying_question=None,
+                ),
+            )
+        )
+        # Mutation: drop `self._err.flush()` from `_handle_think` -> this
+        # stays 0.
+        assert flush_err.flush_count >= 1
 
 
 if __name__ == "__main__":
