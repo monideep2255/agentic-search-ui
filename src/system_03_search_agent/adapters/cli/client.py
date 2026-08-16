@@ -80,13 +80,19 @@ from __future__ import annotations
 
 import codecs
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import httpx
 from pydantic import ValidationError
 
 from system_03_search_agent.adapters.cli.sse import _SseLineAccumulator
-from system_03_search_agent.contracts.events import CitationPayload, Event
+from system_03_search_agent.contracts.events import (
+    PAYLOAD_MODEL_BY_TYPE,
+    CitationPayload,
+    ErrorPayload,
+    Event,
+)
 
 if TYPE_CHECKING:
     from system_03_search_agent.adapters.cli.credentials import Credentials
@@ -168,8 +174,8 @@ class _ChunkSafeLineSplitter:
     never on U+2028, U+2029, U+0085, or any other `str.splitlines()`
     separator, decoding UTF-8 incrementally across chunk boundaries.
 
-    Two boundary cases a naive `"".join(chunks).split("\\n")` approach
-    gets wrong, both handled here:
+    Three boundary cases a naive `"".join(chunks).split("\\n")` approach
+    gets wrong, all handled here:
 
         - A multi-byte UTF-8 character's bytes split across two `feed()`
           calls: `codecs.getincrementaldecoder("utf-8")` buffers the
@@ -182,15 +188,72 @@ class _ChunkSafeLineSplitter:
           since it might be the first half of a `\\r\\n` pair. `close()`
           resolves it as its own line terminator once no more data is
           coming.
+        - F-4.2-RR-04: a byte (or byte run) that is NEVER valid UTF-8 at
+          all, for example a lone `0xFF`, arriving mid-stream rather than
+          at the connection's own end. `feed()` used to let the
+          incremental decoder's `UnicodeDecodeError` escape uncaught,
+          which propagated all the way to `main.py`'s broad catch-all and
+          ended the run with a generic "the event stream ended
+          unexpectedly" message, even though the connection itself was
+          very likely still alive and more valid frames may still follow.
+          `feed()` now recovers locally, replacing exactly the
+          undecodable byte(s) with the standard U+FFFD replacement
+          character and continuing, the SAME "never crash, always leave
+          something visible" discipline `close()` already applies at the
+          stream's own end, deliberately NOT treated as
+          `self.truncated_utf8` (see `feed()`'s own docstring for why the
+          two are kept distinct).
     """
 
     def __init__(self) -> None:
         self._decoder = codecs.getincrementaldecoder("utf-8")()
         self._buffer = ""
         self.truncated_utf8 = False
+        self.replaced_invalid_utf8 = False
 
     def feed(self, raw_bytes: bytes) -> list[str]:
-        self._buffer += self._decoder.decode(raw_bytes)
+        """Decode `raw_bytes` (plus any bytes the incremental decoder
+        already held back from a previous call as a possibly-incomplete
+        trailing sequence) and extract every complete line.
+
+        F-4.2-RR-04: an incremental decoder in the default `strict` error
+        mode does NOT raise for a merely-incomplete trailing sequence in
+        non-final mode (that case is buffered internally without error,
+        which is the whole reason this class uses an incremental decoder
+        at all); it raises only when a byte is definitively, unambiguously
+        invalid UTF-8 regardless of what follows. So a `UnicodeDecodeError`
+        caught here is never a false positive against the legitimate
+        chunk-boundary case `close()` already handles.
+
+        Recovery replaces the bad byte(s) with U+FFFD and keeps going,
+        rather than ending the whole splitter, because a genuinely
+        invalid byte does not mean the connection ended: unlike `close()`'s
+        own truncation case, more valid frames may still arrive after it.
+        Whatever event the corrupted bytes actually belonged to almost
+        always still fails its own JSON parse or `Event` schema
+        validation downstream (`_decode_stream_event`), which already
+        classifies that failure correctly (a benign skip for an
+        unrecognized frame, or a fatal, surfaced failure for a known-type
+        frame per F-4.2-RR-03); this method's only job is to never let one
+        bad byte crash the reader before that classification gets a
+        chance to run.
+
+        `exc.object` (not `raw_bytes` alone) is what gets re-decoded with
+        `errors="replace"`: `codecs`' own incremental-decoder exceptions
+        report the FULL bytes it was working over, including any prefix
+        the decoder was already holding back from a previous `feed()`
+        call as a possibly-incomplete sequence, so recovering from
+        `exc.object` never silently drops that carried-over prefix. The
+        decoder itself is replaced with a fresh instance afterward, since
+        its own internal buffer state is now fully accounted for by the
+        one-shot recovery decode and must not be reused.
+        """
+        try:
+            self._buffer += self._decoder.decode(raw_bytes)
+        except UnicodeDecodeError as exc:
+            self._buffer += exc.object.decode("utf-8", errors="replace")
+            self._decoder = codecs.getincrementaldecoder("utf-8")()
+            self.replaced_invalid_utf8 = True
         return self._extract_complete_lines()
 
     def close(self) -> list[str]:
@@ -434,6 +497,27 @@ def _parse_json_body(
         ) from exc
 
 
+# F-4.2-RR-03: the closed, eleven-member envelope-`type` taxonomy
+# (`contracts.events.PAYLOAD_MODEL_BY_TYPE`), used by `_decode_stream_event`
+# to tell an ADDITIVE, not-yet-taught event type (system-design-patterns
+# rule 10, benign, safe to skip) apart from a frame that claims to be one
+# of the types this build already knows but whose envelope or payload
+# failed to validate against it (a defect, never silently absorbed). The
+# SSE `event:` field is the discriminator, not a peek into the `data:`
+# JSON body: the real server always sets `event:` to the envelope's own
+# `type` (`adapters/web_sse/app.py`'s `_event_stream`), so it is a second,
+# transport-level channel that survives even when the `data:` body itself
+# is too corrupted to parse as JSON at all, and checking it needs no
+# second, informal JSON parser here.
+_KNOWN_EVENT_TYPES: frozenset[str] = frozenset(PAYLOAD_MODEL_BY_TYPE)
+
+# The `trace_id` `_synthesize_decode_failure_event` stamps on a locally
+# built `error` Event: a fixed literal, never derived from anything the
+# server sent, so it is immediately recognizable in a log or a trace tool
+# as client-manufactured rather than server-emitted.
+_STREAM_DECODE_FAILURE_TRACE_ID = "cli-stream-decode-failure"
+
+
 def _is_terminal_event(event: Event) -> bool:
     """True for a `done` event, or a fatal `error` event (F-4.2-A-12).
 
@@ -476,19 +560,26 @@ class CliClient:
         # not read either before calling `fetch_citations` at least once.
         self.citations_run_cancelled: bool | None = None
         self.citations_export_truncated: bool | None = None
-        # F-4.2-A-10: the two `stream_events` disclosures, reset at the
-        # start of every call. `stream_skipped_frame_count` counts frames
-        # this call decoded but discarded (malformed JSON, a well-formed
-        # JSON body that fails the `Event` schema, or an additive `type`
-        # value this build has not been taught, per system-design-
-        # patterns.md rule 10) rather than aborting the run over one bad
-        # frame. `stream_truncated` is a distinct signal: it is set only
-        # when the LAST frame of the stream, the one produced by a
-        # stream-end flush rather than a normal blank-line dispatch,
-        # fails to decode, or when the connection closed mid multi-byte
-        # UTF-8 character. A mid-stream skip is "kept going"; a trailing
-        # decode failure is "the stream ended mid-frame", a genuinely
-        # different shape a caller may want to disclose differently.
+        # F-4.2-A-10, narrowed at the round-3 fix (F-4.2-RR-03): the two
+        # `stream_events` disclosures, reset at the start of every call.
+        # `stream_skipped_frame_count` counts frames this call decoded but
+        # discarded as BENIGN, i.e. an additive `type` value this build
+        # has not been taught yet (system-design-patterns.md rule 10, an
+        # unrecognized SSE `event:` field) rather than aborting the run
+        # over one forward-compatible frame. It no longer counts a frame
+        # whose `event:` field WAS one of the eleven known types but still
+        # failed to decode: that shape is a genuine defect, not a
+        # forward-compatibility gap, and is never silently counted here;
+        # `_decode_stream_event` turns it into a fatal, rendered `error`
+        # Event instead, so it surfaces through the normal error path
+        # rather than through this counter. `stream_truncated` is a
+        # distinct signal: it is set only when the LAST frame of the
+        # stream, the one produced by a stream-end flush rather than a
+        # normal blank-line dispatch, fails to decode, or when the
+        # connection closed mid multi-byte UTF-8 character. A mid-stream
+        # skip is "kept going"; a trailing decode failure is "the stream
+        # ended mid-frame", a genuinely different shape a caller may want
+        # to disclose differently.
         self.stream_skipped_frame_count: int = 0
         self.stream_truncated: bool = False
 
@@ -569,18 +660,28 @@ class CliClient:
             in biomedical free text) is never cut in half. See this
             module's `_ChunkSafeLineSplitter` docstring.
 
-            F-4.2-A-10: a frame that fails to decode, malformed JSON, JSON
-            that does not match the `Event` schema, or an additive `type`
-            value this build has not been taught, is SKIPPED rather than
-            raised: `system-design-patterns.md` rule 10 makes a new event
-            type an allowed additive v1 change, and a client that aborts a
+            F-4.2-A-10, narrowed at the round-3 fix (F-4.2-RR-03): a frame
+            whose SSE `event:` field is an additive `type` value this
+            build has not been taught is SKIPPED rather than raised:
+            `system-design-patterns.md` rule 10 makes a new event type an
+            allowed additive v1 change, and a client that aborts a
             complete, otherwise-successful answer over one unrecognized
             frame is exactly the failure that rule exists to prevent.
             Skipped frames are counted on `self.stream_skipped_frame_count`
-            rather than swallowed invisibly. A decode failure on the
-            STREAM-END trailing flush is a different, genuine shape (the
-            connection ended mid-frame) and is recorded separately on
-            `self.stream_truncated`, never folded into the same counter.
+            rather than swallowed invisibly. A frame whose `event:` field
+            IS one of the eleven types this build already knows, but whose
+            envelope or payload still fails to decode (malformed JSON, or
+            JSON that does not match the declared type's schema), is a
+            DEFECT, not a forward-compatibility gap, and is no longer
+            silently skipped: `_decode_stream_event` synthesizes a fatal
+            `error` Event for it instead, so it renders, sets a nonzero
+            exit code, and ends the stream exactly like a genuinely
+            server-sent fatal error would. See `_decode_stream_event`'s
+            own docstring for the full three-way split. A decode failure
+            on the STREAM-END trailing flush is a different, genuine shape
+            again (the connection ended mid-frame, not "the server sent
+            one bad, complete frame") and is recorded separately on
+            `self.stream_truncated`, never folded into either of the above.
 
             F-4.2-A-12: this method now ends the generator itself,
             immediately after yielding a `done` or a fatal `error`
@@ -652,25 +753,121 @@ class CliClient:
     def _decode_stream_event(
         self, parsed: tuple[str | None, str, str | None], *, is_trailing: bool
     ) -> Event | None:
-        """Decode one SSE tuple into an `Event`, or return `None` and
-        record the failure on the right counter (F-4.2-A-10). `is_trailing`
-        distinguishes a normal, blank-line-terminated dispatch (a failure
-        here means "one bad frame, the stream itself kept going normally"
-        and increments `stream_skipped_frame_count`) from the one dispatch
-        that can only happen when the stream ended without a closing blank
-        line (a failure here means "the stream ended mid-frame", a
-        genuinely different, truncation-shaped failure recorded on
-        `stream_truncated` instead).
+        """Decode one SSE tuple into an `Event`, or return `None`/a
+        synthesized fatal `Event` and record the failure appropriately
+        (F-4.2-A-10, hardened at the round-3 fix, F-4.2-RR-03).
+
+        Three distinct outcomes, not two, since round 2's own fix
+        collapsed a case that needed to stay separate:
+
+            1. `is_trailing=True` (the stream ended without a closing
+               blank line): unchanged from F-4.2-A-10/F-4.2-A-16.
+               `stream_truncated = True`, `None` returned. This is a
+               transport-level truncation, not "the server sent one bad,
+               complete frame and kept going", and it is deliberately NOT
+               folded into the fatal-synthesis path below: a stream that
+               ends here has, by definition, nothing after it in the SAME
+               connection that could go on to report a false clean
+               success, and `Renderer.finish()` already defaults to a
+               nonzero exit whenever no terminal event ever reached it,
+               which is exactly this shape.
+            2. `is_trailing=False` and the SSE `event:` field is NOT one
+               of `_KNOWN_EVENT_TYPES`: an additive, not-yet-taught type
+               (system-design-patterns rule 10). Benign. Skipped and
+               counted on `stream_skipped_frame_count`, unchanged from
+               F-4.2-A-10.
+            3. `is_trailing=False` and the SSE `event:` field IS one of
+               `_KNOWN_EVENT_TYPES`, but the envelope or payload still
+               failed to validate (malformed JSON, an `Event`-level field
+               out of shape, or a payload that does not match the
+               declared type's Section 2.3 model). This is the round-3
+               finding: this build recognizes the claimed type, so a
+               validation failure here is a genuine defect, not a
+               forward-compatibility gap, and round 2's fix silently
+               absorbed it exactly like case 2, which let a later
+               well-formed `done` report clean success over a dropped
+               fatal frame. It is no longer silently skipped: a locally
+               synthesized fatal `error` Event is returned instead
+               (`_synthesize_decode_failure_event`), routed through the
+               SAME `Event`/`ErrorPayload` models and the same
+               `render.py`/`_is_terminal_event` machinery every
+               genuinely server-sent fatal error already uses, so this
+               frame renders an actionable message, sets a nonzero exit
+               code, and ends the stream, exactly like a frame that
+               explicitly claimed `type: "error"` always has. A frame
+               that literally claims `event: error` is the narrowest
+               instance of this case, not a separate one: it is already
+               "one of `_KNOWN_EVENT_TYPES`" and gets the same treatment
+               with no special-casing needed.
         """
-        _event_type, data, _seq_id = parsed
+        event_type, data, seq_id = parsed
         try:
             return Event.model_validate_json(data)
         except ValidationError:
+            if not is_trailing and event_type in _KNOWN_EVENT_TYPES:
+                return self._synthesize_decode_failure_event(event_type, seq_id)
             if is_trailing:
                 self.stream_truncated = True
             else:
                 self.stream_skipped_frame_count += 1
             return None
+
+    def _synthesize_decode_failure_event(
+        self, claimed_type: str, seq_id: str | None
+    ) -> Event:
+        """Builds a fatal, run-scoped `error` Event LOCALLY, never
+        received from the server, for a frame whose SSE `event:` field
+        claimed `claimed_type` (a member of `_KNOWN_EVENT_TYPES`) but
+        whose envelope or payload failed `Event.model_validate_json`
+        (F-4.2-RR-03).
+
+        `error_class="transient"` is a deliberate choice, not the more
+        obvious `"unexpected"`: `render.py`'s own fixed disclosure table
+        (`_CLI_FATAL_ERROR_DISCLOSURE`) renders actionable copy for
+        `"transient"` ("Run 's3 ask' again to start a new attempt"),
+        while `"unexpected"`'s copy names no next step at all. Whether
+        the exit code goes nonzero does not depend on this choice either
+        way: `fatal=True` alone already forces it, per `render.py`'s
+        `_handle_error` (`if payload.fatal or ...`). Choosing the
+        disclosure that tells the user what to do next, when either
+        choice sets the same exit code, is what
+        `tool-call-budgets.md`'s "an error message must say what to do
+        next" already asks for.
+
+        `message` is set for completeness and for any caller that reads
+        the raw `Event` directly (this module's own tests, for example),
+        even though `render.py`'s `_handle_error` never renders
+        `ErrorPayload.message` verbatim for any error, synthesized or
+        server-sent (see that module's own `_CLI_FATAL_ERROR_DISCLOSURE`
+        comment for why); the rendered line comes entirely from the
+        fixed `"transient"` disclosure copy plus `source`, both already
+        safe to display.
+        """
+        try:
+            seq = int(seq_id) if seq_id is not None else 0
+        except ValueError:
+            seq = 0
+        seq = max(seq, 0)
+        payload = ErrorPayload(
+            fatal=True,
+            scope="run",
+            source="cli_stream_decode",
+            error_class="transient",
+            message=(
+                f"the server sent a {claimed_type!r} event that this client "
+                "could not decode; the run cannot be trusted to have "
+                "completed as reported."
+            )[:256],
+            retry_after_s=0,
+        )
+        return Event(
+            type="error",
+            version="v1",
+            trace_id=_STREAM_DECODE_FAILURE_TRACE_ID,
+            seq=seq,
+            ts=datetime.now(UTC),
+            payload=payload.model_dump(),
+        )
 
     async def stop(self, run_id: str) -> bool:
         """`POST /v1/query/{run_id}/stop`. Returns the server's own

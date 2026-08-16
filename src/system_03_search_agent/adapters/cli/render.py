@@ -50,22 +50,29 @@ the gate is the one that cannot be edited:
    already immediately before `done`.
 
 3. Untrusted-content sanitization (build phase 4.2 review, F-4.2-A-01,
-   critical). Every field this module writes that traces back to Layer 2
-   or Layer 3 content, an NCBI record body, a PubTator annotation, a
+   critical; hardened at the round-3 fix, F-4.2-RR-01 and F-4.2-RR-02).
+   Every field this module writes that traces back to Layer 2 or Layer 3
+   content, an NCBI record body, a PubTator annotation, a
    ClinicalTrials.gov study, or model narrative text assembled from any of
    them, is untrusted external text per `ai-security-standards.md`'s
    "treat AI output as untrusted" rule, and this module is the one place
    that text reaches a terminal, an execution surface, not a display
    surface. `_sanitize_untrusted` (defined below) is the one call site
    every such field is routed through before `self._out`/`self._err`
-   writes it: it neutralizes C0/C1 control bytes (which is what defeats
-   ANSI CSI/OSC terminal-control sequences, since both begin with a C0/C1
-   control byte) into a visible escaped form, and separately escapes any
-   literal occurrence of this renderer's own closed structural vocabulary,
-   the four trust-outcome words in brackets and the references header, so
-   a hostile source cannot forge either one byte-for-byte. See
-   `_sanitize_untrusted`'s own docstring for the full threat model and the
-   two-option choice this ticket's report names.
+   writes it: it neutralizes every character in a closed set of Unicode
+   general categories carrying no legitimate display content, `Cc`
+   control bytes (which is what defeats ANSI CSI/OSC terminal-control
+   sequences, since both begin with a `Cc` byte), `Cf` format characters
+   (which is what defeats a bidirectional override, since a hostile
+   source can no longer make a bidi-aware terminal display a cited claim
+   in reverse), `Cs` surrogates, and `Co` private-use code points, into a
+   visible escaped form, and separately escapes any occurrence of this
+   renderer's own closed structural vocabulary, the four trust-outcome
+   words in brackets and the references header, matched case-insensitively
+   and against fullwidth/halfwidth compatibility forms so a hostile source
+   cannot forge either one visually either. See `_sanitize_untrusted`'s
+   own docstring for the full threat model and the two-option choice this
+   ticket's report names.
 
 Depends on:
     - system_03_search_agent.contracts.events (Event and every Section 2.3
@@ -94,6 +101,7 @@ Writes:
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import TYPE_CHECKING, TextIO
 
 import httpx
@@ -193,7 +201,8 @@ def _error_disclosure(error_class: str) -> str:
 
 
 # ----------------------------------------------------------------------
-# Untrusted-content sanitization (F-4.2-A-01, critical)
+# Untrusted-content sanitization (F-4.2-A-01, critical; hardened at build
+# phase 4.2's round-3 fix, F-4.2-RR-01 and F-4.2-RR-02)
 # ----------------------------------------------------------------------
 #
 # A CLI writes to a terminal, and a terminal EXECUTES control sequences.
@@ -202,9 +211,39 @@ def _error_disclosure(error_class: str) -> str:
 # to Layer 2/3 content or model output built from it, which is untrusted
 # external text per `ai-security-standards.md`. Left unescaped, a hostile
 # field can clear the screen (`\x1b[2J`), reposition the cursor, retitle
-# the window (`\x1b]0;...\x07`), conceal text (`\x1b[8m`), or overwrite an
-# already-printed line (`\r`). This is the ONE call site every such field
-# is routed through before either stream sees it.
+# the window (`\x1b]0;...\x07`), conceal text (`\x1b[8m`), overwrite an
+# already-printed line (`\r`), or, the round-3 finding (F-4.2-RR-01), use
+# a Unicode bidirectional override (U+202E RIGHT-TO-LEFT OVERRIDE and
+# its siblings) to make a bidi-aware terminal DISPLAY a cited clinical
+# claim as the opposite of what it actually encodes, with no control byte
+# in range 0x00-0x9F involved at all. This is the ONE call site every
+# such field is routed through before either stream sees it.
+#
+# F-4.2-RR-01's fix generalizes the original C0/C1 range check to a
+# Unicode GENERAL CATEGORY check (`unicodedata.category`), rather than
+# hand-listing the five bidi characters the round-3 verifier happened to
+# name: a hand-enumerated set is exactly how this gap arose in the first
+# place (C0 and C1 were enumerated and every other control-shaped
+# character was implicitly trusted). `_ESCAPED_UNICODE_CATEGORIES` below
+# names the categories that carry no legitimate DISPLAY content of their
+# own: `Cc` (control, which is what C0/C1 already were, so this is a
+# strict superset of the original coverage, never a narrowing), `Cf`
+# (format: every bidi embedding/override/isolate control, zero-width
+# joiner/non-joiner, the byte-order mark, and the internal zero-width
+# padding the round-3 verifier used to defeat the old literal-string
+# forgery match), `Cs` (surrogate, reachable via a crafted `\udXXX` JSON
+# escape even though Python source text cannot contain one directly), and
+# `Co` (private use, code points with no assigned, publicly-defined
+# glyph at all, so a terminal or font renders them unpredictably).
+# Deliberately NOT escaped: every other category, including `Cn`
+# (unassigned) code points and the ordinary letter, mark, number, and
+# punctuation categories real biomedical text needs (Greek letters,
+# superscripts, em dashes, `p.Arg175His` and `HLA-DRB1*15:01` notation,
+# percent signs). No `Cf` character is preserved: every member of that
+# category is a formatting instruction to a renderer, never
+# content a reader needs to see, so this module escapes the category
+# uniformly rather than carve out an exception a future hostile field
+# could hide inside.
 #
 # A second, distinct attack survives a perfect control-character
 # sanitizer alone: because `token.text` is printed close to verbatim
@@ -226,60 +265,156 @@ def _error_disclosure(error_class: str) -> str:
 # references header, so it cannot false-positive on an ordinary numeric
 # citation marker like `[1]`, which design decision 1 requires this
 # module to leave untouched.
-_C0_C1_ESCAPE_EXEMPT = "\n"
+#
+# F-4.2-RR-02 hardened this second defence: the original match was
+# case-sensitive and literal-ASCII-only, so `[ANSWER]`, a fullwidth
+# `［answer］`, or a fullwidth colon in `References：` passed through
+# unescaped, each visually close enough to the genuine tag to confuse a
+# reader. `_forgery_matching_view` (below) builds a same-length matching
+# view of the text, per character, folding a compatibility form (a
+# fullwidth or halfwidth glyph) to its canonical ASCII counterpart via
+# Unicode NFKC and lowercasing the ASCII range, then matches
+# `_FORGERY_PATTERN` against THAT view while still escaping the
+# corresponding span of the ORIGINAL text, never the view itself, so a
+# legitimate fullwidth CJK passage elsewhere in the same field is never
+# rewritten. This does NOT close the harder half of the confusable
+# problem: a true cross-script homoglyph, for example Cyrillic 'а'
+# (U+0430) standing in for Latin 'a', is canonically distinct from its
+# Latin look-alike with no NFKC compatibility mapping between the two, so
+# `аnswer` inside brackets still does not match `_FORGERY_PATTERN` today.
+# Closing that fully needs Unicode's separate confusables data (UTS #39),
+# which this fix does not implement; see `_forgery_matching_view`'s own
+# docstring for the same residual stated again at the point it matters.
+_ESCAPE_EXEMPT_CHARS = frozenset({"\n"})
+
+# Every Unicode general category this module treats as carrying no
+# legitimate DISPLAY content: `Cc` (control, the original C0/C1 range),
+# `Cf` (format, every bidi control and zero-width character), `Cs`
+# (surrogate), `Co` (private use). See the block comment above for why
+# each is included and why no member of `Cf` is exempted.
+_ESCAPED_UNICODE_CATEGORIES = frozenset({"Cc", "Cf", "Cs", "Co"})
 
 # The closed `TrustOutcome` vocabulary (`contracts.events.TrustOutcome`)
 # plus the references header, matched only when they appear inside
-# UNTRUSTED text. This pattern is never applied to a literal this module
-# itself writes.
-_FORGERY_PATTERN = re.compile(r"\[(answer|flag|ask|refuse)\]|References:")
+# UNTRUSTED text, and only ever matched against `_forgery_matching_view`'s
+# normalized, lowercased view, never against the original text directly.
+# This pattern is never applied to a literal this module itself writes.
+_FORGERY_PATTERN = re.compile(r"\[(?P<word>answer|flag|ask|refuse)\]|(?P<ref>references:)")
 
 
 def _escape_control_bytes(text: str) -> str:
-    """Neutralize C0 (except `\\n`) and C1 control bytes into a visible,
-    printable escape form (`\\xHH`/`\\uHHHH`), never a silent deletion: a
-    reader can still see something was there, where deletion would let an
-    attacker hide content instead of merely fail to forge it. `\\n` is
+    """Neutralize every character whose Unicode general category is in
+    `_ESCAPED_UNICODE_CATEGORIES` (except `\\n`) into a visible, printable
+    escape form (`\\xHH`/`\\uHHHH`/`\\UHHHHHHHH`), never a silent deletion:
+    a reader can still see something was there, where deletion would let
+    an attacker hide content instead of merely fail to forge it. `\\n` is
     exempt because it is common in legitimate narrative text and, on its
     own, only moves the cursor down a line; it carries no terminal-control
-    risk the way `\\r` (line overwrite) or an ESC-led CSI/OSC sequence
-    does. This alone defeats every ANSI CSI/OSC sequence too: both begin
-    with the C0 ESC byte (0x1B) or a C1 single-byte equivalent (0x9B for
-    CSI, 0x9D for OSC), and once that lead byte is rewritten into
-    printable text, a terminal has nothing left to interpret as an escape
-    sequence.
+    risk the way `\\r` (line overwrite), an ESC-led CSI/OSC sequence, or a
+    bidi override (F-4.2-RR-01) does. This alone defeats every ANSI
+    CSI/OSC sequence: both begin with the C0 ESC byte (0x1B) or a C1
+    single-byte equivalent (0x9B for CSI, 0x9D for OSC), both category
+    `Cc`, and once that lead byte is rewritten into printable text, a
+    terminal has nothing left to interpret as an escape sequence. It also
+    defeats every bidi override/embedding/isolate control (category `Cf`)
+    the same way, since a terminal that no longer sees the raw bidi
+    control character has nothing left to reorder display around.
     """
     out: list[str] = []
     for ch in text:
-        code = ord(ch)
-        if ch == _C0_C1_ESCAPE_EXEMPT:
+        if ch in _ESCAPE_EXEMPT_CHARS:
             out.append(ch)
-        elif code < 0x20 or code == 0x7F:
-            out.append(f"\\x{code:02x}")
-        elif 0x80 <= code <= 0x9F:
-            out.append(f"\\u{code:04x}")
+            continue
+        if unicodedata.category(ch) in _ESCAPED_UNICODE_CATEGORIES:
+            code = ord(ch)
+            if code < 0x100:
+                out.append(f"\\x{code:02x}")
+            elif code <= 0xFFFF:
+                out.append(f"\\u{code:04x}")
+            else:
+                out.append(f"\\U{code:08x}")
         else:
             out.append(ch)
     return "".join(out)
 
 
-def _escape_forgery_markers(text: str) -> str:
-    """Escape a byte-identical copy of this renderer's own trust tag or
-    references header wherever one appears inside untrusted text, so a
-    forged occurrence can never be indistinguishable from the genuine
-    line this module itself writes. The backslash insertion is visible,
-    not a deletion, matching `_escape_control_bytes`'s convention above:
-    `[answer]` embedded in a hostile field becomes the literal text
-    `[\\answer]`, and `References:` becomes `References\\:`.
+def _forgery_matching_view(text: str) -> str:
+    """Builds a same-LENGTH view of `text` used only to LOCATE a forged
+    structural marker; `_escape_forgery_markers` always performs the
+    actual escape on the ORIGINAL text at the same index range, never on
+    this view, so no legitimate character in the untrusted text is ever
+    rewritten by this function.
+
+    Two bounded, well-defined foldings, both applied one character at a
+    time so the view's length and index alignment with `text` never
+    drifts (a whole-string `unicodedata.normalize` or `str.casefold` can
+    both change length, for example a ligature decomposing to two
+    characters or German 'ß' casefolding to "ss", either of which would
+    silently misalign every index past that point):
+
+        - Unicode NFKC compatibility normalization of each character in
+          isolation, kept only when it collapses to exactly one
+          character. This folds a fullwidth or halfwidth compatibility
+          form (`［`, `Ａ`, `：`) to its canonical ASCII counterpart,
+          closing the fullwidth-bracket and fullwidth-colon bypass
+          F-4.2-RR-02's verifier found.
+        - An ASCII-only (`A`-`Z`) lowercase fold on whatever that leaves,
+          so `[ANSWER]`/`[Answer]` match the same as `[answer]` without
+          reaching for `str.casefold`, which is not length-preserving in
+          general (the German 'ß' case above).
+
+    This does NOT catch a true cross-script homoglyph (a Cyrillic 'а'
+    standing in for a Latin 'a'): NFKC is a compatibility-decomposition
+    normalization, not a confusables table, and the two letters are
+    canonically distinct code points with no compatibility mapping
+    between them. Closing that residual needs Unicode's separate
+    confusables data (UTS #39), which this fix does not implement; stated
+    once more here since it is the one bypass this function still lets
+    through.
     """
+    view_chars: list[str] = []
+    for ch in text:
+        folded = unicodedata.normalize("NFKC", ch)
+        if len(folded) != 1:
+            folded = ch
+        if "A" <= folded <= "Z":
+            folded = folded.lower()
+        view_chars.append(folded)
+    return "".join(view_chars)
 
-    def _replace(match: re.Match[str]) -> str:
-        word = match.group(1)
-        if word is not None:
-            return f"[\\{word}]"
-        return "References\\:"
 
-    return _FORGERY_PATTERN.sub(_replace, text)
+def _escape_forgery_markers(text: str) -> str:
+    """Escape a byte-identical (or, since F-4.2-RR-02, a
+    case-folded/compatibility-normalized) copy of this renderer's own
+    trust tag or references header wherever one appears inside untrusted
+    text, so a forged occurrence can never be indistinguishable from the
+    genuine line this module itself writes. Matching happens against
+    `_forgery_matching_view(text)`, never `text` itself; the escape
+    insertion always applies to the corresponding span of the ORIGINAL
+    `text`, preserving whatever characters were actually there. The
+    backslash insertion is visible, not a deletion, matching
+    `_escape_control_bytes`'s convention above, and keeps this module's
+    original insertion point for a plain-ASCII match unchanged: `[answer]`
+    embedded in a hostile field becomes the literal text `[\\answer]`
+    (backslash right after the opening bracket), and `References:`
+    becomes `References\\:` (backslash right before the closing colon). A
+    fullwidth or mixed-case match gets the same positional treatment
+    against its own original characters, for example `［answer］` becomes
+    `［\\answer］`.
+    """
+    view = _forgery_matching_view(text)
+    pieces: list[str] = []
+    cursor = 0
+    for match in _FORGERY_PATTERN.finditer(view):
+        start, end = match.span()
+        pieces.append(text[cursor:start])
+        if match.group("word") is not None:
+            pieces.append(text[start] + "\\" + text[start + 1 : end])
+        else:
+            pieces.append(text[start : end - 1] + "\\" + text[end - 1 : end])
+        cursor = end
+    pieces.append(text[cursor:])
+    return "".join(pieces)
 
 
 def _sanitize_untrusted(text: str) -> str:

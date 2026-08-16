@@ -41,6 +41,7 @@ from system_03_search_agent.adapters.cli.client import (
     ForbiddenError,
     NotFoundError,
     RateLimitedError,
+    _ChunkSafeLineSplitter,
     _parse_error_detail,
     _parse_retry_after,
 )
@@ -412,6 +413,63 @@ def _event_payload(event_type: str, seq: int, payload: dict) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# _ChunkSafeLineSplitter, direct unit coverage (F-4.2-RR-04). TestStreamEvents
+# below exercises it only through a full SSE round trip; these pin its own
+# byte-level recovery contract in isolation.
+# ---------------------------------------------------------------------------
+
+
+class TestChunkSafeLineSplitter:
+    def test_an_invalid_byte_mid_stream_is_replaced_not_raised(self) -> None:
+        splitter = _ChunkSafeLineSplitter()
+        lines = splitter.feed(b"before\xffafter\n")
+        # Mutation: revert `feed` to the unguarded
+        # `self._buffer += self._decoder.decode(raw_bytes)` -> this line
+        # raises `UnicodeDecodeError` instead of returning.
+        assert lines == ["before�after"]
+        assert splitter.replaced_invalid_utf8 is True
+        assert splitter.truncated_utf8 is False
+
+    def test_a_carried_over_incomplete_prefix_is_not_lost_on_recovery(self) -> None:
+        """`abc\\xe2` leaves a legitimate, still-incomplete 2-byte lead
+        byte buffered inside the incremental decoder (no output for it
+        yet). The next `feed()` supplies an invalid continuation byte
+        (`0x28`, ASCII `(`, never a valid UTF-8 continuation). Recovery
+        must decode `exc.object` (the carried-over `\\xe2` PLUS the new
+        bytes), not `raw_bytes` alone, or the `abc` prefix's trailing
+        buffered byte would silently vanish from the output entirely
+        rather than surface as a visible U+FFFD.
+        """
+        splitter = _ChunkSafeLineSplitter()
+        assert splitter.feed(b"abc\xe2") == []
+        lines = splitter.feed(b"\x28def\n")
+        # Mutation: recover from `raw_bytes` (this call's own
+        # `b"\x28def\n"`) instead of `exc.object` -> the leading `\xe2`
+        # byte carried over from the previous feed() is silently dropped,
+        # producing "abc(def" (7 chars) instead of "abc�(def" (8
+        # chars), with no visible sign the byte was ever there.
+        assert lines == ["abc�(def"]
+        assert splitter.replaced_invalid_utf8 is True
+
+    def test_a_genuinely_incomplete_trailing_sequence_at_close_is_still_truncated_not_replaced(
+        self,
+    ) -> None:
+        """The pre-existing distinction this fix must not blur: bytes
+        that are merely INCOMPLETE at the connection's own end (never
+        invalid, just cut short before the sequence's continuation
+        bytes arrived) are `truncated_utf8`, never `replaced_invalid_utf8`.
+        `feed()`'s own recovery path is never involved here since nothing
+        raises until `close()`'s `final=True` finalize call.
+        """
+        splitter = _ChunkSafeLineSplitter()
+        assert splitter.feed(b"trailing \xe2\x82") == []
+        lines = splitter.close()
+        assert lines == ["trailing "]
+        assert splitter.truncated_utf8 is True
+        assert splitter.replaced_invalid_utf8 is False
+
+
 class TestStreamEvents:
     @pytest.mark.asyncio
     async def test_decodes_the_full_envelope_and_skips_keepalive_comments(self) -> None:
@@ -556,6 +614,64 @@ class TestStreamEvents:
         assert events[0].payload["text"] == token_text
 
     # -----------------------------------------------------------------
+    # F-4.2-RR-04 (round-3 fix): a byte that is never valid UTF-8 at all,
+    # arriving mid-stream, must not raise out of `_ChunkSafeLineSplitter`.
+    # -----------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_an_invalid_utf8_byte_mid_stream_does_not_crash_the_reader(
+        self,
+    ) -> None:
+        """A lone `0xFF` (never a valid UTF-8 lead byte, under any
+        continuation) landing inside an otherwise well-formed frame used
+        to let `UnicodeDecodeError` escape uncaught from `feed()`, all the
+        way to `main.py`'s broad catch-all, which reported a generic "the
+        event stream ended unexpectedly" and abandoned a connection that
+        was very likely still alive. It must instead survive locally: the
+        bad byte is replaced with U+FFFD and the frame still decodes
+        (though it will very likely still fail its OWN JSON parse, which
+        is a separate, already-handled concern per F-4.2-RR-03, not this
+        test's point), and a well-formed frame arriving afterward is
+        still delivered.
+        """
+        done_envelope = _event_payload(
+            "done",
+            1,
+            {
+                "total_cost_usd": 0.0,
+                "total_tool_calls": 0,
+                "elapsed_ms": 1,
+                "trust_outcome": "answer",
+            },
+        )
+        # The invalid byte sits inside an event whose SSE `event:` field
+        # is unrecognized, so the corrupted frame itself is expected to
+        # be benign-skipped per F-4.2-RR-03's own taxonomy; this test's
+        # point is only that the BYTE-level failure never raises, not
+        # what happens to the one frame it lands in.
+        body = (
+            b"event: mystery\ndata: bad byte -> \xff <- still here\nid: 0\n\n"
+            + f"event: done\ndata: {json.dumps(done_envelope)}\nid: 1\n\n".encode()
+        )
+
+        async def gen() -> AsyncIterator[bytes]:
+            yield body
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=gen(), headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+        # Mutation: revert `_ChunkSafeLineSplitter.feed` to the
+        # unguarded `self._buffer += self._decoder.decode(raw_bytes)`
+        # with no try/except -> this raises `UnicodeDecodeError` straight
+        # out of `stream_events`, so the `async for` below never
+        # completes normally.
+        events = [event async for event in client.stream_events("run-1")]
+
+        assert [e.type for e in events] == ["done"]
+        assert client.stream_skipped_frame_count == 1
+
+    # -----------------------------------------------------------------
     # F-4.2-A-10: an unknown or malformed frame is skipped, counted, and
     # never aborts the run over a complete, otherwise-valid answer.
     # -----------------------------------------------------------------
@@ -605,7 +721,16 @@ class TestStreamEvents:
         assert client.stream_truncated is False
 
     @pytest.mark.asyncio
-    async def test_a_non_json_data_line_is_skipped_and_counted_not_raised(self) -> None:
+    async def test_a_non_json_data_line_under_an_unrecognized_type_is_skipped_and_counted(
+        self,
+    ) -> None:
+        """A non-JSON `data:` body is only ever benign-skippable when the
+        SSE `event:` field is not one of the eleven types this build
+        already knows (`event: mystery` here). See
+        `test_a_non_json_data_line_under_a_known_type_is_not_silently_skipped`
+        just below for the opposite, F-4.2-RR-03 case, where the same
+        malformed body under a KNOWN type must not be silently absorbed.
+        """
         done_envelope = _event_payload(
             "done",
             1,
@@ -617,7 +742,7 @@ class TestStreamEvents:
             },
         )
         body = (
-            "event: guard\ndata: not json at all\nid: 0\n\n"
+            "event: mystery\ndata: not json at all\nid: 0\n\n"
             f"event: done\ndata: {json.dumps(done_envelope)}\nid: 1\n\n"
         ).encode()
 
@@ -630,6 +755,99 @@ class TestStreamEvents:
         assert [e.type for e in events] == ["done"]
         assert client.stream_skipped_frame_count == 1
 
+    # -----------------------------------------------------------------
+    # F-4.2-RR-03 (round-3 fix): a frame whose SSE `event:` field IS one
+    # of the eleven known types, but whose envelope or payload fails to
+    # decode, is a defect this build recognizes it should have understood,
+    # not a forward-compatibility gap. Round 2's own fix (F-4.2-A-10)
+    # silently absorbed this case identically to a genuinely unrecognized
+    # type, which let a later well-formed `done` report a clean, trusted
+    # success over a dropped fatal frame. It must instead render, exit
+    # nonzero, and end the stream, the same as any server-sent fatal
+    # `error`.
+    # -----------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_a_non_json_data_line_under_a_known_type_is_not_silently_skipped(
+        self,
+    ) -> None:
+        """Reproduces the round-3 verifier's exact regression shape: a
+        `token` (an ordinary answer-content frame, exercising that this
+        applies to any of the eleven types, not only `error`) streams some
+        real content, a malformed but KNOWN-type frame arrives next, and a
+        well-formed `done` follows behind it. The malformed frame must end
+        the run right there, as a fatal, rendered `error`, so the `done`
+        behind it is never reached and the run can never report a clean
+        trust outcome over a defect this build already knows it should
+        have understood.
+        """
+        token_envelope = _event_payload(
+            "token", 0, {"text": "BRCA1 is a gene.", "marker_ids": []}
+        )
+        done_envelope = _event_payload(
+            "done",
+            2,
+            {
+                "total_cost_usd": 0.0,
+                "total_tool_calls": 0,
+                "elapsed_ms": 1,
+                "trust_outcome": "answer",
+            },
+        )
+        body = (
+            f"event: token\ndata: {json.dumps(token_envelope)}\nid: 0\n\n"
+            # A KNOWN type (`guard`) with a non-JSON body: this build
+            # understands "guard" perfectly well, so this is a defect,
+            # never a forward-compatible skip.
+            "event: guard\ndata: not json at all\nid: 1\n\n"
+            f"event: done\ndata: {json.dumps(done_envelope)}\nid: 2\n\n"
+        ).encode()
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+        events = [event async for event in client.stream_events("run-1")]
+
+        # Mutation observed: reverting `_decode_stream_event` to route
+        # every ValidationError through the old two-way (skip and count /
+        # truncate) split, with no `_KNOWN_EVENT_TYPES` check at all,
+        # turns this into `assert [e.type for e in events] == ["token",
+        # "done"]` with `stream_skipped_frame_count == 1`: the malformed
+        # `guard` frame vanishes, the `done` behind it is reached, and the
+        # run reports success. That is the exact regression this test
+        # exists to catch; see this file's own report for the command
+        # actually run against that mutation.
+        assert [e.type for e in events] == ["token", "error"]
+        assert events[1].payload["fatal"] is True
+        assert events[1].payload["error_class"] == "transient"
+        assert events[1].payload["source"] == "cli_stream_decode"
+        # Never silently absorbed into the skip counter: this is a
+        # rendered, fatal failure, not a benign, forward-compatible skip.
+        assert client.stream_skipped_frame_count == 0
+        assert client.stream_truncated is False
+
+    @pytest.mark.asyncio
+    async def test_a_frame_that_claims_to_be_error_and_fails_to_decode_is_never_dropped(
+        self,
+    ) -> None:
+        """The narrowest instance of the same rule: a frame that literally
+        claims `event: error` and fails to decode must never be dropped in
+        a way that lets the run report success. No special-casing exists
+        for this in `_decode_stream_event`; it falls out of the same
+        `_KNOWN_EVENT_TYPES` check `error` is itself a member of.
+        """
+        body = b"event: error\ndata: {not even valid json\nid: 0\n\n"
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+        events = [event async for event in client.stream_events("run-1")]
+
+        assert [e.type for e in events] == ["error"]
+        assert events[0].payload["fatal"] is True
+
     @pytest.mark.asyncio
     async def test_a_stream_that_ends_mid_frame_sets_truncated_not_skipped(self) -> None:
         """A frame that dispatches via the STREAM-END flush (no closing
@@ -638,7 +856,13 @@ class TestStreamEvents:
         event, not "the server sent one bad, complete frame and kept
         going". `stream_truncated` must be set, and
         `stream_skipped_frame_count` must stay at 0, so a caller can
-        distinguish the two.
+        distinguish the two. This is deliberately preserved, unaffected by
+        F-4.2-RR-03: the trailing frame here claims a KNOWN type (`token`)
+        and would trigger the new fatal-synthesis path if it were not
+        `is_trailing`, but a truncated connection has nothing after it in
+        the same stream that could go on to report a false clean success,
+        so `_decode_stream_event` never applies the new path when
+        `is_trailing=True`.
         """
         guard_envelope = _event_payload(
             "guard", 0, {"passed": True, "category": "ok", "reason": None}

@@ -757,6 +757,295 @@ class TestUntrustedContentSanitization:
         assert "References\\:" in rendered
 
 
+class TestRoundThreeSanitizationHardening:
+    """Build phase 4.2, round-3 fix. Reproduces the round-3 verifier's
+    exact payloads for F-4.2-RR-01 (bidirectional overrides bypassed the
+    old C0/C1-only range check) and F-4.2-RR-02 (the forgery defense was
+    case-sensitive and literal-ASCII-only)."""
+
+    # -------------------------------------------------------------
+    # F-4.2-RR-01: Unicode `Cf`/`Cs`/`Co` categories, not just C0/C1.
+    # -------------------------------------------------------------
+
+    def test_a_bidi_override_in_token_text_no_longer_survives_verbatim(self) -> None:
+        """The verifier's exact reproduction: a RIGHT-TO-LEFT OVERRIDE
+        (U+202E) makes a bidi-aware terminal display the tail of this
+        text in reverse, so a cited clinical claim can be made to DISPLAY
+        the opposite of what it encodes, with no C0/C1 control byte
+        anywhere in the string."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        hostile = "The variant is benign\u202e )1[ tnangilam si( "
+        renderer.handle(TokenPayloadEventBuilder.token(hostile))
+        rendered = out.getvalue()
+        # Mutation: keep `_escape_control_bytes`'s check scoped to
+        # `code < 0x20 or code == 0x7F or 0x80 <= code <= 0x9F` (the old
+        # C0/C1-only range) instead of the `unicodedata.category` check
+        # -> U+202E (category `Cf`, well outside that range) reaches
+        # `rendered` unescaped.
+        assert "\u202e" not in rendered
+        assert "\\u202e" in rendered
+        assert "benign" in rendered
+
+    def test_a_bidi_override_in_citation_source_no_longer_survives_verbatim(self) -> None:
+        """The same defense applies to `citation.source`, printed
+        immediately before `source_url` on the references line, per the
+        verifier's note that a forged host can be made to visually
+        overlap a genuine URL there."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(TokenPayloadEventBuilder.token("a claim [1]. "))
+        hostile_citation = CitationPayload(
+            citation_id="c1", display_index=1,
+            source="ncbi_gene\u2066evil.example\u2069", source_id="672",
+            source_url="https://www.ncbi.nlm.nih.gov/gene/672",
+            layer="layer_1_graph", field="symbol",
+            claim_text="BRCA1 is a protein-coding gene.",
+            evidence_kind="direct", assertion_confidence="high",
+            population_ancestry_context=None, license="public-domain",
+        )
+        renderer.handle(_event("citation", 2, hostile_citation))
+        renderer.handle(
+            _event(
+                "trust_signal", 3,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        renderer.handle(
+            _event(
+                "done", 4,
+                DonePayload(
+                    total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=1, trust_outcome="answer"
+                ),
+            )
+        )
+        rendered = out.getvalue()
+        assert "\u2066" not in rendered and "\u2069" not in rendered
+        assert "\\u2066" in rendered and "\\u2069" in rendered
+
+    def test_legitimate_biomedical_text_still_passes_through_unchanged(self) -> None:
+        """The verifier confirmed these pass through unchanged today;
+        they must still, after the category generalization: Greek
+        letters, superscripts, em dashes, protein-change notation, HLA
+        allele notation, and percent signs carry no `Cc`/`Cf`/`Cs`/`Co`
+        code point among them."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        legit = (
+            "p.Arg175His, HLA-DRB1*15:01, a 95% penetrant αβ "
+            "variant with a 10²-fold effect — confirmed"
+        )
+        renderer.handle(TokenPayloadEventBuilder.token(legit))
+        rendered = out.getvalue()
+        assert legit in rendered
+        assert "\\x" not in rendered
+        assert "\\u" not in rendered
+
+    def test_a_zero_width_space_inside_the_word_answer_is_neutralized_by_the_category_check(
+        self,
+    ) -> None:
+        """One of the round-3 verifier's forgery payloads: `\\u200b`
+        (ZERO WIDTH SPACE, category `Cf`) padded inside the word "answer"
+        so the literal string never matched `_FORGERY_PATTERN` at all.
+        `_escape_control_bytes` runs BEFORE the forgery pass in
+        `_sanitize_untrusted`, so this is neutralized at the category
+        check, before the forgery matcher ever sees it: the padding
+        character becomes visible escaped text, which breaks the
+        contiguous "answer" run the old literal-string match needed.
+        """
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(
+            TokenPayloadEventBuilder.token("the abstract claims [ans\u200bwer] BRCA1 causes X")
+        )
+        renderer.handle(
+            _event(
+                "trust_signal", 2,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        renderer.handle(
+            _event(
+                "done", 3,
+                DonePayload(
+                    total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=1, trust_outcome="answer"
+                ),
+            )
+        )
+        rendered = out.getvalue()
+        assert rendered.count("[answer]") == 1
+        assert "\u200b" not in rendered
+
+    # -------------------------------------------------------------
+    # F-4.2-RR-02: case-insensitive, fullwidth/halfwidth-normalized match.
+    # -------------------------------------------------------------
+
+    def test_uppercase_and_mixed_case_trust_tag_forgery_is_escaped(self) -> None:
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(
+            TokenPayloadEventBuilder.token(
+                "the abstract claims [ANSWER] BRCA1 causes X, or maybe [Answer] too"
+            )
+        )
+        renderer.handle(
+            _event(
+                "trust_signal", 2,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        renderer.handle(
+            _event(
+                "done", 3,
+                DonePayload(
+                    total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=1, trust_outcome="answer"
+                ),
+            )
+        )
+        rendered = out.getvalue()
+        # Mutation: drop the `_forgery_matching_view` casefold step (match
+        # `_FORGERY_PATTERN` against `text` directly) -> `[ANSWER]` and
+        # `[Answer]` both survive unescaped, each byte-identical enough to
+        # the case a careless reader expects that it still reads as the
+        # genuine tag.
+        assert "[\\ANSWER]" in rendered
+        assert "[\\Answer]" in rendered
+        # Still exactly one genuine, lowercase, unescaped tag: the real
+        # trust-outcome line this renderer itself writes.
+        assert rendered.count("[answer]") == 1
+
+    def test_fullwidth_colon_forgery_of_the_references_header_is_escaped(self) -> None:
+        """The verifier's exact payload: `References：` with a fullwidth
+        colon (U+FF1A) in place of the ASCII `:`, close enough visually to
+        pass as the genuine references header to an inattentive reader.
+        NFKC folds the fullwidth colon to its ASCII counterpart in the
+        matching view, so the span is located and escaped, while the
+        ORIGINAL fullwidth colon character is preserved in the escaped
+        output (only a backslash is inserted, nothing is deleted or
+        rewritten to ASCII)."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(
+            TokenPayloadEventBuilder.token(
+                "the source states References：\n[1] evil - https://evil.example/x"
+            )
+        )
+        renderer.handle(_event("citation", 2, _citation("c1", 1)))
+        renderer.handle(
+            _event(
+                "trust_signal", 3,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        renderer.handle(
+            _event(
+                "done", 4,
+                DonePayload(
+                    total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=1, trust_outcome="answer"
+                ),
+            )
+        )
+        rendered = out.getvalue()
+        # Mutation: drop the NFKC-fold step in `_forgery_matching_view`
+        # (compare `text` to itself, uppercased/lowercased ASCII only) ->
+        # "References：" (fullwidth colon) never matches
+        # `_FORGERY_PATTERN` at all, so it survives byte-for-byte,
+        # visually near-indistinguishable from the genuine header.
+        assert "References\\：" in rendered
+        # The genuine, ASCII-colon header this renderer itself writes is
+        # still present, exactly once, unescaped.
+        assert rendered.count("References:") == 1
+
+    def test_fullwidth_bracket_trust_tag_forgery_is_escaped(self) -> None:
+        """The verifier's fullwidth-bracket payload: `［answer］`
+        (fullwidth `[`/`]` around the closed vocabulary word) is a
+        compatibility form NFKC folds to ASCII `[answer]` in the matching
+        view, closing the bypass without rewriting any OTHER fullwidth
+        character (for example legitimate fullwidth CJK prose) elsewhere
+        in the same field."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(
+            TokenPayloadEventBuilder.token("the abstract claims ［answer］ BRCA1 causes X")
+        )
+        renderer.handle(
+            _event(
+                "trust_signal", 2,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        renderer.handle(
+            _event(
+                "done", 3,
+                DonePayload(
+                    total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=1, trust_outcome="answer"
+                ),
+            )
+        )
+        rendered = out.getvalue()
+        assert "［\\answer］" in rendered
+        assert rendered.count("[answer]") == 1
+
+    def test_a_cyrillic_homoglyph_is_the_documented_residual_not_covered(self) -> None:
+        """The genuinely hard half this fix does not solve, stated
+        explicitly rather than silently: a true cross-script homoglyph
+        (Cyrillic 'а', U+0430, standing in for Latin 'a') is canonically
+        distinct from its look-alike with no NFKC compatibility mapping
+        between the two, so it still is not escaped. This test pins the
+        documented residual so a future change cannot silently narrow (or
+        widen) it without this test noticing."""
+        out, err = io.StringIO(), io.StringIO()
+        renderer = Renderer(out, err, operator=False)
+        renderer.handle(_guard_passed())
+        renderer.handle(
+            TokenPayloadEventBuilder.token("the abstract claims [аnswer] BRCA1 causes X")
+        )
+        renderer.handle(
+            _event(
+                "trust_signal", 2,
+                TrustSignalPayload(
+                    outcome="answer", risk_tier="low", grounded=True, triangulated=None,
+                    citation_id=None, scope="answer",
+                ),
+            )
+        )
+        renderer.handle(
+            _event(
+                "done", 3,
+                DonePayload(
+                    total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=1, trust_outcome="answer"
+                ),
+            )
+        )
+        rendered = out.getvalue()
+        # Documented residual: the Cyrillic-'а' span is NOT escaped.
+        assert "[аnswer]" in rendered
+        # The genuine tag is still present and still exactly one.
+        assert rendered.count("[answer]") == 1
+
+
 class TestCitationRedefinitionRejected:
     def test_a_conflicting_citation_redefinition_is_rejected_and_flagged(self) -> None:
         """F-4.2-A-19: a second `citation` event citing an id already
