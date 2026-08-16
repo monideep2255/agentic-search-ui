@@ -101,7 +101,33 @@ def fake_modules(monkeypatch: pytest.MonkeyPatch):
     to these instead of raising `ModuleNotFoundError`. Each test then
     configures the specific attributes it needs directly on the returned
     module objects.
+
+    `main.py` resolves `credentials` through `from
+    system_03_search_agent.adapters.cli import credentials as
+    credentials_module` (a function-body import; see `_call_with_one_refresh`,
+    `_load_credentials_or_report`, and two more call sites). CPython's
+    fromlist import resolves that statement as `getattr(cli_package,
+    "credentials")` FIRST and only falls back to `sys.modules` when the
+    parent package has no such attribute yet (`importlib._bootstrap.
+    _handle_fromlist`). Once any code in the same process performs a REAL
+    import of `system_03_search_agent.adapters.cli.credentials` (this
+    happens whenever `test_phase_4_2_premise.py` or `test_credentials.py`
+    runs first in the same session and drives the real module), the `cli`
+    package object keeps a `credentials` attribute pointing at the real
+    module. `monkeypatch.setitem` on `sys.modules` alone never touches that
+    attribute, so `main.py`'s fromlist import silently keeps resolving the
+    real module instead of the fake one installed below, regardless of
+    what this fixture put in `sys.modules`. `client.py` and `render.py` are
+    not affected today because every call site imports them with `from
+    system_03_search_agent.adapters.cli.client import ...` (a direct
+    dotted-submodule import, which checks `sys.modules` by full dotted
+    name at every level, including the leaf); patch their parent-package
+    attributes too so this fixture stays correct if a call site ever
+    switches to the same `from package import submodule` form credentials
+    uses.
     """
+    import system_03_search_agent.adapters.cli as cli_package
+
     credentials_module = types.ModuleType("system_03_search_agent.adapters.cli.credentials")
     credentials_module.Credentials = FakeCredentials
     credentials_module.InsecureCredentialsError = FakeInsecureCredentialsError
@@ -121,6 +147,10 @@ def fake_modules(monkeypatch: pytest.MonkeyPatch):
     )
     monkeypatch.setitem(sys.modules, "system_03_search_agent.adapters.cli.client", client_module)
     monkeypatch.setitem(sys.modules, "system_03_search_agent.adapters.cli.render", render_module)
+
+    monkeypatch.setattr(cli_package, "credentials", credentials_module, raising=False)
+    monkeypatch.setattr(cli_package, "client", client_module, raising=False)
+    monkeypatch.setattr(cli_package, "render", render_module, raising=False)
 
     return types.SimpleNamespace(
         credentials=credentials_module, client=client_module, render=render_module
