@@ -161,13 +161,26 @@ Then build phases 4.3 to 4.7, in Section 25's order.
 
 ### Carried into 4.2 and beyond
 
-`tracker/phase_4.10.md`'s "Carried open, with an owner each" table records a disposition for every finding that phase did not close. Three need a PRODUCT decision rather than a fix, and they join the queue already waiting from earlier phases:
+`tracker/phase_4.10.md`'s "Carried open, with an owner each" table records a disposition for every finding that phase did not close.
 
-- F-4.10-A-13: a first-time visitor never sees the five dots, because minting is lazy and the dots render only once an allowance exists. The affordance advertising the free searches is invisible until after one is spent.
-- F-4.9-A-09: build phase 4.9's source collapse put the off-host citation warning two disclosures deep, so a security mitigation is opt-in.
-- F-4.9-A-08: a stopped run gives no terminal signal and its tool chip reads "running" for ever.
+The product-decision queue is EMPTY as of 2026-08-15. Eight items that had been accumulating since build phase 3.1, six of them outliving the phase that raised them, were cleared in one session rather than trickled one per phase, which is how they accumulated. Every one is in `DECISIONS.md` with its reasoning. What that leaves for a builder:
+
+| Ready to build, decided | Where |
+|-------------------------|-------|
+| Report `risk_tier` as `unknown` rather than a hardcoded `low` when no assessment ran | Next backend ticket |
+| One withholding rule: if the system drops or shortens anything, it discloses that it did | Next backend ticket touching `pubtator_annotate` or `clinicaltrials_search` |
+| The concurrent-run cap no longer equal to the free allowance, and its message branching on which bound was hit | Next backend ticket |
+| Render the five guest dots from a local default, switching to the server's real count on the first ask | Next frontend ticket |
+| Read `blocked_reason`, label a guest's allowance as lifetime rather than daily, and stop the dots degrading toward a refusal | Next frontend ticket |
+| Move the off-host citation warning outside the collapsed source disclosure | Next frontend ticket |
+| Wait for the backend's `cancelled` event before closing a stopped run's stream | Next frontend ticket |
+| Render `entity_name` and `snapshot_date`, which build phase 4.10 put on the wire and no UI reads | Next frontend ticket |
+
+Two decisions are deferrals rather than work, and both are deliberate. The acronym-gene-symbol and lowercase-gene questions fold into build phase 4.7's entity-resolution design, because the stopword list they turn on is the heuristic 4.7 replaces, so answering now means designing twice.
 
 One residual is accepted rather than owned, and it is the honest floor after four rounds: a caller with genuinely many source addresses gets one share of the anonymous day per address and is bounded only by the day. The money stays bounded by `ANON_DAILY_RUN_CAP` throughout and signed-in users are unaffected. Build phase 6.0's real rate limiting owns the rest, and the whole-repository security scan is already triggered by exposure.
+
+One standing authorization was added on 2026-08-15 and a builder should know it exists: factual corrections to the locked technical specification are allowed as they are found, each logged as a decision, covering text that is demonstrably untrue about already-shipped code and never a design or scope change. It exists because Step 6.2 was the only sanctioned edit window, it closed on 2026-08-10, and five spec-conformance flags had been pointing at that finished event ever since.
 
 
 ## Read before opening the next phase
@@ -489,8 +502,8 @@ One decision below is still waiting on the product owner: whether `security/` st
 
 | Item | Description | Owner |
 |------|-------------|-------|
-| F-3.1-41: stopword list vs. real gene symbols | Product decision, not a bug. Detailed in `tracker/phase_3.1.md` | Whenever the product owner decides |
-| F-3.1-42: lowercase gene mentions fall through silently | Product decision, not a bug. Detailed in `tracker/phase_3.1.md` | Whenever the product owner decides |
+| F-3.1-41: stopword list vs. real gene symbols | Product decision, not a bug. Detailed in `tracker/phase_3.1.md` DECIDED 2026-08-15: folded into build phase 4.7's entity-resolution design, because the stopword list it turns on is the heuristic 4.7 replaces | Build phase 4.7 |
+| F-3.1-42: lowercase gene mentions fall through silently | Product decision, not a bug. Detailed in `tracker/phase_3.1.md` DECIDED 2026-08-15 with F-3.1-41, same reason | Build phase 4.7 |
 | F-3.1-50, F-3.1-51: RESOLVED, Step 6.2, 2026-08-10 | Re-checked live-exploitability now that `ncbi_efetch` is wired into `act_node` (T-3.4-05). F-3.1-50 confirmed live-reachable and real (`ncbi_datasets_actions`'s nested lists had no item-count bound); fixed, matching the sibling module's existing `_MAX_NESTED_ITEMS` pattern, regression test added. F-3.1-51 was a docstring overclaiming 429/503 coverage it never had; corrected | Closed |
 | F-3.1-46: minor gap in code `act_node` cannot reach yet | Re-checked alongside F-3.1-50/51: `ncbi_coordinate_overlap`'s dict-recursion gap has no current caller that constructs a dict-valued field, so it stays latent, not live-reachable. No fix applied | Whenever the product owner decides, or before a future field addition nests a dict |
 | F-2.2-T-01-residual | A declarative injected as a comma-spliced clause inside a single wh-question still licenses its own words. Needs clause-level rather than sentence-level filtering. Pinned by a strict xfail. Product-owner decision, Step 6.2, 2026-08-10: keep tracking rather than fix inline, real engineering work better scoped as its own task | Whenever picked up as a dedicated task |
@@ -516,7 +529,7 @@ One decision below is still waiting on the product owner: whether `security/` st
 | F-2.1-07 | Gene symbol resolution beyond a one-entry seed table, needs the Layer 2 NCBI lookup. Also the real fix for build phase 2.2's symbol-versus-CURIE false reject | 3.1 |
 | F-2.1-B10 | Same cause as F-2.1-07; an unresolvable symbol errors rather than refuses | 3.1 |
 | PubTator3 relations endpoint | Path and fields still not live-verified as of build phase 3.3's close; `pubtator_annotate` has no `mode` for it. Confirmed still unverified at Step 6.2, 2026-08-10, deliberately not probed live this reconciliation (no build decision needed until someone spends the verification work) | A fast-follow ticket once verified |
-| F-3.3-J-04: disclosure-policy asymmetry | `pubtator_annotate` withholds an over-cap field silently (`None`); `litvar2_lookup`, built the same phase, discloses every withholding via `fields_withheld`. Product decision, not a bug. Detailed in `tracker/phase_3.3.md` | Whenever the product owner decides |
+| F-3.3-J-04: disclosure-policy asymmetry | `pubtator_annotate` withholds an over-cap field silently (`None`); `litvar2_lookup`, built the same phase, discloses every withholding via `fields_withheld`. Product decision, not a bug. Detailed in `tracker/phase_3.3.md` DECIDED 2026-08-15: one rule, if the system drops or shortens anything it discloses that it did. Also settles F-3.5-10 | Next backend ticket touching either tool |
 | F-3.3-J-06: litvar2_lookup citation quality | RESOLVED, Step 6.2, 2026-08-10. Section 6.5 widened (additive) with two new fields: `variant_matches[].source_url`, this match's own dbSNP page, populated for every match with a real rsid regardless of match count (the output-level `source_url` stays correctly gated to the single-match case); and `pmid_source_urls`, one canonical PubMed URL per `pmids` entry. Two new regression tests | Closed |
 | F-3.3-A-05: entity_lookup has no citation | RESOLVED, Step 6.2, 2026-08-10. Section 6.4's locked entity item schema widened (additive) with `source_url`, formalizing what build phase 3.3's code already shipped beyond the locked schema's `additionalProperties: false` (populated for the two live-verified db types, `ncbi_gene` and `ncbi_mesh`; `None` for `litvar`/`cvcl`, unverified record-page shapes, not attempted here) | Closed |
 | F-3.3-RR-02: litvar2 empty-guard is count-based, not content-based | A row that parses as a dict but carries no identity (`_id`, `rsid` both absent) still ships as an all-`None` match under `status: "ok"`. Not reachable on live data today; deliberately not fixed a second time on a guard that already regressed once (F-3.3-RR-01) | Whenever live data actually produces this shape |
