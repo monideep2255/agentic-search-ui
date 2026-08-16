@@ -40,7 +40,7 @@ dev = [
 ]
 
 [project.scripts]
-search-agent = "system_03_search_agent.cli:main"
+s3 = "system_03_search_agent.adapters.cli.main:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -55,10 +55,16 @@ line-length = 100
 [tool.setuptools]
 packages = [
     "system_03_search_agent",
-    "system_03_search_agent.api",
-    "system_03_search_agent.agent",
-    "system_03_search_agent.tools",
-    "system_03_search_agent.models",
+    "system_03_search_agent.adapters",
+    "system_03_search_agent.adapters.cli",
+    "system_03_search_agent.adapters.mcp",
+    "system_03_search_agent.adapters.web_sse",
     "system_03_search_agent.auth",
-    "system_03_search_agent.config",
+    "system_03_search_agent.contracts",
+    "system_03_search_agent.core",
+    "system_03_search_agent.data",
+    "system_03_search_agent.guardrail",
+    "system_03_search_agent.harness",
+    "system_03_search_agent.synthesis",
+    "system_03_search_agent.tools",
 ]
