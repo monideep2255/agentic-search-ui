@@ -696,11 +696,48 @@ async def _refresh_and_store(client: httpx.AsyncClient, creds: Credentials) -> C
             f"refresh token is expired, already used, or revoked.",
             remedy="Run: s3 login",
         )
-    body = response.json()
+    # F-4.2-D-05: a 200 with a non-JSON body, or a JSON body missing the
+    # fields this function is about to index, used to escape as a raw
+    # `json.JSONDecodeError` or `KeyError`, neither of which is a
+    # `CredentialsError`. Every caller in this codebase (`main.py`'s
+    # `_call_with_one_refresh` and `_create_run_never_retried`) catches
+    # this module's failures by the `CredentialsError` base, per this
+    # module's own docstring on why a base, not a per-type list, is the
+    # seam that does not go stale. A bare parser exception silently
+    # bypassed that seam and reached the caller as an unrelated,
+    # uncurated "unexpected error". Validated the same way
+    # `client.py`'s `_parse_json_body` and this module's own
+    # `_credentials_from_raw` already validate a server-controlled body,
+    # so a malformed or hostile response can never crash this call past
+    # a typed, actionable `RefreshError`.
+    content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type != "application/json":
+        raise RefreshError(
+            f"POST /auth/refresh returned a non-JSON response (content-type "
+            f"{content_type or 'none'}); this indicates a server or proxy "
+            f"misconfiguration, not a normal failure.",
+            remedy="Retry, or report this to the operator if it recurs.",
+        )
+    try:
+        body = response.json()
+    except ValueError as exc:
+        raise RefreshError(
+            f"POST /auth/refresh declared a JSON content type but the body "
+            f"did not parse as JSON ({type(exc).__name__}).",
+            remedy="Retry, or report this to the operator if it recurs.",
+        ) from exc
+    access_token = body.get("access_token") if isinstance(body, dict) else None
+    refresh_token = body.get("refresh_token") if isinstance(body, dict) else None
+    if not isinstance(access_token, str) or not isinstance(refresh_token, str):
+        raise RefreshError(
+            "POST /auth/refresh returned a 200 response missing the "
+            "expected access_token/refresh_token string fields.",
+            remedy="Retry, or report this to the operator if it recurs.",
+        )
     new_creds = Credentials(
         base_url=creds.base_url,
-        access_token=body["access_token"],
-        refresh_token=body["refresh_token"],
+        access_token=access_token,
+        refresh_token=refresh_token,
     )
     # Persist BEFORE the caller can issue its retried request: this is an
     # ordering property, not merely an eventual one. If the process dies

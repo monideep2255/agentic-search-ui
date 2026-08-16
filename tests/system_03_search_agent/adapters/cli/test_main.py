@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import json
 import sys
 import types
 from typing import NamedTuple
@@ -221,6 +222,19 @@ def fake_modules(monkeypatch: pytest.MonkeyPatch):
     client_module.RateLimitedError = FakeRateLimitedError
 
     render_module = types.ModuleType("system_03_search_agent.adapters.cli.render")
+    # F-4.2-D-03: `_run_login` (main.py) now routes the pre-auth
+    # login-failure message through render.py's own `_sanitize_untrusted`
+    # before it reaches stderr. The GENUINE function is attached here,
+    # not a second reimplementation and not an identity no-op: this
+    # file's own regression coverage for that finding
+    # (`TestLogin::test_login_failure_message_is_sanitized_before_stderr`)
+    # needs the real neutralization behaviour (ANSI control bytes, bidi
+    # overrides) to prove anything, and every other test in this file
+    # that reaches `_run_login`'s success or ordinary-failure path never
+    # sends control bytes, so the real function is transparent there.
+    from system_03_search_agent.adapters.cli import render as _real_render_module
+
+    render_module._sanitize_untrusted = _real_render_module._sanitize_untrusted
 
     monkeypatch.setitem(
         sys.modules, "system_03_search_agent.adapters.cli.credentials", credentials_module
@@ -443,6 +457,134 @@ class TestLogin:
 
         assert exit_code != 0
         assert calls == []
+
+    @pytest.mark.asyncio
+    async def test_login_failure_message_is_sanitized_before_reaching_stderr(
+        self, main_module, fake_modules
+    ) -> None:
+        """F-4.2-D-03, CRITICAL: `s3 login` is the FIRST command anyone
+        runs, before any credential exists, and it is reachable through a
+        user-supplied `--base-url`/`S3_BASE_URL`. A mistyped or hostile
+        host answering with an ANSI CSI clear-screen sequence plus a bidi
+        right-to-left-override wrapped around "your password is valid"
+        used to reach stderr verbatim via `_extract_error_message`,
+        rendering as a bidi-flipped claim about the user's password on a
+        cleared screen, on a surface reachable before authentication.
+        """
+        hostile_detail = "\x1b[2J\x1b[Hlogin failed‮ )dilav si drowssap ruoy(‬"
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(401, json={"detail": hostile_detail})
+
+        http_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(handler), base_url="http://example.test"
+        )
+        out, err = io.StringIO(), io.StringIO()
+        try:
+            exit_code = await main_module.async_main(
+                ["login", "person@example.com"],
+                stdin=io.StringIO("hunter2\n"),
+                stdout=out,
+                stderr=err,
+                http_client=http_client,
+            )
+        finally:
+            await http_client.aclose()
+
+        assert exit_code != 0
+        message = err.getvalue()
+        # Mutation: write `_extract_error_message(response)` straight to
+        # stderr with no `_sanitize_untrusted` call -- the raw ESC
+        # (\x1b) and RLO (‮) bytes below would both be present.
+        assert "\x1b" not in message
+        assert "‮" not in message
+        assert "‬" not in message
+        # The sanitizer neutralizes, it does not silently drop: the
+        # visible words from the server's message still make it through.
+        assert "login failed" in message
+
+    @pytest.mark.asyncio
+    async def test_a_non_json_200_login_body_fails_actionably_not_a_raw_crash(
+        self, main_module, fake_modules
+    ) -> None:
+        """F-4.2-D-05: a 200 response whose body is not JSON used to
+        reach a bare `response.json()` call and escape as a raw
+        `json.JSONDecodeError`, reported by `async_main`'s generic
+        catch-all as "unexpected error (JSONDecodeError)" instead of a
+        curated, actionable message, and with no credential file written
+        despite the crash happening after the 200 status was already
+        accepted as success.
+        """
+        store_calls: list[FakeCredentials] = []
+        fake_modules.credentials.store = store_calls.append
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=b"not json", headers={"content-type": "text/plain"})
+
+        http_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(handler), base_url="http://example.test"
+        )
+        out, err = io.StringIO(), io.StringIO()
+        try:
+            exit_code = await main_module.async_main(
+                ["login", "person@example.com"],
+                stdin=io.StringIO("hunter2\n"),
+                stdout=out,
+                stderr=err,
+                http_client=http_client,
+            )
+        finally:
+            await http_client.aclose()
+
+        assert exit_code == 1
+        assert store_calls == []
+        # Mutation: skip the content-type/JSON guard and call
+        # `response.json()` directly -- this would raise
+        # json.JSONDecodeError uncaught, and async_main's generic
+        # catch-all would report "unexpected error (JSONDecodeError)".
+        assert "unexpected error" not in err.getvalue()
+        assert "JSONDecodeError" not in err.getvalue()
+
+    @pytest.mark.asyncio
+    async def test_a_200_login_body_missing_token_fields_fails_actionably(
+        self, main_module, fake_modules
+    ) -> None:
+        """F-4.2-D-05: a 200 with syntactically valid JSON missing
+        `access_token` used to reach `body["access_token"]` and escape as
+        a raw `KeyError`, the same undercaught shape as the non-JSON case
+        above, and via a different code path (main.py's own `_run_login`,
+        not `credentials.py`'s `refresh_locked`).
+        """
+        store_calls: list[FakeCredentials] = []
+        fake_modules.credentials.store = store_calls.append
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"refresh_token": "r1"})  # no access_token
+
+        http_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(handler), base_url="http://example.test"
+        )
+        out, err = io.StringIO(), io.StringIO()
+        try:
+            exit_code = await main_module.async_main(
+                ["login", "person@example.com"],
+                stdin=io.StringIO("hunter2\n"),
+                stdout=out,
+                stderr=err,
+                http_client=http_client,
+            )
+        finally:
+            await http_client.aclose()
+
+        assert exit_code == 1
+        assert store_calls == []
+        # Mutation: index `body["access_token"]`/`body["refresh_token"]`
+        # directly instead of the isinstance-guarded `.get()` pair --
+        # this would raise a bare KeyError instead of the actionable
+        # message asserted below.
+        assert "unexpected error" not in err.getvalue()
+        assert "KeyError" not in err.getvalue()
+        assert "missing" in err.getvalue()
 
 
 # ---------------------------------------------------------------------------
@@ -794,6 +936,54 @@ class TestCreateRunNeverRetried:
         async def coro_factory(c: FakeCredentials) -> tuple[str, str]:
             raise FakeAuthExpiredError(_response(401, {"detail": "expired"}))
 
+        with pytest.raises(main_module._CommandError) as excinfo:
+            await main_module._create_run_never_retried(
+                coro_factory, http_client=object(), creds=creds, stderr=io.StringIO()
+            )
+        assert excinfo.value.exit_code == 1
+        assert len(rendered) == 1
+        assert isinstance(rendered[0], FakeAuthExpiredError)
+
+    @pytest.mark.asyncio
+    async def test_the_original_401_survives_an_unlisted_exception_type_from_refresh(
+        self, main_module, fake_modules
+    ) -> None:
+        """F-4.2-D-05, the composition failure this finding names as the
+        one that matters most. Before this fix, the background refresh's
+        failure was swallowed by `contextlib.suppress` naming three
+        specific types (`credentials_module.CredentialsError`,
+        `FileNotFoundError`, `httpx.HTTPError`). A `json.JSONDecodeError`
+        or a bare `KeyError` out of `refresh_locked` is none of those
+        three, so it used to escape the `with` block entirely and
+        propagate out of this function uncaught, REPLACING the curated
+        "Run `s3 login`" `AuthExpiredError` rendering with
+        `async_main`'s generic "unexpected error" catch-all -- making
+        this module's own docstring claim, "The original
+        `AuthExpiredError` is ALWAYS what gets rendered", false. The fix
+        makes the guarantee STRUCTURAL (`except Exception`, not a named
+        list): this raises `json.JSONDecodeError`, a type that was never
+        one of the three named exceptions, to prove the new catch is not
+        just a longer list with the same gap shape.
+        """
+        creds = FakeCredentials(base_url="http://test", access_token="a", refresh_token="r")
+
+        async def refresh_locked(client: object, c: FakeCredentials) -> FakeCredentials:
+            raise json.JSONDecodeError("Expecting value", "not json", 0)
+
+        fake_modules.credentials.refresh_locked = refresh_locked
+        rendered: list[Exception] = []
+        fake_modules.render.render_client_error = lambda err, exc: rendered.append(exc)
+
+        async def coro_factory(c: FakeCredentials) -> tuple[str, str]:
+            raise FakeAuthExpiredError(_response(401, {"detail": "expired"}))
+
+        # Mutation: revert to `contextlib.suppress(
+        # credentials_module.CredentialsError, FileNotFoundError,
+        # httpx.HTTPError)` -- the JSONDecodeError raised above would
+        # escape the `with` block uncaught and this call would raise it
+        # directly, failing the pytest.raises(_CommandError) check below
+        # outright (a different, unhandled exception type propagates
+        # instead).
         with pytest.raises(main_module._CommandError) as excinfo:
             await main_module._create_run_never_retried(
                 coro_factory, http_client=object(), creds=creds, stderr=io.StringIO()
