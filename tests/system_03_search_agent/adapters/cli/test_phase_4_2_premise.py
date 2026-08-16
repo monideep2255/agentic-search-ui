@@ -694,16 +694,54 @@ class TestRefusalPath:
 
 
 class TestRefreshRotation:
+    """`tracker/phase_4.2.md`'s premise states two things that cannot both
+    hold when the 401 lands on `POST /v1/query`: (1) a rotated refresh
+    token is persisted before the retried request is issued, and (2)
+    `create_run` is never retried, under any circumstance, because it
+    spends a user's allowance against an endpoint with no idempotency
+    key. F-4.2-A-08 resolved the contradiction in favour of clause 2 for
+    `create`: `_create_run_never_retried` (main.py) never reissues a
+    create call, not even after a 401. Clause 1 governs the calls that
+    ARE legitimately retried, `stop` and `fetch_citations`, both of which
+    go through `_call_with_one_refresh`.
+
+    This class pins BOTH properties as two separate clauses, where the
+    original single test pinned only one (and pinned it against a call
+    shape, `create`, that no longer retries at all):
+
+        1. The ordering property, exercised through `stop`, a call that
+           genuinely IS retried.
+        2. The never-reissue property on `create`, previously unpinned:
+           the old arm observed and relied on a SECOND create call as
+           correct behaviour, so it could not have caught a regression
+           the other direction either.
+    """
+
     @pytest.mark.asyncio
     async def test_the_rotated_refresh_token_is_persisted_before_the_retried_request_is_issued(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path
     ) -> None:
         from system_03_search_agent.adapters.cli import credentials as credentials_module
 
-        monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
+        async def _hanging_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+            yield _event("guard", query.trace_id, 0, GuardPayload(passed=True, category="ok", reason=None))
+            await asyncio.sleep(3600)
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _hanging_stream)
 
         async with _client() as setup_client:
-            _user_id, _access_token, refresh_token = await _signup_and_login(setup_client)
+            _user_id, access_token, refresh_token = await _signup_and_login(setup_client)
+            # Created directly against the real app, with a GOOD access
+            # token, so the run exists before the CLI's own (deliberately
+            # broken) credentials ever come into play. `stop` is the call
+            # under test, not `create`.
+            create = await setup_client.post(
+                "/v1/query",
+                json={"text": "What gene is BRCA1?", "session_id": "session-1"},
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            assert create.status_code == 202
+            run_id = create.json()["run_id"]
 
         creds_path = tmp_path / "credentials"
         monkeypatch.setattr(credentials_module, "CREDENTIALS_PATH", creds_path)
@@ -717,21 +755,25 @@ class TestRefreshRotation:
         )
 
         recorded_refresh_token_on_reissue: list[str | None] = []
+        stop_path = f"/v1/query/{run_id}/stop"
 
         class _OrderingTransport(httpx.AsyncBaseTransport):
             def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
                 self._inner = inner
-                self._create_calls_seen = 0
+                self._stop_calls_seen = 0
 
             async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-                if request.method == "POST" and request.url.path == "/v1/query":
-                    self._create_calls_seen += 1
-                    if self._create_calls_seen == 2:
-                        # This IS the retried create call (the first 401'd
-                        # on the garbage access token above). The on-disk
-                        # refresh_token must already be the NEW one at
-                        # THIS exact point, not merely by the time the
-                        # whole command finishes.
+                if request.method == "POST" and request.url.path == stop_path:
+                    self._stop_calls_seen += 1
+                    if self._stop_calls_seen == 2:
+                        # This IS the retried stop call (the first 401'd
+                        # on the garbage access token above). Unlike
+                        # `create`, `stop` is idempotent server-side, so
+                        # `_call_with_one_refresh` (not
+                        # `_create_run_never_retried`) legitimately
+                        # reissues it, and the on-disk refresh_token must
+                        # already be the NEW one at THIS exact point, not
+                        # merely by the time the whole command finishes.
                         #
                         # Mutation: write the rotated token back AFTER
                         # issuing the retry (or not at all) -> the value
@@ -745,17 +787,78 @@ class TestRefreshRotation:
             transport=_OrderingTransport(httpx.ASGITransport(app=app)), base_url="http://test"
         )
         try:
-            exit_code, out, _err = await _run_ask_main(
-                ["ask", "What gene is BRCA1?", "--session-id", "session-1"], observing_client
-            )
+            exit_code, out, err = await _run_generic_main(["stop", run_id], observing_client)
         finally:
             await observing_client.aclose()
+            run_registry_module.default_registry.cancel_run(run_id)  # tidy up the still-hanging task
 
-        assert exit_code == 0
-        assert "BRCA1 is a protein-coding gene" in out
-        assert recorded_refresh_token_on_reissue, "the retried create call was never observed"
+        assert exit_code == 0, f"stderr: {err}"
+        assert "run stopped" in out
+        assert recorded_refresh_token_on_reissue, "the retried stop call was never observed"
         assert recorded_refresh_token_on_reissue[0] != refresh_token
         assert recorded_refresh_token_on_reissue[0] == credentials_module.load().refresh_token
+
+    @pytest.mark.asyncio
+    async def test_a_401_on_create_is_never_reissued_by_the_retry_policy(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        """The other half of the same contradiction, previously unpinned
+        end to end: the old rotation arm observed a SECOND create call
+        and asserted it carried the rotated token, treating a reissue as
+        correct. `_create_run_never_retried` (F-4.2-A-08/J-4.2-09) makes
+        that reissue structurally impossible: on a 401 it refreshes the
+        STORED credentials in the background, for the NEXT invocation,
+        but always reports the original `AuthExpiredError` and never
+        reissues THIS create call. This is genuinely new coverage, not a
+        relabelling: nothing in this file previously asserted "exactly
+        one create call, ever" on a 401 specifically (`TestCreateIsNeverRetried`
+        pins the same never-retry property, but only against a network
+        timeout, a materially different failure shape from a 401).
+        """
+        from system_03_search_agent.adapters.cli import credentials as credentials_module
+
+        async with _client() as setup_client:
+            _user_id, _access_token, refresh_token = await _signup_and_login(setup_client)
+
+        creds_path = tmp_path / "credentials"
+        monkeypatch.setattr(credentials_module, "CREDENTIALS_PATH", creds_path)
+        credentials_module.store(
+            credentials_module.Credentials(
+                base_url="http://test", access_token="not-a-real-access-token", refresh_token=refresh_token
+            )
+        )
+
+        create_calls_seen = 0
+
+        class _CountingTransport(httpx.AsyncBaseTransport):
+            def __init__(self, inner: httpx.AsyncBaseTransport) -> None:
+                self._inner = inner
+
+            async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+                nonlocal create_calls_seen
+                if request.method == "POST" and request.url.path == "/v1/query":
+                    create_calls_seen += 1
+                return await self._inner.handle_async_request(request)
+
+        counting_client = httpx.AsyncClient(
+            transport=_CountingTransport(httpx.ASGITransport(app=app)), base_url="http://test"
+        )
+        try:
+            # Mutation: wrap create_run's 401 handling in the same
+            # refresh-and-retry-once helper `stop` and `fetch_citations`
+            # use (`_call_with_one_refresh`) instead of
+            # `_create_run_never_retried` -> create_calls_seen becomes 2
+            # and exit_code becomes 0, since the retried create (now
+            # carrying a freshly rotated token) would succeed.
+            exit_code, _out, err = await _run_ask_main(
+                ["ask", "What gene is BRCA1?", "--session-id", "session-1"], counting_client
+            )
+        finally:
+            await counting_client.aclose()
+
+        assert exit_code != 0
+        assert create_calls_seen == 1, f"create was reissued: saw {create_calls_seen} call(s)"
+        assert "invalid or expired credentials" in err
 
 
 # ---------------------------------------------------------------------------
@@ -768,12 +871,44 @@ class TestRefreshLock:
     async def test_two_concurrent_s3_invocations_never_both_spend_the_same_refresh_token(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path
     ) -> None:
+        """Originally driven through two concurrent `s3 ask` invocations,
+        which raced their 401 on `POST /v1/query`. F-4.2-A-08 makes that
+        drive-shape unusable for this property: `create` is never
+        retried at all now, so BOTH invocations would exit nonzero
+        regardless of whether the refresh lock works, for the same
+        reason `TestRefreshRotation` above had to move off `create`. The
+        property this arm actually exists to prove, that two concurrent
+        refreshes never both spend the same refresh token, is orthogonal
+        to which endpoint triggers the refresh; `stop` triggers it the
+        same way and IS legitimately retried, so it is the call this
+        arm now races two invocations through, each against its own
+        pre-created run so the two invocations never also contend on run
+        ownership.
+        """
         from system_03_search_agent.adapters.cli import credentials as credentials_module
 
-        monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
+        async def _hanging_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+            yield _event("guard", query.trace_id, 0, GuardPayload(passed=True, category="ok", reason=None))
+            await asyncio.sleep(3600)
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _hanging_stream)
 
         async with _client() as setup_client:
-            _user_id, _access_token, refresh_token = await _signup_and_login(setup_client)
+            _user_id, access_token, refresh_token = await _signup_and_login(setup_client)
+            create_a = await setup_client.post(
+                "/v1/query",
+                json={"text": "What gene is BRCA1?", "session_id": "session-a"},
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            assert create_a.status_code == 202
+            run_id_a = create_a.json()["run_id"]
+            create_b = await setup_client.post(
+                "/v1/query",
+                json={"text": "What gene is BRCA1?", "session_id": "session-b"},
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            assert create_b.status_code == 202
+            run_id_b = create_b.json()["run_id"]
 
         creds_path = tmp_path / "credentials"
         monkeypatch.setattr(credentials_module, "CREDENTIALS_PATH", creds_path)
@@ -800,19 +935,21 @@ class TestRefreshLock:
             # invocations below would then exit nonzero instead of both
             # succeeding.
             result_a, result_b = await asyncio.gather(
-                _run_ask_main(["ask", "What gene is BRCA1?", "--session-id", "session-a"], client_a),
-                _run_ask_main(["ask", "What gene is BRCA1?", "--session-id", "session-b"], client_b),
+                _run_generic_main(["stop", run_id_a], client_a),
+                _run_generic_main(["stop", run_id_b], client_b),
             )
         finally:
             await client_a.aclose()
             await client_b.aclose()
+            run_registry_module.default_registry.cancel_run(run_id_a)  # tidy up
+            run_registry_module.default_registry.cancel_run(run_id_b)  # the still-hanging tasks
 
         exit_a, out_a, err_a = result_a
         exit_b, out_b, err_b = result_b
         assert exit_a == 0, f"first concurrent invocation was logged out: {err_a}"
         assert exit_b == 0, f"second concurrent invocation was logged out: {err_b}"
-        assert "BRCA1 is a protein-coding gene" in out_a
-        assert "BRCA1 is a protein-coding gene" in out_b
+        assert "run stopped" in out_a
+        assert "run stopped" in out_b
 
 
 # ---------------------------------------------------------------------------

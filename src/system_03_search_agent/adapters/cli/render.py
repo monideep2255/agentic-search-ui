@@ -169,7 +169,19 @@ _GUARD_CATEGORY_FALLBACK = "this question could not be processed."
 # constructor call anywhere in the codebase, today or in a future change;
 # this table holds the line independently of that.
 _CLI_FATAL_ERROR_DISCLOSURE: dict[str, str] = {
-    "transient": "this query hit a temporary error before finishing. Retrying may succeed.",
+    # F-4.2-A-20: the MCP precedent's "Retrying may succeed" (F-4.1-A-09,
+    # server.py's own `_MCP_FATAL_ERROR_DISCLOSURE`) does not carry over
+    # unedited here. That copy promises a behaviour this surface does not
+    # have: main.py's retry policy covers only `stop` and
+    # `fetch_citations` (idempotent REST calls via `_call_with_one_refresh`)
+    # and, by structural rule, never `create_run`
+    # (`_create_run_never_retried`); nothing in this CLI retries the
+    # STREAM itself on a fatal `transient` error, so "retrying" is never
+    # something the CLI does on the user's behalf. The actionable copy
+    # below names the real, available next step instead: run the command
+    # again yourself, which starts a genuinely new `s3 ask` (a fresh
+    # `POST /v1/query`), never a resumption of this failed one.
+    "transient": "this query hit a temporary error before finishing. Run 's3 ask' again to start a new attempt.",
     "recoverable": "this query could not complete as requested.",
     "unexpected": "this query failed unexpectedly before finishing.",
     "cancelled": "this query was stopped before it finished.",
