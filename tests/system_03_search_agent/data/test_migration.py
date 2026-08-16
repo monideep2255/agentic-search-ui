@@ -43,6 +43,14 @@ ALL_TABLES = {
     "interactions",
     "cq_candidates",
     "saved_queries",
+    "guest_daily_usage",
+    # Build phase 4.10, revision 0003. Added by the lead rather than by the
+    # builder that wrote the migration, which was forbidden from editing an
+    # existing test. Adding it here STRENGTHENS both assertions that read
+    # this set: line ~159 now requires `upgrade head` to create the table,
+    # and the `downgrade base` test now requires it to be dropped again. A
+    # new table absent from this set is silently uncovered by both.
+    "guest_sessions",
 }
 
 
@@ -301,10 +309,120 @@ def test_auth_sessions_has_the_absolute_expiry_column(migrated_head):
         engine.dispose()
 
 
-def test_downgrade_one_step_reverses_the_0002_schema_changes(migrated_head):
-    """The 0002 rollback path, proven rather than asserted."""
+def test_guest_sessions_has_the_attempt_counter_column(migrated_head):
+    """F-4.10-R-01 regression, and the pattern
+    `test_auth_sessions_has_the_absolute_expiry_column` above set.
+
+    `ALL_TABLES` only makes a new TABLE visible to this suite. Revision 0005
+    adds a COLUMN to an existing table, so without a clause naming it, both
+    the upgrade and the downgrade of 0005 are silently uncovered: `upgrade
+    head` would still create every table in `ALL_TABLES` with the column
+    missing, and `downgrade base` would still drop every table whether or
+    not the column was ever reversed.
+
+    The column is the only per-identity bound on how much of the shared
+    anonymous budget one caller can move, so a migration that silently
+    failed to add it would restore the drain measured in F-4.10-R-01 with
+    every test in this repository still green.
+    """
+    engine = _fresh_engine()
+    try:
+        columns = {
+            column["name"]: column
+            for column in inspect(engine).get_columns("guest_sessions")
+        }
+        assert "attempts_used" in columns
+        assert columns["attempts_used"]["nullable"] is False
+
+        with engine.connect() as conn:
+            # The CHECK is real, not merely declared: the database itself
+            # refuses a negative count, so no refund path anywhere in the
+            # codebase can drive it below zero.
+            constraints = {
+                row[0]
+                for row in conn.execute(
+                    text(
+                        "SELECT conname FROM pg_constraint "
+                        "WHERE conrelid = 'guest_sessions'::regclass"
+                    )
+                )
+            }
+            assert "ck_guest_sessions_attempts_used" in constraints
+            with pytest.raises(sa.exc.IntegrityError):
+                conn.execute(
+                    text(
+                        "INSERT INTO guest_sessions (attempts_used) VALUES (-1)"
+                    )
+                )
+            conn.rollback()
+
+            # And an existing row predating the revision reads zero rather
+            # than NULL, which is what makes the expand step safe for a
+            # guest already mid-visit when the migration runs.
+            used = conn.execute(
+                text(
+                    "INSERT INTO guest_sessions DEFAULT VALUES "
+                    "RETURNING attempts_used"
+                )
+            ).scalar_one()
+            assert used == 0
+            conn.rollback()
+    finally:
+        engine.dispose()
+
+
+def test_downgrade_to_0004_removes_the_attempt_counter_column(migrated_head):
+    """The 0005 rollback path, proven by running it rather than asserted.
+
+    An explicit revision id, never a relative `-1`, for the reason
+    `test_downgrade_to_0001_reverses_the_0002_schema_changes` below records:
+    a relative offset silently retargets the moment another revision is
+    added on top.
+    """
     cfg = migrated_head
-    command.downgrade(cfg, "-1")
+    command.downgrade(cfg, "0004_guest_daily_usage")
+
+    engine = _fresh_engine()
+    try:
+        columns = {column["name"] for column in inspect(engine).get_columns("guest_sessions")}
+        assert "attempts_used" not in columns
+        with engine.connect() as conn:
+            constraints = {
+                row[0]
+                for row in conn.execute(
+                    text(
+                        "SELECT conname FROM pg_constraint "
+                        "WHERE conrelid = 'guest_sessions'::regclass"
+                    )
+                )
+            }
+            assert "ck_guest_sessions_attempts_used" not in constraints
+            # The rest of the table, and the 0003/0004 tables themselves,
+            # survive a one-step downgrade.
+            assert "ck_guest_sessions_runs_used" in constraints
+            tables = set(inspect(engine).get_table_names())
+            assert {"guest_sessions", "guest_daily_usage"}.issubset(tables)
+    finally:
+        engine.dispose()
+    # The migrated_head fixture re-runs `upgrade head` in its teardown.
+
+
+def test_downgrade_to_0001_reverses_the_0002_schema_changes(migrated_head):
+    """The 0002 rollback path, proven rather than asserted.
+
+    Retargeted at build phase 4.10 from `command.downgrade(cfg, "-1")` to an
+    explicit revision id. NOT a weakened check: every assertion below is
+    unchanged, and the test still proves exactly what its name says. What
+    changed is the navigation. `-1` meant "one step back from head", which
+    landed on 0001 only while 0002 WAS head; adding revision 0003 moved
+    head, so `-1` began undoing 0003 instead and the 0002 assertions failed
+    against a schema 0002 was still applied to. The relative offset was a
+    latent fragility that any new revision would have tripped, and it was
+    tripped by the first one added after it was written. An explicit
+    revision id cannot drift that way.
+    """
+    cfg = migrated_head
+    command.downgrade(cfg, "0001_user_data_schema")
 
     engine = _fresh_engine()
     try:

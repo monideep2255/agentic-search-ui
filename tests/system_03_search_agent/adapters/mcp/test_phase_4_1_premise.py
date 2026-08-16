@@ -852,6 +852,36 @@ _ALLOWED_RESPONSE_KEYS = {
     "source",
     "source_id",
     "source_url",
+    # Build phase 4.10, T-4.10-07. Added by the LEAD, not by the builder
+    # that widened `CitationPayload`, and added deliberately rather than
+    # mechanically, because editing a gate to make it pass is the exact
+    # shape `goal-contracts.md` forbids. Three things make this contract
+    # maintenance instead of a weakening, and all three had to hold:
+    #
+    # 1. The property this allowlist guarantees is unchanged: no cost data,
+    #    and no key outside Section 13.2's pinned response shape. Section
+    #    13.2's `CitationV1` IS `CitationPayload`, "reused verbatim, never
+    #    redefined" (adapters/mcp/server.py's own docstring), so the pinned
+    #    shape genuinely grew. An allowlist asserting a stale contract
+    #    tests nothing; it just fails.
+    # 2. The growth is additive and therefore v1-legal under Section 2.6
+    #    (a new optional field), not a breaking change needing v2.
+    # 3. Neither field is cost-adjacent, so the renamed-cost-field leak
+    #    F-4.1-A-07 exists to catch is still caught. The negative test
+    #    below (`spend_usd`/`tokens_billed`) still fails the allowlist,
+    #    and was re-run to confirm it.
+    #
+    # This set stays a hand-maintained literal rather than being derived
+    # from the three Pydantic models, which would have made this edit
+    # unnecessary. Deriving it would be the real weakening: a cost field
+    # added to a model would then be auto-accepted by the very check that
+    # exists to catch it. The manual step IS the control.
+    #
+    # Pinned positively by `test_the_two_phase_4_10_citation_fields_are_
+    # really_on_the_wire` below, so this entry cannot silently become
+    # permission for fields that are not actually sent.
+    "entity_name",
+    "snapshot_date",
     # TrustSignalPayload
     "fallback_link",
     "grounded",
@@ -1191,6 +1221,32 @@ class TestTrustSignalHelpers:
             "test would not demonstrate the gap the allowlist closes"
         )
         assert not _all_response_keys(leaking_content) <= _ALLOWED_RESPONSE_KEYS
+
+    def test_the_two_phase_4_10_citation_fields_are_really_on_the_wire(self) -> None:
+        """Build phase 4.10 widened `CitationPayload`, and therefore
+        Section 13.2's `CitationV1`. This pins that the allowlist entries
+        added for it are real rather than merely permissive.
+
+        Without this, the two names added to `_ALLOWED_RESPONSE_KEYS`
+        would be indistinguishable from permission granted to fields that
+        no longer exist, and deleting them from the model would leave the
+        allowlist quietly stale in the other direction. An allowlist entry
+        with no positive counterpart is a hole waiting to be widened.
+        """
+        from system_03_search_agent.contracts.events import CitationPayload
+
+        model_fields = set(CitationPayload.model_fields)
+        assert {"snapshot_date", "entity_name"} <= model_fields, (
+            "the allowlist permits these two keys; if the model no longer "
+            "declares them, remove them from the allowlist rather than "
+            "leaving it permissive"
+        )
+        assert model_fields <= _ALLOWED_RESPONSE_KEYS, (
+            "every CitationPayload field must be on the allowlist, since "
+            "Section 13.2's CitationV1 IS CitationPayload; a field on the "
+            "model and off the allowlist fails the gate at runtime instead "
+            "of here, which is a worse place to find out"
+        )
 
     def test_allowlist_is_satisfied_by_a_genuinely_clean_response(self) -> None:
         """No false positives: a real golden-path-shaped response (every
@@ -2044,3 +2100,71 @@ class TestArgumentHardening:
 
         result = await _call_tool(headers, {"query": "line one\nline two\ttabbed"})
         assert result.is_error is False
+
+
+class TestConcurrentRunCapOnTheMcpSurface:
+    """F-4.10-J-04 / F-4.10-A-08 (judge and adversary round 1, build phase
+    4.10).
+
+    Build phase 4.10 gave `RunRegistry.create_run` a per-principal
+    concurrent-run cap and a new `ConcurrentRunCapExceededError`, and did
+    not touch this module. So this surface's one `create_run` call site
+    was the only place in the codebase where a `RuntimeError` could
+    escape a tool handler that converts every other failure into a typed
+    `MCPError`. Nothing exercised the MCP surface at that cap, which is
+    exactly why it stayed invisible.
+
+    The bucket is shared with the web surface on purpose (with `owner_id`
+    omitted, `create_run` derives `user:<uuid>` from `query.user_id`, the
+    same string `get_caller` builds), so this is reachable by an ordinary
+    caller with a browser tab open, not only by an MCP client hammering
+    itself.
+    """
+
+    @pytest.mark.asyncio
+    async def test_hitting_the_cap_returns_a_structured_error_not_a_raw_runtimeerror(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from system_03_search_agent.core.run_registry import (
+            DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER,
+        )
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _never_terminating_stream)
+        user_id, headers = await _real_user_headers()
+
+        # Fill this user's cap through the same registry every surface
+        # shares, with runs that never finish so all of them stay active.
+        held: list[str] = []
+        for _ in range(DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER):
+            held.append(
+                run_registry_module.default_registry.create_run(
+                    Query(
+                        text="holding a slot",
+                        session_id="cap-hold",
+                        trace_id=str(uuid.uuid4()),
+                        user_id=user_id,
+                    ),
+                    RequestContext(surface="rest_sse"),
+                    owner_id=f"user:{user_id}",
+                )
+            )
+        try:
+            error = await _call_tool_expecting_mcp_error(
+                headers, {"query": "What gene is BRCA1?"}
+            )
+        finally:
+            for run_id in held:
+                run_registry_module.default_registry.cancel_run(run_id)
+
+        assert error.message, "the cap must produce a real, non-empty MCP error message"
+        assert "in flight" in error.message, (
+            "the error must say what actually happened and what frees it, per "
+            "production-standards' retry-safety gate"
+        )
+        assert f"user:{user_id}" not in error.message, (
+            "F-4.1-J3-01's defect shape: the internal namespaced owner id must "
+            "never be stringified into an external-facing message"
+        )
+        assert user_id not in error.message, (
+            "no internal identifier at all belongs in this message"
+        )

@@ -59,19 +59,27 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
-vi.mock("./lib/api", () => ({
-  login: vi.fn(),
-  signup: vi.fn(),
-  createRun: vi.fn(),
-  openEventStream: vi.fn(),
-  stopRun: vi.fn(),
-}));
+vi.mock("./lib/api", async () => {
+  const actual = await vi.importActual<typeof import("./lib/api")>("./lib/api");
+  return {
+    ApiError: actual.ApiError,
+    login: vi.fn(),
+    signup: vi.fn(),
+    createRun: vi.fn(),
+    openEventStream: vi.fn(),
+    stopRun: vi.fn(),
+    // T-4.10-08/09: sign-in now also fetches the caller's real allowance.
+    mintGuest: vi.fn(),
+    getAllowance: vi.fn(),
+  };
+});
 
-import { createRun, login, openEventStream } from "./lib/api";
+import { createRun, getAllowance, login, openEventStream } from "./lib/api";
 
 const loginMock = vi.mocked(login);
 const createRunMock = vi.mocked(createRun);
 const openEventStreamMock = vi.mocked(openEventStream);
+const getAllowanceMock = vi.mocked(getAllowance);
 
 const mainArea = () => within(screen.getByRole("main"));
 const navArea = () => within(screen.getByRole("navigation", { name: /main/i }));
@@ -186,9 +194,11 @@ describe("build phase 4.9: the app presents what the prototype presents", () => 
     loginMock.mockReset();
     createRunMock.mockReset();
     openEventStreamMock.mockReset();
+    getAllowanceMock.mockReset();
     loginMock.mockResolvedValue({ access_token: "t", refresh_token: "r", token_type: "bearer" });
     createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
     openEventStreamMock.mockImplementation(scriptedResponse);
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
   });
 
   // ---------------------------------------------------------------- F-4.8-D-09

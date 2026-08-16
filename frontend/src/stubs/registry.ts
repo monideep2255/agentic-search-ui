@@ -75,19 +75,32 @@ export const STUB_REGISTRY: StubEntry[] = [
   {
     surface: "guest-allowance",
     rendersToday:
-      "NOTHING is rendered for an anonymous visitor beyond the sign-in wall. " +
-      "The allowance counter and soft prompt are built but cannot be honoured, " +
-      "because there is no anonymous path to the backend.",
-    wiredBy: "6.0",
+      "REAL as of build phase 4.10 (T-4.10-08): an anonymous visitor mints a " +
+      "guest identity on the first question asked, gets a real, server-counted " +
+      "five-search allowance (guest_sessions.runs_used, spent by one atomic " +
+      "UPDATE), and the five dots render that server count, never a client " +
+      "guess. The sign-in wall now appears only when the server refuses a run " +
+      "with the reason guest_allowance_exhausted, never merely because the " +
+      "visitor has no account. What is NOT real yet: durable history across a " +
+      "reload. Nothing persists a run today (the run registry is in-memory and " +
+      "evicts, and the browser's history list is React state); signing in " +
+      "while holding a guest token re-points that guest's LIVE runs to the new " +
+      "account, which is the honest subset of \"your searches move with you\" " +
+      "(F-4.10-01). Durable cross-reload history is the \"history\" entry " +
+      "below, owned by build phase 4.6.",
+    wiredBy: "4.10",
     realSource:
-      "Server-side rate limiting plus an anonymous run path. The data model " +
-      "already supports the flow: interactions.user_id is nullable so a session " +
-      "can start anonymous and attach to an account at signup. " +
+      "POST /auth/guest, GET /v1/allowance, and the guest bearer token accepted " +
+      "on all four /v1/query* endpoints (adapters/web_sse/app.py). " +
       "HISTORY, recorded because it must not be repeated: this entry previously " +
       "described only the counter, while the code rendered a complete fabricated " +
       "answer to anonymous visitors, with real NCBI source URLs and a 'Grounded' " +
       "trust pill, for any question asked. A registry entry that understates what " +
-      "a stub renders is worse than none, because it is read as an inventory.",
+      "a stub renders is worse than none, because it is read as an inventory. It " +
+      "was then wired for real in build phase 4.10, after which \"stub\" applies " +
+      "only to the cross-reload history piece, not to the allowance itself; this " +
+      "entry stays in the registry (not deleted) so that narrower, still-true " +
+      "boundary is documented rather than lost.",
   },
   {
     surface: "kgx-export",

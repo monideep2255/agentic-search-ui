@@ -81,11 +81,21 @@ EmailAddress = Annotated[
 ]
 
 
+# T-4.10-06 (design decision 4 and 6, tracker/phase_4.10.md): bounded to a
+# realistic HS256 guest-JWT length (guest.py's guest token carries exactly
+# four short claims), not left unbounded. Optional and additive within v1
+# (production-standards.md / system-design-patterns.md pattern 10): a
+# request body that omits it validates exactly as it did before this
+# ticket.
+_MAX_GUEST_TOKEN_LENGTH = 1024
+
+
 class SignupRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     email: EmailAddress
     password: str = Field(min_length=1, max_length=1024)
+    guest_token: str | None = Field(default=None, max_length=_MAX_GUEST_TOKEN_LENGTH)
 
 
 class SignupResponse(BaseModel):
@@ -100,6 +110,7 @@ class LoginRequest(BaseModel):
 
     email: EmailAddress
     password: str = Field(min_length=1, max_length=1024)
+    guest_token: str | None = Field(default=None, max_length=_MAX_GUEST_TOKEN_LENGTH)
 
 
 class TokenResponse(BaseModel):
@@ -135,3 +146,15 @@ class MeResponse(BaseModel):
     email: str
     created_at: datetime
     last_login_at: datetime | None
+
+
+class GuestTokenResponse(BaseModel):
+    """`POST /auth/guest`'s response (T-4.10-04, design decision 6's wire
+    shape): `{guest_token, guest_id, used, total}`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    guest_token: str
+    guest_id: uuid.UUID
+    used: int
+    total: int

@@ -117,16 +117,41 @@ engineering call and document it:
       cancelled (production-standards.md's retry-safety gate).
     - No lock guards `RunRegistry._runs`, `RunEntry.events`, or the
       `finished`/`finished_at` fields outside of `new_event`'s own
-      protocol. Every mutation runs on the single asyncio event loop
-      thread with no `await` between a read and the write it informs, so
-      CPython's GIL makes each individual mutation atomic against another
-      coroutine interleaving mid-operation; asyncio's own cooperative
-      scheduling (a coroutine only yields control at an `await`) means a
-      concurrently-running reader can never observe a torn intermediate
-      state, only a stale one it will catch up on via the next
-      `new_event.notify_all()`. `new_event`'s lock is held only where the
-      `asyncio.Condition` API requires it (`wait_for`, `notify_all`), not
-      as a general-purpose mutex around every field access.
+      protocol. Almost every mutation runs on the single asyncio event
+      loop thread with no `await` between a read and the write it
+      informs, so CPython's GIL makes each individual mutation atomic
+      against another coroutine interleaving mid-operation; asyncio's own
+      cooperative scheduling (a coroutine only yields control at an
+      `await`) means a concurrently-running reader can never observe a
+      torn intermediate state, only a stale one it will catch up on via
+      the next `new_event.notify_all()`. `new_event`'s lock is held only
+      where the `asyncio.Condition` API requires it (`wait_for`,
+      `notify_all`), not as a general-purpose mutex around every field
+      access.
+
+      CORRECTION, build phase 4.10 fix round 1 (F-4.10-J-03): "every
+      mutation runs on the single asyncio event loop thread" became FALSE
+      the moment `reassign_owner` shipped. Its only caller is
+      `auth/router.py`'s `_migrate_guest_session`, reached from `POST
+      /auth/signup` and `POST /auth/login`, and both of those path
+      operations are plain `def`, which FastAPI dispatches to an AnyIO
+      worker thread. So `reassign_owner` mutates `_runs` entries from a
+      thread that is NOT the event loop, concurrently with `create_run`
+      inserting into the same dict from the loop, and the sentence above
+      no longer covers it. A stale read is still harmless here for the
+      same GIL reason, but an UNGUARDED `for entry in self._runs.values()`
+      is not: it raises `RuntimeError: dictionary changed size during
+      iteration` when an insert lands mid-sweep. Every method that walks
+      `_runs` (`_evict_expired`, `count_active_runs_for_owner`,
+      `reassign_owner`) therefore materialises the dict with a single
+      `list(...)`/`tuple(...)` call before walking it. That call is one
+      C-level operation, so the GIL makes it atomic against another
+      thread's insert, and the walk that follows is over a private
+      snapshot no other thread can resize. This is a bound on the ONE
+      real cross-thread shape that exists today; it is not a claim that
+      this registry is generally thread-safe, and it does not make the
+      registry safe across processes (see the eviction note above and
+      `tracker/phase_4.10.md`'s stated non-coverage).
     - The per-run queue still carries a `None` sentinel appended after the
       run's background task finishes draining `run_streaming()`, for any
       reason: normal completion, an internal crash (already converted to
@@ -139,14 +164,17 @@ engineering call and document it:
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from system_03_search_agent.contracts.events import ErrorPayload, Event
 from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core.run import run_streaming
+
+logger = logging.getLogger(__name__)
 
 # Section 13.1: "the server buffers each run's emitted events... for the
 # run's lifetime plus five minutes". Module-level default so it is visible
@@ -159,6 +187,30 @@ DEFAULT_RETENTION_SECONDS = 300.0
 # "a briefly dropped connection reconnects within seconds, not minutes",
 # the same flaky-connection framing Section 13.1 gives resumability itself.
 DEFAULT_ABANDON_GRACE_SECONDS = 30.0
+
+# T-4.10-05 (design decision 7, tracker/phase_4.10.md): the per-principal
+# concurrent-run cap that closes F-4.0-A-10. F-4.0-A-10 measured 9,615
+# runs created by ONE caller in roughly 50 seconds of bursts, with zero
+# rejections, because nothing bounded run creation at all. This constant
+# bounds concurrently ACTIVE (not yet `finished`) runs per owner_id, not a
+# cumulative rate: a legitimate caller (one browser tab, plus perhaps a
+# stray reconnect or a deliberate follow-up question fired before the
+# first answer lands) is not expected to have more than a couple of runs
+# genuinely in flight at once. 5 gives headroom above that ordinary shape
+# while still cutting the unbounded-burst pattern off completely; it is a
+# v1 engineering call, not a value derived from a load test (the real
+# per-layer throttling and concurrency-queue strategy is build phase
+# 6.0's job, tool-call-budgets.md).
+DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER = 5
+
+# A conservative, static hint, not a promise: a caller that hits this cap
+# is told to retry in a few seconds, which is comfortably longer than a
+# guard/plan/synth round trip normally takes to free a slot by finishing,
+# but this module has no per-run completion-time estimate to compute a
+# tighter number from. Genuinely transient (design decision 5): finishing
+# or stopping an existing run frees a slot immediately, unlike the guest
+# allowance's 403, which retrying can never fix.
+CONCURRENT_RUN_CAP_RETRY_AFTER_S = 5
 
 
 class RunNotFoundError(KeyError):
@@ -179,6 +231,22 @@ class RunNotFoundError(KeyError):
         return f"no run registered with run_id {self.run_id!r}"
 
 
+class ConcurrentRunCapExceededError(RuntimeError):
+    """Raised by `RunRegistry.create_run` when `owner_id` already has
+    `DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER` (or the registry's configured
+    override) active runs (T-4.10-05, closes F-4.0-A-10).
+
+    Genuinely transient (design decision 5, tracker/phase_4.10.md):
+    finishing or stopping an existing run frees a slot immediately, so the
+    HTTP layer maps this to `429` with a real `Retry-After`, never the
+    guest-allowance-exhausted `403` that retrying can never fix.
+    """
+
+    def __init__(self, message: str, *, retry_after_s: int) -> None:
+        super().__init__(message)
+        self.retry_after_s = retry_after_s
+
+
 @dataclass
 class RunEntry:
     """One tracked run: its id, its owner, both read paths, and its
@@ -186,6 +254,14 @@ class RunEntry:
 
     run_id: str
     user_id: str | None
+    # T-4.10-03, design decision 2 (tracker/phase_4.10.md): the namespaced
+    # identity ("user:<uuid>" or "guest:<uuid>") every ownership
+    # comparison reads (adapters/web_sse/app.py's `_get_owned_run`).
+    # `user_id` above is left untouched, the bare registered-user UUID
+    # string or None, because it is what `is_operator_user()` and a
+    # future `interactions.user_id` write need; a namespaced string must
+    # never reach either.
+    owner_id: str
     queue: asyncio.Queue[Event | None] = field(repr=False)
     task: asyncio.Task[None] = field(repr=False)
     events: list[Event] = field(default_factory=list, repr=False)
@@ -218,6 +294,193 @@ class RunEntry:
     # citation export as partial rather than indistinguishable from a
     # genuinely empty one (F-4.0-A-05).
     cancelled: bool = False
+    # F-4.10-A-04 (adversary round 1, build phase 4.10): fired at most once,
+    # by `_drain_into_entry`, when this run ends having refused at the
+    # guardrail. This registry knows nothing about allowances and must not:
+    # the callback is supplied by whoever created the run (the web surface
+    # passes one only for a guest caller), so the refund policy lives at the
+    # layer that owns the allowance and this module only reports the
+    # observation. Set back to `None` the instant it fires, which is what
+    # makes "at most once per run" structural rather than a convention.
+    #
+    # Its one argument is `charged` (F-4.10-R-01): whether the refusal came
+    # after a real model call. See `_fire_guard_refusal_callback` for how it
+    # is observed and why it never travels on the wire.
+    on_guard_refused: Callable[[bool], None] | None = field(default=None, repr=False)
+    # The three observations `_fire_guard_refusal_callback` accumulates
+    # before it can decide. All are internal to this process and none is ever
+    # serialized to a client.
+    guard_refused: bool = False
+    guard_cost_observed: bool = False
+    # F-4.10-V-02: a run that ended on a FATAL error rather than on a
+    # guardrail verdict. Separate from `guard_refused` because the two are
+    # genuinely different events and `_decline_for_guardrail`'s own docstring
+    # insists on the distinction (a refusal is a judgement the system
+    # reached; an error is the system failing). They converge only at the
+    # refund, because what the visitor got is the same in both cases: nothing.
+    run_failed: bool = False
+
+
+def _fire_guard_refusal_callback(entry: RunEntry, event: Event) -> None:
+    """Invoke `entry.on_guard_refused` once, when a run ENDS having refused
+    at the guardrail, then disarm it (F-4.10-A-04, F-4.10-R-01).
+
+    WHERE A GUARD REFUSAL BECOMES OBSERVABLE, and why it is here. The
+    guardrail runs inside the agent loop, long after `POST /v1/query` has
+    already returned `202` and already spent the caller's allowance. There is
+    no earlier point: `core/graph.py`'s `_decline_for_guardrail` emits a
+    `guard` event carrying `passed: false` and then stops the graph, and this
+    drain loop is the first thing outside the graph that sees any event at
+    all. So the compensation is a refund after the fact, never a deferred
+    charge. Moving the spend to after the guardrail was considered and
+    rejected: it would let a caller start unbounded runs that never spend at
+    all, which is a strictly worse hole than the one being closed.
+
+    TWO END STATES FIRE IT, F-4.10-V-02, product-owner decision 2026-08-15.
+    This function used to key on a `guard` event carrying `passed: false` and
+    nothing else, on the argument that "a failed run is a different question
+    with a different answer and is not in scope here". The question is
+    different; the ANSWER turned out to be the same. Measured on the running
+    app: a run that died with a Guard-tier `HarnessCallError` left the guest
+    at `(runs_used 1, attempts_used 1)` with the day charged 1, so a visitor
+    lost one of five free searches to a failure that was not theirs and was
+    told nothing. The phase's own principle ("a visitor must not be pushed
+    toward the sign-in wall by questions that were never answered") does not
+    distinguish between a question the system refused and one it dropped.
+
+    So the ANSWER is now given back for either, and the rule is one sentence:
+    a run that ends having produced no answer gives back the answer, never
+    the attempt, and gives back the shared day (and that source's share of
+    it) only when no model call was made. The `charged` observation below is
+    unchanged and already carries that last clause for both cases: an errored
+    run that got as far as a real model call keeps the day charged, because
+    the day's budget bounds money and money was spent.
+
+    THE THREE CASES THAT DO NOT FIRE IT, each for its own reason rather than
+    by omission:
+
+    - A CANCELLED run, which is a run the visitor stopped. Deliberately not
+      refunded, and this is the one place the "produced no answer" framing
+      would mislead: the server cannot know what the visitor already read.
+      Every token emitted before the stop was streamed to them, so a caller
+      could read an answer to its last sentence, stop before `done`, and be
+      refunded for a search they received. That is a free-answer path, which
+      is exactly the class of hole F-4.10-R-01 was filed for. Structurally it
+      also cannot fire: `_drain_into_entry` appends its cancellation event
+      directly to both read paths without routing it through this function,
+      and a cancelled run never reaches a `done` event at all.
+    - A NON-FATAL error (`fatal=False`), which several perfectly good runs
+      emit: `write_node` reports a truncated tool result or an uncited `ok`
+      result that way and then streams a real answer. Refunding those would
+      hand back a search the visitor actually got, so `fatal` is checked
+      rather than merely `type == "error"`.
+    - A per-query COST-CAP partial result, which routes through
+      `_partial_result_for_cap` and emits no fatal error at all. The visitor
+      gets a partial answer, which is Section 19.1's deliberate behaviour and
+      is not nothing.
+
+    A cap-DECLINED run (`_decline_for_daily_cap`) is covered by the new arm
+    without a special case, and correctly: it emits a fatal `error` and a
+    `done` having made no model call, so the answer, the day and the source
+    share all come back. That is the strongest of the three cases the
+    re-review named, since the run was refused before any work at all.
+
+    HOW `charged` REACHES THE CALLBACK WITHOUT REACHING THE GUEST
+    (F-4.10-R-01 part B). The refund policy needs to know whether the refused
+    run made a real model call, because a refusal that cost nothing must not
+    charge the shared daily budget, while one that paid for a Guard-tier call
+    must. `_decline_for_guardrail` knows: it takes `charged` as an argument
+    and emits a `cost` event if and only if it is true.
+
+    That `cost` event is the signal read here, and it is deliberately NOT a
+    new field on `GuardPayload` or on any other payload. Sections 19.4 and
+    19.5 make cost internal-only, and this phase's own premise gate asserts a
+    guest is never streamed a `cost` event; a `charged` flag on the wire
+    would tell every guest exactly which of their questions cost money, which
+    is the same cost-adjacent disclosure the sanitizer exists to prevent. A
+    `cost` event, by contrast, is already stripped for every non-operator
+    caller by `sanitize_event_for_end_user` in the SSE layer, so it reaches
+    this drain loop and stops there. `RunEntry` is on the inside; the wire is
+    not.
+
+    WHAT THAT CLAIM DOES AND DOES NOT COVER, F-4.10-V-05, because the
+    sentence above is easy to read as stronger than it is. What is true, and
+    was measured across both refusal shapes through the running app: no cost
+    figure and no `charged` flag reaches a guest. Response headers, event
+    stream, event-type set, allowance body and citations are byte-identical
+    between a free refusal and a paid one apart from run identifiers.
+
+    What is NOT true is the stronger reading, that nothing a guest can see
+    tells them which questions cost money. `GuardPayload.category` is a
+    product requirement and does reach them, and two of its values are
+    emitted by exactly one screen each: `injection` only by `prefilter.
+    screen` (free), `off_topic` only by the classifier (paid). A guest who
+    reads their own refusal category can therefore infer, for those two
+    values, whether that question cost anything, and latency separates the
+    two anyway by a Guard-tier round trip.
+
+    Recorded as an accepted inference channel rather than fixed, and the
+    reasoning is that it leaks SCREEN IDENTITY, not cost. Sections 19.4 and
+    19.5 govern cost figures and token counts, and no figure travels. The
+    category is what makes the refusal actionable for the person reading it,
+    so removing or blurring it would trade a real product requirement for
+    hiding a fact of no value to an attacker: knowing a refusal was free
+    tells them nothing the attempt ceiling and the per-source share do not
+    already bound. `medical_advice` is emitted by both a free and a paid
+    screen with a byte-identical `reason`, which is the shape to keep.
+
+    That is why the callback fires on `done` rather than on the `guard` event
+    itself. `_decline_for_guardrail` emits guard, then cost (only when
+    charged), then done, so `done` is the first moment both facts are known.
+    The cost of the delay is one narrow window: a run cancelled between the
+    guard event and the done event loses its refund and leaves the caller
+    charged. That is the same residue, and the same safe direction, as the
+    process-death case `post_v1_query` already documents, since the opposite
+    failure hands out free searches.
+
+    Never raises. A callback that fails must not turn a correctly refused run
+    into a crashed one, and the caller's own allowance is the thing at stake,
+    not the run.
+    """
+    if entry.on_guard_refused is None:
+        return
+    if event.type == "cost":
+        # Only ever true for a run that reached a model call. A refused run
+        # emits at most this one, immediately after its guard verdict.
+        entry.guard_cost_observed = True
+        return
+    if event.type == "guard":
+        if event.payload.get("passed") is False:
+            entry.guard_refused = True
+        return
+    if event.type == "error":
+        # F-4.10-V-02. `fatal is True` is the whole discriminator and it is
+        # checked explicitly rather than by truthiness: a non-fatal error is
+        # emitted by runs that go on to stream a real answer (`write_node`'s
+        # truncated-result and uncited-`ok` notes), and refunding those would
+        # give back a search the visitor actually received.
+        if event.payload.get("fatal") is True:
+            entry.run_failed = True
+        return
+    if event.type != "done" or not (entry.guard_refused or entry.run_failed):
+        return
+    callback = entry.on_guard_refused
+    # Disarm BEFORE calling, not after: a callback that raises must still
+    # have consumed its one shot, or a later `done` event (there is none
+    # today, and relying on that is how a second refund gets written) could
+    # fire it again.
+    entry.on_guard_refused = None
+    try:
+        callback(entry.guard_cost_observed)
+    except Exception:  # noqa: BLE001 - a refund failure must never fail the run
+        # No exc_info and no interpolated values, per production-standards'
+        # secrets gate: a database exception's own string can embed bound
+        # parameters, and the guest id is one of them.
+        logger.warning(
+            "the zero-output refund callback for run %s failed; the caller "
+            "was charged for a run that produced no answer",
+            entry.run_id,
+        )
 
 
 async def _drain_into_entry(
@@ -260,6 +523,7 @@ async def _drain_into_entry(
         async for event in run_streaming(query, context):
             entry.events.append(event)
             await entry.queue.put(event)
+            _fire_guard_refusal_callback(entry, event)
             async with entry.new_event:
                 entry.new_event.notify_all()
     except asyncio.CancelledError:
@@ -312,19 +576,24 @@ class RunRegistry:
         *,
         retention_seconds: float = DEFAULT_RETENTION_SECONDS,
         abandon_grace_seconds: float = DEFAULT_ABANDON_GRACE_SECONDS,
+        max_active_runs_per_owner: int = DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER,
     ) -> None:
         self._runs: dict[str, RunEntry] = {}
         self._retention_seconds = retention_seconds
         self._abandon_grace_seconds = abandon_grace_seconds
+        self._max_active_runs_per_owner = max_active_runs_per_owner
 
     def _evict_expired(self) -> None:
         """Drop every run finished for longer than `retention_seconds`
         (F-1.2-01). Swept lazily; see the module docstring for why no
         separate background sweep task exists."""
         now = datetime.now(UTC)
+        # `list(...)` first, then walk the snapshot: see the module
+        # docstring's F-4.10-J-03 correction for why walking `_runs`
+        # directly is no longer safe.
         expired = [
             run_id
-            for run_id, entry in self._runs.items()
+            for run_id, entry in list(self._runs.items())
             if entry.finished_at is not None
             and (now - entry.finished_at).total_seconds() > self._retention_seconds
         ]
@@ -393,12 +662,96 @@ class RunRegistry:
         if entry.subscriber_count == 0 and not entry.task.done():
             entry.task.cancel()
 
+    @property
+    def max_active_runs_per_owner(self) -> int:
+        """The configured concurrent-run cap this instance enforces
+        (T-4.10-05). Exposed read-only so a caller (the HTTP layer's own
+        precheck) can report or compare against the same value `create_run`
+        itself enforces, without reaching into a private attribute."""
+        return self._max_active_runs_per_owner
+
+    def count_active_runs_for_owner(self, owner_id: str) -> int:
+        """Count `owner_id`'s currently ACTIVE (not yet `finished`) runs.
+
+        T-4.10-05 (closes F-4.0-A-10): a completed run does not count
+        against the concurrent-run cap, matching F-1.2-01's own eviction
+        fix's framing of "how long", not "how many at once". Public so the
+        HTTP layer (`adapters/web_sse/app.py`'s `POST /v1/query`) can
+        check this BEFORE spending a guest's allowance (design decision
+        4/5's ordering: a refused creation must not spend), while
+        `create_run` below still enforces the cap itself as the actual
+        authority a caller cannot bypass by skipping this precheck.
+        """
+        self._evict_expired()
+        # Snapshot before counting, per the module docstring's F-4.10-J-03
+        # correction.
+        return sum(
+            1
+            for entry in list(self._runs.values())
+            if entry.owner_id == owner_id and not entry.finished
+        )
+
+    def reassign_owner(
+        self, *, old_owner_id: str, new_owner_id: str, new_user_id: str | None
+    ) -> int:
+        """Re-point every LIVE `RunEntry`'s `owner_id` (and `user_id`)
+        from `old_owner_id` to `new_owner_id` (T-4.10-06, design decision
+        4: migration moves what actually exists).
+
+        Nothing persists a run today (this registry is in-memory and
+        evicts, per the module docstring), so this only ever reaches runs
+        this process still holds; it is not, and does not claim to be,
+        durable cross-reload history (F-4.10-01). Idempotent by
+        construction: a run already reassigned away from `old_owner_id`
+        (or evicted) is simply not matched on a second call with the same
+        arguments, so a replayed migration is a clean no-op here too.
+
+        Cross-guest isolation (T-4.10-06 acceptance criterion) holds by
+        construction at the CALLER, not here: this method reassigns
+        exactly what `old_owner_id` names, and the caller (`auth/router.
+        py`'s `_migrate_guest_session`) builds `old_owner_id` only from
+        the `guest_id` claim decoded out of the presented token itself,
+        so a guest token can never name any owner_id but its own.
+
+        THREADING (F-4.10-J-03, build phase 4.10 fix round 1). This is the
+        one `_runs` walker that does NOT run on the event loop thread. Its
+        only caller, `auth/router.py`'s `_migrate_guest_session`, is
+        reached from `POST /auth/signup` and `POST /auth/login`, which are
+        plain `def` path operations and so run on an AnyIO worker thread,
+        concurrently with `create_run` inserting into `_runs` from the
+        loop. Walking `self._runs.values()` directly raised `RuntimeError:
+        dictionary changed size during iteration` in that window
+        (reproduced, not hypothesised). The `list(...)` below takes a
+        snapshot in one atomic C-level call first; the entries it holds
+        are the same live objects, so the reassignment still lands on real
+        runs, and a run created after the snapshot simply is not matched,
+        which is indistinguishable from one created a microsecond after
+        this method returned. See the module docstring for the full
+        correction to the no-lock invariant this broke.
+
+        Returns:
+            The number of entries reassigned, for the caller to log.
+        """
+        reassigned = 0
+        for entry in list(self._runs.values()):
+            if entry.owner_id == old_owner_id:
+                entry.owner_id = new_owner_id
+                entry.user_id = new_user_id
+                reassigned += 1
+        return reassigned
+
     def create_run(
-        self, query: Query, context: RequestContext, *, run_id: str | None = None
+        self,
+        query: Query,
+        context: RequestContext,
+        *,
+        run_id: str | None = None,
+        owner_id: str | None = None,
+        on_guard_refused: Callable[[bool], None] | None = None,
     ) -> str:
         """Mint a `run_id` (or accept a caller-provided one), start
         `run_streaming(query, context)` as a background task feeding both
-        read paths, and record `query.user_id` as the run's owner.
+        read paths, and record the run's owner.
 
         Returns the new `run_id` immediately; the background task has not
         necessarily produced any events yet by the time this returns (by
@@ -412,16 +765,79 @@ class RunRegistry:
                 `query.trace_id`, never a second, independently-minted id
                 (`trace_id`'s "single join key" role, production-
                 standards.md). Left as `None`, this method mints its own.
+            owner_id: the namespaced `user:<uuid>`/`guest:<uuid>` identity
+                every ownership comparison reads (T-4.10-03, design
+                decision 2). Callers that authenticate through
+                `get_caller` (the web_sse surface, T-4.10-03) always pass
+                this explicitly. Left as `None` for backward compatibility
+                with call sites that predate this ticket (every existing
+                test in `test_run_registry.py`/`test_phase_4_0_premise.
+                py`, and the MCP surface's own authenticated-user-only
+                path, `adapters/mcp/server.py`, T-4.1-03): this method
+                then derives `"user:<uuid>"` from `query.user_id` when one
+                is present, or a synthetic per-call unique owner_id when
+                it is not, so two independently-anonymous callers in two
+                different tests never accidentally share a concurrency
+                slot.
+            on_guard_refused: called at most once, from the background
+                task, when this run ENDS having emitted a `guard` event with
+                `passed: false` (F-4.10-A-04). Its one argument is whether
+                that refusal came after a real model call (F-4.10-R-01),
+                observed from the internal `cost` event no guest is ever
+                streamed; see `_fire_guard_refusal_callback` for why the
+                flag travels this way rather than on a payload. The web
+                surface passes a guest-allowance refund here; every other
+                caller leaves it `None` and nothing fires. This registry
+                deliberately holds no opinion about what a refusal should
+                cost: it reports the observation, and the layer that owns
+                the allowance decides.
+
+        Raises:
+            ConcurrentRunCapExceededError: if `owner_id` (resolved or
+                derived) already has `max_active_runs_per_owner` runs
+                active. T-4.10-05, closes F-4.0-A-10.
         """
         self._evict_expired()
         resolved_run_id = run_id if run_id is not None else str(uuid.uuid4())
+        resolved_owner_id = owner_id
+        if resolved_owner_id is None:
+            resolved_owner_id = (
+                f"user:{query.user_id}" if query.user_id is not None else f"anon:{resolved_run_id}"
+            )
+
+        # T-4.10-05 (closes F-4.0-A-10): the authoritative enforcement
+        # point. Checked here, as the very first thing after resolving
+        # owner_id and before the RunEntry is constructed, so the same
+        # single-threaded, no-await-in-between atomicity this module's own
+        # docstring already documents for every other `_runs` mutation
+        # covers this check too: nothing can observe or mutate `_runs`
+        # between this count and the entry insertion below within one
+        # process. This bounds concurrently active runs; it is a distinct
+        # control from the guest allowance's own atomicity, which
+        # `data.guest_sessions.spend_one_run`'s conditional `UPDATE`
+        # guarantees independently at the database layer, and it does not
+        # (and cannot, being in-process, per this module's own stated
+        # non-coverage) close a true multi-process race, only the
+        # single-caller unbounded-burst shape F-4.0-A-10 measured.
+        active = self.count_active_runs_for_owner(resolved_owner_id)
+        if active >= self._max_active_runs_per_owner:
+            raise ConcurrentRunCapExceededError(
+                f"owner {resolved_owner_id!r} already has {active} run(s) in "
+                f"flight, at the cap of {self._max_active_runs_per_owner}; "
+                "wait for an existing run to finish, or stop one via "
+                "POST /v1/query/{run_id}/stop, then retry",
+                retry_after_s=CONCURRENT_RUN_CAP_RETRY_AFTER_S,
+            )
+
         entry = RunEntry(
             run_id=resolved_run_id,
             user_id=query.user_id,
+            owner_id=resolved_owner_id,
             queue=asyncio.Queue(),
             task=asyncio.create_task(
                 _drain_into_entry(self, resolved_run_id, query, context)
             ),
+            on_guard_refused=on_guard_refused,
         )
         self._runs[resolved_run_id] = entry
         self._reschedule_abandonment_check(entry)

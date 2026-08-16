@@ -128,6 +128,74 @@ describe("AgentEvent union: every non-cost payload shape", () => {
     expect(parseAgentEvent("citation", event)).toEqual(event);
   });
 
+  // T-4.10-07: snapshot_date and entity_name, both additive and optional.
+  // A payload omitting them (above) still validates; these cover a real
+  // server payload that sends both, and one where the server states a
+  // real value for each.
+
+  it("accepts a citation event whose payload states both new fields as null", () => {
+    const payload: CitationPayload = {
+      citation_id: "cit-1",
+      display_index: 1,
+      source: "ClinVar",
+      source_id: "VCV000007105",
+      source_url: "https://www.ncbi.nlm.nih.gov/clinvar/VCV000007105",
+      layer: "layer_1_graph",
+      field: "clinical_significance",
+      claim_text: "Pathogenic for cystic fibrosis",
+      evidence_kind: "graph_node",
+      assertion_confidence: "high",
+      population_ancestry_context: null,
+      license: "public_domain",
+      snapshot_date: null,
+      entity_name: null,
+    };
+    const event = { ...BASE, type: "citation" as const, payload } satisfies AgentEvent;
+    expect(parseAgentEvent("citation", event)).toEqual(event);
+  });
+
+  it("accepts a citation event whose payload states real values for both new fields", () => {
+    const payload: CitationPayload = {
+      citation_id: "cit-1",
+      display_index: 1,
+      source: "NCBI Gene",
+      source_id: "672",
+      source_url: "https://www.ncbi.nlm.nih.gov/gene/672",
+      layer: "layer_1_graph",
+      field: "name",
+      claim_text: "BRCA1 DNA repair associated",
+      evidence_kind: "primary_assertion",
+      assertion_confidence: "asserted",
+      population_ancestry_context: null,
+      license: "public_domain_us_gov",
+      snapshot_date: "2026-04-22",
+      entity_name: "BRCA1",
+    };
+    const event = { ...BASE, type: "citation" as const, payload } satisfies AgentEvent;
+    expect(parseAgentEvent("citation", event)).toEqual(event);
+  });
+
+  it("rejects a citation event whose snapshot_date is not a string or null", () => {
+    const payload = {
+      citation_id: "cit-1",
+      display_index: 1,
+      source: "NCBI Gene",
+      source_id: "672",
+      source_url: "https://www.ncbi.nlm.nih.gov/gene/672",
+      layer: "layer_1_graph",
+      field: "name",
+      claim_text: "BRCA1 DNA repair associated",
+      evidence_kind: "primary_assertion",
+      assertion_confidence: "asserted",
+      population_ancestry_context: null,
+      license: "public_domain_us_gov",
+      snapshot_date: 20260422,
+      entity_name: "BRCA1",
+    };
+    const event = { ...BASE, type: "citation" as const, payload };
+    expect(() => parseAgentEvent("citation", event)).toThrow();
+  });
+
   it("accepts a trust_signal event", () => {
     const payload: TrustSignalPayload = {
       outcome: "answer",

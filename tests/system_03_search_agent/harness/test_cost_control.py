@@ -661,3 +661,210 @@ def test_filter_events_for_end_user_redaction_produces_a_schema_valid_done_event
     # the redaction produces a payload that still validates against
     # DonePayload, it does not merely delete or null out a required field.
     DonePayload.model_validate(redacted.payload)
+
+
+class TestTheTwoAnonymousCeilingsBoundSpendTogether:
+    """F-4.10-R-11 (lead, verifying the F-4.10-R-01 fix).
+
+    Neither anonymous ceiling bounds spend alone. The per-guest attempt
+    ceiling stops one identity; the shared daily ceiling stops the day. They
+    only work together, and only while the first is materially smaller than
+    the second. Raise `ATTEMPT_ALLOWANCE` above the shipped
+    `ANON_DAILY_RUN_CAP`, or drop that cap near it, and one guest token takes
+    the whole day again, which is precisely the denial of service R-01
+    measured at 200 pipelines in 1.68 seconds.
+
+    Nothing tested that relationship, and the premise gate structurally
+    could not: its attack clause imports `ATTEMPT_ALLOWANCE` and scales its
+    own daily cap to four times whatever it finds, so it proves a bound
+    EXISTS while staying blind to both values. Changing the constant from 10
+    to 40 left all 32 of its clauses green.
+
+    That is the trap the premise gate's own header warns about, in its
+    `_EXPECTED_FREE_SEARCHES` comment: "a gate that reads its expected value
+    out of the code it grades cannot catch that value being wrong." The gate
+    stated the principle and then imported the next constant one screen
+    later.
+
+    Why this is a test over the SHIPPED defaults rather than a check inside
+    `anon_daily_run_cap()`, which is where it was first written: enforcing
+    the ratio at read time makes the daily ceiling untestable, because every
+    clause that exercises it sets a deliberately tiny cap so the boundary is
+    reachable in a few requests. That version turned 7 legitimate tests red.
+    A control that forces the tests exercising a bound to stop exercising it
+    is a bad control, whatever it catches.
+
+    Stated cost of the choice, so nobody reads this as stronger than it is:
+    this catches the shipped defaults drifting, not an operator setting a
+    bad value in a real `.env`. Closing that needs a startup-time config
+    validation this service does not have. Carried in `tracker/phase_4.10.md`.
+    """
+
+    def test_the_shipped_default_daily_cap_dwarfs_the_per_guest_attempt_ceiling(self) -> None:
+        import re
+        from pathlib import Path
+
+        from system_03_search_agent.data.guest_sessions import ATTEMPT_ALLOWANCE
+        from system_03_search_agent.harness.cost_control import (
+            _MIN_ANON_DAILY_CAP_MULTIPLE,
+        )
+
+        env_example = Path(__file__).resolve().parents[3] / "env.example"
+        match = re.search(r"^ANON_DAILY_RUN_CAP=(\d+)$", env_example.read_text(), re.MULTILINE)
+        assert match is not None, (
+            "env.example must ship a concrete ANON_DAILY_RUN_CAP; it is the only "
+            "bound on total anonymous spend, and an empty value means the app "
+            "refuses every anonymous run rather than bounding it"
+        )
+        shipped_cap = int(match.group(1))
+
+        assert shipped_cap >= ATTEMPT_ALLOWANCE * _MIN_ANON_DAILY_CAP_MULTIPLE, (
+            f"the shipped ANON_DAILY_RUN_CAP ({shipped_cap}) is less than "
+            f"{_MIN_ANON_DAILY_CAP_MULTIPLE}x the per-guest attempt ceiling "
+            f"({ATTEMPT_ALLOWANCE}), so one anonymous caller could take "
+            f"{ATTEMPT_ALLOWANCE / shipped_cap:.0%} of the day's whole budget "
+            f"and deny the product to everyone else (F-4.10-R-01). Raise the "
+            f"cap, or lower ATTEMPT_ALLOWANCE."
+        )
+
+
+class TestTheAnonymousSourceShareIsMateriallyBelowTheDay:
+    """F-4.10-V-01 (verifier, grading the F-4.10-R-01 fix).
+
+    The ratio invariant, one bound further out than
+    `TestTheTwoAnonymousCeilingsBoundSpendTogether` above, and for the same
+    reason that class exists: a bound whose value is not materially below
+    the thing it subdivides is not a bound at all, and nothing in a
+    behavioural gate notices, because the code still refuses at SOME number.
+
+    The measured failure this pins. `ATTEMPT_ALLOWANCE` bounds an identity
+    and `POST /auth/guest` mints identities for free; the daily ceiling
+    bounds the day and says nothing about who spent it; the mint throttle
+    bounds the RATE of minting at 60 per minute per source and cannot go
+    lower, because the premise gate's own admit arm requires 25 consecutive
+    mints from one shared address to succeed. With all three live and the
+    throttle refusing nothing, 20 identities from ONE source took all 200 of
+    the day's runs in 1.84 seconds. `anon_daily_source_share` is what bounds
+    that, and it only bounds it while it stays a small fraction of the cap.
+
+    Both directions are asserted, because this control has no safe direction
+    of failure either. A share that creeps up toward the cap stops bounding
+    a caller; a share that drops toward zero refuses an ordinary shared
+    address, which is the exact failure the mint throttle's first version
+    shipped (F-4.10-04) and the reason every control in this phase is graded
+    on two arms.
+
+    COVERAGE, per `goal-contracts`. Exercised: the shipped `env.example`
+    value, the share's arithmetic at that value, the floor at a cap small
+    enough to divide to zero, and the input validation. NOT exercised here:
+    that the share is actually ENFORCED, which is
+    `TestOneSourceCannotTakeTheWholeAnonymousDay` in the premise gate and is
+    named rather than duplicated; and an operator setting a bad
+    `ANON_DAILY_RUN_CAP` in a real `.env`, which needs the startup-time
+    config validation this service does not have and which
+    `TestTheTwoAnonymousCeilingsBoundSpendTogether` already carries.
+    """
+
+    @staticmethod
+    def _shipped_cap() -> int:
+        import re
+        from pathlib import Path
+
+        env_example = Path(__file__).resolve().parents[3] / "env.example"
+        match = re.search(r"^ANON_DAILY_RUN_CAP=(\d+)$", env_example.read_text(), re.MULTILINE)
+        assert match is not None, (
+            "env.example must ship a concrete ANON_DAILY_RUN_CAP; the source "
+            "share is derived from it, so an absent value leaves no bound to "
+            "derive"
+        )
+        return int(match.group(1))
+
+    def test_one_source_cannot_take_a_material_fraction_of_the_shipped_day(self) -> None:
+        from system_03_search_agent.harness.cost_control import anon_daily_source_share
+
+        shipped_cap = self._shipped_cap()
+        share = anon_daily_source_share(shipped_cap)
+
+        assert share * 4 <= shipped_cap, (
+            f"one source may take {share} of the shipped {shipped_cap}-run day "
+            f"({share / shipped_cap:.0%}), which is not materially below the day "
+            f"and therefore not a bound on one caller (F-4.10-V-01). At this "
+            f"ratio a handful of sources, or one source across a fixed-window "
+            f"boundary, is the whole day again."
+        )
+
+    def test_the_shipped_share_still_serves_several_whole_visitors(self) -> None:
+        """The admit arm of the same invariant.
+
+        A share below one visitor's answer allowance would refuse the second
+        person behind an office address, which is a control that has
+        destroyed the product to protect it. Five is the floor; the shipped
+        value must clear it with room for more than one visitor, because the
+        shared-address case is the ordinary case, not the attack.
+        """
+        from system_03_search_agent.data.guest_sessions import FREE_RUN_ALLOWANCE
+        from system_03_search_agent.harness.cost_control import anon_daily_source_share
+
+        shipped_cap = self._shipped_cap()
+        share = anon_daily_source_share(shipped_cap)
+
+        assert share >= FREE_RUN_ALLOWANCE * 2, (
+            f"the shipped source share is {share}, under two complete visitors "
+            f"at {FREE_RUN_ALLOWANCE} answers each; several people behind one "
+            f"office, campus or conference address is the ordinary case and is "
+            f"the room this product gets demonstrated in (F-4.10-04's lesson, "
+            f"one bound further out)"
+        )
+
+    def test_the_share_is_a_tenth_of_the_cap_at_the_shipped_value(self) -> None:
+        """The arithmetic itself, stated as the gate's own expectation
+        rather than recomputed from the constants it grades.
+
+        `TestTheTwoAnonymousCeilingsBoundSpendTogether` above records why
+        that matters: the premise gate imported `ATTEMPT_ALLOWANCE` and
+        scaled its own cap to it, so changing the constant from 10 to 40 left
+        all 32 of its clauses green. Writing 20 here means changing the
+        divisor is a red test rather than a silently rescaled one.
+        """
+        from system_03_search_agent.harness.cost_control import anon_daily_source_share
+
+        assert anon_daily_source_share(200) == 20
+        assert anon_daily_source_share(1000) == 100
+
+    def test_a_small_configured_cap_never_divides_the_share_to_zero(self) -> None:
+        """The floor, and the failure it exists to stop.
+
+        A share of zero refuses EVERY anonymous caller whose source is
+        known, which scores perfectly against every attack test that will
+        ever be written and destroys the phase's entire deliverable. Small
+        caps are not hypothetical: every clause in the premise gate that
+        exercises the daily ceiling sets one deliberately, so this is the
+        configuration the test suite itself runs in most often.
+        """
+        from system_03_search_agent.harness.cost_control import anon_daily_source_share
+
+        for tiny_cap in (1, 2, 3, 9):
+            assert anon_daily_source_share(tiny_cap) >= 1, (
+                f"a cap of {tiny_cap} produced a source share of "
+                f"{anon_daily_source_share(tiny_cap)}; a share of zero refuses "
+                f"every anonymous caller whose source is known"
+            )
+
+    @pytest.mark.parametrize("bad_cap", [0, -1, -200])
+    def test_a_non_positive_cap_is_rejected_rather_than_silently_bounded(
+        self, bad_cap: int
+    ) -> None:
+        from system_03_search_agent.harness.cost_control import anon_daily_source_share
+
+        with pytest.raises(ValueError):
+            anon_daily_source_share(bad_cap)
+
+    @pytest.mark.parametrize("bad_cap", [True, 1.5, "200", None])
+    def test_a_non_int_cap_is_rejected(self, bad_cap: object) -> None:
+        """`True` is in this list deliberately: `isinstance(True, int)` is
+        True in Python, so a bool would otherwise sail through and produce a
+        share of 5 from a value that is not a cap at all."""
+        from system_03_search_agent.harness.cost_control import anon_daily_source_share
+
+        with pytest.raises(TypeError):
+            anon_daily_source_share(bad_cap)  # type: ignore[arg-type]

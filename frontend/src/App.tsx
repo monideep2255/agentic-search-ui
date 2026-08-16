@@ -6,7 +6,7 @@
  * trust defects, so the relevant reasoning is recorded here rather than in a
  * commit message nobody reads twice.
  *
- * THE RULE THIS FILE NOW FOLLOWS: nothing that looks like an answer is ever
+ * THE RULE THIS FILE FOLLOWS: nothing that looks like an answer is ever
  * rendered from anything but the agent's own event stream. No demo claims, no
  * demo citations, no demo trust signals, on any path, for any visitor.
  *
@@ -25,19 +25,40 @@
  * CLAUDE.md's "Citations: non-negotiable" both forbid presenting a claim the
  * agent never produced.
  *
- * So an anonymous visitor now meets the sign-in wall the moment they ask.
- * The cost is real and is stated plainly for the product owner: the approved
- * five-free-searches journey cannot be delivered until an anonymous path to
- * the backend exists, which is build phase 6.0's. Showing the wall is honest;
- * showing a fabricated citation is not. Reverting this decision means giving
- * anonymous callers a real backend route, not restoring the demo data.
+ * BUILD PHASE 4.10 UPDATE (T-4.10-08). Until this phase, an anonymous
+ * visitor met the sign-in wall the moment they asked, because no backend
+ * route existed for a caller with no account: showing the wall was honest,
+ * fabricating an answer was not. That backend route now exists
+ * (`POST /auth/guest`, the four `/v1/query*` endpoints accepting a guest
+ * bearer token, `GET /v1/allowance`), so the rule above still holds exactly
+ * as written, and an anonymous visitor now satisfies it the same way a
+ * signed-in one does: by actually asking the agent and rendering only what
+ * its real event stream produces. The wall is no longer shown merely
+ * because the visitor has no account; it is shown only when the SERVER
+ * refuses a run with the reason `guest_allowance_exhausted`, per design
+ * decision 5 (`tracker/phase_4.10.md`). The five-search allowance itself is
+ * counted by the server (`guest_sessions.runs_used`, spent by one atomic
+ * `UPDATE`), never guessed at client-side: the client-side counter this
+ * file used to increment on every ask was exactly the fabrication class
+ * build phase 4.8's judge round filed (F-4.8-J-01's dishonesty class, one
+ * layer up), and it is gone, not merely renamed.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, CssBaseline, ThemeProvider } from "@mui/material";
 
 import { theme } from "./theme";
-import { createRun, stopRun } from "./lib/api";
+import { ApiError, createRun, getAllowance, mintGuest, stopRun } from "./lib/api";
+import type { AllowanceResponse } from "./lib/api";
+import {
+  capitalizeFirst,
+  clearPersistedGuestToken,
+  dailyLimitPhrase,
+  guestSessionWasMigrated,
+  loadPersistedGuestToken,
+  markGuestSessionMigrated,
+  persistGuestToken,
+} from "./lib/guestSession";
 import { useAgentRun } from "./hooks/useAgentRun";
 import { useRunView, EMPTY_RUN_VIEW } from "./hooks/useRunView";
 import { AuthGate } from "./components/auth/AuthGate";
@@ -50,6 +71,7 @@ import type { StepName } from "./components/screens/RunScreen";
 import { AnswerScreen } from "./components/screens/AnswerScreen";
 import { AboutScreen, DocsScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
 import { GuestAllowance, SignInWall } from "./components/guest/GuestAllowance";
+import type { SignInWallReason } from "./components/guest/GuestAllowance";
 import { FeedbackSurface } from "./components/feedback/FeedbackSurface";
 import { CollapsedRail, FollowUp, HistoryRail } from "./components/answer/FollowUp";
 import { DisclaimerModal, hasAcceptedDisclaimer } from "./components/shell/DisclaimerModal";
@@ -59,13 +81,12 @@ type SearchView =
   | { name: "home" }
   | { name: "run"; question: string }
   | { name: "answer"; question: string }
-  | { name: "wall" }
+  // F-4.10-R-02: the wall has three triggers and they are not the same
+  // message. Carrying the reason in the view rather than deriving it at
+  // render time is what makes each sentence answerable to the state that
+  // produced it.
+  | { name: "wall"; reason: SignInWallReason }
   | { name: "signin" };
-
-/** The allowance the approved design calls for. Not yet deliverable: see the
- *  file docstring. Kept so the counter and soft prompt stay designed and
- *  reachable the moment build phase 6.0 provides an anonymous backend path. */
-const FREE_SEARCHES = 5;
 
 /** Canned follow-up hints. Stubbed; build phase 4.5 derives these for real.
  *  These are QUESTIONS, never answer content, which is why they are allowed. */
@@ -78,7 +99,41 @@ const FOLLOW_UP_HINTS = [
 export function App() {
   const [screen, setScreen] = useState<ScreenName>("search");
   const [searchView, setSearchView] = useState<SearchView>({ name: "home" });
-  const [used, setUsed] = useState(0);
+  /**
+   * A guest identity this tab is holding (T-4.10-08), or `null` before one
+   * has ever been minted. Seeded from `localStorage` on mount so a reload
+   * does not silently hand the visitor a fresh allowance (design decision
+   * 1: the token is clearable, and clearing it on purpose IS how a fresh
+   * allowance is obtained, but a plain reload must not do that by
+   * accident). Minted lazily, on the first anonymous ask, not eagerly here
+   * on mount: eager minting would fire an unauthenticated write on every
+   * page load, including one that never asks anything.
+   */
+  const [guestToken, setGuestToken] = useState<string | null>(loadPersistedGuestToken);
+  /**
+   * Whether this browser has already converted a guest identity into an
+   * account (F-4.10-A-05). Seeded from storage on mount, the same way the
+   * token itself is, because it has to outlive both a reload and a
+   * sign-out to be worth anything.
+   *
+   * It exists because the token alone cannot carry the fact. A migrated
+   * guest session is revoked server-side in the same transaction, so its
+   * token is a dead credential that must not be sent again; but forgetting
+   * it entirely is what let an ordinary sign in, sign out, ask cycle mint a
+   * brand-new identity with five fresh searches, indefinitely. The token is
+   * dropped and the fact is kept. See `lib/guestSession.ts` for the full
+   * argument, including why this is an honesty control rather than a
+   * security one (the server's daily anonymous ceiling is the real bound).
+   */
+  const [guestMigrated, setGuestMigrated] = useState<boolean>(guestSessionWasMigrated);
+  /**
+   * The caller's own search allowance, read ONLY from `GET /v1/allowance`
+   * (or the equivalent fields on a fresh `POST /auth/guest` response).
+   * Never computed or incremented client-side: the client-side counter
+   * this field replaces was exactly the fabrication class build phase
+   * 4.8's judge round filed. `null` before any fetch has resolved.
+   */
+  const [allowance, setAllowance] = useState<AllowanceResponse | null>(null);
   const [token, setToken] = useState<string | null>(null);
   /** The signed-in account, named in the rail's footer (the prototype's `.rfoot`). */
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
@@ -141,6 +196,24 @@ export function App() {
   const persona = useMemo(() => drawPersona(0), []);
 
   const signedIn = token !== null;
+  /**
+   * The bearer token every `/v1/query*` call actually authenticates with
+   * (T-4.10-08): the real access token once signed in, the guest token
+   * before that. `useAgentRun`, the run screen's Stop action and the ask
+   * flow below all read this one value rather than each re-deriving it, so
+   * there is exactly one place "which token authenticates this caller"
+   * can disagree with itself.
+   */
+  const authToken = token ?? guestToken;
+  /**
+   * The account menu's line and the rail footer's line (T-4.10-09) are
+   * built from this ONE string, computed once here from whatever
+   * `allowance` currently holds, so the two surfaces are structurally
+   * unable to disagree with each other. `dailyLimitPhrase` never renders
+   * an uncounted zero as a measured count (F-4.9-A-16); see its own
+   * docstring in `lib/guestSession.ts`.
+   */
+  const dailyLimitLine = dailyLimitPhrase(allowance);
 
   /**
    * Whether the rail, its strip and its toggle exist at all (F-4.8-P-03).
@@ -163,7 +236,7 @@ export function App() {
   // run screen sat with five pending steps and Stop disabled, silently, for
   // ever. F-4.8-J-12 closed exactly this hole for createRun and left the
   // identical one a single call downstream.
-  const { events, status, error: streamError, stop } = useAgentRun(runId, token);
+  const { events, status, error: streamError, stop } = useAgentRun(runId, authToken);
   const streamed = useRunView(events);
 
   /**
@@ -212,15 +285,36 @@ export function App() {
   const ask = useCallback(
     async (question: string, chosenDepth: AudienceDepth) => {
       setDepth(chosenDepth);
-      // F-4.8-J-01. An anonymous visitor has no token and therefore no run.
-      // There is nothing truthful to show them, so they are asked to sign in
-      // rather than shown something invented.
-      if (!signedIn) {
-        setSearchView({ name: "wall" });
+      // F-4.10-A-05. This browser already turned its guest allowance into an
+      // account, and the server revoked that guest session when it did.
+      // Minting a fresh identity here is the hole: it is how sign in, sign
+      // out, ask five more, repeat handed out unlimited free allowances with
+      // nobody clearing anything. Checked BEFORE any state is touched, so the
+      // question never reaches the history list or the run screen for a run
+      // that is not going to start.
+      //
+      // The wall rather than an error, because the wall is the one thing the
+      // visitor can act on: signing in works immediately and is exactly what
+      // it offers. A dead-credential 401 would be a message with no next
+      // step in it.
+      if (!signedIn && guestToken === null && guestMigrated) {
+        // `reason: "migrated"`, and this is the case F-4.10-R-02 named
+        // first. Nothing here says how many searches were used, because
+        // nothing here knows: this browser reaches the wall with anywhere
+        // between zero and five spent, including a visitor who created an
+        // account without ever asking a question. "You have used your free
+        // searches" was false exactly when it was shown.
+        setSearchView({ name: "wall", reason: "migrated" });
         return;
       }
-
-      setUsed((n) => n + 1);
+      // F-4.8-J-01's rule survives unchanged (see the file docstring): no
+      // answer content is ever rendered from anything but a real run's own
+      // event stream. What changed in build phase 4.10 is that an
+      // anonymous visitor now HAS a real run to ask for, via a guest
+      // identity, instead of being turned away at this point. The
+      // `if (!signedIn) return wall` intercept that used to sit here is
+      // gone; an anonymous caller now proceeds exactly like a signed-in one,
+      // just with a guest token instead of an access token.
       setFlagged([]);
       setDispatchError(null);
       setHistory((current) =>
@@ -234,16 +328,112 @@ export function App() {
       setSearchView({ name: "run", question });
 
       try {
+        let runToken: string;
+        if (signedIn) {
+          // `signedIn` is derived from `token !== null` at the same render,
+          // so the two can never disagree here.
+          runToken = token as string;
+        } else if (guestToken !== null) {
+          runToken = guestToken;
+        } else {
+          // T-4.10-08: minted lazily, on the FIRST question an anonymous
+          // visitor actually asks, never eagerly on page load. Eager
+          // minting would fire an unauthenticated write on every visit,
+          // including one that never asks anything.
+          const minted = await mintGuest();
+          if (!minted || typeof minted.guest_token !== "string") {
+            throw new Error("could not start a guest session; check your connection and try again");
+          }
+          if (seq !== askSeq.current) {
+            // A newer ask superseded this one while the mint was in
+            // flight. The freshly minted token is still good and worth
+            // keeping for the NEXT ask, so it is stored; this stale
+            // request stops here rather than starting a run under an
+            // abandoned question (the same A-02 discipline below).
+            setGuestToken(minted.guest_token);
+            persistGuestToken(minted.guest_token);
+            return;
+          }
+          runToken = minted.guest_token;
+          setGuestToken(minted.guest_token);
+          persistGuestToken(minted.guest_token);
+          setAllowance({
+            kind: "guest",
+            used: minted.used,
+            total: minted.total,
+            counted: true,
+          });
+        }
+
         const response = await createRun(
           { text: question, audience_depth: chosenDepth, session_id: sessionId },
-          token,
+          runToken,
         );
         // A-02: a newer ask started while this one was in flight. Adopting this
         // run now would attach its answer to the newer question's heading.
         if (seq !== askSeq.current) return;
         setRunId(response.run_id);
+
+        if (!signedIn) {
+          // T-4.10-08: the dots must read the SERVER's own count, never a
+          // client guess (the exact fabrication class F-4.8-J-01 was filed
+          // for, one layer up). Best-effort: a failed refresh here leaves
+          // the previous, still-true count on screen rather than inventing
+          // a new one, per production-standards' graceful-degradation gate.
+          getAllowance(runToken)
+            .then((fresh) => setAllowance(fresh))
+            .catch(() => undefined);
+        }
       } catch (error) {
         if (seq !== askSeq.current) return;
+        if (error instanceof ApiError && error.status === 403 && error.reason === "guest_allowance_exhausted") {
+          // Design decision 5 (`tracker/phase_4.10.md`): the wall appears
+          // ONLY on an exact server refusal, never on a client prediction
+          // and never on the concurrent-run cap's 429, which is a transient
+          // "try again shortly" handled by the branch below.
+          //
+          // The one trigger the wall's original sentence was written for,
+          // and the one it is still true on: five answers delivered, five
+          // spent.
+          setSearchView({ name: "wall", reason: "allowance_exhausted" });
+          return;
+        }
+        if (error instanceof ApiError && error.status === 403 && error.reason === "guest_attempt_limit_reached") {
+          // F-4.10-R-01's refusal. Also a 403 and also permanent for this
+          // identity, so it is also the wall rather than a transient error,
+          // but a DIFFERENT sentence: this visitor may have had every one of
+          // their questions refused and received no answer at all, so
+          // telling them they used their free searches would be false.
+          setSearchView({ name: "wall", reason: "attempt_limit" });
+          return;
+        }
+        if (error instanceof ApiError && error.status === 401 && !signedIn) {
+          // The guest token this tab was holding did not work. It is dropped
+          // either way, so the same 401 does not repeat forever, but WHY it
+          // failed decides what happens next, and collapsing the two was the
+          // second, independent path to a free allowance the adversary named
+          // (F-4.10-A-05).
+          setGuestToken(null);
+          clearPersistedGuestToken();
+          if (error.reason === "guest_session_revoked") {
+            // The server revoked this session at migration, from this tab or
+            // another one. That means the allowance was already converted
+            // into an account, so the next ask must NOT mint a fresh identity
+            // with five more searches. Remember it and show the wall, which
+            // is the actionable surface: signing in works right now.
+            markGuestSessionMigrated();
+            setGuestMigrated(true);
+            // The same state as the pre-flight check above, reached from the
+            // server instead of from storage, so the same sentence
+            // (F-4.10-R-02). `runs_used` is equally unknown here.
+            setSearchView({ name: "wall", reason: "migrated" });
+            return;
+          }
+          // Anything else, most realistically a guest token past its 7-day
+          // TTL, is not about the allowance at all, and a returning visitor
+          // must not be walled for it. The next ask mints a fresh identity,
+          // which is the behaviour that was always correct for this case.
+        }
         // F-4.8-J-12. This previously swallowed the exception and dropped the
         // user on an empty answer screen with no explanation. An error message
         // must say what happened; silence is the one unacceptable option.
@@ -255,7 +445,7 @@ export function App() {
         setSearchView({ name: "answer", question });
       }
     },
-    [signedIn, token, sessionId],
+    [signedIn, token, guestToken, guestMigrated, sessionId],
   );
 
   const body = () => {
@@ -267,10 +457,34 @@ export function App() {
       case "signin":
         return (
           <AuthGate
+            guestToken={guestToken}
             onAuthenticated={(next: string, email: string) => {
               setToken(next);
               setAccountEmail(email);
               setSearchView({ name: "home" });
+              // T-4.10-06: a guest session held at sign-in is migrated and
+              // revoked server-side in the same request (the backend's
+              // `_migrate_guest_session`), so the token this tab was
+              // holding can never spend another run and must be dropped.
+              //
+              // F-4.10-A-05 corrects what this used to do NEXT, which was
+              // nothing: dropping the token also forgot that there had been
+              // one, so the sign-out below minted a fresh identity with five
+              // fresh searches, every cycle, forever. The credential goes and
+              // the fact stays. Recorded only when a guest token was actually
+              // held, since a visitor who signed in without ever asking
+              // anonymously has migrated nothing and must not be walled for
+              // it.
+              if (guestToken !== null) {
+                markGuestSessionMigrated();
+                setGuestMigrated(true);
+              }
+              setGuestToken(null);
+              clearPersistedGuestToken();
+              setAllowance(null);
+              getAllowance(next)
+                .then((fetched) => setAllowance(fetched))
+                .catch(() => undefined);
             }}
           />
         );
@@ -296,7 +510,7 @@ export function App() {
               // reused half the answer. This latches the other half.
               setStopped(true);
               stop();
-              if (runId && token) void stopRun(runId, token).catch(() => undefined);
+              if (runId && authToken) void stopRun(runId, authToken).catch(() => undefined);
             }}
             onNewSearch={() => setSearchView({ name: "home" })}
           />
@@ -343,18 +557,47 @@ export function App() {
           />
         );
       case "wall":
-        return <SignInWall onSignIn={() => setSearchView({ name: "signin" })} />;
+        return (
+          <SignInWall
+            reason={searchView.reason}
+            onSignIn={() => setSearchView({ name: "signin" })}
+          />
+        );
       default:
         return (
           <HomeScreen
             onSubmit={ask}
-            // F-4.8-A-21. This counted the SIGNED-IN user's searches and then
-            // showed that count to the next anonymous visitor after sign-out,
-            // and the very next ask contradicted it with "you have used your
-            // free searches". `used` is now reset on sign-out, and an anonymous
-            // visitor cannot run at all, so the honest count is always zero
-            // until build phase 6.0 provides an anonymous path.
-            footer={signedIn || used === 0 ? null : <GuestAllowance used={used} total={FREE_SEARCHES} />}
+            /*
+             * T-4.10-08. F-4.8-A-21 was about a CLIENT-SIDE counter that
+             * leaked the signed-in user's count to the next anonymous
+             * visitor after sign-out. There is no client-side count left to
+             * leak: `allowance` is set to `null` on sign-out and sign-in
+             * alike (see those handlers), and only ever repopulated from a
+             * fresh `GET /v1/allowance` or `POST /auth/guest` response for
+             * WHOEVER the caller currently is. The dots render only once a
+             * real guest allowance has been fetched (after the first ask,
+             * since minting is lazy); before that, or once signed in, the
+             * footer is simply absent rather than showing a guessed count.
+             */
+            footer={
+              !signedIn && allowance?.kind === "guest" ? (
+                /*
+                 * F-4.10-V-03. `blocked_reason` was on the wire and honest
+                 * from the moment the server learned to send it, and
+                 * nothing read it, so the dots kept promising a search the
+                 * next request refused. Passed straight through rather than
+                 * re-derived here: the server owns which bound fires first,
+                 * and a second opinion computed in the client is how the
+                 * reporting path and the enforcement path start disagreeing
+                 * again (F-4.10-A-03).
+                 */
+                <GuestAllowance
+                  used={allowance.used}
+                  total={allowance.total}
+                  blockedReason={allowance.blocked_reason ?? null}
+                />
+              ) : null
+            }
           />
         );
     }
@@ -390,6 +633,7 @@ export function App() {
         // T-4.9-10: the account menu names the account, so the bar needs the
         // email too, not only the rail's footer.
         accountEmail={accountEmail ?? undefined}
+        accountLimitCopy={dailyLimitLine}
         showRailToggle={railAvailable}
         railOpen={railOpen}
         onToggleRail={() => setRailOpen((open) => !open)}
@@ -417,7 +661,25 @@ export function App() {
           setHistory([]);
           setFlagged([]);
           setDispatchError(null);
-          setUsed(0);
+          // T-4.10-08: the allowance belonged to the account that just
+          // signed out; the next caller (signed in or anonymous) gets its
+          // own, fetched fresh, never a stale number inherited across the
+          // sign-out.
+          setAllowance(null);
+          // F-4.10-A-05, product-owner decision 2026-08-15: the guest token
+          // and the migrated marker are deliberately NOT cleared here, and
+          // this is the one exception to this handler's "everything
+          // session-scoped is cleared here, in one place" rule. A guest
+          // identity is not scoped to an account session; it is scoped to
+          // the browser, and it outlives signing in and out of an account
+          // exactly as it outlives a reload. Clearing it unconditionally is
+          // what made the accepted "clearing the token gives you five more"
+          // tradeoff reachable without anyone clearing anything: sign in,
+          // sign out, ask five more, repeat. A visitor who signs out returns
+          // to the guest identity they already had, with whatever searches
+          // remained, and a visitor whose identity was migrated returns to
+          // the sign-in wall, which is the truthful answer for a session the
+          // server revoked.
           // R-02: a new conversation, not the previous account's.
           setSessionId(newSessionId());
           // R-11: the next person at this workstation has not read the
@@ -474,6 +736,7 @@ export function App() {
               onCollapse={() => setRailOpen(false)}
               onNewSearch={() => setSearchView({ name: "home" })}
               accountEmail={accountEmail ?? undefined}
+              searchLimitLabel={capitalizeFirst(dailyLimitLine)}
             />
             )}
             {/*

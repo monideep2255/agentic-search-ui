@@ -13,6 +13,15 @@ interface AuthGateProps {
    * hand, and keeps it real data rather than a stub.
    */
   onAuthenticated: (token: string, email: string) => void;
+  /**
+   * A guest session this tab is holding, if any (T-4.10-06, design
+   * decision 4). Passed through to `signup`/`login` as the optional
+   * `guest_token` body field so the server can migrate that guest's live
+   * runs to the new account and revoke the guest session. `null` (the
+   * default) when this tab never minted one, e.g. a visitor who clicks
+   * "Log in" from the nav bar before ever asking a question.
+   */
+  guestToken?: string | null;
 }
 
 type AuthMode = "login" | "signup";
@@ -45,7 +54,7 @@ type AuthMode = "login" | "signup";
  * password case). Two explicit actions need no such disambiguation and
  * leave the backend's guarantee intact.
  */
-export function AuthGate({ onAuthenticated }: AuthGateProps) {
+export function AuthGate({ onAuthenticated, guestToken = null }: AuthGateProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -57,14 +66,23 @@ export function AuthGate({ onAuthenticated }: AuthGateProps) {
     setPending(true);
     setError(null);
     try {
+      // The `guest_token` field is genuinely OPTIONAL, not merely typed
+      // that way: it is omitted from the body entirely when this tab
+      // never minted one, rather than sent as an explicit `undefined`, so
+      // a caller comparing the exact request body sent (as
+      // `AuthGate.test.tsx` does) sees byte-identical payloads for a
+      // visitor who never touched the guest path.
+      const credentials = guestToken
+        ? { email, password, guest_token: guestToken }
+        : { email, password };
       if (mode === "signup") {
-        await signup({ email, password });
+        await signup(credentials);
       }
       // A successful signup carries no token of its own (`SignupResponse`
       // has only `id`/`email`); both actions converge on the same
       // token-acquisition call so there is exactly one path that ever
       // calls `onAuthenticated`.
-      const result = await login({ email, password });
+      const result = await login(credentials);
       onAuthenticated(result.access_token, email);
       // No `finally`/reset of `pending` on the success path: the parent
       // stops rendering this component once it holds a token (see

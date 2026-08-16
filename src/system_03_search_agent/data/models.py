@@ -2,7 +2,9 @@
 
 Spec: Technical_specification.md Section 15 (lines 2361-2555), the six
 tables `users`, `auth_sessions`, `sessions`, `interactions`, `cq_candidates`,
-`saved_queries`.
+`saved_queries`, plus `guest_sessions` (build phase 4.10, T-4.10-02,
+design decision 3, `tracker/phase_4.10.md`), a Section 15 extension not in
+the original locked spec text.
 
 Depends on:
     - system_03_search_agent.data.base (Base)
@@ -31,19 +33,21 @@ ascending best-effort mirror and the migration remains authoritative.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import (
     ARRAY,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
     Integer,
     Numeric,
     SmallInteger,
+    String,
     Text,
     text,
 )
@@ -303,4 +307,150 @@ class SavedQuery(Base):
     )
     last_run_interaction_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("interactions.id", ondelete="SET NULL"), nullable=True
+    )
+
+
+class GuestSession(Base):
+    """The `guest_sessions` table: an anonymous visitor's counted allowance.
+
+    Build phase 4.10, T-4.10-02, design decision 3
+    (`tracker/phase_4.10.md`): one row per guest identity, holding the
+    server-side count `data.guest_sessions.spend_one_run` advances with a
+    single conditional `UPDATE ... RETURNING`, never a `SELECT` followed
+    by an `UPDATE`. Distinct from `AuthSession` above, which tracks a
+    registered login's refresh-token state: this tracks a caller with no
+    `users` row at all.
+
+    `migrated_to_user_id` is set, and `revoked_at` is set in the same
+    transaction, when a guest signs up or logs in while holding a live
+    guest token (design decision 4): the guest's runs move to the new
+    account and the guest token can no longer spend. `ON DELETE SET NULL`
+    so deleting a user row never fails or cascades onto this table.
+    """
+
+    __tablename__ = "guest_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    runs_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    # F-4.10-R-01, product-owner decision 2026-08-15. The SECOND counter on
+    # this row, and the two are not redundant. `runs_used` counts ANSWERS and
+    # is refunded when the guardrail refuses, so a curious visitor is not
+    # punished for one clumsy question. `attempts_used` counts every run this
+    # identity STARTS and is never refunded, so the refund cannot leave the
+    # identity unbounded.
+    #
+    # Why that matters, measured rather than reasoned about: with only
+    # `runs_used`, one guest token minted once started 200 paid pipelines in
+    # 1.68 seconds while its own allowance still read `used: 0`, draining the
+    # whole day's anonymous budget for every other visitor. A refusal cost the
+    # caller nothing and cost everyone else a slot. This column is the
+    # per-identity bound the refund removed.
+    attempts_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    migrated_to_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    __table_args__ = (
+        CheckConstraint("runs_used >= 0", name="ck_guest_sessions_runs_used"),
+        CheckConstraint("attempts_used >= 0", name="ck_guest_sessions_attempts_used"),
+    )
+
+
+class GuestDailyUsage(Base):
+    """The `guest_daily_usage` table: one row per UTC day, counting every
+    anonymous run the whole system has started that day.
+
+    Build phase 4.10, design decision 8 (`tracker/phase_4.10.md`), added
+    after the adversary round measured 40 paid pipelines accepted in 0.25
+    seconds from a caller with no account (F-4.10-A-01).
+
+    Why this table exists when `guest_sessions.runs_used` already counts:
+    that counter is keyed on a guest identity, and `POST /auth/guest` mints
+    identities for free, so it bounds a variable the caller controls the
+    supply of. This one is keyed on the calendar day, which nobody controls
+    the supply of, and it is therefore the only real ceiling on what an
+    anonymous caller can spend. The per-IP mint throttle in
+    `auth/router.py` sits in front of it as defense in depth, and is
+    explicitly not the bound, since a rotating source defeats it.
+
+    `day` is the primary key and is a DATE in UTC, never the server's local
+    date: a cap that resets at an operator's midnight rather than a fixed
+    one is a cap whose window silently moves with a deployment's timezone.
+    """
+
+    __tablename__ = "guest_daily_usage"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    runs_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+
+    __table_args__ = (
+        CheckConstraint("runs_used >= 0", name="ck_guest_daily_usage_runs_used"),
+    )
+
+
+class GuestSourceDailyUsage(Base):
+    """The `guest_source_daily_usage` table: one row per (UTC day, source),
+    counting how much of that day's shared anonymous budget one source has
+    taken.
+
+    Build phase 4.10, F-4.10-V-01, product-owner decision 2026-08-15. Added
+    after the fourth measurement of the same defect, and the reason it is a
+    third counter rather than a tighter value on either of the first two is
+    worth stating, because three previous fixes chose the tighter value and
+    all three were defeated the same way.
+
+    `guest_sessions.attempts_used` bounds an IDENTITY, and `POST /auth/guest`
+    mints identities for free. `guest_daily_usage.runs_used` bounds the DAY,
+    and nobody controls the supply of days, which is why it holds the money
+    but says nothing about who spent it. Between those two sits the question
+    neither answers: how much of the day may ONE caller take. Measured on
+    this branch with the shipped defaults, the mint throttle live and zero
+    mints refused: 20 identities from one apparent source took all 200 of the
+    day's runs in 1.84 seconds and every other anonymous visitor was refused
+    until UTC midnight.
+
+    So this counter is keyed on the SOURCE, which is the one thing in that
+    attack the caller did not vary. It is deliberately not keyed on anything
+    the caller mints, and it deliberately does not try to police the RATE of
+    minting: the mint throttle already does that and cannot be tightened,
+    because the premise gate's own admit arm requires 25 consecutive mints
+    from one shared address to succeed (office NAT, campus networks,
+    conference wifi are the rooms this product gets demonstrated in).
+
+    `source_hash` is `auth/router.py`'s `_hash_ip` output: a keyed
+    HMAC-SHA256 hex digest of the connection address, so no raw IP is ever
+    stored here or anywhere else. Exactly 64 characters, and the column is
+    sized to that rather than left unbounded.
+
+    The composite primary key (`day`, `source_hash`) is the invariant itself,
+    one row per source per day, rather than a surrogate id with a unique
+    index a later migration could drop without anyone noticing the counter
+    had started double-counting. Same reasoning as `GuestDailyUsage.day`
+    directly above.
+
+    Row growth is bounded by the number of distinct sources that actually
+    STARTED an anonymous run on a given day, not by request volume: a row
+    appears only after a mint the throttle admitted and a run the daily
+    ceiling admitted. Nothing prunes old days yet; that is a retention
+    concern owned by build phase 6.1's hardening pass, recorded rather than
+    left to be discovered.
+    """
+
+    __tablename__ = "guest_source_daily_usage"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    source_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    runs_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+
+    __table_args__ = (
+        CheckConstraint("runs_used >= 0", name="ck_guest_source_daily_usage_runs_used"),
     )

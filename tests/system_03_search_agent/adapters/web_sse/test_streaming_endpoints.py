@@ -43,7 +43,7 @@ import json
 import os
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -99,6 +99,7 @@ def _harness_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SYNTH_MODEL", "test-provider/synth-model")
     monkeypatch.setenv("PER_QUERY_COST_CAP_USD", "1.0")
     monkeypatch.setenv("PER_USER_DAILY_QUERY_CAP", "100")
+    monkeypatch.setenv("ANON_DAILY_RUN_CAP", "10000")
     monkeypatch.setenv("SYSTEM_DAILY_CAP_USD", "1000000")
 
 
@@ -593,3 +594,223 @@ class TestStopEndpoint:
             assert first.json()["stopped"] is True
             assert second.status_code == 200
             assert second.json()["stopped"] is True
+
+
+class TestAllowanceEndpoint:
+    """`GET /v1/allowance` (T-4.10-04): valid, invalid, and null input for
+    both principal classes. The guest admit/refuse shape and the exact
+    used-increments-by-one property are the phase 4.10 premise gate's job
+    (test_phase_4_10_premise.py); this class covers the input-validation
+    surface T-1.2-02's established convention requires for every endpoint.
+    """
+
+    @pytest.mark.asyncio
+    async def test_valid_input_registered_caller_reports_the_real_cap_uncounted(self) -> None:
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            response = await client.get("/v1/allowance", headers=headers)
+            assert response.status_code == 200
+            body = response.json()
+            # Still an EXACT match. Build phase 4.10 design decision 8
+            # added `blocked_reason`, so the expected value gains it
+            # rather than the comparison being loosened to a subset
+            # check: what makes this assertion worth having is that an
+            # unexpected field fails it.
+            assert body == {
+                "kind": "user", "used": 0, "total": 100, "counted": False,
+                "blocked_reason": None,
+            }
+
+    @pytest.mark.asyncio
+    async def test_valid_input_guest_caller_reports_a_real_counted_allowance(self) -> None:
+        async with _client() as client:
+            guest = await client.post("/auth/guest")
+            assert guest.status_code == 201
+            headers = {"Authorization": f"Bearer {guest.json()['guest_token']}"}
+
+            response = await client.get("/v1/allowance", headers=headers)
+            assert response.status_code == 200
+            # Still an EXACT match. Build phase 4.10 design decision 8
+            # added `blocked_reason`, so the expected value gains it
+            # rather than the comparison being loosened to a subset
+            # check: what makes this assertion worth having is that an
+            # unexpected field fails it.
+            assert response.json() == {
+                "kind": "guest", "used": 0, "total": 5, "counted": True,
+                "blocked_reason": None,
+            }
+
+    @pytest.mark.asyncio
+    async def test_invalid_input_a_tampered_token_returns_401(self) -> None:
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            tampered = headers["Authorization"][:-2] + "zz"
+            response = await client.get("/v1/allowance", headers={"Authorization": tampered})
+            assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_null_input_no_authorization_header_returns_401(self) -> None:
+        async with _client() as client:
+            response = await client.get("/v1/allowance")
+            assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_a_migrated_guest_session_is_never_reported_as_a_live_allowance(
+        self,
+    ) -> None:
+        """F-4.10-A-03 / F-4.10-J-07 (adversary and judge round 1).
+
+        This endpoint used to read `runs_used` alone and never `revoked_at`,
+        so a guest whose session had been migrated and revoked at signup was
+        told `{"used": 2, "total": 5, "counted": true}` and then refused 401
+        by the very next `POST /v1/query`. `counted: true` is design
+        decision 6's honesty field: it means the number is a real,
+        server-side measurement, and for a session that can no longer spend,
+        no number is. This is not cosmetic; the five dots in the UI render
+        exactly this number.
+
+        The assertion is that the REPORTING path and the ENFORCEMENT path
+        now give the same answer, checked by asking both.
+        """
+        async with _client() as client:
+            guest = await client.post("/auth/guest")
+            assert guest.status_code == 201
+            guest_token = guest.json()["guest_token"]
+            headers = {"Authorization": f"Bearer {guest_token}"}
+
+            before = await client.get("/v1/allowance", headers=headers)
+            assert before.status_code == 200, "a fresh guest must still be reported"
+
+            email = f"{uuid.uuid4()}@example.com"
+            signup = await client.post(
+                "/auth/signup",
+                json={
+                    "email": email,
+                    "password": "Str0ngPassw0rd!",
+                    "guest_token": guest_token,
+                },
+            )
+            assert signup.status_code == 201
+
+            reported = await client.get("/v1/allowance", headers=headers)
+            enforced = await client.post("/v1/query", json=_create_body(), headers=headers)
+
+            assert enforced.status_code == 401, (
+                "precondition: the migrated session must be unspendable, or this "
+                "test is not exercising the disagreement it was written for"
+            )
+            assert reported.status_code == 401, (
+                "the allowance endpoint promised searches the very next request "
+                "refused; the two paths must agree on what a live session is"
+            )
+
+    @pytest.mark.asyncio
+    async def test_an_unknown_guest_id_is_never_reported_as_five_searches_left(self) -> None:
+        """F-4.10-A-03, the second measured shape: a validly signed guest
+        token whose `guest_id` has no row at all was reported as
+        `{"used": 0, "total": 5, "counted": true}`, literally "five of five
+        left", and then refused on the first query."""
+        import jwt
+
+        from system_03_search_agent.auth.guest import guest_signing_key
+
+        orphan = jwt.encode(
+            {
+                "guest_id": str(uuid.uuid4()),
+                "typ": "guest",
+                "iat": datetime.now(UTC),
+                "exp": datetime.now(UTC) + timedelta(days=1),
+            },
+            guest_signing_key(),
+            algorithm="HS256",
+        )
+        headers = {"Authorization": f"Bearer {orphan}"}
+        async with _client() as client:
+            reported = await client.get("/v1/allowance", headers=headers)
+            enforced = await client.post("/v1/query", json=_create_body(), headers=headers)
+
+            assert enforced.status_code == 401
+            assert reported.status_code == 401, (
+                "a guest id with no session row must not be advertised as a full, "
+                "counted allowance"
+            )
+
+
+class TestConcurrentRunCap:
+    """T-4.10-05: reproduces F-4.0-A-10's original shape (rapid repeated
+    run creation from one caller, with nothing bounding it) and asserts
+    creation is now bounded. F-4.0-A-10's own repro measured 9,615 runs
+    accepted from one account with zero rejections; this test's cap is
+    `RunRegistry.DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER` (5), several orders of
+    magnitude tighter, and the assertion is exact: the cap fires at
+    exactly that boundary, not merely "eventually rejects something".
+    """
+
+    @pytest.mark.asyncio
+    async def test_rapid_repeated_run_creation_from_one_caller_is_now_bounded(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from system_03_search_agent.core.run_registry import DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER
+
+        started = asyncio.Event()
+
+        async def _fake_stream_never_finishes(query: Query, context: RequestContext):
+            # Every created run stays ACTIVE (never `finished`) for the
+            # whole test, so count_active_runs_for_owner keeps counting
+            # every one of them, the same "still in flight" shape F-4.0-
+            # A-10's burst produced (its runs also outlived the burst
+            # window; here that is forced rather than incidental).
+            yield _fake_event("guard", query.trace_id, 0)
+            started.set()
+            await asyncio.sleep(3600)
+            yield _fake_event("done", query.trace_id, 1)  # pragma: no cover - unreachable
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fake_stream_never_finishes)
+
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            created_run_ids: list[str] = []
+
+            for i in range(DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER):
+                response = await client.post(
+                    "/v1/query", json=_create_body(session_id=f"cap-{i}"), headers=headers
+                )
+                assert response.status_code == 202, (
+                    f"run {i + 1} of {DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER} should still be "
+                    "within the concurrent-run cap"
+                )
+                created_run_ids.append(response.json()["run_id"])
+
+            over_cap = await client.post(
+                "/v1/query", json=_create_body(session_id="cap-over"), headers=headers
+            )
+            assert over_cap.status_code == 429, (
+                "F-4.0-A-10: rapid repeated run creation from one caller must "
+                "now be bounded, not accepted unconditionally"
+            )
+            body = over_cap.json()
+            assert "concurrent_run_cap_exceeded" in str(body)
+            assert "Retry-After" in over_cap.headers
+
+            # Cleanup: cancel every still-hanging background task so it does
+            # not outlive this test process.
+            for run_id in created_run_ids:
+                run_registry_module.default_registry.get_run(run_id).task.cancel()
+
+    @pytest.mark.asyncio
+    async def test_a_completed_run_does_not_count_against_the_cap(self) -> None:
+        """F-1.2-01's own fix ("how long", not "how many") and T-4.10-05's
+        acceptance criterion composed: creating and finishing
+        DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER + 1 runs one at a time (draining
+        each before the next starts) must never hit the cap, since none
+        of them are ever concurrently active."""
+        from system_03_search_agent.core.run_registry import DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER
+
+        async with _client() as client:
+            _user_id, headers = await _auth_headers(client)
+            for i in range(DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER + 3):
+                response = await client.post(
+                    "/v1/query", json=_create_body(session_id=f"seq-{i}"), headers=headers
+                )
+                assert response.status_code == 202
+                await _drain_run_task(response.json()["run_id"])

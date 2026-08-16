@@ -38,14 +38,36 @@ export interface StopRunResponse {
  * HTTP status so a caller can distinguish, for example, a 401 (expired
  * token) from a 403 (run ownership) or a 404 (unknown run_id), per
  * `app.py`'s `_get_owned_run` error ordering.
+ *
+ * `reason` (T-4.10-08) is the machine-readable string a structured
+ * `detail` object carries: `guest_allowance_exhausted`,
+ * `guest_attempt_limit_reached`, `concurrent_run_cap_exceeded`,
+ * `anon_daily_cap_reached`, or
+ * `guest_session_revoked` (`adapters/web_sse/app.py`'s
+ * `HTTPException(..., detail={"reason": ..., "message": ...})` shape).
+ * It is `undefined` when the backend returned a bare string `detail` (most
+ * routes) or no parseable JSON body at all, so a caller must check for
+ * `undefined` before branching on a specific reason string; a bare 403 is
+ * NOT the same thing as a 403 carrying `guest_allowance_exhausted`, and the
+ * two must never be treated alike (design decision 5,
+ * `tracker/phase_4.10.md`: a 403 with this exact reason is the only one
+ * that means "the allowance is spent, show the sign-in wall").
+ *
+ * The same distinction on 401 is what F-4.10-A-05 turns on: a 401 carrying
+ * `guest_session_revoked` means the server revoked this guest session at
+ * migration, so the client must NOT mint a fresh identity, while a bare 401
+ * (a token past its 7-day TTL, tampered, or signed with the wrong key)
+ * legitimately should.
  */
 export class ApiError extends Error {
   readonly status: number;
+  readonly reason: string | undefined;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, reason?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.reason = reason;
   }
 }
 
@@ -66,16 +88,30 @@ function authHeaders(token: string): HeadersInit {
 async function throwIfNotOk(response: Response, context: string): Promise<void> {
   if (!response.ok) {
     let detail = "";
+    let reason: string | undefined;
     try {
       const body = (await response.clone().json()) as { detail?: unknown };
       if (typeof body.detail === "string") {
         detail = `: ${body.detail}`;
+      } else if (body.detail !== null && typeof body.detail === "object") {
+        // The structured `{reason, message}` shape (T-4.10-08): read from
+        // `app.py`'s actual `HTTPException(detail={...})` calls, not
+        // assumed. `reason` is the machine-readable field a caller
+        // branches on; `message` is the human-readable one this error's
+        // own `message` string carries forward.
+        const structured = body.detail as { reason?: unknown; message?: unknown };
+        if (typeof structured.reason === "string") {
+          reason = structured.reason;
+        }
+        if (typeof structured.message === "string") {
+          detail = `: ${structured.message}`;
+        }
       }
     } catch {
       // Response body was not JSON, or was already consumed. The status
       // code alone is still actionable; fall through without detail.
     }
-    throw new ApiError(response.status, `${context} failed with ${response.status}${detail}`);
+    throw new ApiError(response.status, `${context} failed with ${response.status}${detail}`, reason);
   }
 }
 
@@ -130,6 +166,112 @@ export async function stopRun(
   return (await response.json()) as StopRunResponse;
 }
 
+// ---------------------------------------------------------------------------
+// The guest allowance (T-4.10-08). Mirrors `adapters/web_sse/app.py`'s
+// `AllowanceResponse` and `auth/schemas.py`'s `GuestTokenResponse`,
+// field for field (design decision 6, `tracker/phase_4.10.md`).
+// ---------------------------------------------------------------------------
+
+export type AllowanceKind = "guest" | "user";
+
+/**
+ * `GET /v1/allowance`'s response shape. `counted` is the honesty field: a
+ * guest's `used` is a real, server-counted value (`true`); a registered
+ * caller's `used` reads a structural zero today, because nothing writes
+ * `interactions` rows yet (F-2.0-04, `counted: false`). A caller of this
+ * function must branch on `counted` before rendering `used` as though it
+ * were a measurement, or it repeats the exact dishonesty class F-4.9-A-16
+ * named ("Signed in · unlimited searches" against a real, enforced cap).
+ */
+export interface AllowanceResponse {
+  kind: AllowanceKind;
+  used: number;
+  total: number;
+  counted: boolean;
+  /**
+   * Why no search is available right now, even when `used` is below `total`.
+   *
+   * Build phase 4.10, design decision 8. `used` and `total` are this
+   * caller's own true numbers; this is a separate question, because a
+   * system-wide daily ceiling on anonymous runs sits above the personal
+   * allowance. Inflating `used` to `total` was rejected on the server side:
+   * the personal count is what migrates with the caller at signup, so
+   * distorting it would corrupt something real.
+   *
+   * `null` means nothing is blocking. Optional so a payload predating the
+   * field still type-checks.
+   *
+   * `guest_attempt_limit_reached` (F-4.10-R-01) is the second value: this
+   * guest has started as many runs as a guest may start, so the next query
+   * is refused 403 even though refunded answers left `used` below `total`.
+   *
+   * `anon_source_daily_cap_reached` (F-4.10-V-01) is the third: this
+   * network has taken its share of today's anonymous budget. Kept distinct
+   * from `anon_daily_cap_reached` because the two say different true
+   * things, and rendering "the whole product is busy" for "your network has
+   * had its share" would be a confident wrong answer in the UI.
+   *
+   * NOW CONSUMED BY THE UI (F-4.10-V-03 closes F-4.10-05's client half).
+   * `App.tsx` passes it to `GuestAllowance`, which stops rendering "N
+   * searches left" the moment any value is present. It had to: unlike the
+   * daily ceiling, which clears at UTC midnight, `guest_attempt_limit_
+   * reached` never clears for that identity, so an unread field left the
+   * dots promising a search for the remaining life of a 7-day token. The
+   * REFUSAL itself was already handled either way: `App.tsx` walls on both
+   * 403 reasons, with its own sentence for each.
+   */
+  blocked_reason?:
+    | "anon_daily_cap_reached"
+    | "anon_source_daily_cap_reached"
+    | "guest_attempt_limit_reached"
+    | null;
+}
+
+/** `POST /auth/guest`'s response shape. */
+export interface GuestTokenResponse {
+  guest_token: string;
+  guest_id: string;
+  used: number;
+  total: number;
+}
+
+/**
+ * `GET /v1/allowance`: the calling principal's own search allowance,
+ * for a guest or a registered caller alike. Requires whichever bearer
+ * token that principal already holds (a guest token or an access token);
+ * there is no unauthenticated variant.
+ */
+export async function getAllowance(
+  token: string,
+  options: ApiCallOptions = {},
+): Promise<AllowanceResponse> {
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const response = await fetch(`${baseUrl}/v1/allowance`, {
+    method: "GET",
+    headers: authHeaders(token),
+    signal: options.signal,
+  });
+  await throwIfNotOk(response, "getAllowance");
+  return (await response.json()) as AllowanceResponse;
+}
+
+/**
+ * `POST /auth/guest`: mints a fresh guest identity. No body and no
+ * credentials (`auth/router.py`'s `create_guest`): this is the call an
+ * anonymous visitor's browser makes the first time it actually needs a
+ * guest identity, which `App.tsx` triggers lazily, on the first question
+ * asked, rather than on every page load (T-4.10-08).
+ */
+export async function mintGuest(options: ApiCallOptions = {}): Promise<GuestTokenResponse> {
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const response = await fetch(`${baseUrl}/auth/guest`, {
+    method: "POST",
+    signal: options.signal,
+  });
+  await throwIfNotOk(response, "mintGuest");
+  return (await response.json()) as GuestTokenResponse;
+}
+
 /**
  * Opens the raw `fetch()` response for `GET /v1/query/{run_id}/events`,
  * carrying the real `Authorization` header the native `EventSource` API
@@ -172,6 +314,15 @@ export async function openEventStream(
 export interface SignupRequestBody {
   email: string;
   password: string;
+  /**
+   * A held guest session to migrate at signup (design decision 4,
+   * `tracker/phase_4.10.md`): when present and valid, the server
+   * re-points that guest's live runs to the new account and revokes the
+   * guest session, best-effort and never fatal to the signup itself.
+   * Omitted entirely (not sent as `undefined`) when the caller never held
+   * a guest session, matching the backend's optional field.
+   */
+  guest_token?: string;
 }
 
 export interface SignupResponse {
@@ -182,6 +333,8 @@ export interface SignupResponse {
 export interface LoginRequestBody {
   email: string;
   password: string;
+  /** Same field, same migration, on login instead of signup. */
+  guest_token?: string;
 }
 
 export interface LoginResponse {

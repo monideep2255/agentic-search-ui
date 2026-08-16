@@ -1,7 +1,9 @@
-"""FastAPI dependencies for the `/auth` router.
+"""FastAPI dependencies for the `/auth` router and the guest-aware `Principal`
+resolver (T-4.10-03, `tracker/phase_4.10.md`).
 
 Depends on:
     - system_03_search_agent.auth.tokens (decode_access_token)
+    - system_03_search_agent.auth.guest (decode_guest_token)
     - system_03_search_agent.data.models (User)
     - system_03_search_agent.data.session (get_session)
 
@@ -19,11 +21,14 @@ any message this module produces.
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
+from typing import Literal
 
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from system_03_search_agent.auth.guest import decode_guest_token
 from system_03_search_agent.auth.tokens import decode_access_token
 from system_03_search_agent.data.models import User
 from system_03_search_agent.data.session import get_session
@@ -122,3 +127,113 @@ def get_current_user(
         return resolve_user_from_bearer_token(authorization, session)
     except InvalidBearerTokenError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_TOKEN_DETAIL) from None
+
+
+# ---------------------------------------------------------------------------
+# T-4.10-03: the guest-aware Principal resolver. get_current_user above is
+# UNCHANGED (design decision, "the four things most likely to go wrong" #1
+# in this ticket's brief): a guest token presented to a get_current_user
+# route gets the exact same 401 it always did, since decode_access_token
+# rejects a guest token on signature verification alone (the two token
+# families are signed with cryptographically distinct keys, guest.py's own
+# module docstring). get_caller below is additive, used only by routes that
+# must admit both principal classes.
+# ---------------------------------------------------------------------------
+
+_INVALID_CALLER_DETAIL = "invalid or expired credentials"
+
+
+@dataclass(frozen=True)
+class Principal:
+    """The authenticated caller behind a request: a registered user or a guest.
+
+    T-4.10-03, design decision 2 (`tracker/phase_4.10.md`): `owner_id` is
+    the ONLY field an ownership comparison may read (`adapters/web_sse/
+    app.py`'s `_get_owned_run`), namespaced `user:<uuid>` or `guest:<uuid>`
+    so the two principal classes can never collide on a bare UUID.
+    `user_id` is the bare registered-user UUID string, or `None` for a
+    guest: it is what `harness.cost_control.is_operator_user()` reads and
+    what `contracts.query.Query.user_id` and a future `interactions.
+    user_id` write need. `user_id` must NEVER receive a namespaced string;
+    that is the exact defect this two-field split exists to prevent, and
+    `is_operator_user(None)` is already required to return False (a guest
+    can never be an operator).
+    """
+
+    owner_id: str
+    user_id: str | None
+    kind: Literal["user", "guest"]
+
+
+class InvalidCallerError(Exception):
+    """Raised by `resolve_caller_from_bearer_token` for any failure mode.
+
+    One exception, one message, matching `InvalidBearerTokenError`'s own
+    discipline above: a missing header, a malformed scheme, an empty
+    token, an undecodable access token, and an undecodable guest token all
+    raise this same exception with the same detail, so the 401 a caller
+    receives never discloses which check tripped or which token family
+    was even attempted.
+    """
+
+
+def resolve_caller_from_bearer_token(authorization: str | None, session: Session) -> Principal:
+    """Resolve a `Principal` (a registered user OR a guest) from a raw
+    `Authorization` header value.
+
+    Tries the access-token path first (reusing `resolve_user_from_bearer_
+    token` verbatim, so a registered caller's rejection behavior is
+    byte-for-byte unchanged), then falls back to the guest-token path.
+    This is not a guess between two shapes: the two token families are
+    signed with cryptographically domain-separated keys (`auth/guest.py`'s
+    module docstring), so `decode_access_token` fails on signature
+    verification alone for a genuine guest token, before it ever reaches a
+    database lookup, and the reverse holds for `decode_guest_token`
+    against a genuine access token. Trying one and falling back to the
+    other is therefore a deterministic dispatch on which of two disjoint
+    keys actually verifies, not an ambiguous heuristic.
+
+    Raises:
+        InvalidCallerError: if neither a valid access token nor a valid
+            guest token was presented.
+    """
+    if not has_bearer_scheme(authorization):
+        raise InvalidCallerError(_INVALID_CALLER_DETAIL)
+    assert authorization is not None  # narrowed by has_bearer_scheme above
+    token = authorization[len(_BEARER_SCHEME_LOWER) :].strip()
+    if not token:
+        raise InvalidCallerError(_INVALID_CALLER_DETAIL)
+
+    try:
+        user = resolve_user_from_bearer_token(authorization, session)
+    except InvalidBearerTokenError:
+        user = None
+    if user is not None:
+        return Principal(owner_id=f"user:{user.id}", user_id=str(user.id), kind="user")
+
+    try:
+        claims = decode_guest_token(token)
+    except (TypeError, ValueError):
+        raise InvalidCallerError(_INVALID_CALLER_DETAIL) from None
+    return Principal(owner_id=f"guest:{claims['guest_id']}", user_id=None, kind="guest")
+
+
+def get_caller(
+    authorization: str | None = Header(default=None),
+    session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI dependency injection
+) -> Principal:
+    """FastAPI dependency: resolve the calling `Principal`, user or guest.
+
+    Returns 401 for every failure mode `get_current_user` already returns
+    401 for, PLUS an invalid, expired, tampered, or wrong-key guest token.
+    A caller presenting neither a valid access token nor a valid guest
+    token gets the exact same status and detail string regardless of which
+    token family it attempted, matching `get_current_user`'s own
+    single-detail-string discipline.
+    """
+    try:
+        return resolve_caller_from_bearer_token(authorization, session)
+    except InvalidCallerError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_CALLER_DETAIL
+        ) from None
