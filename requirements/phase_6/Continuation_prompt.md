@@ -45,7 +45,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Build phase 4.10, the anonymous run path and the server-side guest allowance, is DONE, merged as PR #46 on 2026-08-15. Someone with no account can now ask a real question and get a real cited answer, five times, counted by the server. Seven review rounds ran and four returned FAIL, filing 30 findings of which five were critical; every critical was a defect in the phase's own design or its premise gate rather than in a builder's code. All five are closed and every remaining finding has a named owner in `tracker/phase_4.10.md`. NEXT: build phase 4.2, the CLI adapter, resuming Section 25's order. See "The next session starts here" below.
+> Build phase 4.2, the CLI adapter, is DONE, merged as PR #47 on 2026-08-16. `system3-cli`, command `s3`, with `ask`, `stop` and `login`, streaming cited answers to a terminal over the REST plus SSE surface. SIX review rounds, 56 findings, five critical, all closed and independently probed. FIVE of the six rounds found their worst defect INSIDE THE PREVIOUS ROUND'S FIX, and the cause was the same every time: parallel agents editing code they could not see each other touch. Round 5 was run as a single serial agent and immediately found a site five parallel rounds had walked past. NEXT: build phase 4.3, the GraphQL surface. See "The next session starts here" below.
 
 Full detail on what PR #23 (build phase 3.1's re-review debt) fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07. Full detail on the F-2.1-C15 fix, including the bypass a fresh-context review found in its own first version before merge and the second review that confirmed the fix, is `tracker/fix_c15_generation_bound.md`.
 
@@ -67,7 +67,7 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Build phase 4.10, the anonymous run path and the server-side guest allowance, is DONE, merged as PR #46 on 2026-08-15. Someone with no account can now ask a real question and get a real cited answer, five times, counted by the server. Seven review rounds ran and four returned FAIL, filing 30 findings of which five were critical; every critical was a defect in the phase's own design or its premise gate rather than in a builder's code. All five are closed and every remaining finding has a named owner in `tracker/phase_4.10.md`. NEXT: build phase 4.2, the CLI adapter, resuming Section 25's order. See "The next session starts here" below.
+> Build phase 4.2, the CLI adapter, is DONE, merged as PR #47 on 2026-08-16. `system3-cli`, command `s3`, with `ask`, `stop` and `login`, streaming cited answers to a terminal over the REST plus SSE surface. SIX review rounds, 56 findings, five critical, all closed and independently probed. FIVE of the six rounds found their worst defect INSIDE THE PREVIOUS ROUND'S FIX, and the cause was the same every time: parallel agents editing code they could not see each other touch. Round 5 was run as a single serial agent and immediately found a site five parallel rounds had walked past. NEXT: build phase 4.3, the GraphQL surface. See "The next session starts here" below.
 
 Build phase 3.1 merged as PR #22 (superseded by PR #23) on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
@@ -109,7 +109,7 @@ Current counts, stated once here:
 - Premise gate, build phase 4.0's own gate (a normal test file, not one of the seven live tool gates above): 26 of 26
 - Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
 - Premise gate, build phase 4.10's own gate (the guest allowance, a normal test file, not one of the seven live tool gates above): 36 of 36, every clause mutation-proven, two-armed throughout since a control that refuses every guest passes every attack test and destroys the product
-- Decisions logged: 334
+- Decisions logged: 336
 - Learnings entries: 86, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below). This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
@@ -146,18 +146,21 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 ## The next session starts here
 
-OPEN BUILD PHASE 4.2, the CLI adapter. Nothing is in flight; `develop` is clean and every gate is green.
+OPEN BUILD PHASE 4.3, the GraphQL surface via Strawberry, sharing auth and tools with the REST surface. Nothing is in flight; `develop` is clean and every gate is green.
 
-It is a thin CLI client over the REST API finalized at build phase 4.0, and it depends only on that phase, which is merged. Section 25's order resumes here now that 4.10's out-of-order insertion is closed.
+It depends only on build phase 4.0, which is merged. Section 25's order continues here.
 
 Open it the standard way, with no structural exception: read `LEARNINGS.md` filtered to the phase's territory, verify 4.0 is merged (it is), write the premise gate and WATCH IT FAIL, then build.
 
-Two things build phase 4.10 leaves for whoever opens 4.2, both about the gate rather than the code:
+### What build phase 4.2 leaves for whoever opens 4.3
 
-- A premise gate can be green while the property it claims is absent, and this is now measured five separate ways in one phase: a clause whose asserted 401 came from the wrong code path, a clause masked by a second cap of the same numeric value, a clause hollowed out without being edited when the state the code reached before it changed, a clause importing the constant it was supposed to pin, and a mutation that did not fire and read exactly like a pass. Before crediting any green clause, name the mutation that would turn it red, run it, and confirm it reached the code path.
-- A brief written by the lead can be factually wrong. Build phase 4.10's worst finding traces to a cost claim asserted in a builder brief without being checked against `core/graph.py`, which the builder then implemented faithfully. Tell a builder to verify anything in its brief that looks like a claim about how the system behaves, and to report the contradiction rather than working around it.
+Three things, and the first is the most transferable result this project has produced so far.
 
-Then build phases 4.3 to 4.7, in Section 25's order.
+- FIX ROUNDS PARTITION BY FILE, NOT BY FINDING, AND RUN SERIALLY WITHIN A FILE. Five of build phase 4.2's six review rounds found their worst defect inside the previous round's fix. The cause was never attention or model tier: two agents editing one file in one round are each individually correct and structurally blind to the other, so two correct fixes compose into a defect that no reviewer of either one can see. The clearest instance is round 4, where one agent routed a message through the sanitizer and a second added an unsanitized write eleven lines below it, in the same commit. Round 5 ran as a single agent holding every fix and immediately found a sixth site five parallel rounds had walked past. The procedure: group findings by the file they land in, give one agent every finding in that file, never split a cross-file finding, and end every brief with a sweep instruction rather than a list of reported lines. Logged in `DECISIONS.md` on 2026-08-16.
+- FIX BY CATEGORY, NEVER BY ENUMERATION. The same shape failed four separate times in one phase: C0 and C1 control bytes instead of a Unicode general category, three exception types instead of a base class, three call sites instead of every write site, five named characters instead of a category sweep. Every enumerated defense grew a gap at the first case nobody listed. If a fix is a list, it is not finished.
+- A NEW SURFACE CAN MAKE A DORMANT FINDING LIVE. `F-3.4-A-06` had been open and correctly judged not exploitable for two phases, on the reasoning that no current call site could reach it. That reasoning was sound and its premise expired silently the moment this phase added the first surface whose output is EXECUTED by a terminal rather than displayed by a browser. Any finding parked on "not reachable today" is a claim about the set of surfaces that exists, so re-check the parked findings whenever a delivery surface lands, not only when the finding's own code is touched.
+
+Then build phases 4.4 to 4.7, in Section 25's order.
 
 ### Carried into 4.2 and beyond
 
@@ -575,4 +578,4 @@ If a different agent takes over, read the "Running this project with a different
 
 One operational note that cost real time on 2026-08-03 and is not obvious from any other file: this machine's network dropped three times in one session, killing two premise-gate runs and three review agents, and every failure they produced looked like a code defect at first glance. Before diagnosing any model-dependent failure, check reachability with `curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v1/models`. An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all. A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-08-15.
+Last updated: 2026-08-16.

@@ -2,7 +2,7 @@
 
 A plain-language update on what this project is, what works today, and what comes next. No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-15.
+Last updated: 2026-08-16.
 
 ## Table of contents
 
@@ -48,6 +48,7 @@ You can ask a question and get a real, cited answer back, streamed to a web page
 Concretely:
 
 - You can use it without an account at all. A first-time visitor gets five free searches, and the count is kept by our server rather than by the browser, so it is a real number rather than one the page can be talked out of. Signing in afterwards carries that visit's searches across.
+- You can use it from a terminal instead of a web page. `s3 ask "your question"` prints the answer as it is written, with the list of sources underneath, and you can send that straight into a file. Progress messages go to the screen rather than into the file, so the file holds the answer and nothing else.
 - You can sign in. Accounts, passwords, and sessions all work.
 - You can type a question into a chat window and watch the answer appear word by word, with a stop button.
 - The system asks a real question against our own biomedical database and gets real results.
@@ -130,6 +131,7 @@ Each of these is a completed, reviewed, merged piece of work.
 | 4.8 | Gave the web page a real design, and found that no browser test in this project had actually run for five sprints | 2026-08-13 |
 | 4.9 | Brought the answer page in line with the approved design, and found three serious problems by putting the two side by side | 2026-08-14 |
 | 4.10 | Opened the product to people without an account: five free searches, counted by our server rather than the browser. Then spent four rounds stopping one person from using up everybody else's free searches in under two seconds | 2026-08-15 |
+| 4.2 | A command-line version, so you can ask a question from a terminal and pipe the answer into a file. Six rounds of review found 56 problems, five of them serious, including one where a booby-trapped research abstract could take over your terminal window and fake its own list of sources | 2026-08-16 |
 | Design system repair | Fixed the design's own colour and keyboard problems at source, after working around them three separate times | 2026-08-14 |
 
 Nine of these are worth understanding, because they explain how this project works.
@@ -216,7 +218,7 @@ The planned specification pause (updating the written plans with everything lear
 
 In order, now:
 
-1. Other ways to reach the system besides the web page, starting with a command-line client. The machinery is already finished and shared; this is a second door onto the same rooms.
+1. A second programmable way in, for other software rather than for people: a query interface where a program asks for exactly the fields it wants. The command-line version is now built, so this is the next door onto the same rooms.
 2. The question-understanding gap now has a home: a specific future sprint, later than the next several, will build the real fix. It is not being rushed in early, and nothing else in the next few sprints depends on it being fixed first.
 3. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
 4. Then the remaining work: the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
