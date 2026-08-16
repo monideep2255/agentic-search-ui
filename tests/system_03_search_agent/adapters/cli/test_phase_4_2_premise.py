@@ -83,14 +83,17 @@ a first and, distinctly, a second Ctrl-C without touching real OS signal
 delivery (`os.kill`/`signal.signal` inside a pytest-asyncio process is its
 own source of flakiness this gate avoids). `argv[0]` is the subcommand
 (`"ask"`, `"stop"`, `"login"`); `ask` takes the question as a positional
-argument and `--session-id` as a flag. Only `ask` is exercised below: none
-of the twelve arms in `tracker/phase_4.2.md`'s premise-gate table name
-`stop` or `login` directly (Ctrl-C drives the STOP API through an
-in-flight `ask`, not the `stop` subcommand), so this gate does not
-independently prove `s3 stop <run_id>` or `s3 login` work end to end, even
-though T-4.2-05 must still build both. Noted here as a real, additional
-gap this gate carries beyond the tracker's own list below, not folded into
-that list since the instruction was to reproduce it unmodified.
+argument and `--session-id` as a flag, `stop` takes the `run_id` as a
+positional argument, and `login` takes the email as a positional argument
+and reads the password only from the injected `stdin`, never from argv.
+
+Originally this gate exercised only `ask`, and no arm in the original
+twelve-arm table named `stop` or `login` directly. That gap was itself the
+finding: the phase's own ticket map assigns T-4.2-05 all three
+subcommands, so a gate that only proved `ask` would let a phase where
+`stop` or `login` was silently broken read as complete. Two arms (13 and
+14, below) were added to `tracker/phase_4.2.md`'s gate-design table to
+close it, and this file now covers all fourteen.
 
 ## What this gate deliberately does NOT cover
 
@@ -381,9 +384,14 @@ def _provision_credentials(
     return creds_path
 
 
-async def _run_ask_main(
+async def _run_generic_main(
     argv: list[str], http_client: httpx.AsyncClient, *, stdin_text: str = ""
 ) -> tuple[int, str, str]:
+    """Drives the real async_main() with real argv, a real captured
+    stdin/stdout/stderr, and the given (real, ASGITransport-backed or
+    instrumented) http_client. Shared by every subcommand this gate
+    exercises (`ask`, `stop`, `login`), so there is exactly one place that
+    wires stdio and the exit code up for a test to inspect."""
     from system_03_search_agent.adapters.cli.main import async_main
 
     out, err = io.StringIO(), io.StringIO()
@@ -391,6 +399,12 @@ async def _run_ask_main(
         argv, stdin=io.StringIO(stdin_text), stdout=out, stderr=err, http_client=http_client
     )
     return exit_code, out.getvalue(), err.getvalue()
+
+
+async def _run_ask_main(
+    argv: list[str], http_client: httpx.AsyncClient, *, stdin_text: str = ""
+) -> tuple[int, str, str]:
+    return await _run_generic_main(argv, http_client, stdin_text=stdin_text)
 
 
 def _only_active_run_id_for_owner(registry: "run_registry_module.RunRegistry", owner_id: str) -> str:
@@ -1248,3 +1262,282 @@ class TestNeverCostTwoLayers:
         assert "9.99" not in out.getvalue()
         assert "$" not in out.getvalue()
         assert "$" not in err.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# Arm 13: `s3 stop` as its own command
+#
+# Added after the lead's decomposition review: the original twelve-arm
+# table pinned `s3 ask` and pinned neither `s3 stop` nor `s3 login`, while
+# T-4.2-05 must build all three subcommands. A phase where every ticket is
+# individually satisfied and the phase premise is not is precisely the
+# failure shape this gate exists to catch.
+# ---------------------------------------------------------------------------
+
+
+class TestStopSubcommand:
+    @pytest.mark.asyncio
+    async def test_stopping_a_run_the_caller_owns_exits_0(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        async def _hanging_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+            yield _event("guard", query.trace_id, 0, GuardPayload(passed=True, category="ok", reason=None))
+            await asyncio.sleep(3600)
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _hanging_stream)
+
+        async with _client() as client:
+            _user_id, access_token, refresh_token = await _signup_and_login(client)
+            _provision_credentials(monkeypatch, tmp_path, access_token=access_token, refresh_token=refresh_token)
+
+            # Created directly against the real app (not via `s3 ask`),
+            # since the assertion under test is about `s3 stop` alone and
+            # this is the same direct-create pattern
+            # test_phase_4_0_premise.py's own TestCancellationTerminalState
+            # already uses for the identical reason: it needs the run_id
+            # back synchronously, before any CLI streaming is involved.
+            create = await client.post(
+                "/v1/query",
+                json={"text": "What gene is BRCA1?", "session_id": "session-1"},
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            assert create.status_code == 202
+            run_id = create.json()["run_id"]
+
+            # Mutation: swallow the server's real 200 {stopped: true} and
+            # still exit nonzero, or never call the endpoint at all ->
+            # exit_code would be nonzero even though the server-side call
+            # itself succeeded.
+            exit_code, _out, err = await _run_generic_main(["stop", run_id], client)
+
+        assert exit_code == 0, f"stderr: {err}"
+
+    @pytest.mark.asyncio
+    async def test_stopping_an_already_finished_run_also_exits_0(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
+
+        async with _client() as client:
+            _user_id, access_token, refresh_token = await _signup_and_login(client)
+            _provision_credentials(monkeypatch, tmp_path, access_token=access_token, refresh_token=refresh_token)
+
+            create = await client.post(
+                "/v1/query",
+                json={"text": "What gene is BRCA1?", "session_id": "session-1"},
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            assert create.status_code == 202
+            run_id = create.json()["run_id"]
+            entry = run_registry_module.default_registry.get_run(run_id)
+            await asyncio.wait_for(entry.task, timeout=5.0)  # let it finish for real, before stopping it
+
+            # Mutation: treat a stop on an already-finished run as an
+            # error (surface the 409 citations-style "not terminal" shape,
+            # or synthesize a client-side "already done" failure) ->
+            # app.py's own stop handler is idempotent by contract: 200
+            # {stopped: true} whether or not the run was still in flight
+            # (post_v1_query_stop's own comment, "always returns 200 once
+            # ownership is established"). A CLI that disagreed with the
+            # surface it wraps would exit nonzero here instead of 0.
+            exit_code, _out, err = await _run_generic_main(["stop", run_id], client)
+
+        assert exit_code == 0, f"stderr: {err}"
+
+    @pytest.mark.asyncio
+    async def test_stopping_an_unknown_run_id_renders_the_404_and_exits_nonzero(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        async with _client() as client:
+            _user_id, access_token, refresh_token = await _signup_and_login(client)
+            _provision_credentials(monkeypatch, tmp_path, access_token=access_token, refresh_token=refresh_token)
+
+            unknown_run_id = str(uuid.uuid4())
+            # app.py's _get_owned_run checks existence BEFORE ownership
+            # (404 first, 403 second), which is why this is pinned as its
+            # own clause rather than folded into the wrong-owner test
+            # below: a CLI that collapsed every non-2xx /stop response
+            # into one generic "failed" outcome would pass both tests
+            # individually while never actually distinguishing "this run
+            # never existed" from "this run exists but is not yours".
+            #
+            # Mutation: dereference the run's owner before checking
+            # whether it exists at all -> a KeyError/None-attribute crash
+            # here instead of a clean nonzero exit with a real message.
+            exit_code, _out, err = await _run_generic_main(["stop", unknown_run_id], client)
+
+        assert exit_code != 0
+        assert err.strip() != ""
+
+    @pytest.mark.asyncio
+    async def test_stopping_a_run_owned_by_someone_else_renders_the_403_and_exits_nonzero(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        async def _hanging_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+            yield _event("guard", query.trace_id, 0, GuardPayload(passed=True, category="ok", reason=None))
+            await asyncio.sleep(3600)
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _hanging_stream)
+
+        async with _client() as client:
+            _owner_id, owner_access_token, _owner_refresh = await _signup_and_login(client)
+            create = await client.post(
+                "/v1/query",
+                json={"text": "What gene is BRCA1?", "session_id": "session-1"},
+                headers={"Authorization": f"Bearer {owner_access_token}"},
+            )
+            assert create.status_code == 202
+            run_id = create.json()["run_id"]
+
+            _other_id, other_access_token, other_refresh_token = await _signup_and_login(client)
+            _provision_credentials(
+                monkeypatch, tmp_path, access_token=other_access_token, refresh_token=other_refresh_token
+            )
+
+            # Mutation: skip the entry.owner_id != caller.owner_id
+            # comparison _get_owned_run performs (e.g. authorize on
+            # "any authenticated caller") -> a DIFFERENT principal could
+            # stop this run and this call would exit 0 instead.
+            exit_code, _out, err = await _run_generic_main(["stop", run_id], client)
+
+            run_registry_module.default_registry.cancel_run(run_id)  # tidy up the still-hanging task
+
+        assert exit_code != 0
+        assert err.strip() != ""
+
+
+# ---------------------------------------------------------------------------
+# Arm 14: `s3 login`
+# ---------------------------------------------------------------------------
+
+
+class TestLoginSubcommand:
+    @pytest.mark.asyncio
+    async def test_a_successful_login_writes_both_tokens_at_mode_600(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        from system_03_search_agent.adapters.cli import credentials as credentials_module
+
+        creds_path = tmp_path / "credentials"
+        monkeypatch.setattr(credentials_module, "CREDENTIALS_PATH", creds_path)
+
+        email, password = _unique_email(), "Str0ngPassw0rd!"
+        async with _client() as client:
+            signup = await client.post("/auth/signup", json={"email": email, "password": password})
+            assert signup.status_code == 201
+
+            # The email is not sensitive and is a positional argv
+            # argument; the password is read ONLY from the injected
+            # stdin, per this arm's own construction rule.
+            exit_code, _out, err = await _run_generic_main(
+                ["login", email], client, stdin_text=password + "\n"
+            )
+            assert exit_code == 0, f"stderr: {err}"
+
+            # Mutation: write only the access token, or only the refresh
+            # token, or write a value that round-trips through store() but
+            # is not the real token pair /auth/login actually issued ->
+            # one or both of these would be missing, and the live-call
+            # check below would fail even if they happened to be present.
+            loaded = credentials_module.load()
+            assert loaded.access_token
+            assert loaded.refresh_token
+
+            if os.name == "posix":
+                # Mutation: create the file at the OS umask default (often
+                # 0o644) instead of an explicit 0o600 -> this would read
+                # something other than 0o600.
+                assert stat.S_IMODE(os.stat(creds_path).st_mode) == 0o600
+
+            # Confirms the WRITTEN tokens are genuinely live, not merely
+            # present: a real authenticated call against the real app
+            # using exactly what login persisted.
+            me = await client.get(
+                "/auth/me", headers={"Authorization": f"Bearer {loaded.access_token}"}
+            )
+            assert me.status_code == 200
+            assert me.json()["email"] == email
+
+    @pytest.mark.asyncio
+    async def test_a_failed_login_leaves_a_pre_existing_credential_file_byte_unchanged(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        from system_03_search_agent.adapters.cli import credentials as credentials_module
+
+        creds_path = tmp_path / "credentials"
+        monkeypatch.setattr(credentials_module, "CREDENTIALS_PATH", creds_path)
+        credentials_module.store(
+            credentials_module.Credentials(
+                base_url="http://test", access_token="pre-existing-access", refresh_token="pre-existing-refresh"
+            )
+        )
+        original_bytes = creds_path.read_bytes()
+        assert original_bytes  # sanity: the fixture actually wrote something to compare against
+
+        email, real_password = _unique_email(), "Str0ngPassw0rd!"
+        async with _client() as client:
+            signup = await client.post("/auth/signup", json={"email": email, "password": real_password})
+            assert signup.status_code == 201
+
+            wrong_password = "definitely-the-wrong-password"
+            exit_code, _out, err = await _run_generic_main(
+                ["login", email], client, stdin_text=wrong_password + "\n"
+            )
+
+        assert exit_code != 0
+        assert err.strip() != ""
+        # Mutation: open the credentials file in a truncating write mode
+        # (a plain open(path, "w")) before the login attempt is known to
+        # have succeeded -> the file would be truncated to empty (or left
+        # partially rewritten) even though this login failed. Asserting
+        # the EXACT bytes, not merely "the file still exists" or "load()
+        # still parses without raising", is what catches a
+        # truncate-then-fail race a weaker check would miss: a naive
+        # open-for-write implementation destroys the file the instant it
+        # is opened, long before /auth/login's 401 is even known.
+        assert creds_path.read_bytes() == original_bytes
+
+    @pytest.mark.asyncio
+    async def test_the_password_never_appears_in_argv_stdout_stderr_or_the_error_message_on_failure(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        from system_03_search_agent.adapters.cli import credentials as credentials_module
+
+        creds_path = tmp_path / "credentials"
+        monkeypatch.setattr(credentials_module, "CREDENTIALS_PATH", creds_path)
+
+        # A distinctive sentinel, unlikely to appear in any real status
+        # message, error string, or library boilerplate by coincidence, so
+        # a positive match anywhere below is unambiguous evidence of a
+        # leak rather than a plausible false positive.
+        password_sentinel = "SENTINEL-PW-8f3c1a9d-do-not-leak"
+        email, real_password = _unique_email(), "Str0ngPassw0rd!"
+        # A real account, and the sentinel is fed in as the WRONG
+        # password: the realistic risk this clause names is a user's own
+        # password typo, not a nonexistent account.
+        argv = ["login", email]
+
+        async with _client() as client:
+            signup = await client.post("/auth/signup", json={"email": email, "password": real_password})
+            assert signup.status_code == 201
+
+            exit_code, out, err = await _run_generic_main(
+                argv, client, stdin_text=password_sentinel + "\n"
+            )
+
+        assert exit_code != 0
+        # Mutation: read the password from a `--password` argv flag
+        # instead of stdin only. This gate's own argv never carries the
+        # sentinel by construction (login is always invoked here as
+        # `["login", email]`), so a main.py that came to REQUIRE
+        # --password would find no password at all for this call and
+        # either crash or hang reading an already-exhausted stdin --
+        # either way it stops passing this test, which is the loud
+        # failure this construction produces rather than a silent one.
+        # The three greps below are the direct part of the clause: the
+        # sentinel must never appear in the argv actually used, in
+        # anything captured on stdout, or in anything captured on stderr,
+        # including the error message this failed attempt produces.
+        assert password_sentinel not in argv
+        assert password_sentinel not in out
+        assert password_sentinel not in err
