@@ -471,7 +471,7 @@ class TestLogin:
         rendering as a bidi-flipped claim about the user's password on a
         cleared screen, on a surface reachable before authentication.
         """
-        hostile_detail = "\x1b[2J\x1b[Hlogin failed‮ )dilav si drowssap ruoy(‬"
+        hostile_detail = "\x1b[2J\x1b[Hlogin failed\u202e )dilav si drowssap ruoy(\u202c"
 
         def handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(401, json={"detail": hostile_detail})
@@ -495,10 +495,10 @@ class TestLogin:
         message = err.getvalue()
         # Mutation: write `_extract_error_message(response)` straight to
         # stderr with no `_sanitize_untrusted` call -- the raw ESC
-        # (\x1b) and RLO (‮) bytes below would both be present.
+        # (\x1b) and RLO (\u202e) bytes below would both be present.
         assert "\x1b" not in message
-        assert "‮" not in message
-        assert "‬" not in message
+        assert "\u202e" not in message
+        assert "\u202c" not in message
         # The sanitizer neutralizes, it does not silently drop: the
         # visible words from the server's message still make it through.
         assert "login failed" in message
