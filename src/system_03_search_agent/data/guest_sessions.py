@@ -22,14 +22,18 @@ Writes:
     - The `guest_daily_usage` table: one conditional upsert per
       `spend_one_anonymous_run` call, and one conditional decrement per
       `refund_one_run` call that is given a `daily_day`.
+    - The `guest_source_daily_usage` table: one conditional upsert per
+      `spend_one_anonymous_run` call that is given a `source_hash`, and one
+      conditional decrement per `refund_one_run` call given both a
+      `daily_day` and a `source_hash` (F-4.10-V-01).
 
     Every public function here commits (or rolls back) the session it is
     given, matching how `auth/router.py` manages its own session's
     transaction boundary directly rather than through a shared
     repository-commit helper; callers pass a session scoped to one
     operation. `spend_one_anonymous_run` and `refund_one_run` each touch
-    both tables and commit ONCE, so the two counters can never disagree
-    because one statement landed and the other did not (design decision 8's
+    all three tables and commit ONCE, so the counters can never disagree
+    because one statement landed and the others did not (design decision 8's
     constraint 1, and F-4.10-R-03, which measured that constraint being
     violated by a function that committed twice).
 """
@@ -59,10 +63,25 @@ FREE_RUN_ALLOWANCE: Final[int] = 5
 # and at most ten ATTEMPTS. Ten rather than five because the whole point of
 # the F-4.10-A-04 refund is that a clumsy question should not cost a visitor
 # an answer, and a ceiling equal to the answer allowance would make the
-# refund purely decorative. Ten rather than fifty because this is the only
-# per-identity bound on how much of the SHARED daily budget one anonymous
-# caller can move: at ten, draining a 200-run day needs 20 mints instead of
-# one, which is a burst the per-source mint throttle can see.
+# refund purely decorative. Ten rather than fifty because it should take
+# several identities, not one, to move a meaningful share of the day.
+#
+# F-4.10-V-01 REMOVES the sentence that used to end that paragraph, and the
+# removal is the finding rather than a tidy-up. It read: "at ten, draining a
+# 200-run day needs 20 mints instead of one, which is a burst the per-source
+# mint throttle can see." The throttle cannot see it.
+# `_MINT_THROTTLE_MAX_PER_WINDOW` is 60 per 60 seconds per source, so 20
+# mints is a third of what one source is freely allowed, and a fixed window
+# permits 120 across a boundary. Measured against the shipped defaults with
+# the throttle live: 20 mints, zero refused, 200 pipelines, the whole day
+# gone in 1.84 seconds. Building the next fix on that sentence is how the
+# same defect survived three rounds.
+#
+# What bounds one caller now is `harness.cost_control.anon_daily_source_
+# share`, enforced by `spend_one_anonymous_run` below on a counter keyed on
+# the connection source. This ceiling keeps its own narrower job: it bounds
+# one IDENTITY, which is what stops a single mint from spending a source's
+# whole share on refusals.
 #
 # Not an env var, deliberately, matching FREE_RUN_ALLOWANCE directly above:
 # both numbers are product decisions about what a guest gets, and a second
@@ -101,6 +120,18 @@ class SpendState(str, Enum):
     # midnight and which signing in bypasses entirely (429). Collapsing
     # them would make one of the two messages a lie.
     DAILY_CAP_REACHED = "daily_cap_reached"
+    # F-4.10-V-01, build phase 4.10. Distinct from DAILY_CAP_REACHED even
+    # though both are 429s that clear at the same UTC midnight, because the
+    # two say different true things and only one of them is about the
+    # caller. DAILY_CAP_REACHED means the whole anonymous product is spent
+    # for everyone today. This one means THIS SOURCE has taken its share of
+    # today and everyone else is unaffected, which is the honest sentence for
+    # the fifth visitor behind a busy office address and would be a lie if it
+    # were reported as the system being at its limit. Collapsing them would
+    # also hide the attack it exists to stop: an operator reading refusal
+    # reasons could not tell "we are popular today" from "one address is
+    # hammering us".
+    SOURCE_DAILY_CAP_REACHED = "source_daily_cap_reached"
 
 
 @dataclass(frozen=True)
@@ -115,11 +146,25 @@ class SpendResult:
 
     `attempts_used` follows the same rule for the attempt counter
     (F-4.10-R-01) and is None wherever `runs_used` is.
+
+    `charged_day` is the UTC calendar day the SHARED counters were actually
+    charged against, populated only by `spend_one_anonymous_run` and only on
+    SPENT. It exists because of F-4.10-V-04: the refund needs the day the
+    spend used, and the handler used to recompute `datetime.now(UTC).date()`
+    a second time AFTER the spend had already committed against its own
+    clock read. Across a UTC midnight falling between the two, the charge
+    landed on day D and the refund was aimed at D+1, leaving D permanently
+    over-charged and D+1 decremented for a run it never took. That is
+    precisely the defect `refund_one_run`'s docstring claimed had been
+    designed out by taking the day as a parameter; passing a freshly
+    recomputed value satisfied the signature and not the argument. Returning
+    it here makes the correct value the only one a caller has to hand.
     """
 
     state: SpendState
     runs_used: int | None = None
     attempts_used: int | None = None
+    charged_day: date | None = None
 
 
 def create_guest_session(session: Session) -> GuestSession:
@@ -326,6 +371,32 @@ _DAILY_SPEND_STATEMENT = text(
     " RETURNING runs_used"
 )
 
+# The per-SOURCE share of the day, F-4.10-V-01. Structurally identical to
+# `_DAILY_SPEND_STATEMENT` above, one key wider, and identical for the same
+# reasons: an upsert because the first run from a source on a given day has
+# no row yet, and `ON CONFLICT ... DO UPDATE ... WHERE` because the whole
+# decision has to stay inside one statement or two concurrent callers from
+# the same source race a SELECT-then-INSERT into a primary-key violation.
+#
+# WHY THIS COUNTER AND NOT A TIGHTER VALUE ON EITHER OF THE OTHER TWO. Three
+# previous rounds tightened a bound keyed on something the caller can mint
+# more of, and all three were defeated identically. `attempts_used` bounds an
+# identity and identities are free. The day bounds the money and says nothing
+# about who spent it. The mint throttle bounds the RATE of minting and cannot
+# be tightened below 20 per window, because the premise gate's own admit arm
+# requires 25 consecutive mints from one shared address to succeed, and real
+# users share addresses behind office NAT and campus networks. What was left
+# unbounded was one source's SHARE of the day, whatever number of identities
+# it minted, and that is what this statement bounds.
+_SOURCE_DAILY_SPEND_STATEMENT = text(
+    "INSERT INTO guest_source_daily_usage (day, source_hash, runs_used)"
+    " VALUES (:day, :source_hash, 1)"
+    " ON CONFLICT (day, source_hash) DO UPDATE"
+    "    SET runs_used = guest_source_daily_usage.runs_used + 1"
+    "  WHERE guest_source_daily_usage.runs_used < :source_cap"
+    " RETURNING runs_used"
+)
+
 # The ANSWER refund, used by `refund_one_run` when a run that WAS admitted
 # turns out to produce nothing (a guardrail refusal, F-4.10-A-04).
 # Conditional on `runs_used > 0` so it can never drive the count negative and
@@ -354,12 +425,31 @@ _DAILY_UNSPEND_STATEMENT = text(
     " RETURNING runs_used"
 )
 
+# The per-SOURCE refund (F-4.10-V-01), which moves in LOCKSTEP with the
+# daily one directly above and never on its own. The source counter is a
+# share OF the day, so a day that is given back while the source's share
+# stays charged would make the share bound tighter than the thing it
+# subdivides, and a visitor behind a shared address would lose part of that
+# address's budget to a refusal that cost the system nothing. `refund_one_
+# run` therefore takes one decision, not two: either both shared counters
+# are given back or neither is.
+#
+# Same `> 0` floor as the two statements above, for the same reason: the
+# row's CHECK constraint must be unreachable no matter what else touched it
+# in between.
+_SOURCE_DAILY_UNSPEND_STATEMENT = text(
+    "UPDATE guest_source_daily_usage SET runs_used = runs_used - 1"
+    " WHERE day = :day AND source_hash = :source_hash AND runs_used > 0"
+    " RETURNING runs_used"
+)
+
 
 def refund_one_run(
     session: Session,
     guest_id: str | uuid.UUID,
     *,
     daily_day: date | None = None,
+    source_hash: str | None = None,
 ) -> bool:
     """Give one ANSWER back to `guest_id`, and never an attempt.
 
@@ -390,15 +480,34 @@ def refund_one_run(
     money, and refunding it would reopen the free-compute path the original
     decision was written to avoid.
 
+    The third half, `source_hash` (F-4.10-V-01), moves in LOCKSTEP with
+    `daily_day` and never on its own. `guest_source_daily_usage` counts one
+    source's share OF the day, so giving the day back while the share stays
+    charged would make the share bound tighter than the thing it subdivides,
+    and a visitor behind a busy shared address would lose part of that
+    address's budget to a refusal that cost the system nothing. Pass both or
+    pass neither; passing `source_hash` without `daily_day` is accepted and
+    does nothing, because there is no state in which refunding the share
+    alone is correct.
+
     The day is passed in rather than computed here so the refund lands on
     the day the run was actually CHARGED. A run refused a few seconds after
     UTC midnight would otherwise decrement the new day's row, taking a slot
     from the day that never charged it.
 
-    Both statements run in ONE transaction, for design decision 8's
+    F-4.10-V-04 is the correction that made that paragraph true rather than
+    merely stated. The value the handler passed used to be a SECOND
+    `datetime.now(UTC).date()` call, made after `spend_one_anonymous_run`
+    had already committed against its own clock read, so across a UTC
+    midnight between the two the charge landed on day D and the refund was
+    aimed at D+1. Taking the day as a parameter satisfied the signature and
+    not the argument. `SpendResult.charged_day` now carries the day the
+    spend actually used, and that is what the call site passes.
+
+    All three statements run in ONE transaction, for design decision 8's
     constraint 1 reason applied to the reverse direction: an answer given
-    back while the day's refund failed would leave the two counters
-    disagreeing with no compensation path.
+    back while the day's refund failed would leave the counters disagreeing
+    with no compensation path.
 
     Idempotent in the sense `production-standards`' retry-safety gate needs:
     the caller fires it at most once per run (see `core/run_registry.py`), and
@@ -417,7 +526,13 @@ def refund_one_run(
         guest_id: the guest session id, string or UUID.
         daily_day: the UTC calendar day whose SHARED anonymous budget should
             also be given back, or None to leave it charged. Pass a day only
-            for a refusal that made no model call.
+            for a refusal that made no model call, and pass the day the
+            spend reported (`SpendResult.charged_day`), never a fresh clock
+            read.
+        source_hash: the hashed connection source whose share of that day
+            should be given back alongside it, or None when the source was
+            not determinable at spend time. Only ever acted on together with
+            `daily_day`.
 
     Returns:
         True when an answer was actually given back, False when there was
@@ -429,17 +544,25 @@ def refund_one_run(
 
     Raises:
         TypeError: If guest_id is not a str or uuid.UUID, if daily_day is
-            not a date, or session is not a Session.
+            not a date, if source_hash is not a str, or session is not a
+            Session.
         ValueError: If guest_id is an empty or malformed string.
     """
     if not isinstance(session, Session):
         raise TypeError("session must be a sqlalchemy.orm.Session")
     if daily_day is not None and not isinstance(daily_day, date):
         raise TypeError("daily_day must be a datetime.date or None")
+    if source_hash is not None and not isinstance(source_hash, str):
+        raise TypeError("source_hash must be a str or None")
     guest_uuid = _coerce_guest_id(guest_id)
     refunded_row = session.execute(_UNSPEND_STATEMENT, {"guest_id": guest_uuid}).first()
     if daily_day is not None:
         session.execute(_DAILY_UNSPEND_STATEMENT, {"day": daily_day})
+        if source_hash is not None:
+            session.execute(
+                _SOURCE_DAILY_UNSPEND_STATEMENT,
+                {"day": daily_day, "source_hash": source_hash},
+            )
     session.commit()
     return refunded_row is not None
 
@@ -451,8 +574,10 @@ def spend_one_anonymous_run(
     cap: int = FREE_RUN_ALLOWANCE,
     attempt_cap: int = ATTEMPT_ALLOWANCE,
     daily_cap: int,
+    source_hash: str | None,
+    source_cap: int,
 ) -> SpendResult:
-    """Spend one anonymous run against ALL THREE bounds, in ONE transaction.
+    """Spend one anonymous run against ALL FOUR bounds, in ONE transaction.
 
     This is what the query endpoint calls. `spend_one_run` above is the
     per-guest primitive and is NOT sufficient on its own for the production
@@ -489,12 +614,46 @@ def spend_one_anonymous_run(
     second statement can fail, including a raise and a lost connection,
     because nothing was ever committed to compensate for.
 
-    Lock ordering is always guest row then daily row, in every caller, so
-    two concurrent spends cannot deadlock on each other.
+    THE FOURTH BOUND, F-4.10-V-01, and the reason it is a new counter rather
+    than a smaller number on one of the first three. Each of the first three
+    is keyed on something a caller can mint more of, or on nothing to do with
+    the caller at all:
 
-    `daily_cap` is keyword-only and has NO default, so the system-wide bound
-    cannot be omitted by accident. Passing it is a decision written down at
-    the call site.
+    - `cap` and `attempt_cap` are keyed on a guest identity, and
+      `POST /auth/guest` mints identities for free.
+    - `daily_cap` is keyed on the calendar day. Nobody controls the supply of
+      days, which is why it holds the system's money, and it says nothing
+      about WHO spent it.
+    - The mint throttle in `auth/router.py` is keyed on the source but bounds
+      the RATE of minting, at 60 per minute, and it cannot be tightened below
+      the 20 mints this attack needs, because the premise gate's own admit
+      arm requires 25 consecutive mints from one shared address to succeed.
+      Office NAT, campus networks and conference wifi are real, and a control
+      that refuses those rooms has destroyed the product to protect it.
+
+    Measured with all three live and the throttle refusing nothing: 20
+    identities from one apparent source, 200 pipelines, the whole 200-run day
+    gone in 1.84 seconds, every other anonymous visitor refused until UTC
+    midnight. `source_cap` bounds a source's SHARE of the day instead of
+    policing how fast it mints, so the number of identities it mints stops
+    mattering.
+
+    `source_hash` of None means the source could not be determined (no
+    `request.client`, or `AUTH_SECRET` unset so no hash exists). Such a call
+    is ALLOWED and simply skips this bound, matching `_MintThrottle.allow`'s
+    existing choice for the same input and for the same reason: refusing
+    every request whose source cannot be identified turns a missing value
+    into an outage, and `daily_cap` still bounds the money. It is stated
+    rather than silent because it IS the residual gap: a deployment that
+    strips `request.client` loses this bound entirely and keeps the other
+    three.
+
+    Lock ordering is always guest row, then daily row, then source row, in
+    every caller, so two concurrent spends cannot deadlock on each other.
+
+    `daily_cap`, `source_hash` and `source_cap` are all keyword-only with NO
+    default, so no bound can be omitted by accident. Passing each one is a
+    decision written down at the call site.
 
     Args:
         session: a session scoped to this one operation; this function
@@ -504,23 +663,35 @@ def spend_one_anonymous_run(
         attempt_cap: this guest's ATTEMPT ceiling (F-4.10-R-01).
         daily_cap: the system-wide ceiling on anonymous runs for the current
             UTC day, from `harness.cost_control.anon_daily_run_cap`.
+        source_hash: the keyed HMAC-SHA256 hash of the connection address
+            (`auth.router._hash_ip`), or None when it cannot be determined.
+            Never a raw address, and never derived from a client-settable
+            header.
+        source_cap: how many of that day's runs this one source may take,
+            from `harness.cost_control.anon_daily_source_share`.
 
     Returns:
-        A SpendResult. SPENT carries the guest's new counts. EXHAUSTED,
-        ATTEMPTS_EXHAUSTED, REVOKED_OR_UNKNOWN and DAILY_CAP_REACHED are all
-        refusals, kept distinct because they mean different things to the
-        caller.
+        A SpendResult. SPENT carries the guest's new counts and the UTC day
+        the shared counters were charged against (`charged_day`, which the
+        refund path needs and must not recompute; F-4.10-V-04). EXHAUSTED,
+        ATTEMPTS_EXHAUSTED, REVOKED_OR_UNKNOWN, DAILY_CAP_REACHED and
+        SOURCE_DAILY_CAP_REACHED are all refusals, kept distinct because they
+        mean different things to the caller.
 
     Raises:
-        TypeError, ValueError: as `spend_one_run`, plus for a `daily_cap`
-            that is not a positive int.
+        TypeError, ValueError: as `spend_one_run`, plus for a `daily_cap` or
+            `source_cap` that is not a positive int, or a `source_hash` that
+            is neither a str nor None.
     """
     if not isinstance(session, Session):
         raise TypeError("session must be a sqlalchemy.orm.Session")
+    if source_hash is not None and not isinstance(source_hash, str):
+        raise TypeError("source_hash must be a str or None")
     guest_uuid = _coerce_guest_id(guest_id)
     validated_cap = _validate_cap(cap)
     validated_attempt_cap = _validate_cap(attempt_cap)
     validated_daily_cap = _validate_cap(daily_cap)
+    validated_source_cap = _validate_cap(source_cap)
 
     guest_result = _apply_spend(
         session, guest_uuid, cap=validated_cap, attempt_cap=validated_attempt_cap
@@ -536,6 +707,11 @@ def spend_one_anonymous_run(
     # operator's midnight is a ceiling whose window moves with a
     # deployment's timezone, and two hosts in different zones would
     # disagree about which day a run belongs to.
+    #
+    # Read ONCE, and returned on the result. Both shared statements below use
+    # this same value, and so does the refund, which is F-4.10-V-04: two
+    # independent clock reads across a UTC midnight charge one day and refund
+    # another.
     today = datetime.now(UTC).date()
     daily_row = session.execute(
         _DAILY_SPEND_STATEMENT, {"day": today, "daily_cap": validated_daily_cap}
@@ -543,5 +719,38 @@ def spend_one_anonymous_run(
     if daily_row is None:
         session.rollback()
         return SpendResult(SpendState.DAILY_CAP_REACHED)
+
+    # The source's share of that day. Checked AFTER the day's own ceiling
+    # deliberately: when the whole product is spent for everyone, that is the
+    # more informative refusal and the one the message should carry, and
+    # telling a caller "your network has had its share" while the system is
+    # at its global limit would send them to a network change that fixes
+    # nothing. The reporting path in `GET /v1/allowance` mirrors this exact
+    # order, because a reporting path that ranks refusals differently from
+    # the enforcement path is how the two start disagreeing again
+    # (F-4.10-A-03).
+    if source_hash is not None:
+        source_row = session.execute(
+            _SOURCE_DAILY_SPEND_STATEMENT,
+            {
+                "day": today,
+                "source_hash": source_hash,
+                "source_cap": validated_source_cap,
+            },
+        ).first()
+        if source_row is None:
+            # A rollback, not a compensating decrement of the two statements
+            # above, for `spend_one_anonymous_run`'s own stated reason: a
+            # compensating statement only covers the refusal case, while a
+            # rollback covers every way this statement can fail, a raise and
+            # a lost connection included.
+            session.rollback()
+            return SpendResult(SpendState.SOURCE_DAILY_CAP_REACHED)
+
     session.commit()
-    return guest_result
+    return SpendResult(
+        SpendState.SPENT,
+        runs_used=guest_result.runs_used,
+        attempts_used=guest_result.attempts_used,
+        charged_day=today,
+    )

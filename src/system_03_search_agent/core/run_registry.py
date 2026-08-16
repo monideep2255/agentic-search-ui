@@ -307,11 +307,18 @@ class RunEntry:
     # after a real model call. See `_fire_guard_refusal_callback` for how it
     # is observed and why it never travels on the wire.
     on_guard_refused: Callable[[bool], None] | None = field(default=None, repr=False)
-    # The two observations `_fire_guard_refusal_callback` accumulates before
-    # it can decide. Both are internal to this process and neither is ever
+    # The three observations `_fire_guard_refusal_callback` accumulates
+    # before it can decide. All are internal to this process and none is ever
     # serialized to a client.
     guard_refused: bool = False
     guard_cost_observed: bool = False
+    # F-4.10-V-02: a run that ended on a FATAL error rather than on a
+    # guardrail verdict. Separate from `guard_refused` because the two are
+    # genuinely different events and `_decline_for_guardrail`'s own docstring
+    # insists on the distinction (a refusal is a judgement the system
+    # reached; an error is the system failing). They converge only at the
+    # refund, because what the visitor got is the same in both cases: nothing.
+    run_failed: bool = False
 
 
 def _fire_guard_refusal_callback(entry: RunEntry, event: Event) -> None:
@@ -329,11 +336,54 @@ def _fire_guard_refusal_callback(entry: RunEntry, event: Event) -> None:
     rejected: it would let a caller start unbounded runs that never spend at
     all, which is a strictly worse hole than the one being closed.
 
-    A `guard` event with `passed: false` is the ONLY refusal signal used,
-    rather than "the run produced no answer". A refusal is a judgement the
-    system reached, distinct from an error, which `_decline_for_guardrail`'s
-    own docstring already insists on; a failed run is a different question
-    with a different answer and is not in scope here.
+    TWO END STATES FIRE IT, F-4.10-V-02, product-owner decision 2026-08-15.
+    This function used to key on a `guard` event carrying `passed: false` and
+    nothing else, on the argument that "a failed run is a different question
+    with a different answer and is not in scope here". The question is
+    different; the ANSWER turned out to be the same. Measured on the running
+    app: a run that died with a Guard-tier `HarnessCallError` left the guest
+    at `(runs_used 1, attempts_used 1)` with the day charged 1, so a visitor
+    lost one of five free searches to a failure that was not theirs and was
+    told nothing. The phase's own principle ("a visitor must not be pushed
+    toward the sign-in wall by questions that were never answered") does not
+    distinguish between a question the system refused and one it dropped.
+
+    So the ANSWER is now given back for either, and the rule is one sentence:
+    a run that ends having produced no answer gives back the answer, never
+    the attempt, and gives back the shared day (and that source's share of
+    it) only when no model call was made. The `charged` observation below is
+    unchanged and already carries that last clause for both cases: an errored
+    run that got as far as a real model call keeps the day charged, because
+    the day's budget bounds money and money was spent.
+
+    THE THREE CASES THAT DO NOT FIRE IT, each for its own reason rather than
+    by omission:
+
+    - A CANCELLED run, which is a run the visitor stopped. Deliberately not
+      refunded, and this is the one place the "produced no answer" framing
+      would mislead: the server cannot know what the visitor already read.
+      Every token emitted before the stop was streamed to them, so a caller
+      could read an answer to its last sentence, stop before `done`, and be
+      refunded for a search they received. That is a free-answer path, which
+      is exactly the class of hole F-4.10-R-01 was filed for. Structurally it
+      also cannot fire: `_drain_into_entry` appends its cancellation event
+      directly to both read paths without routing it through this function,
+      and a cancelled run never reaches a `done` event at all.
+    - A NON-FATAL error (`fatal=False`), which several perfectly good runs
+      emit: `write_node` reports a truncated tool result or an uncited `ok`
+      result that way and then streams a real answer. Refunding those would
+      hand back a search the visitor actually got, so `fatal` is checked
+      rather than merely `type == "error"`.
+    - A per-query COST-CAP partial result, which routes through
+      `_partial_result_for_cap` and emits no fatal error at all. The visitor
+      gets a partial answer, which is Section 19.1's deliberate behaviour and
+      is not nothing.
+
+    A cap-DECLINED run (`_decline_for_daily_cap`) is covered by the new arm
+    without a special case, and correctly: it emits a fatal `error` and a
+    `done` having made no model call, so the answer, the day and the source
+    share all come back. That is the strongest of the three cases the
+    re-review named, since the run was refused before any work at all.
 
     HOW `charged` REACHES THE CALLBACK WITHOUT REACHING THE GUEST
     (F-4.10-R-01 part B). The refund policy needs to know whether the refused
@@ -352,6 +402,32 @@ def _fire_guard_refusal_callback(entry: RunEntry, event: Event) -> None:
     caller by `sanitize_event_for_end_user` in the SSE layer, so it reaches
     this drain loop and stops there. `RunEntry` is on the inside; the wire is
     not.
+
+    WHAT THAT CLAIM DOES AND DOES NOT COVER, F-4.10-V-05, because the
+    sentence above is easy to read as stronger than it is. What is true, and
+    was measured across both refusal shapes through the running app: no cost
+    figure and no `charged` flag reaches a guest. Response headers, event
+    stream, event-type set, allowance body and citations are byte-identical
+    between a free refusal and a paid one apart from run identifiers.
+
+    What is NOT true is the stronger reading, that nothing a guest can see
+    tells them which questions cost money. `GuardPayload.category` is a
+    product requirement and does reach them, and two of its values are
+    emitted by exactly one screen each: `injection` only by `prefilter.
+    screen` (free), `off_topic` only by the classifier (paid). A guest who
+    reads their own refusal category can therefore infer, for those two
+    values, whether that question cost anything, and latency separates the
+    two anyway by a Guard-tier round trip.
+
+    Recorded as an accepted inference channel rather than fixed, and the
+    reasoning is that it leaks SCREEN IDENTITY, not cost. Sections 19.4 and
+    19.5 govern cost figures and token counts, and no figure travels. The
+    category is what makes the refusal actionable for the person reading it,
+    so removing or blurring it would trade a real product requirement for
+    hiding a fact of no value to an attacker: knowing a refusal was free
+    tells them nothing the attempt ceiling and the per-source share do not
+    already bound. `medical_advice` is emitted by both a free and a paid
+    screen with a byte-identical `reason`, which is the shape to keep.
 
     That is why the callback fires on `done` rather than on the `guard` event
     itself. `_decline_for_guardrail` emits guard, then cost (only when
@@ -377,7 +453,16 @@ def _fire_guard_refusal_callback(entry: RunEntry, event: Event) -> None:
         if event.payload.get("passed") is False:
             entry.guard_refused = True
         return
-    if event.type != "done" or not entry.guard_refused:
+    if event.type == "error":
+        # F-4.10-V-02. `fatal is True` is the whole discriminator and it is
+        # checked explicitly rather than by truthiness: a non-fatal error is
+        # emitted by runs that go on to stream a real answer (`write_node`'s
+        # truncated-result and uncited-`ok` notes), and refunding those would
+        # give back a search the visitor actually received.
+        if event.payload.get("fatal") is True:
+            entry.run_failed = True
+        return
+    if event.type != "done" or not (entry.guard_refused or entry.run_failed):
         return
     callback = entry.on_guard_refused
     # Disarm BEFORE calling, not after: a callback that raises must still
@@ -392,8 +477,8 @@ def _fire_guard_refusal_callback(entry: RunEntry, event: Event) -> None:
         # secrets gate: a database exception's own string can embed bound
         # parameters, and the guest id is one of them.
         logger.warning(
-            "the guard-refusal callback for run %s failed; the caller was "
-            "charged for a refused run",
+            "the zero-output refund callback for run %s failed; the caller "
+            "was charged for a run that produced no answer",
             entry.run_id,
         )
 

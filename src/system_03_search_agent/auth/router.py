@@ -247,6 +247,33 @@ def _hash_ip(raw_ip: str | None) -> str | None:
     return hmac.new(secret.encode("utf-8"), b"ip_hash:" + raw_ip.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
+def source_hash_for_request(request: Request) -> str | None:
+    """Return the hashed CONNECTION source of `request`, or None if unknown.
+
+    The one definition of "which source is this", shared by the mint
+    throttle here and by the per-source daily share the query endpoint
+    enforces (`data.guest_sessions.spend_one_anonymous_run`, F-4.10-V-01).
+    Two controls keyed on the source with two independent notions of what a
+    source is would be two controls that disagree, which is the reporting-
+    versus-enforcement shape F-4.10-A-03 was filed for, one layer down.
+
+    THE ADDRESS COMES FROM THE CONNECTION, never from `X-Forwarded-For` or
+    any other client-settable header. A header is attacker-chosen, so a
+    control keyed on one is defeated by editing a string, and a bound that
+    an attacker can opt out of is not a bound. Behind a real reverse proxy
+    this needs the proxy's own real-IP configuration (uvicorn's
+    `--proxy-headers` with trusted hosts, or the proxy setting the peer
+    address). That is a DEPLOYMENT note, and deliberately not a code
+    fallback: a fallback that trusts the header when the connection "looks
+    proxied" is a fallback an attacker can trigger.
+
+    Returns None when `request.client` is absent, which some ASGI servers
+    and transports allow. Both callers treat None as ALLOW rather than
+    refuse, each saying so at its own call site.
+    """
+    return _hash_ip(request.client.host if request.client else None)
+
+
 def _truncate_user_agent(raw_user_agent: str | None) -> str | None:
     """Bound the attacker-chosen `User-Agent` header before persisting it (F-1.1-16)."""
     if raw_user_agent is None:
@@ -630,17 +657,11 @@ def create_guest(
     request: Request,
     session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI DI
 ) -> GuestTokenResponse:
-    # Design decision 8. The IP comes from the CONNECTION, never from an
-    # X-Forwarded-For header: a header is attacker-chosen, so throttling on
-    # one would let any caller rotate past the throttle by editing a
-    # string. Behind a real reverse proxy this needs the proxy's own
-    # real-IP configuration (uvicorn's --proxy-headers with trusted hosts,
-    # or the proxy setting the peer address); that is a DEPLOYMENT note,
-    # and deliberately not a code fallback, because a fallback that trusts
-    # the header when the connection looks proxied is a fallback an
-    # attacker can trigger.
-    client_ip = request.client.host if request.client else None
-    if not _mint_throttle.allow(_hash_ip(client_ip)):
+    # Design decision 8. `source_hash_for_request` is the one definition of
+    # "which source is this", shared with the per-source daily share the
+    # query endpoint enforces; see its docstring for why the address comes
+    # from the connection and never from a header.
+    if not _mint_throttle.allow(source_hash_for_request(request)):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail={

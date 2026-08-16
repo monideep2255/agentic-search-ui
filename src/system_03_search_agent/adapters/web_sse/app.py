@@ -10,7 +10,7 @@ from datetime import UTC, date, datetime, timedelta
 from datetime import time as dt_time
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
@@ -20,6 +20,7 @@ from sse_starlette.sse import EventSourceResponse
 from system_03_search_agent.adapters.mcp.server import server as mcp_server
 from system_03_search_agent.auth.dependencies import Principal, get_caller
 from system_03_search_agent.auth.router import router as auth_router
+from system_03_search_agent.auth.router import source_hash_for_request
 from system_03_search_agent.contracts.events import CitationPayload
 from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core.run_registry import (
@@ -36,10 +37,15 @@ from system_03_search_agent.data.guest_sessions import (
     refund_one_run,
     spend_one_anonymous_run,
 )
-from system_03_search_agent.data.models import GuestDailyUsage, GuestSession
+from system_03_search_agent.data.models import (
+    GuestDailyUsage,
+    GuestSession,
+    GuestSourceDailyUsage,
+)
 from system_03_search_agent.data.session import get_session, session_scope
 from system_03_search_agent.harness.cost_control import (
     anon_daily_run_cap,
+    anon_daily_source_share,
     is_operator_user,
     per_user_daily_query_cap,
     sanitize_event_for_end_user,
@@ -291,8 +297,21 @@ class AllowanceResponse(BaseModel):
     # a bound the next request enforces, so a reporting path that could not
     # name it would promise a search that request refuses. A new enum value
     # is additive within v1 per Section 2.6.
+    #
+    # `anon_source_daily_cap_reached` (F-4.10-V-01) is the third, and it is
+    # here for the same reason and by the same rule. It is kept distinct from
+    # `anon_daily_cap_reached` because the two say different true things: one
+    # means the whole anonymous product is spent for everyone today, the
+    # other means THIS network has taken its share and everyone else is
+    # unaffected. Rendering the first sentence for the second state would be
+    # a confident wrong answer in the UI.
     blocked_reason: (
-        Literal["anon_daily_cap_reached", "guest_attempt_limit_reached"] | None
+        Literal[
+            "anon_daily_cap_reached",
+            "anon_source_daily_cap_reached",
+            "guest_attempt_limit_reached",
+        ]
+        | None
     ) = None
 
 
@@ -334,6 +353,7 @@ def _guest_uuid_from_owner_id(owner_id: str) -> uuid.UUID:
 # applies; documented here rather than left unconsidered.
 @app.get("/v1/allowance", response_model=AllowanceResponse)
 def get_v1_allowance(
+    request: Request,
     caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
     session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI dependency injection
 ) -> AllowanceResponse:
@@ -380,14 +400,64 @@ def get_v1_allowance(
         # reports what is available, or the five dots promise a search that
         # does not exist. Read-only, so it never consumes the allowance it
         # is reporting on.
+        #
+        # ONE clock read for both shared lookups below, for the same reason
+        # the spend takes one (F-4.10-V-04): two reads either side of a UTC
+        # midnight would report the day's ceiling from one day and this
+        # source's share from the next.
+        today = datetime.now(UTC).date()
         daily_used = session.execute(
-            select(GuestDailyUsage.runs_used).where(
-                GuestDailyUsage.day == datetime.now(UTC).date()
-            )
+            select(GuestDailyUsage.runs_used).where(GuestDailyUsage.day == today)
         ).scalar_one_or_none()
-        blocked: Literal["anon_daily_cap_reached", "guest_attempt_limit_reached"] | None
-        if daily_used is not None and int(daily_used) >= anon_daily_run_cap():
+        # F-4.10-V-01, the same constraint-4 argument applied to the bound
+        # that actually stops the measured attack. A visitor behind an
+        # address that has spent its share of the day is refused 429 by the
+        # very next query, so a reporting path that could not name it would
+        # promise a search that request refuses. Read-only, and the source is
+        # resolved through the SAME function the enforcement path uses, never
+        # a second notion of what a source is.
+        daily_cap = anon_daily_run_cap()
+        source_hash = source_hash_for_request(request)
+        source_used = (
+            session.execute(
+                select(GuestSourceDailyUsage.runs_used).where(
+                    GuestSourceDailyUsage.day == today,
+                    GuestSourceDailyUsage.source_hash == source_hash,
+                )
+            ).scalar_one_or_none()
+            if source_hash is not None
+            else None
+        )
+        blocked: (
+            Literal[
+                "anon_daily_cap_reached",
+                "anon_source_daily_cap_reached",
+                "guest_attempt_limit_reached",
+            ]
+            | None
+        )
+        if daily_used is not None and int(daily_used) >= daily_cap:
             blocked = "anon_daily_cap_reached"
+        elif source_used is not None and int(source_used) >= anon_daily_source_share(daily_cap):
+            # Ranked immediately BELOW the system-wide ceiling, which is the
+            # order `spend_one_anonymous_run` enforces in: it consults the
+            # day first and the source second, because "the whole product is
+            # spent today" is the more informative refusal and telling a
+            # caller their network is full while the system is at its global
+            # limit would send them to a network change that fixes nothing.
+            #
+            # What this ordering does NOT claim, so the next reader does not
+            # have to re-derive it: the daily-versus-ATTEMPT ranking below is
+            # already inverted relative to the enforcement path, which
+            # evaluates both per-guest ceilings inside `_apply_spend` before
+            # either shared counter is touched. A guest at its attempt
+            # ceiling on a full day is refused 403
+            # `guest_attempt_limit_reached` while this endpoint reports
+            # `anon_daily_cap_reached`. That predates F-4.10-V-01 and is left
+            # as it stands rather than silently changed under an unrelated
+            # fix; both values are true of that caller, and both send them to
+            # the same sign-in wall.
+            blocked = "anon_source_daily_cap_reached"
         elif int(row[2]) >= ATTEMPT_ALLOWANCE and int(row[1]) < FREE_RUN_ALLOWANCE:
             # F-4.10-R-01, and the same constraint-4 argument one bound
             # further out: this guest has started as many runs as a guest may
@@ -418,7 +488,7 @@ def get_v1_allowance(
 
 
 def _guest_refund_callback(
-    guest_uuid: uuid.UUID, spend_day: date
+    guest_uuid: uuid.UUID, spend_day: date, source_hash: str | None
 ) -> Callable[[bool], None]:
     """Build the refund the run registry fires when a run ends having been
     refused at the guardrail (F-4.10-A-04, F-4.10-R-01). See `post_v1_query`
@@ -433,9 +503,20 @@ def _guest_refund_callback(
     observation of a `cost` event, never through anything the guest receives:
     see `core/run_registry.py`'s `_fire_guard_refusal_callback` for why.
 
-    `spend_day` is the UTC day this run was CHARGED to, captured when the
-    spend happened rather than recomputed here, so a refusal that lands just
-    after UTC midnight gives the slot back to the day that took it.
+    `spend_day` is the UTC day this run was CHARGED to. It now comes from
+    `SpendResult.charged_day`, the day the spend statement itself used
+    (F-4.10-V-04). It used to be a second `datetime.now(UTC).date()` call
+    made in the handler AFTER the spend had already committed against its
+    own clock read, so across a UTC midnight falling between the two the
+    charge landed on day D and the refund was aimed at D+1: D stayed
+    permanently over-charged and D+1 was decremented for a run it never
+    took. That is exactly the defect this parameter's own docstring said had
+    been designed out, which is why it is named here rather than quietly
+    corrected.
+
+    `source_hash` is the same source the spend charged (F-4.10-V-01), so a
+    refunded day gives back that source's share of it too. The two move in
+    lockstep, never separately: see `refund_one_run`.
     """
 
     def _refund(charged: bool) -> None:
@@ -451,6 +532,7 @@ def _guest_refund_callback(
                 refund_session,
                 guest_uuid,
                 daily_day=None if charged else spend_day,
+                source_hash=None if charged else source_hash,
             )
 
     return _refund
@@ -471,6 +553,7 @@ def _guest_refund_callback(
 @app.post("/v1/query", response_model=CreateRunResponse, status_code=status.HTTP_202_ACCEPTED)
 async def post_v1_query(
     request: CreateRunRequest,
+    http_request: Request,
     caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
     session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI dependency injection
 ) -> CreateRunResponse:
@@ -537,18 +620,64 @@ async def post_v1_query(
             headers={"Retry-After": str(CONCURRENT_RUN_CAP_RETRY_AFTER_S)},
         )
 
+    # The refund needs the day the spend actually charged and the source it
+    # charged (F-4.10-V-04, F-4.10-V-01), so both are bound here and read
+    # after the spend rather than recomputed later.
+    guest_spend_day: date | None = None
+    guest_source_hash: str | None = None
+
     if caller.kind == "guest":
         guest_uuid = _guest_uuid_from_owner_id(caller.owner_id)
-        # design decision 8: BOTH bounds, in one call, because the per-guest
-        # allowance alone bounds a variable the caller controls the supply
-        # of. `POST /auth/guest` mints identities for free, and the phase's
+        # design decision 8 plus F-4.10-V-01: ALL FOUR bounds, in one call,
+        # because each of the first three is keyed on something that does not
+        # bound one caller. The per-guest ceilings are keyed on a guest
+        # identity, and `POST /auth/guest` mints identities for free (the
         # adversary round accepted 40 paid pipelines in 0.25 seconds by
-        # minting one guest per run (F-4.10-A-01). `daily_cap` is
-        # keyword-only with no default precisely so this call site cannot
-        # quietly lose the system-wide ceiling in a later refactor.
+        # minting one guest per run, F-4.10-A-01). The daily ceiling is keyed
+        # on the calendar day, so it holds the system's money and says
+        # nothing about who spent it: 20 identities from ONE source took all
+        # 200 of the day's runs in 1.84 seconds with the mint throttle live
+        # and refusing nothing. The source share is the bound that stops
+        # that, and it stops it however many identities the caller mints.
+        #
+        # Every one of the three is keyword-only with no default precisely so
+        # this call site cannot quietly lose a bound in a later refactor.
+        guest_source_hash = source_hash_for_request(http_request)
+        daily_cap = anon_daily_run_cap()
         spend = spend_one_anonymous_run(
-            session, guest_uuid, daily_cap=anon_daily_run_cap()
+            session,
+            guest_uuid,
+            daily_cap=daily_cap,
+            source_hash=guest_source_hash,
+            source_cap=anon_daily_source_share(daily_cap),
         )
+        guest_spend_day = spend.charged_day
+        if spend.state is SpendState.SOURCE_DAILY_CAP_REACHED:
+            # F-4.10-V-01. A 429 like the system-wide ceiling above, and for
+            # the same reason: this bound is genuinely transient, resets at
+            # the same UTC midnight, and signing in bypasses it entirely, so
+            # `Retry-After` is the real number of seconds to that reset.
+            #
+            # A DISTINCT reason and a DISTINCT sentence, because collapsing
+            # it into `anon_daily_cap_reached` would tell this caller the
+            # whole product is spent for everyone when it is not, and would
+            # hide from an operator reading refusal reasons the difference
+            # between "we are popular today" and "one address is hammering
+            # us". The message says what is actually true and what actually
+            # helps: signing in works right now, and it is this network's
+            # share rather than the system that is spent.
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={
+                    "reason": "anon_source_daily_cap_reached",
+                    "message": (
+                        "guest searches from this network have reached their "
+                        "share of today's limit; signing in or creating an "
+                        "account works immediately, or try again tomorrow"
+                    ),
+                },
+                headers={"Retry-After": str(_seconds_until_utc_midnight())},
+            )
         if spend.state is SpendState.DAILY_CAP_REACHED:
             # 429, not the 403 an exhausted personal allowance gets, and the
             # difference is not cosmetic. This ceiling is genuinely
@@ -683,9 +812,17 @@ async def post_v1_query(
     # build phase 4.6 owns; there is nothing to reconcile against today.
     on_guard_refused: Callable[[bool], None] | None = (
         _guest_refund_callback(
-            _guest_uuid_from_owner_id(caller.owner_id), datetime.now(UTC).date()
+            _guest_uuid_from_owner_id(caller.owner_id),
+            guest_spend_day,
+            guest_source_hash,
         )
-        if caller.kind == "guest"
+        # `guest_spend_day is not None` rather than `caller.kind == "guest"`,
+        # and the difference is F-4.10-V-04's fix rather than a style choice:
+        # the day the refund targets must be the day the SPEND charged, so
+        # the callback is built from the spend's own report and cannot exist
+        # without one. Every guest that reaches this line spent successfully
+        # (every other outcome raised above), so this is not a silent skip.
+        if guest_spend_day is not None
         else None
     )
 

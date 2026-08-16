@@ -137,12 +137,95 @@ def _read_int_env(name: str) -> int:
 
 # How many times the per-guest attempt ceiling the shared anonymous daily
 # cap must be, at minimum (F-4.10-R-11). Ten means no single anonymous
-# identity can take more than a tenth of the day, so it takes ten
-# determined callers rather than one to deny the product to everyone else,
-# and the mint throttle is what stands in front of that. Not a magic
-# number: it is the smallest multiple at which "one caller" and "the whole
-# day" stop being the same event.
+# IDENTITY can take more than a tenth of the day.
+#
+# F-4.10-V-01 CORRECTS what this comment used to say next, and the
+# correction matters because three consecutive fixes were built on the
+# sentence being removed. It read: "so it takes ten determined callers
+# rather than one to deny the product to everyone else, and the mint
+# throttle is what stands in front of that." Both halves were false. It
+# takes ten IDENTITIES, not ten callers, and one caller mints ten identities
+# for nothing; and the mint throttle stands in front of nothing at these
+# values, since it admits 60 mints per minute per source and the attack
+# needs 20. Measured: 20 identities from one source, zero mints refused, the
+# whole 200-run day gone in 1.84 seconds.
+#
+# What actually bounds one caller is `anon_daily_source_share` below, which
+# is keyed on the source rather than on anything the caller mints. This
+# constant keeps its own narrower job: it stops the shipped defaults from
+# drifting into a state where one identity alone is the whole day.
 _MIN_ANON_DAILY_CAP_MULTIPLE = 10
+
+# F-4.10-V-01, product-owner decision 2026-08-15: the share of one UTC day's
+# anonymous budget any single SOURCE may take.
+#
+# A tenth, expressed as a divisor of `ANON_DAILY_RUN_CAP` rather than as a
+# second free-floating constant, so the two cannot drift apart. At the
+# shipped cap of 200 that is 20 runs per source, which is four complete
+# visitors at the five-answer allowance, and it is the number the admit arm
+# of the premise gate is written against.
+#
+# Why a share of the day rather than a tighter mint throttle, which is the
+# obvious fix and is the one that is structurally unavailable: making 20
+# mints refusable requires `_MINT_THROTTLE_MAX_PER_WINDOW < 20`, and the
+# premise gate's own admit arm requires 25 consecutive mints from one shared
+# address to succeed. Many real users share one address behind office NAT, a
+# university network or conference wifi. A control that refuses those rooms
+# has destroyed the product to protect it, which is the failure this phase
+# built a two-armed gate to catch.
+_ANON_SOURCE_SHARE_DIVISOR = 10
+
+# The floor under that share. Without it a small configured cap divides to
+# zero and the bound refuses EVERY anonymous caller, which is the same
+# refuses-everybody failure the mint throttle's first version shipped
+# (F-4.10-04). Five is one whole visitor's answer allowance
+# (`data.guest_sessions.FREE_RUN_ALLOWANCE`), restated here as a literal
+# rather than imported, because `harness` importing from `data` would invert
+# this codebase's dependency direction for one integer. The two are pinned
+# together by a test rather than by an import
+# (`TestTheAnonymousSourceShareIsMateriallyBelowTheDay` in
+# `tests/.../harness/test_cost_control.py`), so a change to either that
+# breaks the relationship goes red.
+_MIN_ANON_SOURCE_SHARE = 5
+
+
+def anon_daily_source_share(daily_cap: int) -> int:
+    """Return how many of `daily_cap`'s runs one SOURCE may take in a day.
+
+    The third anonymous bound, and the one that answers the question the
+    other two do not. `anon_daily_run_cap` bounds the day, so it holds the
+    money but says nothing about who spent it. `ATTEMPT_ALLOWANCE` bounds an
+    identity, and `POST /auth/guest` mints identities for free. Between them
+    sat the measured attack: 20 identities from one apparent source, zero
+    mints refused, all 200 of the day's runs consumed in 1.84 seconds, every
+    other anonymous visitor refused until UTC midnight (F-4.10-V-01).
+
+    Derived from the cap rather than configured separately, so an operator
+    raising the day's budget raises each source's share with it and the two
+    can never drift into a state where the share IS the day.
+
+    A caller whose source cannot be determined is not bounded by this at
+    all; see `data.guest_sessions.spend_one_anonymous_run`, which allows
+    that case deliberately and lets the day's ceiling bound it, matching the
+    mint throttle's existing choice for the same input.
+
+    Args:
+        daily_cap: the system-wide ceiling for the current UTC day, from
+            `anon_daily_run_cap`.
+
+    Returns:
+        A positive integer, never zero: the floor is what stops a small
+        configured cap from producing a bound that refuses everybody.
+
+    Raises:
+        TypeError: If daily_cap is not an int (bool excluded).
+        ValueError: If daily_cap is not positive.
+    """
+    if isinstance(daily_cap, bool) or not isinstance(daily_cap, int):
+        raise TypeError("daily_cap must be an int")
+    if daily_cap < 1:
+        raise ValueError("daily_cap must be a positive integer")
+    return max(_MIN_ANON_SOURCE_SHARE, daily_cap // _ANON_SOURCE_SHARE_DIVISOR)
 
 
 def per_query_cost_cap_usd() -> float:
@@ -187,9 +270,22 @@ def anon_daily_run_cap() -> int:
     this shared ceiling in 1.68 seconds and every other anonymous visitor
     was refused for the rest of the day. The per-identity bound is
     `ATTEMPT_ALLOWANCE` in `data/guest_sessions.py`, which counts runs
-    STARTED and is never refunded. The two are complements, not
-    substitutes: this one bounds the system's money, that one bounds any
-    single caller's share of it.
+    STARTED and is never refunded.
+
+    AND THAT PAIR IS STILL NOT ENOUGH, which F-4.10-V-01 measured and which
+    this docstring's previous last sentence got wrong. It said the two were
+    "complements, not substitutes: this one bounds the system's money, that
+    one bounds any single caller's share of it." The second half was false.
+    `ATTEMPT_ALLOWANCE` bounds a single IDENTITY, and one caller mints
+    identities for nothing: 20 mints, none refused by the throttle, took all
+    200 of the day's runs in 1.84 seconds. A caller's share of the day is
+    bounded by `anon_daily_source_share` above, which is keyed on the
+    connection source, the one thing that attack did not vary.
+
+    So there are three bounds and each answers a different question: this
+    one, how much the system spends in a day; the source share, how much of
+    that day one caller may take; `ATTEMPT_ALLOWANCE`, how much one identity
+    may take. Removing any one of them restores a measured attack.
     """
     return _read_int_env("ANON_DAILY_RUN_CAP")
 

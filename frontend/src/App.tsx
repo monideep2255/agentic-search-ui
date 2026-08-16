@@ -581,7 +581,21 @@ export function App() {
              */
             footer={
               !signedIn && allowance?.kind === "guest" ? (
-                <GuestAllowance used={allowance.used} total={allowance.total} />
+                /*
+                 * F-4.10-V-03. `blocked_reason` was on the wire and honest
+                 * from the moment the server learned to send it, and
+                 * nothing read it, so the dots kept promising a search the
+                 * next request refused. Passed straight through rather than
+                 * re-derived here: the server owns which bound fires first,
+                 * and a second opinion computed in the client is how the
+                 * reporting path and the enforcement path start disagreeing
+                 * again (F-4.10-A-03).
+                 */
+                <GuestAllowance
+                  used={allowance.used}
+                  total={allowance.total}
+                  blockedReason={allowance.blocked_reason ?? null}
+                />
               ) : null
             }
           />

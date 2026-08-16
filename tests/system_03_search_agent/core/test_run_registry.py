@@ -21,7 +21,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from system_03_search_agent.contracts.events import DonePayload, Event, GuardPayload
+from system_03_search_agent.contracts.events import (
+    CostPayload,
+    DonePayload,
+    ErrorPayload,
+    Event,
+    GuardPayload,
+)
 from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core import run_registry as run_registry_module
 from system_03_search_agent.core.run_registry import RunEntry, RunNotFoundError, RunRegistry
@@ -393,3 +399,152 @@ class TestReassignOwnerOffTheEventLoop:
         assert all(
             entry.owner_id != "guest:g1" for entry in list(registry._runs.values())
         ), "every seeded run should have been reassigned by the first sweep"
+
+
+class TestTheZeroOutputRefundFiresOnTheRightEndStates:
+    """F-4.10-V-02, at the one place the decision actually lives.
+
+    `_fire_guard_refusal_callback` now fires for a run that ended on a FATAL
+    error as well as one that ended on a guardrail refusal, because a visitor
+    who got nothing got nothing either way. What that must NOT do is fire for
+    a run that emitted a non-fatal error and then streamed a real answer,
+    which several perfectly good runs do: `write_node` reports a truncated
+    tool result and an uncited `ok` result as `fatal=False` and then writes
+    the narrative.
+
+    Driven through the function directly rather than through the app, because
+    a non-fatal error followed by a real answer is not a shape the stubbed
+    end-to-end harness produces, and a gate that could only be exercised
+    end to end would leave `fatal is True` untested. That gap was measured: a
+    mutation removing the `fatal` check left all 36 clauses of the phase
+    premise gate green.
+
+    COVERAGE. Exercised: the fatal arm fires, the non-fatal arm does not, and
+    the `charged` argument is carried correctly on the fatal arm. NOT
+    exercised here: a cancelled run, whose exclusion is structural rather
+    than conditional (`_drain_into_entry` never routes its cancellation event
+    through this function, and a cancelled run reaches no `done` event), and
+    the at-most-once disarm, which `TestRunEntry` above already owns.
+    """
+
+    @staticmethod
+    def _event(event_type: str, payload: object) -> Event:
+        """A real, schema-valid Event.
+
+        Payloads are built from the contract models rather than from bare
+        dicts, so a clause cannot pass against a shape the wire could never
+        carry, and so `fatal` is the genuine field the production path reads
+        rather than a key this test invented.
+        """
+        return Event(
+            type=event_type,
+            version="v1",
+            trace_id="trace-1",
+            seq=0,
+            ts=datetime.now(UTC),
+            payload=payload.model_dump(),  # type: ignore[attr-defined]
+        )
+
+    @staticmethod
+    def _error(*, fatal: bool, scope: str, source: str) -> ErrorPayload:
+        return ErrorPayload(
+            fatal=fatal,
+            scope=scope,  # type: ignore[arg-type]
+            source=source,
+            error_class="unexpected",
+            message="something went wrong",
+            retry_after_s=0,
+        )
+
+    @staticmethod
+    def _cost() -> CostPayload:
+        return CostPayload(
+            query_cost_usd=0.002, query_cap_usd=0.1, cap_fraction=0.02, model_tier="guard"
+        )
+
+    @staticmethod
+    def _done() -> DonePayload:
+        return DonePayload(
+            total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=1, trust_outcome="refuse"
+        )
+
+    def _drive(self, events: list[Event]) -> list[bool]:
+        fired: list[bool] = []
+        entry = RunEntry(
+            run_id="run-1",
+            user_id=None,
+            owner_id="guest:11111111-1111-1111-1111-111111111111",
+            queue=asyncio.Queue(),
+            task=SimpleNamespace(),  # type: ignore[arg-type]
+            on_guard_refused=fired.append,
+        )
+        for event in events:
+            run_registry_module._fire_guard_refusal_callback(entry, event)
+        return fired
+
+    def test_a_fatal_error_then_done_refunds(self) -> None:
+        fired = self._drive([
+            self._event("error", self._error(fatal=True, scope="step", source="guardrail")),
+            self._event("done", self._done()),
+        ])
+        assert fired == [False], (
+            "a run that died before producing an answer did not refund the "
+            "visitor; measured on the running app, that cost them one of five "
+            "free searches for a failure that was not theirs (F-4.10-V-02)"
+        )
+
+    def test_a_fatal_error_after_a_model_call_leaves_the_shared_day_charged(self) -> None:
+        fired = self._drive([
+            self._event("cost", self._cost()),
+            self._event("error", self._error(fatal=True, scope="step", source="write")),
+            self._event("done", self._done()),
+        ])
+        assert fired == [True], (
+            "the refund was told no model call had been made, so the shared "
+            "daily budget would be given back for money that was actually "
+            "spent, which is the free-compute path the asymmetry exists to "
+            "close"
+        )
+
+    def test_a_non_fatal_error_on_an_otherwise_good_run_refunds_nothing(self) -> None:
+        """The arm the `fatal is True` check exists for.
+
+        `write_node` emits `fatal=False` errors on runs that go on to stream
+        a real answer (a truncated tool result, an uncited `ok` result).
+        Refunding those gives back a search the visitor actually received,
+        which is the free-answer class F-4.10-R-01 was filed for, reached
+        from the opposite direction.
+        """
+        fired = self._drive([
+            self._event(
+                "error", self._error(fatal=False, scope="tool", source="cypher_query")
+            ),
+            self._event("done", self._done()),
+        ])
+        assert fired == [], (
+            "a run that emitted a non-fatal note and then answered the "
+            "question was refunded; only a FATAL end state means the visitor "
+            "got nothing"
+        )
+
+    def test_a_guardrail_refusal_still_fires_it(self) -> None:
+        """The original arm, re-proved rather than assumed to have survived
+        having a second trigger added beside it."""
+        fired = self._drive([
+            self._event(
+                "guard",
+                GuardPayload(passed=False, category="injection", reason="refused"),
+            ),
+            self._event("done", self._done()),
+        ])
+        assert fired == [False]
+
+    def test_a_clean_run_fires_nothing(self) -> None:
+        """The arm that catches a refund firing unconditionally, which would
+        hand every visitor unlimited free searches."""
+        fired = self._drive([
+            self._event("guard", GuardPayload(passed=True, category="ok", reason=None)),
+            self._event("cost", self._cost()),
+            self._event("done", self._done()),
+        ])
+        assert fired == []

@@ -577,7 +577,9 @@ def test_a_refund_with_a_daily_day_gives_back_the_shared_budget(db_session) -> N
     guest = create_guest_session(db_session)
     today = datetime.now(UTC).date()
     before = _daily_used(db_session, today)
-    spend_one_anonymous_run(db_session, guest.id, daily_cap=10_000)
+    spend_one_anonymous_run(
+        db_session, guest.id, daily_cap=10_000, source_hash=None, source_cap=1_000
+    )
     assert _daily_used(db_session, today) == before + 1
 
     refund_one_run(db_session, guest.id, daily_day=today)
@@ -598,7 +600,9 @@ def test_a_refund_without_a_daily_day_leaves_the_shared_budget_charged(db_sessio
     guest = create_guest_session(db_session)
     today = datetime.now(UTC).date()
     before = _daily_used(db_session, today)
-    spend_one_anonymous_run(db_session, guest.id, daily_cap=10_000)
+    spend_one_anonymous_run(
+        db_session, guest.id, daily_cap=10_000, source_hash=None, source_cap=1_000
+    )
 
     refund_one_run(db_session, guest.id)
     assert _daily_used(db_session, today) == before + 1, (
@@ -610,7 +614,9 @@ def test_a_refund_without_a_daily_day_leaves_the_shared_budget_charged(db_sessio
 def test_a_daily_refund_can_never_drive_the_shared_counter_negative(db_session) -> None:
     today = datetime.now(UTC).date()
     guest = create_guest_session(db_session)
-    spend_one_anonymous_run(db_session, guest.id, daily_cap=10_000)
+    spend_one_anonymous_run(
+        db_session, guest.id, daily_cap=10_000, source_hash=None, source_cap=1_000
+    )
     for _ in range(50):
         refund_one_run(db_session, guest.id, daily_day=today)
     assert _daily_used(db_session, today) == 0
@@ -654,13 +660,17 @@ def test_a_daily_ceiling_refusal_leaves_the_guest_uncharged(db_session) -> None:
     # count is what makes this clause independent of that ordering.
     burner = create_guest_session(db_session)
     assert (
-        spend_one_anonymous_run(db_session, burner.id, daily_cap=10_000).state
+        spend_one_anonymous_run(
+            db_session, burner.id, daily_cap=10_000, source_hash=None, source_cap=1_000
+        ).state
         == SpendState.SPENT
     )
     at_ceiling = _daily_used(db_session, today)
 
     victim = create_guest_session(db_session)
-    result = spend_one_anonymous_run(db_session, victim.id, daily_cap=at_ceiling)
+    result = spend_one_anonymous_run(
+        db_session, victim.id, daily_cap=at_ceiling, source_hash=None, source_cap=1_000
+    )
     assert result.state == SpendState.DAILY_CAP_REACHED
 
     reloaded = db_session.get(GuestSession, victim.id)
@@ -700,7 +710,9 @@ def test_a_raising_daily_statement_leaves_the_guest_uncharged(
     )
 
     with pytest.raises(sa.exc.DBAPIError):
-        spend_one_anonymous_run(db_session, guest.id, daily_cap=50)
+        spend_one_anonymous_run(
+            db_session, guest.id, daily_cap=50, source_hash=_SOURCE_A, source_cap=50
+        )
     db_session.rollback()
 
     reloaded = db_session.get(GuestSession, guest.id)
@@ -717,9 +729,363 @@ def test_a_raising_daily_statement_leaves_the_guest_uncharged(
 def test_spend_one_anonymous_run_rejects_a_non_positive_daily_cap(db_session) -> None:
     guest = create_guest_session(db_session)
     with pytest.raises(ValueError):
-        spend_one_anonymous_run(db_session, guest.id, daily_cap=0)
+        spend_one_anonymous_run(
+            db_session, guest.id, daily_cap=0, source_hash=None, source_cap=10
+        )
 
 
 def test_spend_one_anonymous_run_rejects_a_null_session(db_session) -> None:
     with pytest.raises(TypeError):
-        spend_one_anonymous_run(None, str(uuid.uuid4()), daily_cap=5)  # type: ignore[arg-type]
+        spend_one_anonymous_run(
+            None,  # type: ignore[arg-type]
+            str(uuid.uuid4()),
+            daily_cap=5,
+            source_hash=None,
+            source_cap=5,
+        )
+
+
+# ---------------------------------------------------------------------------
+# The per-SOURCE share of the day (F-4.10-V-01), at the data layer. The
+# end-to-end attack is `TestOneSourceCannotTakeTheWholeAnonymousDay` in
+# `tests/.../adapters/web_sse/test_phase_4_10_premise.py`; what is pinned here
+# is the counter's own arithmetic, its refund symmetry with the day, and that
+# it stays inside the one transaction the other two counters already share.
+# ---------------------------------------------------------------------------
+
+
+def _source_used(session, day, source_hash) -> int:
+    """One source's count for `day`, with a missing row read as zero.
+
+    A delta measure for the same reason `_daily_used` above is one: the
+    scratch database is module-scoped and the table accumulates across this
+    file, so an absolute assertion would pass or fail on execution order.
+    Each clause below uses its own source hash, which makes that mostly moot
+    and is stated rather than relied on silently.
+    """
+    return int(
+        session.execute(
+            sa.text(
+                "SELECT runs_used FROM guest_source_daily_usage"
+                " WHERE day = :day AND source_hash = :source_hash"
+            ),
+            {"day": day, "source_hash": source_hash},
+        ).scalar_one_or_none()
+        or 0
+    )
+
+
+# Distinct 64-character hashes, the shape `auth.router._hash_ip` actually
+# produces, rather than short strings: the column is sized to a SHA-256 hex
+# digest and a clause that only ever passes "src-a" would not notice a
+# length regression.
+_SOURCE_A = "a" * 64
+_SOURCE_B = "b" * 64
+
+
+def test_one_source_cannot_spend_past_its_share_of_the_day(db_session) -> None:
+    """The bound itself, with the day deliberately left wide open.
+
+    The daily cap is 10,000 here so that nothing but the source counter can
+    refuse. With the two caps close together this clause would pass for the
+    wrong reason, reporting on the ceiling it exists to protect, which is the
+    trap F-4.10-R-11 recorded one bound down.
+    """
+    today = datetime.now(UTC).date()
+    source = f"{uuid.uuid4().hex}{uuid.uuid4().hex}"
+    accepted, refusals = 0, []
+    for _ in range(8):
+        guest = create_guest_session(db_session)
+        result = spend_one_anonymous_run(
+            db_session, guest.id, daily_cap=10_000, source_hash=source, source_cap=3
+        )
+        if result.state is SpendState.SPENT:
+            accepted += 1
+        else:
+            refusals.append(result.state)
+
+    assert accepted == 3, (
+        f"{accepted} runs were accepted against a source share of 3, from eight "
+        f"freshly minted identities; a bound keyed on the identity is a bound "
+        f"keyed on something the caller mints for free (F-4.10-V-01)"
+    )
+    assert refusals == [SpendState.SOURCE_DAILY_CAP_REACHED] * 5
+    assert _source_used(db_session, today, source) == 3
+
+
+def test_a_source_refusal_leaves_the_guest_and_the_day_uncharged(db_session) -> None:
+    """The compensating half, the same one the daily ceiling already has.
+
+    The per-guest spend and the day's spend both commit BEFORE the source
+    statement is consulted, so a source refusal must reverse both or a
+    visitor behind a busy address quietly loses searches they were never
+    allowed to use, and the shared day counts runs that never happened.
+    """
+    today = datetime.now(UTC).date()
+    source = f"{uuid.uuid4().hex}{uuid.uuid4().hex}"
+    burner = create_guest_session(db_session)
+    assert (
+        spend_one_anonymous_run(
+            db_session, burner.id, daily_cap=10_000, source_hash=source, source_cap=1
+        ).state
+        is SpendState.SPENT
+    )
+    day_before = _daily_used(db_session, today)
+
+    victim = create_guest_session(db_session)
+    result = spend_one_anonymous_run(
+        db_session, victim.id, daily_cap=10_000, source_hash=source, source_cap=1
+    )
+    assert result.state is SpendState.SOURCE_DAILY_CAP_REACHED
+
+    reloaded = db_session.get(GuestSession, victim.id)
+    db_session.refresh(reloaded)
+    assert reloaded.runs_used == 0
+    assert reloaded.attempts_used == 0, (
+        "a run the source share refused must not cost the visitor an attempt "
+        "either; they were never allowed to start it"
+    )
+    assert _daily_used(db_session, today) == day_before, (
+        "the shared day was left advanced by a run nobody was allowed to "
+        "start, so a caller whose source is spent could still burn down the "
+        "day's budget for everyone else just by retrying"
+    )
+    assert _source_used(db_session, today, source) == 1
+
+
+def test_two_sources_have_independent_shares(db_session) -> None:
+    """The admit arm at the data layer: one address exhausting its share
+    must not refuse a different address. A bound that leaks across sources
+    is a global bound wearing a per-source name."""
+    today = datetime.now(UTC).date()
+    source_a = f"{uuid.uuid4().hex}{uuid.uuid4().hex}"
+    source_b = f"{uuid.uuid4().hex}{uuid.uuid4().hex}"
+    for _ in range(2):
+        guest = create_guest_session(db_session)
+        spend_one_anonymous_run(
+            db_session, guest.id, daily_cap=10_000, source_hash=source_a, source_cap=2
+        )
+    spent_out = create_guest_session(db_session)
+    assert (
+        spend_one_anonymous_run(
+            db_session, spent_out.id, daily_cap=10_000, source_hash=source_a, source_cap=2
+        ).state
+        is SpendState.SOURCE_DAILY_CAP_REACHED
+    )
+
+    neighbour = create_guest_session(db_session)
+    assert (
+        spend_one_anonymous_run(
+            db_session, neighbour.id, daily_cap=10_000, source_hash=source_b, source_cap=2
+        ).state
+        is SpendState.SPENT
+    )
+    assert _source_used(db_session, today, source_b) == 1
+
+
+def test_an_unknown_source_is_allowed_and_bounded_only_by_the_day(db_session) -> None:
+    """`source_hash=None` means the connection address could not be
+    determined. Allowed rather than refused, matching `_MintThrottle.allow`'s
+    existing choice for the same input, because refusing every request whose
+    source is unknown turns a missing value into an outage while the day's
+    ceiling still holds the money.
+
+    This is the residual gap, asserted so it is on the record rather than
+    discovered: a deployment that strips `request.client` loses this bound.
+    """
+    today = datetime.now(UTC).date()
+    before = _daily_used(db_session, today)
+    guest = create_guest_session(db_session)
+    result = spend_one_anonymous_run(
+        db_session, guest.id, daily_cap=10_000, source_hash=None, source_cap=1
+    )
+    assert result.state is SpendState.SPENT, (
+        "a caller whose source cannot be determined was refused; the source "
+        "share is defense keyed on the source, and the day is what bounds the "
+        "money when there is no source to key on"
+    )
+    assert _daily_used(db_session, today) == before + 1
+
+
+def test_the_spend_reports_the_day_it_actually_charged(db_session) -> None:
+    """F-4.10-V-04. The refund must land on the day the spend charged, and
+    the only way a caller can know that day is for the spend to report it.
+    Recomputing `datetime.now(UTC).date()` at refusal time satisfies the
+    signature and not the argument: across a UTC midnight between the two,
+    the charge lands on D and the refund on D+1."""
+    guest = create_guest_session(db_session)
+    result = spend_one_anonymous_run(
+        db_session, guest.id, daily_cap=10_000, source_hash=_SOURCE_A, source_cap=1_000
+    )
+    assert result.state is SpendState.SPENT
+    assert result.charged_day is not None, (
+        "the spend did not report the day it charged, so every caller has to "
+        "read the clock a second time, which is F-4.10-V-04 exactly"
+    )
+    assert _daily_used(db_session, result.charged_day) > 0, (
+        "the reported day is not the day the shared counter actually moved"
+    )
+
+
+def test_a_refusal_reports_no_charged_day(db_session) -> None:
+    """The other direction: nothing was charged, so there is no day to
+    refund against, and a caller that got one would decrement a counter this
+    run never advanced."""
+    today = datetime.now(UTC).date()
+    burner = create_guest_session(db_session)
+    spend_one_anonymous_run(
+        db_session, burner.id, daily_cap=10_000, source_hash=None, source_cap=1_000
+    )
+    at_ceiling = _daily_used(db_session, today)
+    victim = create_guest_session(db_session)
+    result = spend_one_anonymous_run(
+        db_session, victim.id, daily_cap=at_ceiling, source_hash=None, source_cap=1_000
+    )
+    assert result.state is SpendState.DAILY_CAP_REACHED
+    assert result.charged_day is None
+
+
+def test_a_refund_gives_back_the_source_share_with_the_day(db_session) -> None:
+    """The two shared counters move in LOCKSTEP.
+
+    A day given back while the source's share stays charged makes the share
+    bound tighter than the thing it subdivides: an office visitor's clumsy,
+    free-refused question would permanently cost that office part of its
+    budget for work the system never did.
+    """
+    today = datetime.now(UTC).date()
+    source = f"{uuid.uuid4().hex}{uuid.uuid4().hex}"
+    guest = create_guest_session(db_session)
+    spend_one_anonymous_run(
+        db_session, guest.id, daily_cap=10_000, source_hash=source, source_cap=100
+    )
+    assert _source_used(db_session, today, source) == 1
+
+    refund_one_run(db_session, guest.id, daily_day=today, source_hash=source)
+    assert _source_used(db_session, today, source) == 0, (
+        "the day was refunded and this source's share of it was not, so a free "
+        "refusal permanently costs a shared address part of its budget for "
+        "work that never happened (F-4.10-V-01)"
+    )
+
+
+def test_a_paid_refusal_leaves_both_shared_counters_charged(db_session) -> None:
+    """The other half, and it is not decoration: a refusal that came after a
+    real Guard-tier call spent money, and refunding either shared counter
+    there is the free-compute path F-4.10-A-04's decision was right to
+    avoid."""
+    today = datetime.now(UTC).date()
+    source = f"{uuid.uuid4().hex}{uuid.uuid4().hex}"
+    day_before = _daily_used(db_session, today)
+    guest = create_guest_session(db_session)
+    spend_one_anonymous_run(
+        db_session, guest.id, daily_cap=10_000, source_hash=source, source_cap=100
+    )
+
+    refund_one_run(db_session, guest.id)
+    assert _daily_used(db_session, today) == day_before + 1
+    assert _source_used(db_session, today, source) == 1
+
+
+def test_a_source_refund_can_never_drive_the_counter_negative(db_session) -> None:
+    today = datetime.now(UTC).date()
+    source = f"{uuid.uuid4().hex}{uuid.uuid4().hex}"
+    guest = create_guest_session(db_session)
+    spend_one_anonymous_run(
+        db_session, guest.id, daily_cap=10_000, source_hash=source, source_cap=100
+    )
+    for _ in range(50):
+        refund_one_run(db_session, guest.id, daily_day=today, source_hash=source)
+    assert _source_used(db_session, today, source) == 0
+
+
+def test_a_raising_source_statement_leaves_every_counter_uncharged(
+    db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Design decision 8's constraint 1, extended to the third counter.
+
+    F-4.10-R-03 measured a per-guest spend committing while the daily spend
+    failed. Adding a counter after that one is the obvious way to reintroduce
+    it, so the property is re-proved with the new statement rather than
+    assumed to have survived: a raise here must leave the guest, the day and
+    the source exactly where they were.
+    """
+    today = datetime.now(UTC).date()
+    source = f"{uuid.uuid4().hex}{uuid.uuid4().hex}"
+    guest = create_guest_session(db_session)
+    day_before = _daily_used(db_session, today)
+
+    monkeypatch.setattr(
+        guest_sessions_module,
+        "_SOURCE_DAILY_SPEND_STATEMENT",
+        sa.text(
+            "INSERT INTO guest_source_daily_usage (day, source_hash, runs_used)"
+            " VALUES (:day, :source_hash, :source_cap / 0)"
+        ),
+    )
+
+    with pytest.raises(sa.exc.DBAPIError):
+        spend_one_anonymous_run(
+            db_session, guest.id, daily_cap=10_000, source_hash=source, source_cap=50
+        )
+    db_session.rollback()
+
+    reloaded = db_session.get(GuestSession, guest.id)
+    db_session.refresh(reloaded)
+    assert reloaded.runs_used == 0, (
+        "the per-guest spend committed while the source spend failed, so the "
+        "visitor lost a free search for a run they never got; that is what "
+        "constraint 1 forbids (F-4.10-R-03, re-proved with the third counter)"
+    )
+    assert reloaded.attempts_used == 0
+    assert _daily_used(db_session, today) == day_before
+    assert _source_used(db_session, today, source) == 0
+
+
+def test_spend_one_anonymous_run_rejects_a_non_positive_source_cap(db_session) -> None:
+    guest = create_guest_session(db_session)
+    with pytest.raises(ValueError):
+        spend_one_anonymous_run(
+            db_session, guest.id, daily_cap=10, source_hash=_SOURCE_A, source_cap=0
+        )
+
+
+def test_spend_one_anonymous_run_rejects_a_non_string_source_hash(db_session) -> None:
+    guest = create_guest_session(db_session)
+    with pytest.raises(TypeError):
+        spend_one_anonymous_run(
+            db_session,
+            guest.id,
+            daily_cap=10,
+            source_hash=12345,  # type: ignore[arg-type]
+            source_cap=10,
+        )
+
+
+def test_refund_one_run_rejects_a_non_string_source_hash(db_session) -> None:
+    guest = create_guest_session(db_session)
+    with pytest.raises(TypeError):
+        refund_one_run(
+            db_session,
+            guest.id,
+            daily_day=datetime.now(UTC).date(),
+            source_hash=12345,  # type: ignore[arg-type]
+        )
+
+
+def test_a_source_hash_without_a_daily_day_refunds_nothing_shared(db_session) -> None:
+    """`source_hash` alone is accepted and does nothing, which is stated
+    rather than left implicit: there is no state in which refunding one
+    source's share while leaving the day charged is correct, since the share
+    is a share OF the day."""
+    today = datetime.now(UTC).date()
+    source = f"{uuid.uuid4().hex}{uuid.uuid4().hex}"
+    guest = create_guest_session(db_session)
+    spend_one_anonymous_run(
+        db_session, guest.id, daily_cap=10_000, source_hash=source, source_cap=100
+    )
+    day_before = _daily_used(db_session, today)
+
+    refund_one_run(db_session, guest.id, source_hash=source)
+    assert _daily_used(db_session, today) == day_before
+    assert _source_used(db_session, today, source) == 1

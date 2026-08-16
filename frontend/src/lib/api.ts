@@ -205,15 +205,26 @@ export interface AllowanceResponse {
    * guest has started as many runs as a guest may start, so the next query
    * is refused 403 even though refunded answers left `used` below `total`.
    *
-   * NOT YET CONSUMED BY THE UI. Carried as F-4.10-05: until the dots read
-   * it, a visitor can be shown "5 searches left" while the next query is
-   * refused, which is the same reporting-versus-enforcement mismatch
-   * F-4.10-A-03 was filed for one level down. The backend is honest; the
-   * client has not been taught to ask. The REFUSAL itself is handled
-   * either way: `App.tsx` walls on both 403 reasons, with its own sentence
-   * for each.
+   * `anon_source_daily_cap_reached` (F-4.10-V-01) is the third: this
+   * network has taken its share of today's anonymous budget. Kept distinct
+   * from `anon_daily_cap_reached` because the two say different true
+   * things, and rendering "the whole product is busy" for "your network has
+   * had its share" would be a confident wrong answer in the UI.
+   *
+   * NOW CONSUMED BY THE UI (F-4.10-V-03 closes F-4.10-05's client half).
+   * `App.tsx` passes it to `GuestAllowance`, which stops rendering "N
+   * searches left" the moment any value is present. It had to: unlike the
+   * daily ceiling, which clears at UTC midnight, `guest_attempt_limit_
+   * reached` never clears for that identity, so an unread field left the
+   * dots promising a search for the remaining life of a 7-day token. The
+   * REFUSAL itself was already handled either way: `App.tsx` walls on both
+   * 403 reasons, with its own sentence for each.
    */
-  blocked_reason?: "anon_daily_cap_reached" | "guest_attempt_limit_reached" | null;
+  blocked_reason?:
+    | "anon_daily_cap_reached"
+    | "anon_source_daily_cap_reached"
+    | "guest_attempt_limit_reached"
+    | null;
 }
 
 /** `POST /auth/guest`'s response shape. */

@@ -87,6 +87,16 @@ Cost of a refusal, `TestARefusedRunDoesNotCostTheVisitorASearch`
   the question no clause in this file asked before F-4.10-R-01, and its
   absence is why two review rounds read the same three files without
   seeing it.
+- One SOURCE cannot exhaust it either, however many identities it mints,
+  and an ordinary shared address still serves four complete visitors
+  (F-4.10-V-01, `TestOneSourceCannotTakeTheWholeAnonymousDay`). That is the
+  question no clause asked after F-4.10-R-01 either, because the coverage
+  statement that named it deferred it to a clause that does not answer it.
+- A run that ends having produced no answer at all, a failure rather than a
+  refusal, costs the visitor no answer and still costs them an attempt
+  (F-4.10-V-02, `TestARunThatProducedNoAnswerDoesNotCostTheVisitorASearch`).
+  A run the visitor STOPS is deliberately excluded, because every token it
+  emitted was already streamed to them.
 - None of that internal accounting reaches the guest. No `cost` event, no
   un-redacted `done.total_cost_usd`, and no `charged` flag anywhere on
   the wire (Sections 19.4 and 19.5).
@@ -135,15 +145,24 @@ build phase 2.1's gate had a blind spot identical to the code it graded:
   prevent.
 
   Now covered, in `TestAnonymousSpendIsBounded`,
-  `TestMintThrottleHasBothArms` and
-  `TestOneGuestCannotTakeTheAnonymousProductOffline`: the system-wide daily
+  `TestMintThrottleHasBothArms`,
+  `TestOneGuestCannotTakeTheAnonymousProductOffline` and
+  `TestOneSourceCannotTakeTheWholeAnonymousDay`: the system-wide daily
   ceiling on anonymous runs, its distinct 429 and honest `Retry-After`, that
   a refused daily run does not charge the guest who tried it, that
   `GET /v1/allowance` never promises a search that ceiling would refuse,
   that signing in bypasses it, that the per-source mint throttle refuses a
-  burst without refusing an ordinary shared address, and, from one review
-  round later, that a SINGLE identity cannot exhaust that shared ceiling
-  either.
+  burst without refusing an ordinary shared address, that a SINGLE identity
+  cannot exhaust that shared ceiling, and, from one review round later
+  again, that a single SOURCE cannot either, however many identities it
+  mints.
+
+  What is still NOT covered, stated as a hole rather than as a decision: a
+  caller with genuinely many source ADDRESSES. The per-source share is keyed
+  on the connection address, so a range or a botnet buys one share per
+  address and is bounded by the day's ceiling alone. Closing that needs
+  either the device fingerprinting this phase declines on purpose, or a
+  reputation signal the system does not have. The day still holds the money.
 
 - The daily ceiling ACROSS a UTC midnight boundary, and across more than one
   process. The first would mean faking a clock, which tests the clock rather
@@ -303,8 +322,42 @@ def _reset_mint_throttle() -> None:
     auth_router._mint_throttle._hits.clear()
 
 
-def _client() -> AsyncClient:
-    return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+def _client(source_host: str | None = None) -> AsyncClient:
+    """A client for the real app, optionally from a named CONNECTION source.
+
+    `ASGITransport` puts `client` straight into the ASGI scope, which is
+    what `request.client.host` reads and therefore what both source-keyed
+    controls key on (the mint throttle and, from F-4.10-V-01, the per-source
+    share of the day). Its default is one fixed address, so without this
+    parameter every request in this file looks like one source, which is
+    correct for most clauses and is exactly wrong for the two that have to
+    tell one source from another.
+
+    Deliberately NOT a header. `source_hash_for_request` reads the
+    connection and never `X-Forwarded-For`, so a test that simulated a
+    second source with a header would be testing something the production
+    path does not read.
+    """
+    transport = (
+        ASGITransport(app=app)
+        if source_host is None
+        else ASGITransport(app=app, client=(source_host, 123))
+    )
+    return AsyncClient(transport=transport, base_url="http://test")
+
+
+def _unique_source() -> str:
+    """A source address no other clause in this file has used.
+
+    `guest_source_daily_usage` is keyed on (day, source) and this suite runs
+    against a real, shared database that accumulates across a day and across
+    repeated runs. A clause that reused a fixed address would pass or fail
+    depending on what ran before it, on which calendar day, and how many
+    times the suite had been run that day, which is the shape of green that
+    says nothing. Isolating by SOURCE rather than by deleting rows is what
+    lets these clauses leave the real, durable counter alone.
+    """
+    return f"203.0.113.{uuid.uuid4().hex}"
 
 
 def _unique_email() -> str:
@@ -416,7 +469,16 @@ def _token_of(headers: dict[str, str]) -> str:
 
 
 def _reset_todays_anonymous_usage() -> None:
-    """Clear the current UTC day's `guest_daily_usage` row.
+    """Clear the current UTC day's shared anonymous counters: the
+    `guest_daily_usage` row AND every `guest_source_daily_usage` row.
+
+    BOTH tables, since F-4.10-V-01. Clearing only the first leaves this
+    file's default source carrying every run any earlier clause started, so
+    a clause that sets a small `ANON_DAILY_RUN_CAP` (which most of them do,
+    to reach a boundary in a few requests) finds the derived source share
+    already spent and is refused 429 on its first request. That was measured
+    when the source bound landed: nine clauses went red for a reason none of
+    them was about.
 
     The system-wide ceiling (design decision 8) is deliberately global and
     durable, which is exactly what makes it a real bound and also what makes
@@ -433,6 +495,10 @@ def _reset_todays_anonymous_usage() -> None:
         with engine.begin() as connection:
             connection.execute(
                 sa.text("DELETE FROM guest_daily_usage WHERE day = :day"),
+                {"day": datetime.now(UTC).date()},
+            )
+            connection.execute(
+                sa.text("DELETE FROM guest_source_daily_usage WHERE day = :day"),
                 {"day": datetime.now(UTC).date()},
             )
     finally:
@@ -1547,11 +1613,25 @@ class TestOneGuestCannotTakeTheAnonymousProductOffline:
     product afterwards; and that none of this new internal accounting
     reaches the guest's own event stream.
 
-    NOT exercised here: the attack from MANY minted identities, which is
-    `TestAnonymousSpendIsBounded` above and is bounded by the daily ceiling
-    plus the mint throttle rather than by the attempt counter; the attempt
-    ceiling across a UTC midnight, which does not reset and needs no clock;
-    and multi-process counting, which is this file's standing non-coverage.
+    NOT exercised here: the attempt ceiling across a UTC midnight, which
+    does not reset and needs no clock; and multi-process counting, which is
+    this file's standing non-coverage.
+
+    F-4.10-V-01 REWROTE the rest of that paragraph, and the rewrite is the
+    finding rather than an edit. It used to read: "NOT exercised here: the
+    attack from MANY minted identities, which is `TestAnonymousSpendIsBounded`
+    above and is bounded by the daily ceiling plus the mint throttle rather
+    than by the attempt counter." Both halves of that deferral were wrong.
+    `TestAnonymousSpendIsBounded` proves the daily ceiling exists and refuses
+    past it; it never asks whether ONE caller can reach it. And the mint
+    throttle bounds nothing here, since it admits 60 mints a minute per
+    source and the attack needs 20. Measured with both live: 20 identities
+    from one source, zero mints refused, the whole 200-run day gone in 1.84
+    seconds. The deferral WAS the hole, and it is the third consecutive round
+    in which a coverage statement named the very omission that hid the
+    critical. That case is now covered directly, by
+    `TestOneSourceCannotTakeTheWholeAnonymousDay` below, on a bound keyed on
+    the source rather than on anything the caller mints.
     """
 
     @pytest.mark.asyncio
@@ -1749,3 +1829,370 @@ class TestOneGuestCannotTakeTheAnonymousProductOffline:
                     "un-redacted; `_redact_done_event_for_end_user` forces it "
                     "to 0.0 for every non-operator caller (F-2.0-05)"
                 )
+
+
+class TestOneSourceCannotTakeTheWholeAnonymousDay:
+    """F-4.10-V-01, product-owner decision 2026-08-15.
+
+    THE MEASURED ATTACK, reproduced here so it can never come back. Twenty
+    guest identities minted from ONE apparent source, each sending ten
+    questions the guardrail refuses only AFTER a real Guard-tier call: 200
+    paid pipelines in 1.84 seconds, the whole 200-run day gone, and every
+    other anonymous visitor refused 429 until UTC midnight. The mint throttle
+    was live throughout and refused nothing, because it admits 60 mints per
+    minute per source and the attack needs 20.
+
+    WHY THE THREE PREVIOUS FIXES DID NOT STOP IT, since each was measured
+    and each failed the same way. Round one bounded runs per PRINCIPAL, and
+    minting a principal is free (40 mints, 157 pipelines per second). Round
+    two added the system-wide daily ceiling, which held the MONEY and left
+    no per-identity bound behind it. Round three added the ten-attempt
+    ceiling, which bounded an IDENTITY and multiplied the attacker's mint
+    count by twenty while leaving the wall-clock time and the outcome
+    unchanged. Every bound was keyed on something the caller can mint more
+    of.
+
+    WHY THE OBVIOUS FIX IS UNAVAILABLE, and this is the constraint that
+    forced a new counter rather than a smaller number. Making 20 mints
+    refusable requires `_MINT_THROTTLE_MAX_PER_WINDOW < 20`, and
+    `TestMintThrottleHasBothArms::test_an_ordinary_shared_address_is_not_
+    refused` above requires 25 consecutive mints from one shared address to
+    succeed. That arm is not negotiable: many real users share one address
+    behind office NAT, a university network or conference wifi, and those are
+    the rooms an anonymous demo actually gets shown in. So the fix stops
+    policing the RATE of minting and bounds the SHARE of the day one source
+    may take, whatever number of identities it mints.
+
+    WHY THE OLD GATE DID NOT SEE IT. `TestOneGuestCannotTakeTheAnonymousPro-
+    ductOffline`'s coverage statement declared the omission out loud ("NOT
+    exercised here: the attack from MANY minted identities") and deferred it
+    to `TestAnonymousSpendIsBounded`, which proves the daily ceiling exists
+    and refuses past it and never asks whether one source can reach it. The
+    declaration was honest and pointed at a clause that does not answer the
+    question. That is the third consecutive round in which a coverage
+    statement named the very omission that hid the critical, which is why
+    this class's own statement below names the source it CANNOT tell apart.
+
+    COVERAGE, per `goal-contracts`. Exercised: the attack itself, from many
+    identities at one source, with the day's remaining budget asserted as a
+    number rather than as a boolean; that a visitor at a DIFFERENT source is
+    unaffected while it happens; that an ordinary shared address still serves
+    several complete visitors (the admit arm, and it is not decoration, since
+    a control that refuses an office is a control that gets removed); that
+    the refusal is a distinct, machine-readable 429 with a real
+    `Retry-After`; and that `GET /v1/allowance` names the same bound the next
+    request would enforce.
+
+    NOT exercised here, and each omission is a real hole rather than a
+    formality:
+
+    - A caller with genuinely many source ADDRESSES. This bound is keyed on
+      the connection address, so a caller who controls a range or a botnet
+      gets one share per address and is bounded only by the day's ceiling
+      again. That is the accepted residual: the day still holds the money,
+      and closing it needs something this phase deliberately declines
+      (device fingerprinting) or something it does not have (reputation).
+    - A deployment behind a proxy that does not set the peer address, where
+      every caller looks like one source and this bound would refuse
+      everybody past one share. `source_hash_for_request`'s docstring names
+      the deployment requirement; nothing here can test a proxy that is not
+      in the test path.
+    - A caller whose `request.client` is absent, which is ALLOWED by design
+      and bounded by the day alone. Asserted at the data layer instead, in
+      `test_an_unknown_source_is_allowed_and_bounded_only_by_the_day`
+      (`tests/.../data/test_guest_sessions.py`), because the ASGI transport
+      this file uses always supplies a client tuple.
+    - The share ACROSS a UTC midnight, and multi-process counting, which are
+      this file's standing non-coverage for the reasons its header gives.
+    """
+
+    @pytest.mark.asyncio
+    async def test_many_identities_from_one_source_cannot_drain_the_day(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The attack, run against the fix, at the SHIPPED daily cap.
+
+        200 rather than a small convenient number, because the shipped value
+        is what the finding was measured against and because the share is
+        derived from the cap: a tiny cap would land on the floor rather than
+        on the ratio, and would prove the floor instead of the bound.
+
+        The paid refusal text is load-bearing and is the attack's own
+        delivery mechanism, not a detail. A free pre-filter refusal refunds
+        the day AND this source's share of it, so it cannot drain anything;
+        a refusal that comes after a real Guard-tier call keeps both charged
+        while the guest's own answer allowance is refunded, so each identity
+        converts all ten of its attempts into ten permanent day charges. Swap
+        this text for the free one and the clause stops testing the attack.
+        """
+        from system_03_search_agent.harness.cost_control import anon_daily_source_share
+
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", "200")
+        _reset_todays_anonymous_usage()
+        expected_share = anon_daily_source_share(200)
+        attacker_source = _unique_source()
+
+        accepted, refusals = 0, []
+        async with _client(attacker_source) as client:
+            for _ in range(25):
+                minted = await client.post("/auth/guest")
+                assert minted.status_code == 201, (
+                    "the mint throttle refused this attack's own setup; that "
+                    "would make the clause pass for the wrong reason, and it "
+                    "would mean the throttle now also refuses the 25 mints "
+                    "TestMintThrottleHasBothArms requires it to admit"
+                )
+                headers = {"Authorization": f"Bearer {minted.json()['guest_token']}"}
+                for _ in range(10):
+                    response = await _run_text(client, headers, _PAID_REFUSAL_TEXT)
+                    if response.status_code == 202:
+                        accepted += 1
+                        await _drain_run_task(response.json()["run_id"])
+                    else:
+                        refusals.append(
+                            (response.status_code, str(response.json().get("detail", {})))
+                        )
+
+        assert accepted == expected_share, (
+            f"one source started {accepted} pipelines against a share of "
+            f"{expected_share}; before this bound existed the same loop took all "
+            f"200 of the day's runs in 1.84 seconds with zero mints refused, and "
+            f"every bound in front of it was keyed on something the caller mints "
+            f"for free (F-4.10-V-01)"
+        )
+        assert refusals, "the loop was never refused at all"
+        assert any("anon_source_daily_cap_reached" in reason for _status, reason in refusals), (
+            "the refusal must name the source share rather than borrowing the "
+            "system-wide ceiling's reason; telling this caller the whole product "
+            "is spent for everyone would be false, and would hide from an "
+            "operator the difference between a busy day and one address "
+            "hammering the service"
+        )
+
+        day_used = _todays_anonymous_usage()
+        assert day_used == expected_share, (
+            f"one source moved {day_used} of the day's 200 shared anonymous runs; "
+            f"the whole point of a share is that the other "
+            f"{200 - expected_share} are still there for everybody else"
+        )
+
+        # And the thing that actually matters, from a DIFFERENT source: the
+        # product is still up.
+        async with _client(_unique_source()) as victim_client:
+            _victim_id, victim_headers = await _mint_guest(victim_client)
+            victim = await _run(victim_client, victim_headers)
+            assert victim.status_code == 202, (
+                f"a brand-new visitor at a different address asking a legitimate "
+                f"question was refused {victim.status_code} after one source's "
+                f"drain loop; that is a denial of service on this phase's entire "
+                f"deliverable, and it is the outcome three previous fixes left "
+                f"unchanged"
+            )
+            await _drain_run_task(victim.json()["run_id"])
+
+    @pytest.mark.asyncio
+    async def test_an_ordinary_shared_address_still_gets_a_usable_number_of_searches(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The ADMIT arm, and the reason this bound is a share rather than a
+        tighter throttle.
+
+        Several people behind one office, campus or conference address, each
+        using their whole five-search allowance, is the ordinary case and is
+        precisely the room where an anonymous demo gets shown. A bound that
+        refuses them scores perfectly against every attack test that will
+        ever be written against this file and destroys the product, which is
+        the failure the mint throttle's first version actually shipped
+        (F-4.10-04).
+
+        Four complete visitors at the shipped cap, which is what a tenth of
+        200 buys, and every one of their twenty searches must be a real,
+        admitted run.
+        """
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", "200")
+        _reset_todays_anonymous_usage()
+        office_source = _unique_source()
+
+        accepted, refused = 0, []
+        async with _client(office_source) as office:
+            for _visitor in range(4):
+                _guest_id, headers = await _mint_guest(office)
+                for _search in range(_EXPECTED_FREE_SEARCHES):
+                    response = await _run(office, headers)
+                    if response.status_code == 202:
+                        accepted += 1
+                        await _drain_run_task(response.json()["run_id"])
+                    else:
+                        refused.append(str(response.json().get("detail", {})))
+
+        assert accepted == 4 * _EXPECTED_FREE_SEARCHES, (
+            f"{len(refused)} of {4 * _EXPECTED_FREE_SEARCHES} searches from four "
+            f"visitors behind one shared address were refused ({refused[:1]}); a "
+            f"per-source bound that refuses an office has destroyed the product "
+            f"to protect it"
+        )
+
+    @pytest.mark.asyncio
+    async def test_the_source_share_refuses_with_its_own_reason_and_a_real_retry_after(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """429 with its own reason, not the daily ceiling's and not a 403.
+
+        429 because this bound is genuinely transient: it resets at UTC
+        midnight and signing in bypasses it right now, so `Retry-After` is a
+        real number of seconds to that reset rather than a constant. Its own
+        reason because "anonymous searches are at their daily limit for
+        everyone" would be false for a caller whose network alone is spent,
+        and design decision 5's rule is that a refusal must say something
+        true.
+        """
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", "200")
+        _reset_todays_anonymous_usage()
+        source = _unique_source()
+
+        async with _client(source) as client:
+            spent = 0
+            while spent < 20:
+                _guest_id, headers = await _mint_guest(client)
+                for _ in range(_EXPECTED_FREE_SEARCHES):
+                    response = await _run(client, headers)
+                    assert response.status_code == 202
+                    await _drain_run_task(response.json()["run_id"])
+                    spent += 1
+
+            _blocked_id, blocked_headers = await _mint_guest(client)
+            refused = await _run(client, blocked_headers)
+            assert refused.status_code == 429, (
+                "a 403 would tell this caller the refusal is permanent, which "
+                "is false: it clears at UTC midnight and signing in bypasses it "
+                "immediately"
+            )
+            detail = refused.json()["detail"]
+            assert detail["reason"] == "anon_source_daily_cap_reached", (
+                "collapsing this into anon_daily_cap_reached tells a visitor "
+                "behind a busy address that the whole product is down, and "
+                "hides the attack it exists to stop from anyone reading logs"
+            )
+            retry_after = int(refused.headers["Retry-After"])
+            assert 1 <= retry_after <= 86400, (
+                "Retry-After must be the real seconds remaining to the UTC "
+                "midnight reset, so a client that honors it waits exactly as "
+                "long as it must and no longer"
+            )
+
+            # Design decision 8's constraint 4, applied to this bound: the
+            # reporting path must name what the enforcement path would do.
+            allowance = await client.get("/v1/allowance", headers=blocked_headers)
+            assert allowance.status_code == 200
+            body = allowance.json()
+            assert body["used"] == 0, (
+                "this guest's own numbers must stay true and untouched; the "
+                "personal count is what migrates at signup, so distorting it to "
+                "express a different bound would corrupt something real"
+            )
+            assert body["blocked_reason"] == "anon_source_daily_cap_reached", (
+                "the endpoint reported an unblocked allowance while the very "
+                "next query would be refused 429, which is exactly the defect "
+                "F-4.10-A-03 was filed for and the mismatch that has now been "
+                "filed twice on this endpoint"
+            )
+
+        # A caller at a DIFFERENT source reads no block at all, which is what
+        # makes this a per-source report rather than a global one wearing a
+        # per-source name.
+        async with _client(_unique_source()) as neighbour:
+            _neighbour_id, neighbour_headers = await _mint_guest(neighbour)
+            neighbour_allowance = await neighbour.get("/v1/allowance", headers=neighbour_headers)
+            assert neighbour_allowance.status_code == 200
+            assert neighbour_allowance.json()["blocked_reason"] is None
+
+
+class TestARunThatProducedNoAnswerDoesNotCostTheVisitorASearch:
+    """F-4.10-V-02, product-owner decision 2026-08-15.
+
+    Measured on the running app before this clause existed: a run that died
+    with a Guard-tier `HarnessCallError` left the guest at `(runs_used 1,
+    attempts_used 1)` with the shared day charged 1. A visitor lost one of
+    five free searches to a failure that was not theirs, and was told
+    nothing about it.
+
+    THE RULE, stated once so the three counters stay consistent. A run that
+    ends having produced no answer gives back the ANSWER, never the ATTEMPT,
+    and gives back the shared DAY (with that source's share of it) only when
+    no model call was made. That is the same rule the guardrail refusal
+    already followed; what changed is that "refused" and "failed" now reach
+    it alike, because the visitor's experience of the two is identical.
+
+    WHY A STOPPED RUN IS DELIBERATELY EXCLUDED, and it is the interesting
+    half. Every token a run emitted before the stop was already streamed to
+    the caller, so the server cannot know they received nothing. Refunding
+    there would let a caller read an answer to its last sentence, stop before
+    `done`, and be refunded for a search they got, which is a free-answer
+    path of exactly the class F-4.10-R-01 was filed for. So "produced no
+    answer" is judged by how the run ENDED, not by whether the caller kept
+    the output.
+
+    COVERAGE, per `goal-contracts`. Exercised: a fatal step error refunds the
+    answer, does not refund the attempt, and (having made a real model call)
+    leaves the shared day charged. NOT exercised here: the cap-declined run,
+    which is structurally unreachable for a guest today because
+    `check_user_daily_query_cap` is skipped for a caller with no `users` row
+    and `check_system_daily_cost_cap` sums a table nothing writes (F-2.0-04);
+    a stopped run, which is excluded by decision above and whose exclusion is
+    structural (`_drain_into_entry` never routes its cancellation event
+    through the callback and a cancelled run reaches no `done` event); and a
+    process that dies between the failure and the refund, which loses the
+    refund and is the deliberate safe direction.
+    """
+
+    @pytest.mark.asyncio
+    async def test_a_failed_run_gives_back_the_answer_and_never_the_attempt(
+        self, monkeypatch: pytest.MonkeyPatch, _mock_litellm
+    ) -> None:
+        monkeypatch.setenv("ANON_DAILY_RUN_CAP", "10000")
+        _reset_todays_anonymous_usage()
+
+        from system_03_search_agent.harness.harness import HarnessCallError
+
+        # Fail the FIRST model call the loop makes, which is the Guard tier's
+        # classification. `_dispatch_tier_call` converts this into a
+        # `step_error`, and `write_node` ships it as a FATAL error event
+        # followed by `done`, which is the shape the refund now reads.
+        async def _always_fails(*args: object, **kwargs: object):
+            raise HarnessCallError("upstream is unavailable", error_class="unexpected")
+
+        monkeypatch.setattr(_mock_litellm, "side_effect", _always_fails)
+
+        async with _client() as client:
+            guest_id, headers = await _mint_guest(client)
+            created = await _run(client, headers)
+            assert created.status_code == 202
+            run_id = created.json()["run_id"]
+            await _drain_run_task(run_id)
+
+            # The positive control: this clause must be reporting on a run
+            # that genuinely failed, not on one that never started, was
+            # refused at the guardrail, or quietly succeeded.
+            events = await client.get(f"/v1/query/{run_id}/events", headers=headers)
+            assert events.status_code == 200
+            assert "event: error" in events.text, (
+                "this run did not fail, so the clause is measuring something "
+                "other than what it claims"
+            )
+            assert "event: guard" not in events.text or '"passed": false' not in events.text
+
+            allowance = await client.get("/v1/allowance", headers=headers)
+            assert allowance.status_code == 200
+            assert allowance.json()["used"] == 0, (
+                "a run that died with a step error still cost the visitor one "
+                "of five free searches; the phase's own principle is that a "
+                "visitor must not be pushed toward the sign-in wall by "
+                "questions that were never answered, and a question the system "
+                "dropped is not different from one it refused (F-4.10-V-02)"
+            )
+
+        assert _attempts_used(guest_id) == 1, (
+            "the failed run gave the ATTEMPT back as well; the attempt is the "
+            "per-identity bound and giving it back on any path a caller can "
+            "trigger is what left them unbounded in F-4.10-R-01"
+        )

@@ -204,7 +204,81 @@ describe("build phase 4.10: the anonymous run path and the guest allowance", () 
 
       const widget = await screen.findByTestId("guest-allowance");
       expect(within(widget).getByText(/2 searches left/i)).toBeInTheDocument();
+      // The unblocked arm of the dot-state assertion below: with nothing
+      // blocking, the dots still report the guest's own true count. Without
+      // this, a change that marked every dot spent unconditionally would
+      // satisfy the blocked clauses and destroy the widget.
+      expect(widget.querySelectorAll('[data-dot-state="spent"]')).toHaveLength(3);
+      expect(widget.querySelectorAll('[data-dot-state="available"]')).toHaveLength(2);
     });
+
+    /**
+     * F-4.10-V-03, and the coverage hole that finding named.
+     *
+     * `blocked_reason` was on the wire and honest from the moment the server
+     * learned to send it, and nothing in `frontend/src/` branched on it, so
+     * the gate could assert the endpoint was truthful and still leave a
+     * visitor looking at unspent dots while every query came back refused.
+     * The attempt-ceiling case is the one that made carrying it untenable:
+     * `attempts_used` never decreases, so those dots stay wrong for the
+     * remaining life of a 7-day token with no event that would ever make
+     * them true.
+     *
+     * Each reason is asserted with its OWN sentence and with the other two
+     * absent, the same discipline the wall-copy clauses use, because a
+     * single hedged caption covering all three would pass a looser check
+     * while telling a visitor behind a busy office address that the whole
+     * product is down.
+     *
+     * NOT exercised here: that the refusal itself is handled, which is the
+     * wall clauses below and is a different path (a 403 or 429 on `ask`,
+     * not a field on the allowance read).
+     */
+    it.each([
+      ["guest_attempt_limit_reached", /no guest searches left/i],
+      ["anon_daily_cap_reached", /guest searches are paused for today/i],
+      [
+        "anon_source_daily_cap_reached",
+        /this network has used its guest searches for today/i,
+      ],
+    ] as const)(
+      "stops promising a search when the server reports blocked_reason %s",
+      async (reason, expectedCopy) => {
+        mintGuestMock.mockResolvedValue({
+          guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+        });
+        createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+        // `used: 0` deliberately. This is exactly the shape F-4.10-V-03
+        // measured: the guest's own numbers are true and untouched (their
+        // answers were refunded), and the NEXT query is refused anyway. A
+        // fixture with `used: 5` would pass even with the field ignored,
+        // because `5 - 5` already renders zero left.
+        getAllowanceMock.mockResolvedValue({
+          kind: "guest", used: 0, total: 5, counted: true, blocked_reason: reason,
+        });
+        const user = userEvent.setup();
+        render(<App />);
+
+        await ask(user, "What gene is BRCA1?");
+        await waitFor(() => expect(getAllowanceMock).toHaveBeenCalledWith("guest-token-1"));
+        await user.click(screen.getByRole("button", { name: "New search" }));
+
+        const widget = await screen.findByTestId("guest-allowance");
+        expect(within(widget).getByText(expectedCopy)).toBeInTheDocument();
+        // The COUNT is what promised a search, so the count is what must be
+        // gone. Matched on the digit rather than on the words, because "No
+        // guest searches left" legitimately contains "searches left" and a
+        // check that forbade the phrase would forbid the honest caption too.
+        expect(within(widget).queryByText(/\d+ searches? left/i)).not.toBeInTheDocument();
+        // The dots are the affordance, and they promise independently of the
+        // caption: four blue dots beside "No guest searches left" restates
+        // the same contradiction one element to the left of where it was
+        // fixed. Asserted on state rather than colour so the check can
+        // actually fail.
+        expect(widget.querySelectorAll('[data-dot-state="available"]')).toHaveLength(0);
+        expect(widget.querySelectorAll('[data-dot-state="spent"]')).toHaveLength(5);
+      },
+    );
   });
 
   describe("the wall: only the server's own refusal, never a client prediction", () => {

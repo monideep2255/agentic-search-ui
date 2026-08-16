@@ -24,13 +24,61 @@ import { Box, Button, Typography } from "@mui/material";
 
 import { designTokens } from "../../theme";
 
+/**
+ * What the server says is blocking the NEXT query, `GET /v1/allowance`'s
+ * `blocked_reason` (F-4.10-V-03). `null` or absent means nothing is.
+ */
+export type AllowanceBlockedReason =
+  | "anon_daily_cap_reached"
+  | "anon_source_daily_cap_reached"
+  | "guest_attempt_limit_reached";
+
+/**
+ * One caption per blocking reason, each true on that reason and on no
+ * assumption about the others, the same discipline `WALL_COPY` below states
+ * for the sign-in wall.
+ *
+ * - `guest_attempt_limit_reached` is permanent for this identity, so no
+ *   sentence here may suggest waiting.
+ * - The two daily reasons clear at UTC midnight, so both say "today", and
+ *   they are kept apart because one means the whole product is spent for
+ *   everyone and the other means this network has had its share while
+ *   everyone else is unaffected.
+ */
+const BLOCKED_COPY: Record<AllowanceBlockedReason, string> = {
+  anon_daily_cap_reached: "Guest searches are paused for today",
+  anon_source_daily_cap_reached: "This network has used its guest searches for today",
+  guest_attempt_limit_reached: "No guest searches left",
+};
+
 export interface GuestAllowanceProps {
   used: number;
   total: number;
+  /**
+   * F-4.10-V-03, closing the client half of F-4.10-05. Before this existed
+   * the dots rendered `total - used` unconditionally, so a visitor who had
+   * spent all ten ATTEMPTS on refused questions was shown five unused dots
+   * and "5 searches left" while every query they sent came back 403. The
+   * server had been honest about it since F-4.10-A-03; nothing read the
+   * field.
+   *
+   * That gap is worse for the attempt ceiling than for the daily ones, which
+   * is why it is closed here rather than carried again: `attempts_used`
+   * never decreases and there is no event that would ever make those dots
+   * true again for that identity, while a daily ceiling clears at UTC
+   * midnight.
+   */
+  blockedReason?: AllowanceBlockedReason | null;
 }
 
-export function GuestAllowance({ used, total }: GuestAllowanceProps) {
+export function GuestAllowance({ used, total, blockedReason }: GuestAllowanceProps) {
   const left = Math.max(0, total - used);
+  // The dots are an affordance for "a search is available", not a readout of
+  // `used`. When the server says the next query is refused, none is
+  // available whatever `used` says, so every dot renders spent. Showing four
+  // blue dots beside "No guest searches left" would restate the same
+  // contradiction one element to the left of where it was fixed.
+  const spent = blockedReason != null ? total : used;
   return (
     <Box
       data-testid="guest-allowance"
@@ -51,17 +99,35 @@ export function GuestAllowance({ used, total }: GuestAllowanceProps) {
         {Array.from({ length: total }, (_, index) => (
           <Box
             key={index}
+            /*
+             * F-4.10-V-03. The dots carry their state as an attribute, not
+             * only as a colour, so a test can assert that none of them is
+             * still offering a search the next request would refuse. A
+             * mutation reverting the blocked case to `used` left every
+             * frontend clause green while the dots were visibly wrong, which
+             * is a check that could not fail.
+             *
+             * `aria-hidden` stays: the caption beside them carries the same
+             * fact in words, and a screen reader announcing five dots is
+             * noise. This attribute is for the gate, not for assistive
+             * technology.
+             */
+            data-dot-state={index < spent ? "spent" : "available"}
             sx={{
               width: 7,
               height: 7,
               borderRadius: "50%",
-              bgcolor: index < used ? designTokens.lineStrong : designTokens.blue,
+              bgcolor: index < spent ? designTokens.lineStrong : designTokens.blue,
             }}
           />
         ))}
       </Box>
       <Typography variant="caption">
-        {left === 1 ? "1 search left" : `${left} searches left`}
+        {blockedReason != null
+          ? BLOCKED_COPY[blockedReason]
+          : left === 1
+            ? "1 search left"
+            : `${left} searches left`}
       </Typography>
     </Box>
   );

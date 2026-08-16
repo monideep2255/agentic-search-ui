@@ -47,6 +47,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     SmallInteger,
+    String,
     Text,
     text,
 )
@@ -393,4 +394,63 @@ class GuestDailyUsage(Base):
 
     __table_args__ = (
         CheckConstraint("runs_used >= 0", name="ck_guest_daily_usage_runs_used"),
+    )
+
+
+class GuestSourceDailyUsage(Base):
+    """The `guest_source_daily_usage` table: one row per (UTC day, source),
+    counting how much of that day's shared anonymous budget one source has
+    taken.
+
+    Build phase 4.10, F-4.10-V-01, product-owner decision 2026-08-15. Added
+    after the fourth measurement of the same defect, and the reason it is a
+    third counter rather than a tighter value on either of the first two is
+    worth stating, because three previous fixes chose the tighter value and
+    all three were defeated the same way.
+
+    `guest_sessions.attempts_used` bounds an IDENTITY, and `POST /auth/guest`
+    mints identities for free. `guest_daily_usage.runs_used` bounds the DAY,
+    and nobody controls the supply of days, which is why it holds the money
+    but says nothing about who spent it. Between those two sits the question
+    neither answers: how much of the day may ONE caller take. Measured on
+    this branch with the shipped defaults, the mint throttle live and zero
+    mints refused: 20 identities from one apparent source took all 200 of the
+    day's runs in 1.84 seconds and every other anonymous visitor was refused
+    until UTC midnight.
+
+    So this counter is keyed on the SOURCE, which is the one thing in that
+    attack the caller did not vary. It is deliberately not keyed on anything
+    the caller mints, and it deliberately does not try to police the RATE of
+    minting: the mint throttle already does that and cannot be tightened,
+    because the premise gate's own admit arm requires 25 consecutive mints
+    from one shared address to succeed (office NAT, campus networks,
+    conference wifi are the rooms this product gets demonstrated in).
+
+    `source_hash` is `auth/router.py`'s `_hash_ip` output: a keyed
+    HMAC-SHA256 hex digest of the connection address, so no raw IP is ever
+    stored here or anywhere else. Exactly 64 characters, and the column is
+    sized to that rather than left unbounded.
+
+    The composite primary key (`day`, `source_hash`) is the invariant itself,
+    one row per source per day, rather than a surrogate id with a unique
+    index a later migration could drop without anyone noticing the counter
+    had started double-counting. Same reasoning as `GuestDailyUsage.day`
+    directly above.
+
+    Row growth is bounded by the number of distinct sources that actually
+    STARTED an anonymous run on a given day, not by request volume: a row
+    appears only after a mint the throttle admitted and a run the daily
+    ceiling admitted. Nothing prunes old days yet; that is a retention
+    concern owned by build phase 6.1's hardening pass, recorded rather than
+    left to be discovered.
+    """
+
+    __tablename__ = "guest_source_daily_usage"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    source_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    runs_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+
+    __table_args__ = (
+        CheckConstraint("runs_used >= 0", name="ck_guest_source_daily_usage_runs_used"),
     )
