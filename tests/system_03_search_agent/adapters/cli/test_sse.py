@@ -21,7 +21,13 @@ Writes:
 
 from __future__ import annotations
 
-from system_03_search_agent.adapters.cli.sse import parse_sse_lines
+import pytest
+
+from system_03_search_agent.adapters.cli.sse import (
+    _MAX_ACCUMULATED_DATA_CHARS,
+    SseFrameTooLargeError,
+    parse_sse_lines,
+)
 
 
 def test_a_single_well_formed_event_round_trips() -> None:
@@ -148,3 +154,45 @@ def test_a_trailing_flush_with_nothing_buffered_yields_nothing() -> None:
     # The keepalive comment at the end leaves nothing buffered, so the
     # trailing flush produces no phantom second tuple.
     assert results == [("guard", '{"a": 1}', "0")]
+
+
+# ---------------------------------------------------------------------------
+# F-4.2-A-25: a single event's data field is bounded, and fails fast
+# rather than buffering an unbounded amount before a later JSON-parse
+# failure.
+# ---------------------------------------------------------------------------
+
+
+def test_a_data_field_within_the_cap_still_dispatches_normally() -> None:
+    value = "x" * (_MAX_ACCUMULATED_DATA_CHARS - 1)
+    lines = ["event: token", f"data: {value}", "id: 0", ""]
+    results = list(parse_sse_lines(lines))
+    assert results == [("token", value, "0")]
+
+
+def test_a_single_data_line_exceeding_the_cap_raises_immediately() -> None:
+    value = "x" * (_MAX_ACCUMULATED_DATA_CHARS + 1)
+    lines = ["event: token", f"data: {value}", "id: 0", ""]
+    with pytest.raises(SseFrameTooLargeError):
+        list(parse_sse_lines(lines))
+
+
+def test_multiple_data_lines_that_cumulatively_exceed_the_cap_raise() -> None:
+    # Neither line alone exceeds the cap; their sum (plus the "\n" joiner
+    # `_dispatch` would insert) does. The bound is on the accumulated
+    # total, not on any single physical line.
+    half = "x" * (_MAX_ACCUMULATED_DATA_CHARS // 2 + 10)
+    lines = ["event: token", f"data: {half}", f"data: {half}", "id: 0", ""]
+    with pytest.raises(SseFrameTooLargeError):
+        list(parse_sse_lines(lines))
+
+
+def test_the_cap_violation_message_names_the_accumulated_size() -> None:
+    value = "x" * (_MAX_ACCUMULATED_DATA_CHARS + 500)
+    lines = ["event: token", f"data: {value}", "id: 0", ""]
+    with pytest.raises(SseFrameTooLargeError) as exc_info:
+        list(parse_sse_lines(lines))
+    # Actionable per tool-call-budgets.md: names the bound, not just "too
+    # big", and does not silently retry the same connection.
+    assert str(_MAX_ACCUMULATED_DATA_CHARS) in str(exc_info.value)
+    assert "retry" in str(exc_info.value).lower()

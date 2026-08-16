@@ -78,10 +78,12 @@ attributes, never anything `credentials.py`-specific.
 
 from __future__ import annotations
 
+import codecs
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 import httpx
+from pydantic import ValidationError
 
 from system_03_search_agent.adapters.cli.sse import _SseLineAccumulator
 from system_03_search_agent.contracts.events import CitationPayload, Event
@@ -133,6 +135,113 @@ _STREAM_TIMEOUT = httpx.Timeout(
     write=_STREAM_WRITE_TIMEOUT_S,
     pool=_STREAM_POOL_TIMEOUT_S,
 )
+
+
+# ---------------------------------------------------------------------------
+# F-4.2-A-02: `httpx.Response.aiter_lines()` decodes with `httpx`'s own
+# `LineDecoder`, which splits on the WHATWG `str.splitlines()` separator
+# set: "\n\r\x0b\x0c\x1c\x1d\x1e\x85" plus U+2028/U+2029, not on LF/CR/CRLF
+# alone. U+2028 (LINE SEPARATOR), U+2029 (PARAGRAPH SEPARATOR), and U+0085
+# (NEL) are ordinary characters in biomedical free text
+# (`adapters/web_sse/app.py`'s serializer emits them raw inside a `data:`
+# line's JSON string), so a citation claim or an abstract fragment
+# containing one gets cut in half mid-line by `aiter_lines()`, corrupting
+# the JSON and losing the whole answer. A browser `EventSource` only ever
+# splits on LF, CR, and CRLF, per the `text/event-stream` grammar
+# (WHATWG HTML "Interpreting an SSE event stream"), which is why the web
+# UI never hits this and only this CLI reader does.
+#
+# `_ChunkSafeLineSplitter` below replicates that narrower grammar
+# directly over `httpx.Response.aiter_bytes()`, decoding UTF-8
+# incrementally (`codecs.getincrementaldecoder`) so a multi-byte
+# character split across two network chunks reassembles correctly rather
+# than raising or corrupting on the boundary. It feeds the same shared
+# `_SseLineAccumulator` core `sse.py`'s `parse_sse_lines` uses, per this
+# module's docstring ("share one accumulator, as the module already
+# does"); `parse_sse_lines` itself is untouched; it never had a raw
+# `httpx` byte stream to mis-split in the first place.
+# ---------------------------------------------------------------------------
+
+
+class _ChunkSafeLineSplitter:
+    """Splits a raw byte stream into text lines on LF, CR, or CRLF ONLY,
+    never on U+2028, U+2029, U+0085, or any other `str.splitlines()`
+    separator, decoding UTF-8 incrementally across chunk boundaries.
+
+    Two boundary cases a naive `"".join(chunks).split("\\n")` approach
+    gets wrong, both handled here:
+
+        - A multi-byte UTF-8 character's bytes split across two `feed()`
+          calls: `codecs.getincrementaldecoder("utf-8")` buffers the
+          incomplete trailing bytes internally and completes the
+          character on the next `feed()`, never raising and never
+          silently dropping a byte.
+        - A CRLF pair split across two `feed()` calls (the `\\r` in one
+          chunk, the `\\n` in the next): a lone trailing `\\r` is held
+          back rather than immediately emitted as a line terminator,
+          since it might be the first half of a `\\r\\n` pair. `close()`
+          resolves it as its own line terminator once no more data is
+          coming.
+    """
+
+    def __init__(self) -> None:
+        self._decoder = codecs.getincrementaldecoder("utf-8")()
+        self._buffer = ""
+        self.truncated_utf8 = False
+
+    def feed(self, raw_bytes: bytes) -> list[str]:
+        self._buffer += self._decoder.decode(raw_bytes)
+        return self._extract_complete_lines()
+
+    def close(self) -> list[str]:
+        """Call once after the byte source is exhausted. Finalizes the
+        UTF-8 decoder (an incomplete trailing multi-byte sequence here
+        means the connection was cut mid-character, itself a genuine
+        transport truncation, recorded via `self.truncated_utf8` rather
+        than raised, since a stream-end truncation is an expected shape
+        this reader must survive, not a programming error) and returns
+        any remaining lines, including a final unterminated one.
+        """
+        try:
+            self._buffer += self._decoder.decode(b"", final=True)
+        except UnicodeDecodeError:
+            self.truncated_utf8 = True
+        lines = self._extract_complete_lines()
+        if self._buffer:
+            lines.append(self._buffer)
+            self._buffer = ""
+        return lines
+
+    def _extract_complete_lines(self) -> list[str]:
+        lines: list[str] = []
+        start = 0
+        length = len(self._buffer)
+        i = 0
+        while i < length:
+            ch = self._buffer[i]
+            if ch == "\n":
+                lines.append(self._buffer[start:i])
+                i += 1
+                start = i
+            elif ch == "\r":
+                if i + 1 < length:
+                    if self._buffer[i + 1] == "\n":
+                        lines.append(self._buffer[start:i])
+                        i += 2
+                    else:
+                        lines.append(self._buffer[start:i])
+                        i += 1
+                    start = i
+                else:
+                    # This \r is the last character seen so far: it may
+                    # be the first half of a \r\n pair split across a
+                    # chunk boundary. Stop and hold it (and everything
+                    # from `start`) in the buffer for the next feed().
+                    break
+            else:
+                i += 1
+        self._buffer = self._buffer[start:]
+        return lines
 
 
 # ---------------------------------------------------------------------------
@@ -280,6 +389,72 @@ def _raise_for_status(response: httpx.Response) -> None:
     raise error_cls(response.status_code, reason, message)
 
 
+def _parse_json_body(
+    response: httpx.Response, *, endpoint: str, expected_statuses: frozenset[int]
+) -> Any:
+    """Parse `response`'s body as JSON, or raise a `CliApiError` with an
+    actionable message instead of letting a non-JSON or unexpected-status
+    success response crash on a raw `json.JSONDecodeError` or a raw
+    `KeyError` further down the call chain (F-4.2-A-24). Only called
+    after `_raise_for_status`, so `response.status_code` is already known
+    to be below 400; a 204 No Content, a followed 302/303, or any other
+    2xx/3xx this repo's server never intentionally sends for this
+    endpoint still needs an explicit reject here, since `< 400` alone
+    does not mean "has a JSON body".
+    """
+    if response.status_code not in expected_statuses:
+        raise CliApiError(
+            response.status_code,
+            None,
+            f"{endpoint} returned an unexpected status {response.status_code} "
+            f"(expected one of {sorted(expected_statuses)}); this indicates a "
+            "server or proxy misconfiguration, not a normal failure. Retry "
+            "later, or report this to the operator if it recurs.",
+        )
+    content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type != "application/json":
+        raise CliApiError(
+            response.status_code,
+            None,
+            f"{endpoint} returned a non-JSON response (status "
+            f"{response.status_code}, content-type "
+            f"{content_type or 'none'}); this indicates a server or proxy "
+            "misconfiguration, not a normal failure. Retry later, or report "
+            "this to the operator if it recurs.",
+        )
+    try:
+        return response.json()
+    except ValueError as exc:
+        raise CliApiError(
+            response.status_code,
+            None,
+            f"{endpoint} declared a JSON content type but the body did not "
+            f"parse as JSON ({type(exc).__name__}); retry, or report this to "
+            "the operator if it recurs.",
+        ) from exc
+
+
+def _is_terminal_event(event: Event) -> bool:
+    """True for a `done` event, or a fatal `error` event (F-4.2-A-12).
+
+    A `done`.`error_class` other than "transient" or "recoverable" per
+    `contracts/events.py`'s `ErrorPayload.error_class`, "unexpected" and
+    "cancelled" are the two fatal values, `error.fatal` itself is a
+    simpler, already-validated boolean the server sets for exactly this
+    purpose, so this reads `event.payload["fatal"]` directly rather than
+    re-deriving fatality from `error_class`. `event.payload` is the raw
+    input dict `Event`'s own model validator already proved conforms to
+    `ErrorPayload`, so the key is always present; `bool(...)` guards only
+    against a value pydantic's lax bool coercion would accept (e.g. `1`)
+    but the raw dict still carries un-coerced.
+    """
+    if event.type == "done":
+        return True
+    if event.type == "error":
+        return bool(event.payload.get("fatal"))
+    return False
+
+
 class CliClient:
     """A thin client over the four calls `s3` makes. Holds an injected
     `httpx.AsyncClient` (never constructs its own, so the premise gate can
@@ -301,6 +476,21 @@ class CliClient:
         # not read either before calling `fetch_citations` at least once.
         self.citations_run_cancelled: bool | None = None
         self.citations_export_truncated: bool | None = None
+        # F-4.2-A-10: the two `stream_events` disclosures, reset at the
+        # start of every call. `stream_skipped_frame_count` counts frames
+        # this call decoded but discarded (malformed JSON, a well-formed
+        # JSON body that fails the `Event` schema, or an additive `type`
+        # value this build has not been taught, per system-design-
+        # patterns.md rule 10) rather than aborting the run over one bad
+        # frame. `stream_truncated` is a distinct signal: it is set only
+        # when the LAST frame of the stream, the one produced by a
+        # stream-end flush rather than a normal blank-line dispatch,
+        # fails to decode, or when the connection closed mid multi-byte
+        # UTF-8 character. A mid-stream skip is "kept going"; a trailing
+        # decode failure is "the stream ended mid-frame", a genuinely
+        # different shape a caller may want to disclose differently.
+        self.stream_skipped_frame_count: int = 0
+        self.stream_truncated: bool = False
 
     def _auth_headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self._creds.access_token}"}
@@ -321,6 +511,19 @@ class CliClient:
         acted on the first request), but that reissue is the caller's own,
         separate, deliberate call, never something this function does on
         its own behalf.
+
+        `follow_redirects=False` is explicit here (F-4.2-A-29): the
+        "exactly one HTTP request" guarantee this docstring and
+        `TestCreateIsNeverRetried` both assert is only as real as the
+        setting that controls it, and that setting otherwise lives
+        outside this module, on whatever `httpx.AsyncClient` the caller
+        injected. An injected client constructed with
+        `follow_redirects=True` and a server that ever answered `POST
+        /v1/query` with a 3xx would turn one CLI command into an
+        unbounded chain of creates, each spending its own allowance
+        slot, silently. Pinning it here means the guarantee holds
+        wherever this method is called from, not only when the caller
+        happened to construct its client a particular way.
         """
         response = await self._http.post(
             "/v1/query",
@@ -331,9 +534,12 @@ class CliClient:
             },
             headers=self._auth_headers(),
             timeout=_REST_CALL_TIMEOUT_S,
+            follow_redirects=False,
         )
         _raise_for_status(response)
-        body = response.json()
+        body = _parse_json_body(
+            response, endpoint="create run", expected_statuses=frozenset({200, 201, 202})
+        )
         return body["run_id"], body["persona_name"]
 
     async def stream_events(
@@ -353,13 +559,51 @@ class CliClient:
         by the server with a 400 BEFORE the stream body opens, which
         surfaces here as a raised `CliApiError` before any `Event` is
         yielded, never as a mid-stream failure.
+
+        Three fixes past the original T-4.2-03 shape, all filed by the
+        adversary round against the merged branch:
+
+            F-4.2-A-02: lines are split with `_ChunkSafeLineSplitter` over
+            `aiter_bytes()`, never `aiter_lines()`, so a `data:` line
+            carrying a raw U+2028, U+2029, or U+0085 character (ordinary
+            in biomedical free text) is never cut in half. See this
+            module's `_ChunkSafeLineSplitter` docstring.
+
+            F-4.2-A-10: a frame that fails to decode, malformed JSON, JSON
+            that does not match the `Event` schema, or an additive `type`
+            value this build has not been taught, is SKIPPED rather than
+            raised: `system-design-patterns.md` rule 10 makes a new event
+            type an allowed additive v1 change, and a client that aborts a
+            complete, otherwise-successful answer over one unrecognized
+            frame is exactly the failure that rule exists to prevent.
+            Skipped frames are counted on `self.stream_skipped_frame_count`
+            rather than swallowed invisibly. A decode failure on the
+            STREAM-END trailing flush is a different, genuine shape (the
+            connection ended mid-frame) and is recorded separately on
+            `self.stream_truncated`, never folded into the same counter.
+
+            F-4.2-A-12: this method now ends the generator itself,
+            immediately after yielding a `done` or a fatal `error`
+            (`error_class` other than "transient" or "recoverable"),
+            instead of relying on the server closing the HTTP response
+            body. The prior shape made the "the CLI ends on a stopped
+            run" guarantee the SERVER's rather than the client's; a
+            server that ever held the connection open past a terminal
+            event would hang this method for the full 45s stream read
+            timeout. Ending locally, on the envelope's own terminal
+            shape, is a client-side guarantee that holds regardless of
+            what the transport does next.
         """
         headers = self._auth_headers()
         headers["Accept"] = "text/event-stream"
         if last_event_id is not None:
             headers["Last-Event-ID"] = last_event_id
 
+        self.stream_skipped_frame_count = 0
+        self.stream_truncated = False
+
         accumulator = _SseLineAccumulator()
+        splitter = _ChunkSafeLineSplitter()
         async with self._http.stream(
             "GET",
             f"/v1/query/{run_id}/events",
@@ -369,16 +613,64 @@ class CliClient:
             if response.status_code >= 400:
                 await response.aread()
                 _raise_for_status(response)
-            async for raw_line in response.aiter_lines():
-                parsed = accumulator.feed(raw_line)
+
+            def _feed_and_decode(line: str) -> Event | None:
+                # A normal, blank-line-terminated dispatch, whether it
+                # arrives mid-stream or among `splitter.close()`'s
+                # leftover complete lines: always `is_trailing=False`.
+                # Only `accumulator.flush()`'s own result (below) can be
+                # the OTHER kind, an event with no closing blank line at
+                # all.
+                parsed = accumulator.feed(line)
                 if parsed is None:
+                    return None
+                return self._decode_stream_event(parsed, is_trailing=False)
+
+            async for raw_bytes in response.aiter_bytes():
+                for line in splitter.feed(raw_bytes):
+                    event = _feed_and_decode(line)
+                    if event is None:
+                        continue
+                    yield event
+                    if _is_terminal_event(event):
+                        return
+            for line in splitter.close():
+                event = _feed_and_decode(line)
+                if event is None:
                     continue
-                _event_type, data, _seq_id = parsed
-                yield Event.model_validate_json(data)
+                yield event
+                if _is_terminal_event(event):
+                    return
+            if splitter.truncated_utf8:
+                self.stream_truncated = True
             trailing = accumulator.flush()
             if trailing is not None:
-                _event_type, data, _seq_id = trailing
-                yield Event.model_validate_json(data)
+                event = self._decode_stream_event(trailing, is_trailing=True)
+                if event is not None:
+                    yield event
+
+    def _decode_stream_event(
+        self, parsed: tuple[str | None, str, str | None], *, is_trailing: bool
+    ) -> Event | None:
+        """Decode one SSE tuple into an `Event`, or return `None` and
+        record the failure on the right counter (F-4.2-A-10). `is_trailing`
+        distinguishes a normal, blank-line-terminated dispatch (a failure
+        here means "one bad frame, the stream itself kept going normally"
+        and increments `stream_skipped_frame_count`) from the one dispatch
+        that can only happen when the stream ended without a closing blank
+        line (a failure here means "the stream ended mid-frame", a
+        genuinely different, truncation-shaped failure recorded on
+        `stream_truncated` instead).
+        """
+        _event_type, data, _seq_id = parsed
+        try:
+            return Event.model_validate_json(data)
+        except ValidationError:
+            if is_trailing:
+                self.stream_truncated = True
+            else:
+                self.stream_skipped_frame_count += 1
+            return None
 
     async def stop(self, run_id: str) -> bool:
         """`POST /v1/query/{run_id}/stop`. Returns the server's own
@@ -392,7 +684,8 @@ class CliClient:
             timeout=_REST_CALL_TIMEOUT_S,
         )
         _raise_for_status(response)
-        return bool(response.json()["stopped"])
+        body = _parse_json_body(response, endpoint="stop", expected_statuses=frozenset({200}))
+        return bool(body["stopped"])
 
     async def fetch_citations(self, run_id: str) -> list[CitationPayload]:
         """`GET /v1/query/{run_id}/citations`. Raises `ConflictError`
@@ -410,8 +703,11 @@ class CliClient:
             timeout=_REST_CALL_TIMEOUT_S,
         )
         _raise_for_status(response)
+        body = _parse_json_body(
+            response, endpoint="fetch citations", expected_statuses=frozenset({200})
+        )
         self.citations_run_cancelled = response.headers.get("x-run-cancelled") == "true"
         self.citations_export_truncated = (
             response.headers.get("x-citations-export-truncated") == "true"
         )
-        return [CitationPayload.model_validate(item) for item in response.json()]
+        return [CitationPayload.model_validate(item) for item in body]

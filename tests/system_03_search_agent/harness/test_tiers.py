@@ -142,6 +142,34 @@ _MODEL_ID_SHAPE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.\-]*/[a-zA-Z0-9][a-zA-Z0-
 _SRC_ROOT = Path(__file__).resolve().parents[3] / "src" / "system_03_search_agent"
 _TIERS_FILE = _SRC_ROOT / "harness" / "tiers.py"
 
+# F-4.2-09: a registered IANA media type ("type/subtype", RFC 6838) has
+# the exact same "X/Y" shape `_MODEL_ID_SHAPE` matches, so a hardcoded
+# `Accept` or `Content-Type` literal like "text/event-stream" or
+# "application/json" trips the scan below as a false positive of the
+# SCANNER's mechanism, not a violation of the PURPOSE it exists to catch
+# (a real provider/model id hardcoded outside `_DEFAULT_MODELS`). This
+# repo tripped this exact guard once before, in build phase 2.2
+# (LEARNINGS.md, 2026-08-03), so the fix here is a precision improvement
+# to the check, not a relaxation of it.
+#
+# The exemption is a closed, hand-enumerated set of the SPECIFIC string
+# literals this repo's source actually uses, never a pattern rule such as
+# "the top-level type is a known IANA registered type": a pattern-based
+# exemption would itself be gameable by any future model id that happened
+# to start with "text" or "application". A fixed enumeration cannot hide
+# an unrelated model id unless that exact string were also added here by
+# hand, which is the auditability property this exemption depends on, and
+# `test_exempt_media_types_can_never_collide_with_a_default_model_id`
+# below makes that property a standing, structural check rather than a
+# claim in a comment: it fails loudly if this set and `_DEFAULT_MODELS`
+# ever overlap, for any reason, including a future edit to either.
+_EXEMPT_MEDIA_TYPE_LITERALS = frozenset(
+    {
+        "text/event-stream",  # adapters/cli/client.py: the SSE Accept header
+        "application/json",  # adapters/cli/client.py: the JSON body content-type check
+    }
+)
+
 
 def _iter_string_constants(path: Path) -> list[tuple[int, str]]:
     """Return (line, value) for every string constant an AST parse finds.
@@ -201,9 +229,29 @@ def test_no_model_id_shaped_string_outside_the_default_table() -> None:
                 continue
             if path == _TIERS_FILE and value in allowed_values:
                 continue
+            if value in _EXEMPT_MEDIA_TYPE_LITERALS:
+                continue
             violations.append(f"{path.relative_to(_SRC_ROOT)}:{lineno}: {value!r}")
 
     assert violations == [], (
         "model-id-shaped string found outside harness/tiers.py's "
         f"_DEFAULT_MODELS table: {violations}"
+    )
+
+
+def test_exempt_media_types_can_never_collide_with_a_default_model_id() -> None:
+    """The media-type exemption above must be structurally incapable of
+    hiding a real hardcoded model id (F-4.2-09). If any value in
+    `_DEFAULT_MODELS` ever equals one of the exempted media-type
+    literals, the exemption would silently defeat this guard's one true
+    purpose for that exact value, so this must fail loudly rather than
+    let that coincidence pass unnoticed. This is a standing check, run
+    every time the suite runs, not a one-time claim: it catches a future
+    edit to either set, not only today's two values.
+    """
+    assert _EXEMPT_MEDIA_TYPE_LITERALS.isdisjoint(_DEFAULT_MODELS.values()), (
+        "a _DEFAULT_MODELS value collides with the media-type exemption; "
+        "the guard's true-positive power for that value is now silently "
+        "defeated. Remove the colliding literal from "
+        "_EXEMPT_MEDIA_TYPE_LITERALS, it is no longer a safe exemption."
     )

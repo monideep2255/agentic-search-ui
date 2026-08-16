@@ -25,7 +25,9 @@ Writes:
 
 from __future__ import annotations
 
+import asyncio
 import json
+from collections.abc import AsyncIterator
 from typing import NamedTuple
 
 import httpx
@@ -42,6 +44,8 @@ from system_03_search_agent.adapters.cli.client import (
     _parse_error_detail,
     _parse_retry_after,
 )
+from system_03_search_agent.adapters.cli.sse import SseFrameTooLargeError
+from system_03_search_agent.contracts.events import Event
 
 
 # A local, structurally-identical stand-in for `credentials.Credentials`
@@ -197,6 +201,75 @@ class TestCreateRun:
         assert type(exc_info.value) is CliApiError
         assert exc_info.value.status_code == 500
 
+    @pytest.mark.asyncio
+    async def test_a_204_success_status_raises_actionable_error_rather_than_crashing(
+        self,
+    ) -> None:
+        """F-4.2-A-24: `_raise_for_status` only checks `>= 400`, so a 204
+        would previously reach `response.json()["run_id"]` unguarded and
+        crash on a raw `json.JSONDecodeError`."""
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(204)
+
+        client = _client_with_handler(handler)
+        with pytest.raises(CliApiError) as exc_info:
+            await client.create_run(text="q", session_id="s1", audience_depth="researcher")
+
+        assert exc_info.value.message.strip() != ""
+
+    @pytest.mark.asyncio
+    async def test_a_302_success_status_raises_actionable_error_rather_than_crashing(
+        self,
+    ) -> None:
+        """F-4.2-A-24: a 3xx the transport did not follow is still `< 400`
+        and still has no JSON body to parse."""
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(302, headers={"Location": "http://test/elsewhere"})
+
+        client = _client_with_handler(handler)
+        with pytest.raises(CliApiError) as exc_info:
+            await client.create_run(text="q", session_id="s1", audience_depth="researcher")
+
+        assert exc_info.value.message.strip() != ""
+
+    @pytest.mark.asyncio
+    async def test_never_follows_a_redirect_even_if_the_injected_client_defaults_to_it(
+        self,
+    ) -> None:
+        """F-4.2-A-29: the "exactly one HTTP request" guarantee must hold
+        regardless of the injected `httpx.AsyncClient`'s own
+        `follow_redirects` setting, which lives outside this module's
+        control. With `follow_redirects=True` on the client and a 302
+        from the server, a `create_run` that omitted its own explicit
+        `follow_redirects=False` would let the transport follow the
+        redirect and issue a second create, spending a second allowance
+        slot against a run that may already exist.
+        """
+        call_count = 0
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return httpx.Response(302, headers={"Location": "http://test/v1/query"})
+            return httpx.Response(202, json={"run_id": "run-1", "persona_name": "Persona"})
+
+        http = httpx.AsyncClient(
+            transport=httpx.MockTransport(handler),
+            base_url="http://test",
+            follow_redirects=True,
+        )
+        client = CliClient(http, _CREDS)
+
+        with pytest.raises(CliApiError):
+            await client.create_run(text="q", session_id="s1", audience_depth="researcher")
+
+        # Mutation: drop `follow_redirects=False` from create_run's own
+        # POST call -> call_count becomes 2, the redirect gets followed.
+        assert call_count == 1
+
 
 # ---------------------------------------------------------------------------
 # stop
@@ -223,6 +296,21 @@ class TestStop:
         with pytest.raises(ForbiddenError) as exc_info:
             await client.stop("run-1")
         assert exc_info.value.message == "you do not own this run"
+
+    @pytest.mark.asyncio
+    async def test_a_204_success_status_raises_actionable_error_rather_than_crashing(
+        self,
+    ) -> None:
+        """F-4.2-A-24: previously `response.json()["stopped"]` would crash
+        raw on a 204's absent body."""
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(204)
+
+        client = _client_with_handler(handler)
+        with pytest.raises(CliApiError) as exc_info:
+            await client.stop("run-1")
+        assert exc_info.value.message.strip() != ""
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +365,21 @@ class TestFetchCitations:
         with pytest.raises(ConflictError) as exc_info:
             await client.fetch_citations("run-1")
         assert "terminal state" in exc_info.value.message
+
+    @pytest.mark.asyncio
+    async def test_a_303_success_status_with_no_json_body_raises_actionable_error(
+        self,
+    ) -> None:
+        """F-4.2-A-24: a 303 the transport did not follow is still `< 400`
+        and still has no JSON body to parse."""
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(303, headers={"Location": "http://test/elsewhere"})
+
+        client = _client_with_handler(handler)
+        with pytest.raises(CliApiError) as exc_info:
+            await client.fetch_citations("run-1")
+        assert exc_info.value.message.strip() != ""
 
 
 # ---------------------------------------------------------------------------
@@ -373,6 +476,333 @@ class TestStreamEvents:
         with pytest.raises(CliApiError) as exc_info:
             await _collect()
         assert exc_info.value.status_code == 400
+
+    # -----------------------------------------------------------------
+    # F-4.2-A-02: U+2028, U+2029, U+0085, and a chunk-split multi-byte
+    # character must never corrupt the frame.
+    # -----------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("separator", [" ", " ", ""])
+    async def test_a_raw_line_or_paragraph_separator_survives_in_a_token_and_a_citation(
+        self, separator: str
+    ) -> None:
+        """`httpx.Response.aiter_lines()`'s own `LineDecoder` splits on
+        U+2028/U+2029/U+0085 in addition to LF/CR/CRLF, so a `data:` line
+        carrying one of these ordinary biomedical-text characters used to
+        be cut in half mid-JSON and lose the whole answer. The server's
+        real serializer (`pydantic`'s `model_dump_json`) emits these raw,
+        not escaped, so the test body is built the same way
+        (`ensure_ascii=False`), not with `json.dumps`'s ASCII-escaping
+        default.
+        """
+        token_text = f"line one{separator}line two"
+        citation = _citation_body()
+        citation["claim_text"] = f"BRCA1{separator}is a protein-coding gene."
+        token_envelope = _event_payload("token", 0, {"text": token_text, "marker_ids": []})
+        citation_envelope = _event_payload("citation", 1, citation)
+        body = (
+            "event: token\n"
+            f"data: {json.dumps(token_envelope, ensure_ascii=False)}\n"
+            "id: 0\n\n"
+            "event: citation\n"
+            f"data: {json.dumps(citation_envelope, ensure_ascii=False)}\n"
+            "id: 1\n\n"
+        ).encode()
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+        events = [event async for event in client.stream_events("run-1")]
+
+        assert [e.type for e in events] == ["token", "citation"]
+        assert events[0].payload["text"] == token_text
+        assert events[1].payload["claim_text"] == citation["claim_text"]
+
+    @pytest.mark.asyncio
+    async def test_a_multi_byte_utf8_character_split_across_a_chunk_boundary_survives(
+        self,
+    ) -> None:
+        """A 4-byte UTF-8 character (U+1F9EC) whose bytes are split
+        across two separate network chunks must still decode correctly:
+        `_ChunkSafeLineSplitter` buffers the incomplete trailing bytes in
+        its incremental decoder rather than either raising or silently
+        corrupting the character.
+        """
+        emoji = "\U0001f9ec"
+        token_text = f"BRCA1 {emoji} variant"
+        envelope = _event_payload("token", 0, {"text": token_text, "marker_ids": []})
+        frame = f"event: token\ndata: {json.dumps(envelope, ensure_ascii=False)}\nid: 0\n\n"
+        frame_bytes = frame.encode("utf-8")
+
+        emoji_bytes = emoji.encode("utf-8")
+        assert len(emoji_bytes) == 4
+        split_index = frame_bytes.index(emoji_bytes) + 2  # land inside the 4-byte sequence
+        chunk_one, chunk_two = frame_bytes[:split_index], frame_bytes[split_index:]
+        assert chunk_one and chunk_two
+
+        async def gen() -> AsyncIterator[bytes]:
+            yield chunk_one
+            yield chunk_two
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=gen(), headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+        events = [event async for event in client.stream_events("run-1")]
+
+        assert len(events) == 1
+        assert events[0].payload["text"] == token_text
+
+    # -----------------------------------------------------------------
+    # F-4.2-A-10: an unknown or malformed frame is skipped, counted, and
+    # never aborts the run over a complete, otherwise-valid answer.
+    # -----------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_an_unrecognized_event_type_is_skipped_and_counted_not_raised(
+        self,
+    ) -> None:
+        guard_envelope = _event_payload(
+            "guard", 0, {"passed": True, "category": "ok", "reason": None}
+        )
+        unknown_envelope = {
+            "type": "a_future_event_type_this_build_has_not_been_taught",
+            "version": "v1",
+            "trace_id": "t1",
+            "seq": 1,
+            "ts": "2026-08-16T00:00:00Z",
+            "payload": {},
+        }
+        done_envelope = _event_payload(
+            "done",
+            2,
+            {
+                "total_cost_usd": 0.0,
+                "total_tool_calls": 0,
+                "elapsed_ms": 1,
+                "trust_outcome": "answer",
+            },
+        )
+        body = (
+            f"event: guard\ndata: {json.dumps(guard_envelope)}\nid: 0\n\n"
+            f"event: mystery\ndata: {json.dumps(unknown_envelope)}\nid: 1\n\n"
+            f"event: done\ndata: {json.dumps(done_envelope)}\nid: 2\n\n"
+        ).encode()
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+        events = [event async for event in client.stream_events("run-1")]
+
+        # Mutation: catch nothing around Event.model_validate_json ->
+        # this raises pydantic.ValidationError instead of skipping, and
+        # the "done" below (a correct, complete answer) is never reached.
+        assert [e.type for e in events] == ["guard", "done"]
+        assert client.stream_skipped_frame_count == 1
+        assert client.stream_truncated is False
+
+    @pytest.mark.asyncio
+    async def test_a_non_json_data_line_is_skipped_and_counted_not_raised(self) -> None:
+        done_envelope = _event_payload(
+            "done",
+            1,
+            {
+                "total_cost_usd": 0.0,
+                "total_tool_calls": 0,
+                "elapsed_ms": 1,
+                "trust_outcome": "answer",
+            },
+        )
+        body = (
+            "event: guard\ndata: not json at all\nid: 0\n\n"
+            f"event: done\ndata: {json.dumps(done_envelope)}\nid: 1\n\n"
+        ).encode()
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+        events = [event async for event in client.stream_events("run-1")]
+
+        assert [e.type for e in events] == ["done"]
+        assert client.stream_skipped_frame_count == 1
+
+    @pytest.mark.asyncio
+    async def test_a_stream_that_ends_mid_frame_sets_truncated_not_skipped(self) -> None:
+        """A frame that dispatches via the STREAM-END flush (no closing
+        blank line) and fails to decode is a genuinely different shape
+        from a mid-stream skip: the connection ended while writing this
+        event, not "the server sent one bad, complete frame and kept
+        going". `stream_truncated` must be set, and
+        `stream_skipped_frame_count` must stay at 0, so a caller can
+        distinguish the two.
+        """
+        guard_envelope = _event_payload(
+            "guard", 0, {"passed": True, "category": "ok", "reason": None}
+        )
+        good = f"event: guard\ndata: {json.dumps(guard_envelope)}\nid: 0\n\n"
+        # No closing blank line, and the JSON itself is incomplete: the
+        # connection was cut mid-transmission of this event.
+        partial = (
+            'event: token\ndata: {"type": "token", "version": "v1", '
+            '"trace_id": "t1", "seq": 1, "ts": "2026-08-16T00:00:00Z", '
+            '"payload": {"text": "incom'
+        )
+        body = (good + partial).encode()
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+        events = [event async for event in client.stream_events("run-1")]
+
+        assert [e.type for e in events] == ["guard"]
+        assert client.stream_skipped_frame_count == 0
+        assert client.stream_truncated is True
+
+    # -----------------------------------------------------------------
+    # F-4.2-A-12: the stream ends locally on a fatal terminal event, even
+    # if the transport holds the connection open past it.
+    # -----------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_ends_locally_on_a_fatal_error_even_if_the_connection_stays_open(
+        self,
+    ) -> None:
+        """Reproduces F-4.2-A-12/F-4.2-01 directly: a server that sends a
+        terminal fatal `error` and then holds the connection open (never
+        closes the body) must not hang this method. The prior shape
+        relied on the server closing the response; this proves the
+        client itself now ends the generator on the envelope's own
+        terminal shape. Bounded by `asyncio.wait_for` so a regression
+        fails this test loudly and fast rather than stalling the suite.
+        """
+        error_envelope = _event_payload(
+            "error",
+            0,
+            {
+                "fatal": True,
+                "scope": "run",
+                "source": "agent_loop",
+                "error_class": "cancelled",
+                "message": "the run was stopped",
+                "retry_after_s": 0,
+            },
+        )
+        frame = f"event: error\ndata: {json.dumps(error_envelope)}\nid: 0\n\n".encode()
+
+        async def gen() -> AsyncIterator[bytes]:
+            yield frame
+            # Simulate a server holding the connection open indefinitely
+            # past the terminal event.
+            await asyncio.sleep(3600)
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=gen(), headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+
+        async def _collect() -> list[Event]:
+            return [event async for event in client.stream_events("run-1")]
+
+        events = await asyncio.wait_for(_collect(), timeout=5.0)
+
+        assert [e.type for e in events] == ["error"]
+        assert events[0].payload["error_class"] == "cancelled"
+
+    @pytest.mark.asyncio
+    async def test_ends_locally_on_done_even_if_the_connection_stays_open(self) -> None:
+        done_envelope = _event_payload(
+            "done",
+            0,
+            {
+                "total_cost_usd": 0.0,
+                "total_tool_calls": 0,
+                "elapsed_ms": 1,
+                "trust_outcome": "answer",
+            },
+        )
+        frame = f"event: done\ndata: {json.dumps(done_envelope)}\nid: 0\n\n".encode()
+
+        async def gen() -> AsyncIterator[bytes]:
+            yield frame
+            await asyncio.sleep(3600)
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=gen(), headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+
+        async def _collect() -> list[Event]:
+            return [event async for event in client.stream_events("run-1")]
+
+        events = await asyncio.wait_for(_collect(), timeout=5.0)
+        assert [e.type for e in events] == ["done"]
+
+    @pytest.mark.asyncio
+    async def test_does_not_end_on_a_non_fatal_error_and_keeps_reading(self) -> None:
+        """Negative control for F-4.2-A-12: a non-fatal `error`
+        (`error_class` "transient" or "recoverable") must NOT stop the
+        generator, since the phase premise reserves ending the run for a
+        `done` or a FATAL error only.
+        """
+        transient_envelope = _event_payload(
+            "error",
+            0,
+            {
+                "fatal": False,
+                "scope": "tool",
+                "source": "cypher_query",
+                "error_class": "transient",
+                "message": "graph query timed out, retrying",
+                "retry_after_s": 1,
+            },
+        )
+        done_envelope = _event_payload(
+            "done",
+            1,
+            {
+                "total_cost_usd": 0.0,
+                "total_tool_calls": 0,
+                "elapsed_ms": 1,
+                "trust_outcome": "answer",
+            },
+        )
+        body = (
+            f"event: error\ndata: {json.dumps(transient_envelope)}\nid: 0\n\n"
+            f"event: done\ndata: {json.dumps(done_envelope)}\nid: 1\n\n"
+        ).encode()
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+        events = [event async for event in client.stream_events("run-1")]
+
+        assert [e.type for e in events] == ["error", "done"]
+
+    # -----------------------------------------------------------------
+    # F-4.2-A-25: an oversized single event fails fast rather than
+    # buffering unbounded.
+    # -----------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_an_oversized_data_field_fails_fast_rather_than_buffering_unbounded(
+        self,
+    ) -> None:
+        huge_value = "x" * 200_000
+        body = f"event: token\ndata: {huge_value}\n".encode()
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+        with pytest.raises(SseFrameTooLargeError):
+            async for _event in client.stream_events("run-1"):
+                pass
 
 
 # ---------------------------------------------------------------------------
