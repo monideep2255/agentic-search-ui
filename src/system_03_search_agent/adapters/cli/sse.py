@@ -53,6 +53,38 @@ from collections.abc import Iterable, Iterator
 # is `client.py`'s job.
 SseTuple = tuple[str | None, str, str | None]
 
+# F-4.2-A-25: the accumulator had no bound on a single event's `data:`
+# field, so a hostile or corrupted stream could grow one event's buffer
+# without limit before ever reaching a JSON-parse or Pydantic failure. 64
+# KiB is comfortably above any real envelope this repo's server can emit
+# (contracts/events.py's own `max_length` caps put the largest realistic
+# payload, a full ThinkPayload with 20 ResolvedEntity items, at well under
+# 10 KiB) and far below a pathological multi-megabyte line
+# (`production-standards.md`'s bounded-context-items gate).
+_MAX_ACCUMULATED_DATA_CHARS: int = 65536
+
+
+class SseFrameTooLargeError(Exception):
+    """A single SSE event's accumulated `data:` field exceeded
+    `_MAX_ACCUMULATED_DATA_CHARS` before a blank line (or a stream-end
+    flush) closed it. Raised eagerly, at the `data:` line that pushes the
+    running total over the cap, rather than after buffering an unbounded
+    amount and only failing later at JSON-parse time (F-4.2-A-25).
+    Actionable: no legitimate event from this repo's server approaches
+    this size, so a caller should abort the stream rather than retry the
+    same connection; retrying the whole run from a fresh `s3 ask` is the
+    reasonable next step if this recurs.
+    """
+
+    def __init__(self, accumulated_chars: int) -> None:
+        super().__init__(
+            f"one SSE event's data field exceeded {_MAX_ACCUMULATED_DATA_CHARS} "
+            f"characters ({accumulated_chars} accumulated before this line); "
+            "aborting the stream rather than buffering further. This is not a "
+            "normal server response; do not retry the same connection."
+        )
+        self.accumulated_chars = accumulated_chars
+
 
 class _SseLineAccumulator:
     """The incremental, one-line-at-a-time core both `parse_sse_lines`
@@ -83,6 +115,7 @@ class _SseLineAccumulator:
         self._event_type: str | None = None
         self._data_lines: list[str] = []
         self._data_seen = False
+        self._data_chars = 0
         self._last_event_id: str | None = None
 
     def feed(self, raw_line: str) -> SseTuple | None:
@@ -113,7 +146,15 @@ class _SseLineAccumulator:
         if field == "event":
             self._event_type = value
         elif field == "data":
+            # +1 for the "\n" joiner every line after the first will need
+            # at dispatch time (`_dispatch`'s "\n".join), so the bound
+            # matches what will actually be handed to a JSON parser.
+            joiner = 1 if self._data_lines else 0
+            prospective_chars = self._data_chars + joiner + len(value)
+            if prospective_chars > _MAX_ACCUMULATED_DATA_CHARS:
+                raise SseFrameTooLargeError(prospective_chars)
             self._data_lines.append(value)
+            self._data_chars = prospective_chars
             self._data_seen = True
         elif field == "id":
             self._last_event_id = value
@@ -139,6 +180,7 @@ class _SseLineAccumulator:
         self._event_type = None
         self._data_lines = []
         self._data_seen = False
+        self._data_chars = 0
 
     def flush(self) -> SseTuple | None:
         """Dispatch whatever is buffered even without a trailing blank
