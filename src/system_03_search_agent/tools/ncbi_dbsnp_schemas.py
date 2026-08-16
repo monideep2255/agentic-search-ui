@@ -394,8 +394,22 @@ class NcbiDbsnpOutput(BaseModel):
         Field(default_factory=list, max_length=10),
     ] = Field(default_factory=list)
     chrpos: Annotated[str | None, Field(default=None, max_length=30)] = None
+    # 64, raised from the locked spec's 40 by product-owner decision on
+    # 2026-08-15, and the spec's Section 6.3 is corrected to match rather
+    # than the code deviating from it silently.
+    #
+    # 40 rejected standard ClinVar vocabulary. Measured at build phase 3.2
+    # against a live 800-record clinical sample: about 10 percent of real
+    # terms exceeded it, including `conflicting-interpretations-of-
+    # pathogenicity` (44) and `no-classifications-from-unflagged-records`
+    # (41). A cap that refuses a tenth of the real vocabulary is not
+    # bounding a blast radius, it is withholding facts a clinician needs.
+    #
+    # `fields_withheld` still discloses anything over the new cap, so the
+    # honesty guarantee is unchanged and this is defence in depth for
+    # genuinely absurd input rather than the primary control.
     clinical_significance: Annotated[
-        list[Annotated[str, Field(max_length=40)]],
+        list[Annotated[str, Field(max_length=64)]],
         Field(default_factory=list, max_length=10),
     ] = Field(default_factory=list)
     functional_consequence: Annotated[

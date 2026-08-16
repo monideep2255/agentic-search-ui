@@ -1028,7 +1028,7 @@ Output schema:
     "spdi_canonical": {"type": "string", "maxLength": 150},
     "alleles": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 20}},
     "chrpos": {"type": "string", "maxLength": 30},
-    "clinical_significance": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 40}},
+    "clinical_significance": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 64}},
     "functional_consequence": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 60}},
     "genes": {
       "type": "array",
@@ -1067,7 +1067,7 @@ Endpoints and fields used:
 | Endpoint | Returns |
 |----------|---------|
 | `refsnp/{rsid}` | `refsnp_id`, `primary_snapshot_data`, `mane_select_ids`, `citations` |
-| `spdi/{spdi}/canonical_representative` | canonical `{seq_id, position, deleted_sequence, inserted_sequence}` |
+| `spdi/{spdi}/contextual` | canonical `{seq_id, position, deleted_sequence, inserted_sequence}`. Corrected 2026-08-15: this section previously named `spdi/{spdi}/canonical_representative`, which build phase 3.2 live-confirmed returns HTTP 500 on every well-formed input tried, including NCBI's own documented example. The shipped tool has always used `/contextual`; the spec text was the thing that was wrong |
 | `spdi/{spdi}/all_equivalent_contextual` | all equivalent contextual alleles |
 | `hgvs/{hgvs}/contextuals` | SPDI contextual alleles for an HGVS expression (`>` URL-encoded as `%3E`) |
 | dbSNP ESummary (`db=snp`) | `allele`, `chrpos`, `spdi`, `clinical_significance`, `fxn_class`, `genes`, `global_mafs` |
@@ -3212,7 +3212,7 @@ This section refines that table into `git-workflow.md`'s `phase/N.M-description`
 | 2.2 | `phase/2.2-write-step-grounding` | Deterministic cite-or-refuse, the provenance type wired for Layer 1 citations, a first version of the trust signal for the graph-only path, the two required tests from Section 23 | 2.1 | v1 |
 | 3.0 | `phase/3.0-guardrail-node` | Full guardrail replacing the phase 2.0 passthrough stub: Pydantic validation, prompt-injection rejection, forbidden query types, rate and cost pre-checks | 2.0 | v1 |
 | 3.1 | `phase/3.1-ncbi-efetch` | `ncbi_efetch` (E-utilities for PubMed, ClinVar, OMIM; Datasets API v2 for Gene, Genome, Orthologs, Taxonomy) | 2.0, 3.0 | v1 |
-| 3.2 | `phase/3.2-ncbi-dbsnp` | `ncbi_dbsnp` over Variation Services, plus the Q1 dbVar two-step coordinate-overlap sub-tool (ESearch prefilter, placement post-filter) | 3.1 | v1 |
+| 3.2 | `phase/3.2-ncbi-dbsnp` | `ncbi_dbsnp` over Variation Services and dbSNP ESummary. Corrected 2026-08-15: this line also listed the Q1 dbVar two-step coordinate-overlap sub-tool, which had already shipped in build phase 3.1 as `ncbi_coordinate_overlap.py`, the `coordinate_overlap` action of `ncbi_efetch` | 3.1 | v1 |
 | 3.3 | `phase/3.3-enrichment-tools` | `pubtator_annotate` and `litvar2_lookup`, each with the untrusted-source-reader tier separation (read plus one API, no write, no other tools) | 3.1 | v1 |
 | 3.5 | `phase/3.5-pathogen-clinicaltrials-tools` | `pathogen_detection` (Pathogen Detection FTP, Q5) and `clinicaltrials_search` (ClinicalTrials.gov v2, Q4), each with its own timeout and snapshot or cache semantics, completing the seven-tool roster | 3.1 | v1 |
 | 3.4 | `phase/3.4-citation-trust-full` | Provenance extended to Layer 2 and 3 (the four added fields), the two-tier risk gate (standard cite-or-refuse versus the higher-stakes substantiation-and-triangulation gate), data freshness and conflict resolution | 2.2, 3.1, 3.2, 3.3, 3.5 | v1 |

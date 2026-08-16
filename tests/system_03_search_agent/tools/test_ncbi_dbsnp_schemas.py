@@ -317,13 +317,33 @@ def test_clinical_significance_max_items_10_is_enforced() -> None:
         NcbiDbsnpOutput.model_validate(payload)
 
 
-def test_clinical_significance_item_max_length_40_is_enforced() -> None:
+def test_clinical_significance_item_max_length_64_is_enforced() -> None:
+    """The cap moved from 40 to 64 on 2026-08-15, by product-owner decision.
+
+    Re-pinned to the new boundary rather than relaxed: 65 is still rejected,
+    so the field is still bounded and the multi-agent pipeline gate that
+    requires a cap on every string is still satisfied.
+
+    The real reason for the change is the third assertion below. 40 rejected
+    standard ClinVar vocabulary, measured at build phase 3.2 against a live
+    800-record sample at roughly 10 percent of real terms. Asserting the
+    actual term that motivated the move, rather than only the numeric
+    boundary, is what stops a future tightening from passing review by
+    looking like a reasonable smaller number.
+    """
     payload = dict(MINIMAL_OUTPUT_DICT)
-    payload["clinical_significance"] = ["c" * 40]
+    payload["clinical_significance"] = ["c" * 64]
     NcbiDbsnpOutput.model_validate(payload)  # boundary: ok
-    payload["clinical_significance"] = ["c" * 41]
+    payload["clinical_significance"] = ["c" * 65]
     with pytest.raises(ValidationError):
         NcbiDbsnpOutput.model_validate(payload)
+
+    # The two real ClinVar terms the old cap refused, 44 and 41 characters.
+    payload["clinical_significance"] = [
+        "conflicting-interpretations-of-pathogenicity",
+        "no-classifications-from-unflagged-records",
+    ]
+    NcbiDbsnpOutput.model_validate(payload)
 
 
 def test_functional_consequence_max_items_10_is_enforced() -> None:
