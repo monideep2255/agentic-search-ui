@@ -495,18 +495,32 @@ async def _create_run_never_retried(
     try:
         return await coro_factory(creds)
     except AuthExpiredError as exc:
-        # Best-effort only: whether this background refresh succeeds or
-        # fails changes nothing about what gets reported below, so every
-        # failure mode `refresh_locked` can raise is swallowed here,
-        # caught by credentials.py's own `CredentialsError` base (not an
-        # enumerated list, same reasoning as `_call_with_one_refresh`
-        # above), plus `FileNotFoundError` and a network-level httpx
-        # failure reaching the refresh call itself.
-        with contextlib.suppress(
-            credentials_module.CredentialsError,
-            FileNotFoundError,
-            httpx.HTTPError,
-        ):
+        # Best-effort only, made STRUCTURAL rather than a list of
+        # suppressed types (F-4.2-D-05, the composition case). Whether
+        # this background refresh succeeds or fails changes nothing
+        # about what gets reported below: the original `AuthExpiredError`
+        # is ALWAYS what gets rendered and raised, because the create
+        # already did not happen either way and that is the fact the
+        # user needs reported. A named list here
+        # (`credentials_module.CredentialsError`, `FileNotFoundError`,
+        # `httpx.HTTPError`) is a second place to forget a type the
+        # instant `refresh_locked` grows a new failure shape, which is
+        # exactly the defect this phase already hit three times over
+        # naming a catcher whose raiser had moved on (F-4.2-A-05,
+        # J-4.2-02, and this finding itself: a bare
+        # `json.JSONDecodeError`/`KeyError` out of `refresh_locked`
+        # escaped this exact suppress list, none of `CredentialsError`,
+        # `FileNotFoundError`, or `httpx.HTTPError`, and replaced the
+        # curated "Run `s3 login`" message with a bare "unexpected
+        # error"). `except Exception` is the structural fix: it is a
+        # closed Python guarantee that every ordinary exception
+        # `refresh_locked` raises or ever will raise is caught here,
+        # with no enumerated list to keep in sync, while
+        # `KeyboardInterrupt`/`SystemExit`/`GeneratorExit` (the three
+        # `BaseException` siblings `Exception` deliberately excludes)
+        # still propagate, since swallowing a user-issued interrupt
+        # inside a best-effort side call would be its own defect.
+        with contextlib.suppress(Exception):
             await credentials_module.refresh_locked(http_client, creds)
         _render_client_error(stderr, exc)
         raise _CommandError(1) from exc
@@ -634,6 +648,7 @@ async def _run_login(
     than truncated.
     """
     from system_03_search_agent.adapters.cli import credentials as credentials_module
+    from system_03_search_agent.adapters.cli.render import _sanitize_untrusted
 
     password = _read_password(stdin)
     if not password:
@@ -651,14 +666,66 @@ async def _run_login(
         return 1
 
     if response.status_code != 200:
-        stderr.write(f"s3 login: {_extract_error_message(response)}\n")
+        # F-4.2-D-03: this is the FIRST command anyone runs, before any
+        # credential exists, and it is reachable through a user-supplied
+        # `--base-url`/`S3_BASE_URL`, so a mistyped or hostile host owns
+        # this write before authentication. `_extract_error_message`
+        # returns the server's own `detail`/`detail.message`/
+        # `detail.reason` text verbatim, which is untrusted content by
+        # `ai-security-standards.md`'s "treat AI output as untrusted"
+        # rule the same way any other server-controlled field is,
+        # regardless of which endpoint delivered it. Routed through
+        # `render.py`'s own `_sanitize_untrusted`, the single sanitizer
+        # this codebase has for exactly this class of write, rather than
+        # a second copy: it neutralizes ANSI control sequences and bidi
+        # overrides (Cc/Cf/Cs/Co Unicode categories) before this ever
+        # reaches a terminal.
+        stderr.write(f"s3 login: {_sanitize_untrusted(_extract_error_message(response))}\n")
         return 1
 
-    body = response.json()
+    # F-4.2-D-05: a 200 with a non-JSON body, or a JSON body missing
+    # `access_token`/`refresh_token`, used to crash raw
+    # (`json.JSONDecodeError`/`KeyError`) instead of failing with an
+    # actionable message. This validates the same three things
+    # `client.py`'s own `_parse_json_body` validates for its four
+    # `CliClient`-routed endpoints (F-4.2-A-24: content type, then that
+    # the body actually parses as JSON), inline rather than imported,
+    # since `/auth/login` is never called through `CliClient` and this
+    # function already owns its own status-code check above; the shape
+    # of the check is intentionally identical, not a different policy.
+    content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type != "application/json":
+        stderr.write(
+            f"s3 login: the server returned a non-JSON response (content-type "
+            f"{content_type or 'none'}); this indicates a server or proxy "
+            "misconfiguration, not a normal failure. Retry, or report this "
+            "if it recurs.\n"
+        )
+        return 1
+    try:
+        body = response.json()
+    except ValueError as exc:
+        stderr.write(
+            f"s3 login: the server declared a JSON content type but the body "
+            f"did not parse as JSON ({type(exc).__name__}); retry, or report "
+            "this if it recurs.\n"
+        )
+        return 1
+
+    access_token = body.get("access_token") if isinstance(body, dict) else None
+    refresh_token = body.get("refresh_token") if isinstance(body, dict) else None
+    if not isinstance(access_token, str) or not isinstance(refresh_token, str):
+        stderr.write(
+            "s3 login: the server's response was missing the expected "
+            "access_token/refresh_token fields; try again, or report this "
+            "if it recurs\n"
+        )
+        return 1
+
     creds = credentials_module.Credentials(
         base_url=str(http_client.base_url),
-        access_token=body["access_token"],
-        refresh_token=body["refresh_token"],
+        access_token=access_token,
+        refresh_token=refresh_token,
     )
     credentials_module.store(creds)
     stdout.write("logged in\n")

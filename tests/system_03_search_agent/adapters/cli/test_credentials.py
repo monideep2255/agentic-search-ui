@@ -246,6 +246,73 @@ async def test_refresh_locked_raises_refresh_error_on_a_non_200_and_names_next_s
 
 
 @pytest.mark.asyncio
+async def test_refresh_locked_raises_refresh_error_on_a_200_with_a_non_json_body(
+    monkeypatch, tmp_path
+) -> None:
+    """F-4.2-D-05: a 200 whose body is not JSON at all used to reach the
+    bare `response.json()` call at `_refresh_and_store` and escape as a
+    raw `json.JSONDecodeError`, a type that is not a `CredentialsError`,
+    so `_call_with_one_refresh`/`_create_run_never_retried` in main.py
+    (whose callers only catch `CredentialsError`) never got the chance
+    to render it as anything but "unexpected error". This asserts
+    `refresh_locked` itself now raises the typed, curated `RefreshError`
+    for this shape, closing the gap at its source rather than relying on
+    every caller to special-case a parser exception.
+    """
+    _point_at(monkeypatch, tmp_path)
+    creds_mod.store(
+        creds_mod.Credentials(base_url="http://test", access_token="old-a", refresh_token="old-r")
+    )
+    starting = creds_mod.load()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b"not json at all", headers={"content-type": "text/plain"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://test")
+    try:
+        # Mutation: revert to a bare `response.json()` call with no
+        # content-type or ValueError guard -- this would raise
+        # json.JSONDecodeError instead of creds_mod.RefreshError, failing
+        # the pytest.raises type check below.
+        with pytest.raises(creds_mod.RefreshError):
+            await creds_mod.refresh_locked(client, starting)
+    finally:
+        await client.aclose()
+
+    # A failed refresh must not corrupt the stored credentials.
+    assert creds_mod.load().refresh_token == "old-r"
+
+
+@pytest.mark.asyncio
+async def test_refresh_locked_raises_refresh_error_on_a_200_missing_the_token_fields(
+    monkeypatch, tmp_path
+) -> None:
+    """F-4.2-D-05: a 200 with a syntactically valid JSON body that omits
+    `access_token`/`refresh_token` used to reach `body["access_token"]`
+    and raise a raw `KeyError`, the same undercaught shape as the
+    non-JSON case above.
+    """
+    _point_at(monkeypatch, tmp_path)
+    creds_mod.store(
+        creds_mod.Credentials(base_url="http://test", access_token="old-a", refresh_token="old-r")
+    )
+    starting = creds_mod.load()
+
+    transport = _refresh_transport({"token_type": "bearer"})  # no access_token/refresh_token
+    client = httpx.AsyncClient(transport=transport, base_url="http://test")
+    try:
+        # Mutation: index `body["access_token"]`/`body["refresh_token"]`
+        # directly instead of the isinstance-guarded `.get()` pair above
+        # -- this would raise a bare KeyError instead of RefreshError.
+        with pytest.raises(creds_mod.RefreshError):
+            await creds_mod.refresh_locked(client, starting)
+    finally:
+        await client.aclose()
+
+    assert creds_mod.load().refresh_token == "old-r"
+
+
+@pytest.mark.asyncio
 async def test_refresh_locked_uses_the_already_rotated_disk_value_without_calling_the_server(
     monkeypatch, tmp_path
 ) -> None:
