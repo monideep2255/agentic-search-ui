@@ -105,7 +105,7 @@ class Credentials(NamedTuple):
     refresh_token: str
 def load() -> Credentials                   # raises InsecureCredentialsError if mode is wider than 600
 def store(creds: Credentials) -> None       # atomic replace, mode 600 from creation, never a widen-then-narrow
-def refresh_locked(client, creds) -> Credentials   # exclusive flock for the whole read-refresh-write critical section
+async def refresh_locked(client, creds) -> Credentials  # exclusive flock for the whole read-refresh-write critical section
 
 # sse.py  (T-4.2-03)
 def parse_sse_lines(lines: Iterable[str]) -> Iterator[tuple[str | None, str, str | None]]
@@ -167,8 +167,18 @@ Every clause is mutation-proven before it counts as green, per the five separate
 
 ## Findings
 
-None yet. The adversary and judge rounds file here.
+The adversary and judge rounds file here. Single writer per state: the finder files, the judge or a fix agent triages, only the designated closer closes, and the raiser never closes its own item.
+
+| Finding | Severity | Raised by | State | Detail |
+|---------|----------|-----------|-------|--------|
+| F-4.2-01 | minor | lead, at merge | open | `stream_events` does not itself stop on a fatal `error`. It yields every event and ends when the HTTP response body ends, relying on the server's own `subscribe()` terminating the stream on `done` or a fatal error. That behaviour is real (`core/run_registry.py`), so the CLI does end on a stopped run today, and the 45-second stream read timeout is a second backstop. But the guarantee is now the SERVER's rather than the client's, where the brief asked for it locally, so a future server change that held the connection open past a fatal error would hang the CLI rather than fail it. The gate's `TestStoppedRun` arm is what decides whether this is acceptable as built; the judge must confirm that arm genuinely exercises a stopped run end to end rather than passing on a stream that happened to close for another reason |
+| F-4.2-02 | minor | lead, at merge | open | The lead's fixed-interface table gave `refresh_locked` as synchronous when it issues an HTTP call and is invoked from async code, so it could never have been. Corrected in this file and pushed to T-4.2-05 before that builder consumed it. Recorded rather than quietly amended, because it is the second brief error this phase, after the missing `main()` signature, and two in one phase is a pattern about how the briefs were written rather than two unrelated slips |
 
 ## History
 
-- 2026-08-16: phase opened on `phase/4.2-cli-adapter`. Two parallel read-only researchers mapped the REST surface and the auth, packaging and test conventions before this file was written. Two spec-versus-reality gaps recorded above rather than routed around.
+- 2026-08-16: phase opened on `phase/4.2-cli-adapter`. Two parallel read-only researchers mapped the REST surface and the auth, packaging and test conventions before this file was written. Two spec-versus-reality gaps recorded rather than routed around.
+- 2026-08-16: T-4.2-01 landed as its own commit (459f06a), 20 tests across twelve arms, every one failing with `ModuleNotFoundError` and nothing else. Its builder reported two gaps in the lead's brief rather than building around them: the missing `main()` signature and the two commands no arm pinned.
+- 2026-08-16: T-4.2-01 expanded to 27 tests across fourteen arms (77c8201), adding `s3 stop` and `s3 login`, still failing with exactly one distinct error.
+- 2026-08-16: T-4.2-06 merged. Two pre-existing packaging defects corrected: a console entry point that had never worked, and a package list carrying four phantom packages while omitting eight real ones including both existing adapters.
+- 2026-08-16: T-4.2-02 merged. Its builder found and fixed a deadlock hazard during the build, an `fcntl.flock` acquired inline across an `await` blocking the event-loop thread against its own waiter, and reported the `refresh_locked` signature error (F-4.2-02).
+- 2026-08-16: T-4.2-03 merged, 33 unit tests. Deviation from the brief on stream termination filed as F-4.2-01 rather than accepted silently.
