@@ -2,7 +2,7 @@
 
 A plain-language update on what this project is, what works today, and what comes next. No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-14.
+Last updated: 2026-08-15.
 
 ## Table of contents
 
@@ -47,6 +47,7 @@ You can ask a question and get a real, cited answer back, streamed to a web page
 
 Concretely:
 
+- You can use it without an account at all. A first-time visitor gets five free searches, and the count is kept by our server rather than by the browser, so it is a real number rather than one the page can be talked out of. Signing in afterwards carries that visit's searches across.
 - You can sign in. Accounts, passwords, and sessions all work.
 - You can type a question into a chat window and watch the answer appear word by word, with a stop button.
 - The system asks a real question against our own biomedical database and gets real results.
@@ -80,7 +81,9 @@ All six live-government-API connections the plan called for are now built. That 
 
 ## What does not work yet
 
-The newest work, the redesigned web page, has now been through two independent reviews and both found serious problems. That is the system working, but it is worth being blunt about what they found, because the worst one goes to the heart of what this product is for.
+The honest headline: someone determined, with access to a lot of internet connections, can still use up the free searches we set aside for strangers each day and leave the product unusable for other newcomers until the next morning. It costs them effort and it costs us nothing beyond the daily budget we chose in advance, and anyone signed in is unaffected. Four separate attempts went into narrowing that, and the fourth is the one that held; the honest position is that a free tier with no sign-up can always be spoiled by someone who really wants to, and what we have bounded is the money rather than the nuisance.
+
+The older headline still stands underneath it: the redesigned web page has been through several independent reviews and every one of them found serious problems. That is the system working, but it is worth being blunt about what they found, because the worst one goes to the heart of what this product is for.
 
 The first reviewer discovered that a visitor without an account, asking any question at all, was shown a confident answer with real-looking official source links attached. Asked "what is the capital of the USA?", the page produced a fully sourced answer about a breast cancer gene. Nothing about it was true, and nothing on screen said so. That has been removed entirely: a visitor without an account is now asked to sign in rather than shown anything invented.
 
@@ -126,6 +129,7 @@ Each of these is a completed, reviewed, merged piece of work.
 | 4.1 | Built the first back door: a way for other computer programs and AI agents, not just a person typing into the web page, to ask the system a question and get one complete, cited answer back | 2026-08-11 |
 | 4.8 | Gave the web page a real design, and found that no browser test in this project had actually run for five sprints | 2026-08-13 |
 | 4.9 | Brought the answer page in line with the approved design, and found three serious problems by putting the two side by side | 2026-08-14 |
+| 4.10 | Opened the product to people without an account: five free searches, counted by our server rather than the browser. Then spent four rounds stopping one person from using up everybody else's free searches in under two seconds | 2026-08-15 |
 | Design system repair | Fixed the design's own colour and keyboard problems at source, after working around them three separate times | 2026-08-14 |
 
 Nine of these are worth understanding, because they explain how this project works.
@@ -160,6 +164,20 @@ The third review looked only at the repairs, and found that three of the four mo
 
 All of those are fixed. The number worth keeping is that the page was fully passing its own checks at the moment each of these was found.
 
+Sprint 4.10, letting strangers in, and four attempts to stop one of them ruining it for everybody. Until this sprint, nobody could try the product without creating an account first, which meant it could not be shown to anyone. Fixing that turned out to be the easy half.
+
+The hard half was that a free search costs us real money, and a stranger has no name. Four separate attempts went into limiting how much one person could take, and the first three were each defeated the same way.
+
+The first limited how many searches one visitor could run at once. A reviewer beat it in a quarter of a second by simply becoming forty visitors: asking the system for a new anonymous identity is free, so limiting what one identity can do limits nothing. Worse, it turned out the two spending limits we already had could not see an anonymous person at all, so there was no backstop underneath. Nothing was capping what strangers could spend.
+
+The second added a daily budget for all anonymous use together. That worked, and it is still the thing protecting the money.
+
+The third was meant to stop one person taking the whole daily budget, and it did the opposite. We had decided that a question the system refuses should not cost the asker one of their five searches, which is fair. But that removed the only thing limiting how many times one person could ask, so a single visitor could ask two hundred refused questions in under two seconds and use up the entire day for everyone else. The fix for one problem created a worse one.
+
+The fourth attempt changed what was being counted. Instead of limiting a person, or an identity, it limits how much of the day any one internet connection can take. Making up more identities does not help, because they all come from the same place. That held: the same attack now gets twenty searches instead of two hundred, someone on a different connection is unaffected, and an office of four people sharing one connection still gets their full five searches each.
+
+Three things are worth saying plainly about how that went. Every one of the five serious problems in this sprint was in our own design or in the checks we wrote to prove the design worked, not in the code somebody built from it. Three of those five were created by the fix for the previous one. And one of them came from an instruction written confidently by the lead that was simply factually wrong, which the builder then implemented exactly as told.
+
 ## What is next
 
 Where the finished work sits against what is still ahead:
@@ -184,8 +202,9 @@ flowchart LR
         Sp --> Door[Front door finished: reconnect, watch together, self-stopping]
         Door --> MCP[Back door: other programs can now ask questions too]
     MCP --> Style[The web page redesigned and built]
+        Style --> Guest[Anyone can try it: five free searches, no account]
     end
-    Style --> Dec[Question-understanding gap: given a home, a later sprint, not fixed yet]
+    Guest --> Dec[Question-understanding gap: given a home, a later sprint, not fixed yet]
     Dec --> Wire[Wire the other five tools into the answer pipeline]
     Wire --> Other[Other ways in: command line, saved history]
     Other --> L[Everything else]
@@ -197,9 +216,7 @@ The planned specification pause (updating the written plans with everything lear
 
 In order, now:
 
-1. Letting somebody try it without signing up first. Right now the very first thing a visitor meets is a demand for an account, and there is no way around it: the back end refuses to run a search for anyone it does not recognise. The approved design gives a visitor five free searches before asking, which is the difference between showing this to someone and asking them to commit to it sight unseen. This is the next sprint, and it is back-end work, not a web-page change.
-
-   It also carries the two missing pieces of information the answer page cannot currently show, the snapshot date and the name of the thing a source is about, since it is already changing the back end. And it fixes a small lie: the account menu currently says "unlimited searches" when there is a real limit of a hundred a day.
+1. Other ways to reach the system besides the web page, starting with a command-line client. The machinery is already finished and shared; this is a second door onto the same rooms.
 2. The question-understanding gap now has a home: a specific future sprint, later than the next several, will build the real fix. It is not being rushed in early, and nothing else in the next few sprints depends on it being fixed first.
 3. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
 4. Then the remaining work: the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
@@ -253,6 +270,10 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 | The new back door's honesty signal, for the rare case where nothing at all could be confirmed one way or the other, currently always reports itself as "low risk" rather than "we do not know." Every other case is handled correctly; only reaches this narrow case with no attempted answer at all | Whenever the product owner decides, or whichever sprint next revisits how that signal is set |
 
 That last row is the important one. None of these can affect a real person while the project runs only on a laptop with no outside users. The moment that changes, several of them stop being optional.
+| Someone with many internet connections can still use up the day's free searches for strangers, leaving other newcomers to wait until the next morning. Anyone signed in is unaffected, and the money stays capped either way | When proper traffic limiting is built, near the end of the project |
+| A first-time visitor never sees the five dots showing how many free searches they have, because the dots only appear after the first question is asked. The offer is invisible until it has been partly taken | Waiting on a decision about whether they should appear sooner |
+| If the day's free searches run out, the page can still show a visitor searches remaining until they actually try one. The refusal itself is honest when it comes | The next piece of web page work |
+| A search that is stopped part-way still costs one of the five. This is deliberate: the answer was already on screen, so giving the search back would be a way to read answers for free | Not planned to change |
 
 ## How we work
 

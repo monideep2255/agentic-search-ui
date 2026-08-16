@@ -18,6 +18,7 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 - [Step 6.2, done](#step-62-done)
 - [Build phase 4.0, done](#build-phase-40-done)
 - [Build phase 4.1, done](#build-phase-41-done)
+- [Build phase 4.10, done](#build-phase-410-done)
 - [Build phase 4.9, done](#build-phase-49-done)
 - [Build phase 4.8, done](#build-phase-48-done)
 - [Open items](#open-items)
@@ -44,7 +45,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-> Build phase 4.9, the answer-screen and chrome fidelity gaps against the approved prototype, is DONE, merged as PR #44 on 2026-08-14. Three review rounds ran and ALL THREE returned FAIL, filing 47 findings; the four criticals, all five re-review majors and both gate defects are closed, and every remaining finding has a named owner in `tracker/phase_4.9.md`. A design-system contrast and focus-nesting pass followed as PR #45, fixing seven axe violations at source, four of them a single token, and adding a permanent gate that holds the design system to the same bar as the app. Build phase 4.8 closed earlier the same day via PR #42, having merged as PR #41 on 2026-08-13. NEXT: build phase 4.10, the anonymous run path and the guest allowance. See "The next session starts here" below.
+> Build phase 4.10, the anonymous run path and the server-side guest allowance, is DONE, merged as PR #46 on 2026-08-15. Someone with no account can now ask a real question and get a real cited answer, five times, counted by the server. Seven review rounds ran and four returned FAIL, filing 30 findings of which five were critical; every critical was a defect in the phase's own design or its premise gate rather than in a builder's code. All five are closed and every remaining finding has a named owner in `tracker/phase_4.10.md`. NEXT: build phase 4.2, the CLI adapter, resuming Section 25's order. See "The next session starts here" below.
 
 Full detail on what PR #23 (build phase 3.1's re-review debt) fixed, the two things deliberately left as open product decisions rather than fixed unilaterally (F-3.1-41, F-3.1-42), and three new minor follow-ups filed by the final reviewer (F-3.1-50, F-3.1-51, plus one already-tracked as F-3.1-46), is `tracker/phase_3.1.md`'s Findings table, current as of 2026-08-07. Full detail on the F-2.1-C15 fix, including the bypass a fresh-context review found in its own first version before merge and the second review that confirmed the fix, is `tracker/fix_c15_generation_bound.md`.
 
@@ -66,7 +67,7 @@ The simpler default, and the right one while subscription budget is healthy: run
 
 NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: whoever finishes a stage updates this line before ending the session, because it is what the next session reads first.
 
-> Build phase 4.9, the answer-screen and chrome fidelity gaps against the approved prototype, is DONE, merged as PR #44 on 2026-08-14. Three review rounds ran and ALL THREE returned FAIL, filing 47 findings; the four criticals, all five re-review majors and both gate defects are closed, and every remaining finding has a named owner in `tracker/phase_4.9.md`. A design-system contrast and focus-nesting pass followed as PR #45, fixing seven axe violations at source, four of them a single token, and adding a permanent gate that holds the design system to the same bar as the app. Build phase 4.8 closed earlier the same day via PR #42, having merged as PR #41 on 2026-08-13. NEXT: build phase 4.10, the anonymous run path and the guest allowance. See "The next session starts here" below.
+> Build phase 4.10, the anonymous run path and the server-side guest allowance, is DONE, merged as PR #46 on 2026-08-15. Someone with no account can now ask a real question and get a real cited answer, five times, counted by the server. Seven review rounds ran and four returned FAIL, filing 30 findings of which five were critical; every critical was a defect in the phase's own design or its premise gate rather than in a builder's code. All five are closed and every remaining finding has a named owner in `tracker/phase_4.10.md`. NEXT: build phase 4.2, the CLI adapter, resuming Section 25's order. See "The next session starts here" below.
 
 Build phase 3.1 merged as PR #22 (superseded by PR #23) on 2026-08-05 without the adversarial pass over its own fix round, which was the stated pre-merge condition. That gap closed across three re-review rounds, all 2026-08-07: a first re-review found the merged commit FAIL (11 of 26 findings closed clean, 15 reopened, 9 new defects including two critical), a fix round closed nearly all of it, a second re-review of THAT fix round found one more critical soundness gap (alias-matching in gene resolution could silently return a confidently WRONG gene, not just fail to resolve) plus a scattering of smaller issues, and a FOURTH reviewer, dispatched specifically because every fix so far had only been checked in the same session that wrote it, independently re-verified the whole branch fresh against live NCBI and returned APPROVE. Merged as PR #23. Full account: `tracker/phase_3.1.md`'s Findings table, including the "Final independent review" section at the bottom.
 
@@ -107,7 +108,8 @@ Current counts, stated once here:
 - Premise gate, citation trust full (Layer 2/3 provenance, the two-tier risk gate, freshness, conflict detection): 10 of 10, live, no tunnel-gated skip, graded pass@8 on its one Synth-sampling-sensitive case (F-3.4-T05-05)
 - Premise gate, build phase 4.0's own gate (a normal test file, not one of the seven live tool gates above): 26 of 26
 - Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
-- Decisions logged: 316
+- Premise gate, build phase 4.10's own gate (the guest allowance, a normal test file, not one of the seven live tool gates above): 36 of 36, every clause mutation-proven, two-armed throughout since a control that refuses every guest passes every attack test and destroys the product
+- Decisions logged: 319
 - Learnings entries: 79, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below). This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
@@ -144,76 +146,45 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 ## The next session starts here
 
-OPEN BUILD PHASE 4.10, the anonymous run path and the server-side guest allowance. Nothing is in flight; `develop` is clean and every gate is green.
+OPEN BUILD PHASE 4.2, the CLI adapter. Nothing is in flight; `develop` is clean and every gate is green.
 
-It is the only remaining item that cannot be done as frontend work, and it is the last thing standing between this product and being shown to anyone: until it exists, nobody can use it without creating an account first. Product-owner decision, 2026-08-14, split out of build phase 6.0 and pulled ahead of 4.2 to 4.7.
+It is a thin CLI client over the REST API finalized at build phase 4.0, and it depends only on that phase, which is merged. Section 25's order resumes here now that 4.10's out-of-order insertion is closed.
 
-What it owns:
+Open it the standard way, with no structural exception: read `LEARNINGS.md` filtered to the phase's territory, verify 4.0 is merged (it is), write the premise gate and WATCH IT FAIL, then build.
 
-- An anonymous run path. All four `/v1/query` endpoints return 401 without a bearer token today, verified by probing rather than reading, and no guest path exists anywhere in `src/`.
-- A guest identity the server can trust. Product-owner decision, 2026-08-14: A SIGNED GUEST TOKEN minted on first visit, chosen with a prototype mindset. It is clearable, and anyone who clears it gets five more searches. That is accepted, not overlooked.
-- The allowance counted SERVER-side. A client-side counter is the same dishonesty class judge round 1 filed as build phase 4.8's first critical.
-- Run ownership for a caller with no `users` row, and history migration on signup, since the design promises "Your 5 searches move with you".
-- F-4.0-A-10, unbounded run creation, which is exactly the anonymous-caller case that finding names.
-- The two fields build phase 4.9 could not build because the wire does not carry them: the source card's SNAPSHOT date and the entity name in the source header. Both are additive `CitationPayload` changes, which the v1 contract allows.
-- F-4.9-A-16: the account menu and the rail footer both say "unlimited searches", which is false against a shipped, enforced 100/day cap.
+Two things build phase 4.10 leaves for whoever opens 4.2, both about the gate rather than the code:
 
-Open it the standard way: read `LEARNINGS.md` filtered to auth, rate limiting and the run registry, verify 1.1 and 4.0 are merged (they are), write the premise gate and WATCH IT FAIL, then build. A guardrail-shaped phase has no safe direction of failure, so the gate needs two arms the way build phase 3.0's did: refusing every guest is as wrong as admitting every guest, and only one of those is caught by an attack test.
+- A premise gate can be green while the property it claims is absent, and this is now measured five separate ways in one phase: a clause whose asserted 401 came from the wrong code path, a clause masked by a second cap of the same numeric value, a clause hollowed out without being edited when the state the code reached before it changed, a clause importing the constant it was supposed to pin, and a mutation that did not fire and read exactly like a pass. Before crediting any green clause, name the mutation that would turn it red, run it, and confirm it reached the code path.
+- A brief written by the lead can be factually wrong. Build phase 4.10's worst finding traces to a cost claim asserted in a builder brief without being checked against `core/graph.py`, which the builder then implemented faithfully. Tell a builder to verify anything in its brief that looks like a claim about how the system behaves, and to report the contradiction rather than working around it.
 
-Then build phases 4.2 to 4.7, in Section 25's order.
+Then build phases 4.3 to 4.7, in Section 25's order.
 
-### Carried into 4.10 and beyond
+### Carried into 4.2 and beyond
 
-`tracker/phase_4.9.md` records a disposition for all 47 findings from build phase 4.9's three review rounds. Two need a PRODUCT decision rather than a fix:
+`tracker/phase_4.10.md`'s "Carried open, with an owner each" table records a disposition for every finding that phase did not close. Three need a PRODUCT decision rather than a fix, and they join the queue already waiting from earlier phases:
 
-- F-4.9-A-09: the source collapse this phase added put the off-host citation warning two disclosures deep, so a security mitigation is now opt-in. Whether a warning of that kind may sit behind a disclosure at all is not a styling call.
-- F-4.9-A-08: a stopped run gives no terminal signal and its tool chip reads "running" for ever, because the client aborts the stream before the backend's purpose-built `cancelled` event can arrive. Fixing it means changing the stop path.
+- F-4.10-A-13: a first-time visitor never sees the five dots, because minting is lazy and the dots render only once an allowance exists. The affordance advertising the free searches is invisible until after one is spent.
+- F-4.9-A-09: build phase 4.9's source collapse put the off-host citation warning two disclosures deep, so a security mitigation is opt-in.
+- F-4.9-A-08: a stopped run gives no terminal signal and its tool chip reads "running" for ever.
 
-### How build phase 4.9 came to exist
+One residual is accepted rather than owned, and it is the honest floor after four rounds: a caller with genuinely many source addresses gets one share of the anonymous day per address and is bounded only by the day. The money stays bounded by `ANON_DAILY_RUN_CAP` throughout and signed-in users are unaffected. Build phase 6.0's real rate limiting owns the rest, and the whole-repository security scan is already triggered by exposure.
 
-Agreed with the product owner on 2026-08-13, ahead of build phase 4.2. The bar is the approved design system in `docs/build/design/design-system/`: reach it, then modify from it. Full detail on each item, including how it happened: `tracker/phase_4.8.md`, "Product owner review".
-
-Three items, worked 2026-08-14. One closed, two reclassified as a backend dependency.
-
-1. F-4.8-P-01, the guest allowance. SETTLED, and the answer is that the API does NOT accept a run from an unauthenticated caller. All four `/v1/query` endpoints return 401 with no `Authorization` header, probed rather than reasoned about, and no anonymous path exists anywhere in `src/`. So this is a backend dependency, not a frontend fix.
-
-   Owner: build phase 6.0, which already carries both the anonymous run path and the rate limiting the allowance depends on. `frontend/src/stubs/registry.ts` already declared it that way. The UI half (the five dots, the wall) is built and styled; there is no truthful data to drive it, and a client-side counter would be the same dishonesty class judge round 1 filed. Full evidence and what a real allowance costs: `tracker/phase_4.8.md`, "Disposition, 2026-08-14".
-
-   Worth keeping: the allowance was not forgotten, it was removed. Judge round 1 found that an anonymous visitor asking any question received a fabricated, fully cited answer. The correct fix was to remove the fabricated content. What shipped removed the allowance with it, trading a product regression for a correctness fix that did not require it.
-
-2. F-4.8-P-02, sign-in as the top-right entry point. Confirmed to need NO independent code change: `AppShell` already renders "Log in" at the top right for a signed-out visitor, matching the design card. It is dysfunctional only because the wall intercepts first, so it closes when item 1 closes and not before. Same owner.
-
-3. F-4.8-P-03, the hamburger on the stored-searches rail. CLOSED on `fix/4.8-rail-collapse-control`, and the whole rail is now transcribed from `prototype/app.html`'s `renderRail()` rather than only the collapse control.
-
-   The first version delivered the control and left three differences from the prototype standing, two of them as the lead's own judgment calls. The product owner's direction: the prototype IS the baseline, and those were not calls to make. What that added: the `+ New search` button paired with the collapse control, the prototype's surface and 248px width, a full-height rail, per-search tool/layer/source counts, the empty-state message, and the account footer. Full table of before and after: `tracker/phase_4.8.md`, "Baseline alignment".
-
-   Worth knowing for any future design work: `docs/build/design/Phase_4.8_prototype.html` is a GENERATED copy of `design-system/prototype/app.html`, differing only in the doctype wrapper. There is one prototype, not two.
-
-   Two transferable findings, both in `LEARNINGS.md`, 2026-08-14:
-
-   - A gate written specifically to fix this repository's "asserts what is on screen, never where it is" blind spot had the blind spot itself, and only a mutation revealed it. DOM order and visual order are different properties, and no jsdom test can assert the second. `e2e/rail-collapse.spec.ts` exists because of that measurement.
-   - A faithful transcription of the design reproduced a WCAG 2.1 AA failure, because the design system is internally inconsistent about which of its own surfaces `inkFaint` is safe on. "Matches the design" and "passes the accessibility gate" are two checks that can disagree. Filed as F-4.8-D-08 for the next design pass.
-
-Then, still open from the same phase and lower priority than the three above, five design-fidelity gaps on the answer screen (F-4.8-D-01 through D-05) and the eight findings the review rounds carried. All are rows on `tracker/BOARD.md`'s Open flags table.
-
-One standing instruction that came out of this review, and it is not optional: open the application and look at it. Every automated check in this repository asserts what is on screen and never where it is, which is how two major layout defects and all three items above survived 147 unit tests, 19 browser tests, a clean production build and a full WCAG 2.1 AA pass.
 
 ## Read before opening the next phase
 
-Build phase 4.8 is merged and closed out (see "State now" above). The next phase is NOT a free choice: the product owner directed on 2026-08-14 that the anonymous run path comes first, as build phase 4.10, split out of 6.0 and pulled ahead of 4.2 to 4.7. The reasoning is in `DECISIONS.md`: until it exists, nobody can use the product without creating an account first, so it gates every demo and every new user. After it, four of Step 6.3's six delivery surfaces remain, none depending on 4.8, and Section 25's order takes 4.2.
+Build phase 4.10 is merged and closed out (see "State now" above). With it, the out-of-order insertion that ran 4.8, 4.9 and 4.10 ahead of the locked order is finished, and Section 25's own sequence resumes at 4.2. Four of Step 6.3's six delivery surfaces remain, none of them depending on 4.10.
 
 | Next up | Branch | What it delivers | Depends on |
 |---------|--------|------------------|------------|
-| 4.10 | `phase/4.10-guest-allowance` | The anonymous run path and the server-side guest allowance. Split out of 6.0 and pulled forward by product-owner directive, 2026-08-14. THIS IS NEXT, ahead of 4.2 | 1.1 and 4.0, both merged |
-| 4.9 | `phase/4.9-answer-screen-fidelity` | The five answer-screen fidelity gaps against the approved design, plus F-4.8-D-08 | 4.8, merged |
-| 4.2 | `phase/4.2-cli-adapter` | A thin CLI client over the REST API | 4.0, merged |
+| 4.2 | `phase/4.2-cli-adapter` | A thin CLI client over the REST API. THIS IS NEXT | 4.0, merged |
 | 4.3 | `phase/4.3-graphql-api` | A GraphQL surface via Strawberry, sharing auth and tools with the REST surface | 4.0, merged |
 | 4.4 | `phase/4.4-kgx-export` | An export utility scoped to the existing Hetzner graph, a batch job rather than a live adapter | Layer 1 access, already exists |
 | 4.5 | `phase/4.5-personalization-memory` | Bounded session memory, audience-level depth control, the stable named scientist persona | 1.2 and 2.2, both merged |
 
 Then 4.6 (feedback capture) and 4.7 (competency-question routing, which owns F-2.0-15).
 
-It opens the standard way, with no structural exception: read `LEARNINGS.md` filtered to the phase's territory (70 entries plus a retrospective), verify its dependencies are merged, write the premise gate and watch it fail, then build. Build phase 4.8's design-review pre-stage was specific to a visual deliverable and does not apply to any of the phases above.
+It opens the standard way, with no structural exception: read `LEARNINGS.md` filtered to the phase's territory, verify its dependencies are merged, write the premise gate and watch it fail, then build.
+
 
 ### Three things build phase 4.8 leaves behind
 
@@ -434,6 +405,33 @@ Test counts at close: Python suite 2565 collected (2445 passing, 113 skipped, 1 
 Two adversary findings carried open, each with a named owner on `tracker/BOARD.md`'s Open flags table: F-4.1-A-10 (content originating in untrusted third-party sources, a PubMed abstract field reaching `citations[].claim_text` and the narrative `answer` built from it, relays to an MCP caller with no field, wrapper, or flag distinguishing relayed source text from the system's own words; no clean small fix exists, since labelling would need either a new response field or a framing convention no other surface uses, and whether the obligation runs outward when this system becomes somebody else's tool is a product-level call) to whenever the product owner decides, or build phase 6.1's hardening pass, whichever comes first; F-4.1-A-15 (a caller-supplied `session_id` passed straight into `Query` with length validation only, no check that it belongs to the authenticated `User`; harmless today since nothing reads `Query.session_id` yet, becomes a live authorization gap the moment build phase 4.5 or 4.6 wires a consumer) to build phase 4.5 or 4.6, whichever first wires a `Query.session_id` consumer, and before either ships.
 
 The same day, build phase 4.8 (Web UI visual design) was inserted into the build order immediately after this phase, ahead of 4.2 through 4.7 (see "State now" above and `DECISIONS.md`'s 2026-08-11 entries).
+
+## Build phase 4.10, done
+
+Merged as PR #46 on 2026-08-15. The anonymous run path and the server-side guest allowance, split out of build phase 6.0 and pulled ahead of 4.2 to 4.7 by product-owner directive on 2026-08-14.
+
+What shipped: a signed guest identity whose key is domain-separated from the access-token key; the allowance counted server-side by one conditional UPDATE; run ownership for a caller with no `users` row via a namespaced `owner_id`; migration of a guest's live runs at signup; three bounds on anonymous spend; `snapshot_date` and `entity_name` on `CitationPayload`; F-4.0-A-10 closed; and three false user-visible strings replaced with true ones.
+
+Seven rounds, four of them FAIL. The order matters because each critical was created by the fix for the previous one:
+
+| Round | Worst finding |
+|-------|---------------|
+| Judge, FAIL | Two premise-gate clauses could not fail. The domain-separation clause forged its token for a UUID with no row, so its asserted 401 came from the unknown-guest path, never from signature rejection |
+| Adversary | 40 paid pipelines in 0.25 seconds from a caller with no account. Both pre-existing cost caps are structurally unable to reach a guest, so nothing was behind it |
+| Re-review, FAIL | The refund that closed the above removed the only per-identity bound: one token, 200 pipelines, 1.68 seconds, the whole day gone |
+| Verification, FAIL | The attempt ceiling that closed THAT was defeated by using 20 identities: 200 pipelines, 1.56 seconds, the same outcome |
+
+The fourth bound is the first one minting does not increase: a source's share of the day, so 20 identities or 200 buy the same 20 runs.
+
+Five lessons, all in `LEARNINGS.md` and all measured rather than argued:
+
+- Every bound keyed on something the caller can mint more of is defeated by minting more. Three rounds proved it before the fourth changed what the bound was keyed on.
+- A gate can be green while the property it claims is absent, five distinct ways in one phase: a 401 from the wrong path, a clause masked by a second cap of the same value, a clause hollowed out without being edited, a clause importing the constant it should pin, and a mutation that did not fire.
+- A lead's brief can be factually wrong and a builder will implement it faithfully. The phase's worst finding traces to a cost claim asserted without being checked against `core/graph.py`.
+- A real accepted risk can be used to wave through a much larger unaccepted one on the strength of the two sounding similar. "Clearing your browser gives five more searches" and "a script mints identities in parallel" differ by 157 paid pipelines per second.
+- A control with no safe direction of failure needs both arms. The mint throttle's first version refused the gate's own admit arm, one screen below where that rule is written down.
+
+Full account: `tracker/phase_4.10.md`, and the four review reports beside it.
 
 ## Build phase 4.9, done
 
