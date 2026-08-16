@@ -15,6 +15,7 @@ Deliverable: close the nine fidelity gaps between the running app and the approv
 - [Tickets](#tickets)
 - [What is deliberately not in this phase](#what-is-deliberately-not-in-this-phase)
 - [How these were found](#how-these-were-found)
+- [The two product decisions this phase carried, settled](#the-two-product-decisions-this-phase-carried-settled)
 
 ## The premise
 
@@ -137,3 +138,10 @@ Nine gaps, four of them new, all surfaced on 2026-08-14 by screenshotting the ru
 It also found a live bug in the same pass, F-4.8-P-04, where an anonymous visitor was shown the whole stored-searches rail. Fixed on `develop` before this phase opened.
 
 The transferable point, now recorded in `LEARNINGS.md`: comparing the built thing to the designed thing is a distinct check from asserting the built thing against itself, and this repository had only ever done the second.
+
+## The two product decisions this phase carried, settled
+
+Both were left open at close as genuine product calls rather than bugs, and both were answered on 2026-08-15 in a single decision session that cleared the backlog of eight such items accumulated across phases 3.1 to 4.10. Full reasoning for each is in `DECISIONS.md`; recorded here so this phase's own file does not read as though they are still open.
+
+- F-4.9-A-09, the off-host citation warning two disclosures deep: the warning MOVES OUTSIDE the collapsed source disclosure. The person a link-goes-off-site warning protects is exactly the person who would not open two disclosures looking for it, so nesting it inverts who it reaches. The collapse itself stays for the rest of the card. Owner: the next frontend ticket.
+- F-4.9-A-08, a stopped run giving no terminal signal: the client WAITS for the backend's `cancelled` event before closing the stream. That event already exists and is purpose-built; the client aborts before it can arrive, so the signal is being discarded rather than missing. Asserting a stopped state locally instead was rejected, because it is the page claiming something it has not confirmed, which is the same class as the fabricated answer this phase's own judge round filed as its first critical. Owner: the next frontend ticket.
