@@ -85,6 +85,7 @@ from system_03_search_agent.contracts.events import (
 )
 
 if TYPE_CHECKING:
+    from system_03_search_agent.adapters.cli.client import CliApiError
     from system_03_search_agent.contracts.events import TrustOutcome
 
 # Exit codes. Two values only: the CLI reports success or failure, never a
@@ -365,25 +366,46 @@ def render_client_error(err: TextIO, exc: BaseException) -> int:
     their own failure in one). `main.py` (T-4.2-05) calls this directly at
     the point one of those calls raises, before any `Event` for that
     request could ever reach `Renderer.handle()`. This is the ticket's
-    "MIXED ERROR-BODY SHAPES" constraint made concrete: `client.py`'s
-    fixed interface names no dedicated exception type, so this handles the
-    standard shape an `httpx.AsyncClient` raises on
-    `response.raise_for_status()`, per the pre-build source read's own
-    finding on `app.py` error bodies (`tracker/phase_4.2.md`): a
-    structured body on 429 (`{"detail": {"reason", "message"}}`, both
-    already curated, hand-authored copy in `app.py`, e.g.
-    `_CONCURRENT_RUN_CAP_MESSAGE`, never raw exception text) and a bare
-    string body on 401/403/404/409 (`{"detail": "..."}`, the same kind of
-    curated literal, e.g. `auth/router.py`'s `_INVALID_REFRESH_DETAIL`).
-    Both are already safe to display verbatim, unlike `ErrorPayload.
-    message` above: they are fixed `HTTPException(detail=...)` literals in
-    this codebase, never `str(exc)`.
+    "MIXED ERROR-BODY SHAPES" constraint made concrete.
+
+    Two distinct failure shapes reach this function, and both are handled:
+
+    1. `client.py`'s own typed hierarchy (`CliApiError` and its five
+       subclasses: `AuthExpiredError`, `ForbiddenError`, `NotFoundError`,
+       `ConflictError`, `RateLimitedError`). This is what `CliClient`
+       actually raises for every non-2xx response from `create_run`,
+       `stream_events`, `stop`, and `fetch_citations` (`client.py`'s
+       `_raise_for_status`), so it is the primary, expected shape and is
+       checked first. `CliApiError.message` already carries the server's
+       own curated, hand-authored copy (e.g. `app.py`'s
+       `_CONCURRENT_RUN_CAP_MESSAGE` for a 429, `auth/router.py`'s
+       `_INVALID_REFRESH_DETAIL` for a 401), parsed once in `client.py`'s
+       `_parse_error_detail` from either mixed body shape the pre-build
+       source read found (a structured `{"detail": {"reason", "message"}}`
+       on 429, a bare string `{"detail": "..."}` on 401/403/404/409), so
+       this function never re-parses a response body itself.
+    2. A bare `httpx` exception (`HTTPStatusError`, `TimeoutException`, or
+       the broader `HTTPError`). Kept as the fallback path for a genuinely
+       transport-level failure that never reached `client.py`'s own
+       `_raise_for_status`, for example a call this module is exercised
+       against directly in a unit test, or a future call site that talks
+       to `httpx` without going through `CliClient`. `client.py`'s typed
+       hierarchy does not subclass any `httpx` exception type, so without
+       the explicit `CliApiError` branch above, every one of the five
+       typed errors `CliClient` actually raises fell through to the bare,
+       unhelpful fallback at the bottom of this function (the real defect
+       this branch fixes; `tracker/phase_4.2.md` finding filed at the
+       phase 4.2 to 4.3 ticket seam).
 
     Flagged in this ticket's final report as an addition beyond the four
     interfaces `tracker/phase_4.2.md`'s lead section fixed, since no
     signature for HTTP-level (as opposed to event-stream) error rendering
     was named there.
     """
+    from system_03_search_agent.adapters.cli.client import CliApiError
+
+    if isinstance(exc, CliApiError):
+        return _render_cli_api_error(err, exc)
     if isinstance(exc, httpx.HTTPStatusError):
         return _render_http_status_error(err, exc)
     if isinstance(exc, httpx.TimeoutException):
@@ -399,6 +421,36 @@ def render_client_error(err: TextIO, exc: BaseException) -> int:
         )
         return _EXIT_FAILURE
     err.write("error: the request failed unexpectedly. Try again.\n")
+    return _EXIT_FAILURE
+
+
+def _render_cli_api_error(err: TextIO, exc: CliApiError) -> int:
+    """Renders one of `client.py`'s five typed errors. `exc.message` is
+    always the server's own already-curated, already-actionable text (see
+    `CliApiError`'s own docstring in `client.py`), never a raw exception
+    string, so it is safe to write verbatim, the same trust boundary
+    `_render_http_status_error` below already applies to a bare-httpx
+    `detail` string. `_actionable_suffix_for_status` is reused rather than
+    duplicated: it is a pure function of status code, reason, and headers,
+    and this call site has all three (`exc.status_code`, `exc.reason`, and
+    a synthesized `Retry-After` header when `exc` is a `RateLimitedError`
+    carrying `retry_after_s`), so the 429/401/403/404/409 action copy stays
+    identical to the bare-httpx path instead of drifting into a second,
+    hand-maintained copy of the same table.
+    """
+    from system_03_search_agent.adapters.cli.client import RateLimitedError
+
+    message = exc.message[:500] if exc.message else (
+        f"the server refused the request (HTTP {exc.status_code})"
+    )
+    retry_after_s = exc.retry_after_s if isinstance(exc, RateLimitedError) else None
+    headers = (
+        httpx.Headers({"retry-after": str(retry_after_s)})
+        if retry_after_s is not None
+        else httpx.Headers()
+    )
+    action = _actionable_suffix_for_status(exc.status_code, exc.reason or "", headers)
+    err.write(f"error: {message}{action}\n")
     return _EXIT_FAILURE
 
 

@@ -626,7 +626,26 @@ class TestGoldenPath:
         # per marker.
         assert "ncbi_gene" in out
         assert "https://www.ncbi.nlm.nih.gov/gene/672" in out
-        assert err.strip() == ""
+        # The stream split (Section 13.3), not an empty stderr: `think`,
+        # `plan`, `tool_start`, and `tool_result` are SPECIFIED to render
+        # as dim status lines to stderr, so an empty stderr on a run that
+        # actually dispatched a tool would mean those lines were either
+        # dropped (a spec violation) or misrouted onto stdout (which would
+        # corrupt `s3 ask "..." > answer.txt`, the exact pipeline Section
+        # 13.3's split exists to protect). This golden-path fixture always
+        # emits a `think`, a `plan`, and one `tool_start`/`tool_result`
+        # pair (`_golden_path_stream` above), so the correct assertion is
+        # that those lines exist, on stderr, and never leak onto stdout,
+        # not that stderr is empty.
+        # Mutation: render a status line to stdout instead of stderr ->
+        # the "not in out" assertions below go red because the marker text
+        # then appears in `out`.
+        assert "[think]" not in out
+        assert "[plan]" not in out
+        assert "[tool]" not in out
+        assert "[think]" in err
+        assert "[plan]" in err
+        assert "[tool]" in err
 
 
 # ---------------------------------------------------------------------------
@@ -1032,8 +1051,24 @@ class TestStoppedRun:
             # nonzero exit code.
             exit_code = await asyncio.wait_for(ask_task, timeout=5.0)
 
+        # bound above with an explicit timeout: a hang here fails loudly
+        # and fast (an asyncio.TimeoutError from wait_for) rather than
+        # stalling the suite, which is the property F-4.2-01 puts in
+        # question for a future server-side regression.
+        final_err = err.getvalue()
         assert exit_code != 0
-        assert err.strip() != ""
+        assert final_err.strip() != ""
+        # Not just "some stderr text": the disclosure string below is
+        # emitted ONLY for error_class == "cancelled"
+        # (render.py's _CLI_FATAL_ERROR_DISCLOSURE table has one distinct
+        # sentence per error_class: "temporary error", "could not
+        # complete", "failed unexpectedly", "stopped before it finished").
+        # Asserting it proves the terminal event this run actually ended
+        # on was the fatal cancelled error F-4.2-01 describes, not merely
+        # that SOME error text reached stderr by some other path, and it
+        # proves the run ended on that error rather than hanging for a
+        # `done` a cancelled run never produces.
+        assert "stopped before it finished" in final_err
 
 
 # ---------------------------------------------------------------------------
