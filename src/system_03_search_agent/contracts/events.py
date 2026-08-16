@@ -54,9 +54,42 @@ TrustOutcome = Literal["answer", "flag", "ask", "refuse"]
 # wires (ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup,
 # pathogen_detection) cites an ncbi.nlm.nih.gov-family host, so the first
 # alternative alone still covers them.
+#
+# Build phase 4.2 (F-4.2-A-01, closing the open flag F-3.4-A-06 that was
+# tracked as "confirmed still not exploitable through any current call
+# site"): this pattern used to be anchored at the START only. Pydantic's
+# `pattern=` constraint compiles the string and calls `re.match`, which
+# requires a match at position 0 but never requires consuming the whole
+# value unless the pattern itself ends in `$`. With no end anchor,
+# everything after the host prefix was free text, including a literal
+# newline, so a single `source_url` field could carry a whole forged
+# reference row pointing at any host. That was recorded as not
+# exploitable while every surface rendered the value to a browser; build
+# phase 4.2 adds the first surface (a terminal, over
+# `adapters/cli/render.py`) that treats a string as something closer to
+# executable content than display markup, so the gap is live now.
+#
+# The flag's own recorded fix is a CHARACTER-CLASS RESTRICTION on the
+# remainder, not a bare `$` appended right after the host prefix: a bare
+# `$` there would reject every real citation URL, since all of them carry
+# a path or an id after the host (`https://www.ncbi.nlm.nih.gov/gene/672`,
+# `https://clinicaltrials.gov/study/NCT00000000`, a PubTator autocomplete
+# URL carrying `?query=...`, a `synthesis.refuse.build_fallback_link`
+# result carrying a `urllib.parse.quote(..., safe="")`-encoded search
+# term). `_URL_REMAINDER_CHARS` is that restriction: RFC 3986's unreserved
+# set plus the gen-delims and sub-delims plus `%` (percent-encoding),
+# which is every character a real, already-encoded HTTPS URL's path,
+# query, or fragment can contain, and pointedly excludes whitespace and
+# every C0/C1 control character, including `\n`. A value that needs a raw
+# space or a raw newline in its remainder was never a valid encoded URL
+# to begin with.
+_URL_REMAINDER_CHARS = r"[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]"
+
 NCBI_SOURCE_URL_PATTERN = (
     r"^https://(?:([A-Za-z0-9-]+\.)*ncbi\.nlm\.nih\.gov/"
     r"|(?:www\.)?clinicaltrials\.gov/study/)"
+    + _URL_REMAINDER_CHARS
+    + r"*$"
 )
 
 
