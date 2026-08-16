@@ -628,31 +628,30 @@ class TestStreamEvents:
         way to `main.py`'s broad catch-all, which reported a generic "the
         event stream ended unexpectedly" and abandoned a connection that
         was very likely still alive. It must instead survive locally: the
-        bad byte is replaced with U+FFFD and the frame still decodes
-        (though it will very likely still fail its OWN JSON parse, which
-        is a separate, already-handled concern per F-4.2-RR-03, not this
-        test's point), and a well-formed frame arriving afterward is
-        still delivered.
+        bad byte is replaced with U+FFFD and the frame still decodes into
+        a dispatched SSE tuple, never a raised `UnicodeDecodeError`.
+
+        F-4.2-D-02 (round-4 fix): this test's assertions changed from the
+        round-3 shape. The corrupted `data:` body (`bad byte -> <FFFD>
+        <- still here`) is not valid JSON, so it offers no positive proof
+        of being a benign, forward-compatible frame
+        (`_payload_declares_unknown_type` returns `False` for it) no
+        matter what its SSE `event:` field says; the round-3 fix used to
+        key benign-vs-fatal on `event:` alone (`mystery`, here, is not a
+        member of `_KNOWN_EVENT_TYPES`) and silently skipped this exact
+        corrupted, fatal-shaped payload, letting the well-formed `done`
+        behind it report a false clean success. That is F-4.2-D-02's own
+        finding, reproduced directly by this byte-level fixture rather
+        than a synthetic one. This test's point, that the byte-level
+        recovery never crashes the reader, still holds: the corrupted
+        frame reaches `_decode_stream_event` and is turned into a
+        rendered, fatal `error` Event instead of an uncaught exception.
         """
-        done_envelope = _event_payload(
-            "done",
-            1,
-            {
-                "total_cost_usd": 0.0,
-                "total_tool_calls": 0,
-                "elapsed_ms": 1,
-                "trust_outcome": "answer",
-            },
-        )
         # The invalid byte sits inside an event whose SSE `event:` field
-        # is unrecognized, so the corrupted frame itself is expected to
-        # be benign-skipped per F-4.2-RR-03's own taxonomy; this test's
-        # point is only that the BYTE-level failure never raises, not
-        # what happens to the one frame it lands in.
-        body = (
-            b"event: mystery\ndata: bad byte -> \xff <- still here\nid: 0\n\n"
-            + f"event: done\ndata: {json.dumps(done_envelope)}\nid: 1\n\n".encode()
-        )
+        # is unrecognized (`mystery`), which no longer matters to the
+        # classification: `data:` alone decides, and this `data:` is not
+        # valid JSON.
+        body = b"event: mystery\ndata: bad byte -> \xff <- still here\nid: 0\n\n"
 
         async def gen() -> AsyncIterator[bytes]:
             yield body
@@ -668,8 +667,17 @@ class TestStreamEvents:
         # completes normally.
         events = [event async for event in client.stream_events("run-1")]
 
-        assert [e.type for e in events] == ["done"]
-        assert client.stream_skipped_frame_count == 1
+        # Mutation: revert `_decode_stream_event` to key on
+        # `event_type in _KNOWN_EVENT_TYPES` instead of
+        # `_payload_declares_unknown_type(data)` -> `"mystery"` is not a
+        # known type, so this becomes a silent, counted skip and never
+        # surfaces as an error at all.
+        assert [e.type for e in events] == ["error"]
+        assert events[0].payload["fatal"] is True
+        assert events[0].payload["error_class"] == "transient"
+        assert events[0].payload["source"] == "cli_stream_decode"
+        assert client.stream_skipped_frame_count == 0
+        assert client.stream_truncated is False
 
     # -----------------------------------------------------------------
     # F-4.2-A-10: an unknown or malformed frame is skipped, counted, and
@@ -680,6 +688,14 @@ class TestStreamEvents:
     async def test_an_unrecognized_event_type_is_skipped_and_counted_not_raised(
         self,
     ) -> None:
+        """Unaffected by the F-4.2-D-02 round-4 fix: `unknown_envelope`
+        below is well-formed JSON carrying its own `"type"` key set to a
+        genuinely unrecognized value, which is exactly the positive proof
+        `_payload_declares_unknown_type` looks for directly in `data:`.
+        This is the real rule-10 shape (a well-formed, forward-compatible
+        new event type), not the malformed-body shape the sibling tests
+        around this one exercise.
+        """
         guard_envelope = _event_payload(
             "guard", 0, {"passed": True, "category": "ok", "reason": None}
         )
@@ -721,15 +737,25 @@ class TestStreamEvents:
         assert client.stream_truncated is False
 
     @pytest.mark.asyncio
-    async def test_a_non_json_data_line_under_an_unrecognized_type_is_skipped_and_counted(
+    async def test_a_non_json_data_line_is_never_benign_skipped_regardless_of_event_field(
         self,
     ) -> None:
-        """A non-JSON `data:` body is only ever benign-skippable when the
-        SSE `event:` field is not one of the eleven types this build
-        already knows (`event: mystery` here). See
+        """F-4.2-D-02 (round-4 fix): renamed and re-asserted from the
+        round-3 shape, which was itself the vulnerability. A non-JSON
+        `data:` body offers no positive proof of being a well-formed,
+        forward-compatible frame no matter what its SSE `event:` field
+        claims (`event: mystery` here is not a member of
+        `_KNOWN_EVENT_TYPES`, exactly the shape the round-3 fix treated
+        as benign-skippable): `event:` is set by the same sender as
+        `data:` and can diverge from it, so a benign-looking `event:`
+        value next to garbage `data:` is not evidence, it is exactly the
+        composition F-4.2-D-02 exploited to hide a fatal frame behind an
+        unrecognized-looking label. `data:` alone must now offer positive
+        proof, and `not json at all` cannot. See
         `test_a_non_json_data_line_under_a_known_type_is_not_silently_skipped`
-        just below for the opposite, F-4.2-RR-03 case, where the same
-        malformed body under a KNOWN type must not be silently absorbed.
+        just below for the sibling F-4.2-RR-03 case (a KNOWN `event:`
+        type over the same shape of malformed body), which already
+        asserted this and is unchanged by this fix.
         """
         done_envelope = _event_payload(
             "done",
@@ -752,8 +778,20 @@ class TestStreamEvents:
         client = _client_with_handler(handler)
         events = [event async for event in client.stream_events("run-1")]
 
-        assert [e.type for e in events] == ["done"]
-        assert client.stream_skipped_frame_count == 1
+        # Mutation: revert `_decode_stream_event` to key on
+        # `event_type in _KNOWN_EVENT_TYPES` instead of
+        # `_payload_declares_unknown_type(data)` -> `"mystery"` is not a
+        # known type, so the malformed frame is silently skipped and
+        # counted, the `done` behind it is reached, and
+        # `[e.type for e in events] == ["done"]` with
+        # `stream_skipped_frame_count == 1`. That is the exact F-4.2-D-02
+        # regression this test exists to catch.
+        assert [e.type for e in events] == ["error"]
+        assert events[0].payload["fatal"] is True
+        assert events[0].payload["error_class"] == "transient"
+        assert events[0].payload["source"] == "cli_stream_decode"
+        assert client.stream_skipped_frame_count == 0
+        assert client.stream_truncated is False
 
     # -----------------------------------------------------------------
     # F-4.2-RR-03 (round-3 fix): a frame whose SSE `event:` field IS one
@@ -847,6 +885,123 @@ class TestStreamEvents:
 
         assert [e.type for e in events] == ["error"]
         assert events[0].payload["fatal"] is True
+
+    # -----------------------------------------------------------------
+    # F-4.2-D-02 (round-4 fix): the SAME malformed, fatal-shaped frame as
+    # the control case directly above (`event: error` intact), reproduced
+    # with only its `event:` line varying, to pin the composition defect
+    # between the round-3 classifier (F-4.2-RR-03, keyed on `event:`) and
+    # the round-3 byte-recovery fix (F-4.2-RR-04, which keeps the stream
+    # alive after a corrupted byte instead of ending it, making a
+    # corrupted `event:` line a REACHABLE shape rather than a
+    # theoretical one). Both varying-`event:` shapes below must still end
+    # the run as a fatal, rendered `error`, exactly like the control
+    # case, and never as a silent skip that lets the well-formed `done`
+    # behind it report a false clean, cited answer.
+    # -----------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_a_fatal_frame_with_no_event_field_is_not_silently_skipped(self) -> None:
+        """Case B. `sse.py`'s own parser (`_SseLineAccumulator.feed`)
+        leaves `event_type` as `None` when no `event:` line arrives at
+        all. Before F-4.2-D-02, `None not in _KNOWN_EVENT_TYPES` was
+        `True`, so a frame with no `event:` line was ALWAYS classified as
+        an unrecognized, forward-compatible type, regardless of what its
+        `data:` body actually contained, including the exact malformed,
+        fatal-shaped body the control case above correctly rejects.
+        """
+        done_envelope = _event_payload(
+            "done",
+            1,
+            {
+                "total_cost_usd": 0.0,
+                "total_tool_calls": 0,
+                "elapsed_ms": 1,
+                "trust_outcome": "answer",
+            },
+        )
+        body = (
+            # Same malformed `data:` as the control case, `event:` line
+            # omitted entirely.
+            "data: {not even valid json\nid: 0\n\n"
+            f"event: done\ndata: {json.dumps(done_envelope)}\nid: 1\n\n"
+        ).encode()
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+        events = [event async for event in client.stream_events("run-1")]
+
+        # Mutation: revert `_decode_stream_event` to key on
+        # `event_type in _KNOWN_EVENT_TYPES` (`event_type` is `None`
+        # here) instead of `_payload_declares_unknown_type(data)` ->
+        # `None not in _KNOWN_EVENT_TYPES` is `True`, so this is
+        # classified as benign and silently skipped; the `done` behind it
+        # is reached and `[e.type for e in events] == ["done"]` with
+        # `stream_skipped_frame_count == 1`. That is the exact F-4.2-D-02
+        # case-B regression this test exists to catch.
+        assert [e.type for e in events] == ["error"]
+        assert events[0].payload["fatal"] is True
+        assert events[0].payload["error_class"] == "transient"
+        assert events[0].payload["source"] == "cli_stream_decode"
+        assert client.stream_skipped_frame_count == 0
+        assert client.stream_truncated is False
+
+    @pytest.mark.asyncio
+    async def test_a_fatal_frame_with_a_corrupted_event_field_is_not_silently_skipped(
+        self,
+    ) -> None:
+        """Case C. The same malformed frame again, `event:` present but
+        its own bytes corrupted by a single invalid UTF-8 byte
+        (`\\xff`), the shape F-4.2-RR-04's own "replace the bad byte with
+        U+FFFD and keep going" recovery makes reachable rather than
+        stream-ending. `_ChunkSafeLineSplitter.feed` substitutes U+FFFD
+        for the invalid byte, so the parsed `event:` value becomes
+        `"\\ufffd"`, which, exactly like case B's `None`, is not a member
+        of `_KNOWN_EVENT_TYPES`. This is the composition finding
+        F-4.2-D-02 names directly: F-4.2-RR-04's "keep going" and
+        F-4.2-RR-03's `event:`-keyed classifier, each correct on its own
+        and shipped in the same commit (`b264091`), combine to silently
+        demote a fatal frame to benign whenever the corruption happens to
+        land inside the `event:` line's own bytes.
+        """
+        done_envelope = _event_payload(
+            "done",
+            1,
+            {
+                "total_cost_usd": 0.0,
+                "total_tool_calls": 0,
+                "elapsed_ms": 1,
+                "trust_outcome": "answer",
+            },
+        )
+        body = (
+            # `event:`'s value is one invalid byte (never valid UTF-8
+            # under any continuation), decoded to U+FFFD by
+            # `_ChunkSafeLineSplitter`; `data:` is the SAME malformed
+            # body as the control case and case B.
+            b"event: \xff\ndata: {not even valid json\nid: 0\n\n"
+            + f"event: done\ndata: {json.dumps(done_envelope)}\nid: 1\n\n".encode()
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+        client = _client_with_handler(handler)
+        events = [event async for event in client.stream_events("run-1")]
+
+        # Mutation: same as case B's mutation note above. Here
+        # `event_type` decodes to `"�"` rather than `None`, but it
+        # is equally absent from `_KNOWN_EVENT_TYPES`, so the reverted
+        # classifier silently skips this frame the same way and reaches
+        # `done` behind it.
+        assert [e.type for e in events] == ["error"]
+        assert events[0].payload["fatal"] is True
+        assert events[0].payload["error_class"] == "transient"
+        assert events[0].payload["source"] == "cli_stream_decode"
+        assert client.stream_skipped_frame_count == 0
+        assert client.stream_truncated is False
 
     @pytest.mark.asyncio
     async def test_a_stream_that_ends_mid_frame_sets_truncated_not_skipped(self) -> None:
