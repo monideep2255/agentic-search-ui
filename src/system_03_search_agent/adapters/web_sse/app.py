@@ -178,6 +178,42 @@ app.add_middleware(
 
 app.include_router(auth_router)
 
+# T-4.3-07, build phase 4.3: the GraphQL surface, mounted in THIS process
+# per Section 24's topology ("a router mounted in the same FastAPI process"),
+# so it shares this app's auth, its middleware and its one agent core rather
+# than standing up a second service with a second copy of any of them.
+#
+# The import is local to this statement rather than at module top, and that
+# is load-bearing rather than stylistic: `adapters/graphql/schema.py` imports
+# `core.run_registry`, and this module is what the GraphQL package's own
+# ownership rule was promoted out of. Keeping the import here documents the
+# one-directional dependency (app.py -> graphql, never the reverse) at the
+# exact line that creates it, and keeps a future top-level import from
+# quietly reintroducing the cycle.
+#
+# Its path and every hardened setting come from the GraphQL package itself
+# (`router.GRAPHQL_PATH`, `security.ROUTER_SETTINGS`), so no bound can be
+# relaxed here at the mount while that package still claims to enforce it.
+from system_03_search_agent.adapters.graphql.router import (
+    GRAPHQL_PATH,
+    RequestTimeoutMiddleware,
+    graphql_router,
+)
+
+app.include_router(graphql_router, prefix=GRAPHQL_PATH)
+
+# The per-request wall-clock bound, which cannot live in a schema extension
+# (read `RequestTimeoutMiddleware`'s own note for the measured reason). It is
+# added as app-level ASGI middleware and gates itself on the GraphQL path, so
+# it is a no-op for every other route.
+#
+# Mounting the wrapped router instead was tried and rejected: `app.mount`
+# gives the sub-app its own path space, so a bare `POST /graphql` 307-
+# redirects to `/graphql/`, which is the identical trailing-slash trap this
+# file already documents for the MCP mount above. A redirect on every call is
+# a worse public surface than a middleware that costs one path comparison.
+app.add_middleware(RequestTimeoutMiddleware)
+
 
 class HealthResponse(BaseModel):
     status: str

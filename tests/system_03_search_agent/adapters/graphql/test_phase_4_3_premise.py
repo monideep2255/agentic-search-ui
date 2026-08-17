@@ -510,7 +510,11 @@ async def _real_user_headers(client: httpx.AsyncClient) -> tuple[str, dict[str, 
 async def _guest_headers(client: httpx.AsyncClient) -> dict[str, str]:
     minted = await client.post("/auth/guest")
     assert minted.status_code == 201, minted.text
-    return {"Authorization": f"Bearer {minted.json()['access_token']}"}
+    # `GuestTokenResponse` names the field `guest_token`, not `access_token`
+    # (`auth/schemas.py`). A guest credential is a different token family
+    # from a user's access token, signed with a domain-separated key, and
+    # the wire shape says so rather than blurring the two.
+    return {"Authorization": f"Bearer {minted.json()['guest_token']}"}
 
 
 async def _post_graphql(
@@ -1210,9 +1214,23 @@ class TestSurfaceConfiguration:
         # default. This phase builds no subscription, so the surface must
         # not offer a WebSocket upgrade path nobody designed, tested, or
         # bounded.
+        #
+        # CORRECTED 2026-08-17: this arm previously read a `subscription_
+        # protocols` attribute off the router via `getattr(..., ())`. No such
+        # attribute exists on the constructed router, so the default kicked
+        # in, `() == ()` held, and the arm passed WITHOUT TESTING ANYTHING.
+        # It would have passed just as happily with both default protocols
+        # enabled. That is the vacuous-assertion class LEARNINGS.md counts as
+        # its single most repeated failure, caught here by printing what the
+        # router actually exposes instead of trusting the name the
+        # constructor argument uses. The real attributes are `protocols` and
+        # `websocket_subprotocols`, asserted below, and a `getattr` default
+        # is deliberately NOT used, so a future rename fails loudly rather
+        # than silently passing again.
         from system_03_search_agent.adapters.graphql import router as router_module
 
-        assert tuple(getattr(router_module.graphql_router, "subscription_protocols", ()) or ()) == ()
+        assert router_module.graphql_router.protocols == ()
+        assert router_module.graphql_router.websocket_subprotocols == []
 
     @pytest.mark.asyncio
     async def test_an_internal_exception_is_masked(self, monkeypatch: pytest.MonkeyPatch) -> None:
