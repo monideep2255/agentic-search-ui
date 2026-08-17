@@ -105,29 +105,29 @@ from strawberry.extensions import (
 from strawberry.schema.config import StrawberryConfig
 
 # ---------------------------------------------------------------------------
-# Exception base. Every exception this module raises subclasses this one.
-# Per tracker/phase_4.3.md's module contract, shared by types.py's own
-# GraphQLTypeError and fold.py's FoldError: an enumerated catch list
-# drifted out of sync with its raiser three separate times inside build
-# phase 4.2 alone. This module's own `_is_allowlisted_application_exception`
-# check below deliberately does NOT enumerate this class (or types.py's, or
-# fold.py's) by name either, for the identical reason: it recognizes any
-# exception defined anywhere under this package by its module path, so a
-# new safe exception type added to this surface in a future phase is
-# allowlisted automatically, with nothing to keep in sync.
+# Exception base. Every exception this module raises subclasses this one,
+# so a catch site dispatches on a base class rather than an enumerated list
+# of subclasses; that list drifted out of sync with its raiser three
+# separate times inside build phase 4.2 alone.
+#
+# Disclosure is a SEPARATE question from inheritance, and the two were
+# conflated until the fix round (F-4.3-A-12). An exception reaches a caller
+# only if its class declares `PUBLIC_ERROR_MARKER`, which is an explicit,
+# reviewable line. Sharing a base class, or a package, grants nothing.
 # ---------------------------------------------------------------------------
 
 
 class GraphQLSecurityError(Exception):
-    """Base exception for this module's own errors. This surface's `should_
-    mask_error` callback (below) treats an instance of this class, or of any
-    other exception class defined anywhere under this package
-    (`system_03_search_agent.adapters.graphql`), as a deliberate,
-    already-reviewed, safe-to-expose application exception: `types.py`'s
-    `GraphQLTypeError`, `fold.py`'s `FoldError` and its subclasses, and this
-    surface's own future `context.py` auth-refusal exception all qualify
-    without needing to be named here individually.
+    """Base exception for this module's own errors.
+
+    Declares itself caller-safe via `PUBLIC_ERROR_MARKER`, which is what
+    `_should_mask_error` reads. That declaration carries an obligation:
+    every message raised as this class or a subclass must be a fixed literal,
+    or built only from values the caller already supplied, and never from a
+    caught internal exception, a host, a path, or a configured bound.
     """
+
+    __graphql_public__ = True
 
 
 # ---------------------------------------------------------------------------
@@ -209,10 +209,34 @@ _MASKED_ERROR_MESSAGE = "This request could not be completed due to an internal 
 # and False (do not mask) for one that is.
 # ---------------------------------------------------------------------------
 
-# This module's own package, computed from `__name__` rather than
-# hardcoded, so the allowlist cannot silently stop matching if this package
-# is ever renamed or moved without this constant being updated by hand.
-_TRUSTED_EXCEPTION_PACKAGE = __name__.rsplit(".", 1)[0]
+# The marker an exception must CARRY to be disclosed. Trust is declared by
+# the exception class itself, never inferred from where the class happens to
+# be defined.
+#
+# REPLACED a package-origin check at the fix round for build phase 4.3
+# (finding F-4.3-A-12, critical). The old rule read `type(exc).__module__`
+# and disclosed anything defined anywhere under this package. An adversary
+# built a class with `__module__` set to a module in this package and got
+# back, verbatim: a DSN with its password, the host, the port, the database
+# user, an absolute source path and a line number. An identical
+# `RuntimeError` with the identical message was correctly masked. Only the
+# package differed.
+#
+# The lead had filed that risk as MINOR and "safe as it stands". That was
+# wrong in the direction that matters: the rule failed OPEN on the
+# disclosure axis, in a repository whose own F-4.1-A-09 was a live database
+# host, port and username reaching a caller through a field assumed safe. It
+# was not fully safe at rest either, since `types.py`'s
+# `InvalidCitationPayloadError` interpolates a Pydantic `ValidationError`
+# whose string embeds the rejected `input_value`; only its call sites
+# happened to swallow it, which is a property of those call sites and not of
+# this allowlist.
+#
+# Declaring the marker inverts the default. A new exception added to this
+# package in a future phase is MASKED unless its author opts it in, and
+# opting in is a visible, reviewable line rather than an accident of file
+# placement.
+PUBLIC_ERROR_MARKER = "__graphql_public__"
 
 _CAMEL_RUN_1 = re.compile(r"(.)([A-Z][a-z]+)")
 _CAMEL_RUN_2 = re.compile(r"([a-z0-9])([A-Z])")
@@ -234,24 +258,24 @@ def _error_code_for(exc: BaseException) -> str:
 
 
 def _is_allowlisted_application_exception(exc: BaseException) -> bool:
-    """True for an exception whose class is defined anywhere under this
-    surface's own package (`system_03_search_agent.adapters.graphql`,
-    computed once above as `_TRUSTED_EXCEPTION_PACKAGE`): this module's own
-    `GraphQLSecurityError`, `types.py`'s `GraphQLTypeError`, `fold.py`'s
-    `FoldError` and its subclasses (`FoldTimeoutError`,
-    `RunNotYetFinishedError`), and this surface's own future `context.py`
-    auth-refusal exception, without importing any of those classes by name
-    (this ticket may import only from `types.py`, and `context.py` does not
-    exist yet). Every message any of those classes carries was written, by
-    the module that defines it, as caller-safe text (verified by reading
-    `types.py` and `fold.py` before writing this check): none embeds a
-    host, a credential, a stack frame, or any other internal implementation
-    detail, which is the property this allowlist exists to trust.
+    """True only for an exception whose class DECLARES itself caller-safe by
+    setting `PUBLIC_ERROR_MARKER` to `True`.
+
+    Declared, never inferred. The marker has to be written on the class, so
+    an exception is disclosed because somebody decided it carries no internal
+    detail, not because of which file it happens to live in. Everything else,
+    including every exception defined in this same package, is masked.
+
+    `getattr` with a `False` default is what makes the default deny: an
+    exception that says nothing about itself says "mask me". The `is True`
+    comparison is deliberate too, so a truthy-but-unintended attribute value
+    cannot open the channel.
+
+    See `PUBLIC_ERROR_MARKER` above for the finding that replaced the old
+    package-origin rule (F-4.3-A-12, critical, driven end to end by an
+    adversary that recovered a DSN with its password).
     """
-    module = type(exc).__module__
-    return module == _TRUSTED_EXCEPTION_PACKAGE or module.startswith(
-        _TRUSTED_EXCEPTION_PACKAGE + "."
-    )
+    return getattr(type(exc), PUBLIC_ERROR_MARKER, False) is True
 
 
 def _should_mask_error(error: GraphQLError) -> bool:

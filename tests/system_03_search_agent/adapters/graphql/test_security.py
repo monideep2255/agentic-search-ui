@@ -286,6 +286,50 @@ class TestErrorMasking:
         assert result.errors
         assert "caller-safe message" in result.errors[0].message
 
+    def test_an_exception_is_disclosed_only_if_it_declares_itself_public(self) -> None:
+        # F-4.3-A-12, critical, filed by the adversary round and driven end
+        # to end: the allowlist used to trust an exception by the PACKAGE its
+        # class was defined in, so a class whose `__module__` pointed into
+        # this package had its message returned verbatim. The adversary
+        # recovered a DSN with its password, a host, a port, a database user
+        # and an absolute source path that way, while an identical
+        # `RuntimeError` was correctly masked.
+        #
+        # Mutation: revert `_is_allowlisted_application_exception` to reading
+        # `type(exc).__module__`. This arm turns red immediately, because the
+        # forged class below is exactly what that rule trusted.
+        forged = type(
+            "ForgedPackageLocalError",
+            (Exception,),
+            {"__module__": "system_03_search_agent.adapters.graphql.fold"},
+        )
+
+        @strawberry.type
+        class _ForgedQ:
+            @strawberry.field
+            def leak(self) -> str:
+                raise forged("INTERNAL-DETAIL-MARKER")
+
+        schema = strawberry.Schema(
+            query=_ForgedQ,
+            extensions=list(security.SCHEMA_EXTENSIONS),
+            config=security.STRAWBERRY_CONFIG,
+        )
+        result = _execute("query { leak }", schema=schema)
+
+        assert result.errors
+        joined = " ".join(e.message for e in result.errors)
+        assert "INTERNAL-DETAIL-MARKER" not in joined, (
+            "package origin must not grant disclosure; only a declared marker does"
+        )
+
+    def test_the_public_marker_must_be_declared_not_inherited_by_location(self) -> None:
+        # The positive half. Mutation: drop `__graphql_public__` from
+        # `GraphQLSecurityError`, which would mask every deliberate,
+        # actionable error this surface publishes and leave callers with
+        # nothing but a generic string. Two-armed, as everywhere here.
+        assert getattr(security.GraphQLSecurityError, security.PUBLIC_ERROR_MARKER, False) is True
+
     def test_an_unmasked_error_carries_a_machine_readable_code(self) -> None:
         # Mutation: stop attaching extensions["code"], forcing callers to
         # match on prose.

@@ -131,7 +131,16 @@ class SchemaError(Exception):
     site here dispatches on a base class rather than an enumerated list of
     subclasses. That list drifted out of sync with its raiser three separate
     times inside build phase 4.2 alone.
+
+    Declares itself caller-safe (F-4.3-A-12's marker). That is defensible
+    here and ONLY here because every message this module raises is a fixed
+    literal defined above: nothing is interpolated from a caught exception,
+    a host, a path, or an internal bound. Adding a message that interpolates
+    anything internal to this module withdraws that guarantee, so change the
+    marker if that ever happens.
     """
+
+    __graphql_public__ = True
 
 
 class RunNotFound(SchemaError):

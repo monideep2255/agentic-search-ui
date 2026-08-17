@@ -168,9 +168,14 @@ class Citation:
         try:
             validated = CitationPayload.model_validate(payload.model_dump())
         except ValueError as exc:
+            # The caught exception is deliberately NOT interpolated. A
+            # Pydantic `ValidationError`'s string embeds `input_value`, so
+            # this message would carry the rejected field's actual content
+            # onward (F-4.3-A-12). The `from exc` chain keeps the detail for
+            # a server-side log without putting it in the message.
             raise InvalidCitationPayloadError(
                 f"citation {payload.citation_id!r} failed re-validation "
-                f"against CitationPayload: {exc}"
+                "against CitationPayload"
             ) from exc
         return cls(
             citation_id=validated.citation_id,
