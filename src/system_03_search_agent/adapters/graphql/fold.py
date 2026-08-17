@@ -838,6 +838,10 @@ def _finalize(
     collector = acc.citations_collector
     citations = collector.citations
     notes: list[str] = []
+    # Initialised before the branch, not inside it: the else branch below
+    # never assigns it, and a name bound on only one arm is a NameError
+    # waiting for the first run that takes the other.
+    preserved_trust_warnings: list[str] = []
 
     if acc.trust_signals:
         trust_payload = _floor_trust_payloads(acc.trust_signals, acc.terminal_trust_outcome)
@@ -852,9 +856,34 @@ def _finalize(
         # Only when more than one signal contributed. A single signal's
         # message is already the whole of `trust_signal.message`, so copying
         # it into notes would show the reader the same sentence twice.
-        trust_messages = _distinct_trust_messages(acc.trust_signals)
-        if len(trust_messages) > 1:
-            notes.extend(trust_messages)
+        # Held SEPARATELY from `notes`, not appended to it, and the separation
+        # fixes two defects the first version of this fix caused (RR2-02,
+        # RR2-03). Putting them straight into `notes` meant:
+        #
+        #   1. They were written into `trust_signal.message` TWICE. They are
+        #      already merged into that message by the floor above, and
+        #      `notes` are merged into the same message again further down, so
+        #      the text appeared as "ALPHA BETA ALPHA BETA", consumed the
+        #      500-character budget twice over, and made the truncation marker
+        #      fire on runs where nothing had actually been omitted. A
+        #      disclosure that cries wolf is its own defect.
+        #   2. They EVICTED the surface's own disclosures. They landed at the
+        #      front of `notes`, and `_cap_notes` keeps only the first
+        #      `MAX_DISCLOSURE_NOTES`, so a run with a dozen warnings lost its
+        #      answer-truncation note, its citations-omitted note, and its
+        #      fatal-error disclosure. The last of those has no structured
+        #      field to fall back on, so it was simply gone: a NEW hole in the
+        #      very premise clause this fix exists to close.
+        #
+        # So they are appended at the END, after every disclosure the surface
+        # generated itself, and only into the list that reaches the caller,
+        # never into the one that is merged back into the message.
+        preserved_trust_warnings = _distinct_trust_messages(acc.trust_signals)
+        if len(preserved_trust_warnings) <= 1:
+            # A single signal's message is already the whole of
+            # `trust_signal.message`; copying it would show the same sentence
+            # twice.
+            preserved_trust_warnings = []
     else:
         trust_payload = TrustSignalPayload(
             outcome=acc.terminal_trust_outcome or "refuse",  # type: ignore[arg-type]
@@ -969,16 +998,24 @@ def _finalize(
         trust_payload = _floor_trust_signal_for_fatal_error(trust_payload)
         notes.append(_fatal_error_disclosure(acc.fatal_error_payload))
 
+    # The surface's OWN disclosures are what get merged back into the message.
+    # The preserved trust warnings are deliberately excluded here: they are
+    # already in that message, put there by the floor, and merging them again
+    # is what produced the duplication RR2-02 found.
     notes = _cap_notes(notes)
     if notes:
         trust_payload = trust_payload.model_copy(
             update={"message": _merge_disclosure_messages(trust_payload.message, notes)}
         )
 
+    # Only now do the preserved warnings join the list the caller reads, at the
+    # end, so the cap sheds THEM before it sheds a disclosure the surface
+    # generated itself (RR2-03). Their full text is what makes the merged
+    # message's truncation marker point at something real.
     disclosures = Disclosures(
         answer_truncated=answer_truncated,
         citations_omitted=citations_omitted,
-        notes=notes,
+        notes=_cap_notes(notes + preserved_trust_warnings),
     )
     return answer_text, TrustSignal.from_payload(trust_payload), citations, disclosures
 

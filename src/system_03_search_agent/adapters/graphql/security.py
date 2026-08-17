@@ -358,13 +358,35 @@ def _should_mask_error(error: GraphQLError) -> bool:
     # gate and `tool-call-budgets.md`'s actionability rule both forbid exactly
     # that.
     #
-    # This is a CATEGORY rule, not a list of the three cases the re-review
-    # happened to name: any coercion or validation error graphql-core can
-    # generate is covered, including ones no one has thought of yet. The
-    # inverse is what keeps it safe: anything OUR code raises that is not
-    # caller-facing is a plain Python exception, not a `GraphQLError`, and
-    # still falls to the masked branch below.
-    if isinstance(original, GraphQLError):
+    # THE PHASE, NOT THE CLASS. This condition originally read
+    # `isinstance(original, GraphQLError)` alone, and that REOPENED
+    # F-4.3-A-12, the critical credential-disclosure finding this module's
+    # marker rule exists to close. The reasoning behind it, that "anything our
+    # code raises which is not caller-facing is a plain Python exception, not
+    # a GraphQLError", was simply false, and a re-review proved it twice over:
+    # a resolver raising a bare `GraphQLError` returned a live database DSN,
+    # credentials and a source path verbatim to the caller, and graphql-core
+    # ITSELF raises a bare `GraphQLError` for a server-side bug (a field
+    # annotated as a list that resolves to a non-iterable), which this branch
+    # then stamped `BAD_USER_INPUT`, blaming the caller for our defect. That
+    # is trust inferred from a class family, the exact thing the marker rule
+    # forbids, reintroduced by the commit that cited it.
+    #
+    # `error.path` is the structural signal that actually separates the two,
+    # and it separates them by WHEN the error arose rather than by what type
+    # it is. Verified against the installed graphql-core rather than assumed:
+    #
+    #   variable coercion, document validation   path is None
+    #   raised while resolving a field           path is set, e.g. ['ask']
+    #
+    # A path exists only once execution has reached a field, and `located_
+    # error` is what attaches it. So `path is None` means no resolver ran:
+    # the request was rejected against the schema and the caller's own
+    # values, and nothing internal has been touched yet. Anything with a path
+    # came out of our code while serving the request and falls through to the
+    # marker check below, where it is masked unless it declares itself
+    # public.
+    if isinstance(original, GraphQLError) and error.path is None:
         if error.extensions is None or "code" not in error.extensions:
             error.extensions = {
                 **(error.extensions or {}),

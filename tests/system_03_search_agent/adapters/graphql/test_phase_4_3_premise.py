@@ -1441,6 +1441,50 @@ class TestCallerInputIsNeverAnInternalError:
         )
 
     @pytest.mark.asyncio
+    async def test_a_resolver_raising_a_graphql_error_still_masks(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # THE arm for the critical that has now been introduced TWICE: once by
+        # the original package-origin allowlist, and again by the first R-09
+        # fix, which disclosed any `GraphQLError` on the reasoning that our own
+        # code only ever raises plain Python exceptions. That was false. A
+        # resolver can raise a bare `GraphQLError`, and graphql-core raises one
+        # itself for a server-side bug, and both were being handed to the
+        # caller verbatim, the second stamped BAD_USER_INPUT so our defect was
+        # blamed on them.
+        #
+        # The distinction that makes this safe is the PHASE the error came
+        # from, not its class: an error raised while resolving a field carries
+        # a `path`, and one from coercion or validation does not.
+        #
+        # Mutation that turns this red: drop `and error.path is None` from
+        # `security._should_mask_error`, which is exactly the state the
+        # re-review found.
+        from graphql import GraphQLError
+
+        from system_03_search_agent.adapters.graphql import fold as fold_module
+
+        secret = "AGE_DSN=postgresql://kg_reader:hunter2@10.0.0.1:5432/kg"
+
+        async def _leak(*_args: Any, **_kwargs: Any) -> Any:
+            raise GraphQLError(f"{secret} at /Users/secret/path/fold.py:912")
+
+        monkeypatch.setattr(fold_module, "fold_run", _leak)
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await _ask(client, headers)
+
+        serialized = _serialized(response)
+        for probe in ("postgresql://", "kg_reader", "hunter2", "10.0.0.1", "/Users/secret"):
+            assert probe not in serialized, f"{probe} reached the caller"
+        # And it must not be mislabelled as the caller's mistake.
+        errors = response.json().get("errors") or []
+        codes = [(error.get("extensions") or {}).get("code") for error in errors]
+        assert "BAD_USER_INPUT" not in codes, (
+            "a failure inside our own resolver was blamed on the caller"
+        )
+
+    @pytest.mark.asyncio
     async def test_an_internal_failure_is_still_masked(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -1494,12 +1538,23 @@ class TestDisclosuresSurvive:
         data = _payload(response)["ask"]
         notes = data["disclosures"]["notes"]
 
-        # The full text of every distinct warning survives, so nothing a
-        # merge had to cut is lost. This is the clause that actually closes
-        # C5, and it goes red the moment the preservation is removed.
-        for marker in ("WARNING-ALPHA", "WARNING-OMEGA"):
-            assert any(marker in note for note in notes), (
-                f"{marker} was dropped from the merged message and preserved nowhere"
+        # The FULL text of every distinct warning survives, so nothing a merge
+        # had to cut is lost.
+        #
+        # This asserted only that a PREFIX MARKER appeared somewhere in notes,
+        # and was vacuous: cutting every preserved warning to 20 characters,
+        # undisclosed, left it green, because the marker sits in the first 14.
+        # Preserving the first 20 characters of a warning is not preserving
+        # the warning. Proven by running exactly that mutation; corrected to
+        # compare full text.
+        expected = [
+            "WARNING-ALPHA " + ("a" * 200),
+            "WARNING-OMEGA " + ("z" * 200),
+        ]
+        for full_text in expected:
+            assert any(full_text in note for note in notes), (
+                f"a warning was preserved only in part: {full_text[:24]}... "
+                "a prefix is not the disclosure"
             )
 
         # And the merge itself discloses its own cut, asserted DIRECTLY on
