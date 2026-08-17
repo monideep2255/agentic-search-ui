@@ -1626,7 +1626,21 @@ class TestTransportBounds:
             raise AssertionError("an over-cap body must not reach run creation")
 
         monkeypatch.setattr(run_registry_module.default_registry, "create_run", _spy)
-        oversized = "x" * (router_module.MAX_REQUEST_BODY_BYTES + 4096)
+        # A FIXED size, deliberately not derived from the cap.
+        #
+        # CORRECTED at the re-review round (finding R-03). This probe was
+        # `MAX_REQUEST_BODY_BYTES + 4096`, so it scaled with the constant and
+        # NO cap value could ever fail it: raising the cap to 20 MB left the
+        # arm green, which means F-4.3-A-15's fix was unpinned by the very
+        # arm written to pin it. A probe sized from the thing it tests proves
+        # only that the arithmetic is consistent.
+        #
+        # 2 MB is well above any legitimate GraphQL request to this surface
+        # and well below the 20 MB the adversary actually sent.
+        oversized = "x" * (2 * 1024 * 1024)
+        assert router_module.MAX_REQUEST_BODY_BYTES < len(oversized), (
+            "the probe must exceed the cap by construction, or this arm proves nothing"
+        )
         async with _client() as client:
             _user_id, headers = await _real_user_headers(client)
             response = await _post_graphql(
@@ -1664,7 +1678,10 @@ class TestTransportBounds:
         # or lies in it, would then walk straight past the bound.
         from system_03_search_agent.adapters.graphql import router as router_module
 
-        oversized = b"x" * (router_module.MAX_REQUEST_BODY_BYTES + 4096)
+        # Fixed size, not derived from the cap. See the sibling arm above:
+        # a probe built as `cap + n` cannot fail for any cap (R-03).
+        oversized = b"x" * (2 * 1024 * 1024)
+        assert router_module.MAX_REQUEST_BODY_BYTES < len(oversized)
 
         async def _chunks() -> AsyncIterator[bytes]:
             for start in range(0, len(oversized), 16384):
@@ -1748,14 +1765,20 @@ class TestTransportBounds:
         monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
         async with _client() as client:
             _user_id, headers = await _real_user_headers(client)
-            response = await _post_graphql(
-                client,
-                _ASK_DOCUMENT,
-                headers=headers,
-                variables={"input": {"text": "{" * 500, "sessionId": "s"}},
+            # The braces must sit in the DOCUMENT, inside a string literal.
+            #
+            # CORRECTED at the re-review round (finding R-05). They were in
+            # `variables`, which the nesting scanner never reads, so the arm
+            # passed without exercising the string-skipping it exists to
+            # prove. An inline literal is what actually reaches the scanner.
+            document = (
+                "mutation { ask(input: {text: "
+                + '"' + "{" * 500 + '"'
+                + ', sessionId: "s"}) { runId } }'
             )
+            response = await _post_graphql(client, document, headers=headers)
 
-        assert _payload(response)["ask"]["runId"]
+        assert _payload(response)["ask"]["runId"], response.text
 
     @pytest.mark.asyncio
     async def test_the_trailing_slash_spelling_is_served_not_redirected(

@@ -323,6 +323,56 @@ class TestErrorMasking:
             "package origin must not grant disclosure; only a declared marker does"
         )
 
+    def test_every_exception_families_disclosure_decision_is_pinned(self) -> None:
+        # THE arm that would have caught R-02, and did not exist.
+        #
+        # Replacing the package-origin allowlist with a declared marker
+        # silently dropped `fold.py`'s whole error family to the generic
+        # uncoded "internal error". The old rule had named that module
+        # explicitly; the new one gave it no marker. So `citations(runId:)`
+        # on an unfinished run and the fold's own timeout both stopped
+        # telling a caller anything actionable, inside the very round that
+        # spent its length fixing that same defect class for a different
+        # field. Nothing turned red, because nothing pinned the BOUNDARY,
+        # only its two endpoints.
+        #
+        # This arm pins the whole table, so moving any class across the line
+        # in either direction is a visible failure rather than a silent one.
+        # Mutation: drop `__graphql_public__` from `FoldError` (the exact
+        # regression), or add it to `GraphQLTypeError` (the exact hazard,
+        # since `InvalidCitationPayloadError` handles rejected payload
+        # content).
+        from graphql import GraphQLError
+
+        from system_03_search_agent.adapters.graphql import fold, types
+
+        def decision(exc: BaseException) -> tuple[bool, str | None]:
+            error = GraphQLError(str(exc), original_error=exc)
+            masked = security._should_mask_error(error)
+            return masked, (error.extensions or {}).get("code")
+
+        disclosed = [
+            fold.FoldError("x"),
+            fold.FoldTimeoutError("x"),
+            fold.RunNotYetFinishedError("x"),
+            security.GraphQLSecurityError("x"),
+        ]
+        for exc in disclosed:
+            masked, code = decision(exc)
+            assert masked is False, f"{type(exc).__name__} must reach the caller"
+            assert code, f"{type(exc).__name__} must carry a machine-readable code"
+
+        masked_families = [
+            # Interpolates rejected payload content, so it stays masked even
+            # though it lives in this same package.
+            types.InvalidCitationPayloadError("x"),
+            RuntimeError("internal host detail"),
+            ValueError("internal detail"),
+        ]
+        for exc in masked_families:
+            masked, _code = decision(exc)
+            assert masked is True, f"{type(exc).__name__} must NOT reach the caller"
+
     def test_the_public_marker_must_be_declared_not_inherited_by_location(self) -> None:
         # The positive half. Mutation: drop `__graphql_public__` from
         # `GraphQLSecurityError`, which would mask every deliberate,

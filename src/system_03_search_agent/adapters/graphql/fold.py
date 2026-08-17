@@ -109,15 +109,44 @@ logger = logging.getLogger(__name__)
 
 
 class FoldError(Exception):
-    pass
+    """Base for this module's own errors.
+
+    Declares itself caller-safe (`security.PUBLIC_ERROR_MARKER`). Every
+    message raised as this class or a subclass is a fixed literal, or is
+    built only from a `run_id` the caller already supplied, so none of them
+    carries a host, a credential, a path, an internal bound or a caught
+    exception's text.
+
+    RESTORED at the re-review round (finding R-02). These errors WERE
+    disclosed under the previous package-origin allowlist, which named this
+    class explicitly. Replacing that rule with a declared marker
+    (F-4.3-A-12, the critical fix) silently dropped them to the generic
+    uncoded "internal error", so `citations(runId:)` on an unfinished run and
+    the fold's own timeout both stopped telling a caller anything actionable.
+    That is the same defect class the SAME round spent its length fixing for
+    a different field, and no gate arm turned red on it, which is build phase
+    4.2's lesson reproduced exactly: the newest code is the most dangerous
+    code.
+
+    The marker is inherited by subclasses, and that is deliberate rather than
+    incidental: `FoldTimeoutError` and `RunNotYetFinishedError` are the two
+    actionable outcomes a caller most needs named. A subclass that ever
+    carries internal detail must set the marker to `False` explicitly.
+    """
+
+    __graphql_public__ = True
 
 
 class FoldTimeoutError(FoldError):
-    pass
+    """The fold's own wall-clock bound elapsed. Actionable: the caller can
+    retry or narrow the question, so this must reach them by name."""
 
 
 class RunNotYetFinishedError(FoldError):
-    pass
+    """A read that requires a finished run was made against one still in
+    flight. This is REST's 409 mirror, and a caller that cannot tell it from
+    a server fault will retry a request that can never succeed until the run
+    ends."""
 
 
 # ---------------------------------------------------------------------------

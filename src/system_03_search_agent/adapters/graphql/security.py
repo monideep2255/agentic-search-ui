@@ -236,6 +236,24 @@ _MASKED_ERROR_MESSAGE = "This request could not be completed due to an internal 
 # package in a future phase is MASKED unless its author opts it in, and
 # opting in is a visible, reviewable line rather than an accident of file
 # placement.
+#
+# THE MARKER IS INHERITED, and that is a deliberate part of the design rather
+# than an accident of `getattr`. The fix commit's own wording said "sharing a
+# base class grants nothing", which the re-review round showed is false:
+# `getattr(type(exc), ...)` walks the MRO, so a subclass of a marked class is
+# disclosed, and `InvalidAskInput` in fact relies on exactly that. The
+# statement is corrected here rather than left to mislead the next reader.
+#
+# Inheritance is the behaviour we want, because it makes a marked base an
+# explicit contract for a family of errors: subclassing one is itself the
+# opt-in, and the obligation on every message in that family is stated on the
+# base. A subclass that ever needs to carry internal detail sets the marker
+# to `False` explicitly, which is why the check below compares against `True`
+# rather than merely testing truthiness.
+#
+# What the fix commit got RIGHT is narrower and still holds: sharing a
+# PACKAGE grants nothing. Only an explicit declaration, inherited or direct,
+# does.
 PUBLIC_ERROR_MARKER = "__graphql_public__"
 
 _CAMEL_RUN_1 = re.compile(r"(.)([A-Z][a-z]+)")
