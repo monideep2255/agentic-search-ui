@@ -1591,6 +1591,246 @@ class TestConcurrencyBound:
 # ---------------------------------------------------------------------------
 
 
+class TestTransportBounds:
+    """The bounds that live in the ASGI layer rather than in the schema.
+
+    Specified by the fix agent that owns `router.py` and written here by the
+    lead, since that agent was correctly barred from this file. Each arm
+    names the mutation that turns it red, and each bound is two-armed: it
+    must refuse the hostile request AND admit an ordinary one, because a
+    bound that refuses everything passes every attack arm and destroys the
+    product.
+
+    These bounds run BEFORE authentication, which is a deliberate change to
+    the unauthenticated response shape: a request cannot be authenticated
+    without being read, so bounding what the server is willing to read
+    cannot wait behind a privilege check. The refusal discloses only the cap.
+    """
+
+    @pytest.mark.asyncio
+    async def test_an_oversized_request_body_is_refused_and_starts_no_run(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Mutation that turns this red: raise MAX_REQUEST_BODY_BYTES above
+        # the probe size. F-4.3-A-15: 20 MB of unused variables was accepted
+        # and served, and the document token limiter does not bound
+        # variables at all, so this is the cheap-to-send expensive-to-serve
+        # vector the token bound cannot see.
+        from system_03_search_agent.adapters.graphql import router as router_module
+        from system_03_search_agent.core import run_registry as run_registry_module
+
+        created: list[str] = []
+
+        def _spy(query: Query, context: RequestContext, **kwargs: Any) -> str:
+            created.append(query.trace_id)
+            raise AssertionError("an over-cap body must not reach run creation")
+
+        monkeypatch.setattr(run_registry_module.default_registry, "create_run", _spy)
+        oversized = "x" * (router_module.MAX_REQUEST_BODY_BYTES + 4096)
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await _post_graphql(
+                client,
+                _ASK_DOCUMENT,
+                headers=headers,
+                variables={"input": {"text": "BRCA1?", "sessionId": "s"}, "padding": oversized},
+            )
+
+        body = response.json()
+        codes = [(e.get("extensions") or {}).get("code") for e in (body.get("errors") or [])]
+        assert router_module.BODY_TOO_LARGE_CODE in codes, body
+        assert created == []
+
+    @pytest.mark.asyncio
+    async def test_an_ordinary_body_still_creates_a_run(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The converse. Mutation that turns this red: set
+        # MAX_REQUEST_BODY_BYTES to 0, which would make the arm above pass
+        # while refusing every real question.
+        from system_03_search_agent.core import run_registry as run_registry_module
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await _ask(client, headers)
+
+        assert _payload(response)["ask"]["runId"]
+
+    @pytest.mark.asyncio
+    async def test_an_oversized_body_without_a_content_length_is_still_refused(self) -> None:
+        # Mutation that turns this red: keep only the `content-length` fast
+        # path and drop the counting drain. A sender that omits the header,
+        # or lies in it, would then walk straight past the bound.
+        from system_03_search_agent.adapters.graphql import router as router_module
+
+        oversized = b"x" * (router_module.MAX_REQUEST_BODY_BYTES + 4096)
+
+        async def _chunks() -> AsyncIterator[bytes]:
+            for start in range(0, len(oversized), 16384):
+                yield oversized[start : start + 16384]
+
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await client.post(
+                _GRAPHQL_PATH,
+                content=_chunks(),
+                headers={**headers, "Content-Type": "application/json"},
+            )
+
+        codes = [
+            (e.get("extensions") or {}).get("code") for e in (response.json().get("errors") or [])
+        ]
+        assert router_module.BODY_TOO_LARGE_CODE in codes, response.text
+
+    @pytest.mark.asyncio
+    async def test_the_nesting_bound_is_monotonic_in_the_attack_size(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # THE property F-4.3-A-14 was actually about, and the reason this arm
+        # tests three depths rather than one: before the fix, a BIGGER attack
+        # produced a WORSE outcome (the parser crashed with an unhandled
+        # recursion failure reported as a generic internal error). A bound
+        # that degrades as the attack grows is not a bound.
+        #
+        # Mutation that turns this red: remove the pre-parser nesting scan.
+        from system_03_search_agent.adapters.graphql import router as router_module
+        from system_03_search_agent.core import run_registry as run_registry_module
+
+        created: list[str] = []
+
+        def _spy(query: Query, context: RequestContext, **kwargs: Any) -> str:
+            created.append(query.trace_id)
+            raise AssertionError("a too-deeply-nested document must not reach run creation")
+
+        monkeypatch.setattr(run_registry_module.default_registry, "create_run", _spy)
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            observed: list[list[str | None]] = []
+            for depth in (200, 400, 2000):
+                document = "query D { " + "... on Query { " * depth + "__typename" + " }" * depth + " }"
+                response = await _post_graphql(client, document, headers=headers)
+                observed.append(
+                    [
+                        (e.get("extensions") or {}).get("code")
+                        for e in (response.json().get("errors") or [])
+                    ]
+                )
+
+        for codes in observed:
+            assert router_module.DOCUMENT_TOO_DEEPLY_NESTED_CODE in codes, observed
+        assert created == []
+
+    @pytest.mark.asyncio
+    async def test_the_transport_bound_has_not_swallowed_the_schema_depth_bound(self) -> None:
+        # Mutation that turns this red: lower MAX_DOCUMENT_NESTING_DEPTH
+        # below the schema's own limit, which would make the coarse transport
+        # bound fire first and silently retire QueryDepthLimiter. The two
+        # bounds are deliberately at different layers and both must remain
+        # reachable.
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await _post_graphql(client, _deeply_nested_document(40), headers=headers)
+
+        messages = " ".join(_error_messages(response.json())).lower()
+        assert "depth" in messages, messages
+
+    @pytest.mark.asyncio
+    async def test_the_nesting_scan_is_not_fooled_by_braces_inside_strings(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Mutation that turns this red: count every `{` in the raw body
+        # rather than skipping strings, block strings and comments. A user
+        # legitimately asking about a sequence full of braces would then be
+        # refused, which is the false-positive half of this bound.
+        from system_03_search_agent.core import run_registry as run_registry_module
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await _post_graphql(
+                client,
+                _ASK_DOCUMENT,
+                headers=headers,
+                variables={"input": {"text": "{" * 500, "sessionId": "s"}},
+            )
+
+        assert _payload(response)["ask"]["runId"]
+
+    @pytest.mark.asyncio
+    async def test_the_trailing_slash_spelling_is_served_not_redirected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Mutation that turns this red: drop the trailing-slash spelling from
+        # the served paths. F-4.3-A-10: it used to 307-redirect, and the
+        # redirect DROPPED the request body, so a caller who added a slash
+        # silently lost their query rather than being told anything.
+        from system_03_search_agent.core import run_registry as run_registry_module
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await client.post(
+                _GRAPHQL_PATH + "/",
+                json={
+                    "query": _ASK_DOCUMENT,
+                    "variables": {"input": {"text": "BRCA1?", "sessionId": "s"}},
+                },
+                headers=headers,
+            )
+
+        assert response.status_code == 200, response.text
+        assert _payload(response)["ask"]["runId"]
+
+    @pytest.mark.asyncio
+    async def test_the_timeout_bound_matches_this_surface_exactly(self) -> None:
+        # Mutation that turns this red: restore the `startswith` prefix
+        # match. F-4.3-A-11: a prefix match also bounds unrelated paths that
+        # merely begin with the same string, so `/graphql-admin` would
+        # silently inherit this surface's timeout.
+        from system_03_search_agent.adapters.graphql.router import RequestTimeoutMiddleware
+
+        seen: list[str] = []
+
+        async def _inner(scope: dict[str, Any], receive: Any, send: Any) -> None:
+            seen.append(scope["path"])
+
+        middleware = RequestTimeoutMiddleware(_inner)
+
+        async def _receive() -> dict[str, Any]:
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def _send(_message: dict[str, Any]) -> None:
+            return None
+
+        for path in ("/graphql", "/graphql/", "/graphqlXYZ", "/graphql-admin", "/other"):
+            await middleware({"type": "http", "path": path, "headers": []}, _receive, _send)
+
+        assert seen[2:] == ["/graphqlXYZ", "/graphql-admin", "/other"], seen
+
+    @pytest.mark.asyncio
+    async def test_the_timeout_message_does_not_claim_the_run_was_stopped(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Mutation that turns this red: restore the "was aborted" wording.
+        # F-4.3-A-17: the request is abandoned but the RUN keeps going and
+        # keeps billing, so telling a caller it was aborted is untrue, and a
+        # caller who then retries starts a SECOND billed run believing the
+        # first is gone.
+        from system_03_search_agent.adapters.graphql import security as security_module
+        from system_03_search_agent.core import run_registry as run_registry_module
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _never_terminating_stream)
+        monkeypatch.setattr(security_module, "REQUEST_TIMEOUT_S", 0.5, raising=True)
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await _ask(client, headers)
+
+        messages = " ".join(_error_messages(response.json())).lower()
+        assert "abort" not in messages, messages
+        assert "still" in messages or "continue" in messages or "second" in messages, messages
+
+
 class TestRiskTierHonesty:
     @pytest.mark.asyncio
     async def test_a_refusal_reports_an_unassessed_risk_tier_as_unknown(
@@ -1645,12 +1885,53 @@ class TestRiskTierHonesty:
         # happens to observe and leave a sibling site hardcoded. This is
         # the fix-by-category rule build phase 4.2 paid for four times: an
         # enumerated fix grows a gap at the first case nobody listed.
+        # NARROWED 2026-08-17, on a report from the fix agent that owns
+        # `core/graph.py`. The grep matched ANY line containing the literal,
+        # including a comment quoting it to explain the rule and a severity
+        # table deriving from it. That is a blunt proxy for the arm's real
+        # intent, and it punishes exactly the code that documents the
+        # invariant. The intent is narrower: no site that EMITS a
+        # `TrustSignalPayload` may hardcode the benign tier.
+        #
+        # Deliberately still a source grep rather than a behavioural test,
+        # because the point is to catch a NEW emit site that nobody wired a
+        # behavioural arm for. Judge finding J-04's companion arm covers the
+        # behaviour on the surface this phase owns.
+        #
+        # Mutation that turns this red: hardcode the benign tier at either
+        # refusal site in `core/graph.py`.
+        # The scan walks each `TrustSignalPayload(` call to its MATCHING
+        # close paren and looks inside that span, rather than looking back a
+        # fixed number of lines. The first attempt at narrowing this arm used
+        # a six-line lookback and was itself VACUOUS: these emit sites carry
+        # long explanatory comments between the constructor and the field, so
+        # the window never reached the argument and the arm passed under its
+        # own mutation. Caught by running that mutation, which is the whole
+        # discipline this phase kept failing to apply to itself.
         from pathlib import Path
 
         source = Path("src/system_03_search_agent/core/graph.py").read_text(encoding="utf-8")
+        lines = source.splitlines()
+
+        def _emit_site_spans() -> list[str]:
+            spans: list[str] = []
+            for index, line in enumerate(lines):
+                if "TrustSignalPayload(" not in line:
+                    continue
+                depth = 0
+                collected: list[str] = []
+                for candidate in lines[index:]:
+                    code = candidate.split("#", 1)[0]  # a comment is documentation
+                    collected.append(code)
+                    depth += code.count("(") - code.count(")")
+                    if depth <= 0 and collected:
+                        break
+                spans.append("".join(collected))
+            return spans
+
         offending = [
-            line.strip()
-            for line in source.splitlines()
-            if 'risk_tier="low"' in line.replace(" ", "")
+            span for span in _emit_site_spans() if 'risk_tier="low"' in span.replace(" ", "")
         ]
-        assert offending == [], f"still hardcoding a low risk tier: {offending}"
+        assert offending == [], (
+            f"a trust-signal emit site still hardcodes the benign tier: {offending}"
+        )

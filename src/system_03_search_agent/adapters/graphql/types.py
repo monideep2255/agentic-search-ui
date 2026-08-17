@@ -35,6 +35,12 @@ Depends on:
       NCBI_SOURCE_URL_PATTERN, TrustSignalPayload): the Section 2.3 payload
       models this module's types mirror, and the host-pinned URL pattern
       `Citation.from_payload` re-validates against.
+    - system_03_search_agent.contracts.query (Query): read at import time
+      for the two INPUT bounds `AskInput` publishes, so the GraphQL layer
+      and the core contract cannot drift (F-4.3-A-16 / J-10).
+    - graphql (GraphQLError): the base `InvalidAskInput` must carry so a
+      scalar's `parse_value` failure reaches the caller as a located,
+      coded, caller-fixable error instead of a masked internal one.
 
 Reads:
     - Nothing directly.
@@ -47,14 +53,17 @@ from __future__ import annotations
 
 import enum
 import re
+from typing import Any, NewType, NoReturn
 
 import strawberry
+from graphql import GraphQLError
 
 from system_03_search_agent.contracts.events import (
     NCBI_SOURCE_URL_PATTERN,
     CitationPayload,
     TrustSignalPayload,
 )
+from system_03_search_agent.contracts.query import Query as CoreQuery
 
 # ---------------------------------------------------------------------------
 # Exception base. Every exception this module raises subclasses this one,
@@ -74,6 +83,76 @@ class GraphQLTypeError(ValueError):
 
 
 class InvalidCitationPayloadError(GraphQLTypeError):
+    pass
+
+
+# ---------------------------------------------------------------------------
+# The caller-facing error base, and the one caller-facing error this module
+# raises.
+#
+# `SchemaError` LIVES HERE rather than in schema.py, where it was first
+# written, and the move is load-bearing rather than cosmetic. `security.py`
+# discloses an exception to the caller only when its class sets
+# `PUBLIC_ERROR_MARKER` (F-4.3-A-12 replaced the old "trusted because of the
+# package it lives in" rule with this declared one), and this module now
+# needs to raise a caller-facing error of its own for an out-of-bounds
+# `AskInput` field. schema.py imports types.py, so types.py can never import
+# schema.py; one shared base for the whole surface therefore has to sit on
+# this side of that edge. schema.py re-exports it, so `schema.SchemaError`
+# still names this exact class and every existing subclass there is
+# unchanged. `_error_code_for` derives the wire code from the CLASS NAME
+# alone, so moving the definition changes no published code.
+#
+# The discipline the marker buys is unchanged and still binding: every
+# message raised through a `SchemaError` is a fixed module-level literal,
+# never interpolated from a caught exception, a host, a path, or an internal
+# bound. `GraphQLTypeError` above deliberately does NOT descend from this
+# base: `InvalidCitationPayloadError`'s message names a citation id taken
+# from internal data, so it stays masked.
+# ---------------------------------------------------------------------------
+
+
+class SchemaError(Exception):
+    """The one base every caller-facing exception on this surface descends
+    from, so a catch site dispatches on a base class rather than an
+    enumerated list of subclasses. That list drifted out of sync with its
+    raiser three separate times inside build phase 4.2 alone.
+
+    Declares itself caller-safe (F-4.3-A-12's marker). That is defensible
+    only while every message raised through it is a fixed literal. Adding a
+    message that interpolates anything internal withdraws that guarantee,
+    so change the marker if that ever happens.
+    """
+
+    __graphql_public__ = True
+
+
+class InvalidAskInput(GraphQLError, SchemaError):
+    # Publishes code INVALID_ASK_INPUT (derived from this class name by
+    # security._error_code_for; the name is the wire contract, as it is for
+    # every error class on this surface).
+    #
+    # WHY IT SUBCLASSES `GraphQLError` AND NOT ONLY `SchemaError`, which is
+    # the whole mechanism of the F-4.3-A-16 / J-10 fix and is not obvious:
+    # this error is raised from a SCALAR's `parse_value`, during input
+    # coercion, before any resolver runs. graphql-core keeps a raised
+    # `GraphQLError` as the direct `original_error` of the error it reports
+    # (`coerce_input_value`'s `except GraphQLError` branch); a raised plain
+    # exception instead gets wrapped in an intermediate `GraphQLError`, and
+    # THAT wrapper, not the raised class, becomes what `security.py`'s
+    # allowlist inspects. A plain exception with the marker on it would
+    # therefore still be masked. Verified by probe against the real
+    # extension stack, not assumed.
+    #
+    # Both entry paths are covered and both were measured:
+    #   - as a query VARIABLE, graphql-core rebuilds the error with this
+    #     instance as `original_error`, so `security._should_mask_error`
+    #     finds the marker and attaches `extensions.code` itself;
+    #   - as an INLINE LITERAL, the raised error is reported as-is with no
+    #     `original_error` at all, which `_should_mask_error` already
+    #     declines to mask, and the `extensions` set at construction survive.
+    # Setting the code explicitly at every raise is what makes the two paths
+    # publish the identical code rather than one of them publishing none.
     pass
 
 
@@ -274,14 +353,31 @@ class RunResult:
     disclosures: Disclosures
 
 
+# `disclosures` is REQUIRED, with no default, and that is the point (judge
+# J-06, premise clause C5). This export used to carry `export_truncated`
+# alone, a bare boolean that says SOMETHING was dropped and never why, so a
+# citation dropped for failing validation was indistinguishable from one
+# dropped at the 50-citation cap, and a caller reading a short export could
+# not tell a data-quality problem from a volume one. A defaulted field would
+# have been worse than no field: every existing construction site would keep
+# compiling while reporting "nothing to disclose" about an export that had
+# just dropped something. Required means a construction site has to say what
+# it dropped, checked by the compiler rather than by review.
 @strawberry.type
 class CitationsExport:
     run_id: str
     export_truncated: bool
     run_cancelled: bool
     citations: list[Citation]
+    disclosures: Disclosures
 
 
+# `stopped` reports whether THAT CALL actually cancelled a run that was
+# still in flight, not whether the call was accepted (F-4.3-A-20). A second
+# stop of the same run, or a stop of a run that already finished, is still a
+# success rather than an error (the mutation is idempotent) and reports
+# `stopped: false`, which is what `citations.runCancelled` on this same
+# surface would also say about that run.
 @strawberry.type
 class StopRunResult:
     run_id: str
@@ -316,8 +412,179 @@ def resolve_audience_depth(value: AudienceDepth | None) -> str:
     return value.value if value is not None else DEFAULT_AUDIENCE_DEPTH
 
 
+# ---------------------------------------------------------------------------
+# AskInput's INPUT bounds (F-4.3-A-16, J-10).
+#
+# Until this section existed, `AskInput` declared no bound at all: `text` and
+# `session_id` were bare `str`, the real bounds lived one layer inward on
+# `contracts.query.Query`, and a violating value therefore reached the `ask`
+# resolver, raised a Pydantic `ValidationError` there, and was masked into
+# "This request could not be completed due to an internal error." with no
+# code. Four entirely caller-fixable mistakes (an over-long question, an
+# empty one, a whitespace-only one, an over-long sessionId) were all reported
+# as a server fault, so a well-behaved client retries forever on input that
+# can never succeed. That breaks production-standards.md's retry-safety gate
+# ("an error must say what to do next"), and it made this surface strictly
+# worse than the REST surface it mirrors, which answers 422 naming the field.
+#
+# EVERY NUMBER BELOW IS READ OFF `contracts.query.Query` AT IMPORT TIME
+# rather than restated, which is the opposite of the surface-local-constants
+# choice the OUTPUT bounds above make, deliberately. An output cap is this
+# surface's own policy and may legitimately differ per surface. An input
+# bound is not a policy: it is the same contract the core will enforce a
+# moment later, and the only failure mode that matters is the two disagreeing
+# (a GraphQL layer that accepts 3000 characters the core then rejects is
+# exactly the masked-internal-error bug this section closes, reintroduced).
+# Reading them from the model makes that disagreement unrepresentable, and a
+# bound that disappears from the model is an import-time crash rather than a
+# silently unbounded field.
+# ---------------------------------------------------------------------------
+
+
+def _bound_from_core_query(field_name: str, attribute: str) -> int:
+    """Read one length bound off `contracts.query.Query`'s own field
+    metadata (`annotated_types.MinLen` / `MaxLen`, which Pydantic stores
+    there for a `Field(min_length=..., max_length=...)`).
+
+    Duck-typed on the attribute name rather than importing
+    `annotated_types` so this module gains no new dependency, direct or
+    transitive, for a two-line lookup.
+
+    Raises:
+        RuntimeError: the named bound is absent from the core model, which
+            means the core stopped enforcing it and this surface must not
+            silently keep publishing a bound nobody else holds.
+    """
+    for item in CoreQuery.model_fields[field_name].metadata:
+        value = getattr(item, attribute, None)
+        if value is not None:
+            return int(value)
+    raise RuntimeError(
+        f"contracts.query.Query.{field_name} declares no {attribute}, so this "
+        "surface cannot mirror it; the two would drift"
+    )
+
+
+ASK_TEXT_MIN_LENGTH = _bound_from_core_query("text", "min_length")
+ASK_TEXT_MAX_LENGTH = _bound_from_core_query("text", "max_length")
+ASK_SESSION_ID_MAX_LENGTH = _bound_from_core_query("session_id", "max_length")
+
+# The wire code every `InvalidAskInput` publishes. Pinned as a literal here
+# and cross-checked against `security._error_code_for` by a test rather than
+# imported, so this module gains no import edge to `security.py` (which
+# imports nothing from here today, and the one-directional edge is worth
+# keeping).
+ASK_INPUT_ERROR_CODE = "INVALID_ASK_INPUT"
+
+# Every message is a FIXED module-level literal, assembled once at import
+# time from this module's own constants and never from a caught exception, a
+# caller value, a host, or any runtime state (F-4.3-A-12). The numbers they
+# quote are the caller's own published input bounds, which is precisely what
+# an actionable input error has to say; that is the opposite of schema.py's
+# concurrency-cap message, which deliberately omits the internal cap value.
+_TEXT_NOT_A_STRING_MESSAGE = (
+    "ask input field 'text' must be a string; send the question as a GraphQL "
+    "String and retry"
+)
+_TEXT_BLANK_MESSAGE = (
+    "ask input field 'text' must contain at least one non-whitespace "
+    "character; send a question and retry"
+)
+_TEXT_TOO_LONG_MESSAGE = (
+    "ask input field 'text' must be at most "
+    f"{ASK_TEXT_MAX_LENGTH} characters; shorten the question and retry"
+)
+_SESSION_ID_NOT_A_STRING_MESSAGE = (
+    "ask input field 'sessionId' must be a string; send it as a GraphQL "
+    "String and retry"
+)
+_SESSION_ID_TOO_LONG_MESSAGE = (
+    "ask input field 'sessionId' must be at most "
+    f"{ASK_SESSION_ID_MAX_LENGTH} characters; shorten it and retry"
+)
+
+# The resolver-side half of the fix, keyed by the CORE model's field name.
+# `schema.py` builds `contracts.query.Query` inside the `ask` resolver from
+# fields this surface does not all own (`trace_id` and `user_id` are
+# server-supplied), so a `ValidationError` can still be raised there even
+# with both scalars in place. schema.py selects a message from this table by
+# the offending field's `loc`, a structural token, and re-raises; a failure
+# on any field NOT in this table is a server fault and stays masked, because
+# telling a caller to fix input they never sent would be a second wrong
+# error message rather than a fix for the first.
+#
+# Selecting a fixed message by a structural token off an exception is the
+# same shape schema.py's own `_CONCURRENCY_CAP_MESSAGES_BY_BOUND` already
+# uses with `exc.bound`: the table is the message source, the exception only
+# picks a key.
+ASK_INPUT_MESSAGES_BY_CORE_FIELD: dict[str, str] = {
+    "text": (
+        "ask input field 'text' must be a non-whitespace string of "
+        f"{ASK_TEXT_MIN_LENGTH} to {ASK_TEXT_MAX_LENGTH} characters; correct "
+        "it and retry"
+    ),
+    "session_id": _SESSION_ID_TOO_LONG_MESSAGE,
+    "audience_depth": (
+        "ask input field 'audienceDepth' must be one of the schema's declared "
+        "AudienceDepth values; correct it and retry"
+    ),
+}
+
+
+def _refuse(message: str) -> NoReturn:
+    raise InvalidAskInput(message, extensions={"code": ASK_INPUT_ERROR_CODE})
+
+
+def _parse_ask_text(value: Any) -> str:
+    # A custom scalar does its OWN type check: graphql-core hands
+    # `parse_value` whatever the variable held, having applied no String
+    # coercion of its own once the field's type is this scalar.
+    if not isinstance(value, str):
+        _refuse(_TEXT_NOT_A_STRING_MESSAGE)
+    if len(value) > ASK_TEXT_MAX_LENGTH:
+        _refuse(_TEXT_TOO_LONG_MESSAGE)
+    # Mirrors BOTH of the core's emptiness rules in one check: `min_length=1`
+    # and `Query._reject_whitespace_only_text`. Refuses rather than strips,
+    # for the reason that validator states: a boundary validator accepts or
+    # refuses, it never edits the user's question before the guardrail sees
+    # it.
+    if len(value) < ASK_TEXT_MIN_LENGTH or not value.strip():
+        _refuse(_TEXT_BLANK_MESSAGE)
+    return value
+
+
+def _parse_ask_session_id(value: Any) -> str:
+    if not isinstance(value, str):
+        _refuse(_SESSION_ID_NOT_A_STRING_MESSAGE)
+    if len(value) > ASK_SESSION_ID_MAX_LENGTH:
+        _refuse(_SESSION_ID_TOO_LONG_MESSAGE)
+    # No minimum: `contracts.query.Query.session_id` declares `max_length`
+    # only. A bound this surface invented would be a bound no other surface
+    # enforces, which is the drift this whole section exists to prevent.
+    return value
+
+
+# Input-only scalars, so `serialize` is unreachable in practice; it is the
+# identity rather than something that raises, because a scalar that explodes
+# on an unexpected call is a worse failure than one that passes the value
+# through. No `description=` on either: Strawberry prints a description into
+# the SDL, and this module's schema-print discipline (see the module
+# docstring) keeps every explanation in `#` comments.
+AskText = strawberry.scalar(
+    NewType("AskText", str),
+    serialize=lambda value: value,
+    parse_value=_parse_ask_text,
+)
+
+AskSessionId = strawberry.scalar(
+    NewType("AskSessionId", str),
+    serialize=lambda value: value,
+    parse_value=_parse_ask_session_id,
+)
+
+
 @strawberry.input
 class AskInput:
-    text: str
-    session_id: str
+    text: AskText
+    session_id: AskSessionId
     audience_depth: AudienceDepth | None = None

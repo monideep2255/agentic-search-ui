@@ -36,6 +36,7 @@ from system_03_search_agent.contracts.events import (
     Event,
     GuardPayload,
     TokenPayload,
+    ToolResultPayload,
     TrustSignalPayload,
 )
 from system_03_search_agent.contracts.query import Query, RequestContext
@@ -574,3 +575,867 @@ class TestExceptionHierarchy:
         # of unrelated types instead of this module's own single base.
         assert issubclass(fold_module.FoldTimeoutError, fold_module.FoldError)
         assert issubclass(fold_module.RunNotYetFinishedError, fold_module.FoldError)
+
+
+# ===========================================================================
+# The 2026-08-17 honesty round.
+#
+# Every arm below was written against one finding from build phase 4.3's
+# judge and adversary rounds, and every one of those findings was the same
+# defect wearing a different field name: THIS SURFACE REPORTED MORE
+# CONFIDENCE THAN ITS EVIDENCE SUPPORTED. The governing rule the fixes hold
+# to, and that these arms exist to keep held, is: aggregate toward LESS
+# confidence, never more; where nothing assessed something, say so rather
+# than default to the benign value; and disclose anything dropped,
+# shortened, failed or truncated anywhere upstream.
+#
+# Each arm names, beside its assertions, the mutation that turns it red.
+# Every mutation named here was RUN: the real source line was edited, this
+# single arm was run and observed failing, and the line was restored. An arm
+# that cannot be made to fail is not evidence, and this phase has already
+# found nine arms that could not be.
+# ===========================================================================
+
+
+def _raw_event(event_type: str, trace_id: str, seq: int, payload: dict[str, Any]) -> Event:
+    """An `Event` built WITHOUT the model validator that binds `payload` to
+    its declared type's Section 2.3 model.
+
+    `Event`'s own `_payload_matches_declared_type` validator rejects a
+    malformed payload at construction, which is why the fold's defensive
+    per-event branches are latent rather than live today (judge J-05's own
+    reachability note says exactly this). `model_construct` is how a test
+    reaches them: it is the same bypass `CitationPayload.model_copy` gives a
+    future producer, and the point of a defensive branch is that it is
+    correct on the day something does reach it.
+    """
+    return Event.model_construct(
+        type=event_type,
+        version="v1",
+        trace_id=trace_id,
+        seq=seq,
+        ts=datetime.now(UTC),
+        payload=payload,
+    )
+
+
+def _trust(**overrides: Any) -> TrustSignalPayload:
+    base: dict[str, Any] = {
+        "outcome": "answer",
+        "risk_tier": "low",
+        "grounded": True,
+        "triangulated": None,
+        "citation_id": None,
+        "scope": "answer",
+        "message": None,
+        "fallback_link": None,
+    }
+    base.update(overrides)
+    return TrustSignalPayload(**base)
+
+
+def _stream_of(*payload_specs: tuple[str, Any]) -> Any:
+    """Build a `run_streaming` stand-in from `(event_type, payload)` pairs,
+    numbering `seq` in order. Payloads that are already `Event`s (built via
+    `_raw_event`) are yielded as-is with their trace id rewritten.
+    """
+
+    async def _stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+        trace_id = query.trace_id
+        for seq, (event_type, payload) in enumerate(payload_specs):
+            if isinstance(payload, Event):
+                yield Event.model_construct(
+                    type=payload.type,
+                    version="v1",
+                    trace_id=trace_id,
+                    seq=seq,
+                    ts=datetime.now(UTC),
+                    payload=payload.payload,
+                )
+            else:
+                yield _event(event_type, trace_id, seq, payload)
+
+    return _stream
+
+
+_GUARD_OK = ("guard", GuardPayload(passed=True, category="ok", reason=None))
+
+
+def _done(outcome: str = "answer") -> tuple[str, Any]:
+    return (
+        "done",
+        DonePayload(
+            total_cost_usd=0.01,
+            total_tool_calls=1,
+            elapsed_ms=100,
+            trust_outcome=outcome,  # type: ignore[arg-type]
+        ),
+    )
+
+
+async def _drain(registry: RunRegistry, run_id: str, *, timeout: float = 2.0) -> None:
+    """Wait until the registry has finished draining `run_id`, so a
+    snapshot read sees the WHOLE buffer, post-terminal events included.
+    """
+    entry = registry.get_run(run_id)
+    deadline = asyncio.get_running_loop().time() + timeout
+    while not entry.finished:
+        if asyncio.get_running_loop().time() > deadline:  # pragma: no cover
+            raise AssertionError("the run never finished draining")
+        await asyncio.sleep(0.01)
+
+
+def _notes_text(result: Any) -> str:
+    return " ".join(result.disclosures.notes)
+
+
+# ---------------------------------------------------------------------------
+# F-4.3-A-01: an aggregate is never more reassuring than its worst input.
+# ---------------------------------------------------------------------------
+
+
+class TestRiskTierIsFlooredNotCollapsed:
+    @pytest.mark.asyncio
+    async def test_an_unknown_claim_risk_tier_is_never_reported_as_low(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # F-4.3-A-01. Mutation that turns this red, and the line that was
+        # actually there: replace `_floor_risk_tier(...)` in
+        # `_floor_trust_payloads` with the boolean collapse
+        # `"high" if any(p.risk_tier == "high" for p in payloads) else "low"`.
+        # RUN: this arm fails with riskTier == "low". `risk_tier` is a bare
+        # `str` on the payload, not a two-value Literal, so that expression
+        # turned EVERY non-"high" value into the most reassuring value the
+        # field has, including the "unknown" this phase introduced to mean
+        # "no assessment ran".
+        stream = _stream_of(
+            _GUARD_OK,
+            ("token", TokenPayload(text="Claim one [1]. ", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+            ("trust_signal", _trust(scope="claim", risk_tier="unknown", citation_id="c1")),
+            ("token", TokenPayload(text="Claim two [2]. ", marker_ids=["c2"])),
+            ("citation", _citation(2, citation_id="c2")),
+            ("trust_signal", _trust(scope="claim", risk_tier="unknown", citation_id="c2")),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert result.trust_signal.risk_tier == "unknown"
+
+    @pytest.mark.asyncio
+    async def test_an_unrecognized_risk_tier_is_never_downgraded_to_low(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The fix-by-category half of F-4.3-A-01, and the reason the fix is
+        # a severity map rather than an added `elif` for "unknown". Mutation
+        # that turns this red: give `_risk_tier_severity` a default of
+        # `_RISK_TIER_SEVERITY["low"]` for a value not in the map, i.e.
+        # treat anything unrecognized as benign. RUN: this arm fails with
+        # riskTier == "low". A future "medium" or "critical" must never be
+        # reported as the most reassuring tier the field has.
+        #
+        # The "low" signal is emitted FIRST on purpose: `min` returns the
+        # first minimal element, so a mutation that merely ties the two
+        # severities has to actually change the reported value for this arm
+        # to be able to see it.
+        stream = _stream_of(
+            _GUARD_OK,
+            ("token", TokenPayload(text="Claim one [1]. ", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+            ("trust_signal", _trust(scope="claim", risk_tier="low", citation_id="c1")),
+            ("trust_signal", _trust(scope="claim", risk_tier="critical", citation_id="c1")),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert result.trust_signal.risk_tier == "critical"
+
+    @pytest.mark.asyncio
+    async def test_a_known_high_risk_is_never_hidden_behind_an_unknown(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The other direction, and the one judge finding J-09 records the
+        # frontend getting wrong: "unknown" must rank BETTER than "high", so
+        # that mixing an unassessed claim into a run carrying a flagged one
+        # cannot make the flag disappear. Mutation that turns this red: swap
+        # the severities of "high" and "unknown" in `_RISK_TIER_SEVERITY`.
+        # RUN: this arm fails with riskTier == "unknown", i.e. the known
+        # high-risk claim vanishes.
+        stream = _stream_of(
+            _GUARD_OK,
+            ("token", TokenPayload(text="Claim one [1]. ", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+            ("trust_signal", _trust(scope="claim", risk_tier="unknown", citation_id="c1")),
+            ("trust_signal", _trust(scope="claim", risk_tier="high", citation_id="c1")),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert result.trust_signal.risk_tier == "high"
+
+    @pytest.mark.asyncio
+    async def test_an_answer_scope_signal_is_floored_by_a_worse_claim_scope_one(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The governing principle, applied to the branch structure itself.
+        # Mutation that turns this red: restore the two disjoint branches
+        # (`if acc.answer_trust_signal is not None: use it` / `elif
+        # acc.claim_trust_signals: aggregate those`), under which an
+        # answer-scope "low / answer / grounded" signal won outright and
+        # every claim-scoped verdict it disagreed with was discarded. RUN:
+        # this arm fails with outcome == "answer" and riskTier == "low".
+        stream = _stream_of(
+            _GUARD_OK,
+            ("token", TokenPayload(text="Claim one [1]. ", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+            ("trust_signal", _trust(scope="claim", outcome="flag", risk_tier="high",
+                                    grounded=False, citation_id="c1")),
+            ("trust_signal", _trust(scope="answer", outcome="answer", risk_tier="low",
+                                    grounded=True)),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert result.trust_signal.outcome == "flag"
+        assert result.trust_signal.risk_tier == "high"
+        assert result.trust_signal.grounded is False
+
+
+# ---------------------------------------------------------------------------
+# F-4.3-A-02: no trust assessment is ever discarded, whatever its scope.
+# ---------------------------------------------------------------------------
+
+
+class TestNoTrustSignalIsDiscarded:
+    @pytest.mark.asyncio
+    async def test_a_scopeless_trust_signal_is_folded_not_dropped(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # F-4.3-A-02, the single worst shape available on this surface.
+        # Mutation that turns this red: restore the two-branch routing in
+        # `_consume_event` (`if scope == "answer": ... elif scope ==
+        # "claim": ...`), under which a signal whose `scope` is None (a
+        # contract-legal event: `scope` is optional with a None default)
+        # matched neither branch, was dropped on the floor, and was replaced
+        # by a MORE REASSURING synthetic signal. RUN: this arm fails on the
+        # first assertion, `outcome == "flag"`, because the flag verdict was
+        # discarded and a synthetic signal manufactured in its place; the
+        # high risk tier, the ungrounded verdict and the warning text go
+        # with it. Every field moves in the reassuring direction at once, on
+        # a system whose whole moat is an honest trust signal.
+        stream = _stream_of(
+            _GUARD_OK,
+            ("token", TokenPayload(text="A dangerous claim [1].", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+            (
+                "trust_signal",
+                _trust(
+                    outcome="flag",
+                    risk_tier="high",
+                    grounded=False,
+                    scope=None,
+                    message="this answer contradicts its sources",
+                ),
+            ),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert result.trust_signal.outcome == "flag"
+        assert result.trust_signal.risk_tier == "high"
+        assert result.trust_signal.grounded is False
+        assert "contradicts its sources" in (result.trust_signal.message or "")
+        assert "no recognized scope" in _notes_text(result)
+
+
+# ---------------------------------------------------------------------------
+# F-4.3-A-03: grounding is never asserted from an assessment that never ran.
+# ---------------------------------------------------------------------------
+
+
+class TestGroundingIsNeverAssertedFromNothing:
+    @pytest.mark.asyncio
+    async def test_a_run_with_no_trust_assessment_is_not_reported_as_grounded(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # F-4.3-A-03. Mutation that turns this red, and the line that was
+        # actually there: in `_finalize`'s synthetic branch, replace
+        # `grounded=False` with `grounded=bool(citations) and
+        # acc.terminal_trust_outcome == "answer"`. RUN: this arm fails with
+        # grounded is True. That line sat DIRECTLY BELOW a six-line comment
+        # explaining why asserting an unassessed risk tier is a defect, and
+        # then asserted an unassessed grounding verdict from nothing but
+        # "at least one citation event went past". A citation existing is
+        # not the answer being tied to it; deciding that is the grounding
+        # step's job, and this run never ran it.
+        stream = _stream_of(
+            _GUARD_OK,
+            ("token", TokenPayload(text="BRCA1 is a gene [1].", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert result.citations, "the citation itself is still returned"
+        assert result.trust_signal.grounded is False
+        assert result.trust_signal.risk_tier == "unknown"
+        assert "No trust assessment" in _notes_text(result)
+
+
+# ---------------------------------------------------------------------------
+# F-4.3-A-04 and F-4.3-A-05: an upstream failure or truncation is disclosed.
+# ---------------------------------------------------------------------------
+
+
+class TestUpstreamDegradationIsDisclosed:
+    @pytest.mark.asyncio
+    async def test_a_non_fatal_error_is_disclosed_without_leaking_its_message(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # F-4.3-A-04. Mutation that turns this red: drop the `else:` arm of
+        # `_consume_event`'s error branch, restoring `if payload.fatal:
+        # acc.fatal_error_payload = payload` with nothing for the non-fatal
+        # case. RUN: this arm fails with notes == []. A run whose Layer 1
+        # call failed and was skipped reported a clean, low-risk, grounded
+        # answer, and the REST surface forwards the same error event so ITS
+        # callers can see it.
+        #
+        # The second half of the arm is F-4.1-A-09's rule holding on the new
+        # path: mutation, interpolate `payload.message` (or `payload.
+        # source`) into the note. RUN: fails on the two substring asserts.
+        stream = _stream_of(
+            _GUARD_OK,
+            (
+                "error",
+                ErrorPayload(
+                    fatal=False,
+                    scope="tool",
+                    source="cypher_query",
+                    error_class="transient",
+                    message="graph unreachable at kg-internal.example:5432, layer 1 skipped",
+                    retry_after_s=2,
+                ),
+            ),
+            ("token", TokenPayload(text="Only BRCA1 is associated [1].", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+            ("trust_signal", _trust()),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        notes = _notes_text(result)
+        assert "incomplete data" in notes
+        assert "kg-internal.example" not in notes
+        assert "cypher_query" not in notes
+
+    @pytest.mark.asyncio
+    async def test_a_truncated_tool_result_is_disclosed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # F-4.3-A-05. Mutation that turns this red: delete the
+        # `tool_result` branch from `_consume_event`, which is what the
+        # module used to do deliberately ("carries nothing this surface's
+        # schema has a field for"). RUN: this arm fails with notes == [].
+        # `ToolResultPayload.truncated` is precisely a "the data behind this
+        # answer was cut short" flag, and an answer reading "only BRCA1 is
+        # associated" built from a tool that saw 500 rows and returned 25 is
+        # the exact shape this surface must not present as complete.
+        stream = _stream_of(
+            _GUARD_OK,
+            (
+                "tool_result",
+                ToolResultPayload(
+                    call_id="call-1",
+                    tool="cypher_query",
+                    layer="layer_1_graph",
+                    status="ok",
+                    summary="500 rows found, first 25 returned",
+                    result_count=25,
+                    truncated=True,
+                ),
+            ),
+            ("token", TokenPayload(text="Only BRCA1 is associated [1].", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+            ("trust_signal", _trust()),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert "truncated by the tool itself" in _notes_text(result)
+
+    @pytest.mark.asyncio
+    async def test_an_untruncated_tool_result_discloses_nothing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The second arm, so the one above cannot be satisfied by a note
+        # that always fires. Mutation that turns this red: disclose on every
+        # `tool_result` rather than on `payload.truncated`. RUN: fails.
+        stream = _stream_of(
+            _GUARD_OK,
+            (
+                "tool_result",
+                ToolResultPayload(
+                    call_id="call-1",
+                    tool="cypher_query",
+                    layer="layer_1_graph",
+                    status="ok",
+                    summary="1 row found",
+                    result_count=1,
+                    truncated=False,
+                ),
+            ),
+            ("token", TokenPayload(text="BRCA1 is a gene [1].", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+            ("trust_signal", _trust()),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert result.disclosures.notes == []
+
+
+# ---------------------------------------------------------------------------
+# F-4.3-A-07: duplicate citation identity is resolved and disclosed.
+# ---------------------------------------------------------------------------
+
+
+class TestDuplicateCitationIdentity:
+    @pytest.mark.asyncio
+    async def test_a_duplicate_citation_id_is_dropped_and_disclosed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # F-4.3-A-07. Mutation that turns this red: delete the
+        # `citation.citation_id in self.seen_ids` check from
+        # `_CitationCollector.accept`. RUN: this arm fails with two
+        # citations returned, both `citationId == "c1"`, carrying opposite
+        # claims, `citationsOmitted: 0` and no note. The marker `[1]` then
+        # resolved to two different sources asserting opposite things with
+        # no way for the caller to pick, and a claim-scoped trust signal
+        # naming "c1" could not be bound to either.
+        contradicting = _citation(1).model_copy(
+            update={
+                "claim_text": "BRCA1 does NOT cause cancer",
+                "source_url": "https://www.ncbi.nlm.nih.gov/gene/9999",
+            }
+        )
+        stream = _stream_of(
+            _GUARD_OK,
+            ("token", TokenPayload(text="Fact [1].", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+            ("citation", contradicting),
+            ("trust_signal", _trust()),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert [c.citation_id for c in result.citations] == ["c1"]
+        assert result.disclosures.citations_omitted == 1
+        assert "repeated a citation id" in _notes_text(result)
+
+    @pytest.mark.asyncio
+    async def test_a_duplicate_display_index_is_kept_but_disclosed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The other half of F-4.3-A-07: two DISTINCT citations sharing one
+        # display index are real evidence, so both are returned, but the
+        # marker they share is ambiguous and the caller is told so.
+        # Mutation that turns this red: delete the `citation.display_index
+        # in self.seen_display_indexes` check. RUN: this arm fails with no
+        # note, i.e. two sources silently answering to one `[1]`.
+        collision = _citation(2, citation_id="c2").model_copy(
+            update={"display_index": 1}
+        )
+        stream = _stream_of(
+            _GUARD_OK,
+            ("token", TokenPayload(text="Fact [1].", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+            ("citation", collision),
+            ("trust_signal", _trust()),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert len(result.citations) == 2
+        assert "share a display index" in _notes_text(result)
+
+
+# ---------------------------------------------------------------------------
+# J-05: the omission note states the REAL reason.
+# ---------------------------------------------------------------------------
+
+
+class TestOmissionNotesStateTheRealReason:
+    @pytest.mark.asyncio
+    async def test_a_rejected_citation_is_not_blamed_on_the_cap(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # J-05. Mutation that turns this red: replace `_CitationCollector.
+        # disclosure_notes`'s per-reason lookup with the single sentence the
+        # fold used to emit for every omission, `f"{n} citation(s) beyond
+        # this surface's {MAX_CITATIONS}-citation limit were omitted"`. RUN:
+        # this arm fails on the "50-citation limit" assertion. Two
+        # citations existed and one was REJECTED as untrustworthy, and the
+        # caller was told the surface had more evidence it was withholding
+        # for capacity. Those are opposite meanings on a trust surface, and
+        # the second is the one a caller needs.
+        off_host = _citation(2, citation_id="c2").model_dump()
+        off_host["source_url"] = "https://evil.example/gene/672"
+        stream = _stream_of(
+            _GUARD_OK,
+            ("token", TokenPayload(text="Fact one [1]. Fact two [2].", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+            ("citation", _raw_event("citation", "t", 0, off_host)),
+            ("trust_signal", _trust()),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        notes = _notes_text(result)
+        assert result.disclosures.citations_omitted == 1
+        assert "REJECTED" in notes
+        assert "50-citation limit" not in notes
+
+    @pytest.mark.asyncio
+    async def test_an_unlisted_omission_reason_is_still_disclosed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The fix-by-category arm. Build phase 4.2 paid four times for a fix
+        # that was a LIST and grew a gap at the first case nobody listed, so
+        # the per-reason note table has a fallback and the emission order
+        # has a sorted tail. Mutation that turns this red: in
+        # `disclosure_notes`, replace `_OMISSION_NOTES.get(reason,
+        # _OMISSION_FALLBACK_NOTE)` with `_OMISSION_NOTES[reason]` (which
+        # raises) or iterate only `_OMISSION_ORDER` (which silently drops
+        # it). RUN: fails with a KeyError and with notes == [] respectively.
+        collector = fold_module._CitationCollector()
+        collector.events_seen = 1
+        collector.omissions["some_future_reason"] = 3
+
+        notes = collector.disclosure_notes()
+        assert len(notes) == 1
+        assert "3 citation(s) were omitted" in notes[0]
+
+
+# ---------------------------------------------------------------------------
+# F-4.3-A-08: a run with no terminal event is not an ordinary refusal.
+# ---------------------------------------------------------------------------
+
+
+class TestATerminalEventIsRequired:
+    @pytest.mark.asyncio
+    async def test_a_run_that_ends_without_a_terminal_event_says_so(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # F-4.3-A-08. Mutation that turns this red: delete the `if not
+        # acc.terminal_event_seen:` block from `_finalize`. RUN: this arm
+        # fails with notes == []. `_finalize` had no notion of "did a
+        # terminal event actually arrive", so a run that died halfway
+        # returned partial answer text plus `outcome: refuse, grounded:
+        # false, notes: []`, which is IDENTICAL IN SHAPE to a legitimate
+        # guardrail refusal that produced no answer. The caller could not
+        # tell "the system declined to answer" from "the system died
+        # halfway and handed you half an answer".
+        stream = _stream_of(
+            _GUARD_OK,
+            ("token", TokenPayload(text="Fact one [1]. Fact two [2].", marker_ids=["c1"])),
+            ("citation", _citation(1)),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert "PARTIAL" in _notes_text(result)
+        assert result.trust_signal.grounded is False
+        assert result.trust_signal.outcome == "refuse"
+
+    @pytest.mark.asyncio
+    async def test_an_ordinary_refusal_does_not_claim_it_ended_abnormally(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The second arm, so the one above cannot pass on a note that always
+        # fires. A guardrail refusal is a run WORKING and reaches its `done`
+        # event. Mutation that turns this red: set `terminal_event_seen`
+        # unconditionally False, or never set it in the `done` branch. RUN:
+        # fails.
+        stream = _stream_of(
+            (
+                "guard",
+                GuardPayload(passed=False, category="off_topic", reason="outside biomedicine"),
+            ),
+            ("trust_signal", _trust(outcome="refuse", risk_tier="unknown", grounded=False)),
+            _done("refuse"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert "PARTIAL" not in _notes_text(result)
+        assert "has not finished" not in _notes_text(result)
+
+    @pytest.mark.asyncio
+    async def test_a_mid_flight_snapshot_never_claims_the_run_ended(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Judge finding J-07, the same missing fact pointed at the answer
+        # text. `Query.run` is this surface's only polling read, and a poll
+        # of a HEALTHY in-progress run returned the literal sentence "the
+        # run ended before producing an answer" in the same response whose
+        # own `finished` field said False. Mutation that turns this red:
+        # drop the `run_finished` parameter's branch from
+        # `_fallback_answer_text`. RUN: this arm fails on the "ended"
+        # assertion.
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, _never_terminating_stream)
+        await asyncio.sleep(0.05)
+
+        result = await asyncio.wait_for(fold_module.fold_run_snapshot(run_id), timeout=1.0)
+
+        assert result.finished is False
+        assert "ended" not in result.answer
+        assert "has not finished" in _notes_text(result)
+
+
+# ---------------------------------------------------------------------------
+# F-4.3-A-13: `ask` and `run` fold the same prefix of the same run.
+# ---------------------------------------------------------------------------
+
+
+async def _post_terminal_leak_stream(
+    query: Query, context: RequestContext
+) -> AsyncIterator[Event]:
+    """Terminates with a refusal and then keeps emitting: answer tokens, a
+    citation, and an answer-scope trust signal claiming the whole thing is
+    grounded. Nothing after the terminal event is part of what this run
+    answered, on either read path.
+    """
+    trace_id = query.trace_id
+    yield _event("guard", trace_id, 0, GuardPayload(passed=True, category="ok", reason=None))
+    yield _event(
+        "done",
+        trace_id,
+        1,
+        DonePayload(total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=10, trust_outcome="refuse"),
+    )
+    yield _event("token", trace_id, 2, TokenPayload(text="POST-TERMINAL LEAKED TEXT", marker_ids=[]))
+    yield _event("citation", trace_id, 3, _citation(1))
+    yield _event(
+        "trust_signal",
+        trace_id,
+        4,
+        TrustSignalPayload(
+            outcome="answer",
+            risk_tier="low",
+            grounded=True,
+            triangulated=None,
+            citation_id="c1",
+            scope="answer",
+            message=None,
+            fallback_link=None,
+        ),
+    )
+
+
+class TestTheTwoReadPathsAgree:
+    @pytest.mark.asyncio
+    async def test_ask_and_run_agree_on_the_same_finished_run(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # F-4.3-A-13, and the invariant this module's own comment ASSERTED
+        # while it was false: the two entry points "can never silently
+        # diverge on what folding means". They diverged on WHICH EVENTS
+        # THEY CONSUME. `fold_run` reads `subscribe`, which stops at the
+        # terminal event; `fold_run_snapshot` read `entry.events`, the whole
+        # buffer including everything appended after it. Nothing tested that
+        # they agree, which is exactly the shape `self-eval-loop.md` warns
+        # about: a confident comment is where the next reader stops
+        # checking.
+        #
+        # Mutation that turns this red: delete the `if acc.
+        # terminal_event_seen: break` from `fold_run_snapshot`'s loop. RUN:
+        # this arm fails on every assertion below at once. `ask` returned a
+        # refusal and `run` returned "POST-TERMINAL LEAKED TEXT" with
+        # `grounded: true` and a citation, for one run id, one second apart.
+        registry, run_id = _isolated_registry_and_run(monkeypatch, _post_terminal_leak_stream)
+
+        ask_result = await fold_module.fold_run(run_id)
+        await _drain(registry, run_id)
+        run_result = await fold_module.fold_run_snapshot(run_id)
+
+        assert run_result.finished is True
+        assert run_result.answer == ask_result.answer
+        assert run_result.trust_signal.outcome == ask_result.trust_signal.outcome
+        assert run_result.trust_signal.grounded == ask_result.trust_signal.grounded
+        assert run_result.trust_signal.risk_tier == ask_result.trust_signal.risk_tier
+        assert [c.citation_id for c in run_result.citations] == [
+            c.citation_id for c in ask_result.citations
+        ]
+        assert run_result.disclosures.notes == ask_result.disclosures.notes
+
+    @pytest.mark.asyncio
+    async def test_post_terminal_content_is_never_reported_as_the_answer(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The direction that matters, stated on its own so the agreement arm
+        # above cannot be satisfied by making BOTH paths leak: this one is
+        # false whenever `run` leaks, whatever `ask` does. Mutation that
+        # turns this red: delete the terminal-event break from
+        # `fold_run_snapshot`'s loop. RUN: fails on the leaked-text
+        # assertion.
+        registry, run_id = _isolated_registry_and_run(monkeypatch, _post_terminal_leak_stream)
+        await fold_module.fold_run(run_id)
+        await _drain(registry, run_id)
+
+        run_result = await fold_module.fold_run_snapshot(run_id)
+        assert "LEAKED" not in run_result.answer
+        assert run_result.trust_signal.grounded is False
+        assert run_result.citations == []
+
+    @pytest.mark.asyncio
+    async def test_the_citations_export_also_stops_at_the_terminal_event(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The third read path. A citation appended after the run's terminal
+        # event is not part of what the run answered, so it is not part of
+        # the run's citation export either, and `citations(runId:)` must not
+        # hand a caller a citation `ask` and `run` both refuse to show.
+        # Mutation that turns this red: delete the terminal-event break from
+        # `fold_citations`'s loop. RUN: fails with one citation exported.
+        registry, run_id = _isolated_registry_and_run(monkeypatch, _post_terminal_leak_stream)
+        await fold_module.fold_run(run_id)
+        await _drain(registry, run_id)
+
+        export = fold_module.fold_citations(registry.get_run(run_id))
+        assert export.citations == []
+
+
+# ---------------------------------------------------------------------------
+# J-06 / premise clause C5: the citations export discloses what it dropped.
+# ---------------------------------------------------------------------------
+
+
+class TestCitationsExportDisclosesEveryDrop:
+    @pytest.mark.asyncio
+    async def test_a_rejected_citation_makes_the_export_report_truncated(self) -> None:
+        # J-06, and premise clause C5 ("anything the surface drops or
+        # shortens, it says so"), which the judge graded NOT MET on this
+        # operation. Mutation that turns this red, and the line that was
+        # actually there: `export_truncated=citation_events_total >
+        # MAX_CITATIONS`. RUN: this arm fails with exportTruncated False
+        # while the export silently omits a rejected citation, and
+        # `CitationsExport` carries no other field that could have said
+        # otherwise.
+        #
+        # REPORTED, not fixed here: the caller still cannot learn WHY the
+        # export is short. That needs a `disclosures` field on
+        # `CitationsExport`, which lives in `types.py`, another agent's file
+        # this round. `_CitationCollector.disclosure_notes()` already
+        # computes the wording.
+        off_host = _citation(2, citation_id="c2").model_dump()
+        off_host["source_url"] = "https://evil.example/gene/672"
+        events = [
+            _event("citation", "t1", 0, _citation(1)),
+            _raw_event("citation", "t1", 1, off_host),
+            _event("citation", "t1", 2, _citation(3, citation_id="c3")),
+        ]
+        entry = await _finished_entry(events=events, finished=True, cancelled=False)
+
+        export = fold_module.fold_citations(entry)
+
+        assert len(export.citations) == 2
+        assert export.export_truncated is True
+
+    @pytest.mark.asyncio
+    async def test_a_duplicate_citation_id_makes_the_export_report_truncated(self) -> None:
+        # The same rule for the other drop reason, so the fix cannot be a
+        # special case for one of them. Mutation that turns this red: use
+        # `collector.events_seen > MAX_CITATIONS` instead of `collector.
+        # omitted_total > 0`. RUN: fails.
+        events = [
+            _event("citation", "t1", 0, _citation(1)),
+            _event("citation", "t1", 1, _citation(1)),
+        ]
+        entry = await _finished_entry(events=events, finished=True, cancelled=False)
+
+        export = fold_module.fold_citations(entry)
+
+        assert len(export.citations) == 1
+        assert export.export_truncated is True
+
+
+# ---------------------------------------------------------------------------
+# J-08: one malformed payload degrades one event, never the whole answer.
+# ---------------------------------------------------------------------------
+
+
+class TestMalformedPayloadsDegradeOneEvent:
+    @pytest.mark.asyncio
+    async def test_a_malformed_token_payload_does_not_lose_the_whole_answer(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # J-08. Mutation that turns this red: restore the bare
+        # `TokenPayload(**event.payload)` construction in `_consume_event`
+        # (and the same for `trust_signal`, `guard`, `error`, `done`),
+        # instead of routing every branch through `_parse_payload`. RUN:
+        # this arm fails with a `ValidationError` raised out of `fold_run`,
+        # which on the real surface `MaskErrors` turns into "This request
+        # could not be completed due to an internal error" and the WHOLE
+        # answer is lost where one record could have been dropped. The fold
+        # already had exactly this defensive posture on its citation branch
+        # and on no other, with a docstring arguing for it at length.
+        stream = _stream_of(
+            _GUARD_OK,
+            ("token", TokenPayload(text="Fact one [1]. ", marker_ids=["c1"])),
+            ("token", _raw_event("token", "t", 0, {"text": 12345, "marker_ids": "nope"})),
+            ("citation", _citation(1)),
+            ("trust_signal", _trust()),
+            _done("answer"),
+        )
+        _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
+        result = await fold_module.fold_run(run_id)
+
+        assert "Fact one" in result.answer
+        assert "could not be read by this surface" in _notes_text(result)
+
+
+# ---------------------------------------------------------------------------
+# The surface does not truncate its own saying-so undisclosed.
+# ---------------------------------------------------------------------------
+
+
+class TestDisclosuresAreThemselvesDisclosed:
+    def test_capping_the_note_list_discloses_the_cap(self) -> None:
+        # Judge Section 1, clause C5, hole 3: `notes[:MAX_DISCLOSURE_NOTES]`
+        # silently dropped disclosures on a surface whose premise is "if we
+        # drop something we say so". Mutation that turns this red: restore
+        # the plain slice, i.e. `return notes[:MAX_DISCLOSURE_NOTES]` in
+        # `_cap_notes`. RUN: fails on the substring assertion.
+        notes = [f"note {index}" for index in range(fold_module.MAX_DISCLOSURE_NOTES + 5)]
+        capped = fold_module._cap_notes(notes)
+
+        assert len(capped) == fold_module.MAX_DISCLOSURE_NOTES
+        assert "further disclosure(s) did not fit" in capped[-1]
+
+    def test_an_uncapped_note_list_is_returned_unchanged(self) -> None:
+        # The second arm. Mutation that turns this red: always append the
+        # cap note. RUN: fails.
+        notes = ["one", "two"]
+        assert fold_module._cap_notes(notes) == ["one", "two"]
+
+    def test_truncating_the_merged_message_discloses_the_cut(self) -> None:
+        # The same rule for `trust_signal.message`, which is hard-capped at
+        # `TrustSignalPayload.message`'s own 500-character bound. Mutation
+        # that turns this red: restore the bare `" ".join(parts)[:MAX_
+        # DISCLOSURE_NOTE_LENGTH]`. RUN: fails on the marker assertion.
+        merged = fold_module._merge_disclosure_messages(None, ["x" * 400, "y" * 400])
+
+        assert len(merged) <= 500
+        assert "further disclosures omitted" in merged

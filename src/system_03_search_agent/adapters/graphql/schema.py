@@ -47,7 +47,12 @@ Depends on:
       fold_run_snapshot, fold_citations), reached through the module
     - system_03_search_agent.adapters.graphql.security (SCHEMA_EXTENSIONS,
       STRAWBERRY_CONFIG, RUN_CREATING_FIELD_NAME)
-    - system_03_search_agent.adapters.graphql.types (every result type)
+    - system_03_search_agent.adapters.graphql.types (every result type, the
+      `SchemaError` base this module re-exports, `InvalidAskInput` and its
+      published code and message table)
+    - pydantic (ValidationError), caught around the core `Query`
+      construction so an input failure is never masked into a bare internal
+      error (F-4.3-A-16 / J-10)
     - system_03_search_agent.contracts.query (Query, RequestContext)
     - system_03_search_agent.core.run_registry (default_registry,
       resolve_owned_run's two errors, the concurrent-run cap error)
@@ -64,14 +69,19 @@ from __future__ import annotations
 import uuid
 
 import strawberry
+from pydantic import ValidationError
 
 from system_03_search_agent.adapters.graphql import fold, security
 from system_03_search_agent.adapters.graphql.context import GraphQLContext
 from system_03_search_agent.adapters.graphql.types import (
+    ASK_INPUT_ERROR_CODE,
+    ASK_INPUT_MESSAGES_BY_CORE_FIELD,
     AskInput,
     AskResult,
     CitationsExport,
+    InvalidAskInput,
     RunResult,
+    SchemaError,
     StopRunResult,
 )
 from system_03_search_agent.contracts.query import Query as CoreQuery
@@ -89,20 +99,21 @@ from system_03_search_agent.core.run_registry import (
 # an error must say what to do next, not only that something failed).
 #
 # HOW THESE BECOME PUBLIC, and the one surprising coupling in this file.
-# `security.py`'s `MaskErrors` allowlist trusts an exception by WHERE ITS
-# CLASS IS DEFINED (anywhere under this surface's own package), not by a base
-# class it must inherit, and it derives the wire `extensions.code` from the
-# CLASS NAME. Both choices are deliberate and documented there. Two things
-# follow for this module, and neither is obvious from reading either file
-# alone:
+# `security.py`'s `MaskErrors` allowlist masks BY DEFAULT and discloses an
+# exception only when its class declares `security.PUBLIC_ERROR_MARKER`
+# (`__graphql_public__ = True`), which every class below inherits from
+# `SchemaError`. It derives the wire `extensions.code` from the CLASS NAME.
+# Both choices are deliberate and documented there. Two things follow for
+# this module, and neither is obvious from reading either file alone:
 #
-#   - Anything raised from here is unmasked automatically. That is
-#     convenient and it is also a loaded gun: an exception added later whose
-#     message carries internal text would be disclosed by default rather
-#     than masked by default. So every message below is a fixed literal,
-#     never interpolated from an exception, a host, or a caller value.
-#     F-4.1-A-09 measured a live database host, port and username reaching a
-#     caller through a field assumed safe. Filed as F-4.3-L-03.
+#   - Nothing is unmasked by accident. The marker rule REPLACED an earlier
+#     "trusted because of the package the class lives in" rule, which
+#     F-4.3-A-12 drove end to end into a credential disclosure. Declaring
+#     the marker is now the whole permission, and it is only defensible
+#     while every message below is a fixed literal, never interpolated from
+#     an exception, a host, or a caller value. F-4.1-A-09 measured a live
+#     database host, port and username reaching a caller through a field
+#     assumed safe. Filed as F-4.3-L-03.
 #   - THE CLASS NAME IS THE WIRE CONTRACT. `RunNotFound` publishes
 #     `code: "RUN_NOT_FOUND"`. Renaming the class silently changes the
 #     public API, so these names are chosen for the codes they produce and
@@ -126,21 +137,18 @@ _CONCURRENCY_CAP_MESSAGES_BY_BOUND: dict[str, str] = {
 _CONCURRENCY_CAP_FALLBACK_MESSAGE = _CONCURRENCY_CAP_MESSAGES_BY_BOUND["concurrency"]
 
 
-class SchemaError(Exception):
-    """The one base every exception in this module descends from, so a catch
-    site here dispatches on a base class rather than an enumerated list of
-    subclasses. That list drifted out of sync with its raiser three separate
-    times inside build phase 4.2 alone.
-
-    Declares itself caller-safe (F-4.3-A-12's marker). That is defensible
-    here and ONLY here because every message this module raises is a fixed
-    literal defined above: nothing is interpolated from a caught exception,
-    a host, a path, or an internal bound. Adding a message that interpolates
-    anything internal to this module withdraws that guarantee, so change the
-    marker if that ever happens.
-    """
-
-    __graphql_public__ = True
+# `SchemaError` is DEFINED IN `types.py` and imported above, not declared
+# here where it was first written. It moved at the F-4.3-A-16 / J-10 fix
+# because `types.py` now raises a caller-facing error of its own
+# (`InvalidAskInput`, from an input scalar) and cannot import this module:
+# schema.py imports types.py, so one shared base for the whole surface has to
+# sit on that side of the edge. This module re-exports it, so
+# `schema.SchemaError` still names the same class, every subclass below is
+# unchanged, and every published `extensions.code` is unchanged too (the code
+# is derived from the class name alone). The discipline it carries is
+# unchanged and still binding: every message raised through it is a fixed
+# literal, never interpolated from a caught exception, a host, a path, or an
+# internal bound.
 
 
 class RunNotFound(SchemaError):
@@ -192,6 +200,35 @@ def _owner_id_of(info: strawberry.Info) -> str:
     return f"user:{context.principal.id}"
 
 
+def _caller_fixable_ask_input_message(exc: ValidationError) -> str | None:
+    """The fixed, published message for the first caller-supplied field
+    `exc` rejected, or `None` when nothing the caller sent is at fault.
+
+    The SECOND half of the F-4.3-A-16 / J-10 fix, and the reason it exists
+    even though `AskInput`'s scalars already refuse an out-of-bounds value
+    before this resolver runs: the `Query` built here also carries
+    `trace_id` and `user_id`, which the SERVER supplies, so this
+    construction can still fail on a field no scalar guards. Without this
+    split, either every such failure stays a masked internal error (the bug)
+    or every one of them tells the caller to fix input they never sent
+    (a second wrong message dressed as a fix).
+
+    Only `exc`'s structural `loc` is read, never its message and never its
+    `input_value`, whose string embeds the rejected content (F-4.3-A-12).
+    The returned message comes wholly from `types.ASK_INPUT_MESSAGES_BY_
+    CORE_FIELD`, the same shape `_CONCURRENCY_CAP_MESSAGES_BY_BOUND` above
+    already uses: the table is the message source, the exception picks a key.
+    """
+    for error in exc.errors():
+        location = error.get("loc") or ()
+        if not location:
+            continue
+        message = ASK_INPUT_MESSAGES_BY_CORE_FIELD.get(str(location[0]))
+        if message is not None:
+            return message
+    return None
+
+
 @strawberry.type
 class Query:
     @strawberry.field
@@ -233,15 +270,33 @@ class Mutation:
         context: GraphQLContext = info.context
 
         run_id = str(uuid.uuid4())
-        core_query = CoreQuery(
-            text=input.text,
-            session_id=input.session_id,
-            trace_id=run_id,
-            user_id=str(context.principal.id),
-            audience_depth=(
-                input.audience_depth.value if input.audience_depth is not None else "researcher"
-            ),
-        )
+        # `AskInput`'s two scalars have already refused an out-of-bounds
+        # `text` or `sessionId` during input coercion, before this resolver
+        # was entered. This catch is the defense-in-depth half: `trace_id`
+        # and `user_id` below are server-supplied and carry their own bounds
+        # on `Query`, so a `ValidationError` is still reachable here, and an
+        # unhandled one is masked into a generic internal error with no code
+        # (F-4.3-A-16 / J-10). A caller-supplied field at fault becomes a
+        # coded, actionable refusal; anything else stays masked, because it
+        # is a genuine server fault and saying otherwise would misdirect the
+        # caller into "fixing" input that was already correct.
+        try:
+            core_query = CoreQuery(
+                text=input.text,
+                session_id=input.session_id,
+                trace_id=run_id,
+                user_id=str(context.principal.id),
+                audience_depth=(
+                    input.audience_depth.value if input.audience_depth is not None else "researcher"
+                ),
+            )
+        except ValidationError as exc:
+            message = _caller_fixable_ask_input_message(exc)
+            if message is None:
+                raise
+            raise InvalidAskInput(
+                message, extensions={"code": ASK_INPUT_ERROR_CODE}
+            ) from None
         # `run_id` is passed through rather than letting the registry mint
         # its own, so the id the caller holds and the `trace_id` threaded
         # through every event and every audit record are the same string
@@ -272,14 +327,31 @@ class Mutation:
     @strawberry.mutation
     async def stop_run(self, info: strawberry.Info, run_id: strawberry.ID) -> StopRunResult:
         # Idempotent, mirroring POST /v1/query/{run_id}/stop: stopping a
-        # finished or already-stopped run is a no-op that reports success,
-        # never an error (production-standards.md's retry-safety gate, since
-        # the caller may legitimately retry).
+        # finished or already-stopped run is a no-op, never an error
+        # (production-standards.md's retry-safety gate, since the caller may
+        # legitimately retry).
+        #
+        # `stopped` REPORTS WHAT HAPPENED, and used to be the fixed literal
+        # `True` (F-4.3-A-20). `cancel_run` is a documented no-op on a run
+        # whose task has already finished, so the old literal claimed a stop
+        # that never occurred, and contradicted `citations.runCancelled` on
+        # this same surface, which reported `false` for the same run. Two
+        # fields disagreeing about one run is worse than either answer alone,
+        # and "did my stop do anything" is the one thing a caller calls this
+        # mutation to find out. Idempotency requires that a repeated stop not
+        # ERROR; it never required saying something untrue.
+        #
+        # The read and the cancel are adjacent with NO await between them, so
+        # the event loop cannot advance the run's task in the gap: this is an
+        # exact report, not a sampled guess. `task.done()` is the only signal
+        # available synchronously (`entry.cancelled` is set later, by the
+        # drain loop, once the cancellation is actually observed).
         owner_id = _owner_id_of(info)
         resolved = str(run_id)
-        _resolve_owned(resolved, owner_id)
+        entry = _resolve_owned(resolved, owner_id)
+        was_in_flight = not entry.task.done()
         default_registry.cancel_run(resolved)
-        return StopRunResult(run_id=resolved, stopped=True)
+        return StopRunResult(run_id=resolved, stopped=was_in_flight)
 
 
 # The one schema this surface serves. Built once at import time, with the
