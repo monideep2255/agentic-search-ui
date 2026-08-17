@@ -320,7 +320,28 @@ After fixing the four real ones, 12 of 15 turn red and the remaining three are t
 | 2026-08-17 | Lead | First full assembly: 39 of 42 gate arms passed immediately. Three failures, each a real defect rather than a flake, and all three closed: a wrong field name in the gate's own guest-token helper, the timeout that could not be enforced from a schema extension (F-4.3-L-05), and, found while fixing the second, a gate arm that was VACUOUS (F-4.3-L-06). The gate is now 42 of 42 |
 | 2026-08-17 | Lead | Mounting the wrapped router was tried for the timeout and reverted: `app.mount` gives the sub-app its own path space, so a bare `POST /graphql` 307-redirected, the identical trailing-slash trap `app.py` already documents for the MCP mount. A redirect on every call is a worse public surface than a path-gated middleware |
 
-## Resuming this phase
+## Resuming this phase, second pause (2026-08-17, after the fix round and its re-review)
+
+This supersedes the first pause section below, which described an earlier and much smaller state. Read this one.
+
+Branch `phase/4.3-graphql-api`, HEAD `649e04c`, pushed, working tree clean, PR #48 open against `develop`. Doc drift 0 stale 0 structural. Backend 3077 passed against the same six known live-network-gated failures, 189 in the GraphQL package, 181 frontend, `ruff check src/` clean.
+
+STATUS: `in-review`, NOT done. No ticket is closed, because no judge round has ever returned PASS on this phase. Do not merge on the strength of the green suite alone.
+
+What has run, in order: build, lead mutation sweep (5 vacuous arms), judge round (FAIL), adversary round (1 critical, 13 major, 6 minor), a three-agent fix round, and a re-review of that fix round (FAIL, 5 major, 6 minor, 3 more vacuous arms). All four reports are in `tracker/`: `phase_4.3_judge_report.md`, `phase_4.3_adversary_report.md`, `phase_4.3_rereview_report.md`.
+
+TWO FINDINGS REMAIN OPEN and both are real, not bookkeeping:
+
+- R-04, major. `fold.py` still truncates merged trust warnings silently, and unlike the truncation site already fixed, that text survives in NO field at all. Premise clause C5, "anything the surface drops or shortens, it says so", is therefore still NOT MET.
+- R-09, major. The input-bounds fix only reaches fields carrying a custom scalar. A bad `audienceDepth`, a missing required field and an explicit null still return the uncoded generic "internal error", which is the same defect J-10 filed and reads as transient to a retrying client.
+
+Also carried: the `strawberry.scalar()` deprecation warning (the non-deprecated form needs `scalar_map` on `STRAWBERRY_CONFIG` in `security.py`), and the MCP surface still holds the four honesty defects this phase fixed here, by product-owner decision to keep the blast radius honest.
+
+THE NEXT STEP, and its order matters: fix R-04 and R-09, then re-review AGAIN. This phase has now had three review rounds and every single one found its worst defect inside the previous round's fix. That is build phase 4.2's measured pattern reproducing for a second phase, so treat "the fix is obvious and small" as the warning sign it has repeatedly turned out to be.
+
+WHEN IT FINALLY PASSES: the product owner's decisions from 2026-08-17 were to merge only after a clean review, and to open build phase 4.4 (KGX export) next.
+
+## Resuming this phase, first pause (superseded)
 
 State at the pause: the gate is failing as designed, four of seven tickets are in review, and nothing is `done` because the judge round has not run.
 
