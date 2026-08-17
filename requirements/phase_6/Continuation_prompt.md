@@ -94,8 +94,8 @@ Twelve build phases are done, all twelve merged into `develop` (renamed from `ma
 
 Current counts, stated once here:
 
-- Python tests: 2991 (2871 passing, 113 skipped, 1 xfailed, 6 failed; the 6 are `test_citation_trust_full_premise.py`'s live-network-opt-in-gated cases, confirmed not a regression, identical set carried since build phase 4.0's close)
-- Frontend tests: 180
+- Python tests: 3125 (3005 passing, 113 skipped, 1 xfailed, 6 failed; the 6 are `test_citation_trust_full_premise.py`'s live-network-opt-in-gated cases, confirmed not a regression, identical set carried since build phase 4.0's close)
+- Frontend tests: 181
 - Playwright end-to-end tests: 27 declarations, 30 executed cases, ALL PASSING, re-run at build phase 4.10 close on 2026-08-15 including the full axe sweep. A webServer timeout seen during that run was an orphaned probe process squatting on the backend port, diagnosed rather than assumed, since this suite once carried an IPv6-binding defect as "environmental" for five phases. First green as of 2026-08-13, the first green run since build phase 3.0. The previous note here said these were "unverifiable, a webServer-orchestration timeout unrelated to any file either phase touched, confirmed by starting the dev server directly, HTTP 200". That diagnosis was wrong and is corrected rather than deleted, because the way it was wrong is the lesson: the check started the server by hand and queried `localhost`, which resolves to `::1` on macOS, while Playwright probes `127.0.0.1`. Vite bound IPv6-only, so the evidence gathered proved a different address than the one failing. Behind that timeout sat a second, older breakage: the e2e mock backend's Guard-tier response had not matched the classifier's schema since build phase 3.0, so the suite would have failed even had it started. Both are fixed
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
@@ -110,7 +110,7 @@ Current counts, stated once here:
 - Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
 - Premise gate, build phase 4.10's own gate (the guest allowance, a normal test file, not one of the seven live tool gates above): 36 of 36, every clause mutation-proven, two-armed throughout since a control that refuses every guest passes every attack test and destroys the product
 - Decisions logged: 336
-- Learnings entries: 86, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
+- Learnings entries: 88, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below). This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
 
@@ -177,7 +177,7 @@ The product-decision queue is EMPTY as of 2026-08-15. Eight items that had been 
 | Read `blocked_reason`, label a guest's allowance as lifetime rather than daily, and stop the dots degrading toward a refusal | Next frontend ticket |
 | Move the off-host citation warning outside the collapsed source disclosure | Next frontend ticket |
 | Wait for the backend's `cancelled` event before closing a stopped run's stream | Next frontend ticket |
-| Render `entity_name` and `snapshot_date`, which build phase 4.10 put on the wire and no UI reads | Next frontend ticket |
+| Build phase 4.10 put `entity_name` and `snapshot_date` on the wire; render them, since no UI reads either one today | Next frontend ticket |
 
 Two decisions are deferrals rather than work, and both are deliberate. The acronym-gene-symbol and lowercase-gene questions fold into build phase 4.7's entity-resolution design, because the stopword list they turn on is the heuristic 4.7 replaces, so answering now means designing twice.
 

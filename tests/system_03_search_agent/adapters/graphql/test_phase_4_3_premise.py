@@ -1036,6 +1036,21 @@ def _deeply_nested_document(depth: int) -> str:
 
 
 class TestDocumentBounds:
+    """Each arm asserts the SPECIFIC bound's own error message, never merely
+    that some error came back.
+
+    CORRECTED 2026-08-17 after a mutation sweep. All three of these arms
+    originally asserted `body.get("errors")` alone, and all three were
+    VACUOUS: each stayed green with the bound it names deleted, because some
+    OTHER error always arrived to satisfy the assertion. The 40-deep document
+    is also independently invalid (`citations` is not a field on `Citation`),
+    the 60-alias document resolves 60 unknown runs into 60 errors, and the
+    oversized document trips the alias limiter once the token limiter is
+    gone. Every one of them "passed" for a reason unrelated to the control it
+    claimed to prove. Asserting the bound's own message is what makes each
+    arm about its own bound.
+    """
+
     @pytest.mark.asyncio
     async def test_a_document_nested_past_the_limit_is_rejected(self) -> None:
         # Mutation that turns this red: drop QueryDepthLimiter, or raise
@@ -1044,8 +1059,8 @@ class TestDocumentBounds:
             _user_id, headers = await _real_user_headers(client)
             response = await _post_graphql(client, _deeply_nested_document(40), headers=headers)
 
-        body = response.json()
-        assert body.get("errors"), "a 40-deep document must not execute"
+        messages = " ".join(_error_messages(response.json())).lower()
+        assert "depth" in messages, f"the depth limiter did not fire: {messages}"
 
     @pytest.mark.asyncio
     async def test_a_document_repeating_a_field_under_many_aliases_is_rejected(self) -> None:
@@ -1056,7 +1071,8 @@ class TestDocumentBounds:
             _user_id, headers = await _real_user_headers(client)
             response = await _post_graphql(client, "query { " + aliases + " }", headers=headers)
 
-        assert response.json().get("errors"), "60 aliases must not execute"
+        messages = " ".join(_error_messages(response.json())).lower()
+        assert "alias" in messages, f"the alias limiter did not fire: {messages}"
 
     @pytest.mark.asyncio
     async def test_an_oversized_document_is_rejected(self) -> None:
@@ -1066,7 +1082,8 @@ class TestDocumentBounds:
             _user_id, headers = await _real_user_headers(client)
             response = await _post_graphql(client, "query { " + padding + " }", headers=headers)
 
-        assert response.json().get("errors"), "an oversized document must not execute"
+        messages = " ".join(_error_messages(response.json())).lower()
+        assert "token" in messages, f"the token limiter did not fire: {messages}"
 
     @pytest.mark.asyncio
     async def test_one_document_can_never_start_more_than_one_run(
@@ -1189,10 +1206,21 @@ class TestSurfaceConfiguration:
     async def test_the_interactive_ide_is_not_served(self) -> None:
         # Mutation that turns this red: leave graphql_ide at its default
         # 'graphiql'.
+        #
+        # CORRECTED 2026-08-17 after a mutation sweep. This arm previously
+        # sent NO credentials, so the request was refused with 401 before the
+        # IDE could ever render, and the arm passed with GraphiQL fully
+        # enabled. It was testing auth, not the IDE setting. An authenticated
+        # caller is exactly who WOULD be served the IDE, so the credentials
+        # are what make this arm about its own subject.
         async with _client() as client:
-            response = await client.get(_GRAPHQL_PATH, headers={"Accept": "text/html"})
+            _user_id, headers = await _real_user_headers(client)
+            response = await client.get(
+                _GRAPHQL_PATH, headers={**headers, "Accept": "text/html"}
+            )
 
-        assert response.status_code != 200 or "graphiql" not in response.text.lower()
+        assert "graphiql" not in response.text.lower()
+        assert "<html" not in response.text.lower()
 
     @pytest.mark.asyncio
     async def test_a_query_over_get_is_refused(self, monkeypatch: pytest.MonkeyPatch) -> None:

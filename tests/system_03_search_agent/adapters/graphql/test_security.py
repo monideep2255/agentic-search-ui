@@ -44,6 +44,15 @@ class _Leaf:
 @strawberry.type
 class _Branch:
     leaf: _Leaf
+    # Self-referential ON PURPOSE. Without it, `branch { branch { ... } }` is
+    # not a deep document, it is an INVALID one, and the depth arm below would
+    # pass on "Cannot query field 'branch'" rather than on the depth limiter
+    # firing. A recursive type is what makes an over-depth document otherwise
+    # legal, so the depth bound is the only thing left that can reject it.
+    # The real GraphQL schema has no recursion at all, which is why the
+    # premise gate's own depth arm has to assert the limiter's message
+    # instead; here the shape can be built properly.
+    branch: _Branch | None = None
 
 
 @strawberry.type
@@ -104,9 +113,13 @@ def _execute(document: str, schema: strawberry.Schema | None = None):
 
 
 def _nested(depth: int) -> str:
+    """A document that is deep and otherwise LEGAL, so only the depth bound
+    can reject it. `_Branch.branch` is self-referential for exactly this
+    reason; see the comment on that field.
+    """
     opening = "".join("branch { " for _ in range(depth))
     closing = "".join(" }" for _ in range(depth))
-    return "query { " + opening + "leaf { value }" + closing + " }"
+    return "query { branch { " + opening + "leaf { value }" + closing + " } }"
 
 
 class TestDepthBound:
@@ -115,6 +128,12 @@ class TestDepthBound:
         # MAX_QUERY_DEPTH above the crafted depth.
         result = _execute(_nested(security.MAX_QUERY_DEPTH + 5))
         assert result.errors
+        # The limiter's own message, not just "an error happened": a mutation
+        # sweep found every bound arm in this phase passing on an unrelated
+        # error until each named its own.
+        assert any("depth" in e.message.lower() for e in result.errors), [
+            e.message for e in result.errors
+        ]
 
     def test_an_ordinary_shallow_document_still_runs(self) -> None:
         # Mutation: lower MAX_QUERY_DEPTH to 1. This is the arm that stops
@@ -132,6 +151,9 @@ class TestAliasBound:
         )
         result = _execute("query { " + aliases + " }")
         assert result.errors
+        assert any("alias" in e.message.lower() for e in result.errors), [
+            e.message for e in result.errors
+        ]
 
     def test_a_document_with_a_couple_of_aliases_still_runs(self) -> None:
         # Mutation: set MAX_ALIAS_COUNT to 0, which would refuse every
@@ -148,6 +170,9 @@ class TestTokenBound:
         padding = " ".join(f"f{i}: __typename" for i in range(security.MAX_TOKEN_COUNT))
         result = _execute("query { " + padding + " }")
         assert result.errors
+        assert any("token" in e.message.lower() for e in result.errors), [
+            e.message for e in result.errors
+        ]
 
     def test_a_normal_sized_document_still_runs(self) -> None:
         # Mutation: set MAX_TOKEN_COUNT to a single-digit value.
