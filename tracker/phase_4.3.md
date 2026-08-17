@@ -55,7 +55,9 @@ Anything the surface drops or shortens, it says so. An answer truncated at the c
 
 The schema is bounded against a hostile document, not only against a hostile value. A query deeper than the configured limit, wider than the configured complexity budget, or repeating a field under many aliases is rejected before execution, and introspection and the interactive playground are off outside development. An unbounded GraphQL endpoint over an agent loop that spends real money on every call is the failure this phase most has to avoid: one document must never be able to start many runs.
 
-A run created through GraphQL is owned by its creator. Reading or stopping a run through this surface enforces the identical 404-before-403 ordering `_get_owned_run` enforces for REST, so a run id is never an authorization bypass and never an existence oracle.
+A run created through GraphQL is owned by its creator. Reading or stopping a run through this surface enforces ownership exactly as `_get_owned_run` does for REST, reusing that check rather than deriving a second ownership rule, so a run id is never an authorization bypass and a non-owner never learns anything about a run's content.
+
+Corrected 2026-08-17, before any resolver was written: an earlier version of this sentence claimed the 404-before-403 ordering means a run id is "never an existence oracle". That is false on its own terms, since answering 404 for unknown and 403 for foreign is precisely what tells a caller which of the two it hit. The claim is withdrawn rather than quietly reworded, and the underlying question is filed as F-4.3-L-01 against every surface rather than fixed on the newest one inside a delivery-surface phase.
 
 Every run this surface starts is attributed to it: `RequestContext.surface` gains a `"graphql"` member, and no GraphQL-originated run is ever recorded as `rest_sse`.
 
@@ -138,8 +140,8 @@ Only the lead writes this table during the build, and only the judge may set `do
 |--------|--------|-------|
 | T-4.3-01 types | in-review | builder-types-fold |
 | T-4.3-02 fold | in-review | builder-types-fold |
-| T-4.3-03 context and auth | todo, NOT STARTED | unassigned, was builder-context-security |
-| T-4.3-04 security | todo, NOT STARTED | unassigned, was builder-context-security |
+| T-4.3-03 context and auth | in-progress | builder-context |
+| T-4.3-04 security | in-progress | builder-security |
 | T-4.3-05 shared-contract edits | in-review | builder-shared-edits |
 | T-4.3-06 packaging | in-review | builder-shared-edits |
 | T-4.3-07 the integration seam | todo | lead, after 01 to 06 |
@@ -177,7 +179,7 @@ type Mutation {
 Module contracts:
 
 - `types.py` exposes `Citation`, `TrustSignal`, `AskResult`, `RunResult`, `CitationsExport`, `StopRunResult`, `AskInput`, and `Disclosures`. Every field name derives from the Pydantic payload field it mirrors; nothing is renamed, invented, or dropped.
-- `fold.py` exposes `async def fold_run(run_id: str, *, operator_mode: bool = False) -> AskResult`, subscribing through `default_registry.subscribe`, and `def fold_citations(entry) -> CitationsExport`. It never calls `core.run.run_streaming`.
+- `fold.py` exposes three functions, not two: `async def fold_run(run_id: str, *, operator_mode: bool = False) -> AskResult`, which subscribes through `default_registry.subscribe` and waits for the terminal event; `async def fold_run_snapshot(run_id: str, *, operator_mode: bool = False) -> RunResult`, which reports what has arrived so far WITHOUT waiting, since `Query.run` is a non-blocking read; and `def fold_citations(entry: RunEntry) -> CitationsExport`. It never calls `core.run.run_streaming`. Corrected 2026-08-17: this bullet originally named only the first and third, an omission builder-types-fold caught and reported rather than silently resolving, having built the middle one because the dispatch brief and `Query.run`'s own contract both required it.
 - `context.py` exposes `class GraphQLContext(BaseContext)` carrying `principal` and `request`, and `async def get_context(...) -> GraphQLContext` as the `context_getter`. It raises this surface's own `GraphQLAuthError`.
 - `security.py` exposes `SCHEMA_EXTENSIONS`, `ROUTER_SETTINGS`, `STRAWBERRY_CONFIG`, `RequestTimeoutExtension`, `ComplexityBudgetExtension`, and every bound as a named module constant.
 - Every module defines its own exception base class and every catch dispatches on that base, never on an enumerated subclass list. This is not stylistic: an enumerated catch list drifted out of sync with its raiser three separate times inside build phase 4.2 alone.
@@ -197,7 +199,7 @@ The gate is `tests/system_03_search_agent/adapters/graphql/test_phase_4_3_premis
 | Refusal is a success | A guardrail refusal returns 200 with a refusal outcome, never a transport error and never an empty `data` | Route refusals through the error array |
 | Cost can never appear | No cost figure in any response, with `operator_mode` pinned `False` in code and the sanitizer run over every event | Unpin `operator_mode`, or skip the sanitizer |
 | Guest refused, actionably | A valid guest token is refused with a message naming the reason and the fix, distinguishable from an invalid credential | Swap the registered-only path for `get_caller` |
-| Ownership, 404 before 403 | Another caller's run id yields the same answer as an unknown run id, so a run id is neither a bypass nor an existence oracle | Reverse the ordering, or drop the owner check |
+| Ownership | A non-owner gets no run and learns nothing about its content, asserted over the whole serialized body so a leak that moves fields is still caught | Return the folded run to a non-owner, or drop the ownership comparison. AMENDED 2026-08-17: this arm originally required a foreign run and an unknown run to be indistinguishable, which would have made this surface strictly more private than every shipped surface. See F-4.3-L-01 |
 | Depth bound | A document nested past the limit is rejected before execution | Raise the limit, or drop the extension |
 | Alias bound | A document repeating a field under many aliases is rejected | Drop `MaxAliasesLimiter` |
 | Token bound | An oversized document is rejected | Drop `MaxTokensLimiter` |
@@ -214,7 +216,9 @@ The gate is `tests/system_03_search_agent/adapters/graphql/test_phase_4_3_premis
 ## Findings
 
 | ID | Severity | Description | State | Reason | Raised by |
-|----|----------|-------------|-------|--------|-----------|
+| --- | --- | --- | --- | --- | --- |
+| F-4.3-L-01 | minor | Every surface distinguishes an unknown run (404, "no such run") from a foreign one (403, "you do not own this run"), which tells a caller which of the two it hit and is therefore an existence oracle on any run id it holds. Deliberately NOT closed here. Run ids are uuid4, so the oracle carries no enumeration value, and the two distinct answers are the more actionable ones. If it should be closed, it should be closed on every surface at once as its own ticket, not on the newest surface inside a delivery-surface phase, because REST's behavior is asserted by shipped tests and T-1.2-02's acceptance criteria | open | Raised while planning the seam, on discovering the lead's own premise sentence and gate arm asserted a privacy property REST does not provide | Lead |
+| F-4.3-L-02 | minor | The fold logic duplicates the MCP server's rather than sharing it. Accepted for this phase with its reasoning recorded under "Two duplications accepted, with reasons", and mitigated by turning each of MCP's four hard-won fold findings into a clause of this phase's blocking gate. It remains a real future-divergence risk: a correctness fix applied to one fold will not reach the other | open | Extracting a shared fold would refactor a shipped, heavily-reviewed surface inside a phase whose review attention belongs on a new one | Lead |
 
 ## History
 

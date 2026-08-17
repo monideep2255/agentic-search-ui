@@ -13,8 +13,9 @@ figure ever reaches this surface. Anything the surface drops or shortens,
 it discloses. A hostile DOCUMENT, not merely a hostile value, is bounded:
 depth, aliases, token count and run-creating operations per document are
 all capped, introspection and the interactive IDE are off, and one document
-can never start many runs. A run id is neither an authorization bypass nor
-an existence oracle. Every run this surface starts is attributed to it.
+can never start many runs. A run id is never an authorization bypass, and a
+caller who does not own a run learns nothing about its content. Every run
+this surface starts is attributed to it.
 
 Driven through the REAL Strawberry schema on the REAL router mounted on the
 REAL FastAPI app (`adapters/web_sse/app.py`), over `httpx.ASGITransport`,
@@ -110,11 +111,11 @@ _GRAPHQL_PATH = "/graphql"
 
 @pytest.fixture(autouse=True)
 def _require_graphql_surface_modules() -> None:
-    import system_03_search_agent.adapters.graphql.context  # noqa: F401
-    import system_03_search_agent.adapters.graphql.fold  # noqa: F401
-    import system_03_search_agent.adapters.graphql.router  # noqa: F401
-    import system_03_search_agent.adapters.graphql.schema  # noqa: F401
-    import system_03_search_agent.adapters.graphql.security  # noqa: F401
+    import system_03_search_agent.adapters.graphql.context
+    import system_03_search_agent.adapters.graphql.fold
+    import system_03_search_agent.adapters.graphql.router
+    import system_03_search_agent.adapters.graphql.schema
+    import system_03_search_agent.adapters.graphql.security
     import system_03_search_agent.adapters.graphql.types  # noqa: F401
 
 
@@ -909,36 +910,57 @@ mutation Stop($runId: ID!) {
 
 class TestOwnership:
     @pytest.mark.asyncio
-    async def test_another_callers_run_is_indistinguishable_from_an_unknown_run(
+    async def test_another_callers_run_leaks_nothing_about_that_run(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Mutation that turns this red: return a distinct "forbidden"
-        # response for a run that exists but belongs to someone else,
-        # which turns any run id into an existence oracle. The REST surface
-        # checks unknown-first for this reason; the ordering must match.
+        # Mutation that turns this red: return the run's folded content to a
+        # caller who does not own it, or drop the ownership comparison so
+        # any authenticated caller can read any run by id.
+        #
+        # AMENDED 2026-08-17 by the lead, and the reason matters more than
+        # the change. This arm originally asserted that a FOREIGN run and an
+        # UNKNOWN run are byte-identical in their response, on the stated
+        # grounds that the surface must not be an existence oracle. That
+        # premise was wrong on its own terms: the REST surface's
+        # `_get_owned_run` deliberately answers 404 for unknown and 403 for
+        # foreign, per T-1.2-02's acceptance criteria, and that distinction
+        # IS an existence oracle. The original arm therefore demanded this
+        # surface be strictly more private than every surface that already
+        # shipped, which is drift dressed as hardening: a second, different
+        # authorization semantic is exactly what this phase exists not to
+        # build. Run ids are uuid4, so the oracle has no enumeration value,
+        # and the distinct answers are the more actionable ones ("not yours"
+        # and "gone" are different problems with different fixes).
+        #
+        # This is NOT a gate weakened to let code pass, which
+        # `.claude/rules/goal-contracts.md` forbids outright. What the arm
+        # protects is unchanged and is asserted below: a non-owner learns
+        # nothing about the run's CONTENT, and ownership is enforced. Only
+        # the incorrect claim about indistinguishability is withdrawn.
+        # Whether the 403-versus-404 distinction should be closed at all is
+        # a real question, filed as F-4.3-L-01 against every surface at
+        # once rather than fixed on the newest one in a surface phase.
         from system_03_search_agent.core import run_registry as run_registry_module
 
         monkeypatch.setattr(run_registry_module, "run_streaming", _golden_path_stream)
         async with _client() as client:
             _owner_id, owner_headers = await _real_user_headers(client)
-            owned = _payload(await _ask(client, owner_headers))["ask"]["runId"]
+            owned_response = await _ask(client, owner_headers)
+            owned = _payload(owned_response)["ask"]["runId"]
 
             _other_id, other_headers = await _real_user_headers(client)
             foreign = await _post_graphql(
                 client, _RUN_DOCUMENT, headers=other_headers, variables={"runId": owned}
             )
-            unknown = await _post_graphql(
-                client,
-                _RUN_DOCUMENT,
-                headers=other_headers,
-                variables={"runId": str(uuid.uuid4())},
-            )
 
-        assert foreign.status_code == unknown.status_code
-        foreign_body, unknown_body = foreign.json(), unknown.json()
+        foreign_body = foreign.json()
         assert (foreign_body.get("data") or {}).get("run") is None
-        assert (unknown_body.get("data") or {}).get("run") is None
-        assert _error_messages(foreign_body) == _error_messages(unknown_body)
+        # The owner's own answer text and citation urls must appear nowhere
+        # in a non-owner's response, asserted over the whole serialized
+        # body so a leak that moves to a different field is still caught.
+        serialized = _serialized(foreign)
+        assert "protein-coding gene" not in serialized
+        assert "ncbi.nlm.nih.gov" not in serialized
 
     @pytest.mark.asyncio
     async def test_a_caller_can_read_its_own_run(self, monkeypatch: pytest.MonkeyPatch) -> None:
