@@ -28,6 +28,7 @@ from system_03_search_agent.core.run_registry import (
     ConcurrentRunCapExceededError,
     RunEntry,
     RunNotFoundError,
+    RunNotOwnedError,
     default_registry,
 )
 from system_03_search_agent.data.guest_sessions import (
@@ -917,16 +918,26 @@ def _get_owned_run(run_id: str, caller: Principal) -> RunEntry:
     else, the namespaced `user:<uuid>`/`guest:<uuid>` identity, so a
     guest can never read/stop/export another guest's or any user's run,
     and the reverse.
+
+    T-4.3-07, build phase 4.3: the RULE itself now lives in
+    `RunRegistry.resolve_owned_run`, and this function is the HTTP mapping
+    of its two domain errors. Behavior here is unchanged, deliberately and
+    to the letter: the same unknown-before-ownership ordering, the same two
+    status codes, the same two detail strings. What changed is only that a
+    second delivery surface (GraphQL) can now enforce the identical rule
+    without either copying this check or importing this module, which it
+    cannot do, since `app.py` imports the GraphQL router in order to mount
+    it and the reverse import would be circular. An authorization rule that
+    exists in two places is one that will eventually differ in one of them.
     """
     try:
-        entry = default_registry.get_run(run_id)
+        return default_registry.resolve_owned_run(run_id, caller.owner_id)
     except RunNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no such run") from None
-    if entry.owner_id != caller.owner_id:
+    except RunNotOwnedError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="you do not own this run"
-        )
-    return entry
+        ) from None
 
 
 @app.get("/v1/query/{run_id}/events")

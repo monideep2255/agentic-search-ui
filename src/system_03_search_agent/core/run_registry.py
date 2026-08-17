@@ -246,6 +246,39 @@ DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER = 12
 CONCURRENT_RUN_CAP_RETRY_AFTER_S = 5
 
 
+class RunNotOwnedError(PermissionError):
+    """Raised by `resolve_owned_run` for a run that exists but whose
+    `owner_id` is not the caller's.
+
+    T-4.3-07, build phase 4.3. Exists so the ownership rule can live in
+    exactly one place while more than one delivery surface enforces it.
+    Before this, the rule lived in `adapters/web_sse/app.py`'s
+    `_get_owned_run`, which raises `HTTPException` directly. A second
+    surface could not reuse that: `app.py` imports the GraphQL router in
+    order to mount it, so a GraphQL module importing `app.py` back is a
+    circular import, and copying the check would have produced a second
+    authorization rule, which is a rule that eventually differs from the
+    first.
+
+    So the rule is stated once here, in domain terms, and each surface
+    maps this error and `RunNotFoundError` to its own transport: REST to
+    `403` and `404` respectively (`_get_owned_run`, unchanged in
+    behavior), GraphQL to its own error shape. One rule, two mappings.
+
+    Subclasses `PermissionError` rather than `KeyError`, the mirror of the
+    choice `RunNotFoundError` makes below: this is an authorization
+    outcome, not a lookup miss, and the distinction is what lets a caller
+    catch one without the other.
+    """
+
+    def __init__(self, run_id: str) -> None:
+        super().__init__(run_id)
+        self.run_id = run_id
+
+    def __str__(self) -> str:
+        return f"run {self.run_id!r} is not owned by this caller"
+
+
 class RunNotFoundError(KeyError):
     """Raised by `get_run`/`cancel_run`/`subscribe` for a `run_id` this
     registry never created, or one it has since evicted.
@@ -919,6 +952,41 @@ class RunRegistry:
             return self._runs[run_id]
         except KeyError:
             raise RunNotFoundError(run_id) from None
+
+    def resolve_owned_run(self, run_id: str, owner_id: str) -> RunEntry:
+        """Look up `run_id` and enforce that `owner_id` owns it.
+
+        T-4.3-07, build phase 4.3. THE ownership rule, stated once, in
+        domain terms, so that more than one delivery surface can enforce
+        the same rule instead of each carrying its own copy. Every surface
+        that reads, exports or stops an existing run calls this.
+
+        It compares `entry.owner_id` and NOTHING else, the namespaced
+        `user:<uuid>`/`guest:<uuid>` identity, preserving T-4.10-03's
+        design decision 2 exactly: a guest can never read, stop or export
+        another guest's or any user's run, and the reverse. Passing a bare
+        user uuid here instead of the namespaced form is a caller bug that
+        would silently never match, which is why `Principal.owner_id` is
+        the only field a caller should ever pass.
+
+        The unknown-run check runs FIRST and the ownership check second.
+        That ordering is preserved from `adapters/web_sse/app.py`'s
+        `_get_owned_run`, whose behavior this method now backs, so an
+        evicted or never-created run reports as missing rather than as
+        forbidden.
+
+        Raises:
+            RunNotFoundError: `run_id` was never created by this registry,
+                or has since been evicted. A surface maps this to its own
+                not-found shape (REST: `404`).
+            RunNotOwnedError: the run exists and belongs to someone else.
+                A surface maps this to its own forbidden shape (REST:
+                `403`).
+        """
+        entry = self.get_run(run_id)
+        if entry.owner_id != owner_id:
+            raise RunNotOwnedError(run_id)
+        return entry
 
     def cancel_run(self, run_id: str) -> None:
         """Cancel `run_id`'s background task.

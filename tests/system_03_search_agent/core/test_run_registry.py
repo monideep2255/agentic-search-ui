@@ -30,7 +30,12 @@ from system_03_search_agent.contracts.events import (
 )
 from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core import run_registry as run_registry_module
-from system_03_search_agent.core.run_registry import RunEntry, RunNotFoundError, RunRegistry
+from system_03_search_agent.core.run_registry import (
+    RunEntry,
+    RunNotFoundError,
+    RunNotOwnedError,
+    RunRegistry,
+)
 from system_03_search_agent.harness import cost_control
 from system_03_search_agent.harness import harness as harness_module
 
@@ -268,6 +273,89 @@ class TestRunRegistryGetRun:
 
     def test_run_not_found_error_is_a_key_error(self) -> None:
         assert issubclass(RunNotFoundError, KeyError)
+
+
+class TestRunRegistryResolveOwnedRun:
+    """T-4.3-07: THE ownership rule, promoted here so more than one
+    delivery surface enforces the same one rather than each carrying a
+    copy. `adapters/web_sse/app.py`'s `_get_owned_run` is now the HTTP
+    mapping of these two errors, and its own tests still assert the 404
+    and 403 it produces; these arms pin the rule itself.
+    """
+
+    @pytest.mark.asyncio
+    async def test_the_owner_gets_its_own_run(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Mutation that turns this red: reject every caller. A rule that
+        # refuses everyone passes every attack arm and destroys the
+        # product, so this arm exists beside the two refusal arms below.
+        async def _fake_stream(query: Query, context: RequestContext):
+            yield _fake_event("done", query.trace_id, 0)
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fake_stream)
+        registry = RunRegistry()
+        run_id = registry.create_run(_valid_query(), _valid_context(), owner_id="user:owner-1")
+
+        entry = registry.resolve_owned_run(run_id, "user:owner-1")
+
+        assert entry.run_id == run_id
+        await _drain_until_sentinel(entry.queue)
+
+    @pytest.mark.asyncio
+    async def test_a_different_owner_is_refused(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Mutation that turns this red: drop the owner comparison, which
+        # would let any authenticated caller read any run by id.
+        async def _fake_stream(query: Query, context: RequestContext):
+            yield _fake_event("done", query.trace_id, 0)
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fake_stream)
+        registry = RunRegistry()
+        run_id = registry.create_run(_valid_query(), _valid_context(), owner_id="user:owner-1")
+        entry = registry.get_run(run_id)
+
+        with pytest.raises(RunNotOwnedError):
+            registry.resolve_owned_run(run_id, "user:someone-else")
+
+        await _drain_until_sentinel(entry.queue)
+
+    def test_an_unknown_run_reports_missing_not_forbidden(self) -> None:
+        # Mutation that turns this red: check ownership before existence,
+        # which would report an unknown id as forbidden. The ordering is
+        # preserved from `_get_owned_run`, whose 404-before-403 behavior
+        # T-1.2-02's acceptance criteria fixed and whose tests assert it.
+        registry = RunRegistry()
+
+        with pytest.raises(RunNotFoundError):
+            registry.resolve_owned_run("does-not-exist", "user:owner-1")
+
+    @pytest.mark.asyncio
+    async def test_a_guest_and_a_user_are_never_confused(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Mutation that turns this red: compare a bare uuid rather than the
+        # namespaced owner_id, which would let `guest:<uuid>` match
+        # `user:<uuid>` for the same uuid. T-4.10-03's design decision 2.
+        async def _fake_stream(query: Query, context: RequestContext):
+            yield _fake_event("done", query.trace_id, 0)
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fake_stream)
+        registry = RunRegistry()
+        shared_uuid = "11111111-2222-3333-4444-555555555555"
+        run_id = registry.create_run(
+            _valid_query(), _valid_context(), owner_id=f"guest:{shared_uuid}"
+        )
+        entry = registry.get_run(run_id)
+
+        with pytest.raises(RunNotOwnedError):
+            registry.resolve_owned_run(run_id, f"user:{shared_uuid}")
+
+        await _drain_until_sentinel(entry.queue)
+
+    def test_run_not_owned_error_is_a_permission_error(self) -> None:
+        # Mutation that turns this red: make it subclass KeyError like its
+        # sibling, which would let one `except RunNotFoundError` swallow an
+        # authorization failure as if the run simply did not exist.
+        assert issubclass(RunNotOwnedError, PermissionError)
+        assert not issubclass(RunNotOwnedError, KeyError)
 
 
 class TestRunRegistryCancelRun:
