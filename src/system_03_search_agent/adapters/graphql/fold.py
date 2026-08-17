@@ -287,6 +287,23 @@ def _floor_risk_tier(risk_tiers: list[str]) -> str:
     return min(risk_tiers, key=_risk_tier_severity)
 
 
+def _distinct_trust_messages(payloads: list[TrustSignalPayload]) -> list[str]:
+    """Every distinct non-empty `message` across `payloads`, in arrival order.
+
+    One definition, used by BOTH the floor that merges these into
+    `trust_signal.message` and the caller that preserves them in
+    `disclosures.notes`. Extracted at the re-review round (R-04) rather than
+    computed twice: the two would have been the same three lines in two
+    places, which is how this phase's earlier citation-acceptance drift
+    started (judge J-06).
+    """
+    messages: list[str] = []
+    for payload in payloads:
+        if payload.message and payload.message not in messages:
+            messages.append(payload.message)
+    return messages
+
+
 def _floor_trust_payloads(
     payloads: list[TrustSignalPayload],
     terminal_trust_outcome: str | None,
@@ -315,11 +332,21 @@ def _floor_trust_payloads(
     """
     if len(payloads) == 1 and payloads[0].scope != "claim":
         return payloads[0]
-    messages: list[str] = []
-    for payload in payloads:
-        if payload.message and payload.message not in messages:
-            messages.append(payload.message)
-    merged_message = " ".join(messages)[:MAX_DISCLOSURE_NOTE_LENGTH] or None
+    messages = _distinct_trust_messages(payloads)
+    # R-04 (re-review round), the last hole in premise clause C5. This line
+    # was `" ".join(messages)[:MAX_DISCLOSURE_NOTE_LENGTH]`, a silent cut. It
+    # is the WORST place in the module to truncate silently, because what
+    # gets dropped here is warning text: the fold merges several trust
+    # signals' own messages, so a run carrying many warnings is exactly the
+    # run whose tail gets discarded, and the caller is told nothing. Unlike
+    # every other truncation site, this text survived in NO other field, so
+    # there was no second channel a reader could recover it from.
+    #
+    # Routed through the shared `_merge_disclosure_messages` helper rather
+    # than given its own marker, so there is ONE rule for "this message did
+    # not fit" instead of two that can drift. That helper appends the
+    # disclosure marker and is already the path every other note takes.
+    merged_message = _merge_disclosure_messages(None, messages) or None
     return TrustSignalPayload(
         outcome=aggregate(
             [payload.outcome for payload in payloads],
@@ -814,6 +841,20 @@ def _finalize(
 
     if acc.trust_signals:
         trust_payload = _floor_trust_payloads(acc.trust_signals, acc.terminal_trust_outcome)
+        # R-04. `_merge_disclosure_messages`'s contract is that a cut message
+        # always survives in full in `disclosures.notes`. That was true of
+        # every other note and NOT of these, which is precisely why R-04 was
+        # filed: merged trust warnings were the one text that could be cut
+        # with no second channel to recover it from. Preserving each distinct
+        # warning as its own note makes the helper's stated contract true at
+        # this call site too, rather than leaving a docstring that overclaims.
+        #
+        # Only when more than one signal contributed. A single signal's
+        # message is already the whole of `trust_signal.message`, so copying
+        # it into notes would show the reader the same sentence twice.
+        trust_messages = _distinct_trust_messages(acc.trust_signals)
+        if len(trust_messages) > 1:
+            notes.extend(trust_messages)
     else:
         trust_payload = TrustSignalPayload(
             outcome=acc.terminal_trust_outcome or "refuse",  # type: ignore[arg-type]

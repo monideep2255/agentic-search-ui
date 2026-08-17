@@ -202,6 +202,16 @@ _TOO_MANY_RUN_CREATING_FIELDS_CODE = "TOO_MANY_RUN_CREATING_FIELDS"
 # the masked exception's own text would just be a slower way of leaking it.
 _MASKED_ERROR_MESSAGE = "This request could not be completed due to an internal error."
 
+# The code attached to a coercion or validation error graphql-core generated
+# itself (R-09). `BAD_USER_INPUT` rather than a name derived from the Python
+# class: the derived form would be `GRAPH_QL_ERROR`, which names the library's
+# base type and tells a client nothing about what to do. `BAD_USER_INPUT` is
+# the code the GraphQL ecosystem already uses for exactly this case, so a
+# client can branch on "my request was malformed, do not retry it unchanged"
+# without parsing prose, which is what `tool-call-budgets.md` requires of an
+# error and what a bare masked message made impossible.
+INPUT_VALIDATION_ERROR_CODE = "BAD_USER_INPUT"
+
 # ---------------------------------------------------------------------------
 # The allowlist. `_should_mask_error` is MaskErrors's `should_mask_error`
 # callback: it returns True (mask) for anything that is not a deliberate,
@@ -327,6 +337,39 @@ def _should_mask_error(error: GraphQLError) -> bool:
     """
     original = error.original_error
     if original is None:
+        return False
+    # R-09 (re-review round), the half of J-10 the first fix did not reach.
+    #
+    # A `GraphQLError` raised by graphql-core ITSELF during input coercion or
+    # validation is a caller-input error by construction. It is built from the
+    # schema (which is the caller's own published contract) and from the value
+    # the caller supplied, so it carries no internal detail there is anything
+    # to protect.
+    #
+    # Masking these was a real defect, not a cosmetic one. The first input-
+    # bounds fix only ever reached fields carrying a CUSTOM SCALAR, because
+    # only those raise one of this surface's own allowlisted exceptions. Every
+    # other caller mistake, a value outside an enum, a missing required field,
+    # an explicit null, fell through to "This request could not be completed
+    # due to an internal error" with no code. That is worse than useless: it
+    # tells a caller their own malformed request was OUR fault, and an
+    # internal error reads as transient, so a well-behaved client retries a
+    # request that can never succeed. `production-standards.md`'s retry-safety
+    # gate and `tool-call-budgets.md`'s actionability rule both forbid exactly
+    # that.
+    #
+    # This is a CATEGORY rule, not a list of the three cases the re-review
+    # happened to name: any coercion or validation error graphql-core can
+    # generate is covered, including ones no one has thought of yet. The
+    # inverse is what keeps it safe: anything OUR code raises that is not
+    # caller-facing is a plain Python exception, not a `GraphQLError`, and
+    # still falls to the masked branch below.
+    if isinstance(original, GraphQLError):
+        if error.extensions is None or "code" not in error.extensions:
+            error.extensions = {
+                **(error.extensions or {}),
+                "code": INPUT_VALIDATION_ERROR_CODE,
+            }
         return False
     if not _is_allowlisted_application_exception(original):
         return True

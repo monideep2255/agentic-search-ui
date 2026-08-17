@@ -330,10 +330,14 @@ STATUS: `in-review`, NOT done. No ticket is closed, because no judge round has e
 
 What has run, in order: build, lead mutation sweep (5 vacuous arms), judge round (FAIL), adversary round (1 critical, 13 major, 6 minor), a three-agent fix round, and a re-review of that fix round (FAIL, 5 major, 6 minor, 3 more vacuous arms). All four reports are in `tracker/`: `phase_4.3_judge_report.md`, `phase_4.3_adversary_report.md`, `phase_4.3_rereview_report.md`.
 
-TWO FINDINGS REMAIN OPEN and both are real, not bookkeeping:
+BOTH REMAINING MAJORS ARE NOW CLOSED, 2026-08-17:
 
-- R-04, major. `fold.py` still truncates merged trust warnings silently, and unlike the truncation site already fixed, that text survives in NO field at all. Premise clause C5, "anything the surface drops or shortens, it says so", is therefore still NOT MET.
-- R-09, major. The input-bounds fix only reaches fields carrying a custom scalar. A bad `audienceDepth`, a missing required field and an explicit null still return the uncoded generic "internal error", which is the same defect J-10 filed and reads as transient to a retrying client.
+- R-04, CLOSED. `_floor_trust_payloads` routed through the shared `_merge_disclosure_messages` helper so the cut is disclosed, and each distinct warning is additionally preserved in full in `disclosures.notes`, so the text a merge had to shorten now has a channel it survives in. That second half is what actually closes premise clause C5; the helper's own docstring claimed the full text "always survives in disclosures.notes", and that claim was false at this call site until now. Both halves mutation-proven.
+- R-09, CLOSED. A `GraphQLError` raised by graphql-core itself during input coercion or validation is now disclosed with the code `BAD_USER_INPUT`, since it is built from the schema and the caller's own value and carries nothing internal. Anything our code raises that is not caller-facing is a plain Python exception and still masks, and that converse is armed too, so the fix cannot degrade into "mask nothing". A category rule, not the three cases the re-review named.
+
+Note the reproduction detail, because it is why this survived one fix already: the three cases fail ONLY through VARIABLES, not through inline literals. An inline-literal probe reports them correctly and shows a false green.
+
+ONE VACUOUS ARM WAS PRODUCED AND CORRECTED WHILE CLOSING THESE, and it is worth reading before writing the next one. The first version of the R-04 arm asserted the truncation marker on the END-TO-END response, and stayed green when the silent cut was restored, because `disclosures.notes` are merged into `trust_signal.message` a second time downstream and that second merge appends the marker whatever the first one did. The clause now asserts directly on `_floor_trust_payloads`. That is the eleventh vacuous arm found in this phase and the fourth written by the lead.
 
 Also carried: the `strawberry.scalar()` deprecation warning (the non-deprecated form needs `scalar_map` on `STRAWBERRY_CONFIG` in `security.py`), and the MCP surface still holds the four honesty defects this phase fixed here, by product-owner decision to keep the blast radius honest.
 

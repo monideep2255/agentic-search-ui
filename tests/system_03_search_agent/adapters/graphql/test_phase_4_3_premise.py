@@ -385,6 +385,52 @@ async def _claim_scoped_trust_stream(query: Query, context: RequestContext) -> A
     )
 
 
+async def _many_trust_warnings_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+    """Several claim-scoped trust signals, each carrying its own long warning,
+    so the fold must MERGE their messages and the merge overruns
+    `TrustSignalPayload.message`'s own 500-character bound (R-04).
+
+    The two markers asserted by the arm sit in the FIRST and LAST warning
+    deliberately: the last is the one a silent tail-cut discards, and the
+    first proves the arm is reading real merged content rather than passing
+    because everything was dropped.
+    """
+    trace_id = query.trace_id
+    yield _event("guard", trace_id, 0, GuardPayload(passed=True, category="ok", reason=None))
+    yield _event("token", trace_id, 1, TokenPayload(text="an answer", marker_ids=["c1"]))
+    yield _event("citation", trace_id, 2, _citation(1, citation_id="c1"))
+    warnings = [
+        "WARNING-ALPHA " + ("a" * 200),
+        "WARNING-BETA " + ("b" * 200),
+        "WARNING-OMEGA " + ("z" * 200),
+    ]
+    seq = 3
+    for index, warning in enumerate(warnings):
+        yield _event(
+            "trust_signal",
+            trace_id,
+            seq,
+            TrustSignalPayload(
+                outcome="flag",
+                risk_tier="high",
+                grounded=True,
+                triangulated=None,
+                citation_id=f"c{index + 1}",
+                scope="claim",
+                message=warning,
+            ),
+        )
+        seq += 1
+    yield _event(
+        "done",
+        trace_id,
+        seq,
+        DonePayload(
+            total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=5, trust_outcome="flag"
+        ),
+    )
+
+
 async def _oversized_answer_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
     """More answer text and more citations than this surface's own caps
     allow, so the truncation-disclosure arms have something to disclose.
@@ -1342,7 +1388,156 @@ query Citations($runId: ID!) {
 """
 
 
+class TestCallerInputIsNeverAnInternalError:
+    """R-09. A caller's own malformed request must never be reported as our
+    fault, and must carry a code the caller can branch on.
+
+    The first input-bounds fix only reached fields carrying a CUSTOM SCALAR,
+    because only those raise one of this surface's allowlisted exceptions.
+    Every other caller mistake collapsed to "This request could not be
+    completed due to an internal error" with no code. An internal error reads
+    as transient, so a well-behaved client retries forever a request that can
+    never succeed.
+
+    Driven through VARIABLES rather than inline literals deliberately: the two
+    take different paths through graphql-core, and only the variables path was
+    broken. An inline-literal probe reports these correctly and would have
+    shown a false green, which is how this survived the first fix.
+    """
+
+    @pytest.mark.parametrize(
+        ("label", "variables"),
+        [
+            ("a value outside an enum", {"text": "hi", "sessionId": "s", "audienceDepth": "NOPE"}),
+            ("a missing required field", {"sessionId": "s"}),
+            ("an explicit null", {"text": None, "sessionId": "s"}),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_a_malformed_request_is_named_not_masked(
+        self, label: str, variables: dict[str, Any]
+    ) -> None:
+        # Mutation that turns this red: drop the `isinstance(original,
+        # GraphQLError)` branch from `security._should_mask_error`, which is
+        # the exact state R-09 found.
+        document = "mutation A($input: AskInput!) { ask(input: $input) { runId } }"
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await _post_graphql(
+                client, document, headers=headers, variables={"input": variables}
+            )
+
+        body = response.json()
+        errors = body.get("errors") or []
+        assert errors, f"{label} must be reported, not silently accepted"
+        message = errors[0].get("message") or ""
+        code = (errors[0].get("extensions") or {}).get("code")
+
+        assert "internal error" not in message.lower(), (
+            f"{label} is the CALLER's mistake and must never be reported as ours"
+        )
+        assert code == "BAD_USER_INPUT", (
+            f"{label} must carry a code a client can branch on, not prose alone"
+        )
+
+    @pytest.mark.asyncio
+    async def test_an_internal_failure_is_still_masked(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The converse arm, and the one that stops the fix above from being a
+        # hole. Disclosing caller-input errors must not disclose OUR errors:
+        # a plain Python exception raised inside a resolver still masks.
+        # Without this arm, `_should_mask_error` could return False
+        # unconditionally and every arm above would still pass.
+        #
+        # Mutation that turns this red: return False unconditionally from
+        # `_should_mask_error`.
+        from system_03_search_agent.adapters.graphql import fold as fold_module
+
+        async def _leak(*_args: Any, **_kwargs: Any) -> Any:
+            raise RuntimeError("AGE_DSN=postgresql://kg_reader:secret@10.0.0.1:5432/kg")
+
+        monkeypatch.setattr(fold_module, "fold_run", _leak)
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await _ask(client, headers)
+
+        serialized = _serialized(response)
+        assert "postgresql://" not in serialized
+        assert "kg_reader" not in serialized
+        assert "secret" not in serialized
+        assert "10.0.0.1" not in serialized
+
+
 class TestDisclosuresSurvive:
+    @pytest.mark.asyncio
+    async def test_merged_trust_warnings_are_never_cut_without_saying_so(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # R-04, the last hole in premise clause C5, and the worst place in
+        # the module to have had one: what gets cut here is WARNING text, so
+        # the run whose tail is discarded is exactly the run carrying the
+        # most warnings. Unlike every other truncation site, this text
+        # survived in no other field, so nothing could recover it.
+        #
+        # Mutation that turns this red: restore the silent
+        # `" ".join(messages)[:MAX_DISCLOSURE_NOTE_LENGTH]` in
+        # `fold._floor_trust_payloads`, or drop the `notes.extend(...)` that
+        # preserves each warning in full.
+        from system_03_search_agent.core import run_registry as run_registry_module
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _many_trust_warnings_stream)
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await _ask(client, headers)
+
+        data = _payload(response)["ask"]
+        notes = data["disclosures"]["notes"]
+
+        # The full text of every distinct warning survives, so nothing a
+        # merge had to cut is lost. This is the clause that actually closes
+        # C5, and it goes red the moment the preservation is removed.
+        for marker in ("WARNING-ALPHA", "WARNING-OMEGA"):
+            assert any(marker in note for note in notes), (
+                f"{marker} was dropped from the merged message and preserved nowhere"
+            )
+
+        # And the merge itself discloses its own cut, asserted DIRECTLY on
+        # the floor rather than on the response.
+        #
+        # This second assertion was end-to-end in its first version and was
+        # VACUOUS: `disclosures.notes` are merged into `trust_signal.message`
+        # a second time downstream, and that second merge appends the
+        # truncation marker whatever the first one did, so restoring the
+        # silent cut left the arm green. Proven by running exactly that
+        # mutation. Checking the floor directly is what makes the clause
+        # sensitive to the code it names.
+        #
+        # Mutation that turns this red: restore
+        # `" ".join(messages)[:MAX_DISCLOSURE_NOTE_LENGTH]` in
+        # `fold._floor_trust_payloads`.
+        from system_03_search_agent.adapters.graphql import fold as fold_module
+
+        payloads = [
+            TrustSignalPayload(
+                outcome="flag",
+                risk_tier="high",
+                grounded=True,
+                triangulated=None,
+                citation_id="c1",
+                scope="claim",
+                message=text,
+            )
+            for text in ("WARNING-ALPHA " + "a" * 200, "WARNING-BETA " + "b" * 200,
+                         "WARNING-OMEGA " + "z" * 200)
+        ]
+        floored = fold_module._floor_trust_payloads(payloads, "flag")
+        assert floored.message is not None
+        assert "omitted" in floored.message.lower(), (
+            "the merge cut warning text and did not say so; that text has no "
+            "other channel to survive in, which is exactly R-04"
+        )
+
     @pytest.mark.asyncio
     async def test_a_truncated_answer_says_so(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Mutation that turns this red: truncate silently. The withholding
