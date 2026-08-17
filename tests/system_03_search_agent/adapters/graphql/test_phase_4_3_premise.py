@@ -465,6 +465,32 @@ async def _fatal_error_stream(query: Query, context: RequestContext) -> AsyncIte
     )
 
 
+async def _no_trust_signal_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+    """A run that completes and emits NO `trust_signal` of any scope.
+
+    This is the only shape that reaches the fold's own synthetic fallback,
+    the branch where THIS SURFACE invents a trust signal from nothing. Judge
+    finding J-04: every other arm supplies a real trust signal from the core,
+    so that branch was covered by nothing, even though it is the exact
+    F-4.1-J3-02 shape the phase claims to be closing. The core's equivalent
+    was protected by a source grep while this surface's own was not.
+    """
+    trace_id = query.trace_id
+    yield _event("guard", trace_id, 0, GuardPayload(passed=True, category="ok", reason=None))
+    yield _event("token", trace_id, 1, TokenPayload(text="a partial answer", marker_ids=[]))
+    yield _event(
+        "done",
+        trace_id,
+        2,
+        DonePayload(
+            total_cost_usd=0.002,
+            total_tool_calls=1,
+            elapsed_ms=120,
+            trust_outcome="refuse",
+        ),
+    )
+
+
 async def _never_terminating_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
     """Emits a guard event and then never terminates, so the per-request
     timeout bound has something to bound. Without a timeout this hangs the
@@ -1487,15 +1513,31 @@ class TestProvenanceAndAttribution:
 
 class TestConcurrencyBound:
     @pytest.mark.asyncio
-    async def test_the_concurrent_run_cap_is_not_the_free_allowance(self) -> None:
-        # Mutation that turns this red: leave the two constants equal, as
-        # they were before this phase. While they are the same number a
-        # caller who hits a wall cannot be told which wall it was, which is
-        # the decided item this phase folds in.
+    async def test_the_concurrent_run_cap_sits_above_the_attempt_allowance(self) -> None:
+        # Mutation that turns this red: set the cap to any value at or below
+        # ATTEMPT_ALLOWANCE, for example 6.
+        #
+        # CORRECTED 2026-08-17 (judge finding J-03). This arm previously
+        # asserted only `!= FREE_RUN_ALLOWANCE`, which any value other than 5
+        # satisfies, INCLUDING 6. But 6 sits below ATTEMPT_ALLOWANCE and so
+        # reintroduces exactly the ambiguous-refusal shape this phase claims
+        # to have closed structurally. The property the phase file is
+        # proudest of was the one property nothing tested.
+        #
+        # The real invariant: a guest identity must always meet the honest
+        # allowance refusal BEFORE it can hit the concurrency cap, which
+        # holds only while the cap is strictly above the attempt allowance.
         from system_03_search_agent.core.run_registry import DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER
-        from system_03_search_agent.data.guest_sessions import FREE_RUN_ALLOWANCE
+        from system_03_search_agent.data.guest_sessions import (
+            ATTEMPT_ALLOWANCE,
+            FREE_RUN_ALLOWANCE,
+        )
 
         assert DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER != FREE_RUN_ALLOWANCE
+        assert DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER > ATTEMPT_ALLOWANCE, (
+            "a guest must exhaust its attempt allowance before it can reach the "
+            "concurrency cap, or the refusal it gets is untrue advice"
+        )
 
     @pytest.mark.asyncio
     async def test_the_cap_refusal_names_which_bound_was_hit(
@@ -1570,6 +1612,33 @@ class TestRiskTierHonesty:
         trust = _payload(response)["ask"]["trustSignal"]
         assert trust["outcome"] == "refuse"
         assert trust["riskTier"] == "unknown"
+
+    @pytest.mark.asyncio
+    async def test_the_folds_own_invented_trust_signal_says_unknown_not_low(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Mutation that turns this red: change `fold.py`'s synthetic
+        # no-signal fallback back to `risk_tier="low"`.
+        #
+        # ADDED 2026-08-17 (judge finding J-04). Every other risk-tier arm
+        # drives a stream carrying a real answer-scope trust signal from the
+        # core, so the fold takes that branch and NEVER reaches the fallback
+        # where it invents a signal itself. That fallback is this surface's
+        # own instance of asserting a safety-relevant value from nothing, and
+        # it was ungated while the core's equivalent was grep-protected.
+        from system_03_search_agent.core import run_registry as run_registry_module
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _no_trust_signal_stream)
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await _ask(client, headers)
+
+        trust = _payload(response)["ask"]["trustSignal"]
+        assert trust["riskTier"] != "low", (
+            "no assessment ran on this run, so reporting the benign tier asserts "
+            "a safety-relevant value from nothing"
+        )
+        assert trust["grounded"] is False
 
     def test_no_refusal_site_in_the_core_still_hardcodes_a_low_risk_tier(self) -> None:
         # Mutation that turns this red: fix only the value this surface

@@ -232,7 +232,51 @@ The gate is `tests/system_03_search_agent/adapters/graphql/test_phase_4_3_premis
 | F-4.3-L-08 | minor | The public `extensions.code` on a GraphQL error is DERIVED FROM THE PYTHON CLASS NAME, so a routine refactor rename silently changes the published API. Mitigated by naming `schema.py`'s exceptions for the codes they must produce and pinning the coupling with an import-time check plus a test, but the coupling itself remains implicit | open | Noticed while reconciling the seam's error types against the allowlist's code derivation | Lead |
 | F-4.3-L-02 | minor | The fold logic duplicates the MCP server's rather than sharing it. Accepted for this phase with its reasoning recorded under "Two duplications accepted, with reasons", and mitigated by turning each of MCP's four hard-won fold findings into a clause of this phase's blocking gate. It remains a real future-divergence risk: a correctness fix applied to one fold will not reach the other | open | Extracting a shared fold would refactor a shipped, heavily-reviewed surface inside a phase whose review attention belongs on a new one | Lead |
 
-## The review round, and why it was run by hand
+## The review rounds, third attempt, and what they found
+
+The judge and adversary rounds finally completed on the third dispatch, after four earlier agent runs died to machine sleep and watchdog stalls. What survived the earlier attempts was nothing; what made the third work was instructing both to append findings to a file the moment they had them rather than reporting at the end.
+
+Full reports, copied into the tracker so they outlive the session's scratchpad:
+
+- `tracker/phase_4.3_judge_report.md`, 711 lines. Verdict FAIL. 3 major, 8 minor.
+- `tracker/phase_4.3_adversary_report.md`, 1000 lines, with runnable probes. 1 critical, 13 major, 6 minor.
+
+Both rounds paid for themselves several times over, and the single most valuable thing either produced was a correction to the lead's own judgment.
+
+### The critical finding, and the lead's misjudgment of it
+
+The lead filed the masking allowlist as `F-4.3-L-07`, severity MINOR, state open, with the reasoning "correct today, safe as it stands". The adversary drove it end to end in one pass and recovered a DSN with its password, the host, the port, the database user, an absolute source path and a line number, returned verbatim to the caller. An identical `RuntimeError` carrying the identical message was correctly masked; only the defining package differed.
+
+The lead's own finding text had even said "the default for an unanticipated future exception is disclosure rather than silence, which is the wrong direction" and then rated it minor anyway. That is the error worth remembering: the direction of a default IS the severity, and a control that fails open on disclosure in a repository whose own F-4.1-A-09 was a leaked database credential is not a minor matter. It was also not safe at rest, since `types.py` already interpolated a Pydantic `ValidationError` carrying the rejected input value, and only the call sites' `except` clauses stopped it escaping.
+
+Closed by inverting the rule: trust is now DECLARED by the exception class (`__graphql_public__`), never inferred from file location, so the default is deny.
+
+### The honesty cluster, this surface's real defect
+
+Seven findings, all the same shape: the surface reports more confidence than its evidence supports. A claim-scoped `risk_tier` of `"unknown"`, the value THIS PHASE introduced to mean "no assessment ran", was reported to callers as `"low"` by an aggregator written as `"high" if any(...) else "low"`. `grounded: true` was asserted from "a citation event went past". Non-fatal `error` events and upstream `tool_result.truncated=True` were both dropped with no disclosure, so a run where a layer failed and a tool returned 25 of 500 rows reported a clean, low-risk, grounded answer.
+
+The governing rule adopted in response, which is more useful than any individual fix: AGGREGATE TOWARD LESS CONFIDENCE, NEVER MORE. Where inputs disagree the aggregate takes the least reassuring one, where nothing assessed something the surface says so, and where anything was dropped, shortened, failed or truncated upstream it is disclosed.
+
+The same four defects exist in `adapters/mcp/server.py`, and one in `core/graph.py`. `F-4.3-L-02` had called fold duplication a "future divergence risk"; it had already happened before the finding was written. Product-owner decision, 2026-08-17: fix this surface and the shared core aggregator, since `"unknown"` is a value this phase introduced and mislabelling it is this phase's own regression, and file MCP with a named owner rather than editing a shipped surface mid-phase.
+
+### Nine more vacuous arms, bringing the phase total to nine
+
+The judge proved four the lead's sweep had not reached, on top of the five already found. Two are worth stating because of what they were:
+
+- The citations-export arm stays green with `exportTruncated` hardcoded `False` AND with `runCancelled` hardcoded `False`. It only ever asserts the negative state on a golden path. That arm was written specifically for the "GraphQL has no header channel, so the disclosure vanishes silently" failure, and it is the one failure it cannot detect.
+- The concurrency-cap arm asserted only `!= 5`, so it passed at 6, which sits BELOW `ATTEMPT_ALLOWANCE` and reintroduces exactly the ambiguous-refusal shape the phase file is proudest of having closed structurally. The property the phase most claimed was the property nothing tested.
+
+Two disjoint sweeps have now checked 33 of 42 arms and found 9 vacuous, about 27 percent of everything anyone checked. The premise clause "every clause is mutation-proven" was therefore false when written.
+
+### What held, and it is worth recording
+
+- The money bound is genuinely strong. 14 separate vectors (aliases, nested and mutually-spread and inline fragments, multi-operation with `operationName`, duplicated JSON keys, batching, GET, multipart, `__typename` aliasing, `@skip`) all produced zero `create_run` calls, and it fails CLOSED even on a document that crashes the parser.
+- Cite-or-refuse holds. The floor overrides an explicit `grounded: true` claim, and the `Event` model rejects an off-host citation URL before it can enter the registry at all.
+- No cost, token or dollar field is reachable anywhere.
+- Auth and cross-user ownership held against every vector, including duplicate `Authorization` headers, cookies and query parameters.
+- No test in the whole diff was weakened. The judge checked every changed test file specifically for loosened assertions and found none.
+
+## The earlier round, and why it was run by hand
 
 Stages 8 and 9 (judge and adversary) were dispatched twice as background agents and FOUR agent runs died before producing anything usable: two to machine sleep, one to a watchdog stall, one to machine sleep again. The second pair were explicitly instructed to append findings to a file as they went, precisely so a death would not lose the work; both died before writing more than a header. A fifth dispatch was not attempted.
 
