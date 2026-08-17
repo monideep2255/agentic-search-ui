@@ -130,7 +130,33 @@ The integration seam is deliberately NOT parallelized. `schema.py`, `router.py` 
 | T-4.3-06 | Packaging: the pinned dependency in both `pyproject.toml` and `requirements.txt`, and the new package in the setuptools package list | `pyproject.toml`, `requirements.txt` | none |
 | T-4.3-07 | The integration seam, LEAD-OWNED, written after 01 to 06 land: the `Query` and `Mutation` roots and their resolvers, the hardened router, and the mount on the existing app | `src/system_03_search_agent/adapters/graphql/schema.py`, `src/system_03_search_agent/adapters/graphql/router.py`, `src/system_03_search_agent/adapters/web_sse/app.py` | 01 to 06 |
 
-### The interfaces, fixed by the lead before dispatch
+### Ticket status
+
+Only the lead writes this table during the build, and only the judge may set `done`. This is a deliberate narrowing of the usual convention that a builder sets its own ticket to `in-progress`: three builders editing one markdown file concurrently is exactly the shared-write collision the file partition above exists to prevent, so the lead sets the states and the builders never open this file.
+
+| Ticket | Status | Owner |
+|--------|--------|-------|
+| T-4.3-01 types | in-review | builder-types-fold |
+| T-4.3-02 fold | in-review | builder-types-fold |
+| T-4.3-03 context and auth | todo, NOT STARTED | unassigned, was builder-context-security |
+| T-4.3-04 security | todo, NOT STARTED | unassigned, was builder-context-security |
+| T-4.3-05 shared-contract edits | in-review | builder-shared-edits |
+| T-4.3-06 packaging | in-review | builder-shared-edits |
+| T-4.3-07 the integration seam | todo | lead, after 01 to 06 |
+
+No ticket is `done`: only the judge sets that, and the judge round has not run.
+
+### Isolation: a shared checkout, deliberately, against the documented default
+
+The bossman-mode default is a git worktree per concurrent file-mutating builder. This phase runs all three builders in the shared checkout instead, with no builder permitted to run any git command. Stated here rather than done quietly, because it departs from a written default.
+
+The reason is that three of the four worktree failures this repository has actually recorded are worktree-specific, and the file partition already removes the hazard worktrees exist to remove:
+
+- A gitignored `venv/` is invisible to a worktree-isolated agent (LEARNINGS.md, 2026-07-27, after one retraction). Each builder would have to install the new pinned dependency separately.
+- A worktree builder's green test run proves nothing about the checkout the work merges into (2026-07-28). The lead re-runs everything after the fact regardless.
+- A merge can report "Already up to date", exit zero, and bring in nothing, when a builder used its own branch name (2026-08-16). Caught only because the specific gate was re-run after the merge.
+
+What replaces the isolation is the partition itself: no two tickets name the same file, so there is no concurrent write to make safe. The residual risk is a builder disobeying its file list, which the lead checks by diffing before anything is committed rather than trusting the reports.
 
 Builders write against these names and do not negotiate them, so a module can be written and unit-tested before its siblings exist on disk. Cross-module imports are lazy or `TYPE_CHECKING`-only, the pattern build phase 4.2 used for the same reason.
 
@@ -195,3 +221,33 @@ The gate is `tests/system_03_search_agent/adapters/graphql/test_phase_4_3_premis
 | When | Who | What |
 |------|-----|------|
 | 2026-08-17 | Lead | Phase opened. Branch cut. Three researchers dispatched. Three scope readings recorded before any ticket, since the locked spec deliberately does not specify this surface |
+| 2026-08-17 | Lead | `strawberry-graphql==0.324.0` pinned after the supply-chain checks. Every API name probed against the INSTALLED version rather than the docs, which were a 0.282 mirror forty-odd releases behind. That probe is what found the four wrong-for-production defaults now ticketed as T-4.3-04 |
+| 2026-08-17 | Lead | Premise gate written and WATCHED FAILING: 42 cases, 42 errors, one uniform `ModuleNotFoundError`. Committed alone as `7b29321` |
+| 2026-08-17 | Lead | Build phase 4.10's board row flipped from `in-review` to `done`. It merged as PR #46 and its own checkpoint missed the row, so the board had been claiming a merged phase was awaiting review. Not this phase's work; fixed because the count edits this phase makes would otherwise have been built on a false number |
+| 2026-08-17 | builder-types-fold | T-4.3-01 and T-4.3-02 delivered, 37 of its own tests green, ruff clean. Found something the lead's plan had wrong: Strawberry prints class and field docstrings into the SDL, so an explanatory docstring would itself have tripped the gate's schema-grep arm. Every explanation moved to `#` comments |
+| 2026-08-17 | builder-shared-edits | T-4.3-05 and T-4.3-06 delivered, then the agent STALLED on a watchdog before reporting. Its work was verified from disk rather than from its report: 497 tests green across every suite it touched, ruff clean, no `risk_tier="low"` literal left in `core/graph.py`. The lead finished the one cosmetic edit it died mid-way through (a missing blank line before a class, which ruff's default rule set does not flag) |
+| 2026-08-17 | Lead | Chose the concurrency cap's new value: the builder set 12, ABOVE `ATTEMPT_ALLOWANCE` (10), so a guest identity always hits the honest allowance refusal before it can hit the concurrency cap. That is a structural fix to the ambiguous-refusal shape rather than an arbitrary offset, and it is better than the brief asked for |
+| 2026-08-17 | Lead | PAUSED at the product owner's request. builder-context-security was stopped before it wrote anything, so T-4.3-03 and T-4.3-04 are cleanly NOT STARTED rather than half-written. See "Resuming this phase" below |
+
+## Resuming this phase
+
+State at the pause: the gate is failing as designed, four of seven tickets are in review, and nothing is `done` because the judge round has not run.
+
+What is on disk and verified:
+
+- The premise gate, committed, failing on the missing package. This is correct and must stay failing until the surface exists.
+- T-4.3-01, T-4.3-02: `adapters/graphql/types.py` and `fold.py`, plus their two test files. 37 tests green.
+- T-4.3-05, T-4.3-06: the `"graphql"` surface member, `risk_tier="unknown"` at both refusal sites and MCP's silent-fallback branch, the concurrency cap decoupled at 12 with a structural `bound` attribute on its exception, both existing catch sites branching on it, and the pinned dependency recorded. 497 backend tests green across the touched suites, 181 frontend tests green.
+
+What remains, in order:
+
+1. T-4.3-03 and T-4.3-04, NOT STARTED. `adapters/graphql/context.py` (registered-only auth, the actionable guest refusal) and `security.py` (the four hardened defaults, the four limiters, the timeout extension, and the one-`ask`-per-document rule). The dispatch brief for these is fully specified in the Ticket map and can be reissued as-is.
+2. T-4.3-07, the integration seam, LEAD-OWNED and deliberately not parallelized: `schema.py`, `router.py`, and the mount in `app.py`.
+3. Then the judge round, the adversary round, the stage-10 gates, and the pull request.
+
+Two things the next session must not lose:
+
+- `security.py`'s timeout extension MUST read the module attribute `REQUEST_TIMEOUT_S` at request time, not capture it at import. A gate arm monkeypatches it, and a captured value turns that arm into a test that cannot fail.
+- `schema.py`'s resolvers MUST reach the fold through the module (`from . import fold` then `fold.fold_run(...)`), never `from .fold import fold_run`. A gate arm monkeypatches `fold_module.fold_run` to prove errors are masked, and a direct name import silently defeats it.
+
+One open question builder-types-fold raised and the lead has not yet resolved: this file's "Module contracts" bullet for `fold.py` names only `fold_run` and `fold_citations`, omitting `fold_run_snapshot`, which `Query.run`'s non-blocking read needs and which the builder built anyway. The contract text should be reconciled to the three functions that now exist.

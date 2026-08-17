@@ -155,6 +155,90 @@ class TestRunRegistryCreateRun:
         await _drain_until_sentinel(registry.get_run(anonymous_run_id).queue)
 
 
+class TestConcurrentRunCapExceededErrorBound:
+    """T-4.3-05, build phase 4.3: `ConcurrentRunCapExceededError` gains a
+    structural `bound` attribute, and `retry_after_s` gains a default, so
+    a caller (this repository's own GraphQL adapter, and any future one)
+    can construct it with just a message and still have a catch site
+    branch on WHICH bound was hit without parsing the message string.
+    """
+
+    def test_bound_defaults_to_concurrency(self) -> None:
+        # Mutation that turns this red: drop the `bound` attribute, or
+        # default it to anything other than "concurrency", the only bound
+        # this exception represents today.
+        exc = run_registry_module.ConcurrentRunCapExceededError("too many active runs")
+        assert exc.bound == "concurrency"
+
+    def test_retry_after_s_defaults_without_being_passed(self) -> None:
+        # Mutation that turns this red: make `retry_after_s` required
+        # again. A caller that only knows the message (the shape a
+        # monkeypatched raise site in an adapter's own tests uses) must
+        # still be able to construct this exception.
+        exc = run_registry_module.ConcurrentRunCapExceededError("too many active runs")
+        assert exc.retry_after_s == run_registry_module.CONCURRENT_RUN_CAP_RETRY_AFTER_S
+
+    def test_bound_and_retry_after_s_are_still_overridable(self) -> None:
+        exc = run_registry_module.ConcurrentRunCapExceededError(
+            "too many active runs", retry_after_s=42, bound="a-future-bound"
+        )
+        assert exc.retry_after_s == 42
+        assert exc.bound == "a-future-bound"
+
+    @pytest.mark.asyncio
+    async def test_create_run_raises_with_bound_concurrency(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Mutation that turns this red: raise the bare exception with no
+        # `bound` kwarg at the real production raise site inside
+        # `create_run`, silently relying on the default rather than
+        # stating the bound explicitly.
+        async def _never_finishes(query: Query, context: RequestContext):
+            yield _fake_event("guard", query.trace_id, 0)
+            await asyncio.sleep(3600)
+            yield _fake_event("done", query.trace_id, 1)  # pragma: no cover
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _never_finishes)
+        registry = RunRegistry(max_active_runs_per_owner=1)
+        held_run_id = registry.create_run(_valid_query(), _valid_context(), owner_id="user:cap-test")
+
+        with pytest.raises(run_registry_module.ConcurrentRunCapExceededError) as excinfo:
+            registry.create_run(_valid_query(), _valid_context(), owner_id="user:cap-test")
+
+        assert excinfo.value.bound == "concurrency"
+        assert excinfo.value.retry_after_s == run_registry_module.CONCURRENT_RUN_CAP_RETRY_AFTER_S
+
+        registry.get_run(held_run_id).task.cancel()
+
+
+class TestConcurrentRunCapDecoupledFromTheFreeAllowance:
+    """T-4.3-05, build phase 4.3 (closes the shared-number half of
+    F-4.10-A-10 / F-4.10-J-02): the concurrency cap this module enforces
+    must not be the free-allowance ceiling `data.guest_sessions` enforces,
+    and it must exceed the guest ATTEMPT ceiling so a bursting guest
+    always hits the allowance wall first, never an ambiguous concurrency
+    refusal.
+    """
+
+    def test_the_cap_is_not_the_free_allowance(self) -> None:
+        # Mutation that turns this red: restore DEFAULT_MAX_ACTIVE_RUNS_
+        # PER_OWNER to 5, the exact value F-4.10-J-02 measured making a
+        # concurrency test clause unable to fail.
+        from system_03_search_agent.data.guest_sessions import FREE_RUN_ALLOWANCE
+
+        assert run_registry_module.DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER != FREE_RUN_ALLOWANCE
+
+    def test_the_cap_exceeds_the_guest_attempt_ceiling(self) -> None:
+        # Mutation that turns this red: pick a cap between the allowance
+        # (5) and the attempt ceiling (10), which would still be numerically
+        # distinct from FREE_RUN_ALLOWANCE and still leave a guest able to
+        # burst past this cap before ATTEMPTS_EXHAUSTED ever fires, which
+        # is the exact ambiguous-refusal shape this phase closes.
+        from system_03_search_agent.data.guest_sessions import ATTEMPT_ALLOWANCE
+
+        assert run_registry_module.DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER > ATTEMPT_ALLOWANCE
+
+
 class TestRunRegistryGetRun:
     @pytest.mark.asyncio
     async def test_get_run_returns_a_run_entry_with_the_expected_fields(

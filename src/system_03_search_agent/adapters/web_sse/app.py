@@ -259,6 +259,22 @@ _CONCURRENT_RUN_CAP_MESSAGE = (
     "POST /v1/query/{run_id}/stop, then retry"
 )
 
+# T-4.3-05, build phase 4.3: keyed by `ConcurrentRunCapExceededError.bound`
+# rather than a single hardcoded message, so the catch site below branches
+# on the STRUCTURAL attribute the exception now carries (never on parsing
+# its `str(exc)`, which F-4.10-J-04 already forbids for this exact
+# exception) instead of assuming its type can only ever mean one thing.
+# `ConcurrentRunCapExceededError` represents exactly one bound today (the
+# concurrency cap; the guest allowance is a wholly separate mechanism in
+# `data.guest_sessions` that never raises this class), so this table has
+# one entry, and `.get(...)` falls back to the same concurrency message
+# for any `bound` value this table does not yet name, which keeps this
+# catch site correct rather than silently blank if a future bound is
+# added here before this table is updated for it.
+_CONCURRENT_RUN_CAP_MESSAGES_BY_BOUND: dict[str, str] = {
+    "concurrency": _CONCURRENT_RUN_CAP_MESSAGE,
+}
+
 
 class CreateRunResponse(BaseModel):
     run_id: str
@@ -858,11 +874,30 @@ async def post_v1_query(
         # message. Nothing derived from the exception reaches the caller
         # now except its `retry_after_s`, which is a number the caller
         # needs and which discloses nothing.
+        #
+        # T-4.3-05: the message is now looked up by `exc.bound`, the
+        # structural attribute the exception carries (never re-derived
+        # from `str(exc)`, for the same F-4.10-J-04 reason above), so this
+        # site actually branches on which bound was hit rather than
+        # assuming every `ConcurrentRunCapExceededError` means the same
+        # thing forever. The `reason` string on the wire is left
+        # unchanged: `concurrent_run_cap_exceeded` is already asserted by
+        # the frontend and the CLI client (frontend/src/lib/api.ts,
+        # tests/.../adapters/cli/test_client.py), and it was already
+        # unambiguous, since the guest-allowance refusal is a completely
+        # separate code path with its own `guest_allowance_exhausted`
+        # reason (this same function's `SpendState.EXHAUSTED` branch,
+        # above). What was ambiguous was only the NUMBER the two caps
+        # happened to share, which T-4.3-05 fixed at the source (`core/
+        # run_registry.py`'s `DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER`), not by
+        # renaming a reason string every consumer already keys on.
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail={
                 "reason": "concurrent_run_cap_exceeded",
-                "message": _CONCURRENT_RUN_CAP_MESSAGE,
+                "message": _CONCURRENT_RUN_CAP_MESSAGES_BY_BOUND.get(
+                    exc.bound, _CONCURRENT_RUN_CAP_MESSAGE
+                ),
             },
             headers={"Retry-After": str(exc.retry_after_s)},
         ) from None

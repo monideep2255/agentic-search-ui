@@ -446,7 +446,21 @@ export function useRunView(events: AgentEvent[]): RunView {
           ? { kind: "good", label: "Grounded · every claim cited" }
           : { kind: "risk", label: "Not fully grounded" },
       );
-      if (payload.risk_tier && payload.risk_tier !== "low") {
+      // T-4.3-05 (build phase 4.3): the backend now emits "unknown" for a
+      // refusal path where no risk assessment ever ran (`core/graph.py`'s
+      // two refusal sites and `adapters/mcp/server.py`'s fully-silent
+      // fallback, closing F-4.1-J3-02), never a hardcoded "low". "unknown"
+      // is therefore an EXPECTED value now, distinct from a genuinely
+      // elevated tier the F-4.8-A-19 comment above was written to over-
+      // report on. Before this fix, "unknown" !== "low" would have pushed
+      // a spurious "unknown risk claim" pill on every refusal, alongside
+      // the "Not fully grounded" pill the `grounded: false` branch above
+      // already pushes for the same run; that pairing would have implied
+      // an assessed elevated risk where none was ever computed. Excluding
+      // it here restores the pre-existing display for a refusal (only
+      // "Not fully grounded") while still over-reporting, unchanged, for
+      // any OTHER unrecognised string a future backend value might send.
+      if (payload.risk_tier && payload.risk_tier !== "low" && payload.risk_tier !== "unknown") {
         trust.push({ kind: "risk", label: `${payload.risk_tier} risk claim` });
       }
       // R-01: "agreed" needs at least two things to agree. The A-05 fix moved

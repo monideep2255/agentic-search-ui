@@ -439,6 +439,54 @@ describe("clause 3c: the screens render from the real event stream", () => {
     expect(view.trust.some((t: { label: string }) => /high/i.test(t.label))).toBe(true);
   });
 
+  it("does not render an 'unknown risk claim' pill for a refusal with no assessment", async () => {
+    // T-4.3-05 (build phase 4.3) regression. The backend now emits
+    // risk_tier: "unknown" on a refusal path where no risk assessment ran
+    // (closing F-4.1-J3-02), rather than a hardcoded "low". Before this
+    // fix, useRunView's `risk_tier !== "low"` check treated "unknown" the
+    // same as a genuinely elevated tier and pushed a spurious "unknown
+    // risk claim" pill alongside "Not fully grounded", implying an
+    // assessed elevated risk where none was ever computed. Mutation that
+    // turns this red: drop the `&& payload.risk_tier !== "unknown"` clause
+    // from useRunView.ts's risk-pill condition.
+    const { useRunView } = await need<any>("T-4.8-12 (event adapter)", "./hooks/useRunView.ts");
+
+    const events = [
+      { type: "guard", payload: { passed: false, category: "off_topic", reason: "outside biomedical research" } },
+      {
+        type: "trust_signal",
+        payload: {
+          outcome: "refuse",
+          risk_tier: "unknown",
+          grounded: false,
+          triangulated: null,
+        },
+      },
+      { type: "done", payload: {} },
+    ];
+
+    const { result } = renderHook(() => useRunView(events));
+    const view = result.current;
+
+    const labels = view.trust.map((t: { label: string }) => t.label);
+    expect(labels.some((label: string) => /not fully grounded/i.test(label))).toBe(true);
+    expect(labels.some((label: string) => /unknown risk claim/i.test(label))).toBe(false);
+    // The second arm: a GENUINELY unrecognised (not "unknown") tier must
+    // still over-report, per F-4.8-A-19's own reasoning, so this is not a
+    // control that silently stopped reporting every non-"low" tier.
+    const escalatedEvents = [
+      {
+        type: "trust_signal",
+        payload: { outcome: "flag", risk_tier: "critical", grounded: true, triangulated: null },
+      },
+      { type: "done", payload: {} },
+    ];
+    const { result: escalated } = renderHook(() => useRunView(escalatedEvents));
+    expect(
+      escalated.current.trust.some((t: { label: string }) => /critical risk claim/i.test(t.label)),
+    ).toBe(true);
+  });
+
   it("reports no progress when no events have arrived", async () => {
     // The counterfactual. A timer-driven stepper advances on an empty stream;
     // an event-driven one cannot, and that difference is the defect this

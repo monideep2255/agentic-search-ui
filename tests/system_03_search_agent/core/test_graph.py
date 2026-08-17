@@ -1229,6 +1229,15 @@ async def test_ok_outcome_with_zero_citeable_rows_refuses_explicitly_not_silentl
         "this refusal was not caused by truncation; the message must not claim it was"
     )
 
+    # T-4.3-05, build phase 4.3: this refusal goes through write_node's
+    # `if trust_outcome == "refuse":` branch, the second of the two sites
+    # that used to hardcode `risk_tier="low"` with no assessment behind
+    # it (F-4.1-J3-02). Mutation that turns this red: restore that
+    # hardcoded value at this refusal site.
+    trust_signal = next(event.payload for event in events if event.type == "trust_signal")
+    assert trust_signal["outcome"] == "refuse"
+    assert trust_signal["risk_tier"] == "unknown"
+
 
 # ---------------------------------------------------------------------------
 # F-2.1-B07 (adversary, second pass, open until now): a Disease/
@@ -2325,6 +2334,12 @@ async def test_unresolved_gene_symbol_refuses_before_reaching_the_graph(
         event.payload for event in events if event.type == "trust_signal"
     )
     assert trust_signal["message"] == graph_module._UNRESOLVED_ENTITY_REFUSAL_MESSAGE
+    # T-4.3-05, build phase 4.3: this is a refusal path, so no risk
+    # assessment ever ran. "low" was a safety-relevant claim made from
+    # nothing (F-4.1-J3-02); "unknown" is the honest value. Mutation that
+    # turns this red: restore the hardcoded `risk_tier="low"` at this
+    # refusal site in `core/graph.py`.
+    assert trust_signal["risk_tier"] == "unknown"
 
 
 @pytest.mark.asyncio

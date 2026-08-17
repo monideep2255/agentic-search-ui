@@ -196,12 +196,45 @@ DEFAULT_ABANDON_GRACE_SECONDS = 30.0
 # cumulative rate: a legitimate caller (one browser tab, plus perhaps a
 # stray reconnect or a deliberate follow-up question fired before the
 # first answer lands) is not expected to have more than a couple of runs
-# genuinely in flight at once. 5 gives headroom above that ordinary shape
-# while still cutting the unbounded-burst pattern off completely; it is a
-# v1 engineering call, not a value derived from a load test (the real
-# per-layer throttling and concurrency-queue strategy is build phase
-# 6.0's job, tool-call-budgets.md).
-DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER = 5
+# genuinely in flight at once.
+#
+# T-4.3-05, build phase 4.3 (closes F-4.10-A-10's carried residual): this
+# used to be 5, the exact same number as `data.guest_sessions.
+# FREE_RUN_ALLOWANCE`. That equality was a real bug, not a coincidence
+# worth keeping: a guest who fires several requests fast enough for
+# earlier ones to still be active (not yet `finished`) could reach THIS
+# cap and be told "wait for an existing run to finish, or stop one, then
+# retry", advice that is untrue for a guest whose five-answer allowance is
+# genuinely spent, since waiting only delays the moment they discover the
+# real wall is the allowance, not concurrency. Two caps meaning different
+# things while sharing one number is also what made an earlier
+# concurrency test clause unable to fail (F-4.10-J-02): a test could not
+# tell which cap it had actually tripped.
+#
+# 12, not merely "some other number", because it is set ABOVE `data.
+# guest_sessions.ATTEMPT_ALLOWANCE` (10), the hard ceiling on how many
+# times a single guest identity can ever successfully spend (`
+# spend_one_run`/`spend_one_anonymous_run` increment `attempts_used`,
+# never refunded, on every successful spend regardless of outcome). Since
+# a run only becomes ACTIVE here after a successful spend, a guest can
+# never accumulate more than `ATTEMPT_ALLOWANCE` concurrently-active runs
+# of their own no matter how fast they burst requests; at 12, the
+# allowance's own `ATTEMPTS_EXHAUSTED` refusal always fires first, before
+# this concurrency cap ever could, for a guest identity. That structurally
+# closes the ambiguous-refusal shape above rather than merely making the
+# two numbers look different by choosing an arbitrary offset, and the
+# reasoning is documented here rather than by importing `ATTEMPT_ALLOWANCE`
+# from `data.guest_sessions`, which would introduce a new core-to-data
+# layering dependency this module's own docstring does not otherwise have
+# (Depends on: contracts, core.run only) for one constant's derivation.
+# Registered users have no allowance at all, so this cap is their only
+# bound regardless of its value; 12 remains far below the 9,615-in-50-
+# seconds abuse pattern F-4.0-A-10 measured, so it still cuts off the
+# unbounded-burst pattern completely. A v1 engineering call, not a value
+# derived from a load test (the real per-layer throttling and
+# concurrency-queue strategy is build phase 6.0's job,
+# tool-call-budgets.md).
+DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER = 12
 
 # A conservative, static hint, not a promise: a caller that hits this cap
 # is told to retry in a few seconds, which is comfortably longer than a
@@ -240,11 +273,40 @@ class ConcurrentRunCapExceededError(RuntimeError):
     finishing or stopping an existing run frees a slot immediately, so the
     HTTP layer maps this to `429` with a real `Retry-After`, never the
     guest-allowance-exhausted `403` that retrying can never fix.
+
+    `bound` (T-4.3-05, build phase 4.3): which cap was hit, carried as a
+    real attribute rather than left for a catch site to infer from this
+    exception's TYPE alone or, worse, to parse out of its message string.
+    This registry only ever raises this exception for one reason today
+    (the concurrency cap `create_run` itself enforces; the guest
+    allowance is a wholly separate mechanism in `data.guest_sessions`
+    that never raises this class), so `bound` is always `"concurrency"`
+    for now. It is still made structural rather than left implicit,
+    exactly the shape `tool-call-budgets.md` asks of a rate/cap error
+    (an error must say what to do next, and what kind of wall it is, not
+    just that something failed): a catch site branches on `exc.bound`
+    instead of hardcoding the assumption that this exception type can
+    only ever mean one thing, so a future second bound sharing this
+    class needs no catch site to change its dispatch logic, only its
+    message table.
+
+    `retry_after_s` defaults to `CONCURRENT_RUN_CAP_RETRY_AFTER_S` so a
+    caller that already knows it is reporting the concurrency bound (the
+    only bound this class represents today) is not forced to repeat that
+    module constant at every raise site; `create_run` below still passes
+    it explicitly for clarity at the one production raise site.
     """
 
-    def __init__(self, message: str, *, retry_after_s: int) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        retry_after_s: int = CONCURRENT_RUN_CAP_RETRY_AFTER_S,
+        bound: str = "concurrency",
+    ) -> None:
         super().__init__(message)
         self.retry_after_s = retry_after_s
+        self.bound = bound
 
 
 @dataclass
@@ -827,6 +889,7 @@ class RunRegistry:
                 "wait for an existing run to finish, or stop one via "
                 "POST /v1/query/{run_id}/stop, then retry",
                 retry_after_s=CONCURRENT_RUN_CAP_RETRY_AFTER_S,
+                bound="concurrency",
             )
 
         entry = RunEntry(

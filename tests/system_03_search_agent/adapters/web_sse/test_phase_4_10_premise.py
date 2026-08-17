@@ -123,12 +123,17 @@ build phase 2.1's gate had a blind spot identical to the code it graded:
   The `guest_sessions` counter is the one piece that would survive it, and
   the concurrency arm exercises it only within one process.
 - The concurrent-run cap (`DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER`) at its own
-  boundary. That cap is a SECOND, unrelated bound of the same numeric
-  value as the free allowance, and F-4.10-J-02 measured that letting the
-  two overlap is exactly what made the concurrency clause unable to fail.
-  The concurrency clause below now deliberately drains every run before
-  the boundary so no run is active and the cap cannot fire; the cap's own
-  boundary is covered by `TestConcurrentRunCap` in
+  boundary. That cap is a SECOND, unrelated bound, and F-4.10-J-02
+  measured that letting it share the free allowance's exact numeric value
+  is what made the concurrency clause unable to fail. T-4.3-05 (build
+  phase 4.3) decoupled the two: `DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER` is no
+  longer equal to `FREE_RUN_ALLOWANCE` (see the former's own comment in
+  `core/run_registry.py`), which closes the shared-number half of
+  F-4.10-J-02's root cause structurally rather than only by test
+  discipline. The concurrency clause below still deliberately drains
+  every run before the boundary so no run is active and the cap cannot
+  fire, which remains the right isolation regardless of the two caps'
+  values; the cap's own boundary is covered by `TestConcurrentRunCap` in
   `test_streaming_endpoints.py`, not here.
 - Device or browser FINGERPRINTING. The clearable-token decision declines
   it on purpose, so there is nothing here to test.

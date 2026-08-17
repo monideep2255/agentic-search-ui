@@ -3958,7 +3958,18 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             "trust_signal",
             TrustSignalPayload(
                 outcome="refuse",
-                risk_tier="low",
+                # T-4.3-05, build phase 4.3 (closes the `core/graph.py`
+                # half of F-4.1-J3-02): this is a refusal path, no risk
+                # assessment ever ran, so `risk_tier` must not assert
+                # "low", a safety-relevant claim made from nothing.
+                # `outcome="refuse"` already carries the meaning a
+                # consumer needs; `risk_tier` here can only honestly say
+                # it was never computed. `TrustSignalPayload.risk_tier`
+                # is a bare `str` (contracts/events.py), not the stricter
+                # `synthesis.trust.RiskTier` two-value Literal, so
+                # "unknown" is a valid wire value without widening any
+                # type.
+                risk_tier="unknown",
                 grounded=False,
                 triangulated=None,
                 scope="answer",
@@ -4226,7 +4237,12 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             "trust_signal",
             TrustSignalPayload(
                 outcome="refuse",
-                risk_tier="low",
+                # T-4.3-05, build phase 4.3 (closes the second `core/
+                # graph.py` half of F-4.1-J3-02). Same reasoning as the
+                # unresolved-entity refusal above: `outcome="refuse"`,
+                # `grounded=False`, no assessment ran, so "unknown" is
+                # the honest value, never a hardcoded "low".
+                risk_tier="unknown",
                 grounded=False,
                 triangulated=None,
                 scope="answer",
