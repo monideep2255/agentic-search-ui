@@ -172,7 +172,7 @@ The product-decision queue is EMPTY. The eight items cleared on 2026-08-15 staye
 
 ## Read before opening the next phase
 
-Build phase 4.3 is merged and closed out (PR #48, see "State now" above). Three of Step 6.3's six delivery surfaces remain, none of them depending on it. The out-of-order insertion that ran 4.8, 4.9 and 4.10 ahead of the locked order finished earlier, and Section 25's own sequence resumes at 4.2. Four of Step 6.3's six delivery surfaces remain, none of them depending on 4.10.
+Build phase 4.3 is merged and closed out (PR #48, see "State now" above). Four of Step 6.3's six delivery surfaces remain (4.4 through 4.7), none of them depending on it. The out-of-order insertion that ran 4.8, 4.9 and 4.10 ahead of the locked order finished earlier, and Section 25's own sequence resumed at 4.2, then 4.3, and now continues at 4.4. This paragraph carried two contradictory counts ("three" and "four") and a stale "resumes at 4.2" until 2026-08-18, from being appended to across three merges instead of rewritten.
 
 | Next up | Branch | What it delivers | Depends on |
 |---------|--------|------------------|------------|
@@ -182,6 +182,19 @@ Build phase 4.3 is merged and closed out (PR #48, see "State now" above). Three 
 Then 4.6 (feedback capture) and 4.7 (competency-question routing, which owns F-2.0-15).
 
 It opens the standard way, with no structural exception: read `LEARNINGS.md` filtered to the phase's territory, verify its dependencies are merged, write the premise gate and watch it fail, then build.
+
+### The harness changed on 2026-08-18, before 4.4 opens
+
+Four changes to how a phase runs, merged as PR #49 and PR #50. 4.4 is the first phase to run under them, so read this before opening it. Full statement in `.claude/skills/bossman-mode/SKILL.md` under "Do not dispatch into a dead transport" and "The review loop has a budget".
+
+- Transport preflight, new Step 1 item: run `python3 tracker/preflight.py`. It probes the product's model provider, the harness's own provider, and the graph, separately, and exits 1 when one is down. Re-run `--transport harness-model` immediately before any review-agent dispatch. A `skipped` result is not a pass.
+- The review loop is capped at TWO rounds. One judge and adversary round, one fix-and-reverify round. A blocking finding after round 2 escalates to the product owner with the open findings, a diff summary per attempt, and options including revert-and-re-decompose. There is no round 3. This is a stop condition, not a guideline.
+- Fixes group BY FILE. Every finding touching one file goes to a single fix agent working serially. Two parallel agents editing the same function are each correct and blind to the other, which is how build phase 4.2's rounds 1 through 4 each produced the next round's worst defect. Fixes name a category, never a list of instances.
+- A finding located inside an earlier fix stops the phase mid-round, even in round 1, and is filed with `Regression of: F-N.M-XX`. `Round: N` is now mandatory on every finding. Both fields are in `task-tracker`.
+
+Two roles were deleted from the cadence in the same change, after zero dispatches across every phase: Sub-planner and Integrator. If 4.4 genuinely needs either, add it back with its first real dispatch as the evidence.
+
+Also corrected in the locked spec: build phases 4.9 and 4.10 were missing from Section 25 entirely, though both had merged. They are now in the table with the same product-owner exception note 4.8 carries, so Step 1's dependency check can actually see them.
 
 
 ### Three things build phase 4.8 leaves behind
@@ -587,4 +600,4 @@ If a different agent takes over, read the "Running this project with a different
 
 One operational note that cost real time on 2026-08-03 and is not obvious from any other file: this machine's network dropped three times in one session, killing two premise-gate runs and three review agents, and every failure they produced looked like a code defect at first glance. Before diagnosing any model-dependent failure, check reachability with `curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://openrouter.ai/api/v1/models`. An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all. A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-08-17.
+Last updated: 2026-08-18.

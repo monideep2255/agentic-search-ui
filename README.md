@@ -179,6 +179,7 @@ agentic-search-ui/
 | [NCBI databases and APIs](docs/ncbi/NCBI_databases_and_APIs_reference.md) | All 39 NCBI databases, endpoints, rate limits, record counts |
 | [NCBI repos deep dive](docs/ncbi/NCBI_repos_deep_dive.md) | Analysis of 13 NCBI GitHub repos: code to reuse, patterns to adopt, what not to build locally |
 | [BioLink repos explained](docs/architecture/Biolink_repos_explained.md) | BioLink model categories, predicates, CURIEs used in the graph |
+| [Multi-agent system design explained](docs/architecture/Multi_agent_system_design_explained.md) | Converted external reading on how groups of AI agents fail in a shared environment, and the bounded-swarm architecture that prevents it |
 | [Project overview](docs/data-engineering/Project_overview_A_to_Z.md) | Navigation hub for the full project |
 | [Agent teams tmux quickstart](docs/build/Agent_teams_tmux_quickstart.md) | tmux launch guide for bossman-mode parallel builders |
 | [Claude security plugin usage](docs/Claude_security_plugin_usage.md) | How to run the on-demand `claude-security` scan, apply patches, and how it complements the always-on `security-guidance` plugin |
@@ -220,4 +221,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-08-17
+Last updated: 2026-08-18

@@ -2,7 +2,7 @@
 
 A plain-language update on what this project is, what works today, and what comes next. No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-17.
+Last updated: 2026-08-18.
 
 ## Table of contents
 
@@ -298,6 +298,22 @@ Every sprint follows the same loop, and it is deliberately slower than just writ
 The reason for steps 4 and 5 is that the person who wrote something is the worst person to check it. On sprint 3.0, everything passed the checklist, and the reviewer still failed it, because it turned out you could ask "what is the capital of the USA?" and get let straight through. On the same sprint, the second reviewer found that a doctor asking "should this patient be started on tamoxifen?" also got through, which is exactly the kind of question this system must never answer.
 
 Both of those were found after every test was green. That is why both steps exist.
+
+### What changed on 18 August, and why
+
+Step 6 above, "fix what they find and re-run everything", had no limit on how many times it could go round. Two sprints went round five and six times, and each time we looked, the worst problem in that round was sitting inside the repair we had made in the round before. More care did not help; we tried that, and the rate of new problems did not drop.
+
+The cause turned out to be how the repairs were shared out. When two problems were in the same file, we gave one to each of two workers running at the same time. Each repair was correct on its own, and neither worker could see the other, so the two correct repairs combined into a new problem that nobody reviewing either half could spot. When we tried one worker holding both problems at once, it not only fixed both but found a third that four earlier rounds had walked straight past.
+
+Three things changed as a result:
+
+- Two rounds, then a person decides. If it is still not right after one repair round, the work stops and comes back with what is broken, what each attempt changed, and the choices. Before, it just went round again.
+- Repairs to the same file go to one worker, in order. Different files can still be worked on at the same time.
+- A repair that breaks something we already fixed stops the work immediately, rather than being added to a list.
+
+We also added a ten-second check that the connections are alive before starting any expensive piece of work. On one day in August we lost somewhere between one and one and a half hours to work that was sent off into a dead connection, and twice we read the silence as a bug in the work rather than a network outage and went looking for a fault that was not there.
+
+None of this is proven yet. It is based on measuring what went wrong before, and the next sprint is the first real test of whether it helps.
 
 ## Where to look for more detail
 
