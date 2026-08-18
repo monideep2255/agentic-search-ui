@@ -7,7 +7,7 @@ Split out of `docs/build/` on 2026-08-12, when that folder hit its own nine-file
 ## Table of contents
 
 - [Open this first](#open-this-first)
-- [Open reconciliation, as of 2026-08-12](#open-reconciliation-as-of-2026-08-12)
+- [Reconciliation, closed 2026-08-18](#reconciliation-closed-2026-08-18)
 - [The files](#the-files)
 - [Which file answers which question](#which-file-answers-which-question)
 - [The one thing not allowed to go stale](#the-one-thing-not-allowed-to-go-stale)
@@ -18,11 +18,13 @@ Split out of `docs/build/` on 2026-08-12, when that folder hit its own nine-file
 
 It is also in the Claude Design project "NCBI Agentic Search" under the group `Prototype`, at `claude.ai/design`. That is where design changes originate. Everything in this folder is downstream of it.
 
-## Open reconciliation, as of 2026-08-12
+## Reconciliation, closed 2026-08-18
 
-The design review is still running. The prototype has moved ahead of the component cards, so the cards do not yet describe the current design. Build phase 4.8 must not open until this is closed, because the cards are what builders build against and the premise gate asserts against: opening now would build the previous design.
+Closed. Build phases 4.8, 4.9 and 4.10 have all merged, so the gate this section once held ("build phase 4.8 must not open until this is closed") no longer applies and has been removed rather than left standing, since a satisfied blocker that still reads as blocking is worse than no note.
 
-Five things exist in the prototype with no card at all:
+What follows is the record of what the reconciliation covered, kept because the five uncarded surfaces below are the ones 4.9's fidelity pass worked from, and because the tool-name correction at the end has to be reapplied after every pull from Claude Design.
+
+Five things existed in the prototype with no card at all:
 
 | Needs a card | What it is |
 |--------------|-----------|
@@ -40,7 +42,7 @@ One correction is applied locally but not yet pushed to Claude Design, deliberat
 
 | Path | What it is |
 |------|-----------|
-| `design-system/` | The fixture. 18 isolated component cards plus the prototype, mirrored to Claude Design |
+| `design-system/` | The fixture. 20 isolated component cards plus the prototype card, 21 files in all, mirrored to Claude Design |
 | `Design_to_build_workflow.md` | How a design change travels from Claude Design into React code, and what it costs before versus after the phase opens. Read before touching anything else here |
 | `Phase_4.8_visual_design.html` | The argument. Why the layer system is the identity, why flat, why one saturated surface, why monospace narrowed. Holds no component reproductions, so it cannot drift |
 | `Phase_4.8_prototype.html` | Generated, do not hand-edit. The publishable form of the prototype |
@@ -60,10 +62,10 @@ That last row is the one people get wrong. A builder implementing the citation c
 
 ## The one thing not allowed to go stale
 
-`design-system/` is a fixture, not documentation. The build phase 4.8 premise gate asserts against it: token conformance against `foundations/colors.html`, structural checks that a citation chip carries a layer class and a source card renders all six provenance fields, WCAG 2.1 AA contrast on every token pair used, and Playwright visual regression against the cards.
+`design-system/` is a fixture, not documentation. The build phase 4.8 premise gate asserts against it: token conformance against `foundations/colors.html`, structural checks that a citation chip carries a layer class and a source card renders all six provenance fields, WCAG 2.1 AA contrast on every token pair used, and an assembly check that every screen is reachable and renders from the real event stream. It does NOT do visual regression: a screenshot test was planned and deliberately never built, and pixel fidelity is the judge and adversary rounds' job. This line claimed the visual-regression gate until 2026-08-18, which advertised a gate nothing performed, the exact failure `Design_to_build_workflow.md` line 70 records deciding against.
 
 Treat it the way you would treat a test's golden files. The prototype and the argument page are both allowed to lag, because nothing is checked against them. The cards are not.
 
 Each card is standalone HTML carrying its own copy of the token block, so it renders correctly in isolation in the Claude Design pane, and its first line is a `@dsCard` marker naming its group. The token duplication across files is deliberate: a shared stylesheet would not survive isolated-card rendering.
 
-Last updated: 2026-08-12
+Last updated: 2026-08-18

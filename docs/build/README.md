@@ -38,7 +38,7 @@ For failures and their fixes rather than velocity, read `LEARNINGS.md` at the re
 
 ## The design segment
 
-`design/` holds everything build phase 4.8 is built against: the clickable prototype, the 18-card component library mirrored to Claude Design, the workflow that turns a design change into React code, and the argument for why the design looks the way it does. It has its own README.
+`design/` holds everything build phase 4.8 is built against: the clickable prototype, the 21-card component library mirrored to Claude Design, the workflow that turns a design change into React code, and the argument for why the design looks the way it does. It has its own README.
 
 | Read | For |
 |------|-----|

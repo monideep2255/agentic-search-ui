@@ -226,8 +226,7 @@
         <div class="stage-body">
           <div class="stage-title">Branch and brief<span class="actor">lead</span><span class="model">depth + speed &middot; low</span></div>
           <p class="stage-text">Cut <code>phase/N.M-description</code> from main. Dispatch
-            researchers first if an API is unfamiliar, so builders never start blind. Sub-planners
-            only when a phase is genuinely complex.</p>
+            researchers first if an API is unfamiliar, so builders never start blind.</p>
           <div class="io"><span class="w">git branch</span></div>
         </div>
       </div>
@@ -285,6 +284,28 @@
             judge tests what someone thought to specify, and a fluent wrong answer is not on that
             list. It over-reports on purpose and never closes its own findings.</p>
           <div class="io"><span class="w">tracker/phase_N.M.md, Findings</span></div>
+        </div>
+      </div>
+
+      <div class="stage" style="--stage-tone: var(--blocked)">
+        <div class="spine"><div class="marker">8b</div><div class="thread"></div></div>
+        <div class="stage-body">
+          <div class="stage-title">The round budget<span class="actor">lead</span><span class="model">two rounds, then a human</span></div>
+          <p class="stage-text">Stages 7 and 8 get ONE fix-and-reverify round, not unlimited passes.
+            Findings are grouped BY FILE and every finding in one file goes to a single fix agent
+            working serially, because two parallel agents editing the same function are each correct
+            and blind to the other, which is how two correct fixes compose into a defect neither
+            reviewer sees. Fixes name a category, never a list of instances. Re-verification goes to
+            a FRESH agent, never the judge that filed the findings. If round 2 still blocks, or any
+            finding sits inside an earlier fix, the phase STOPS and hands the product owner the open
+            findings, a diff per attempt and the options. There is no round 3.</p>
+          <p class="stage-text">Why: build phases 2.1 and 4.2 ran five and six rounds, and in both,
+            every round found its worst defect inside the previous round's fix. Rising scrutiny was
+            never the lever.</p>
+          <div class="io">
+            <span class="r">tracker/phase_N.M.md, Findings</span>
+            <span class="w">Round, Regression of</span>
+          </div>
         </div>
       </div>
 
@@ -371,11 +392,9 @@
           <tr><td>Researcher, bulk reading</td><td class="f">speed</td><td>low</td><td>The cost is input tokens, not reasoning. Reading an API doc does not need a frontier model.</td></tr>
           <tr><td>Researcher, analysis</td><td class="f">balance</td><td>medium</td><td>When the research needs a judgment rather than a summary.</td></tr>
           <tr><td>Builder</td><td class="f">balance</td><td>medium</td><td>Well-scoped construction against clear acceptance criteria.</td></tr>
-          <tr><td>Sub-planner</td><td class="f">depth</td><td>high</td><td>The same cascade risk as the lead's own decomposition.</td></tr>
           <tr><td>Judge</td><td class="f">depth</td><td>high or extra high</td><td>A missed defect here is the most expensive thing in the loop, because it ships.</td></tr>
           <tr><td>Adversary</td><td class="f">depth</td><td>high</td><td>Finding a fluent, plausible, wrong answer needs real adversarial reasoning. A cheap tier will not find what the judge missed.</td></tr>
           <tr><td>Test writer</td><td class="f">balance</td><td>medium</td><td>Bounded work against a finished artifact.</td></tr>
-          <tr><td>Integrator</td><td class="f">balance</td><td>medium</td><td>Wiring only, and only when builders produced isolated pieces.</td></tr>
         </tbody>
       </table>
     </div>
