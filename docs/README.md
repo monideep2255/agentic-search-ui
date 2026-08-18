@@ -4,7 +4,7 @@ Reference material for System 3. Start here to find the right document without o
 
 Planning documents live in `requirements/`, not here. This folder holds reference and how-to material. The distinction that matters: `requirements/` says what we are building and why, `docs/` says how things actually work.
 
-Last updated: 2026-08-02.
+Last updated: 2026-08-18.
 
 ## Table of contents
 
@@ -28,6 +28,7 @@ Last updated: 2026-08-02.
 | Run a build phase | `build/Build_workflow_cadence.md`, or `build/Phase_6_execution_flow.html` for the visual |
 | Watch parallel builders in live panes | `build/Agent_teams_tmux_quickstart.md` |
 | Run the security scan before a pull request | `Claude_security_plugin_usage.md` |
+| Design anything that runs more than one agent against a shared resource | `architecture/Multi_agent_system_design_explained.md` |
 
 ## The folders
 
@@ -38,6 +39,7 @@ Last updated: 2026-08-02.
 | `System_3_architecture_brainstorming.md` | The search agent's design: agent loop, tools, multi-model harness, cost model, deployment |
 | `Three_layer_data_architecture.md` | Layer 1 the graph, Layer 2 on-demand NCBI APIs, Layer 3 enrichment, and how the agent uses each |
 | `Biolink_repos_explained.md` | The BioLink model: categories, predicates, CURIEs. Needed to read the graph schema |
+| `Multi_agent_system_design_explained.md` | Converted external reading on how groups of AI agents fail in a shared environment: correlated failure, tacit collusion, trust and dissent errors, turf wars, and the bounded-swarm architecture that contains them |
 
 ### `build/` how the work gets done
 
