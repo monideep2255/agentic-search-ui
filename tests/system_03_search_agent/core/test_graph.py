@@ -1229,6 +1229,15 @@ async def test_ok_outcome_with_zero_citeable_rows_refuses_explicitly_not_silentl
         "this refusal was not caused by truncation; the message must not claim it was"
     )
 
+    # T-4.3-05, build phase 4.3: this refusal goes through write_node's
+    # `if trust_outcome == "refuse":` branch, the second of the two sites
+    # that used to hardcode `risk_tier="low"` with no assessment behind
+    # it (F-4.1-J3-02). Mutation that turns this red: restore that
+    # hardcoded value at this refusal site.
+    trust_signal = next(event.payload for event in events if event.type == "trust_signal")
+    assert trust_signal["outcome"] == "refuse"
+    assert trust_signal["risk_tier"] == "unknown"
+
 
 # ---------------------------------------------------------------------------
 # F-2.1-B07 (adversary, second pass, open until now): a Disease/
@@ -2325,6 +2334,12 @@ async def test_unresolved_gene_symbol_refuses_before_reaching_the_graph(
         event.payload for event in events if event.type == "trust_signal"
     )
     assert trust_signal["message"] == graph_module._UNRESOLVED_ENTITY_REFUSAL_MESSAGE
+    # T-4.3-05, build phase 4.3: this is a refusal path, so no risk
+    # assessment ever ran. "low" was a safety-relevant claim made from
+    # nothing (F-4.1-J3-02); "unknown" is the honest value. Mutation that
+    # turns this red: restore the hardcoded `risk_tier="low"` at this
+    # refusal site in `core/graph.py`.
+    assert trust_signal["risk_tier"] == "unknown"
 
 
 @pytest.mark.asyncio
@@ -3825,13 +3840,15 @@ def test_field_class_for_layer1_field_matches_real_graph_data_today() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _claim_trust(*, citation_id: str, outcome: str, risk_tier: str = "low"):
+def _claim_trust(
+    *, citation_id: str, outcome: str, risk_tier: str = "low", grounded: bool = True
+):
     from system_03_search_agent.synthesis.trust import ClaimTrust
 
     return ClaimTrust(
         citation_id=citation_id,
         risk_tier=risk_tier,  # type: ignore[arg-type]
-        grounded=True,
+        grounded=grounded,
         triangulation="insufficient",
         outcome=outcome,  # type: ignore[arg-type]
     )
@@ -4112,6 +4129,144 @@ def test_conflict_flags_is_a_no_op_with_only_one_layer() -> None:
     )
 
     assert result[0].outcome == "answer"
+
+
+# ---------------------------------------------------------------------------
+# F-4.3-A-19, build phase 4.3: `_aggregate_answer_scope_trust`, the
+# answer-scope collapse of the per-claim verdicts.
+#
+# The two fields it computes used to be written inline as ASSERTIONS rather
+# than derivations: a one-question test that mapped every non-high tier onto
+# the low tier, and a literal `grounded=True`. The direction of both failures
+# is the dangerous one, since both report MORE confidence than was actually
+# established, and the collapsed tier is the single field a reader consults to
+# decide how much to trust an answer.
+#
+# Both arms below are required, and neither alone is sufficient: an
+# implementation that returned the unknown tier unconditionally would pass the
+# first arm while destroying the surface, and the inline expression this
+# section exists to replace passes the second arm perfectly. Naming what each
+# arm does NOT cover, per `goal-contracts`: these are pure-function arms over
+# a hand-built `ClaimTrust` list. They do not prove the emit site calls this
+# function, which `test_write_emits_an_answer_scope_trust_signal`-style full
+# path coverage elsewhere in this file exercises, and they do not prove any
+# consumer renders the result correctly.
+# ---------------------------------------------------------------------------
+
+
+def test_an_unassessed_claim_is_never_aggregated_into_a_low_risk_answer() -> None:
+    """The core F-4.3-A-19 arm. "unknown" is the value this phase introduced
+    to mean "no assessment ran". Collapsing it to "low", the value that means
+    "we checked, and it is fine", reverses its meaning at the exact field a
+    reader trusts.
+
+    Mutation that turns this red: restore the original inline expression in
+    `_aggregate_answer_scope_trust`, that is, replace the three-way branch
+    with `"high" if _ANSWER_SCOPE_HIGH_RISK_TIER in tiers else
+    _ANSWER_SCOPE_LOW_RISK_TIER`. The unknown input then reports as "low"
+    and this assertion fails.
+    """
+    claim_trusts = [
+        _claim_trust(citation_id="c1", outcome="answer", risk_tier="low"),
+        _claim_trust(citation_id="c2", outcome="answer", risk_tier="unknown"),
+    ]
+
+    risk_tier, _grounded = graph_module._aggregate_answer_scope_trust(claim_trusts)
+
+    assert risk_tier != "low", (
+        "a claim whose risk was never assessed must not be reported as "
+        "assessed-and-fine at the answer level"
+    )
+    assert risk_tier == "unknown"
+
+
+def test_a_real_high_risk_claim_still_outranks_an_unassessed_one() -> None:
+    """The other half of the same decision, and the reason the precedence is
+    high > unknown > low rather than a naive "least confident wins".
+
+    A completed assessment that found real elevated risk must never be masked
+    by an incomplete one. The web UI's `useRunView` reduce ranks any
+    unrecognised tier above every known tier and then suppresses the risk pill
+    for "unknown" specifically, so letting "unknown" win here would delete a
+    genuine high-risk warning from the screen.
+
+    Mutation that turns this red: reorder the branch so the unknown test runs
+    before the high test (`if tiers != {LOW}: return UNKNOWN`). The mixed list
+    then reports "unknown" and this assertion fails.
+    """
+    claim_trusts = [
+        _claim_trust(citation_id="c1", outcome="answer", risk_tier="high"),
+        _claim_trust(citation_id="c2", outcome="answer", risk_tier="unknown"),
+    ]
+
+    risk_tier, _grounded = graph_module._aggregate_answer_scope_trust(claim_trusts)
+
+    assert risk_tier == "high", (
+        "a completed high-risk finding must not be masked by an unassessed claim"
+    )
+
+
+def test_ordinary_low_and_high_aggregation_is_unchanged() -> None:
+    """The regression half. The honesty fix above must not cost the behaviour
+    that was already correct: an all-low answer still reports low, and any
+    high claim still lifts the whole answer to high.
+
+    Mutation that turns this red: return `_ANSWER_SCOPE_UNKNOWN_RISK_TIER`
+    unconditionally from `_aggregate_answer_scope_trust`, the cheapest way to
+    "fix" F-4.3-A-19 while destroying the field. Both assertions fail.
+    """
+    all_low = [
+        _claim_trust(citation_id="c1", outcome="answer", risk_tier="low"),
+        _claim_trust(citation_id="c2", outcome="answer", risk_tier="low"),
+    ]
+    assert graph_module._aggregate_answer_scope_trust(all_low)[0] == "low"
+
+    one_high = [
+        _claim_trust(citation_id="c1", outcome="answer", risk_tier="low"),
+        _claim_trust(citation_id="c2", outcome="answer", risk_tier="high"),
+    ]
+    assert graph_module._aggregate_answer_scope_trust(one_high)[0] == "high"
+
+
+def test_answer_scope_grounded_is_derived_from_the_claims_never_asserted() -> None:
+    """The second half of F-4.3-A-19: `grounded=True` was a literal with no
+    test behind it, asserting that grounding was established regardless of
+    what the claims said.
+
+    Mutation that turns this red: replace the `all(...)` in
+    `_aggregate_answer_scope_trust` with a literal `True`. The mixed list then
+    reports grounded, and the first assertion fails.
+    """
+    mixed = [
+        _claim_trust(citation_id="c1", outcome="answer", grounded=True),
+        _claim_trust(citation_id="c2", outcome="refuse", grounded=False),
+    ]
+    assert graph_module._aggregate_answer_scope_trust(mixed)[1] is False, (
+        "one ungrounded claim must withdraw the grounded claim for the answer"
+    )
+
+    every_claim_grounded = [
+        _claim_trust(citation_id="c1", outcome="answer", grounded=True),
+        _claim_trust(citation_id="c2", outcome="answer", grounded=True),
+    ]
+    assert graph_module._aggregate_answer_scope_trust(every_claim_grounded)[1] is True
+
+
+def test_aggregating_nothing_reports_unknown_and_ungrounded_never_vacuously_true() -> None:
+    """`all([])` is True, which would make an empty claim list report a
+    grounded answer built from no claims at all. The one caller guards with
+    `if claim_trusts:` and cannot reach this, but a function whose safe answer
+    depends on its caller checking first is one edit away from being wrong.
+
+    Mutation that turns this red: delete the `if not claim_trusts:` guard.
+    `tiers` is then the empty set, which is not `{"low"}`, so the tier stays
+    "unknown" and that assertion survives, but `all([])` returns True and the
+    grounded assertion fails.
+    """
+    risk_tier, grounded = graph_module._aggregate_answer_scope_trust([])
+
+    assert risk_tier == "unknown"
+    assert grounded is False
 
 
 @pytest.mark.asyncio

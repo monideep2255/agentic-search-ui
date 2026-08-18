@@ -28,6 +28,17 @@ dependencies = [
     # see requirements.txt for the full rationale.
     "mcp-types>=2.0",
     "httpx2>=2.0",
+    # T-4.3-06, build phase 4.3: exact pin, not a floor, per
+    # tracker/phase_4.3.md's supply-chain review (no compromise report, MIT
+    # licensed, no install-time execution surface in the wheel) and this
+    # repo's own `strawberry-graphql==0.324.0` published-docs-mismatch
+    # finding: the published docs available to that review were forty-odd
+    # releases behind, so every API name the GraphQL surface depends on was
+    # probed directly against this exact installed version rather than
+    # trusted from documentation. `cross-web>=0.6.0` arrives as a required
+    # (non-extra) transitive dependency; see requirements.txt for the full
+    # note, not restated here.
+    "strawberry-graphql==0.324.0",
 ]
 
 [project.optional-dependencies]
@@ -57,6 +68,7 @@ packages = [
     "system_03_search_agent",
     "system_03_search_agent.adapters",
     "system_03_search_agent.adapters.cli",
+    "system_03_search_agent.adapters.graphql",
     "system_03_search_agent.adapters.mcp",
     "system_03_search_agent.adapters.web_sse",
     "system_03_search_agent.auth",

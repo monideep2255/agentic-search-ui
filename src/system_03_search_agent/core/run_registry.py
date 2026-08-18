@@ -196,12 +196,45 @@ DEFAULT_ABANDON_GRACE_SECONDS = 30.0
 # cumulative rate: a legitimate caller (one browser tab, plus perhaps a
 # stray reconnect or a deliberate follow-up question fired before the
 # first answer lands) is not expected to have more than a couple of runs
-# genuinely in flight at once. 5 gives headroom above that ordinary shape
-# while still cutting the unbounded-burst pattern off completely; it is a
-# v1 engineering call, not a value derived from a load test (the real
-# per-layer throttling and concurrency-queue strategy is build phase
-# 6.0's job, tool-call-budgets.md).
-DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER = 5
+# genuinely in flight at once.
+#
+# T-4.3-05, build phase 4.3 (closes F-4.10-A-10's carried residual): this
+# used to be 5, the exact same number as `data.guest_sessions.
+# FREE_RUN_ALLOWANCE`. That equality was a real bug, not a coincidence
+# worth keeping: a guest who fires several requests fast enough for
+# earlier ones to still be active (not yet `finished`) could reach THIS
+# cap and be told "wait for an existing run to finish, or stop one, then
+# retry", advice that is untrue for a guest whose five-answer allowance is
+# genuinely spent, since waiting only delays the moment they discover the
+# real wall is the allowance, not concurrency. Two caps meaning different
+# things while sharing one number is also what made an earlier
+# concurrency test clause unable to fail (F-4.10-J-02): a test could not
+# tell which cap it had actually tripped.
+#
+# 12, not merely "some other number", because it is set ABOVE `data.
+# guest_sessions.ATTEMPT_ALLOWANCE` (10), the hard ceiling on how many
+# times a single guest identity can ever successfully spend (`
+# spend_one_run`/`spend_one_anonymous_run` increment `attempts_used`,
+# never refunded, on every successful spend regardless of outcome). Since
+# a run only becomes ACTIVE here after a successful spend, a guest can
+# never accumulate more than `ATTEMPT_ALLOWANCE` concurrently-active runs
+# of their own no matter how fast they burst requests; at 12, the
+# allowance's own `ATTEMPTS_EXHAUSTED` refusal always fires first, before
+# this concurrency cap ever could, for a guest identity. That structurally
+# closes the ambiguous-refusal shape above rather than merely making the
+# two numbers look different by choosing an arbitrary offset, and the
+# reasoning is documented here rather than by importing `ATTEMPT_ALLOWANCE`
+# from `data.guest_sessions`, which would introduce a new core-to-data
+# layering dependency this module's own docstring does not otherwise have
+# (Depends on: contracts, core.run only) for one constant's derivation.
+# Registered users have no allowance at all, so this cap is their only
+# bound regardless of its value; 12 remains far below the 9,615-in-50-
+# seconds abuse pattern F-4.0-A-10 measured, so it still cuts off the
+# unbounded-burst pattern completely. A v1 engineering call, not a value
+# derived from a load test (the real per-layer throttling and
+# concurrency-queue strategy is build phase 6.0's job,
+# tool-call-budgets.md).
+DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER = 12
 
 # A conservative, static hint, not a promise: a caller that hits this cap
 # is told to retry in a few seconds, which is comfortably longer than a
@@ -211,6 +244,39 @@ DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER = 5
 # or stopping an existing run frees a slot immediately, unlike the guest
 # allowance's 403, which retrying can never fix.
 CONCURRENT_RUN_CAP_RETRY_AFTER_S = 5
+
+
+class RunNotOwnedError(PermissionError):
+    """Raised by `resolve_owned_run` for a run that exists but whose
+    `owner_id` is not the caller's.
+
+    T-4.3-07, build phase 4.3. Exists so the ownership rule can live in
+    exactly one place while more than one delivery surface enforces it.
+    Before this, the rule lived in `adapters/web_sse/app.py`'s
+    `_get_owned_run`, which raises `HTTPException` directly. A second
+    surface could not reuse that: `app.py` imports the GraphQL router in
+    order to mount it, so a GraphQL module importing `app.py` back is a
+    circular import, and copying the check would have produced a second
+    authorization rule, which is a rule that eventually differs from the
+    first.
+
+    So the rule is stated once here, in domain terms, and each surface
+    maps this error and `RunNotFoundError` to its own transport: REST to
+    `403` and `404` respectively (`_get_owned_run`, unchanged in
+    behavior), GraphQL to its own error shape. One rule, two mappings.
+
+    Subclasses `PermissionError` rather than `KeyError`, the mirror of the
+    choice `RunNotFoundError` makes below: this is an authorization
+    outcome, not a lookup miss, and the distinction is what lets a caller
+    catch one without the other.
+    """
+
+    def __init__(self, run_id: str) -> None:
+        super().__init__(run_id)
+        self.run_id = run_id
+
+    def __str__(self) -> str:
+        return f"run {self.run_id!r} is not owned by this caller"
 
 
 class RunNotFoundError(KeyError):
@@ -240,11 +306,40 @@ class ConcurrentRunCapExceededError(RuntimeError):
     finishing or stopping an existing run frees a slot immediately, so the
     HTTP layer maps this to `429` with a real `Retry-After`, never the
     guest-allowance-exhausted `403` that retrying can never fix.
+
+    `bound` (T-4.3-05, build phase 4.3): which cap was hit, carried as a
+    real attribute rather than left for a catch site to infer from this
+    exception's TYPE alone or, worse, to parse out of its message string.
+    This registry only ever raises this exception for one reason today
+    (the concurrency cap `create_run` itself enforces; the guest
+    allowance is a wholly separate mechanism in `data.guest_sessions`
+    that never raises this class), so `bound` is always `"concurrency"`
+    for now. It is still made structural rather than left implicit,
+    exactly the shape `tool-call-budgets.md` asks of a rate/cap error
+    (an error must say what to do next, and what kind of wall it is, not
+    just that something failed): a catch site branches on `exc.bound`
+    instead of hardcoding the assumption that this exception type can
+    only ever mean one thing, so a future second bound sharing this
+    class needs no catch site to change its dispatch logic, only its
+    message table.
+
+    `retry_after_s` defaults to `CONCURRENT_RUN_CAP_RETRY_AFTER_S` so a
+    caller that already knows it is reporting the concurrency bound (the
+    only bound this class represents today) is not forced to repeat that
+    module constant at every raise site; `create_run` below still passes
+    it explicitly for clarity at the one production raise site.
     """
 
-    def __init__(self, message: str, *, retry_after_s: int) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        retry_after_s: int = CONCURRENT_RUN_CAP_RETRY_AFTER_S,
+        bound: str = "concurrency",
+    ) -> None:
         super().__init__(message)
         self.retry_after_s = retry_after_s
+        self.bound = bound
 
 
 @dataclass
@@ -827,6 +922,7 @@ class RunRegistry:
                 "wait for an existing run to finish, or stop one via "
                 "POST /v1/query/{run_id}/stop, then retry",
                 retry_after_s=CONCURRENT_RUN_CAP_RETRY_AFTER_S,
+                bound="concurrency",
             )
 
         entry = RunEntry(
@@ -856,6 +952,41 @@ class RunRegistry:
             return self._runs[run_id]
         except KeyError:
             raise RunNotFoundError(run_id) from None
+
+    def resolve_owned_run(self, run_id: str, owner_id: str) -> RunEntry:
+        """Look up `run_id` and enforce that `owner_id` owns it.
+
+        T-4.3-07, build phase 4.3. THE ownership rule, stated once, in
+        domain terms, so that more than one delivery surface can enforce
+        the same rule instead of each carrying its own copy. Every surface
+        that reads, exports or stops an existing run calls this.
+
+        It compares `entry.owner_id` and NOTHING else, the namespaced
+        `user:<uuid>`/`guest:<uuid>` identity, preserving T-4.10-03's
+        design decision 2 exactly: a guest can never read, stop or export
+        another guest's or any user's run, and the reverse. Passing a bare
+        user uuid here instead of the namespaced form is a caller bug that
+        would silently never match, which is why `Principal.owner_id` is
+        the only field a caller should ever pass.
+
+        The unknown-run check runs FIRST and the ownership check second.
+        That ordering is preserved from `adapters/web_sse/app.py`'s
+        `_get_owned_run`, whose behavior this method now backs, so an
+        evicted or never-created run reports as missing rather than as
+        forbidden.
+
+        Raises:
+            RunNotFoundError: `run_id` was never created by this registry,
+                or has since been evicted. A surface maps this to its own
+                not-found shape (REST: `404`).
+            RunNotOwnedError: the run exists and belongs to someone else.
+                A surface maps this to its own forbidden shape (REST:
+                `403`).
+        """
+        entry = self.get_run(run_id)
+        if entry.owner_id != owner_id:
+            raise RunNotOwnedError(run_id)
+        return entry
 
     def cancel_run(self, run_id: str) -> None:
         """Cancel `run_id`'s background task.

@@ -101,8 +101,15 @@ class TestQueryExtraForbid:
 
 
 class TestRequestContextSurface:
-    @pytest.mark.parametrize("surface", ["web_ui", "rest_sse", "mcp", "cli"])
+    @pytest.mark.parametrize(
+        "surface", ["web_ui", "rest_sse", "mcp", "cli", "graphql"]
+    )
     def test_valid_surfaces_accepted(self, surface: str) -> None:
+        # "graphql" added at T-4.3-05 (build phase 4.3): additive within
+        # v1 per system-design-patterns.md pattern 10. This is an EXISTING
+        # test whose old parametrize list ["web_ui", "rest_sse", "mcp",
+        # "cli"] asserted the closed set BEFORE this phase; updated here
+        # rather than left to assert a set the contract no longer matches.
         context = RequestContext(surface=surface)
         assert context.surface == surface
 

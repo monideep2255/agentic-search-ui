@@ -34,6 +34,32 @@ mcp>=2.0
 # of a resolvable dependency conflict.
 mcp-types>=2.0
 httpx2>=2.0
+# T-4.3-06, build phase 4.3: `strawberry-graphql`, the library the GraphQL
+# surface (build phase 4.3, Technical_specification.md Section 13) is
+# built on. Pinned to the EXACT version, not a floor, per
+# `.claude/rules/supply-chain-security.md`'s pre-install checks, all run
+# before this pin was added: no active compromise report (the only search
+# hits were OSV false-positive malware reports for many packages including
+# this one, withdrawn May 2026), MIT licensed, and the wheel carries no
+# `.data/scripts`, no compiled extension and no `.pth`, so it has no
+# install-time execution surface. The published docs available at review
+# time were a 0.282 mirror, forty-odd releases behind 0.324.0, so every
+# API this phase depends on (`DisableIntrospection`, `QueryDepthLimiter`,
+# `MaxAliasesLimiter`, `MaxTokensLimiter`, `MaskErrors`,
+# `AddValidationRules`, `SchemaExtension`) was confirmed against the
+# installed version directly rather than trusted from stale documentation,
+# which is also why this is an exact pin rather than a floor: a future
+# minor version has not been probed the same way. `cross-web>=0.6.0`
+# arrives as a REQUIRED (non-extra) transitive dependency, not declared
+# here directly: it is young (published first in 2026, six releases) and
+# single-maintainer (the same maintainer as strawberry-graphql itself),
+# depending only on `typing-extensions`, and its wheel is likewise free of
+# any install-time execution surface. Named here rather than absorbed
+# silently, per the same supply-chain rule's instruction to name a
+# widening rather than let it pass unremarked, even though it is not
+# itself pinned in this file (no direct import in this codebase requires
+# a specific version).
+strawberry-graphql==0.324.0
 
 # Config
 python-dotenv>=1.0

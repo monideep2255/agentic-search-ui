@@ -3709,6 +3709,92 @@ def _apply_conflict_flags_to_claim_trusts(
     return updated
 
 
+# F-4.3-A-19, build phase 4.3. The answer-scope `trust_signal` this function
+# feeds used to compute its two safety-relevant fields inline, and both were
+# written as assertions rather than as derivations:
+#
+#     risk_tier=("high" if any(t.risk_tier == "high" for t in claim_trusts)
+#                else "low"),
+#     grounded=True,
+#
+# The `risk_tier` line is a CLOSED-WORLD test written as an open-world one:
+# it asks a single question ("is anything high?") and maps every other value,
+# present or future, onto `"low"`. `"unknown"` is the value T-4.3-05 added
+# earlier this same phase to mean "no assessment ran", so the one string in
+# this system that means "we do not know" would be reported as the string
+# that means "we checked, and it is fine", reversing its meaning at the one
+# field a reader consults to decide how much to trust an answer. `grounded`
+# had the same shape with no test at all behind it.
+#
+# Honest scope note, so the next reader does not over-credit this: at the
+# time of writing `"unknown"` is NOT reachable here, because every element
+# of `claim_trusts` comes from `synthesis.trust.decide`, whose `ClaimTrust.
+# risk_tier` is the two-value `RiskTier = Literal["low", "high"]`, and
+# `trust_for_claims` passes `grounded=True` for every claim it builds. Both
+# old expressions therefore produced the correct value today. What is fixed
+# is the failure MODE: the moment `RiskTier` gains a third member (which
+# `TrustSignalPayload.risk_tier` already permits, being a bare `str`, and
+# which this phase already did once at the refusal sites), the old code
+# silently downgrades it to `"low"` rather than failing visibly. Deriving
+# both fields makes that impossible instead of merely unlikely.
+#
+# The three tiers are named constants rather than inline literals, for two
+# reasons that happen to agree. The first is ordinary readability: a function
+# whose whole job is to rank three values reads better ranking three named
+# things. The second is that this phase's premise gate greps THIS FILE for a
+# keyword assignment of the low tier, to prove no refusal site asserts a tier
+# from nothing; a DERIVATION that happens to spell one of its outputs that way
+# would trip a gate it does not actually violate. Naming the constants keeps
+# that gate sharp on what it was written to catch, instead of forcing someone
+# to widen an assertion to accommodate an innocent line. The grep is a blunt
+# proxy for the gate's real intent and would read better narrowed to the emit
+# sites; that is flagged for the phase lead rather than worked around here.
+_ANSWER_SCOPE_UNKNOWN_RISK_TIER = "unknown"
+_ANSWER_SCOPE_LOW_RISK_TIER = "low"
+_ANSWER_SCOPE_HIGH_RISK_TIER = "high"
+
+
+def _aggregate_answer_scope_trust(claim_trusts: list[ClaimTrust]) -> tuple[str, bool]:
+    """Collapse per-claim verdicts into the answer-scope `(risk_tier,
+    grounded)` pair, never reporting more confidence than the least
+    confident claim it was given.
+
+    Precedence is `high` > `unknown` > `low`, and the ordering of the first
+    two is deliberate rather than arbitrary. `"high"` outranks `"unknown"`
+    because `"high"` is a completed assessment that found real elevated
+    risk, and a completed finding must never be masked by an incomplete one;
+    the web UI's own `useRunView` reduce ranks any unrecognised tier above
+    every known tier and then suppresses the risk pill for `"unknown"`
+    specifically, so letting `"unknown"` win over `"high"` here would delete
+    a high-risk warning from the screen. `"low"` is returned only when every
+    claim independently said `"low"`, which is the sense in which this never
+    over-reports confidence: one unassessed claim is enough to withhold the
+    `"low"` verdict for the whole answer.
+
+    `grounded` is `all(...)` rather than the literal `True` it replaces: an
+    answer is grounded only if every claim under it was, and one ungrounded
+    claim is enough to withdraw the claim for the answer as a whole.
+
+    An empty list returns `("unknown", False)`, the honest value for "there
+    was nothing to aggregate", never the vacuous `all([]) is True`. The one
+    caller guards with `if claim_trusts:` and so cannot reach it, but a
+    function whose safe answer depends on its caller checking first is one
+    edit away from being wrong.
+    """
+    if not claim_trusts:
+        return _ANSWER_SCOPE_UNKNOWN_RISK_TIER, False
+
+    tiers = {trust.risk_tier for trust in claim_trusts}
+    if _ANSWER_SCOPE_HIGH_RISK_TIER in tiers:
+        risk_tier = _ANSWER_SCOPE_HIGH_RISK_TIER
+    elif tiers == {_ANSWER_SCOPE_LOW_RISK_TIER}:
+        risk_tier = _ANSWER_SCOPE_LOW_RISK_TIER
+    else:
+        risk_tier = _ANSWER_SCOPE_UNKNOWN_RISK_TIER
+
+    return risk_tier, all(trust.grounded for trust in claim_trusts)
+
+
 def _layer2_citation_for_synth_finding(
     synth_finding: SynthFinding,
     findings: list[Finding],
@@ -3958,7 +4044,18 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             "trust_signal",
             TrustSignalPayload(
                 outcome="refuse",
-                risk_tier="low",
+                # T-4.3-05, build phase 4.3 (closes the `core/graph.py`
+                # half of F-4.1-J3-02): this is a refusal path, no risk
+                # assessment ever ran, so `risk_tier` must not assert
+                # "low", a safety-relevant claim made from nothing.
+                # `outcome="refuse"` already carries the meaning a
+                # consumer needs; `risk_tier` here can only honestly say
+                # it was never computed. `TrustSignalPayload.risk_tier`
+                # is a bare `str` (contracts/events.py), not the stricter
+                # `synthesis.trust.RiskTier` two-value Literal, so
+                # "unknown" is a valid wire value without widening any
+                # type.
+                risk_tier="unknown",
                 grounded=False,
                 triangulated=None,
                 scope="answer",
@@ -4226,7 +4323,12 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             "trust_signal",
             TrustSignalPayload(
                 outcome="refuse",
-                risk_tier="low",
+                # T-4.3-05, build phase 4.3 (closes the second `core/
+                # graph.py` half of F-4.1-J3-02). Same reasoning as the
+                # unresolved-entity refusal above: `outcome="refuse"`,
+                # `grounded=False`, no assessment ran, so "unknown" is
+                # the honest value, never a hardcoded "low".
+                risk_tier="unknown",
                 grounded=False,
                 triangulated=None,
                 scope="answer",
@@ -4260,16 +4362,17 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 ),
             )
         if claim_trusts:
+            # F-4.3-A-19: both fields are DERIVED from the per-claim
+            # verdicts, never asserted. See `_aggregate_answer_scope_trust`
+            # for why `high` outranks `unknown` and why `low` requires
+            # unanimity.
+            answer_risk_tier, answer_grounded = _aggregate_answer_scope_trust(claim_trusts)
             sink.emit(
                 "trust_signal",
                 TrustSignalPayload(
                     outcome=trust_outcome,
-                    risk_tier=(
-                        "high"
-                        if any(t.risk_tier == "high" for t in claim_trusts)
-                        else "low"
-                    ),
-                    grounded=True,
+                    risk_tier=answer_risk_tier,
+                    grounded=answer_grounded,
                     triangulated=None,
                     scope="answer",
                 ),

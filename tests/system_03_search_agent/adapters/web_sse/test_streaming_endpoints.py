@@ -741,9 +741,13 @@ class TestConcurrentRunCap:
     run creation from one caller, with nothing bounding it) and asserts
     creation is now bounded. F-4.0-A-10's own repro measured 9,615 runs
     accepted from one account with zero rejections; this test's cap is
-    `RunRegistry.DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER` (5), several orders of
-    magnitude tighter, and the assertion is exact: the cap fires at
-    exactly that boundary, not merely "eventually rejects something".
+    `RunRegistry.DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER` (12 as of T-4.3-05,
+    build phase 4.3, deliberately no longer equal to `data.guest_sessions.
+    FREE_RUN_ALLOWANCE`; see that constant's own comment), several orders
+    of magnitude tighter than 9,615, and the assertion is exact: the cap
+    fires at exactly that boundary, not merely "eventually rejects
+    something". The value is read dynamically below, not hardcoded, so
+    this test tracks the real constant rather than a number restated here.
     """
 
     @pytest.mark.asyncio

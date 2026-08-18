@@ -28,6 +28,7 @@ from system_03_search_agent.core.run_registry import (
     ConcurrentRunCapExceededError,
     RunEntry,
     RunNotFoundError,
+    RunNotOwnedError,
     default_registry,
 )
 from system_03_search_agent.data.guest_sessions import (
@@ -177,6 +178,42 @@ app.add_middleware(
 
 app.include_router(auth_router)
 
+# T-4.3-07, build phase 4.3: the GraphQL surface, mounted in THIS process
+# per Section 24's topology ("a router mounted in the same FastAPI process"),
+# so it shares this app's auth, its middleware and its one agent core rather
+# than standing up a second service with a second copy of any of them.
+#
+# The import is local to this statement rather than at module top, and that
+# is load-bearing rather than stylistic: `adapters/graphql/schema.py` imports
+# `core.run_registry`, and this module is what the GraphQL package's own
+# ownership rule was promoted out of. Keeping the import here documents the
+# one-directional dependency (app.py -> graphql, never the reverse) at the
+# exact line that creates it, and keeps a future top-level import from
+# quietly reintroducing the cycle.
+#
+# Its path and every hardened setting come from the GraphQL package itself
+# (`router.GRAPHQL_PATH`, `security.ROUTER_SETTINGS`), so no bound can be
+# relaxed here at the mount while that package still claims to enforce it.
+from system_03_search_agent.adapters.graphql.router import (
+    GRAPHQL_PATH,
+    RequestTimeoutMiddleware,
+    graphql_router,
+)
+
+app.include_router(graphql_router, prefix=GRAPHQL_PATH)
+
+# The per-request wall-clock bound, which cannot live in a schema extension
+# (read `RequestTimeoutMiddleware`'s own note for the measured reason). It is
+# added as app-level ASGI middleware and gates itself on the GraphQL path, so
+# it is a no-op for every other route.
+#
+# Mounting the wrapped router instead was tried and rejected: `app.mount`
+# gives the sub-app its own path space, so a bare `POST /graphql` 307-
+# redirects to `/graphql/`, which is the identical trailing-slash trap this
+# file already documents for the MCP mount above. A redirect on every call is
+# a worse public surface than a middleware that costs one path comparison.
+app.add_middleware(RequestTimeoutMiddleware)
+
 
 class HealthResponse(BaseModel):
     status: str
@@ -258,6 +295,22 @@ _CONCURRENT_RUN_CAP_MESSAGE = (
     "wait for an existing run to finish, or stop one via "
     "POST /v1/query/{run_id}/stop, then retry"
 )
+
+# T-4.3-05, build phase 4.3: keyed by `ConcurrentRunCapExceededError.bound`
+# rather than a single hardcoded message, so the catch site below branches
+# on the STRUCTURAL attribute the exception now carries (never on parsing
+# its `str(exc)`, which F-4.10-J-04 already forbids for this exact
+# exception) instead of assuming its type can only ever mean one thing.
+# `ConcurrentRunCapExceededError` represents exactly one bound today (the
+# concurrency cap; the guest allowance is a wholly separate mechanism in
+# `data.guest_sessions` that never raises this class), so this table has
+# one entry, and `.get(...)` falls back to the same concurrency message
+# for any `bound` value this table does not yet name, which keeps this
+# catch site correct rather than silently blank if a future bound is
+# added here before this table is updated for it.
+_CONCURRENT_RUN_CAP_MESSAGES_BY_BOUND: dict[str, str] = {
+    "concurrency": _CONCURRENT_RUN_CAP_MESSAGE,
+}
 
 
 class CreateRunResponse(BaseModel):
@@ -858,11 +911,30 @@ async def post_v1_query(
         # message. Nothing derived from the exception reaches the caller
         # now except its `retry_after_s`, which is a number the caller
         # needs and which discloses nothing.
+        #
+        # T-4.3-05: the message is now looked up by `exc.bound`, the
+        # structural attribute the exception carries (never re-derived
+        # from `str(exc)`, for the same F-4.10-J-04 reason above), so this
+        # site actually branches on which bound was hit rather than
+        # assuming every `ConcurrentRunCapExceededError` means the same
+        # thing forever. The `reason` string on the wire is left
+        # unchanged: `concurrent_run_cap_exceeded` is already asserted by
+        # the frontend and the CLI client (frontend/src/lib/api.ts,
+        # tests/.../adapters/cli/test_client.py), and it was already
+        # unambiguous, since the guest-allowance refusal is a completely
+        # separate code path with its own `guest_allowance_exhausted`
+        # reason (this same function's `SpendState.EXHAUSTED` branch,
+        # above). What was ambiguous was only the NUMBER the two caps
+        # happened to share, which T-4.3-05 fixed at the source (`core/
+        # run_registry.py`'s `DEFAULT_MAX_ACTIVE_RUNS_PER_OWNER`), not by
+        # renaming a reason string every consumer already keys on.
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail={
                 "reason": "concurrent_run_cap_exceeded",
-                "message": _CONCURRENT_RUN_CAP_MESSAGE,
+                "message": _CONCURRENT_RUN_CAP_MESSAGES_BY_BOUND.get(
+                    exc.bound, _CONCURRENT_RUN_CAP_MESSAGE
+                ),
             },
             headers={"Retry-After": str(exc.retry_after_s)},
         ) from None
@@ -882,16 +954,26 @@ def _get_owned_run(run_id: str, caller: Principal) -> RunEntry:
     else, the namespaced `user:<uuid>`/`guest:<uuid>` identity, so a
     guest can never read/stop/export another guest's or any user's run,
     and the reverse.
+
+    T-4.3-07, build phase 4.3: the RULE itself now lives in
+    `RunRegistry.resolve_owned_run`, and this function is the HTTP mapping
+    of its two domain errors. Behavior here is unchanged, deliberately and
+    to the letter: the same unknown-before-ownership ordering, the same two
+    status codes, the same two detail strings. What changed is only that a
+    second delivery surface (GraphQL) can now enforce the identical rule
+    without either copying this check or importing this module, which it
+    cannot do, since `app.py` imports the GraphQL router in order to mount
+    it and the reverse import would be circular. An authorization rule that
+    exists in two places is one that will eventually differ in one of them.
     """
     try:
-        entry = default_registry.get_run(run_id)
+        return default_registry.resolve_owned_run(run_id, caller.owner_id)
     except RunNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no such run") from None
-    if entry.owner_id != caller.owner_id:
+    except RunNotOwnedError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="you do not own this run"
-        )
-    return entry
+        ) from None
 
 
 @app.get("/v1/query/{run_id}/events")

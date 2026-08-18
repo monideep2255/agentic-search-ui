@@ -148,6 +148,20 @@ _RUN_CAP_MESSAGE = (
     "surface, then retry this call"
 )
 
+# T-4.3-05, build phase 4.3: mirrors `adapters/web_sse/app.py`'s own
+# `_CONCURRENT_RUN_CAP_MESSAGES_BY_BOUND` table. `ConcurrentRunCapExceededError`
+# now carries a structural `bound` attribute rather than only a message
+# string; this surface's catch site below branches on it the same way, so
+# a message is looked up by WHICH bound was hit instead of assuming this
+# exception type can only ever mean one thing. Only one bound exists today
+# (the concurrency cap this registry enforces; a guest's allowance never
+# reaches this exception), so this table has one entry, and `.get(...)`
+# falls back to the same message for any `bound` this table does not yet
+# name.
+_RUN_CAP_MESSAGES_BY_BOUND: dict[str, str] = {
+    "concurrency": _RUN_CAP_MESSAGE,
+}
+
 # F-4.1-A-06 (adversary round 1, fix round 2): a wall-clock bound on the
 # fold loop itself, on top of, never instead of, every per-step timeout
 # the harness already enforces (`harness/harness.py`'s `_TIER_STEP_
@@ -619,7 +633,24 @@ async def _fold_run_to_response(run_id: str) -> AskBiomedicalQuestionOutput:
             resolved_outcome = terminal_trust_outcome or "refuse"
             answer_trust_signal = TrustSignalPayload(
                 outcome=resolved_outcome,
-                risk_tier="low",
+                # T-4.3-05, build phase 4.3: closes F-4.1-J3-02, the
+                # residual F-4.1-A-03 fix round 2 left carried open. This
+                # is the fully-silent fallback branch: no `trust_signal`
+                # event of any scope arrived, so no risk assessment ran,
+                # and "low" was a fixed, unearned assertion in exactly
+                # the same shape the refusal sites in `core/graph.py`
+                # had. F-4.1-J3-02 carried this open because `synthesis.
+                # trust.RiskTier` (the internal `ClaimTrust` dataclass's
+                # type) is a strict two-value `Literal["low", "high"]`
+                # with no "unknown" member, and asserting "high" would
+                # have been its own unearned assertion in the opposite
+                # direction. That blocker does not apply here:
+                # `TrustSignalPayload.risk_tier` (contracts/events.py) is
+                # a bare `str`, not `RiskTier`, so "unknown" is a valid
+                # wire value without widening any type, the same fix
+                # made in `core/graph.py`'s two refusal sites this same
+                # phase.
+                risk_tier="unknown",
                 # F-4.1-A-03: `grounded` must reflect whether a citation
                 # actually exists, never be asserted from the outcome
                 # alone. Zero citations means nothing here was verified,
@@ -733,6 +764,13 @@ async def ask_biomedical_question(
     # handler, never allowed to escape as a bare RuntimeError.
     try:
         default_registry.create_run(query_obj, context, run_id=run_id)
-    except ConcurrentRunCapExceededError:
-        raise MCPError(code=INVALID_REQUEST, message=_RUN_CAP_MESSAGE) from None
+    except ConcurrentRunCapExceededError as exc:
+        # T-4.3-05: branch on the structural `bound` attribute rather than
+        # a static message, same reasoning as the REST/SSE catch site.
+        # Nothing derived from `str(exc)` reaches the caller, matching
+        # F-4.10-J-04's fix on the other surface.
+        raise MCPError(
+            code=INVALID_REQUEST,
+            message=_RUN_CAP_MESSAGES_BY_BOUND.get(exc.bound, _RUN_CAP_MESSAGE),
+        ) from None
     return await _fold_run_to_response(run_id)

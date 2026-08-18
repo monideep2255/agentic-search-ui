@@ -1719,6 +1719,14 @@ class TestUncitedAnswerGrounding:
         content = result.structured_content
         assert content["citations"] == []
         assert content["trust_signal"]["grounded"] is False
+        # T-4.3-05, build phase 4.3 (closes F-4.1-J3-02): this run hits
+        # `_fold_run_to_response`'s fully-silent fallback branch (zero
+        # `trust_signal` events of any scope, and no fatal error to floor
+        # it to "high"), so no risk assessment ever ran. "low" was the
+        # other unearned assertion that same branch used to make; this
+        # asserts the honest replacement. Mutation that turns this red:
+        # restore the hardcoded `risk_tier="low"` in that branch.
+        assert content["trust_signal"]["risk_tier"] == "unknown"
 
 
 class TestAnswerAndCitationTruncationDisclosure:
