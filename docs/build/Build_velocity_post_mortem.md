@@ -13,6 +13,7 @@ Answers one question: why has the build slowed down, is that slowdown real work 
 - [Is auto mode the cause](#is-auto-mode-the-cause)
 - [The algorithm, applied honestly](#the-algorithm-applied-honestly)
 - [What to change](#what-to-change)
+- [Resolved, 2026-08-18: recommendation 1 is built](#resolved-2026-08-18-recommendation-1-is-built)
 - [Correction, 2026-08-04: the pre-flight check covers one transport, not two](#correction-2026-08-04-the-pre-flight-check-covers-one-transport-not-two)
 - [What could not be measured](#what-could-not-be-measured)
 
@@ -189,6 +190,21 @@ Prioritized, in the order this investigation found them, delete first:
 | 4 | Keep the judge, adversary, and premise gate exactly as they are, at `depth`/`high effort` | Twice measured this week alone to catch a defect that would otherwise have shipped as a confident, fully cited, wrong or dangerous answer: 25 non-human orthologs for a disease question (2.1), and an uncited invented drug-discontinuation instruction (2.2). This is the highest-value spend in the entire cadence and should not be the target of any future cost-cutting pass |
 | 5 | Leave the 2026-08-02 reasoning-effort tiering as is | Already measured and already correct; nothing in 2026-08-03's slowdown traces back to it |
 | 6 | Do not shrink `.claude/rules/` further as a velocity fix | It is a real per-call token cost (134,463 bytes, confirmed unchanged by the prior consolidation attempt), but it is a dollar-cost lever, not a wall-clock lever. The 2026-08-03 slowdown was network and genuine review findings, not context size |
+
+## Resolved, 2026-08-18: recommendation 1 is built
+
+`tracker/preflight.py` now implements recommendation 1 with one probe per transport, which is what the 2026-08-04 correction below said a correct version needed. The probe the correction called out as written down nowhere, the one covering agent dispatch against the harness's own provider, is `--transport harness-model` and is the reason this exists at all: it gates the more expensive of the two failure modes, at 15 to 25 minutes per dead dispatch.
+
+Three transports are probed, not two: the correction's table named the two model providers, and the graph is the third, since a tool-phase premise gate dies against it the same way.
+
+Two design choices worth stating, because both look like defects to a later reader and neither is:
+
+- A probe passes on ANY HTTP status, never on 200 specifically. The harness provider answers `404` to a bare `HEAD /`, which is a live server, and that is the entire question being asked. Comparing against 200 would have made the probe fail permanently on the most important transport, and a guard that cries wolf gets ignored and then protects nothing.
+- A `down` result cannot distinguish a sandbox denial from a real outage, and the script says so in its own output rather than guessing. An unconfigured transport reports `skipped` rather than `ok`, because nothing was verified and a verified pass is a different claim.
+
+It was mutation-tested rather than trusted for being green, per this repository's eleven recorded assertions-that-cannot-fail. Four arms were driven red or green deliberately: a nonexistent hostname (DNS failure, exit 1), a closed local port (connection refused, exit 1), a blackholed address (bounded at 3.09s against a 3s timeout, which is the 600-second stall from the original incident), and a known-open port (`ok`, proving the passing arm can actually fire). Its own coverage statement, in the module docstring, names what it does not check: correctness of a response, anything after the sample instant, sandbox-versus-outage, quota, and the Layer 2 and Layer 3 APIs.
+
+Not yet resolved from the list above: recommendation 3, folding the mutation-testing pass into the judge's checklist, which was done as part of the 2026-08-18 review-budget change in `bossman-mode` and is recorded there rather than here.
 
 ## Correction, 2026-08-04: the pre-flight check covers one transport, not two
 

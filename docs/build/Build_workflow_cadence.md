@@ -16,6 +16,7 @@ Last updated: 2026-08-18.
 - [Provider mapping](#provider-mapping)
 - [Where everything is written](#where-everything-is-written)
 - [The two verification halves](#the-two-verification-halves)
+- [Stage 4's transport preflight](#stage-4s-transport-preflight)
 - [Stages 8 and 9 have a budget: two rounds](#stages-8-and-9-have-a-budget-two-rounds)
 - [Known weak points](#known-weak-points)
 
@@ -30,7 +31,7 @@ It runs like a normal engineering team. Tickets get read, picked up, worked, and
 | 1 | Open the phase: read section 25, verify dependencies merged | Lead | balance | medium |
 | 2 | Read `LEARNINGS.md` filtered to this phase | Lead | balance | low |
 | 3 | Decompose into tickets with acceptance criteria and file scopes | Lead | depth | high |
-| 4 | Cut the branch, dispatch researchers | Lead, researchers | balance lead, speed research | low |
+| 4 | Transport preflight (`python3 tracker/preflight.py`), cut the branch, dispatch researchers | Lead, researchers | balance lead, speed research | low |
 | 5 | Write the premise gate and WATCH IT FAIL. Blocks stage 6 | Lead | depth | high |
 | 6 | Builders work tickets in parallel | Builders | balance | medium |
 | 7 | Record what broke, at the moment it breaks | Whoever hit it | inherits its own | n/a |
@@ -188,6 +189,20 @@ The split that matters, and the reason both halves exist:
 - The product owner verifies the product. Is this the right thing to have built, does it meet the user need, and on interface phases, does it actually feel right. No agent can answer that last one.
 
 One nuance worth keeping straight: the adversary sits on the boundary. It hunts the confident wrong answer, which is an engineering failure in mechanism and a product failure in consequence. It belongs to the agent half because finding it is mechanical, but what it protects is the trust moat, which is a product concern.
+
+## Stage 4's transport preflight
+
+Added 2026-08-18, closing the priority-1 recommendation in `Build_velocity_post_mortem.md`. `python3 tracker/preflight.py` probes one endpoint per transport before anything expensive is dispatched, and exits 1 when a transport is down.
+
+There is one probe per transport rather than one probe, because the first attempt at this check probed the product's model provider while the thing dying was agent dispatch against a different endpoint, so a green result predicted nothing:
+
+| Transport | Gates | Dead-dispatch cost |
+|-----------|-------|--------------------|
+| `product-model` | Premise-gate runs, anything calling `harness.call_tier` | 6 to 10 minutes |
+| `harness-model` | Every agent dispatch | 15 to 25 minutes |
+| `graph` | Tool-phase premise gates, live graph tests | The run, plus the misdiagnosis |
+
+Re-probe `harness-model` immediately before a review-agent dispatch at stages 8 and 9, since phase open may have been an hour earlier. A `down` result on a host that is not on the sandbox allowlist may be a denial rather than an outage; the two are indistinguishable at that layer and the script says so instead of guessing. A `skipped` result means the transport was not configured, so nothing was verified, which is not the same as a pass.
 
 ## Stages 8 and 9 have a budget: two rounds
 

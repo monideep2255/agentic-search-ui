@@ -241,6 +241,28 @@ The adversary is the unscripted half. It uses the running system in hostile ways
 
 Run the adversary after the judge, only on a phase that produced a runnable artifact. A green judge verdict is necessary but not sufficient; the adversary is what decides whether the answer path is actually trustworthy. Source: the Personal Space autonomous build harness, analyzed in the personal-os Reference-repos set, which pairs a scripted qa role with a separate unscripted adversary.
 
+### Do not dispatch into a dead transport
+
+`python3 tracker/preflight.py` probes one endpoint per transport before anything expensive is spent. Run it at Step 1, and again with `--transport harness-model` immediately before any agent dispatch later in the phase, because a transport that answered at phase open can be dead an hour in.
+
+Three transports, and the reason there is more than one probe is that a green result on one predicts nothing about the others:
+
+| Transport | What it gates | Cost of dispatching into it dead |
+|-----------|---------------|----------------------------------|
+| `product-model` | Premise-gate runs, and any test calling `harness.call_tier` | 6 to 10 minutes per run |
+| `harness-model` | Every agent dispatch: judge, adversary, builder, researcher, fix agent | 15 to 25 minutes per dispatch |
+| `graph` | Tool-phase premise gates, and any live graph test | The run, plus the misdiagnosis |
+
+On 2026-08-03 an estimated 1 to 1.5 hours went to dispatches that died against a dead connection, and the outage was twice read as a defect in the work, which cost debugging on top of the dead dispatch. A `curl` check was added at build phase 3.0 and did not help, because it probed the product's model provider while the thing dying was agent dispatch against a different endpoint. That is why this is one probe per transport rather than one probe.
+
+When a probe reports `down`:
+
+- Check the sandbox allowlist first. A denial and a real outage are indistinguishable at this layer, and the script says so rather than guessing.
+- If it is a real outage, wait and re-probe. Do not read a dead dispatch as a defect in the work.
+- If the task is small, do it inline. A two-file read plus a grep was measured as costing less inline than either of the two dead dispatches that preceded it. "Each dispatched agent should carry a task worth its overhead" includes the failure rate, not only the setup cost.
+
+A `skipped` result is not a pass. It means the transport was not configured, so nothing was verified, and the script keeps the two apart deliberately.
+
 ### The review loop has a budget
 
 This section exists because the review loop, not the build, is where phases actually lose their day. Build phase 2.1 took five rounds and build phase 4.2 took six, and in both, every round found its worst defect inside the previous round's fix. That is not a scrutiny problem. Five rounds of increasing scrutiny did not lower the recurrence rate.
@@ -454,11 +476,12 @@ The ledger is a real file, not an abstraction: `tracker/phase_N.M.md`, the same 
 
 1. Run `best-practices` session checklist (venv, API keys configured, dev server runs, CLAUDE.md, git status)
 2. Agent teams preflight: run the tmux check from "Agent teams setup". If tmux is missing or the session is not inside tmux, print the setup steps and let the user fix it before any builder dispatch.
-3. Read the phase definition from `requirements/Technical_specification.md` Section 25. That section is the single source of truth for the 26 numbered build phases: what each delivers, what it depends on, and its branch name. Never invent a phase or reorder the sequence.
-4. Verify every dependency phase in Section 25's dependency graph is already merged. If one is not, stop and report. Do not build on an unmerged dependency.
-5. Read `LEARNINGS.md` filtered to this phase, its tools, and its layers (`learnings --brief N.M`). Past dead ends are cheaper to read than to rediscover.
-6. Open the phase board with `task-tracker --open N.M`. Decompose the phase into tickets with acceptance criteria traced to spec sections before dispatching anyone.
-7. Create the phase branch, using the exact branch name from Section 25's table: `git checkout develop && git pull origin develop && git checkout -b phase/N.M-description`
+3. Transport preflight: `python3 tracker/preflight.py`. It probes one endpoint per transport, because a green probe against one says nothing about the others. Exit 1 means a transport is down, and you do not dispatch what that transport gates. Re-run it with `--transport harness-model` immediately before any agent dispatch later in the phase, since a transport that was alive at phase open can die an hour in. See "Do not dispatch into a dead transport" below for what each transport gates and what to do when one is down.
+4. Read the phase definition from `requirements/Technical_specification.md` Section 25. That section is the single source of truth for the 26 numbered build phases: what each delivers, what it depends on, and its branch name. Never invent a phase or reorder the sequence.
+5. Verify every dependency phase in Section 25's dependency graph is already merged. If one is not, stop and report. Do not build on an unmerged dependency.
+6. Read `LEARNINGS.md` filtered to this phase, its tools, and its layers (`learnings --brief N.M`). Past dead ends are cheaper to read than to rediscover.
+7. Open the phase board with `task-tracker --open N.M`. Decompose the phase into tickets with acceptance criteria traced to spec sections before dispatching anyone.
+8. Create the phase branch, using the exact branch name from Section 25's table: `git checkout develop && git pull origin develop && git checkout -b phase/N.M-description`
 
 ### Step 2: confirm entry and show team
 
