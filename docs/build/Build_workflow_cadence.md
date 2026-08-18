@@ -4,7 +4,7 @@ The loop one build phase runs, who does each step, and which model runs it. This
 
 The loop repeats 26 times, once per build phase in `requirements/Technical_specification.md` section 25.
 
-Last updated: 2026-08-10.
+Last updated: 2026-08-18.
 
 ## Table of contents
 
@@ -16,6 +16,7 @@ Last updated: 2026-08-10.
 - [Provider mapping](#provider-mapping)
 - [Where everything is written](#where-everything-is-written)
 - [The two verification halves](#the-two-verification-halves)
+- [Stages 8 and 9 have a budget: two rounds](#stages-8-and-9-have-a-budget-two-rounds)
 - [Known weak points](#known-weak-points)
 
 ## The one-paragraph version
@@ -187,6 +188,19 @@ The split that matters, and the reason both halves exist:
 - The product owner verifies the product. Is this the right thing to have built, does it meet the user need, and on interface phases, does it actually feel right. No agent can answer that last one.
 
 One nuance worth keeping straight: the adversary sits on the boundary. It hunts the confident wrong answer, which is an engineering failure in mechanism and a product failure in consequence. It belongs to the agent half because finding it is mechanical, but what it protects is the trust moat, which is a product concern.
+
+## Stages 8 and 9 have a budget: two rounds
+
+Added 2026-08-18. The twelve stages above describe one pass, and until this was written down nothing said what happens when stage 8 or 9 fails. In practice the answer was "run it again", which is how build phase 2.1 reached five rounds and build phase 4.2 reached six. In both, every round found its worst defect inside the previous round's fix, and rising scrutiny did not lower the recurrence rate, so the loop was never a scrutiny problem.
+
+The budget is one review round plus one fix-and-reverify round. A blocking finding after round 2 escalates to the product owner with the open findings, a diff summary per fix attempt, any regression links, and options including revert-and-re-decompose. There is no round 3.
+
+Two rules govern how fixes are dispatched inside that budget, both measured on build phase 4.2:
+
+- Group findings by file, and give every finding in one file to a single fix agent working serially. Parallel fix agents are individually correct and structurally blind to the sibling editing the same function, so two correct fixes compose into a defect no reviewer of either one sees. Round 5 of that phase, run deliberately as one agent holding every finding, found a sixth defect four parallel rounds had walked past.
+- Fix by category, never by enumerating instances. A defense that lists cases (two control-character ranges rather than the Unicode category, three exception types rather than the base class, five write sites rather than every write site) has failed here every time it was tried.
+
+A finding located inside an earlier fix stops the phase mid-round, without finishing the round, because it says the fix approach is wrong rather than incomplete. `bossman-mode` holds the full statement of all four rules, and `task-tracker` holds the two ledger fields, `Round` and `Regression of`, that make them checkable rather than remembered.
 
 ## Known weak points
 

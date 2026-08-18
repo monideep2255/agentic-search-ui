@@ -119,6 +119,7 @@ Findings sit beside tickets rather than in their own file on purpose: a confirme
 Status: confirmed
 Raised by: adversary
 Severity: high
+Round: 1
 Ticket: T-2.1-07 (fix)
 
 What happened: query for a gene symbol that does not exist returned a
@@ -138,6 +139,16 @@ History:
 | `closed` | Fixed and verified, reason required | The designated closer, never the raiser |
 
 The adversary over-reports on purpose, because a false alarm is cheap and a missed wrong answer is not. A high `rejected` rate is a healthy adversary, not a broken one.
+
+### Two fields the review budget needs
+
+`bossman-mode`'s review budget caps a phase at two rounds and stops it the moment a fix regresses. Neither is enforceable unless the ledger records them, so two fields are mandatory on every finding.
+
+`Round: N` names the review round that raised it. Round 1 is the judge and adversary pass, round 2 is the fix-and-reverify pass, and there is no round 3: a blocking finding in round 2 escalates to the product owner instead. Without this field the round count has to be reconstructed by counting report files afterwards, which is how build phase 4.2 reached six rounds before anyone noticed the shape.
+
+`Regression of: F-N.M-XX` is required whenever the finding sits inside code written to fix an earlier finding in the same phase. It is the single highest-value field in this file. Across build phases 2.1 and 4.2, eleven review rounds between them, every round's worst defect was a regression in the previous round's fix, and nothing in the ledger said so, so each round read as fresh scrutiny finding fresh problems rather than as one unresolved fix approach failing repeatedly. A finding carrying this field is a stop condition, not a queue item: the phase escalates on the spot without finishing the round.
+
+Both fields are set by whoever files the finding. Neither is a judgment state, so neither needs a reason line, and the `Regression of` link is a factual claim about where the code came from that the judge verifies like any other.
 
 Every confirmed finding that cost real time to diagnose also earns a `LEARNINGS.md` entry, so the next phase does not rediscover it.
 

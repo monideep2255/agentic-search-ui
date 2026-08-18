@@ -22,11 +22,20 @@
  */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { writeFileSync, readdirSync } from "node:fs";
+import { writeFileSync, readdirSync, mkdirSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const DS = "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/docs/build/design/design-system";
-const OUT = "/private/tmp/claude-501/-Users-anuradhachakraborti-Desktop-Tech-Skills-agentic-search-ui/5071737f-3fc1-4077-8bbc-f22e1383fa74/scratchpad/ds-audit.json";
+// Both paths are derived from this file's own location, never hardcoded.
+// They were absolute machine-specific paths until 2026-08-18, which pinned the
+// gate to one laptop and one dead session directory: the output path named a
+// scratchpad belonging to a session that no longer exists. That is a gate that
+// cannot run anywhere else, which matters because this repository is scheduled
+// to move to an NCBI Linux machine (Plan.md Phase 8).
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const REPO = path.resolve(HERE, "..", "..");
+const DS = path.join(REPO, "docs", "build", "design", "design-system");
+const OUT = path.join(REPO, "frontend", "test-results", "ds-audit.json");
 
 function cards(): string[] {
   const out: string[] = [];
@@ -57,6 +66,7 @@ test("audit the design system itself", async ({ page }) => {
       })),
     }));
   }
+  mkdirSync(path.dirname(OUT), { recursive: true });
   writeFileSync(OUT, JSON.stringify(results, null, 1));
 
   /*
