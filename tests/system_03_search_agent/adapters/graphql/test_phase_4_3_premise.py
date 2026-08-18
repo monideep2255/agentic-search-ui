@@ -1530,6 +1530,7 @@ query Citations($runId: ID!) {
     exportTruncated
     runCancelled
     citations { citationId sourceUrl }
+    disclosures { answerTruncated citationsOmitted runFailed notes }
   }
 }
 """
@@ -1588,17 +1589,33 @@ class TestCallerInputIsNeverAnInternalError:
         )
 
     @pytest.mark.parametrize(
-        ("label", "document"),
+        ("label", "document", "own_token"),
         [
-            ("unknown argument", 'mutation { ask(inpt: {text: "hi", sessionId: "s"}) { runId } }'),
-            ("unknown type", "mutation A($i: AskInpt!) { ask(input: $i) { runId } }"),
-            ("unknown output field", 'mutation { ask(input: {text: "x", sessionId: "s"}) { nope } }'),
-            ("unknown input field", 'mutation { ask(input: {tex: "x", sessionId: "s"}) { runId } }'),
+            (
+                "unknown argument",
+                'mutation { ask(inpt: {text: "hi", sessionId: "s"}) { runId } }',
+                "'inpt'",
+            ),
+            (
+                "unknown type",
+                "mutation A($i: AskInpt!) { ask(input: $i) { runId } }",
+                "'AskInpt'",
+            ),
+            (
+                "unknown output field",
+                'mutation { ask(input: {text: "x", sessionId: "s"}) { nope } }',
+                "'nope'",
+            ),
+            (
+                "unknown input field",
+                'mutation { ask(input: {tex: "x", sessionId: "s"}) { runId } }',
+                "'tex'",
+            ),
         ],
     )
     @pytest.mark.asyncio
     async def test_a_rejected_token_never_names_its_real_neighbours(
-        self, label: str, document: str
+        self, label: str, document: str, own_token: str
     ) -> None:
         # F-R5-04. Disclosing validation errors reopened schema enumeration:
         # graphql-core appends "Did you mean 'x' or 'y'?", which names real
@@ -1607,9 +1624,21 @@ class TestCallerInputIsNeverAnInternalError:
         # own `disable_field_suggestions` covers only messages beginning
         # "Cannot query field", so arguments and types were still enumerable.
         #
-        # Both arms matter: the suggestion is gone AND the caller is still
-        # told which of their own tokens was rejected, since stripping the
-        # whole message would trade one defect for a useless error.
+        # THE THIRD ASSERTION IS WHAT MAKES THIS ARM ABLE TO FAIL, and it was
+        # missing. Review round 6 (F8) proved this arm VACUOUS: making
+        # `_strip_schema_suggestions` the identity left the whole suite green,
+        # because an unstripped message then matches no authored shape and
+        # default-deny replaces it with the generic literal, which satisfies
+        # both "no Did you mean" AND "non-empty". Four cases, none of which
+        # could fail. Asserting that the caller's OWN rejected token survives
+        # is what the arm was always claiming and never checked: the generic
+        # literal names nothing.
+        #
+        # Asserted over ALL messages, not `errors[0]`: a malformed input object
+        # produces both "not defined by type" and "of required type ... was not
+        # provided", in an order that is the library's business, not this
+        # arm's. Quoted on both sides so a token cannot pass by being a
+        # substring of an unrelated name ("tex" inside "AskInput.text").
         #
         # Mutation that turns this red: remove either
         # `_strip_schema_suggestions` call from `security._should_mask_error`.
@@ -1621,11 +1650,14 @@ class TestCallerInputIsNeverAnInternalError:
 
         errors = response.json().get("errors") or []
         assert errors, f"{label} must be rejected"
-        message = errors[0].get("message") or ""
-        assert "Did you mean" not in message, (
-            f"{label} enumerated the schema: {message}"
+        messages = [error.get("message") or "" for error in errors]
+        joined = " ".join(messages)
+        assert "Did you mean" not in joined, f"{label} enumerated the schema: {joined}"
+        assert messages[0].strip(), f"{label} was stripped to nothing, which is not actionable"
+        assert own_token in joined, (
+            f"{label} no longer names the caller's own rejected token {own_token}, "
+            f"so the error is not actionable: {joined}"
         )
-        assert message.strip(), f"{label} was stripped to nothing, which is not actionable"
 
     @pytest.mark.asyncio
     async def test_a_resolver_raising_a_graphql_error_still_masks(
@@ -1860,6 +1892,50 @@ class TestDisclosuresSurvive:
         assert export["exportTruncated"] is False
         assert export["runCancelled"] is False
         assert export["citations"]
+        # The healthy arm of the pair below, asserted here so the two live
+        # side by side: a healthy run must not be reported as failed.
+        assert export["disclosures"]["runFailed"] is False
+        assert export["disclosures"]["notes"] == []
+
+    @pytest.mark.asyncio
+    async def test_the_citations_export_of_a_dead_run_says_the_run_died(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Review round 6, F1, MAJOR and blocking, and the reason it blocked:
+        # this is reachable by any caller, over HTTP, on any finished run.
+        # `fold_citations` passed `run_failed=False` as a literal, so a run
+        # that DIED returned a `disclosures` block indistinguishable from a
+        # healthy run's, with empty notes. `entry.finished` is set in the same
+        # `finally` block for a fatal error (`core/run_registry.py`), so
+        # `citations(runId:)` is callable on every failed run.
+        #
+        # Driven over the REAL router rather than against `fold_citations`
+        # directly, because the unit arms in `test_fold.py` prove the fold and
+        # this proves a caller actually receives it.
+        #
+        # Mutation that turns this red: restore `run_failed=False` in
+        # `fold_citations`.
+        from system_03_search_agent.core import run_registry as run_registry_module
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fatal_error_stream)
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            run_id = _payload(await _ask(client, headers))["ask"]["runId"]
+            response = await _post_graphql(
+                client, _CITATIONS_DOCUMENT, headers=headers, variables={"runId": run_id}
+            )
+
+        export = _payload(response)["citations"]
+        assert export["disclosures"]["runFailed"] is True, (
+            "a run that died is indistinguishable from a healthy one on this surface"
+        )
+        notes = export["disclosures"]["notes"]
+        assert "This query failed unexpectedly before finishing." in notes
+        joined = " ".join(notes)
+        # `_fatal_error_stream`'s payload message names a live host and user
+        # (F-4.1-A-09). Disclosing the FACT must never disclose the TEXT.
+        assert "db-internal.example" not in joined
+        assert "kg_reader" not in joined
 
 
 # ---------------------------------------------------------------------------

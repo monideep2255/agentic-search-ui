@@ -349,9 +349,36 @@ class TestErrorMasking:
                 None,
                 False,
             ),
+            # THE TWO CASES THIS ARM USED TO OMIT, and the omission is why its
+            # old name ("...only if its shape was authored") overclaimed: the
+            # marker branch is a SECOND way out, and it never consults the
+            # content rule at all (review round 6, F2). Both cases below are
+            # disclosed, and the second one is disclosed even though its text
+            # is pure internal detail.
+            (
+                "marked exception, its own fixed literal",
+                "marked",
+                "a deliberate, caller-safe message",
+                ["ask"],
+                False,
+            ),
+            (
+                # DELIBERATELY asserts the hazard rather than the wish. A
+                # marked class whose message interpolates internal text leaks
+                # it, and no pattern table stops that; what stops it is the
+                # obligation stated on every marked base, enforced by review.
+                # If a future change routes marked exceptions through the
+                # content rule too, this case goes red and must be updated on
+                # purpose, which is the point: the risk is pinned, not hidden.
+                "marked exception carrying internal text (the standing hazard)",
+                "marked",
+                _INTERNAL_MARKER,
+                ["ask"],
+                False,
+            ),
         ],
     )
-    def test_a_message_reaches_a_caller_only_if_its_shape_was_authored(
+    def test_a_message_reaches_a_caller_only_if_its_shape_was_authored_or_its_class_is_marked(
         self, label: str, raiser: str | None, message: str, path: list[str] | None, must_hide: bool
     ) -> None:
         # THE arm for the redesign, and for the shape of defect that produced
@@ -374,7 +401,9 @@ class TestErrorMasking:
         # Mutation that turns this red: add `.*` to
         # `_DISCLOSABLE_MESSAGE_PATTERNS`, or delete the
         # `_is_disclosable_message` guard from
-        # `_disclose_if_message_is_authored`.
+        # `_disclose_if_message_is_authored`. For the two `marked` cases:
+        # delete the `_is_allowlisted_application_exception` branch, or drop
+        # `__graphql_public__` from `GraphQLSecurityError`.
         from graphql import GraphQLError
 
         original: BaseException | None
@@ -382,6 +411,8 @@ class TestErrorMasking:
             original = GraphQLError(message)
         elif raiser == "runtime":
             original = RuntimeError(message)
+        elif raiser == "marked":
+            original = security.GraphQLSecurityError(message)
         else:
             original = None
 
@@ -540,3 +571,432 @@ class TestBoundsAreNamedConstants:
         # so the attribute name shows up in its name table too.
         middleware_globals = router_module.RequestTimeoutMiddleware.__call__.__code__.co_names
         assert "REQUEST_TIMEOUT_S" in middleware_globals
+
+
+# ---------------------------------------------------------------------------
+# The disclosable-message allowlist, driven against the REAL schema.
+#
+# This class is the durable half of the review-round-6 F3 fix. That finding
+# measured 15 ordinary caller-side mistakes coming back as a codeless generic
+# literal, and three authored patterns that missed the installed library's
+# wording by a single word, so they matched nothing and nobody could notice.
+# The patterns had been written from what their author expected the messages
+# to say.
+#
+# Every string below was CAPTURED from the installed graphql-core and
+# strawberry-graphql by driving the real schema, then pasted here. Nothing in
+# this table is inferred. Pinning the exact text is the point: a library
+# upgrade that rewords a message now fails HERE, loudly, instead of silently
+# blunting that error for every caller.
+#
+# What this class does NOT cover, stated so the gap is arguable
+# (`goal-contracts.md`):
+#   - Anything raised while a resolver runs. Those carry a `path` and are
+#     masked by class, not by message shape; `TestErrorMasking` owns them.
+#   - `{ ...UnknownFragment }` spread inside an operation, which never reaches
+#     the masking callback at all. See the coverage note in `security.py`.
+#   - Whether the REAL ROUTER returns these over HTTP. That is the premise
+#     gate's job; this drives the schema directly so a failure names the
+#     shape rather than the transport.
+# ---------------------------------------------------------------------------
+
+_RUN = 'run(runId: "r") { runId }'
+_ASK_HEAD = 'ask(input: {text: "hi", sessionId: "s"'
+
+# (label, document, variables, the message the installed library ACTUALLY
+# produces and that a caller must therefore receive)
+_CALLER_MISTAKES: tuple[tuple[str, str, dict | None, str], ...] = (
+    (
+        "unused variable",
+        f"query Q($x: String) {{ {_RUN} }}",
+        None,
+        "Variable '$x' is never used in operation 'Q'.",
+    ),
+    (
+        "undefined variable",
+        "query Q { run(runId: $x) { runId } }",
+        None,
+        "Variable '$x' is not defined by operation 'Q'.",
+    ),
+    (
+        "duplicate argument",
+        '{ run(runId: "a", runId: "b") { runId } }',
+        None,
+        "There can be only one argument named 'runId'.",
+    ),
+    (
+        "duplicate variable name",
+        f"query Q($x: String, $x: String) {{ {_RUN} }}",
+        None,
+        "There can be only one variable named '$x'.",
+    ),
+    (
+        "duplicate operation name",
+        f"query Q {{ {_RUN} }} query Q {{ {_RUN} }}",
+        None,
+        "There can be only one operation named 'Q'.",
+    ),
+    (
+        "duplicate fragment name",
+        "{ ...A } fragment A on Query { __typename } fragment A on Query { __typename }",
+        None,
+        "There can be only one fragment named 'A'.",
+    ),
+    (
+        "duplicate input field",
+        'mutation { ask(input: {text: "a", text: "b", sessionId: "s"}) { runId } }',
+        None,
+        "There can be only one input field named 'text'.",
+    ),
+    (
+        "misplaced directive",
+        f"query Q @include(if: true) {{ {_RUN} }}",
+        None,
+        "Directive '@include' may not be used on query.",
+    ),
+    (
+        "repeated directive",
+        '{ run(runId: "r") @skip(if: true) @skip(if: true) { runId } }',
+        None,
+        "The directive '@skip' can only be used once at this location.",
+    ),
+    (
+        "missing required directive argument",
+        '{ run(runId: "r") @skip { runId } }',
+        None,
+        ("Directive '@skip' argument 'if' of type 'Boolean!' is required, "
+        "but it was not provided."),
+    ),
+    (
+        "field conflict",
+        '{ a: run(runId: "x") { runId } a: run(runId: "y") { runId } }',
+        None,
+        ("Fields 'a' conflict because they have differing arguments. Use "
+        "different aliases on the fields to fetch both if this was intentional."),
+    ),
+    (
+        "fragment cycle",
+        "{ ...A } fragment A on Query { ...B } fragment B on Query { ...A }",
+        None,
+        "Cannot spread fragment 'A' within itself via 'B'.",
+    ),
+    (
+        "unused fragment",
+        "{ __typename } fragment A on Query { __typename }",
+        None,
+        "Fragment 'A' is never used.",
+    ),
+    (
+        "unknown fragment named in an unused fragment",
+        "{ __typename } fragment A on Query { ...Nope }",
+        None,
+        "Unknown fragment 'Nope'.",
+    ),
+    (
+        "leaf field given a selection set",
+        '{ run(runId: "r") { runId { x } } }',
+        None,
+        "Field 'runId' must not have a selection since type 'String!' has no subfields.",
+    ),
+    (
+        "object field given no selection set",
+        '{ run(runId: "r") }',
+        None,
+        # The library appends "Did you mean 'run { ... }'?"; the surface strips
+        # every suggestion clause before disclosing (F-R5-04).
+        "Field 'run' of type 'RunResult!' must have a selection of subfields.",
+    ),
+    (
+        "subscription operation",
+        f"subscription S {{ {_RUN} }}",
+        None,
+        "Schema is not configured to execute subscription operation.",
+    ),
+    (
+        "anonymous plus named operation",
+        f"{{ {_RUN} }} query Named {{ {_RUN} }}",
+        None,
+        "This anonymous operation must be the only defined operation.",
+    ),
+    (
+        "__schema introspection",
+        "{ __schema { types { name } } }",
+        None,
+        ("GraphQL introspection has been disabled, but the requested query "
+        "contained the field '__schema'."),
+    ),
+    (
+        "__type introspection",
+        '{ __type(name: "Query") { name } }',
+        None,
+        ("GraphQL introspection has been disabled, but the requested query "
+        "contained the field '__type'."),
+    ),
+    (
+        "non-null variable given null",
+        "query Q($r: ID!) { run(runId: $r) { runId } }",
+        {"r": None},
+        "Variable '$r' of non-null type 'ID!' must not be null.",
+    ),
+    (
+        "variable of the wrong type",
+        "query Q($r: Int!) { run(runId: $r) { runId } }",
+        {"r": 1},
+        "Variable '$r' of type 'Int!' used in position expecting type 'ID!'.",
+    ),
+    (
+        "variable not provided",
+        "mutation M($i: AskInput!) { ask(input: $i) { runId } }",
+        {},
+        "Variable '$i' of required type 'AskInput!' was not provided.",
+    ),
+    (
+        "variable given an invalid value",
+        "mutation M($i: AskInput!) { ask(input: $i) { runId } }",
+        {"i": {"text": 5, "sessionId": "s"}},
+        ("Variable '$i' got invalid value 5 at 'i.text'; ask input field 'text' "
+        "must be a string; send the question as a GraphQL String and retry"),
+    ),
+    (
+        "unknown type",
+        "query Q($r: Nope!) { run(runId: $r) { runId } }",
+        None,
+        "Unknown type 'Nope'.",
+    ),
+    (
+        "unknown argument",
+        '{ run(runId: "r", nope: 1) { runId } }',
+        None,
+        "Unknown argument 'nope' on field 'Query.run'.",
+    ),
+    (
+        "unknown output field",
+        "{ nope }",
+        None,
+        "Cannot query field 'nope' on type 'Query'.",
+    ),
+    (
+        "unknown input field",
+        'mutation { ask(input: {text: "hi", sessionId: "s", nope: 1}) { runId } }',
+        None,
+        "Field 'nope' is not defined by type 'AskInput'.",
+    ),
+    (
+        "unknown directive",
+        '{ run(runId: "r") @nope { runId } }',
+        None,
+        "Unknown directive '@nope'.",
+    ),
+    (
+        "missing required argument",
+        "{ run { runId } }",
+        None,
+        "Field 'run' argument 'runId' of type 'ID!' is required, but it was not provided.",
+    ),
+    (
+        "missing required input field",
+        "mutation { ask(input: {}) { runId } }",
+        None,
+        "Field 'AskInput.text' of required type 'AskText!' was not provided.",
+    ),
+    (
+        "required input field given null",
+        'mutation { ask(input: {text: null, sessionId: "s"}) { runId } }',
+        None,
+        "Expected value of type 'AskText!', found null.",
+    ),
+    (
+        "enum value that does not exist",
+        f"mutation {{ {_ASK_HEAD}, audienceDepth: NOPE}}) {{ runId }} }}",
+        None,
+        "Value 'NOPE' does not exist in 'AudienceDepth' enum.",
+    ),
+    (
+        "built-in scalar given an object literal",
+        "{ run(runId: {a: 1}) { runId } }",
+        None,
+        "ID cannot represent a non-string and non-integer value: {a: 1}",
+    ),
+    (
+        "syntax error",
+        "{ run(runId: ",
+        None,
+        "Syntax Error: Unexpected <EOF>.",
+    ),
+    (
+        "token bound",
+        "{ " + " ".join(["__typename"] * 2000) + " }",
+        None,
+        "Syntax Error: Document contains more than 1000 tokens. Parsing aborted.",
+    ),
+    (
+        "alias bound",
+        "{ " + " ".join(f"a{index}: __typename" for index in range(60)) + " }",
+        None,
+        "60 aliases found. Allowed: 20",
+    ),
+    (
+        # The real schema has no recursive type, so an over-depth document is
+        # necessarily also an invalid one and graphql-core reports both. The
+        # depth limiter's own message is the one asserted; `TestDepthBound`
+        # above proves the BOUND on a recursive throwaway schema, where the
+        # document can be deep and otherwise legal.
+        "depth bound",
+        '{ run(runId: "r") ' + "{ trustSignal " * 12 + "{ message }" + " }" * 12 + " }",
+        None,
+        "'anonymous' exceeds maximum operation depth of 10",
+    ),
+    (
+        "this surface's own scalar bound",
+        'mutation { ask(input: {text: "%s", sessionId: "s"}) { runId } }' % ("x" * 3000),
+        None,
+        ("ask input field 'text' must be at most 2000 characters; shorten the "
+        "question and retry"),
+    ),
+)
+
+# Patterns in `_DISCLOSABLE_MESSAGE_PATTERNS` that no document above reaches on
+# the INSTALLED library version, declared here rather than left invisible. A
+# pattern that matches nothing is exactly the F3 defect, so the coverage arm
+# below requires every other pattern to be exercised by a real message and
+# requires any new inert one to be added here deliberately.
+_PATTERNS_WITH_NO_LIVE_PROBE = frozenset(
+    {
+        # graphql-core raises this from `coerce_input_value`; no document
+        # reached it on the installed version.
+        r"^Expected non-nullable type '[^']*' not to be None\.$",
+        # Both of these are short-circuited by Strawberry, which raises
+        # `CannotGetOperationTypeError` to the HTTP layer before graphql-core
+        # can report either (review round 6, F4).
+        r"^Must provide (?:an )?operation.{0,80}$",
+        r"^Operation '[^']*' .{0,120}$",
+    }
+)
+
+
+def _execute_real_schema(document: str, variables: dict | None):
+    """Drive the SHIPPED schema, with the SHIPPED extension list and config.
+
+    Not the throwaway `_schema()` above: F3 was a mismatch between authored
+    patterns and the real library's real wording on the real types, and a
+    test schema cannot prove that.
+    """
+    from system_03_search_agent.adapters.graphql.schema import schema as real_schema
+
+    return asyncio.run(real_schema.execute(document, variable_values=variables))
+
+
+class TestOrdinaryCallerMistakesStayActionable:
+    @pytest.mark.parametrize(
+        ("label", "document", "variables", "expected"),
+        [(case[0], case[1], case[2], case[3]) for case in _CALLER_MISTAKES],
+        ids=[case[0] for case in _CALLER_MISTAKES],
+    )
+    def test_the_caller_is_told_what_they_got_wrong(
+        self, label: str, document: str, variables: dict | None, expected: str
+    ) -> None:
+        # Mutation that turns this red, per case: delete or reword the
+        # matching entry in `_DISCLOSABLE_MESSAGE_PATTERNS`. Default-deny then
+        # replaces the message with `_UNAUTHORED_MESSAGE_REPLACEMENT`, which is
+        # exactly the state review round 6 measured on 15 of these.
+        #
+        # It also turns red on a library upgrade that rewords the message,
+        # which is the OTHER half of the fix: three shipped patterns missed the
+        # installed wording by one word, matched nothing, and no test noticed
+        # because none of them asserted the real string.
+        result = _execute_real_schema(document, variables)
+        assert result.errors, f"{label} must be rejected"
+        messages = [error.message for error in result.errors]
+        assert expected in messages, (
+            f"{label}: expected {expected!r}, got {messages!r}. If the library "
+            "reworded this, update BOTH the pattern and this expectation; do "
+            "not delete the case."
+        )
+
+    @pytest.mark.parametrize(
+        ("label", "document", "variables", "expected"),
+        [(case[0], case[1], case[2], case[3]) for case in _CALLER_MISTAKES],
+        ids=[case[0] for case in _CALLER_MISTAKES],
+    )
+    def test_the_caller_is_never_told_their_own_mistake_was_ours(
+        self, label: str, document: str, variables: dict | None, expected: str
+    ) -> None:
+        # The second arm of the same fact, asserted separately because it is a
+        # different failure: `production-standards.md`'s retry-safety gate and
+        # `tool-call-budgets.md`'s actionability rule both forbid reporting a
+        # caller's malformed request as an internal error, since "internal"
+        # reads as transient and a well-behaved client retries a request that
+        # can never succeed.
+        #
+        # Mutation: make `_is_disclosable_message` return False.
+        result = _execute_real_schema(document, variables)
+        messages = [error.message for error in result.errors or []]
+        assert security._MASKED_ERROR_MESSAGE not in messages, (
+            f"{label} was reported as an internal error"
+        )
+        assert security._UNAUTHORED_MESSAGE_REPLACEMENT not in messages, (
+            f"{label} was blunted to the generic literal"
+        )
+
+    def test_every_authored_pattern_is_either_exercised_or_declared_inert(self) -> None:
+        # THE anti-vacuity arm, and the one that would have caught F3 at the
+        # commit that introduced it.
+        #
+        # Three shipped patterns matched nothing at all, because they were
+        # written from what their author expected the library to say. A
+        # pattern that matches nothing cannot be noticed by any test that only
+        # asserts messages ARE disclosed, so this arm asserts the converse:
+        # every pattern must match at least one really-captured message, or be
+        # declared inert on purpose in `_PATTERNS_WITH_NO_LIVE_PROBE`.
+        #
+        # Mutation that turns this red: add a pattern nobody can reach (say,
+        # `^Introspection is disabled\.` again) without declaring it.
+        captured = [case[3] for case in _CALLER_MISTAKES]
+        inert = {
+            pattern.pattern
+            for pattern in security._DISCLOSABLE_MESSAGE_PATTERNS
+            if not any(pattern.match(message) for message in captured)
+        }
+        assert inert == _PATTERNS_WITH_NO_LIVE_PROBE, (
+            "a pattern matches no captured message and is not declared inert "
+            f"(undeclared: {sorted(inert - _PATTERNS_WITH_NO_LIVE_PROBE)}; "
+            f"declared but now reachable: {sorted(_PATTERNS_WITH_NO_LIVE_PROBE - inert)})"
+        )
+
+    @pytest.mark.parametrize(
+        ("label", "message"),
+        [
+            ("a raw internal marker", _INTERNAL_MARKER),
+            (
+                "a DSN dressed as a validation error",
+                "Cannot connect: postgresql://kg_reader:hunter2@10.0.0.1:5432/kg",
+            ),
+            (
+                "internal text after a pattern's own prefix",
+                "Unknown type 'Nope'. Connected to db-internal.example:5432",
+            ),
+            (
+                "an over-long tail on a bounded pattern",
+                "Syntax Error: " + ("x" * 500),
+            ),
+            (
+                "a custom scalar impersonating a built-in",
+                "AskText cannot represent " + _INTERNAL_MARKER,
+            ),
+            (
+                "a directive location that is not one",
+                "Directive '@x' may not be used on " + _INTERNAL_MARKER + ".",
+            ),
+        ],
+    )
+    def test_widening_the_table_did_not_open_it(self, label: str, message: str) -> None:
+        # The other arm of the two-armed discipline, and the one that matters
+        # most: this fix ADDED roughly twenty shapes to a default-deny
+        # allowlist, and an allowlist that admits everything is not one.
+        #
+        # Mutation that turns this red: append `re.compile(r".*")` to
+        # `_DISCLOSABLE_MESSAGE_PATTERNS`, or drop the `$` anchor from any
+        # pattern, or replace a bounded `.{0,N}` tail with `.*`.
+        assert security._is_disclosable_message(message) is False, (
+            f"{label} matched an authored shape: {message}"
+        )

@@ -113,9 +113,22 @@ class FoldError(Exception):
 
     Declares itself caller-safe (`security.PUBLIC_ERROR_MARKER`). Every
     message raised as this class or a subclass is a fixed literal, or is
-    built only from a `run_id` the caller already supplied, so none of them
-    carries a host, a credential, a path, an internal bound or a caught
-    exception's text.
+    built only from a `run_id` the caller already supplied, or names a
+    PUBLISHED bound of this surface, so none of them carries a host, a
+    credential, a path, a caught exception's text, or any value that varies
+    with server state.
+
+    "A published bound" is stated rather than glossed, because this docstring
+    used to say "an internal bound" and `FoldTimeoutError` interpolates
+    `_FOLD_LOOP_TIMEOUT_S` into its own message five hundred lines below, so
+    the claim was false where it mattered most: on the one subclass whose
+    message is not a fixed literal (review round 6, F6). Naming the budget is
+    deliberate and is the same choice `security.py`'s `RequestTimeoutExtension`
+    makes when it names its own 270s bound: a caller told "the budget is 240s"
+    can decide whether to narrow the question or move to the streaming
+    surface, and a caller told only "it took too long" cannot. A configured
+    bound is part of the contract, not server state; a host, a path or a
+    credential is server state, and none of those may ever appear here.
 
     RESTORED at the re-review round (finding R-02). These errors WERE
     disclosed under the previous package-origin allowlist, which named this
@@ -216,15 +229,24 @@ _NON_FATAL_ERROR_DISCLOSURE: dict[str, str] = {
 }
 
 
+def _fatal_error_disclosure_for_class(error_class: str) -> str:
+    """The keyed lookup both fatal-error entry points share, so the sentence a
+    caller reads for a dead run is identical whether they asked through
+    `ask`/`run` (which has a parsed `ErrorPayload`) or through
+    `citations(runId:)` (which walks the raw event payloads and has only the
+    class string). Two surfaces reading one `Disclosures` type must not word
+    the same fact differently.
+    """
+    return _FATAL_ERROR_DISCLOSURE.get(error_class, _FATAL_ERROR_DISCLOSURE["unexpected"])
+
+
 def _fatal_error_disclosure(error_payload: ErrorPayload) -> str:
     """Sanitized, external-facing sentence for a fatal `ErrorPayload`,
     keyed by `error_class`. `error_class` is a closed four-value `Literal`
-    (`contracts.events.ErrorPayload`), so the `"unexpected"` fallback below
-    is defensive completeness, never reachable today.
+    (`contracts.events.ErrorPayload`), so the `"unexpected"` fallback is
+    defensive completeness, never reachable today.
     """
-    return _FATAL_ERROR_DISCLOSURE.get(
-        error_payload.error_class, _FATAL_ERROR_DISCLOSURE["unexpected"]
-    )
+    return _fatal_error_disclosure_for_class(error_payload.error_class)
 
 
 def _non_fatal_error_disclosure(error_class: str) -> str:
@@ -800,6 +822,20 @@ _RUN_NOT_FINISHED_NOTE = (
     "may change."
 )
 
+# The citations-export wording of the note above. Separate constant rather
+# than a shared one because the note above says "the answer above", and a
+# citations export has no answer; the FACT is the same and the sentence
+# cannot be. Added at the review round 6 fix: a run whose stream died without
+# ever emitting a terminal event has no fatal error payload to report, so
+# `run_failed` is False on BOTH surfaces (`_finalize` computes it the same
+# way), and without this note the export was indistinguishable from a healthy
+# one. That is the same defect F1 filed against the hardcoded `run_failed`,
+# reached by a different route.
+_CITATIONS_RUN_ENDED_WITHOUT_TERMINAL_EVENT_NOTE = (
+    "This run ended without a terminal event, so this citation export is "
+    "PARTIAL and this surface cannot vouch for it as complete."
+)
+
 _NOTES_TRUNCATION_NOTE = (
     "{count} further disclosure(s) did not fit this surface's "
     "{limit}-disclosure limit and were omitted."
@@ -1166,12 +1202,31 @@ def fold_citations(entry: RunEntry) -> CitationsExport:
         )
 
     collector = _CitationCollector()
+    # The run's own fatal-error signal, read from the entry the caller already
+    # holds, exactly as `run_cancelled` below is. It used to be hardcoded
+    # `False` with a comment asserting "the citations export carries no
+    # fatal-error signal of its own", and that was simply wrong: the signal is
+    # in `entry.events`, which this same loop is already walking, and the loop
+    # already had to recognise a fatal error to know where to stop. So a run
+    # that DIED reported `runFailed: false` here, indistinguishable from a
+    # healthy one, on a type whose whole premise is that anything the surface
+    # drops or shortens it says so (review round 6, F1).
+    fatal_error_class: str | None = None
+    terminal_event_seen = False
     for event in entry.events:
         sanitized = sanitize_event_for_end_user(event)
         if sanitized is None:
             continue
         if sanitized.type == "citation":
             collector.accept(sanitized)
+        if sanitized.type == "error" and sanitized.payload.get("fatal") is True:
+            # `error_class` only, never `message`: F-4.1-A-09's rule, the same
+            # one `_fatal_error_disclosure` exists to enforce. A missing or
+            # unrecognised class still marks the run failed; it just falls back
+            # to the "unexpected" wording, because the run failing is the fact
+            # that must not be lost.
+            raw_class = sanitized.payload.get("error_class")
+            fatal_error_class = raw_class if isinstance(raw_class, str) else "unexpected"
         if sanitized.type == "done" or (
             sanitized.type == "error" and sanitized.payload.get("fatal") is True
         ):
@@ -1179,6 +1234,7 @@ def fold_citations(entry: RunEntry) -> CitationsExport:
             # (F-4.3-A-13): a citation appended after the run's terminal
             # event is not part of what the run answered, so it is not part
             # of what the run's citation export contains either.
+            terminal_event_seen = True
             break
 
     return CitationsExport(
@@ -1211,11 +1267,37 @@ def fold_citations(entry: RunEntry) -> CitationsExport:
         disclosures=Disclosures(
             answer_truncated=False,
             citations_omitted=collector.omitted_total,
-            # The citations export is a read of an already-finished run and
-            # carries no fatal-error signal of its own; a run that died is
-            # reported through `ask`/`run`, which is where `run_failed` is
-            # computed. Stated rather than left as a bare `False`.
-            run_failed=False,
-            notes=_cap_notes(collector.disclosure_notes()),
+            # Read from the run's own terminal event above, so this field means
+            # the same thing on `citations(runId:)` as it does on `ask`/`run`.
+            # `_finalize` computes it as "a fatal error payload was seen", and
+            # so does this; two surfaces reading one type must not disagree
+            # about what its fields assert.
+            run_failed=fatal_error_class is not None,
+            # PREPENDED for the same reason `_finalize` prepends it: `_cap_
+            # notes` keeps the HEAD of the list, so an appended note is the
+            # first one shed, and these are the most important notes this
+            # operation can emit.
+            #
+            # The second one closes the OTHER half of F1, found while
+            # verifying the first live. A run whose stream dies without ever
+            # appending a terminal event (a `run_streaming` that raises,
+            # which its own docstring says cannot happen) leaves no fatal
+            # error payload behind, so `run_failed` is False on this surface
+            # AND in `_finalize`, by the same rule. Without this note the
+            # export was byte-identical to a healthy run's. `_finalize`
+            # already emits its own wording of the same fact.
+            notes=_cap_notes(
+                (
+                    [_fatal_error_disclosure_for_class(fatal_error_class)]
+                    if fatal_error_class is not None
+                    else []
+                )
+                + (
+                    []
+                    if terminal_event_seen
+                    else [_CITATIONS_RUN_ENDED_WITHOUT_TERMINAL_EVENT_NOTE]
+                )
+                + collector.disclosure_notes()
+            ),
         ),
     )

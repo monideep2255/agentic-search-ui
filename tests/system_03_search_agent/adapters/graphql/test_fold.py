@@ -549,6 +549,114 @@ class TestFoldCitations:
         assert export.run_cancelled is False
         assert len(export.citations) == 1
 
+    @pytest.mark.parametrize(
+        ("error_class", "expected_note"),
+        [
+            ("unexpected", "This query failed unexpectedly before finishing."),
+            (
+                "transient",
+                "This query hit a temporary error before finishing. Retrying may succeed.",
+            ),
+            ("recoverable", "This query could not complete as requested."),
+            ("cancelled", "This query was stopped before it finished."),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_a_dead_runs_export_says_the_run_died(
+        self, error_class: str, expected_note: str
+    ) -> None:
+        # Review round 6, F1, MAJOR and blocking. `run_failed` was the literal
+        # `False` here, with a comment claiming "the citations export carries
+        # no fatal-error signal of its own". It has one: the run's own fatal
+        # `error` event, in `entry.events`, which the loop below was ALREADY
+        # reading in order to know where to stop. So a run that died returned
+        # a `Disclosures` byte-identical to a healthy run's, on the one type
+        # whose premise is that anything the surface drops or shortens it says
+        # so, and on a surface a caller reaches through `citations(runId:)`
+        # for any finished run.
+        #
+        # Mutation that turns this red: put `run_failed=False` back, or drop
+        # the fatal-error branch from the loop.
+        events = [
+            _event("citation", "t1", 0, _citation(1)),
+            _event(
+                "error",
+                "t1",
+                1,
+                ErrorPayload(
+                    fatal=True,
+                    scope="run",
+                    source="graph_connection",
+                    error_class=error_class,
+                    # Internal text, on purpose: the export must report the
+                    # FACT of the failure and never this sentence (F-4.1-A-09).
+                    message="could not connect to host db-internal.example:5432 as kg_reader",
+                    retry_after_s=0,
+                ),
+            ),
+        ]
+        entry = await _finished_entry(events=events, finished=True, cancelled=False)
+
+        export = fold_module.fold_citations(entry)
+
+        assert export.disclosures.run_failed is True
+        assert expected_note in export.disclosures.notes
+        joined = " ".join(export.disclosures.notes)
+        assert "db-internal.example" not in joined
+        assert "kg_reader" not in joined
+        # The export itself is still returned, with whatever the run produced
+        # before it died. Disclosing the death must not empty the payload.
+        assert len(export.citations) == 1
+
+    @pytest.mark.asyncio
+    async def test_a_healthy_runs_export_is_not_accused_of_failing(self) -> None:
+        # The second arm. Mutation that turns it red: hardcode
+        # `run_failed=True`, which would make the arm above pass while every
+        # healthy export lies about itself. A surface that reports every run
+        # as failed is exactly as dishonest as one that reports none.
+        events = [
+            _event("citation", "t1", 0, _citation(1)),
+            _event(
+                "done",
+                "t1",
+                1,
+                DonePayload(
+                    total_cost_usd=0.0,
+                    total_tool_calls=1,
+                    elapsed_ms=12,
+                    trust_outcome="answer",
+                ),
+            ),
+        ]
+        entry = await _finished_entry(events=events, finished=True, cancelled=False)
+
+        export = fold_module.fold_citations(entry)
+
+        assert export.disclosures.run_failed is False
+        assert export.disclosures.notes == []
+
+    @pytest.mark.asyncio
+    async def test_an_export_from_a_run_that_never_reached_a_terminal_event_says_so(
+        self,
+    ) -> None:
+        # The other half of F1, found while verifying the first half live. A
+        # run whose stream dies WITHOUT appending a terminal event leaves no
+        # fatal error payload behind, so `run_failed` is False here and in
+        # `_finalize` alike, by the same rule. Without a note the export was
+        # again byte-identical to a healthy run's.
+        #
+        # Mutation that turns this red: drop `terminal_event_seen` from
+        # `fold_citations`, or stop prepending its note.
+        events = [_event("citation", "t1", 0, _citation(1))]
+        entry = await _finished_entry(events=events, finished=True, cancelled=False)
+
+        export = fold_module.fold_citations(entry)
+
+        assert export.disclosures.run_failed is False
+        assert export.disclosures.notes == [
+            fold_module._CITATIONS_RUN_ENDED_WITHOUT_TERMINAL_EVENT_NOTE
+        ]
+
     @pytest.mark.asyncio
     async def test_an_unfinished_run_raises_rather_than_returning_a_silent_partial_export(
         self,

@@ -345,47 +345,219 @@ _SCHEMA_SUGGESTION_PATTERN = re.compile(r"\s*Did you mean[^?]*\?", re.IGNORECASE
 # has exceptions, and five review rounds found one every time.
 #
 # So the rule now checks the text. A message reaches a caller only if it
-# matches a shape authored HERE, in advance, and reviewed. Anything else, from
-# any raiser, in any phase, of any class, is replaced by a fixed literal and a
-# code. The failure direction is safety: an unrecognised message loses its
-# detail, it never loses its masking.
+# matches a shape authored HERE, in advance, and reviewed. Anything else,
+# EXCEPT an exception whose class carries `PUBLIC_ERROR_MARKER` (see
+# `_should_mask_error`'s last branch, and the obligation stated below), is
+# replaced by a fixed literal and a code. The failure direction is safety: an
+# unrecognised message loses its detail, it never loses its masking.
 #
-# `{0}` in these patterns is always a value the CALLER supplied or a name from
-# the caller's own document. None of them can interpolate server state,
-# because none of them has a slot for it.
+# The one exception is stated here rather than left for a reader to discover,
+# because an earlier version of this comment claimed "anything else, from any
+# raiser, in any phase, of any class" and that was FALSE (review round 6, F2).
+# A marked exception's message is disclosed VERBATIM without ever reaching
+# this table: `RunNotFound`'s "no such run" matches nothing here and goes out
+# anyway. The marker branch is kept, because a marked class is a reviewed,
+# deliberate opt-in and this table cannot enumerate every application error
+# the surface will ever want to be actionable about. What keeps it safe is an
+# OBLIGATION, not this table: every class carrying the marker must raise fixed
+# literals, or text built only from values the caller already supplied. That
+# obligation is stated on `GraphQLSecurityError` and on `fold.FoldError`, and
+# it is the whole reason the marker has to be written by hand rather than
+# inferred. A marked subclass whose message interpolates a caught exception
+# leaks it, and nothing below will stop that.
+#
+# `'[^']*'` in these patterns is always a value the CALLER supplied or a name
+# from the caller's own document or from the published schema, which is the
+# caller's own contract. None of them can interpolate server state, because
+# none of them has a slot for it.
+#
+# EVERY PATTERN BELOW WAS READ FROM THE INSTALLED LIBRARY, NOT INFERRED. The
+# previous table was written from what its author expected the messages to
+# say, and review round 6 measured the result: 15 ordinary caller-side
+# mistakes (an unused variable, a duplicate argument, a fragment cycle, a
+# subscription, `{ __schema }`, ...) were replaced by a codeless generic
+# literal, and three patterns missed the installed wording by a single word,
+# so they matched nothing and nobody could notice. `tests/.../test_security.py`
+# now drives every document below through the REAL schema and asserts the
+# exact string, so the next library upgrade fails loudly instead of silently
+# blunting every error message again.
+#
+# WHAT THIS TABLE DOES NOT COVER, stated so the gap is arguable rather than
+# invisible (`goal-contracts.md`: a verify surface must state its own
+# coverage):
+#   - Anything raised while a resolver is running. That has a `path`, so it
+#     never reaches this table at all; it is masked unless its class carries
+#     the marker.
+#   - `{ ...UnknownFragment }` spread inside an operation. The installed
+#     `QueryDepthLimiter` raises `KeyError(<name>)` from its own `__init__`,
+#     which `graphql.validate` runs while BUILDING its visitor list, before
+#     graphql-core's own `KnownFragmentNames` rule ever gets to visit and
+#     report. That exception escapes `validate()`, so Strawberry's
+#     `except Exception` handler in `Schema.execute` builds the response
+#     OUTSIDE `extensions_runner.operation()`, which means `MaskErrors` never
+#     runs and THIS CALLBACK IS NEVER CALLED. Measured, not inferred: a spy
+#     wrapped around `_should_mask_error` recorded zero calls for that
+#     document, and `"'Nope'"` reached the wire verbatim. Review round 6
+#     filed this as F5 and classified it LATENT ("nothing on this surface can
+#     reach that handler today"); it is in fact REACHABLE, by any caller, with
+#     one line of GraphQL. It is not a disclosure today only because the text
+#     that escapes is `str(KeyError(<fragment name>))`, and the fragment name
+#     is the caller's own. No pattern in this table can change any of that:
+#     the table is not consulted on that path at all.
+#     Spread inside an UNUSED fragment the depth limiter never walks it, so it
+#     reports normally as "Unknown fragment 'X'.", which IS covered below.
+#   - Three shapes retained without a live probe, marked NOT PROBED below.
 # ---------------------------------------------------------------------------
 
 _DISCLOSABLE_MESSAGE_PATTERNS: tuple[re.Pattern[str], ...] = (
-    # graphql-core validation: the caller's own token was rejected.
+    # -- graphql-core validation: the caller named something that is not there.
+    # "Cannot query field 'nope' on type 'Query'."
     re.compile(r"^Cannot query field '[^']*' on type '[^']*'\.$"),
+    # "Unknown argument 'nope' on field 'Query.run'."
     re.compile(r"^Unknown argument '[^']*' on field '[^']*'\.$"),
+    # "Unknown type 'Nope'."
     re.compile(r"^Unknown type '[^']*'\.$"),
+    # "Unknown directive '@nope'."
     re.compile(r"^Unknown directive '[^']*'\.$"),
-    re.compile(r"^Field '[^']*' argument '[^']*' of type '[^']*' is required.*$"),
+    # "Unknown fragment 'Nope'."
+    re.compile(r"^Unknown fragment '[^']*'\.$"),
+    # -- graphql-core validation: something required is missing, or the wrong
+    # shape. The unbounded `.*$` tail the first of these used to carry is now
+    # the library's own literal ending, read from
+    # graphql/validation/rules/provided_required_arguments.py.
+    # "Field 'run' argument 'runId' of type 'ID!' is required, but it was not provided."
+    re.compile(
+        r"^Field '[^']*' argument '[^']*' of type '[^']*' is required, "
+        r"but it was not provided\.$"
+    ),
+    # "Directive '@skip' argument 'if' of type 'Boolean!' is required, but it was not provided."
+    re.compile(
+        r"^Directive '[^']*' argument '[^']*' of type '[^']*' is required, "
+        r"but it was not provided\.$"
+    ),
+    # "Field 'AskInput.text' of required type 'AskText!' was not provided."
     re.compile(r"^Field '[^']*' of required type '[^']*' was not provided\.$"),
+    # "Field 'nope' is not defined by type 'AskInput'."
+    re.compile(r"^Field '[^']*' is not defined by type '[^']*'\.$"),
+    # "Field 'runId' must not have a selection since type 'String!' has no subfields."
+    re.compile(r"^Field '[^']*' must not have a selection since type '[^']*' has no subfields\.$"),
+    # "Field 'run' of type 'RunResult!' must have a selection of subfields."
+    # (the library appends "Did you mean 'run { ... }'?", which
+    # `_strip_schema_suggestions` removes before this predicate runs)
+    re.compile(r"^Field '[^']*' of type '[^']*' must have a selection of subfields\.$"),
+    # -- graphql-core: the document does not parse.
+    # "Syntax Error: Unexpected <EOF>." and, since MaxTokensLimiter reports
+    # through the lexer, "Syntax Error: Document contains more than 1000
+    # tokens. Parsing aborted." The separate token-limit pattern this table
+    # used to carry could never be the matching one (this pattern already
+    # matched it first) and was removed as dead code.
     re.compile(r"^Syntax Error: .{0,120}$"),
+    # -- graphql-core: the caller's variables.
+    # "Variable '$i' got invalid value 5 at 'i.text'; ask input field 'text' ..."
+    # "Variable '$i' of required type 'AskInput!' was not provided."
     re.compile(r"^Variable '\$[^']*' (?:got invalid value|of required type).{0,400}$"),
+    # "Variable '$r' of non-null type 'ID!' must not be null."
+    re.compile(r"^Variable '\$[^']*' of non-null type '[^']*' must not be null\.$"),
+    # "Variable '$r' of type 'Int!' used in position expecting type 'ID!'."
+    re.compile(r"^Variable '\$[^']*' of type '[^']*' used in position expecting type '[^']*'\.$"),
+    # "Variable '$x' is never used in operation 'Q'." (and, in an anonymous
+    # operation, "Variable '$x' is never used.")
+    re.compile(r"^Variable '\$[^']*' is never used(?: in operation '[^']*')?\.$"),
+    # "Variable '$x' is not defined by operation 'Q'." (same anonymous variant)
+    re.compile(r"^Variable '\$[^']*' is not defined(?: by operation '[^']*')?\.$"),
+    # -- graphql-core: the caller's literal values.
+    # "Expected value of type 'AskText!', found null."
     re.compile(r"^Expected value of type '[^']*'.{0,120}$"),
+    # "Value 'NOPE' does not exist in 'AudienceDepth' enum."
     re.compile(r"^Value '[^']*' does not exist in '[^']*' enum\.$"),
+    # "ID cannot represent a non-string and non-integer value: {a: 1}".
+    # Anchored to the five BUILT-IN scalar names on purpose: a custom scalar's
+    # own parse failure must not ride this shape, since only the built-ins are
+    # known to build their message from the rejected value alone.
+    # graphql-core's `inspect()` truncates that value at 240 characters
+    # (graphql/pyutils/inspect.py, `max_str_size`), which is what bounds the
+    # tail below.
+    re.compile(r"^(?:Int|Float|String|Boolean|ID) cannot represent .{0,240}$"),
+    # NOT PROBED: no document reached this on the installed version. Retained
+    # because graphql-core still raises it from `coerce_input_value`.
     re.compile(r"^Expected non-nullable type '[^']*' not to be None\.$"),
+    # -- graphql-core: fragments.
+    # "Fragment 'A' is never used.", "Fragment 'A' cannot be spread here as
+    # objects of type 'RunResult' can never be of type 'Mutation'.",
+    # "Fragment 'A' cannot condition on non composite type 'String'."
+    # Tail left at the 120 this pattern already shipped with, rather than
+    # widened while the table was being rewritten: the longest captured
+    # instance is 83 characters past the prefix, so there is headroom, and a
+    # bound is not loosened without a measured reason.
     re.compile(r"^Fragment '[^']*' .{0,120}$"),
-    re.compile(r"^Anonymous operation must be the only defined operation\.$"),
+    # "Cannot spread fragment 'A' within itself via 'B'." and, for a
+    # self-spread, "Cannot spread fragment 'A' within itself."
+    re.compile(r"^Cannot spread fragment '[^']*' within itself.{0,200}$"),
+    # -- graphql-core: the caller named the same thing twice.
+    # "There can be only one argument named 'runId'."
+    re.compile(r"^There can be only one argument named '[^']*'\.$"),
+    # "There can be only one variable named '$x'."
+    re.compile(r"^There can be only one variable named '\$[^']*'\.$"),
+    # "There can be only one operation named 'Q'."
+    re.compile(r"^There can be only one operation named '[^']*'\.$"),
+    # "There can be only one fragment named 'A'."
+    re.compile(r"^There can be only one fragment named '[^']*'\.$"),
+    # "There can be only one input field named 'text'."
+    re.compile(r"^There can be only one input field named '[^']*'\.$"),
+    # -- graphql-core: directives.
+    # "Directive '@include' may not be used on query." The location is one of
+    # graphql-core's own `DirectiveLocation` names, lowercased with spaces
+    # ("query", "fragment spread", "variable definition"), never caller text.
+    re.compile(r"^Directive '[^']*' may not be used on [a-z ]{1,40}\.$"),
+    # "The directive '@skip' can only be used once at this location."
+    re.compile(r"^The directive '[^']*' can only be used once at this location\.$"),
+    # -- graphql-core: overlapping fields. The reason clause nests
+    # ("subfields 'b' conflict because ..."), and every name in it is a
+    # response key from the caller's own document or a schema field name.
+    # "Fields 'a' conflict because they have differing arguments. Use
+    # different aliases on the fields to fetch both if this was intentional."
+    re.compile(r"^Fields '[^']*' conflict because .{0,400}$"),
+    # -- graphql-core: operations.
+    # "This anonymous operation must be the only defined operation." The
+    # leading "This " is what the previous pattern missed, so this shape
+    # matched nothing and every caller hitting it got the generic literal
+    # (graphql/validation/rules/lone_anonymous_operation.py).
+    re.compile(r"^This anonymous operation must be the only defined operation\.$"),
+    # "Schema is not configured to execute subscription operation." The
+    # previous pattern guessed "Subscriptions are not enabled" and matched
+    # nothing (graphql/execution/execute.py, `build_execution_context`).
+    re.compile(r"^Schema is not configured to execute [a-z]{1,20} operation\.$"),
+    # NOT PROBED, both of these: the installed Strawberry raises
+    # `CannotGetOperationTypeError` to the HTTP layer before graphql-core can
+    # report either one (see F4 in review round 6). Retained because that is a
+    # Strawberry-version-specific short circuit, not a property of the schema.
     re.compile(r"^Must provide (?:an )?operation.{0,80}$"),
     re.compile(r"^Operation '[^']*' .{0,120}$"),
-    re.compile(r"^Introspection is disabled\.?.{0,120}$"),
-    re.compile(r"^Subscriptions are not enabled.{0,120}$"),
-    # Strawberry's own security limiters. Each describes the caller's own
+    # -- graphql-core: introspection, disabled by `DisableIntrospection`.
+    # "GraphQL introspection has been disabled, but the requested query
+    # contained the field '__schema'." The previous pattern guessed
+    # "Introspection is disabled." and matched nothing, so the one thing that
+    # would tell a caller the refusal was deliberate was withheld
+    # (graphql/validation/rules/custom/no_schema_introspection.py).
+    re.compile(
+        r"^GraphQL introspection has been disabled, but the requested query "
+        r"contained the field '[^']*'\.$"
+    ),
+    # -- Strawberry's own security limiters. Each describes the caller's own
     # document and nothing else.
+    # "'anonymous' exceeds maximum operation depth of 10" (no trailing period
+    # on the installed version, hence the optional one).
     re.compile(r"^'[^']*' exceeds maximum operation depth of \d+\.?$"),
     # The installed MaxAliasesLimiter's real wording, read from the library
-    # rather than guessed: "60 aliases found. Allowed: 15".
+    # rather than guessed: "60 aliases found. Allowed: 20".
     re.compile(r"^\d+ aliases found\. Allowed: \d+$"),
-    # This surface's own scalar parsers (`types.py`). Their messages are
+    # -- This surface's own scalar parsers (`types.py`). Their messages are
     # fixed literals naming the caller's own field, and an inline-literal
     # argument reaches this predicate without the "Variable '$x'" wrapper a
     # variables-borne value carries.
+    # "ask input field 'text' must be at most 2000 characters; shorten the
+    # question and retry"
     re.compile(r"^ask input field '[^']*' .{0,200}$"),
-    re.compile(r"^Syntax Error: Document contains more than \d+ tokens.*$"),
 )
 
 
@@ -569,6 +741,19 @@ def _should_mask_error(error: GraphQLError) -> bool:
         return _disclose_if_message_is_authored(error, code=INPUT_VALIDATION_ERROR_CODE)
     if not _is_allowlisted_application_exception(original):
         return True
+    # THE SECOND DISCLOSURE PATH, and the one the content rule does not police.
+    # A marked exception's message goes out VERBATIM from here; it never
+    # touches `_DISCLOSABLE_MESSAGE_PATTERNS`. `RunNotFound`'s "no such run"
+    # matches no authored shape and reaches callers anyway, which is correct
+    # and intended, and is why the comment above that table no longer claims
+    # the content rule is the only way out (review round 6, F2).
+    # What makes this safe is the obligation on every marked class: fixed
+    # literals, or text built only from values the caller already supplied.
+    # Every marked class holds to it today (`GraphQLSecurityError` and its
+    # subclasses, `fold.FoldError` and its subclasses). A marked subclass that
+    # interpolates a caught exception leaks it, and nothing here will catch
+    # that; the review is the control, which is exactly why the marker must be
+    # written by hand.
     if error.extensions is None or "code" not in error.extensions:
         error.extensions = {**(error.extensions or {}), "code": _error_code_for(original)}
     return False

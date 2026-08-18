@@ -335,6 +335,41 @@ Two supporting decisions, same date:
 - The fix round is run by a FRESH AGENT, and the lead verifies rather than writes it. Five of the last six defects in this phase were introduced by the lead's own fix rounds, including a critical reopened twice. The maker-checker split was applied to reviews from the start and never to fixes, which is the one place it was missing.
 - One more review round is budgeted. Not open-ended.
 
+## Round six, and the merge decision
+
+Ran against the merge bar above, which is the first round in this phase to have one. Verdict from the reviewer: DO-NOT-MERGE, 2 blocking, 6 non-blocking. Both blocking findings were the lead's, and both are now fixed by a FRESH AGENT with the lead verifying rather than writing, per the 2026-08-17 decision.
+
+| Finding | Class | Disposition |
+|---|---|---|
+| F3, the allowlist blunted 15 ordinary caller mistakes into a codeless generic literal | BLOCKING, major, reachable | FIXED. Re-committed the exact defect an earlier commit in this phase existed to fix. Root cause: the pattern table was written from inference while `security.py`'s own header claimed everything in it was verified against the installed library. Now derived from live capture, 22 patterns to 39, each carrying its captured example |
+| F1, `fold_citations` hardcoded `run_failed=False` | BLOCKING, major, reachable | FIXED. Defeated an invariant added one commit earlier. The fixing agent then found a SECOND half nobody had filed: when `run_streaming` itself raises, no fatal event is ever appended, so both surfaces reported a healthy run |
+| F5, the masking layer is bypassed for an error escaping Strawberry's operation context | NON-BLOCKING, lead's disposition | TRACKED, not fixed. See below |
+| F4, unknown `operationName` escapes as a plain-text HTTP 400 | NON-BLOCKING | Pre-existing Strawberry behavior. Owner: build phase 6.1 |
+| Four smaller items (false comment, overclaiming arm, the 14th vacuous arm, a docstring overclaim) | NON-BLOCKING | All FIXED in the same round |
+
+### F5, and why it is tracked rather than fixed
+
+The fixing agent DISPUTED the review on this one and was right, which is worth more than the finding. The review called it latent; the agent measured it reachable, and the lead independently re-measured it before accepting: `{ ...UnknownFragment }` makes the installed `QueryDepthLimiter` raise `KeyError` from its own `__init__` while `graphql.validate` is still building its visitor list, so the exception escapes before any rule runs, Strawberry's outer handler builds the response outside the extension context, and `_should_mask_error` is never called. Measured: zero masking calls on that path against one for the control.
+
+So the premise "every error reaches the content rule" is FALSE on a live path, and `security.py`'s comment saying so has been corrected rather than left to mislead.
+
+It does not block, and the reasoning is the bar's own: what escapes is `str(KeyError(<fragment name>))`, the caller's own text. The lead re-verified that nothing server-side reaches the wire on that path. The defect is a broken invariant with no current disclosure, which is the definition of a minor under the agreed bar, and the fix (patching a library rule that owns a premise-gate bound, or post-processing errors in the transport) is exactly the scope creep that produced five of this phase's last six defects. Owner: build phase 6.1's hardening pass, or sooner if any error on that path is ever found carrying server text.
+
+### The lead's verification, done independently rather than on the agent's report
+
+Four mutations run by the lead against the shipped source, each restored with a sha256 equality check:
+
+| Mutation | Result |
+|---|---|
+| Reintroduce F3's exact wrong introspection wording | 5 failed |
+| Reintroduce F1's exact `run_failed=False` hardcode | 5 failed |
+| Make the suggestion strip the identity (the 14th vacuous arm's own mutation, which left the suite green last round) | 5 failed |
+| Widen the allowlist to match everything | 8 failed |
+
+Suite 3308 tests, 3188 passing against the same six known live-network-gated failures, GraphQL package 300 (from 206), lint clean, doc drift 0 stale 0 structural.
+
+MERGE DECISION: zero blocking findings remain, so the phase MEETS THE BAR and merges.
+
 ## Resuming this phase, second pause (2026-08-17, after the fix round and its re-review)
 
 This supersedes the first pause section below, which described an earlier and much smaller state. Read this one.
