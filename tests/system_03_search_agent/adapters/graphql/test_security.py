@@ -28,6 +28,11 @@ import strawberry
 
 from system_03_search_agent.adapters.graphql import security
 
+# Server-produced text a caller must never see. Deliberately not shaped like a
+# credential, so the repository's own secret scanner does not object to a test
+# fixture, while still standing for a host, a path and an internal identifier.
+_INTERNAL_MARKER = "INTERNALMARKER-db-internal.example-5432-kgreader-/Users/private/fold.py:912"
+
 
 class _Boom(Exception):
     """Defined OUTSIDE the graphql package on purpose: the masking allowlist
@@ -322,6 +327,74 @@ class TestErrorMasking:
         assert "INTERNAL-DETAIL-MARKER" not in joined, (
             "package origin must not grant disclosure; only a declared marker does"
         )
+
+    @pytest.mark.parametrize(
+        ("label", "raiser", "message", "path", "must_hide"),
+        [
+            ("scalar raises internal text during coercion", "graphql", _INTERNAL_MARKER, None, True),
+            ("resolver raises internal text", "graphql", _INTERNAL_MARKER, ["ask"], True),
+            ("plain internal exception", "runtime", _INTERNAL_MARKER, ["ask"], True),
+            ("validation error carrying internal text", None, _INTERNAL_MARKER, None, True),
+            (
+                "legitimate validation error",
+                None,
+                "Cannot query field 'nope' on type 'AskResult'.",
+                None,
+                False,
+            ),
+            (
+                "legitimate coercion error",
+                "graphql",
+                "Variable '$input' got invalid value 'NOPE' at 'input.audienceDepth'.",
+                None,
+                False,
+            ),
+        ],
+    )
+    def test_a_message_reaches_a_caller_only_if_its_shape_was_authored(
+        self, label: str, raiser: str | None, message: str, path: list[str] | None, must_hide: bool
+    ) -> None:
+        # THE arm for the redesign, and for the shape of defect that produced
+        # both of this phase's criticals.
+        #
+        # Three earlier rules each asked WHO RAISED the error and inferred
+        # from that whether its text was safe: the package a class was
+        # declared in, then its class family, then the phase it came from.
+        # Each is a correlate of the property that actually matters, which is
+        # a fact about the STRING, and every review round found the case where
+        # the correlate broke. The rule now checks the text against shapes
+        # authored in advance, default-deny.
+        #
+        # This arm drives the predicate AND models what Strawberry does after
+        # it, because `_should_mask_error` returns a verdict and
+        # `MaskErrors.anonymise_error` is what rewrites a masked message. An
+        # earlier version of this check read `error.message` straight after
+        # the predicate and reported a leak on every correctly-masked case.
+        #
+        # Mutation that turns this red: add `.*` to
+        # `_DISCLOSABLE_MESSAGE_PATTERNS`, or delete the
+        # `_is_disclosable_message` guard from
+        # `_disclose_if_message_is_authored`.
+        from graphql import GraphQLError
+
+        original: BaseException | None
+        if raiser == "graphql":
+            original = GraphQLError(message)
+        elif raiser == "runtime":
+            original = RuntimeError(message)
+        else:
+            original = None
+
+        error = GraphQLError(message, original_error=original, path=path)
+        masked = security._should_mask_error(error)
+        final = security._MASKED_ERROR_MESSAGE if masked else error.message
+
+        if must_hide:
+            assert _INTERNAL_MARKER not in final, f"{label} leaked internal text: {final}"
+        else:
+            assert final == message, (
+                f"{label} was rewritten, so a legitimate error lost its detail: {final}"
+            )
 
     def test_every_exception_families_disclosure_decision_is_pinned(self) -> None:
         # THE arm that would have caught R-02, and did not exist.

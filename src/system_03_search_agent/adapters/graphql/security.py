@@ -77,6 +77,7 @@ Writes:
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 from collections.abc import AsyncIterator, Callable, Mapping
 
@@ -212,6 +213,15 @@ _MASKED_ERROR_MESSAGE = "This request could not be completed due to an internal 
 # error and what a bare masked message made impossible.
 INPUT_VALIDATION_ERROR_CODE = "BAD_USER_INPUT"
 
+# Substituted for a message that matched no authored shape. Deliberately says
+# the request was rejected rather than that something broke: the caller still
+# learns which side the fault is on, and gets a code to branch on, while the
+# unrecognised text itself never leaves the process.
+_UNAUTHORED_MESSAGE_REPLACEMENT = (
+    "This request was rejected as malformed. No further detail is available "
+    "for this failure."
+)
+
 # ---------------------------------------------------------------------------
 # The allowlist. `_should_mask_error` is MaskErrors's `should_mask_error`
 # callback: it returns True (mask) for anything that is not a deliberate,
@@ -266,6 +276,12 @@ INPUT_VALIDATION_ERROR_CODE = "BAD_USER_INPUT"
 # does.
 PUBLIC_ERROR_MARKER = "__graphql_public__"
 
+# Never carries the rejected message itself. An unrecognised message is
+# withheld precisely because nothing has established it is safe to reproduce,
+# and a log line is still a place it could reach a reader who should not see
+# it (`ai-security-standards.md`: no internal detail in log messages).
+logger = logging.getLogger(__name__)
+
 _CAMEL_RUN_1 = re.compile(r"(.)([A-Z][a-z]+)")
 _CAMEL_RUN_2 = re.compile(r"([a-z0-9])([A-Z])")
 
@@ -313,6 +329,98 @@ def _is_allowlisted_application_exception(exc: BaseException) -> bool:
 _SCHEMA_SUGGESTION_PATTERN = re.compile(r"\s*Did you mean[^?]*\?", re.IGNORECASE)
 
 
+# ---------------------------------------------------------------------------
+# The disclosable-message allowlist: default-deny on the TEXT ITSELF.
+#
+# This replaces the question every previous version of this module asked. Each
+# of those asked WHO RAISED the error and inferred from that whether its text
+# was safe, and each used a different proxy for the answer:
+#
+#   round 1  the PACKAGE the class was declared in    leaked a live DSN
+#   round 4  the CLASS FAMILY (isinstance GraphQLError) leaked a live DSN
+#   round 5  the PHASE it came from (path is None)    leaked through a scalar
+#
+# All three are correlates of the property that actually matters, which is a
+# fact about the STRING: does this text contain anything internal? A correlate
+# has exceptions, and five review rounds found one every time.
+#
+# So the rule now checks the text. A message reaches a caller only if it
+# matches a shape authored HERE, in advance, and reviewed. Anything else, from
+# any raiser, in any phase, of any class, is replaced by a fixed literal and a
+# code. The failure direction is safety: an unrecognised message loses its
+# detail, it never loses its masking.
+#
+# `{0}` in these patterns is always a value the CALLER supplied or a name from
+# the caller's own document. None of them can interpolate server state,
+# because none of them has a slot for it.
+# ---------------------------------------------------------------------------
+
+_DISCLOSABLE_MESSAGE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    # graphql-core validation: the caller's own token was rejected.
+    re.compile(r"^Cannot query field '[^']*' on type '[^']*'\.$"),
+    re.compile(r"^Unknown argument '[^']*' on field '[^']*'\.$"),
+    re.compile(r"^Unknown type '[^']*'\.$"),
+    re.compile(r"^Unknown directive '[^']*'\.$"),
+    re.compile(r"^Field '[^']*' argument '[^']*' of type '[^']*' is required.*$"),
+    re.compile(r"^Field '[^']*' of required type '[^']*' was not provided\.$"),
+    re.compile(r"^Syntax Error: .{0,120}$"),
+    re.compile(r"^Variable '\$[^']*' (?:got invalid value|of required type).{0,400}$"),
+    re.compile(r"^Expected value of type '[^']*'.{0,120}$"),
+    re.compile(r"^Value '[^']*' does not exist in '[^']*' enum\.$"),
+    re.compile(r"^Expected non-nullable type '[^']*' not to be None\.$"),
+    re.compile(r"^Fragment '[^']*' .{0,120}$"),
+    re.compile(r"^Anonymous operation must be the only defined operation\.$"),
+    re.compile(r"^Must provide (?:an )?operation.{0,80}$"),
+    re.compile(r"^Operation '[^']*' .{0,120}$"),
+    re.compile(r"^Introspection is disabled\.?.{0,120}$"),
+    re.compile(r"^Subscriptions are not enabled.{0,120}$"),
+    # Strawberry's own security limiters. Each describes the caller's own
+    # document and nothing else.
+    re.compile(r"^'[^']*' exceeds maximum operation depth of \d+\.?$"),
+    # The installed MaxAliasesLimiter's real wording, read from the library
+    # rather than guessed: "60 aliases found. Allowed: 15".
+    re.compile(r"^\d+ aliases found\. Allowed: \d+$"),
+    # This surface's own scalar parsers (`types.py`). Their messages are
+    # fixed literals naming the caller's own field, and an inline-literal
+    # argument reaches this predicate without the "Variable '$x'" wrapper a
+    # variables-borne value carries.
+    re.compile(r"^ask input field '[^']*' .{0,200}$"),
+    re.compile(r"^Syntax Error: Document contains more than \d+ tokens.*$"),
+)
+
+
+# Codes this surface's own extensions and validation rules attach AT THE
+# RAISE SITE. An error already carrying one of these was authored here, in
+# full, by code in this package, so its text is disclosable by the same
+# "someone wrote this in advance and it was reviewed" standard the message
+# shapes above meet.
+#
+# This is a DECLARATION, not another proxy. The distinction from the three
+# rules that leaked is that nothing is being inferred: our code does not
+# happen to live somewhere or belong to some family, it explicitly stamps the
+# error as it builds it. An error graphql-core generates, or one raised deep
+# in the fold, carries no code and gets none here.
+_AUTHORED_ERROR_CODES = frozenset(
+    {
+        _REQUEST_TIMEOUT_CODE,
+        _TOO_MANY_RUN_CREATING_FIELDS_CODE,
+        "REQUEST_BODY_TOO_LARGE",
+        "DOCUMENT_TOO_DEEPLY_NESTED",
+    }
+)
+
+
+def _is_disclosable_message(message: str, extensions: Mapping[str, object] | None = None) -> bool:
+    """Does this message match a shape authored in advance for disclosure?
+
+    Default-deny. A message nobody authored a shape for is not disclosed, no
+    matter what raised it or when.
+    """
+    if extensions and extensions.get("code") in _AUTHORED_ERROR_CODES:
+        return True
+    return any(pattern.match(message) for pattern in _DISCLOSABLE_MESSAGE_PATTERNS)
+
+
 def _strip_schema_suggestions(message: str) -> str:
     """Remove graphql-core's "Did you mean ...?" clauses from a message.
 
@@ -323,6 +431,34 @@ def _strip_schema_suggestions(message: str) -> str:
     actionable, so this narrows the disclosure without blunting it.
     """
     return _SCHEMA_SUGGESTION_PATTERN.sub("", message).strip()
+
+
+def _disclose_if_message_is_authored(error: GraphQLError, *, code: str | None = None) -> bool:
+    """Strip suggestions, then disclose only if the remaining text matches a
+    shape authored in `_DISCLOSABLE_MESSAGE_PATTERNS`.
+
+    Returns MaskErrors's `should_mask_error` verdict, so `False` means the
+    error goes out as it now stands and `True` means the generic message
+    replaces it.
+
+    An unrecognised message is REWRITTEN here rather than left to
+    `MaskErrors.anonymise_error`, for one reason worth stating: this way the
+    caller still gets a code (`code` if one was supplied), so a client can
+    tell "your request was rejected, I will not tell you more" from "something
+    broke". Detail is lost; actionability is not, and safety is never traded
+    for either.
+    """
+    error.message = _strip_schema_suggestions(error.message)
+    if not _is_disclosable_message(error.message, error.extensions):
+        logger.warning(
+            "graphql: an error message matched no authored disclosure shape and "
+            "was replaced; if it was legitimate, add its shape to "
+            "_DISCLOSABLE_MESSAGE_PATTERNS rather than widening the rule"
+        )
+        error.message = _UNAUTHORED_MESSAGE_REPLACEMENT
+    if code is not None and (error.extensions is None or "code" not in error.extensions):
+        error.extensions = {**(error.extensions or {}), "code": code}
+    return False
 
 
 def _should_mask_error(error: GraphQLError) -> bool:
@@ -357,14 +493,11 @@ def _should_mask_error(error: GraphQLError) -> bool:
     original = error.original_error
     if original is None:
         # A validation-phase error built by graphql-core or by one of this
-        # module's own rules. Suggestions are stripped here as well as on the
-        # coercion path below, because F-R5-04's enumeration vectors (an
-        # unknown argument, an unknown type) arrive on THIS branch, not that
-        # one: they never wrap a raised exception, so they returned before
-        # ever reaching the strip when it lived only downstream. Every path
-        # that discloses a message strips it; none is left to be the exception.
-        error.message = _strip_schema_suggestions(error.message)
-        return False
+        # module's own rules. Suggestions are stripped first (F-R5-04: they
+        # name real neighbouring fields, arguments and types, which is
+        # introspection one guess at a time), then the remaining text must
+        # match an authored shape or it does not go out at all.
+        return _disclose_if_message_is_authored(error)
     # R-09 (re-review round), the half of J-10 the first fix did not reach.
     #
     # A `GraphQLError` raised by graphql-core ITSELF during input coercion or
@@ -428,13 +561,12 @@ def _should_mask_error(error: GraphQLError) -> bool:
         # disclosed validation error rather than for the message shapes
         # someone enumerated, since the next graphql-core release can add a
         # suggestion to a message nobody listed.
-        error.message = _strip_schema_suggestions(error.message)
-        if error.extensions is None or "code" not in error.extensions:
-            error.extensions = {
-                **(error.extensions or {}),
-                "code": INPUT_VALIDATION_ERROR_CODE,
-            }
-        return False
+        # And the remaining text must match a shape authored here. This is
+        # what closes F-R5-02: variable coercion runs THIS SURFACE'S OWN code
+        # (the scalar parsers), so "no resolver ran, nothing internal has been
+        # touched" was false, and a scalar raising with internal text leaked
+        # it on exactly this branch with the caller-blaming code attached.
+        return _disclose_if_message_is_authored(error, code=INPUT_VALIDATION_ERROR_CODE)
     if not _is_allowlisted_application_exception(original):
         return True
     if error.extensions is None or "code" not in error.extensions:
