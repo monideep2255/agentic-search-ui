@@ -994,9 +994,16 @@ def _finalize(
             grounded=False,
         )
 
+    run_failed = acc.fatal_error_payload is not None
     if acc.fatal_error_payload is not None:
         trust_payload = _floor_trust_signal_for_fatal_error(trust_payload)
-        notes.append(_fatal_error_disclosure(acc.fatal_error_payload))
+        # PREPENDED, not appended (F-R5-07). `_cap_notes` keeps the HEAD of
+        # the list, so an appended note is the first one shed. This is the
+        # single most important note the surface can emit, so it goes first
+        # among the surface's own disclosures. The `run_failed` field above
+        # is what makes the fact undroppable regardless; this ordering is
+        # what keeps the human-readable sentence alongside it.
+        notes.insert(0, _fatal_error_disclosure(acc.fatal_error_payload))
 
     # The surface's OWN disclosures are what get merged back into the message.
     # The preserved trust warnings are deliberately excluded here: they are
@@ -1015,6 +1022,7 @@ def _finalize(
     disclosures = Disclosures(
         answer_truncated=answer_truncated,
         citations_omitted=citations_omitted,
+        run_failed=run_failed,
         notes=_cap_notes(notes + preserved_trust_warnings),
     )
     return answer_text, TrustSignal.from_payload(trust_payload), citations, disclosures
@@ -1203,6 +1211,11 @@ def fold_citations(entry: RunEntry) -> CitationsExport:
         disclosures=Disclosures(
             answer_truncated=False,
             citations_omitted=collector.omitted_total,
+            # The citations export is a read of an already-finished run and
+            # carries no fatal-error signal of its own; a run that died is
+            # reported through `ask`/`run`, which is where `run_failed` is
+            # computed. Stated rather than left as a bare `False`.
+            run_failed=False,
             notes=_cap_notes(collector.disclosure_notes()),
         ),
     )

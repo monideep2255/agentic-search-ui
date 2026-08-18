@@ -306,6 +306,25 @@ def _is_allowlisted_application_exception(exc: BaseException) -> bool:
     return getattr(type(exc), PUBLIC_ERROR_MARKER, False) is True
 
 
+# Matches graphql-core's suggestion clause in any of its shapes: "Did you
+# mean 'x'?", "Did you mean 'x' or 'y'?", "Did you mean to use an inline
+# fragment on 'x'?". Anchored to the sentence so the rest of the message,
+# which is what makes the error actionable, survives intact.
+_SCHEMA_SUGGESTION_PATTERN = re.compile(r"\s*Did you mean[^?]*\?", re.IGNORECASE)
+
+
+def _strip_schema_suggestions(message: str) -> str:
+    """Remove graphql-core's "Did you mean ...?" clauses from a message.
+
+    A suggestion names real neighbouring fields, arguments or types, which is
+    schema introspection delivered one guess at a time and works with
+    introspection fully disabled. What remains still tells a caller which of
+    THEIR OWN tokens was rejected, which is the part that makes the error
+    actionable, so this narrows the disclosure without blunting it.
+    """
+    return _SCHEMA_SUGGESTION_PATTERN.sub("", message).strip()
+
+
 def _should_mask_error(error: GraphQLError) -> bool:
     """MaskErrors's `should_mask_error` callback.
 
@@ -337,6 +356,14 @@ def _should_mask_error(error: GraphQLError) -> bool:
     """
     original = error.original_error
     if original is None:
+        # A validation-phase error built by graphql-core or by one of this
+        # module's own rules. Suggestions are stripped here as well as on the
+        # coercion path below, because F-R5-04's enumeration vectors (an
+        # unknown argument, an unknown type) arrive on THIS branch, not that
+        # one: they never wrap a raised exception, so they returned before
+        # ever reaching the strip when it lived only downstream. Every path
+        # that discloses a message strips it; none is left to be the exception.
+        error.message = _strip_schema_suggestions(error.message)
         return False
     # R-09 (re-review round), the half of J-10 the first fix did not reach.
     #
@@ -387,6 +414,21 @@ def _should_mask_error(error: GraphQLError) -> bool:
     # marker check below, where it is masked unless it declares itself
     # public.
     if isinstance(original, GraphQLError) and error.path is None:
+        # F-R5-04. Disclosing these reopened SCHEMA ENUMERATION, which
+        # `DisableIntrospection` and `disable_field_suggestions` exist to
+        # prevent. graphql-core appends "Did you mean ...?" to several
+        # validation errors, and Strawberry's own `disable_field_suggestions`
+        # only strips the ones beginning "Cannot query field", so unknown
+        # ARGUMENTS and unknown TYPES still named their real neighbours:
+        # `Unknown type 'AskInpt'. Did you mean 'AskInput' or 'AskText'?` is a
+        # schema dump one guess at a time, and it survived introspection being
+        # off entirely.
+        #
+        # Stripped on the message the caller actually receives, for every
+        # disclosed validation error rather than for the message shapes
+        # someone enumerated, since the next graphql-core release can add a
+        # suggestion to a message nobody listed.
+        error.message = _strip_schema_suggestions(error.message)
         if error.extensions is None or "code" not in error.extensions:
             error.extensions = {
                 **(error.extensions or {}),

@@ -324,6 +324,24 @@ class TrustSignal:
 class Disclosures:
     answer_truncated: bool
     citations_omitted: int
+    # F-R5-07, a CRITICAL found at the fifth review round. "This run died
+    # before finishing" was carried ONLY as a note, and `_cap_notes` keeps
+    # just the first `MAX_DISCLOSURE_NOTES`, so on a run with enough other
+    # disclosures the fatal note was evicted and the fact survived NOWHERE.
+    # The caller then saw an answer, citations, and an `outcome`/`riskTier`
+    # combination reachable on a perfectly healthy run, with nothing
+    # anywhere saying the run had failed. That is the worst possible
+    # instance of this surface's own premise failing: not a shortened
+    # disclosure, a deleted one.
+    #
+    # A structured field rather than a reordering, and the distinction is
+    # the point. Reordering would make the note survive TODAY's cap; a
+    # field cannot be evicted by any future cap, ordering change, or new
+    # disclosure source, because it does not live in the capped list at
+    # all. The note is still emitted for a human reader; this is what a
+    # machine reads, and it is the one disclosure that must never be
+    # droppable.
+    run_failed: bool
     notes: list[str]
 
 

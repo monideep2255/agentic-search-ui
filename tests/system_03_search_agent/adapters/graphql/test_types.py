@@ -204,13 +204,18 @@ class TestTrustSignalFromPayload:
 
 
 class TestRemainingTypesConstruct:
-    def test_disclosures_carries_its_three_fields(self) -> None:
+    def test_disclosures_carries_its_four_fields(self) -> None:
         # Mutation that turns this red: drop a field from Disclosures.
+        # `run_failed` was added at the fifth review round (F-R5-07): the
+        # fatal-error disclosure had been carried ONLY as a note, and notes
+        # are capped, so on a busy run it was evicted and the fact that the
+        # run had died survived nowhere at all.
         disclosures = types_module.Disclosures(
-            answer_truncated=True, citations_omitted=3, notes=["a note"]
+            answer_truncated=True, citations_omitted=3, run_failed=True, notes=["a note"]
         )
         assert disclosures.answer_truncated is True
         assert disclosures.citations_omitted == 3
+        assert disclosures.run_failed is True
         assert disclosures.notes == ["a note"]
 
     def test_ask_result_carries_all_six_fields(self) -> None:
@@ -225,7 +230,7 @@ class TestRemainingTypesConstruct:
             trust_signal=trust_signal,
             citations=[citation],
             disclosures=types_module.Disclosures(
-                answer_truncated=False, citations_omitted=0, notes=[]
+                answer_truncated=False, citations_omitted=0, run_failed=False, notes=[]
             ),
         )
         assert result.run_id == "r1"
@@ -249,7 +254,8 @@ class TestRemainingTypesConstruct:
         # (judge J-06, premise clause C5).
         citation = types_module.Citation.from_payload(_citation_payload())
         disclosures = types_module.Disclosures(
-            answer_truncated=False, citations_omitted=2, notes=["two were dropped"]
+            answer_truncated=False, citations_omitted=2, run_failed=False,
+            notes=["two were dropped"]
         )
         export = types_module.CitationsExport(
             run_id="r1",

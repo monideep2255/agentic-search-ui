@@ -385,6 +385,19 @@ async def _claim_scoped_trust_stream(query: Query, context: RequestContext) -> A
     )
 
 
+# The warning set `_many_trust_warnings_stream` emits AND the disclosure arm
+# asserts on, defined once. Two copies drifted at the fifth review round: the
+# fixture emitted three warnings and the assertion checked only the first and
+# last, so dropping the middle one passed (F-R5-09, the thirteenth vacuous arm
+# in this phase). A shared constant makes "assert on every one" structural
+# rather than a thing the next reader has to remember.
+_EXPECTED_TRUST_WARNINGS = (
+    "WARNING-ALPHA " + ("a" * 200),
+    "WARNING-BETA " + ("b" * 200),
+    "WARNING-OMEGA " + ("z" * 200),
+)
+
+
 async def _many_trust_warnings_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
     """Several claim-scoped trust signals, each carrying its own long warning,
     so the fold must MERGE their messages and the merge overruns
@@ -399,11 +412,7 @@ async def _many_trust_warnings_stream(query: Query, context: RequestContext) -> 
     yield _event("guard", trace_id, 0, GuardPayload(passed=True, category="ok", reason=None))
     yield _event("token", trace_id, 1, TokenPayload(text="an answer", marker_ids=["c1"]))
     yield _event("citation", trace_id, 2, _citation(1, citation_id="c1"))
-    warnings = [
-        "WARNING-ALPHA " + ("a" * 200),
-        "WARNING-BETA " + ("b" * 200),
-        "WARNING-OMEGA " + ("z" * 200),
-    ]
+    warnings = list(_EXPECTED_TRUST_WARNINGS)
     seq = 3
     for index, warning in enumerate(warnings):
         yield _event(
@@ -474,6 +483,87 @@ async def _oversized_answer_stream(query: Query, context: RequestContext) -> Asy
             total_tool_calls=6,
             elapsed_ms=9000,
             trust_outcome="answer",
+        ),
+    )
+
+
+async def _busy_fatal_error_stream(query: Query, context: RequestContext) -> AsyncIterator[Event]:
+    """A run that dies fatally AFTER generating more disclosures than the note
+    cap can hold: an over-cap answer, an over-cap citation list, and many
+    trust warnings.
+
+    This is F-R5-07's repro. The fatal-error disclosure was carried only as a
+    note, notes are capped, and on a run like this one it was evicted, so the
+    caller was shown an answer, citations and an outcome combination reachable
+    on a perfectly healthy run, with nothing anywhere saying the run had died.
+    """
+    trace_id = query.trace_id
+    yield _event("guard", trace_id, 0, GuardPayload(passed=True, category="ok", reason=None))
+    seq = 1
+    for chunk in range(40):
+        yield _event(
+            "token", trace_id, seq, TokenPayload(text=("x" * 900) + f" c{chunk} ", marker_ids=[])
+        )
+        seq += 1
+    for index in range(1, 71):
+        yield _event("citation", trace_id, seq, _citation(index, citation_id=f"c{index}"))
+        seq += 1
+    for index, warning in enumerate(_EXPECTED_TRUST_WARNINGS):
+        yield _event(
+            "trust_signal",
+            trace_id,
+            seq,
+            TrustSignalPayload(
+                outcome="flag",
+                risk_tier="high",
+                grounded=True,
+                triangulated=None,
+                citation_id=f"c{index + 1}",
+                scope="claim",
+                message=warning,
+            ),
+        )
+        seq += 1
+    # Enough of the surface's OWN disclosures to overflow `MAX_DISCLOSURE_
+    # NOTES` before the fatal error arrives. Without these the cap never
+    # fires, the eviction never happens, and the arm below passes for the
+    # wrong reason: measured, an earlier version of this fixture left the
+    # arm GREEN under the exact mutation it names.
+    for index in range(12):
+        yield _event(
+            "tool_result",
+            trace_id,
+            seq,
+            ToolResultPayload(
+                call_id=f"call{index}",
+                tool="cypher_query",
+                layer="layer_1_graph",
+                status="ok",
+                summary=f"tool call {index} returned a truncated row set",
+                result_count=25,
+                truncated=True,
+            ),
+        )
+        seq += 1
+    yield _event(
+        "error",
+        trace_id,
+        seq,
+        ErrorPayload(
+            fatal=True,
+            scope="run",
+            source="graph_connection",
+            error_class="unexpected",
+            message="could not connect to host db-internal.example:5432 as user kg_reader",
+            retry_after_s=0,
+        ),
+    )
+    yield _event(
+        "done",
+        trace_id,
+        seq + 1,
+        DonePayload(
+            total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=42, trust_outcome="refuse"
         ),
     )
 
@@ -636,6 +726,7 @@ mutation Ask($input: AskInput!) {
     disclosures {
       answerTruncated
       citationsOmitted
+      runFailed
       notes
     }
   }
@@ -969,7 +1060,7 @@ query Run($runId: ID!) {
     answer
     trustSignal { outcome riskTier grounded }
     citations { citationId sourceUrl }
-    disclosures { answerTruncated citationsOmitted notes }
+    disclosures { answerTruncated citationsOmitted runFailed notes }
   }
 }
 """
@@ -1352,6 +1443,62 @@ class TestSurfaceConfiguration:
         assert "kg_reader" not in serialized
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
+    async def test_a_failed_run_says_so_even_when_disclosures_overflow(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # F-R5-07, the CRITICAL the fifth review round found. "This run died"
+        # was carried ONLY as a note, and `_cap_notes` keeps just the first
+        # `MAX_DISCLOSURE_NOTES`, so a run that also truncated its answer,
+        # omitted citations and raised several warnings evicted the one
+        # disclosure that mattered most. The caller then saw an answer, 50
+        # citations and a trust signal reachable on a healthy run, with the
+        # failure erased.
+        #
+        # Mutation that turns this red: drop `run_failed` from `Disclosures`,
+        # or hardcode it `False`. That is the structured field which cannot be
+        # evicted, and it is what actually closes the critical.
+        #
+        # COVERAGE, STATED HONESTLY because the alternative is a clause that
+        # implies more than it proves. This arm does NOT prove the note
+        # ordering (`notes.insert(0, ...)` rather than `.append(...)`).
+        # Measured: restoring the append leaves this arm GREEN, because the
+        # surface cannot currently produce more than four distinct notes of
+        # its own (the twelve truncated tool results aggregate into ONE note),
+        # so `_cap_notes` never fires on them and there is nothing to evict.
+        # The eviction the fifth review round demonstrated was reachable only
+        # while the preserved trust warnings still lived INSIDE `notes`, which
+        # is what the RR2-03 fix changed.
+        #
+        # So the ordering is defence in depth against a future disclosure
+        # source, deliberately kept and deliberately not claimed as tested.
+        # If a later phase adds enough distinct note kinds to reach the cap,
+        # this arm should grow a second clause that actually exercises it.
+        from system_03_search_agent.core import run_registry as run_registry_module
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _busy_fatal_error_stream)
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await _ask(client, headers)
+
+        data = _payload(response)["ask"]
+        disclosures = data["disclosures"]
+        notes = disclosures["notes"]
+
+        # The undroppable half.
+        assert disclosures["runFailed"] is True, (
+            "a run that died fatally reported nothing structured to say so"
+        )
+        # And the human-readable half survived the cap alongside it.
+        assert any("fail" in note.lower() or "unexpected" in note.lower() for note in notes), (
+            "the fatal-error disclosure was evicted from notes by the cap"
+        )
+        # The internal detail still never reaches the caller.
+        serialized = _serialized(response)
+        assert "db-internal.example" not in serialized
+        assert "kg_reader" not in serialized
+
+    @pytest.mark.asyncio
     async def test_a_fatal_run_error_is_disclosed_as_a_fixed_literal(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -1439,6 +1586,46 @@ class TestCallerInputIsNeverAnInternalError:
         assert code == "BAD_USER_INPUT", (
             f"{label} must carry a code a client can branch on, not prose alone"
         )
+
+    @pytest.mark.parametrize(
+        ("label", "document"),
+        [
+            ("unknown argument", 'mutation { ask(inpt: {text: "hi", sessionId: "s"}) { runId } }'),
+            ("unknown type", "mutation A($i: AskInpt!) { ask(input: $i) { runId } }"),
+            ("unknown output field", 'mutation { ask(input: {text: "x", sessionId: "s"}) { nope } }'),
+            ("unknown input field", 'mutation { ask(input: {tex: "x", sessionId: "s"}) { runId } }'),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_a_rejected_token_never_names_its_real_neighbours(
+        self, label: str, document: str
+    ) -> None:
+        # F-R5-04. Disclosing validation errors reopened schema enumeration:
+        # graphql-core appends "Did you mean 'x' or 'y'?", which names real
+        # fields, arguments and types. That is introspection one guess at a
+        # time, and it worked with introspection fully disabled. Strawberry's
+        # own `disable_field_suggestions` covers only messages beginning
+        # "Cannot query field", so arguments and types were still enumerable.
+        #
+        # Both arms matter: the suggestion is gone AND the caller is still
+        # told which of their own tokens was rejected, since stripping the
+        # whole message would trade one defect for a useless error.
+        #
+        # Mutation that turns this red: remove either
+        # `_strip_schema_suggestions` call from `security._should_mask_error`.
+        # There are two, on different branches, and these cases arrive on the
+        # `original is None` branch specifically.
+        async with _client() as client:
+            _user_id, headers = await _real_user_headers(client)
+            response = await _post_graphql(client, document, headers=headers)
+
+        errors = response.json().get("errors") or []
+        assert errors, f"{label} must be rejected"
+        message = errors[0].get("message") or ""
+        assert "Did you mean" not in message, (
+            f"{label} enumerated the schema: {message}"
+        )
+        assert message.strip(), f"{label} was stripped to nothing, which is not actionable"
 
     @pytest.mark.asyncio
     async def test_a_resolver_raising_a_graphql_error_still_masks(
@@ -1538,6 +1725,19 @@ class TestDisclosuresSurvive:
         data = _payload(response)["ask"]
         notes = data["disclosures"]["notes"]
 
+        # EVERY distinct warning, not a sample of the ends.
+        #
+        # The corrected version of this clause asserted only ALPHA and OMEGA,
+        # the first and last, so a mutation that dropped every MIDDLE warning
+        # left it green. That was the thirteenth vacuous arm in this phase and
+        # the sixth of the lead's: the first correction fixed the assertion's
+        # DEPTH (full text, not a prefix) and left its BREADTH untouched.
+        # Asserting on a sample of a collection tests the sample.
+        for full_text in _EXPECTED_TRUST_WARNINGS:
+            assert any(full_text in note for note in notes), (
+                f"a warning was dropped or preserved only in part: {full_text[:24]}..."
+            )
+
         # The FULL text of every distinct warning survives, so nothing a merge
         # had to cut is lost.
         #
@@ -1547,15 +1747,7 @@ class TestDisclosuresSurvive:
         # Preserving the first 20 characters of a warning is not preserving
         # the warning. Proven by running exactly that mutation; corrected to
         # compare full text.
-        expected = [
-            "WARNING-ALPHA " + ("a" * 200),
-            "WARNING-OMEGA " + ("z" * 200),
-        ]
-        for full_text in expected:
-            assert any(full_text in note for note in notes), (
-                f"a warning was preserved only in part: {full_text[:24]}... "
-                "a prefix is not the disclosure"
-            )
+
 
         # And the merge itself discloses its own cut, asserted DIRECTLY on
         # the floor rather than on the response.
