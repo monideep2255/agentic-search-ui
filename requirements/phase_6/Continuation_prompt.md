@@ -16,6 +16,7 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 - [Build phase 3.4, done](#build-phase-34-done)
 - [Build phase 3.5, done](#build-phase-35-done)
 - [Step 6.2, done](#step-62-done)
+- [Build phase 4.3, done](#build-phase-43-done)
 - [Build phase 4.0, done](#build-phase-40-done)
 - [Build phase 4.1, done](#build-phase-41-done)
 - [Build phase 4.10, done](#build-phase-410-done)
@@ -146,55 +147,36 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 ## The next session starts here
 
-OPEN BUILD PHASE 4.3, the GraphQL surface via Strawberry, sharing auth and tools with the REST surface. Nothing is in flight; `develop` is clean and every gate is green.
+OPEN BUILD PHASE 4.4, the KGX export. Nothing is in flight; `develop` is clean, build phase 4.3 merged as PR #48, and every gate is green.
 
-It depends only on build phase 4.0, which is merged. Section 25's order continues here.
+It depends only on Layer 1 access, which already exists, so it has no unmerged dependency at all. Section 25's order continues here.
 
-Open it the standard way, with no structural exception: read `LEARNINGS.md` filtered to the phase's territory, verify 4.0 is merged (it is), write the premise gate and WATCH IT FAIL, then build.
+Open it the standard way, with no structural exception: read `LEARNINGS.md` filtered to the phase's territory, confirm the dependency, write the premise gate and WATCH IT FAIL, then build.
 
-### What build phase 4.2 leaves for whoever opens 4.3
+### What build phase 4.3 leaves for whoever opens 4.4
 
-Three things, and the first is the most transferable result this project has produced so far.
+Four things. The first two are the most transferable results this project has produced, and they cost six review rounds and two criticals to learn.
 
-- FIX ROUNDS PARTITION BY FILE, NOT BY FINDING, AND RUN SERIALLY WITHIN A FILE. Five of build phase 4.2's six review rounds found their worst defect inside the previous round's fix. The cause was never attention or model tier: two agents editing one file in one round are each individually correct and structurally blind to the other, so two correct fixes compose into a defect that no reviewer of either one can see. The clearest instance is round 4, where one agent routed a message through the sanitizer and a second added an unsanitized write eleven lines below it, in the same commit. Round 5 ran as a single agent holding every fix and immediately found a sixth site five parallel rounds had walked past. The procedure: group findings by the file they land in, give one agent every finding in that file, never split a cross-file finding, and end every brief with a sweep instruction rather than a list of reported lines. Logged in `DECISIONS.md` on 2026-08-16.
-- FIX BY CATEGORY, NEVER BY ENUMERATION. The same shape failed four separate times in one phase: C0 and C1 control bytes instead of a Unicode general category, three exception types instead of a base class, three call sites instead of every write site, five named characters instead of a category sweep. Every enumerated defense grew a gap at the first case nobody listed. If a fix is a list, it is not finished.
-- A NEW SURFACE CAN MAKE A DORMANT FINDING LIVE. `F-3.4-A-06` had been open and correctly judged not exploitable for two phases, on the reasoning that no current call site could reach it. That reasoning was sound and its premise expired silently the moment this phase added the first surface whose output is EXECUTED by a terminal rather than displayed by a browser. Any finding parked on "not reachable today" is a claim about the set of surfaces that exists, so re-check the parked findings whenever a delivery surface lands, not only when the finding's own code is touched.
+- CHECK THE VALUE, NOT ITS PROVENANCE. Build phase 4.3 shipped the same critical twice, three rounds apart, in the same decision: may the caller see this exception? Each version answered it with a PROXY for safety, the package a class was declared in, then its class family, then the phase the error came from. Each proxy was defeated by the first case its author had not imagined, and two of them returned a live database DSN with credentials. The property that mattered was a fact about the STRING, and all three were merely correlates of it. The fourth attempt checks the text against shapes captured from the installed library. Whenever a check must decide about a value, check the value.
+- A REVIEW LOOP NEEDS A MERGE BAR OR IT CANNOT TERMINATE. Five rounds were briefed as "find anything", which on a surface this size always has an answer, so nothing could end the loop. A done-when had been written for the build and never for the review. The phase converged in one round after the product owner set one: a critical or a REACHABLE major blocks, minors and latent findings are tracked with an owner. Write the review's done-when when you write the build's.
+- THE MAKER-CHECKER SPLIT APPLIES TO FIXES, NOT ONLY TO REVIEWS. Five of six fix rounds here were run by the lead, who then wrote the tests pinning those fixes, and six of the phase's FOURTEEN vacuous gate arms came from exactly that. The round that finally closed the phase was fixed by a fresh agent with the lead verifying. It closed both blockers, found a second half of one finding nobody had filed, and correctly DISPUTED the review on a third.
+- CAPTURE FROM THE INSTALLED LIBRARY, NEVER FROM WHAT YOU EXPECT IT TO SAY. A message allowlist written from belief blunted fifteen ordinary caller errors into a generic literal, missing the real wording by ONE WORD in three places, while the file's own header claimed everything in it had been verified against the installed package. A comment claiming verification is not verification.
 
-Then build phases 4.4 to 4.7, in Section 25's order.
+Then build phases 4.5 to 4.7, in Section 25's order.
 
-### Carried into 4.2 and beyond
+### Carried into 4.4 and beyond
 
-`tracker/phase_4.10.md`'s "Carried open, with an owner each" table records a disposition for every finding that phase did not close.
+`tracker/phase_4.3.md`'s findings table records a disposition for every finding that phase did not close, and `tracker/BOARD.md` carries the five that remain open as flags. The one worth knowing before touching the GraphQL surface again: the masking layer is BYPASSED for an error that escapes Strawberry's operation context (an unknown fragment spread reaches it), so the premise "every error passes the content rule" is false on a live path. It discloses only the caller's own text today, which is why it did not block, and build phase 6.1 owns it.
 
-The product-decision queue is EMPTY as of 2026-08-15. Eight items that had been accumulating since build phase 3.1, six of them outliving the phase that raised them, were cleared in one session rather than trickled one per phase, which is how they accumulated. Every one is in `DECISIONS.md` with its reasoning. What that leaves for a builder:
-
-| Ready to build, decided | Where |
-|-------------------------|-------|
-| Report `risk_tier` as `unknown` rather than a hardcoded `low` when no assessment ran | Next backend ticket |
-| One withholding rule: if the system drops or shortens anything, it discloses that it did | Next backend ticket touching `pubtator_annotate` or `clinicaltrials_search` |
-| The concurrent-run cap no longer equal to the free allowance, and its message branching on which bound was hit | Next backend ticket |
-| Render the five guest dots from a local default, switching to the server's real count on the first ask | Next frontend ticket |
-| Read `blocked_reason`, label a guest's allowance as lifetime rather than daily, and stop the dots degrading toward a refusal | Next frontend ticket |
-| Move the off-host citation warning outside the collapsed source disclosure | Next frontend ticket |
-| Wait for the backend's `cancelled` event before closing a stopped run's stream | Next frontend ticket |
-| Build phase 4.10 put `entity_name` and `snapshot_date` on the wire; render them, since no UI reads either one today | Next frontend ticket |
-
-Two decisions are deferrals rather than work, and both are deliberate. The acronym-gene-symbol and lowercase-gene questions fold into build phase 4.7's entity-resolution design, because the stopword list they turn on is the heuristic 4.7 replaces, so answering now means designing twice.
-
-One residual is accepted rather than owned, and it is the honest floor after four rounds: a caller with genuinely many source addresses gets one share of the anonymous day per address and is bounded only by the day. The money stays bounded by `ANON_DAILY_RUN_CAP` throughout and signed-in users are unaffected. Build phase 6.0's real rate limiting owns the rest, and the whole-repository security scan is already triggered by exposure.
-
-One standing authorization was added on 2026-08-15 and a builder should know it exists: factual corrections to the locked technical specification are allowed as they are found, each logged as a decision, covering text that is demonstrably untrue about already-shipped code and never a design or scope change. It exists because Step 6.2 was the only sanctioned edit window, it closed on 2026-08-10, and five spec-conformance flags had been pointing at that finished event ever since.
-
+The product-decision queue is EMPTY. The eight items cleared on 2026-08-15 stayed cleared, and build phase 4.3 added none.
 
 ## Read before opening the next phase
 
-Build phase 4.10 is merged and closed out (see "State now" above). With it, the out-of-order insertion that ran 4.8, 4.9 and 4.10 ahead of the locked order is finished, and Section 25's own sequence resumes at 4.2. Four of Step 6.3's six delivery surfaces remain, none of them depending on 4.10.
+Build phase 4.3 is merged and closed out (PR #48, see "State now" above). Three of Step 6.3's six delivery surfaces remain, none of them depending on it. The out-of-order insertion that ran 4.8, 4.9 and 4.10 ahead of the locked order finished earlier, and Section 25's own sequence resumes at 4.2. Four of Step 6.3's six delivery surfaces remain, none of them depending on 4.10.
 
 | Next up | Branch | What it delivers | Depends on |
 |---------|--------|------------------|------------|
-| 4.2 | `phase/4.2-cli-adapter` | A thin CLI client over the REST API. THIS IS NEXT | 4.0, merged |
-| 4.3 | `phase/4.3-graphql-api` | A GraphQL surface via Strawberry, sharing auth and tools with the REST surface | 4.0, merged |
-| 4.4 | `phase/4.4-kgx-export` | An export utility scoped to the existing Hetzner graph, a batch job rather than a live adapter | Layer 1 access, already exists |
+| 4.4 | `phase/4.4-kgx-export` | An export utility scoped to the existing Hetzner graph, a batch job rather than a live adapter. THIS IS NEXT | Layer 1 access, already exists |
 | 4.5 | `phase/4.5-personalization-memory` | Bounded session memory, audience-level depth control, the stable named scientist persona | 1.2 and 2.2, both merged |
 
 Then 4.6 (feedback capture) and 4.7 (competency-question routing, which owns F-2.0-15).
@@ -377,6 +359,33 @@ Closed 2026-08-10, across eight PRs (#29 through #36) merged to `develop`. Ran i
 - An informal manual smoke test run against the live system (PR #36): the 7 v1 must-pass moat questions asked directly through the real FastAPI backend, real LLM calls, real NCBI APIs, answers read by hand, deliberately not the formal graded eval-harness gate (that stays deferred to build phase 5.1). The live knowledge graph was unreachable from the session that ran it (the SSH tunnel cannot be opened from a sandboxed coding session; a structural limitation, not a defect), so Layer 1 answers were read as untested-here rather than failed. Surfaced F-2.0-15: `think_node`'s real query classification was never built past its build-phase-2.0 stub (`query_class` hardcoded to `"lookup"`, entity resolution always empty), causing 4 of 7 must-pass questions to refuse outright ("I could not identify that gene," a false-positive gene-symbol guess off database names like GTR, AMR, SRA mentioned in the question) and a 5th to answer near-empty. Filed in `tracker/BOARD.md`'s Open flags table; product-owner decision, 2026-08-10, assigns it to build phase 4.7 as that phase's real deliverable, not just its closest candidate.
 
 The whole-repository security scan stays PAUSED INDEFINITELY on cost, unchanged by this reconciliation. Exposure, a deploy, a public URL, or first contact with a user who is not the product owner, is the only thing that turns it back on.
+
+## Build phase 4.3, done
+
+Merged as PR #48 on 2026-08-17, after SIX independent review rounds. It is the most-reviewed phase in this build, and the reason is worth reading before opening any phase that touches an error path or a security boundary.
+
+What shipped: a GraphQL surface at `/graphql`, served by Strawberry from the same FastAPI process, sharing the REST surface's auth and its tools. Four operations (`ask`, `run`, `citations`, `stopRun`) over the one agent core.
+
+Three scope readings the locked documents did not settle, each recorded before any code was written, since Section 13 names this surface and then explicitly declines to specify it:
+
+- "Shared tools" means through the one core, NOT a resolver per tool. Section 13.2 had already ruled on that exact PRD phrase for MCP: a per-tool passthrough lets a caller bypass cite-or-refuse and the cost caps entirely.
+- Registered accounts only, no guest path, matching both existing programmatic surfaces. The guest allowance is an ordering, not a function, and reproducing it on a second surface doubles a surface with a known accepted residual.
+- Request/response only. Subscriptions were available, and deliberately not built, so this surface advertises no WebSocket protocol at all.
+
+| Round | Result |
+|-------|--------|
+| Lead's own mutation sweep | 5 vacuous gate arms found in the lead's own gate, before any reviewer saw it |
+| Judge | FAIL. 3 major, 8 minor, plus 5 more vacuous arms. Premise clause C5 (anything dropped is disclosed) NOT MET |
+| Adversary | 1 CRITICAL, 13 major, 6 minor. The critical was a working credential-disclosure primitive the lead had rated minor: an exception was trusted because of the PACKAGE its class was declared in, and a crafted class returned a live DSN |
+| Re-review of the fix round | FAIL, 5 major. The critical's own fix had silently masked two actionable errors, and its commit message stated a claim about Python inheritance that was false |
+| Fifth round | FAIL, 1 CRITICAL. A run that died could report an answer, citations and a healthy trust signal, because the fatal disclosure lived only in a capped list and was evicted. Also: the second disclosure proxy had leaked again |
+| Sixth round, the first run against a MERGE BAR | DO-NOT-MERGE, 2 blocking. Both the lead's. Fixed by a fresh agent with the lead verifying, then MERGED |
+
+Final gates: 3308 Python tests (3188 passing, the same six live-network-gated cases carried since build phase 4.0), the GraphQL package alone 206 to 300 tests, 181 frontend, ruff clean, doc drift 0 stale 0 structural.
+
+Five findings are carried open with owners, all on `tracker/BOARD.md`. The one to know: the masking layer is bypassed for an error escaping Strawberry's operation context, reachable via an unknown fragment spread, disclosing only the caller's own text. Build phase 6.1 owns it.
+
+Full per-round detail: `tracker/phase_4.3.md`, plus one report per round at `tracker/phase_4.3_judge_report.md`, `_adversary_report.md`, `_rereview_report.md`, `_rereview2_report.md`, `_review5_report.md`, `_review6_report.md`.
 
 ## Build phase 4.0, done
 

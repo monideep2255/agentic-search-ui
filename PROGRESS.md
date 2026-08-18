@@ -2,7 +2,7 @@
 
 A plain-language update on what this project is, what works today, and what comes next. No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-16.
+Last updated: 2026-08-17.
 
 ## Table of contents
 
@@ -48,6 +48,7 @@ You can ask a question and get a real, cited answer back, streamed to a web page
 Concretely:
 
 - You can use it without an account at all. A first-time visitor gets five free searches, and the count is kept by our server rather than by the browser, so it is a real number rather than one the page can be talked out of. Signing in afterwards carries that visit's searches across.
+- Another program can now ask it questions, in a format built for software rather than for people. A developer writes down exactly which parts of the answer they want (just the answer text, or the answer plus every source, or only the sources) and gets back that and nothing else. This needs an account; there is no anonymous version of it.
 - You can use it from a terminal instead of a web page. `s3 ask "your question"` prints the answer as it is written, with the list of sources underneath, and you can send that straight into a file. Progress messages go to the screen rather than into the file, so the file holds the answer and nothing else.
 - You can sign in. Accounts, passwords, and sessions all work.
 - You can type a question into a chat window and watch the answer appear word by word, with a stop button.
@@ -132,6 +133,7 @@ Each of these is a completed, reviewed, merged piece of work.
 | 4.9 | Brought the answer page in line with the approved design, and found three serious problems by putting the two side by side | 2026-08-14 |
 | 4.10 | Opened the product to people without an account: five free searches, counted by our server rather than the browser. Then spent four rounds stopping one person from using up everybody else's free searches in under two seconds | 2026-08-15 |
 | 4.2 | A command-line version, so you can ask a question from a terminal and pipe the answer into a file. Six rounds of review found 56 problems, five of them serious, including one where a booby-trapped research abstract could take over your terminal window and fake its own list of sources | 2026-08-16 |
+| 4.3 | A way for other software to ask questions and pick exactly which parts of the answer it wants back. It took six rounds of review, more than any other piece of work so far. Twice the same bug returned: an error message meant for us leaked a database password out to whoever was asking. Both times the cause was the same, and it is worth stating plainly, because it is a mistake anyone can make: the code tried to decide whether a message was safe to show by looking at WHERE THE MESSAGE CAME FROM instead of at WHAT IT SAID | 2026-08-17 |
 | Design system repair | Fixed the design's own colour and keyboard problems at source, after working around them three separate times | 2026-08-14 |
 
 Nine of these are worth understanding, because they explain how this project works.
@@ -205,8 +207,10 @@ flowchart LR
         Door --> MCP[Back door: other programs can now ask questions too]
     MCP --> Style[The web page redesigned and built]
         Style --> Guest[Anyone can try it: five free searches, no account]
+        Guest --> Cli[Ask from a terminal]
+        Cli --> Gql[Software can ask and pick what it wants back]
     end
-    Guest --> Dec[Question-understanding gap: given a home, a later sprint, not fixed yet]
+    Gql --> Dec[Question-understanding gap: given a home, a later sprint, not fixed yet]
     Dec --> Wire[Wire the other five tools into the answer pipeline]
     Wire --> Other[Other ways in: command line, saved history]
     Other --> L[Everything else]
@@ -218,7 +222,7 @@ The planned specification pause (updating the written plans with everything lear
 
 In order, now:
 
-1. A second programmable way in, for other software rather than for people: a query interface where a program asks for exactly the fields it wants. The command-line version is now built, so this is the next door onto the same rooms.
+1. A way to export a slice of our biomedical database as a standard file other researchers' tools can read. It is a batch job rather than something you click, and it is the last of the ways in and out that has not been built.
 2. The question-understanding gap now has a home: a specific future sprint, later than the next several, will build the real fix. It is not being rushed in early, and nothing else in the next few sprints depends on it being fixed first.
 3. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
 4. Then the remaining work: the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
@@ -229,6 +233,8 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| When another program asks a badly-formed question, one particular kind of mistake slips past the part that scrubs our internal wording out of error messages. Today the only thing that escapes is a word the asker typed themselves, so nothing of ours gets out, but the rule we rely on is not airtight and we know it | The hardening sprint, 6.1 |
+| The safety net that logs what broke during a sprint reported "nothing to record" for the sprint that had the most to record of any so far. It was looking for words our notes did not happen to use. The notes were written by hand instead, but a check that cannot fail is worth no more than no check | The hardening sprint, 6.1 |
 | Almost nothing in this project looks at the finished web page. Most checks ask what is on the screen, never where it is, which is how a page that drew itself into a narrow strip passed everything. There are now a handful of checks that measure where things actually land, and one that checks the design pages themselves, but they cover a few specific things rather than the page as a whole | Partly addressed. Full coverage needs a deliberate visual-checking approach that does not exist yet |
 | The answer page cannot show two things the design calls for, because the system does not send them: the date our stored database snapshot was taken, and the name of the thing a source is about rather than just its number. A reader therefore cannot tell a stored value from a freshly fetched one | The next sprint, which is already changing the back end |
 | Sources now fold away until you click them, which is what the design asks for, but it also folded away a warning that appears when a source link points somewhere other than an official government site. A security warning is now two clicks deep instead of visible | Needs a decision: whether a warning of that kind may sit behind a fold at all |
