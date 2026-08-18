@@ -86,7 +86,7 @@ When 2+ signals appear in the same phase: treat as DEGRADING regardless of estim
 
 ### Phase boundary = context reset point
 
-At every phase boundary (Step 6: phase checkpoint), explicitly assess context health. If DEGRADING or CRITICAL, the checkpoint file becomes the handoff document for a fresh session. Include in the checkpoint:
+At every phase boundary (Step 7: phase checkpoint), explicitly assess context health. If DEGRADING or CRITICAL, the checkpoint file becomes the handoff document for a fresh session. Include in the checkpoint:
 
 1. Plan name and current phase number
 2. What was completed (with file paths)
@@ -136,19 +136,7 @@ The rule in one line: open a phase on the primary provider, always. Stages 3 and
 
 The stage-to-provider split is in `docs/build/Build_workflow_cadence.md` under "Provider mapping", and the launch commands are named in `requirements/phase_6/Continuation_prompt.md` under "Which session to open". If neither describes an alternate backend for this machine, there is only `claude` and nothing to decide.
 
-#### A budget-split phase is three sessions, not one
-
-This skill runs stages 1 to 11 and stops only at the phase boundary. The provider split cuts across those stages and cannot change inside a running session. Those two facts collide, and the resolution is that splitting a phase across providers means splitting it across sessions:
-
-| Session | Launch | Stages | Stop condition to state in the prompt |
-|---------|--------|--------|----------------------------------------|
-| 1 | primary | 1 to 5 | Once the premise gate is written and failing |
-| 2 | alternate | 6 to 7 | At the judge |
-| 3 | primary | 8 to 11 | At the pull request |
-
-This skill does not stop at stage boundaries on its own, so each session's stop condition has to be stated when it is invoked. Re-enter a partially built phase with `--phase N`, and check where it stands with `--status`.
-
-Do not treat this as the default. While primary-provider budget is healthy, run the whole phase in one session there: three sessions per phase is ceremony that costs more than it saves until the limit is actually close. The split exists to rescue a week that would otherwise be lost.
+If the primary-provider budget runs out mid-phase, split the phase across sessions rather than switching backend mid-run: open on the primary through the premise gate, hand the builder stages to the alternate, and return to the primary for the judge onward. State each session's stop condition when you invoke it, since this skill does not stop at stage boundaries on its own. Re-enter a partially built phase with `--phase N`, and check where it stands with `--status`. This is a rescue path, not a default.
 
 Navigate panes with `Ctrl-b` then an arrow key.
 
@@ -184,22 +172,19 @@ Each teammate receives its task via the shared task list. The lead monitors prog
 | Product owner | 1 (human) | Not dispatched | Approves the PR, decides scope, judges whether a UI actually feels right. Coordinates only with the lead, never with a builder. | At phase boundaries, and during any phase marked product owner required |
 | Orchestrator (lead) | 1 (main session) | Always active | Decompose phase, create team, track tasks, coordinate, own the board. Never builds directly when 2+ tasks exist. | Always |
 | Researcher | 1-N | Sub-agent | Fetch docs, read APIs, find examples, explore codebases BEFORE builders start. | Pre-build |
-| Planner | 0-N | Sub-agent | Sub-planners for complex areas. Recursive decomposition. | When complexity warrants |
 | Builder | 2-N | Agent team (teammates) | Execute independent build tasks in parallel. Each builder owns one task in the shared task list. Runs in its own tmux pane. | After research/planning |
 | Judge | 1 | Sub-agent | Single quality gate. Reviews ALL builder output: functional, quality, plan adherence, security. | After all builders complete |
 | Adversary | 0-1 | Sub-agent | Use the running artifact in hostile, unscripted ways to find what scripted checks miss. Over-reports on purpose. Files findings to a shared ledger only, never fixes, triages, or closes them. | After the judge, on any phase with a runnable artifact |
 | Test writer | 1 | Sub-agent | Write tests for what was built. Unit, integration, smoke tests. | After or alongside judge |
-| Integrator | 0-1 | Sub-agent | Wire independently-built components together. Only when builders produced isolated pieces. | Only when components need wiring |
 
 ### Key design principles (from [Cursor scaling agents](https://cursor.com/blog/scaling-agents))
 
 1. Simpler beats complex. The judge is one agent, not three.
-2. Workers don't coordinate with each other. Each builder gets a task and grinds independently. The orchestrator (lead) handles coordination via the shared task list.
-3. Planning is recursive. Complex phases get sub-planners in parallel.
-4. Fresh starts combat drift. If a builder teammate is stuck or going in circles, the lead can message it with a clearer prompt or ask it to start over.
-5. The integrator is conditional. Skip when builders produce self-contained deliverables.
-6. Thin orchestrator. The lead's job is routing and monitoring, not reading full file contents. Delegate reads to the agent that needs the information.
-7. Fresh context per agent. Every teammate starts with a clean context window. Pre-inject only what it needs via the task description.
+2. Workers don't coordinate with each other, but only when their work is genuinely disjoint. Each builder gets a task and grinds independently, and the lead handles coordination via the shared board. This holds for separate files and breaks for a shared seam: two agents editing the same file are individually correct and structurally blind to each other, which is how two correct changes compose into a defect nobody reviewing either one can see. When work shares a file, it is one agent working serially, not two coordinating. See "The review loop has a budget", Rule 1, for the measurement.
+   Corollary, and the reason this reads as agents working over each other: every builder READS the board's Findings section before it starts and again before it reports, even for tickets it does not own. Isolation is about write access, never about awareness. A builder that cannot see what its siblings found is not isolated, it is uninformed, and it will re-make a mistake already filed one pane over.
+3. Fresh starts combat drift. If a builder teammate is stuck or going in circles, the lead can message it with a clearer prompt or ask it to start over.
+4. Thin orchestrator. The lead's job is routing and monitoring, not reading full file contents. Delegate reads to the agent that needs the information.
+5. Fresh context per agent. Every teammate starts with a clean context window. Pre-inject only what it needs via the task description.
 
 ### Model tiering (build-time cost lever)
 
@@ -217,7 +202,6 @@ Tiers are named by capability, never by product, so this table survives a change
 | Test writer | Balance | medium | Bounded work against a finished artifact. |
 | Judge | Depth | high or xhigh | Single quality gate. A missed defect here is the most expensive, so pay for the reasoning. |
 | Adversary | Depth | high | Finding a fluent, plausible, wrong answer needs real adversarial reasoning. A cheaper tier will not find what the judge missed. |
-| Sub-planner | Depth | high | Decomposition errors cascade into every downstream builder. |
 
 The three tiers: Speed for lookups, extraction, classification, and repetitive work. Balance for normal development. Depth for architecture, hard debugging, and long messy agentic work. The effort ladder runs low, medium, high, extra high, max, and rises with the difficulty of the task rather than its importance.
 
@@ -257,14 +241,51 @@ The adversary is the unscripted half. It uses the running system in hostile ways
 
 Run the adversary after the judge, only on a phase that produced a runnable artifact. A green judge verdict is necessary but not sufficient; the adversary is what decides whether the answer path is actually trustworthy. Source: the Personal Space autonomous build harness, analyzed in the personal-os Reference-repos set, which pairs a scripted qa role with a separate unscripted adversary.
 
+### The review loop has a budget
+
+This section exists because the review loop, not the build, is where phases actually lose their day. Build phase 2.1 took five rounds and build phase 4.2 took six, and in both, every round found its worst defect inside the previous round's fix. That is not a scrutiny problem. Five rounds of increasing scrutiny did not lower the recurrence rate.
+
+Four rules, each traceable to a measured failure rather than to principle.
+
+Rule 1, fan out on files and go serial on findings. Parallelism is a throughput lever for independent work and an active hazard for work that shares a seam. Two builders fixing two findings in the same file are each individually correct and structurally blind to the sibling editing the same function, so two correct fixes compose into a defect and no reviewer of either one sees it. Build phase 4.2 measured this directly: rounds 1 through 4 ran parallel fix agents, one per module, and each round's fix produced the next round's worst finding. Round 5 was run deliberately as a single agent holding every finding at once, closed both assigned findings, and found a sixth defect on a fallback path that four parallel rounds had walked past. So:
+
+- Two findings in different files: parallel fix agents, as usual.
+- Two or more findings touching the same file: one fix agent, holding all of them, serially. Never one agent per finding.
+- The lead states the file-to-finding map before dispatching any fix, the same way it states the file scope of a build ticket.
+
+Rule 2, fix by category, never by enumeration. The shape that keeps failing here is a defense that lists instances instead of naming the class: C0 and C1 control characters rather than the Unicode category, three exception types rather than the base class, five write sites rather than every write site. Every one of those shipped, passed its own test, and was bypassed by the sixth case. A fix that enumerates is rejected at review, even when every listed case is handled correctly. Fix by category, by base class, or by an exhaustive sweep of the call sites, and say in the ticket which of the three it is.
+
+Rule 3, two rounds, then stop. The budget is one judge round plus one fix-and-reverify round. If round 2 still returns a blocking finding, the phase stops and escalates to the product owner instead of opening round 3. What it hands over is not "still failing":
+
+- Which findings remain open, with severity.
+- What each fix attempt changed, as a diff summary per attempt.
+- Whether any round-2 finding sits inside a round-1 fix, named explicitly.
+- Two or three options with a recommendation, one of which is always "revert this phase's fixes and re-decompose".
+
+A phase that would have taken six rounds now costs two and a decision. This is the `goal-contracts` blocked-stop applied to review: a blocked stop is a valid, honest end state, and escalation must be cheaper than fighting the loop.
+
+Rule 4, a regression inside a prior fix stops the round immediately. Do not finish the round, do not batch it with the round's other findings. When a reviewer locates a finding inside code written to fix an earlier finding in this same phase, the phase escalates on the spot, even in round 1, because that is the signal that the fix approach itself is wrong rather than incomplete. The finding is filed with `Regression of: F-N.M-XX` so the pattern is visible in the ledger rather than reconstructed afterwards from five reports.
+
+### Reviewing a fix, and reviewing a gate
+
+Two additions to the judge's brief, both measured, both cheap to state and expensive to omit.
+
+A fix is the most dangerous code in the phase, not the safest. It is the newest and least-exercised thing in the build, and it is written with the defect freshly in mind, which feels like safety and is not. So the review brief names the fix commits explicitly and says the newest code is the most dangerous code. Two consequences:
+
+- A code comment that claims a security or correctness property is a claim to be tested, never documentation. Build phase 2.1's F-2.1-J5-01 was a comment asserting an invariant sitting directly above code that never implemented it, and it survived review because a confident comment is exactly where the next reader stops checking. Where a comment asserts a property, a test must assert the same property, or the comment gets deleted.
+- When a fix adds a new code path that produces the same class of output, every prior finding about that output class is re-tested against the new path. A regression test proves the old route is shut and says nothing about a route that did not exist when it was written.
+
+Never resume the judge to re-review its own findings. Resuming is cheaper on context and silently violates the raiser-never-closes rule, because the judge is then both raiser and closer even when a different agent authored the fix. Route re-verification to a fresh agent with no prior context, which re-derives the verdict from the code and tests rather than from anyone's summary.
+
+Mutation-test every gate before it counts as evidence. Assertions that cannot fail are the single most repeated failure in `LEARNINGS.md`, eleven separate instances by 2026-08-14, and a gate's greenness on the day it is written proves nothing: four of the eleven were caught only by a mutation, not by reading the assertions. This is one line item on the judge's checklist, not a separate agent dispatch. For every new or changed gate the judge asks: break the thing this gate exists to catch, and does the gate go red? If it stays green, the gate fails and the finding is a vacuous gate arm, regardless of what the suite total says. Build phase 4.3 alone carried fourteen of them, several written by the lead.
+
 ### Team dispatch order
 
 ```
 Phase start
   |-- Researchers (sub-agents, parallel) --- gather context, docs, examples
-  |-- Sub-planners (sub-agents, if needed) --- decompose complex sub-areas
   |
-  |-- [research + planning complete]
+  |-- [research complete]
   |
   |-- Create agent team --- spawn builder teammates in tmux panes
   |-- Builders (teammates, parallel) --- each claims a task, executes independently
@@ -275,9 +296,14 @@ Phase start
   |-- Judge (sub-agent) --- single quality gate (pass/fail + details)
   |-- Adversary (sub-agent, only on a runnable artifact) --- hostile unscripted use, files to the ledger
   |-- Test writer (sub-agent, parallel with judge if targets clear)
-  |-- Integrator (sub-agent, only if components need wiring)
   |
-  |-- [judge passed, tests written, integration done]
+  |-- [ROUND 1 done. Findings? group them BY FILE, one serial fix agent per file]
+  |-- Fix agents --- category fixes only, never enumerated instances
+  |-- Re-verify (FRESH agent, never the judge that filed the findings)
+  |
+  |-- [ROUND 2 done. Still blocking, or a regression inside an earlier fix?]
+  |       yes --> STOP. Escalate to the product owner. No round 3.
+  |       no  --> continue
   |
   |-- Skill chain --- verify, eval-harness/dev-standards as applicable, ship
   |
@@ -315,7 +341,7 @@ Steps 1 through 4 are the gates the locked spec actually requires and that this 
 
 ### Agent prompt template
 
-For sub-agents (researcher, judge, test writer, integrator):
+For sub-agents (researcher, judge, adversary, test writer, fix agent):
 
 ```
 You are the [ROLE] on a bossman mode execution team.
@@ -395,7 +421,6 @@ Partition first, isolate second. Worktrees make concurrent writes safe, they do 
 
 - When a teammate encounters files it did not create or modify, it notes them and continues. It does not clean them up, reformat them, or include them in its commit.
 - If a teammate sees unexpected diffs in `git status`, it reports them in its completion summary but does not resolve them.
-- The integrator agent wires results together after isolated builders finish.
 
 ### Git state protection
 
@@ -454,13 +479,11 @@ Learnings read: [N] entries tagged to this phase, or "none recorded yet"
 Team:
 - Lead (orchestrator): main session
 - Researchers: [N] sub-agents for [what needs lookup]
-- Sub-planners: [N, or "none - phase is straightforward"]
 - Builders: [N] teammates via agent team in tmux panes [task list]
 - Worktree isolation: [which builders, or "none - no overlapping writes"]
 - Judge: 1 sub-agent (post-build)
 - Adversary: [1 sub-agent if the phase produces a runnable artifact, or "not needed"]
 - Test writer: 1 sub-agent (post-build)
-- Integrator: [1 if components need wiring, or "not needed"]
 
 Skills active: best-practices, decision-logging, learnings
 Skills at phase end: verify -> [eval-harness] -> [dev-standards] -> ship -> task-tracker
@@ -474,14 +497,7 @@ Dispatching now. Next check-in at phase completion.
 - Researchers report back with context that builders will need
 - Skip if sufficient context from prior phases or planning stage
 
-### Step 4: sub-planning (if needed)
-
-- For complex phases, dispatch sub-planner sub-agents to decompose specific areas
-- Sub-planners run in parallel, each producing a task list
-- Orchestrator merges sub-plans into the builder dispatch
-- Skip for straightforward phases
-
-### Step 5: dispatch builders (agent team)
+### Step 4: dispatch builders (agent team)
 
 For phases with 2+ parallel builder tasks:
 
@@ -497,21 +513,21 @@ For phases with 2+ parallel builder tasks:
 
 For phases with 1 builder task: use a sub-agent in the shared checkout instead.
 
-### Step 6: judge + tests + integration
+### Step 5: judge, adversary, tests
 
 Once all builders complete:
 
 1. Dispatch judge sub-agent to review ALL builder output (functional correctness, code quality, plan adherence, security). Give it the strongest model at high effort. It must produce cited evidence for every claim and verify the phase premise, not just each artifact (see "The judge produces evidence, not a verdict")
 2. On any phase that produced a runnable artifact, dispatch an adversary sub-agent (see the adversary role and "The adversary attacks what the judge certifies"). It throws hostile, unscripted queries at the running system, over-reports on purpose, and files every finding to a shared-ledger file. It targets the cite-or-refuse gate: queries where the graph returns nothing and the system must refuse rather than fabricate. It never fixes, triages, or closes its own findings; the judge or a fix agent triages them, and only the ledger's designated closer closes them.
 3. Dispatch test writer sub-agent (can run in parallel with judge if test targets are clear)
-4. Dispatch integrator sub-agent ONLY if builders produced isolated components that need wiring
 5. Scope check: verify nothing built in this phase crosses the v1 boundary in `.claude/rules/v1-scope-boundary.md`. A capability the PRD declared out of scope does not become in scope because a builder found it easy. This check matters most when no human watched the phase.
 6. UI phases: a phase that ships user-facing interface does not pass on a judge's code review alone. It needs a Playwright run proving the flow works in a browser, and it is marked product owner required so a human decides whether it actually feels right. An agent can verify a button exists. It cannot verify the thing is good.
 7. The judge closes the board. It is the only role allowed to move a ticket from `in-review` to `done`, and the only one allowed to set `rejected`, each with a one-line reason and its evidence pasted into the ticket. A builder never closes its own ticket. If the judge does not touch the board, the phase does not close, because nothing else is permitted to write that state.
-8. If judge fails or the adversary files findings: minor issues = dispatch a fix sub-agent. Major issues = escalate to the product owner.
-9. Anything that cost real time to diagnose gets a `LEARNINGS.md` entry before the phase closes: what broke, what was tried and did not work, and what actually fixed it. A confirmed adversary finding always qualifies. This is the one place a phase is allowed to end without a learning, and only when genuinely nothing broke. Step 7's `check_learnings_coverage.py` is the mechanical check that this actually happened; do not treat this item as satisfied just because it was read, run the check.
+8. If judge fails or the adversary files findings, dispatch fixes under the four rules in "The review loop has a budget": group findings by file and give every finding in one file to a single serial fix agent, require category fixes rather than enumerated ones, and count the round. This is round 1. Major issues still escalate to the product owner immediately rather than being fixed autonomously.
+9. Re-verify with a FRESH agent, never by resuming the judge that filed the findings. This is round 2, and it is the last autonomous round. If it returns a blocking finding, stop the phase and escalate with the four-item handover in Rule 3. If any finding at any point sits inside a fix from earlier in this phase, stop immediately without finishing the round, per Rule 4.
+10. Anything that cost real time to diagnose gets a `LEARNINGS.md` entry before the phase closes: what broke, what was tried and did not work, and what actually fixed it. A confirmed adversary finding always qualifies. This is the one place a phase is allowed to end without a learning, and only when genuinely nothing broke. Step 6's `check_learnings_coverage.py` is the mechanical check that this actually happened; do not treat this item as satisfied just because it was read, run the check.
 
-### Step 7: gates and ship
+### Step 6: gates and ship
 
 After judge passes and tests are written, run the phase-end skill chain in full: see "Skill chain (every phase, no exceptions)" below for the six steps (`verify`, `eval-harness` where applicable, `dev-standards` where applicable, the learnings-coverage check, `ship`, then `task-tracker --close`) and why each one exists.
 
@@ -519,7 +535,7 @@ Rewritten at Step 6.2 (2026-08-10): `release-workflow` is no longer the vehicle 
 
 If any gate fails: fix the root cause, restart from step 1 of the skill chain.
 
-### Step 8: phase checkpoint
+### Step 7: phase checkpoint
 
 When the phase is complete (all agents done, judge passed, PR created), print:
 
@@ -540,6 +556,8 @@ Team activity:
 - Builders: [N] teammates in agent team, [N] succeeded, [N] needed retry
 - Judge result: [pass/fail with details]
 - Adversary findings: [N filed to ledger, or "not run - no runnable artifact"]
+- Review rounds used: [1 or 2 of 2. If 2 were used, say what round 2 changed]
+- Regressions inside a prior fix: [none, or list each with its Regression of link. Any entry here means the phase escalated rather than closed]
 - Tests written: [count and location]
 - Integration: [done/not needed]
 
@@ -567,7 +585,7 @@ Recommendation: [proceed / adjust plan / stop and discuss / fresh session recomm
 Waiting for your go. Merge the PR then say "next" to start the next phase.
 ```
 
-### Step 9: await approval
+### Step 8: await approval
 
 Do NOT proceed to the next phase until:
 
@@ -587,8 +605,12 @@ The user may:
 
 1. Architecture-level change needed - something in the plan is fundamentally wrong
 2. Blocker with no reasonable workaround - missing credentials, broken dependency, ambiguous requirement that could go either way with major consequences
-3. Phase complete - normal checkpoint
-4. User says stop - `/bossman --stop` or any clear signal to pause
+3. Review budget exhausted - round 2 returned a blocking finding. Escalate with the four-item handover in Rule 3. Do not open round 3.
+4. Regression inside a prior fix - a finding sits inside code written to fix an earlier finding in this phase. Stop mid-round, do not batch it, per Rule 4.
+5. Phase complete - normal checkpoint
+6. User says stop - `/bossman --stop` or any clear signal to pause
+
+Conditions 3 and 4 are new as of 2026-08-18 and are the reason this list exists at all. Build phases 2.1 and 4.2 hit both repeatedly and neither was a stop condition, so the loop ran five and six rounds respectively instead of handing the decision back after two.
 
 ---
 
@@ -610,14 +632,12 @@ Blockers: [none or list]
 
 Level 1 (now): Single-phase execution with agent teams for builders, sub-agents for other roles. Manual PR approval between phases. Full skill chain enforced at phase end. Phase-branch git workflow with worktree isolation for concurrent writers.
 
-Level 2 (unattended overnight, deferred): the product owner deferred this on 2026-07-26 until we know whether it is actually needed. Do not enable it by inference from a general "keep going". It requires an explicit, itemized grant, because it overrides this skill's own Step 9 and the `bossman-mode` rule's standing deny on proceeding without approval.
+Level 2 (unattended overnight, deferred): the product owner deferred this on 2026-07-26 until we know whether it is actually needed. Do not enable it by inference from a general "keep going". It requires an explicit, itemized grant, because it overrides this skill's own Step 8 and the `bossman-mode` rule's standing deny on proceeding without approval.
 
 When it is enabled, the shape is decided: fan out where Section 25's dependency graph allows, stack only where phase N literally needs phase N-1's code. Independent phases each get their own branch off develop and their own PR, so a morning review is parallel rather than a chain, and rejecting one does not contaminate the others. Nothing merges to develop unreviewed. Merging overnight buys no throughput anyway, since a dependent phase builds on the previous branch either way, so autonomy would only remove the review gate, not speed anything up.
 
-Level 3 (Cursor-scale): Full autonomous multi-phase execution. Checkpoint files at phase boundaries. Morning summary of everything built, tested, and judged while the product owner was away. Fresh-start pattern: stuck teammates get messaged with clearer prompts rather than debugged in-place.
-
-Level 4 (multi-team): Multiple independent agent teams for separate subsystems (e.g. one team for API routes, one for agent tools, one for UI components running simultaneously). Each team has its own lead running its own research/build/judge cycle. A meta-orchestrator coordinates between teams at phase boundaries.
+Levels 3 and 4, full multi-phase autonomy and multiple simultaneous teams, were deleted on 2026-08-18. They described capability nobody had asked for and nothing had scheduled, and by this repository's own `attack-the-constraint` standard an ownerless requirement is suspect by default. Level 2 stays because it carries a real, dated product-owner deferral. If multi-phase autonomy is ever wanted, design it against the measurement available then, not against a sketch written before the review loop was understood.
 
 ## Design inspiration
 
-Architecture inspired by Cursor's [Scaling long-running autonomous coding](https://cursor.com/blog/scaling-agents) post: strict planner/worker separation, single judge over multiple QA roles, workers that don't coordinate with each other, recursive sub-planning, and the principle that simpler systems outperform complex ones. Adapted for Claude Code's agent teams (experimental) with tmux split-pane display, sub-agents for single-task roles, and a fixed skill chain (verify, eval-harness/dev-standards as applicable, ship) at phase boundaries.
+Architecture inspired by Cursor's [Scaling long-running autonomous coding](https://cursor.com/blog/scaling-agents) post, adapted for agent teams in tmux panes with a fixed phase-end skill chain. The review-loop discipline in "The review loop has a budget" came from this repository's own measurement rather than from that post, and where the two disagree the measurement wins: "workers do not coordinate with each other" is right for disjoint files and actively wrong for two findings inside one file.
