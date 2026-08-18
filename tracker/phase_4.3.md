@@ -320,6 +320,21 @@ After fixing the four real ones, 12 of 15 turn red and the remaining three are t
 | 2026-08-17 | Lead | First full assembly: 39 of 42 gate arms passed immediately. Three failures, each a real defect rather than a flake, and all three closed: a wrong field name in the gate's own guest-token helper, the timeout that could not be enforced from a schema extension (F-4.3-L-05), and, found while fixing the second, a gate arm that was VACUOUS (F-4.3-L-06). The gate is now 42 of 42 |
 | 2026-08-17 | Lead | Mounting the wrapped router was tried for the timeout and reverted: `app.mount` gives the sub-app its own path space, so a bare `POST /graphql` 307-redirected, the identical trailing-slash trap `app.py` already documents for the MCP mount. A redirect on every call is a worse public surface than a path-gated middleware |
 
+## The merge bar, decided 2026-08-17
+
+This phase ran six review rounds without one, and that is the single clearest reason it did not close. Every round was briefed as "find anything", and against a surface this size an adversary always will, so the loop had no terminating condition by construction. That is a `goal-contracts.md` failure: a done-when was written for the BUILD and never for the REVIEW.
+
+Stated now, by product-owner decision, and it applies to the remaining rounds:
+
+- BLOCKS THE MERGE: any critical, and any major that is REACHABLE through a real call path on shipped code.
+- DOES NOT BLOCK: minors, and any finding that is latent (not reachable today, dependent on a call site or data shape that does not yet exist). These are tracked with a named owner, exactly as build phases 3.2 through 4.2 each tracked theirs.
+- A round that returns nothing blocking closes the phase. A round that returns another critical is a signal to STOP patching and reconsider scope, not to run a seventh round.
+
+Two supporting decisions, same date:
+
+- The fix round is run by a FRESH AGENT, and the lead verifies rather than writes it. Five of the last six defects in this phase were introduced by the lead's own fix rounds, including a critical reopened twice. The maker-checker split was applied to reviews from the start and never to fixes, which is the one place it was missing.
+- One more review round is budgeted. Not open-ended.
+
 ## Resuming this phase, second pause (2026-08-17, after the fix round and its re-review)
 
 This supersedes the first pause section below, which described an earlier and much smaller state. Read this one.
