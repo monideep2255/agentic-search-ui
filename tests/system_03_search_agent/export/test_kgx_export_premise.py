@@ -25,6 +25,15 @@ What this gate exercises:
 - Provenance on every exported row, host-pinned, since a citation URL that
   only checks for `https://` can point anywhere.
 
+- THE DEFAULT INVOCATION, with no edge-label list at all. Added
+  2026-08-19 after review round 1, and it is the most important case in
+  this file. Its absence let finding F-4.4-50 through: the default path
+  spent its whole node budget on the highest-cardinality edge label and
+  returned 500 Articles and none of the 12 disease edges this same file
+  pins as ground truth, with a manifest listing all fourteen labels as
+  traversed. Every other case here passes an explicit single-label list,
+  so every other case walked straight past it.
+
 What this gate deliberately OMITS, stated so the gap is arguable rather
 than discovered later:
 
@@ -33,12 +42,21 @@ than discovered later:
   the shape of finding F-2.1-A5-03 in build phase 2.1, where nine gate
   questions were all one hop from a single anchor type and a two-hop
   defect survived.
-- Every edge label but `gene_associated_with_condition`. The other
-  thirteen in `graph_schema_constants.EDGE_LABELS` are unexercised here.
+- Exhaustive per-label coverage. The default-invocation case below proves
+  a high-cardinality label cannot starve the others, but it does not
+  exercise all fourteen labels individually.
 - Seeds that are not Gene vertices. Disease, Article, and SequenceVariant
-  seeds are unexercised.
+  seeds are unexercised. `NamedThing` seeds are known broken, filed as
+  F-4.4-52, and are not pinned here.
 - Concurrency. A second export running against the same output directory
   is not tested.
+
+A note on this file's own history, kept because it is the lesson. The
+omission list above named "every edge label but
+`gene_associated_with_condition`" from the day this gate was written, and
+the phase's only critical lived exactly there. Writing a blind spot down
+makes it arguable. It does not make it safe. A stated omission that
+covers the DEFAULT path is not an omission, it is a hole.
 
 Ground truth provenance: read live from the AGE graph on Hetzner on
 2026-08-19 over the tunnel on 127.0.0.1:15432, via `execute_cypher` with
@@ -65,6 +83,12 @@ import socket
 from pathlib import Path
 
 import pytest
+
+# Imported rather than restated, so this gate cannot drift from the
+# label set the traversal actually walks.
+from system_03_search_agent.tools.graph_schema_constants import (
+    EDGE_LABELS as ALL_EDGE_LABELS,
+)
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 
@@ -297,6 +321,87 @@ def test_a_seed_that_matches_no_vertex_exports_empty_with_a_reason(
     manifest = json.loads(result.manifest_path.read_text())
     assert manifest["empty_reason"], "an empty export says why it is empty"
     assert manifest["truncated"] is False
+
+
+@requires_graph
+def test_the_default_invocation_reaches_the_low_cardinality_labels_too(
+    tmp_path: Path,
+) -> None:
+    """No edge-label list at all, which is what every real caller sends first.
+
+    Pins finding F-4.4-50. A traversal that walks the labels in list order
+    against one shared node budget spends all of it on `mentioned_in`,
+    which is second in `EDGE_LABELS` and the highest-cardinality edge in
+    the graph, and never reaches `gene_associated_with_condition`, which
+    is thirteenth. The export that results is well-formed, correctly
+    cited, correctly ordered, and holds none of the answer.
+
+    This asserts the property, not the mechanism: whatever scheduling the
+    traversal uses, a high-cardinality label must not be able to starve a
+    low-cardinality one out of the export entirely.
+    """
+    result = _export(tmp_path, seeds=[TP53], hops=1)
+
+    _, node_rows = _read_tsv(result.nodes_path)
+    _, edge_rows = _read_tsv(result.edges_path)
+
+    node_ids = {row["id"] for row in node_rows}
+    missing = TP53_DISEASE_CURIES - node_ids
+    assert not missing, (
+        "the default invocation dropped "
+        + str(len(missing))
+        + " of the 12 disease neighbours the graph holds for TP53, so a "
+        "high-cardinality edge label starved a low-cardinality one"
+    )
+
+    predicates = {row["predicate"] for row in edge_rows}
+    assert GENE_DISEASE_PREDICATE in predicates
+    assert len(predicates) > 1, (
+        "every exported edge carried one predicate, which is the starvation "
+        "shape F-4.4-50 named"
+    )
+
+
+@requires_graph
+def test_the_manifest_never_claims_an_edge_label_it_did_not_traverse(
+    tmp_path: Path,
+) -> None:
+    """Pins the disclosure half of F-4.4-50 and the judge's F-4.4-02.
+
+    The manifest's `edge_labels` is documented as the labels actually
+    traversed. Filling it with the labels REQUESTED is the same defect
+    shape as build phase 4.3's two criticals: deciding a value from a
+    proxy for that value rather than from the value itself. A consumer
+    reading a label that was never queried concludes the graph holds no
+    such edges, which is a false negative about Layer 1 contents.
+
+    A first draft of this case passed an explicit single-label list, where
+    the requested set and the traversed set cannot diverge by
+    construction, so it could not fail. It was rewritten against the
+    default path, which is where the divergence is real.
+    """
+    result = _export(tmp_path, seeds=[TP53], hops=1, max_nodes=60)
+
+    manifest = json.loads(result.manifest_path.read_text())
+    _, edge_rows = _read_tsv(result.edges_path)
+
+    claimed = set(manifest["edge_labels"])
+    observed = {row["predicate"].removeprefix("biolink:") for row in edge_rows}
+
+    assert claimed >= observed, (
+        "the manifest omitted a label that actually produced exported edges: "
+        + str(sorted(observed - claimed))
+    )
+    assert manifest["truncated"] is True, (
+        "a 60 node cap on this seed must truncate, or this case proves nothing"
+    )
+    assert claimed != set(ALL_EDGE_LABELS), (
+        "a truncated export claims to have traversed all "
+        + str(len(ALL_EDGE_LABELS))
+        + " edge labels. The manifest documents this field as the labels "
+        "actually traversed, so listing the labels merely REQUESTED asserts "
+        "coverage the export does not have"
+    )
 
 
 @requires_graph

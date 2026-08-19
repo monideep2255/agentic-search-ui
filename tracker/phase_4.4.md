@@ -60,7 +60,7 @@ History:
 
 ### T-4.4-02: Bounded subgraph traversal over Layer 1
 
-Status: todo
+Status: in-progress
 Refine: refined
 Branch: phase/4.4-kgx-export
 Depends on: T-4.4-01
@@ -84,7 +84,7 @@ History:
 
 ### T-4.4-03: KGX serialization
 
-Status: todo
+Status: in-progress
 Refine: refined
 Branch: phase/4.4-kgx-export
 Depends on: T-4.4-02
@@ -108,7 +108,7 @@ History:
 
 ### T-4.4-04: Manifest, truncation disclosure, and the Layer 1 limitation
 
-Status: todo
+Status: in-progress
 Refine: refined
 Branch: phase/4.4-kgx-export
 Depends on: T-4.4-03
@@ -133,7 +133,7 @@ History:
 
 ### T-4.4-05: The batch entry point
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/4.4-kgx-export
 Depends on: T-4.4-04
@@ -147,13 +147,22 @@ Acceptance criteria:
 - [ ] The command accepts one or more seed CURIEs, a hop limit, an output directory, and cap overrides, and rejects an unparseable CURIE with an actionable message naming the expected shape
 - [ ] The command exits non-zero when the graph is unreachable, with a message naming the transport rather than a stack trace
 - [ ] The command writes no file outside the output directory it was given
-- [ ] No credential value appears in the command's output or in any log line it emits, on either the success or the failure path
+- [x] No credential value appears in the command's output or in any log line it emits, on either the success or the failure path
 
-Evidence:
-- (filled at close)
+Evidence, re-run by the lead rather than quoted from the builder:
+- `src/system_03_search_agent/export/cli.py`, `tests/system_03_search_agent/export/test_kgx_cli.py`, and one line added to `pyproject.toml` registering `s3-kgx-export`
+- `venv/bin/python -m pytest tests/system_03_search_agent/export/test_kgx_cli.py -q`: `26 passed in 0.15s`
+- `venv/bin/ruff check src/system_03_search_agent/export/cli.py`: `All checks passed!`
+- `git diff pyproject.toml`: one added line, nothing else
+- `git diff --stat` on the premise gate: empty, the gate was not modified
+- Credential criterion spot-checked at source rather than accepted on report: `test_kgx_cli.py:440` builds a fake failure carrying `postgresql://kg_reader:hunter2@127.0.0.1:15432/ncbi_kg` and asserts the password reaches neither stdout nor stderr
+- Caps are passed through only when the flag is given, so `export_subgraph`'s own defaults win rather than being duplicated in a second place. That is the right call and it is now a coupling the judge should confirm holds once T-4.4-02 lands
 
 History:
 - 2026-08-19 lead: created, scoped at phase open
+- 2026-08-19 builder-export-cli: claimed
+- 2026-08-19 builder-export-cli: in-review, all five criteria reported holding, one with the caveat filed as F-4.4-01
+- 2026-08-19 lead: verify commands re-run independently, all green. Not closed here: the judge closes, never the builder and never the dispatcher
 
 ### T-4.4-06: Amend the file-protection rule
 
@@ -186,8 +195,53 @@ History:
 
 ## Findings
 
-None yet.
+Round 1, the adversary pass, filed 12: one critical, four reachable majors, seven minors. Full detail per finding is in `tracker/phase_4.4_adversary_report.md`. No finding carried a `Regression of:` line, so the phase did not stop mid-round. The blocking five are F-4.4-50 through F-4.4-54. The critical is restated here in full because it is the phase's central result and because it indicts this phase's own premise gate.
+
+### F-4.4-50: The default invocation exports the wrong subgraph and the manifest certifies coverage that never happened
+
+Status: confirmed
+Raised by: adversary
+Confirmed by: lead, independently reproduced
+Severity: critical
+Round: 1
+Reachable: yes, it IS the default path. `s3-kgx-export NCBIGene:7157 --output-dir DIR` with no `--edge-label` flag reaches it
+Ticket: T-4.4-02, with a second half in T-4.4-04
+Location: `src/system_03_search_agent/export/traversal.py:522-534`, `src/system_03_search_agent/export/manifest.py:138-158`
+
+What happened: with no explicit edge-label list, the traversal walks `EDGE_LABELS` in order and spends the entire shared node budget on the second label, `mentioned_in`, which is the highest-cardinality edge in the graph. It never reaches `gene_associated_with_condition`, which sits thirteenth. There is no fairness or round-robin across labels, so a single high-cardinality label starves every other one.
+
+Reproduced independently by the lead against the live graph, seed `NCBIGene:7157`, `hops=1`, no `edge_labels` argument:
+
+- 500 nodes, 499 edges
+- every edge `biolink:mentioned_in`, every node an Article but the seed
+- 0 of the 12 TP53 disease neighbours this phase pinned as its own ground truth
+
+The second half is the disclosure. `manifest.json` lists all fourteen edge labels under `edge_labels`, a key whose own docstring defines it as the labels actually traversed. Exactly one was. So the export is not merely incomplete, it ships a manifest asserting coverage it does not have, which is worse than silence.
+
+Why the premise gate did not catch it, which is the part worth keeping: five of the gate's six cases pass an explicit single-label list, and the sixth is a cap case that asserts only on truncation. The default invocation, the one every real user hits first, is exercised by no case at all. The gate's own coverage statement names "every edge label but `gene_associated_with_condition`" as a deliberate omission, and the critical lives exactly there. Stating a blind spot made this arguable in one reading; it did not make it safe. The gate is the lead's artifact, so this is a defect in the lead's work as much as the builder's.
+
+History:
+- 2026-08-19 adversary: filed, reproduced live
+- 2026-08-19 lead: confirmed, reproduced independently with the numbers above. Blocks the merge
+
+### F-4.4-01: The console-script criterion cannot be verified end to end, because nothing is installed
+
+Status: filed
+Raised by: builder-export-cli, confirmed reproducible by the lead
+Severity: minor
+Round: 0 (build, not review)
+Ticket: T-4.4-05
+
+What happened: T-4.4-05 requires the export to be invocable by its own console script. The entry point is registered in `pyproject.toml`, but neither `venv/bin/s3-kgx-export` nor `venv/bin/s3` exists, so no console script in this environment resolves from `$PATH`. Both invocations are verified only with `PYTHONPATH=src` set, which is what pytest's own `pythonpath` config supplies.
+
+This is pre-existing and not caused by this phase: the same is already true of the `s3` command build phase 4.2 shipped, and the root cause is the already-tracked open item "Fix `pip install .`, fails outright on a `package-dir` mapping error", owned by build phase 6.1. Recorded here rather than fixed, because fixing packaging inside a build phase that does not own it is scope creep, and because a criterion that is only structurally satisfied should be visible rather than quietly ticked.
+
+History:
+- 2026-08-19 builder-export-cli: flagged in its report as out of its file scope
+- 2026-08-19 lead: reproduced, `ls venv/bin/s3 venv/bin/s3-kgx-export` finds neither. Linked to the existing build phase 6.1 packaging item
 
 ## History
 
+- 2026-08-19 lead: two builders dispatched in parallel on disjoint file scopes, Sonnet tier. One holds T-4.4-02, T-4.4-03 and T-4.4-04 serially, since traversal, serialization and manifest are one coupled build and parallel agents inside coupled code is the documented failure of build phase 4.2's rounds 1 to 4. The second holds T-4.4-05 alone, writing `export/cli.py` and the `pyproject.toml` entry against the signature the premise gate fixes, with `export_subgraph` monkeypatched so it needs neither the graph nor the other builder's modules. Both were told the premise gate file is read-only.
+- 2026-08-19 lead: tunnel confirmed open, all three transports green on `python3 tracker/preflight.py`.
 - 2026-08-19 lead: phase opened. Dependencies verified: Section 25 gives 4.4 no in-repo dependency. Preflight run, graph transport down, recorded above. Scope decided by the product owner, six tickets created, refinement moved from `tech_refine` to `refined`.
