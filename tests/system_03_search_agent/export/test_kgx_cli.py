@@ -34,8 +34,11 @@ later:
   unexpected-exception failure path, a `ValueError` input-validation
   failure path (its own message shown verbatim at the usage exit code,
   never the transport remediation, for an unknown edge label, negative
-  hops, and an empty seed set, plus that distinct scenarios produce
-  distinct messages), an output-directory creation failure, that no
+  hops, an empty seed set, and a destination that is not empty, plus that
+  distinct scenarios produce distinct messages), the `--force` flag's
+  pass-through in both states, the summary line naming the directory the
+  export reports rather than the string that was typed, an
+  output-directory creation failure, that no
   credential-shaped value ever reaches stdout or stderr on any path
   (including one that is neither a `GraphError` nor a `ValueError`), and
   that `main()` and a real `python -m` subprocess invocation both
@@ -72,9 +75,20 @@ A_DISEASE = "MedGen:C0205770"
 
 
 class _FakeExportResult(NamedTuple):
+    """Mirrors `kgx.ExportResult`'s own field set closely enough for `cli.py`.
+
+    `output_dir` is the resolved directory the real export reports having
+    landed in, which is not always the `--output-dir` string that was typed
+    (finding F-4.4-59). It is a field here, defaulting to the directory the
+    fixture wrote into, so a test can hand the CLI a result whose reported
+    directory differs from the typed one and check which of the two the
+    command actually prints.
+    """
+
     nodes_path: Path
     edges_path: Path
     manifest_path: Path
+    output_dir: Path
 
 
 def _write_fake_export(
@@ -92,6 +106,7 @@ def _write_fake_export(
     dropped_rows: dict[str, int] | None = None,
     rows_fetched_not_exported: int = 0,
     rows_with_empty_source_url: int = 0,
+    reported_output_dir: Path | None = None,
 ) -> _FakeExportResult:
     """Writes a minimal but shape-correct KGX export into `output_dir`,
     mirroring what `kgx.export_subgraph` is contracted to produce.
@@ -144,7 +159,9 @@ def _write_fake_export(
         unexpanded_frontier_nodes=unexpanded_frontier_nodes,
     )
     manifest_path = manifest_module.write_manifest(manifest, output_dir)
-    return _FakeExportResult(nodes_path, edges_path, manifest_path)
+    return _FakeExportResult(
+        nodes_path, edges_path, manifest_path, reported_output_dir or output_dir
+    )
 
 
 def _run(argv: list[str]) -> tuple[int, str, str]:
@@ -516,6 +533,106 @@ class TestSuccessfulExport:
             target / "edges.tsv",
             target / "manifest.json",
         }
+
+
+class TestDestinationHandling:
+    """Findings F-4.4-58 and F-4.4-59 at the command surface.
+
+    The policy itself lives in `export_subgraph`, which owns the
+    destination and is the only place that can check it before the
+    traversal runs. What this class checks is the command's half: that the
+    flag reaches the export in both states, and that the user is told where
+    the files actually landed.
+    """
+
+    def test_force_is_passed_through_as_overwrite_true(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_export(**kwargs: object) -> _FakeExportResult:
+            captured.update(kwargs)
+            return _write_fake_export(kwargs["output_dir"])  # type: ignore[arg-type]
+
+        monkeypatch.setattr(cli, "_export_subgraph", fake_export)
+
+        code, _out, _err = _run([TP53, "--output-dir", str(tmp_path), "--force"])
+
+        assert code == 0
+        assert captured["overwrite"] is True
+
+    def test_overwrite_is_false_when_force_is_not_given(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The default IS the decision (F-4.4-58): without this flag a
+        # destination that already holds something is refused rather than
+        # merged into, so the absent flag must reach the export as an
+        # explicit False, never be omitted and left to a default that could
+        # drift the other way.
+        captured: dict[str, object] = {}
+
+        def fake_export(**kwargs: object) -> _FakeExportResult:
+            captured.update(kwargs)
+            return _write_fake_export(kwargs["output_dir"])  # type: ignore[arg-type]
+
+        monkeypatch.setattr(cli, "_export_subgraph", fake_export)
+
+        _run([TP53, "--output-dir", str(tmp_path)])
+
+        assert captured["overwrite"] is False
+
+    def test_a_non_empty_destination_refusal_reaches_the_user_with_its_remedy(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The export refuses this one before any graph work and says how to
+        # proceed. The command must show that message as it stands, at the
+        # usage exit code, not replace it with the transport remediation.
+        def fake_export(**_kwargs: object) -> _FakeExportResult:
+            raise ValueError(
+                f"the export destination {tmp_path} is not empty; it holds "
+                "extra_from_last_run.tsv. An export replaces its destination "
+                "wholesale rather than merging into it, so choose an empty or "
+                "new directory, or re-run with overwrite=True (the --force "
+                "flag on s3-kgx-export) to replace everything that is there"
+            )
+
+        monkeypatch.setattr(cli, "_export_subgraph", fake_export)
+
+        code, out, err = _run([TP53, "--output-dir", str(tmp_path)])
+
+        assert code == cli.EXIT_USAGE_ERROR
+        assert out == ""
+        assert "is not empty" in err
+        assert "--force" in err, "the message must say how to proceed"
+        assert "SSH tunnel" not in err
+        assert "Traceback" not in err
+
+    def test_the_summary_names_where_the_files_landed_not_what_was_typed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Finding F-4.4-59: a symlinked or `..`-bearing --output-dir resolves
+        # to somewhere else, and a caller told only what they typed cannot
+        # go and check the files. The export resolves the destination and
+        # reports it; this pins that the command prints THAT, not its own
+        # copy of the argument.
+        typed = tmp_path / "typed_path"
+        landed = tmp_path / "where_it_really_landed"
+        landed.mkdir()
+
+        monkeypatch.setattr(
+            cli,
+            "_export_subgraph",
+            lambda **kwargs: _write_fake_export(
+                kwargs["output_dir"],  # type: ignore[arg-type]
+                reported_output_dir=landed,
+            ),
+        )
+
+        code, out, _err = _run([TP53, "--output-dir", str(typed)])
+
+        assert code == 0
+        assert str(landed) in out
+        assert str(typed) not in out
 
 
 class TestGraphUnreachable:

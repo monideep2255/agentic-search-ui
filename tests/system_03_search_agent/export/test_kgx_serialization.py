@@ -1,18 +1,45 @@
-"""Unit tests for the KGX TSV serialization in kgx.py (T-4.4-03).
+"""Unit tests for the KGX serialization and write path in kgx.py (T-4.4-03).
 
-These cover the shapes the premise gate deliberately does not exercise
-(`tests/system_03_search_agent/export/test_kgx_export_premise.py`'s own
-module docstring): a property value carrying a tab, a newline, or a
-double quote, a list-valued property, a zero-row export, extra columns
-sorted after the required ones, and a row missing a column. None of these
-need the live graph: they exercise `kgx.py`'s pure TSV-writing functions
+Two halves, neither of which needs the live graph.
+
+The serialization half covers the shapes the premise gate deliberately
+does not exercise (`tests/system_03_search_agent/export/
+test_kgx_export_premise.py`'s own module docstring): a property value
+carrying a tab, a newline, or a double quote, a list-valued property, a
+zero-row export, extra columns sorted after the required ones, and a row
+missing a column. These exercise `kgx.py`'s pure TSV-writing functions
 directly against hand-built row dicts.
+
+The write-path half, added in review round 3, covers the output-directory
+discipline findings F-4.4-53, F-4.4-58 and F-4.4-59 filed against this
+phase, which are one defect: the export had no discipline about the
+directory it writes into. Concurrency is the fourth item on the premise
+gate's own stated omission list, so it is covered here instead, with the
+race made deterministic rather than scheduled (see
+`TestAtomicPublish`'s own docstring for exactly how). These tests drive
+the real `kgx.export_subgraph` with `traverse_subgraph` replaced by a
+fake, so they exercise every line of the write path and none of the
+graph.
+
+Stated so the gap is arguable rather than discovered later, this file
+does NOT cover: multi-process concurrency (every case here is threads in
+one process, so it proves the ordering of the rename, not the kernel's),
+crash or power-loss durability (nothing in the write path is fsynced, and
+nothing here asserts it is), a staging directory and a destination that
+land on different filesystems, and the real traversal or the real graph.
 """
 
 from __future__ import annotations
 
 import csv
+import errno
+import json
+import os
+import threading
 from pathlib import Path
+from typing import Any
+
+import pytest
 
 from system_03_search_agent.export import kgx
 
@@ -342,3 +369,557 @@ class TestRowsFromTraversal:
         assert node_rows == []
         assert edge_rows == []
         assert empty_count == 0
+
+
+# The three files one export bundle is made of. Restated here rather than
+# imported from `kgx.BUNDLE_FILENAMES` on purpose: a test that reads the
+# names from the module it is checking cannot notice that module dropping
+# one of them from what it writes.
+BUNDLE_FILENAMES = ("nodes.tsv", "edges.tsv", "manifest.json")
+
+SEED_A = "NCBIGene:1"
+SEED_B = "NCBIGene:2"
+NEIGHBOURS_A = ("MedGen:C0000001", "MedGen:C0000002")
+NEIGHBOURS_B = ("MedGen:C0000003",)
+
+
+def _vertex(curie: str, label: str) -> dict[str, Any]:
+    return {
+        "id": len(curie),
+        "label": label,
+        "properties": {
+            "id": curie,
+            "name": curie.replace(":", "_"),
+            "source": "NCBI Gene",
+            "source_url": "",
+        },
+    }
+
+
+def _edge_entity(subject_curie: str, object_curie: str) -> dict[str, Any]:
+    return {
+        "id": len(subject_curie) + len(object_curie),
+        "label": "gene_associated_with_condition",
+        "start_id": 1,
+        "end_id": 2,
+        "subject_curie": subject_curie,
+        "object_curie": object_curie,
+        "properties": {
+            "source": "NCBI MIM2Gene",
+            "source_url": "",
+            "knowledge_level": "knowledge_assertion",
+            "agent_type": "manual_agent",
+        },
+    }
+
+
+def _traversal_result(seed: str, neighbours: tuple[str, ...]):
+    """A TraversalResult a fake `traverse_subgraph` can return.
+
+    Each run this file builds is identifiable from any one of its three
+    files on its own: the seed appears in `nodes.tsv` and in the manifest's
+    `seeds`, every edge's subject is that seed, and the two runs differ in
+    row counts. That is what makes a mixed bundle detectable rather than
+    merely suspicious.
+    """
+    from system_03_search_agent.export.traversal import TraversalResult
+
+    nodes = {seed: _vertex(seed, "Gene")}
+    for neighbour in neighbours:
+        nodes[neighbour] = _vertex(neighbour, "Disease")
+
+    return TraversalResult(
+        nodes=nodes,
+        edges=[_edge_entity(seed, neighbour) for neighbour in neighbours],
+        seeds_requested=[seed],
+        seeds_resolved=[seed],
+        hops=1,
+        max_nodes=500,
+        max_edges=1000,
+        time_budget_s=60.0,
+        elapsed_s=0.01,
+        truncated=False,
+        edge_labels_requested=("gene_associated_with_condition",),
+        edge_labels_traversed=("gene_associated_with_condition",),
+    )
+
+
+class _TraversalSpy:
+    """A stand-in for `traverse_subgraph` that records every call.
+
+    The recording is the point for the destination tests: a check that is
+    supposed to run before any graph work is only proven by a traversal
+    that never ran, not by an exception that happened to be raised.
+    """
+
+    def __init__(self, per_seed: dict[str, tuple[str, ...]] | None = None) -> None:
+        self.calls: list[list[str]] = []
+        self._per_seed = per_seed or {
+            SEED_A: NEIGHBOURS_A,
+            SEED_B: NEIGHBOURS_B,
+        }
+
+    def __call__(self, **kwargs: Any):
+        seeds = list(kwargs["seeds"])
+        self.calls.append(seeds)
+        seed = seeds[0]
+        return _traversal_result(seed, self._per_seed.get(seed, ()))
+
+
+def _install_traversal(monkeypatch: pytest.MonkeyPatch, **kwargs: Any) -> _TraversalSpy:
+    spy = _TraversalSpy(**kwargs)
+    monkeypatch.setattr(kgx, "traverse_subgraph", spy)
+    return spy
+
+
+def _bundle_state(destination: Path) -> str:
+    """What a reader looking at `destination` right now would see.
+
+    Returns "absent", "empty", "complete", or a "partial: ..." string
+    naming what it found, so a failing assertion says which files were
+    visible rather than only that something was wrong.
+    """
+    if not destination.exists():
+        return "absent"
+    present = sorted(entry.name for entry in destination.iterdir())
+    if not present:
+        return "empty"
+    if set(present) == set(BUNDLE_FILENAMES):
+        return "complete"
+    return "partial: " + ", ".join(present)
+
+
+def _bundle_run(destination: Path) -> str:
+    """The one run a complete bundle belongs to, or an assertion failure.
+
+    Checks the three files against each other the way a downstream KGX
+    consumer would: the manifest's seed must appear in `nodes.tsv`, every
+    edge subject must be a node the same file holds, and the manifest's
+    counts must match the rows actually on disk. A bundle assembled from
+    two runs fails at least one of those, which is exactly what the
+    adversary observed: four edges whose subject was absent from
+    `nodes.tsv`, beside a manifest certifying the pair.
+    """
+    assert _bundle_state(destination) == "complete", _bundle_state(destination)
+
+    manifest = json.loads((destination / "manifest.json").read_text(encoding="utf-8"))
+    _, node_rows = _read_tsv(destination / "nodes.tsv")
+    _, edge_rows = _read_tsv(destination / "edges.tsv")
+
+    seeds = manifest["seeds"]
+    assert len(seeds) == 1, seeds
+    seed = seeds[0]
+    node_ids = {row["id"] for row in node_rows}
+
+    assert seed in node_ids, (
+        "torn bundle: the manifest names seed "
+        + seed
+        + " and nodes.tsv holds "
+        + str(sorted(node_ids))
+    )
+    dangling = {row["subject"] for row in edge_rows} - node_ids
+    assert not dangling, (
+        "torn bundle: edges.tsv references subjects absent from nodes.tsv: "
+        + str(sorted(dangling))
+    )
+    assert manifest["counts"]["nodes"] == len(node_rows), (
+        "torn bundle: the manifest certifies "
+        + str(manifest["counts"]["nodes"])
+        + " nodes and nodes.tsv holds "
+        + str(len(node_rows))
+    )
+    assert manifest["counts"]["edges"] == len(edge_rows), (
+        "torn bundle: the manifest certifies "
+        + str(manifest["counts"]["edges"])
+        + " edges and edges.tsv holds "
+        + str(len(edge_rows))
+    )
+    return seed
+
+
+def _observe(destination: Path) -> tuple[str, str | None]:
+    """One reader's observation of `destination` at this instant.
+
+    Returns the directory's state and, when it holds a complete bundle,
+    which run that bundle belongs to. Taken at the moment of the call and
+    kept, rather than re-derived after the run: a check written after every
+    export has finished is a check of the final state three times over, not
+    of what a reader could see while they were running.
+    """
+    state = _bundle_state(destination)
+    return state, _bundle_run(destination) if state == "complete" else None
+
+
+def _leftovers(parent: Path, destination: Path) -> list[str]:
+    """Everything beside the destination the export should not have left."""
+    return sorted(
+        entry.name for entry in parent.iterdir() if entry.name != destination.name
+    )
+
+
+class TestDestinationDiscipline:
+    """Findings F-4.4-58 and F-4.4-59.
+
+    The destination is resolved and checked before the traversal is paid
+    for, a destination that already holds something is refused rather than
+    merged into, and replacing one wholesale leaves none of its previous
+    contents behind.
+    """
+
+    def test_an_empty_destination_is_exported_into_without_a_force_flag(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The premise gate passes pytest's own empty `tmp_path` straight
+        # through as `output_dir`, so this is the case that must keep
+        # working unchanged.
+        _install_traversal(monkeypatch)
+        destination = tmp_path / "bundle"
+        destination.mkdir()
+
+        result = kgx.export_subgraph(seeds=[SEED_A], output_dir=destination)
+
+        assert _bundle_run(destination) == SEED_A
+        assert result.nodes_path == destination / "nodes.tsv"
+        assert result.edges_path == destination / "edges.tsv"
+        assert result.manifest_path == destination / "manifest.json"
+
+    def test_a_destination_that_does_not_exist_yet_is_created(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install_traversal(monkeypatch)
+        destination = tmp_path / "deep" / "not" / "there" / "yet"
+
+        kgx.export_subgraph(seeds=[SEED_A], output_dir=destination)
+
+        assert _bundle_run(destination) == SEED_A
+
+    def test_a_non_empty_destination_is_refused_before_any_graph_work(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        spy = _install_traversal(monkeypatch)
+        destination = tmp_path / "bundle"
+        destination.mkdir()
+        stale = destination / "extra_from_last_run.tsv"
+        stale.write_text("stale", encoding="utf-8")
+
+        with pytest.raises(ValueError) as excinfo:
+            kgx.export_subgraph(seeds=[SEED_A], output_dir=destination)
+
+        message = str(excinfo.value)
+        assert str(destination) in message
+        assert "extra_from_last_run.tsv" in message
+        assert "overwrite=True" in message and "--force" in message
+        assert spy.calls == [], "the destination was rejected only after traversing"
+        assert stale.read_text(encoding="utf-8") == "stale", "a refusal changes nothing"
+        assert sorted(entry.name for entry in destination.iterdir()) == [
+            "extra_from_last_run.tsv"
+        ]
+
+    def test_force_replaces_a_non_empty_destination_leaving_no_stale_sibling(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Finding F-4.4-58 exactly: a file the new run does not write must
+        # not survive beside the new bundle, where a consumer reading the
+        # directory as one export would count it as part of it.
+        _install_traversal(monkeypatch)
+        destination = tmp_path / "bundle"
+        destination.mkdir()
+        (destination / "extra_from_last_run.tsv").write_text("stale", encoding="utf-8")
+        (destination / "nodes.tsv").write_text("stale header\n", encoding="utf-8")
+        (destination / "nested").mkdir()
+        (destination / "nested" / "deep.txt").write_text("stale", encoding="utf-8")
+
+        kgx.export_subgraph(seeds=[SEED_A], output_dir=destination, overwrite=True)
+
+        assert sorted(entry.name for entry in destination.iterdir()) == sorted(
+            BUNDLE_FILENAMES
+        )
+        assert _bundle_run(destination) == SEED_A
+        assert _leftovers(tmp_path, destination) == []
+
+    def test_a_destination_that_is_a_file_is_refused_before_any_graph_work(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        spy = _install_traversal(monkeypatch)
+        destination = tmp_path / "not_a_directory"
+        destination.write_text("occupied", encoding="utf-8")
+
+        with pytest.raises(ValueError) as excinfo:
+            kgx.export_subgraph(seeds=[SEED_A], output_dir=destination)
+
+        message = str(excinfo.value)
+        assert "not a directory" in message
+        assert str(destination) in message, "the message must name the path it refused"
+        assert spy.calls == []
+        assert destination.read_text(encoding="utf-8") == "occupied"
+
+    def test_the_filesystem_root_is_refused_before_any_graph_work(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        spy = _install_traversal(monkeypatch)
+
+        with pytest.raises(ValueError) as excinfo:
+            kgx.export_subgraph(seeds=[SEED_A], output_dir=Path("/"))
+
+        assert "filesystem root" in str(excinfo.value)
+        assert spy.calls == []
+
+    @pytest.mark.skipif(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        reason="a root user is not stopped by a read-only directory",
+    )
+    def test_an_unwritable_parent_fails_before_any_graph_work(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Finding F-4.4-59's second half. This used to run the whole
+        # traversal and discover the problem at the first write, so the
+        # assertion that matters here is not the exception, it is that the
+        # spy was never called.
+        spy = _install_traversal(monkeypatch)
+        parent = tmp_path / "read_only_parent"
+        parent.mkdir()
+        destination = parent / "bundle"
+        os.chmod(parent, 0o500)
+        try:
+            with pytest.raises(OSError) as excinfo:
+                kgx.export_subgraph(seeds=[SEED_A], output_dir=destination)
+        finally:
+            os.chmod(parent, 0o700)
+
+        assert isinstance(excinfo.value, PermissionError)
+        assert spy.calls == [], "the traversal was paid for before the write failed"
+        assert not destination.exists()
+
+    def test_the_result_reports_the_resolved_destination_not_the_path_as_typed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Finding F-4.4-59's first half: a symlinked destination wrote
+        # somewhere other than the path the user typed, with nothing
+        # resolved and nothing reported.
+        _install_traversal(monkeypatch)
+        real = tmp_path / "real_location"
+        real.mkdir()
+        typed = tmp_path / "looks_local"
+        typed.symlink_to(real, target_is_directory=True)
+
+        result = kgx.export_subgraph(seeds=[SEED_A], output_dir=typed)
+
+        assert result.output_dir == real.resolve()
+        assert result.output_dir != typed
+        assert _bundle_run(real) == SEED_A
+
+    def test_a_dot_dot_segment_is_collapsed_in_the_reported_destination(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install_traversal(monkeypatch)
+        (tmp_path / "somewhere").mkdir()
+        typed = tmp_path / "somewhere" / ".." / "elsewhere"
+
+        result = kgx.export_subgraph(seeds=[SEED_A], output_dir=typed)
+
+        assert result.output_dir == (tmp_path / "elsewhere").resolve()
+        assert ".." not in str(result.output_dir)
+        assert _bundle_run(tmp_path / "elsewhere") == SEED_A
+
+    def test_a_successful_export_leaves_nothing_beside_the_destination(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The bundle is assembled in a sibling directory, so this is the
+        # check that the sibling never outlives the export.
+        _install_traversal(monkeypatch)
+        destination = tmp_path / "bundle"
+
+        kgx.export_subgraph(seeds=[SEED_A], output_dir=destination)
+
+        assert _leftovers(tmp_path, destination) == []
+
+    def test_a_failed_export_leaves_nothing_beside_the_destination(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def exploding_traversal(**_kwargs: Any):
+            raise RuntimeError("the graph went away mid-traversal")
+
+        monkeypatch.setattr(kgx, "traverse_subgraph", exploding_traversal)
+        destination = tmp_path / "bundle"
+
+        with pytest.raises(RuntimeError):
+            kgx.export_subgraph(seeds=[SEED_A], output_dir=destination)
+
+        assert not destination.exists(), "a failed export publishes nothing"
+        assert sorted(entry.name for entry in tmp_path.iterdir()) == []
+
+    def test_a_failed_publish_puts_the_previous_bundle_back(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The one path where the destination is briefly moved aside. If the
+        # move that follows fails, what was there has to come back, or a
+        # failed export would have destroyed the export it was replacing.
+        _install_traversal(monkeypatch)
+        destination = tmp_path / "bundle"
+        destination.mkdir()
+        (destination / "previous.tsv").write_text("previous bundle", encoding="utf-8")
+
+        real_rename = os.rename
+        staging_moves = {"count": 0}
+
+        def flaky_rename(src: Any, dst: Any) -> None:
+            if Path(src).name.startswith(kgx._STAGING_PREFIX):
+                staging_moves["count"] += 1
+                if staging_moves["count"] == 2:
+                    raise OSError(errno.EACCES, "injected publish failure")
+            real_rename(src, dst)
+
+        monkeypatch.setattr(os, "rename", flaky_rename)
+
+        with pytest.raises(OSError) as excinfo:
+            kgx.export_subgraph(seeds=[SEED_A], output_dir=destination, overwrite=True)
+
+        assert excinfo.value.errno == errno.EACCES
+        assert (destination / "previous.tsv").read_text(encoding="utf-8") == (
+            "previous bundle"
+        )
+        assert _leftovers(tmp_path, destination) == []
+
+
+class TestAtomicPublish:
+    """Finding F-4.4-53, the blocking one.
+
+    Two exports into one directory used to interleave three unsynchronized
+    overwrites and both return success, leaving `nodes.tsv` from one run
+    beside `edges.tsv` and `manifest.json` from another, with the manifest
+    certifying the pair.
+
+    How the race is made deterministic, stated plainly rather than implied:
+    nothing here schedules a real race and hopes. `kgx._write_tsv` is
+    replaced with a wrapper that blocks one export on a `threading.Event`
+    immediately after it has written its `nodes.tsv`, which is the exact
+    point the adversary widened with an injected sleep. The window it opens
+    is genuine in the shipped code, since the write path has no lock and no
+    ordering of its own; the event only removes the timing luck from the
+    reproduction. Everything here runs in one process, so these tests prove
+    the ordering of the publish step, not the kernel's rename semantics.
+    """
+
+    def _run_interleaved(
+        self, monkeypatch: pytest.MonkeyPatch, destination: Path
+    ) -> list[tuple[str, str | None]]:
+        """Drive the interleaving and return what a reader observed at each
+        of the three checkpoints, so a caller asserts on observations
+        rather than on timing.
+
+        Every observation is taken while the schedule is still in progress
+        and returned by value. A caller that re-read the directory after
+        both exports had finished would be asserting on the final state
+        three times, which no interleaving can fail.
+        """
+        _install_traversal(monkeypatch)
+        real_write_tsv = kgx._write_tsv
+        wrote_nodes = threading.Event()
+        may_continue = threading.Event()
+
+        def stalling_write_tsv(records: Any, path: Path, required_columns: Any) -> Path:
+            written = real_write_tsv(records, path, required_columns)
+            if threading.current_thread().name == "export-A" and path.name == "nodes.tsv":
+                wrote_nodes.set()
+                assert may_continue.wait(timeout=30), "the second export never finished"
+            return written
+
+        monkeypatch.setattr(kgx, "_write_tsv", stalling_write_tsv)
+
+        failures: list[BaseException] = []
+
+        def run_a() -> None:
+            try:
+                kgx.export_subgraph(seeds=[SEED_A], output_dir=destination)
+            except BaseException as exc:  # noqa: BLE001 - re-raised in the caller
+                failures.append(exc)
+
+        thread_a = threading.Thread(target=run_a, name="export-A")
+        thread_a.start()
+        try:
+            assert wrote_nodes.wait(timeout=30), "the first export never started writing"
+            observations = [_observe(destination)]
+
+            kgx.export_subgraph(seeds=[SEED_B], output_dir=destination)
+            observations.append(_observe(destination))
+        finally:
+            may_continue.set()
+            thread_a.join(timeout=30)
+
+        assert not thread_a.is_alive(), "the first export never finished"
+        if failures:
+            raise failures[0]
+        observations.append(_observe(destination))
+        return observations
+
+    def test_a_reader_never_sees_half_a_bundle_or_two_runs_mixed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        destination = tmp_path / "shared_output_dir"
+
+        mid_write, after_second, after_first = self._run_interleaved(
+            monkeypatch, destination
+        )
+
+        # Checkpoint 1: the first export has written its nodes.tsv and is
+        # stalled. Before the fix this read "partial: nodes.tsv", which is
+        # half a bundle, reachable.
+        assert mid_write[0] in {"absent", "empty"}, (
+            "a reader could see a partly written export: " + mid_write[0]
+        )
+        # Checkpoint 2: the second export finished while the first is still
+        # stalled. What a reader saw at that moment was one complete
+        # bundle, and it was the second export's, entire.
+        assert after_second == ("complete", SEED_B), after_second
+        # Checkpoint 3: the first export published on top. Last writer
+        # wins, entire: never one run's nodes beside another run's edges.
+        assert after_first == ("complete", SEED_A), after_first
+
+    def test_neither_interleaved_export_leaves_anything_beside_the_destination(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        destination = tmp_path / "shared_output_dir"
+
+        self._run_interleaved(monkeypatch, destination)
+
+        assert _leftovers(tmp_path, destination) == []
+
+
+class TestRetiredCopyCleanup:
+    """The one step that may fail without failing the export.
+
+    Replacing an occupied destination moves its contents aside first and
+    removes them once the new bundle is in place. If that removal fails,
+    the export has already succeeded, so the removal warns rather than
+    raising: a caller that reads a landed export as a failed one is worse
+    than a caller told exactly what was left behind and where.
+    """
+
+    @pytest.mark.skipif(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        reason="a root user is not stopped by a read-only directory",
+    )
+    def test_an_unremovable_previous_bundle_warns_and_still_publishes(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _install_traversal(monkeypatch)
+        destination = tmp_path / "bundle"
+        destination.mkdir()
+        locked = destination / "locked"
+        locked.mkdir()
+        (locked / "previous.tsv").write_text("previous", encoding="utf-8")
+        os.chmod(locked, 0o500)
+
+        try:
+            with pytest.warns(UserWarning, match="could not be removed"):
+                kgx.export_subgraph(
+                    seeds=[SEED_A], output_dir=destination, overwrite=True
+                )
+
+            assert _bundle_run(destination) == SEED_A
+            leftovers = _leftovers(tmp_path, destination)
+            assert len(leftovers) == 1
+            assert leftovers[0].startswith(".kgx-export-replaced-")
+        finally:
+            for path in tmp_path.rglob("locked"):
+                os.chmod(path, 0o700)

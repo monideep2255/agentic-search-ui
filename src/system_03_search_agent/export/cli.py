@@ -50,9 +50,14 @@ Reads:
 Writes:
     - stdout, stderr: the export summary, the manifest's Layer 1 limitation
       and truncation disclosure, and every error message.
-    - The caller-supplied output directory only, created if it does not
-      already exist. This module never writes a file itself; every file in
-      that directory is written by `export_subgraph`.
+    - The caller-supplied output directory, created if it does not already
+      exist. This module never writes a file itself; every file in that
+      directory is written by `export_subgraph`, which also creates and
+      removes one temporary directory beside it while the export runs (see
+      that module's own Writes section). The summary line reports the
+      directory the export says it landed in, not the string that was
+      typed, so a symlinked or `..`-bearing argument does not hide where
+      the files went (finding F-4.4-59).
 """
 
 from __future__ import annotations
@@ -164,6 +169,18 @@ def _parse_args(argv: list[str], *, out: TextIO, err: TextIO) -> argparse.Namesp
         required=True,
         metavar="DIR",
         help="the directory to write nodes.tsv, edges.tsv, and manifest.json into",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        dest="force",
+        help=(
+            "replace a non-empty output directory. Without this an export "
+            "into a directory that already holds anything is refused before "
+            "any graph work, because an export replaces its destination "
+            "wholesale rather than merging into it; with it, every file "
+            "already in that directory is gone once the new export lands"
+        ),
     )
     parser.add_argument(
         "--hops",
@@ -294,6 +311,12 @@ def run(argv: list[str], *, stdout: TextIO, stderr: TextIO) -> int:
         "seeds": list(args.seed),
         "output_dir": output_dir,
         "hops": args.hops,
+        # Always passed, unlike the cap flags below, which are omitted when
+        # unset because this module does not know `export_subgraph`'s own
+        # defaults for them. This one it does know: the flag's default IS
+        # the decision, that a non-empty destination is refused unless the
+        # user asked for it to be replaced (finding F-4.4-58).
+        "overwrite": bool(args.force),
     }
     if args.edge_label:
         call_kwargs["edge_labels"] = tuple(args.edge_label)
@@ -381,9 +404,13 @@ def run(argv: list[str], *, stdout: TextIO, stderr: TextIO) -> int:
         return EXIT_RUNTIME_ERROR
 
     counts = manifest.get("counts") or {}
+    # `result.output_dir`, never the `--output-dir` string as typed. The
+    # export resolves its destination, so a symlink or a `..` segment means
+    # the files landed somewhere other than what was typed, and a caller
+    # told the typed path cannot go and check them (finding F-4.4-59).
     stdout.write(
         f"wrote {counts.get('nodes', 0)} nodes and {counts.get('edges', 0)} edges "
-        f"to {output_dir}\n"
+        f"to {result.output_dir}\n"
     )
     _print_disclosures(manifest, stdout=stdout)
     return 0
