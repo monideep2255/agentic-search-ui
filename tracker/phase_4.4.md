@@ -29,7 +29,7 @@ Every ticket below except T-4.4-06 reads Layer 1. None of them may be dispatched
 
 ### T-4.4-01: Premise gate for the KGX export
 
-Status: todo
+Status: in-review
 Refine: refined
 Branch: phase/4.4-kgx-export
 Depends on: T-4.4-06
@@ -44,13 +44,19 @@ Acceptance criteria:
 - [ ] The gate exercises a seed whose neighbourhood exceeds the export's node cap, and asserts the manifest discloses the truncation
 - [ ] The gate exercises a seed CURIE that resolves to no vertex, and asserts an empty export with an explicit manifest reason rather than a crash or a silent zero-row file
 - [ ] The gate states, in its own file, which shapes of export it exercises and which it deliberately omits
-- [ ] The gate has been SEEN FAILING before any other ticket in this phase opens
+- [x] The gate has been SEEN FAILING before any other ticket in this phase opens
 
 Evidence:
-- (filled at close)
+- `tests/system_03_search_agent/export/test_kgx_export_premise.py`, six cases
+- Seen failing: `venv/bin/python -m pytest tests/system_03_search_agent/export/ -q` returns `6 failed in 0.15s`, every one on `ModuleNotFoundError: No module named 'system_03_search_agent.export'`. It FAILED rather than SKIPPED, which is the load-bearing part: the tunnel was open and `_graph_is_reachable()` returned True, so the live guard was exercised and the failures are real
+- Ground truth read live 2026-08-19 over the tunnel: TP53 (`NCBIGene:7157`) carries exactly 12 `gene_associated_with_condition` edges to Disease vertices, pinned as `TP53_DISEASE_CURIES`, returned in 2.3 seconds
+- Traversal cost measured while pinning that ground truth, and it shaped the design: an unscoped `MATCH (g:Gene {id})-[r]->(n) LIMIT 10` off BRCA1 takes 23.2 seconds and the reverse direction exceeds a 25 second budget, while the same hop scoped to one edge label returns in 2.3 seconds. The exporter traverses per edge label for this reason, not for tidiness
+- Coverage stated in the gate's own module docstring. It omits multi-hop traversal, the other thirteen edge labels, non-Gene seeds, and concurrent exports
 
 History:
 - 2026-08-19 lead: created, scoped at phase open
+- 2026-08-19 lead: claimed
+- 2026-08-19 lead: in-review, gate written and seen failing 6 of 6 against a reachable graph. Unblocks T-4.4-02 through T-4.4-05
 
 ### T-4.4-02: Bounded subgraph traversal over Layer 1
 
