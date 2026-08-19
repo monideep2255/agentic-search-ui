@@ -1,16 +1,23 @@
 """Unit tests for the KGX export's batch entry point, `cli.py` (T-4.4-05).
 
-The other two builders' modules this phase depends on (`kgx.py`,
-`traversal.py`, `manifest.py`; T-4.4-02/03/04) are being built concurrently
-and may not exist in this worktree yet. `cli.py` defers importing
-`export_subgraph` into `_export_subgraph`'s own function body rather than at
-module scope (see its own module docstring), and this file never imports
-`system_03_search_agent.export.kgx` directly for the same reason: every test
-below monkeypatches `system_03_search_agent.export.cli._export_subgraph`
-itself, the one seam `cli.py` calls through, so this file exercises argument
-parsing, CURIE validation, output-directory handling, error rendering, and
-the manifest disclosure printing entirely independent of whether the real
-`kgx.export_subgraph` exists yet.
+`kgx.py` and `traversal.py` (T-4.4-02/03) are a different builder's files,
+still in flight. `cli.py` defers importing `export_subgraph` into
+`_export_subgraph`'s own function body rather than at module scope (see its
+own module docstring), and this file never imports either of those two
+modules directly for the same reason: every test below monkeypatches
+`system_03_search_agent.export.cli._export_subgraph` itself, the one seam
+`cli.py` calls through, so this file exercises argument parsing, CURIE
+validation, output-directory handling, and error rendering entirely
+independent of whether the real `kgx.export_subgraph` exists yet.
+
+`manifest.py` (T-4.4-04) is different: it is complete, and round 2 of this
+phase's review made `cli.py`'s own `_print_disclosures` call its
+`summary_lines` directly rather than re-deriving the same wording a second
+time (findings F-4.4-05/F-4.4-57). This file's fake export fixture,
+`_write_fake_export`, therefore builds its manifest through the real
+`manifest.build_manifest`/`manifest.write_manifest` rather than a
+hand-rolled dict, so a fixture drifting from the real manifest shape cannot
+hide a real regression in what `cli.py` prints.
 
 This file does not re-prove the real, end-to-end integration against the
 live graph: that is `test_kgx_export_premise.py`'s job (T-4.4-01).
@@ -20,22 +27,28 @@ later:
 
 - Exercised: CURIE syntax rejection, missing required flags, cap-override
   pass-through (present and absent), a successful export's stdout summary
-  and manifest disclosure printing (limitation note, truncation, and empty
-  reason), a `GraphError` failure path, an unexpected-exception failure
-  path, an output-directory creation failure, that no credential-shaped
-  value ever reaches stdout or stderr on any path, and that `main()` and a
-  real `python -m` subprocess invocation both dispatch through the same
-  `run()` body.
+  and every disclosure line `manifest.summary_lines` can produce (the
+  Layer 1 limitation, truncation, no-cap-hit, hop-limit, dropped-row,
+  rows-fetched-not-exported, empty-source_url-count, and
+  unqueried-edge-label lines), a `GraphError` failure path, an
+  unexpected-exception failure path, a `ValueError` input-validation
+  failure path (its own message shown verbatim at the usage exit code,
+  never the transport remediation, for an unknown edge label, negative
+  hops, and an empty seed set, plus that distinct scenarios produce
+  distinct messages), an output-directory creation failure, that no
+  credential-shaped value ever reaches stdout or stderr on any path
+  (including one that is neither a `GraphError` nor a `ValueError`), and
+  that `main()` and a real `python -m` subprocess invocation both
+  dispatch through the same `run()` body.
 - Deliberately NOT exercised here: the real graph, the real `kgx.py`
-  traversal or serialization behaviour, and concurrent invocations against
-  the same output directory (matching the premise gate's own stated
-  omissions for the phase as a whole).
+  traversal or serialization behaviour, and concurrent invocations
+  against the same output directory (matching the premise gate's own
+  stated omissions for the phase as a whole).
 """
 
 from __future__ import annotations
 
 import io
-import json
 import subprocess
 import sys
 from pathlib import Path
@@ -44,6 +57,7 @@ from typing import NamedTuple
 import pytest
 
 from system_03_search_agent.export import cli
+from system_03_search_agent.export import manifest as manifest_module
 from system_03_search_agent.tools.graph_connection import (
     GraphAuthError,
     GraphConnectionError,
@@ -71,17 +85,31 @@ def _write_fake_export(
     empty_reason: str | None = None,
     node_count: int = 2,
     edge_count: int = 1,
+    edge_labels_traversed: tuple[str, ...] = (),
+    edge_labels_requested: tuple[str, ...] = (),
+    hop_limit_reached: bool = False,
+    unexpanded_frontier_nodes: int = 0,
+    dropped_rows: dict[str, int] | None = None,
+    rows_fetched_not_exported: int = 0,
+    rows_with_empty_source_url: int = 0,
 ) -> _FakeExportResult:
     """Writes a minimal but shape-correct KGX export into `output_dir`,
-    mirroring what `kgx.export_subgraph` is contracted to produce (T-4.4-03/
-    04's manifest keys: `truncated`, `truncation`, `empty_reason`, `layers`,
-    `layer_note`, `counts`). Used as the return value of a fake
-    `_export_subgraph`, never called directly by `cli.py`.
+    mirroring what `kgx.export_subgraph` is contracted to produce.
+
+    Builds the manifest through the REAL `manifest.build_manifest` and
+    `manifest.write_manifest` (T-4.4-04), rather than a hand-rolled dict, on
+    purpose: `manifest.py` now exists and is a real, direct (lazily
+    imported) dependency of `cli.py`'s own `_print_disclosures`, so a fixture
+    that drifts from `build_manifest`'s actual shape would defeat the exact
+    thing this round's fix exists to prevent (F-4.4-05/F-4.4-57, drift
+    between two independently maintained renderings of the same facts). This
+    is the one place this file imports `system_03_search_agent.export.
+    manifest` directly; every test still monkeypatches `_export_subgraph`
+    itself and never calls the real `kgx.export_subgraph` or `traversal.py`.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     nodes_path = output_dir / "nodes.tsv"
     edges_path = output_dir / "edges.tsv"
-    manifest_path = output_dir / "manifest.json"
 
     nodes_path.write_text(
         "id\tcategory\tname\tsource\tsource_url\n"
@@ -92,22 +120,30 @@ def _write_fake_export(
         "subject\tpredicate\tobject\tsource\tsource_url\tknowledge_level\tagent_type\n",
         encoding="utf-8",
     )
-    manifest = {
-        "seeds": [TP53],
-        "hops": 1,
-        "truncated": truncated,
-        "truncation": truncation or [],
-        "empty_reason": empty_reason,
-        "layers": ["layer_1"],
-        "layer_note": (
-            "This export covers Layer 1 only. Layer 2 and Layer 3 data are "
-            "fetched live at query time and are not present here."
-        ),
-        "counts": {"nodes": node_count, "edges": edge_count},
-        "graph_snapshot_version": "2026-07-29",
-        "exported_at": "2026-08-19T00:00:00Z",
-    }
-    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    manifest = manifest_module.build_manifest(
+        seeds=[TP53],
+        hops=1,
+        edge_labels_traversed=edge_labels_traversed,
+        max_nodes=100,
+        max_edges=200,
+        time_budget_s=60.0,
+        node_count=node_count,
+        edge_count=edge_count,
+        truncated=truncated,
+        truncation=truncation or [],
+        empty_reason=empty_reason,
+        rows_with_empty_source_url=rows_with_empty_source_url,
+        seeds_resolved=[] if empty_reason else [TP53],
+        elapsed_s=1.23,
+        edge_labels_requested=edge_labels_requested,
+        per_query_row_limit=500,
+        dropped_rows=dropped_rows,
+        rows_fetched_not_exported=rows_fetched_not_exported,
+        hop_limit_reached=hop_limit_reached,
+        unexpanded_frontier_nodes=unexpanded_frontier_nodes,
+    )
+    manifest_path = manifest_module.write_manifest(manifest, output_dir)
     return _FakeExportResult(nodes_path, edges_path, manifest_path)
 
 
@@ -288,7 +324,7 @@ class TestSuccessfulExport:
 
         _code, out, _err = _run([TP53, "--output-dir", str(tmp_path)])
 
-        assert "Layer 1 only" in out
+        assert "Layer 1" in out and "only" in out
         assert "Layer 2" in out and "Layer 3" in out
 
     def test_prints_truncation_disclosure_when_the_manifest_reports_one(
@@ -306,9 +342,12 @@ class TestSuccessfulExport:
 
         _code, out, _err = _run([TP53, "--output-dir", str(tmp_path)])
 
-        assert "truncated" in out.lower()
-        assert "max_nodes" in out
-        assert "5" in out
+        # Wording owned by manifest.summary_lines, not re-derived here
+        # (F-4.4-05/F-4.4-57's fix): assert on ITS actual sentence rather
+        # than a guessed synonym, so a future re-wording there is caught
+        # here too, not silently tolerated by a loose substring check.
+        assert "This export is INCOMPLETE" in out
+        assert "max_nodes=5" in out
 
     def test_prints_no_truncation_line_when_the_manifest_reports_none(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -319,7 +358,8 @@ class TestSuccessfulExport:
 
         _code, out, _err = _run([TP53, "--output-dir", str(tmp_path)])
 
-        assert "truncated" not in out.lower()
+        assert "This export hit no cap" in out
+        assert "INCOMPLETE" not in out
 
     def test_prints_the_empty_reason_when_the_manifest_carries_one(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -338,6 +378,108 @@ class TestSuccessfulExport:
         _code, out, _err = _run(["NCBIGene:99999999", "--output-dir", str(tmp_path)])
 
         assert "seed matched no vertex in the graph" in out
+
+    def test_prints_the_hop_limit_disclosure_when_the_manifest_reports_one(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            cli,
+            "_export_subgraph",
+            lambda **kwargs: _write_fake_export(
+                kwargs["output_dir"],
+                hop_limit_reached=True,
+                unexpanded_frontier_nodes=7,
+            ),
+        )
+
+        _code, out, _err = _run([TP53, "--output-dir", str(tmp_path)])
+
+        assert "stopped at its hop limit of 1" in out
+        assert "7 vertex(es) left unexpanded" in out
+
+    def test_prints_the_dropped_row_disclosure_when_the_manifest_reports_any(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            cli,
+            "_export_subgraph",
+            lambda **kwargs: _write_fake_export(
+                kwargs["output_dir"],
+                dropped_rows={"malformed_row": 2, "duplicate": 1},
+            ),
+        )
+
+        _code, out, _err = _run([TP53, "--output-dir", str(tmp_path)])
+
+        assert "3 fetched row(s) were discarded" in out
+        assert "malformed_row=2" in out
+        assert "duplicate=1" in out
+
+    def test_prints_no_dropped_row_line_when_every_reason_counts_zero(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            cli,
+            "_export_subgraph",
+            lambda **kwargs: _write_fake_export(
+                kwargs["output_dir"], dropped_rows={"malformed_row": 0}
+            ),
+        )
+
+        _code, out, _err = _run([TP53, "--output-dir", str(tmp_path)])
+
+        assert "discarded" not in out
+
+    def test_prints_rows_fetched_not_exported_when_the_manifest_reports_any(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            cli,
+            "_export_subgraph",
+            lambda **kwargs: _write_fake_export(
+                kwargs["output_dir"], rows_fetched_not_exported=4
+            ),
+        )
+
+        _code, out, _err = _run([TP53, "--output-dir", str(tmp_path)])
+
+        assert "4 fetched row(s) were read from the graph and not exported" in out
+
+    def test_prints_the_unqueried_edge_label_disclosure(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            cli,
+            "_export_subgraph",
+            lambda **kwargs: _write_fake_export(
+                kwargs["output_dir"],
+                edge_labels_traversed=("gene_associated_with_condition",),
+                edge_labels_requested=(
+                    "gene_associated_with_condition",
+                    "orthologous_to",
+                ),
+            ),
+        )
+
+        _code, out, _err = _run([TP53, "--output-dir", str(tmp_path)])
+
+        assert "queried 1 of the 2 requested edge label(s)" in out
+        assert "orthologous_to" in out
+
+    def test_prints_the_empty_source_url_count_when_the_manifest_reports_any(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            cli,
+            "_export_subgraph",
+            lambda **kwargs: _write_fake_export(
+                kwargs["output_dir"], rows_with_empty_source_url=3
+            ),
+        )
+
+        _code, out, _err = _run([TP53, "--output-dir", str(tmp_path)])
+
+        assert "3 row(s) were written with an empty source_url" in out
 
     def test_creates_the_output_directory_when_it_does_not_exist(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -424,23 +566,162 @@ class TestGraphUnreachable:
         assert "RuntimeError" in err
 
 
+class TestValidationFailureClassification:
+    """Round 2 fix for F-4.4-04 / F-4.4-54: a pure input-validation
+    failure, raised before any graph contact, must be classified as a
+    usage error, not a graph-transport failure. `_export_subgraph`
+    (really `traversal.py` and `kgx.py`, once they land) raises a plain
+    `ValueError` for each of these, carrying its own specific, actionable
+    message. This class proves the CLI shows that message verbatim, exits
+    with the usage code, and never substitutes the generic
+    transport-and-output-directory remediation for any of them.
+
+    Each test below constructs an input that actually reaches its own
+    distinct `ValueError`, and checks a message unique to that scenario,
+    so a single shared boilerplate string could not accidentally satisfy
+    every assertion in this class at once.
+    """
+
+    def test_an_unknown_edge_label_shows_its_own_message_at_the_usage_exit_code(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_export(**_kwargs: object) -> _FakeExportResult:
+            raise ValueError(
+                "unknown edge label 'bogus_label'; valid labels are: "
+                "gene_associated_with_disease, interacts_with, mentioned_in"
+            )
+
+        monkeypatch.setattr(cli, "_export_subgraph", fake_export)
+
+        code, out, err = _run(
+            [TP53, "--output-dir", str(tmp_path), "--edge-label", "bogus_label"]
+        )
+
+        assert code == cli.EXIT_USAGE_ERROR
+        assert out == ""
+        assert "bogus_label" in err
+        assert "gene_associated_with_disease" in err
+        assert "Traceback" not in err
+        assert "SSH tunnel" not in err
+        assert "output directory" not in err
+        assert "transport" not in err.lower()
+
+    def test_negative_hops_shows_its_own_message_at_the_usage_exit_code(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_export(**_kwargs: object) -> _FakeExportResult:
+            raise ValueError("hops must be zero or greater")
+
+        monkeypatch.setattr(cli, "_export_subgraph", fake_export)
+
+        code, out, err = _run([TP53, "--output-dir", str(tmp_path), "--hops", "-1"])
+
+        assert code == cli.EXIT_USAGE_ERROR
+        assert out == ""
+        assert "hops must be zero or greater" in err
+        assert "Traceback" not in err
+        assert "SSH tunnel" not in err
+        assert "output directory" not in err
+        assert "transport" not in err.lower()
+
+    def test_an_empty_seed_set_shows_its_own_message_at_the_usage_exit_code(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_export(**_kwargs: object) -> _FakeExportResult:
+            raise ValueError("export_subgraph requires at least one seed CURIE")
+
+        monkeypatch.setattr(cli, "_export_subgraph", fake_export)
+
+        code, out, err = _run([TP53, "--output-dir", str(tmp_path)])
+
+        assert code == cli.EXIT_USAGE_ERROR
+        assert out == ""
+        assert "requires at least one seed CURIE" in err
+        assert "Traceback" not in err
+        assert "SSH tunnel" not in err
+        assert "output directory" not in err
+        assert "transport" not in err.lower()
+
+    def test_each_validation_failure_message_is_distinct_not_a_shared_boilerplate(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        messages = [
+            "unknown edge label 'bogus_label'; valid labels are: interacts_with",
+            "hops must be zero or greater",
+            "export_subgraph requires at least one seed CURIE",
+        ]
+        seen_errors = []
+        for message in messages:
+
+            def fake_export(_message: str = message, **_kwargs: object) -> _FakeExportResult:
+                raise ValueError(_message)
+
+            monkeypatch.setattr(cli, "_export_subgraph", fake_export)
+            _code, _out, err = _run([TP53, "--output-dir", str(tmp_path)])
+            seen_errors.append(err)
+
+        assert len(set(seen_errors)) == len(messages), "each scenario produced its own message"
+        for message, err in zip(messages, seen_errors, strict=True):
+            assert message in err
+
+    def test_a_value_error_never_reports_the_runtime_exit_code(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Guards the classification itself, not just the message text: a
+        # validation failure must land on EXIT_USAGE_ERROR, never
+        # EXIT_RUNTIME_ERROR, so a caller's own exit-code handling can
+        # tell the two failure classes apart without parsing stderr.
+        def fake_export(**_kwargs: object) -> _FakeExportResult:
+            raise ValueError("some validation problem")
+
+        monkeypatch.setattr(cli, "_export_subgraph", fake_export)
+
+        code, _out, _err = _run([TP53, "--output-dir", str(tmp_path)])
+
+        assert code == cli.EXIT_USAGE_ERROR
+        assert code != cli.EXIT_RUNTIME_ERROR
+
+
+class _MysteryError(Exception):
+    """An exception shape that is neither `GraphError` nor `ValueError`,
+    standing in for a failure this module has no typed knowledge of
+    ahead of time. Defined here, not imported from anywhere, precisely so
+    it carries no special meaning to `cli.py`: the point of the test that
+    uses it is that a shape the module does not recognise is redacted
+    regardless of what that shape happens to be called.
+    """
+
+
 class TestNoCredentialLeakage:
     """No credential value appears in the command's output on either the
     success or the failure path (T-4.4-05's own last acceptance criterion).
     A `GraphError` message is already redacted by `graph_connection.py`
     itself; this test proves the CLI does not undo that by re-deriving or
-    logging the raw exception text for an exception SHAPE that is not a
-    `GraphError`, where `str(exc)` could carry anything, including a
-    connection string.
+    logging the raw exception text for an exception SHAPE that is neither
+    a `GraphError` nor a `ValueError`, where `str(exc)` could carry
+    anything, including a connection string.
+
+    Round 2 fix note: this test used to raise a bare `ValueError` to stand
+    in for "an unknown exception shape". That premise no longer holds:
+    `ValueError` is now this module's explicit, deliberate signal for an
+    input-validation failure (see `run`'s `except ValueError` branch and
+    `TestValidationFailureClassification` below), because every validator
+    ahead of graph contact in this export path already raises exactly
+    that type for exactly that reason, and `graph_connection.py`, the
+    only module in this path that ever handles a credential, never raises
+    `ValueError`. Simulating "unknown shape" with `ValueError` would now
+    be simulating a shape this module DOES recognise, so this test uses
+    `_MysteryError` instead, which is neither typed branch, to keep
+    testing the property it actually exists to test.
     """
 
-    def test_a_credential_bearing_generic_exception_never_reaches_the_output(
+    def test_a_credential_bearing_unknown_exception_never_reaches_the_output(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         secret_dsn = "postgresql://kg_reader:hunter2@127.0.0.1:15432/ncbi_kg"
 
         def fake_export(**_kwargs: object) -> _FakeExportResult:
-            raise ValueError(f"could not connect using {secret_dsn}")
+            raise _MysteryError(f"could not connect using {secret_dsn}")
 
         monkeypatch.setattr(cli, "_export_subgraph", fake_export)
 
@@ -451,7 +732,7 @@ class TestNoCredentialLeakage:
         assert "hunter2" not in err
         assert secret_dsn not in out
         assert secret_dsn not in err
-        assert "ValueError" in err, "the exception TYPE name is fine, only the value is withheld"
+        assert "_MysteryError" in err, "the exception TYPE name is fine, only the value is withheld"
 
     def test_a_graph_auth_error_message_carries_no_password_value(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

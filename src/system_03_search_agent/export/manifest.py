@@ -26,7 +26,10 @@ Reads:
     - Environment variable: GRAPH_SNAPSHOT_VERSION, optional. Falls back
       to the last verified snapshot name recorded in
       docs/data-engineering/Knowledge_graph_on_server_reference.md when
-      unset, the same fallback `cypher_query.py` uses.
+      unset, the same fallback `cypher_query.py` uses. The manifest states
+      which of the two happened, in `graph_snapshot_version_source`, so a
+      consumer is never left reading an assumed value as a read one
+      (finding F-4.4-11).
 
 Writes:
     - `manifest.json` in the caller-supplied output directory only.
@@ -70,6 +73,19 @@ _LAYER_NOTE: Final[str] = (
 )
 
 
+# How `graph_snapshot_version` arrived at its value. Finding F-4.4-11:
+# the manifest stated a hardcoded fallback as fact, with nothing marking
+# it as a fallback, so a consumer could not tell an export whose snapshot
+# label was read from configuration from one whose label was assumed.
+# `GRAPH_SNAPSHOT_VERSION` is unset in every environment this phase ran
+# in, so today that is every manifest. The VALUE is deliberately left
+# alone, since it mirrors `cypher_query` and changing it here alone would
+# drift the two; what changes is that the manifest now says which of the
+# two it is.
+SNAPSHOT_SOURCE_ENVIRONMENT: Final[str] = "environment"
+SNAPSHOT_SOURCE_FALLBACK: Final[str] = "hardcoded_fallback"
+
+
 def graph_snapshot_version() -> str:
     """Read the graph snapshot label, falling back to the last verified one.
 
@@ -77,16 +93,28 @@ def graph_snapshot_version() -> str:
     `_DEFAULT_GRAPH_SNAPSHOT_VERSION` rather than an empty string, so this
     field is never blank in a written manifest.
     """
-    value = os.environ.get(_ENV_GRAPH_SNAPSHOT_VERSION, _DEFAULT_GRAPH_SNAPSHOT_VERSION)
-    if not value:
-        value = _DEFAULT_GRAPH_SNAPSHOT_VERSION
-    return value[:_MAX_SNAPSHOT_VERSION_CHARS]
+    return graph_snapshot_version_and_source()[0]
+
+
+def graph_snapshot_version_and_source() -> tuple[str, str]:
+    """The snapshot label and whether it was read or assumed.
+
+    Returns `(value, source)`, `source` being `SNAPSHOT_SOURCE_ENVIRONMENT`
+    when `GRAPH_SNAPSHOT_VERSION` supplied a non-empty value and
+    `SNAPSHOT_SOURCE_FALLBACK` when the hardcoded default was used.
+    """
+    raw = os.environ.get(_ENV_GRAPH_SNAPSHOT_VERSION, "")
+    if raw:
+        return raw[:_MAX_SNAPSHOT_VERSION_CHARS], SNAPSHOT_SOURCE_ENVIRONMENT
+    return _DEFAULT_GRAPH_SNAPSHOT_VERSION[:_MAX_SNAPSHOT_VERSION_CHARS], (
+        SNAPSHOT_SOURCE_FALLBACK
+    )
 
 
 def build_manifest(
     seeds: list[str],
     hops: int,
-    edge_labels_used: tuple[str, ...],
+    edge_labels_traversed: tuple[str, ...],
     max_nodes: int,
     max_edges: int,
     time_budget_s: float,
@@ -98,6 +126,12 @@ def build_manifest(
     rows_with_empty_source_url: int,
     seeds_resolved: list[str],
     elapsed_s: float,
+    edge_labels_requested: tuple[str, ...] = (),
+    per_query_row_limit: int = 0,
+    dropped_rows: dict[str, int] | None = None,
+    rows_fetched_not_exported: int = 0,
+    hop_limit_reached: bool = False,
+    unexpanded_frontier_nodes: int = 0,
 ) -> dict[str, Any]:
     """Assemble the manifest dict for one export, before it is written.
 
@@ -106,9 +140,12 @@ def build_manifest(
             order, never deduplicated or reordered, so a consumer can
             compare this list against what they asked for.
         hops: the hop limit the traversal was bounded to.
-        edge_labels_used: the edge labels actually traversed. Every label
-            in `graph_schema_constants.EDGE_LABELS` when the caller asked
-            for "every label" (`edge_labels=None` at the traversal layer).
+        edge_labels_traversed: the edge labels a graph query was actually
+            ISSUED for, in the order they were first issued. Never the
+            labels the caller requested: those are a proxy for this value,
+            not this value, and filling the field from them let a default
+            export certify coverage of fourteen labels after querying one
+            (finding F-4.4-50).
         max_nodes: the configured node cap.
         max_edges: the configured edge cap.
         time_budget_s: the configured wall-clock budget, in seconds.
@@ -127,6 +164,26 @@ def build_manifest(
         seeds_resolved: the subset of `seeds` that actually matched a
             vertex in the graph.
         elapsed_s: the traversal's own measured wall-clock time.
+        edge_labels_requested: what the caller asked for, recorded beside
+            the traversed set rather than in place of it, so the gap
+            between the two is readable instead of hidden.
+        per_query_row_limit: the traversal's own internal per-query row
+            ceiling. It is a real bound on the result and is recorded as
+            its own cap, never attributed to `max_nodes` or `max_edges`
+            (finding F-4.4-51).
+        dropped_rows: one count per named discard reason, always written
+            in full including the zero counts, so "nothing was dropped" is
+            stated rather than inferred from an absent key.
+        rows_fetched_not_exported: rows read from the graph that a cap
+            stopped this export from writing.
+        hop_limit_reached: whether the REASON vertices were left
+            unexpanded is the requested hop limit specifically. False when
+            a cap stopped the traversal first, in which case that cap is
+            named in `truncation` and is the reason to read.
+        unexpanded_frontier_nodes: how many vertices were collected and
+            never expanded, for ANY reason. Non-zero beside a
+            `hop_limit_reached` of False is not a contradiction: it means
+            a cap stopped the traversal before the hop limit could.
 
     Returns:
         A JSON-serializable dict. Every key this phase's premise gate
@@ -135,24 +192,32 @@ def build_manifest(
         (with `nodes` and `edges`), `graph_snapshot_version`,
         `exported_at`.
     """
+    snapshot_version, snapshot_source = graph_snapshot_version_and_source()
     return {
         "seeds": list(seeds),
         "seeds_resolved": list(seeds_resolved),
         "hops": hops,
-        "edge_labels": list(edge_labels_used),
+        "edge_labels": list(edge_labels_traversed),
+        "edge_labels_requested": list(edge_labels_requested),
         "caps": {
             "max_nodes": max_nodes,
             "max_edges": max_edges,
             "time_budget_s": time_budget_s,
+            "per_query_row_limit": per_query_row_limit,
         },
         "counts": {"nodes": node_count, "edges": edge_count},
         "truncated": truncated,
         "truncation": list(truncation),
         "empty_reason": empty_reason,
+        "hop_limit_reached": hop_limit_reached,
+        "unexpanded_frontier_nodes": unexpanded_frontier_nodes,
+        "dropped_rows": dict(dropped_rows or {}),
+        "rows_fetched_not_exported": rows_fetched_not_exported,
         "layers": ["layer_1"],
         "layer_note": _LAYER_NOTE,
         "rows_with_empty_source_url": rows_with_empty_source_url,
-        "graph_snapshot_version": graph_snapshot_version(),
+        "graph_snapshot_version": snapshot_version,
+        "graph_snapshot_version_source": snapshot_source,
         "exported_at": datetime.now(UTC).isoformat(),
         "elapsed_s": round(elapsed_s, 3),
     }
@@ -172,7 +237,7 @@ def write_manifest(manifest: dict[str, Any], output_dir: Path) -> Path:
 
 
 def summary_lines(manifest: dict[str, Any]) -> list[str]:
-    """Render the manifest's limitation and truncation statements as plain text.
+    """Render the manifest's limitation and disclosure statements as plain text.
 
     Exists so a caller that also prints to the command's own output
     (T-4.4-05's batch entry point, a different builder's file) states the
@@ -180,22 +245,69 @@ def summary_lines(manifest: dict[str, Any]) -> list[str]:
     re-deriving a summary that could drift from what the file actually
     says. Never includes a credential value or a file path outside the
     caller's own output directory.
+
+    Reads every key with `.get`, so a manifest written by an older or
+    partial caller renders what it has rather than raising.
     """
-    lines = [manifest["layer_note"]]
-    if manifest["truncated"]:
+    lines = [str(manifest.get("layer_note") or "")]
+    if manifest.get("truncated"):
         caps_text = ", ".join(
-            entry["cap"] + "=" + str(entry["value"]) for entry in manifest["truncation"]
+            str(entry.get("cap")) + "=" + str(entry.get("value"))
+            for entry in manifest.get("truncation") or []
         )
         lines.append(
             "This export is INCOMPLETE: it hit the following cap(s): " + caps_text + "."
         )
     else:
         lines.append("This export hit no cap; it is the complete requested subgraph.")
-    if manifest["empty_reason"]:
+
+    traversed = manifest.get("edge_labels") or []
+    requested = manifest.get("edge_labels_requested") or []
+    unqueried = [label for label in requested if label not in traversed]
+    if unqueried:
+        lines.append(
+            "This export queried "
+            + str(len(traversed))
+            + " of the "
+            + str(len(requested))
+            + " requested edge label(s); no query was issued for: "
+            + ", ".join(unqueried)
+            + "."
+        )
+
+    if manifest.get("hop_limit_reached"):
+        lines.append(
+            "This export stopped at its hop limit of "
+            + str(manifest.get("hops"))
+            + " with "
+            + str(manifest.get("unexpanded_frontier_nodes"))
+            + " vertex(es) left unexpanded."
+        )
+
+    if manifest.get("empty_reason"):
         lines.append("Empty export: " + str(manifest["empty_reason"]))
-    if manifest["rows_with_empty_source_url"]:
+
+    if manifest.get("rows_with_empty_source_url"):
         lines.append(
             str(manifest["rows_with_empty_source_url"])
             + " row(s) were written with an empty source_url."
+        )
+
+    dropped_total = sum((manifest.get("dropped_rows") or {}).values())
+    if dropped_total:
+        detail = ", ".join(
+            reason + "=" + str(count)
+            for reason, count in sorted((manifest.get("dropped_rows") or {}).items())
+            if count
+        )
+        lines.append(
+            str(dropped_total) + " fetched row(s) were discarded (" + detail + ")."
+        )
+
+    if manifest.get("rows_fetched_not_exported"):
+        lines.append(
+            str(manifest["rows_fetched_not_exported"])
+            + " fetched row(s) were read from the graph and not exported, because a "
+            "cap stopped the export first."
         )
     return lines

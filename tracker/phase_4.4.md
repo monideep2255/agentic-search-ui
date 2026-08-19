@@ -224,6 +224,23 @@ History:
 - 2026-08-19 adversary: filed, reproduced live
 - 2026-08-19 lead: confirmed, reproduced independently with the numbers above. Blocks the merge
 
+### F-4.4-12: The CLI's error classification rests on a convention, not a declaration
+
+Status: filed
+Raised by: lead, while verifying the round 2 CLI fix
+Severity: minor
+Round: 2
+Reachable: no, latent. Verified today: `graph_connection` raises no `ValueError` at all, so no credential-bearing message can reach the verbatim-printed branch, and the only `json.loads` in the package sits in a separate try block that routes a `JSONDecodeError` to the runtime path rather than the usage path
+Ticket: T-4.4-05
+Location: `src/system_03_search_agent/export/cli.py:312`
+
+What happened: the round 2 fix classifies an input problem as "the exception was a `ValueError`". That is a better rule than the one it replaced, which classified by where the exception was caught, and it does generalize to validators added later. It is still a proxy rather than a declaration: it holds only while every `ValueError` reachable from this call path really is a caller-input problem. The property was verified true today rather than assumed, which is why this is latent and not a defect.
+
+The trigger that would make it real: any module in the export path raising `ValueError` for a reason that is not bad caller input, for example a parse failure over graph data. Then a data failure would print verbatim and exit with the usage code. The durable form is an explicit exception type owned by this package, for example `ExportInputError`, so the classification is declared by the raiser rather than inferred by the catcher.
+
+History:
+- 2026-08-19 lead: filed after verifying the fix. Not a blocker under the merge bar; tracked with a named trigger
+
 ### F-4.4-01: The console-script criterion cannot be verified end to end, because nothing is installed
 
 Status: filed

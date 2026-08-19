@@ -12,13 +12,32 @@ rules/file-protection.md`); its column contract is replicated here, never
 imported, since a System 3 module must not depend on System 1 code at
 runtime.
 
-Every `source_url` this module writes comes from
+Every `source_url` this module writes is BUILT by
 `cypher_provenance.source_url_for_curie`, the same host-pinned builder
-`cypher_query`'s own citation path uses, or from a stored graph value that
-independently matches the same host-pinned pattern
-(`graph_schema_constants.NCBI_RECORD_URL_PATTERN`). A row whose URL cannot
-be verified either way is written with an empty `source_url` and counted,
-never given a guessed path.
+`cypher_query`'s own citation path uses, from a CURIE that verified first.
+A row whose citation cannot be verified is written with an empty
+`source_url` and counted, never given a guessed path.
+
+The citation POLICY around that builder is `cypher_provenance`'s too, not
+a second one invented here (finding F-4.4-03, reversing F-2.1-B06,
+F-2.1-C04 and F-2.1-C05). Three properties carry over, and
+`_edge_citation` below is where they live:
+
+- A stored graph URL is never passed through as the citation. It is first
+  reverse-derived back to a real CURIE (`_curie_for_source_url`), and the
+  canonical URL is then rebuilt from that CURIE, so a stored value's own
+  formatting never leaks into the citation and two differently-formatted
+  stored URLs for the same record cannot produce two different citations.
+  This also closes a prefix-match hole: the host pattern is anchored only
+  at the start, so `https://www.ncbi.nlm.nih.gov/gene/7157 https://
+  elsewhere.example/x` used to pass a bare `re.match` check and be written
+  whole into the column.
+- An edge carries no CURIE of its own (F-2.1-B06 verified this live), so
+  its citation is always some other record's. The edge's OWN stored URL is
+  tried first because that is edge-intrinsic, and only then the subject
+  endpoint and then the object endpoint, rather than the subject alone.
+- Either way the row is marked, in a `cited_via_endpoint_curie` column,
+  as citing an endpoint's record rather than the edge's own identity.
 
 Depends on:
     - system_03_search_agent.export.traversal (traverse_subgraph,
@@ -26,9 +45,12 @@ Depends on:
       DEFAULT_TIME_BUDGET_S)
     - system_03_search_agent.export.manifest (build_manifest,
       write_manifest)
-    - system_03_search_agent.tools.cypher_provenance (source_url_for_curie)
-    - system_03_search_agent.tools.graph_schema_constants (EDGE_LABELS,
-      NCBI_RECORD_URL_PATTERN)
+    - system_03_search_agent.tools.cypher_provenance (source_url_for_curie,
+      and the two private helpers `_curie_for_source_url` and
+      `_matches_host_pattern`. Imported rather than restated on purpose:
+      re-implementing the reverse-derivation table here is exactly the
+      "second policy" this finding was filed for, and a copy would drift
+      the first time `cypher_provenance` gained a seventh CURIE prefix)
     - system_03_search_agent.tools.graph_connection (ConnectionFactory,
       the type only, for pass-through injection in tests)
 
@@ -47,7 +69,6 @@ Depended by:
 from __future__ import annotations
 
 import csv
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
@@ -60,12 +81,12 @@ from system_03_search_agent.export.traversal import (
     TraversalResult,
     traverse_subgraph,
 )
-from system_03_search_agent.tools.cypher_provenance import source_url_for_curie
-from system_03_search_agent.tools.graph_connection import ConnectionFactory
-from system_03_search_agent.tools.graph_schema_constants import (
-    EDGE_LABELS,
-    NCBI_RECORD_URL_PATTERN,
+from system_03_search_agent.tools.cypher_provenance import (
+    _curie_for_source_url,
+    _matches_host_pattern,
+    source_url_for_curie,
 )
+from system_03_search_agent.tools.graph_connection import ConnectionFactory
 
 # The upstream column contract, restated here (not imported, see the
 # module docstring). Column ORDER is part of the contract: a shifted
@@ -82,7 +103,12 @@ EDGE_REQUIRED_COLUMNS: Final[list[str]] = [
     "agent_type",
 ]
 
-_HOST_PATTERN = re.compile(NCBI_RECORD_URL_PATTERN)
+# The column that marks an edge row's citation as belonging to an
+# endpoint's record rather than to the edge itself. Named for the field
+# `cypher_provenance._shape_entity` sets for the same purpose
+# (`_cited_via_endpoint_curie`), without the leading underscore, since
+# this is a published TSV column rather than an internal field.
+EDGE_CITED_VIA_COLUMN: Final[str] = "cited_via_endpoint_curie"
 
 
 @dataclass
@@ -160,21 +186,78 @@ def _write_tsv(records: list[dict[str, Any]], path: Path, required_columns: list
     return path
 
 
-def _resolve_source_url(curie: str | None, stored_url: object) -> str | None:
-    """Resolve the source_url for one KGX row: keep a valid stored URL, else derive.
+def _curie_from_stored_url(stored_url: object) -> str | None:
+    """Reverse-derive a verified CURIE from a stored graph URL, or None.
 
-    A stored URL already on the vertex or edge (data carried over from
-    Systems 1 and 2) is kept only when it matches the host-pinned
-    pattern. Otherwise this falls back to `source_url_for_curie(curie)`,
-    the same verified builder `cypher_query`'s own citation path uses.
-    Returns None, never a guessed or unverified URL, when neither check
-    succeeds.
+    Two checks, both required. The host pin
+    (`cypher_provenance._matches_host_pattern`) rejects a foreign host.
+    The reverse derivation (`cypher_provenance._curie_for_source_url`)
+    then matches the WHOLE string against one of the six documented
+    record-page templates and re-validates the extracted local id, which
+    is what makes this a verification of the value rather than a check of
+    its prefix. A stored value that is host-valid at the front and
+    arbitrary afterwards, the shape `re.match` on the host pattern alone
+    used to accept, fails here.
     """
-    if isinstance(stored_url, str) and stored_url and _HOST_PATTERN.match(stored_url):
-        return stored_url
+    if not isinstance(stored_url, str) or not stored_url:
+        return None
+    if not _matches_host_pattern(stored_url):
+        return None
+    return _curie_for_source_url(stored_url)
+
+
+def _resolve_source_url(curie: str | None, stored_url: object) -> str | None:
+    """Resolve the source_url for one KGX NODE row.
+
+    A vertex carries its own CURIE, so its citation is its own record. A
+    stored URL already on the vertex (data carried over from Systems 1 and
+    2) is preferred, the same order `cypher_provenance._resolve_source_url`
+    uses, but it is verified back to a CURIE and the canonical URL is then
+    rebuilt from that CURIE rather than the stored string being passed
+    through. When no stored URL verifies, the URL is built from the
+    vertex's own CURIE. Returns None, never a guessed or unverified URL,
+    when neither succeeds.
+    """
+    stored_curie = _curie_from_stored_url(stored_url)
+    if stored_curie:
+        return source_url_for_curie(stored_curie)
     if not curie:
         return None
     return source_url_for_curie(curie)
+
+
+def _edge_citation(
+    stored_url: object, subject_curie: str, object_curie: str
+) -> tuple[str | None, str | None]:
+    """Resolve the citation for one KGX EDGE row.
+
+    Returns `(source_url, attributed_curie)`, both None when nothing
+    verifies. This is `cypher_provenance._attributed_endpoint_curie`'s
+    policy, applied to the two CURIEs this module's traversal already
+    attached to the edge:
+
+    1. The edge's own stored `source_url`, reverse-derived to a CURIE.
+       Edge-intrinsic, so the same edge cites the same record no matter
+       which endpoints a given traversal happened to collect (F-2.1-C05).
+    2. Failing that, the subject endpoint, then the object endpoint. Both,
+       in that order, never the subject alone, which is the asymmetry
+       F-2.1-B06 filed and finding F-4.4-03 found reintroduced here.
+
+    An AGE edge carries no `properties["id"]` of its own (verified live
+    under F-2.1-B06), so whichever branch succeeds, the citation belongs
+    to some other record and the caller marks the row as such. The URL is
+    always rebuilt from the verified CURIE, never the stored string.
+    """
+    stored_curie = _curie_from_stored_url(stored_url)
+    if stored_curie:
+        return source_url_for_curie(stored_curie), stored_curie
+    for candidate in (subject_curie, object_curie):
+        if not candidate:
+            continue
+        url = source_url_for_curie(candidate)
+        if url:
+            return url, candidate
+    return None, None
 
 
 def _node_row(curie: str, entity: dict[str, Any]) -> tuple[dict[str, Any], bool]:
@@ -214,6 +297,15 @@ def _edge_row(edge_entity: dict[str, Any]) -> tuple[dict[str, Any], bool]:
     has resolved both endpoints from data already collected during the
     same traversal. Returns the row dict and whether its `source_url`
     came back empty, the same convention `_node_row` uses.
+
+    The `cited_via_endpoint_curie` column names the record the citation
+    actually points at. It is never presented as the edge's own identity,
+    which is the misattribution F-2.1-B06 described as "a citation that
+    survives inspection while pointing at the wrong thing": for a
+    `mentioned_in` edge the column reads `NCBIGene:7157` beside a
+    `source_url` for the gene page, so a consumer can see at a glance that
+    the citation is the subject's record and not the article that
+    evidences the mention.
     """
     label = str(edge_entity.get("label") or "")
     properties = edge_entity.get("properties")
@@ -230,8 +322,11 @@ def _edge_row(edge_entity: dict[str, Any]) -> tuple[dict[str, Any], bool]:
     row.setdefault("knowledge_level", "")
     row.setdefault("agent_type", "")
 
-    resolved_url = _resolve_source_url(subject_curie, properties.get("source_url"))
+    resolved_url, attributed_curie = _edge_citation(
+        properties.get("source_url"), subject_curie, object_curie
+    )
     row["source_url"] = resolved_url or ""
+    row[EDGE_CITED_VIA_COLUMN] = attributed_curie or ""
     return row, not resolved_url
 
 
@@ -332,14 +427,20 @@ def export_subgraph(
     nodes_path = _write_tsv(node_rows, output_dir / "nodes.tsv", NODE_REQUIRED_COLUMNS)
     edges_path = _write_tsv(edge_rows, output_dir / "edges.tsv", EDGE_REQUIRED_COLUMNS)
 
-    effective_edge_labels = edge_labels if edge_labels is not None else EDGE_LABELS
+    # `edge_labels_traversed`, never the requested set. Finding F-4.4-50
+    # and the judge's F-4.4-02: filling a field documented as "the labels
+    # actually traversed" from the labels the caller ASKED for is a value
+    # decided by a proxy for that value, and it made a default export
+    # certify fourteen-label coverage after querying one label.
     manifest = build_manifest(
         seeds=list(seeds),
         hops=hops,
-        edge_labels_used=tuple(effective_edge_labels),
+        edge_labels_traversed=tuple(result.edge_labels_traversed),
+        edge_labels_requested=tuple(result.edge_labels_requested),
         max_nodes=max_nodes,
         max_edges=max_edges,
         time_budget_s=time_budget_s,
+        per_query_row_limit=result.per_query_row_limit,
         node_count=len(node_rows),
         edge_count=len(edge_rows),
         truncated=result.truncated,
@@ -348,6 +449,10 @@ def export_subgraph(
         rows_with_empty_source_url=empty_source_url_count,
         seeds_resolved=result.seeds_resolved,
         elapsed_s=result.elapsed_s,
+        dropped_rows=result.dropped,
+        rows_fetched_not_exported=result.rows_fetched_not_exported,
+        hop_limit_reached=result.hop_limit_reached,
+        unexpanded_frontier_nodes=result.unexpanded_frontier_nodes,
     )
     manifest_path = write_manifest(manifest, output_dir)
 

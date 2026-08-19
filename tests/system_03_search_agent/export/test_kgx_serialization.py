@@ -145,6 +145,108 @@ class TestResolveSourceUrl:
         assert kgx._resolve_source_url("", None) is None
         assert kgx._resolve_source_url(None, None) is None
 
+    def test_a_stored_url_with_a_second_url_appended_is_not_passed_through(self) -> None:
+        # Finding F-4.4-03(b). The host pattern is anchored only at the
+        # start, so a bare `re.match` accepted this whole string and wrote
+        # it into the column. Verifying the value (reverse-deriving it to
+        # a real CURIE) rather than its prefix rejects the tail.
+        stored = "https://www.ncbi.nlm.nih.gov/gene/672 https://elsewhere.example/x"
+        resolved = kgx._resolve_source_url("NCBIGene:672", stored)
+        assert resolved == "https://www.ncbi.nlm.nih.gov/gene/672"
+        assert "elsewhere.example" not in (resolved or "")
+
+    def test_a_stored_url_is_re_derived_canonically_not_passed_through_verbatim(
+        self,
+    ) -> None:
+        # F-2.1-C04's determinism guarantee: two differently-formatted
+        # stored URLs for the same record must produce one citation.
+        with_slash = kgx._resolve_source_url(
+            "NCBIGene:672", "https://www.ncbi.nlm.nih.gov/gene/672/"
+        )
+        without_slash = kgx._resolve_source_url(
+            "NCBIGene:672", "https://www.ncbi.nlm.nih.gov/gene/672"
+        )
+        assert with_slash == without_slash
+
+
+class TestEdgeCitationPolicy:
+    """Finding F-4.4-03, reversing F-2.1-B06, F-2.1-C04 and F-2.1-C05.
+
+    An AGE edge carries no CURIE of its own, so its citation is always
+    some other record's. The policy here is `cypher_provenance`'s, not a
+    second one: the edge's own stored URL is reverse-derived first because
+    that is edge-intrinsic, the endpoints are tried in order rather than
+    subject-only, the canonical URL is always rebuilt from the verified
+    CURIE, and the row is marked as citing an endpoint's record.
+    """
+
+    def test_the_edges_own_stored_url_wins_over_either_endpoint(self) -> None:
+        url, curie = kgx._edge_citation(
+            "https://pubmed.ncbi.nlm.nih.gov/1088347/",
+            "NCBIGene:7157",
+            "PMID:1088347",
+        )
+        assert curie == "PMID:1088347"
+        assert url == "https://pubmed.ncbi.nlm.nih.gov/1088347/"
+
+    def test_the_object_endpoint_is_tried_when_the_subject_cannot_be_built(self) -> None:
+        # Subject-only attribution is the asymmetry F-2.1-B06 filed. `GO:`
+        # has no record-page builder, so a subject-only implementation
+        # returns no citation at all here and this assertion fails.
+        url, curie = kgx._edge_citation("", "GO:0008150", "NCBIGene:7157")
+        assert curie == "NCBIGene:7157"
+        assert url == "https://www.ncbi.nlm.nih.gov/gene/7157"
+
+    def test_the_subject_endpoint_is_preferred_over_the_object(self) -> None:
+        url, curie = kgx._edge_citation("", "NCBIGene:7157", "MedGen:C0205770")
+        assert curie == "NCBIGene:7157"
+        assert url == "https://www.ncbi.nlm.nih.gov/gene/7157"
+
+    def test_a_foreign_host_stored_url_falls_back_to_an_endpoint(self) -> None:
+        url, curie = kgx._edge_citation(
+            "https://evil.example/pubmed/1", "NCBIGene:7157", "PMID:1"
+        )
+        assert curie == "NCBIGene:7157"
+        assert url == "https://www.ncbi.nlm.nih.gov/gene/7157"
+
+    def test_nothing_verifiable_yields_no_citation_rather_than_a_guess(self) -> None:
+        assert kgx._edge_citation("", "GO:0008150", "GO:0008151") == (None, None)
+
+    def test_the_row_marks_the_record_its_citation_actually_points_at(self) -> None:
+        edge_entity = {
+            "id": 42,
+            "label": "mentioned_in",
+            "start_id": 1,
+            "end_id": 2,
+            "subject_curie": "NCBIGene:7157",
+            "object_curie": "PMID:1088347",
+            "properties": {
+                "source": "NCBI Gene",
+                "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+            },
+        }
+        row, is_empty = kgx._edge_row(edge_entity)
+        assert is_empty is False
+        assert row["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/7157"
+        # The load-bearing part: the row says whose record that is, so the
+        # citation is never read as the edge's own identity.
+        assert row[kgx.EDGE_CITED_VIA_COLUMN] == "NCBIGene:7157"
+
+    def test_an_uncitable_edge_carries_an_empty_marker_not_a_stale_one(self) -> None:
+        edge_entity = {
+            "id": 43,
+            "label": "close_match",
+            "start_id": 1,
+            "end_id": 2,
+            "subject_curie": "GO:0008150",
+            "object_curie": "GO:0008151",
+            "properties": {"source": "GO", "source_url": ""},
+        }
+        row, is_empty = kgx._edge_row(edge_entity)
+        assert is_empty is True
+        assert row["source_url"] == ""
+        assert row[kgx.EDGE_CITED_VIA_COLUMN] == ""
+
 
 class TestNodeAndEdgeRowShaping:
     def test_node_row_maps_label_to_biolink_category_and_carries_extras(self) -> None:

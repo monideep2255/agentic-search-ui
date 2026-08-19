@@ -22,11 +22,18 @@ being built concurrently, T-4.4-02 through T-4.4-04). `_export_subgraph` is
 also the one seam this module's own tests patch, so those tests exercise
 every other line in this file without needing the graph or the sibling
 modules to exist yet (see the module docstring in
-`tests/system_03_search_agent/export/test_kgx_cli.py`).
+`tests/system_03_search_agent/export/test_kgx_cli.py`). The disclosure text
+itself is not derived here: `_print_disclosures` calls
+`system_03_search_agent.export.manifest.summary_lines`, also imported
+lazily, rather than re-deriving the same wording a second time (findings
+F-4.4-05 and F-4.4-57, fixed in build phase 4.4's round 2).
 
 Depends on:
     - system_03_search_agent.export.kgx (T-4.4-02/03/04, imported lazily
       inside `_export_subgraph`, never at module level)
+    - system_03_search_agent.export.manifest (`summary_lines`, T-4.4-04,
+      imported lazily inside `_print_disclosures`, never at module level,
+      for the same reason as `export.kgx` above)
     - system_03_search_agent.tools.graph_connection (`GraphError` and its
       three subclasses, `GraphConnectionError`, `GraphTimeoutError`,
       `GraphAuthError`; this module is already built and stable, so it is
@@ -227,30 +234,29 @@ def _export_subgraph(**kwargs: object):
 
 
 def _print_disclosures(manifest: dict, *, stdout: TextIO) -> None:
-    """Prints the manifest's Layer 1 limitation statement and any
-    truncation or empty-export disclosure to the user's own output.
-    T-4.4-04's acceptance criterion is that these statements "appear on the
-    command's own output, not only inside the manifest file"; this function
-    is where that happens. Every value printed here is read back out of the
-    manifest this same run just wrote, never freshly derived, so the
-    command's own output and the manifest file can never disagree about
-    what happened in this run.
+    """Prints the manifest's Layer 1 limitation statement and every
+    truncation, hop-limit, dropped-row, and empty-export disclosure to the
+    user's own output. T-4.4-04's acceptance criterion is that these
+    statements "appear on the command's own output, not only inside the
+    manifest file"; this function is where that happens.
+
+    Delegates the actual wording to `manifest.summary_lines`, imported
+    lazily for the same reason `_export_subgraph` imports `kgx` lazily:
+    this module must import cleanly even while `manifest.py` is mid-edit.
+    This function used to re-derive the same statements itself, which is
+    exactly the drift `summary_lines`'s own docstring says it exists to
+    prevent (findings F-4.4-05 and F-4.4-57): two independently written
+    renderings of "what happened in this export" is two places for the
+    wording, and eventually the facts, to disagree. Calling the shared
+    function instead means the command's own output and the manifest file
+    are reading the same sentence, not two sentences about the same
+    numbers.
     """
-    layer_note = manifest.get("layer_note")
-    if layer_note:
-        stdout.write(f"{layer_note}\n")
+    from system_03_search_agent.export.manifest import summary_lines
 
-    if manifest.get("truncated"):
-        for entry in manifest.get("truncation") or []:
-            cap = entry.get("cap", "an unnamed cap")
-            value = entry.get("value")
-            stdout.write(
-                f"truncated: hit the {cap} cap at {value}; the export is incomplete\n"
-            )
-
-    empty_reason = manifest.get("empty_reason")
-    if empty_reason:
-        stdout.write(f"empty export: {empty_reason}\n")
+    for line in summary_lines(manifest):
+        if line:
+            stdout.write(f"{line}\n")
 
 
 def run(argv: list[str], *, stdout: TextIO, stderr: TextIO) -> int:
@@ -309,18 +315,54 @@ def run(argv: list[str], *, stdout: TextIO, stderr: TextIO) -> int:
         # actionable to print here without a second sanitization pass.
         stderr.write(f"s3-kgx-export: {exc}\n")
         return EXIT_RUNTIME_ERROR
+    except ValueError as exc:
+        # `ValueError` is this module's explicit signal for "a problem with
+        # what was typed, not with reaching the graph". Every validator
+        # that runs ahead of graph contact in this export path
+        # (`traversal.py`'s edge-label check, its hops check, `kgx.py`'s
+        # empty-seed check) raises exactly this type, and each one already
+        # builds its own specific, actionable message naming what was
+        # wrong and what the valid options are. `str(exc)` is that
+        # message; print it as is rather than discarding it in favour of a
+        # generic one.
+        #
+        # This is classification by the actual nature of the failure, not
+        # by which line of code happened to catch it, which is the same
+        # shape of defect that shipped two criticals in build phase 4.3
+        # when an exception's safety was inferred from a proxy (the
+        # package or class family it came from) instead of an explicit
+        # signal. `ValueError` is the explicit signal here, not a proxy:
+        # it is the one exception type this export path's input
+        # validation deliberately and consistently raises, matching the
+        # same convention `adapters/cli/main.py` already uses for its own
+        # argument-conversion failures. `graph_connection.py`, the only
+        # module in this export path that ever handles a credential,
+        # never raises `ValueError` for any failure of its own; every
+        # credential-adjacent failure it raises is a `GraphError`
+        # subclass, caught above. A validation check added to
+        # `traversal.py` or `kgx.py` next year is classified correctly
+        # here with no change to this module, as long as it keeps to that
+        # same, already-established convention of raising `ValueError`
+        # for a bad argument value.
+        #
+        # A usage-level exit code, matching `_ArgparseExit`'s own
+        # `EXIT_USAGE_ERROR` for an unparseable argument or seed: this is
+        # the same class of failure, caught one call later.
+        stderr.write(f"s3-kgx-export: {exc}\n")
+        return EXIT_USAGE_ERROR
     except Exception as exc:  # noqa: BLE001 - the export's own failure shape is not
-        # fully known to this module: `traversal.py` and `kgx.py` are
-        # concurrent, in-progress work (T-4.4-02/03), and this module must
-        # not import them to find out. `type(exc).__name__` only, never
-        # `str(exc)`: an exception from a code path this module cannot
-        # inspect ahead of time is exactly the shape that could carry a
-        # connection string or another credential-bearing value, the same
-        # reasoning `adapters/cli/main.py`'s own last-resort catch-all
-        # applies. The message still names the transport explicitly, since
-        # a graph-unreachable failure that for any reason is not raised as
-        # a GraphError must still meet this ticket's "names the transport"
-        # requirement.
+        # fully known to this module beyond the two typed signals above:
+        # `traversal.py` and `kgx.py` are concurrent, in-progress work
+        # (T-4.4-02/03), and this module must not import them to find out.
+        # `type(exc).__name__` only, never `str(exc)`: an exception from a
+        # code path this module cannot inspect ahead of time, and that is
+        # neither a `GraphError` nor a `ValueError`, is exactly the shape
+        # that could carry a connection string or another
+        # credential-bearing value, the same reasoning `adapters/cli/main.
+        # py`'s own last-resort catch-all applies. The message still names
+        # the transport explicitly, since a graph-unreachable failure that
+        # for any reason is not raised as a GraphError must still meet
+        # this ticket's "names the transport" requirement.
         stderr.write(
             f"s3-kgx-export: the export failed ({type(exc).__name__}); check "
             "that the output directory is writable and that the graph "

@@ -33,11 +33,71 @@ class TestGraphSnapshotVersion:
         assert manifest_module.graph_snapshot_version() == "ncbi_kg_v1_2026-04-22"
 
 
+class TestGraphSnapshotVersionSource:
+    """Finding F-4.4-11: the value must say whether it was read or assumed.
+
+    Both arms are exercised, so neither branch is a guard that cannot
+    fire, and the manifest-level assertions below check the flag travels
+    to the written file rather than only existing on the helper.
+    """
+
+    def test_source_is_the_environment_when_the_env_var_supplies_a_value(
+        self, monkeypatch
+    ) -> None:
+        monkeypatch.setenv("GRAPH_SNAPSHOT_VERSION", "ncbi_kg_v2_2026-09-01")
+        value, source = manifest_module.graph_snapshot_version_and_source()
+        assert value == "ncbi_kg_v2_2026-09-01"
+        assert source == manifest_module.SNAPSHOT_SOURCE_ENVIRONMENT
+
+    def test_source_is_the_hardcoded_fallback_when_the_env_var_is_unset(
+        self, monkeypatch
+    ) -> None:
+        monkeypatch.delenv("GRAPH_SNAPSHOT_VERSION", raising=False)
+        value, source = manifest_module.graph_snapshot_version_and_source()
+        assert value == "ncbi_kg_v1_2026-04-22"
+        assert source == manifest_module.SNAPSHOT_SOURCE_FALLBACK
+
+    def test_source_is_the_hardcoded_fallback_when_the_env_var_is_empty(
+        self, monkeypatch
+    ) -> None:
+        monkeypatch.setenv("GRAPH_SNAPSHOT_VERSION", "")
+        _, source = manifest_module.graph_snapshot_version_and_source()
+        assert source == manifest_module.SNAPSHOT_SOURCE_FALLBACK
+
+    def test_the_manifest_carries_the_source_beside_the_value(self, monkeypatch) -> None:
+        monkeypatch.delenv("GRAPH_SNAPSHOT_VERSION", raising=False)
+        manifest = _build_sample_manifest()
+        assert manifest["graph_snapshot_version"] == "ncbi_kg_v1_2026-04-22"
+        assert (
+            manifest["graph_snapshot_version_source"]
+            == manifest_module.SNAPSHOT_SOURCE_FALLBACK
+        )
+
+    def test_the_manifest_source_flips_with_the_environment(self, monkeypatch) -> None:
+        monkeypatch.setenv("GRAPH_SNAPSHOT_VERSION", "ncbi_kg_v3_2026-12-01")
+        manifest = _build_sample_manifest()
+        assert manifest["graph_snapshot_version"] == "ncbi_kg_v3_2026-12-01"
+        assert (
+            manifest["graph_snapshot_version_source"]
+            == manifest_module.SNAPSHOT_SOURCE_ENVIRONMENT
+        )
+
+
 def _build_sample_manifest(**overrides):
     base = {
         "seeds": ["NCBIGene:7157"],
         "hops": 1,
-        "edge_labels_used": ("gene_associated_with_condition",),
+        "edge_labels_traversed": ("gene_associated_with_condition",),
+        "edge_labels_requested": ("gene_associated_with_condition",),
+        "per_query_row_limit": 500,
+        "dropped_rows": {
+            "malformed_edge_row": 0,
+            "unresolved_edge_endpoint": 0,
+            "duplicate_edge_row": 0,
+        },
+        "rows_fetched_not_exported": 0,
+        "hop_limit_reached": False,
+        "unexpanded_frontier_nodes": 0,
         "max_nodes": 500,
         "max_edges": 1000,
         "time_budget_s": 60.0,
@@ -105,6 +165,54 @@ class TestBuildManifest:
         manifest = _build_sample_manifest()
         assert manifest["exported_at"]
         assert "T" in manifest["exported_at"]
+
+    def test_edge_labels_records_what_was_traversed_not_what_was_requested(self) -> None:
+        # Finding F-4.4-50 and the judge's F-4.4-02. The two arguments are
+        # deliberately different here, which is the only way this
+        # assertion can fail: a build_manifest that read the requested
+        # tuple would put all three labels under a key documented as the
+        # labels actually traversed.
+        manifest = _build_sample_manifest(
+            edge_labels_traversed=("gene_associated_with_condition",),
+            edge_labels_requested=(
+                "mentioned_in",
+                "gene_associated_with_condition",
+                "in_taxon",
+            ),
+        )
+        assert manifest["edge_labels"] == ["gene_associated_with_condition"]
+        assert manifest["edge_labels_requested"] == [
+            "mentioned_in",
+            "gene_associated_with_condition",
+            "in_taxon",
+        ]
+
+    def test_per_query_row_limit_is_recorded_as_its_own_cap(self) -> None:
+        # Finding F-4.4-51: the internal row ceiling is a real bound and
+        # must be disclosed as itself, never attributed to max_nodes.
+        manifest = _build_sample_manifest(per_query_row_limit=500)
+        assert manifest["caps"]["per_query_row_limit"] == 500
+
+    def test_dropped_rows_is_written_in_full_including_zero_counts(self) -> None:
+        manifest = _build_sample_manifest()
+        assert manifest["dropped_rows"] == {
+            "malformed_edge_row": 0,
+            "unresolved_edge_endpoint": 0,
+            "duplicate_edge_row": 0,
+        }
+
+    def test_hop_limit_is_reported_as_a_bound(self) -> None:
+        # Finding F-4.4-10. Both states are asserted, so neither is a
+        # value that can only ever read one way.
+        complete = _build_sample_manifest()
+        assert complete["hop_limit_reached"] is False
+        assert complete["unexpanded_frontier_nodes"] == 0
+
+        bounded = _build_sample_manifest(
+            hop_limit_reached=True, unexpanded_frontier_nodes=12
+        )
+        assert bounded["hop_limit_reached"] is True
+        assert bounded["unexpanded_frontier_nodes"] == 12
 
     def test_result_is_json_serializable(self) -> None:
         manifest = _build_sample_manifest(truncated=True, truncation=[{"cap": "max_edges", "value": 1000}])
@@ -174,3 +282,65 @@ class TestSummaryLines:
         manifest = _build_sample_manifest(rows_with_empty_source_url=0)
         lines = manifest_module.summary_lines(manifest)
         assert not any("row(s) were written" in line for line in lines)
+
+    def test_names_the_requested_labels_that_were_never_queried(self) -> None:
+        manifest = _build_sample_manifest(
+            edge_labels_traversed=("mentioned_in",),
+            edge_labels_requested=("mentioned_in", "gene_associated_with_condition"),
+        )
+        lines = manifest_module.summary_lines(manifest)
+        assert any("gene_associated_with_condition" in line for line in lines)
+        assert any("no query was issued for" in line for line in lines)
+
+    def test_omits_the_unqueried_label_line_when_every_label_was_queried(self) -> None:
+        manifest = _build_sample_manifest(
+            edge_labels_traversed=("mentioned_in", "in_taxon"),
+            edge_labels_requested=("mentioned_in", "in_taxon"),
+        )
+        lines = manifest_module.summary_lines(manifest)
+        assert not any("no query was issued for" in line for line in lines)
+
+    def test_states_the_hop_limit_bound_when_the_frontier_was_left_unexpanded(
+        self,
+    ) -> None:
+        manifest = _build_sample_manifest(
+            hop_limit_reached=True, unexpanded_frontier_nodes=12
+        )
+        lines = manifest_module.summary_lines(manifest)
+        assert any("hop limit" in line and "12" in line for line in lines)
+
+    def test_omits_the_hop_limit_line_when_the_frontier_was_exhausted(self) -> None:
+        lines = manifest_module.summary_lines(_build_sample_manifest())
+        assert not any("hop limit" in line for line in lines)
+
+    def test_states_the_dropped_row_counts_when_any_row_was_discarded(self) -> None:
+        manifest = _build_sample_manifest(
+            dropped_rows={
+                "malformed_edge_row": 2,
+                "unresolved_edge_endpoint": 1,
+                "duplicate_edge_row": 0,
+            }
+        )
+        lines = manifest_module.summary_lines(manifest)
+        assert any("3 fetched row(s) were discarded" in line for line in lines)
+        assert any("malformed_edge_row=2" in line for line in lines)
+        # A zero count is not listed in the detail, since the line only
+        # appears at all when something was actually dropped.
+        assert not any("duplicate_edge_row=0" in line for line in lines)
+
+    def test_omits_the_dropped_row_line_when_every_count_is_zero(self) -> None:
+        lines = manifest_module.summary_lines(_build_sample_manifest())
+        assert not any("discarded" in line for line in lines)
+
+    def test_states_rows_fetched_but_not_exported(self) -> None:
+        manifest = _build_sample_manifest(rows_fetched_not_exported=462)
+        lines = manifest_module.summary_lines(manifest)
+        assert any("462 fetched row(s) were read from the graph" in line for line in lines)
+
+    def test_renders_a_partial_manifest_without_raising(self) -> None:
+        # summary_lines reads every key with .get, so a manifest written
+        # by an older caller renders what it has instead of raising a
+        # KeyError at the moment a user most needs the disclosure.
+        lines = manifest_module.summary_lines({"layer_note": "note", "truncated": False})
+        assert "note" in lines
+        assert any("hit no cap" in line for line in lines)
