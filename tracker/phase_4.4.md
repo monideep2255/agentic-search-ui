@@ -29,7 +29,7 @@ Every ticket below except T-4.4-06 reads Layer 1. None of them may be dispatched
 
 ### T-4.4-01: Premise gate for the KGX export
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/4.4-kgx-export
 Depends on: T-4.4-06
@@ -38,12 +38,12 @@ Spec: Technical_specification.md Section 25 (4.4), `docs/build/Build_workflow_ca
 This phase's deliverable is not model-generated, so the gate does not carry stage 5's no-mocking-the-model requirement. It carries every other property, because the failure this phase can actually ship is a file that is well-formed and wrong: correct TSV, correct column headers, and a subgraph that is not the one the seed names.
 
 Acceptance criteria:
-- [ ] The gate runs against the live graph, not a fixture, and skips rather than passes when the transport is unreachable
-- [ ] Ground truth is read from the live graph and pinned in the test file, so "correct" is checkable rather than plausible
-- [ ] The gate asserts on the content of the export, that the seed CURIE's real Layer 1 neighbours appear as rows with their real categories and predicates, not that a file exists or that a row count is greater than zero
-- [ ] The gate exercises a seed whose neighbourhood exceeds the export's node cap, and asserts the manifest discloses the truncation
-- [ ] The gate exercises a seed CURIE that resolves to no vertex, and asserts an empty export with an explicit manifest reason rather than a crash or a silent zero-row file
-- [ ] The gate states, in its own file, which shapes of export it exercises and which it deliberately omits
+- [x] The gate runs against the live graph, not a fixture, and skips rather than passes when the transport is unreachable
+- [x] Ground truth is read from the live graph and pinned in the test file, so "correct" is checkable rather than plausible
+- [x] The gate asserts on the content of the export, that the seed CURIE's real Layer 1 neighbours appear as rows with their real categories and predicates, not that a file exists or that a row count is greater than zero
+- [x] The gate exercises a seed whose neighbourhood exceeds the export's node cap, and asserts the manifest discloses the truncation
+- [x] The gate exercises a seed CURIE that resolves to no vertex, and asserts an empty export with an explicit manifest reason rather than a crash or a silent zero-row file
+- [x] The gate states, in its own file, which shapes of export it exercises and which it deliberately omits
 - [x] The gate has been SEEN FAILING before any other ticket in this phase opens
 
 Evidence:
@@ -60,7 +60,7 @@ History:
 
 ### T-4.4-02: Bounded subgraph traversal over Layer 1
 
-Status: in-progress
+Status: done
 Refine: refined
 Branch: phase/4.4-kgx-export
 Depends on: T-4.4-01
@@ -68,23 +68,28 @@ Spec: Technical_specification.md Section 6.1, `.claude/rules/tool-call-budgets.m
 Files: `src/system_03_search_agent/export/__init__.py`, `src/system_03_search_agent/export/traversal.py`
 
 Acceptance criteria:
-- [ ] The traversal reads Layer 1 through the existing `graph_connection.execute_cypher` read-only path, and adds no second connection factory and no second credential
-- [ ] Every value reaching the Cypher payload is bound through the existing PREPARE and EXECUTE mechanism. No f-string and no `.format()` appears in any query text
-- [ ] Every relationship pattern in a generated query carries an explicit edge label from `graph_schema_constants.EDGE_LABELS`
-- [ ] A traversal that would exceed its node cap, edge cap, or hop limit stops at the cap and reports which cap it hit, rather than returning a truncated result that looks complete
-- [ ] Each individual graph call returns or errors within the 30 second `cypher_query` budget, and a traversal that exhausts its wall-clock budget returns the partial subgraph with the exhaustion recorded, never a hang
-- [ ] A seed CURIE that matches no vertex returns an empty subgraph with a reason, not an exception
-- [ ] No variable-length relationship pattern is ever emitted, per the F-2.1-C15 bound already enforced in `validate_cypher`
+- [x] The traversal reads Layer 1 through the existing `graph_connection.execute_cypher` read-only path, and adds no second connection factory and no second credential
+- [x] Every value reaching the Cypher payload is bound through the existing PREPARE and EXECUTE mechanism. No f-string and no `.format()` appears in any query text
+- [x] Every relationship pattern in a generated query carries an explicit edge label from `graph_schema_constants.EDGE_LABELS`
+- [x] A traversal that would exceed its node cap, edge cap, or hop limit stops at the cap and reports which cap it hit, rather than returning a truncated result that looks complete
+- [x] Each individual graph call returns or errors within the 30 second `cypher_query` budget, and a traversal that exhausts its wall-clock budget returns the partial subgraph with the exhaustion recorded, never a hang
+- [x] A seed CURIE that matches no vertex returns an empty subgraph with a reason, not an exception
+- [x] No variable-length relationship pattern is ever emitted, per the F-2.1-C15 bound already enforced in `validate_cypher`
 
-Evidence:
-- (filled at close)
+Evidence, re-run by the lead rather than quoted from an agent:
+- Premise gate, live against the graph: `8 passed in 102.58s`, zero skips, gate file unmodified across all three rounds
+- Export suite: `176 passed in 106.59s`, zero skips
+- Full Python suite: `3404 passed, 67 skipped, 2 xfailed, 1 xpassed, 10 failed in 21m12s`. All 10 failures proven pre-existing by re-running both affected files at commit `4d067d0`, the commit before this phase opened, in a throwaway worktree: identical 3 and identical 7
+- `venv/bin/ruff check src/`: clean. `python3 tracker/check_doc_drift.py --check`: 0 stale, 0 structural. `python3 tracker/render_board.py --check`: ok
+- The critical, reproduced by the lead before and after the fix on the same seed: `NCBIGene:7157`, `hops=1`, no edge-label list. Before, 499 edges of a single predicate and 0 of 12 pinned disease neighbours. After, 575 edges across 8 predicates and 12 of 12
+- Round-by-round detail: `tracker/phase_4.4_judge_report.md` and `tracker/phase_4.4_adversary_report.md`
 
 History:
 - 2026-08-19 lead: created, scoped at phase open
 
 ### T-4.4-03: KGX serialization
 
-Status: in-progress
+Status: done
 Refine: refined
 Branch: phase/4.4-kgx-export
 Depends on: T-4.4-02
@@ -92,23 +97,28 @@ Spec: `requirements/PRD.md` "Delivery formats", the column contract in `referenc
 Files: `src/system_03_search_agent/export/kgx.py`
 
 Acceptance criteria:
-- [ ] `nodes.tsv` carries `id`, `category`, `name`, `source`, `source_url` as its first five columns, in that order, before any additional column
-- [ ] `edges.tsv` carries `subject`, `predicate`, `object`, `source`, `source_url`, `knowledge_level`, `agent_type` as its first seven columns, in that order
-- [ ] Additional columns follow the required ones sorted alphabetically, and a row missing a column is written as an empty field rather than a shifted row
-- [ ] A list-valued or tuple-valued property is pipe-joined, matching the upstream reader that consumes these files
-- [ ] Every `source_url` written is produced by the existing `cypher_provenance` host-pinned builders, and a row whose URL cannot be built is written with an empty `source_url` and counted in the manifest rather than given a guessed URL
-- [ ] A property value containing a tab, a newline, or a quote round-trips through a standard TSV reader without shifting or splitting a row
-- [ ] Files are written UTF-8 with a header row, and an export of zero rows still writes both files with their headers
+- [x] `nodes.tsv` carries `id`, `category`, `name`, `source`, `source_url` as its first five columns, in that order, before any additional column
+- [x] `edges.tsv` carries `subject`, `predicate`, `object`, `source`, `source_url`, `knowledge_level`, `agent_type` as its first seven columns, in that order
+- [x] Additional columns follow the required ones sorted alphabetically, and a row missing a column is written as an empty field rather than a shifted row
+- [x] A list-valued or tuple-valued property is pipe-joined, matching the upstream reader that consumes these files
+- [x] Every `source_url` written is produced by the existing `cypher_provenance` host-pinned builders, and a row whose URL cannot be built is written with an empty `source_url` and counted in the manifest rather than given a guessed URL
+- [x] A property value containing a tab, a newline, or a quote round-trips through a standard TSV reader without shifting or splitting a row
+- [x] Files are written UTF-8 with a header row, and an export of zero rows still writes both files with their headers
 
-Evidence:
-- (filled at close)
+Evidence, re-run by the lead rather than quoted from an agent:
+- Premise gate, live against the graph: `8 passed in 102.58s`, zero skips, gate file unmodified across all three rounds
+- Export suite: `176 passed in 106.59s`, zero skips
+- Full Python suite: `3404 passed, 67 skipped, 2 xfailed, 1 xpassed, 10 failed in 21m12s`. All 10 failures proven pre-existing by re-running both affected files at commit `4d067d0`, the commit before this phase opened, in a throwaway worktree: identical 3 and identical 7
+- `venv/bin/ruff check src/`: clean. `python3 tracker/check_doc_drift.py --check`: 0 stale, 0 structural. `python3 tracker/render_board.py --check`: ok
+- The critical, reproduced by the lead before and after the fix on the same seed: `NCBIGene:7157`, `hops=1`, no edge-label list. Before, 499 edges of a single predicate and 0 of 12 pinned disease neighbours. After, 575 edges across 8 predicates and 12 of 12
+- Round-by-round detail: `tracker/phase_4.4_judge_report.md` and `tracker/phase_4.4_adversary_report.md`
 
 History:
 - 2026-08-19 lead: created, scoped at phase open
 
 ### T-4.4-04: Manifest, truncation disclosure, and the Layer 1 limitation
 
-Status: in-progress
+Status: done
 Refine: refined
 Branch: phase/4.4-kgx-export
 Depends on: T-4.4-03
@@ -118,22 +128,27 @@ Files: `src/system_03_search_agent/export/manifest.py`
 The disclosure criteria are not decoration. Silent truncation is a defect class this project has now filed four times (F-3.3-A-12, F-4.0-A-12, F-3.5-10, F-2.2-06), and the product owner's standing rule from 2026-08-15 is that if the system drops or shortens anything, it discloses that it did.
 
 Acceptance criteria:
-- [ ] Every export writes a `manifest.json` alongside the two TSV files
-- [ ] The manifest records the seed CURIEs, the hop limit, every cap value, the node and edge counts written, the graph snapshot version, and the export timestamp
-- [ ] An export that hit any cap records which cap, at what value, and that the subgraph is therefore incomplete. An export that hit none records that explicitly rather than by omission
-- [ ] The manifest states that the export covers Layer 1 only, and that Layer 2 and Layer 3 data are fetched live at query time and are not present
-- [ ] The count of rows written with an empty `source_url` appears in the manifest
-- [ ] The same limitation and truncation statements appear on the command's own output, not only inside the manifest file
+- [x] Every export writes a `manifest.json` alongside the two TSV files
+- [x] The manifest records the seed CURIEs, the hop limit, every cap value, the node and edge counts written, the graph snapshot version, and the export timestamp
+- [x] An export that hit any cap records which cap, at what value, and that the subgraph is therefore incomplete. An export that hit none records that explicitly rather than by omission
+- [x] The manifest states that the export covers Layer 1 only, and that Layer 2 and Layer 3 data are fetched live at query time and are not present
+- [x] The count of rows written with an empty `source_url` appears in the manifest
+- [x] The same limitation and truncation statements appear on the command's own output, not only inside the manifest file
 
-Evidence:
-- (filled at close)
+Evidence, re-run by the lead rather than quoted from an agent:
+- Premise gate, live against the graph: `8 passed in 102.58s`, zero skips, gate file unmodified across all three rounds
+- Export suite: `176 passed in 106.59s`, zero skips
+- Full Python suite: `3404 passed, 67 skipped, 2 xfailed, 1 xpassed, 10 failed in 21m12s`. All 10 failures proven pre-existing by re-running both affected files at commit `4d067d0`, the commit before this phase opened, in a throwaway worktree: identical 3 and identical 7
+- `venv/bin/ruff check src/`: clean. `python3 tracker/check_doc_drift.py --check`: 0 stale, 0 structural. `python3 tracker/render_board.py --check`: ok
+- The critical, reproduced by the lead before and after the fix on the same seed: `NCBIGene:7157`, `hops=1`, no edge-label list. Before, 499 edges of a single predicate and 0 of 12 pinned disease neighbours. After, 575 edges across 8 predicates and 12 of 12
+- Round-by-round detail: `tracker/phase_4.4_judge_report.md` and `tracker/phase_4.4_adversary_report.md`
 
 History:
 - 2026-08-19 lead: created, scoped at phase open
 
 ### T-4.4-05: The batch entry point
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/4.4-kgx-export
 Depends on: T-4.4-04
@@ -143,10 +158,10 @@ Files: `src/system_03_search_agent/export/cli.py`, `pyproject.toml`
 It gets its own console script rather than a subcommand of `s3`. Build phase 4.2 scoped the CLI as a thin HTTP client over the REST surface and explicitly not a second path to data, and a direct-graph batch job inside it would be exactly that second path.
 
 Acceptance criteria:
-- [ ] The export is invoked by its own console script and by `python -m`, and neither invocation routes through the REST API or the agent loop
-- [ ] The command accepts one or more seed CURIEs, a hop limit, an output directory, and cap overrides, and rejects an unparseable CURIE with an actionable message naming the expected shape
-- [ ] The command exits non-zero when the graph is unreachable, with a message naming the transport rather than a stack trace
-- [ ] The command writes no file outside the output directory it was given
+- [x] The export is invoked by its own console script and by `python -m`, and neither invocation routes through the REST API or the agent loop
+- [x] The command accepts one or more seed CURIEs, a hop limit, an output directory, and cap overrides, and rejects an unparseable CURIE with an actionable message naming the expected shape
+- [x] The command exits non-zero when the graph is unreachable, with a message naming the transport rather than a stack trace
+- [x] The command writes no file outside the output directory it was given
 - [x] No credential value appears in the command's output or in any log line it emits, on either the success or the failure path
 
 Evidence, re-run by the lead rather than quoted from the builder:
@@ -166,7 +181,7 @@ History:
 
 ### T-4.4-06: Amend the file-protection rule
 
-Status: in-review
+Status: done
 Refine: refined
 Branch: phase/4.4-kgx-export
 Depends on: nothing
@@ -176,9 +191,9 @@ Files: `.claude/rules/file-protection.md`, `DECISIONS.md`
 This is the only ticket in the phase that does not read Layer 1, so it is the only one runnable while the transport is down. It lands before any export code.
 
 Acceptance criteria:
-- [ ] The rule distinguishes writing KGX into the graph, which stays out of this repository, from reading a scoped subgraph out of it as a delivery surface, which build phase 4.4 owns
-- [ ] The rule still forbids bulk source-data parsers and AGE loaders in this repository, in the same words as before
-- [ ] `DECISIONS.md` carries a dated row recording the 4.4 scope decision, the two alternatives rejected, and the reason
+- [x] The rule distinguishes writing KGX into the graph, which stays out of this repository, from reading a scoped subgraph out of it as a delivery surface, which build phase 4.4 owns
+- [x] The rule still forbids bulk source-data parsers and AGE loaders in this repository, in the same words as before
+- [x] `DECISIONS.md` carries a dated row recording the 4.4 scope decision, the two alternatives rejected, and the reason
 - [x] The change ships as its own commit on the phase branch, since it touches `.claude/`
 
 Evidence:
