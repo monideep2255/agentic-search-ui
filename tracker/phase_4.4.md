@@ -224,6 +224,14 @@ History:
 - 2026-08-19 adversary: filed, reproduced live
 - 2026-08-19 lead: confirmed, reproduced independently with the numbers above. Blocks the merge
 
+### Lead rulings on two disputed findings, 2026-08-19
+
+The round 2 fix agent disputed two findings rather than complying with them, and flagged both for the lead instead of deciding unilaterally. That is the behaviour this harness wants: the round that finally closed build phase 4.3 also correctly disputed a finding. Both disputes are UPHELD.
+
+F-4.4-10, the hop limit, upheld on placement. The judge asked for the hop limit to be reported; the fix agent reports it as its own explicit manifest field (`hop_limit_reached` plus `unexpanded_frontier_nodes`) rather than as a `truncation` entry, and it is right. A one-hop export normally ends with a non-empty frontier, so folding the hop limit into `truncation` would set `truncated: true` on almost every ordinary export and cost the flag its meaning. `truncated` means the export is smaller than what the caller asked for. The hop limit is part of what the caller asked for, not a shortfall against it. The criterion is satisfied: the limit is reported, and reported more usefully than the finding proposed.
+
+F-4.4-11, the snapshot-version fallback, upheld. The fix agent disclosed the provenance with `graph_snapshot_version_source` rather than changing the hardcoded fallback value. Changing the value here alone would have made this module disagree with `cypher_query`, which reads the same variable with the same fallback, and a silent divergence between two modules reporting the same fact is worse than a documented fallback. Correct call.
+
 ### F-4.4-12: The CLI's error classification rests on a convention, not a declaration
 
 Status: filed
