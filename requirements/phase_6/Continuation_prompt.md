@@ -8,6 +8,7 @@ Phase 6 is the build. Read this file at the start of any session that continues 
 - [State now](#state-now)
 - [Which session to open, before anything else](#which-session-to-open-before-anything-else)
 - [The next session starts here](#the-next-session-starts-here)
+- [Build phase 4.4, done](#build-phase-44-done)
 - [Read before opening the next phase](#read-before-opening-the-next-phase)
 - [Build phase 3.0, done](#build-phase-30-done)
 - [Build phase 3.1, done](#build-phase-31-done)
@@ -114,8 +115,8 @@ Current counts, stated once here:
 - Premise gate, build phase 4.0's own gate (a normal test file, not one of the seven live tool gates above): 26 of 26
 - Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
 - Premise gate, build phase 4.10's own gate (the guest allowance, a normal test file, not one of the seven live tool gates above): 36 of 36, every clause mutation-proven, two-armed throughout since a control that refuses every guest passes every attack test and destroys the product
-- Decisions logged: 345
-- Learnings entries: 91, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
+- Decisions logged: 347
+- Learnings entries: 99, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below). This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
 
@@ -151,18 +152,38 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 ## The next session starts here
 
-BUILD PHASE 4.4 IS ALREADY OPEN, on `phase/4.4-kgx-export`, and it is blocked on one thing. Do not re-open it.
+OPEN BUILD PHASE 4.5, personalization and session memory. Nothing is in flight; `develop` is clean at `c27fefa`, build phase 4.4 merged as PR #51, and every gate is green.
 
-What happened on 2026-08-19, in order:
+It is NOT like the phases before it, and the difference is the first thing to notice. On `tracker/BOARD.md` it carries `product_refine` with the product owner as its owner, so it cannot be decomposed by the lead alone. A phase in `product_refine` moves only on the product owner's answer. Start with the conversation, not with tickets.
 
-- Preflight ran. `product-model` and `harness-model` both ok, `graph` reported `skipped`, because `GRAPH_PG_HOST` is unset in a bare shell. Re-probed with the real values loaded from `.env`, the graph reported `down`: TCP 15432 connection refused. A `skipped` result is not a pass, and this is the case that shows why.
-- The phase's scope was found undecided rather than merely unwritten. Section 25 gives it two negative sentences, the PRD gives it one, and Section 6 declines to restate the design. The product owner decided it: a query-scoped subgraph export, seed CURIEs plus bounded hops, writing `nodes.tsv`, `edges.tsv` and a manifest. Not a full-graph snapshot, which the merge pipeline in the data-engineering repository already produces at roughly 144 GB.
-- A rule conflict was found and resolved rather than crossed. `file-protection` banned "KGX exporters" outright, which banned a deliverable two locked documents require. Amended by direction of data flow, with the original ban intact for every case it was written for. `DECISIONS.md` carries the row.
-- Six tickets were written into `tracker/phase_4.4.md`, all `refined`. T-4.4-06, the rule amendment, is the only one that does not read Layer 1. It is built and in review at `ade54c9`.
+What it delivers, per Section 25: bounded in-conversation session memory, audience-level depth control, and the stable named scientist persona. It depends on 1.2 and 2.2, both merged. It never touches grounding.
 
-The one blocker, and the first action of the next session: nothing is listening on 127.0.0.1:15432 on either loopback family. The host answers on port 22 and its Postgres port is closed by design, so this is an unopened forward, not an outage. It cannot be opened from inside an agent session, where the command is blocked. Open it from a terminal, using the forward recorded in `tracker/phase_2.1.md`, then re-probe with `python3 tracker/preflight.py` and only then work the tickets.
+Three things to settle with the product owner before any ticket exists:
 
-T-4.4-01, the premise gate, blocks the other four. It drops stage 5's no-mocking-the-model clause, which does not apply to a deterministic batch job, and keeps every other property. WATCH IT FAIL before any other ticket opens. The failure this phase can actually ship is a well-formed file holding the wrong subgraph, which is why the gate asserts on the content of the export against ground truth read live from the graph, never on a row count or on a file existing.
+- What memory is bounded BY. Decision F scopes v1 to in-conversation memory only, and `v1-scope-boundary` names persistent cross-session per-user memory as out of scope with its own trigger. The bound itself, turns, tokens, or entities, is not written anywhere.
+- What the depth levels ARE, and who picks them. The phase name says audience-level control; nothing states the levels.
+- Whether the persona has a name yet. Build phase 4.2 already filed F-4.2-03: Section 13.3 asks the CLI to prefix status lines with the persona name, and no event payload carries one. Section 12.7 flags the identical gap for the web UI. Two surfaces are already waiting on this one answer, so 4.5 should settle it rather than adding a third.
+
+Then open it the standard way: read `LEARNINGS.md` filtered to the phase's territory, verify its dependencies, write the premise gate and WATCH IT FAIL, then build.
+
+Two open findings from build phase 4.4 name 4.5 or 4.6 indirectly, both listed on the board with owners. Neither blocks opening this phase.
+
+## Build phase 4.4, done
+
+Merged as PR #51 on 2026-08-19. The fifth of the six delivery surfaces, and the first phase to run under the review cap.
+
+What shipped: a query-scoped subgraph export. Seed CURIEs, bounded hops over Layer 1 through the existing read-only path, writing `nodes.tsv`, `edges.tsv` and a manifest. Not a full-graph snapshot.
+
+Four things it leaves for whoever builds next, in order of how much they cost to learn:
+
+- A STATED BLIND SPOT IS NOT A SAFE ONE. The premise gate passed 6 of 6 while the default invocation returned 500 Articles and zero of the twelve disease edges the gate itself pinned. Five of six cases passed an explicit edge-label list; the default path was tested by nothing, and the gate's coverage statement had named that omission from day one. Test the path a real caller hits first, before the path that is convenient to write.
+- CONSTRUCT THE INPUT THAT MAKES YOUR ASSERTION FAIL. The lead's own second gate case passed on first run against code that was provably lying, because it used a single-label list where the two sets it compared cannot diverge by construction. An assertion you cannot make fail is decoration.
+- RE-MEASURE A BASELINE, NEVER CARRY IT FORWARD. The recorded suite baseline said 6 known failures; the real figure was 10, and had been wrong for some time. Proving the 10 were pre-existing took one throwaway worktree at the pre-phase commit and about eight minutes, and converted a plausible argument into evidence.
+- FIX THE SCHEDULER, NOT THE ORDER. The critical was one shared budget consumed sequentially, so the highest-cardinality label starved twelve others. Reordering the list or special-casing that label would have moved the starvation one position along.
+
+Two findings carried forward with owners, both on `tracker/BOARD.md`: the console script cannot be verified end to end until `pip install .` is fixed (build phase 6.1, shared with build phase 4.2's `s3`), and the export CLI classifies an input problem by catching `ValueError`, a proxy rather than a declaration, verified latent.
+
+Full record: `tracker/phase_4.4.md`, plus `tracker/phase_4.4_judge_report.md` and `tracker/phase_4.4_adversary_report.md`.
 
 ### What build phase 4.3 leaves for whoever opens 4.4
 
