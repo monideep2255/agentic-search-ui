@@ -52,6 +52,7 @@ dev = [
 
 [project.scripts]
 s3 = "system_03_search_agent.adapters.cli.main:main"
+s3-kgx-export = "system_03_search_agent.export.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
