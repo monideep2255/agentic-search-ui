@@ -188,7 +188,7 @@ _DEPTH_LENGTH_RATIO = 1.4
 #: this exact phrase, not merely "some note appeared", so a generic caveat
 #: cannot satisfy the disclosure branch: build phase 4.3 found four gate arms
 #: that passed because SOMETHING arrived rather than the right thing.
-_INCOMPLETE_NOTE_MARKER = "does not report every retrieved finding"
+_INCOMPLETE_NOTE_MARKER = "not reported are absent from the citations"
 
 # F-4.5-03. Live gene-symbol resolution goes to E-utilities, whose
 # unauthenticated pool is 3 requests per second, and this file fires several
@@ -697,10 +697,15 @@ async def test_p2_the_claim_set_is_identical_across_depths() -> None:
         if not missing:
             continue
 
+        # The note states the SCALE rather than naming each omitted value,
+        # because a Layer 1 field value is full of periods and the coverage
+        # grader splits sentences on periods, so an inlined value fragments
+        # the note into uncited claims. So this asserts the note's own
+        # fingerprint plus the honest count, not the CURIEs.
         narrative = answers[depth].narrative
-        disclosed = _INCOMPLETE_NOTE_MARKER in narrative and all(
-            curie in narrative for curie in missing
-        )
+        disclosed = _INCOMPLETE_NOTE_MARKER in narrative and str(
+            len(missing)
+        ) in narrative
         assert disclosed, (
             "SILENT INCOMPLETENESS. This depth omitted a pinned disease and "
             "did not say so, which is the confident-wrong-answer failure "

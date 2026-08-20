@@ -33,6 +33,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from system_03_search_agent.adapters.mcp.server import server as mcp_server
 from system_03_search_agent.auth.dependencies import Principal, get_caller
+from system_03_search_agent.auth.preferences import write_audience_depth
 from system_03_search_agent.auth.router import router as auth_router
 from system_03_search_agent.auth.router import source_hash_for_request
 from system_03_search_agent.contracts.events import CitationPayload
@@ -57,6 +58,7 @@ from system_03_search_agent.data.models import (
     GuestDailyUsage,
     GuestSession,
     GuestSourceDailyUsage,
+    User,
 )
 from system_03_search_agent.data.session import get_session, session_scope
 from system_03_search_agent.harness.cost_control import (
@@ -939,6 +941,22 @@ async def post_v1_query(
         if guest_spend_day is not None
         else None
     )
+
+    # T-4.5-08, Section 14.5: remember this account's depth so their control
+    # starts where they left it next time. Only for a registered caller: a
+    # guest has no row to remember against, and inventing one to hold a
+    # display preference would create an identity the guest never asked for.
+    #
+    # Guarded by `write_audience_depth` returning False when nothing changed,
+    # so the common case (the same depth as last time, which is most requests)
+    # does no UPDATE at all rather than putting one on every authenticated
+    # query's hot path.
+    if caller.user_id is not None:
+        user_row = session.get(User, uuid.UUID(caller.user_id))
+        if user_row is not None and write_audience_depth(
+            user_row, request.audience_depth
+        ):
+            session.commit()
 
     run_id = str(uuid.uuid4())
     query = Query(

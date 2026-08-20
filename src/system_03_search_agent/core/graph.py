@@ -2782,28 +2782,37 @@ def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
     )
 
 
-def _build_incomplete_answer_note(omitted: list[Any]) -> str:
-    """T-4.5-07, F-4.5-06 breach 2: name the findings the answer left out.
+def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
+    """T-4.5-07, F-4.5-06 breach 2: disclose that findings went unreported.
 
-    Same discipline as `_build_partial_answer_note` and
-    `_build_truncated_answer_note`: state WHAT is missing, not merely that
-    something is. "This answer may be incomplete" is technically true and
-    practically useless, and it is exactly the shape of note a reader learns
-    to skip.
+    Two things this note got wrong on its first version, both caught by the
+    offline eval gate rather than by review, and both worth stating because
+    the shape of each recurs:
 
-    This fires only after the bounded regeneration has already tried and
-    failed to recover the omissions, so by the time a user sees it the system
-    has genuinely done what it can.
+    WRONG CLAIM. It ended "The full set is in the citations." That is FALSE.
+    A finding the answer never reported produced no grounded claim, so it
+    produced no citation either; the omitted rows are missing from the
+    citations exactly as they are missing from the prose. A disclosure that
+    misdirects the reader to somewhere the data is not is worse than no
+    disclosure, because it closes the question.
+
+    WRONG SHAPE. It was three sentences. `_citation_coverage` counts any
+    non-framing sentence with no marker as an uncited factual claim, and only
+    the first sentence started with "Note:", so the continuations read as
+    uncited claims and failed the cite-or-refuse gate. Now one sentence.
+
+    It states the SCALE rather than naming each omitted value, which is the
+    same discipline `_build_truncated_answer_note` already follows, and here
+    it is also forced: a Layer 1 field value like
+    "NM_007294.4(BRCA1):c.190T>G" is full of periods, and the coverage
+    grader splits sentences on periods, so inlining values would fragment the
+    note into uncited pieces no matter how it was worded.
     """
-    listed = ", ".join(
-        f"{finding.field}={finding.field_value}" for finding in omitted[:5]
-    )
-    remainder = len(omitted) - 5
-    if remainder > 0:
-        listed = f"{listed}, and {remainder} more"
+    total = reported + len(omitted)
     return (
-        f"Note: this answer does not report every retrieved finding. Missing: "
-        f"{listed}. The full set is in the citations."
+        f"Note: this answer reports {reported} of the {total} findings "
+        f"retrieved for it, and the {len(omitted)} not reported are absent "
+        "from the citations as well as from the text above"
     )
 
 
@@ -4363,7 +4372,9 @@ async def write_node(state: GraphState) -> dict[str, Any]:
     incomplete_answer_note: str | None = None
     if omitted_findings and trust_outcome != "refuse":
         trust_outcome = aggregate([trust_outcome, "ask"])
-        incomplete_answer_note = _build_incomplete_answer_note(omitted_findings)
+        incomplete_answer_note = _build_incomplete_answer_note(
+            omitted_findings, len(synth_findings) - len(omitted_findings)
+        )
 
     # `citations_capped` keeps its 2.1 meaning: the user is being shown
     # fewer facts than exist. Its two sources are now the findings cap

@@ -73,6 +73,7 @@ from sqlalchemy.orm import Session
 from system_03_search_agent.auth.dependencies import get_current_user
 from system_03_search_agent.auth.guest import decode_guest_token, mint_guest_token
 from system_03_search_agent.auth.passwords import hash_password, verify_password
+from system_03_search_agent.auth.preferences import read_audience_depth
 from system_03_search_agent.auth.schemas import (
     GuestTokenResponse,
     LoginRequest,
@@ -619,6 +620,7 @@ def me(
         email=current_user.email,
         created_at=current_user.created_at,
         last_login_at=current_user.last_login_at,
+        audience_depth=read_audience_depth(current_user),
         # Keyed on the account, so this is the same scientist `POST /v1/query`
         # will report and the same one the CLI and GraphQL surfaces show.
         persona_name=persona_for_session(

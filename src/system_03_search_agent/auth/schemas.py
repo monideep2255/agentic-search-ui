@@ -146,6 +146,12 @@ class MeResponse(BaseModel):
     email: str
     created_at: datetime
     last_login_at: datetime | None
+    # T-4.5-08, Section 14.5: "once auth is live, depth defaults to the
+    # user's last-used value". Served here so a returning caller's control
+    # starts where they left it, on any device, rather than resetting to the
+    # default every session. Falls back to "researcher" for an account that
+    # has never set one, the same default the contract carries.
+    audience_depth: str = "researcher"
     # T-4.5-10, Section 14.2. Additive within v1, which
     # system-design-patterns pattern 10 permits: a new optional-to-ignore
     # field, never a redefinition. It is here so a signed-in client can show

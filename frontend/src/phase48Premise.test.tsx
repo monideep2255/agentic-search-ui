@@ -778,8 +778,11 @@ describe("clause 4: stub registry", () => {
     // curated deceased-only list, so there is no persona stub left to
     // declare. The list is deliberately not emptied of the others; each
     // remaining entry is still a real placeholder with an owning phase.
+    // "audience-depth" was removed by T-4.5-08/T-4.5-11, which wired it: the
+    // control already existed and already sent Query.audience_depth, but the
+    // backend dropped the value before synthesis, so it was a stub in effect.
+    // It now reaches the Write step and persists per account.
     for (const expected of [
-      "audience-depth",
       "follow-up",
       "history",
       "feedback",

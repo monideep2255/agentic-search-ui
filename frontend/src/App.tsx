@@ -51,6 +51,7 @@ import { theme } from "./theme";
 import {
   ApiError,
   createRun,
+  fetchMe,
   fetchPersona,
   getAllowance,
   mintGuest,
@@ -221,6 +222,33 @@ export function App() {
       .catch(() => undefined);
     return () => controller.abort();
   }, [sessionId]);
+
+  // T-4.5-08, Section 14.5: "once auth is live, depth defaults to the user's
+  // last-used value". Seeded from the account rather than from localStorage,
+  // because the preference belongs to the account and should follow it to
+  // another device. Also adopts the account's persona, which is keyed on the
+  // user id and so differs from the anonymous one fetched above.
+  //
+  // Best-effort: a failure leaves the control at whatever it already shows,
+  // which is the contract default. A preference that fails to load must never
+  // block asking a question.
+  useEffect(() => {
+    if (token === null) return undefined;
+    const controller = new AbortController();
+    fetchMe(token, { signal: controller.signal })
+      .then((me) => {
+        if (
+          me.audience_depth === "clinical_brief" ||
+          me.audience_depth === "researcher" ||
+          me.audience_depth === "deep_technical"
+        ) {
+          setDepth(me.audience_depth);
+        }
+        setPersona(me.persona_name);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [token]);
 
   const signedIn = token !== null;
   /**

@@ -32,13 +32,6 @@ export interface StubEntry {
 
 export const STUB_REGISTRY: StubEntry[] = [
   {
-    surface: "audience-depth",
-    rendersToday:
-      "A three-way control that holds its value locally and locks during a run.",
-    wiredBy: "4.5",
-    realSource: "Query.audience_depth on POST /v1/query. Sections 12.9 and 14.5.",
-  },
-  {
     surface: "follow-up",
     rendersToday:
       "A follow-up field with suggested hints, which starts a fresh run.",
