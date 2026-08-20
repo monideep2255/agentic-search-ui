@@ -482,8 +482,10 @@ from system_03_search_agent.harness.harness import (
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
 from system_03_search_agent.synthesis.findings import (
     SynthFinding,
+    build_completeness_directive,
     build_synth_findings,
     build_synth_messages,
+    unreported_findings,
 )
 from system_03_search_agent.synthesis.freshness import (
     STABLE_FIELD_EXAMPLES,
@@ -2714,6 +2716,31 @@ def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
     )
 
 
+def _build_incomplete_answer_note(omitted: list[Any]) -> str:
+    """T-4.5-07, F-4.5-06 breach 2: name the findings the answer left out.
+
+    Same discipline as `_build_partial_answer_note` and
+    `_build_truncated_answer_note`: state WHAT is missing, not merely that
+    something is. "This answer may be incomplete" is technically true and
+    practically useless, and it is exactly the shape of note a reader learns
+    to skip.
+
+    This fires only after the bounded regeneration has already tried and
+    failed to recover the omissions, so by the time a user sees it the system
+    has genuinely done what it can.
+    """
+    listed = ", ".join(
+        f"{finding.field}={finding.field_value}" for finding in omitted[:5]
+    )
+    remainder = len(omitted) - 5
+    if remainder > 0:
+        listed = f"{listed}, and {remainder} more"
+    return (
+        f"Note: this answer does not report every retrieved finding. Missing: "
+        f"{listed}. The full set is in the citations."
+    )
+
+
 def _build_truncated_answer_note(shown: int, total_available: int | None) -> str:
     """F-2.1-C12: state the scale of what is not shown, not just that a
     cut happened. "Results were truncated" said nothing when the user was
@@ -4137,6 +4164,79 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         question=query.text,
     )
 
+    # T-4.5-07, finding F-4.5-06 breach 2: the completeness repair.
+    #
+    # An answer can be fully grounded, fully cited, and still report only
+    # some of the findings retrieval produced. Measured on `clinical_brief`:
+    # three of four pinned disease associations, confidently worded, with
+    # nothing announcing the fourth. Two strengthenings of the prompt did not
+    # hold it, so the guarantee is structural here rather than promptable
+    # there.
+    #
+    # Bounded to ONE extra Synth call, and only when something was actually
+    # omitted, so the common case costs nothing. It sits inside the same
+    # try block as the first call so a cap hit or a harness failure during
+    # the repair takes the identical, already-tested path as the original,
+    # rather than introducing a second error contract to keep in sync.
+    #
+    # If the repair still comes back incomplete, this does NOT silently
+    # accept it: the block below floors `trust_outcome` at `ask` and attaches
+    # a disclosure note, so an incomplete answer is never presented as a
+    # complete one. Fail loud, then fail visible.
+    omitted_findings: list[SynthFinding] = []
+    if tool_outcome != "no_tool" and synth_findings:
+        omitted_findings = unreported_findings(
+            {claim.finding.citation_id for claim in grounding.claims}, synth_findings
+        )
+        if omitted_findings:
+            try:
+                repaired_text = await _dispatch_tier_call(
+                    harness,
+                    trace_id,
+                    "synth",
+                    "write",
+                    build_synth_messages(
+                        query.text,
+                        synth_findings,
+                        query.audience_depth,
+                        completeness_directive=build_completeness_directive(
+                            omitted_findings
+                        ),
+                    ),
+                    budget_s=budget_for_step("write", query_class),
+                )
+            except (cost_control.QueryCapExceededError, HarnessCallError):
+                # The repair is best-effort. A cap or harness failure during
+                # it must not discard the answer already in hand, which is
+                # incomplete but grounded and useful; the disclosure below
+                # still fires because `omitted_findings` is unchanged.
+                repaired_text = None
+            if repaired_text is not None:
+                repaired_grounding = run_grounding_pass(
+                    _response_text(repaired_text),
+                    synth_findings,
+                    core_ask_required=True,
+                    question=query.text,
+                )
+                still_omitted = unreported_findings(
+                    {
+                        claim.finding.citation_id
+                        for claim in repaired_grounding.claims
+                    },
+                    synth_findings,
+                )
+                # Keep the repair only when it is a strict improvement.
+                # A regeneration that reported the missing rows but dropped
+                # others, or that grounded nothing at all, is not an
+                # improvement, and accepting it because it is newer would
+                # trade a known-incomplete answer for an unknown one.
+                if repaired_grounding.claims and len(still_omitted) < len(
+                    omitted_findings
+                ):
+                    synth_text = repaired_text
+                    grounding = repaired_grounding
+                    omitted_findings = still_omitted
+
     if tool_outcome == "no_tool":
         # No tool was selected at all, so there is nothing to ground
         # against and nothing to refuse about. Preserved from 2.1
@@ -4187,6 +4287,17 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             if unaddressed:
                 trust_outcome = aggregate([trust_outcome, "ask"])
                 partial_answer_note = _build_partial_answer_note(unaddressed)
+
+    # T-4.5-07, F-4.5-06 breach 2. The second half of the completeness
+    # repair above: when the bounded regeneration did not recover every
+    # omitted finding, say so rather than shipping a short answer that looks
+    # whole. Floors at `ask` through the same `aggregate` most-restrictive-
+    # wins rule the entity-level check and the conflict check already use, so
+    # it can tighten an outcome and never weaken a `refuse`.
+    incomplete_answer_note: str | None = None
+    if omitted_findings and trust_outcome != "refuse":
+        trust_outcome = aggregate([trust_outcome, "ask"])
+        incomplete_answer_note = _build_incomplete_answer_note(omitted_findings)
 
     # `citations_capped` keeps its 2.1 meaning: the user is being shown
     # fewer facts than exist. Its two sources are now the findings cap
@@ -4348,6 +4459,8 @@ async def write_node(state: GraphState) -> dict[str, Any]:
 
         if partial_answer_note is not None:
             sink.emit("token", TokenPayload(text=partial_answer_note, marker_ids=[]))
+        if incomplete_answer_note is not None:
+            sink.emit("token", TokenPayload(text=incomplete_answer_note, marker_ids=[]))
 
         for citation in citations:
             sink.emit("citation", citation)

@@ -370,3 +370,39 @@ THE PRODUCT DECISION, for the product owner, since it is a real trade-off rather
 - Option C, drop `clinical_brief` from v1. Ship `researcher` and `deep_technical` only, on the grounds that a clinical audience is the one for whom a silent omission is least acceptable.
 
 The lead recommends Option A, on the grounds that this repository's own standard is that a confident wrong answer is worse than no answer, and a per-depth completeness guarantee is the only one of the three that keeps the eval harness's stateless pass a trustworthy proxy for live behavior. It is not taken unilaterally because it trades away part of what the depth was for, which is a product call.
+
+### F-4.5-06 update, 2026-08-20: the repair is built, and it lands short of the guarantee
+
+Product owner chose Option A, completeness is structural, on 2026-08-20.
+
+What was built, in `synthesis/findings.py` and `core/graph.py`:
+
+- `unreported_findings` compares the findings handed to Synth against the citation ids that survived the grounding pass. It is the finding-level sibling of F-3.4-A-01's entity-level check, one level down: that one catches an answer covering only some of the entities the QUESTION named, this one catches an answer reporting only some of the findings RETRIEVAL produced.
+- On an omission, ONE bounded regeneration runs, carrying a directive that names the missing rows explicitly rather than repeating a general "report everything", since the general form is precisely what had already failed twice.
+- The repair is kept only when it is a STRICT improvement. A regeneration that recovered the missing rows but dropped others, or that grounded nothing, is discarded in favour of the original, because trading a known-incomplete answer for an unknown one is not a repair.
+- If omissions survive the regeneration, `trust_outcome` floors at `ask` through the same `aggregate` most-restrictive-wins rule the entity check and the conflict check already use, and `_build_incomplete_answer_note` names what is missing. Never silent.
+
+The directive itself took three more attempts, and the pattern across all of them is the finding worth keeping:
+
+- Version 1 forbade identifiers. Every claim failed the grounding pass's substring match, so the depth REFUSED.
+- Version 2 said "keep background to a minimum". The depth reported three of four findings.
+- Version 3 said "state the identifiers and values exactly as they appear" and "say less about each finding". The model complied literally, emitted a bare identifier list with no sentence answering the question, the core-ask requirement rejected it, and the depth refused with an EMPTY narrative.
+- Version 4, current, constrains register and length and NOTHING about form.
+
+One cause under three symptoms: each version tried to buy a property (verifiability, completeness, groundedness) with an instruction about FORM. The grounding pass already owns verifiability and the repair now owns completeness, structurally. A depth directive that also tries to own them fights two mechanisms that are better at it.
+
+CURRENT MEASURED STATE, stated plainly rather than rounded up:
+
+- P1 (default path) PASSES.
+- P3 (forbidden-output boundary at clinical_brief) PASSES.
+- P2 (the firewall) STILL FAILS. `clinical_brief` reports three of the four pinned diseases. The regeneration fired and did not recover the fourth.
+- The disclosure fires correctly. The shipped answer now reads "Note: this answer does not report every retrieved finding. Missing: curie=MedGen:C0346153. The full set is in the citations."
+
+So the SILENT wrong answer is fixed and the guarantee is not yet met. The system is honest about the gap; it does not yet close it.
+
+THE REMAINING CHOICE, for the product owner, because Option A named two mechanisms and only one is built:
+
+- A1, deterministic append. Construct the missing findings' sentences by code from the findings themselves, grounded by construction, and append them with their markers. This GUARANTEES the fact set at every depth, which is what Option A asked for. It is the more invasive change: it writes prose by code into the one path where prose has so far only ever come from the model, and it interacts with Section 9.4's marker renumbering, so it wants independent review more than anything else in this phase.
+- A2, accept regenerate-then-disclose as shipped. Completeness is attempted, and any residue is named in the answer with the outcome floored at `ask`. Cheaper, already built and measured, and strictly better than what the phase started with, but it is Option A in spirit and Option B in guarantee.
+
+The lead did not choose between these unilaterally because A1 was authorized in principle by the Option A decision while its actual cost, generating answer prose in code, was not visible at the time that decision was made.
