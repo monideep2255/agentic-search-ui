@@ -444,3 +444,33 @@ The note this phase added to disclose an unreported finding carried two defects,
 Fixed as one sentence stating the SCALE rather than naming each omitted value. That is the discipline `_build_truncated_answer_note` already follows, and here it is also forced rather than chosen: a Layer 1 field value such as `NM_007294.4(BRCA1):c.190T>G` is full of periods, and the coverage grader splits sentences on periods, so inlining values fragments the note into uncited pieces no matter how it is worded.
 
 The general form worth carrying: a disclosure is ANSWER TEXT, and every rule that governs answer text governs it too. It can be uncited, it can be wrong, and it can fail the same gates a claim fails. Writing one is not a safe act just because its purpose is honesty.
+
+### F-4.5-09: session memory was never written, and eight gate arms could not see it
+
+Severity: CRITICAL, in the product
+Round: 0 (found by the lead, at the end of the phase, by asking what actually populates memory)
+Status: closed, with a new gate arm that would have caught it
+
+The phase built the read side of session memory completely: the contract, the token cap, compaction, the injection point, reference resolution against it, and the ownership check. Every one of those worked. Nothing ever WROTE a summary, so on the real path memory was permanently empty and the entire feature was inert.
+
+Eight premise-gate arms passed throughout, because every one of them constructs a `SessionMemorySummary` in the test and hands it in on `RequestContext`. They test that memory is READ and INJECTED correctly, and they are structurally blind to whether anything ever produces one.
+
+This is build phase 4.4's lesson arriving in a new costume, and the lead wrote the coverage note quoting that lesson while committing the same error. There, five of six cases passed an explicit edge-label list and the default path was tested by nothing. Here, every memory case passed an explicit summary and the path a real caller takes was tested by nothing. THE INJECTED FIXTURE IS THE EXPLICIT LIST.
+
+Found by asking a question no test asked: what populates this? Not by a failing test, not by review, and not by the gate.
+
+Four defects were behind it, and each one alone would have kept memory inert. That is worth recording, because each was invisible to the tests that existed and each was found only by running the end-to-end arm and reading what actually came back:
+
+- NO WRITE PATH AT ALL. `merge_turn` and `save_for_caller` did not exist. Added, with idempotent folding by natural key, since the Act step retries and a blind append would grow the list on every replay.
+- NO READ-BACK PATH. `load_for_caller` existed and nothing called it on the way in. The graph reads `RequestContext.session_memory`, which only a CALLER ever set, so a summary could have been written every turn and never read. Write-without-read and read-without-write are the same bug from two sides, and both look correct in isolation.
+- THE ROW KEY WAS WRONG. `Query.session_id` is a free-form string of up to 64 characters and the surfaces genuinely differ: the web UI sends `crypto.randomUUID()`, the CLI sends bare 32-character hex, MCP accepts anything. `sessions.id` is a UUID column, and the first store silently DROPPED every session whose id did not parse as a UUID. Memory would have worked in a browser and been inert for the CLI and most MCP callers. Fixed with a documented uuid5 mapping, which build phase 4.6 must use for `interactions.session_id` or the two will disagree about which row a conversation is.
+- THE ENTITIES WERE READ FROM A FIELD THAT DOES NOT EXIST ON THE WIRE. `_remember_turn` reached into `tool_calls[].target_entities`, and `ToolCall` carries tool, call_id and layer only. It found nothing, every turn, silently. Fixed by publishing the resolved CURIEs on `PlanPayload.resolved_entities`, an additive field, so memory reads a typed value instead of parsing a narrative sentence for a CURIE-shaped substring.
+
+Two further defects surfaced while fixing those, both from the same end-to-end arm:
+
+- The event contract's `ResolvedEntity` is `{text, curie, confidence}` and the memory contract's is `{mention, curie, entity_type}`. Constructing one with the other's fields crashed `plan_node`, and `run()`'s last-resort catch turned the crash into a generic "failed unexpectedly" with an empty narrative. The catch is correct and it also means a contract mismatch presents as a mystery rather than a traceback.
+- An ownership refusal on the READ path escaped `run()` as an unhandled exception, breaking its documented never-raises contract and failing 27 existing tests. Read and write need different answers: a read from another caller's session degrades to a stateless turn, since it discloses nothing and the caller loses nothing they were entitled to, while a write still refuses because it would overwrite their conversation.
+
+The new arm, P4b, hands in NOTHING: two real turns through one session, where turn 2's pronoun can only bind if turn 1 was actually persisted. It was seen failing against each of the four defects above in turn, which is the only reason it can be trusted now.
+
+The transferable rule, stated plainly because this phase paid for it twice: WHEN A TEST SUPPLIES THE THING UNDER TEST, IT CANNOT TELL YOU THE THING EXISTS. At least one arm must obtain that thing the way production obtains it.

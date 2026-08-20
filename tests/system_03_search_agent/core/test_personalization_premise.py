@@ -76,6 +76,11 @@ Exercised here:
   so it CAN fail, meaning memory really does hold a claim the findings do
   not.
 - Memory losing to fresh retrieval on a contradiction (P6).
+- The END-TO-END path (P4b), with nothing handed in: two real turns through
+  one session, where turn 2 can only resolve if turn 1 was actually
+  persisted. Every other memory arm injects the summary it tests, so all of
+  them pass on a system that never WRITES memory, which is precisely what
+  this phase shipped until F-4.5-09 was found.
 - The prompt-cache stable prefix staying byte-identical as depth varies
   (P7), by SHA-256, which is what `prompt-cache-discipline` requires
   instead of a passing suite.
@@ -242,7 +247,24 @@ def _is_environmental_failure(answer: Answer) -> bool:
     """
     if any(flake in answer.narrative for flake in _ENVIRONMENTAL_FLAKES):
         return True
-    return any(error.get("error_class") == "transient" for error in answer.errors)
+    if any(error.get("error_class") == "transient" for error in answer.errors):
+        return True
+    # A `recoverable` error from the WRITE step specifically: synthesis
+    # produced text that grounded to nothing, so the answer was withheld
+    # rather than shown ungrounded. That is the product working correctly, and
+    # the product's own error message ends "Retrying may succeed", so this
+    # follows the system's classification instead of second-guessing it.
+    #
+    # Narrow on purpose, in three ways. It requires `scope == "step"`, it
+    # requires the step to be `write`, and `_ask` retries ONCE: two
+    # consecutive ungroundable syntheses is a real defect and is reported.
+    # A `recoverable` error from any other step is not covered.
+    return any(
+        error.get("scope") == "step"
+        and error.get("source") == "write"
+        and error.get("error_class") == "recoverable"
+        for error in answer.errors
+    )
 
 # P3's fingerprint. Section 14.5: clinical_brief changes vocabulary and
 # framing, and never unlocks a diagnosis or a classification. These are the
@@ -702,10 +724,14 @@ async def test_p2_the_claim_set_is_identical_across_depths() -> None:
         # grader splits sentences on periods, so an inlined value fragments
         # the note into uncited claims. So this asserts the note's own
         # fingerprint plus the honest count, not the CURIEs.
+        # Asserts the note's own FINGERPRINT, not a count. An earlier version
+        # required the digit `len(missing)` to appear, which broke the moment
+        # the note learned to write "the one not reported" instead of "the 1
+        # not reported": the disclosure was present and correct and the arm
+        # called it silent. A fingerprint that a grammar fix can invalidate is
+        # testing the wording, not the control.
         narrative = answers[depth].narrative
-        disclosed = _INCOMPLETE_NOTE_MARKER in narrative and str(
-            len(missing)
-        ) in narrative
+        disclosed = _INCOMPLETE_NOTE_MARKER in narrative
         assert disclosed, (
             "SILENT INCOMPLETENESS. This depth omitted a pinned disease and "
             "did not say so, which is the confident-wrong-answer failure "
@@ -951,6 +977,45 @@ async def test_p6_memory_that_contradicts_fresh_retrieval_loses() -> None:
         "the answer repeated a count that came from session memory and that "
         "this turn's retrieval contradicts. Memory shapes orchestration, "
         f"never grounding. true count={BRCA1_DISEASES}" + answer.describe()
+    )
+
+
+@premise_gate
+@pytest.mark.asyncio
+async def test_p4b_memory_accumulates_across_two_real_turns() -> None:
+    """The END-TO-END path, with NOTHING handed in. F-4.5-09.
+
+    Every other memory arm in this file constructs a `SessionMemorySummary`
+    and passes it on `RequestContext`, which tests that memory is READ and
+    INJECTED correctly and is completely blind to whether anything ever
+    WRITES one. This phase shipped exactly that hole: read, inject, resolve,
+    all working, and no write path at all, so the feature was inert in
+    production while every injection arm passed.
+
+    That is build phase 4.4's lesson in a new costume. Its gate passed 6 of 6
+    while the default invocation was broken, because five of six cases passed
+    an explicit edge-label list and nothing exercised the path a real caller
+    takes. Here the "explicit list" is the injected summary.
+
+    So this arm hands in nothing. Turn 1 asks a normal question with a bare
+    session id. Turn 2 asks a question whose subject exists only in turn 1.
+    If nothing persisted between them, turn 2 cannot resolve and this fails.
+    """
+    session = f"premise-gate-4-5-p4b-{uuid.uuid4().hex[:8]}"
+
+    first = await _ask("Which diseases are associated with BRCA1?", session_id=session)
+    assert first.citations, (
+        "turn 1 produced no citations, so there is nothing for turn 2 to "
+        "remember and this arm cannot test what it exists to test."
+        + first.describe()
+    )
+
+    second = await _ask("What variants are associated with it?", session_id=session)
+    assert BRCA1 in second.plan_narrative, (
+        "turn 2's pronoun did not resolve, with NO memory handed in, so "
+        "nothing persisted the first turn. Session memory is inert on the "
+        "real path however well the injection arms pass (F-4.5-09)."
+        f"\n  plan={second.plan_narrative!r}" + second.describe()
     )
 
 

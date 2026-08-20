@@ -462,6 +462,9 @@ from system_03_search_agent.contracts.events import (
     TrustOutcome,
     TrustSignalPayload,
 )
+from system_03_search_agent.contracts.events import (
+    ResolvedEntity as EventResolvedEntity,
+)
 from system_03_search_agent.contracts.query import SessionMemorySummary
 from system_03_search_agent.core.session_memory import build_session_context
 from system_03_search_agent.core.state import GraphState
@@ -1814,6 +1817,24 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         plan_payload = PlanPayload(
             narrative=narrative,
             tool_calls=[p.tool_call for p in planned_tool_calls],
+            # T-4.5-06: publish what this step actually resolved, so session
+            # memory can record it from a typed field rather than by parsing
+            # the narrative sentence above for a CURIE.
+            #
+            # `text` is the CURIE rather than the user's phrase: the free-text
+            # mention is not recoverable at this point, and echoing the CURIE
+            # is honest where inventing a phrase would not be.
+            #
+            # `confidence` is 1.0 because this list contains only CURIEs a
+            # LIVE lookup confirmed. `_resolve_query_entities` returns a
+            # symbol as unresolved rather than guessing, so a value reaching
+            # here is a match, not a ranked candidate. If that resolver ever
+            # gains fuzzy matching, this constant becomes a lie and must move
+            # with it.
+            resolved_entities=[
+                EventResolvedEntity(text=curie, curie=curie, confidence=1.0)
+                for curie in planned.cypher_input.target_entities[:20]
+            ],
         )
 
     sink.emit("plan", plan_payload)
@@ -2809,10 +2830,19 @@ def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
     note into uncited pieces no matter how it was worded.
     """
     total = reported + len(omitted)
+    count = len(omitted)
+    # Singular and plural are handled rather than left as "1 findings are",
+    # because this string is shown to a reader in a clinical context and a
+    # visible grammar slip in a caveat undermines the caveat.
+    tail = (
+        "and the one not reported is absent"
+        if count == 1
+        else f"and the {count} not reported are absent"
+    )
     return (
         f"Note: this answer reports {reported} of the {total} findings "
-        f"retrieved for it, and the {len(omitted)} not reported are absent "
-        "from the citations as well as from the text above"
+        f"retrieved for it, {tail} from the citations as well as from the "
+        "text above"
     )
 
 

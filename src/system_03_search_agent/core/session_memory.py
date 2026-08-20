@@ -41,11 +41,14 @@ Writes:
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any, Protocol
 
 from system_03_search_agent.contracts.query import (
+    MAX_COMPRESSED_FINDINGS,
     MAX_RESOLVED_ENTITIES,
     CompressedFinding,
+    ResolvedEntity,
     SessionMemorySummary,
 )
 from system_03_search_agent.harness.tiers import Tier, resolve_model
@@ -250,6 +253,37 @@ __all__ = [
 ]
 
 
+#: Namespace for mapping a caller's session id to a `sessions.id` row key.
+#:
+#: `Query.session_id` is a free-form string of up to 64 characters, and the
+#: surfaces genuinely send different shapes: the web UI sends
+#: `crypto.randomUUID()`, the CLI sends a bare 32-character hex string, and
+#: MCP accepts whatever the caller passes. `sessions.id` is a UUID column. So
+#: the two cannot be the same value, and an early version of this store
+#: silently DROPPED every session whose id did not parse as a UUID, which
+#: made memory inert for the CLI and for most MCP callers while looking
+#: correct for the browser.
+#:
+#: uuid5 is used rather than a new text column because it needs no schema
+#: change and is deterministic: the same caller id always maps to the same
+#: row, on every process and every deploy, which is the property that makes
+#: it safe to derive rather than store. A random uuid4 would create a new row
+#: per turn and lose the conversation.
+#:
+#: Build phase 4.6 writes `interactions.session_id` against the same table
+#: and must use this same mapping, or the two will disagree about which row a
+#: conversation is.
+_SESSION_ID_NAMESPACE = uuid.UUID("6ba7b812-9dad-11d1-80b4-00c04fd430c8")
+
+
+def session_row_key(session_id: str) -> uuid.UUID:
+    """The `sessions.id` this caller-supplied session id maps to."""
+    try:
+        return uuid.UUID(session_id)
+    except ValueError:
+        return uuid.uuid5(_SESSION_ID_NAMESPACE, session_id)
+
+
 class SessionMemoryStore(Protocol):
     """Where a session's owner and memory are read from.
 
@@ -264,6 +298,12 @@ class SessionMemoryStore(Protocol):
         """Return `(owner_user_id, memory_payload)`, or None if unknown."""
         ...
 
+    async def put(
+        self, session_id: str, user_id: str | None, payload: dict[str, Any]
+    ) -> None:
+        """Write this session's memory, creating the row if it is new."""
+        ...
+
 
 class _PostgresSessionMemoryStore:
     """The shipped store: one row of the `sessions` table (alembic 0007)."""
@@ -276,16 +316,7 @@ class _PostgresSessionMemoryStore:
         from system_03_search_agent.data.models import ChatSession
         from system_03_search_agent.data.session import session_scope
 
-        try:
-            key = uuid.UUID(session_id)
-        except ValueError:
-            # A session id that is not a UUID cannot name a row, so it is
-            # "unknown" rather than "denied". Raising an ownership error here
-            # would make a malformed id and someone else's id look different
-            # to a caller, which is exactly the oracle `_ownership_refusal`
-            # avoids. F-4.10-A-09 is the same defect shape one surface up: a
-            # non-UUID guest id escaping as a 500.
-            return None
+        key = session_row_key(session_id)
 
         with session_scope() as db:
             row = db.execute(
@@ -297,6 +328,27 @@ class _PostgresSessionMemoryStore:
             return None
         owner, payload = row
         return (str(owner) if owner is not None else None, payload)
+
+
+    async def put(
+        self, session_id: str, user_id: str | None, payload: dict[str, Any]
+    ) -> None:
+        from system_03_search_agent.data.models import ChatSession
+        from system_03_search_agent.data.session import session_scope
+
+        key = session_row_key(session_id)
+
+        with session_scope() as db:
+            row = db.get(ChatSession, key)
+            if row is None:
+                # First turn of this session. The row is created here rather
+                # than at session start because nothing else needs one: the
+                # id is minted client-side and a session that never asks a
+                # question should not leave a row behind.
+                row = ChatSession(id=key, user_id=uuid.UUID(user_id) if user_id else None)
+                db.add(row)
+            row.memory = payload
+            db.commit()
 
 
 def _default_store() -> SessionMemoryStore:
@@ -370,3 +422,79 @@ async def load_for_caller(
     if payload is None:
         return None
     return SessionMemorySummary.model_validate(payload)
+
+
+def merge_turn(
+    existing: SessionMemorySummary | None,
+    *,
+    session_id: str,
+    now: datetime,
+    resolved: list[ResolvedEntity],
+    findings: list[CompressedFinding],
+) -> SessionMemorySummary:
+    """Fold one finished turn into the session's memory (T-4.5-04).
+
+    Idempotent by natural key, which the retry-safety gate in
+    `production-standards` requires because the Act step retries and a turn
+    can be replayed: an entity is keyed by its CURIE and a finding by its
+    `trace_id` plus summary, so folding the same turn twice produces the same
+    summary as folding it once. A blind append would grow the list on every
+    retry and evict real history to make room for duplicates.
+
+    Newest-last ordering is load-bearing rather than incidental. `compact`
+    drops the OLDEST open threads and merges the OLDEST findings, and FIFO
+    eviction past the 50-entity ceiling takes from the front, so all three
+    rules depend on this list being ordered oldest to newest.
+    """
+    base = existing or SessionMemorySummary(session_id=session_id, last_updated=now)
+
+    entities = list(base.resolved_entities)
+    seen_curies = {entity.curie for entity in entities}
+    for entity in resolved:
+        if entity.curie not in seen_curies:
+            entities.append(entity)
+            seen_curies.add(entity.curie)
+
+    merged_findings = list(base.compressed_findings)
+    seen_findings = {(f.trace_id, f.claim_summary) for f in merged_findings}
+    for finding in findings:
+        key = (finding.trace_id, finding.claim_summary)
+        if key not in seen_findings:
+            merged_findings.append(finding)
+            seen_findings.add(key)
+
+    return compact(
+        SessionMemorySummary(
+            session_id=session_id,
+            resolved_entities=entities[-MAX_RESOLVED_ENTITIES:],
+            compressed_findings=merged_findings[-MAX_COMPRESSED_FINDINGS:],
+            open_threads=list(base.open_threads),
+            token_budget=base.token_budget,
+            last_updated=now,
+        )
+    )
+
+
+async def save_for_caller(
+    summary: SessionMemorySummary,
+    *,
+    user_id: str | None,
+    store: SessionMemoryStore | None = None,
+) -> None:
+    """Persist a session's memory, refusing if the session is not the caller's.
+
+    Goes through the SAME ownership check as the read path rather than
+    trusting that whoever assembled the summary already checked. A write path
+    that skips the check is how an authorization hole reopens after the read
+    path was fixed: the two are separate code paths and only one of them was
+    ever the finding.
+    """
+    active = store if store is not None else _default_store()
+    record = await active.get(summary.session_id)
+    if record is not None:
+        owner_id, _payload = record
+        if (owner_id or None) != (user_id or None):
+            raise _ownership_refusal(summary.session_id)
+    await active.put(
+        summary.session_id, user_id, summary.model_dump(mode="json")
+    )
