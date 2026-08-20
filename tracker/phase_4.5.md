@@ -174,7 +174,7 @@ Acceptance criteria:
 
 ### T-4.5-08: Depth persistence
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.5-07
 Spec: Section 14.5
@@ -217,7 +217,7 @@ Acceptance criteria:
 
 ### T-4.5-11: The AudienceDepthToggle component
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.5-07
 Spec: Section 12 component inventory, Section 12.7
@@ -429,3 +429,18 @@ Two ways to close it properly, neither done here:
 - Accept that on sparse Layer 1 findings the depths legitimately converge, and assert the register difference rather than the length difference. That needs a register fingerprint that does not collide with grounding, which is exactly what F-4.5-06 established is hard: the obvious one, identifier presence, is unavailable because grounding requires identifiers at every depth.
 
 The honest summary for a reviewer: this gate currently proves that depth does not BREAK anything. It does not prove that depth DOES anything. Those are different claims and only the first is gated.
+
+### F-4.5-08: the incomplete-answer note misdirected the reader and broke citation coverage
+
+Severity: major, in the product, found by the offline eval gate
+Round: 0
+Status: closed by the lead, same session
+
+The note this phase added to disclose an unreported finding carried two defects, and neither was visible by reading it. Both surfaced only when `tests/system_03_search_agent/eval/test_write_step_eval_gate.py` ran.
+
+- IT MADE A FALSE CLAIM. The note ended "The full set is in the citations." That is not true. A finding the answer never reported produced no grounded claim, and citations are built from grounded claims, so the omitted rows are missing from the citations exactly as they are missing from the prose. The note pointed the reader at a place the data is not, which is worse than saying nothing: a wrong pointer closes the question, while silence at least leaves it open.
+- IT BROKE THE COVERAGE GATE. `_citation_coverage` treats any non-framing sentence without a marker as an uncited factual claim. The note was three sentences and only the first began "Note:", so the two continuations scored as uncited claims and pulled coverage below 1.0.
+
+Fixed as one sentence stating the SCALE rather than naming each omitted value. That is the discipline `_build_truncated_answer_note` already follows, and here it is also forced rather than chosen: a Layer 1 field value such as `NM_007294.4(BRCA1):c.190T>G` is full of periods, and the coverage grader splits sentences on periods, so inlining values fragments the note into uncited pieces no matter how it is worded.
+
+The general form worth carrying: a disclosure is ANSWER TEXT, and every rule that governs answer text governs it too. It can be uncited, it can be wrong, and it can fail the same gates a claim fails. Writing one is not a safe act just because its purpose is honesty.
