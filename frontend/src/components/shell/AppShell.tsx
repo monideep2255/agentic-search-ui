@@ -39,7 +39,8 @@ export interface AppShellProps {
   current?: ScreenName;
   onNavigate?: (screen: ScreenName) => void;
   /** The session's persona. Stubbed; wired by build phase 4.5. */
-  personaName?: string;
+  /** Server-assigned persona (T-4.5-10); null until the first run returns. */
+  personaName?: string | null;
   signedIn?: boolean;
   accountEmail?: string;
   /** Forwarded to `AccountMenu`'s `limitCopy` (T-4.10-09). See that prop's own docstring. */
@@ -99,7 +100,7 @@ export function AppShell({
   children,
   current = "search",
   onNavigate,
-  personaName = "Mendel",
+  personaName = null,
   signedIn = false,
   accountEmail,
   accountLimitCopy,

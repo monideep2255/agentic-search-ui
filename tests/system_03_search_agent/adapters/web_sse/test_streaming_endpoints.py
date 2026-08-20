@@ -267,7 +267,20 @@ class TestCreateRun:
     run_id/trace_id/ownership wiring."""
 
     @pytest.mark.asyncio
-    async def test_returns_202_with_a_run_id_and_the_stub_persona_name(self) -> None:
+    async def test_returns_202_with_a_run_id_and_a_real_persona_name(self) -> None:
+        """T-4.5-10: the "Assistant" stub is gone.
+
+        This used to assert the literal stub. It now asserts the two
+        properties Section 14.2 actually requires, which is strictly stronger
+        than a literal comparison: the name comes from the curated list, and
+        it is STABLE for the same account. A hardcoded string would satisfy
+        neither, and a random draw per request would satisfy the first but
+        not the second.
+        """
+        from system_03_search_agent.core.persona import load_persona_list
+
+        curated = {persona.name for persona in load_persona_list()}
+
         async with _client() as client:
             _user_id, headers = await _auth_headers(client)
             response = await client.post("/v1/query", json=_create_body(), headers=headers)
@@ -275,9 +288,22 @@ class TestCreateRun:
             assert response.status_code == 202
             body = response.json()
             uuid.UUID(body["run_id"])  # raises ValueError if not a well-formed UUID
-            assert body["persona_name"] == "Assistant"
-
+            assert body["persona_name"] in curated, (
+                "the persona is not drawn from the curated list, so the "
+                "deceased-only guarantee the list carries does not apply to "
+                f"what the caller was shown: {body['persona_name']!r}"
+            )
             await _drain_run_task(body["run_id"])
+
+            second = await client.post("/v1/query", json=_create_body(), headers=headers)
+            assert second.status_code == 202
+            second_body = second.json()
+            assert second_body["persona_name"] == body["persona_name"], (
+                "the same account was given two different scientists across "
+                "two queries. Section 14.2 fixes the persona for the life of "
+                "the account, never reassigned"
+            )
+            await _drain_run_task(second_body["run_id"])
 
     @pytest.mark.asyncio
     async def test_requires_auth(self) -> None:

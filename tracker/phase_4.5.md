@@ -80,7 +80,7 @@ History:
 
 ### T-4.5-02: The SessionMemorySummary contract
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.5-01
 Spec: Section 14.3, Section 2.1
@@ -96,7 +96,7 @@ Acceptance criteria:
 
 ### T-4.5-03: build_session_context and the hard token cap
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.5-02
 Spec: Section 14.4
@@ -111,7 +111,7 @@ Acceptance criteria:
 
 ### T-4.5-04: Append and compaction
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.5-02
 Spec: Section 14.3
@@ -160,7 +160,7 @@ Acceptance criteria:
 
 ### T-4.5-07: Thread audience_depth into the Write step
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.5-01
 Spec: Section 14.5
@@ -186,7 +186,7 @@ Acceptance criteria:
 
 ### T-4.5-09: The curated persona list and the draw
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: nothing
 Spec: Section 14.2; `DECISIONS.md` 2026-08-20, both rows
@@ -202,7 +202,7 @@ Acceptance criteria:
 
 ### T-4.5-10: Wire the persona to all four surfaces
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.5-09
 Spec: Section 12.7, Section 13.1, Section 13.3; closes F-4.2-03

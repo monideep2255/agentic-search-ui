@@ -34,6 +34,11 @@ vi.mock("./lib/api", async () => {
   const actual = await vi.importActual<typeof import("./lib/api")>("./lib/api");
   return {
     ApiError: actual.ApiError,
+    // T-4.5-10 added `fetchPersona`, which App calls once at load so the
+    // shell's persona chip has a real name before the first question. Stubbed
+    // rather than left out: an api mock that omits an export App actually
+    // calls throws inside a useEffect and takes the whole render down.
+    fetchPersona: vi.fn(async () => ({ persona_name: "Mendel" })),
     login: vi.fn(),
     signup: vi.fn(),
     createRun: vi.fn(),

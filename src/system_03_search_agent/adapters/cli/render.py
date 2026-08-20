@@ -486,10 +486,26 @@ class Renderer:
     exit code `main.py` passes to `sys.exit`.
     """
 
-    def __init__(self, out: TextIO, err: TextIO, *, operator: bool) -> None:
+    def __init__(
+        self,
+        out: TextIO,
+        err: TextIO,
+        *,
+        operator: bool,
+        persona_name: str | None = None,
+    ) -> None:
         self._out = out
         self._err = err
         self._operator = operator
+        # T-4.5-10, closing F-4.2-03. Section 13.3 asks the status line to be
+        # prefixed with the persona name, and until build phase 4.5 there was
+        # no value to prefix it WITH: `persona_name` is resolved once on the
+        # `POST /v1/query` response body and never repeated on a streamed
+        # event, so this renderer, which only ever sees events, could not
+        # invent one. It is now passed in by the caller, which does hold the
+        # response body. Optional because a renderer constructed for a run
+        # whose create call never returned still has to render the failure.
+        self._persona_name = persona_name
 
         # Citation bookkeeping for the references block and the honest
         # unresolved-marker report (design decision 1 above).
@@ -535,25 +551,34 @@ class Renderer:
         self._guard_rejected = True
         self._exit_code = _EXIT_FAILURE
 
+    def _status_prefix(self, step: str) -> str:
+        """The status-line prefix for one agent-loop step (Section 13.3).
+
+        The persona name is NOT sanitized here, and that is deliberate rather
+        than an omission: it comes from this process's own curated list via
+        `core.persona`, never from the server's event stream, so it is not
+        untrusted content the way a narrative is. Sanitizing it would imply a
+        provenance it does not have and would hide that distinction from the
+        next reader.
+        """
+        if self._persona_name is None:
+            return f"[{step}]"
+        return f"[{self._persona_name} | {step}]"
+
     def _handle_think(self, event: Event) -> None:
         payload = ThinkPayload.model_validate(event.payload)
-        # No persona name is available here. Section 13.3 asks for the
-        # status line to be "prefixed with the persona name," but neither
-        # `ThinkPayload` nor this class's fixed constructor carries one:
-        # Section 12.7's own "Design note for Section 2 or 13 alignment"
-        # already flags that `persona_name` is resolved once, in `POST
-        # /v1/query`'s response body, not on any streamed event. This
-        # renderer cannot invent a value it was never given, so the line
-        # below omits the persona prefix rather than fabricate one.
-        # Flagged again in this ticket's final report.
+        # F-4.2-03 is closed here: the persona prefix Section 13.3 asks for.
+        # It still degrades to the bare label when no name was supplied,
+        # rather than fabricating one, which was the correct half of the old
+        # behaviour and is kept.
         narrative = _sanitize_untrusted(payload.narrative)
-        self._err.write(f"[think] {narrative}\n")
+        self._err.write(f"{self._status_prefix('think')} {narrative}\n")
         self._err.flush()
 
     def _handle_plan(self, event: Event) -> None:
         payload = PlanPayload.model_validate(event.payload)
         narrative = _sanitize_untrusted(payload.narrative)
-        self._err.write(f"[plan] {narrative}\n")
+        self._err.write(f"{self._status_prefix('plan')} {narrative}\n")
         self._err.flush()
 
     def _handle_tool_start(self, event: Event) -> None:

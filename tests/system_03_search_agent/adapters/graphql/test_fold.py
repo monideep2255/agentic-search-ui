@@ -279,10 +279,13 @@ class TestFoldRunGoldenPath:
         # fail to carry the answer-scope trust_signal's grounded=True
         # through unchanged.
         _registry, run_id = _isolated_registry_and_run(monkeypatch, _golden_path_stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert result.run_id == run_id
-        assert result.persona_name == "Assistant"
+        # T-4.5-10: the "Assistant" stub is gone. `fold_run` no longer owns a
+        # persona at all; the caller resolves it from `core.persona` and
+        # threads it in, so this asserts pass-through rather than a literal.
+        assert result.persona_name == "Mendel"
         assert "protein-coding gene" in result.answer
         assert result.trust_signal.outcome == "answer"
         assert result.trust_signal.grounded is True
@@ -307,7 +310,7 @@ class TestFoldRunGoldenPath:
                 yield event
 
         _registry, run_id = _isolated_registry_and_run(monkeypatch, _counting_golden_path)
-        await fold_module.fold_run(run_id)
+        await fold_module.fold_run(run_id, persona_name="Mendel")
         assert calls == [run_id]
 
 
@@ -328,7 +331,7 @@ class TestFoldRunGrounding:
         # zero citation events; the floor in _finalize must correct that
         # claim, not trust it.
         _registry, run_id = _isolated_registry_and_run(monkeypatch, _uncited_answer_stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert result.citations == []
         assert result.trust_signal.grounded is False
@@ -343,7 +346,7 @@ class TestFoldRunGrounding:
         # rest, instead of aggregating to the most restrictive
         # (outcome="flag", risk_tier="high").
         _registry, run_id = _isolated_registry_and_run(monkeypatch, _claim_scoped_trust_stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert result.trust_signal.outcome == "flag"
         assert result.trust_signal.risk_tier == "high"
@@ -365,7 +368,7 @@ class TestFoldRunTruncationDisclosure:
         # disclosures.answer_truncated False on a run that plainly
         # overflowed it.
         _registry, run_id = _isolated_registry_and_run(monkeypatch, _oversized_answer_stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert len(result.answer) <= MAX_ANSWER_LENGTH
         assert result.disclosures.answer_truncated is True
@@ -379,7 +382,7 @@ class TestFoldRunTruncationDisclosure:
         # counting what was dropped (citations_omitted stays 0), or return
         # more than MAX_CITATIONS citations.
         _registry, run_id = _isolated_registry_and_run(monkeypatch, _oversized_answer_stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert len(result.citations) == MAX_CITATIONS
         assert result.disclosures.citations_omitted == 5  # MAX_CITATIONS+6-1 emitted, 5 over cap
@@ -400,7 +403,7 @@ class TestFoldRunFatalError:
         # directly into the answer or the disclosure note instead of using
         # the fixed, error_class-keyed literal.
         _registry, run_id = _isolated_registry_and_run(monkeypatch, _fatal_error_stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         serialized = " ".join(
             [result.answer, result.trust_signal.message or "", *result.disclosures.notes]
@@ -417,7 +420,7 @@ class TestFoldRunFatalError:
         # default branch produced (which could read as safe on a run that
         # crashed mid-answer).
         _registry, run_id = _isolated_registry_and_run(monkeypatch, _fatal_error_stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert result.trust_signal.grounded is False
         assert result.trust_signal.risk_tier == "high"
@@ -444,7 +447,7 @@ class TestFoldRunWallClockBound:
         _registry, run_id = _isolated_registry_and_run(monkeypatch, _never_terminating_stream)
 
         with pytest.raises(fold_module.FoldTimeoutError):
-            await asyncio.wait_for(fold_module.fold_run(run_id), timeout=2.0)
+            await asyncio.wait_for(fold_module.fold_run(run_id, persona_name="Mendel"), timeout=2.0)
 
 
 # ---------------------------------------------------------------------------
@@ -483,7 +486,7 @@ class TestFoldRunSnapshot:
         # True (or False) regardless of entry.finished, which would make
         # the arm above pass while this one silently lies.
         _registry, run_id = _isolated_registry_and_run(monkeypatch, _golden_path_stream)
-        await fold_module.fold_run(run_id)  # drains the run to completion first
+        await fold_module.fold_run(run_id, persona_name="Mendel")  # drains the run to completion first
 
         result = await fold_module.fold_run_snapshot(run_id)
         assert result.finished is True
@@ -827,7 +830,7 @@ class TestRiskTierIsFlooredNotCollapsed:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert result.trust_signal.risk_tier == "unknown"
 
@@ -856,7 +859,7 @@ class TestRiskTierIsFlooredNotCollapsed:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert result.trust_signal.risk_tier == "critical"
 
@@ -880,7 +883,7 @@ class TestRiskTierIsFlooredNotCollapsed:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert result.trust_signal.risk_tier == "high"
 
@@ -906,7 +909,7 @@ class TestRiskTierIsFlooredNotCollapsed:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert result.trust_signal.outcome == "flag"
         assert result.trust_signal.risk_tier == "high"
@@ -952,7 +955,7 @@ class TestNoTrustSignalIsDiscarded:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert result.trust_signal.outcome == "flag"
         assert result.trust_signal.risk_tier == "high"
@@ -988,7 +991,7 @@ class TestGroundingIsNeverAssertedFromNothing:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert result.citations, "the citation itself is still returned"
         assert result.trust_signal.grounded is False
@@ -1036,7 +1039,7 @@ class TestUpstreamDegradationIsDisclosed:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         notes = _notes_text(result)
         assert "incomplete data" in notes
@@ -1075,7 +1078,7 @@ class TestUpstreamDegradationIsDisclosed:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert "truncated by the tool itself" in _notes_text(result)
 
@@ -1106,7 +1109,7 @@ class TestUpstreamDegradationIsDisclosed:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert result.disclosures.notes == []
 
@@ -1144,7 +1147,7 @@ class TestDuplicateCitationIdentity:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert [c.citation_id for c in result.citations] == ["c1"]
         assert result.disclosures.citations_omitted == 1
@@ -1172,7 +1175,7 @@ class TestDuplicateCitationIdentity:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert len(result.citations) == 2
         assert "share a display index" in _notes_text(result)
@@ -1208,7 +1211,7 @@ class TestOmissionNotesStateTheRealReason:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         notes = _notes_text(result)
         assert result.disclosures.citations_omitted == 1
@@ -1261,7 +1264,7 @@ class TestATerminalEventIsRequired:
             ("citation", _citation(1)),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert "PARTIAL" in _notes_text(result)
         assert result.trust_signal.grounded is False
@@ -1285,7 +1288,7 @@ class TestATerminalEventIsRequired:
             _done("refuse"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert "PARTIAL" not in _notes_text(result)
         assert "has not finished" not in _notes_text(result)
@@ -1374,7 +1377,7 @@ class TestTheTwoReadPathsAgree:
         # `grounded: true` and a citation, for one run id, one second apart.
         registry, run_id = _isolated_registry_and_run(monkeypatch, _post_terminal_leak_stream)
 
-        ask_result = await fold_module.fold_run(run_id)
+        ask_result = await fold_module.fold_run(run_id, persona_name="Mendel")
         await _drain(registry, run_id)
         run_result = await fold_module.fold_run_snapshot(run_id)
 
@@ -1399,7 +1402,7 @@ class TestTheTwoReadPathsAgree:
         # `fold_run_snapshot`'s loop. RUN: fails on the leaked-text
         # assertion.
         registry, run_id = _isolated_registry_and_run(monkeypatch, _post_terminal_leak_stream)
-        await fold_module.fold_run(run_id)
+        await fold_module.fold_run(run_id, persona_name="Mendel")
         await _drain(registry, run_id)
 
         run_result = await fold_module.fold_run_snapshot(run_id)
@@ -1418,7 +1421,7 @@ class TestTheTwoReadPathsAgree:
         # Mutation that turns this red: delete the terminal-event break from
         # `fold_citations`'s loop. RUN: fails with one citation exported.
         registry, run_id = _isolated_registry_and_run(monkeypatch, _post_terminal_leak_stream)
-        await fold_module.fold_run(run_id)
+        await fold_module.fold_run(run_id, persona_name="Mendel")
         await _drain(registry, run_id)
 
         export = fold_module.fold_citations(registry.get_run(run_id))
@@ -1508,7 +1511,7 @@ class TestMalformedPayloadsDegradeOneEvent:
             _done("answer"),
         )
         _registry, run_id = _isolated_registry_and_run(monkeypatch, stream)
-        result = await fold_module.fold_run(run_id)
+        result = await fold_module.fold_run(run_id, persona_name="Mendel")
 
         assert "Fact one" in result.answer
         assert "could not be read by this surface" in _notes_text(result)

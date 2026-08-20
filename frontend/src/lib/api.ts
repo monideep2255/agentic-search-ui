@@ -262,6 +262,32 @@ export async function getAllowance(
  * guest identity, which `App.tsx` triggers lazily, on the first question
  * asked, rather than on every page load (T-4.10-08).
  */
+export interface PersonaResponse {
+  persona_name: string;
+}
+
+/**
+ * `GET /v1/persona` (T-4.5-10, Section 14.2).
+ *
+ * Unauthenticated on purpose: its whole job is to serve a visitor who has no
+ * credential yet, so the persona chip in the app shell has a real name on the
+ * landing screen instead of a locally invented one. The server keys it
+ * exactly as `POST /v1/query` does, so the name shown before the first
+ * question is the one the first answer will carry.
+ */
+export async function fetchPersona(
+  sessionId: string,
+  options: ApiCallOptions = {},
+): Promise<PersonaResponse> {
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const response = await fetch(
+    `${baseUrl}/v1/persona?session_id=${encodeURIComponent(sessionId)}`,
+    { signal: options.signal },
+  );
+  await throwIfNotOk(response, "fetchPersona");
+  return (await response.json()) as PersonaResponse;
+}
+
 export async function mintGuest(options: ApiCallOptions = {}): Promise<GuestTokenResponse> {
   const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
   const response = await fetch(`${baseUrl}/auth/guest`, {

@@ -63,7 +63,8 @@ export interface RunScreenProps {
    * reasoning was unreachable while the run was live and again afterwards.
    */
   steps?: ReasoningStep[];
-  personaName?: string;
+  /** Server-assigned persona (T-4.5-10); null until the first run returns. */
+  personaName?: string | null;
   onStop?: () => void;
   onNewSearch?: () => void;
   /**
@@ -116,7 +117,7 @@ export function RunScreen({
   reachedSteps = [],
   toolCalls = [],
   steps = [],
-  personaName = "Mendel",
+  personaName = null,
   onStop,
   onNewSearch,
   stopEnabled = true,

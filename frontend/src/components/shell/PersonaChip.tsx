@@ -12,41 +12,21 @@
  * should build connection without undercutting the provenance-forward
  * positioning. So there is no animation here, and there never should be.
  *
- * STUB: the name is drawn from a placeholder list. Wired by build phase 4.5
- * from `persona_name` on the POST /v1/query response. See `stubs/registry.ts`.
+ * T-4.5-10: no longer a stub. The name comes from `persona_name` on the
+ * POST /v1/query response, resolved server-side from the curated deceased-only
+ * list in `core/persona.py`. The placeholder list and its local draw are gone:
+ * a client-side draw could not know which scientist an ACCOUNT is bound to, so
+ * it would have shown a different name than the CLI and GraphQL surfaces do
+ * for the same user.
+ *
+ * Renders nothing when `name` is null, which is the window before the first
+ * run returns. A placeholder there would visibly change once the first answer
+ * lands, which reads as a bug.
  */
 
 import { Box, Typography } from "@mui/material";
 
 import { designTokens } from "../../theme";
-
-/**
- * A placeholder for the curated top-100 biomedical-scientist list, which is
- * its own Phase 6 task. Ten is enough to prove the component; the real list is
- * a research task, not a styling one.
- */
-export const PLACEHOLDER_PERSONAS = [
-  "Mendel",
-  "Franklin",
-  "McClintock",
-  "Ramon y Cajal",
-  "Hodgkin",
-  "Elion",
-  "Nirenberg",
-  "Blackburn",
-  "Tsien",
-  "Sanger",
-] as const;
-
-/**
- * Draw a persona for a session.
- *
- * Deterministic rather than random, so a demo reads the same way twice and a
- * test does not need to stub a clock or a generator.
- */
-export function drawPersona(seed = 0): string {
-  return PLACEHOLDER_PERSONAS[Math.abs(seed) % PLACEHOLDER_PERSONAS.length];
-}
 
 /** The muted icon the spec calls for: a plain figure, not a face, not a mascot. */
 function PersonIcon({ size = 12 }: { size?: number }) {
@@ -59,13 +39,15 @@ function PersonIcon({ size = 12 }: { size?: number }) {
 }
 
 export interface PersonaChipProps {
-  name: string;
+  /** The server-assigned persona, or null before the first run returns. */
+  name: string | null;
   /** `onNavy` for the app bar; `onLight` for a plain surface. */
   variant?: "onLight" | "onNavy";
 }
 
 export function PersonaChip({ name, variant = "onNavy" }: PersonaChipProps) {
   const onNavy = variant === "onNavy";
+  if (name === null) return null;
   return (
     <Box
       data-testid="persona-chip"
@@ -134,14 +116,15 @@ export const STEP_NARRATIVE: Record<string, string> = {
 };
 
 export interface PersonaCaptionProps {
-  name: string;
+  /** Server-assigned persona (T-4.5-10); null before the first run returns. */
+  name: string | null;
   /** The live step, or null when no run is in flight. */
   step: string | null;
 }
 
 /** The per-step caption on the run screen. Renders nothing when idle. */
 export function PersonaCaption({ name, step }: PersonaCaptionProps) {
-  if (!step) return null;
+  if (!step || name === null) return null;
   return (
     <Box
       data-testid="persona-caption"

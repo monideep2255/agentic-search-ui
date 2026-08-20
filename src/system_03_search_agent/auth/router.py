@@ -90,6 +90,7 @@ from system_03_search_agent.auth.tokens import (
     mint_access_token,
 )
 from system_03_search_agent.core import run_registry as run_registry_module
+from system_03_search_agent.core.persona import persona_for_session
 from system_03_search_agent.data.guest_sessions import FREE_RUN_ALLOWANCE, create_guest_session
 from system_03_search_agent.data.models import AuthSession, GuestSession, User
 from system_03_search_agent.data.session import get_session
@@ -618,6 +619,11 @@ def me(
         email=current_user.email,
         created_at=current_user.created_at,
         last_login_at=current_user.last_login_at,
+        # Keyed on the account, so this is the same scientist `POST /v1/query`
+        # will report and the same one the CLI and GraphQL surfaces show.
+        persona_name=persona_for_session(
+            session_id=str(current_user.id), user_id=str(current_user.id)
+        ),
     )
 
 
@@ -676,5 +682,9 @@ def create_guest(
     guest = create_guest_session(session)
     token = mint_guest_token(str(guest.id))
     return GuestTokenResponse(
-        guest_token=token, guest_id=guest.id, used=guest.runs_used, total=FREE_RUN_ALLOWANCE
+        guest_token=token,
+        guest_id=guest.id,
+        used=guest.runs_used,
+        total=FREE_RUN_ALLOWANCE,
+        persona_name=persona_for_session(session_id=str(guest.id), user_id=None),
     )
