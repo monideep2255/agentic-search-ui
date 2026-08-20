@@ -836,7 +836,7 @@ async def _run_ask(
     session_id = args.session_id or uuid.uuid4().hex
 
     try:
-        run_id, _persona_name = await _create_run_never_retried(
+        run_id, persona_name = await _create_run_never_retried(
             lambda c: CliClient(http_client, c).create_run(
                 text=args.question, session_id=session_id, audience_depth=args.depth
             ),
@@ -868,7 +868,11 @@ async def _run_ask(
     # client-supplied way left to ask for cost fields (see
     # `_parse_ask_args`'s comment on why `--operator` was removed rather
     # than wired to a check this module cannot perform).
-    renderer = Renderer(stdout, stderr, operator=False)
+    # T-4.5-10, closing F-4.2-03: the persona the server assigned this run,
+    # taken from the create response rather than redrawn locally, so the CLI
+    # names the same scientist the web UI and the GraphQL surface do for the
+    # same account.
+    renderer = Renderer(stdout, stderr, operator=False, persona_name=persona_name)
     client = CliClient(http_client, creds)
     stream_iter = client.stream_events(run_id).__aiter__()
 

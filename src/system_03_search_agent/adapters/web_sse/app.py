@@ -10,7 +10,21 @@ from datetime import UTC, date, datetime, timedelta
 from datetime import time as dt_time
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
+from fastapi import (
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Request,
+    Response,
+    status,
+)
+from fastapi import (
+    # Aliased: `Query` is already this module's domain request model
+    # (contracts.query.Query). Importing FastAPI's under its own name would
+    # shadow it silently.
+    Query as FastAPIQuery,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
@@ -19,10 +33,12 @@ from sse_starlette.sse import EventSourceResponse
 
 from system_03_search_agent.adapters.mcp.server import server as mcp_server
 from system_03_search_agent.auth.dependencies import Principal, get_caller
+from system_03_search_agent.auth.preferences import write_audience_depth
 from system_03_search_agent.auth.router import router as auth_router
 from system_03_search_agent.auth.router import source_hash_for_request
 from system_03_search_agent.contracts.events import CitationPayload
 from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.core.persona import persona_for_session
 from system_03_search_agent.core.run_registry import (
     CONCURRENT_RUN_CAP_RETRY_AFTER_S,
     ConcurrentRunCapExceededError,
@@ -42,6 +58,7 @@ from system_03_search_agent.data.models import (
     GuestDailyUsage,
     GuestSession,
     GuestSourceDailyUsage,
+    User,
 )
 from system_03_search_agent.data.session import get_session, session_scope
 from system_03_search_agent.harness.cost_control import (
@@ -257,10 +274,12 @@ class CreateRunRequest(BaseModel):
         return value
 
 
-# Phase 4.5 (personalization and memory) is the ticket that assigns a real
-# persona; until then every run reports this fixed placeholder rather than
-# silently omitting the field (per this ticket's acceptance criteria).
-_STUB_PERSONA_NAME = "Assistant"
+# T-4.5-10: the real persona replaces the "Assistant" placeholder this
+# surface reported from build phase 4.0 until build phase 4.5. Resolved from
+# `core.persona`, which both this surface and the GraphQL one now import
+# rather than each restating a literal: that module sits BELOW both adapters,
+# so importing it inverts no dependency, which was the stated reason the two
+# stubs were duplicated in the first place.
 
 # The one external wording for the concurrent-run cap, shared by both
 # places that can refuse on it (the precheck and `create_run`'s own
@@ -395,6 +414,50 @@ def _guest_uuid_from_owner_id(owner_id: str) -> uuid.UUID:
     reader's), not a line to add under cover of a comment correction.
     """
     return uuid.UUID(owner_id.split(":", 1)[1])
+
+
+class PersonaResponse(BaseModel):
+    """`GET /v1/persona`'s response: `{persona_name}` (T-4.5-10)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    persona_name: str
+
+
+# T-4.5-10, Section 14.2. Why this endpoint exists rather than the client
+# drawing its own name:
+#
+# The persona is part of the app shell build phase 4.8 designed, and its
+# premise gate asserts the chip is present on the landing screen. But an
+# anonymous visitor on that screen has no server identity yet: the guest
+# token is minted lazily on the FIRST question (T-4.10-08, deliberately), and
+# `persona_name` otherwise arrives on `POST /v1/query`'s response. So between
+# page load and the first question there is no server-supplied name.
+#
+# The tempting fix is a client-side draw. That was the pre-4.5 behaviour and
+# it is a fabrication: the browser cannot know which scientist an ACCOUNT is
+# bound to, so it would show one name and every other surface would show a
+# different one for the same user. It also duplicates the curated list into
+# the frontend, where it would drift.
+#
+# So the client asks. The answer is a pure function of the identity, keyed
+# exactly as `POST /v1/query` keys it, so the name shown on the landing
+# screen is the one the first answer will carry.
+#
+# Rate-limit consideration, the same criterion `GET /v1/allowance` below
+# records: this is unauthenticated, because its whole purpose is to serve a
+# caller who has no credential yet. It is safe to leave open because it
+# touches no database, makes no model call, and returns a name from a public
+# curated list, so it discloses nothing about whether a session or account
+# exists. It is a hash of the caller's own input. Real throttling is build
+# phase 6.0's, as everywhere else on this surface.
+@app.get("/v1/persona", response_model=PersonaResponse)
+def get_v1_persona(
+    session_id: str = FastAPIQuery(..., max_length=64, min_length=1),
+) -> PersonaResponse:
+    return PersonaResponse(
+        persona_name=persona_for_session(session_id=session_id, user_id=None)
+    )
 
 
 # Rate-limit consideration (T-4.10-04 acceptance criterion, the other
@@ -879,6 +942,22 @@ async def post_v1_query(
         else None
     )
 
+    # T-4.5-08, Section 14.5: remember this account's depth so their control
+    # starts where they left it next time. Only for a registered caller: a
+    # guest has no row to remember against, and inventing one to hold a
+    # display preference would create an identity the guest never asked for.
+    #
+    # Guarded by `write_audience_depth` returning False when nothing changed,
+    # so the common case (the same depth as last time, which is most requests)
+    # does no UPDATE at all rather than putting one on every authenticated
+    # query's hot path.
+    if caller.user_id is not None:
+        user_row = session.get(User, uuid.UUID(caller.user_id))
+        if user_row is not None and write_audience_depth(
+            user_row, request.audience_depth
+        ):
+            session.commit()
+
     run_id = str(uuid.uuid4())
     query = Query(
         text=request.text,
@@ -938,7 +1017,17 @@ async def post_v1_query(
             },
             headers={"Retry-After": str(exc.retry_after_s)},
         ) from None
-    return CreateRunResponse(run_id=run_id, persona_name=_STUB_PERSONA_NAME)
+    # Section 14.2: keyed on the account when there is one, so a registered
+    # caller keeps the same scientist for the life of the account, and on the
+    # session otherwise, so an anonymous session holds one for that session
+    # and draws a new one next time. Delivered HERE, once, on the response
+    # body, and never repeated on a streamed event.
+    return CreateRunResponse(
+        run_id=run_id,
+        persona_name=persona_for_session(
+            session_id=request.session_id, user_id=caller.user_id
+        ),
+    )
 
 
 def _get_owned_run(run_id: str, caller: Principal) -> RunEntry:

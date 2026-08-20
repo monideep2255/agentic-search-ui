@@ -153,6 +153,16 @@ class ChatSession(Base):
     )
     experiment_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     experiment_arm: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # T-4.5-05, Section 14.3: one serialized SessionMemorySummary, or NULL
+    # for a session that has not accumulated any yet. Stored here rather than
+    # in a process-local cache so it survives a restart and is the same
+    # across workers; both failures are invisible in a single-process dev run
+    # and obvious in production. Alembic revision 0007.
+    #
+    # It lives next to `user_id` on purpose. That adjacency is what lets
+    # `core/session_memory.load_for_caller` answer "is this session yours"
+    # from the database, which is how F-4.1-A-15 closes.
+    memory: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
 
 class Interaction(Base):

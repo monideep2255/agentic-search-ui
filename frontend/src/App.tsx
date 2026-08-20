@@ -44,11 +44,19 @@
  * layer up), and it is gone, not merely renamed.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, CssBaseline, ThemeProvider } from "@mui/material";
 
 import { theme } from "./theme";
-import { ApiError, createRun, getAllowance, mintGuest, stopRun } from "./lib/api";
+import {
+  ApiError,
+  createRun,
+  fetchMe,
+  fetchPersona,
+  getAllowance,
+  mintGuest,
+  stopRun,
+} from "./lib/api";
 import type { AllowanceResponse } from "./lib/api";
 import {
   capitalizeFirst,
@@ -64,7 +72,6 @@ import { useRunView, EMPTY_RUN_VIEW } from "./hooks/useRunView";
 import { AuthGate } from "./components/auth/AuthGate";
 import { AppShell } from "./components/shell/AppShell";
 import type { ScreenName } from "./components/shell/AppShell";
-import { drawPersona } from "./components/shell/PersonaChip";
 import { HomeScreen } from "./components/screens/HomeScreen";
 import { RunScreen } from "./components/screens/RunScreen";
 import type { StepName } from "./components/screens/RunScreen";
@@ -192,8 +199,56 @@ export function App() {
       : `session-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   const [sessionId, setSessionId] = useState(newSessionId);
 
-  // Section 14.2, presentation only. Stubbed; wired by build phase 4.5.
-  const persona = useMemo(() => drawPersona(0), []);
+  // Section 14.2, presentation only. T-4.5-10 replaced the local
+  // `drawPersona(0)` stub with the name the SERVER assigns: it arrives once,
+  // on the `POST /v1/query` response body, and is never repeated on a
+  // streamed event. Drawing it here would have been a fabrication of exactly
+  // the class F-4.8-J-01 was filed for, since the client cannot know which
+  // scientist the account is bound to.
+  //
+  // Null until the first run returns. `PersonaChip` renders nothing rather
+  // than a placeholder in that window, because a name that changes once the
+  // first answer lands reads as a bug to the user.
+  const [persona, setPersona] = useState<string | null>(null);
+
+  // Fetch the session's persona once, at load, so the chip build phase 4.8
+  // put in the shell has a real name before the first question rather than a
+  // locally invented one. Best-effort: a failure leaves the chip absent,
+  // which is the honest degradation, never a fabricated scientist.
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchPersona(sessionId, { signal: controller.signal })
+      .then((result) => setPersona(result.persona_name))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [sessionId]);
+
+  // T-4.5-08, Section 14.5: "once auth is live, depth defaults to the user's
+  // last-used value". Seeded from the account rather than from localStorage,
+  // because the preference belongs to the account and should follow it to
+  // another device. Also adopts the account's persona, which is keyed on the
+  // user id and so differs from the anonymous one fetched above.
+  //
+  // Best-effort: a failure leaves the control at whatever it already shows,
+  // which is the contract default. A preference that fails to load must never
+  // block asking a question.
+  useEffect(() => {
+    if (token === null) return undefined;
+    const controller = new AbortController();
+    fetchMe(token, { signal: controller.signal })
+      .then((me) => {
+        if (
+          me.audience_depth === "clinical_brief" ||
+          me.audience_depth === "researcher" ||
+          me.audience_depth === "deep_technical"
+        ) {
+          setDepth(me.audience_depth);
+        }
+        setPersona(me.persona_name);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [token]);
 
   const signedIn = token !== null;
   /**
@@ -373,6 +428,10 @@ export function App() {
         // run now would attach its answer to the newer question's heading.
         if (seq !== askSeq.current) return;
         setRunId(response.run_id);
+        // T-4.5-10: adopt the server's persona. Set every run rather than
+        // only the first, so a sign-in that changes the identity behind the
+        // session is reflected without a reload.
+        setPersona(response.persona_name);
 
         if (!signedIn) {
           // T-4.10-08: the dots must read the SERVER's own count, never a

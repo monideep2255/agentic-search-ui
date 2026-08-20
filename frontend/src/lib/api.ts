@@ -262,6 +262,61 @@ export async function getAllowance(
  * guest identity, which `App.tsx` triggers lazily, on the first question
  * asked, rather than on every page load (T-4.10-08).
  */
+export interface MeResponse {
+  id: string;
+  email: string;
+  audience_depth: string;
+  persona_name: string;
+}
+
+/**
+ * `GET /auth/me` (T-4.5-08, Section 14.5).
+ *
+ * Read once on sign-in so the depth control starts where this account left
+ * it, on any device, rather than resetting to the default every session.
+ * localStorage would have been cheaper and is wrong for the same reason a
+ * client-side persona draw was wrong: the preference belongs to the ACCOUNT,
+ * not to the browser.
+ */
+export async function fetchMe(
+  token: string,
+  options: ApiCallOptions = {},
+): Promise<MeResponse> {
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const response = await fetch(`${baseUrl}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: options.signal,
+  });
+  await throwIfNotOk(response, "fetchMe");
+  return (await response.json()) as MeResponse;
+}
+
+export interface PersonaResponse {
+  persona_name: string;
+}
+
+/**
+ * `GET /v1/persona` (T-4.5-10, Section 14.2).
+ *
+ * Unauthenticated on purpose: its whole job is to serve a visitor who has no
+ * credential yet, so the persona chip in the app shell has a real name on the
+ * landing screen instead of a locally invented one. The server keys it
+ * exactly as `POST /v1/query` does, so the name shown before the first
+ * question is the one the first answer will carry.
+ */
+export async function fetchPersona(
+  sessionId: string,
+  options: ApiCallOptions = {},
+): Promise<PersonaResponse> {
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const response = await fetch(
+    `${baseUrl}/v1/persona?session_id=${encodeURIComponent(sessionId)}`,
+    { signal: options.signal },
+  );
+  await throwIfNotOk(response, "fetchPersona");
+  return (await response.json()) as PersonaResponse;
+}
+
 export async function mintGuest(options: ApiCallOptions = {}): Promise<GuestTokenResponse> {
   const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
   const response = await fetch(`${baseUrl}/auth/guest`, {

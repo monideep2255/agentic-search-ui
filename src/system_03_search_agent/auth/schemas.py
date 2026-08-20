@@ -146,6 +146,19 @@ class MeResponse(BaseModel):
     email: str
     created_at: datetime
     last_login_at: datetime | None
+    # T-4.5-08, Section 14.5: "once auth is live, depth defaults to the
+    # user's last-used value". Served here so a returning caller's control
+    # starts where they left it, on any device, rather than resetting to the
+    # default every session. Falls back to "researcher" for an account that
+    # has never set one, the same default the contract carries.
+    audience_depth: str = "researcher"
+    # T-4.5-10, Section 14.2. Additive within v1, which
+    # system-design-patterns pattern 10 permits: a new optional-to-ignore
+    # field, never a redefinition. It is here so a signed-in client can show
+    # the persona BEFORE its first query, which Section 14.2 requires (the
+    # persona is assigned at first login, not at first answer). Without it the
+    # chip would be empty on the landing screen until a run returned.
+    persona_name: str
 
 
 class GuestTokenResponse(BaseModel):
@@ -158,3 +171,10 @@ class GuestTokenResponse(BaseModel):
     guest_id: uuid.UUID
     used: int
     total: int
+    # T-4.5-10, Section 14.2: "an anonymous prototype session gets a persona
+    # drawn and held for that session only, then redrawn on the next
+    # anonymous session". The mint IS that session's start, so this is where
+    # the draw becomes visible to the client. Keyed on the guest id, so it
+    # holds for the life of the guest session and changes with the next one,
+    # exactly as the section describes.
+    persona_name: str

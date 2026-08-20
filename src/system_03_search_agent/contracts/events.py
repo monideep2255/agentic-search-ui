@@ -141,6 +141,22 @@ class PlanPayload(BaseModel):
 
     narrative: str = Field(..., max_length=500)
     tool_calls: list[ToolCall] = Field(default_factory=list, max_length=20)
+    # T-4.5-06: the entities this step actually resolved, mirroring
+    # `ThinkPayload.resolved_entities` above. Additive within v1, which
+    # system-design-patterns pattern 10 permits: a new field with a default,
+    # never a redefinition, so every existing consumer is unaffected.
+    #
+    # It is on PLAN rather than THINK because Plan is where resolution
+    # happens today: `think_node` is still the build-phase-2.0 stub and emits
+    # an empty list, while `plan_node` runs the live symbol lookup. Build
+    # phase 4.7 owns moving that to Think (F-2.0-15), at which point this
+    # field becomes the redundant one rather than the useful one.
+    #
+    # Session memory reads THIS to learn what a turn resolved. Without it the
+    # only record of a resolved CURIE was prose in the narrative, and parsing
+    # a sentence to recover a value the code already had is how a fragile
+    # dependency gets built.
+    resolved_entities: list[ResolvedEntity] = Field(default_factory=list, max_length=20)
 
 
 class ToolStartPayload(BaseModel):

@@ -1278,7 +1278,13 @@ class TestAskCommand:
 
         renderer_holder: list[_FakeRenderer] = []
 
-        def make_renderer(out: object, err: object, *, operator: bool) -> _FakeRenderer:
+        def make_renderer(
+            out: object, err: object, *, operator: bool, persona_name: str | None = None
+        ) -> _FakeRenderer:
+            # T-4.5-10 added `persona_name` to the real Renderer. Accepted
+            # and ignored here: these tests grade stream disclosures, not
+            # the status-line prefix, which has its own coverage.
+            del persona_name
             renderer = _FakeRenderer(out, err, operator=operator)
             renderer.finish_result = 0
             renderer_holder.append(renderer)
@@ -1329,7 +1335,13 @@ class TestAskCommand:
         creds = FakeCredentials(base_url="http://test", access_token="a", refresh_token="r")
         fake_modules.credentials.load = lambda: creds
 
-        def make_renderer(out: object, err: object, *, operator: bool) -> _FakeRenderer:
+        def make_renderer(
+            out: object, err: object, *, operator: bool, persona_name: str | None = None
+        ) -> _FakeRenderer:
+            # T-4.5-10 added `persona_name` to the real Renderer. Accepted
+            # and ignored here: these tests grade stream disclosures, not
+            # the status-line prefix, which has its own coverage.
+            del persona_name
             renderer = _FakeRenderer(out, err, operator=operator)
             renderer.finish_result = 7  # a distinctive, non-conventional code
             return renderer
@@ -1373,7 +1385,7 @@ class TestAskCommand:
         """
         creds = FakeCredentials(base_url="http://test", access_token="a", refresh_token="r")
         fake_modules.credentials.load = lambda: creds
-        fake_modules.render.Renderer = lambda out, err, *, operator: _FakeRenderer(
+        fake_modules.render.Renderer = lambda out, err, *, operator, persona_name=None: _FakeRenderer(
             out, err, operator=operator
         )
 
@@ -1413,7 +1425,7 @@ class TestAskCommand:
     async def test_create_run_timeout_is_never_retried(self, main_module, fake_modules) -> None:
         creds = FakeCredentials(base_url="http://test", access_token="a", refresh_token="r")
         fake_modules.credentials.load = lambda: creds
-        fake_modules.render.Renderer = lambda out, err, *, operator: _FakeRenderer(
+        fake_modules.render.Renderer = lambda out, err, *, operator, persona_name=None: _FakeRenderer(
             out, err, operator=operator
         )
 
@@ -1452,7 +1464,7 @@ class TestAskCommand:
     ) -> None:
         creds = FakeCredentials(base_url="http://test", access_token="a", refresh_token="r")
         fake_modules.credentials.load = lambda: creds
-        fake_modules.render.Renderer = lambda out, err, *, operator: _FakeRenderer(
+        fake_modules.render.Renderer = lambda out, err, *, operator, persona_name=None: _FakeRenderer(
             out, err, operator=operator
         )
 
@@ -1523,7 +1535,13 @@ class TestAskCommand:
 
         renderer_holder: list[_FakeRenderer] = []
 
-        def make_renderer(out: object, err: object, *, operator: bool) -> _FakeRenderer:
+        def make_renderer(
+            out: object, err: object, *, operator: bool, persona_name: str | None = None
+        ) -> _FakeRenderer:
+            # T-4.5-10 added `persona_name` to the real Renderer. Accepted
+            # and ignored here: these tests grade stream disclosures, not
+            # the status-line prefix, which has its own coverage.
+            del persona_name
             renderer = _FakeRenderer(out, err, operator=operator)
             renderer.finish_result = 7  # a distinctive, non-conventional code
             renderer_holder.append(renderer)
@@ -1695,7 +1713,7 @@ class TestAskCommand:
     ) -> None:
         creds = FakeCredentials(base_url="http://test", access_token="a", refresh_token="r")
         fake_modules.credentials.load = lambda: creds
-        fake_modules.render.Renderer = lambda out, err, *, operator: _FakeRenderer(
+        fake_modules.render.Renderer = lambda out, err, *, operator, persona_name=None: _FakeRenderer(
             out, err, operator=operator
         )
 
@@ -1782,7 +1800,7 @@ class TestAskCommand:
         fake_modules.credentials.load = lambda: creds
         captured: dict[str, object] = {}
 
-        def make_renderer(out: object, err: object, *, operator: bool) -> _FakeRenderer:
+        def make_renderer(out: object, err: object, *, operator: bool, persona_name: str | None = None) -> _FakeRenderer:
             captured["operator"] = operator
             return _FakeRenderer(out, err, operator=operator)
 
@@ -1828,7 +1846,7 @@ class TestAskCommand:
         """
         creds = FakeCredentials(base_url="http://test", access_token="a", refresh_token="r")
         fake_modules.credentials.load = lambda: creds
-        fake_modules.render.Renderer = lambda out, err, *, operator: _FakeRenderer(
+        fake_modules.render.Renderer = lambda out, err, *, operator, persona_name=None: _FakeRenderer(
             out, err, operator=operator
         )
 
@@ -1926,7 +1944,7 @@ class TestStreamDisclosures:
     ) -> tuple[int, str]:
         creds = FakeCredentials(base_url="http://test", access_token="a", refresh_token="r")
         fake_modules.credentials.load = lambda: creds
-        fake_modules.render.Renderer = lambda out, err, *, operator: _FakeRenderer(
+        fake_modules.render.Renderer = lambda out, err, *, operator, persona_name=None: _FakeRenderer(
             out, err, operator=operator
         )
         fake_modules.client.CliClient = lambda http, c: _FakeCliClientForStream(

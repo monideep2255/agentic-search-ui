@@ -462,6 +462,11 @@ from system_03_search_agent.contracts.events import (
     TrustOutcome,
     TrustSignalPayload,
 )
+from system_03_search_agent.contracts.events import (
+    ResolvedEntity as EventResolvedEntity,
+)
+from system_03_search_agent.contracts.query import SessionMemorySummary
+from system_03_search_agent.core.session_memory import build_session_context
 from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.data.session import session_scope
 from system_03_search_agent.guardrail import classifier, forbidden, prefilter
@@ -479,11 +484,14 @@ from system_03_search_agent.harness.harness import (
     QueryClass,
     budget_for_step,
 )
+from system_03_search_agent.harness.tiers import Tier
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
 from system_03_search_agent.synthesis.findings import (
     SynthFinding,
+    build_completeness_directive,
     build_synth_findings,
     build_synth_messages,
+    unreported_findings,
 )
 from system_03_search_agent.synthesis.freshness import (
     STABLE_FIELD_EXAMPLES,
@@ -909,7 +917,8 @@ async def think_node(state: GraphState) -> dict[str, Any]:
             trace_id,
             "guard",
             "think",
-            _stub_probe_messages(query.text),
+            # T-4.5-06: same dynamic-suffix rule as Plan below.
+            _stub_probe_messages(query.text + _memory_suffix(state, "guard")),
             budget_s=budget_for_step("think", "lookup"),
         )
     except cost_control.QueryCapExceededError:
@@ -1632,8 +1641,43 @@ def _build_planned_ncbi_efetch_call(gene_curie: str) -> _PlannedNcbiEfetchToolCa
     return _PlannedNcbiEfetchToolCall(tool_call=tool_call, ncbi_efetch_input=ncbi_efetch_input)
 
 
+def _session_memory(state: GraphState) -> SessionMemorySummary | None:
+    """The caller's session memory for this run, if any (Section 14.3)."""
+    context = state.get("context")
+    return getattr(context, "session_memory", None) if context is not None else None
+
+
+def _memory_curies(state: GraphState) -> list[str]:
+    """CURIEs this session already resolved, for reference resolution."""
+    memory = _session_memory(state)
+    if memory is None:
+        return []
+    return [entity.curie for entity in memory.resolved_entities]
+
+
+def _memory_suffix(state: GraphState, tier: Tier) -> str:
+    """The session-memory block to append to a Think or Plan prompt.
+
+    Returns "" when there is no memory, so the prompt for a first turn is
+    byte-identical to what it was before this phase and the common case costs
+    nothing.
+
+    `injected_steps` is not consulted here to decide WHETHER to inject; the
+    two call sites are Think and Plan by construction and there is no third.
+    It exists as the single declaration those call sites are checked against,
+    which is what premise-gate arm P10 asserts.
+    """
+    memory = _session_memory(state)
+    if memory is None:
+        return ""
+    block = build_session_context(memory, tier=tier)
+    return f"\n\n{block}" if block else ""
+
+
 async def _select_planned_tool_call(
-    query_text: str, query_class: QueryClass
+    query_text: str,
+    query_class: QueryClass,
+    memory_curies: list[str] | None = None,
 ) -> _PlannedToolCall | _UnresolvedEntityRefusal | None:
     """Deterministically select `cypher_query`, refuse, or select nothing.
 
@@ -1662,13 +1706,33 @@ async def _select_planned_tool_call(
         return None
 
     resolution = await _resolve_query_entities(query_text)
-    if not resolution.curies and resolution.unresolved_symbols:
+
+    # T-4.5-06, Section 14.3: reference resolution against session memory.
+    #
+    # This is the ONE place memory is allowed to change what happens, and it
+    # is orchestration, never grounding: it decides which entity the question
+    # is ABOUT, and nothing about what may then be claimed. Whatever the graph
+    # returns for that entity is retrieved fresh this turn and grounded by the
+    # same code as any other query, so Section 14.1's firewall holds.
+    #
+    # It fires only when this turn resolved NOTHING on its own. A question
+    # that names its own gene is never overridden by an older one from memory,
+    # which would be memory silently answering a different question than the
+    # one asked.
+    #
+    # Closes the mechanism half of F-4.8-A-22: a canned follow-up chip sends
+    # "What variants cause it?" as a standalone query, and before this there
+    # was no prior turn for "it" to bind to.
+    target_curies = resolution.curies
+    if not target_curies and memory_curies:
+        target_curies = list(memory_curies)
+    elif not resolution.curies and resolution.unresolved_symbols:
         return _UnresolvedEntityRefusal(attempted_symbols=resolution.unresolved_symbols)
 
     cypher_input = CypherQueryInput(
         query_intent=query_text[:_PLAN_TOOL_CALL_MAX_INTENT_CHARS],
         query_class=query_class,
-        target_entities=resolution.curies,
+        target_entities=target_curies,
         row_limit=_PLAN_TOOL_CALL_ROW_LIMIT,
     )
     tool_call = ToolCall(
@@ -1692,7 +1756,12 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             trace_id,
             "plan",
             "plan",
-            [{"role": "user", "content": query.text}],
+            # T-4.5-06: memory rides the DYNAMIC SUFFIX, appended after the
+            # question, never spliced into the system block. The system block
+            # is the prompt-cache stable prefix, and a per-session value there
+            # misses the cache on every request whose memory changed, which is
+            # every request after the first. Nothing errors; the bill climbs.
+            [{"role": "user", "content": query.text + _memory_suffix(state, "plan")}],
             budget_s=budget_for_step("plan", query_class),
         )
     except cost_control.QueryCapExceededError:
@@ -1700,7 +1769,9 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     except HarnessCallError as exc:
         return {"step_error": _step_error_kwargs("plan", exc)}
 
-    planned = await _select_planned_tool_call(query.text, query_class)
+    planned = await _select_planned_tool_call(
+        query.text, query_class, _memory_curies(state)
+    )
     if isinstance(planned, _UnresolvedEntityRefusal):
         # T-3.1-13/F-2.1-B10: refuse now, before act_node ever dispatches
         # a tool call and before write_node's own synth call, rather than
@@ -1746,6 +1817,24 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         plan_payload = PlanPayload(
             narrative=narrative,
             tool_calls=[p.tool_call for p in planned_tool_calls],
+            # T-4.5-06: publish what this step actually resolved, so session
+            # memory can record it from a typed field rather than by parsing
+            # the narrative sentence above for a CURIE.
+            #
+            # `text` is the CURIE rather than the user's phrase: the free-text
+            # mention is not recoverable at this point, and echoing the CURIE
+            # is honest where inventing a phrase would not be.
+            #
+            # `confidence` is 1.0 because this list contains only CURIEs a
+            # LIVE lookup confirmed. `_resolve_query_entities` returns a
+            # symbol as unresolved rather than guessing, so a value reaching
+            # here is a match, not a ranked candidate. If that resolver ever
+            # gains fuzzy matching, this constant becomes a lie and must move
+            # with it.
+            resolved_entities=[
+                EventResolvedEntity(text=curie, curie=curie, confidence=1.0)
+                for curie in planned.cypher_input.target_entities[:20]
+            ],
         )
 
     sink.emit("plan", plan_payload)
@@ -2711,6 +2800,49 @@ def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
         f"Note: this answer does not address the following entities named "
         f"in the question: {listed}. Ask about them individually for a "
         f"complete answer."
+    )
+
+
+def _build_incomplete_answer_note(omitted: list[Any], reported: int) -> str:
+    """T-4.5-07, F-4.5-06 breach 2: disclose that findings went unreported.
+
+    Two things this note got wrong on its first version, both caught by the
+    offline eval gate rather than by review, and both worth stating because
+    the shape of each recurs:
+
+    WRONG CLAIM. It ended "The full set is in the citations." That is FALSE.
+    A finding the answer never reported produced no grounded claim, so it
+    produced no citation either; the omitted rows are missing from the
+    citations exactly as they are missing from the prose. A disclosure that
+    misdirects the reader to somewhere the data is not is worse than no
+    disclosure, because it closes the question.
+
+    WRONG SHAPE. It was three sentences. `_citation_coverage` counts any
+    non-framing sentence with no marker as an uncited factual claim, and only
+    the first sentence started with "Note:", so the continuations read as
+    uncited claims and failed the cite-or-refuse gate. Now one sentence.
+
+    It states the SCALE rather than naming each omitted value, which is the
+    same discipline `_build_truncated_answer_note` already follows, and here
+    it is also forced: a Layer 1 field value like
+    "NM_007294.4(BRCA1):c.190T>G" is full of periods, and the coverage
+    grader splits sentences on periods, so inlining values would fragment the
+    note into uncited pieces no matter how it was worded.
+    """
+    total = reported + len(omitted)
+    count = len(omitted)
+    # Singular and plural are handled rather than left as "1 findings are",
+    # because this string is shown to a reader in a clinical context and a
+    # visible grammar slip in a caveat undermines the caveat.
+    tail = (
+        "and the one not reported is absent"
+        if count == 1
+        else f"and the {count} not reported are absent"
+    )
+    return (
+        f"Note: this answer reports {reported} of the {total} findings "
+        f"retrieved for it, {tail} from the citations as well as from the "
+        "text above"
     )
 
 
@@ -4098,7 +4230,10 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             trace_id,
             "synth",
             "write",
-            build_synth_messages(query.text, synth_findings),
+            # T-4.5-07: the depth the caller asked for reaches synthesis here
+            # and nowhere else. It was carried on `Query` from build phase
+            # 1.0 and dropped at this line until phase 4.5.
+            build_synth_messages(query.text, synth_findings, query.audience_depth),
             budget_s=budget_for_step("write", query_class),
         )
     except cost_control.QueryCapExceededError:
@@ -4133,6 +4268,79 @@ async def write_node(state: GraphState) -> dict[str, Any]:
         core_ask_required=True,
         question=query.text,
     )
+
+    # T-4.5-07, finding F-4.5-06 breach 2: the completeness repair.
+    #
+    # An answer can be fully grounded, fully cited, and still report only
+    # some of the findings retrieval produced. Measured on `clinical_brief`:
+    # three of four pinned disease associations, confidently worded, with
+    # nothing announcing the fourth. Two strengthenings of the prompt did not
+    # hold it, so the guarantee is structural here rather than promptable
+    # there.
+    #
+    # Bounded to ONE extra Synth call, and only when something was actually
+    # omitted, so the common case costs nothing. It sits inside the same
+    # try block as the first call so a cap hit or a harness failure during
+    # the repair takes the identical, already-tested path as the original,
+    # rather than introducing a second error contract to keep in sync.
+    #
+    # If the repair still comes back incomplete, this does NOT silently
+    # accept it: the block below floors `trust_outcome` at `ask` and attaches
+    # a disclosure note, so an incomplete answer is never presented as a
+    # complete one. Fail loud, then fail visible.
+    omitted_findings: list[SynthFinding] = []
+    if tool_outcome != "no_tool" and synth_findings:
+        omitted_findings = unreported_findings(
+            {claim.finding.citation_id for claim in grounding.claims}, synth_findings
+        )
+        if omitted_findings:
+            try:
+                repaired_text = await _dispatch_tier_call(
+                    harness,
+                    trace_id,
+                    "synth",
+                    "write",
+                    build_synth_messages(
+                        query.text,
+                        synth_findings,
+                        query.audience_depth,
+                        completeness_directive=build_completeness_directive(
+                            omitted_findings
+                        ),
+                    ),
+                    budget_s=budget_for_step("write", query_class),
+                )
+            except (cost_control.QueryCapExceededError, HarnessCallError):
+                # The repair is best-effort. A cap or harness failure during
+                # it must not discard the answer already in hand, which is
+                # incomplete but grounded and useful; the disclosure below
+                # still fires because `omitted_findings` is unchanged.
+                repaired_text = None
+            if repaired_text is not None:
+                repaired_grounding = run_grounding_pass(
+                    _response_text(repaired_text),
+                    synth_findings,
+                    core_ask_required=True,
+                    question=query.text,
+                )
+                still_omitted = unreported_findings(
+                    {
+                        claim.finding.citation_id
+                        for claim in repaired_grounding.claims
+                    },
+                    synth_findings,
+                )
+                # Keep the repair only when it is a strict improvement.
+                # A regeneration that reported the missing rows but dropped
+                # others, or that grounded nothing at all, is not an
+                # improvement, and accepting it because it is newer would
+                # trade a known-incomplete answer for an unknown one.
+                if repaired_grounding.claims and len(still_omitted) < len(
+                    omitted_findings
+                ):
+                    synth_text = repaired_text
+                    grounding = repaired_grounding
+                    omitted_findings = still_omitted
 
     if tool_outcome == "no_tool":
         # No tool was selected at all, so there is nothing to ground
@@ -4184,6 +4392,19 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             if unaddressed:
                 trust_outcome = aggregate([trust_outcome, "ask"])
                 partial_answer_note = _build_partial_answer_note(unaddressed)
+
+    # T-4.5-07, F-4.5-06 breach 2. The second half of the completeness
+    # repair above: when the bounded regeneration did not recover every
+    # omitted finding, say so rather than shipping a short answer that looks
+    # whole. Floors at `ask` through the same `aggregate` most-restrictive-
+    # wins rule the entity-level check and the conflict check already use, so
+    # it can tighten an outcome and never weaken a `refuse`.
+    incomplete_answer_note: str | None = None
+    if omitted_findings and trust_outcome != "refuse":
+        trust_outcome = aggregate([trust_outcome, "ask"])
+        incomplete_answer_note = _build_incomplete_answer_note(
+            omitted_findings, len(synth_findings) - len(omitted_findings)
+        )
 
     # `citations_capped` keeps its 2.1 meaning: the user is being shown
     # fewer facts than exist. Its two sources are now the findings cap
@@ -4345,6 +4566,8 @@ async def write_node(state: GraphState) -> dict[str, Any]:
 
         if partial_answer_note is not None:
             sink.emit("token", TokenPayload(text=partial_answer_note, marker_ids=[]))
+        if incomplete_answer_note is not None:
+            sink.emit("token", TokenPayload(text=incomplete_answer_note, marker_ids=[]))
 
         for citation in citations:
             sink.emit("citation", citation)

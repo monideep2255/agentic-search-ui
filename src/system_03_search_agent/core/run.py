@@ -89,6 +89,7 @@ DECISIONS.md (T-2.0-07): remove this wrapper only when a phase 5.0/5.1
 ticket replaces it with an intentionally configured tracer.
 """
 
+import logging
 import time
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
@@ -146,6 +147,146 @@ def _crash_fallback_events(trace_id: str, elapsed_ms: int, start_seq: int = 0) -
     ]
 
 
+logger = logging.getLogger(__name__)
+
+
+async def _load_session_memory(
+    query: Query, context: RequestContext
+) -> RequestContext:
+    """Attach this session's stored memory to the context (T-4.5-05/06).
+
+    The other half of `_remember_turn`, and missing for exactly as long: the
+    graph reads `RequestContext.session_memory`, which only a CALLER ever
+    set, so a summary could be written every turn and never read back. Write
+    without read and read without write are the same bug seen from two sides,
+    and both look correct in isolation.
+
+    A caller that supplied its own memory keeps it. That is what every
+    premise-gate injection arm does, and it is also the honest contract for a
+    programmatic caller such as MCP that manages its own conversation state.
+
+    Best-effort, like the write: a memory that cannot be loaded degrades to a
+    stateless turn, which is a worse answer rather than no answer. An
+    READ and WRITE need different answers to a session that is not the
+    caller's, and an earlier version gave them the same one.
+
+    A read degrades to a STATELESS turn. It discloses nothing, since the
+    refusal happens before any content is loaded, and the caller simply gets
+    no memory. Raising was wrong twice over: it broke `run()`'s documented
+    never-raises contract by escaping unhandled, and it turned a benign id
+    collision into a failed query.
+
+    A WRITE still refuses, in `save_for_caller`, because that one would
+    overwrite someone else's conversation. Same check, two consequences,
+    chosen by what the operation can actually do.
+    """
+    if context.session_memory is not None:
+        return context
+    from system_03_search_agent.core.session_memory import (
+        SessionOwnershipError,
+        load_for_caller,
+    )
+
+    try:
+        stored = await load_for_caller(
+            session_id=query.session_id, user_id=query.user_id
+        )
+    except SessionOwnershipError:
+        # Logged, not raised: a normal outcome for a reused or guessed
+        # session id, and the caller loses nothing they were entitled to.
+        logger.info(
+            "session memory withheld (not the caller's session) for trace_id=%s",
+            query.trace_id,
+        )
+        return context
+    except Exception:
+        logger.warning(
+            "session memory not loaded for trace_id=%s", query.trace_id, exc_info=True
+        )
+        return context
+    if stored is None:
+        return context
+    return context.model_copy(update={"session_memory": stored})
+
+
+async def _remember_turn(query: Query, events: list[Event]) -> None:
+    """Fold this finished turn into the session's memory (T-4.5-04).
+
+    THE REASON THIS FUNCTION EXISTS AS A SEPARATE STEP, stated because its
+    absence was the phase's own worst defect (F-4.5-09): every memory arm in
+    the premise gate hands `RequestContext.session_memory` in directly, so a
+    system that reads and injects memory perfectly while never WRITING any
+    passes all of them. The gate could not see that memory was inert,
+    because the gate supplied the memory itself.
+
+    Best-effort by construction. Memory is an optimization: a failure to
+    file a summary must never fail a query whose answer already streamed, so
+    every error here is swallowed after the events are out. It runs AFTER
+    the caller has been given the answer for the same reason.
+    """
+    from system_03_search_agent.contracts.query import (
+        CompressedFinding,
+        ResolvedEntity,
+    )
+    from system_03_search_agent.core.session_memory import (
+        load_for_caller,
+        merge_turn,
+        save_for_caller,
+    )
+
+    citations = [e.payload for e in events if e.type == "citation"]
+    # Read from the typed field `plan_node` now publishes (T-4.5-06), never
+    # by parsing the narrative for a CURIE-shaped substring. An earlier
+    # version reached into `tool_calls[].target_entities`, which does not
+    # exist on the wire: `ToolCall` carries tool, call_id and layer only, so
+    # it silently found nothing and memory recorded no entities at all.
+    resolved: list[ResolvedEntity] = []
+    seen: set[str] = set()
+    for event in events:
+        if event.type != "plan":
+            continue
+        for entity in event.payload.get("resolved_entities") or []:
+            curie = str(entity.get("curie", "")) if isinstance(entity, dict) else ""
+            if curie and curie not in seen:
+                seen.add(curie)
+                # The event contract's ResolvedEntity is {text, curie,
+                # confidence}; the memory contract's is {mention, curie,
+                # entity_type}. They are different shapes for different jobs
+                # and this is the one place they meet, so the translation is
+                # explicit rather than a spread. `entity_type` is "Unknown"
+                # because the event does not carry one and deriving "Gene"
+                # from the CURIE prefix would be reading a fact off a naming
+                # convention.
+                resolved.append(
+                    ResolvedEntity(
+                        mention=str(entity.get("text") or curie)[:200],
+                        curie=curie[:100],
+                        entity_type="Unknown",
+                    )
+                )
+    findings = [
+        CompressedFinding(
+            claim_summary=str(c.get("claim_text", ""))[:280],
+            trace_id=query.trace_id,
+            citation_ids=[str(c.get("citation_id", ""))][:5],
+        )
+        for c in citations
+        if c.get("claim_text")
+    ]
+    if not resolved and not findings:
+        return
+
+    existing = await load_for_caller(session_id=query.session_id, user_id=query.user_id)
+    summary = merge_turn(
+        existing,
+        session_id=query.session_id,
+        now=datetime.now(UTC),
+        resolved=resolved,
+        findings=findings,
+    )
+    await save_for_caller(summary, user_id=query.user_id)
+
+
 async def run(query: Query, context: RequestContext) -> AsyncIterator[Event]:
     """The single internal interface every surface calls.
 
@@ -168,6 +309,7 @@ async def run(query: Query, context: RequestContext) -> AsyncIterator[Event]:
     """
     start = time.monotonic()
     harness = Harness(trace_id=query.trace_id)
+    context = await _load_session_memory(query, context)
     initial_state: GraphState = {
         "query": query,
         "context": context,
@@ -186,6 +328,17 @@ async def run(query: Query, context: RequestContext) -> AsyncIterator[Event]:
         return
     for event in final_state["events"]:
         yield event
+    # After the caller has the answer, never before: see `_remember_turn`.
+    try:
+        await _remember_turn(query, final_state["events"])
+    except Exception:
+        # Logged rather than silently swallowed: a memory write that fails on
+        # every turn makes the feature look implemented and behave inert,
+        # which is F-4.5-09's failure mode arriving by a second route. The
+        # answer is already streamed, so this cannot affect the caller.
+        logger.warning(
+            "session memory not recorded for trace_id=%s", query.trace_id, exc_info=True
+        )
 
 
 async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[Event]:
@@ -224,6 +377,7 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
     """
     start = time.monotonic()
     harness = Harness(trace_id=query.trace_id)
+    context = await _load_session_memory(query, context)
     initial_state: GraphState = {
         "query": query,
         "context": context,
@@ -233,14 +387,28 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
         "start_monotonic": start,
     }
     next_seq = 0
+    # Accumulated so this path can record memory too. `run()` gets the whole
+    # event list for free from `ainvoke`; this one streams and would otherwise
+    # have nothing to fold at the end. Recording only in `run()` would have
+    # left memory inert on the SSE surface, which is the one real users
+    # actually reach, while every test that calls `run()` passed.
+    seen_events: list[Event] = []
     try:
         with tracing_context(enabled=False):
             async for update in compiled_graph.astream(initial_state, stream_mode="updates"):
                 for partial_state in update.values():
                     for event in partial_state.get("events", []):
                         next_seq = max(next_seq, event.seq + 1)
+                        seen_events.append(event)
                         yield event
     except Exception:  # noqa: BLE001 - mirrors run()'s deliberate last-resort catch, F-2.0-11
         elapsed_ms = int((time.monotonic() - start) * 1000)
         for event in _crash_fallback_events(query.trace_id, elapsed_ms, start_seq=next_seq):
             yield event
+        return
+    try:
+        await _remember_turn(query, seen_events)
+    except Exception:
+        logger.warning(
+            "session memory not recorded for trace_id=%s", query.trace_id, exc_info=True
+        )

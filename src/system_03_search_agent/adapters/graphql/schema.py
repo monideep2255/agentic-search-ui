@@ -86,6 +86,7 @@ from system_03_search_agent.adapters.graphql.types import (
 )
 from system_03_search_agent.contracts.query import Query as CoreQuery
 from system_03_search_agent.contracts.query import RequestContext
+from system_03_search_agent.core.persona import persona_for_session
 from system_03_search_agent.core.run_registry import (
     ConcurrentRunCapExceededError,
     RunNotFoundError,
@@ -322,7 +323,16 @@ class Mutation:
                 )
             ) from None
 
-        return await fold.fold_run(run_id)
+        # T-4.5-10, Section 14.2. Resolved here rather than inside the fold
+        # because this is where the caller's identity exists. Keyed on the
+        # account, since this surface is registered accounts only, so a
+        # GraphQL caller sees the same scientist the web UI gives them.
+        return await fold.fold_run(
+            run_id,
+            persona_name=persona_for_session(
+                session_id=input.session_id, user_id=str(context.principal.id)
+            ),
+        )
 
     @strawberry.mutation
     async def stop_run(self, info: strawberry.Info, run_id: strawberry.ID) -> StopRunResult:

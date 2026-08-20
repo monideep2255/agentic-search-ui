@@ -52,6 +52,32 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 /**
+ * T-4.5-10. `App` fetches the session's persona once at load from
+ * `GET /v1/persona`, so the shell's persona chip carries the name the server
+ * assigned rather than one the browser invented. This file deliberately uses
+ * dynamic imports and mocks no module (see WHY THE IMPORTS ARE DYNAMIC
+ * above), so the one network call that clause 2 and clause 4 depend on is
+ * stubbed at the `fetch` level instead.
+ *
+ * Only `/v1/persona` is answered here. Anything else this suite reaches for
+ * still fails exactly as it did before, so this stub cannot quietly satisfy
+ * an assertion it was not written for.
+ */
+const _realFetch = globalThis.fetch;
+globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+  const url = typeof input === "string" ? input : input.toString();
+  if (url.includes("/v1/persona")) {
+    return Promise.resolve(
+      new Response(JSON.stringify({ persona_name: "Mendel" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+  return _realFetch(input, init);
+}) as typeof fetch;
+
+/**
  * The design system is the fixture. These values are transcribed from
  * `docs/build/design/design-system/foundations/colors.html`, which is
  * generated from the approved prototype, so a drift here means the theme and
@@ -166,8 +192,13 @@ describe("clause 2: structure", () => {
     // T-4.8-03. The disclaimer strip is permanent and not dismissible, so its
     // absence is a compliance defect rather than a styling one.
     const { AppShell } = await loadShell();
+    // T-4.5-10: the shell no longer invents a persona. It used to default to
+    // a hardcoded "Mendel", which meant this assertion passed whether or not
+    // a real name ever reached the component. The name is now an INPUT,
+    // resolved server-side from the curated deceased-only list, so the gate
+    // supplies one and the assertion tests rendering rather than a default.
     render(
-      <AppShell>
+      <AppShell personaName="Mendel">
         <div />
       </AppShell>,
     );
@@ -742,9 +773,16 @@ describe("clause 4: stub registry", () => {
     // production; this makes the set enumerable rather than discoverable.
     const { STUB_REGISTRY } = await loadRegistry();
     const surfaces = STUB_REGISTRY.map((entry: { surface: string }) => entry.surface);
+    // "persona" was removed from this list by T-4.5-10, which WIRED that
+    // surface: the chip now renders the server-assigned name from the
+    // curated deceased-only list, so there is no persona stub left to
+    // declare. The list is deliberately not emptied of the others; each
+    // remaining entry is still a real placeholder with an owning phase.
+    // "audience-depth" was removed by T-4.5-08/T-4.5-11, which wired it: the
+    // control already existed and already sent Query.audience_depth, but the
+    // backend dropped the value before synthesis, so it was a stub in effect.
+    // It now reaches the Write step and persists per account.
     for (const expected of [
-      "persona",
-      "audience-depth",
       "follow-up",
       "history",
       "feedback",
@@ -786,7 +824,12 @@ describe("clause 4: stub registry", () => {
       screen.getByRole("textbox", { name: /question/i }),
       "the assembled app must render the landing before this test means anything",
     ).toBeInTheDocument();
-    expect(screen.getByTestId("persona-chip")).toBeInTheDocument();
+    // T-4.5-10: the persona arrives from `GET /v1/persona` (stubbed at the
+    // top of this file), so it lands a tick after first paint rather than
+    // being drawn synchronously in the client. Awaited rather than asserted
+    // synchronously, which is the honest consequence of the name now coming
+    // from the server instead of being invented locally.
+    expect(await screen.findByTestId("persona-chip")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /depth/i })).toBeInTheDocument();
 
     expect(container.textContent ?? "").not.toMatch(

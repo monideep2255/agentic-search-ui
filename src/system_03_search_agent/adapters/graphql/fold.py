@@ -163,15 +163,21 @@ class RunNotYetFinishedError(FoldError):
 
 
 # ---------------------------------------------------------------------------
-# This surface's own persona-name stub. Mirrors adapters/web_sse/app.py's
-# `_STUB_PERSONA_NAME = "Assistant"` value exactly, restated rather than
-# imported: importing from `adapters.web_sse.app` would invert this
-# package's dependency direction (that module mounts this one's router,
-# T-4.3-07), the same reasoning tracker/phase_4.3.md gives for every other
-# surface-local constant in this phase.
+# T-4.5-10 removed this surface's `_PERSONA_NAME = "Assistant"` stub.
+#
+# It had been a restated literal rather than an import, because importing
+# from `adapters.web_sse.app` would invert this package's dependency
+# direction (that module mounts this one's router, T-4.3-07). That reasoning
+# was correct and no longer applies: the real persona lives in
+# `core.persona`, which sits BELOW every adapter, so both surfaces import it
+# and neither restates anything.
+#
+# The name is resolved by the caller in `schema.py`, where the caller's
+# identity actually exists, and threaded in as `persona_name`. `fold_run`
+# takes `run_id` and knows nothing about who is asking, so resolving it here
+# would have meant either widening this function's inputs for no other
+# reason or, worse, reaching for a request-scoped global.
 # ---------------------------------------------------------------------------
-
-_PERSONA_NAME = "Assistant"
 
 # F-4.1-A-06's precedent (adapters/mcp/server.py): a wall-clock bound on the
 # fold loop itself, independent of any request-level timeout security.py's
@@ -188,7 +194,8 @@ _FOLD_LOOP_TIMEOUT_S = 240.0
 # database host, port, and username, in the finding that established this
 # rule). Keyed by error_class, a fixed literal per class, restated here
 # rather than imported from adapters.mcp.server for the same dependency-
-# direction reason `_PERSONA_NAME` above is restated rather than imported.
+# direction reason the persona stub above was restated rather than
+# imported, before T-4.5-10 removed it.
 _FATAL_ERROR_DISCLOSURE: dict[str, str] = {
     "transient": "This query hit a temporary error before finishing. Retrying may succeed.",
     "recoverable": "This query could not complete as requested.",
@@ -1069,7 +1076,9 @@ def _finalize(
 # ---------------------------------------------------------------------------
 
 
-async def fold_run(run_id: str, *, operator_mode: bool = False) -> AskResult:
+async def fold_run(
+    run_id: str, *, operator_mode: bool = False, persona_name: str
+) -> AskResult:
     """Subscribe to `run_id` via `default_registry.subscribe` and fold its
     ENTIRE event stream into one `AskResult`, waiting for the run's
     terminal event (`done`, or a fatal `error`).
@@ -1118,7 +1127,7 @@ async def fold_run(run_id: str, *, operator_mode: bool = False) -> AskResult:
     answer_text, trust_signal, citations, disclosures = _finalize(acc, run_finished=True)
     return AskResult(
         run_id=run_id,
-        persona_name=_PERSONA_NAME,
+        persona_name=persona_name,
         answer=answer_text,
         trust_signal=trust_signal,
         citations=citations,

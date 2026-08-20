@@ -643,8 +643,38 @@ class TestGoldenPath:
         assert "[think]" not in out
         assert "[plan]" not in out
         assert "[tool]" not in out
-        assert "[think]" in err
-        assert "[plan]" in err
+        # T-4.5-10 closed F-4.2-03, which this line used to pin the ABSENCE
+        # of: Section 13.3 asks the status line to carry the persona name,
+        # and build phase 4.2 had no field to read one from, so the prefix
+        # was the bare step label. It now reads "[Salk | think]".
+        #
+        # Strengthened rather than merely retargeted: asserting the step is
+        # present AND the prefix carries a name from the curated list is more
+        # than the old literal checked, and it would fail on a fabricated or
+        # hardcoded persona, which is the defect worth guarding against.
+        from system_03_search_agent.core.persona import load_persona_list
+
+        curated = {persona.name for persona in load_persona_list()}
+        think_prefixes = [
+            line.split("]")[0].lstrip("[")
+            for line in err.splitlines()
+            if "think]" in line
+        ]
+        assert think_prefixes, f"no think status line was rendered at all: {err!r}"
+        for prefix in think_prefixes:
+            assert prefix.endswith("| think"), (
+                f"the think status line lost its step label: {prefix!r}"
+            )
+            name = prefix.split("|")[0].strip()
+            assert name in curated, (
+                "the CLI status line carries a persona that is not from the "
+                f"curated list, so the deceased-only guarantee does not apply "
+                f"to what the user was shown: {name!r}"
+            )
+        # Same F-4.2-03 closure as the think line above: "[Palade | plan]".
+        assert any("| plan]" in line for line in err.splitlines()), (
+            f"no plan status line was rendered with a persona prefix: {err!r}"
+        )
         assert "[tool]" in err
 
 

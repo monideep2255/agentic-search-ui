@@ -32,22 +32,6 @@ export interface StubEntry {
 
 export const STUB_REGISTRY: StubEntry[] = [
   {
-    surface: "persona",
-    rendersToday:
-      "A name drawn from a ten-entry placeholder list, held for the session.",
-    wiredBy: "4.5",
-    realSource:
-      "persona_name on the POST /v1/query response, drawn from the curated top-100 " +
-      "biomedical-scientist list. Section 14.2. The curated list is its own Phase 6 task.",
-  },
-  {
-    surface: "audience-depth",
-    rendersToday:
-      "A three-way control that holds its value locally and locks during a run.",
-    wiredBy: "4.5",
-    realSource: "Query.audience_depth on POST /v1/query. Sections 12.9 and 14.5.",
-  },
-  {
     surface: "follow-up",
     rendersToday:
       "A follow-up field with suggested hints, which starts a fresh run.",
