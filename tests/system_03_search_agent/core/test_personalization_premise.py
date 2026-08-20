@@ -63,8 +63,14 @@ Exercised here:
   GUARDRAIL's, which already existed before this phase and already refuses
   this query. It is a REGRESSION GUARD that depth must not defeat, not
   evidence that depth is implemented.
-- Reference resolution across turns (P4), asserted by the CURIE actually
-  reached, never by the answer being non-empty.
+- Reference resolution across turns (P4), asserted on what PLAN targeted,
+  which is the layer memory is allowed to act on, and paired with a NEGATIVE
+  CONTROL: the identical question with no memory must NOT reach the same
+  entity. Without that control the arm would pass with memory injection
+  deleted, which is the vacuous shape F-4.5-02 was filed for. An earlier
+  version asserted the gene among the CITATIONS and failed while the
+  mechanism worked, because the question asks for variants and the cited
+  records are therefore variant rows, not the gene.
 - The anti-citation rule (P5): a claim living only in memory, which this
   turn's retrieval does not support, must not come back cited. Constructed
   so it CAN fail, meaning memory really does hold a claim the findings do
@@ -371,6 +377,19 @@ class Answer:
         return frozenset(
             (str(c.get("source_id")), str(c.get("claim_text")))
             for c in self.citations
+        )
+
+    @property
+    def plan_narrative(self) -> str:
+        """What Plan said it was going to do.
+
+        Orchestration is the layer session memory is ALLOWED to change, so it
+        is the layer a reference-resolution assertion belongs in. Asserting on
+        citations instead confuses "the pronoun bound" with "the answer
+        happened to mention the gene", which are different claims.
+        """
+        return " ".join(
+            str(e.payload.get("narrative", "")) for e in self.events if e.type == "plan"
         )
 
     @property
@@ -822,16 +841,35 @@ async def test_p4_a_pronoun_resolves_to_the_prior_turns_entity() -> None:
         ],
         last_updated=_now(),
     )
+    question = "What variants are associated with it?"
     answer = await _ask(
-        "What variants are associated with it?",
-        session_memory=memory,
-        session_id="premise-gate-4-5-p4",
+        question, session_memory=memory, session_id="premise-gate-4-5-p4"
     )
-    assert any(BRCA1 in str(c.get("source_id", "")) for c in answer.citations), (
+
+    # Asserted on ORCHESTRATION, not on citations. The question asks for
+    # variants, so the cited records are ClinVar variant rows and the gene
+    # CURIE never appears among them; an earlier version of this arm looked
+    # for it there and failed while the mechanism was working correctly.
+    # What "the pronoun resolved" actually means is that Plan targeted the
+    # prior turn's entity, and Plan says so in its own narrative.
+    assert BRCA1 in answer.plan_narrative, (
         "the pronoun did not resolve to the prior turn's entity. The answer "
-        "may still be fluent, which is why this asserts the CURIE reached "
-        f"rather than that an answer came back. expected={BRCA1}"
-        + answer.describe()
+        "may still be fluent and fully cited, which is why this asserts what "
+        f"PLAN targeted rather than that an answer came back. expected={BRCA1}"
+        f"\n  plan={answer.plan_narrative!r}" + answer.describe()
+    )
+
+    # The negative control, and the reason this arm can fail at all. Without
+    # memory the identical question must NOT reach BRCA1, because there is
+    # nothing for "it" to bind to. Without this, the arm above would pass on
+    # a system that resolved BRCA1 for some unrelated reason, which is the
+    # vacuous-arm shape F-4.5-02 was filed for.
+    control = await _ask(question, session_id="premise-gate-4-5-p4-control")
+    assert BRCA1 not in control.plan_narrative, (
+        "the same question resolved to BRCA1 with NO session memory, so this "
+        "arm proves nothing about reference resolution: it would pass with "
+        "memory injection deleted entirely."
+        f"\n  plan={control.plan_narrative!r}" + control.describe()
     )
 
 
@@ -1076,30 +1114,95 @@ def test_p10_memory_is_never_injected_into_the_act_step() -> None:
 # ---------------------------------------------------------------------------
 
 
-@premise_gate
 @pytest.mark.asyncio
-async def test_p11_a_session_belonging_to_another_account_is_refused() -> None:
+async def test_p11_session_memory_is_bound_to_its_owner() -> None:
     """F-4.1-A-15, boarded at build phase 4.1 and deferred to this phase.
 
     The finding's own wording: it "becomes a live authorization gap the
-    moment build phase 4.5 wires session memory". This is that moment.
+    moment build phase 4.5 wires session memory". This is that moment, and
+    this arm is what proves the gap closed.
+
+    Not marked `premise_gate`, and that is a deliberate trade rather than an
+    oversight. This asserts an authorization DECISION, which is pure and
+    store-independent by construction, so binding it to the live graph and a
+    real model key would make the one security arm in this file skip on any
+    machine without a tunnel. A skipped security check is worse than a fast
+    one. The store is injected so the decision is exercised directly; the
+    shipped store is a single indexed SELECT with no branching of its own.
+
+    Four cases, because the interesting failures are the two middle ones.
     """
     from system_03_search_agent.core.session_memory import (
         SessionOwnershipError,
         load_for_caller,
     )
 
+    owner = "user-a"
+    stranger = "user-b"
+    stored = {
+        "session_id": "s-1",
+        "resolved_entities": [
+            {"mention": "BRCA1", "curie": BRCA1, "entity_type": "Gene"}
+        ],
+        "compressed_findings": [],
+        "open_threads": [],
+        "token_budget": 1500,
+        "last_updated": _now().isoformat(),
+    }
+
+    class _Store:
+        def __init__(self, owner_id: str | None) -> None:
+            self._owner = owner_id
+
+        async def get(self, session_id: str):
+            if session_id == "unknown":
+                return None
+            return (self._owner, stored)
+
+    # 1. The owner gets their own memory back.
+    mine = await load_for_caller(
+        session_id="s-1", user_id=owner, store=_Store(owner)
+    )
+    assert mine is not None and mine.resolved_entities[0].curie == BRCA1
+
+    # 2. A different ACCOUNT is refused. This is the finding, exactly: an MCP
+    #    caller naming another account's session id.
     with pytest.raises(SessionOwnershipError) as caught:
-        await load_for_caller(
-            session_id="owned-by-someone-else", user_id="not-the-owner"
-        )
+        await load_for_caller(session_id="s-1", user_id=stranger, store=_Store(owner))
 
     message = str(caught.value)
-    assert "session" in message.lower(), (
-        "the refusal does not name what was refused. The retry-safety gate "
-        "requires an error to say what to do next, since the reader is an "
-        f"agent step. message={message!r}"
+    assert "s-1" in message and "session" in message.lower(), (
+        f"the refusal does not name what was refused: {message!r}"
     )
+    assert "retry" in message.lower(), (
+        "the refusal does not say what to do next. The reader here is an "
+        f"agent step, and the retry-safety gate requires it: {message!r}"
+    )
+    assert owner not in message and stranger not in message, (
+        "the refusal leaks an account identifier to the wrong caller, which "
+        f"is the disclosure F-4.1-J3-01 was filed for: {message!r}"
+    )
+
+    # 3. An ANONYMOUS session is not handed to an authenticated caller. A
+    #    guest conversation does not become the property of whoever signs in
+    #    next on that browser; migrating it is build phase 4.6's explicit
+    #    step, never a silent side effect here.
+    with pytest.raises(SessionOwnershipError):
+        await load_for_caller(session_id="s-1", user_id=owner, store=_Store(None))
+
+    # 4. ...and the reverse: an owned session is not readable with no
+    #    credential at all.
+    with pytest.raises(SessionOwnershipError):
+        await load_for_caller(session_id="s-1", user_id=None, store=_Store(owner))
+
+    # 5. An UNKNOWN session is not a refusal. "Not yours" and "does not
+    #    exist" must be indistinguishable to a caller, or this becomes an
+    #    oracle for probing which session ids are live. Returning None here
+    #    is what makes the two cases look identical from outside.
+    absent = await load_for_caller(
+        session_id="unknown", user_id=owner, store=_Store(owner)
+    )
+    assert absent is None
 
 
 # ---------------------------------------------------------------------------

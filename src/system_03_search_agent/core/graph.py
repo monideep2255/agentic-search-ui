@@ -462,6 +462,8 @@ from system_03_search_agent.contracts.events import (
     TrustOutcome,
     TrustSignalPayload,
 )
+from system_03_search_agent.contracts.query import SessionMemorySummary
+from system_03_search_agent.core.session_memory import build_session_context
 from system_03_search_agent.core.state import GraphState
 from system_03_search_agent.data.session import session_scope
 from system_03_search_agent.guardrail import classifier, forbidden, prefilter
@@ -479,6 +481,7 @@ from system_03_search_agent.harness.harness import (
     QueryClass,
     budget_for_step,
 )
+from system_03_search_agent.harness.tiers import Tier
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
 from system_03_search_agent.synthesis.findings import (
     SynthFinding,
@@ -911,7 +914,8 @@ async def think_node(state: GraphState) -> dict[str, Any]:
             trace_id,
             "guard",
             "think",
-            _stub_probe_messages(query.text),
+            # T-4.5-06: same dynamic-suffix rule as Plan below.
+            _stub_probe_messages(query.text + _memory_suffix(state, "guard")),
             budget_s=budget_for_step("think", "lookup"),
         )
     except cost_control.QueryCapExceededError:
@@ -1634,8 +1638,43 @@ def _build_planned_ncbi_efetch_call(gene_curie: str) -> _PlannedNcbiEfetchToolCa
     return _PlannedNcbiEfetchToolCall(tool_call=tool_call, ncbi_efetch_input=ncbi_efetch_input)
 
 
+def _session_memory(state: GraphState) -> SessionMemorySummary | None:
+    """The caller's session memory for this run, if any (Section 14.3)."""
+    context = state.get("context")
+    return getattr(context, "session_memory", None) if context is not None else None
+
+
+def _memory_curies(state: GraphState) -> list[str]:
+    """CURIEs this session already resolved, for reference resolution."""
+    memory = _session_memory(state)
+    if memory is None:
+        return []
+    return [entity.curie for entity in memory.resolved_entities]
+
+
+def _memory_suffix(state: GraphState, tier: Tier) -> str:
+    """The session-memory block to append to a Think or Plan prompt.
+
+    Returns "" when there is no memory, so the prompt for a first turn is
+    byte-identical to what it was before this phase and the common case costs
+    nothing.
+
+    `injected_steps` is not consulted here to decide WHETHER to inject; the
+    two call sites are Think and Plan by construction and there is no third.
+    It exists as the single declaration those call sites are checked against,
+    which is what premise-gate arm P10 asserts.
+    """
+    memory = _session_memory(state)
+    if memory is None:
+        return ""
+    block = build_session_context(memory, tier=tier)
+    return f"\n\n{block}" if block else ""
+
+
 async def _select_planned_tool_call(
-    query_text: str, query_class: QueryClass
+    query_text: str,
+    query_class: QueryClass,
+    memory_curies: list[str] | None = None,
 ) -> _PlannedToolCall | _UnresolvedEntityRefusal | None:
     """Deterministically select `cypher_query`, refuse, or select nothing.
 
@@ -1664,13 +1703,33 @@ async def _select_planned_tool_call(
         return None
 
     resolution = await _resolve_query_entities(query_text)
-    if not resolution.curies and resolution.unresolved_symbols:
+
+    # T-4.5-06, Section 14.3: reference resolution against session memory.
+    #
+    # This is the ONE place memory is allowed to change what happens, and it
+    # is orchestration, never grounding: it decides which entity the question
+    # is ABOUT, and nothing about what may then be claimed. Whatever the graph
+    # returns for that entity is retrieved fresh this turn and grounded by the
+    # same code as any other query, so Section 14.1's firewall holds.
+    #
+    # It fires only when this turn resolved NOTHING on its own. A question
+    # that names its own gene is never overridden by an older one from memory,
+    # which would be memory silently answering a different question than the
+    # one asked.
+    #
+    # Closes the mechanism half of F-4.8-A-22: a canned follow-up chip sends
+    # "What variants cause it?" as a standalone query, and before this there
+    # was no prior turn for "it" to bind to.
+    target_curies = resolution.curies
+    if not target_curies and memory_curies:
+        target_curies = list(memory_curies)
+    elif not resolution.curies and resolution.unresolved_symbols:
         return _UnresolvedEntityRefusal(attempted_symbols=resolution.unresolved_symbols)
 
     cypher_input = CypherQueryInput(
         query_intent=query_text[:_PLAN_TOOL_CALL_MAX_INTENT_CHARS],
         query_class=query_class,
-        target_entities=resolution.curies,
+        target_entities=target_curies,
         row_limit=_PLAN_TOOL_CALL_ROW_LIMIT,
     )
     tool_call = ToolCall(
@@ -1694,7 +1753,12 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
             trace_id,
             "plan",
             "plan",
-            [{"role": "user", "content": query.text}],
+            # T-4.5-06: memory rides the DYNAMIC SUFFIX, appended after the
+            # question, never spliced into the system block. The system block
+            # is the prompt-cache stable prefix, and a per-session value there
+            # misses the cache on every request whose memory changed, which is
+            # every request after the first. Nothing errors; the bill climbs.
+            [{"role": "user", "content": query.text + _memory_suffix(state, "plan")}],
             budget_s=budget_for_step("plan", query_class),
         )
     except cost_control.QueryCapExceededError:
@@ -1702,7 +1766,9 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
     except HarnessCallError as exc:
         return {"step_error": _step_error_kwargs("plan", exc)}
 
-    planned = await _select_planned_tool_call(query.text, query_class)
+    planned = await _select_planned_tool_call(
+        query.text, query_class, _memory_curies(state)
+    )
     if isinstance(planned, _UnresolvedEntityRefusal):
         # T-3.1-13/F-2.1-B10: refuse now, before act_node ever dispatches
         # a tool call and before write_node's own synth call, rather than

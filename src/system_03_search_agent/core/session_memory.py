@@ -40,6 +40,9 @@ Writes:
 
 from __future__ import annotations
 
+import uuid
+from typing import Any, Protocol
+
 from system_03_search_agent.contracts.query import (
     MAX_RESOLVED_ENTITIES,
     CompressedFinding,
@@ -245,3 +248,125 @@ __all__ = [
     "count_tokens_for_tier",
     "injected_steps",
 ]
+
+
+class SessionMemoryStore(Protocol):
+    """Where a session's owner and memory are read from.
+
+    A Protocol rather than a concrete class so the ownership CHECK can be
+    tested without standing up a database, while the shipped default reads
+    the real `sessions` row. The check is the security-relevant part and it
+    lives in `load_for_caller`, above any store: swapping the store cannot
+    weaken it, which is the property worth preserving.
+    """
+
+    async def get(self, session_id: str) -> tuple[str | None, dict[str, Any] | None] | None:
+        """Return `(owner_user_id, memory_payload)`, or None if unknown."""
+        ...
+
+
+class _PostgresSessionMemoryStore:
+    """The shipped store: one row of the `sessions` table (alembic 0007)."""
+
+    async def get(
+        self, session_id: str
+    ) -> tuple[str | None, dict[str, Any] | None] | None:
+        from sqlalchemy import select
+
+        from system_03_search_agent.data.models import ChatSession
+        from system_03_search_agent.data.session import session_scope
+
+        try:
+            key = uuid.UUID(session_id)
+        except ValueError:
+            # A session id that is not a UUID cannot name a row, so it is
+            # "unknown" rather than "denied". Raising an ownership error here
+            # would make a malformed id and someone else's id look different
+            # to a caller, which is exactly the oracle `_ownership_refusal`
+            # avoids. F-4.10-A-09 is the same defect shape one surface up: a
+            # non-UUID guest id escaping as a 500.
+            return None
+
+        with session_scope() as db:
+            row = db.execute(
+                select(ChatSession.user_id, ChatSession.memory).where(
+                    ChatSession.id == key
+                )
+            ).first()
+        if row is None:
+            return None
+        owner, payload = row
+        return (str(owner) if owner is not None else None, payload)
+
+
+def _default_store() -> SessionMemoryStore:
+    return _PostgresSessionMemoryStore()
+
+
+class SessionOwnershipError(Exception):
+    """A caller asked for a session that is not theirs (F-4.1-A-15).
+
+    Boarded at build phase 4.1 and deliberately deferred to whichever phase
+    first wired a `Query.session_id` consumer, on the reasoning that binding a
+    session to its owner means designing the ownership model ahead of the
+    phase that actually needs it. Build phase 4.5 is that phase.
+
+    The gap it closes, in the finding's own words: every surface accepts a
+    caller-supplied `session_id` with length validation and no check that it
+    belongs to the caller. That was harmless while nothing READ the id.
+    The moment session memory became readable by it, naming another account's
+    session id would have handed over their conversation: the entities they
+    resolved, the findings they established, and the threads they left open.
+    """
+
+
+def _ownership_refusal(session_id: str) -> SessionOwnershipError:
+    """Build the refusal, worded once so every raise site agrees.
+
+    Two properties, both required rather than stylistic:
+
+    - It never says whether the session EXISTS. "Not yours" and "no such
+      session" are the same message on purpose, because distinguishing them
+      turns this into an oracle for probing which session ids are live.
+    - It says what to do next, per the retry-safety gate in
+      `production-standards`. The reader here is often an agent step, and
+      "denied" tells it nothing about whether to retry.
+    """
+    return SessionOwnershipError(
+        f"session {session_id!r} is not available to this caller; start a new "
+        "session, or retry with the session id this caller was issued. Do not "
+        "retry this id: it will not become available."
+    )
+
+
+async def load_for_caller(
+    *,
+    session_id: str,
+    user_id: str | None,
+    store: SessionMemoryStore | None = None,
+) -> SessionMemorySummary | None:
+    """Load this session's memory, or refuse if it is not the caller's.
+
+    Returns None for a session that has no memory yet, which is the ordinary
+    first turn and is not an error.
+
+    Raises `SessionOwnershipError` when the stored session belongs to someone
+    else. The check is deliberately conservative in BOTH directions:
+
+    - A session owned by an account is readable only by that account.
+    - A session owned by nobody (an anonymous session, `user_id` NULL) is
+      never handed to an authenticated caller, and vice versa. A guest
+      session's contents are not automatically the property of whoever signs
+      in next on that browser; migrating them is build phase 4.6's explicit
+      history-migration step, not something that should happen silently here.
+    """
+    active = store if store is not None else _default_store()
+    record = await active.get(session_id)
+    if record is None:
+        return None
+    owner_id, payload = record
+    if (owner_id or None) != (user_id or None):
+        raise _ownership_refusal(session_id)
+    if payload is None:
+        return None
+    return SessionMemorySummary.model_validate(payload)

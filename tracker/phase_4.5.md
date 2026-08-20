@@ -126,7 +126,7 @@ Acceptance criteria:
 
 ### T-4.5-05: Session memory storage and ownership binding
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.5-02
 Spec: Section 15; closes F-4.1-A-15
@@ -145,7 +145,7 @@ Acceptance criteria:
 
 ### T-4.5-06: Inject memory into Think and Plan, and nowhere else
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.5-03, T-4.5-05
 Spec: Section 14.1, 14.4
@@ -231,7 +231,7 @@ Acceptance criteria:
 
 ### T-4.5-12: Resolve the canned follow-up pronoun
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.5-06
 Spec: closes F-4.8-A-22
