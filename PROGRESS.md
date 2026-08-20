@@ -2,7 +2,7 @@
 
 A plain-language update on what this project is, what works today, and what comes next. No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-19.
+Last updated: 2026-08-20.
 
 ## Table of contents
 
@@ -51,6 +51,11 @@ Concretely:
 - Another program can now ask it questions, in a format built for software rather than for people. A developer writes down exactly which parts of the answer they want (just the answer text, or the answer plus every source, or only the sources) and gets back that and nothing else. This needs an account; there is no anonymous version of it.
 - You can now take a slice of our biomedical database away with you as a file. You name a starting point, say a gene, and how far out from it to walk, and you get back two spreadsheet-style files, one listing the things and one listing the connections between them, plus a short note recording exactly what was asked for and what actually came back. Other researchers' tools read this format directly. It is a batch job you run rather than something you click, and it will refuse to write into a folder that already has files in it unless you tell it to go ahead, because quietly mixing two exports together is how you end up with a file that looks complete and is not.
 - You can use it from a terminal instead of a web page. `s3 ask "your question"` prints the answer as it is written, with the list of sources underneath, and you can send that straight into a file. Progress messages go to the screen rather than into the file, so the file holds the answer and nothing else.
+- It remembers the conversation. Ask "which diseases are associated with BRCA1?" and then "what variants cause it?", and it knows what "it" means. What it remembers is deliberately small and capped, it is only ever used to work out what you are asking about, and it is never used as evidence: anything it tells you is looked up fresh and cited from the source, every time.
+- What it remembers is yours. If someone else names your conversation, they get nothing, and they cannot tell the difference between "that is not yours" and "that does not exist", so it cannot be used to go fishing for other people's conversations.
+- You can choose how technical the answer is: a short version for a clinician who needs the evidence fast, the normal version, or a full-detail version with the raw identifiers spelled out. Once you are signed in it remembers which you prefer, on any device.
+- If an answer leaves something out that we actually found, it now says so, in the answer, and lowers its own confidence rating. It tries once to write the answer again including what it missed, and if it still cannot, it tells you rather than quietly handing you a shorter answer that looks complete.
+- Every answer is signed by a named scientist from history, the same name every time for your account. They are all people who have died, which is a deliberate choice: putting a living scientist's name above an answer they had no part in reads like they are endorsing it.
 - You can sign in. Accounts, passwords, and sessions all work.
 - You can type a question into a chat window and watch the answer appear word by word, with a stop button.
 - The system asks a real question against our own biomedical database and gets real results.
@@ -85,6 +90,8 @@ All six live-government-API connections the plan called for are now built. That 
 ## What does not work yet
 
 The honest headline: someone determined, with access to a lot of internet connections, can still use up the free searches we set aside for strangers each day and leave the product unusable for other newcomers until the next morning. It costs them effort and it costs us nothing beyond the daily budget we chose in advance, and anyone signed in is unaffected. Four separate attempts went into narrowing that, and the fourth is the one that held; the honest position is that a free tier with no sign-up can always be spoiled by someone who really wants to, and what we have bounded is the money rather than the nuisance.
+
+A second honest headline, new this week and different in kind: the work that just landed has NOT been independently reviewed. Every other piece of work in the list above was checked by people, or by fresh reviewers, who had not written it. This one was written and checked by the same hands. That matters here more than it would elsewhere, because two serious problems in it were found only after it looked finished, and one of them was found by chance rather than by any check we had. Until it gets a proper review, treat the conversation-memory and answer-completeness work as newer and less proven than everything above it.
 
 The older headline still stands underneath it: the redesigned web page has been through several independent reviews and every one of them found serious problems. That is the system working, but it is worth being blunt about what they found, because the worst one goes to the heart of what this product is for.
 
@@ -136,6 +143,7 @@ Each of these is a completed, reviewed, merged piece of work.
 | 4.2 | A command-line version, so you can ask a question from a terminal and pipe the answer into a file. Six rounds of review found 56 problems, five of them serious, including one where a booby-trapped research abstract could take over your terminal window and fake its own list of sources | 2026-08-16 |
 | 4.3 | A way for other software to ask questions and pick exactly which parts of the answer it wants back. It took six rounds of review, more than any other piece of work so far. Twice the same bug returned: an error message meant for us leaked a database password out to whoever was asking. Both times the cause was the same, and it is worth stating plainly, because it is a mistake anyone can make: the code tried to decide whether a message was safe to show by looking at WHERE THE MESSAGE CAME FROM instead of at WHAT IT SAID | 2026-08-17 |
 | 4.4 | Take a slice of the database away as a standard file other tools can read. The check we had written to prove it worked passed, while the plain everyday way of running it returned five hundred of the wrong thing and none of the right thing | 2026-08-19 |
+| 4.5 | It remembers what you just asked, so you can say "what variants cause it?" instead of naming the gene again. You can also pick how technical the answer should be, and it now signs its work with the name of a scientist from history. Two serious problems turned up in our own work, both after it looked finished: telling it to write plainly made it stop answering entirely, and the remembering half was built so carefully that nobody noticed nothing was ever being written down | 2026-08-20 |
 | Design system repair | Fixed the design's own colour and keyboard problems at source, after working around them three separate times | 2026-08-14 |
 
 Nine of these are worth understanding, because they explain how this project works.
@@ -232,10 +240,11 @@ The planned specification pause (updating the written plans with everything lear
 
 In order, now:
 
-1. Personalisation and memory within a conversation: the system remembering what you already asked in this session, letting you say how much depth you want, and answering as one consistent character rather than a different voice each time. This one needs a product decision before it can even be scoped, so it starts with a conversation rather than with code.
-2. The question-understanding gap now has a home: a specific future sprint, later than the next several, will build the real fix. It is not being rushed in early, and nothing else in the next few sprints depends on it being fixed first.
-3. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
-4. Then the remaining work: the other ways to access the system, saved history and personalisation, measurement and quality scoring, and finally hardening it for real use.
+1. An independent review of the conversation-memory work that just landed. It is the only piece here that has not had one, two serious problems in it were found after it looked finished, and one of those was found by luck rather than by any check we had. Nothing new should start ahead of it.
+2. Collecting feedback: letting people say whether an answer was any good, and keeping those answers somewhere we can learn from them.
+3. The question-understanding gap now has a home: a specific future sprint, later than the next several, will build the real fix. It is not being rushed in early, and nothing else in the next few sprints depends on it being fixed first.
+4. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
+5. Then the remaining work: routing a question to the right worked example, measurement and quality scoring, and finally hardening it for real use. Personalisation and saved history used to sit on this line and have now been built.
 
 ## Problems we know about and are tracking
 
@@ -243,6 +252,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
+| The conversation-memory and answer-completeness work has never been checked by anyone other than the person who wrote it. Every other piece of work here had a fresh pair of eyes on it; this one did not, and two serious problems in it were found only after it looked done | Before the next sprint starts, ahead of any new feature work |
+| When the short, plain-language answer leaves something out, it now says so, but it can still leave something out. We tried three times to instruct it not to and none of them held, so instead it reports what it missed and lowers its own confidence. It is honest rather than complete | Reconsidered if it turns out to omit things often; the fix is a bigger change to how answers are assembled |
+| The tool we use to check that everything is reachable before a big run does not read the settings file where the database address actually lives, so it reports "could not check" for the database and then says everything is ready anyway. It has been giving a false all-clear | Next time the build tooling is touched |
 | The two shortcut commands this project installs, the terminal one and the new export one, do not actually work by typing their name. The packaging step that would put them on your computer properly has been broken for a while, so both only run the long way round. This is not new to this sprint, it just became visible again | In the hardening sprint, along with the packaging fix itself |
 | The export command tells apart "you typed something wrong" from "the database could not be reached" by the type of error rather than by the error saying which it is. It is correct today, and we checked that it is, but it stays correct only as long as nobody uses that error type for a third meaning | Whenever the export needs to report a new kind of failure |
 | When another program asks a badly-formed question, one particular kind of mistake slips past the part that scrubs our internal wording out of error messages. Today the only thing that escapes is a word the asker typed themselves, so nothing of ours gets out, but the rule we rely on is not airtight and we know it | The hardening sprint, 6.1 |
