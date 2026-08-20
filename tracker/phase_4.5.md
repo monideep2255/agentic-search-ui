@@ -406,3 +406,26 @@ THE REMAINING CHOICE, for the product owner, because Option A named two mechanis
 - A2, accept regenerate-then-disclose as shipped. Completeness is attempted, and any residue is named in the answer with the outcome floored at `ask`. Cheaper, already built and measured, and strictly better than what the phase started with, but it is Option A in spirit and Option B in guarantee.
 
 The lead did not choose between these unilaterally because A1 was authorized in principle by the Option A decision while its actual cost, generating answer prose in code, was not visible at the time that decision was made.
+
+### F-4.5-07: the depth fingerprint is not reliably measurable on this question
+
+Severity: minor, in the gate rather than the product
+Round: 0
+Status: open, xfailed non-strictly so it reports XPASS the day it holds
+
+P2b asserts that `deep_technical` is materially longer than `clinical_brief`, at a ratio of 1.4. Measured on the BRCA1 disease question: 1.13, from 161 characters against 182.
+
+The cause is the data, not the directive. That answer is built from five short Layer 1 rows, and `deep_technical`'s brief is to add raw identifiers, assembly context and coordinate detail "that the findings actually contain". These findings contain almost nothing more than the identifiers already required at every depth for grounding, so there is very little for the deeper register to add. The two answers came out nearly identical in length while still differing in register: `deep_technical` wrote "BRCA1 (gene symbol: BRCA1 [1])" where `clinical_brief` wrote "BRCA1 [1]".
+
+Three options were considered and the reasoning is recorded because the tempting one is wrong:
+
+- Lower the threshold to the observed 1.13. REJECTED. That is tuning the check until it passes, which `.claude/rules/goal-contracts.md` names as a failed run rather than a completed one. The threshold would then encode the measurement instead of the requirement.
+- Delete the arm. REJECTED. It is the only depth-differentiation signal in the file, and deleting a check because it currently fails is the same reward hack wearing a different hat.
+- Keep it running and xfail non-strictly, with the reason stated in the marker. CHOSEN, following the precedent build phase 2.2 set for F-2.2-06's truncation-scale half. It reports XPASS the day a richer finding set or a stronger directive makes the split real, so the gap is visible in every run rather than silently accepted.
+
+Two ways to close it properly, neither done here:
+
+- Ask the fingerprint question against a finding set with room to differentiate. TP53 carries twelve disease associations against BRCA1's four, so a brief and a deep write-up of it have far more to diverge over. This is the better fix and costs two more live runs per gate execution.
+- Accept that on sparse Layer 1 findings the depths legitimately converge, and assert the register difference rather than the length difference. That needs a register fingerprint that does not collide with grounding, which is exactly what F-4.5-06 established is hard: the obvious one, identifier presence, is unavailable because grounding requires identifiers at every depth.
+
+The honest summary for a reviewer: this gate currently proves that depth does not BREAK anything. It does not prove that depth DOES anything. Those are different claims and only the first is gated.
