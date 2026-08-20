@@ -310,3 +310,63 @@ Two gaps, both this gate's:
 
 - No environmental retry. A flake in Layer 2 resolution reports here as a personalization defect, which is the wrong step entirely and would send a reviewer looking in the wrong file.
 - No pacing. P2 fires three full loops back to back with no delay, and each resolves a gene symbol against live E-utilities, whose unauthenticated pool is 3 requests per second. `.claude/rules/tool-call-budgets.md` names this directly: an integration suite that fires faster than the limit it tests against is a self-inflicted failure, and it can trip a shared bucket that then fails an unrelated run.
+
+### F-4.5-04: the firewall arm compared prose, not grounding
+
+Severity: major, in the gate rather than the product
+Round: 0
+Status: closed by the lead, same session
+
+P2's invariant was a set of `(source_id, claim_text)` pairs. `claim_text` is the sentence fragment a citation supports, and depth is SUPPOSED to change sentences, so the arm reported a breach while the feature was working correctly: `deep_technical` grounded the same sources in two extra sentences and the pair-set diff called it a firewall violation.
+
+It conflated presentation with grounding, which is the precise distinction Section 14.1 draws and the one this whole phase is about. Corrected to assert the ANSWER SET pinned against ground truth read from the live graph, which is stronger where it matters, since all three depths agreeing on a wrong answer still fails it.
+
+### F-4.5-05: the gate ran against a blocked network and blamed personalization
+
+Severity: critical, in the gate rather than the product
+Round: 0
+Status: closed by the lead, same session
+
+`tests/conftest.py` installs a session-scoped autouse fixture that blocks every real outbound HTTP call unless `RUN_PREMISE_GATE=1` is set. It was added at build phase 3.1 after a judge proved the unit suite was silently burning E-utilities quota on every run.
+
+This gate did not set it. The consequence was not a skip and not an obvious error. Live gene-symbol resolution returned nothing, the loop refused with "I could not identify that gene", and a file about personalization reported that refusal as a personalization defect.
+
+How it was found, because the method is the point. The failure looked exactly like an intermittent live flake and was treated as one at first. What broke the tie was measuring instead of theorising:
+
+- 3 of 3 identical failures under pytest, so not a flake.
+- The same question run outside pytest succeeded 2 of 2, with 5 citations.
+- `resolve_symbol_to_curie` called directly succeeded 5 of 5.
+- `_extract_target_entities` returned the correct CURIE for all four phrasings.
+- A direct HTTPS probe of E-utilities returned gene 672 in 164ms, so NCBI was neither down nor throttling.
+
+Every component worked; only the composition failed. That is the signature of an environment difference rather than a defect, and it pointed straight at conftest.
+
+Build phase 2.2's gate never hit this because its questions name CURIEs directly and resolve no symbol, so it reaches the graph over psycopg2 and opens no outbound HTTP at all. This gate asks with bare symbols, which is what a real user types.
+
+Fixed: the skip predicate now requires `RUN_PREMISE_GATE=1` and says so in the skip reason.
+
+### F-4.5-06: audience depth breached the grounding firewall, twice, in two different costumes
+
+Severity: CRITICAL, in the product
+Round: 0 (found by the premise gate on the first real implementation, before any review round)
+Status: partially fixed, ONE HALF OPEN AND NEEDS A PRODUCT DECISION
+
+This is what the gate was built for, and it caught the lead's own code.
+
+Breach 1, fixed. The first `clinical_brief` directive ended "do not print CURIEs, accession numbers, or coordinates in the prose; the citations carry them". Build phase 2.2's grounding pass accepts a claim only when it substring-matches the finding it cites, and a Layer 1 finding's value IS the identifier. So forbidding identifiers made every claim fail the match, the answer was stripped, and the run REFUSED with "I could not find grounded evidence for this", while `researcher` cited all four pinned diseases from the identical findings. A depth control had turned into a retrieval control.
+
+The transferable form: a presentation instruction that constrains WHICH TOKENS may appear is not presentation at all when a downstream gate matches on those tokens. It is grounding wearing a style hat.
+
+Breach 2, OPEN. With that clause removed and replaced by "be brief, keep background to a minimum", the depth stopped refusing and started ANSWERING INCOMPLETELY: three of the four pinned diseases, fully cited, confidently worded, with nothing in the output announcing the loss. Strengthening the directive to "report every finding you were given, without exception. Say less about each finding; never report fewer findings" did NOT fix it. Measured again after that change: still 3 of 4, missing `MedGen:C0346153`.
+
+Breach 2 is worse than breach 1 even though it looks milder. A refusal is visibly a non-answer. A brief that silently drops one of four disease associations is a confident wrong answer, which is the single failure mode this product exists to avoid, and the clinician who selected "brief" is exactly the reader least able to notice.
+
+Why this is not just a prompt to keep tuning: two successive strengthenings of the instruction did not hold, which is evidence that completeness under a brevity instruction is not reliably promptable. Per `attack-the-constraint`, the constraint is not the wording.
+
+THE PRODUCT DECISION, for the product owner, since it is a real trade-off rather than a bug with one right answer:
+
+- Option A, completeness is structural. After synthesis, check by code that every finding handed to Synth is represented in the answer, and if any is missing either regenerate or append the omitted ones. `clinical_brief` then guarantees the same fact set as every other depth. Costs some of the brevity the depth exists to provide.
+- Option B, brevity may summarize, and must DISCLOSE. `clinical_brief` may report a subset, and the answer must then say so explicitly, the same discipline build phase 2.2 already applies to a truncated result set. Keeps the depth genuinely brief, and makes the omission visible rather than silent.
+- Option C, drop `clinical_brief` from v1. Ship `researcher` and `deep_technical` only, on the grounds that a clinical audience is the one for whom a silent omission is least acceptable.
+
+The lead recommends Option A, on the grounds that this repository's own standard is that a confident wrong answer is worse than no answer, and a per-depth completeness guarantee is the only one of the three that keeps the eval harness's stateless pass a trustworthy proxy for live behavior. It is not taken unilaterally because it trades away part of what the depth was for, which is a product call.

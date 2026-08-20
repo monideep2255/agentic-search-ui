@@ -1,15 +1,31 @@
 """Tests for the Query and RequestContext models (Section 2.1)."""
 
-import json
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
 
 from system_03_search_agent.contracts.query import (
-    SESSION_MEMORY_MAX_SERIALIZED_LENGTH,
+    MAX_COMPRESSED_FINDINGS,
+    MAX_OPEN_THREADS,
+    MAX_RESOLVED_ENTITIES,
+    SESSION_MEMORY_TOKEN_BUDGET,
+    CompressedFinding,
     Query,
     RequestContext,
+    ResolvedEntity,
+    SessionMemorySummary,
 )
+
+
+def _summary(**overrides: object) -> SessionMemorySummary:
+    """A minimal valid SessionMemorySummary, overridable per test."""
+    base: dict[str, object] = {
+        "session_id": "session-1",
+        "last_updated": datetime(2026, 8, 20, tzinfo=UTC),
+    }
+    base.update(overrides)
+    return SessionMemorySummary(**base)  # type: ignore[arg-type]
 
 
 def _query_kwargs(**overrides: object) -> dict[str, object]:
@@ -126,53 +142,82 @@ class TestRequestContextSurface:
         assert context.session_memory is None
         assert context.operator_mode is False
 
-    def test_session_memory_accepts_placeholder_any(self) -> None:
-        # SessionMemorySummary (Section 14) does not exist yet (phase 4.5);
-        # session_memory is typed Any | None as a placeholder.
-        context = RequestContext(surface="web_ui", session_memory={"turns": []})
-        assert context.session_memory == {"turns": []}
+    def test_session_memory_accepts_a_real_summary(self) -> None:
+        # T-4.5-02: the placeholder `Any | None` is gone. This used to accept
+        # an arbitrary dict, `{"turns": []}`, which is now a validation error.
+        summary = _summary()
+        context = RequestContext(surface="web_ui", session_memory=summary)
+        assert context.session_memory is not None
+        assert context.session_memory.session_id == "session-1"
 
 
 class TestRequestContextSessionMemoryBound:
-    """F-1.0-02: session_memory is a placeholder type, not an unbounded one.
+    """F-1.0-02: session_memory is never an unbounded payload.
 
-    Regression coverage for the judge's probe (a 500,000-character nested
-    payload posted to context.session_memory, previously accepted with
-    HTTP 200) plus a check that a reasonably-sized summary still succeeds.
+    This class predates the typed model. It used to pin a placeholder
+    serialized-length cap of 5000 characters on an `Any`-typed field, and the
+    original regression it covers is the judge's probe: a 500,000-character
+    nested payload posted to `context.session_memory` and accepted with HTTP
+    200.
+
+    T-4.5-02 replaced the placeholder with `SessionMemorySummary`. The
+    property under test is UNCHANGED and the coverage is strictly stronger,
+    which is the only direction `.claude/rules/goal-contracts.md` permits: the
+    probe payload is still rejected, and now it is rejected because it is not
+    a valid summary at all rather than because it is long. An attacker can no
+    longer stay under a byte count and send arbitrary structure.
     """
 
-    def test_oversized_session_memory_rejected(self) -> None:
-        # Reproduces the judge's probe shape: a large nested payload well
-        # past the placeholder cap.
+    def test_the_original_oversized_probe_is_still_rejected(self) -> None:
+        # The exact shape from F-1.0-02, kept verbatim so the regression this
+        # class exists for stays covered across the retyping.
         oversized = {"notes": "n" * 500_000, "turns": [{"role": "user"}] * 100}
-        assert len(json.dumps(oversized)) > SESSION_MEMORY_MAX_SERIALIZED_LENGTH
         with pytest.raises(ValidationError):
             RequestContext(surface="web_ui", session_memory=oversized)
 
-    def test_session_memory_at_cap_accepted(self) -> None:
-        # Pad a string value so the serialized payload lands exactly at the
-        # cap, proving the boundary is inclusive.
-        payload = {"summary": ""}
-        overhead = len(json.dumps(payload))
-        padded = {"summary": "s" * (SESSION_MEMORY_MAX_SERIALIZED_LENGTH - overhead)}
-        assert len(json.dumps(padded)) == SESSION_MEMORY_MAX_SERIALIZED_LENGTH
-        context = RequestContext(surface="web_ui", session_memory=padded)
-        assert context.session_memory == padded
-
-    def test_session_memory_over_cap_by_one_rejected(self) -> None:
-        payload = {"summary": ""}
-        overhead = len(json.dumps(payload))
-        padded = {
-            "summary": "s" * (SESSION_MEMORY_MAX_SERIALIZED_LENGTH - overhead + 1)
-        }
-        assert len(json.dumps(padded)) == SESSION_MEMORY_MAX_SERIALIZED_LENGTH + 1
+    def test_an_arbitrary_dict_is_now_rejected_outright(self) -> None:
+        # Strictly stronger than the old cap: this payload is SMALL and was
+        # accepted before, because the placeholder only measured length.
         with pytest.raises(ValidationError):
-            RequestContext(surface="web_ui", session_memory=padded)
+            RequestContext(surface="web_ui", session_memory={"turns": []})
 
-    def test_reasonably_sized_session_memory_accepted(self) -> None:
-        reasonable = {
-            "turns": [{"role": "user", "text": "What gene is BRCA1?"}],
-            "resolved_entities": ["NCBIGene:672"],
-        }
-        context = RequestContext(surface="web_ui", session_memory=reasonable)
-        assert context.session_memory == reasonable
+    def test_each_list_is_capped(self) -> None:
+        with pytest.raises(ValidationError):
+            _summary(
+                resolved_entities=[
+                    ResolvedEntity(
+                        mention="m", curie=f"NCBIGene:{i}", entity_type="Gene"
+                    )
+                    for i in range(MAX_RESOLVED_ENTITIES + 1)
+                ]
+            )
+        with pytest.raises(ValidationError):
+            _summary(
+                compressed_findings=[
+                    CompressedFinding(claim_summary="c", trace_id="t")
+                    for _ in range(MAX_COMPRESSED_FINDINGS + 1)
+                ]
+            )
+        with pytest.raises(ValidationError):
+            _summary(open_threads=["t"] * (MAX_OPEN_THREADS + 1))
+
+    def test_one_open_thread_cannot_be_unbounded(self) -> None:
+        # The list cap bounds HOW MANY threads arrive and says nothing about
+        # how long one may be. Without the per-item validator, ten threads of
+        # a megabyte each satisfy every declared cap on the model.
+        _summary(open_threads=["t" * 200])
+        with pytest.raises(ValidationError):
+            _summary(open_threads=["t" * 201])
+
+    def test_the_token_budget_cannot_be_disabled_or_unbounded(self) -> None:
+        assert _summary().token_budget == SESSION_MEMORY_TOKEN_BUDGET
+        # Zero would silently disable memory; a huge value would defeat the
+        # cap the field exists to impose. Both are refused.
+        with pytest.raises(ValidationError):
+            _summary(token_budget=0)
+        with pytest.raises(ValidationError):
+            _summary(token_budget=100_000)
+
+    def test_a_valid_summary_is_accepted(self) -> None:
+        context = RequestContext(surface="web_ui", session_memory=_summary())
+        assert context.session_memory is not None

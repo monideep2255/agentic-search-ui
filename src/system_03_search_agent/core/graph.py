@@ -4098,7 +4098,10 @@ async def write_node(state: GraphState) -> dict[str, Any]:
             trace_id,
             "synth",
             "write",
-            build_synth_messages(query.text, synth_findings),
+            # T-4.5-07: the depth the caller asked for reaches synthesis here
+            # and nowhere else. It was carried on `Query` from build phase
+            # 1.0 and dropped at this line until phase 4.5.
+            build_synth_messages(query.text, synth_findings, query.audience_depth),
             budget_s=budget_for_step("write", query_class),
         )
     except cost_control.QueryCapExceededError:
