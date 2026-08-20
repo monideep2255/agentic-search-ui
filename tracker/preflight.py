@@ -57,6 +57,15 @@ Exit codes
 A transport whose configuration is absent reports `skipped`, not `ok`, and does
 not fail the run. `skipped` means nothing was verified, which is different from
 a verified pass, and the summary keeps the two apart on purpose.
+
+Where configuration comes from
+------------------------------
+The real environment first, then `.env` for anything the environment did not
+already set. Both, in that order, matter: reading only the environment is
+F-4.5-01, where the graph probe reported `skipped: GRAPH_PG_HOST is unset`
+against a graph that was reachable, because this repository keeps that host in
+`.env` and a normal shell does not export it. That made `skipped` the normal
+case for the one transport a tool phase most needs verified.
 """
 
 from __future__ import annotations
@@ -64,6 +73,7 @@ from __future__ import annotations
 import argparse
 import http.client
 import os
+import pathlib
 import socket
 import ssl
 import sys
@@ -87,6 +97,43 @@ HTTPS_TRANSPORTS = {
 GRAPH_GATES = "tool-phase premise gates, and any live graph test"
 
 OK, DOWN, SKIPPED = "ok", "down", "skipped"
+
+
+def load_dotenv() -> None:
+    """Populate missing variables from `.env`, the way every premise gate does.
+
+    F-4.5-01: this was absent, and the absence was invisible. `probe_graph`
+    reads `GRAPH_PG_HOST` from `os.environ` only, this repository keeps that
+    host in `.env`, and a normal developer shell does not export it. So the
+    graph probe returned `skipped: GRAPH_PG_HOST is unset` against a graph
+    that was reachable at that moment, and the run still printed READY and
+    exited 0. The one transport preflight could not verify was the one it
+    waved through, using a benign word for "I did not check".
+
+    This is F-2.1-04 in a second place. Every premise gate already loads
+    `.env` explicitly and cites that finding for why; preflight was written
+    later, in 2026-08-18, and did not inherit it.
+
+    `setdefault`, not assignment, so a variable exported in the real
+    environment still wins over the file. That precedence is load-bearing
+    here rather than conventional: it is what lets a caller point this probe
+    at a deliberately dead host to test it, which assignment would silently
+    undo.
+
+    Stdlib only, and deliberately the same seven lines the gates use rather
+    than a dependency. `tracker/preflight.py` is on CLAUDE.md's portability
+    list as running under any agent harness, and adding python-dotenv to a
+    diagnostic script would take it off that list to save nothing.
+    """
+    env_path = pathlib.Path(__file__).resolve().parent.parent / ".env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text().splitlines():
+        stripped = line.strip()
+        if "=" not in stripped or stripped.startswith("#"):
+            continue
+        key, value = stripped.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip())
 
 
 def probe_https(host: str, path: str, timeout: float) -> tuple[str, str]:
@@ -197,6 +244,12 @@ def run(selected: list[str], timeout: float) -> int:
 
 
 def main(argv: list[str]) -> int:
+    # F-4.5-01: before anything reads a variable. Loading here rather than
+    # inside `probe_graph` keeps importing this module free of side effects,
+    # while still covering every path a caller can reach from the command
+    # line, which is the only way the cadence invokes it.
+    load_dotenv()
+
     names = list(HTTPS_TRANSPORTS) + ["graph"]
     parser = argparse.ArgumentParser(
         description="Probe one transport per dispatch target before spending on it."
