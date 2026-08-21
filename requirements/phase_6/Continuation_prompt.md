@@ -117,7 +117,7 @@ Current counts, stated once here:
 - Premise gate, build phase 4.0's own gate (a normal test file, not one of the seven live tool gates above): 26 of 26
 - Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
 - Premise gate, build phase 4.10's own gate (the guest allowance, a normal test file, not one of the seven live tool gates above): 36 of 36, every clause mutation-proven, two-armed throughout since a control that refuses every guest passes every attack test and destroys the product
-- Decisions logged: 358
+- Decisions logged: 359
 - Learnings entries: 104, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below). This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
@@ -154,18 +154,16 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 ## The next session starts here
 
-DECIDE THE ORDER, THEN OPEN A PHASE. Nothing is in flight, `develop` is clean and pushed, and no branch is open. Build phase 4.5's review round merged as PR #53 on 2026-08-21 and everything it carried is closed.
+OPEN BUILD PHASE 4.6, FEEDBACK CAPTURE. Settled by the product owner on 2026-08-21 and logged in `DECISIONS.md`: Section 25's locked order is followed rather than reordered a fourth time. Nothing is in flight, `develop` is clean and pushed at `f446c0d`, and no branch is open. Build phase 4.5's review round merged as PR #53 and everything it carried is closed.
 
-The one open question, and it is the product owner's: WHICH PHASE COMES NEXT. Two candidates now exist where there was one:
+WHAT 4.6 MUST READ BEFORE IT WRITES ANYTHING. It inherits two things build phase 4.5's review round changed, and getting either wrong is silent rather than loud:
 
-- Build phase 4.6, feedback capture, which is the locked Section 25 order.
-- Build phase 4.11, the read-only HTTPS graph query service, followed by 4.12, the demo deployment. Both were added to the board on 2026-08-21 by product-owner decision and neither is in Section 25. They exist because deployment was implied inside build phase 6.1's "CI and CD gates" line, named as no ticket, and sat behind every other phase, so nothing was demoable to anyone until the whole build finished; and because the query service Decision D names as the v1 Layer 1 transport had no phase at all.
+- The ownership model in `core/session_memory.py`. Session memory is now keyed on `Query.owner_id`, the namespaced principal (`user:<uuid>` or `guest:<uuid>`), NOT on `user_id`, which is NULL for every guest and made all guests one principal. A missing identity raises `CallerIdentityRequired` rather than defaulting to anonymous. Interaction capture must key on the same field or it will file a guest's feedback against a shared bucket, which is the exact critical that round fixed.
+- The uuid5 session-row mapping, `session_row_key`, which is owner-scoped. `interactions.session_id` must use that same mapping, or the two will disagree about which row a conversation is. This was flagged before 4.5 shipped and it is still the single most likely way 4.6 goes wrong.
 
-The case for taking 4.11 first, stated so it can be argued rather than assumed: it removes the hand-opened SSH tunnel that currently gates every live premise-gate arm. On 2026-08-21 that tunnel was down, `preflight.py` correctly reported it, and the entire live gate for build phase 4.5 could not run until it was reopened by hand. Every future tool phase inherits that fragility. The case against is simply that Section 25's order exists for reasons, and 4.6 is what it says.
+Two board phases are scheduled and deliberately NOT next: 4.11, the read-only HTTPS graph query service, and 4.12, the demo deployment on Railway. Both were added on 2026-08-21 because deployment was implied inside build phase 6.1's "CI and CD gates" line, named as no ticket, and sat behind every other phase, and because the query service Decision D names as the v1 Layer 1 transport had no phase at all. 4.11's dependency (2.1) is already met, so it can be opened whenever the product owner wants it. The argument for taking it sooner is on the record and was rejected rather than missed: it deletes the hand-opened SSH tunnel that went down on 2026-08-21 and silently blocked the entire live premise gate for two days, and every future tool phase inherits that fragility.
 
-Whichever is chosen, the other stays on the board. Do not silently reorder; log the choice in `DECISIONS.md` the way the 4.8 and 4.10 insertions were logged.
-
-SUPERSEDED, kept because it is what this section said before PR #53 merged: "FINISH THE BRANCH. `fix/4.5-review-followups` is cut from `develop` at `45c2636`, is NOT merged, and is NOT blocked."
+SUPERSEDED, kept because it is what this section said before the order was settled: "DECIDE THE ORDER, THEN OPEN A PHASE."
 
 A blocking decision WAS recorded here on 2026-08-20 and was WITHDRAWN on 2026-08-21. If you are reading a copy of this file that still says the fix round starved the completeness repair, that is stale: it did not. Read the withdrawal at the bottom of `tracker/phase_4.5.md`, under "WITHDRAWN: the 'regression' was my own instrument", before acting on any claim about the Write budget.
 
