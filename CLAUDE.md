@@ -154,7 +154,7 @@ The invocation is always the skill's exact name. A shortened alias does not reso
 | release-workflow | End-to-end release verification and ship | `/release-workflow` |
 | eval-harness | The offline evaluation gate, operationalizing the evaluation playbook: 8-point rubric, hard-fails, coverage metric, must-pass set | `/eval-harness` |
 | verify | Pre-commit checks: Python compile, tests, lint, git status | `/verify` |
-| standup | Where the build stands right now, in four plain lines: phase, what worked, what is next, what is blocked. Reads the tracker and git, never the conversation, so it is correct in a fresh session. Reports only, never edits | `/standup` |
+| standup | Where the build stands right now, in five plain lines: phase, what landed, what is in motion this moment, what is next, what is blocked. Reports committed AND uncommitted work, including running agents and commands. Reads the tracker and git, never the conversation, so it is correct in a fresh session. Reports only, never edits | `/standup` |
 | phase-checkpoint | Sync planning docs at a phase or sub-phase boundary (decisions, session doc, meeting note, continuation prompt, and at phase end the synthesis and Plan status). Runs before `/ship`, never touches git | `/phase-checkpoint` |
 
 Auto-read skills (loaded by other skills or before specific tasks): best-practices, release-workflow, dev-standards.

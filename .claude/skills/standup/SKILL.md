@@ -1,12 +1,12 @@
 ---
 name: standup
-description: "Answer where the build stands right now, in four plain lines: the phase, what worked, what is next, what is blocked. Reads the tracker and git rather than the conversation, so it is correct in a fresh session and in a long one. TRIGGER on 'standup', 'catch me up', 'where are we', 'what is the status', 'what did I miss', 'quick update'. Distinct from task-tracker, which maintains the board and ticket detail: this only reports, never edits. Distinct from phase-checkpoint, which syncs planning documents at a phase boundary."
+description: "Answer where the build stands right now, in five plain lines: the phase, what has landed, what is in motion this moment, what is next, what is blocked. Reports BOTH committed work and uncommitted work, including running agents, running commands, and what the assistant is mid-way through, since the product owner asking mid-flight is usually asking about the present and the present is not in the git log yet. Reads the tracker and git rather than the conversation, so it is correct in a fresh session and in a long one. TRIGGER on 'standup', 'catch me up', 'where are we', 'what is the status', 'what did I miss', 'what are you doing', 'quick update'. Distinct from task-tracker, which maintains the board and ticket detail: this only reports, never edits. Distinct from phase-checkpoint, which syncs planning documents at a phase boundary."
 scope: project
 ---
 
 # Standup skill
 
-Four lines. No preamble, no headings, no ticket ids unless asked.
+Five lines. No preamble, no headings, no ticket ids unless asked.
 
 Its whole reason for existing is that the product owner asks "where are we" mid-flight, often while several agents are running, and the honest answer has to come from files rather than from what happens to be in this session's context. A summary reconstructed from conversation is wrong in a fresh session and stale in a long one.
 
@@ -20,12 +20,31 @@ Its whole reason for existing is that the product owner asks "where are we" mid-
 
 Skip any of these that cannot answer the question at hand. Reading all five costs little; reading none and answering from memory is the failure this skill prevents.
 
-## The four lines
+## The five lines
 
 - Phase: which build phase, and what it is about, in words a non-engineer follows.
-- What worked: what actually landed and is verified. Name the user-visible effect, not the mechanism.
+- Landed: what is committed and verified. Name the user-visible effect, not the mechanism.
+- Right now: what is in motion this moment and is NOT committed. See below; this line is the one most often skipped and the one most often wanted.
 - Next: the one next action.
 - Blockers: what is stopping progress, or "None". If something needs the product owner's decision, say so here and say what the decision is.
+
+## The "right now" line is mandatory
+
+A standup built only from git history describes the past. The product owner asking "where are we" mid-flight is usually asking about the present, and the present is not in the log yet. Report both, always, even when one of them is empty. "Nothing uncommitted, nothing running" is a real and useful answer; silence about it is not.
+
+Four sources, all cheap:
+
+- `git status --short`: files edited but not committed. Say what they are and whether they are finished or half-done.
+- Background agents: how many are running and what each was sent to do. Report them as RUNNING. Never state or guess their findings before they return, and never imply a result is in when it is not.
+- Background commands: a live measurement, a long test run, a build. Say what it is measuring and that the number is not in yet.
+- What the assistant is personally mid-way through in this turn: the file being edited, the probe being written, the thing being verified. This is invisible to every file on disk, so it exists only if it is said.
+
+Two failure modes this line exists to prevent, both observed:
+
+- Reporting a task as done because its agent was dispatched. A dispatched agent is not a result.
+- Reporting a clean tree as "everything is committed" while several files are half-edited, so the product owner believes work is safe that would be lost.
+
+If work is uncommitted, say plainly whether it is safe to interrupt.
 
 ## Rules
 
