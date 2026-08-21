@@ -154,7 +154,18 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 ## The next session starts here
 
-FINISH THE BRANCH. `fix/4.5-review-followups` is cut from `develop` at `45c2636`, is NOT merged, and is NOT blocked. Nothing is waiting on the product owner.
+DECIDE THE ORDER, THEN OPEN A PHASE. Nothing is in flight, `develop` is clean and pushed, and no branch is open. Build phase 4.5's review round merged as PR #53 on 2026-08-21 and everything it carried is closed.
+
+The one open question, and it is the product owner's: WHICH PHASE COMES NEXT. Two candidates now exist where there was one:
+
+- Build phase 4.6, feedback capture, which is the locked Section 25 order.
+- Build phase 4.11, the read-only HTTPS graph query service, followed by 4.12, the demo deployment. Both were added to the board on 2026-08-21 by product-owner decision and neither is in Section 25. They exist because deployment was implied inside build phase 6.1's "CI and CD gates" line, named as no ticket, and sat behind every other phase, so nothing was demoable to anyone until the whole build finished; and because the query service Decision D names as the v1 Layer 1 transport had no phase at all.
+
+The case for taking 4.11 first, stated so it can be argued rather than assumed: it removes the hand-opened SSH tunnel that currently gates every live premise-gate arm. On 2026-08-21 that tunnel was down, `preflight.py` correctly reported it, and the entire live gate for build phase 4.5 could not run until it was reopened by hand. Every future tool phase inherits that fragility. The case against is simply that Section 25's order exists for reasons, and 4.6 is what it says.
+
+Whichever is chosen, the other stays on the board. Do not silently reorder; log the choice in `DECISIONS.md` the way the 4.8 and 4.10 insertions were logged.
+
+SUPERSEDED, kept because it is what this section said before PR #53 merged: "FINISH THE BRANCH. `fix/4.5-review-followups` is cut from `develop` at `45c2636`, is NOT merged, and is NOT blocked."
 
 A blocking decision WAS recorded here on 2026-08-20 and was WITHDRAWN on 2026-08-21. If you are reading a copy of this file that still says the fix round starved the completeness repair, that is stale: it did not. Read the withdrawal at the bottom of `tracker/phase_4.5.md`, under "WITHDRAWN: the 'regression' was my own instrument", before acting on any claim about the Write budget.
 
@@ -173,7 +184,9 @@ WHAT IS ALREADY DONE on that branch, so it is not redone:
 
 Counts at that point: 3448 passed, 124 skipped, 1 xfailed, excluding `test_citation_trust_full_premise.py`, whose 6 failures are a conflict between two harness controls (a configured model key selects its live arms, then `conftest.py` blocks the live call) and predate this branch.
 
-WHAT IS LEFT: run the gates, then open the pull request. Build phase 4.6 comes after, and it inherits the ownership model and the uuid5 session-row mapping this branch changed, so it must read `core/session_memory.py` before it writes `interactions.session_id`.
+WHAT IS LEFT: nothing on that branch. It merged as PR #53 on 2026-08-21 and the branch is deleted. The gates ran, including the live ones once the graph tunnel was reopened: the phase 4.5 premise gate returned 16 passed and 1 xfailed, with one arm failing transiently on a plan-step model call after ten minutes of continuous live traffic and passing alone on re-run. `RUN_PREMISE_GATE=1` is required or the six live arms skip silently, which is worth knowing because a run without it finishes in 2.5 seconds and looks like a pass.
+
+Whenever build phase 4.6 is opened, it inherits the ownership model and the uuid5 session-row mapping this round changed, so it must read `core/session_memory.py` before it writes `interactions.session_id`, or the two will disagree about which row a conversation is.
 
 SUPERSEDED, kept because it is what this section said before the review ran: REVIEW PR #52, build phase 4.5. It is BUILT and NOT MERGED, and it has not been independently reviewed.
 
