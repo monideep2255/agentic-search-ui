@@ -45,7 +45,46 @@ LEARNINGS_MD = ROOT / "LEARNINGS.md"
 
 _FINDING_HEADER_RE = re.compile(r"^###\s+(F-[\w.\-]+):")
 _STATUS_LINE_RE = re.compile(r"Severity:.*?Status:\s*([a-zA-Z]+)", re.IGNORECASE | re.DOTALL)
-_COVERED_STATUSES = {"confirmed", "closed"}
+
+#: A finding written as a TABLE ROW rather than a narrative block. Added
+#: 2026-08-21 (R-02) because this script returned a FALSE PASS, "ok: no
+#: confirmed or closed findings, nothing to cover", against build phase 4.6's
+#: ledger of THIRTY findings including two criticals. It recognised only the
+#: `### F-x:` narrative form, and that ledger is a table. Build phase 3.3
+#: flagged this exact gap and it stayed open, so the gate whose whole job is
+#: to force a learnings entry had been passing without reading anything.
+#:
+#: A false pass is worse than a false alarm here: an alarm gets investigated,
+#: a green result stops anyone looking.
+_FINDING_ROW_RE = re.compile(r"^\|\s*(F-[\w.\-]+)\s*\|")
+
+#: States meaning a reviewer has verified the finding is real, so it needs a
+#: learning. Widened from {"confirmed", "closed"} for the same reason: no
+#: ledger in this repository actually writes those two words alone. The real
+#: vocabulary is "fixed, re-verified", "RESOLVED by revert", "fixed, pending
+#: judge" and similar.
+#:
+#: Deliberately EXCLUDED, and each exclusion is a judgement rather than an
+#: oversight: "open" and "filed" (not yet verified), "rejected" (verified NOT
+#: real), and "withdrawn" (filed then disproven, as build phase 4.5's budget
+#: finding and build phase 4.6's F-4.6-05 both were). A withdrawn finding
+#: taught something, but it is not the phase's defect and forcing a learning
+#: for it would train the gate to be ignored.
+_COVERED_STATUSES = {"confirmed", "closed", "fixed", "resolved"}
+
+
+def _leading_word(cell: str) -> str:
+    """The first alphabetic token of a table cell, lowercased.
+
+    Only the LEADING word counts, never a substring search across the cell.
+    That distinction is load-bearing: build phase 4.6's ledger contains the
+    phrase "NOT FIXED and not reachable" inside a reason cell, and a
+    substring search for "fixed" would read that as fixed and count a
+    genuinely open finding as covered, which is the same false pass this
+    change exists to remove.
+    """
+    match = re.match(r"\s*([A-Za-z]+)", cell)
+    return match.group(1).lower() if match else ""
 
 
 def _phase_file_path(phase: str) -> Path:
@@ -71,6 +110,26 @@ def find_covered_findings(phase_text: str) -> list[str]:
         block = "\n".join(lines[start:end])
         status_match = _STATUS_LINE_RE.search(block)
         if status_match and status_match.group(1).lower() in _COVERED_STATUSES:
+            covered.append(finding_id)
+
+    # The table form (R-02). Scanned independently of the narrative form above
+    # rather than instead of it, because a phase file may legitimately carry
+    # both: build phase 4.6's does not, but build phase 3.3's mixes narrative
+    # tickets with table findings, which is how that phase's gap was missed.
+    #
+    # Column ORDER is not assumed. Different phase files order their columns
+    # differently, so every cell is offered to `_leading_word` and the row
+    # counts if any cell BEGINS with a covered state. That is more robust than
+    # indexing a fixed column and stricter than searching the whole row.
+    for line in lines:
+        row_match = _FINDING_ROW_RE.match(line)
+        if row_match is None:
+            continue
+        finding_id = row_match.group(1)
+        if finding_id in covered:
+            continue
+        cells = line.split("|")
+        if any(_leading_word(cell) in _COVERED_STATUSES for cell in cells):
             covered.append(finding_id)
     return covered
 

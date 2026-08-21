@@ -46,7 +46,11 @@ export const STUB_REGISTRY: StubEntry[] = [
     wiredBy: "4.5",
     realSource:
       "Session memory for the live thread; the interactions table for anything " +
-      "that must survive a reload, which is build phase 4.6.",
+      "that must survive a reload, which is build phase 4.13. Corrected 2026-08-21: " +
+      "this said 4.6, which was a guess about ownership rather than a " +
+      "decision. Section 25 never named history as a 4.6 deliverable, and " +
+      "4.6 shipped the interactions substrate this needs without the read " +
+      "path or the UI.",
   },
   {
     surface: "guest-allowance",
@@ -63,7 +67,7 @@ export const STUB_REGISTRY: StubEntry[] = [
       "while holding a guest token re-points that guest's LIVE runs to the new " +
       "account, which is the honest subset of \"your searches move with you\" " +
       "(F-4.10-01). Durable cross-reload history is the \"history\" entry " +
-      "below, owned by build phase 4.6.",
+      "below, owned by build phase 4.13 (corrected 2026-08-21 from 4.6).",
     wiredBy: "4.10",
     realSource:
       "POST /auth/guest, GET /v1/allowance, and the guest bearer token accepted " +
