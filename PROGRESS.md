@@ -2,7 +2,7 @@
 
 A plain-language update on what this project is, what works today, and what comes next. No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-20.
+Last updated: 2026-08-21.
 
 ## Table of contents
 
@@ -91,7 +91,15 @@ All six live-government-API connections the plan called for are now built. That 
 
 The honest headline: someone determined, with access to a lot of internet connections, can still use up the free searches we set aside for strangers each day and leave the product unusable for other newcomers until the next morning. It costs them effort and it costs us nothing beyond the daily budget we chose in advance, and anyone signed in is unaffected. Four separate attempts went into narrowing that, and the fourth is the one that held; the honest position is that a free tier with no sign-up can always be spoiled by someone who really wants to, and what we have bounded is the money rather than the nuisance.
 
-A second honest headline, new this week and different in kind: the work that just landed has NOT been independently reviewed. Every other piece of work in the list above was checked by people, or by fresh reviewers, who had not written it. This one was written and checked by the same hands. That matters here more than it would elsewhere, because two serious problems in it were found only after it looked finished, and one of them was found by chance rather than by any check we had. Until it gets a proper review, treat the conversation-memory and answer-completeness work as newer and less proven than everything above it.
+A second headline from last week has now been resolved, and how it resolved is worth reading. The conversation-memory work went out without being independently reviewed: it was written and checked by the same hands, which is the one thing we try never to do. That review has since been done, and it found two serious problems that were live in the product.
+
+The first: if you asked about a gene and mistyped its name, the system would quietly answer about a different gene you had asked about earlier in the same conversation. The answer looked perfect. It was confident, it was fully sourced, and nothing on screen said the question had been swapped. This is the exact failure this whole product exists to prevent, and the sources made it more convincing rather than less. Mistyping a gene name is the single most common thing people get wrong here, and we had built a specific safeguard for it years of effort ago in project terms; the new memory feature walked straight around it.
+
+The second: everyone browsing without an account was treated as the same person. Two strangers who happened to use the same conversation label could read, and overwrite, each other's conversation history. It needed no trickery to reach.
+
+Both are fixed, and both were checked by someone other than the person who fixed them. The reason to keep this paragraph rather than delete it: two independent reviewers, working separately and without seeing each other's notes, found the same two problems first. That is the strongest sign we have that a review was worth doing, and it is the clearest argument in this project's history for never letting the same hands write and approve the same work.
+
+One thing the review got wrong, kept here on purpose. It reported a third serious problem, that a repair step had been starved of time and was failing. That was investigated the next day and withdrawn: the measuring tool was broken, not the product. The lesson is written into our own notes, because when a measurement looks alarming, the measuring tool is the cheapest thing to doubt first.
 
 The older headline still stands underneath it: the redesigned web page has been through several independent reviews and every one of them found serious problems. That is the system working, but it is worth being blunt about what they found, because the worst one goes to the heart of what this product is for.
 
@@ -144,6 +152,7 @@ Each of these is a completed, reviewed, merged piece of work.
 | 4.3 | A way for other software to ask questions and pick exactly which parts of the answer it wants back. It took six rounds of review, more than any other piece of work so far. Twice the same bug returned: an error message meant for us leaked a database password out to whoever was asking. Both times the cause was the same, and it is worth stating plainly, because it is a mistake anyone can make: the code tried to decide whether a message was safe to show by looking at WHERE THE MESSAGE CAME FROM instead of at WHAT IT SAID | 2026-08-17 |
 | 4.4 | Take a slice of the database away as a standard file other tools can read. The check we had written to prove it worked passed, while the plain everyday way of running it returned five hundred of the wrong thing and none of the right thing | 2026-08-19 |
 | 4.5 | It remembers what you just asked, so you can say "what variants cause it?" instead of naming the gene again. You can also pick how technical the answer should be, and it now signs its work with the name of a scientist from history. Two serious problems turned up in our own work, both after it looked finished: telling it to write plainly made it stop answering entirely, and the remembering half was built so carefully that nobody noticed nothing was ever being written down | 2026-08-20 |
+| 4.5 review | The review sprint 4.5 skipped, run afterwards by two independent reviewers who had not written any of it. They found the mistyped-gene problem and the shared-conversation problem described above, plus about thirty smaller things, and they found the same two worst problems separately without seeing each other's notes. They also found that the safety check written to guard this work was barely running at all | 2026-08-21 |
 | Design system repair | Fixed the design's own colour and keyboard problems at source, after working around them three separate times | 2026-08-14 |
 
 Nine of these are worth understanding, because they explain how this project works.
@@ -240,11 +249,10 @@ The planned specification pause (updating the written plans with everything lear
 
 In order, now:
 
-1. An independent review of the conversation-memory work that just landed. It is the only piece here that has not had one, two serious problems in it were found after it looked finished, and one of those was found by luck rather than by any check we had. Nothing new should start ahead of it.
-2. Collecting feedback: letting people say whether an answer was any good, and keeping those answers somewhere we can learn from them.
-3. The question-understanding gap now has a home: a specific future sprint, later than the next several, will build the real fix. It is not being rushed in early, and nothing else in the next few sprints depends on it being fixed first.
-4. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
-5. Then the remaining work: routing a question to the right worked example, measurement and quality scoring, and finally hardening it for real use. Personalisation and saved history used to sit on this line and have now been built.
+1. Collecting feedback: letting people say whether an answer was any good, and keeping those answers somewhere we can learn from them. This one has to be careful with the part of the system that decides which conversation a person is in, because the review that just finished changed exactly that, and if the two disagree the feedback gets filed against the wrong conversation.
+2. The question-understanding gap now has a home: a specific future sprint, later than the next several, will build the real fix. It is not being rushed in early, and nothing else in the next few sprints depends on it being fixed first.
+3. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
+4. Then the remaining work: routing a question to the right worked example, measurement and quality scoring, and finally hardening it for real use. Personalisation and saved history used to sit on this line and have now been built.
 
 ## Problems we know about and are tracking
 
@@ -252,9 +260,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
-| The conversation-memory and answer-completeness work has never been checked by anyone other than the person who wrote it. Every other piece of work here had a fresh pair of eyes on it; this one did not, and two serious problems in it were found only after it looked done | Before the next sprint starts, ahead of any new feature work |
+| About half the time, a question that should have a straightforward answer comes back as "I could not find information on this" instead. The system finds one relevant record, then writes an answer that does not actually rest on it, so our own honesty check correctly refuses to show it. Refusing is the right behaviour; needing to refuse this often is not. This is not new, and it is not something recent work caused: we measured it on the current version and on the version from before, and it was the same on both | Sprint 5.1, when the scoring harness that measures answer quality across fifty test questions gets built. That is the tool designed to find exactly this |
 | When the short, plain-language answer leaves something out, it now says so, but it can still leave something out. We tried three times to instruct it not to and none of them held, so instead it reports what it missed and lowers its own confidence. It is honest rather than complete | Reconsidered if it turns out to omit things often; the fix is a bigger change to how answers are assembled |
-| The tool we use to check that everything is reachable before a big run does not read the settings file where the database address actually lives, so it reports "could not check" for the database and then says everything is ready anyway. It has been giving a false all-clear | Next time the build tooling is touched |
+| The checks that run the system against the real database could not run this week, because the connection to that database was down. Everything that does not need it passed. This is a temporary condition rather than a defect, but it does mean one whole category of checking has not been done on the most recent work | As soon as the database connection is back up. It is a single command to re-run |
 | The two shortcut commands this project installs, the terminal one and the new export one, do not actually work by typing their name. The packaging step that would put them on your computer properly has been broken for a while, so both only run the long way round. This is not new to this sprint, it just became visible again | In the hardening sprint, along with the packaging fix itself |
 | The export command tells apart "you typed something wrong" from "the database could not be reached" by the type of error rather than by the error saying which it is. It is correct today, and we checked that it is, but it stays correct only as long as nobody uses that error type for a third meaning | Whenever the export needs to report a new kind of failure |
 | When another program asks a badly-formed question, one particular kind of mistake slips past the part that scrubs our internal wording out of error messages. Today the only thing that escapes is a word the asker typed themselves, so nothing of ours gets out, but the rule we rely on is not airtight and we know it | The hardening sprint, 6.1 |
