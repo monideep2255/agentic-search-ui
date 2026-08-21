@@ -474,3 +474,53 @@ Two further defects surfaced while fixing those, both from the same end-to-end a
 The new arm, P4b, hands in NOTHING: two real turns through one session, where turn 2's pronoun can only bind if turn 1 was actually persisted. It was seen failing against each of the four defects above in turn, which is the only reason it can be trusted now.
 
 The transferable rule, stated plainly because this phase paid for it twice: WHEN A TEST SUPPLIES THE THING UNDER TEST, IT CANNOT TELL YOU THE THING EXISTS. At least one arm must obtain that thing the way production obtains it.
+
+## The independent review this phase merged without, run afterwards
+
+Build phase 4.5 merged as PR #52 having run stages 1 to 7 and 10. Stages 8 and 9, the judge round and the adversary round, did not run, and every fix and every test on the branch was written by the same agent that wrote the code. That is the one split `.claude/rules/self-eval-loop.md` says must never collapse. Both rounds were run on 2026-08-20 against the merged code, before build phase 4.6 opened.
+
+Reports, one per round:
+
+- `tracker/phase_4.5_judge_report.md`: 22 findings, F-4.5-J-01 through F-4.5-J-22. 2 critical, 11 major, 7 minor, 2 latent.
+- `tracker/phase_4.5_adversary_report.md`: 26 findings, F-4.5-A-01 through F-4.5-A-26. 3 critical, 9 major, 11 minor, 3 latent. 19 confirmed by executing code, 7 reasoned from reading.
+
+Roughly 35 unique findings after overlap. Both reviewers ran with separate briefs and separate contexts, and they converged independently on the same three worst defects, which is the strongest verification signal available short of a live exploit.
+
+### What the two rounds agreed on, stated first because agreement is the signal
+
+- Memory defeats the unresolved-entity refusal (F-4.5-J-01, F-4.5-A-01, critical, both confirmed by execution). A question naming a gene that does not resolve is answered about a remembered gene instead, grounded, cited, and shipped as `trust_outcome: "answer"` with no disclosure. The comment three lines above asserts the opposite property.
+- Every guest is the same principal (F-4.5-J-02, F-4.5-A-02, critical, both confirmed by execution). `(owner_id or None) != (user_id or None)` is False for every guest pair, so any anonymous caller reads and overwrites any other guest's memory. The distinguishing identity already exists: `caller.owner_id` carries `guest:<uuid>` and is passed to `create_run` on the next line. It is simply not the field the check reads.
+- Eleven remembered CURIEs crash the query (F-4.5-J-03 major, F-4.5-A-03 critical, both confirmed). `_memory_curies` returns up to 50, `target_entities` caps at 10, and the memory path does not slice where the resolver path does. Permanent for the session, because memory only grows, and it fails hardest in long sessions, which are what memory is for.
+
+The severity disagreement on the third is recorded rather than reconciled away: the judge called it major, the adversary critical. Treated as critical here, because the failure is permanent for the affected session and presents as an opaque crash naming nothing.
+
+### The pattern both rounds named independently
+
+The phase's controls are mostly correct in the code and mostly unguarded by the gate. Three arms are fully vacuous, one half, one partial. Five arms that need no live resources sit behind `@premise_gate` and skip in ordinary CI, measured at `2 passed, 14 skipped in 0.03s`, so most of this gate does not run unless someone runs it deliberately. The 500-line memory module has no unit test file. The completeness repair, which fires a second Synth call on the most safety-critical path in the product and floors `trust_outcome`, has no deterministic test. Five of six load-bearing code comments assert a property the code does not have.
+
+Both criticals live in the two newest feature commits, `6576b73` and `1543c46`, and both sit inside code written to repair an earlier finding: F-4.5-J-01 inside the reference resolution closing F-4.8-A-22, F-4.5-J-02 inside the ownership check closing F-4.1-A-15. The standing bias this repository measured across build phases 2.1, 4.2 and 4.3, that every review round finds its worst defect inside the previous round's fix, held here without a single exception.
+
+### F-4.5-09 recurred four times in one phase
+
+The phase's own signature defect is that a test which supplies the thing under test cannot tell you the thing exists. It was filed once, quoted in this file while being committed a second time, and the two rounds found two further instances that had gone unfiled:
+
+- F-4.5-A-09: both injection sites discard the model's response. `think_node` is the build-phase-2.0 stub and `plan_node` selects its tool deterministically straight afterwards, so the whole rendered-memory apparatus, `_render`, `compact`, `build_session_context`, the token cap and the compaction order, produces a block appended to two prompts, billed at two tiers at 59 tokenizer calls and 50ms twice per query, and read by nothing that changes an answer. The only live effect memory has today is `_memory_curies` feeding `target_entities`, which needs none of it.
+- F-4.5-A-10: `open_threads` has no writer anywhere in `src/`. Section 14.3's first compaction rule, drop the oldest open threads first, can never fire on real data, so real compaction always begins by merging findings, which the section itself names as the more expensive loss. Premise arm P9 proves the order holds only because it constructs ten threads by hand and passes them in.
+
+### Disposition
+
+Settled with the product owner on 2026-08-20: fix the criticals and the reachable majors before build phase 4.6 opens, track the minors and the latent findings. That is the merge bar build phase 4.3 converged under and the standard every phase since has been held to.
+
+Fix work runs on `fix/4.5-review-followups`, cut from `develop` at `45c2636`. Findings are grouped by file with one agent per group working serially, per `docs/build/Build_workflow_cadence.md`: parallel fix agents in one file are individually correct and structurally blind to the sibling editing the same function, which is how build phase 4.2 reached six rounds.
+
+### F-4.5-01, closed
+
+`tracker/preflight.py` now loads `.env` before probing, so the graph transport is actually verified rather than reported `skipped` against an open tunnel while the run prints READY and exits 0. This was F-2.1-04 in a second place: every premise gate already loads `.env` explicitly and cites that finding, and preflight was written later and did not inherit it. `setdefault`, so an exported variable still beats the file.
+
+Proven both directions rather than asserted:
+
+- `python3 tracker/preflight.py --transport graph` returned `skipped` before and returns `ok  TCP 15432 open in 2ms` after, against the same open tunnel.
+- `GRAPH_PG_PORT=1 python3 tracker/preflight.py --transport graph` returns `down  ConnectionRefusedError` and exits 1, which proves both that the exported value beat `.env`'s 15432 and that a configured but dead graph now fails the run.
+- A full run reports `ok` for all three transports, the first preflight run in this repository to actually verify the graph.
+
+Commit `d79122a`. One stale reference remains, at `tests/system_03_search_agent/core/test_personalization_premise.py:292`, which says preflight is the one tool that does not load `.env`. It is left for the agent that owns that file rather than edited under a concurrent reviewer.
