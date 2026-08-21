@@ -370,7 +370,7 @@ The docstring says "Never raises. A capture failure is logged and dropped." The 
 
 ### J-11. MINOR. The phase's own goal-contract verify item fails
 
-`python tracker/check_doc_drift.py --check` returns `error: 10 facts computed | 14 stale | 0 structural`. The goal contract at `tracker/phase_4.6.md:19` names this command as part of the verify surface. Normally cleared at `/phase-checkpoint`; noted so it is not skipped. Real new counts: 3690 Python tests, 209 frontend tests, 29 Playwright declarations, 360 DECISIONS.md rows, 105 LEARNINGS.md entries.
+`python tracker/check_doc_drift.py --check` returns `error: 10 facts computed | 14 stale | 0 structural`. The goal contract at `tracker/phase_4.6.md:19` names this command as part of the verify surface. Normally cleared at `/phase-checkpoint`; noted so it is not skipped. Real new counts, as measured at the time of this round: 3690 Python tests, 209 frontend tests, 29 Playwright declarations, 360 DECISIONS.md rows as of then, 105 LEARNINGS.md entries, both as of that round.
 
 ### J-12. MINOR. F-4.6-09's caveat is not where the reviewer will see it
 
