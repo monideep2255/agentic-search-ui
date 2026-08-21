@@ -50,7 +50,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete: six build phases merged into develop. Step 6.3, build v1, ran build phases 3.0 through 3.5, all merged; Step 6.2, the reconciliation pause, closed 2026-08-10; build phases 4.0 and 4.1 closed 2026-08-11; build phases 4.8 and 4.9 (web UI visual design and answer-screen fidelity) closed 2026-08-13 and 2026-08-14; build phase 4.10 (the anonymous run path and the server-side guest allowance) closed 2026-08-15, PR #46; build phase 4.2 (the CLI adapter, `system3-cli`, command `s3`) closed 2026-08-16, PR #47; build phase 4.3 (the GraphQL surface via Strawberry) closed 2026-08-17, PR #48; build phase 4.4 (KGX export) closed 2026-08-19, PR #51; build phase 4.5 (personalization and session memory) closed 2026-08-20, PR #52, the first phase to merge with no judge or adversary round; Step 6.3 continues at build phase 4.6, feedback capture, after the independent review 4.5 never received. See the table below |
+| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete: six build phases merged into develop. Step 6.3, build v1, ran build phases 3.0 through 3.5, all merged; Step 6.2, the reconciliation pause, closed 2026-08-10; build phases 4.0 and 4.1 closed 2026-08-11; build phases 4.8 and 4.9 (web UI visual design and answer-screen fidelity) closed 2026-08-13 and 2026-08-14; build phase 4.10 (the anonymous run path and the server-side guest allowance) closed 2026-08-15, PR #46; build phase 4.2 (the CLI adapter, `system3-cli`, command `s3`) closed 2026-08-16, PR #47; build phase 4.3 (the GraphQL surface via Strawberry) closed 2026-08-17, PR #48; build phase 4.4 (KGX export) closed 2026-08-19, PR #51; build phase 4.5 (personalization and session memory) closed 2026-08-20, PR #52, then reviewed and fixed in PR #53 on 2026-08-21; it was the first phase to merge with no judge or adversary round, and that gap was closed afterwards; Step 6.3 continues at build phase 4.6, feedback capture, after the independent review 4.5 never received. See the table below |
 
 ### Build phase detail
 
@@ -221,4 +221,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-08-20
+Last updated: 2026-08-21

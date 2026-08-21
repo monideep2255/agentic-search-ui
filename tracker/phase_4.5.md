@@ -477,7 +477,7 @@ The transferable rule, stated plainly because this phase paid for it twice: WHEN
 
 ## The independent review this phase merged without, run afterwards
 
-Build phase 4.5 merged as PR #52 having run stages 1 to 7 and 10. Stages 8 and 9, the judge round and the adversary round, did not run, and every fix and every test on the branch was written by the same agent that wrote the code. That is the one split `.claude/rules/self-eval-loop.md` says must never collapse. Both rounds were run on 2026-08-20 against the merged code, before build phase 4.6 opened.
+Build phase 4.5 merged as PR #52, superseded by PR #53, having run stages 1 to 7 and 10. Stages 8 and 9, the judge round and the adversary round, did not run, and every fix and every test on the branch was written by the same agent that wrote the code. That is the one split `.claude/rules/self-eval-loop.md` says must never collapse. Both rounds were run on 2026-08-20 against the merged code, before build phase 4.6 opened.
 
 Reports, one per round:
 

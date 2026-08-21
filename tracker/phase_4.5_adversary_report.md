@@ -1,6 +1,6 @@
 # Build phase 4.5 adversary report
 
-Stage 9 of the cadence in `docs/build/Build_workflow_cadence.md`, run after the fact: build phase 4.5 merged as PR #52 with no judge round and no adversary round. Merge commit 1f70fc3, merge base bddd970.
+Stage 9 of the cadence in `docs/build/Build_workflow_cadence.md`, run after the fact: build phase 4.5 merged as PR #52, superseded by PR #53, with no judge round and no adversary round. Merge commit 1f70fc3, merge base bddd970.
 
 This is not a checklist grade. A judge owns the checklist. This is the unscripted half of `.claude/rules/self-eval-loop.md`: hostile use of the shipped code, over-reporting on purpose. Nothing here is fixed, triaged, or closed. Every finding names an id, a severity, a file and line, the exact input or sequence, the outcome, and whether it was run or reasoned.
 
