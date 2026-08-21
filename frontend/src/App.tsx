@@ -211,23 +211,45 @@ export function App() {
   // first answer lands reads as a bug to the user.
   const [persona, setPersona] = useState<string | null>(null);
 
-  // Fetch the session's persona once, at load, so the chip build phase 4.8
-  // put in the shell has a real name before the first question rather than a
-  // locally invented one. Best-effort: a failure leaves the chip absent,
-  // which is the honest degradation, never a fabricated scientist.
+  // Fetch the persona before the first question, so the chip build phase 4.8
+  // put in the shell has a real name rather than a locally invented one.
+  // Best-effort: a failure leaves the chip absent, which is the honest
+  // degradation, never a fabricated scientist.
+  //
+  // ONE effect owns this, and F-4.5-A-12 is why it is stated that way. There
+  // used to be two: this one, keyed on `[sessionId]` and always anonymous,
+  // and the `/auth/me` effect below, keyed on `[token]`, both calling
+  // `setPersona`. Nothing ordered them and nothing cancelled one when the
+  // other ran, so for a signed-in user the chip showed whichever HTTP
+  // response happened to land second, and then changed again when the first
+  // run returned. `PersonaChip`'s own docstring says a name that changes
+  // after load "reads as a bug to the user", which is exactly what two
+  // unordered writers to one piece of state produce.
+  //
+  // The dependency array carries `token` as well as `sessionId` because the
+  // ANSWER depends on both: the server keys the persona on the account when
+  // a credential is presented and on the session otherwise. Signing in or out
+  // re-runs this effect, and its cleanup aborts the in-flight request from
+  // the previous identity, so a slow anonymous response can never overwrite a
+  // fresh signed-in one.
   useEffect(() => {
     const controller = new AbortController();
-    fetchPersona(sessionId, { signal: controller.signal })
+    fetchPersona(sessionId, { signal: controller.signal, token })
       .then((result) => setPersona(result.persona_name))
       .catch(() => undefined);
     return () => controller.abort();
-  }, [sessionId]);
+  }, [sessionId, token]);
 
   // T-4.5-08, Section 14.5: "once auth is live, depth defaults to the user's
   // last-used value". Seeded from the account rather than from localStorage,
   // because the preference belongs to the account and should follow it to
-  // another device. Also adopts the account's persona, which is keyed on the
-  // user id and so differs from the anonymous one fetched above.
+  // another device.
+  //
+  // This effect deliberately does NOT touch the persona. `MeResponse` still
+  // carries `persona_name` and it is still correct; adopting it here is what
+  // made this effect the second writer in F-4.5-A-12's race. The persona
+  // effect above is the single owner, and it now asks with this same token,
+  // so it returns the account-keyed name without a second request racing it.
   //
   // Best-effort: a failure leaves the control at whatever it already shows,
   // which is the contract default. A preference that fails to load must never
@@ -244,7 +266,6 @@ export function App() {
         ) {
           setDepth(me.audience_depth);
         }
-        setPersona(me.persona_name);
       })
       .catch(() => undefined);
     return () => controller.abort();
@@ -395,7 +416,12 @@ export function App() {
           // visitor actually asks, never eagerly on page load. Eager
           // minting would fire an unauthenticated write on every visit,
           // including one that never asks anything.
-          const minted = await mintGuest();
+          // `sessionId` is passed so the mint response's own `persona_name`
+          // is keyed the way every later query from this guest is keyed
+          // (F-4.5-A-12). This app does not read that field, since the
+          // persona effect above already owns the chip, but a wire value
+          // that cannot be correct for any client is worse than one that is.
+          const minted = await mintGuest({ sessionId });
           if (!minted || typeof minted.guest_token !== "string") {
             throw new Error("could not start a guest session; check your connection and try again");
           }
@@ -626,6 +652,15 @@ export function App() {
         return (
           <HomeScreen
             onSubmit={ask}
+            /*
+             * T-4.5-08, Section 14.5. `depth` is App's state, seeded from
+             * `GET /auth/me`, so the control a returning caller sees starts
+             * where they left it. Until this prop existed, `HomeScreen` owned
+             * its own depth and App's seeded value reached only the follow-up
+             * ask, never the landing control or the first question.
+             */
+            depth={depth}
+            onDepthChange={setDepth}
             /*
              * T-4.10-08. F-4.8-A-21 was about a CLIENT-SIDE counter that
              * leaked the signed-in user's count to the next anonymous

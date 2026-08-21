@@ -173,8 +173,15 @@ class GuestTokenResponse(BaseModel):
     total: int
     # T-4.5-10, Section 14.2: "an anonymous prototype session gets a persona
     # drawn and held for that session only, then redrawn on the next
-    # anonymous session". The mint IS that session's start, so this is where
-    # the draw becomes visible to the client. Keyed on the guest id, so it
-    # holds for the life of the guest session and changes with the next one,
-    # exactly as the section describes.
+    # anonymous session".
+    #
+    # Keyed on the `session_id` the caller passes to `POST /auth/guest`,
+    # which is the same string it will send on every `POST /v1/query`, so the
+    # two agree. F-4.5-A-12: this comment used to say the name was "keyed on
+    # the guest id, so it holds for the life of the guest session", which was
+    # true of the value and useless to the caller, because no query is ever
+    # keyed on the guest id. A caller that sends no `session_id` still gets a
+    # name, keyed on the guest row id, and that name will not match its first
+    # answer; see the handler for why the fallback is kept rather than the
+    # field removed.
     persona_name: str

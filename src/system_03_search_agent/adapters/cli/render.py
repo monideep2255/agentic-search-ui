@@ -77,7 +77,11 @@ the gate is the one that cannot be edited:
       `citation.source`, `citation.source_url`, `error.source`,
       `think`/`plan` narrative text, `tool_result.summary`,
       `CliApiError.message` (both `_render_cli_api_error` and
-      `_render_http_status_error`, since F-4.2-D-03), the `Content-Type`
+      `_render_http_status_error`, since F-4.2-D-03), the
+      `persona_name` the create-run response body carries and
+      `_status_prefix` writes on every think and plan line (since
+      F-4.5-A-11, which found it exempted by a comment that was wrong
+      about where the value came from), the `Content-Type`
       header text in `main.py`'s `_run_login` and in
       `_render_credentials_error`'s general branch (covering
       `credentials.py`'s `RefreshError`, since F-4.2-V4-01), and the
@@ -554,16 +558,30 @@ class Renderer:
     def _status_prefix(self, step: str) -> str:
         """The status-line prefix for one agent-loop step (Section 13.3).
 
-        The persona name is NOT sanitized here, and that is deliberate rather
-        than an omission: it comes from this process's own curated list via
-        `core.persona`, never from the server's event stream, so it is not
-        untrusted content the way a narrative is. Sanitizing it would imply a
-        provenance it does not have and would hide that distinction from the
-        next reader.
+        The persona name IS sanitized, and finding F-4.5-A-11 is why this
+        docstring now says the opposite of what it used to say. It used to
+        claim the name "comes from this process's own curated list via
+        `core.persona`, never from the server's event stream", and used that
+        claimed provenance to justify writing it raw. The claim was false.
+        This process never imports `core.persona`: `CliClient.create_run`
+        parses `persona_name` off the `POST /v1/query` response body and
+        `main.py` hands that value straight to this renderer. It is a
+        server-supplied freeform string, which is exactly the category this
+        module's docstring says must go through `_sanitize_untrusted`.
+
+        A terminal is an execution surface, not a display surface. An
+        unsanitized name from a hostile server, a `--base-url` pointed at
+        one, or any proxy in between, gets ANSI CSI and OSC control
+        sequences written to the user's stderr on every think and plan line,
+        and can forge this renderer's own structural vocabulary. Nothing
+        about the value's shape prevents that; only the sanitizer does.
+
+        Sanitized once here rather than at construction, so there is exactly
+        one place the raw value can reach a write, and it is this one.
         """
         if self._persona_name is None:
             return f"[{step}]"
-        return f"[{self._persona_name} | {step}]"
+        return f"[{_sanitize_untrusted(self._persona_name)} | {step}]"
 
     def _handle_think(self, event: Event) -> None:
         payload = ThinkPayload.model_validate(event.payload)

@@ -639,8 +639,8 @@ class CliClient:
         return {"Authorization": f"Bearer {self._creds.access_token}"}
 
     async def create_run(
-        self, text: str, session_id: str, audience_depth: str
-    ) -> tuple[str, str]:
+        self, text: str, session_id: str, audience_depth: str | None
+    ) -> tuple[str, str | None]:
         """`POST /v1/query`. Returns `(run_id, persona_name)`.
 
         NEVER retried, under any circumstance: not a network timeout, not
@@ -683,7 +683,20 @@ class CliClient:
         body = _parse_json_body(
             response, endpoint="create run", expected_statuses=frozenset({200, 201, 202})
         )
-        return body["run_id"], body["persona_name"]
+        # F-4.5-A-11 follow-up: bare `body[...]` indexing raised KeyError on a
+        # response missing either key, which escapes as an unhandled traceback
+        # rather than as this module's own error type, so the CLI's error
+        # handling never saw it. `run_id` is required by the contract and its
+        # absence is a real protocol violation; `persona_name` is optional on
+        # the wire, so a server that omits it degrades to no persona rather
+        # than to a crash.
+        if "run_id" not in body:
+            raise CliApiError(
+                "the server's create-run response carried no run_id, so this "
+                "run cannot be followed. Check that the API version matches "
+                "this client."
+            )
+        return body["run_id"], body.get("persona_name")
 
     async def stream_events(
         self, run_id: str, *, last_event_id: str | None = None

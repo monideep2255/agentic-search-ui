@@ -40,6 +40,26 @@ export interface HomeScreenProps {
   onSubmit?: (question: string, depth: AudienceDepth) => void;
   /** Rendered under the hero. The guest allowance counter lives here. */
   footer?: React.ReactNode;
+  /**
+   * The depth to show, when a parent owns it. Pass `depth` and
+   * `onDepthChange` together, or neither.
+   *
+   * This screen used to own the depth outright, in local state seeded from
+   * the literal `"researcher"`, and nothing could change that seed. Section
+   * 14.5 says depth defaults to the account's last-used value once auth is
+   * live, and `App` had been reading that value from `GET /auth/me` since
+   * build phase 4.5 and had nowhere to put it: the control the user actually
+   * sees was a different piece of state entirely, so a returning caller
+   * whose account said `deep_technical` was shown `researcher` and the first
+   * question they asked was sent at `researcher`. Found while fixing
+   * F-4.5-J-15's server half.
+   *
+   * Left OPTIONAL so this screen still renders standalone, uncontrolled,
+   * exactly as it did before, which is how the design-system tests mount it.
+   */
+  depth?: AudienceDepth;
+  /** Called instead of the internal setter when `depth` is supplied. */
+  onDepthChange?: (depth: AudienceDepth) => void;
 }
 
 /** The prototype's `button.go` arrow, from `#s-landing`. */
@@ -77,9 +97,23 @@ function SearchIcon() {
   );
 }
 
-export function HomeScreen({ onSubmit, footer }: HomeScreenProps) {
+export function HomeScreen({
+  onSubmit,
+  footer,
+  depth: controlledDepth,
+  onDepthChange,
+}: HomeScreenProps) {
   const [question, setQuestion] = useState("");
-  const [depth, setDepth] = useState<AudienceDepth>("researcher");
+  const [localDepth, setLocalDepth] = useState<AudienceDepth>("researcher");
+
+  // Controlled when the parent supplies a value, uncontrolled otherwise. One
+  // `depth` and one `setDepth` below, so no call site has to know which mode
+  // it is in and the two can never be read from different places.
+  const depth = controlledDepth ?? localDepth;
+  const setDepth = (next: AudienceDepth) => {
+    if (controlledDepth !== undefined) onDepthChange?.(next);
+    else setLocalDepth(next);
+  };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();

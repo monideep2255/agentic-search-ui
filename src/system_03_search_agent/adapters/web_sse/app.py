@@ -32,8 +32,16 @@ from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
 from system_03_search_agent.adapters.mcp.server import server as mcp_server
-from system_03_search_agent.auth.dependencies import Principal, get_caller
-from system_03_search_agent.auth.preferences import write_audience_depth
+from system_03_search_agent.auth.dependencies import (
+    InvalidCallerError,
+    Principal,
+    get_caller,
+    resolve_caller_from_bearer_token,
+)
+from system_03_search_agent.auth.preferences import (
+    resolve_audience_depth,
+    write_audience_depth,
+)
 from system_03_search_agent.auth.router import router as auth_router
 from system_03_search_agent.auth.router import source_hash_for_request
 from system_03_search_agent.contracts.events import CitationPayload
@@ -260,7 +268,18 @@ class CreateRunRequest(BaseModel):
 
     text: str = Field(..., min_length=1, max_length=2000)
     session_id: str = Field(..., max_length=64)
-    audience_depth: Literal["clinical_brief", "researcher", "deep_technical"] = "researcher"
+    # Nullable, and F-4.5-J-15 is why. It used to default to the literal
+    # `"researcher"` here, which made "not named by the caller" and
+    # "explicitly asked for researcher" the same value by the time the
+    # handler saw it, so the handler could not honor the account's stored
+    # preference even in principle. `None` now means "the caller named no
+    # depth"; `auth.preferences.resolve_audience_depth` turns that into the
+    # stored value or the contract default. Additive and non-breaking under
+    # system-design-patterns pattern 10: a client that sends one of the three
+    # values behaves exactly as before, and a client that omits the field now
+    # gets the account's preference instead of a hardcoded literal, which is
+    # what Section 14.5 asked for.
+    audience_depth: Literal["clinical_brief", "researcher", "deep_technical"] | None = None
 
     @field_validator("text")
     @classmethod
@@ -444,19 +463,51 @@ class PersonaResponse(BaseModel):
 # exactly as `POST /v1/query` keys it, so the name shown on the landing
 # screen is the one the first answer will carry.
 #
+# That last sentence used to be false, and F-4.5-J-12 / F-4.5-A-12 is why
+# the credential below exists. This handler hardcoded `user_id=None`, so a
+# signed-in caller was keyed on the client-chosen session id here and on the
+# account everywhere else: the landing chip named one scientist and every
+# answer named a different one. The comment above asserted the property the
+# code did not have, and it had already correctly identified the failure it
+# was reintroducing one layer down ("it would show one name and every other
+# surface would show a different one for the same user").
+#
+# The `Authorization` header is therefore read here, and it is OPTIONAL in
+# both directions: absent, it stays the anonymous session-keyed draw this
+# endpoint was built for; present and valid for a registered account, it
+# keys on the account, exactly as `POST /v1/query` does. A present but
+# INVALID or expired credential falls back to the anonymous draw rather than
+# returning 401, because the whole purpose of this endpoint is to answer a
+# caller who may have no usable credential, and a landing screen that fails
+# on a stale token is a worse outcome than a chip keyed on the session.
+#
 # Rate-limit consideration, the same criterion `GET /v1/allowance` below
-# records: this is unauthenticated, because its whole purpose is to serve a
-# caller who has no credential yet. It is safe to leave open because it
-# touches no database, makes no model call, and returns a name from a public
+# records: this stays reachable without a credential, because its whole
+# purpose is to serve a caller who has no credential yet. It is safe to
+# leave open because it makes no model call and returns a name from a public
 # curated list, so it discloses nothing about whether a session or account
-# exists. It is a hash of the caller's own input. Real throttling is build
-# phase 6.0's, as everywhere else on this surface.
+# exists: an anonymous caller and a caller holding a token for an account
+# that does not exist get answers of exactly the same shape. It does now
+# touch the database, but only on the path where a credential was actually
+# presented, which is the same lookup every authenticated route already
+# does: `get_session` constructs a SQLAlchemy `Session` without checking out
+# a connection, and nothing below issues a statement unless an
+# `Authorization` header arrived. Real throttling is build phase 6.0's, as
+# everywhere else on this surface.
 @app.get("/v1/persona", response_model=PersonaResponse)
 def get_v1_persona(
     session_id: str = FastAPIQuery(..., max_length=64, min_length=1),
+    authorization: str | None = Header(default=None),
+    session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI DI
 ) -> PersonaResponse:
+    user_id: str | None = None
+    if authorization is not None:
+        try:
+            user_id = resolve_caller_from_bearer_token(authorization, session).user_id
+        except InvalidCallerError:
+            user_id = None
     return PersonaResponse(
-        persona_name=persona_for_session(session_id=session_id, user_id=None)
+        persona_name=persona_for_session(session_id=session_id, user_id=user_id)
     )
 
 
@@ -942,21 +993,18 @@ async def post_v1_query(
         else None
     )
 
-    # T-4.5-08, Section 14.5: remember this account's depth so their control
-    # starts where they left it next time. Only for a registered caller: a
-    # guest has no row to remember against, and inventing one to hold a
-    # display preference would create an identity the guest never asked for.
-    #
-    # Guarded by `write_audience_depth` returning False when nothing changed,
-    # so the common case (the same depth as last time, which is most requests)
-    # does no UPDATE at all rather than putting one on every authenticated
-    # query's hot path.
-    if caller.user_id is not None:
-        user_row = session.get(User, uuid.UUID(caller.user_id))
-        if user_row is not None and write_audience_depth(
-            user_row, request.audience_depth
-        ):
-            session.commit()
+    # T-4.5-08, Section 14.5. The account row is read HERE and the
+    # preference is resolved from it, rather than the handler trusting the
+    # request's own default. F-4.5-J-15 / F-4.5-A-13: `CreateRunRequest`
+    # used to default the field to the literal `"researcher"`, so a caller
+    # that named no depth was indistinguishable from one that asked for
+    # researcher, and the account's stored value could only take effect if
+    # the client had first called `GET /auth/me` and re-echoed it. The web
+    # UI did. No other surface did, and neither does a bare REST caller.
+    user_row = (
+        session.get(User, uuid.UUID(caller.user_id)) if caller.user_id is not None else None
+    )
+    audience_depth = resolve_audience_depth(requested=request.audience_depth, user=user_row)
 
     run_id = str(uuid.uuid4())
     query = Query(
@@ -971,7 +1019,7 @@ async def post_v1_query(
         # `guest:<uuid>` and was already being passed to `create_run` a few
         # lines below; it just never reached the Query.
         owner_id=caller.owner_id,
-        audience_depth=request.audience_depth,
+        audience_depth=audience_depth,
     )
     context = RequestContext(surface="rest_sse")
     try:
@@ -1024,6 +1072,42 @@ async def post_v1_query(
             },
             headers={"Retry-After": str(exc.retry_after_s)},
         ) from None
+    # T-4.5-08, Section 14.5: remember this account's depth so their control
+    # starts where they left it next time. Only for a registered caller: a
+    # guest has no row to remember against, and inventing one to hold a
+    # display preference would create an identity the guest never asked for.
+    #
+    # AFTER `create_run` returns, not before it, and that ordering is
+    # F-4.5-A-20's fix. The write and its commit used to run before the run
+    # id was even minted, so a query the authoritative concurrent-run cap
+    # then refused with a 429 had already permanently changed the account's
+    # default depth. A preference is a record of a choice that took effect;
+    # a request that was refused took none.
+    #
+    # Stated exactly, because the honest scope is narrower than "no rejected
+    # query ever writes". What this ordering covers is every rejection that
+    # happens before an admitted run exists: the guest-allowance and
+    # concurrency prechecks above, which already preceded the old write
+    # position, and `create_run`'s own authoritative cap check, which did
+    # not. What it does NOT cover is a guardrail refusal, because the
+    # guardrail runs inside the run this endpoint has already admitted and
+    # answered 202 for, and there is no synchronous point here at which its
+    # verdict is known. That residue is the same one `on_guard_refused`
+    # above documents, and closing it needs the durable run record build
+    # phase 4.6 owns.
+    #
+    # `audience_depth` rather than `request.audience_depth`: the value
+    # recorded is the one the run actually used, which for a caller that
+    # named no depth is the account's existing stored value, so this write
+    # is a no-op in exactly that case rather than a rewrite.
+    #
+    # Guarded by `write_audience_depth` returning False when nothing changed,
+    # so the common case (the same depth as last time, which is most requests)
+    # does no UPDATE at all rather than putting one on every authenticated
+    # query's hot path.
+    if user_row is not None and write_audience_depth(user_row, audience_depth):
+        session.commit()
+
     # Section 14.2: keyed on the account when there is one, so a registered
     # caller keeps the same scientist for the life of the account, and on the
     # session otherwise, so an anonymous session holds one for that session

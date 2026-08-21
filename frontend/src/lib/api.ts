@@ -298,28 +298,55 @@ export interface PersonaResponse {
 /**
  * `GET /v1/persona` (T-4.5-10, Section 14.2).
  *
- * Unauthenticated on purpose: its whole job is to serve a visitor who has no
- * credential yet, so the persona chip in the app shell has a real name on the
- * landing screen instead of a locally invented one. The server keys it
- * exactly as `POST /v1/query` does, so the name shown before the first
- * question is the one the first answer will carry.
+ * Reachable without a credential, because its whole job is to serve a
+ * visitor who has no credential yet, so the persona chip in the app shell has
+ * a real name on the landing screen instead of a locally invented one.
+ *
+ * `token`, when given, is sent as the bearer credential, and F-4.5-J-12 is
+ * why it exists. The docstring here used to claim "the server keys it exactly
+ * as `POST /v1/query` does, so the name shown before the first question is
+ * the one the first answer will carry", and the endpoint hardcoded an
+ * anonymous identity, so for a signed-in user the claim was false: the chip
+ * named the session's scientist and every answer named the account's. Sending
+ * the token is what makes the old sentence true. An absent, stale or invalid
+ * token is not an error on this endpoint; the server falls back to the
+ * session-keyed name rather than refusing.
+ *
+ * This is the ONE call the app uses for the pre-answer persona. `fetchMe`
+ * also carries a `persona_name`, and App deliberately ignores it: two
+ * unordered requests both writing one piece of state is a race, and the
+ * winner was decided by network timing (F-4.5-A-12).
  */
 export async function fetchPersona(
   sessionId: string,
-  options: ApiCallOptions = {},
+  options: ApiCallOptions & { token?: string | null } = {},
 ): Promise<PersonaResponse> {
   const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
   const response = await fetch(
     `${baseUrl}/v1/persona?session_id=${encodeURIComponent(sessionId)}`,
-    { signal: options.signal },
+    {
+      signal: options.signal,
+      headers:
+        options.token != null ? { Authorization: `Bearer ${options.token}` } : undefined,
+    },
   );
   await throwIfNotOk(response, "fetchPersona");
   return (await response.json()) as PersonaResponse;
 }
 
-export async function mintGuest(options: ApiCallOptions = {}): Promise<GuestTokenResponse> {
+export async function mintGuest(
+  options: ApiCallOptions & { sessionId?: string } = {},
+): Promise<GuestTokenResponse> {
   const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
-  const response = await fetch(`${baseUrl}/auth/guest`, {
+  // `session_id`, when the caller knows it, so the `persona_name` on the mint
+  // response is keyed the same way every later `POST /v1/query` from this
+  // guest is keyed (F-4.5-A-12). Without it the server keys on the guest row
+  // id and returns a name that can never match the first answer.
+  const query =
+    options.sessionId != null
+      ? `?session_id=${encodeURIComponent(options.sessionId)}`
+      : "";
+  const response = await fetch(`${baseUrl}/auth/guest${query}`, {
     method: "POST",
     signal: options.signal,
   });
