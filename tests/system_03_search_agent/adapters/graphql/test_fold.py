@@ -509,6 +509,16 @@ async def _finished_entry(
     return RunEntry(
         run_id="r-citations-test",
         user_id="u1",
+        # T-4.6-06: `RunEntry` holds the `Query` its task is running, so the
+        # guest-to-account migration can rewrite the run's own identity and
+        # not only this entry's copy of it (F-4.6-J-01). Nothing in this
+        # file reads it; it is supplied because the field is required.
+        query=Query(
+            text="what is this",
+            session_id="fold-test",
+            trace_id="r-citations-test",
+            owner_id="user:u1",
+        ),
         owner_id="user:u1",
         queue=asyncio.Queue(),
         task=task,

@@ -49,14 +49,6 @@ export const STUB_REGISTRY: StubEntry[] = [
       "that must survive a reload, which is build phase 4.6.",
   },
   {
-    surface: "feedback",
-    rendersToday:
-      "Rating, reason chips and the per-citation flag, all accepted and discarded.",
-    wiredBy: "4.6",
-    realSource:
-      "The interactions table, which already names feedback as one of its fields.",
-  },
-  {
     surface: "guest-allowance",
     rendersToday:
       "REAL as of build phase 4.10 (T-4.10-08): an anonymous visitor mints a " +

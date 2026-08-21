@@ -425,6 +425,90 @@ export interface LoginResponse {
   token_type: string;
 }
 
+// ---------------------------------------------------------------------------
+// Feedback (T-4.6-09). Mirrors `src/system_03_search_agent/feedback/
+// contracts.py`'s `FeedbackPayload` field for field, and
+// `adapters/web_sse/app.py`'s `post_v1_query_feedback` route.
+// ---------------------------------------------------------------------------
+
+export interface FeedbackCitationFlag {
+  citation_id: string;
+  reason: string;
+}
+
+export interface FeedbackRequestBody {
+  rating: "up" | "down" | null;
+  comment: string | null;
+  flagged_reason: string | null;
+  citation_flags: FeedbackCitationFlag[];
+}
+
+/**
+ * Thrown for `postFeedback`'s one special case: a 409 Conflict.
+ *
+ * `feedback.capture_run` is dispatched as a background task after the
+ * `done` event (`app.py`'s own comment above `post_v1_query_feedback`), so
+ * a rating submitted the instant an answer lands can genuinely arrive
+ * before the `interactions` row does. The server answers that race with
+ * 409 and a `Retry-After` header, never a 404 (which would say the run
+ * does not exist at all) and never a bare 200 (which would silently drop
+ * the rating). A caller of `postFeedback` must treat this as "try again
+ * shortly", never as an ordinary failure.
+ */
+export class FeedbackNotYetCapturedError extends Error {
+  /** Seconds to wait before retrying, read from the response's `Retry-After`
+   *  header. Falls back to 3, the server's own documented retry hint
+   *  (`app.py`'s `_FEEDBACK_NOT_YET_CAPTURED_RETRY_AFTER_S`), when the
+   *  header is missing or unparseable. */
+  readonly retryAfterS: number;
+
+  constructor(retryAfterS: number) {
+    super("this run's feedback target has not been captured yet");
+    this.name = "FeedbackNotYetCapturedError";
+    this.retryAfterS = retryAfterS;
+  }
+}
+
+/**
+ * `POST /v1/query/{run_id}/feedback`: submits, or replaces, this caller's
+ * rating, comment and per-citation flags for one run. 204 No Content on
+ * success, so there is no body to parse.
+ *
+ * `record_feedback` REPLACES the whole `user_feedback` row on every call
+ * (`feedback/writer.py`'s own docstring), rather than merging fields in.
+ * A caller must therefore always send the full current payload, rating,
+ * comment, flagged_reason and citation_flags together, never just the one
+ * field that changed, or an earlier field silently reverts to null.
+ *
+ * Throws `FeedbackNotYetCapturedError` on 409 (see above). Every other
+ * non-2xx status throws the ordinary `ApiError`, including 403 (this run
+ * belongs to someone else) and 404 (no such run).
+ */
+export async function postFeedback(
+  runId: string,
+  body: FeedbackRequestBody,
+  token: string,
+  options: ApiCallOptions = {},
+): Promise<void> {
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const response = await fetch(`${baseUrl}/v1/query/${encodeURIComponent(runId)}/feedback`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token),
+    },
+    body: JSON.stringify(body),
+    signal: options.signal,
+  });
+  if (response.status === 409) {
+    const header = response.headers.get("Retry-After");
+    const parsed = header !== null ? Number(header) : NaN;
+    throw new FeedbackNotYetCapturedError(Number.isFinite(parsed) && parsed > 0 ? parsed : 3);
+  }
+  await throwIfNotOk(response, "postFeedback");
+  // 204 No Content: nothing to parse.
+}
+
 /**
  * `POST /auth/signup`: registers a new account. Returns only the created
  * user's `id` and `email`, never a token (`SignupResponse` in

@@ -79,7 +79,6 @@ import { AnswerScreen } from "./components/screens/AnswerScreen";
 import { AboutScreen, DocsScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
 import { GuestAllowance, SignInWall } from "./components/guest/GuestAllowance";
 import type { SignInWallReason } from "./components/guest/GuestAllowance";
-import { FeedbackSurface } from "./components/feedback/FeedbackSurface";
 import { CollapsedRail, FollowUp, HistoryRail } from "./components/answer/FollowUp";
 import { DisclaimerModal, hasAcceptedDisclaimer } from "./components/shell/DisclaimerModal";
 import type { AudienceDepth } from "./components/controls/DepthControl";
@@ -625,7 +624,18 @@ export function App() {
              */
             failure={dispatchError ?? view.failure ?? streamError}
             capMessage={view.capMessage}
-            feedback={<FeedbackSurface key={searchView.question} />}
+            /*
+             * F-4.6-08. `AnswerScreen` builds `FeedbackSurface` itself
+             * (T-4.6-09) and needs the real POST target and bearer token to
+             * do it, the same values `useAgentRun` and the Stop action
+             * already read below. `runId` is `App`'s own state and `null`
+             * until a run has actually landed one, which is exactly the
+             * case `FeedbackSurface` degrades visibly for rather than
+             * posting to a malformed URL, so passing it through unguarded
+             * here is correct, not a gap to work around.
+             */
+            runId={runId}
+            authToken={authToken}
             followUp={
               <FollowUp
                 hints={FOLLOW_UP_HINTS}

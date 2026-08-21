@@ -1,5 +1,6 @@
 /**
- * The feedback surface, build phase 4.8, ticket T-4.8-07.
+ * The feedback surface, build phase 4.8, ticket T-4.8-07. Wired for real by
+ * build phase 4.6, ticket T-4.6-09.
  *
  * Answer-level rating, plus the thing a cite-or-refuse system actually needs:
  * a per-citation flag saying this source does not support the claim attached
@@ -13,15 +14,38 @@
  * worth more at review time than "not helpful", and it is what makes
  * signal-based review sampling possible later.
  *
- * STUB: everything here is accepted and discarded. Wired by build phase 4.6,
- * which already names feedback as an `interactions` field. See
- * `stubs/registry.ts`.
+ * WHY THE PER-CITATION FLAG IS BUNDLED INTO THIS SAME SUBMISSION, rather than
+ * posted the instant its button is clicked on the source card. `record_
+ * feedback` (`src/system_03_search_agent/feedback/writer.py`) REPLACES the
+ * whole `user_feedback` row on every write, it does not merge fields in. A
+ * lone POST fired from a citation-flag click, carrying only that flag, would
+ * silently erase a rating or comment already sent in an earlier call. Bundling
+ * every field into the one submission this panel's Send button fires is what
+ * keeps every write a correct, complete replacement rather than a partial one
+ * that clobbers what came before.
+ *
+ * WHY A 409 IS NOT TREATED AS A FAILURE. `feedback.capture_run` runs as a
+ * background task dispatched after the run's own `done` event, so a rating
+ * typed the instant an answer lands can genuinely beat that row into
+ * existence. The server answers that race with 409 and a `Retry-After`
+ * header (`postFeedback`'s `FeedbackNotYetCapturedError`), and this
+ * component retries automatically, showing the caller that it is still
+ * saving rather than that it failed, bounded to a small number of attempts
+ * before it gives up and offers a manual retry.
+ *
+ * WHY A FAILED SEND STAYS ON SCREEN WITH A RETRY, rather than silently
+ * discarding the rating. A user who rated an answer and had that rating
+ * vanish with no sign of it is worse off than one who sees a plain error and
+ * a button to try again: the first looks like it worked and did not, the
+ * second is honest about what happened and gives the user a next step.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Typography } from "@mui/material";
 
 import { designTokens } from "../../theme";
+import { FeedbackNotYetCapturedError, postFeedback } from "../../lib/api";
+import type { FeedbackRequestBody } from "../../lib/api";
 
 /** Each maps to a failure mode this system has actually produced. */
 const REASONS = [
@@ -31,6 +55,22 @@ const REASONS = [
   "Should have refused",
   "Too slow",
 ] as const;
+
+/**
+ * The fixed reason attached to every per-citation flag. The source card's
+ * button carries exactly one meaning ("this source does not support the
+ * claim it is attached to"), so there is no separate reason control for it,
+ * unlike the answer-level reason chips above.
+ */
+const CITATION_FLAG_REASON = "Citation does not support the claim";
+
+/** Bounded so a genuinely stuck capture path fails visibly rather than
+ *  retrying forever. Each attempt waits the server's own `Retry-After`
+ *  hint, so three attempts is comfortably longer than one background DB
+ *  write normally takes. */
+const MAX_NOT_YET_CAPTURED_RETRIES = 3;
+
+type SendStatus = "idle" | "sending" | "retrying" | "sent" | "error";
 
 function Thumb({ down = false }: { down?: boolean }) {
   return (
@@ -51,25 +91,130 @@ function Thumb({ down = false }: { down?: boolean }) {
   );
 }
 
-export function FeedbackSurface() {
+export interface FeedbackSurfaceProps {
+  /**
+   * The landed run's id, `POST /v1/query/{run_id}/feedback`'s path target.
+   * Optional, and `null` when omitted: `AnswerScreen` passes a real run id
+   * once it has one, and until every call site of this component is
+   * updated to do so, sending fails visibly rather than posting to a
+   * malformed URL.
+   */
+  runId?: string | null;
+  /**
+   * The bearer token this run's own request used: a real access token once
+   * signed in, a guest token before that. A guest must be able to submit
+   * feedback the same as a signed-in caller, so this is deliberately not
+   * scoped to an account. Optional and `null` when omitted, same reasoning
+   * as `runId` above.
+   */
+  authToken?: string | null;
+  /**
+   * Source display indices (`Source.n`) the reader has flagged, via the
+   * source card's own "Flag: does not support" control, as not supporting
+   * their claim. Included in this same submission rather than posted the
+   * moment the flag is clicked; see the module docstring for why a
+   * separate, immediate POST would be unsafe against a replacing write.
+   */
+  flaggedSources?: number[];
+}
+
+export function FeedbackSurface({
+  runId = null,
+  authToken = null,
+  flaggedSources = [],
+}: FeedbackSurfaceProps) {
   const [rating, setRating] = useState<"up" | "down" | null>(null);
   const [reasons, setReasons] = useState<string[]>([]);
-  const [sent, setSent] = useState(false);
+  const [comment, setComment] = useState("");
+  const [status, setStatus] = useState<SendStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState(false);
 
-  if (sent) {
+  const retryAttempts = useRef(0);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Mutation proof: deleting this cleanup lets a retry fire `setState` on an
+  // unmounted component (a new question remounts this component by key)
+  // after the user has already moved on, which React reports as a warning
+  // and which schedules a POST for a panel nobody can see any more.
+  useEffect(
+    () => () => {
+      if (retryTimer.current !== null) {
+        clearTimeout(retryTimer.current);
+      }
+    },
+    [],
+  );
+
+  const toggleReason = (reason: string) =>
+    setReasons((current) =>
+      current.includes(reason) ? current.filter((r) => r !== reason) : [...current, reason],
+    );
+
+  const buildPayload = (): FeedbackRequestBody => ({
+    rating,
+    comment: comment.trim() === "" ? null : comment.trim(),
+    flagged_reason: reasons.length > 0 ? reasons.join("; ") : null,
+    citation_flags: flaggedSources.map((n) => ({
+      citation_id: String(n),
+      reason: CITATION_FLAG_REASON,
+    })),
+  });
+
+  const attemptSend = async () => {
+    if (runId === null || authToken === null) {
+      // A wiring gap, not a user error: whatever renders this component has
+      // not given it a real run yet. Visible rather than silent, per the
+      // same rule as every other failure here, but distinguishable in the
+      // message so it does not read as "your rating failed to save".
+      setStatus("error");
+      setErrorMessage("Feedback is not available for this answer right now.");
+      return;
+    }
+    try {
+      await postFeedback(runId, buildPayload(), authToken);
+      setStatus("sent");
+    } catch (error) {
+      if (error instanceof FeedbackNotYetCapturedError) {
+        if (retryAttempts.current >= MAX_NOT_YET_CAPTURED_RETRIES) {
+          setStatus("error");
+          setErrorMessage("Still saving your answer. Try again in a moment.");
+          return;
+        }
+        retryAttempts.current += 1;
+        setStatus("retrying");
+        retryTimer.current = setTimeout(() => {
+          void attemptSend();
+        }, error.retryAfterS * 1000);
+        return;
+      }
+      setStatus("error");
+      setErrorMessage("Could not send your feedback. Check your connection and try again.");
+    }
+  };
+
+  const send = () => {
+    retryAttempts.current = 0;
+    setStatus("sending");
+    setErrorMessage(null);
+    void attemptSend();
+  };
+
+  if (dismissed) {
+    return null;
+  }
+
+  if (status === "sent") {
     return (
       <Box sx={{ mt: 3, pt: 2.25, borderTop: `1px solid ${designTokens.line}` }}>
-        <Typography variant="body2" sx={{ color: designTokens.ok, fontWeight: 600 }}>
+        <Typography variant="body2" role="status" sx={{ color: designTokens.ok, fontWeight: 600 }}>
           Thanks. This goes to the review queue.
         </Typography>
       </Box>
     );
   }
 
-  const toggleReason = (reason: string) =>
-    setReasons((current) =>
-      current.includes(reason) ? current.filter((r) => r !== reason) : [...current, reason],
-    );
+  const busy = status === "sending" || status === "retrying";
 
   const button = (kind: "up" | "down") => {
     const active = rating === kind;
@@ -113,6 +258,11 @@ export function FeedbackSurface() {
       </Box>
     );
   };
+
+  // A rating, or at least one flagged citation, is enough to have something
+  // worth sending: a reader who only wants to flag a bad source without
+  // giving an overall up/down verdict must still be able to submit that.
+  const canSend = rating !== null || flaggedSources.length > 0;
 
   return (
     <Box
@@ -170,6 +320,10 @@ export function FeedbackSurface() {
             type="text"
             aria-label="What went wrong"
             placeholder="What went wrong? (optional)"
+            value={comment}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+              setComment(event.target.value)
+            }
             sx={{
               maxWidth: 470,
               font: "inherit",
@@ -184,12 +338,28 @@ export function FeedbackSurface() {
         </>
       ) : null}
 
-      {rating !== null ? (
+      {status === "retrying" || status === "error" ? (
+        <Box
+          data-testid="feedback-status"
+          role={status === "error" ? "alert" : "status"}
+          sx={{
+            fontSize: 12.5,
+            color: status === "error" ? designTokens.risk : designTokens.inkMuted,
+          }}
+        >
+          {status === "retrying"
+            ? "Still finishing up your answer. Retrying in a moment."
+            : errorMessage}
+        </Box>
+      ) : null}
+
+      {canSend ? (
         <Box sx={{ display: "flex", gap: 1 }}>
           <Box
             component="button"
             type="button"
-            onClick={() => setSent(true)}
+            disabled={busy}
+            onClick={send}
             sx={{
               font: "inherit",
               fontSize: 12.5,
@@ -198,24 +368,29 @@ export function FeedbackSurface() {
               py: 0.9,
               border: 0,
               borderRadius: 0.5,
-              cursor: "pointer",
+              cursor: busy ? "default" : "pointer",
               color: "#FFFFFF",
-              bgcolor: designTokens.blue,
+              bgcolor: busy ? designTokens.inkFaint : designTokens.blue,
             }}
           >
-            Send feedback
+            {status === "error"
+              ? "Retry"
+              : busy
+                ? "Sending…"
+                : "Send feedback"}
           </Box>
           <Box
             component="button"
             type="button"
-            onClick={() => setSent(true)}
+            disabled={busy}
+            onClick={() => setDismissed(true)}
             sx={{
               font: "inherit",
               fontSize: 12.5,
               px: 1.75,
               py: 0.9,
               borderRadius: 0.5,
-              cursor: "pointer",
+              cursor: busy ? "default" : "pointer",
               color: designTokens.inkMuted,
               bgcolor: "transparent",
               border: `1px solid ${designTokens.line}`,

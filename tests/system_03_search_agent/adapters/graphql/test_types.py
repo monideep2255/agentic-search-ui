@@ -308,6 +308,14 @@ class TestRemainingTypesConstruct:
         entry = RunEntry(
             run_id="r-disclosures",
             user_id="u1",
+            # T-4.6-06: required field, holding the `Query` the run is
+            # actually using (F-4.6-J-01). Nothing here reads it.
+            query=CoreQuery(
+                text="what is this",
+                session_id="types-test",
+                trace_id="r-disclosures",
+                owner_id="user:u1",
+            ),
             owner_id="user:u1",
             queue=asyncio.Queue(),
             task=task,

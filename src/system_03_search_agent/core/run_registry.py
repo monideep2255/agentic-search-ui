@@ -349,6 +349,12 @@ class RunEntry:
 
     run_id: str
     user_id: str | None
+    #: The `Query` this run's background task is actually using, held so
+    #: the guest-to-account migration can rewrite the run's OWN identity
+    #: and not only this entry's copy of it (T-4.6-06, F-4.6-J-01). It is
+    #: the same object `_drain_into_entry` holds, never a copy: a copy
+    #: would migrate a value nothing reads. See `reassign_owner`.
+    query: Query
     # T-4.10-03, design decision 2 (tracker/phase_4.10.md): the namespaced
     # identity ("user:<uuid>" or "guest:<uuid>") every ownership
     # comparison reads (adapters/web_sse/app.py's `_get_owned_run`).
@@ -614,8 +620,14 @@ async def _drain_into_entry(
     exactly as it would for any other fatal error.
     """
     entry = registry._runs[run_id]
+    # Held by name rather than iterated anonymously so the `finally` below
+    # can close it (F-4.6-A-02). An `async for` over an inline generator
+    # expression leaves nothing to close, and a generator nobody closes is
+    # finalized whenever the collector reaches it, which is not a schedule
+    # a cost cap can depend on.
+    stream = run_streaming(query, context)
     try:
-        async for event in run_streaming(query, context):
+        async for event in stream:
             entry.events.append(event)
             await entry.queue.put(event)
             _fire_guard_refusal_callback(entry, event)
@@ -661,6 +673,25 @@ async def _drain_into_entry(
         async with entry.new_event:
             entry.new_event.notify_all()
         await entry.queue.put(None)
+        # LAST, and after both read paths already have their terminal
+        # signal, so nothing a subscriber is waiting on is held up by this
+        # (Section 16: capture never blocks or degrades an answer the caller
+        # already received).
+        #
+        # F-4.6-A-02. Cancelling this task leaves `stream` suspended at the
+        # `yield` its `__anext__` was serving, with its own `finally`, and
+        # therefore the run's capture, unexecuted until something finalizes
+        # it. Nothing did: twelve runs stopped through
+        # `POST /v1/query/{run_id}/stop` against a per-user cap of three
+        # were all accepted and left zero rows, and a run abandoned by a
+        # client that never subscribed lost its row the same way through
+        # `_cancel_if_still_abandoned` below. `aclose()` is the language's
+        # own finalization for exactly this, so it covers every early-exit
+        # route out of the `async for` above (cancellation, an abandonment
+        # cancel, a `break`, an exception) rather than the two that were
+        # measured. It is a no-op on a generator that already ran to
+        # completion, which is the ordinary path.
+        await stream.aclose()
 
 
 class RunRegistry:
@@ -824,6 +855,30 @@ class RunRegistry:
         this method returned. See the module docstring for the full
         correction to the no-lock invariant this broke.
 
+        THE RUN'S OWN IDENTITY MOVES TOO (T-4.6-06, F-4.6-J-01 and
+        F-4.6-A-03). This used to rewrite `entry.owner_id` and
+        `entry.user_id` and nothing else, which migrated what the HTTP
+        layer's ownership check reads and left what the RUN reads behind.
+        The run is still holding the `Query` it was created with, and
+        `feedback.capture.assemble_interaction` reads `Query.owner_id` when
+        the run finishes, so an in-flight run migrated by this method went
+        on to write its `interactions` row under the revoked guest
+        principal. The row was then owned by an identity the registry no
+        longer recognised and unreachable by the account that had just
+        watched it stream. Rewriting `entry.query` in place, rather than
+        rebinding it to a copy, is what makes the migration land: the task
+        holds that same object, so a copy would migrate a value nothing
+        reads.
+
+        One consequence, stated rather than discovered later. The captured
+        row's `session_id` is `session_row_key(session_id, owner_id=...)`,
+        so a run migrated mid-flight lands on the NEW owner's session-row
+        key rather than the guest's. That is the same key every turn after
+        the migration uses, so the migrated run is grouped with the
+        conversation it actually belongs to; the alternative, leaving it on
+        the revoked guest's key, would file it under an identity that no
+        longer exists.
+
         Returns:
             The number of entries reassigned, for the caller to log.
         """
@@ -832,6 +887,16 @@ class RunRegistry:
             if entry.owner_id == old_owner_id:
                 entry.owner_id = new_owner_id
                 entry.user_id = new_user_id
+                # A plain attribute assignment, which is atomic under the
+                # GIL, so the run task reading this field concurrently on
+                # the loop thread sees either the old value or the new one
+                # and never a torn state. `assemble_interaction` reads
+                # `owner_id` once into a local before deriving anything
+                # from it, so a migration landing mid-assembly cannot
+                # produce a row whose `owner_id` and `session_id` disagree
+                # about which principal they belong to.
+                entry.query.owner_id = new_owner_id
+                entry.query.user_id = new_user_id
                 reassigned += 1
         return reassigned
 
@@ -928,6 +993,7 @@ class RunRegistry:
         entry = RunEntry(
             run_id=resolved_run_id,
             user_id=query.user_id,
+            query=query,
             owner_id=resolved_owner_id,
             queue=asyncio.Queue(),
             task=asyncio.create_task(

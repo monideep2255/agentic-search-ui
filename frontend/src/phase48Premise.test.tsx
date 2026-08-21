@@ -798,10 +798,14 @@ describe("clause 4: stub registry", () => {
     // control already existed and already sent Query.audience_depth, but the
     // backend dropped the value before synthesis, so it was a stub in effect.
     // It now reaches the Write step and persists per account.
+    // "feedback" was removed by T-4.6-09, build phase 4.6, which wired it:
+    // the rating, reason chips and per-citation flag now POST for real to
+    // `POST /v1/query/{run_id}/feedback` (`lib/api.ts`'s `postFeedback`),
+    // including the not-yet-captured 409 race and a visible failure state,
+    // rather than being accepted and discarded.
     for (const expected of [
       "follow-up",
       "history",
-      "feedback",
       "guest-allowance",
       "kgx-export",
     ]) {

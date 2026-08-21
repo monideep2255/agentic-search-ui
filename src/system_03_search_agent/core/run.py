@@ -87,6 +87,13 @@ wide env mutation, so it does not disturb `.env`'s setting for whatever
 component phase 5.0/5.1 eventually wires up for real). Logged in
 DECISIONS.md (T-2.0-07): remove this wrapper only when a phase 5.0/5.1
 ticket replaces it with an intentionally configured tracer.
+
+T-4.6-07, build phase 4.6: `capture_run` (stage 1 of the feedback loop,
+`feedback/capture.py` and `feedback/writer.py`) is dispatched from the
+epilogue below, beside `_remember_turn`, on every path that can produce a
+`done` event, including the crash-fallback pair. See `_capture_interaction`
+for why every exception is caught here rather than trusted to
+`capture_run`'s own internal handling.
 """
 
 import logging
@@ -96,7 +103,12 @@ from datetime import UTC, datetime
 
 from langsmith.run_helpers import tracing_context
 
-from system_03_search_agent.contracts.events import DonePayload, ErrorPayload, Event
+from system_03_search_agent.contracts.events import (
+    CostPayload,
+    DonePayload,
+    ErrorPayload,
+    Event,
+)
 from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.core.graph import compiled_graph
 from system_03_search_agent.core.state import GraphState
@@ -148,6 +160,128 @@ def _crash_fallback_events(trace_id: str, elapsed_ms: int, start_seq: int = 0) -
 
 
 logger = logging.getLogger(__name__)
+
+
+def _observed_cost_usd(events: list[Event]) -> float:
+    """The harness's own running query cost, read off the last `cost` event.
+
+    `CostPayload.query_cost_usd` is CUMULATIVE (`cap_fraction` is that value
+    over `query_cap_usd`), so the last one is the total and summing them
+    would multiply-count every earlier step. Zero when no `cost` event was
+    emitted, which is the shape of a run cancelled before the guard step
+    finished.
+
+    No defensive `try` around the validation, deliberately: `Event`'s own
+    model validator binds `payload` to the model its `type` names at
+    construction (`contracts/events.py`), so a `cost` event that is not a
+    valid `CostPayload` cannot exist to be read here. Catching for it would
+    be guarding a state the type system already forbids, and would hide a
+    real contract break behind a silent zero.
+    """
+    total = 0.0
+    for event in events:
+        if event.type == "cost":
+            total = CostPayload.model_validate(event.payload).query_cost_usd
+    return total
+
+
+def _terminal_events_for_capture(
+    query: Query, events: list[Event], elapsed_ms: int
+) -> list[Event]:
+    """`events`, guaranteed to end in a `done` the assembler can read.
+
+    F-4.6-A-02. `assemble_interaction` returns `None` when there is no
+    `done` event, so a run that ended without reaching Write captured
+    nothing at all, and a run that captures nothing is a run neither daily
+    cap can see. Twelve stopped queries against a cap of three were all
+    accepted for exactly this reason.
+
+    A run can end without a `done` event by more routes than the two the
+    adversary reached, so this is written against the CLASS: an async
+    generator's body stops early whenever it is finalized rather than
+    exhausted, which covers a consumer that breaks out of its loop, a
+    consumer whose task is cancelled (the Stop button, and the registry's
+    abandonment timer), an explicit `aclose()`, a `throw()`, and garbage
+    collection. Every one of those runs the generator's `finally` and none
+    of them reaches the code after its last `yield`. Rather than enumerate
+    them, capture moved into that `finally` and this function supplies the
+    terminal record the assembler needs whenever the run did not produce
+    one itself.
+
+    THE SYNTHESIZED EVENT IS NEVER YIELDED. It exists only so the row can be
+    assembled, and it cannot be yielded: the `finally` this is called from
+    may be running under `GeneratorExit`, where yielding raises
+    `RuntimeError: async generator ignored GeneratorExit`. A caller
+    therefore never sees it, and the terminal event a stopped run's
+    SUBSCRIBER sees is the `cancelled` error `core/run_registry.py`
+    synthesizes for its own read paths, which is a separate record for a
+    separate audience.
+
+    `trust_outcome` is `refuse`, matching the crash-fallback pair: a run
+    that ended early asserted nothing, and `rubric_outcome_for` maps
+    `refuse` to `abstain`, which is what the weekly review ritual wants to
+    see for a run that never produced an answer. The cost is the real
+    observed cost rather than zero, so the system-wide daily cost cap
+    counts the model calls a stopped run actually paid for.
+    """
+    if any(event.type == "done" for event in events):
+        return events
+    next_seq = max((event.seq for event in events), default=-1) + 1
+    done_payload = DonePayload(
+        total_cost_usd=_observed_cost_usd(events),
+        # Observed rather than the graph's own `findings_count`, which lives
+        # in graph state this function cannot see. A `tool_result` event is
+        # a tool call that actually returned.
+        total_tool_calls=sum(1 for event in events if event.type == "tool_result"),
+        elapsed_ms=elapsed_ms,
+        trust_outcome="refuse",
+    )
+    return [
+        *events,
+        Event(
+            type="done",
+            version="v1",
+            trace_id=query.trace_id,
+            seq=next_seq,
+            ts=datetime.now(UTC),
+            payload=done_payload.model_dump(),
+        ),
+    ]
+
+
+async def _capture_interaction(query: Query, events: list[Event]) -> None:
+    """T-4.6-07: dispatch stage 1 of the feedback loop for one finished run.
+
+    Sits beside `_remember_turn`, after the caller already has every event
+    this run produced, never before: same reasoning as that function's own
+    docstring, restated here because it is the same property applied to a
+    different write. `feedback.capture_run` never raises by its own
+    docstring's contract, but this wrapper catches anyway rather than
+    trusting that promise at the one call site that matters most: the
+    phase's own premise gate (P6) monkeypatches
+    `feedback.writer.write_interaction` directly to raise, which bypasses
+    whatever internal handling `capture_run` or `write_interaction` do,
+    and this is the last line of defense between that write and a caller
+    who already has their answer streamed to them.
+
+    Deferred import, matching `_remember_turn`'s own precedent immediately
+    above: the run path is hot, and `feedback.capture`/`feedback.writer`
+    pull in SQLAlchemy, which nothing else on the streaming path needs.
+
+    Logged rather than silently swallowed, for the same reason
+    `_remember_turn` logs rather than dropping silently: a capture failure
+    that never surfaces anywhere makes the whole feedback loop look built
+    while behaving inert on every turn it actually fails on, F-4.5-09's
+    shape arriving by a second, adjacent route one phase later.
+    """
+    from system_03_search_agent.feedback import capture_run
+
+    try:
+        await capture_run(query, events)
+    except Exception:
+        logger.warning(
+            "interaction capture failed for trace_id=%s", query.trace_id, exc_info=True
+        )
 
 
 async def _load_session_memory(
@@ -326,36 +460,69 @@ async def run(query: Query, context: RequestContext) -> AsyncIterator[Event]:
     event sequence, never a raw exception and zero events.
     """
     start = time.monotonic()
-    harness = Harness(trace_id=query.trace_id)
-    context = await _load_session_memory(query, context)
-    initial_state: GraphState = {
-        "query": query,
-        "context": context,
-        "harness": harness,
-        "seq": 0,
-        "events": [],
-        "start_monotonic": start,
-    }
+    # Accumulated as events become known, so the `finally` below has the run's
+    # own record to capture from on EVERY exit, not only on exhaustion
+    # (F-4.6-A-02). See `_terminal_events_for_capture`.
+    emitted: list[Event] = []
     try:
-        with tracing_context(enabled=False):
-            final_state = await compiled_graph.ainvoke(initial_state)
-    except Exception:  # noqa: BLE001 - the deliberate last-resort catch F-2.0-11 requires
-        elapsed_ms = int((time.monotonic() - start) * 1000)
-        for event in _crash_fallback_events(query.trace_id, elapsed_ms):
+        harness = Harness(trace_id=query.trace_id)
+        context = await _load_session_memory(query, context)
+        initial_state: GraphState = {
+            "query": query,
+            "context": context,
+            "harness": harness,
+            "seq": 0,
+            "events": [],
+            "start_monotonic": start,
+        }
+        try:
+            with tracing_context(enabled=False):
+                final_state = await compiled_graph.ainvoke(initial_state)
+        except Exception:  # noqa: BLE001 - the deliberate last-resort catch F-2.0-11 requires
+            elapsed_ms = int((time.monotonic() - start) * 1000)
+            crash_events = _crash_fallback_events(query.trace_id, elapsed_ms)
+            emitted.extend(crash_events)
+            for event in crash_events:
+                yield event
+            # T-4.6-07: a crashed run still captures. It does so through the
+            # `finally` below rather than here, so there is exactly one
+            # capture dispatch on exactly one code path.
+            return
+        emitted.extend(final_state["events"])
+        for event in final_state["events"]:
             yield event
-        return
-    for event in final_state["events"]:
-        yield event
-    # After the caller has the answer, never before: see `_remember_turn`.
-    try:
-        await _remember_turn(query, final_state["events"])
-    except Exception:
-        # Logged rather than silently swallowed: a memory write that fails on
-        # every turn makes the feature look implemented and behave inert,
-        # which is F-4.5-09's failure mode arriving by a second route. The
-        # answer is already streamed, so this cannot affect the caller.
-        logger.warning(
-            "session memory not recorded for trace_id=%s", query.trace_id, exc_info=True
+        # After the caller has the answer, never before: see `_remember_turn`.
+        # Left on the normal-completion path deliberately. Capture is the
+        # ledger entry the daily caps count and must survive every
+        # termination; memory is an optimization for the NEXT turn of a
+        # conversation, and a run that was stopped has no next turn to serve.
+        try:
+            await _remember_turn(query, final_state["events"])
+        except Exception:
+            # Logged rather than silently swallowed: a memory write that fails
+            # on every turn makes the feature look implemented and behave
+            # inert, which is F-4.5-09's failure mode arriving by a second
+            # route. The answer is already streamed, so this cannot affect the
+            # caller.
+            logger.warning(
+                "session memory not recorded for trace_id=%s",
+                query.trace_id,
+                exc_info=True,
+            )
+    finally:
+        # T-4.6-07, hardened by F-4.6-A-02. In a `finally` rather than after
+        # the last yield, because code after the last yield of an async
+        # generator runs ONLY when a consumer exhausts it. A consumer that
+        # breaks, is cancelled (the Stop button, the registry's abandonment
+        # timer), calls `aclose()`, or is collected finalizes the generator
+        # instead, and every one of those paths runs this block. Capture is
+        # independent of session memory above for the same reason it always
+        # was: neither failure may skip the other.
+        await _capture_interaction(
+            query,
+            _terminal_events_for_capture(
+                query, emitted, int((time.monotonic() - start) * 1000)
+            ),
         )
 
 
@@ -394,39 +561,68 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
     the synthetic pair's `seq` values stay monotonic with them.
     """
     start = time.monotonic()
-    harness = Harness(trace_id=query.trace_id)
-    context = await _load_session_memory(query, context)
-    initial_state: GraphState = {
-        "query": query,
-        "context": context,
-        "harness": harness,
-        "seq": 0,
-        "events": [],
-        "start_monotonic": start,
-    }
     next_seq = 0
-    # Accumulated so this path can record memory too. `run()` gets the whole
-    # event list for free from `ainvoke`; this one streams and would otherwise
-    # have nothing to fold at the end. Recording only in `run()` would have
-    # left memory inert on the SSE surface, which is the one real users
-    # actually reach, while every test that calls `run()` passed.
+    # Accumulated so this path can record memory too, and so the `finally`
+    # below has the run's own record to capture from however this generator
+    # ends. `run()` gets the whole event list for free from `ainvoke`; this
+    # one streams and would otherwise have nothing to fold at the end.
+    # Recording only in `run()` would have left memory inert on the SSE
+    # surface, which is the one real users actually reach, while every test
+    # that calls `run()` passed.
     seen_events: list[Event] = []
     try:
-        with tracing_context(enabled=False):
-            async for update in compiled_graph.astream(initial_state, stream_mode="updates"):
-                for partial_state in update.values():
-                    for event in partial_state.get("events", []):
-                        next_seq = max(next_seq, event.seq + 1)
-                        seen_events.append(event)
-                        yield event
-    except Exception:  # noqa: BLE001 - mirrors run()'s deliberate last-resort catch, F-2.0-11
-        elapsed_ms = int((time.monotonic() - start) * 1000)
-        for event in _crash_fallback_events(query.trace_id, elapsed_ms, start_seq=next_seq):
-            yield event
-        return
-    try:
-        await _remember_turn(query, seen_events)
-    except Exception:
-        logger.warning(
-            "session memory not recorded for trace_id=%s", query.trace_id, exc_info=True
+        harness = Harness(trace_id=query.trace_id)
+        context = await _load_session_memory(query, context)
+        initial_state: GraphState = {
+            "query": query,
+            "context": context,
+            "harness": harness,
+            "seq": 0,
+            "events": [],
+            "start_monotonic": start,
+        }
+        try:
+            with tracing_context(enabled=False):
+                async for update in compiled_graph.astream(
+                    initial_state, stream_mode="updates"
+                ):
+                    for partial_state in update.values():
+                        for event in partial_state.get("events", []):
+                            next_seq = max(next_seq, event.seq + 1)
+                            seen_events.append(event)
+                            yield event
+        except Exception:  # noqa: BLE001 - mirrors run()'s deliberate last-resort catch, F-2.0-11
+            elapsed_ms = int((time.monotonic() - start) * 1000)
+            crash_events = _crash_fallback_events(
+                query.trace_id, elapsed_ms, start_seq=next_seq
+            )
+            # Appended before yielding so the `finally` captures whatever
+            # real events (guard, think, ...) fired before the crash as well
+            # as the synthetic pair, and so a consumer that stops reading
+            # between these two yields still leaves the same row.
+            seen_events.extend(crash_events)
+            for event in crash_events:
+                yield event
+            return
+        try:
+            await _remember_turn(query, seen_events)
+        except Exception:
+            logger.warning(
+                "session memory not recorded for trace_id=%s",
+                query.trace_id,
+                exc_info=True,
+            )
+    finally:
+        # The same single capture dispatch `run()` now uses, and for the same
+        # reason (F-4.6-A-02). This is the path a stopped run actually takes:
+        # `core/run_registry.py`'s `_drain_into_entry` consumes this
+        # generator and is cancelled by the Stop endpoint and by the
+        # abandonment timer, and it closes this generator explicitly so this
+        # block runs immediately rather than whenever the collector gets to
+        # it.
+        await _capture_interaction(
+            query,
+            _terminal_events_for_capture(
+                query, seen_events, int((time.monotonic() - start) * 1000)
+            ),
         )

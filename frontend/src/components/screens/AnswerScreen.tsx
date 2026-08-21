@@ -31,6 +31,7 @@ import { visuallyHidden } from "@mui/utils";
 import { designTokens, layerColour } from "../../theme";
 import type { ReasoningStep } from "./RunScreen";
 import { ReasoningLog } from "./ReasoningLog";
+import { FeedbackSurface } from "../feedback/FeedbackSurface";
 
 export type Layer = 1 | 2 | 3;
 
@@ -78,8 +79,30 @@ export interface AnswerScreenProps {
   /** The run's own account of what it did, behind `Show work` (F-4.8-D-05). */
   steps?: ReasoningStep[];
   trust?: TrustSignal[];
-  /** The feedback surface, injected so this screen does not own its state. */
+  /**
+   * Superseded by `runId`/`authToken` below (T-4.6-09). This screen now
+   * builds `FeedbackSurface` itself, so it can give the real POST target and
+   * bearer token it needs; a caller that still passes a pre-built node here
+   * is not rendered. Kept in the prop type, rather than removed, only so
+   * `App.tsx`'s existing call site (owned by a concurrent build-phase-4.6
+   * ticket, not this one) keeps type-checking until that ticket updates it
+   * to pass `runId`/`authToken` instead.
+   */
   feedback?: React.ReactNode;
+  /**
+   * The landed run's id (`App.tsx`'s `runId`), threaded to `FeedbackSurface`
+   * as its `POST /v1/query/{run_id}/feedback` target. `null` or omitted
+   * before that wiring lands; `FeedbackSurface` degrades visibly rather than
+   * posting to a malformed URL when this is absent.
+   */
+  runId?: string | null;
+  /**
+   * The bearer token this run's own request used (`App.tsx`'s `authToken`):
+   * a real access token once signed in, a guest token before that. Threaded
+   * to `FeedbackSurface` unchanged, so a guest can submit feedback the same
+   * as a signed-in caller.
+   */
+  authToken?: string | null;
   /** Rendered under the sources. The follow-up field. */
   followUp?: React.ReactNode;
   /**
@@ -197,7 +220,8 @@ export function AnswerScreen({
   elapsedMs = null,
   steps = [],
   trust = [],
-  feedback,
+  runId = null,
+  authToken = null,
   followUp,
   onNewSearch,
   refusal = null,
@@ -799,7 +823,20 @@ export function AnswerScreen({
           than before it.
         */}
         {followUp}
-        {feedback}
+        {/*
+          T-4.6-09. `FeedbackSurface` is built here, not passed in as an
+          opaque node, so it can be given the real POST target (`runId`) and
+          bearer token (`authToken`) it needs. `key={question}` remounts it
+          per question, the same reset the old call site in `App.tsx`
+          achieved with `key={searchView.question}`, so a rating typed for
+          one answer can never linger onto the next.
+        */}
+        <FeedbackSurface
+          key={question}
+          runId={runId}
+          authToken={authToken}
+          flaggedSources={flaggedSources}
+        />
       </Box>
     </Box>
   );

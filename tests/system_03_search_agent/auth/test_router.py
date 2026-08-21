@@ -854,3 +854,143 @@ def test_login_still_succeeds_when_the_run_reassignment_raises(client, monkeypat
         json={"email": email, "password": password, "guest_token": guest_token},
     )
     assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# F-4.6-J-01: signup also migrates the rows the guest already captured.
+# ---------------------------------------------------------------------------
+
+
+def _plant_interaction(owner_id: str) -> str:
+    """One captured `interactions` row owned by `owner_id`.
+
+    Written through the real `write_interaction`, not by hand, so this arm
+    is migrating the same shape of row capture actually produces.
+    """
+    import asyncio
+
+    from system_03_search_agent.feedback.contracts import InteractionRow
+    from system_03_search_agent.feedback.writer import write_interaction
+
+    trace_id = f"auth-migrate-{uuid.uuid4().hex[:12]}"
+    asyncio.run(
+        write_interaction(
+            InteractionRow(
+                trace_id=trace_id,
+                user_id=None,
+                session_id=None,
+                owner_id=owner_id,
+                query_text="What is BRCA1?",
+                query_class="lookup",
+                route={},
+                trust_signal="answer",
+                rubric_outcome="pass",
+                cost_usd=0.01,
+                latency_ms=250,
+            )
+        )
+    )
+    return trace_id
+
+
+def _interaction_owner(trace_id: str):
+    engine = sa.create_engine(USER_DB_URL, future=True)
+    try:
+        with engine.connect() as conn:
+            return conn.execute(
+                sa.text(
+                    "SELECT owner_id, user_id, user_feedback FROM interactions "
+                    "WHERE trace_id = :tid"
+                ),
+                {"tid": trace_id},
+            ).one()
+    finally:
+        engine.dispose()
+
+
+def test_signup_migrates_the_guests_already_captured_interactions(client):
+    """F-4.6-J-01, end to end through the endpoint the user actually hits.
+
+    Ownership of a run is recorded in two places, `RunEntry.owner_id` in the
+    registry and `interactions.owner_id` in the database, and the feedback
+    endpoint checks both. Signup used to migrate only the first, so a guest
+    who signed up and then rated the answer they had just watched stream got
+    HTTP 403 "you do not own this run" and their rating was silently
+    discarded. Build phase 4.10 shipped the anonymous run path precisely so
+    someone can use the product before creating an account, which makes
+    signing up after a good answer the conversion path this breaks.
+
+    Mutation: delete the `reassign_interaction_owner(...)` call from
+    `auth/router.py::_migrate_guest_session`. Ran it. This test goes red on
+    the `owner_id` assertion, and `record_feedback` below then raises
+    `FeedbackOwnershipError`, which is the 403 the user saw."""
+    import asyncio
+
+    from system_03_search_agent.feedback import record_feedback
+
+    guest_id, guest_token = _mint_guest(client)
+    trace_id = _plant_interaction(f"guest:{guest_id}")
+    assert _interaction_owner(trace_id).owner_id == f"guest:{guest_id}"
+
+    response = client.post(
+        "/auth/signup",
+        json={
+            "email": _unique_email(),
+            "password": "Str0ngPassw0rd!",
+            "guest_token": guest_token,
+        },
+    )
+    assert response.status_code == 201, response.text
+    user_id = response.json()["id"]
+
+    migrated = _interaction_owner(trace_id)
+    assert migrated.owner_id == f"user:{user_id}", (
+        "the captured row still names the revoked guest, so the new account "
+        "is refused feedback on the answer it just watched (F-4.6-J-01)"
+    )
+    assert str(migrated.user_id) == user_id, (
+        "interactions.user_id stayed NULL, so the new account's daily query "
+        "cap will never count the queries it just inherited"
+    )
+
+    asyncio.run(
+        record_feedback(trace_id=trace_id, owner_id=f"user:{user_id}", rating="up")
+    )
+    assert _interaction_owner(trace_id).user_feedback["rating"] == "up"
+
+
+def test_signup_does_not_migrate_another_guests_interactions(client):
+    """The F-4.5-A-02 guard at the endpoint: the migration is scoped to the
+    guest identity decoded out of the presented token and to no other.
+
+    Mutation: pass `old_owner_id="guest:%"` to
+    `reassign_interaction_owner` from `auth/router.py`. Ran it. Both arms in
+    this section go red, and NOT where predicted: the `WHERE` clause is
+    exact equality rather than a pattern match, so `"guest:%"` matches
+    nothing at all and the failure is the migrating guest's OWN row staying
+    put, not a bystander's row moving. Recorded rather than smoothed over,
+    because it says something about the fix worth keeping: over-matching is
+    not reachable from this call site, and the only place it could be
+    introduced is the `WHERE` clause itself, which
+    `feedback/test_writer.py::test_a_migration_never_touches_another_
+    principals_row` grades directly."""
+    mine_id, mine_token = _mint_guest(client)
+    theirs_id, _theirs_token = _mint_guest(client)
+    mine_trace = _plant_interaction(f"guest:{mine_id}")
+    theirs_trace = _plant_interaction(f"guest:{theirs_id}")
+
+    response = client.post(
+        "/auth/signup",
+        json={
+            "email": _unique_email(),
+            "password": "Str0ngPassw0rd!",
+            "guest_token": mine_token,
+        },
+    )
+    assert response.status_code == 201, response.text
+    user_id = response.json()["id"]
+
+    assert _interaction_owner(mine_trace).owner_id == f"user:{user_id}"
+    assert _interaction_owner(theirs_trace).owner_id == f"guest:{theirs_id}", (
+        "a bystanding guest's captured row was handed to the migrating account"
+    )
