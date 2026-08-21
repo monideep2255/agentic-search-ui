@@ -104,6 +104,7 @@ from system_03_search_agent.contracts.events import (
     TrustSignalPayload,
 )
 from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.core.persona import persona_for_session
 from system_03_search_agent.core.run_registry import (
     ConcurrentRunCapExceededError,
     default_registry,
@@ -265,6 +266,24 @@ class AskBiomedicalQuestionOutput(BaseModel):
     citations: list[CitationPayload] = Field(..., max_length=_MAX_CITATIONS)
     trust_signal: TrustSignalPayload
     run_id: str = Field(..., max_length=64)
+    # F-4.5-A-21: MCP was the one delivery surface build phase 4.5 left
+    # without a persona, though the phase's own ticket said all four.
+    #
+    # Optional rather than required, and that is load-bearing twice over:
+    # Section 13.2's locked `output_schema` names four required fields, so
+    # widening the required set would change the locked shape rather than
+    # extend it, and `system-design-patterns` pattern 10 permits a new
+    # OPTIONAL field within v1 and nothing more.
+    #
+    # Adding a key here also required adding it to `_ALLOWED_RESPONSE_KEYS`
+    # in the phase 4.1 premise gate, which pins the resolved key set of the
+    # whole response tree so that any unlisted key fails, including a
+    # renamed cost field. That allowlist is a deliberate manual control, so
+    # this addition was approved by the product owner on 2026-08-20 rather
+    # than made to get a test green: the value is a server-side name drawn
+    # from a checked-in file of deceased scientists, carrying no user data,
+    # no cost data and no identifier.
+    persona_name: str | None = Field(default=None, max_length=64)
 
 
 server = MCPServer(
@@ -538,7 +557,9 @@ def _merge_disclosure_messages(existing: str | None, notes: list[str]) -> str:
     return " ".join(parts)[:500]
 
 
-async def _fold_run_to_response(run_id: str) -> AskBiomedicalQuestionOutput:
+async def _fold_run_to_response(
+    run_id: str, *, persona_name: str | None = None
+) -> AskBiomedicalQuestionOutput:
     """Drive `run_id` to its terminal event and fold the result into
     Section 13.2's locked response shape.
 
@@ -701,6 +722,7 @@ async def _fold_run_to_response(run_id: str) -> AskBiomedicalQuestionOutput:
         citations=citations,
         trust_signal=answer_trust_signal,
         run_id=run_id,
+        persona_name=persona_name,
     )
 
 
@@ -746,6 +768,12 @@ async def ask_biomedical_question(
         session_id=session_id if session_id is not None else run_id,
         trace_id=run_id,
         user_id=str(user.id),
+        # F-4.5-J-02: the namespaced principal session memory keys on. This
+        # surface is registered-accounts-only, so it is always a user
+        # principal. Built in the same shape `auth/dependencies.py` mints,
+        # since the two must agree for one caller to reach one session row
+        # from two surfaces.
+        owner_id=f"user:{user.id}",
         audience_depth=audience_depth,
     )
     # T-4.1-03: `operator_mode` is hard-set `False` here in code, never
@@ -773,4 +801,12 @@ async def ask_biomedical_question(
             code=INVALID_REQUEST,
             message=_RUN_CAP_MESSAGES_BY_BOUND.get(exc.bound, _RUN_CAP_MESSAGE),
         ) from None
-    return await _fold_run_to_response(run_id)
+    # F-4.5-A-21: drawn from the same one source every other surface reads,
+    # and keyed on the same two values, so a caller reaching this system from
+    # MCP and from the web UI in one session sees one name rather than two.
+    return await _fold_run_to_response(
+        run_id,
+        persona_name=persona_for_session(
+            session_id=query_obj.session_id, user_id=str(user.id)
+        ),
+    )

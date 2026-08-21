@@ -49,7 +49,7 @@
 
 import { render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 /**
  * T-4.5-10. `App` fetches the session's persona once at load from
@@ -62,20 +62,36 @@ import { describe, expect, it, vi } from "vitest";
  * Only `/v1/persona` is answered here. Anything else this suite reaches for
  * still fails exactly as it did before, so this stub cannot quietly satisfy
  * an assertion it was not written for.
+ *
+ * F-4.5-A-23. The stub used to be installed at module scope with no restore,
+ * so the original `fetch` was captured and never put back. Vitest's default
+ * per-file isolation happened to contain it, which is the kind of protection
+ * that holds until someone turns isolation off for speed. It is installed in
+ * `beforeAll` and restored in `afterAll` instead, which is a property of this
+ * file rather than of the runner configuration. `beforeAll` is early enough
+ * because every module this suite touches is imported dynamically inside a
+ * test, never at module scope.
  */
 const _realFetch = globalThis.fetch;
-globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-  const url = typeof input === "string" ? input : input.toString();
-  if (url.includes("/v1/persona")) {
-    return Promise.resolve(
-      new Response(JSON.stringify({ persona_name: "Mendel" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-  }
-  return _realFetch(input, init);
-}) as typeof fetch;
+
+beforeAll(() => {
+  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input.toString();
+    if (url.includes("/v1/persona")) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ persona_name: "Mendel" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }
+    return _realFetch(input, init);
+  }) as typeof fetch;
+});
+
+afterAll(() => {
+  globalThis.fetch = _realFetch;
+});
 
 /**
  * The design system is the fixture. These values are transcribed from
@@ -835,5 +851,38 @@ describe("clause 4: stub registry", () => {
     expect(container.textContent ?? "").not.toMatch(
       /stub|placeholder|coming soon|TODO/i,
     );
+  });
+});
+
+/**
+ * F-4.5-A-23. The `fetch` stub above is narrow and it is restored, and the
+ * narrowness half is pinned here rather than only described in a comment.
+ *
+ * The adversary round's tell was that `_realFetch` was captured and never
+ * used, which is what a dropped restore looks like from the outside. This
+ * arm makes the delegation load-bearing: a stub that answered EVERY url,
+ * rather than only `/v1/persona`, would satisfy every other assertion in
+ * this file while quietly standing in for a network the suite is supposed to
+ * be doing without.
+ *
+ * MUTATION PROOF. Replacing the `return _realFetch(input, init);` fallback
+ * with a canned `new Response("{}")` turns this arm red: the unroutable url
+ * resolves instead of rejecting.
+ *
+ * The restore itself cannot be observed from inside the file that installs
+ * it, since `afterAll` runs after the last arm here. It is verified by the
+ * suite as a whole: with the `afterAll` deleted, `globalThis.fetch` stays
+ * replaced for whatever runs next in the same worker.
+ */
+describe("clause 5: the fetch stub answers one url and nothing else", () => {
+  it("answers /v1/persona", async () => {
+    const response = await fetch("http://localhost/v1/persona");
+    expect(await response.json()).toEqual({ persona_name: "Mendel" });
+  });
+
+  it("delegates every other url to the captured original", async () => {
+    // Port 1 is unroutable, so the captured original rejects. A stub that
+    // answered everything would resolve here instead.
+    await expect(fetch("http://127.0.0.1:1/not-the-persona")).rejects.toThrow();
   });
 });

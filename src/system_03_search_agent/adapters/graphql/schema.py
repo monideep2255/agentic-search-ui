@@ -67,6 +67,7 @@ Writes:
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 import strawberry
 from pydantic import ValidationError
@@ -84,6 +85,7 @@ from system_03_search_agent.adapters.graphql.types import (
     SchemaError,
     StopRunResult,
 )
+from system_03_search_agent.auth.preferences import resolve_audience_depth
 from system_03_search_agent.contracts.query import Query as CoreQuery
 from system_03_search_agent.contracts.query import RequestContext
 from system_03_search_agent.core.persona import persona_for_session
@@ -93,6 +95,8 @@ from system_03_search_agent.core.run_registry import (
     RunNotOwnedError,
     default_registry,
 )
+from system_03_search_agent.data.models import User
+from system_03_search_agent.data.session import session_scope
 
 # ---------------------------------------------------------------------------
 # The public error shapes. Each carries a stable machine-readable code so a
@@ -201,6 +205,20 @@ def _owner_id_of(info: strawberry.Info) -> str:
     return f"user:{context.principal.id}"
 
 
+def _resolved_audience_depth(*, requested: str | None, principal_id: Any) -> str:
+    """Section 14.5's depth for this run: the caller's, else the account's.
+
+    A separate function rather than inline in the resolver so the account
+    read is one statement at the call site and the session is opened only
+    when it is actually needed, which is when the caller named no depth.
+    """
+    if requested is not None:
+        return requested
+    with session_scope() as session:
+        user_row = session.get(User, uuid.UUID(str(principal_id)))
+        return resolve_audience_depth(requested=None, user=user_row)
+
+
 def _caller_fixable_ask_input_message(exc: ValidationError) -> str | None:
     """The fixed, published message for the first caller-supplied field
     `exc` rejected, or `None` when nothing the caller sent is at fault.
@@ -287,8 +305,27 @@ class Mutation:
                 session_id=input.session_id,
                 trace_id=run_id,
                 user_id=str(context.principal.id),
-                audience_depth=(
-                    input.audience_depth.value if input.audience_depth is not None else "researcher"
+                # F-4.5-J-02: the namespaced principal session memory keys
+                # on. Already computed above for the run's ownership; this
+                # surface is registered-accounts-only, so it is always
+                # `user:<uuid>`, never a guest.
+                owner_id=owner_id,
+                # F-4.5-J-15, F-4.5-A-13: this used to fall back to the
+                # literal "researcher", which meant a GraphQL caller that
+                # named no depth could never receive the account's stored
+                # preference, no matter what Section 14.5 says. The literal
+                # is now `None`, meaning "the caller named none", and the
+                # server resolves it from the account row the same way REST
+                # and the CLI do. Resolved once in `auth.preferences` rather
+                # than at each surface, because a preference honored by one
+                # of several clients is not a stored preference.
+                audience_depth=_resolved_audience_depth(
+                    requested=(
+                        input.audience_depth.value
+                        if input.audience_depth is not None
+                        else None
+                    ),
+                    principal_id=context.principal.id,
                 ),
             )
         except ValidationError as exc:

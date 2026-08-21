@@ -833,12 +833,53 @@ async def _call_tool_with_raw_headers_expecting_mcp_error(
 # deduplicated across the three models (`AskBiomedicalQuestionOutput`,
 # `CitationPayload`, `TrustSignalPayload`) since `citation_id` is a real
 # field on both the latter two.
+# The TOP-LEVEL response keys, stated once and used by every arm that pins
+# the whole shape. Three separate copies of this set existed and adding one
+# optional field to Section 13.2's response had to be made in all three, which
+# is drift waiting to happen: an arm holding a stale copy fails for a reason
+# that has nothing to do with the property it guards, and the pressure is then
+# to "just update it", which is how a real leak gets waved through.
+#
+# Still hand-maintained, deliberately. Deriving it from the response models is
+# the weakening the allowlist comment below warns against, because a leak added
+# to a model would then be added to its own expected set automatically.
+_EXPECTED_TOP_LEVEL_KEYS = {
+    "answer",
+    "citations",
+    "trust_signal",
+    "run_id",
+    # F-4.5-A-21, optional, so `output_schema["required"]` stays exactly the
+    # four fields Section 13.2 locks. See the allowlist entry below.
+    "persona_name",
+}
+
 _ALLOWED_RESPONSE_KEYS = {
     # AskBiomedicalQuestionOutput
     "answer",
     "citations",
     "trust_signal",
     "run_id",
+    # Build phase 4.5's post-merge review round, F-4.5-A-21. Added by the
+    # LEAD, not by the agent that added the field to the output model, and
+    # with the product owner's explicit approval on 2026-08-20, because
+    # this allowlist is a deliberate manual control and editing a gate to
+    # make your own change pass is what `goal-contracts.md` forbids. The
+    # agent that wrote the source change stopped here and escalated rather
+    # than edit it, which is the control working.
+    #
+    # The same three tests the phase 4.10 entry below had to pass:
+    #
+    # 1. The property is unchanged: no cost data, and no key outside
+    #    Section 13.2's pinned shape. MCP was the one surface of four left
+    #    without a persona though the phase's ticket said all four, so the
+    #    pinned shape genuinely grew rather than the assertion going stale.
+    # 2. Additive and therefore v1-legal under Section 2.6: a new OPTIONAL
+    #    field, so Section 13.2's four required fields are untouched.
+    # 3. Not cost-adjacent, so the renamed-cost-field leak F-4.1-A-07
+    #    exists to catch is still caught. The value is a server-side name
+    #    drawn from a checked-in file of 32 deceased scientists: no user
+    #    data, no cost data, no identifier.
+    "persona_name",
     # CitationPayload
     "assertion_confidence",
     "citation_id",
@@ -1473,7 +1514,7 @@ class TestEventFolding:
 
         assert result.is_error is False
         content = result.structured_content
-        assert set(content.keys()) == {"answer", "citations", "trust_signal", "run_id"}
+        assert set(content.keys()) == _EXPECTED_TOP_LEVEL_KEYS
         for excluded_key in ("think", "plan", "tool_start", "token", "tool_result", "guard", "cost"):
             # F-4.1-J-01 (judge round 1): `_find_all(content, key)` returns
             # the VALUES found under `key` anywhere in the structure, not
@@ -1504,7 +1545,7 @@ class TestNeverCost:
 
         assert result.is_error is False
         content = result.structured_content
-        assert set(content.keys()) == {"answer", "citations", "trust_signal", "run_id"}
+        assert set(content.keys()) == _EXPECTED_TOP_LEVEL_KEYS
         for cost_key in ("cost", "total_cost_usd", "query_cost_usd", "query_cap_usd", "cap_fraction"):
             # F-4.1-J-01 (judge round 1): same fix as `TestEventFolding`
             # above. `_find_all` returns values found under `cost_key`, so

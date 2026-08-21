@@ -65,7 +65,7 @@ import time
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import and_, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -664,6 +664,7 @@ def me(
 def create_guest(
     request: Request,
     session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI DI
+    session_id: str | None = Query(default=None, max_length=64, min_length=1),
 ) -> GuestTokenResponse:
     # Design decision 8. `source_hash_for_request` is the one definition of
     # "which source is this", shared with the per-source daily share the
@@ -688,5 +689,28 @@ def create_guest(
         guest_id=guest.id,
         used=guest.runs_used,
         total=FREE_RUN_ALLOWANCE,
-        persona_name=persona_for_session(session_id=str(guest.id), user_id=None),
+        # F-4.5-A-12, disagreement 2. This used to key unconditionally on
+        # `str(guest.id)`, and the resulting name could never match: every
+        # subsequent query from this same guest keys on the CLIENT-chosen
+        # `session_id` it sends to `POST /v1/query`, which the mint had no
+        # way to know. The field was documented as part of the wire contract
+        # and was dead on arrival, since no correct client could use it.
+        #
+        # The client now tells the mint which session it is, as an optional
+        # query parameter, and the name is keyed on that, so it is the same
+        # name the first answer will carry. The parameter is optional rather
+        # than required because this endpoint's whole design is that it needs
+        # no body and no credentials, and adding a required parameter to a
+        # shipped endpoint is a breaking change.
+        #
+        # The fallback, for a client that sends nothing, is the guest row id
+        # as before. Said plainly rather than dressed up: that fallback name
+        # will NOT match the caller's first answer. It is kept only because
+        # the field is non-optional in the response schema and removing it
+        # would be a breaking change within v1. A client that wants a name it
+        # can show should send its session id.
+        persona_name=persona_for_session(
+            session_id=session_id if session_id is not None else str(guest.id),
+            user_id=None,
+        ),
     )

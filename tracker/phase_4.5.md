@@ -474,3 +474,111 @@ Two further defects surfaced while fixing those, both from the same end-to-end a
 The new arm, P4b, hands in NOTHING: two real turns through one session, where turn 2's pronoun can only bind if turn 1 was actually persisted. It was seen failing against each of the four defects above in turn, which is the only reason it can be trusted now.
 
 The transferable rule, stated plainly because this phase paid for it twice: WHEN A TEST SUPPLIES THE THING UNDER TEST, IT CANNOT TELL YOU THE THING EXISTS. At least one arm must obtain that thing the way production obtains it.
+
+## The independent review this phase merged without, run afterwards
+
+Build phase 4.5 merged as PR #52 having run stages 1 to 7 and 10. Stages 8 and 9, the judge round and the adversary round, did not run, and every fix and every test on the branch was written by the same agent that wrote the code. That is the one split `.claude/rules/self-eval-loop.md` says must never collapse. Both rounds were run on 2026-08-20 against the merged code, before build phase 4.6 opened.
+
+Reports, one per round:
+
+- `tracker/phase_4.5_judge_report.md`: 22 findings, F-4.5-J-01 through F-4.5-J-22. 2 critical, 11 major, 7 minor, 2 latent.
+- `tracker/phase_4.5_adversary_report.md`: 26 findings, F-4.5-A-01 through F-4.5-A-26. 3 critical, 9 major, 11 minor, 3 latent. 19 confirmed by executing code, 7 reasoned from reading.
+
+Roughly 35 unique findings after overlap. Both reviewers ran with separate briefs and separate contexts, and they converged independently on the same three worst defects, which is the strongest verification signal available short of a live exploit.
+
+### What the two rounds agreed on, stated first because agreement is the signal
+
+- Memory defeats the unresolved-entity refusal (F-4.5-J-01, F-4.5-A-01, critical, both confirmed by execution). A question naming a gene that does not resolve is answered about a remembered gene instead, grounded, cited, and shipped as `trust_outcome: "answer"` with no disclosure. The comment three lines above asserts the opposite property.
+- Every guest is the same principal (F-4.5-J-02, F-4.5-A-02, critical, both confirmed by execution). `(owner_id or None) != (user_id or None)` is False for every guest pair, so any anonymous caller reads and overwrites any other guest's memory. The distinguishing identity already exists: `caller.owner_id` carries `guest:<uuid>` and is passed to `create_run` on the next line. It is simply not the field the check reads.
+- Eleven remembered CURIEs crash the query (F-4.5-J-03 major, F-4.5-A-03 critical, both confirmed). `_memory_curies` returns up to 50, `target_entities` caps at 10, and the memory path does not slice where the resolver path does. Permanent for the session, because memory only grows, and it fails hardest in long sessions, which are what memory is for.
+
+The severity disagreement on the third is recorded rather than reconciled away: the judge called it major, the adversary critical. Treated as critical here, because the failure is permanent for the affected session and presents as an opaque crash naming nothing.
+
+### The pattern both rounds named independently
+
+The phase's controls are mostly correct in the code and mostly unguarded by the gate. Three arms are fully vacuous, one half, one partial. Five arms that need no live resources sit behind `@premise_gate` and skip in ordinary CI, measured at `2 passed, 14 skipped in 0.03s`, so most of this gate does not run unless someone runs it deliberately. The 500-line memory module has no unit test file. The completeness repair, which fires a second Synth call on the most safety-critical path in the product and floors `trust_outcome`, has no deterministic test. Five of six load-bearing code comments assert a property the code does not have.
+
+Both criticals live in the two newest feature commits, `6576b73` and `1543c46`, and both sit inside code written to repair an earlier finding: F-4.5-J-01 inside the reference resolution closing F-4.8-A-22, F-4.5-J-02 inside the ownership check closing F-4.1-A-15. The standing bias this repository measured across build phases 2.1, 4.2 and 4.3, that every review round finds its worst defect inside the previous round's fix, held here without a single exception.
+
+### F-4.5-09 recurred four times in one phase
+
+The phase's own signature defect is that a test which supplies the thing under test cannot tell you the thing exists. It was filed once, quoted in this file while being committed a second time, and the two rounds found two further instances that had gone unfiled:
+
+- F-4.5-A-09: both injection sites discard the model's response. `think_node` is the build-phase-2.0 stub and `plan_node` selects its tool deterministically straight afterwards, so the whole rendered-memory apparatus, `_render`, `compact`, `build_session_context`, the token cap and the compaction order, produces a block appended to two prompts, billed at two tiers at 59 tokenizer calls and 50ms twice per query, and read by nothing that changes an answer. The only live effect memory has today is `_memory_curies` feeding `target_entities`, which needs none of it.
+- F-4.5-A-10: `open_threads` has no writer anywhere in `src/`. Section 14.3's first compaction rule, drop the oldest open threads first, can never fire on real data, so real compaction always begins by merging findings, which the section itself names as the more expensive loss. Premise arm P9 proves the order holds only because it constructs ten threads by hand and passes them in.
+
+### Disposition
+
+Settled with the product owner on 2026-08-20: fix the criticals and the reachable majors before build phase 4.6 opens, track the minors and the latent findings. That is the merge bar build phase 4.3 converged under and the standard every phase since has been held to.
+
+Fix work runs on `fix/4.5-review-followups`, cut from `develop` at `45c2636`. Findings are grouped by file with one agent per group working serially, per `docs/build/Build_workflow_cadence.md`: parallel fix agents in one file are individually correct and structurally blind to the sibling editing the same function, which is how build phase 4.2 reached six rounds.
+
+### F-4.5-01, closed
+
+`tracker/preflight.py` now loads `.env` before probing, so the graph transport is actually verified rather than reported `skipped` against an open tunnel while the run prints READY and exits 0. This was F-2.1-04 in a second place: every premise gate already loads `.env` explicitly and cites that finding, and preflight was written later and did not inherit it. `setdefault`, so an exported variable still beats the file.
+
+Proven both directions rather than asserted:
+
+- `python3 tracker/preflight.py --transport graph` returned `skipped` before and returns `ok  TCP 15432 open in 2ms` after, against the same open tunnel.
+- `GRAPH_PG_PORT=1 python3 tracker/preflight.py --transport graph` returns `down  ConnectionRefusedError` and exits 1, which proves both that the exported value beat `.env`'s 15432 and that a configured but dead graph now fails the run.
+- A full run reports `ok` for all three transports, the first preflight run in this repository to actually verify the graph.
+
+Commit `d79122a`. One stale reference remains, at `tests/system_03_search_agent/core/test_personalization_premise.py:292`, which says preflight is the one tool that does not load `.env`. It is left for the agent that owns that file rather than edited under a concurrent reviewer.
+
+## WITHDRAWN: the "regression" was my own instrument, and how it was wrong is the lesson
+
+Status: WITHDRAWN on 2026-08-21 by the lead who filed it, after measuring the mechanism instead of reading it. There is no regression, and no product-owner decision is needed. The original text is kept below rather than removed, because the way it was wrong is worth more than the finding ever was.
+
+WHAT IS ACTUALLY TRUE. The completeness repair runs, with 29 to 43 seconds of its 45-second budget still available, and finishes in 2 to 8.5 seconds. Budget starvation was never possible. Measured by instrumenting every Synth dispatch, every grounding pass and every `unreported_findings` call in a single probe:
+
+```text
+synth_call  budget 45.0  took 3.9   the first answer
+grounding   claims 0                it grounded nothing
+unreported  omitted 1               so the repair is triggered
+synth_call  budget 41.1  took 8.5   THE REPAIR, running, 41s available
+grounding   claims 0                the repair also grounded nothing
+                                    and no second unreported_findings call
+```
+
+WHY IT LOOKED LIKE A REGRESSION. The instrument counted calls to `unreported_findings` and read two calls as "the repair completed". The shipped code computed `still_omitted` unconditionally after any regeneration. The strict-superset fix for F-4.5-J-13 short-circuits that call when the regeneration grounded nothing. So the two commits differ in how many times one function is CALLED, not in what the product DOES, and the instrument reported that structural difference as a behavioural one.
+
+THE LESSON, which is this repository's own rule turned back on the person applying it. `attack-the-constraint` says that when a generated output looks wrong, print what the component actually received before debugging the component. The same discipline applies one level up: when a MEASUREMENT looks wrong, verify the instrument before believing the number. Two narrower probes disagreed on an identical tree, and `git log` showed no code in the Write path had changed between them. That was the moment to suspect the instrument, and it was not taken. It was taken only after a third probe recorded the whole block at once.
+
+Compounding it: the original diagnosis named budget starvation and called it "confirmed by reading, not inferred from the numbers". Reading the source confirmed that a subtraction EXISTS. It did not confirm the subtraction ever binds, and it never binds. A mechanism read out of source is a hypothesis, not a confirmation, and calling it confirmed is how a wrong cause acquires false authority.
+
+WHAT THE MEASUREMENT DID ESTABLISH, and this part stands:
+
+- F-4.5-J-18 and F-4.5-A-05 are CONFIRMED on the substance. The repair fires often: 7 of 12 runs in the first sample, 2 of 4 in the second. It is a structural event rather than a rare one, exactly as both rounds argued.
+- Their ARITHMETIC was wrong. Both derived that rate from "two to five sentences cannot ground twenty findings". Only 0 or 1 findings reach synthesis, never more, at both commits. A correct conclusion drawn from a false premise is not evidence for the premise.
+- The repair is cheap where it was feared expensive: 2 to 8.5 seconds inside one declared 45-second step budget.
+- The real quality problem sits upstream of all of it. One finding reaches synthesis, and the first answer grounds nothing against it in roughly half of runs, which is what produces a refusal. That belongs to the eval harness at build phase 5.1, and it is present at both commits.
+
+The superseded original text follows, unedited.
+
+Status (superseded, and wrong): open, needs a product-owner decision. Nothing is merged; `develop` is untouched and this lives on `fix/4.5-review-followups`.
+
+F-4.5-A-04a said the completeness repair took a SECOND full Write-step budget, so the step could run to twice its declared timeout. That is a real contract breach under `.claude/rules/tool-call-budgets.md` and it was fixed by sharing one deadline: `repair_budget_s = write_budget_s - elapsed`, with the repair skipped below a floor.
+
+The fix is worse than the defect, and the only reason that is known is that the product owner asked for the firing rate to be MEASURED rather than reasoned about.
+
+Twelve live runs, four questions across all three depths, run identically against `45c2636` (pre-fix) and against the fix branch:
+
+| Measure | Baseline 45c2636 | After the fix |
+|---------|------------------|---------------|
+| Repair attempted, an omission existed | 7 of 12 | 7 of 12 |
+| Second Synth call produced usable text | 7 of 7 | 1 of 7 |
+| Terminal outcome `answer` | 6 | 5 |
+| Terminal outcome `refuse` | 4 | 6 |
+
+The mechanism is confirmed by reading, not inferred from the numbers: the first Synth call consumes most of the Write budget, so the subtraction leaves the repair below its floor or too short to finish. The repair is the mechanism that rescues an answer which grounded nothing against its findings, so starving it converts answers into refusals.
+
+Both options are real and neither is obviously right, which is why this is not being decided by the lead:
+
+- Revert to a second full budget. Restores the measured-good behaviour and reopens F-4.5-A-04a, so the Write step can again take twice its declared timeout. It also requires changing a mutation-proven test that currently pins the shared deadline, and `.claude/rules/goal-contracts.md` forbids weakening a check to make something pass, so that edit needs to be a deliberate, recorded decision rather than a tidy-up.
+- Declare the real budget. Make the Write step's declared timeout account for a possible repair, so one deadline covers both calls honestly and the contract stops lying. This is the better shape and it changes a locked per-step budget, which `tool-call-budgets` explicitly puts in the ask-first column.
+
+What this episode is worth beyond the fix, and the reason it is written here rather than in a commit message. Both review rounds derived the repair's firing rate arithmetically from the shipped prompt: rule 7 asks for two to five sentences while up to 20 findings are handed in, so the repair must fire nearly always. The measurement found the number of findings reaching synthesis is 0 or 1, NEVER more, across all twelve runs at both commits. The premise both rounds reasoned from does not describe this system. That is `attack-the-constraint`'s own rule arriving from the other direction: the constraint was upstream of the thing two careful reviewers were reasoning about, and reading the input would have found it before either ledger was written.
+
+Second, smaller result from the same runs, not filed as a finding because it predates this branch: the flagship query shape refuses often at BOTH commits, 4 of 12 before and 6 of 12 after, because only one finding reaches synthesis and the first answer frequently grounds nothing against it. That is a product-quality question for build phase 5.1's eval harness, not a defect this branch introduced.
+
+Method note, stated so the numbers can be attacked: the instrument counts grounding passes, so "repair attempted but the regeneration returned nothing" and "repair never attempted" look identical in the raw log. They are separated by the recorded omission count, which is why the table above reports attempts and completions as two different rows. n is 12 per commit against a sampling model, so the 7-of-7 versus 1-of-7 split is the load-bearing figure and the single-run outcomes are not.

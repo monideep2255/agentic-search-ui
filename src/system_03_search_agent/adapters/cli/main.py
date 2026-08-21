@@ -619,11 +619,22 @@ def _parse_ask_args(argv: Sequence[str], *, out: TextIO, err: TextIO) -> argpars
         default=None,
         help="a session id to group related questions; a fresh one is generated if omitted",
     )
+    # F-4.5-J-15 / F-4.5-A-13: the default is None, not "researcher", and
+    # the difference is the whole fix on this surface. Section 14.5 says
+    # depth defaults to the account's last-used value once auth is live, and
+    # a client that always sends a value leaves the server no way to tell
+    # "the user named no depth" from "the user asked for researcher". Sending
+    # nothing is what lets the server apply the stored preference; `--depth`
+    # still overrides it, which is Section 14.5's "always overridable per
+    # query".
     parser.add_argument(
         "--depth",
         choices=["clinical_brief", "researcher", "deep_technical"],
-        default="researcher",
-        help="the audience depth for the answer",
+        default=None,
+        help=(
+            "the audience depth for the answer; omitted, the server uses the "
+            "depth this account last used"
+        ),
     )
     return parser.parse_args(list(argv))
 
@@ -836,6 +847,14 @@ async def _run_ask(
     session_id = args.session_id or uuid.uuid4().hex
 
     try:
+        # `args.depth` is None unless `--depth` was given (F-4.5-J-15). It
+        # rides through `CliClient.create_run` into the request body as an
+        # explicit JSON null, which `CreateRunRequest.audience_depth` accepts
+        # and reads as "the caller named no depth". `create_run`'s parameter
+        # is still annotated `str` in `client.py`; widening that annotation
+        # to `str | None` is a one-word follow-up in a file this change does
+        # not own, and it is a documentation defect rather than a behavioral
+        # one, since the value is only ever serialized to JSON.
         run_id, persona_name = await _create_run_never_retried(
             lambda c: CliClient(http_client, c).create_run(
                 text=args.question, session_id=session_id, audience_depth=args.depth

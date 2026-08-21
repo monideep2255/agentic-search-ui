@@ -18,6 +18,13 @@ convention:
     response body, never repeated on every streamed event. This module owns
     where the name comes from; Section 12.7 owns rendering it.
 
+    IT SURVIVES AN EXTENSION OF THE LIST. The 2026-08-20 product decision
+    ships roughly 30 names with the mechanism SIZED for 100, so that a
+    later extension is a data change and not a code change. A draw that
+    reshuffles when the list grows defeats exactly that decision, so the
+    draw is not a modulus over the list length. See `persona_for_session`
+    for the mechanism and for the one case in which an identity does move.
+
 The list is deceased-only by product decision, 2026-08-20. A living
 scientist's name rendered above a generated biomedical answer reads as an
 association or an endorsement that person never gave, on a product that makes
@@ -121,6 +128,19 @@ def load_persona_list() -> tuple[Persona, ...]:
     return tuple(personas)
 
 
+def _rendezvous_score(identity: str, name: str) -> bytes:
+    """One candidate's score for one identity.
+
+    The NUL separator is load-bearing rather than decorative: without a
+    separator, identity "ab" with name "c" and identity "a" with name "bc"
+    would hash the same bytes, and a persona name can never contain a NUL
+    because the curated file is JSON text.
+    """
+    return hashlib.sha256(
+        identity.encode("utf-8") + b"\x00" + name.encode("utf-8")
+    ).digest()
+
+
 def persona_for_session(*, session_id: str, user_id: str | None) -> str:
     """The persona name for this caller.
 
@@ -139,12 +159,51 @@ def persona_for_session(*, session_id: str, user_id: str | None) -> str:
     process, so `hash()` would give a user a different scientist every time
     the server restarted. That is a real bug that a test inside one process
     could never see.
+
+    NOT a modulus over the list length, and that is finding F-4.5-J-10's fix
+    rather than a style choice. `int.from_bytes(digest) % len(personas)`
+    changes its answer for essentially every identity the moment
+    `len(personas)` changes, so growing the curated file from 32 entries
+    toward the 100 the mechanism is sized for would rebind every existing
+    account to a different scientist. That is a breach of the 2026-08-20
+    product decision, whose whole point was that a later extension is a DATA
+    change: a data change that silently rewrites every user's identity is a
+    code change wearing a data change's clothes.
+
+    The draw is instead a highest-random-weight (rendezvous) selection: score
+    every candidate with `sha256(identity || NUL || name)` and take the
+    largest score. Three properties follow, and the tests in
+    `tests/.../core/test_persona.py` pin all three:
+
+        ADDING a name moves an identity only if that identity's score for
+        the NEW name beats its current best. An identity that moves
+        therefore moves TO the newly added scientist, never from one
+        pre-existing scientist to another pre-existing one. Some movement is
+        unavoidable, since a name nobody is ever drawn for would be dead
+        weight in the file; what the old modulus did, and this does not, is
+        reshuffle identities between names that both already existed.
+
+        REORDERING the file changes nothing at all, because the score is
+        keyed on the name and never on the position.
+
+        The distribution stays even, because SHA-256 over distinct inputs is
+        uniform and the maximum of N independent uniform scores is equally
+        likely to fall on any of the N candidates.
+
+    Ties are broken on the name, so two candidates that somehow produced an
+    identical 32-byte score would still resolve deterministically rather
+    than depending on iteration order.
     """
     identity = user_id or session_id
     personas = load_persona_list()
-    digest = hashlib.sha256(identity.encode("utf-8")).digest()
-    index = int.from_bytes(digest[:8], "big") % len(personas)
-    return personas[index].name
+    best_name = personas[0].name
+    best_score = _rendezvous_score(identity, best_name)
+    for persona in personas[1:]:
+        score = _rendezvous_score(identity, persona.name)
+        if score > best_score or (score == best_score and persona.name < best_name):
+            best_score = score
+            best_name = persona.name
+    return best_name
 
 
 __all__ = ["MAX_PERSONAS", "Persona", "load_persona_list", "persona_for_session"]

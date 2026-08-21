@@ -72,3 +72,50 @@ def write_audience_depth(user: Any, depth: str) -> bool:
     # a JSONB preference look like it saved and then not.
     user.profile = {**profile, _DEPTH_KEY: depth}
     return True
+
+
+def resolve_audience_depth(*, requested: str | None, user: Any | None) -> str:
+    """The depth a run should actually use: F-4.5-J-15 and F-4.5-A-13's fix.
+
+    Section 14.5: "once auth is live, depth defaults to the user's last-used
+    value". Until this function existed, that sentence was true of exactly
+    one caller. `write_audience_depth` ran on every authenticated query and
+    `read_audience_depth` was served on `GET /auth/me`, and the round trip
+    closed only because the browser re-echoed the value on the next request.
+    A CLI, GraphQL, MCP or bare REST caller that omitted the field got the
+    hardcoded contract default no matter what the account had stored. A
+    preference honored by one of several clients is not a stored preference,
+    it is a client-side setting the server happens to persist.
+
+    So the resolution moves to the server, and it is stated once, here,
+    rather than at each surface. The order is:
+
+        A depth the caller named explicitly always wins, per Section 14.5's
+        "always overridable per query". `None` means "not named", which is
+        why the surfaces make the field nullable rather than defaulting it.
+
+        Otherwise the account's stored value, when there is an account.
+
+        Otherwise the contract default, `researcher`.
+
+    `user` is `None` for a guest or an anonymous caller, which has no row to
+    remember against. Section 14.5's "before that, it defaults per session"
+    is NOT implemented by this function and is not implemented anywhere: it
+    needs a per-session depth store that does not exist. Carried as an open
+    item rather than faked here, because falling back to the contract
+    default is the honest behavior and a comment claiming otherwise would be
+    the exact shape `self-eval-loop` warns about.
+
+    Never raises, for the same reason `read_audience_depth` never raises: a
+    corrupt or unrecognised stored preference means "this account has no
+    usable preference", not "fail this query".
+    """
+    if requested in _ALLOWED:
+        # `requested` is validated by each surface's own contract before it
+        # reaches here. Re-checked anyway, because this function is what
+        # decides what reaches a prompt directive, and the closed set is
+        # cheap to re-assert at the boundary that actually depends on it.
+        return str(requested)
+    if user is None:
+        return _DEFAULT
+    return read_audience_depth(user)
