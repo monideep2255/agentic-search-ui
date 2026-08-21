@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-Claude Code instructions for `agentic-search-ui`. This IS a software project.
+Instructions for `agentic-search-ui`. For all AI agents (Gemini, Copilot, Codex, GPT, etc.). Exact same content as CLAUDE.md.
 
 This repo covers System 3 (search agent, API, UI). System 1 (data pipelines) and System 2 (knowledge graph) live in a separate repository symlinked at `reference/agentic-search-data-engineering`.
 
@@ -154,6 +154,7 @@ The invocation is always the skill's exact name. A shortened alias does not reso
 | release-workflow | End-to-end release verification and ship | `/release-workflow` |
 | eval-harness | The offline evaluation gate, operationalizing the evaluation playbook: 8-point rubric, hard-fails, coverage metric, must-pass set | `/eval-harness` |
 | verify | Pre-commit checks: Python compile, tests, lint, git status | `/verify` |
+| standup | Where the build stands right now, in four plain lines: phase, what worked, what is next, what is blocked. Reads the tracker and git, never the conversation, so it is correct in a fresh session. Reports only, never edits | `/standup` |
 | phase-checkpoint | Sync planning docs at a phase or sub-phase boundary (decisions, session doc, meeting note, continuation prompt, and at phase end the synthesis and Plan status). Runs before `/ship`, never touches git | `/phase-checkpoint` |
 
 Auto-read skills (loaded by other skills or before specific tasks): best-practices, release-workflow, dev-standards.
