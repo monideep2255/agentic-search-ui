@@ -154,11 +154,13 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 ## The next session starts here
 
-DECIDE ONE THING FIRST, then finish the branch. `fix/4.5-review-followups` is cut from `develop` at `45c2636`, has four commits on it, is NOT merged, and is BLOCKED on a single product-owner decision recorded at the bottom of `tracker/phase_4.5.md` under "OPEN, and blocking".
+FINISH THE BRANCH. `fix/4.5-review-followups` is cut from `develop` at `45c2636`, is NOT merged, and is NOT blocked. Nothing is waiting on the product owner.
 
-The decision: the completeness repair's timeout budget. Fixing F-4.5-A-04a (the repair took a second FULL Write budget, so the step could run to twice its declared timeout) by sharing one deadline starved the repair. Measured across twelve identical live runs at both commits, the repair's second Synth call completed 7 of 7 times before and 1 of 7 after, and terminal refusals went from 4 to 6. The repair is what rescues an answer that grounded nothing against its findings, so starving it turns answers into refusals. Two options, both real, neither the lead's to take: revert to a second full budget and reopen the contract breach, or declare a Write-step budget that honestly covers both calls, which changes a locked per-step budget and `tool-call-budgets` puts that in the ask-first column.
+A blocking decision WAS recorded here on 2026-08-20 and was WITHDRAWN on 2026-08-21. If you are reading a copy of this file that still says the fix round starved the completeness repair, that is stale: it did not. Read the withdrawal at the bottom of `tracker/phase_4.5.md`, under "WITHDRAWN: the 'regression' was my own instrument", before acting on any claim about the Write budget.
 
-Read that section before touching anything. It also carries the more transferable result: BOTH review rounds derived the repair's firing rate arithmetically from the shipped prompt, and the measurement found the premise false. Only 0 or 1 findings reach synthesis, never the "up to 20" both rounds reasoned from.
+The short version, because the failure is the useful part. The repair was reported as starved on the strength of a twelve-run measurement showing its second Synth call completing 7 of 7 times before the fix and 1 of 7 after. The instrument counted calls to `unreported_findings`, and the strict-superset fix for F-4.5-J-13 short-circuits that call when a regeneration grounds nothing, where the previous code always made it. So the measurement recorded a change in how often one function is CALLED and reported it as a change in what the product DOES. Instrumenting the whole Write block showed the repair running normally with 29 to 43 seconds of its 45-second budget spare, finishing in 2 to 8.5 seconds. Two narrower probes had already disagreed on an identical tree, with `git log` showing no Write-path change between them, and that was the moment to suspect the instrument rather than the code.
+
+What survives the withdrawal, and is worth carrying into build phase 5.1: F-4.5-J-18 and F-4.5-A-05 are confirmed on substance, since the repair does fire often, but both rounds' arithmetic was wrong. They reasoned that two to five sentences cannot ground twenty findings; only 0 or 1 findings ever reach synthesis. Separately, the first answer grounds nothing against its single finding in roughly half of live runs, which is what produces a refusal, at both commits. That is a retrieval and synthesis quality question for the eval harness, not a defect this branch introduced.
 
 WHAT IS ALREADY DONE on that branch, so it is not redone:
 
@@ -171,7 +173,7 @@ WHAT IS ALREADY DONE on that branch, so it is not redone:
 
 Counts at that point: 3448 passed, 124 skipped, 1 xfailed, excluding `test_citation_trust_full_premise.py`, whose 6 failures are a conflict between two harness controls (a configured model key selects its live arms, then `conftest.py` blocks the live call) and predate this branch.
 
-AFTER the decision lands: apply it, re-run the twelve-run measurement to confirm the repair completes again, run the gates, then open the pull request. Build phase 4.6 comes after, and it inherits the ownership model and the uuid5 session-row mapping this branch changed, so it must read `core/session_memory.py` before it writes `interactions.session_id`.
+WHAT IS LEFT: run the gates, then open the pull request. Build phase 4.6 comes after, and it inherits the ownership model and the uuid5 session-row mapping this branch changed, so it must read `core/session_memory.py` before it writes `interactions.session_id`.
 
 SUPERSEDED, kept because it is what this section said before the review ran: REVIEW PR #52, build phase 4.5. It is BUILT and NOT MERGED, and it has not been independently reviewed.
 

@@ -525,9 +525,37 @@ Proven both directions rather than asserted:
 
 Commit `d79122a`. One stale reference remains, at `tests/system_03_search_agent/core/test_personalization_premise.py:292`, which says preflight is the one tool that does not load `.env`. It is left for the agent that owns that file rather than edited under a concurrent reviewer.
 
-## OPEN, and blocking: the fix round introduced a regression, measured
+## WITHDRAWN: the "regression" was my own instrument, and how it was wrong is the lesson
 
-Status: open, needs a product-owner decision. Nothing is merged; `develop` is untouched and this lives on `fix/4.5-review-followups`.
+Status: WITHDRAWN on 2026-08-21 by the lead who filed it, after measuring the mechanism instead of reading it. There is no regression, and no product-owner decision is needed. The original text is kept below rather than removed, because the way it was wrong is worth more than the finding ever was.
+
+WHAT IS ACTUALLY TRUE. The completeness repair runs, with 29 to 43 seconds of its 45-second budget still available, and finishes in 2 to 8.5 seconds. Budget starvation was never possible. Measured by instrumenting every Synth dispatch, every grounding pass and every `unreported_findings` call in a single probe:
+
+```text
+synth_call  budget 45.0  took 3.9   the first answer
+grounding   claims 0                it grounded nothing
+unreported  omitted 1               so the repair is triggered
+synth_call  budget 41.1  took 8.5   THE REPAIR, running, 41s available
+grounding   claims 0                the repair also grounded nothing
+                                    and no second unreported_findings call
+```
+
+WHY IT LOOKED LIKE A REGRESSION. The instrument counted calls to `unreported_findings` and read two calls as "the repair completed". The shipped code computed `still_omitted` unconditionally after any regeneration. The strict-superset fix for F-4.5-J-13 short-circuits that call when the regeneration grounded nothing. So the two commits differ in how many times one function is CALLED, not in what the product DOES, and the instrument reported that structural difference as a behavioural one.
+
+THE LESSON, which is this repository's own rule turned back on the person applying it. `attack-the-constraint` says that when a generated output looks wrong, print what the component actually received before debugging the component. The same discipline applies one level up: when a MEASUREMENT looks wrong, verify the instrument before believing the number. Two narrower probes disagreed on an identical tree, and `git log` showed no code in the Write path had changed between them. That was the moment to suspect the instrument, and it was not taken. It was taken only after a third probe recorded the whole block at once.
+
+Compounding it: the original diagnosis named budget starvation and called it "confirmed by reading, not inferred from the numbers". Reading the source confirmed that a subtraction EXISTS. It did not confirm the subtraction ever binds, and it never binds. A mechanism read out of source is a hypothesis, not a confirmation, and calling it confirmed is how a wrong cause acquires false authority.
+
+WHAT THE MEASUREMENT DID ESTABLISH, and this part stands:
+
+- F-4.5-J-18 and F-4.5-A-05 are CONFIRMED on the substance. The repair fires often: 7 of 12 runs in the first sample, 2 of 4 in the second. It is a structural event rather than a rare one, exactly as both rounds argued.
+- Their ARITHMETIC was wrong. Both derived that rate from "two to five sentences cannot ground twenty findings". Only 0 or 1 findings reach synthesis, never more, at both commits. A correct conclusion drawn from a false premise is not evidence for the premise.
+- The repair is cheap where it was feared expensive: 2 to 8.5 seconds inside one declared 45-second step budget.
+- The real quality problem sits upstream of all of it. One finding reaches synthesis, and the first answer grounds nothing against it in roughly half of runs, which is what produces a refusal. That belongs to the eval harness at build phase 5.1, and it is present at both commits.
+
+The superseded original text follows, unedited.
+
+Status (superseded, and wrong): open, needs a product-owner decision. Nothing is merged; `develop` is untouched and this lives on `fix/4.5-review-followups`.
 
 F-4.5-A-04a said the completeness repair took a SECOND full Write-step budget, so the step could run to twice its declared timeout. That is a real contract breach under `.claude/rules/tool-call-budgets.md` and it was fixed by sharing one deadline: `repair_budget_s = write_budget_s - elapsed`, with the repair skipped below a floor.
 
