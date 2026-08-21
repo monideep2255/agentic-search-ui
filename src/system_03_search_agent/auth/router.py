@@ -45,11 +45,19 @@ Depends on:
     - system_03_search_agent.auth.schemas (every request/response model)
     - system_03_search_agent.data.models (User, AuthSession)
     - system_03_search_agent.data.session (get_session)
+    - system_03_search_agent.core.run_registry (reassign_owner, the live
+      half of the guest-to-account migration)
+    - system_03_search_agent.feedback.writer (reassign_interaction_owner,
+      the durable half of it; deferred import, F-4.6-J-01)
 
 Writes:
     - `users` rows (signup, `last_login_at` on login).
     - `auth_sessions` rows (login creates one, refresh revokes the old
       and creates a new one, logout revokes one).
+    - `guest_sessions` rows (signup and login revoke and migrate one).
+    - `interactions.owner_id` and `interactions.user_id`, only through
+      `feedback.writer.reassign_interaction_owner` and only for the one
+      guest identity the presented token names (F-4.6-J-01).
 
 Never logs and never raises with a password, a token, or a connection
 string embedded in a log record or exception string.
@@ -490,6 +498,38 @@ def _migrate_guest_session(session: Session, guest_token: str | None, user: User
             new_owner_id=f"user:{user.id}",
             new_user_id=str(user.id),
         )
+
+        # F-4.6-J-01 / F-4.6-A-03. The registry call above moves the runs
+        # this process still holds; it cannot reach the `interactions` rows
+        # they already wrote, because `RunEntry` has no reference to the row
+        # and the row is durable while the entry is not. Ownership of a run
+        # is recorded in both places and the feedback endpoint checks both,
+        # so migrating only the registry left the two disagreeing: the
+        # registry check passed, the row check refused, and a guest who
+        # signed up and then rated the answer they had just watched stream
+        # got HTTP 403 "you do not own this run" with their rating
+        # discarded.
+        #
+        # ORDER IS LOAD-BEARING and it is this way round on purpose. Once
+        # `reassign_owner` has run, a still-running run captures under the
+        # NEW owner, so every row this UPDATE could miss is one that will
+        # already carry the new owner when it lands. Reversing the two
+        # would leave a window in which a run captures under the old owner
+        # after the UPDATE has passed over it, and that row would be
+        # orphaned exactly as before.
+        #
+        # Deferred import, matching this module's own precedent for the
+        # registry above: the auth path must not pull in SQLAlchemy models
+        # it does not otherwise need at import time.
+        from system_03_search_agent.feedback.writer import (
+            reassign_interaction_owner,
+        )
+
+        rows_reassigned = reassign_interaction_owner(
+            old_owner_id=f"guest:{claims['guest_id']}",
+            new_owner_id=f"user:{user.id}",
+            new_user_id=str(user.id),
+        )
     except Exception:  # noqa: BLE001 - migration must never fail signup/login, any error included
         # No exc_info here, deliberately: a DB exception's own string
         # representation can embed the failed statement's bound
@@ -501,7 +541,12 @@ def _migrate_guest_session(session: Session, guest_token: str | None, user: User
         logger.warning("guest token migration failed; signup/login itself is unaffected")
         return
 
-    logger.info("guest session migrated to a new user; %d live run(s) reassigned", reassigned)
+    logger.info(
+        "guest session migrated to a new user; %d live run(s) and %d captured "
+        "row(s) reassigned",
+        reassigned,
+        rows_reassigned,
+    )
 
 
 @router.post("/signup", response_model=SignupResponse, status_code=status.HTTP_201_CREATED)

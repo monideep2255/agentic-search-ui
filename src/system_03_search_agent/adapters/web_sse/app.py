@@ -69,6 +69,12 @@ from system_03_search_agent.data.models import (
     User,
 )
 from system_03_search_agent.data.session import get_session, session_scope
+from system_03_search_agent.feedback import (
+    FeedbackOwnershipError,
+    FeedbackPayload,
+    InteractionNotFound,
+    record_feedback,
+)
 from system_03_search_agent.harness.cost_control import (
     anon_daily_run_cap,
     anon_daily_source_share,
@@ -1414,3 +1420,130 @@ async def post_v1_query_stop(
     # whether the run was still in flight.
     default_registry.cancel_run(run_id)
     return StopRunResponse(stopped=True)
+
+
+# ---------------------------------------------------------------------------
+# T-4.6-08, build phase 4.6: the feedback endpoint (Section 15's
+# `user_feedback` column, Section 16 stage 1's other half). Reuses
+# `_get_owned_run` for the same ownership rule, and the same 404-before-403
+# ordering, `POST /v1/query/{run_id}/stop` above already enforces, per this
+# ticket's brief to match that sibling rather than invent a new
+# authorization path.
+#
+# The request body is `FeedbackPayload` itself (feedback/contracts.py,
+# fixed), not a locally redeclared shape. It carries every bound
+# production-standards.md's multi-agent pipeline gate asks for: `maxLength`
+# on `comment` and `flagged_reason`, `maxItems` on `citation_flags`, and
+# (F-4.6-A-07's fix) `maxLength` on `citation_id` and `reason` INSIDE each
+# `citation_flags` entry too, via the `FeedbackCitationFlag` model, not just
+# on the list. Redeclaring any of this here would be a second copy of the
+# wire contract that could drift from the one `record_feedback` actually
+# validates against.
+#
+# No total-payload guard was added on top of these per-field bounds. Worst
+# case with every bound maxed (`feedback/contracts.py`'s own comment on
+# `FeedbackPayload.citation_flags` carries the same number): 50
+# `citation_flags` entries at 64 + 200 characters plus a 2000-character
+# `comment` and a 200-character `flagged_reason` is 15,400 characters of
+# content, on the order of 15 to 20 KB once JSON structure is counted, which
+# is small enough that a separate total-size check would only be testing
+# what the per-field and per-list bounds already guarantee together. F-4.6-
+# A-07's actual defect was an unbounded entry inside a bounded list, not an
+# unbounded list; fixing the entry shape closes the 100 MB payload the
+# adversary sent without a second, redundant guard.
+# ---------------------------------------------------------------------------
+
+# A background-task race, not a fixed API guarantee: no SLA bounds how long
+# `feedback.capture_run` takes to land after the `done` event, so this is a
+# practical retry hint (comfortably longer than a single background DB
+# write normally takes), not a promise the row will exist by then.
+_FEEDBACK_NOT_YET_CAPTURED_RETRY_AFTER_S = 3
+
+
+@app.post("/v1/query/{run_id}/feedback", status_code=status.HTTP_204_NO_CONTENT)
+async def post_v1_query_feedback(
+    run_id: str,
+    payload: FeedbackPayload,
+    caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
+) -> Response:
+    # `entry.run_id` rather than the raw path parameter: `post_v1_query`
+    # mints exactly one uuid4, sets it as both `Query.trace_id` and the
+    # `run_id` this registry returns, specifically so the two are always
+    # byte-identical (see that endpoint's own "run_id/trace_id wiring"
+    # comment above). Reading it back off the resolved entry, the same
+    # value `_get_owned_run`'s ownership check already vouches for, keeps
+    # this endpoint from ever trusting an unresolved path string as the
+    # join key `record_feedback` writes under.
+    #
+    # KNOWN GAP, not routed around: `_get_owned_run` raises 404 for a
+    # `run_id` this in-process registry has evicted (finished for longer
+    # than its retention window, module docstring, `core/run_registry.py`),
+    # which is indistinguishable here from a `run_id` that never existed. A
+    # caller who waits past that window to rate an old answer is told "no
+    # such run" even though `feedback.capture_run` may well have written a
+    # durable `interactions` row for it. Closing that needs a second,
+    # durable lookup path keyed on something other than the in-memory
+    # registry, which is a real design question (this ticket's own
+    # BLOCKED-STOP condition) and not one to answer by quietly bolting a
+    # database fallback onto this handler.
+    entry = _get_owned_run(run_id, caller)
+    try:
+        await record_feedback(
+            trace_id=entry.run_id,
+            owner_id=caller.owner_id,
+            rating=payload.rating,
+            comment=payload.comment,
+            flagged_reason=payload.flagged_reason,
+            # `payload.citation_flags` is `list[FeedbackCitationFlag]`
+            # (feedback/contracts.py, F-4.6-A-07's fix), a typed model, not
+            # the bare `list[dict[str, str]]` `record_feedback` declares.
+            # Dumped explicitly here rather than passed through as model
+            # instances and relying on `FeedbackPayload`'s own re-validation
+            # inside `record_feedback` (feedback/__init__.py) to coerce them
+            # back, so the wire shape that crosses this call boundary stays
+            # exactly what the type hint on the other side says it is.
+            citation_flags=[flag.model_dump() for flag in payload.citation_flags],
+        )
+    except InteractionNotFound:
+        # A REAL and EXPECTED race (feedback/contracts.py's own docstring),
+        # not a caller error: `capture_run` is dispatched as a background
+        # task after the `done` event (Section 16 stage 1), so feedback
+        # submitted the instant an answer finishes can genuinely arrive
+        # first. Answered the same way `GET .../citations` above already
+        # answers "this run has not reached a state I can serve yet": 409
+        # Conflict with a Retry-After, never a 404, which would tell a
+        # genuine retrier the resource is permanently absent and contradict
+        # the 404 `_get_owned_run` raises two lines up for an ACTUALLY
+        # unknown run_id. Never a bare 200/202 either, which would silently
+        # discard the rating the caller just typed with no way for them to
+        # know it was dropped. The client is expected to retry this exact
+        # request; `record_feedback` replaces rather than appends on every
+        # call (feedback/__init__.py's own docstring), so a retry a few
+        # seconds later is the same idempotent write it would have been the
+        # first time, never a duplicate.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "this run's interaction row has not been captured yet; "
+                "capture runs as a background task right after the answer "
+                "finishes, so retry this exact request in a few seconds"
+            ),
+            headers={"Retry-After": str(_FEEDBACK_NOT_YET_CAPTURED_RETRY_AFTER_S)},
+        ) from None
+    except FeedbackOwnershipError:
+        # Deliberately the SAME status and the SAME detail string
+        # `_get_owned_run` above already raises for a run that exists but
+        # belongs to someone else, never a distinct "feedback ownership"
+        # message. By the time `record_feedback` is reached, `_get_owned_run`
+        # has already confirmed the caller owns this `run_id` at the
+        # registry layer; a `FeedbackOwnershipError` here means the row-level
+        # check disagreed. Answering that disagreement with any detail more
+        # specific than "you do not own this run" would let a caller tell
+        # the two refusals apart, disclosing more about the row's real state
+        # than this surface ever should: the whole point of matching the
+        # registry-level wording is that neither response confirms or denies
+        # anything beyond "not yours" to whoever is asking.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="you do not own this run"
+        ) from None
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

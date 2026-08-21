@@ -76,8 +76,16 @@ packages = [
     "system_03_search_agent.contracts",
     "system_03_search_agent.core",
     "system_03_search_agent.data",
+    # Added at build phase 4.6 (F-4.6-02). This list is hand-maintained, so a
+    # new package is invisible to an installed distribution until someone
+    # remembers to add it here, while `pythonpath = ["src"]` keeps the test
+    # suite green either way. `export` was missing since build phase 4.4 and
+    # was found by that same gap, not by a test.
+    "system_03_search_agent.export",
+    "system_03_search_agent.feedback",
     "system_03_search_agent.guardrail",
     "system_03_search_agent.harness",
+    "system_03_search_agent.orchestrator",
     "system_03_search_agent.synthesis",
     "system_03_search_agent.tools",
 ]

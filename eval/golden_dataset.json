@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "_scope_note": "Written by build phase 4.6's promotion path (T-4.6-11), one eval_case per approved cq_candidates row. The full Phase 4 golden dataset (the 50-query expansion set) is built by build phase 5.1 (Section 25); this file seeds it with real promoted cases rather than starting build phase 5.1 from zero.",
+  "cases": []
+}

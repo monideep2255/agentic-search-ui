@@ -525,6 +525,18 @@ class TestReassignOwnerOffTheEventLoop:
         return RunEntry(
             run_id=run_id,
             user_id=None,
+            # T-4.6-06: `RunEntry` now holds the `Query` its task is running,
+            # so the guest-to-account migration can rewrite the run's own
+            # identity and not only this entry's copy of it (F-4.6-J-01). A
+            # real `Query` rather than a stand-in, because `reassign_owner`
+            # writes to `entry.query.owner_id` and a stand-in would let a
+            # mutation to that line pass unnoticed here.
+            query=Query(
+                text="what is this",
+                session_id="bare-entry",
+                trace_id=run_id,
+                owner_id=owner_id,
+            ),
             owner_id=owner_id,
             queue=asyncio.Queue(),
             task=None,  # type: ignore[arg-type]
@@ -645,6 +657,12 @@ class TestTheZeroOutputRefundFiresOnTheRightEndStates:
         entry = RunEntry(
             run_id="run-1",
             user_id=None,
+            query=Query(
+                text="what is this",
+                session_id="refund-probe",
+                trace_id="run-1",
+                owner_id="guest:11111111-1111-1111-1111-111111111111",
+            ),
             owner_id="guest:11111111-1111-1111-1111-111111111111",
             queue=asyncio.Queue(),
             task=SimpleNamespace(),  # type: ignore[arg-type]
@@ -720,3 +738,246 @@ class TestTheZeroOutputRefundFiresOnTheRightEndStates:
             self._event("done", self._done()),
         ])
         assert fired == []
+
+
+# ---------------------------------------------------------------------------
+# F-4.6-A-02 and F-4.6-J-01: the registry's two halves of the fix.
+# ---------------------------------------------------------------------------
+
+
+class TestACancelledRunIsFinalizedRatherThanAbandoned:
+    """`_drain_into_entry` closes the stream it consumed, on every exit.
+
+    F-4.6-A-02. Cancelling this task used to leave `run_streaming` suspended
+    at the `yield` its `__anext__` was serving, with the run's own epilogue
+    (session memory, and capture) unexecuted until the collector happened to
+    finalize it. Twelve queries stopped through `POST /v1/query/{run_id}/stop`
+    against a per-user cap of three were all accepted and left zero rows.
+    """
+
+    @pytest.mark.asyncio
+    async def test_a_stopped_run_finalizes_the_stream_it_was_consuming(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The ordinary stop: the cancellation lands inside the generator,
+        which is where a draining run is nearly always awaiting.
+
+        Control: the `try`/`finally` around `run_streaming`'s body. Delete
+        it and this arm goes red, because the run's epilogue would then sit
+        after the last `yield`, which a cancelled generator never reaches.
+
+        WHAT THIS ARM DOES NOT GRADE, stated because the first version of
+        it claimed otherwise. Deleting `await stream.aclose()` from
+        `_drain_into_entry`'s `finally` leaves this arm GREEN. Measured, not
+        reasoned: with the close removed, the end-to-end reproduction still
+        produced three rows for three stopped runs. A cancellation is
+        delivered to the innermost awaitable, so it lands inside the
+        generator, Python runs its `finally` on the spot, and the explicit
+        close has nothing left to do. `test_a_run_suspended_at_a_yield_is_
+        finalized_by_the_explicit_close` below is the arm that grades the
+        close, and it exists because this one cannot."""
+        finalized: list[bool] = []
+
+        async def _fake_stream(query, context):
+            try:
+                yield _fake_event("guard", query.trace_id, 0)
+                await asyncio.sleep(3600)
+            finally:
+                finalized.append(True)
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fake_stream)
+
+        registry = RunRegistry()
+        run_id = registry.create_run(
+            _valid_query(), _valid_context(), owner_id="guest:cancel-probe"
+        )
+        await asyncio.sleep(0.01)
+        registry.cancel_run(run_id)
+        entry = registry.get_run(run_id)
+        try:
+            await entry.task
+        except asyncio.CancelledError:
+            pass
+
+        assert finalized == [True], (
+            "a stopped run left its stream unfinalized, so the run's own "
+            "epilogue (capture) never ran (F-4.6-A-02)"
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_run_suspended_at_a_yield_is_finalized_by_the_explicit_close(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The case `await stream.aclose()` exists for, and the ONLY one
+        that grades it. Recorded this way because the obvious version of
+        this arm does not grade it at all.
+
+        MEASURED, NOT REASONED. Removing `await stream.aclose()` from
+        `_drain_into_entry`'s `finally` and re-running the end-to-end
+        stopped-run reproduction left every row in place: three stopped runs
+        still produced three rows. The reason is that a cancellation is
+        delivered to the INNERMOST awaitable, which for a run being drained
+        is almost always something inside the generator itself, so Python
+        runs the generator's own `finally` on the spot and the explicit
+        close has nothing left to do. An arm built on that shape would pass
+        with the close deleted, which is the definition of a decorative
+        assertion.
+
+        The window the close actually covers is the other one: the
+        generator suspended at its `yield` while the CONSUMER is awaiting.
+        `_drain_into_entry` does await in its loop body (the queue put, and
+        the condition it notifies on), so a cancellation landing there
+        leaves the generator untouched and unfinalized. This arm produces
+        exactly that state by holding the entry's own condition lock, which
+        is where the drain loop blocks, then cancelling while it waits.
+
+        Mutation: delete `await stream.aclose()`. Ran it. This arm goes red
+        on `finalized == [True]`, reading `[]`: the run's epilogue, and
+        therefore its capture, never ran at all."""
+        finalized: list[bool] = []
+
+        async def _fake_stream(query, context):
+            try:
+                yield _fake_event("guard", query.trace_id, 0)
+                yield _fake_event("done", query.trace_id, 1)
+            finally:
+                finalized.append(True)
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fake_stream)
+
+        registry = RunRegistry()
+        run_id = registry.create_run(
+            _valid_query(), _valid_context(), owner_id="guest:suspend-probe"
+        )
+        entry = registry.get_run(run_id)
+
+        # Block the drain loop inside its own body, with the generator
+        # parked at the yield it just served.
+        await entry.new_event.acquire()
+        await asyncio.sleep(0.01)
+        assert entry.events, "the drain loop never got an event, so it is not blocked"
+        assert not finalized, (
+            "the generator finalized before the cancellation, so this arm is "
+            "not producing the state it claims to"
+        )
+
+        entry.task.cancel()
+        await asyncio.sleep(0)
+        entry.new_event.release()
+        try:
+            await entry.task
+        except asyncio.CancelledError:
+            pass
+
+        assert finalized == [True], (
+            "a run cancelled while its generator was suspended at a yield was "
+            "never finalized, so its epilogue (capture) never ran (F-4.6-A-02)"
+        )
+
+
+class TestGuestMigrationMovesTheRunsOwnIdentity:
+    @pytest.mark.asyncio
+    async def test_reassign_owner_rewrites_the_query_the_task_is_running(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """T-4.6-06, F-4.6-J-01 and F-4.6-A-03. `reassign_owner` used to
+        rewrite `entry.owner_id` and `entry.user_id` only, which migrated
+        what the HTTP layer's ownership check reads and left what the RUN
+        reads behind, so an in-flight run captured its `interactions` row
+        under the revoked guest principal.
+
+        Asserted on the object the RUNNING TASK holds, not on
+        `entry.query`, because those are only the same object while the fix
+        is correct and asserting on `entry.query` would pass on a version
+        that rebound the entry to a copy.
+
+        Mutation: delete the two `entry.query.*` assignments from
+        `reassign_owner`. This test goes red on the first assertion below."""
+        observed: list[Query] = []
+
+        async def _fake_stream(query, context):
+            observed.append(query)
+            yield _fake_event("guard", query.trace_id, 0)
+            await asyncio.sleep(3600)
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fake_stream)
+
+        registry = RunRegistry()
+        run_id = registry.create_run(
+            _valid_query(owner_id="guest:g-migrate"),
+            _valid_context(),
+            owner_id="guest:g-migrate",
+        )
+        await asyncio.sleep(0.01)
+        assert observed, "the fake stream never started, so nothing is being graded"
+
+        reassigned = registry.reassign_owner(
+            old_owner_id="guest:g-migrate",
+            new_owner_id="user:new-account",
+            new_user_id="new-account",
+        )
+
+        assert observed[0].owner_id == "user:new-account", (
+            "the run is still holding the revoked guest principal, so its "
+            "captured row will be owned by an identity that no longer exists"
+        )
+        assert observed[0].user_id == "new-account"
+        assert reassigned == 1
+        assert registry.get_run(run_id).owner_id == "user:new-account"
+
+        registry.cancel_run(run_id)
+        entry = registry.get_run(run_id)
+        try:
+            await entry.task
+        except asyncio.CancelledError:
+            pass
+
+    @pytest.mark.asyncio
+    async def test_reassign_owner_leaves_another_guests_run_alone(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The F-4.5-A-02 guard on the new half: a migration must move the
+        one named principal's runs and nobody else's. Mutation: change the
+        `if entry.owner_id == old_owner_id` test in `reassign_owner` to
+        `if entry.owner_id.startswith("guest:")`. This test goes red because
+        the bystander's run would then be handed to the new account."""
+        observed: dict[str, Query] = {}
+
+        async def _fake_stream(query, context):
+            observed[query.trace_id] = query
+            yield _fake_event("guard", query.trace_id, 0)
+            await asyncio.sleep(3600)
+
+        monkeypatch.setattr(run_registry_module, "run_streaming", _fake_stream)
+
+        registry = RunRegistry()
+        mine = registry.create_run(
+            _valid_query(trace_id="mine", owner_id="guest:mine"),
+            _valid_context(),
+            owner_id="guest:mine",
+        )
+        theirs = registry.create_run(
+            _valid_query(trace_id="theirs", owner_id="guest:theirs"),
+            _valid_context(),
+            owner_id="guest:theirs",
+        )
+        await asyncio.sleep(0.01)
+
+        registry.reassign_owner(
+            old_owner_id="guest:mine",
+            new_owner_id="user:new-account",
+            new_user_id="new-account",
+        )
+
+        assert observed["mine"].owner_id == "user:new-account"
+        assert observed["theirs"].owner_id == "guest:theirs", (
+            "a bystanding guest's run was handed to the migrating account"
+        )
+
+        for run_id in (mine, theirs):
+            registry.cancel_run(run_id)
+            entry = registry.get_run(run_id)
+            try:
+                await entry.task
+            except asyncio.CancelledError:
+                pass

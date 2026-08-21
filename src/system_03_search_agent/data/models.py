@@ -180,6 +180,14 @@ class Interaction(Base):
     session_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True
     )
+    #: The exact namespaced principal (`user:<uuid>` or `guest:<uuid>`)
+    #: capture recorded this row for (alembic 0008, F-4.6-01). What
+    #: `feedback/writer.py`'s ownership check now compares against directly,
+    #: rather than deriving from `user_id` or a session-memory envelope.
+    #: NULL for every row written before this column existed; NULL never
+    #: matches any caller's owner_id, so a pre-migration row's ownership is
+    #: refused rather than guessed at.
+    owner_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
