@@ -524,3 +524,33 @@ Proven both directions rather than asserted:
 - A full run reports `ok` for all three transports, the first preflight run in this repository to actually verify the graph.
 
 Commit `d79122a`. One stale reference remains, at `tests/system_03_search_agent/core/test_personalization_premise.py:292`, which says preflight is the one tool that does not load `.env`. It is left for the agent that owns that file rather than edited under a concurrent reviewer.
+
+## OPEN, and blocking: the fix round introduced a regression, measured
+
+Status: open, needs a product-owner decision. Nothing is merged; `develop` is untouched and this lives on `fix/4.5-review-followups`.
+
+F-4.5-A-04a said the completeness repair took a SECOND full Write-step budget, so the step could run to twice its declared timeout. That is a real contract breach under `.claude/rules/tool-call-budgets.md` and it was fixed by sharing one deadline: `repair_budget_s = write_budget_s - elapsed`, with the repair skipped below a floor.
+
+The fix is worse than the defect, and the only reason that is known is that the product owner asked for the firing rate to be MEASURED rather than reasoned about.
+
+Twelve live runs, four questions across all three depths, run identically against `45c2636` (pre-fix) and against the fix branch:
+
+| Measure | Baseline 45c2636 | After the fix |
+|---------|------------------|---------------|
+| Repair attempted, an omission existed | 7 of 12 | 7 of 12 |
+| Second Synth call produced usable text | 7 of 7 | 1 of 7 |
+| Terminal outcome `answer` | 6 | 5 |
+| Terminal outcome `refuse` | 4 | 6 |
+
+The mechanism is confirmed by reading, not inferred from the numbers: the first Synth call consumes most of the Write budget, so the subtraction leaves the repair below its floor or too short to finish. The repair is the mechanism that rescues an answer which grounded nothing against its findings, so starving it converts answers into refusals.
+
+Both options are real and neither is obviously right, which is why this is not being decided by the lead:
+
+- Revert to a second full budget. Restores the measured-good behaviour and reopens F-4.5-A-04a, so the Write step can again take twice its declared timeout. It also requires changing a mutation-proven test that currently pins the shared deadline, and `.claude/rules/goal-contracts.md` forbids weakening a check to make something pass, so that edit needs to be a deliberate, recorded decision rather than a tidy-up.
+- Declare the real budget. Make the Write step's declared timeout account for a possible repair, so one deadline covers both calls honestly and the contract stops lying. This is the better shape and it changes a locked per-step budget, which `tool-call-budgets` explicitly puts in the ask-first column.
+
+What this episode is worth beyond the fix, and the reason it is written here rather than in a commit message. Both review rounds derived the repair's firing rate arithmetically from the shipped prompt: rule 7 asks for two to five sentences while up to 20 findings are handed in, so the repair must fire nearly always. The measurement found the number of findings reaching synthesis is 0 or 1, NEVER more, across all twelve runs at both commits. The premise both rounds reasoned from does not describe this system. That is `attack-the-constraint`'s own rule arriving from the other direction: the constraint was upstream of the thing two careful reviewers were reasoning about, and reading the input would have found it before either ledger was written.
+
+Second, smaller result from the same runs, not filed as a finding because it predates this branch: the flagship query shape refuses often at BOTH commits, 4 of 12 before and 6 of 12 after, because only one finding reaches synthesis and the first answer frequently grounds nothing against it. That is a product-quality question for build phase 5.1's eval harness, not a defect this branch introduced.
+
+Method note, stated so the numbers can be attacked: the instrument counts grounding passes, so "repair attempted but the regeneration returned nothing" and "repair never attempted" look identical in the raw log. They are separated by the recorded omission count, which is why the table above reports attempts and completions as two different rows. n is 12 per commit against a sampling model, so the 7-of-7 versus 1-of-7 split is the load-bearing figure and the single-run outcomes are not.

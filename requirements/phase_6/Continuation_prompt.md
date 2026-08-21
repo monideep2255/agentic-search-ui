@@ -102,8 +102,8 @@ Twelve build phases are done, all twelve merged into `develop` (renamed from `ma
 
 Current counts, stated once here:
 
-- Python tests: 3502 (3404 passing, 67 skipped, 2 xfailed, 1 xpassed, 10 failed, full run 21m12s at build phase 4.4's close). The 10 are all PRE-EXISTING and none belong to build phase 4.4: 7 in `test_citation_trust_full_premise.py` and 3 in `test_cypher_query_e2e.py`, the latter all failing on `the guard tier did not return valid JSON`, a model-side failure. Proven rather than asserted: both files were re-run at commit `4d067d0`, the commit BEFORE the phase opened, in a throwaway worktree, and produced the identical 3 and identical 7. CORRECTION, and the reason this line now carries the method: this entry previously said 6 failures in `test_citation_trust_full_premise.py`. The real figure is 7, both before and after build phase 4.4, so the recorded baseline had been stale for some time. A stale baseline is how a genuine regression hides, since the next reader compares against a number that was never true. Re-measure this at each phase close rather than carrying it forward.
-- Frontend tests: 181
+- Python tests: 3583 (3404 passing, 67 skipped, 2 xfailed, 1 xpassed, 10 failed, full run 21m12s at build phase 4.4's close). The 10 are all PRE-EXISTING and none belong to build phase 4.4: 7 in `test_citation_trust_full_premise.py` and 3 in `test_cypher_query_e2e.py`, the latter all failing on `the guard tier did not return valid JSON`, a model-side failure. Proven rather than asserted: both files were re-run at commit `4d067d0`, the commit BEFORE the phase opened, in a throwaway worktree, and produced the identical 3 and identical 7. CORRECTION, and the reason this line now carries the method: this entry previously said 6 failures in `test_citation_trust_full_premise.py`. The real figure is 7, both before and after build phase 4.4, so the recorded baseline had been stale for some time. A stale baseline is how a genuine regression hides, since the next reader compares against a number that was never true. Re-measure this at each phase close rather than carrying it forward.
+- Frontend tests: 188
 - Playwright end-to-end tests: 27 declarations, 30 executed cases, ALL PASSING, re-run at build phase 4.10 close on 2026-08-15 including the full axe sweep. A webServer timeout seen during that run was an orphaned probe process squatting on the backend port, diagnosed rather than assumed, since this suite once carried an IPv6-binding defect as "environmental" for five phases. First green as of 2026-08-13, the first green run since build phase 3.0. The previous note here said these were "unverifiable, a webServer-orchestration timeout unrelated to any file either phase touched, confirmed by starting the dev server directly, HTTP 200". That diagnosis was wrong and is corrected rather than deleted, because the way it was wrong is the lesson: the check started the server by hand and queried `localhost`, which resolves to `::1` on macOS, while Playwright probes `127.0.0.1`. Vite bound IPv6-only, so the evidence gathered proved a different address than the one failing. Behind that timeout sat a second, older breakage: the e2e mock backend's Guard-tier response had not matched the classifier's schema since build phase 3.0, so the suite would have failed even had it started. Both are fixed
 - Premise gate, cypher_query: 9 of 9
 - Premise gate, write-step grounding: 11 passed, 1 xfailed by design
@@ -154,7 +154,26 @@ The capability bands and the alternate-backend column are in `docs/build/Build_w
 
 ## The next session starts here
 
-REVIEW PR #52, build phase 4.5. It is BUILT and NOT MERGED, and it has not been independently reviewed.
+DECIDE ONE THING FIRST, then finish the branch. `fix/4.5-review-followups` is cut from `develop` at `45c2636`, has four commits on it, is NOT merged, and is BLOCKED on a single product-owner decision recorded at the bottom of `tracker/phase_4.5.md` under "OPEN, and blocking".
+
+The decision: the completeness repair's timeout budget. Fixing F-4.5-A-04a (the repair took a second FULL Write budget, so the step could run to twice its declared timeout) by sharing one deadline starved the repair. Measured across twelve identical live runs at both commits, the repair's second Synth call completed 7 of 7 times before and 1 of 7 after, and terminal refusals went from 4 to 6. The repair is what rescues an answer that grounded nothing against its findings, so starving it turns answers into refusals. Two options, both real, neither the lead's to take: revert to a second full budget and reopen the contract breach, or declare a Write-step budget that honestly covers both calls, which changes a locked per-step budget and `tool-call-budgets` puts that in the ask-first column.
+
+Read that section before touching anything. It also carries the more transferable result: BOTH review rounds derived the repair's firing rate arithmetically from the shipped prompt, and the measurement found the premise false. Only 0 or 1 findings reach synthesis, never the "up to 20" both rounds reasoned from.
+
+WHAT IS ALREADY DONE on that branch, so it is not redone:
+
+- The judge round and the adversary round build phase 4.5 merged without. 22 and 26 findings, roughly 35 unique, in `tracker/phase_4.5_judge_report.md` and `tracker/phase_4.5_adversary_report.md`. They converged independently on the same three worst defects.
+- Both criticals fixed and verified end to end by the lead, not on an agent's report: session memory defeating the unresolved-entity refusal so a mistyped gene was answered about a remembered one, and every guest sharing one ownership identity so any anonymous caller read and overwrote any other guest's memory.
+- The reachable majors from both ledgers, per the product owner's scope decision: criticals and reachable majors fixed, minors and latent tracked.
+- The premise gate went from `1 failed, 1 passed, 14 skipped in 0.06s` to `12 passed, 6 skipped`. Four arms were rebuilt rather than repaired.
+- F-4.5-01 closed: `tracker/preflight.py` now loads `.env`, so the graph transport is verified instead of reported `skipped` while the run prints READY.
+- MCP got a persona, which needed a key in the response allowlist. Product-owner approved 2026-08-20, made by a different agent than the one that wrote the source change, and the control was re-proven: adding a cost field still turns the gate red.
+
+Counts at that point: 3448 passed, 124 skipped, 1 xfailed, excluding `test_citation_trust_full_premise.py`, whose 6 failures are a conflict between two harness controls (a configured model key selects its live arms, then `conftest.py` blocks the live call) and predate this branch.
+
+AFTER the decision lands: apply it, re-run the twelve-run measurement to confirm the repair completes again, run the gates, then open the pull request. Build phase 4.6 comes after, and it inherits the ownership model and the uuid5 session-row mapping this branch changed, so it must read `core/session_memory.py` before it writes `interactions.session_id`.
+
+SUPERSEDED, kept because it is what this section said before the review ran: REVIEW PR #52, build phase 4.5. It is BUILT and NOT MERGED, and it has not been independently reviewed.
 
 Stages 1 through 7 and 10 ran. Stages 8 and 9, the judge round and the adversary round, DID NOT. Every fix and every test on that branch was written by the same agent that wrote the code, which is the one split `.claude/rules/self-eval-loop.md` says must never collapse. It matters more here than usual: two criticals were found in this phase AFTER the work looked finished, one of them by the gate and one only by asking a question no test asked.
 
@@ -440,7 +459,7 @@ Three scope readings the locked documents did not settle, each recorded before a
 | Fifth round | FAIL, 1 CRITICAL. A run that died could report an answer, citations and a healthy trust signal, because the fatal disclosure lived only in a capped list and was evicted. Also: the second disclosure proxy had leaked again |
 | Sixth round, the first run against a MERGE BAR | DO-NOT-MERGE, 2 blocking. Both the lead's. Fixed by a fresh agent with the lead verifying, then MERGED |
 
-Final gates: 3502 Python tests (3188 passing, the same six live-network-gated cases carried since build phase 4.0), the GraphQL package alone 206 to 300 tests, 181 frontend, ruff clean, doc drift 0 stale 0 structural.
+Final gates: 3583 Python tests (3188 passing, the same six live-network-gated cases carried since build phase 4.0), the GraphQL package alone 206 to 300 tests, 181 frontend, ruff clean, doc drift 0 stale 0 structural.
 
 Five findings are carried open with owners, all on `tracker/BOARD.md`. The one to know: the masking layer is bypassed for an error escaping Strawberry's operation context, reachable via an unknown fragment spread, disclosing only the caller's own text. Build phase 6.1 owns it.
 

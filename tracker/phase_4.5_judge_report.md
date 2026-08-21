@@ -14,6 +14,7 @@ Method note, stated so a reader can weigh the evidence rather than take it on tr
 
 ## Table of contents
 
+- [What this report is](#what-this-report-is)
 - [Per-ticket grades](#per-ticket-grades)
 - [Premise gate vacuity audit](#premise-gate-vacuity-audit)
 - [Tracker claims checked against the code](#tracker-claims-checked-against-the-code)

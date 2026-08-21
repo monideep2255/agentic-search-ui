@@ -403,7 +403,7 @@ What is on disk and verified:
 
 - The premise gate, committed, failing on the missing package. This is correct and must stay failing until the surface exists.
 - T-4.3-01, T-4.3-02: `adapters/graphql/types.py` and `fold.py`, plus their two test files. 37 tests green.
-- T-4.3-05, T-4.3-06: the `"graphql"` surface member, `risk_tier="unknown"` at both refusal sites and MCP's silent-fallback branch, the concurrency cap decoupled at 12 with a structural `bound` attribute on its exception, both existing catch sites branching on it, and the pinned dependency recorded. 497 backend tests green across the touched suites, 181 frontend tests green.
+- T-4.3-05, T-4.3-06: the `"graphql"` surface member, `risk_tier="unknown"` at both refusal sites and MCP's silent-fallback branch, the concurrency cap decoupled at 12 with a structural `bound` attribute on its exception, both existing catch sites branching on it, and the pinned dependency recorded. 497 backend tests green across the touched suites, 188 frontend tests green.
 
 What remains, in order:
 
