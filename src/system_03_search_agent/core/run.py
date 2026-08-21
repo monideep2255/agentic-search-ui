@@ -183,14 +183,27 @@ async def _load_session_memory(
     if context.session_memory is not None:
         return context
     from system_03_search_agent.core.session_memory import (
+        CallerIdentityRequired,
         SessionOwnershipError,
         load_for_caller,
     )
 
     try:
         stored = await load_for_caller(
-            session_id=query.session_id, user_id=query.user_id
+            session_id=query.session_id, owner_id=query.owner_id
         )
+    except CallerIdentityRequired:
+        # F-4.5-J-02: a query that carries no principal now gets NO memory,
+        # where before it got the shared anonymous bucket every guest also
+        # got. Degrading to a stateless turn is the same best-effort outcome
+        # every other memory failure here takes, and it is the safe
+        # direction: the failure costs a follow-up its antecedent, while the
+        # behaviour it replaces let one guest read another's conversation.
+        logger.info(
+            "session memory skipped (no caller identity) for trace_id=%s",
+            query.trace_id,
+        )
+        return context
     except SessionOwnershipError:
         # Logged, not raised: a normal outcome for a reused or guessed
         # session id, and the caller loses nothing they were entitled to.
@@ -229,9 +242,7 @@ async def _remember_turn(query: Query, events: list[Event]) -> None:
         ResolvedEntity,
     )
     from system_03_search_agent.core.session_memory import (
-        load_for_caller,
-        merge_turn,
-        save_for_caller,
+        remember_turn_for_caller,
     )
 
     citations = [e.payload for e in events if e.type == "citation"]
@@ -268,7 +279,10 @@ async def _remember_turn(query: Query, events: list[Event]) -> None:
         CompressedFinding(
             claim_summary=str(c.get("claim_text", ""))[:280],
             trace_id=query.trace_id,
-            citation_ids=[str(c.get("citation_id", ""))][:5],
+            # F-4.5-A-26: this was `[str(...)][:5]`, slicing a list that is
+            # built with exactly one element to five. A cap that can never
+            # bind is not a cap, and it reads as one to the next person.
+            citation_ids=[str(c.get("citation_id", ""))],
         )
         for c in citations
         if c.get("claim_text")
@@ -276,15 +290,19 @@ async def _remember_turn(query: Query, events: list[Event]) -> None:
     if not resolved and not findings:
         return
 
-    existing = await load_for_caller(session_id=query.session_id, user_id=query.user_id)
-    summary = merge_turn(
-        existing,
+    # F-4.5-A-15: one locked operation rather than load, merge, save as three
+    # separate round trips. The three-call form is a read-modify-write with no
+    # lock held across it, so two concurrent turns on one session both read the
+    # same base and the second write discards the first turn's entities. Keeping
+    # the three-call form here re-opens that finding no matter what the module
+    # does internally, which is why this is a single call.
+    await remember_turn_for_caller(
         session_id=query.session_id,
+        owner_id=query.owner_id,
         now=datetime.now(UTC),
         resolved=resolved,
         findings=findings,
     )
-    await save_for_caller(summary, user_id=query.user_id)
 
 
 async def run(query: Query, context: RequestContext) -> AsyncIterator[Event]:

@@ -964,6 +964,13 @@ async def post_v1_query(
         session_id=request.session_id,
         trace_id=run_id,
         user_id=caller.user_id,
+        # F-4.5-J-02, F-4.5-A-02: this surface is the one with guests, and
+        # therefore the whole reason that critical was reachable. `user_id`
+        # above is None for every guest, so session memory keyed on it made
+        # all guests one principal. `caller.owner_id` carries the distinct
+        # `guest:<uuid>` and was already being passed to `create_run` a few
+        # lines below; it just never reached the Query.
+        owner_id=caller.owner_id,
         audience_depth=request.audience_depth,
     )
     context = RequestContext(surface="rest_sse")

@@ -287,6 +287,11 @@ class Mutation:
                 session_id=input.session_id,
                 trace_id=run_id,
                 user_id=str(context.principal.id),
+                # F-4.5-J-02: the namespaced principal session memory keys
+                # on. Already computed above for the run's ownership; this
+                # surface is registered-accounts-only, so it is always
+                # `user:<uuid>`, never a guest.
+                owner_id=owner_id,
                 audience_depth=(
                     input.audience_depth.value if input.audience_depth is not None else "researcher"
                 ),

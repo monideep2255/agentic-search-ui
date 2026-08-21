@@ -36,6 +36,35 @@ MAX_COMPRESSED_FINDINGS = 20
 MAX_OPEN_THREADS = 10
 MAX_CITATION_IDS_PER_FINDING = 5
 
+#: Section 14.3's per-ITEM ceilings, one per list-of-strings on the memory
+#: models. A list cap bounds how MANY items arrive and says nothing about how
+#: long one may be, and the two are separate obligations under
+#: production-standards' multi-agent pipeline gate, which calls `maxLength`
+#: on every string field required rather than optional. Both were needed and
+#: only one was given: `open_threads` had a per-item validator from the start
+#: while `citation_ids` had none, so one finding could carry five strings of
+#: a megabyte each and satisfy every declared cap on the model (F-4.5-J-19).
+#: Named as constants so the next list of strings added here has an obvious
+#: place to declare its own item bound rather than inheriting the omission.
+MAX_CLAIM_SUMMARY_LENGTH = 280
+MAX_OPEN_THREAD_LENGTH = 200
+MAX_CITATION_ID_LENGTH = 64
+
+
+def _bound_each_item(values: list[str], *, field: str, limit: int) -> list[str]:
+    """Reject any item in a list of strings longer than `limit`.
+
+    One helper rather than a validator per field, so adding a list of strings
+    to these models means adding one line that calls this, and forgetting is
+    visible as an absence next to the fields that have it.
+    """
+    for item in values:
+        if len(item) > limit:
+            raise ValueError(
+                f"each {field} is capped at {limit} characters, got {len(item)}"
+            )
+    return values
+
 
 class ResolvedEntity(BaseModel):
     """An entity this session has already resolved (Section 14.3).
@@ -72,7 +101,7 @@ class CompressedFinding(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    claim_summary: str = Field(..., max_length=280)
+    claim_summary: str = Field(..., max_length=MAX_CLAIM_SUMMARY_LENGTH)
     """A compressed restatement. Never re-asserted verbatim into an answer."""
 
     trace_id: str = Field(..., max_length=64)
@@ -82,6 +111,21 @@ class CompressedFinding(BaseModel):
         default_factory=list, max_length=MAX_CITATION_IDS_PER_FINDING
     )
     """The markers that supported the claim in its original run."""
+
+    @field_validator("citation_ids")
+    @classmethod
+    def _bound_each_citation_id(cls, value: list[str]) -> list[str]:
+        """`max_length` on a `list[str]` bounds the list, never the items.
+
+        Without this, five citation ids of a megabyte each validate, and a
+        SessionMemorySummary then has no upper bound on serialized size at
+        all: 20 findings times 5 unbounded strings, straight into a JSONB
+        column (F-4.5-J-19). A citation id is a short marker, so 64
+        characters is generous for what the field is actually for.
+        """
+        return _bound_each_item(
+            value, field="citation_id", limit=MAX_CITATION_ID_LENGTH
+        )
 
 
 class SessionMemorySummary(BaseModel):
@@ -105,10 +149,18 @@ class SessionMemorySummary(BaseModel):
     )
     open_threads: list[str] = Field(default_factory=list, max_length=MAX_OPEN_THREADS)
 
-    token_budget: int = Field(default=SESSION_MEMORY_TOKEN_BUDGET, ge=1, le=8000)
+    token_budget: int = Field(
+        default=SESSION_MEMORY_TOKEN_BUDGET, ge=1, le=SESSION_MEMORY_TOKEN_BUDGET
+    )
     """The hard cap, enforced at injection. Bounded on both sides on purpose:
-    a caller-supplied budget of zero would silently disable memory, and an
-    unbounded one would defeat the cap this field exists to impose."""
+    a caller-supplied budget of zero would silently disable memory, and one
+    above Section 14.3's 1500 would defeat the cap this field exists to
+    impose. The ceiling used to be 8000, which is not a bound on a 1500-token
+    cap: a summary carrying 8000 rendered a 19,000-character block into two
+    prompts, 3.2x the section's figure, with the enforcement code working
+    exactly as written (F-4.5-A-24). `core.session_memory` clamps to the same
+    number again at every enforcement point, because a stored row written by
+    an older version never passed through this validator."""
 
     last_updated: datetime
 
@@ -122,12 +174,9 @@ class SessionMemorySummary(BaseModel):
         megabyte each satisfy every declared cap on this model, which is
         exactly the bounded-context hole production-standards names.
         """
-        for thread in value:
-            if len(thread) > 200:
-                raise ValueError(
-                    f"each open_thread is capped at 200 characters, got {len(thread)}"
-                )
-        return value
+        return _bound_each_item(
+            value, field="open_thread", limit=MAX_OPEN_THREAD_LENGTH
+        )
 
 
 class Query(BaseModel):
@@ -148,6 +197,23 @@ class Query(BaseModel):
     # this Query is passed to run(), so it is never trusted from the
     # request body. The field stays optional so a client may omit it.
     user_id: str | None = Field(None, max_length=64)
+    # F-4.5-J-02 and F-4.5-A-02, the critical the post-merge review round
+    # found: the caller's namespaced principal, `user:<uuid>` or
+    # `guest:<uuid>`, and the ONLY identity session memory may be keyed on.
+    #
+    # `user_id` above cannot serve that purpose and the reason is structural
+    # rather than a bug in the check that used to read it. It is NULL for
+    # every guest, because a guest has no account row to name, so an
+    # ownership test written against it made all guests one principal:
+    # `(None or None) != (None or None)` is False, and any anonymous caller
+    # read and overwrote any other guest's memory. The distinguishing
+    # identity already existed, minted by `auth/dependencies.py` and passed
+    # to `create_run` on the line after the one that built the Query. It was
+    # simply not the field the check read.
+    #
+    # Additive within v1, per `system-design-patterns` pattern 10: a new
+    # optional field, no existing field's meaning changed.
+    owner_id: str | None = Field(None, max_length=128)
     audience_depth: Literal["clinical_brief", "researcher", "deep_technical"] = (
         "researcher"
     )

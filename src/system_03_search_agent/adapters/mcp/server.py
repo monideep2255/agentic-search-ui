@@ -746,6 +746,12 @@ async def ask_biomedical_question(
         session_id=session_id if session_id is not None else run_id,
         trace_id=run_id,
         user_id=str(user.id),
+        # F-4.5-J-02: the namespaced principal session memory keys on. This
+        # surface is registered-accounts-only, so it is always a user
+        # principal. Built in the same shape `auth/dependencies.py` mints,
+        # since the two must agree for one caller to reach one session row
+        # from two surfaces.
+        owner_id=f"user:{user.id}",
         audience_depth=audience_depth,
     )
     # T-4.1-03: `operator_mode` is hard-set `False` here in code, never
