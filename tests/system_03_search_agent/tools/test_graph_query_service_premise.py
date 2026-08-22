@@ -2037,3 +2037,232 @@ def test_p24_a_failed_query_returns_its_concurrency_slot(
         "concurrency bound leaks a slot per failure and degrades to zero "
         "capacity under exactly the conditions that make queries fail"
     )
+
+
+# ---------------------------------------------------------------------------
+# Round 4, findings F-4.11-R3V-01 through R3V-05. GATE FIRST.
+#
+# These four arms were written and watched failing BEFORE the fixes they
+# grade, on the product owner's instruction, because this phase had by then
+# planted a defect inside its own fix three rounds running. The order is the
+# point: rounds 2 and 3 each fixed first and wrote an arm afterwards, and an
+# arm written after the fix is written to confirm the fix works rather than
+# to find where it does not. Every gap these four close was named by an
+# independent re-verifier that went looking for the way each existing arm
+# could still be vacuous.
+#
+# What the existing arms could not see, stated plainly so the next reader can
+# argue with it: P16 checked that the substring "suppressed=" appears and
+# never what number followed it. P23 counted retained keys and never checked
+# WHICH keys survived. P23b drove eviction in one direction and could not see
+# over-eviction. Each is the same omission: an arm that measures a quantity
+# and not the choice behind it.
+# ---------------------------------------------------------------------------
+
+
+def test_p16b_the_suppressed_count_survives_another_source_emitting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A withheld count is reported, not destroyed by unrelated traffic.
+
+    Finding F-4.11-R3V-01, Regression of: F-4.11-RV-01. Round 3's idle sweep
+    popped `_suppressed` alongside `_last_emitted`, and the sweep runs at the
+    end of EVERY emission by ANY source, so one caller's refusal destroyed
+    another caller's accumulated count at exactly the moment it was about to
+    be reported.
+
+    Two of this service's own docstrings were made false by that: one says a
+    bound that hides its own suppression turns a volume control into a blind
+    spot, the other says eviction discards nothing the bound relies on.
+
+    P16 could not see it, and the reason is worth keeping: P16 asserts the
+    substring `suppressed=` is PRESENT and never reads the value after it. A
+    single-source flood also keeps the counter, so a hand-check misses it
+    too. This arm therefore drives TWO sources on purpose and reads the
+    number.
+    """
+    import services.graph_query_service.app as app_module
+
+    clock = {"now": 1000.0}
+    monkeypatch.setattr(app_module.time, "monotonic", lambda: clock["now"])
+    refusals = app_module._RefusalLog()
+
+    assert refusals.should_emit("auth_rejected", "flooder") == 0
+    for _ in range(40):
+        assert refusals.should_emit("auth_rejected", "flooder") is None
+
+    # An unrelated source emits, far enough ahead that the flooder's entry
+    # looks idle to the sweep. This is the step that destroyed the count.
+    clock["now"] += 120.0
+    refusals.should_emit("auth_rejected", "someone-else")
+
+    withheld = refusals.should_emit("auth_rejected", "flooder")
+    assert withheld == 40, (
+        "the flooder's 40 withheld refusals were reported as " + str(withheld)
+        + "; an unrelated source's emission destroyed the count, so the "
+        "audit trail silently understates a flood by exactly the amount the "
+        "bound suppressed"
+    )
+
+
+def test_p23c_the_cap_drops_the_least_recently_seen_not_the_most(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """WHICH keys the cap drops, not merely how many survive.
+
+    Finding F-4.11-R3V-03. P23 counts retained keys and passes whichever
+    keys those are. Reverse the sort and the cap evicts the most recently
+    seen instead of the least, which silently disables rate limiting for
+    every active caller past the cap while the whole suite stays green. A
+    memory bound that evicts exactly the callers it is supposed to be
+    limiting is worse than no bound.
+    """
+    import services.graph_query_service.app as app_module
+
+    clock = {"now": 1000.0}
+    monkeypatch.setattr(app_module.time, "monotonic", lambda: clock["now"])
+    monkeypatch.setattr(app_module, "MAX_TRACKED_SOURCES", 10)
+
+    limiter = app_module._RateLimiter(60, 60.0)
+
+    # Thirty keys, strictly increasing in last-seen time, against a cap of
+    # ten. A correct least-recently-seen cap retains exactly the ten newest.
+    #
+    # The first version of this arm asserted that one caller marked "active"
+    # survived twenty NEWER arrivals, and it failed against correct code:
+    # under a strict recency cap that caller legitimately ages out. Watching
+    # it fail is what surfaced the wrong premise, which is the whole reason
+    # an arm is watched failing before the fix rather than after.
+    for index in range(30):
+        limiter.check("source-" + str(index))
+        clock["now"] += 0.001
+
+    retained = set(limiter.tracked_keys())
+    assert len(retained) == 10, (
+        "expected the cap to hold ten keys, found " + str(len(retained))
+    )
+
+    newest = {"source-" + str(index) for index in range(20, 30)}
+    assert retained == newest, (
+        "the cap kept " + str(sorted(retained)) + " rather than the ten most "
+        "recently seen keys; the eviction order is inverted, which silently "
+        "disables rate limiting for every active caller past the cap while "
+        "the retained COUNT still looks correct"
+    )
+
+
+def test_p23d_the_refusal_logs_hard_cap_holds_too(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The refusal log's ceiling, which had no arm at all.
+
+    Finding F-4.11-R3V-04. `_RateLimiter`'s cap has P23. Its twin in
+    `_RefusalLog` had nothing, so the index naming who was refused could
+    grow past its ceiling with the suite green.
+    """
+    import services.graph_query_service.app as app_module
+
+    clock = {"now": 1000.0}
+    monkeypatch.setattr(app_module.time, "monotonic", lambda: clock["now"])
+    monkeypatch.setattr(app_module, "MAX_TRACKED_SOURCES", 15)
+
+    refusals = app_module._RefusalLog()
+    for index in range(200):
+        refusals.should_emit("auth_rejected", "source-" + str(index))
+
+    remembered = len(refusals.tracked_keys())
+    assert remembered > 1, (
+        "this arm retained " + str(remembered) + " key(s), so it never "
+        "exercised the ceiling and proves nothing about it"
+    )
+    assert remembered <= 15, (
+        "the refusal log retained " + str(remembered) + " source keys "
+        "against a cap of 15"
+    )
+
+
+def test_p23e_eviction_does_not_drop_a_live_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Over-eviction, the direction P23b could not see.
+
+    Finding F-4.11-R3V-05. P23b proves idle keys ARE dropped. Nothing proved
+    that active ones are NOT, so a sweep that discarded everything passed it.
+    The two directions are separate properties and a bound needs both: one
+    keeps the table small, the other keeps the bound meaningful.
+    """
+    import services.graph_query_service.app as app_module
+
+    clock = {"now": 1000.0}
+    monkeypatch.setattr(app_module.time, "monotonic", lambda: clock["now"])
+
+    limiter = app_module._RateLimiter(60, 60.0)
+    for _ in range(30):
+        assert limiter.check("steady") is None
+
+    # Advance INSIDE the caller's own window, so its budget is still live,
+    # then force a sweep to be due.
+    #
+    # That second step is load-bearing and its absence made the first
+    # version of this arm vacuous: the sweep is amortised behind an interval
+    # equal to the window, so a caller whose budget is still live can never
+    # coincide with a naturally-due sweep. The arm passed because the sweep
+    # NEVER RAN, not because eviction was correct, and a mutation making the
+    # sweep evict everything survived it. An arm that cannot distinguish
+    # "the control behaved" from "the control was skipped" proves nothing,
+    # which is the third time that shape appeared in this phase.
+    clock["now"] += 30.0
+    limiter._last_eviction = clock["now"] - 61.0
+    limiter.check("unrelated")
+
+    assert "steady" in limiter.tracked_keys(), (
+        "an active caller's budget was evicted while still inside its own "
+        "window, so it can reset its budget simply by waiting for someone "
+        "else to make a request"
+    )
+    for _ in range(30):
+        limiter.check("steady")
+    assert limiter.check("steady") is not None, (
+        "the caller that had spent its full budget of 60 was not refused on "
+        "its 61st request, so eviction handed it a fresh budget. The first "
+        "version of this arm spent 59 and expected refusal on the 60th, "
+        "which is off by one against a limit of 60: the 60th is the last "
+        "ALLOWED request, not the first refused one"
+    )
+
+
+def test_p23f_the_cap_trims_to_the_low_water_mark_not_to_the_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Eviction happens in batches, which is what makes the bound affordable.
+
+    Finding F-4.11-R3V-02. Trimming to exactly the ceiling means every new
+    source afterwards pushes the table one over and pays a full sort of the
+    whole table to remove a single key. Measured on the pre-auth path at
+    0.857ms against 0.00087ms cold, a 990x amplification, running
+    synchronously on the event loop: the same failure class as F-4.11-08,
+    this phase's round 1 headline, reintroduced by the fix for a different
+    finding.
+
+    Asserted structurally rather than by timing, because a wall-clock
+    assertion in a test suite is a flake waiting to happen. The batch is the
+    mechanism; the speed is its consequence.
+    """
+    import services.graph_query_service.app as app_module
+
+    clock = {"now": 1000.0}
+    monkeypatch.setattr(app_module.time, "monotonic", lambda: clock["now"])
+    monkeypatch.setattr(app_module, "MAX_TRACKED_SOURCES", 100)
+
+    limiter = app_module._RateLimiter(60, 60.0)
+    for index in range(150):
+        limiter.check("source-" + str(index))
+        clock["now"] += 0.001
+
+    tracked = len(limiter.tracked_keys())
+    assert tracked <= 100, "the cap did not hold: " + str(tracked)
+    assert tracked <= 95, (
+        "the table sits at " + str(tracked) + ", right against its ceiling of "
+        "100, so the very next arrival pays a full sort to evict one key. "
+        "Eviction must drop to a low-water mark so the sort amortises"
+    )

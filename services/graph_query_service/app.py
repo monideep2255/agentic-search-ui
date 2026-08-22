@@ -292,6 +292,16 @@ REFUSAL_LOG_INTERVAL_SECONDS: float = 60.0
 # and far below anything that threatens the box's memory.
 MAX_TRACKED_SOURCES: int = 10000
 
+# When a bookkeeping table passes its ceiling, evict down to this fraction of
+# it rather than to the ceiling itself.
+#
+# F-4.11-R3V-02. Trimming to exactly the cap means every subsequent new
+# source pushes the table to cap+1 and pays a full sort to remove one key,
+# measured at 990x the cold cost on the pre-auth path, synchronously on the
+# event loop. Dropping ten percent at once amortises that sort over the next
+# thousand arrivals.
+_EVICTION_LOW_WATER: float = 0.9
+
 # The one message every authentication failure returns. See the module
 # docstring's Auth section: the shape of the failure is not a fact this
 # service tells an unauthenticated caller.
@@ -413,11 +423,22 @@ class _RateLimiter:
 
     def _enforce_cap(self) -> None:
         """Drop the least recently seen keys once past the hard ceiling."""
-        if len(self._calls) > MAX_TRACKED_SOURCES:
-            for key in sorted(
-                self._calls, key=lambda k: self._calls[k][-1] if self._calls[k] else 0.0
-            )[: len(self._calls) - MAX_TRACKED_SOURCES]:
-                del self._calls[key]
+        if len(self._calls) <= MAX_TRACKED_SOURCES:
+            return
+        # F-4.11-R3V-02: drop to a low-water mark, not to the cap itself.
+        # Trimming to exactly the cap meant every subsequent arrival pushed
+        # the table to cap+1 and paid a full sorted() over 10001 keys to
+        # remove one, measured at 0.857ms against 0.00087ms cold, a 990x
+        # amplification running synchronously on the event loop on the
+        # PRE-AUTH path. That is the same failure class as F-4.11-08, this
+        # phase's round 1 headline, reintroduced by the fix for a different
+        # finding. Dropping ten percent at once amortises the sort over the
+        # next thousand arrivals.
+        target = int(MAX_TRACKED_SOURCES * _EVICTION_LOW_WATER)
+        for key in sorted(
+            self._calls, key=lambda k: self._calls[k][-1] if self._calls[k] else 0.0
+        )[: len(self._calls) - target]:
+            del self._calls[key]
 
     def _evict_idle(self, now: float) -> None:
         """Drop keys whose window has fully expired.
@@ -488,6 +509,7 @@ class _RefusalLog:
     def __init__(self) -> None:
         self._last_emitted: dict[tuple[str, str], float] = {}
         self._suppressed: dict[tuple[str, str], int] = defaultdict(int)
+        self._last_eviction = time.monotonic()
 
     def should_emit(self, event: str, source_key: str) -> int | None:
         """Whether to write this refusal now.
@@ -504,6 +526,7 @@ class _RefusalLog:
         withheld = self._suppressed.pop(key, 0)
         self._last_emitted[key] = now
         self._evict_idle(now)
+        self._enforce_cap()
         return withheld
 
     def _evict_idle(self, now: float) -> None:
@@ -518,17 +541,54 @@ class _RefusalLog:
         refusal from that key emits regardless, so eviction discards nothing
         the bound relies on.
         """
+        # F-4.11-R3V-02: amortised, matching the rate limiter's own guard.
+        # This method used to scan the whole index on EVERY emission, which
+        # measured a 182x cost amplification on the pre-auth path. Its twin
+        # in _RateLimiter always had this guard; this one was written without
+        # it, which is what an asymmetry between two near-identical methods
+        # usually turns out to be.
+        if now - self._last_eviction < REFUSAL_LOG_INTERVAL_SECONDS:
+            return
+        self._last_eviction = now
+
         interval = REFUSAL_LOG_INTERVAL_SECONDS
-        for key in [k for k, seen in self._last_emitted.items() if now - seen > interval]:
+        for key in [
+            k
+            for k, seen in self._last_emitted.items()
+            if now - seen > interval and not self._suppressed.get(k)
+        ]:
             self._last_emitted.pop(key, None)
             self._suppressed.pop(key, None)
 
-        if len(self._last_emitted) > MAX_TRACKED_SOURCES:
-            for key in sorted(self._last_emitted, key=self._last_emitted.get)[
-                : len(self._last_emitted) - MAX_TRACKED_SOURCES
-            ]:
-                self._last_emitted.pop(key, None)
-                self._suppressed.pop(key, None)
+    def _enforce_cap(self) -> None:
+        """The hard ceiling, checked on every emission.
+
+        Deliberately OUTSIDE the amortisation guard above, and arm P23d is
+        what forced that. Folding the cap into the amortised sweep meant a
+        burst arriving inside one interval skipped the cap entirely and the
+        table sailed past its ceiling until the next sweep was due. The two
+        controls answer different questions, "has this gone quiet" and "is
+        this too big", and only the first is safe to defer.
+
+        Drop to a low-water mark rather than to exactly the cap, so the sort
+        is paid once per batch instead of once per new source. F-4.11-R3V-02
+        measured the every-insert version at 990x the cold cost on its
+        rate-limiter twin: pushing the table to cap+1 and sorting the whole
+        thing to remove exactly one key.
+
+        Keys carrying an unreported suppressed count sort LAST, so a flood's
+        own tally is the last thing discarded. Under the cap something must
+        go, and it should not be the number that says a flood happened.
+        """
+        if len(self._last_emitted) <= MAX_TRACKED_SOURCES:
+            return
+        target = int(MAX_TRACKED_SOURCES * _EVICTION_LOW_WATER)
+        for key in sorted(
+            self._last_emitted,
+            key=lambda k: (bool(self._suppressed.get(k)), self._last_emitted[k]),
+        )[: len(self._last_emitted) - target]:
+            self._last_emitted.pop(key, None)
+            self._suppressed.pop(key, None)
 
     def tracked_keys(self) -> list[str]:
         """The source keys currently retained. For the gate's bound arm."""
