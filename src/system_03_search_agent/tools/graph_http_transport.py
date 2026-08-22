@@ -124,6 +124,28 @@ _AUTH_STATUSES = (401, 403)
 _TIMEOUT_STATUS = 504
 _RATE_LIMITED_STATUS = 429
 
+# How much longer the client waits than the budget it sends the service.
+#
+# F-4.11-09 and F-4.11-J-06. The client and the service used to share one
+# value, which meant the client always gave up a moment before the service
+# could answer, so the service's own 504 never arrived and a graph timeout
+# was misclassified as a connection failure. This headroom exists so the
+# service's answer wins the race, and it must exceed the longest the
+# service can spend BEFORE starting a query, which is its concurrency wait
+# ceiling (`MAX_CONCURRENT_QUERIES`'s wait bound, 5.0s). Ten seconds leaves
+# room for that plus TLS and proxy overhead without making a genuinely dead
+# service take noticeably longer to report.
+#
+# Premise-gate arm P21 asserts this is greater than the service's own
+# constant, so the two cannot drift apart silently: raising the service's
+# wait ceiling past this value re-creates the finding, and the gate fails.
+CLIENT_TIMEOUT_HEADROOM_SECONDS: float = 10.0
+
+# How long to wait for the socket itself. Deliberately not the query budget:
+# a service that will not accept a connection is unreachable now, and a
+# caller learns nothing extra by waiting 30 seconds to be told so.
+_CONNECT_TIMEOUT_SECONDS: float = 10.0
+
 
 class GraphRateLimitedError(GraphError):
     """The graph query service's per-caller rate limit was reached.
@@ -335,8 +357,53 @@ def execute_cypher_over_http(
             url=url.rstrip("/") + _CYPHER_PATH,
             json=body,
             headers=headers,
-            timeout=timeout_s,
+            # F-4.11-09 and F-4.11-J-06, found independently by the adversary
+            # and the judge. This used to be `timeout=timeout_s`, the SAME
+            # value sent to the service as its own budget, so on a genuinely
+            # slow query the client always gave up first and the service's
+            # 504 could never arrive. Two things followed, and the second is
+            # the serious one. The 504 mapping below was dead code in
+            # production, passing its arm only because the arm synthesized a
+            # 504 rather than causing one. And a graph timeout arrived as
+            # GraphConnectionError where psycopg2 raised GraphTimeoutError,
+            # so the transport swap CHANGED observable behaviour, which is
+            # the one thing this phase promised it would not do. KGX export
+            # catches only GraphTimeoutError to write a partial result, so a
+            # graceful partial export became a total failure.
+            #
+            # The headroom must exceed the longest the service can spend
+            # before it even starts the query, which is its concurrency wait
+            # ceiling; P21 asserts that inequality against the service's own
+            # constant rather than trusting this comment.
+            # An explicit httpx.Timeout rather than one blanket number, so
+            # the two deadlines that mean different things are set
+            # separately. READ carries the headroom, because that is the
+            # one racing the service's own budget. CONNECT stays short: a
+            # service that will not accept a socket is dead now, and making
+            # a caller wait the full query budget to learn that helps
+            # nobody.
+            timeout=httpx.Timeout(
+                connect=_CONNECT_TIMEOUT_SECONDS,
+                read=timeout_s + CLIENT_TIMEOUT_HEADROOM_SECONDS,
+                write=timeout_s + CLIENT_TIMEOUT_HEADROOM_SECONDS,
+                pool=_CONNECT_TIMEOUT_SECONDS,
+            ),
         )
+    except (httpx.ReadTimeout, httpx.WriteTimeout) as exc:
+        # A client-side timeout is still a TIMEOUT, not a connection
+        # failure. With the headroom above this is now the rare case (the
+        # service died mid-query, or the network stalled) rather than the
+        # normal one, but it must classify the same way psycopg2 does or
+        # every caller that branches on the two types branches wrongly.
+        raise GraphTimeoutError(
+            _redact(
+                "graph query service did not answer within "
+                + format(timeout_s + CLIENT_TIMEOUT_HEADROOM_SECONDS, ".1f")
+                + "s (" + type(exc).__name__ + "); retry with a narrower "
+                "query_intent or a smaller query_class",
+                token,
+            )
+        ) from None
     except Exception as exc:  # noqa: BLE001 - every transport-level
         # failure, a socket refusal, a DNS failure, a TLS error, an httpx
         # exception of any kind, must become a typed GraphError. Catching

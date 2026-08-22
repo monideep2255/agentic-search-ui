@@ -56,7 +56,15 @@ tar -C "$STAGE" -cf - . | ssh "$HOST" "tar -C $TARGET -xf -"
 echo "==> python environment"
 ssh "$HOST" "test -d $TARGET/venv || python3 -m venv $TARGET/venv"
 ssh "$HOST" "$TARGET/venv/bin/pip install --quiet --upgrade pip"
-ssh "$HOST" "$TARGET/venv/bin/pip install --quiet fastapi uvicorn psycopg2-binary pydantic httpx"
+# F-4.11-13: pinned, from requirements.txt, never a bare package list.
+# This line used to install five packages with no versions on the box that
+# holds the graph credential, so every redeploy took whatever was newest.
+# --require-hashes is deliberately NOT used yet: it needs a hash for every
+# transitive dependency too, and generating that set is its own task with
+# its own verification. The pins are the first half and the honest state is
+# recorded rather than implied.
+scp -q services/graph_query_service/deploy/requirements.txt "$HOST:$TARGET/"
+ssh "$HOST" "$TARGET/venv/bin/pip install --quiet -r $TARGET/requirements.txt"
 
 echo "==> units"
 scp -q services/graph_query_service/deploy/graph-query-service.service "$HOST:/etc/systemd/system/"

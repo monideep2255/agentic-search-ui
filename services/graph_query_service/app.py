@@ -389,12 +389,153 @@ class _RateLimiter:
         return None
 
 
+class _RefusalLog:
+    """Bounded emission for the lines a refused call writes.
+
+    See the module docstring's Logging section for why this exists.
+    Emits at most one line per (event, source) per
+    REFUSAL_LOG_INTERVAL_SECONDS and reports how many it withheld, so an
+    unauthenticated flood cannot grow the journal without bound, and
+    cannot use journald's own drop-limiting to suppress the INFO call
+    records the audit trail exists to keep.
+
+    Keyed on the SOURCE rather than on the presented credential. Keying on
+    the credential would let a caller rotating guesses buy a fresh bucket
+    per guess, which is the enumeration failure this bound exists to
+    avoid: the category is "refusals from one place", not "refusals
+    carrying one credential".
+
+    The interval is read from the module global on every call rather than
+    captured at construction, so a test can isolate audit COMPLETENESS
+    (P15) from the bound on audit VOLUME (P16). They are different
+    properties and each has its own arm.
+    """
+
+    def __init__(self) -> None:
+        self._last_emitted: dict[tuple[str, str], float] = {}
+        self._suppressed: dict[tuple[str, str], int] = defaultdict(int)
+
+    def should_emit(self, event: str, source_key: str) -> int | None:
+        """Whether to write this refusal now.
+
+        Returns the number of same-event refusals withheld since the last
+        emission (0 on the first), or None when this one must be withheld.
+        """
+        now = time.monotonic()
+        key = (event, source_key)
+        last = self._last_emitted.get(key)
+        if last is not None and now - last < REFUSAL_LOG_INTERVAL_SECONDS:
+            self._suppressed[key] += 1
+            return None
+        withheld = self._suppressed.pop(key, 0)
+        self._last_emitted[key] = now
+        return withheld
+
+
+def _parse_forwarded_address(value: str) -> str | None:
+    """Parse one X-Forwarded-For element into a bare IP address, or None.
+
+    Tolerates a bracketed IPv6 literal and an IPv4 host:port pair, which
+    are the two shapes a proxy may append. Anything that is not an IP
+    address returns None and the caller falls back to the real peer, so a
+    junk header can never become a rate-limit key.
+    """
+    candidate = value.strip()
+    if candidate.startswith("[") and "]" in candidate:
+        candidate = candidate[1 : candidate.index("]")]
+    elif candidate.count(":") == 1:
+        candidate = candidate.split(":", 1)[0]
+    try:
+        ipaddress.ip_address(candidate)
+    except ValueError:
+        return None
+    return candidate
+
+
+def client_source(request: Any) -> str:
+    """The caller's real source address, or "unknown".
+
+    Finding F-4.11-11, 2026-08-22. Behind Caddy the service's immediate
+    peer is always loopback, so `request.client.host` was `127.0.0.1` for
+    every caller on earth: the rate-limit key and the audit log's caller
+    identity had no source component at all, and the log could not
+    distinguish two sources. The design intent stated in this module,
+    "keyed on the token plus the client host, so a second credential gets
+    its own independent budget", was only half true, and the inert half
+    was the one that identifies an abusive caller.
+
+    Reading a forwarded header is the fix and it is also how a rate-limit
+    BYPASS gets built, so two rules bound it:
+
+    - The header is honoured only when the immediate peer is the local
+      proxy. A caller reaching the service directly is identified by its
+      own peer address and its header is ignored entirely.
+    - Only the RIGHTMOST element is used, which is the value the proxy
+      itself appended, never anything the caller sent ahead of it. The
+      deployed Caddyfile additionally OVERWRITES the header with the real
+      remote host rather than appending to it, so both layers are safe
+      independently.
+    """
+    client = getattr(request, "client", None)
+    peer = getattr(client, "host", None) if client is not None else None
+    if peer in _TRUSTED_PROXY_HOSTS:
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            parsed = _parse_forwarded_address(forwarded.rsplit(",", 1)[-1])
+            if parsed is not None:
+                return parsed
+    return peer or "unknown"
+
+
+def _source_digest(source: str) -> str:
+    """A short, non-reversible identifier for one caller source."""
+    return hashlib.sha256(("source|" + source).encode("utf-8")).hexdigest()[:16]
+
+
+def _emit_refusal(
+    refusal_log: _RefusalLog,
+    event: str,
+    source_key: str,
+    retry_after: float | None,
+) -> None:
+    """Write one refusal to the audit trail, subject to the volume bound.
+
+    Every refusal path goes through here rather than calling the logger
+    directly, so a new refusal class cannot be added later that is either
+    unbounded or unlogged. F-4.11-J-03 was exactly that: the fix for
+    F-4.11-03 added two log lines and only one was pinned by an arm, so
+    the other could be deleted with both suites staying green.
+
+    The withheld count is carried on the emitted line rather than dropped,
+    because "429 refusals suppressed" is the number an operator needs to
+    see a flood; a bound that hides its own suppression turns a volume
+    control into a blind spot.
+    """
+    withheld = refusal_log.should_emit(event, source_key)
+    if withheld is None:
+        return
+    # `caller=` rather than `source=`, and the event spelled with spaces, so
+    # a refusal line is greppable the same way the main call line is. For a
+    # refused call the caller IS the source: there is no authenticated
+    # identity to name, which is the whole reason the pre-auth bound keys on
+    # source in the first place.
+    logger.warning(
+        "graph_query_service %s caller=%s retry_after=%s suppressed=%d",
+        event.replace("_", " "),
+        source_key,
+        "none" if retry_after is None else format(retry_after, ".2f"),
+        withheld,
+    )
+
+
 def _caller_digest(token: str, client_host: str | None) -> str:
     """A short, non-reversible identifier for logging and rate-limit keys.
 
-    Never the credential itself. Keying on the token plus the client host
-    means the shape is already right for a second credential to get its
-    own independent rate-limit budget and its own identity in the log.
+    Never the credential itself. Keying on the token plus the caller's
+    real source (see `client_source`) means a second credential added
+    later gets its own independent rate-limit budget and its own identity
+    in the log, and two sources presenting the same credential are
+    distinguishable rather than collapsed into one bucket.
     """
     material = token + "|" + (client_host or "unknown")
     return hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
@@ -406,16 +547,21 @@ def _check_auth(header_value: str | None) -> str:
     Runs before any JSON parsing or database work. Compares in constant
     time with hmac.compare_digest, never `==`, so a wrong-but-correctly-
     shaped credential cannot be distinguished from a correct one by timing.
-    Raises ServiceError("unauthorized", ...) on any failure: a missing
-    header, an empty bearer, a wrong scheme, or a wrong value all take the
-    same path so the response cannot leak which kind of failure occurred.
+    Raises ServiceError("unauthorized", _UNAUTHORIZED_MESSAGE) on any
+    failure: a missing header, an empty bearer, a wrong scheme, or a wrong
+    value all take the same path AND return the same message, so the
+    response cannot leak which kind of failure occurred. Findings
+    F-4.11-J-08 and F-4.11-10: this docstring made that claim while the
+    code returned two different messages, both of them in the response
+    body. Premise-gate arm P18 now asserts the bodies are byte-identical
+    across every failure shape.
     """
     configured = service_token()
     if not header_value or not header_value.startswith("Bearer "):
-        raise ServiceError("unauthorized", "missing or malformed bearer credential")
+        raise ServiceError("unauthorized", _UNAUTHORIZED_MESSAGE)
     presented = header_value[len("Bearer ") :]
     if not presented or not hmac.compare_digest(presented, configured):
-        raise ServiceError("unauthorized", "invalid bearer credential")
+        raise ServiceError("unauthorized", _UNAUTHORIZED_MESSAGE)
     return presented
 
 
@@ -522,14 +668,43 @@ def build_app() -> FastAPI:
             "service call itself. Clear it before starting."
         )
 
-    app = FastAPI(title="Graph query service", docs_url=None, redoc_url=None)
+    # F-4.11-12: openapi_url=None as well as the two docs pages. Disabling
+    # the pages while leaving the schema endpoint served is a control that
+    # looks complete and is not: /openapi.json disclosed the endpoint
+    # inventory to an unauthenticated caller.
+    app = FastAPI(
+        title="Graph query service",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+    )
 
-    # Built fresh per app instance, never module-level. A module-level
-    # singleton would leak rate-limit state across independent app
-    # instances (every test that calls build_app() would share one bucket
-    # with every other test), which is exactly the cross-contamination a
+    # All four built fresh per app instance, never module-level. A
+    # module-level singleton would leak state across independent app
+    # instances (every test calling build_app() would share one bucket with
+    # every other test), which is exactly the cross-contamination a
     # per-caller limiter must not have.
     rate_limiter = _RateLimiter(RATE_LIMIT_PER_MINUTE, _RATE_LIMIT_WINDOW_SECONDS)
+
+    # F-4.11-J-05 and F-4.11-10: a SECOND limiter, keyed on source alone and
+    # checked BEFORE auth. The original limiter sits after auth and is keyed
+    # on the presented credential, so the unauthenticated path was unlimited:
+    # a caller guessing credentials never reached the limiter at all, and
+    # after F-4.11-03 added a log line per failure it could drive unbounded
+    # journal growth on a box measured at 92 percent full. Two limiters
+    # rather than one moved earlier, because they bound different things: an
+    # authenticated caller's query budget, and anyone's ability to make this
+    # service do work at all.
+    source_limiter = _RateLimiter(SOURCE_RATE_LIMIT_PER_MINUTE, _RATE_LIMIT_WINDOW_SECONDS)
+
+    refusal_log = _RefusalLog()
+
+    # F-4.11-08: the concurrency bound. execute_cypher is blocking and now
+    # runs in a threadpool, so without a bound a burst of slow queries would
+    # simply consume every thread instead of every event-loop tick. The
+    # bound is what makes the threadpool an actual fix rather than a wider
+    # version of the same failure.
+    query_slots = asyncio.Semaphore(MAX_CONCURRENT_QUERIES)
 
     @app.exception_handler(ServiceError)
     async def _service_error_handler(_request: Request, exc: ServiceError) -> JSONResponse:
@@ -573,6 +748,27 @@ def build_app() -> FastAPI:
 
     @app.post("/v1/cypher")
     async def cypher_endpoint(request: Request) -> JSONResponse:
+        # Step 0: the PRE-AUTH bound, keyed on source alone.
+        #
+        # F-4.11-J-05 and F-4.11-10. Everything below this point costs the
+        # service work, and until this existed none of it was bounded for a
+        # caller who never presents a valid credential. Ordering matters and
+        # is the whole finding: a limiter placed after auth cannot bound the
+        # unauthenticated path by construction, no matter how tight it is.
+        source = client_source(request)
+        source_key = _source_digest(source)
+        source_retry = source_limiter.check(source_key)
+        if source_retry is not None:
+            _emit_refusal(refusal_log, "source_rate_limited", source_key, source_retry)
+            raise ServiceError(
+                "rate_limited",
+                "source exceeded "
+                + str(SOURCE_RATE_LIMIT_PER_MINUTE)
+                + " requests per minute against this service; retry after "
+                "the interval given in retry_after",
+                retry_after=source_retry,
+            )
+
         # Step 1: auth, before any parsing or database work.
         #
         # F-4.11-03: a rejected credential is logged before it is refused.
@@ -581,28 +777,27 @@ def build_app() -> FastAPI:
         # and a caller being throttled, were the only two that left no trace
         # at all. Section 24 asks for every call logged, and P11b could not
         # see the gap: it asserts the log is CLEAN, never that it is
-        # COMPLETE. The digest here is over the PRESENTED credential, so
-        # repeated guesses from one source are countable without the failed
-        # value ever being written down.
-        client_host = request.client.host if request.client else None
+        # COMPLETE.
+        #
+        # F-4.11-J-05: that log line is now emitted through the bounded
+        # refusal log rather than directly, so the audit trail the fix
+        # created cannot itself be used to flood the journal, and cannot be
+        # suppressed by journald's own drop-limiting taking the INFO call
+        # records down with it.
         try:
             presented_token = _check_auth(request.headers.get("authorization"))
         except ServiceError:
-            logger.warning(
-                "graph_query_service auth rejected caller=%s",
-                _caller_digest(request.headers.get("authorization") or "", client_host),
-            )
+            _emit_refusal(refusal_log, "auth_rejected", source_key, None)
             raise
-        caller_key = _caller_digest(presented_token, client_host)
+        caller_key = _caller_digest(presented_token, source)
 
         # Step 2: the per-caller rate limit. Fail fast, never queue.
         retry_after = rate_limiter.check(caller_key)
         if retry_after is not None:
-            logger.warning(
-                "graph_query_service rate limited caller=%s retry_after=%.2f",
-                caller_key,
-                retry_after,
-            )
+            # F-4.11-J-03: this line had no arm. The fix for F-4.11-03 added
+            # TWO log lines and only the auth one was pinned, so deleting
+            # this one left both suites green. P16b pins it now.
+            _emit_refusal(refusal_log, "rate_limited", source_key, retry_after)
             raise ServiceError(
                 "rate_limited",
                 "caller exceeded "
@@ -613,9 +808,21 @@ def build_app() -> FastAPI:
             )
 
         # Step 3: parse and shape-validate the body.
+        #
+        # Both failures here are LOGGED before they are raised. Found by
+        # premise-gate arm P15 asserting audit completeness as a universal
+        # over every outcome class rather than over the outcomes someone
+        # thought to enumerate: an authenticated caller sending malformed
+        # JSON was refused at this step, above the main logging step below,
+        # and left no audit record at all. That is the same shape as
+        # F-4.11-03 and F-4.11-J-03 before it, which is three times in one
+        # phase that a refusal path was added above the logger rather than
+        # below it, so the ordering is now stated here as the rule: no
+        # request leaves this endpoint unlogged, whatever refuses it.
         try:
             raw_body = await request.json()
         except Exception as exc:  # malformed JSON is a caller defect
+            _emit_refusal(refusal_log, "malformed_json", source_key, None)
             raise ServiceError(
                 "invalid_payload", "request body is not valid JSON"
             ) from exc
@@ -623,6 +830,7 @@ def build_app() -> FastAPI:
         try:
             payload = CypherRequest.model_validate(raw_body)
         except ValidationError as exc:
+            _emit_refusal(refusal_log, "invalid_payload", source_key, None)
             raise ServiceError(
                 "invalid_payload",
                 "request body did not match the expected schema: " + str(exc),
@@ -656,8 +864,43 @@ def build_app() -> FastAPI:
         # Step 6: execute the NORMALIZED Cypher validate_cypher returned,
         # never the raw input, since normalization is what injects the
         # bounded LIMIT clause.
+        #
+        # F-4.11-08, the phase's worst defect and the reason round 2 exists.
+        # This endpoint is async and execute_cypher is BLOCKING psycopg2, so
+        # calling it directly held the event loop for the whole query. On a
+        # single-worker server that serialized every caller and stalled the
+        # unauthenticated /healthz for up to the clamped budget: measured at
+        # 10.97 seconds while a 12 second query was in flight. Because
+        # tracker/preflight.py reads /healthz to decide whether the graph is
+        # up, the service reported the graph DOWN during any slow query,
+        # which is the exact "transport looks down" failure this phase was
+        # pulled ahead of build phase 4.7 to delete. It is build phase 2.1's
+        # already-fixed event-loop defect (F-2.1-06) resurfacing one layer
+        # down, in code whose gate names concurrency as a stated omission.
+        #
+        # Two parts, and neither is sufficient alone. to_thread keeps the
+        # loop free; the semaphore bounds how many threads the pool can be
+        # made to hold, since an unbounded threadpool is the same exhaustion
+        # one layer further out. Acquisition itself is bounded: a caller
+        # waits a fraction of its own budget and is then refused with a
+        # retry_after, never queued indefinitely, per tool-call-budgets.
+        wait_budget = min(MAX_CONCURRENCY_WAIT_SECONDS, timeout_s * _CONCURRENCY_WAIT_FRACTION)
         try:
-            rows, total_available = execute_cypher(
+            await asyncio.wait_for(query_slots.acquire(), timeout=wait_budget)
+        except TimeoutError as exc:
+            _emit_refusal(refusal_log, "at_capacity", source_key, wait_budget)
+            raise ServiceError(
+                "rate_limited",
+                "the service is at its concurrent-query limit of "
+                + str(MAX_CONCURRENT_QUERIES)
+                + "; retry after the interval given in retry_after, or send "
+                "a narrower query_intent",
+                retry_after=wait_budget,
+            ) from exc
+
+        try:
+            rows, total_available = await asyncio.to_thread(
+                execute_cypher,
                 result.normalized_cypher,
                 payload.params,
                 row_limit=row_limit,
@@ -690,6 +933,13 @@ def build_app() -> FastAPI:
                 "an unexpected error occurred executing the graph query; "
                 "retry shortly or escalate to an operator if it persists",
             ) from exc
+        finally:
+            # In a finally rather than after the return, so a slot is
+            # returned on every path including the five raises above. A
+            # concurrency bound that leaks a slot per failed query is worse
+            # than no bound: it degrades to zero capacity under exactly the
+            # conditions that make queries fail.
+            query_slots.release()
 
         # Step 7: the wire encoding check, then the response.
         encoded_rows = _encode_rows(rows)

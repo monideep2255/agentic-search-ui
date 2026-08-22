@@ -123,6 +123,7 @@ from __future__ import annotations
 
 import os
 import socket
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -341,7 +342,7 @@ def _write_baseline(case: str, cypher: str, rows: Any, total: int) -> None:
     would make the comparison circular.
     """
     import json
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     _BASELINE_PATH.parent.mkdir(parents=True, exist_ok=True)
     document: dict[str, Any] = {"cases": {}}
@@ -357,7 +358,7 @@ def _write_baseline(case: str, cypher: str, rows: Any, total: int) -> None:
         "rows": rows,
         "total_available": total,
         "transport": "psycopg2",
-        "captured_at": datetime.now(timezone.utc).isoformat(),
+        "captured_at": datetime.now(UTC).isoformat(),
     }
     _BASELINE_PATH.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
 
@@ -1437,6 +1438,19 @@ def test_p15_every_request_leaves_an_audit_record_whatever_its_outcome(
     monkeypatch.setattr(
         app_module, "execute_cypher", lambda *a, **k: ([{"result": "stub"}], 1)
     )
+
+    # The volume bound is switched OFF for this arm, deliberately, and the
+    # reason is the whole distinction between this arm and P16. Audit
+    # COMPLETENESS (does every outcome class have a logging path at all?)
+    # and audit VOLUME (can a flood grow the journal without bound?) are
+    # different properties that pull in opposite directions, and a single
+    # arm testing both tests neither: with the bound on, several of the
+    # outcomes below collapse into one emitted line and this arm reports a
+    # missing logging path that is in fact present and working. So this arm
+    # isolates completeness, P16 isolates the bound, and each fails for one
+    # reason. The interval is read from the module global on every call
+    # precisely so this separation is possible.
+    monkeypatch.setattr(app_module, "REFUSAL_LOG_INTERVAL_SECONDS", 0.0)
 
     def _request(headers: dict[str, str], body: Any, raw: bool = False) -> None:
         if raw:

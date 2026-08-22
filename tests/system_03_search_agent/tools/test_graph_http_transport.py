@@ -106,7 +106,21 @@ def test_request_carries_the_bearer_header_and_the_five_body_fields(
         "timeout_s": 30.0,
         "as_clause": "(result agtype)",
     }
-    assert seen["timeout"] == 30.0
+    # Findings F-4.11-09 and F-4.11-J-06, 2026-08-22. This line used to read
+    # `assert seen["timeout"] == 30.0`, and that equality WAS the defect: the
+    # client waited exactly as long as the budget it handed the service, so
+    # the service could never answer its own timeout in time and a graph
+    # timeout arrived as a connection failure. The assertion is strengthened
+    # rather than deleted, because the property worth pinning is the
+    # inequality, not the absence of a check.
+    assert seen["timeout"].read > 30.0, (
+        "the client's read deadline must exceed the budget it sent the "
+        "service, or the service's own timeout can never win the race"
+    )
+    assert seen["timeout"].connect <= 30.0, (
+        "a connect timeout should not wait the whole query budget to learn "
+        "the service will not accept a socket"
+    )
 
 
 def test_missing_url_raises_before_any_post_is_attempted(
