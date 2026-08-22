@@ -326,15 +326,38 @@ async def test_p2_cypher_query_produces_citations_over_https(
     """
     _load_env_explicitly()
     monkeypatch.setenv("GRAPH_QUERY_URL", os.environ["GRAPH_QUERY_URL"])
+
+    from system_03_search_agent.harness.harness import Harness
     from system_03_search_agent.tools.cypher_query import cypher_query
+    from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
 
     result = await cypher_query(
-        query_intent="Which diseases are associated with TP53?",
-        target_entities=[TP53],
-        query_class="lookup",
+        Harness(trace_id="premise-4.11-https"),
+        CypherQueryInput(
+            query_intent="Which diseases are associated with TP53?",
+            query_class="lookup",
+            target_entities=[TP53],
+            row_limit=25,
+        ),
     )
-    assert result.citations, "the HTTPS transport produced no citations"
-    assert all(c.source_url.startswith("https://") for c in result.citations)
+
+    # `cypher_query` never raises: every failure folds into status="error"
+    # with a message. So asserting on the status is asserting on the real
+    # outcome, where asserting that no exception escaped would assert
+    # nothing at all.
+    assert result.status == "ok", (
+        "the HTTPS transport did not produce a result: status="
+        + result.status
+        + ", error="
+        + str(result.error)
+    )
+    assert result.rows, "the HTTPS transport produced no rows"
+    assert result.row_count == len(result.rows)
+    for row in result.rows:
+        assert row.curie, "a row crossed the wire without its identity"
+        assert row.graph_snapshot_version, "a row crossed the wire without provenance"
+        if row.source_url is not None:
+            assert row.source_url.startswith("https://")
 
 
 # ---------------------------------------------------------------------------
