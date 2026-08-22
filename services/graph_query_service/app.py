@@ -43,6 +43,22 @@ order is enforced by construction rather than by hoping the framework
 schedules a dependency first. A rejection body never contains the
 configured token value or its length, in any form.
 
+Every auth failure returns ONE message, `_UNAUTHORIZED_MESSAGE`, so the
+response body cannot tell a caller which kind of failure occurred.
+Findings F-4.11-J-08 and F-4.11-10, 2026-08-22: this paragraph used to
+make that claim while the code returned "missing or malformed bearer
+credential" for a header-shape failure and "invalid bearer credential"
+for a value failure, both in the response body, so a caller could learn
+when it had the header FORMAT right and only the value wrong. Two
+resolutions were available, unify the code or delete the claim, and
+unifying was chosen because a uniform failure path is worth more than a
+distinction that only helps a caller probing the service; an operator
+diagnosing a real misconfiguration reads the service's own log, which
+still records the rejection. Premise-gate arm P18 compares the bodies of
+every auth-failure shape byte for byte against each other, since a
+comment asserting a security property with no test asserting the same
+property is a liability rather than documentation.
+
 The service refuses to start (`build_app` raises `RuntimeError`) when the
 token is unset or empty: starting with auth effectively off is worse than
 not starting. It also refuses to start when `GRAPH_QUERY_URL` is set in
@@ -81,27 +97,87 @@ ceiling would produce. There is no analogous "this input could not
 possibly be meant literally" signal the way there is for `row_limit`, so
 there is nothing here worth rejecting instead of clamping.
 
-Rate limiting
--------------
+Three bounds, in the order they run
+-----------------------------------
 
-`RATE_LIMIT_PER_MINUTE` bounds each caller to a fixed number of requests
-per rolling 60-second window. The limiter is keyed on a digest of the
-presented bearer token plus the client host, not on the token alone, so a
-second credential added later gets its own independent budget rather than
-sharing one bucket by construction. On exhaustion the caller fails fast
-with `rate_limited` and a positive `retry_after`, per
-`.claude/rules/tool-call-budgets.md`; there is no unbounded wait queue.
+Findings F-4.11-J-05 and F-4.11-10, reached independently by the judge and
+the adversary from separate briefs, 2026-08-22: the only bound this
+service had ran AFTER auth, so it bound the population that needed it
+least. A caller with no credential, or any wrong credential, was refused
+by auth and never reached the limiter at all, which made the whole
+unauthenticated path unlimited on a public port. The fix is an ORDERING,
+not another special case: decide what must be bounded before identity is
+established, and bound it.
+
+- `SOURCE_RATE_LIMIT_PER_MINUTE`, step 0, before auth. Keyed on the
+  caller's source address alone, because a caller that has not
+  authenticated has no credential to key on. This binds every request the
+  endpoint receives, authenticated or not.
+- `RATE_LIMIT_PER_MINUTE`, step 2, after auth. Keyed on a digest of the
+  presented bearer token plus the source, so a second credential added
+  later gets its own independent budget rather than sharing one bucket by
+  construction.
+- `MAX_CONCURRENT_QUERIES`, step 6, around execution only. A per-second
+  rate says nothing about how many queries are in flight at once, and each
+  one can hold a graph connection for the full clamped budget. A call that
+  cannot get a slot within its wait ceiling fails fast rather than joining
+  an unbounded queue. The ceiling is tied to the query's own budget, a
+  fraction of `timeout_s`, capped at `MAX_CONCURRENCY_WAIT_SECONDS`, per
+  `.claude/rules/tool-call-budgets.md`'s wait-queue clause. The cap is
+  load-bearing beyond this file: the client transport's own HTTP read
+  timeout carries `CLIENT_TIMEOUT_HEADROOM_SECONDS` of headroom over the
+  budget it sends here, and that headroom has to cover the longest this
+  service can wait before it even starts a query, or the client gives up
+  before the service can answer its own timeout. Premise-gate arm P21
+  asserts the inequality between the two constants rather than leaving it
+  to this paragraph.
+
+All three fail fast with `rate_limited` and a positive `retry_after`, and
+name the saturated family, per `.claude/rules/tool-call-budgets.md`. None
+of them queues.
+
+Concurrency
+-----------
+
+The endpoint is `async def` and `execute_cypher` is blocking psycopg2 I/O,
+so the call runs through `asyncio.to_thread` rather than directly on the
+event loop. Finding F-4.11-08, 2026-08-22: it used to run directly, on a
+single-worker uvicorn, so one legal slow query serialized every other
+request and stalled the unauthenticated `/healthz` for up to the clamped
+budget. The adversary measured `/healthz` taking 10.97 seconds while a 12
+second query was in flight. `tracker/preflight.py` reads `/healthz` to
+decide whether the graph transport is up, so that turned "busy" into
+"down" and reintroduced, through a different mechanism, the exact symptom
+this phase was pulled forward to remove. It is F-2.1-06's already-fixed
+event-loop defect one layer down: `cypher_query.py` wraps the same
+function in `asyncio.to_thread` for the same reason.
 
 Logging
 -------
 
-Every authenticated call that reaches payload validation is logged once
-at INFO through the stdlib `logging` module (`logging.getLogger(__name__)`,
-no custom handler, so `caplog` and any process-level log configuration
-both see it), naming the caller by a short, non-reversible digest of the
-credential, never the credential itself, plus a length-bounded slice of
-the Cypher body. The credential value never appears in a log line, an
-error body, or an exception string.
+Every request is logged, whatever its outcome, through the stdlib
+`logging` module (`logging.getLogger(__name__)`, no custom handler, so
+`caplog` and any process-level log configuration both see it). A call
+that reaches payload validation is logged once at INFO with a
+length-bounded slice of the Cypher body; a call refused before that point
+is logged at WARNING through `_RefusalLog`. Every line names the caller
+by a short, non-reversible digest, never the credential itself, and the
+credential value never appears in a log line, an error body, or an
+exception string.
+
+Refusal logging is BOUNDED, and this is the other half of the same
+finding. Once every failed attempt writes a line, an unauthenticated
+flood does not merely grow a file on a box measured at 92 percent full:
+journald applies its own rate limiting and DROPS messages once a service
+exceeds its burst, so the flood suppresses the INFO call records the
+audit trail exists to keep, inverting the purpose of the fix that added
+the line. Bounding the request rate alone does not close it, because the
+rejection of a bounded request is itself a line. So `_RefusalLog` emits at
+most one line per event per source per `REFUSAL_LOG_INTERVAL_SECONDS` and
+carries a `suppressed=` count forward, keyed on the SOURCE rather than on
+the presented credential, so a caller rotating credentials cannot buy a
+new bucket per guess. Nothing is silently lost: the operator still learns
+that a credential is being guessed and how often.
 
 Depends on:
     - system_03_search_agent.tools.cypher_validator (validate_cypher, the
@@ -129,7 +205,8 @@ Writes:
     - Nothing to the graph. The `kg_reader` role this service reaches
       through is read-only by credential.
     - INFO-level log lines through the stdlib logging module, one per
-      authenticated call that reaches payload validation. Append-only by
+      call that reaches payload validation, and bounded WARNING-level
+      lines for calls refused before that point. Append-only by
       construction: this module never opens or rotates a log file itself,
       it only emits records through the standard logging pipeline.
 
@@ -140,8 +217,10 @@ Depended by:
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
+import ipaddress
 import logging
 import os
 import re
@@ -179,6 +258,42 @@ _GRAPH_QUERY_URL_ENV_VAR = "GRAPH_QUERY_URL"
 # test can exhaust it in a tight loop without being slow.
 RATE_LIMIT_PER_MINUTE: int = 60
 _RATE_LIMIT_WINDOW_SECONDS: float = 60.0
+
+# The pre-auth bound, keyed on the source address alone. Deliberately looser
+# than the per-caller bound above: it is a backstop against an
+# unauthenticated flood, not the product's own budget, and it must never be
+# the thing that refuses a legitimate caller who is already inside
+# RATE_LIMIT_PER_MINUTE.
+SOURCE_RATE_LIMIT_PER_MINUTE: int = 120
+
+# How many graph queries may be in flight at once, and the longest a call
+# will wait for a slot before failing fast. See the module docstring's
+# "Three bounds" section, including why the cap below is coupled to
+# graph_http_transport.CLIENT_TIMEOUT_HEADROOM_SECONDS.
+MAX_CONCURRENT_QUERIES: int = 8
+MAX_CONCURRENCY_WAIT_SECONDS: float = 5.0
+_CONCURRENCY_WAIT_FRACTION: float = 0.25
+
+# At most one refusal line per event per source per interval. Read fresh on
+# every emission rather than captured at construction, so a test can shorten
+# it to isolate audit COMPLETENESS from the bound on audit VOLUME; the two
+# are different properties and each has its own arm (P15 and P16).
+REFUSAL_LOG_INTERVAL_SECONDS: float = 60.0
+
+# The one message every authentication failure returns. See the module
+# docstring's Auth section: the shape of the failure is not a fact this
+# service tells an unauthenticated caller.
+_UNAUTHORIZED_MESSAGE = (
+    "missing or invalid bearer credential; set the service's bearer "
+    "credential from the value issued for it and retry, or escalate to an "
+    "operator if it may have been rotated"
+)
+
+# Which immediate peers may speak for a caller other than themselves. The
+# service binds loopback and Caddy is the only way in, so the proxy is the
+# only peer whose forwarded address means anything. Trusting the header from
+# anyone else would build a rate-limit bypass while closing a rate-limit gap.
+_TRUSTED_PROXY_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 
 # The same as_clause shape guard graph_connection._AS_CLAUSE_PATTERN uses.
 # as_clause travels over the wire now, so it is caller input regardless of

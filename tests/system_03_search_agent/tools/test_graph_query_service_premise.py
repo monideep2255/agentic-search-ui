@@ -33,16 +33,48 @@ What this gate exercises:
   merely re-states what the client already refused to send.
 - Auth, including a correctly-shaped but wrong bearer, so the check cannot
   be passing on shape alone.
-- The three budget controls this service owes per
+- The budget controls this service owes per
   `.claude/rules/tool-call-budgets.md`: the hard row limit, the per-call
-  timeout matching `cypher_query`'s own 30 seconds, and the per-caller rate
-  limit, each asserted at the SERVICE rather than at the client.
+  timeout clamp (asserted on the value the service actually hands to the
+  executor, not on a query that happens to be slow), the per-caller rate
+  limit, the pre-auth source bound, and the bound on concurrent in-flight
+  queries, each asserted at the SERVICE rather than at the client.
+- Concurrency at the service: the unauthenticated health probe stays
+  responsive while a slow query is in flight, which is the property
+  `tracker/preflight.py` depends on to tell "busy" from "down".
 - Transport dispatch observed directly: which transport was used, not
   whether the call succeeded.
 - Both startup refusals, since a service that starts with auth effectively
   off is worse than one that does not start.
 - The exposure property: the Postgres port is still refused from the public
   internet while 443 answers.
+- The audit trail's COMPLETENESS as a universal rather than as a list of
+  cases: every request to the endpoint leaves a record whatever its
+  outcome, including the outcomes refused before the main logging step.
+- Timeout classification across the transport swap, including the
+  downstream consequence in the KGX export path, since a timeout that
+  arrives under the wrong type turns a graceful partial export into a
+  total failure.
+
+How an arm is gated, stated as a rule rather than left to per-arm habit
+(finding F-4.11-J-01, where twelve arms were gated on the psycopg2 socket
+this phase retired and seven of them never needed a graph at all):
+
+- An arm that reaches the DEPLOYED service over HTTPS carries
+  `requires_service`.
+- An arm that genuinely needs the psycopg2 transport carries
+  `requires_psycopg2_graph`. Exactly one property needs it, byte-equality
+  between the two transports, and that arm does not skip when the
+  transport is missing: see P1.
+- Every other arm carries NO live marker, builds the service in process,
+  and runs on any machine and any checkout with no live dependency. An arm
+  that would otherwise reach a database on that path installs a tripwire
+  rather than relying on the database being absent, so it cannot pass
+  because a socket happened to be shut.
+
+The test applied to each arm while re-gating: could this arm still pass
+while the thing it names is broken? Where the answer was yes, the arm was
+rebuilt rather than relabelled.
 
 What this gate deliberately OMITS, stated so the gap is arguable rather than
 discovered later, per `.claude/rules/goal-contracts.md`:
@@ -50,17 +82,23 @@ discovered later, per `.claude/rules/goal-contracts.md`:
 - Certificate validation behaviour against a hostile or expired certificate.
   The client trusts the system trust store, and nothing here presents a bad
   certificate to prove the client would refuse it.
-- Concurrency at the service. No arm sends overlapping requests, so a shared
-  state defect between two in-flight calls is invisible here. The rate-limit
-  arm is sequential.
+- A genuinely slow query against the DEPLOYED service. The timeout clamp
+  and the timeout response are both asserted in process, on the value the
+  service hands its executor and on a raised `GraphTimeoutError`; no arm
+  sends production a query engineered to burn a 90-second budget.
 - Reboot survival. T-4.11-04 requires it and it is verified operationally in
   the runbook, not by an arm in this file.
 - Multi-hop and multi-column result shapes beyond the two pinned below. This
   is the same one-hop blind spot that let F-2.1-A5-03 through in build phase
   2.1, and it is named here rather than left to be found.
-- The KGX export path and the MCP, GraphQL and CLI surfaces. They reach the
-  graph through `cypher_query`, so P2 covers them transitively and nothing
-  here exercises them directly.
+- The MCP, GraphQL and CLI surfaces. They reach the graph through
+  `cypher_query`, so P2 covers them transitively and nothing here
+  exercises them directly. The KGX export path is no longer on this list:
+  P14 exercises it directly over the HTTPS transport, because F-4.11-09
+  found the consequence of a mis-typed timeout landing exactly there.
+- Caddy's own behaviour. The forwarded-address handling this gate asserts
+  is the SERVICE half; that the deployed proxy actually sends the header is
+  a deployment property, verified by the runbook, not by an arm here.
 
 Ground truth: TP53 and its 12 `gene_associated_with_condition` edges to
 Disease vertices, and BRCA1's name, both already pinned by build phase 2.1's
@@ -75,7 +113,10 @@ Depends on:
     - GRAPH_QUERY_URL and the service bearer credential, for the deployed arms
 
 Writes:
-    - Nothing. Layer 1 access is read-only by credential.
+    - Nothing to the graph. Layer 1 access is read-only by credential.
+    - `fixtures/phase_4_11_byte_equality.json`, and only when the psycopg2
+      transport actually answered AND the operator set
+      GRAPH_BYTE_EQUALITY_CAPTURE=1. See P1.
 """
 
 from __future__ import annotations
@@ -129,12 +170,20 @@ def _load_env_explicitly() -> None:
         os.environ.setdefault(key.strip(), value.strip())
 
 
-def _graph_is_reachable() -> bool:
+def _psycopg2_is_reachable() -> bool:
     """Whether the graph answers on the psycopg2 path right now.
 
     F-2.1-B12: checked fresh per test rather than once at import, because
     the transport can drop mid-session and an import-time guard cannot see
     that.
+
+    RENAMED 2026-08-22, finding F-4.11-J-01. It used to be
+    `_graph_is_reachable`, and that name is what made the critical
+    plausible: twelve arms were gated on "the graph", which reads as "this
+    arm needs data", when what it actually tests is one specific socket,
+    the SSH local port forward this phase retired. Seven of those arms
+    never touched a database at all. The name now says which transport it
+    probes, so gating an in-process arm on it reads as the mistake it is.
     """
     _load_env_explicitly()
     host = os.environ.get("GRAPH_PG_HOST")
@@ -168,14 +217,23 @@ _RUN_LIVE = os.environ.get("RUN_PREMISE_GATE") == "1"
 # A gate run without RUN_PREMISE_GATE=1 finishes in seconds and LOOKS like a
 # pass. The two markers below keep "not run" distinguishable from "passed",
 # which is the property F-4.5-01 restored and build phase 4.6 depended on.
-requires_graph = pytest.mark.skipif(
-    not _RUN_LIVE or not _graph_is_reachable(),
-    reason="needs RUN_PREMISE_GATE=1 and a reachable AGE graph",
-)
+#
+# There are exactly two live markers, and neither is a general "this arm
+# needs the graph" marker any more. See the module docstring's "How an arm
+# is gated" section for the rule and for what F-4.11-J-01 measured.
 requires_service = pytest.mark.skipif(
     not _RUN_LIVE or not _service_is_reachable(),
     reason="needs RUN_PREMISE_GATE=1 and the deployed HTTPS service",
 )
+requires_psycopg2_graph = pytest.mark.skipif(
+    not _RUN_LIVE or not _psycopg2_is_reachable(),
+    reason="needs RUN_PREMISE_GATE=1 and the psycopg2 transport",
+)
+
+# Where the byte-equality baseline lives once it has been minted from the
+# psycopg2 transport. See P1 for why a file exists at all.
+_BASELINE_PATH = Path(__file__).with_name("fixtures") / "phase_4_11_byte_equality.json"
+_CAPTURE_BASELINE = os.environ.get("GRAPH_BYTE_EQUALITY_CAPTURE") == "1"
 
 
 # ---------------------------------------------------------------------------
@@ -255,17 +313,59 @@ def _payload(**overrides: Any) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+_P1_CASES: list[tuple[str, str, dict[str, Any]]] = [
+    ("vertex", CYPHER_VERTEX, {"seed": TP53}),
+    ("scalar", CYPHER_SCALAR, {"seed": BRCA1}),
+]
+
+
+def _read_baseline(case: str) -> dict[str, Any] | None:
+    """The psycopg2 side of the byte-equality comparison, if it was minted."""
+    if not _BASELINE_PATH.exists():
+        return None
+    import json
+
+    try:
+        document = json.loads(_BASELINE_PATH.read_text())
+    except ValueError:
+        return None
+    entry = document.get("cases", {}).get(case)
+    return entry if isinstance(entry, dict) else None
+
+
+def _write_baseline(case: str, cypher: str, rows: Any, total: int) -> None:
+    """Mint or update one case of the psycopg2 baseline.
+
+    Only ever called when the psycopg2 transport actually answered and the
+    operator asked for a capture. A baseline written from anything else
+    would make the comparison circular.
+    """
+    import json
+    from datetime import datetime, timezone
+
+    _BASELINE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    document: dict[str, Any] = {"cases": {}}
+    if _BASELINE_PATH.exists():
+        try:
+            existing = json.loads(_BASELINE_PATH.read_text())
+            if isinstance(existing, dict) and isinstance(existing.get("cases"), dict):
+                document = existing
+        except ValueError:
+            document = {"cases": {}}
+    document["cases"][case] = {
+        "cypher": cypher,
+        "rows": rows,
+        "total_available": total,
+        "transport": "psycopg2",
+        "captured_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _BASELINE_PATH.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
+
+
 @requires_service
-@requires_graph
-@pytest.mark.parametrize(
-    ("cypher", "params"),
-    [
-        (CYPHER_VERTEX, {"seed": TP53}),
-        (CYPHER_SCALAR, {"seed": BRCA1}),
-    ],
-)
+@pytest.mark.parametrize(("case", "cypher", "params"), _P1_CASES, ids=[c[0] for c in _P1_CASES])
 def test_p1_https_rows_are_byte_identical_to_psycopg2_rows(
-    cypher: str, params: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+    case: str, cypher: str, params: dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The transport swap changes nothing about what the caller receives.
 
@@ -273,18 +373,37 @@ def test_p1_https_rows_are_byte_identical_to_psycopg2_rows(
     downstream, and build phase 2.1 proved a whole phase can pass its suite
     while these strings are being discarded, so a comparison after parsing
     would be testing the wrong layer.
+
+    REBUILT 2026-08-22, finding F-4.11-J-02, and the way it was wrong is
+    the reusable part. This arm carries the phase's central premise, and it
+    used to carry `requires_graph` as well as `requires_service`. The
+    cutover in T-4.11-05 retired the psycopg2 socket, so the arm began
+    SKIPPING on the exact configuration the phase ships, and a skip is
+    indistinguishable from a pass in a run's headline. The premise stopped
+    being re-checkable at the moment the phase succeeded, and nothing said
+    so out loud.
+
+    It does not skip any more. In a live run it does one of three things,
+    and only the first two can be green:
+
+    - Both transports available: the comparison runs for real, and with
+      GRAPH_BYTE_EQUALITY_CAPTURE=1 the psycopg2 side is also written to
+      `fixtures/phase_4_11_byte_equality.json` so the next person does not
+      need the transport.
+    - Only HTTPS available, baseline present: the live HTTPS read is
+      compared against the committed psycopg2 rows, byte for byte. The
+      graph is a pinned snapshot, so a mismatch is a real signal rather
+      than noise.
+    - Only HTTPS available, no baseline: the arm FAILS, loudly, naming the
+      one command that mints the baseline. A red arm is the point. The
+      alternative was a green run that quietly means "nobody checked".
     """
     from system_03_search_agent.tools.graph_connection import execute_cypher
-
-    monkeypatch.delenv("GRAPH_QUERY_URL", raising=False)
-    pg_rows, pg_total = execute_cypher(cypher, params, row_limit=25)
 
     _load_env_explicitly()
     monkeypatch.setenv("GRAPH_QUERY_URL", os.environ["GRAPH_QUERY_URL"])
     http_rows, http_total = execute_cypher(cypher, params, row_limit=25)
 
-    assert http_total == pg_total
-    assert http_rows == pg_rows
     for row in http_rows:
         for value in row.values():
             assert value is None or isinstance(value, str), (
@@ -292,9 +411,42 @@ def test_p1_https_rows_are_byte_identical_to_psycopg2_rows(
                 "value here is the build phase 2.1 defect returning"
             )
 
+    if _psycopg2_is_reachable():
+        monkeypatch.delenv("GRAPH_QUERY_URL", raising=False)
+        pg_rows, pg_total = execute_cypher(cypher, params, row_limit=25)
+        if _CAPTURE_BASELINE:
+            _write_baseline(case, cypher, pg_rows, pg_total)
+        assert http_total == pg_total
+        assert http_rows == pg_rows
+        return
+
+    baseline = _read_baseline(case)
+    if baseline is None:
+        pytest.fail(
+            "THE CENTRAL PREMISE OF BUILD PHASE 4.11 WAS NOT RE-VERIFIED IN "
+            "THIS RUN. Byte-equality between the psycopg2 and HTTPS "
+            "transports needs both transports, the cutover retired the "
+            "psycopg2 one, and no committed baseline exists to compare "
+            "against. This arm fails rather than skipping because a skip "
+            "reads as a pass in the run headline, which is finding "
+            "F-4.11-J-02. To close it once and for all: open the forward "
+            "(ssh -N -L 15432:127.0.0.1:5432 root@" + GRAPH_HOST_PUBLIC + "), "
+            "then run this gate once with GRAPH_BYTE_EQUALITY_CAPTURE=1 and "
+            "commit " + str(_BASELINE_PATH.relative_to(_REPO_ROOT)) + ". "
+            "Every later run then re-verifies the premise with no forward "
+            "open at all."
+        )
+
+    assert http_total == baseline["total_available"], (
+        "total_available diverged from the psycopg2 baseline for case " + case
+    )
+    assert http_rows == baseline["rows"], (
+        "the HTTPS transport's raw agtype rows diverged from the psycopg2 "
+        "baseline for case " + case
+    )
+
 
 @requires_service
-@requires_graph
 def test_p1b_pinned_ground_truth_survives_the_http_transport(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -365,7 +517,6 @@ async def test_p2_cypher_query_produces_citations_over_https(
 # ---------------------------------------------------------------------------
 
 
-@requires_graph
 @pytest.mark.parametrize(
     ("field", "value", "expected_code"),
     [
@@ -393,13 +544,39 @@ def test_p3_server_rejects_what_a_bypassed_client_would_send(
     field: str,
     value: Any,
     expected_code: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Defense in depth is only depth if the client is out of the path.
 
     Section 24 asks for these checks server-side precisely so a bug in the
     client-side validator is not the only thing standing between a request
     and the database. Every payload here is posted raw.
+
+    UNGATED 2026-08-22, finding F-4.11-J-01. These five arms carried
+    `requires_graph` and never touched a database: every one of them is
+    refused before the endpoint reaches its executor. They were therefore
+    the five arms proving Section 24's whole defense-in-depth clause, and
+    they went dark the moment the phase retired the psycopg2 socket. The
+    judge demonstrated they pass against a socket that is not even
+    Postgres, which is the proof that the gate was never the reason they
+    were green.
+
+    The tripwire replaces the marker rather than nothing replacing it. A
+    marker made the arm's correctness depend on a database being absent;
+    the tripwire makes it depend on the rejection happening, which is what
+    the arm claims. If a future change lets one of these payloads through
+    to execution, this arm goes red on any machine instead of turning into
+    a connection error on some machines and a skip on others.
     """
+    import services.graph_query_service.app as app_module
+
+    def _tripwire(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError(
+            "the graph was reached for a payload the service must refuse "
+            "before execution"
+        )
+
+    monkeypatch.setattr(app_module, "execute_cypher", _tripwire)
     response = service_client.post(
         "/v1/cypher", json=_payload(**{field: value}), headers=_auth(valid_token)
     )
@@ -407,7 +584,6 @@ def test_p3_server_rejects_what_a_bypassed_client_would_send(
     assert response.json()["error"]["code"] == expected_code
 
 
-@requires_graph
 def test_p3b_a_rejected_payload_never_reached_the_database(
     service_client: Any, valid_token: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -534,28 +710,77 @@ def test_p5_rate_limit_fires_with_an_actionable_retry_after(
     assert error["retry_after"] > 0
 
 
-@requires_graph
-def test_p6_per_call_timeout_is_enforced_by_the_service(
-    service_client: Any, valid_token: str
+def test_p6_the_service_clamps_the_per_call_timeout_it_actually_uses(
+    service_client: Any, valid_token: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The service clamps and enforces its own timeout.
+    """A caller cannot raise the per-call budget past the tool's own.
 
-    A caller cannot raise it past `cypher_query`'s own 30-second budget, and
-    a query that outruns it comes back as an actionable timeout rather than
-    a bare 500.
+    REBUILT 2026-08-22, findings F-4.11-J-01 and F-4.11-J-09. The previous
+    form posted the ordinary pinned query with an absurd `timeout_s` and
+    then did `if response.status_code == 200: pytest.skip(...)`. Against a
+    graph that answers promptly, which is every run this repository has
+    recorded for this query, the arm reached `pytest.skip` and asserted
+    nothing at all; it also carried `requires_graph`, so on the shipped
+    configuration it did not even get that far. Removing the clamp
+    entirely left the whole gate green (mutation M5).
+
+    The property is not "a slow query times out". It is "the value the
+    service hands its executor is the clamped one, never the caller's".
+    That is observable directly, on any machine, by reading what the
+    executor was called with, so this arm asserts the clamp itself rather
+    than a slow query as a proxy for it. P6b covers the other half, that
+    an executor timeout comes back actionable rather than as a bare 500.
     """
+    import services.graph_query_service.app as app_module
     from system_03_search_agent.tools.graph_schema_constants import (
         CYPHER_QUERY_TIMEOUT_SECONDS,
     )
 
+    seen: list[dict[str, Any]] = []
+
+    def _capture(*args: Any, **kwargs: Any) -> tuple[list[dict[str, Any]], int]:
+        seen.append(kwargs)
+        return [{"result": "stub"}], 1
+
+    monkeypatch.setattr(app_module, "execute_cypher", _capture)
     response = service_client.post(
         "/v1/cypher",
         json=_payload(timeout_s=CYPHER_QUERY_TIMEOUT_SECONDS * 100, row_limit=1),
         headers=_auth(valid_token),
     )
+    assert response.status_code == 200
+    assert seen, "the service never reached its executor; this arm proved nothing"
+    assert seen[0]["timeout_s"] == CYPHER_QUERY_TIMEOUT_SECONDS, (
+        "the caller's timeout_s reached the executor unclamped: "
+        + str(seen[0]["timeout_s"])
+    )
+
+
+def test_p6b_a_query_that_outruns_the_budget_returns_an_actionable_timeout(
+    service_client: Any, valid_token: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A query that outruns its budget comes back actionable, not as a 500.
+
+    Carries the assertions the old P6 would have made if it had ever
+    reached them: the status is not 500, the code is `timeout`, and the
+    message tells the Act step what to do next rather than only what
+    failed, per `.claude/rules/tool-call-budgets.md`.
+    """
+    import services.graph_query_service.app as app_module
+    from system_03_search_agent.tools.graph_connection import GraphTimeoutError
+
+    def _slow(*args: Any, **kwargs: Any) -> Any:
+        raise GraphTimeoutError(
+            "graph query exceeded its budget, retry with a narrower "
+            "query_intent or a smaller query_class"
+        )
+
+    monkeypatch.setattr(app_module, "execute_cypher", _slow)
+    response = service_client.post(
+        "/v1/cypher", json=_payload(row_limit=1), headers=_auth(valid_token)
+    )
     assert response.status_code != 500
-    if response.status_code == 200:
-        pytest.skip("this graph answered inside the budget; timeout path untested here")
+    assert response.status_code == 504
     error = response.json()["error"]
     assert error["code"] == "timeout"
     assert "narrower" in error["message"] or "smaller" in error["message"]
@@ -835,10 +1060,26 @@ def test_p10b_the_service_answers_over_real_tls() -> None:
 # ---------------------------------------------------------------------------
 
 
-@requires_graph
 def test_p11_the_credential_never_appears_in_a_response_body(
-    service_client: Any, valid_token: str
+    service_client: Any, valid_token: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """No response body ever carries the credential, on any outcome.
+
+    UNGATED 2026-08-22, finding F-4.11-J-01. This arm carried
+    `requires_graph` and never needed one: two of its three payloads are
+    refused before execution, and the third only reached a database
+    because nothing stopped it. With the socket retired it went dark, and
+    with the socket present-but-wrong it passed for the wrong reason,
+    since a failed connection also produces a body with no credential in
+    it. Stubbing the executor makes the SUCCESS path a real case here
+    rather than an accident of whether a database answered.
+    """
+    import services.graph_query_service.app as app_module
+
+    monkeypatch.setattr(
+        app_module, "execute_cypher", lambda *a, **k: ([{"result": "stub"}], 1)
+    )
+
     bodies = []
     for payload in (
         _payload(),
@@ -882,11 +1123,22 @@ def test_p11c_a_refused_call_is_logged_too(
     )
 
 
-@requires_graph
 def test_p11b_the_credential_never_appears_in_the_audit_log(
-    service_client: Any, valid_token: str, caplog: pytest.LogCaptureFixture
+    service_client: Any, valid_token: str, caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Every call is logged. None of those lines carries the credential."""
+    """Every call is logged. None of those lines carries the credential.
+
+    UNGATED 2026-08-22, finding F-4.11-J-01, for the same reason as P11:
+    the log line this arm reads is emitted before the executor runs, so a
+    database was never needed and the marker only made the arm skip on the
+    configuration the phase ships.
+    """
+    import services.graph_query_service.app as app_module
+
+    monkeypatch.setattr(
+        app_module, "execute_cypher", lambda *a, **k: ([{"result": "stub"}], 1)
+    )
     with caplog.at_level("INFO"):
         service_client.post("/v1/cypher", json=_payload(), headers=_auth(valid_token))
     assert caplog.records, (
@@ -927,3 +1179,635 @@ def test_p12b_the_service_refuses_to_start_if_it_would_call_itself(
     monkeypatch.setenv("GRAPH_QUERY_URL", "https://example.invalid")
     with pytest.raises(RuntimeError):
         build_app()
+
+
+# ---------------------------------------------------------------------------
+# P13: concurrency. The gate's own coverage statement named this as a
+# deliberate omission, and the omission is exactly where F-4.11-08 lived.
+# ---------------------------------------------------------------------------
+
+
+_SLOW_QUERY_SECONDS = 1.5
+
+
+@pytest.mark.asyncio()
+async def test_p13_a_slow_query_does_not_stall_the_health_probe(
+    configured_token: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """One slow query must not freeze every other caller.
+
+    Added 2026-08-22 for finding F-4.11-08, and written to fail against the
+    code as it stood before that fix. The endpoint was `async def` and
+    called the BLOCKING `execute_cypher` directly on the event loop, on a
+    single-worker uvicorn, so one legal slow query serialized every other
+    request. The adversary measured the unauthenticated `/healthz` taking
+    10.97 seconds while a 12 second query was in flight.
+
+    That matters beyond latency. `tracker/preflight.py` reads `/healthz` to
+    decide whether the graph transport is up, so during any slow query
+    preflight reports the graph DOWN while it is merely busy, which is the
+    exact "the transport looks down" failure this whole phase was pulled
+    forward to eliminate.
+
+    The assertion is an ORDERING, not a duration, because a duration
+    measured from the test's own side can be taken after the block has
+    already ended and read as fast. The probe must complete while the slow
+    query is still running: `slow_started < health_done < slow_finished`.
+    The first half is what stops this arm passing when the probe simply
+    got in first, and it is satisfied on both the blocking and the
+    non-blocking implementation because of the head start below.
+    """
+    import asyncio
+    import time
+
+    import httpx
+
+    import services.graph_query_service.app as app_module
+    from services.graph_query_service.app import build_app
+
+    monkeypatch.delenv("GRAPH_QUERY_URL", raising=False)
+    timings: dict[str, float] = {}
+
+    def _slow(*args: Any, **kwargs: Any) -> tuple[list[dict[str, Any]], int]:
+        timings["slow_started"] = time.monotonic()
+        time.sleep(_SLOW_QUERY_SECONDS)
+        timings["slow_finished"] = time.monotonic()
+        return [{"result": "stub"}], 1
+
+    monkeypatch.setattr(app_module, "execute_cypher", _slow)
+    app = build_app()
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://service") as client:
+        slow = asyncio.create_task(
+            client.post(
+                "/v1/cypher",
+                json=_payload(),
+                headers=_auth(configured_token),
+                timeout=_SLOW_QUERY_SECONDS * 10,
+            )
+        )
+        # A head start, so the slow query is genuinely in flight before the
+        # probe is issued. On the blocking implementation this sleep does
+        # not resume until the block ends, which is itself the defect.
+        await asyncio.sleep(0.1)
+        health = await client.get("/healthz", timeout=_SLOW_QUERY_SECONDS * 10)
+        timings["health_done"] = time.monotonic()
+        slow_response = await slow
+
+    assert slow_response.status_code == 200
+    assert health.status_code == 200
+    assert "slow_started" in timings, "the slow query never ran; this arm proved nothing"
+    assert timings["slow_started"] < timings["health_done"], (
+        "the health probe completed before the slow query even started, so "
+        "this arm measured nothing about concurrency"
+    )
+    assert timings["health_done"] < timings["slow_finished"], (
+        "the unauthenticated health probe did not complete until the slow "
+        "query had finished, so one slow query stalls the probe "
+        "tracker/preflight.py uses to decide the transport is up"
+    )
+
+
+@pytest.mark.asyncio()
+async def test_p13b_concurrent_in_flight_queries_are_bounded_and_fail_fast(
+    configured_token: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Moving work off the event loop must not make it unbounded.
+
+    `.claude/rules/tool-call-budgets.md` allows a bounded FIFO wait and
+    requires a fail-fast `rate_limited` carrying `retry_after` and the
+    saturated family name once the bound is reached. It forbids an
+    unbounded queue. Running the blocking executor in a threadpool without
+    a cap would trade one defect for another: the adversary's own "what I
+    would attack next" names exhausting the graph's connection pool with
+    concurrent long-running-but-legal queries.
+
+    The bound is exercised at 1 rather than at its shipped value so the arm
+    stays fast; the control under test is the bound itself, not the number.
+    """
+    import asyncio
+
+    import httpx
+
+    import services.graph_query_service.app as app_module
+    from services.graph_query_service.app import build_app
+
+    monkeypatch.delenv("GRAPH_QUERY_URL", raising=False)
+    monkeypatch.setattr(app_module, "MAX_CONCURRENT_QUERIES", 1)
+    monkeypatch.setattr(app_module, "MAX_CONCURRENCY_WAIT_SECONDS", 0.2)
+
+    def _slow(*args: Any, **kwargs: Any) -> tuple[list[dict[str, Any]], int]:
+        import time
+
+        time.sleep(_SLOW_QUERY_SECONDS)
+        return [{"result": "stub"}], 1
+
+    monkeypatch.setattr(app_module, "execute_cypher", _slow)
+    app = build_app()
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://service") as client:
+        first = asyncio.create_task(
+            client.post(
+                "/v1/cypher",
+                json=_payload(),
+                headers=_auth(configured_token),
+                timeout=_SLOW_QUERY_SECONDS * 10,
+            )
+        )
+        await asyncio.sleep(0.1)
+        second = await client.post(
+            "/v1/cypher",
+            json=_payload(),
+            headers=_auth(configured_token),
+            timeout=_SLOW_QUERY_SECONDS * 10,
+        )
+        await first
+
+    assert second.status_code == 429, (
+        "a second in-flight query was admitted past the concurrency bound "
+        "instead of failing fast"
+    )
+    error = second.json()["error"]
+    assert error["code"] == "rate_limited"
+    assert isinstance(error["retry_after"], (int, float))
+    assert error["retry_after"] > 0
+    assert "concurren" in error["message"], (
+        "the error must name the saturated family so the Act step can act "
+        "on it, per tool-call-budgets"
+    )
+
+
+# ---------------------------------------------------------------------------
+# P14: the downstream consequence of a mis-typed timeout, in the KGX export
+# path. Formerly a deliberate omission of this gate.
+# ---------------------------------------------------------------------------
+
+
+def test_p14_a_slow_hop_over_https_still_writes_a_partial_kgx_export(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A slow hop degrades gracefully on the HTTPS transport, as on psycopg2.
+
+    Added 2026-08-22 for finding F-4.11-09, and written to fail against the
+    code as it stood before that fix. `export/traversal.py` catches
+    `GraphTimeoutError` to mean "budget exhausted, stop and return what we
+    have", and deliberately lets `GraphConnectionError` propagate as a hard
+    transport failure that `export/cli.py` turns into an exit code with no
+    output. The client's HTTP timeout equalled the service's own budget, so
+    a genuinely slow query always tripped the client's read timeout first
+    and arrived as `GraphConnectionError`. The transport swap therefore
+    turned a graceful partial KGX export into a total failure, which is
+    `.claude/rules/production-standards.md`'s degradation gate, defeated by
+    the transport rather than by the export code.
+
+    This arm drives the REAL dispatch: `GRAPH_QUERY_URL` is set, so
+    `execute_cypher` goes over HTTP, and only the network seam `_post` is
+    replaced. The seed lookup answers; every hop after it read-times-out.
+    """
+    import httpx
+
+    import system_03_search_agent.tools.graph_http_transport as transport_module
+    from system_03_search_agent.export.traversal import traverse_subgraph
+
+    seed_row = (
+        '{"id": 1, "label": "Gene", "properties": '
+        '{"id": "' + TP53 + '", "name": "TP53"}}::vertex'
+    )
+
+    class _SeedResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, Any]:
+            return {"rows": [{"n": seed_row}], "total_available": 1}
+
+    calls: list[int] = []
+
+    def _fake_post(**kwargs: Any) -> Any:
+        calls.append(1)
+        if len(calls) == 1:
+            return _SeedResponse()
+        raise httpx.ReadTimeout("the graph query service did not answer in time")
+
+    monkeypatch.setenv("GRAPH_QUERY_URL", "https://example.invalid")
+    monkeypatch.setenv(_TOKEN_VAR, "t")
+    monkeypatch.setattr(transport_module, "_post", _fake_post)
+
+    result = traverse_subgraph(
+        [TP53], hops=1, edge_labels=("gene_associated_with_condition",)
+    )
+
+    assert result.seeds_resolved == [TP53], (
+        "the traversal did not even keep the seed it had already collected"
+    )
+    assert result.truncated, "a hop that outran its budget was not recorded as a stop"
+    assert len(calls) >= 2, "no hop query was issued; this arm proved nothing"
+
+
+# ---------------------------------------------------------------------------
+# P15, P16, P17: the audit trail and the pre-auth bound.
+# ---------------------------------------------------------------------------
+
+
+def test_p15_every_request_leaves_an_audit_record_whatever_its_outcome(
+    service_client: Any, valid_token: str, caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The audit trail is COMPLETE across every outcome, not two of them.
+
+    Added 2026-08-22 for finding F-4.11-J-03. F-4.11-03 found that TWO
+    classes of call left no trace, a rejected credential and a rate-limited
+    caller, and its fix added a log line for each. Only the auth half got
+    an arm, so mutation M16, deleting the rate-limit log line, left both
+    suites green. That is `.claude/skills/bossman-mode/SKILL.md`'s Rule 2
+    failing in the smallest possible way: the fix enumerated instances of
+    a category instead of naming the category.
+
+    The category is not "auth and rate limiting". It is: EVERY request the
+    service handles leaves a record, including the ones refused before the
+    main logging step. So this arm asserts that as a universal over every
+    outcome class the endpoint can produce, rather than over the two
+    someone happened to think of. A new refusal path added without logging
+    fails here the moment its outcome class is exercised.
+    """
+    import services.graph_query_service.app as app_module
+
+    monkeypatch.setattr(
+        app_module, "execute_cypher", lambda *a, **k: ([{"result": "stub"}], 1)
+    )
+
+    def _request(headers: dict[str, str], body: Any, raw: bool = False) -> None:
+        if raw:
+            service_client.post("/v1/cypher", content=body, headers=headers)
+        else:
+            service_client.post("/v1/cypher", json=body, headers=headers)
+
+    outcomes: list[tuple[str, Any]] = [
+        ("success", lambda: _request(_auth(valid_token), _payload())),
+        ("auth_rejected", lambda: _request(_auth("wrong-credential"), _payload())),
+        ("no_credential", lambda: _request({}, _payload())),
+        (
+            "malformed_json",
+            lambda: _request(
+                _auth(valid_token) | {"Content-Type": "application/json"},
+                b"{not json",
+                True,
+            ),
+        ),
+        ("schema_violation", lambda: _request(_auth(valid_token), {"cypher": 1})),
+        (
+            "cypher_rejected",
+            lambda: _request(
+                _auth(valid_token),
+                _payload(cypher="MATCH (g:Gene) DELETE g RETURN g"),
+            ),
+        ),
+    ]
+
+    for name, send in outcomes:
+        caplog.clear()
+        with caplog.at_level("INFO"):
+            send()
+        messages = [record.getMessage() for record in caplog.records]
+        assert messages, (
+            "outcome '" + name + "' left no audit record at all; Section 24 "
+            "requires every call logged, and a log that is missing whole "
+            "categories of call is clean rather than complete"
+        )
+        assert any("caller=" in message for message in messages), (
+            "outcome '" + name + "' was logged without a caller identity"
+        )
+        assert all(valid_token not in message for message in messages)
+
+    # The rate-limited outcome needs its own budget, so it is driven last
+    # and separately rather than being folded into the loop above.
+    caplog.clear()
+    with caplog.at_level("INFO"):
+        for _ in range(app_module.RATE_LIMIT_PER_MINUTE + 2):
+            _request(_auth(valid_token), _payload())
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("rate limited" in message for message in messages), (
+        "a rate-limited caller left no audit record, which is exactly the "
+        "half of the F-4.11-03 fix that shipped with no verify surface"
+    )
+
+
+def test_p16_a_flood_of_refusals_cannot_drive_unbounded_log_growth(
+    service_client: Any, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Refusal logging is bounded, and nothing is silently lost.
+
+    Added 2026-08-22 for findings F-4.11-J-05 and F-4.11-10. Since the
+    F-4.11-03 fix every failed authentication writes a warning, and the
+    box holding the graph was measured at 92 percent full. journald applies
+    its own rate limiting and DROPS messages once a service exceeds its
+    burst, so an unbounded refusal flood does not merely grow a file, it
+    suppresses the INFO call records the audit trail exists to keep. That
+    inverts the purpose of the fix that added the line.
+
+    Bounding the request rate alone does not fix it, because the rejection
+    of a bounded request is itself a log line. So the emitter is bounded
+    too, per key and per event, and it carries the suppressed count forward
+    rather than discarding it: the operator still learns that a credential
+    is being guessed and how often, from a number of lines that does not
+    grow with the attack.
+    """
+    from services.graph_query_service.app import SOURCE_RATE_LIMIT_PER_MINUTE
+
+    attempts = SOURCE_RATE_LIMIT_PER_MINUTE + 40
+    with caplog.at_level("WARNING"):
+        for _ in range(attempts):
+            service_client.post(
+                "/v1/cypher", json=_payload(), headers=_auth("wrong-credential")
+            )
+
+    records = [r for r in caplog.records if "graph_query_service" in r.getMessage()]
+    assert records, "a flood of refusals left no audit record at all"
+    assert len(records) < attempts / 4, (
+        "refusal logging grows one line per refused request: "
+        + str(len(records))
+        + " records for "
+        + str(attempts)
+        + " attempts"
+    )
+    assert any("suppressed=" in r.getMessage() for r in records), (
+        "the suppressed count was never reported, so the bound loses the "
+        "very signal an operator needs"
+    )
+
+
+def test_p17_the_unauthenticated_path_is_bounded_before_identity_is_known(
+    service_client: Any,
+) -> None:
+    """A caller with no credential is bounded, not unlimited.
+
+    Added 2026-08-22 for findings F-4.11-J-05 and F-4.11-10, reached
+    independently by the judge and the adversary from separate briefs.
+    Auth ran first and raised, so the rate limiter was never consulted for
+    a failed credential, and the population the limiter bound was the one
+    that needed it least: callers who already hold the credential.
+
+    The ordering is the category. What must be bounded before identity is
+    established is every request that reaches the endpoint, so the bound
+    that runs first is keyed on the SOURCE rather than on a credential the
+    caller may not have. The per-caller limit still exists behind auth and
+    still binds an authenticated caller; this one binds everyone.
+    """
+    from services.graph_query_service.app import SOURCE_RATE_LIMIT_PER_MINUTE
+
+    statuses = []
+    for _ in range(SOURCE_RATE_LIMIT_PER_MINUTE + 5):
+        statuses.append(
+            service_client.post(
+                "/v1/cypher", json=_payload(), headers=_auth("wrong-credential")
+            ).status_code
+        )
+
+    assert 429 in statuses, (
+        "an unauthenticated caller was never rate limited, so the "
+        "unauthenticated path is unbounded"
+    )
+    last = service_client.post(
+        "/v1/cypher", json=_payload(), headers=_auth("wrong-credential")
+    )
+    assert last.status_code == 429
+    error = last.json()["error"]
+    assert error["code"] == "rate_limited"
+    assert isinstance(error["retry_after"], (int, float))
+    assert error["retry_after"] > 0
+
+
+# ---------------------------------------------------------------------------
+# P18, P19: the unauthenticated surface.
+# ---------------------------------------------------------------------------
+
+
+def test_p18_every_auth_failure_returns_a_byte_identical_body(
+    service_client: Any,
+) -> None:
+    """The auth failure path is uniform, which the docstring already claimed.
+
+    Added 2026-08-22 for findings F-4.11-J-08 and F-4.11-10. The module
+    docstring said a missing header, an empty bearer, a wrong scheme and a
+    wrong value "all take the same path so the response cannot leak which
+    kind of failure occurred", and the code returned two different
+    messages, both of which are in the response body. A caller could tell
+    "your credential is the wrong SHAPE" from "your credential is the
+    wrong VALUE".
+
+    `.claude/skills/bossman-mode/SKILL.md` says a comment claiming a
+    security property is a claim to be tested or deleted. The claim was
+    the better half here, so the code was made to hold it and this arm is
+    the test. The bodies are compared byte for byte against each other
+    rather than against a literal copied from the source, so the arm
+    cannot go green by being updated alongside a change that reintroduces
+    the oracle.
+    """
+    cases = {
+        "no_header": {},
+        "empty_bearer": {"Authorization": "Bearer "},
+        "wrong_scheme": {"Authorization": "not-a-bearer-at-all"},
+        "wrong_value": {"Authorization": "Bearer " + "z" * 40},
+        "wrong_value_other_length": {"Authorization": "Bearer " + "q" * 9},
+    }
+    bodies: dict[str, str] = {}
+    for case, headers in cases.items():
+        response = service_client.post("/v1/cypher", json=_payload(), headers=headers)
+        assert response.status_code == 401, "case " + case + " was not refused"
+        bodies[case] = response.text
+
+    distinct = set(bodies.values())
+    assert len(distinct) == 1, (
+        "auth failures return "
+        + str(len(distinct))
+        + " distinguishable bodies, so a caller can tell one kind of failure "
+        "from another: "
+        + str(sorted(bodies.items()))
+    )
+
+
+def test_p19_the_openapi_document_is_not_served_unauthenticated(
+    service_client: Any,
+) -> None:
+    """Disabling the docs pages must also disable the schema they render.
+
+    Added 2026-08-22 for findings F-4.11-J-07 and F-4.11-12. `docs_url` and
+    `redoc_url` were set to None and `openapi_url` was left at its default,
+    so `/openapi.json` answered 200 unauthenticated on the public internet
+    and enumerated the endpoint inventory. The disclosure is small; the
+    shape is not, and the shape is a control that looks complete and is
+    not.
+    """
+    assert service_client.get("/openapi.json").status_code == 404
+    assert service_client.get("/docs").status_code == 404
+    assert service_client.get("/redoc").status_code == 404
+    assert service_client.get("/healthz").status_code == 200
+
+
+def test_p20_a_forwarded_client_address_is_trusted_only_from_the_local_proxy(
+    monkeypatch: pytest.MonkeyPatch, configured_token: str
+) -> None:
+    """The rate-limit key and the audit identity get a real source component.
+
+    Added 2026-08-22 for finding F-4.11-11. Behind Caddy the service's
+    immediate peer is always loopback, so `request.client.host` was
+    `127.0.0.1` for every caller on earth: the per-caller rate-limit key
+    and the audit log's caller identity had no source component at all,
+    and the log could never distinguish two sources.
+
+    Reading a forwarded header is the fix and it is also how a rate-limit
+    BYPASS gets built, so the header is honoured only when the immediate
+    peer is the local proxy, and only its RIGHTMOST element is used, which
+    is the value the proxy itself appended rather than anything the caller
+    sent ahead of it. A caller that is not behind the proxy is identified
+    by its own peer address and its header is ignored entirely.
+    """
+    from services.graph_query_service.app import client_source
+
+    class _Client:
+        def __init__(self, host: str) -> None:
+            self.host = host
+
+    class _Request:
+        def __init__(self, host: str | None, forwarded: str | None) -> None:
+            self.client = _Client(host) if host else None
+            self.headers = {"x-forwarded-for": forwarded} if forwarded else {}
+
+    assert client_source(_Request("127.0.0.1", "203.0.113.7")) == "203.0.113.7"
+    assert client_source(_Request("::1", "203.0.113.7")) == "203.0.113.7"
+    # Spoof ahead of the proxy's own appended value: the rightmost wins.
+    assert (
+        client_source(_Request("127.0.0.1", "198.51.100.9, 203.0.113.7"))
+        == "203.0.113.7"
+    )
+    # Not the local proxy: the header is data, not identity.
+    assert client_source(_Request("203.0.113.99", "127.0.0.1")) == "203.0.113.99"
+    # Junk in the header falls back to the peer rather than becoming a key.
+    assert client_source(_Request("127.0.0.1", "not-an-address")) == "127.0.0.1"
+    assert client_source(_Request(None, None)) == "unknown"
+
+
+# ---------------------------------------------------------------------------
+# P21, P22: the client's budget against the service's, and the classification
+# of a client-side timeout.
+# ---------------------------------------------------------------------------
+
+
+def test_p21_the_client_gives_the_service_time_to_answer_its_own_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The service's own timeout answer must be able to win the race.
+
+    Added 2026-08-22 for findings F-4.11-09 and F-4.11-J-06. The client
+    passed the SAME `timeout_s` to httpx that it sent the service as its
+    budget, and the service needs that full duration plus TLS and HTTP
+    overhead before it can emit its 504. So the client's read timeout fired
+    first essentially every time and the service's `timeout -> 504 ->
+    GraphTimeoutError` mapping was dead code in production.
+
+    Two things are asserted, and the second is the one a comment cannot be
+    trusted to carry: the read timeout the client actually passes exceeds
+    the budget it sends, and the headroom constant exceeds the worst-case
+    extra delay the SERVICE can add before answering. The two constants
+    live in different modules, so the relationship between them is checked
+    here rather than asserted in prose in either.
+    """
+    import system_03_search_agent.tools.graph_http_transport as t
+    from services.graph_query_service.app import MAX_CONCURRENCY_WAIT_SECONDS
+
+    seen: list[dict[str, Any]] = []
+
+    class _Response:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, Any]:
+            return {"rows": [], "total_available": 0}
+
+    def _capture(**kwargs: Any) -> Any:
+        seen.append(kwargs)
+        return _Response()
+
+    monkeypatch.setattr(t, "_post", _capture)
+    monkeypatch.setenv("GRAPH_QUERY_URL", "https://example.invalid")
+    monkeypatch.setenv(_TOKEN_VAR, "t")
+
+    t.execute_cypher_over_http(
+        cypher=CYPHER_VERTEX,
+        params=None,
+        row_limit=25,
+        timeout_s=30.0,
+        as_clause="(result agtype)",
+    )
+
+    assert seen, "the transport never posted; this arm proved nothing"
+    assert seen[0]["json"]["timeout_s"] == 30.0, (
+        "the budget sent to the service must stay the caller's budget"
+    )
+    read_timeout = seen[0]["timeout"].read
+    assert read_timeout > 30.0, (
+        "the client's read timeout equals or undercuts the budget it sent "
+        "the service, so the service can never answer its own timeout"
+    )
+    assert t.CLIENT_TIMEOUT_HEADROOM_SECONDS > MAX_CONCURRENCY_WAIT_SECONDS, (
+        "the client's headroom does not cover the longest the service can "
+        "wait before it even starts a query, so a queued call still races "
+        "the client's deadline"
+    )
+
+
+@pytest.mark.parametrize(
+    ("raised", "expected"),
+    [
+        ("ReadTimeout", "GraphTimeoutError"),
+        ("WriteTimeout", "GraphTimeoutError"),
+        ("ConnectTimeout", "GraphConnectionError"),
+        ("PoolTimeout", "GraphConnectionError"),
+        ("ConnectError", "GraphConnectionError"),
+    ],
+)
+def test_p22_a_client_side_timeout_is_classified_as_a_timeout(
+    raised: str, expected: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A budget burned at the client is still a budget burned.
+
+    Added 2026-08-22 for findings F-4.11-09 and F-4.11-J-06. Every
+    transport-level exception was classified as `GraphConnectionError`
+    with "verify GRAPH_QUERY_URL is reachable and retry", so the one
+    failure the Act step most needs to distinguish, a query that burned
+    its whole budget, was presented as a connectivity blip worth retrying
+    immediately. On psycopg2 the same query raised `GraphTimeoutError`.
+
+    The split is by MEANING rather than by an enumerated list: a timeout
+    that happened after the request reached an established connection is a
+    budget timeout, and a timeout that means no connection was ever
+    obtained is a connection failure. `ConnectError` is included here to
+    pin that a plain connection failure did not accidentally move.
+    """
+    import httpx
+
+    import system_03_search_agent.tools.graph_http_transport as t
+
+    def _boom(**kwargs: Any) -> Any:
+        raise getattr(httpx, raised)("simulated " + raised)
+
+    monkeypatch.setattr(t, "_post", _boom)
+    monkeypatch.setenv("GRAPH_QUERY_URL", "https://example.invalid")
+    monkeypatch.setenv(_TOKEN_VAR, "t")
+
+    with pytest.raises(getattr(t, expected)) as caught:
+        t.execute_cypher_over_http(
+            cypher=CYPHER_VERTEX,
+            params=None,
+            row_limit=25,
+            timeout_s=30.0,
+            as_clause="(result agtype)",
+        )
+    assert str(caught.value)
+    if expected == "GraphTimeoutError":
+        assert not isinstance(caught.value, t.GraphConnectionError), (
+            "a budget timeout must not also be a connection error, or "
+            "export/traversal.py cannot tell them apart"
+        )
