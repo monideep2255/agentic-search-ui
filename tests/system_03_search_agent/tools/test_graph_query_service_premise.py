@@ -1825,3 +1825,215 @@ def test_p22_a_client_side_timeout_is_classified_as_a_timeout(
             "a budget timeout must not also be a connection error, or "
             "export/traversal.py cannot tell them apart"
         )
+
+
+# ---------------------------------------------------------------------------
+# Round 3, findings F-4.11-RV-01 and F-4.11-RV-04
+#
+# Both arms exist because round 2's fixes were graded by the party that wrote
+# them, and an independent re-verifier then found a defect inside one fix and
+# a gap under the other. The shape is worth stating once: round 2 bounded the
+# unauthenticated request path and left the BOOKKEEPING for that bound
+# unbounded, so the control traded one exhaustible resource for another.
+#
+# The reason neither arm existed already is the same reason in both cases.
+# Every concurrency and rate-limit arm written before this drove ONE source
+# and ONE failure mode, so neither a per-source leak nor a per-failure leak
+# could show up: the blind spot in the gate matched the blind spot in the
+# code exactly, which is build phase 2.1's F-2.1-A5-03 in a new costume.
+# ---------------------------------------------------------------------------
+
+
+def test_p23_the_hard_cap_on_tracked_sources_actually_holds(
+    service_client: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Past the ceiling, retained source keys stop growing.
+
+    Finding F-4.11-RV-01, Regression of: F-4.11-J-05.
+
+    REWRITTEN 2026-08-22, finding F-4.11-R3-01, and the first version is
+    worth keeping in view because it was VACUOUS and the author did not
+    notice. It drove 400 requests across 256 distinct sources and asserted
+    the retained count stayed under MAX_TRACKED_SOURCES, which is 10000. It
+    therefore passed with every eviction mechanism deleted: four separate
+    mutations (no sweep, a sweep that keeps everything, no hard cap, and a
+    refusal log that never evicts) ALL survived it. An arm asserting a
+    ceiling it never approaches proves nothing, and this one was written by
+    the same party that wrote the fix, one round after an independent
+    reviewer had just found that exact pattern.
+
+    The rewrite lowers the ceiling instead of raising the traffic, so the
+    arm crosses it in a fraction of a second and fails the moment the cap
+    stops being enforced. The constant is read from the module at call time
+    precisely so this is possible.
+    """
+    import services.graph_query_service.app as app_module
+
+    monkeypatch.setattr(app_module, "MAX_TRACKED_SOURCES", 25)
+    # TestClient's peer address is the literal string "testclient", not a
+    # loopback address, so without this the trusted-proxy check refuses the
+    # forwarded header and every request collapses into ONE source key. That
+    # is not a hypothetical: it is how this arm was vacuous a SECOND time,
+    # after being rewritten to fix being vacuous the first time. The
+    # populate-check below is the durable guard, since it fails loudly
+    # whatever the cause.
+    monkeypatch.setattr(
+        app_module, "_TRUSTED_PROXY_HOSTS", frozenset({"testclient", "127.0.0.1"})
+    )
+    limiter = app_module.source_limiter_for_test(service_client.app)
+
+    for index in range(300):
+        service_client.post(
+            "/v1/cypher",
+            json={
+                "cypher": "MATCH (g:Gene) RETURN g",
+                "params": None,
+                "row_limit": 5,
+                "timeout_s": 30.0,
+                "as_clause": "(result agtype)",
+            },
+            headers={
+                "X-Forwarded-For": "203.0.113." + str(index % 250),
+                "Authorization": "Bearer not-the-token",
+            },
+        )
+
+    tracked = len(limiter.tracked_keys())
+    # Prove the arm did its own setup BEFORE asserting the bound. Without
+    # this, every way the traffic could fail to produce distinct keys reads
+    # as the cap working perfectly. An arm that cannot tell "the bound held"
+    # from "nothing happened" is not a bound arm at all.
+    assert tracked > 1, (
+        "this arm produced " + str(tracked) + " distinct source key(s), so it "
+        "never exercised the cap and proves nothing about it"
+    )
+    assert tracked <= 25, (
+        "the rate limiter retained " + str(tracked) + " source keys against a "
+        "cap of 25, so an unauthenticated caller can grow this table without "
+        "bound; the box carries a global IPv6 /64, which supplies 2^64 "
+        "distinct un-spoofable keys from one attacker's own range"
+    )
+
+
+def test_p23b_idle_source_keys_are_evicted_as_their_window_passes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A source that goes quiet stops being remembered.
+
+    The other half of F-4.11-RV-01, and it fails for a DIFFERENT reason than
+    P23, which is the point of splitting them. P23 proves the adversarial
+    ceiling holds when sources arrive faster than they expire. This proves
+    the ordinary path: traffic that stops is forgotten, so the table does
+    not creep upward over days of normal operation and reach that ceiling
+    at all.
+
+    Driven at the unit level with a controlled clock, because the property
+    is about the PASSAGE of time and an HTTP arm would have to sleep through
+    a real window to see it.
+    """
+    import services.graph_query_service.app as app_module
+
+    clock = {"now": 1000.0}
+    monkeypatch.setattr(app_module.time, "monotonic", lambda: clock["now"])
+
+    limiter = app_module._RateLimiter(60, 60.0)
+    for index in range(50):
+        limiter.check("source-" + str(index))
+    assert len(limiter.tracked_keys()) == 50, "the arm did not populate the table"
+
+    clock["now"] += 600.0
+    limiter.check("someone-new")
+
+    tracked = len(limiter.tracked_keys())
+    assert tracked <= 2, (
+        "after ten idle windows the limiter still retains " + str(tracked) +
+        " source keys; keys whose window has fully passed are dead weight "
+        "and must be dropped, or normal traffic alone grows the table "
+        "without bound"
+    )
+
+    refusals = app_module._RefusalLog()
+    for index in range(50):
+        refusals.should_emit("auth_rejected", "source-" + str(index))
+    assert len(refusals.tracked_keys()) == 50, "the arm did not populate the log index"
+
+    clock["now"] += 600.0
+    refusals.should_emit("auth_rejected", "someone-new")
+
+    remembered = len(refusals.tracked_keys())
+    assert remembered <= 2, (
+        "the refusal log still remembers " + str(remembered) + " sources; "
+        "bounding how many LINES a flood writes while the index naming who "
+        "wrote them grows without bound moves the exhaustion rather than "
+        "removing it"
+    )
+
+
+def test_p24_a_failed_query_returns_its_concurrency_slot(
+    service_client: Any, valid_token: str, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Capacity survives failure, which is when capacity matters most.
+
+    Finding F-4.11-RV-04. The slot release sits in a `finally` and the
+    comment above it says a bound leaking a slot per failure "degrades to
+    zero capacity under exactly the conditions that make queries fail".
+    Nothing asserted that. The re-verifier moved the release out of the
+    `finally` and the live gate returned 51 passed.
+
+    So this arm drives MORE consecutive failures than there are slots and
+    then requires a normal query to still succeed. Under a leak the semaphore
+    is exhausted by the failures and the final call cannot get a slot. A
+    comment claiming a correctness property with no test asserting the same
+    property is a liability rather than documentation, and this phase has now
+    produced three such comments.
+    """
+    import services.graph_query_service.app as app_module
+
+    calls = {"n": 0}
+
+    def _explode(*args: Any, **kwargs: Any) -> Any:
+        calls["n"] += 1
+        raise app_module.GraphConnectionError("induced failure")
+
+    monkeypatch.setattr(app_module, "execute_cypher", _explode)
+
+    failures = app_module.MAX_CONCURRENT_QUERIES + 3
+    for _ in range(failures):
+        response = service_client.post(
+            "/v1/cypher",
+            json={
+                "cypher": "MATCH (g:Gene) RETURN g",
+                "params": None,
+                "row_limit": 5,
+                "timeout_s": 30.0,
+                "as_clause": "(result agtype)",
+            },
+            headers=_auth(valid_token),
+        )
+        assert response.status_code == 502, response.status_code
+
+    assert calls["n"] == failures, (
+        "the induced failures did not all reach the executor, so this arm "
+        "never exercised the release path it exists to test"
+    )
+
+    monkeypatch.setattr(
+        app_module, "execute_cypher", lambda *a, **k: ([{"result": "ok"}], 1)
+    )
+    response = service_client.post(
+        "/v1/cypher",
+        json={
+                "cypher": "MATCH (g:Gene) RETURN g",
+                "params": None,
+                "row_limit": 5,
+                "timeout_s": 30.0,
+                "as_clause": "(result agtype)",
+            },
+        headers=_auth(valid_token),
+    )
+    assert response.status_code == 200, (
+        "after " + str(failures) + " failed queries the service could not "
+        "serve a normal one (status " + str(response.status_code) + "); the "
+        "concurrency bound leaks a slot per failure and degrades to zero "
+        "capacity under exactly the conditions that make queries fail"
+    )

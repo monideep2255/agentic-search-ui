@@ -280,6 +280,18 @@ _CONCURRENCY_WAIT_FRACTION: float = 0.25
 # are different properties and each has its own arm (P15 and P16).
 REFUSAL_LOG_INTERVAL_SECONDS: float = 60.0
 
+# The hard ceiling on distinct source keys any bookkeeping table retains.
+#
+# F-4.11-RV-01. Eviction alone handles sources that go quiet; it does not
+# handle sources arriving faster than they expire, which is precisely the
+# adversarial case and the one an attacker with an IPv6 range produces for
+# free. Past this ceiling the least recently seen keys are dropped.
+#
+# 10000 is chosen to sit far above any plausible legitimate caller count
+# (this service fronts one API process and a handful of developer machines)
+# and far below anything that threatens the box's memory.
+MAX_TRACKED_SOURCES: int = 10000
+
 # The one message every authentication failure returns. See the module
 # docstring's Auth section: the shape of the failure is not a fact this
 # service tells an unauthenticated caller.
@@ -369,6 +381,9 @@ class _RateLimiter:
         self._limit = limit_per_minute
         self._window = window_seconds
         self._calls: dict[str, deque[float]] = defaultdict(deque)
+        # F-4.11-RV-01: eviction is amortised, run at most once per window,
+        # so a sweep never turns every request into a full scan of the table.
+        self._last_eviction = time.monotonic()
 
     def check(self, key: str) -> float | None:
         """Record one call attempt for key.
@@ -378,6 +393,7 @@ class _RateLimiter:
         is within budget (and the attempt IS recorded).
         """
         now = time.monotonic()
+        self._evict_idle(now)
         bucket = self._calls[key]
         while bucket and now - bucket[0] > self._window:
             bucket.popleft()
@@ -386,7 +402,65 @@ class _RateLimiter:
             retry_after = max(self._window - (now - oldest), 0.1)
             return retry_after
         bucket.append(now)
+        # The cap is enforced AFTER the insert, not before it. Enforcing it
+        # first leaves the table holding cap+1 between the sweep and the
+        # append, which arm P23 caught: it asserted the documented bound and
+        # measured 26 against a cap of 25. A bound that is off by one is
+        # still a bound, but a bound that does not equal what it claims is a
+        # comment, and this phase has produced three of those already.
+        self._enforce_cap()
         return None
+
+    def _enforce_cap(self) -> None:
+        """Drop the least recently seen keys once past the hard ceiling."""
+        if len(self._calls) > MAX_TRACKED_SOURCES:
+            for key in sorted(
+                self._calls, key=lambda k: self._calls[k][-1] if self._calls[k] else 0.0
+            )[: len(self._calls) - MAX_TRACKED_SOURCES]:
+                del self._calls[key]
+
+    def _evict_idle(self, now: float) -> None:
+        """Drop keys whose window has fully expired.
+
+        Finding F-4.11-RV-01, Regression of: F-4.11-J-05, found by the
+        independent re-verifier inside round 2's own fix.
+
+        `self._calls` is a defaultdict, so reading `self._calls[key]` CREATES
+        the key. The window loop above then drains that caller's deque as its
+        timestamps age out, and the emptied deque was left in the dict
+        forever. So the control that exists to bound what an unauthenticated
+        caller can consume grew by one permanent entry per distinct source:
+        it bounded the requests and not the bookkeeping, which moves the
+        exhaustion rather than removing it.
+
+        This is not a theoretical reach. The box carries a global IPv6 /64
+        and the proxy listens on every address, so one attacker's own range
+        supplies 2^64 distinct source keys that need no spoofing, and this
+        bound sits before auth by design, so no credential is required.
+
+        Two mechanisms, because either alone still fails. Eviction removes
+        keys that have gone quiet, which handles the ordinary case. The hard
+        cap handles the adversarial one, where sources arrive faster than
+        they expire and eviction alone never catches up: past the cap the
+        least recently seen keys are dropped outright. Dropping a key is safe
+        in the direction that matters, since it can only forget a caller's
+        history and let it start fresh, never invent a refusal for a caller
+        that made no requests.
+        """
+        if now - self._last_eviction >= self._window:
+            self._last_eviction = now
+            for key in [
+                k
+                for k, bucket in self._calls.items()
+                if not bucket or now - bucket[-1] > self._window
+            ]:
+                del self._calls[key]
+
+        self._enforce_cap()
+
+    def tracked_keys(self) -> list[str]:
+        """The source keys currently retained. For the gate's bound arm."""
+        return list(self._calls)
 
 
 class _RefusalLog:
@@ -429,7 +503,36 @@ class _RefusalLog:
             return None
         withheld = self._suppressed.pop(key, 0)
         self._last_emitted[key] = now
+        self._evict_idle(now)
         return withheld
+
+    def _evict_idle(self, now: float) -> None:
+        """Bound the INDEX, not only the volume.
+
+        F-4.11-RV-01. Bounding how many lines a flood can write while the
+        table naming who wrote them grows without limit moves the exhaustion
+        rather than removing it, and the re-verifier measured exactly that:
+        3000 sources left 3000 permanently retained entries here.
+
+        An entry is useless once its interval has passed, since the next
+        refusal from that key emits regardless, so eviction discards nothing
+        the bound relies on.
+        """
+        interval = REFUSAL_LOG_INTERVAL_SECONDS
+        for key in [k for k, seen in self._last_emitted.items() if now - seen > interval]:
+            self._last_emitted.pop(key, None)
+            self._suppressed.pop(key, None)
+
+        if len(self._last_emitted) > MAX_TRACKED_SOURCES:
+            for key in sorted(self._last_emitted, key=self._last_emitted.get)[
+                : len(self._last_emitted) - MAX_TRACKED_SOURCES
+            ]:
+                self._last_emitted.pop(key, None)
+                self._suppressed.pop(key, None)
+
+    def tracked_keys(self) -> list[str]:
+        """The source keys currently retained. For the gate's bound arm."""
+        return list(self._last_emitted)
 
 
 def _parse_forwarded_address(value: str) -> str | None:
@@ -471,10 +574,24 @@ def client_source(request: Any) -> str:
       proxy. A caller reaching the service directly is identified by its
       own peer address and its header is ignored entirely.
     - Only the RIGHTMOST element is used, which is the value the proxy
-      itself appended, never anything the caller sent ahead of it. The
-      deployed Caddyfile additionally OVERWRITES the header with the real
-      remote host rather than appending to it, so both layers are safe
-      independently.
+      itself appended, never anything the caller sent ahead of it.
+
+    Finding F-4.11-RV-02, 2026-08-22. This docstring used to add that the
+    deployed Caddyfile "additionally OVERWRITES the header with the real
+    remote host rather than appending to it, so both layers are safe
+    independently." The re-verifier read the deployed `/etc/caddy/Caddyfile`
+    and found NO `X-Forwarded-For` directive at all, so Caddy's default
+    append applies and there is exactly ONE safeguard here, not two: the
+    rightmost-element rule above.
+
+    The rule still holds and arm P20 pins it, so nothing is broken. What was
+    broken is the claim, and it is corrected rather than deleted because
+    this is the third false comment this phase produced, each asserting a
+    property no test checked. A confident comment is where the next reader
+    stops checking, which is why `.claude/rules/self-eval-loop.md` treats a
+    comment claiming a security property as a claim to be tested rather than
+    as documentation. Do not restore the two-layer claim without first
+    adding the directive to the Caddyfile AND an arm that reads it.
     """
     client = getattr(request, "client", None)
     peer = getattr(client, "host", None) if client is not None else None
@@ -644,6 +761,16 @@ def _encode_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
+def source_limiter_for_test(app: FastAPI) -> Any:
+    """The pre-auth source limiter behind an app. Gate arm P23 only."""
+    return app.state.source_limiter
+
+
+def refusal_log_for_test(app: FastAPI) -> Any:
+    """The bounded refusal log behind an app. Gate arm P23 only."""
+    return app.state.refusal_log
+
+
 def build_app() -> FastAPI:
     """Build the FastAPI application, refusing to start if misconfigured.
 
@@ -705,6 +832,14 @@ def build_app() -> FastAPI:
     # bound is what makes the threadpool an actual fix rather than a wider
     # version of the same failure.
     query_slots = asyncio.Semaphore(MAX_CONCURRENT_QUERIES)
+
+    # Exposed for the premise gate's bound arm (P23). A bound nobody can
+    # observe is a bound nobody can test, and F-4.11-RV-01 is what an
+    # untestable bound costs: it was wrong for the whole of round 2 and the
+    # gate had no way to see it.
+    app.state.source_limiter = source_limiter
+    app.state.rate_limiter = rate_limiter
+    app.state.refusal_log = refusal_log
 
     @app.exception_handler(ServiceError)
     async def _service_error_handler(_request: Request, exc: ServiceError) -> JSONResponse:
@@ -796,7 +931,10 @@ def build_app() -> FastAPI:
         if retry_after is not None:
             # F-4.11-J-03: this line had no arm. The fix for F-4.11-03 added
             # TWO log lines and only the auth one was pinned, so deleting
-            # this one left both suites green. P16b pins it now.
+            # this one left both suites green. P15 pins it now.
+            # (F-4.11-RV-05: this comment cited "P16b", an arm that exists
+            # nowhere. The fix for "no arm pins this" cited a fictional arm,
+            # which is how a citation becomes decoration.)
             _emit_refusal(refusal_log, "rate_limited", source_key, retry_after)
             raise ServiceError(
                 "rate_limited",
