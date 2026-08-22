@@ -168,14 +168,44 @@ def probe_https(host: str, path: str, timeout: float) -> tuple[str, str]:
             conn.close()
 
 
+def probe_graph_service(service_url: str, timeout: float) -> tuple[str, str]:
+    """Reachability for the read-only HTTPS graph query service (Section 24).
+
+    Probes the unauthenticated health endpoint. A 200 means the proxy, the
+    TLS certificate and the service process are all up; it does NOT mean the
+    graph behind it is answering, and the message says so rather than
+    implying more than was measured.
+    """
+    if not service_url.startswith("https://"):
+        return DOWN, "GRAPH_QUERY_URL is set to a non-HTTPS value"
+
+    host = service_url.split("://", 1)[1].split("/", 1)[0]
+    state, detail = probe_https(host, "/healthz", timeout)
+    if state == OK:
+        return OK, "HTTPS query service " + detail
+    return state, "HTTPS query service " + detail
+
+
 def probe_graph(timeout: float) -> tuple[str, str]:
-    """TCP reachability for the Layer 1 graph, from the same env the tool reads.
+    """Reachability for the Layer 1 graph, from the same env the tool reads.
 
     Variable names match `graph_connection.py` so this probe and the real
-    connection cannot drift apart. Only host and port are read: a credential is
-    never needed to answer "is the port open", and reading one here would put a
-    secret in a diagnostic script for no gain.
+    connection cannot drift apart. That module dispatches on GRAPH_QUERY_URL,
+    so this one does too: probing the psycopg2 port while the tool is talking
+    HTTPS would report on a transport nothing is using, which is worse than
+    not probing at all, because it looks like an answer.
+
+    Only host and port, or the service URL, are read. A credential is never
+    needed to answer "is it reachable", and reading one here would put a
+    secret in a diagnostic script for no gain. The service's health endpoint
+    is deliberately unauthenticated for exactly this reason.
+
+    Added at build phase 4.11, when the HTTPS service became the v1 transport.
     """
+    service_url = os.environ.get("GRAPH_QUERY_URL")
+    if service_url:
+        return probe_graph_service(service_url, timeout)
+
     host = os.environ.get("GRAPH_PG_HOST")
     port_raw = os.environ.get("GRAPH_PG_PORT", "5432")
     if not host:

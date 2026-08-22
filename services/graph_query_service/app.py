@@ -446,7 +446,12 @@ def build_app() -> FastAPI:
             },
         )
 
-    @app.get("/healthz")
+    # HEAD as well as GET: `tracker/preflight.py` probes with HEAD, and a
+    # GET-only route answers it 405. That is still "reachable" and the probe
+    # scored it correctly, but a diagnostic whose healthy output reads
+    # "HTTP 405" trains its reader to ignore the status code, which is the
+    # one thing a preflight cannot afford. Added at build phase 4.11.
+    @app.api_route("/healthz", methods=["GET", "HEAD"])
     async def healthz() -> dict[str, str]:
         """Unauthenticated reachability probe. Reveals nothing else."""
         return {"status": "ok"}

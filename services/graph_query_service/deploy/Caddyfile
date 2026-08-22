@@ -1,0 +1,39 @@
+# Caddy configuration for the read-only HTTPS graph query service.
+#
+# Build phase 4.11, Technical_specification.md Section 24: "TLS via an
+# automatic-HTTPS reverse proxy (for example Caddy) in front of the service;
+# the database port itself never opens to the internet."
+#
+# The hostname is the Hetzner reverse-DNS name for this box, which forward
+# resolves to the same address. That is what lets Let's Encrypt issue a
+# certificate without the project owning a domain. See DECISIONS.md,
+# 2026-08-22.
+#
+# Deployed to /etc/caddy/Caddyfile by deploy.sh. Never hand-edited on the
+# box: a hand-edit is invisible to this repository and survives until it
+# causes an outage nobody can explain.
+
+static.133.128.225.46.clients.your-server.de {
+	# The service listens on loopback only. This proxy is the sole way in,
+	# which is why the service never needs to bind a public interface.
+	reverse_proxy 127.0.0.1:8080
+
+	# Bound the request body. The payload is one Cypher template plus its
+	# parameters, so anything approaching a megabyte is not a real caller.
+	request_body {
+		max_size 256KB
+	}
+
+	header {
+		# This service has exactly one machine caller and no browser
+		# surface, so every one of these is free to set.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/graph-query-service.log
+		format json
+	}
+}
