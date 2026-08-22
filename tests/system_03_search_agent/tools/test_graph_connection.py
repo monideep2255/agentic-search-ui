@@ -414,6 +414,94 @@ def test_no_credential_value_appears_in_any_raised_exception_across_all_paths():
 
 
 # ---------------------------------------------------------------------------
+# Build phase 4.11: transport dispatch on GRAPH_QUERY_URL
+# ---------------------------------------------------------------------------
+#
+# These mirror this phase's premise gate arms P7, P7b, and P8
+# (tests/system_03_search_agent/tools/test_graph_query_service_premise.py),
+# housed here as unit-level coverage of graph_connection's own dispatch
+# logic rather than the live end-to-end gate. Each observes WHICH transport
+# ran, never merely whether the call succeeded, per T-4.11-01's own
+# requirement that this be asserted by observation, not by inference.
+
+
+def test_dispatch_uses_http_transport_when_url_is_set(monkeypatch):
+    """GRAPH_QUERY_URL set: the HTTPS transport runs and psycopg2 never opens."""
+    from system_03_search_agent.tools import graph_connection as gc
+
+    def _psycopg2_must_not_open():
+        raise AssertionError("psycopg2 was opened while GRAPH_QUERY_URL was set")
+
+    calls = []
+
+    def _fake_http(**kwargs):
+        calls.append(kwargs)
+        return [{"result": "x"}], 1
+
+    monkeypatch.setenv("GRAPH_QUERY_URL", "https://example.invalid")
+    monkeypatch.setattr(gc, "_default_connection_factory", _psycopg2_must_not_open)
+    monkeypatch.setattr(gc, "execute_cypher_over_http", _fake_http)
+
+    rows, total = gc.execute_cypher("MATCH (g:Gene) RETURN g", {"seed": "x"})
+
+    assert calls, "execute_cypher_over_http was never called"
+    assert calls[0]["cypher"] == "MATCH (g:Gene) RETURN g"
+    assert calls[0]["params"] == {"seed": "x"}
+    assert (rows, total) == ([{"result": "x"}], 1)
+
+
+def test_dispatch_uses_psycopg2_transport_when_url_is_unset(monkeypatch):
+    """GRAPH_QUERY_URL unset: the psycopg2 transport runs and HTTP never fires."""
+    from system_03_search_agent.tools import graph_connection as gc
+
+    def _http_must_not_fire(**kwargs):
+        raise AssertionError("execute_cypher_over_http ran while GRAPH_QUERY_URL was unset")
+
+    monkeypatch.delenv("GRAPH_QUERY_URL", raising=False)
+    monkeypatch.setattr(gc, "execute_cypher_over_http", _http_must_not_fire)
+
+    cursor = FakeCursor(rows=[("row",)], columns=["result"])
+    factory = _factory_for(cursor)
+
+    rows, total = gc.execute_cypher(
+        "MATCH (g:Gene) RETURN g", connection_factory=factory
+    )
+
+    assert rows == [{"result": "row"}]
+    assert total == 1
+
+
+def test_connection_factory_with_url_set_raises_graph_error(monkeypatch):
+    """Passing connection_factory while GRAPH_QUERY_URL is set is a caller
+    defect: two transports named in one call, never silently resolved by
+    picking one and discarding the other.
+
+    execute_cypher_over_http is monkeypatched to a tripwire here on
+    purpose, not left to run for real. Without it, a mutation that deletes
+    the conflict check entirely would still raise a GraphError, just from
+    a real (and here, unreachable) network attempt to "https://example.
+    invalid" instead of from the conflict check, and this test would pass
+    for the wrong reason. The tripwire is what makes this assertion
+    mutation-proof rather than merely shape-matching the right exception
+    family by accident.
+    """
+    from system_03_search_agent.tools import graph_connection as gc
+
+    def _must_not_run(**kwargs):
+        raise AssertionError("execute_cypher_over_http ran despite the conflict")
+
+    monkeypatch.setenv("GRAPH_QUERY_URL", "https://example.invalid")
+    monkeypatch.setattr(gc, "execute_cypher_over_http", _must_not_run)
+
+    with pytest.raises(GraphError):
+        gc.execute_cypher(
+            "MATCH (g:Gene) RETURN g",
+            connection_factory=lambda: None,
+        )
+
+
+
+# ---------------------------------------------------------------------------
 # Defense in depth: dollar-quote escape and as_clause shape
 # ---------------------------------------------------------------------------
 

@@ -184,7 +184,32 @@ requires_service = pytest.mark.skipif(
 
 
 @pytest.fixture()
-def service_client() -> Any:
+def configured_token(monkeypatch: pytest.MonkeyPatch) -> str:
+    """Guarantee the service has a credential, without needing a deployment.
+
+    Added 2026-08-22, finding F-4.11-05, raised by the builder of the
+    service. Before it, every arm using the app in process ERRORED at
+    fixture setup on a machine with no configured credential, because
+    `build_app()` correctly refuses to start without one. Five arms that
+    test auth and the startup refusals themselves were therefore unrunnable
+    exactly where they are cheapest to run, and five errors that look like
+    defects is how a gate stops being read.
+
+    Skipping them was the other option and it is the worse one: these arms
+    need SOME credential, not the deployed one, so skipping would trade a
+    confusing error for a silent hole. The fixture supplies a synthetic
+    value instead, and the arms then run everywhere.
+    """
+    existing = os.environ.get(_TOKEN_VAR)
+    if existing:
+        return existing
+    synthetic = "premise-gate-synthetic-credential-not-a-real-one"
+    monkeypatch.setenv(_TOKEN_VAR, synthetic)
+    return synthetic
+
+
+@pytest.fixture()
+def service_client(configured_token: str, monkeypatch: pytest.MonkeyPatch) -> Any:
     """A raw HTTP client bound to the service app IN PROCESS.
 
     Deliberately raw. Every server-side rejection arm below must reach the
@@ -196,14 +221,17 @@ def service_client() -> Any:
 
     from services.graph_query_service.app import build_app
 
+    # The service refuses to start when this is set in its own environment,
+    # which is the recursion guard P12b pins. A developer machine that has
+    # cut over to the HTTPS transport has it set, so it is cleared for the
+    # in-process app rather than letting the guard fire on a caller's config.
+    monkeypatch.delenv("GRAPH_QUERY_URL", raising=False)
     return TestClient(build_app())
 
 
 @pytest.fixture()
-def valid_token() -> str:
-    from services.graph_query_service.app import service_token
-
-    return service_token()
+def valid_token(configured_token: str) -> str:
+    return configured_token
 
 
 def _auth(token: str) -> dict[str, str]:
@@ -437,9 +465,8 @@ def test_p4c_a_refusal_discloses_nothing_about_the_credential(
 # ---------------------------------------------------------------------------
 
 
-@requires_graph
 def test_p5_rate_limit_fires_with_an_actionable_retry_after(
-    service_client: Any, valid_token: str
+    service_client: Any, valid_token: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A saturated caller fails fast rather than joining an unbounded queue.
 
@@ -447,8 +474,29 @@ def test_p5_rate_limit_fires_with_an_actionable_retry_after(
     retry_after estimate and the saturated family name, because the Act step
     reads this error and decides its next move. "Rate limited" alone is not
     actionable.
+
+    DECOUPLED FROM THE LIVE GRAPH 2026-08-22, finding F-4.11-06. This arm
+    was marked `requires_graph` and it FAILED against the live graph while
+    the control it grades was working correctly. The limiter is a sliding
+    60 second window with a limit of 60, and each live query takes roughly
+    two seconds, so sending 62 of them takes over two minutes and the
+    window empties from the front faster than the loop fills it from the
+    back. The arm was measuring how fast the graph answers, not whether the
+    limiter fires.
+
+    The downstream execution is stubbed so the loop runs in milliseconds.
+    That is isolation of the control under test, not the gate supplying its
+    own answer: the limiter runs entirely unmodified, and what is replaced
+    is the graph behind it, which this arm never had any reason to exercise.
+    The consequence worth stating is that the arm now runs everywhere, on
+    any machine, with no live dependency at all.
     """
+    import services.graph_query_service.app as app_module
     from services.graph_query_service.app import RATE_LIMIT_PER_MINUTE
+
+    monkeypatch.setattr(
+        app_module, "execute_cypher", lambda *a, **k: ([{"result": "stub"}], 1)
+    )
 
     last = None
     for _ in range(RATE_LIMIT_PER_MINUTE + 2):
@@ -531,9 +579,9 @@ def test_p7b_dispatch_uses_psycopg2_when_the_url_is_unset(
     closed: list[bool] = []
 
     class _Cur:
-        description = [("result",)]
+        description = (("result",),)
 
-        def __enter__(self) -> "_Cur":
+        def __enter__(self) -> _Cur:  # noqa: PYI034 - a fake cursor, not a protocol
             return self
 
         def __exit__(self, *exc: object) -> None:
@@ -566,13 +614,40 @@ def test_p8_a_connection_factory_with_the_url_set_raises_rather_than_being_ignor
 
     Silently honouring one and discarding the other is how a test suite goes
     on passing against a transport nobody is shipping.
+
+    TIGHTENED 2026-08-22, finding F-4.11-04, raised by the builder of the
+    code this arm grades rather than by the arm's author. The original body
+    was only:
+
+        with pytest.raises(gc.GraphError):
+            gc.execute_cypher(CYPHER_VERTEX, None, connection_factory=...)
+
+    and that passes for the wrong reason. Delete the conflict check
+    entirely and the call proceeds to a real HTTPS attempt against
+    `example.invalid`, whose DNS failure is classified into
+    `GraphConnectionError`, which IS a `GraphError`. So the arm stayed green
+    with the control it exists to prove removed, which is the definition of
+    a vacuous arm and the single most repeated defect in this repository.
+
+    Two tripwires make the assertion mean what it says: neither transport
+    may be entered at all, so the only way to reach the raise is the
+    conflict check itself.
     """
     import system_03_search_agent.tools.graph_connection as gc
 
+    def _no_http(**kwargs: Any) -> Any:
+        raise AssertionError("the HTTP transport ran instead of refusing the conflict")
+
+    def _no_pg() -> Any:
+        raise AssertionError("psycopg2 was opened instead of refusing the conflict")
+
     monkeypatch.setenv("GRAPH_QUERY_URL", "https://example.invalid")
     monkeypatch.setenv(_TOKEN_VAR, "t")
+    monkeypatch.setattr(gc, "execute_cypher_over_http", _no_http)
+    monkeypatch.setattr(gc, "_default_connection_factory", _no_pg)
+
     with pytest.raises(gc.GraphError):
-        gc.execute_cypher(CYPHER_VERTEX, None, connection_factory=lambda: None)
+        gc.execute_cypher(CYPHER_VERTEX, None, connection_factory=_no_pg)
 
 
 # ---------------------------------------------------------------------------
@@ -656,9 +731,68 @@ def test_p10_the_database_port_is_still_closed_to_the_internet() -> None:
 
     A service that fronts the graph while the graph itself stays directly
     reachable has added a door without closing one.
+
+    REBUILT 2026-08-22, finding F-4.11-01, and the original is worth stating
+    because the way it was wrong is the reusable part. It read:
+
+        with pytest.raises(OSError):
+            socket.create_connection((GRAPH_HOST_PUBLIC, 5432), timeout=5)
+
+    which is vacuous in the environment it runs in. Measured that day: a
+    connection to `github.com:12345`, a port GitHub plainly neither serves
+    nor drops, ALSO times out here, because this sandbox answers any
+    unreachable destination with a timeout rather than a refusal. A
+    TimeoutError is an OSError, so that arm passed on a sandbox denial and
+    would have gone on passing with the database port wide open. This is
+    `.claude/rules/sandbox-diagnosis.md`'s own warning arriving as a test
+    defect: a denial and an outage look identical at this layer.
+
+    The rebuild makes the two outcomes distinguishable inside ONE run, which
+    is the property the original lacked. The service's own port must CONNECT
+    from this same machine first. That establishes the path to this host is
+    open here, so a timeout on 5432 from the same host in the same seconds
+    is attributable to the host rather than to the sandbox. Under the old
+    form both ports timing out was a pass. Under this one it is a failure.
     """
+    with socket.create_connection((GRAPH_HOST_PUBLIC, 443), timeout=8):
+        pass
+
     with pytest.raises(OSError):
-        socket.create_connection((GRAPH_HOST_PUBLIC, GRAPH_PG_PUBLIC_PORT), timeout=5)
+        socket.create_connection((GRAPH_HOST_PUBLIC, GRAPH_PG_PUBLIC_PORT), timeout=8)
+
+
+@requires_service
+def test_p10c_postgres_is_bound_to_loopback_on_the_box_itself() -> None:
+    """The same property read where a network probe cannot be fooled at all.
+
+    P10's rebuild is sound and still infers from outside. This one observes
+    the binding directly on the host, so the two arms fail for independent
+    reasons and no single environmental quirk can make both green.
+    """
+    import subprocess
+
+    listeners = subprocess.run(
+        [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "root@" + GRAPH_HOST_PUBLIC,
+            "ss -lnt sport = :5432",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    ).stdout
+
+    assert "5432" in listeners, "no Postgres listener found; this arm proved nothing"
+    for line in listeners.splitlines()[1:]:
+        if not line.strip():
+            continue
+        local_address = line.split()[3]
+        assert local_address.startswith(("127.0.0.1:", "[::1]:")), (
+            "Postgres is listening on " + local_address + ", not on loopback only"
+        )
 
 
 @requires_service
@@ -695,6 +829,34 @@ def test_p11_the_credential_never_appears_in_a_response_body(
         )
     for body in bodies:
         assert valid_token not in body
+
+
+def test_p11c_a_refused_call_is_logged_too(
+    service_client: Any, valid_token: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The audit log is COMPLETE, not merely clean.
+
+    Added 2026-08-22 with the fix for finding F-4.11-03. The service logged
+    only calls that got past auth and past the rate limit, so a credential
+    being guessed and a caller being throttled, the two classes of call an
+    operator most needs to see, left no trace at all. Section 24 asks for
+    every call logged.
+
+    P11b could not catch this and never will: it asserts the credential
+    does not appear in the log, which stays true when whole categories of
+    call are missing from it. A clean log and a complete log are different
+    properties and each needs its own arm.
+    """
+    with caplog.at_level("WARNING"):
+        service_client.post("/v1/cypher", json=_payload(), headers=_auth("wrong"))
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("auth rejected" in message for message in messages), (
+        "a rejected credential left no audit trail"
+    )
+    assert all("wrong" not in message for message in messages), (
+        "the rejected credential itself was written to the log"
+    )
 
 
 @requires_graph
