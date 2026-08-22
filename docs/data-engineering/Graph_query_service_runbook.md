@@ -34,7 +34,6 @@ The operational reason: before this service, every live test in this repository 
 
 | Part | Where | What it does |
 |------|-------|--------------|
-| Hetzner Cloud Firewall | Hetzner console, attached to `agentic-search-vps` | Allows inbound 22, 80 and 443. Everything else, including 5432, is filtered upstream of the operating system |
 | Caddy | `systemd` unit `caddy`, package from Ubuntu `universe` | Terminates TLS on the reverse-DNS hostname, obtains and renews the certificate, proxies to the service on localhost |
 | The service | `systemd` unit, a non-root user, bound to `127.0.0.1` | Auth, server-side revalidation, budgets, execution, audit logging |
 | AGE Postgres | `systemd` unit `postgresql`, bound to `127.0.0.1:5432` | The graph. Reached only from this machine, only as `kg_reader` |
@@ -47,7 +46,7 @@ Host: `46.225.128.133`, reverse-DNS name `static.133.128.225.46.clients.your-ser
 
 Run every step from the repository root on a machine with SSH access to the box.
 
-1. Open the ports. Inbound TCP 80 and 443 on the Hetzner Cloud Firewall attached to `agentic-search-vps`. Port 80 is needed for certificate issuance and renewal, not for traffic. Without this step everything below installs cleanly and is unreachable, which is a confusing failure, so do it first.
+1. Confirm nothing is filtering the ports. There is NO firewall on this box and none in the Hetzner project: `ufw` is inactive, `iptables`, `ip6tables` and `nftables` are all empty, and the Hetzner API reports zero firewalls. Ports 80 and 443 are reachable as soon as something listens on them. Verify by connecting to 80 once Caddy is up rather than by reading this sentence, since this is the one fact in this file that would be expensive to have wrong.
 2. Install Caddy from the distribution repository. Not from the vendor apt repository and never from a script piped to a shell, per `.claude/rules/supply-chain-security.md`.
 3. Create the service user. A non-login system user that owns nothing but the service directory and the credential file.
 4. Copy the service and its three vendored modules with the deploy script. Never hand-edit a file on the box; a hand-edit is invisible to this repository and survives until it causes an outage nobody can explain.
@@ -76,14 +75,14 @@ Four checks, in this order, because each one rules out the layer below it.
 
 The service logs every call at INFO through journald: what was queried, when, and which caller, identified by a short non-reversible digest rather than by the credential. Caddy logs the TLS layer separately, including certificate issuance and renewal.
 
-If a call is missing from the log, the request did not reach the service. That is a Caddy or firewall question, not a service question.
+If a call is missing from the log, the request did not reach the service. That is a Caddy question, not a service question.
 
 ## Diagnose an outage
 
 Work down this list. It is ordered so the cheapest check that can explain the symptom comes first.
 
 - A caller times out and SSH also fails: the box or the network is down. Nothing below applies.
-- A caller times out and SSH works: the firewall rule for 443 is gone, or Caddy is not running. Check the firewall first, because a rule can be removed from the console without touching the box.
+- A caller times out and SSH works: Caddy is not running, or is running and not listening on 443. Check `systemctl is-active caddy` and `ss -lnt` on the box. Do NOT go looking for a firewall rule: there is no firewall here, and an earlier version of this runbook sent readers hunting for one that never existed (finding F-4.11-J-04).
 - A caller gets a TLS error: the certificate failed to renew. Renewal needs inbound port 80. The most likely cause is that port 80 was closed after install as a tidy-up.
 - A caller gets 401: the credential in the caller's environment and the credential on the box disagree. Rotate deliberately rather than guessing, and remember Railway holds its own copy once build phase 4.12 has run.
 - A caller gets 502 with `graph_unavailable`: the service is up and Postgres is not, or `kg_reader` cannot authenticate. This is the one failure that is genuinely the graph's rather than the transport's.
@@ -108,5 +107,5 @@ To rotate: generate a new value on the box, update the service's credential file
 
 - Acquire a write credential. It uses `kg_reader`, which carries `default_transaction_read_only`, so a validator bug still cannot produce a write. This is enforcement at the connection level, not an instruction.
 - Accept Cypher that its own server-side validator rejected. The point of re-running the checks here is that a bug in the client-side validator must not be the only barrier between a request and the database.
-- Open the database port to the internet. It is filtered at the Hetzner firewall and bound to `127.0.0.1`, and both halves are deliberate.
+- Open the database port to the internet. It is bound to `127.0.0.1` and that binding is the WHOLE defense, not half of one. An earlier version of this file claimed a Hetzner firewall was the second half; there is no firewall, so nothing is holding that line except the binding. Treat it accordingly and never widen it.
 - Grow a second feature. It is a transport. Anything that looks like query planning, caching, or result shaping belongs in the tool layer where it can be tested against the rest of the product.
