@@ -71,7 +71,7 @@ The security scan's trigger is exposure and this phase opens a public HTTPS port
 
 ### T-4.11-01: Premise gate for the HTTPS graph query service
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: nothing
 Spec: Section 24; `docs/build/Build_workflow_cadence.md` stage 5
@@ -95,7 +95,7 @@ Acceptance criteria:
 
 ### T-4.11-02: The service application
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.11-01
 Spec: Section 24; `.claude/rules/tool-call-budgets.md`
@@ -119,7 +119,7 @@ Acceptance criteria:
 
 ### T-4.11-03: The client transport and the dispatch inside execute_cypher
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.11-01
 Spec: Section 24; Section 6.1
@@ -136,7 +136,7 @@ Acceptance criteria:
 
 ### T-4.11-04: Deployment to the Hetzner box, and the runbook
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.11-02
 Spec: Section 24
@@ -156,7 +156,7 @@ Acceptance criteria:
 
 ### T-4.11-05: Cutover, and preflight without a tunnel
 
-Status: todo
+Status: in-review
 Refine: refined
 Depends on: T-4.11-03, T-4.11-04
 Spec: Section 24's environment table
