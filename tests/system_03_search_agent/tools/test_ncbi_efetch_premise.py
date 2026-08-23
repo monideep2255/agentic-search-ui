@@ -798,31 +798,69 @@ async def test_11_pubchem_fault_is_error() -> None:
 # ===========================================================================
 
 
+# Cases 12 to 14 originally drove `core.graph.resolve_entity_curies`, the
+# public entry point over `_resolve_query_entities`'s regex-token guess
+# plus live confirmation. Build phase 4.7 (T-4.7-06, product-owner
+# decision 2026-08-23) retires that whole call chain outright: entity
+# resolution moves to `think_node`, driven by a Plan-tier model call
+# rather than a deterministic regex scan over the query text. RETIRED
+# WITH THIS COMMENT AS THE STATED REASON, per `tracker/phase_4.7.md`'s
+# T-4.7-06 acceptance criteria, rather than left asserting a mechanism
+# that no longer exists:
+#
+#   - Case 12 (F-2.1-07, "a gene the system was never told about
+#     resolves"): the property that matters, that `resolve_symbol_to_curie`
+#     is a genuine live Layer 2 lookup and not a hardcoded table, is
+#     retested below directly against THAT function, which is unchanged
+#     by this phase (Think's own confirmation step calls it the same way
+#     `_resolve_query_entities` used to). Its production-path form, "does
+#     a real question about TP53 reach and confirm the right CURIE", is
+#     now `test_cq_routing_premise.py`'s P2 arm (the flagship, run through
+#     the full loop with a real model), since which candidates are even
+#     ATTEMPTED is now the model's decision, not a regex scan this file
+#     can drive standalone.
+#   - Case 13 (F-2.1-B10, "an unresolvable symbol refuses rather than
+#     errors"): the live-confirmation half is retested below against
+#     `resolve_symbol_to_curie` directly. The end-to-end refusal wording
+#     property is `test_cq_routing_premise.py`'s P6 arm (a fabricated
+#     CURIE is never returned) and this file's own case 13
+#     replacement below (`resolve_symbol_to_curie` itself returns `None`).
+#   - Case 14 ("the real gene is attempted among ordinary words"): this
+#     property was entirely about the retired regex-token guess's OWN
+#     candidate-selection order (which all-caps tokens survived the
+#     stopword filter and in what order they consumed the live-lookup
+#     budget). That mechanism does not exist anymore: Think's Plan-tier
+#     model decides which spans are worth attempting, not a query-order
+#     regex scan. The equivalent live property, that a real gene is not
+#     lost among clinical acronyms competing for the model's attention, is
+#     `test_cq_routing_premise.py`'s P1 arm (GTR/AMR/SRA mentioned in
+#     passing must not be misread as the subject) run against a real
+#     model; no offline or single-function replacement exists here because
+#     there is no longer a standalone function whose candidate order this
+#     file could pin.
+
+
 @premise_gate
 @pytest.mark.asyncio
 async def test_12_a_gene_the_system_was_never_told_about_resolves() -> None:
-    """Case 12. F-2.1-07, through the production path.
-
-    Today `_KNOWN_GENE_SYMBOL_CURIES` holds exactly one entry, BRCA1, so this
-    fails. It must pass by REPLACING that table with a live lookup, not by
-    adding TP53 to it, which is why the BRCA1 assertion below is here: if
-    BRCA1 resolves and an arbitrary third gene does not, the table was widened
-    and the finding is still open.
-
-    Run through `core.run.run()` rather than by hand-feeding the resolver.
-    2.1's gate scored 8 of 9 hand-fed and 3 of 9 through production.
+    """Case 12, re-pointed at `resolve_symbol_to_curie` directly (build
+    phase 4.7). F-2.1-07's property: a gene the system was never told
+    about resolves via a genuine live Layer 2 lookup, not a hardcoded
+    table. TP53 resolving and BRCA1 still resolving together is what rules
+    out "the table was just widened to include TP53"; see the module-level
+    comment above this case for the full account of what moved where.
     """
-    from system_03_search_agent.core.graph import resolve_entity_curies
+    from system_03_search_agent.core.graph import resolve_symbol_to_curie
 
-    resolved = await resolve_entity_curies("What diseases are linked to TP53?")
-    assert TP53_CURIE in resolved, (
-        f"TP53 must resolve to {TP53_CURIE} via a live Layer 2 lookup. "
-        f"Got {resolved!r}. This is finding F-2.1-07 and it is the single "
+    resolved = await resolve_symbol_to_curie("TP53")
+    assert resolved == TP53_CURIE, (
+        f"TP53 must resolve to {TP53_CURIE} via a live Layer 2 lookup. Got "
+        f"{resolved!r}. This is finding F-2.1-07 and it is the single "
         f"thing standing between this repo and a demonstrable prototype."
     )
 
-    still_resolves = await resolve_entity_curies("Which diseases are linked to BRCA1?")
-    assert BRCA1_CURIE in still_resolves, (
+    still_resolves = await resolve_symbol_to_curie("BRCA1")
+    assert still_resolves == BRCA1_CURIE, (
         "BRCA1 must still resolve. If TP53 resolves only because it was added "
         "to a hardcoded table, this assertion passes while F-2.1-07 stays "
         "open, so read it together with the TP53 case above."
@@ -832,86 +870,20 @@ async def test_12_a_gene_the_system_was_never_told_about_resolves() -> None:
 @premise_gate
 @pytest.mark.asyncio
 async def test_13_an_unresolvable_symbol_refuses_rather_than_errors() -> None:
-    """Case 13. F-2.1-B10, which does NOT close when F-2.1-07 closes.
-
-    Perfect resolution still leaves unrecognizable inputs: typos, non-human
-    genes, disease names typed where a symbol was expected. Today those reach
-    the graph with an unbound parameter and surface as
-    "graph query failed: UndefinedParameter", after burning two model calls
-    and 21.7 seconds.
-
-    The adversary's own line is the acceptance criterion: "I could not
-    identify that gene" and "the graph query failed" are different messages,
-    and only one of them is true.
+    """Case 13, re-pointed at `resolve_symbol_to_curie` directly (build
+    phase 4.7). F-2.1-B10's property, which does NOT close when F-2.1-07
+    closes: perfect resolution still leaves unrecognizable inputs, typos,
+    non-human genes, disease names typed where a symbol was expected. This
+    asserts the primitive Think's own confirmation step depends on: a
+    symbol NCBI does not know resolves to `None`, never a fabricated
+    CURIE. See the module-level comment above case 12 for the full account
+    of what moved where.
     """
-    from system_03_search_agent.core.graph import resolve_entity_curies
+    from system_03_search_agent.core.graph import resolve_symbol_to_curie
 
-    resolved = await resolve_entity_curies(
-        f"What diseases are linked to {INVALID_GENE_SYMBOL.upper()}?"
-    )
-    assert resolved == [] or all(
-        INVALID_GENE_SYMBOL.upper() not in c for c in resolved
-    ), f"an unresolvable symbol must resolve to nothing, got {resolved!r}"
-
-
-@premise_gate
-@pytest.mark.asyncio
-async def test_14_the_real_gene_is_actually_attempted_among_ordinary_words() -> None:
-    """Case 14. Rewritten twice, and the second rewrite is the point.
-
-    Version 1 asserted `len(calls) <= 3` and stayed green while the behavior
-    was wrong, because a bounded budget says nothing about WHICH lookups the
-    budget was spent on. `return []` scores perfectly on that assertion and
-    resolves no gene at all. The adversary found what the bound could not:
-    "In ADHD, PTSD and OCD cohorts, is TP53 mutated?" never tried TP53, and
-    "Does chronic smoking increase EGFR mutation frequency?" never tried EGFR,
-    both inside a passing three-call ceiling.
-
-    Version 2 asserted exactly one lookup on a query whose only capitalized
-    token was already the gene, so it could not distinguish the fix from the
-    defect either: it never contained a competing candidate.
-
-    This version asserts the property the finding actually asked for: in a
-    question stuffed with ordinary English words AND with all-caps clinical
-    acronyms that compete for the same lookup budget, the real gene symbol is
-    ATTEMPTED and RESOLVES. The budget assertion stays, secondary, because a
-    bound alone was already proven to be the wrong primary check.
-
-    The three acronyms are deliberately placed BEFORE the gene in the
-    sentence, so a query-order scan with no shape heuristic spends all three
-    lookups before reaching TP53.
-    """
-    from system_03_search_agent.core import graph as graph_module
-
-    calls: list[str] = []
-    original = graph_module.resolve_symbol_to_curie
-
-    async def _counting(symbol: str, *args: Any, **kwargs: Any) -> Any:
-        calls.append(symbol)
-        return await original(symbol, *args, **kwargs)
-
-    graph_module.resolve_symbol_to_curie = _counting  # type: ignore[assignment]
-    try:
-        resolved = await graph_module.resolve_entity_curies(
-            "In ADHD, PTSD and OCD cohorts, is TP53 mutated?"
-        )
-    finally:
-        graph_module.resolve_symbol_to_curie = original  # type: ignore[assignment]
-
-    assert "TP53" in calls, (
-        f"the real gene symbol in the question was never even attempted; the "
-        f"lookups actually spent were {calls!r}. A bounded lookup count is not "
-        f"the property under test: a run that resolves nothing at all also "
-        f"satisfies the bound."
-    )
-    assert TP53_CURIE in resolved, (
-        f"TP53 was attempted but did not resolve to {TP53_CURIE}. Got "
-        f"{resolved!r} from a live Layer 2 lookup."
-    )
-    assert len(calls) <= graph_module._MAX_LIVE_SYMBOL_LOOKUPS, (
-        f"resolution fired {len(calls)} live lookups ({calls!r}), over the "
-        f"{graph_module._MAX_LIVE_SYMBOL_LOOKUPS}-call ceiling. Ordinary words "
-        f"must be filtered out BEFORE the network call, not after."
+    resolved = await resolve_symbol_to_curie(INVALID_GENE_SYMBOL.upper())
+    assert resolved is None, (
+        f"an unresolvable symbol must resolve to None, got {resolved!r}"
     )
 
 

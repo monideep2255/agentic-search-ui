@@ -260,11 +260,22 @@ class TestRunEmitsTheFullFiveNodeLoop:
 
     @pytest.mark.asyncio
     async def test_yields_a_think_event_and_it_is_schema_valid(self) -> None:
+        """Build phase 4.7 (T-4.7-04): `query_class` is a real classification
+        now, not a hardcoded `"lookup"` stub literal, so the assertion checks
+        membership in Section 17's five shapes rather than pinning the
+        retired stub's own fixed value.
+        """
         events = [event async for event in run(_valid_query(), _valid_context())]
         think_event = next(event for event in events if event.type == "think")
         payload_model = PAYLOAD_MODEL_BY_TYPE["think"]
         payload_model.model_validate(think_event.payload)
-        assert think_event.payload["query_class"] == "lookup"
+        assert think_event.payload["query_class"] in (
+            "lookup",
+            "single_hop",
+            "multi_hop",
+            "aggregate",
+            "exploratory",
+        )
 
     @pytest.mark.asyncio
     async def test_yields_a_plan_event_and_it_is_schema_valid(self) -> None:
@@ -498,9 +509,17 @@ class TestRunStreamingIsGenuinelyIncremental:
         # the run never reaches `think`. The guard branch below is what keeps
         # this test measuring streaming rather than accidentally measuring
         # the guardrail's error path.
+        #
+        # Build phase 4.7 (T-4.7-04): `think_node`'s own call is a real
+        # classification too, now the SECOND call in sequence (still the
+        # second chronologically, only the tier that answers it changed from
+        # guard to plan), so it needs the same treatment or the run never
+        # reaches `plan` either.
+        from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
         from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
         from tests.system_03_search_agent.model_stub import (
             COMPLIANT_GUARD_CLASSIFICATION,
+            compliant_think_classification,
         )
 
         delay_s = 0.25
@@ -516,6 +535,8 @@ class TestRunStreamingIsGenuinelyIncremental:
             )
             if GUARD_SYSTEM_INSTRUCTION in joined:
                 return _fake_response(COMPLIANT_GUARD_CLASSIFICATION)
+            if _THINK_SYSTEM_INSTRUCTION in joined:
+                return _fake_response(compliant_think_classification(messages))  # type: ignore[arg-type]
             if call_count == 3:  # the plan node's call_tier call
                 await asyncio.sleep(delay_s)
             return _fake_response()
