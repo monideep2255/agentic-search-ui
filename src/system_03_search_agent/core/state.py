@@ -4,7 +4,7 @@ Spec: Technical_specification.md Section 3.2 (429-448); tracker/phase_2.0.md
 T-2.0-07.
 
 Depends on:
-    - system_03_search_agent.contracts.events (Event)
+    - system_03_search_agent.contracts.events (Event, ResolvedEntity)
     - system_03_search_agent.contracts.query (Query, RequestContext)
     - system_03_search_agent.harness.harness (Harness, QueryClass)
 
@@ -41,10 +41,26 @@ Field lifecycle:
         query_class: set by `think`, read by `plan`/`act`/`write` (via
             `harness.harness.budget_for_query_class`) to resolve every
             later node's per-step timeout budget from Think's emitted
-            classification (T-2.0-04's mapping), per the ticket's
-            explicit instruction that Think's stub `query_class` output
-            still drives real budget resolution downstream even though
-            the classification itself is not real yet.
+            classification (T-2.0-04's mapping). Through build phase 4.6
+            this was always the stub literal `"lookup"`; build phase 4.7
+            (T-4.7-04) makes it a real classification of the question,
+            produced by a Plan-tier model call, so the same downstream
+            budget resolution now selects on something true.
+        resolved_entities: set by `think` (T-4.7-05, build phase 4.7),
+            the real, live-confirmed or exact-ID-resolved entities Think's
+            own `_EntityResolution` produced: Section 17's deterministic
+            exact-ID pre-pass (`core.graph.resolve_exact_identifiers`)
+            plus a Plan-tier typed-extraction call for whatever text the
+            pre-pass left unresolved. A list of `contracts.events.
+            ResolvedEntity` (the locked `{text, curie, confidence}`
+            shape), never a fabricated CURIE for a span a live lookup
+            could not confirm. `plan` reads this (T-4.7-06) for
+            `CypherQueryInput.target_entities`, replacing the deterministic
+            regex-token guess that used to compute it independently inside
+            `plan_node` itself. Unset or empty means Think resolved
+            nothing this turn, which is not necessarily a problem: session
+            memory may still supply an antecedent (`plan_node`'s
+            `_antecedent_curie`).
         tool_calls: set by `plan` (empty in this stub, since no tool
             exists until phase 2.1+).
         findings_count: set by `act`, the length of the `Finding` list
@@ -93,20 +109,21 @@ Field lifecycle:
             eligible and was judged. Collapsing them would make the
             audit trail unable to tell a rate-limited user from a
             rejected query.
-        unresolved_entity_symbols: set by `plan` only (T-3.1-13,
-            F-2.1-B10), when the query text carries at least one
-            gene-symbol-shaped candidate that was looked up live against
-            NCBI (`core.graph.resolve_symbol_to_curie`) and resolved to
-            nothing, and no other entity rescues the query. `write` reads
-            this BEFORE its own synth call, the same early-exit shape
-            `step_error` and `cap_exceeded` already use, and ships a
-            refusal naming the unresolved symbol rather than letting an
-            unbound Cypher parameter reach the graph and fail there as an
-            opaque `UndefinedParameter`. Unset or empty means every
-            candidate either resolved or none was found at all, which is
-            not the same thing: "no gene mentioned" answers normally,
-            "a gene-shaped token was mentioned and NCBI does not know it"
-            refuses.
+        unresolved_entity_symbols: set by `think` as of build phase 4.7
+            (T-3.1-13/F-2.1-B10; previously set by `plan`, before entity
+            resolution moved to `think` in T-4.7-05), when the query text
+            carries at least one gene-shaped span that was looked up live
+            against NCBI (`core.graph.resolve_symbol_to_curie`) and
+            resolved to nothing, and no other entity rescues the query.
+            `write` reads this BEFORE its own synth call, the same
+            early-exit shape `step_error` and `cap_exceeded` already use,
+            and ships a refusal naming the unresolved symbol rather than
+            letting an unbound Cypher parameter reach the graph and fail
+            there as an opaque `UndefinedParameter`. Unset or empty means
+            every candidate either resolved or none was found at all,
+            which is not the same thing: "no gene mentioned" answers
+            normally, "a gene-shaped token was mentioned and NCBI does not
+            know it" refuses.
         layer2_raw_outputs: set by `act` (T-3.4-05/T-3.1-28), the real,
             typed Layer 2 tool output (currently only ever `NcbiEfetchOutput`,
             this phase's one wired Layer 2 tool) behind each dispatched
@@ -134,7 +151,7 @@ from __future__ import annotations
 from operator import add
 from typing import Annotated, Any, TypedDict
 
-from system_03_search_agent.contracts.events import Event
+from system_03_search_agent.contracts.events import Event, ResolvedEntity
 from system_03_search_agent.contracts.query import Query, RequestContext
 from system_03_search_agent.harness.harness import Harness, QueryClass
 
@@ -153,6 +170,7 @@ class GraphState(TypedDict, total=False):
     events: Annotated[list[Event], add]
     start_monotonic: float
     query_class: QueryClass
+    resolved_entities: list[ResolvedEntity]
     tool_calls: list[Any]
     findings_count: int
     findings: list[Any]

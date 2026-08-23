@@ -361,9 +361,21 @@ _QUERY_CLASS_BUDGET_S: dict[QueryClass, float] = {
 # `act` is deliberately absent: it is not a single tier's call, it runs the
 # tool plus a Guard-tier reader pass, and its budget comes from the query
 # class instead. See `budget_for_step`.
+#
+# `think` maps to `"guard"` through build phase 2.0's stub, which made a
+# Guard-tier call whose response it discarded. Build phase 4.7 (T-4.7-04)
+# gives `think_node` a real classification and entity-extraction call, and
+# Section 17 is explicit that this call runs "via the Plan-tier model, on
+# every query", not the Guard tier: `think` moved here so this step's own
+# per-step timeout budget (below, `_TIER_STEP_BUDGET_S`) tracks the tier
+# that actually answers it, the same principle this table's own docstring
+# already states for why the budget is keyed on tier rather than on query
+# class. Left mapped to `"guard"` here, the plan-tier call (documented at
+# roughly 15 to 45 seconds in the measurements above) would race a 15
+# second guard-tier budget on every query.
 _STEP_TIER: dict[str, Tier] = {
     "guardrail": "guard",
-    "think": "guard",
+    "think": "plan",
     "plan": "plan",
     "write": "synth",
 }
