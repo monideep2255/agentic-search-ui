@@ -24,28 +24,48 @@ Depends on:
     - system_03_search_agent.tools.pathogen_detection_schemas
       (PathogenDetectionInput, for `REGISTERED_TOOL_SCHEMAS`'s
       pathogen_detection entry; T-3.5-07)
+    - system_03_search_agent.orchestrator.few_shot_pool (`load_pool`, for
+      the few-shot block appended to the end of the stable prefix;
+      T-4.7-07). This module does not import `core.graph`; `core.graph`'s
+      existing module-level call site (`_STABLE_PREFIX =
+      build_stable_prefix(list(REGISTERED_TOOL_SCHEMAS))`) is unchanged by
+      this ticket, so the few-shot block reaches it without that call site
+      needing to change at all.
 
 Reads:
-    - Nothing at runtime. `SYSTEM_INSTRUCTIONS` and `_BIOLINK_CONCEPT_SCHEMA`
-      are static string constants fixed in code, per prompt-cache-
-      discipline.md obligation 3 (no live per-request source for anything
-      that belongs in the stable prefix). `REGISTERED_TOOL_SCHEMAS` is
-      likewise built once at import time from the two imported models'
-      own `model_json_schema()`, never re-derived per call.
+    - `orchestrator/few_shot_examples.json`, indirectly, through
+      `few_shot_pool.load_pool()`, at most once per process
+      (prompt-cache-discipline.md obligation 3). `SYSTEM_INSTRUCTIONS` and
+      `_BIOLINK_CONCEPT_SCHEMA` remain static string constants fixed in
+      code; `REGISTERED_TOOL_SCHEMAS` remains built once at import time
+      from the imported models' own `model_json_schema()`. The few-shot
+      pool is the one section of this module's output that is sourced from
+      a file rather than a code constant, and `few_shot_pool`'s own
+      process-level cache is what keeps that read to at most one per
+      process, matching every other section's "fixed for the life of the
+      process" guarantee.
 
 Writes:
     - Nothing. Pure string assembly, no side effects.
 
 Ticket and scope boundary (Technical_specification.md Section 4.2 lines
-569-590, Section 4.5 lines 624-626; tracker/phase_2.0.md T-2.0-06;
-.claude/rules/prompt-cache-discipline.md): this module builds the stable
-prefix shared by the main agent's Think, Plan, and Write calls in a fixed
-order: system instructions, the tool-schema slot, then the static graph
-and BioLink concept-level schema. It never builds or accepts the dynamic
-suffix (current query, resolved entities, session-memory tail, structured
-plan); that is why `build_stable_prefix` takes no suffix-shaped parameter
-at all. Callers append the dynamic suffix separately, after this prefix,
-in the `messages` list passed to `Harness.call_tier`.
+569-590, Section 4.5 lines 624-626, Section 17 "sits inside the stable,
+cache-hot prefix"; tracker/phase_2.0.md T-2.0-06; tracker/phase_4.7.md
+T-4.7-07; .claude/rules/prompt-cache-discipline.md): this module builds
+the stable prefix shared by the main agent's Think, Plan, and Write calls
+in a fixed order: system instructions, the tool-schema slot, the static
+graph and BioLink concept-level schema, then the few-shot pool. The
+few-shot block is appended last, after the three sections Section 4.2
+names, rather than interleaved among them: Section 4.2 fixes the order of
+those three sections exactly ("never reordered at runtime... a reorder
+busts the cache exactly like a schema edit"), so this ticket's only safe
+placement for a new section is at the end of what Section 4.2 already
+specifies, immediately before the dynamic suffix the caller appends
+separately. This module never builds or accepts the dynamic suffix
+(current query, resolved entities, session-memory tail, structured plan);
+that is why `build_stable_prefix` takes no suffix-shaped parameter at all.
+Callers append the dynamic suffix separately, after this prefix, in the
+`messages` list passed to `Harness.call_tier`.
 
 Concept-schema reconciliation note: Technical_specification.md Section 4.2
 names "the 10 concept labels and 14 edge predicates". The live, verified
@@ -87,6 +107,7 @@ import json
 from collections.abc import Mapping, Sequence
 from typing import Any, Final
 
+from system_03_search_agent.orchestrator import few_shot_pool
 from system_03_search_agent.tools.clinicaltrials_search_schemas import (
     ClinicalTrialsSearchInput,
 )
@@ -462,8 +483,61 @@ _BIOLINK_CONCEPT_SCHEMA = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Section 4: the few-shot routing pool (T-4.7-07, Section 17).
+#
+# Section 17: "the few-shot block sits inside the stable, cache-hot prefix
+# (system instructions, tool schemas, the sliced graph schema)... At this
+# size, roughly seven to nine examples, Think and Plan inject the whole
+# pool into the stable prefix on every call." Appended as this module's
+# fourth section, after the three Section 4.2 already fixes the order of,
+# so this ticket adds a slot rather than reordering existing ones.
+#
+# Sourced from `few_shot_pool.load_pool()`, which reads
+# `orchestrator/few_shot_examples.json` at most once per process
+# (prompt-cache-discipline.md obligation 3) and holds the result in its own
+# module-level cache. Calling `load_pool()` on every `build_stable_prefix()`
+# call is therefore a cache hit after the first, never a second file read:
+# `test_p9_the_pool_is_read_from_disk_once_per_process` asserts that
+# directly against `few_shot_pool`, and `test_p10_the_few_shot_block_does_
+# not_move_the_stable_prefix` asserts the consequence here, that two
+# `build_stable_prefix()` calls in the same process produce byte-identical
+# output.
+# ---------------------------------------------------------------------------
+
+_FEW_SHOT_POOL_START = "===FEW_SHOT_POOL_START==="
+_FEW_SHOT_POOL_END = "===FEW_SHOT_POOL_END==="
+
+
+def _build_few_shot_section() -> str:
+    """Render the few-shot pool between two fixed boundary markers.
+
+    Each example is `model_dump()`'d and serialized with
+    `json.dumps(..., sort_keys=True)`, one line per example, in the pool's
+    own file order (itself fixed for the life of the process, since
+    `few_shot_pool.load_pool()` reads the file at most once). Deterministic
+    output for a given cached pool is what makes the byte-equality
+    assertion in `test_p10...` meaningful rather than accidental.
+
+    An empty pool (the pre-build-phase-4.7 unwired state, or a future
+    process that genuinely has none) renders the two boundary markers with
+    nothing between them, the same empty-slot shape
+    `_build_tool_schema_section` uses for no tool schemas, so a caller
+    inspecting the assembled prefix sees a consistent pattern for "this
+    section exists but is empty" across every section of this module.
+    """
+    pool = few_shot_pool.load_pool()
+    if not pool:
+        return f"{_FEW_SHOT_POOL_START}\n{_FEW_SHOT_POOL_END}"
+
+    serialized = "\n".join(
+        json.dumps(example.model_dump(), sort_keys=True) for example in pool
+    )
+    return f"{_FEW_SHOT_POOL_START}\n{serialized}\n{_FEW_SHOT_POOL_END}"
+
+
 def build_stable_prefix(tool_schemas: list[dict] | None = None) -> str:
-    """Assemble the prompt-cache stable prefix in its fixed, three-slot order.
+    """Assemble the prompt-cache stable prefix in its fixed, four-slot order.
 
     Order, never reordered at runtime (prompt-cache-discipline.md):
         1. `SYSTEM_INSTRUCTIONS`.
@@ -472,6 +546,10 @@ def build_stable_prefix(tool_schemas: list[dict] | None = None) -> str:
            `tool_schemas` is supplied in a later phase.
         3. `_BIOLINK_CONCEPT_SCHEMA`, the static, concept-level graph
            schema.
+        4. The few-shot pool slot (`_build_few_shot_section`, T-4.7-07):
+           Section 17's seeded routing examples, appended last, still
+           entirely inside the stable prefix and still ahead of anything
+           per-query.
 
     Deliberately excludes the dynamic suffix: this function accepts no
     parameter for the current query, resolved entities, session-memory
@@ -482,8 +560,10 @@ def build_stable_prefix(tool_schemas: list[dict] | None = None) -> str:
     `Harness.call_tier`, after this prefix.
 
     No timestamp, request id, `trace_id`, or session id appears anywhere
-    in the assembled output: every section here is a static constant or a
-    deterministic function of `tool_schemas` alone.
+    in the assembled output: every section here is a static constant, a
+    deterministic function of `tool_schemas` alone, or (the few-shot
+    section) a deterministic function of the process-cached pool, which is
+    itself fixed for the life of the process.
 
     Args:
         tool_schemas: Tool schema dicts, each expected to carry at least
@@ -494,12 +574,16 @@ def build_stable_prefix(tool_schemas: list[dict] | None = None) -> str:
 
     Returns:
         The assembled stable prefix as one string, byte-identical across
-        calls for the same `tool_schemas` input, regardless of any
-        surrounding request-specific state (trace id, timestamp, session
-        id) in scope at the call site.
+        calls for the same `tool_schemas` input and the same cached pool,
+        regardless of any surrounding request-specific state (trace id,
+        timestamp, session id) in scope at the call site.
     """
     tool_schema_section = _build_tool_schema_section(tool_schemas)
-    return f"{SYSTEM_INSTRUCTIONS}\n\n{tool_schema_section}\n\n{_BIOLINK_CONCEPT_SCHEMA}"
+    few_shot_section = _build_few_shot_section()
+    return (
+        f"{SYSTEM_INSTRUCTIONS}\n\n{tool_schema_section}\n\n"
+        f"{_BIOLINK_CONCEPT_SCHEMA}\n\n{few_shot_section}"
+    )
 
 
 def prefix_sha256(prefix: str) -> str:

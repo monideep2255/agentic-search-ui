@@ -1,5 +1,125 @@
 {
   "schema_version": 1,
-  "_scope_note": "Written by build phase 4.6's promotion path (T-4.6-11). Nothing in this repository reads this file yet: build phase 4.7 owns wiring the orchestrator to load it once at process start, per .claude/rules/prompt-cache-discipline.md. An empty examples array, or one growing slower than promotions run, is expected until then, not a defect.",
-  "examples": []
+  "_scope_note": "Seeded by build phase 4.7 (T-4.7-01) with the seven v1 must-pass moat questions (Q1, Q3, Q4, Q5, Q6, Q8, Q10 from requirements/Evaluation_playbook.md), one entry per question, each in the exact `few_shot_example` shape Technical_specification.md Section 17 fixes. Every `query_pattern` below is a generalized template ('{gene}' rather than one user's literal sentence), the same privacy discipline Section 16 requires of a promoted example. `orchestrator/few_shot_pool.py` (also build phase 4.7) is the loader that reads this file exactly once per process and holds it in memory, per .claude/rules/prompt-cache-discipline.md obligation 3. A promoted example appended later by build phase 4.6's promotion path (feedback/promotion.py) carries an additional `cq_candidate_id` bookkeeping field the loader strips before schema validation; the seven seed entries below carry no such field, since they were hand-authored rather than promoted from a candidate row.",
+  "examples": [
+    {
+      "query_pattern": "What is the published evidence for a copy number variant at {coordinate_range} on {genome_build}?",
+      "query_class": "multi_hop",
+      "resolved_entities": [
+        {
+          "surface_form": "chr17:41,196,312-41,277,500 (GRCh37)",
+          "curie": "GRCH37:17:41196312-41277500",
+          "entity_type": "genomic_region"
+        }
+      ],
+      "route": {
+        "layers": ["layer1", "layer2"],
+        "tools": ["cypher_query", "ncbi_efetch"]
+      },
+      "narrative_pattern": "graph-ingested structural-variant and ClinVar records at the coordinate range, corrected against a live dbVar and ClinVar coordinate-overlap check, linked OMIM conditions",
+      "citation_pattern": ["dbVar", "ClinVar", "OMIM"]
+    },
+    {
+      "query_pattern": "Which diseases are associated with {gene}?",
+      "query_class": "multi_hop",
+      "resolved_entities": [
+        {
+          "surface_form": "BRCA1",
+          "curie": "NCBIGene:672",
+          "entity_type": "gene"
+        }
+      ],
+      "route": {
+        "layers": ["layer1", "layer2"],
+        "tools": ["cypher_query", "ncbi_efetch"]
+      },
+      "narrative_pattern": "gene record, graph-traversed disease associations, Layer 2 correction on suspect fields, linked conditions",
+      "citation_pattern": ["Gene", "ClinVar", "MedGen"]
+    },
+    {
+      "query_pattern": "Which genes are on the diagnostic testing panel for {disease}, and what is the citation for each?",
+      "query_class": "exploratory",
+      "resolved_entities": [
+        {
+          "surface_form": "Lynch syndrome",
+          "curie": "MedGen:C1333991",
+          "entity_type": "disease"
+        }
+      ],
+      "route": {
+        "layers": ["layer2", "layer3"],
+        "tools": ["ncbi_efetch", "pubtator_annotate"]
+      },
+      "narrative_pattern": "disease phrase normalized to a MedGen concept via literature annotation, its Genetic Testing Registry panel genes, each cited to its own GTR test record",
+      "citation_pattern": ["MedGen", "GTR"]
+    },
+    {
+      "query_pattern": "For {organism} isolate {biosample_accession}, what SNP cluster is it in, what antimicrobial resistance genes does it carry, and which isolates are within {snp_distance} SNPs of it?",
+      "query_class": "multi_hop",
+      "resolved_entities": [
+        {
+          "surface_form": "PDT000123456",
+          "curie": "BioSample:PDT000123456",
+          "entity_type": "biosample"
+        }
+      ],
+      "route": {
+        "layers": ["layer2"],
+        "tools": ["pathogen_detection"]
+      },
+      "narrative_pattern": "isolate metadata and SNP cluster membership, its AMR genotype, nearby isolates within the given SNP-distance threshold",
+      "citation_pattern": ["PathogenDetection"]
+    },
+    {
+      "query_pattern": "Find sequencing runs from {sample_source} samples of {population} with {condition}, and explain why each one matched.",
+      "query_class": "aggregate",
+      "resolved_entities": [
+        {
+          "surface_form": "inflammatory bowel disease",
+          "curie": "MedGen:C0021390",
+          "entity_type": "disease"
+        }
+      ],
+      "route": {
+        "layers": ["layer2"],
+        "tools": ["ncbi_efetch"]
+      },
+      "narrative_pattern": "SRA runs matching the sample-metadata search terms, with the matched attribute named for each result",
+      "citation_pattern": ["SRA"]
+    },
+    {
+      "query_pattern": "For PMID {pmid}, what sequencing data, BioProjects, and assemblies are linked to it, and which links are direct rather than inferred?",
+      "query_class": "single_hop",
+      "resolved_entities": [
+        {
+          "surface_form": "PMID 21376230",
+          "curie": "PMID:21376230",
+          "entity_type": "publication"
+        }
+      ],
+      "route": {
+        "layers": ["layer2"],
+        "tools": ["ncbi_efetch"]
+      },
+      "narrative_pattern": "cross-database ELink chase from the publication to its linked SRA runs, BioProjects, and assemblies, direct links distinguished from inferred ones",
+      "citation_pattern": ["PubMed", "SRA", "BioProject", "Assembly"]
+    },
+    {
+      "query_pattern": "What BioSamples, SRA runs, and genome assemblies belong to BioProject {bioproject_accession}, and how would I retrieve them?",
+      "query_class": "single_hop",
+      "resolved_entities": [
+        {
+          "surface_form": "PRJNA31257",
+          "curie": "BioProject:PRJNA31257",
+          "entity_type": "bioproject"
+        }
+      ],
+      "route": {
+        "layers": ["layer2"],
+        "tools": ["ncbi_efetch"]
+      },
+      "narrative_pattern": "cross-database ELink chase from the BioProject to its BioSamples, SRA runs, and assemblies, with retrieval guidance for each",
+      "citation_pattern": ["BioProject", "BioSample", "SRA", "Assembly"]
+    }
+  ]
 }
