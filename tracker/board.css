@@ -548,3 +548,22 @@
     content: "\2611";
     color: var(--done);
   }
+
+  /* Flags table: a ledger that keeps closed findings in place, so the two
+     dispositions have to be tellable apart at a glance. Added 2026-08-23
+     after the product owner read the summary count as a backlog. */
+  .note {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 76ch;
+    margin: -4px 0 14px;
+  }
+
+  /* Long prose now lives in this column (a closure reads "CLOSED <date> by
+     <phase>, which ..."), so the nowrap that suited a short phase name would
+     force the table many screens wide. */
+  td.when { white-space: normal; }
+
+  tr[data-closed] { opacity: 0.62; }
+  tr[data-closed] td.when { color: var(--done); }
