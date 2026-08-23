@@ -214,20 +214,39 @@ Q1_COORDINATE_ANCHORED = (
 
 Q3_FLAGSHIP = "Which diseases are associated with BRCA1?"
 
+# Q4, Q5 and Q6 NAME THE DATABASE, and that is the whole point of these three
+# strings. `test_guardrail_premise.py` carries variants that do not, because
+# that file grades whether a question is ADMITTED and the database name is
+# irrelevant to it. Here it is the thing under test.
+#
+# These were WRONG in this file's first version and the account is kept rather
+# than the strings quietly swapped. All three were copied from the guardrail
+# gate, so Q4 asserted `GTR` was not resolved from a question containing no
+# `GTR`, Q5 asserted `AMR` against "antimicrobial resistance" spelled out, and
+# Q6 asserted `SRA` against "sequencing runs". Three of the four cases could
+# not fail. That is build phase 4.11's result reproduced exactly: three
+# vacuous arms, written by the lead, in a file whose own docstring quotes the
+# lesson against writing them. Caught by a builder reading the file, and by
+# the populate-check now in the arm, which is what makes it mechanical rather
+# than a matter of someone noticing.
+#
+# The phrasings below are faithful to the playbook's own short forms, which
+# name these databases: Q4 "(MedGen, ClinVar, GTR, PubMed, ClinicalTrials,
+# Gene)", Q5 "AMR genes", Q6 "Natural-language SRA metadata search".
+
 Q4_DISEASE_PHRASE = (
-    "Which genes are on the diagnostic testing panel for Lynch syndrome, and "
-    "what is the citation for each?"
+    "Which genes are on the diagnostic testing panel for Lynch syndrome in "
+    "GTR, and what is the citation for each?"
 )
 
 Q5_ORGANISM_ANCHORED = (
     "For Salmonella isolate PDT000123456, what SNP cluster is it in, what "
-    "antimicrobial resistance genes does it carry, and which isolates are "
-    "within 5 SNPs of it?"
+    "AMR genes does it carry, and which isolates are within 5 SNPs of it?"
 )
 
 Q6_METADATA_SEARCH = (
-    "Find sequencing runs from stool samples of adults with inflammatory "
-    "bowel disease, and explain why each one matched."
+    "Find SRA runs from stool samples of adults with inflammatory bowel "
+    "disease, and explain why each one matched."
 )
 
 Q8_PMID_LINKED = (
@@ -396,6 +415,25 @@ async def test_p1_a_database_name_in_passing_is_not_the_subject(
     that refuses nothing but still resolves `SRA` as a gene has not fixed
     anything, so the arm asserts on the specific token by name.
     """
+    # POPULATE-CHECK, and it is the one that matters most in this file.
+    #
+    # This arm asserts a token is NOT resolved. An arm of that shape passes
+    # trivially when the token is not in the question to begin with, and
+    # nothing about the assertion looks wrong when you read it. Three of this
+    # arm's four cases shipped exactly that way in this file's first version.
+    #
+    # Build phase 4.11 wrote three vacuous arms and all three were caught by
+    # mutation and none by reading. This check is the generalisation: a
+    # negative assertion must first prove the thing it denies was actually
+    # available to be found. It is cheap, it is mechanical, and it turns "did
+    # anyone notice" into "the arm cannot be written wrong".
+    assert passing_mention in question, (
+        f"{label}: this arm asserts `{passing_mention}` is not resolved, but "
+        f"`{passing_mention}` does not appear in the question at all, so the "
+        "assertion below cannot fail and the arm proves nothing. Fix the "
+        "question or fix the token; do not delete this check"
+    )
+
     events = await _run_raw(question)
     payload = _think_payload(events)
 

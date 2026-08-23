@@ -63,10 +63,53 @@ Each has a named ancestor in this repository.
 | T-4.7-09 | The premise gate | todo | `tests/system_03_search_agent/core/test_cq_routing_premise.py` (new) | End to end over the real loop, live, `RUN_PREMISE_GATE=1`. One arm per must-pass question asserting the routed class and the resolved subject, driven by the raw natural-language question a user types, never by a pre-resolved CURIE. Arms for the four questions that refuse today (Q4, Q5, Q6, Q10) asserting the database name mentioned in passing is NOT taken as the subject. Every arm carries a populate-check. Every arm mutation-proven, with the mutation and the observed red recorded in this file. The file states its own coverage, including the exclusions above |
 | T-4.7-10 | Docs, decisions and learnings | todo | `CLAUDE.md`, `README.md`, `DECISIONS.md`, `LEARNINGS.md`, `requirements/Plan.md`, `tracker/BOARD.md` | `python tracker/check_doc_drift.py --check` passes. F-2.0-15, F-3.1-41, F-3.1-42 and F-4.6-A-08 are closed on the board with a reason. The ask-back exclusion is raised to the product owner rather than closed |
 
+## The gate, watched failing before any builder ran
+
+Recorded here rather than asserted in a commit message, because "the gate was watched failing" is the claim this repository has most often made and least often evidenced.
+
+Offline, no environment variable set:
+
+```
+6 failed, 10 skipped in 2.28s
+```
+
+Live, `RUN_PREMISE_GATE=1`, arms P2 and P3, which is the real path:
+
+```
+AssertionError: the flagship question names BRCA1 explicitly and resolved nothing
+ +  where [] = _resolved({'narrative': 'stub: real query classification lands
+    in a later phase', 'query_class': 'lookup', 'resolved_entities': [],
+    'clarifying_question': None})
+
+AssertionError: a multi-database evidence-assembly question over a coordinate
+range classified as `lookup` ... assert 'lookup' != 'lookup'
+
+2 failed, 14 deselected in 63.56s
+```
+
+The gate reproduces F-2.0-15 by quoting the stub's own literal back, rather than describing it. That is the property that makes it a verify surface for THIS phase instead of a component test.
+
+### What gate-first caught, in the lead's own arms, before a builder was dispatched
+
+Two wrong premises, both the lead's, both found on the first live run. This is build phase 4.11's round-4 result reproduced: that round was ordered gate-first by the product owner and, in one round, caught the real defect, caught two wrong premises in the lead's own arms, and showed two of three findings it set out to fix were gate gaps over already-correct code.
+
+- `premise_gate` was written as a bare `pytest.mark.premise_gate`, which marks nothing and skips nothing. Every live arm therefore RAN with no model configured and the run hung until it was killed. The convention this repository already uses is a `skipif` on the environment. Had the offline run alone been trusted, ten arms would have been carried as "skipped, will run live later" while being incapable of skipping.
+- Six arms read `Event.payload` as an object. `contracts/events.py` line 348 declares it `dict[str, Any]`. Every one failed with `'dict' object has no attribute 'query_class'`, which is a failure that LOOKS like a routing defect and is not. Fixed by routing every read through `_class_of` and `_resolved`, both of which assert the key exists rather than defaulting, so a missing key can never compare unequal to every shape and pass an arm for the wrong reason.
+
+A third thing was found rather than committed, and it is carried as an observation for the judge: every premise gate written before build phase 4.11 gates its live arms on a raw socket probe of `GRAPH_PG_HOST`/`GRAPH_PG_PORT`, which was the SSH tunnel's local port. That tunnel no longer exists. Those probes now report the graph unreachable on a machine where it is perfectly reachable over `GRAPH_QUERY_URL`, so those arms skip while printing a skip reason that is false. This file deliberately does not use that probe and says so at the marker's definition. Not fixed here, since it touches seven other phases' gate files.
+
 ## Findings
 
-None yet. This phase has not been reviewed.
+| ID | Round | Severity | Finding | Status | Notes |
+|----|-------|----------|---------|--------|-------|
+| F-4.7-01 | 0 | major | THREE of the premise gate's four P1 cases were VACUOUS. The arm asserts a token is not resolved, and in three of four cases that token did not appear in the question at all, so the assertion could not fail. Q4 asserted `GTR` against a question with no `GTR`; Q5 asserted `AMR` against "antimicrobial resistance" spelled out; Q6 asserted `SRA` against "sequencing runs". Only Q10 was sound | closed | Written by the LEAD, in the file whose own docstring quotes build phase 4.11's lesson against vacuous arms, which is the third time this repository has recorded that knowing a failure mode by name does not prevent committing it. Cause: the three strings were copied from `test_guardrail_premise.py`, where the database name is irrelevant because that file grades admission, not resolution. Found by a BUILDER reading the gate it was handed, not by the lead and not by a review round. Closed two ways: the strings now name the database, faithfully to the playbook's own short forms, AND the arm carries a populate-check asserting the token is present in the question before asserting it is not resolved. The second half is the durable fix, because it makes the defect mechanical rather than a matter of someone noticing |
+| F-4.7-02 | 0 | minor | Section 17 names FIVE exact-identifier sources and the phase built four. The fifth is "a gene symbol against a small in-memory symbol table" | open, spec-vs-reality gap for the next reconciliation | Flagged by the builder rather than decided unilaterally, which is the correct call. Not built, and the reasoning is recorded here rather than left implicit: build phase 3.1 already REPLACED a hardcoded symbol table (`_KNOWN_GENE_SYMBOL_CURIES`, one entry) with live resolution through `resolve_symbol_to_curie`, deliberately, and the 2026-08-23 product-owner decision retires hand-maintained token lists in this path rather than adding one. Building the table now would re-introduce the shape both of those removed. This is a locked-spec deviation and is recorded as one, following the precedent of the three gaps build phase 3.2 carried to Step 6.2. NEEDS PRODUCT-OWNER CONFIRMATION, since the spec is locked and the lead does not get to overrule it silently |
+| F-4.7-04 | 0 | minor | `test_persona.py::test_the_mint_name_is_the_one_that_sessions_first_answer_will_carry` fails roughly 1 run in 32. PRE-EXISTING, from build phase 4.5, and not caused by this phase | open, needs a product-owner call on who fixes it | Seen once in three full-suite runs during this phase and NOT waved away as noise, because this repository has twice recorded a real defect being dismissed as environmental. The arm's own POPULATE-CHECK is the flaky line: it asserts `persona_for_session("guest-session-1") != persona_for_session(str(uuid.uuid4()))`, and `persona_for_session` maps onto the 32 curated scientists, so a random uuid collides with the fixed one about 3 percent of the time. MEASURED rather than reasoned: 628 collisions in 20000 random uuids, a rate of 0.0314 against 1/32 = 0.0312. The irony is the instructive part, and it generalises past this test: the check exists precisely to stop the arm being vacuous, and it was written with a random value against a 32-element codomain, so the anti-vacuity device is itself the flake. A populate-check must be deterministic or it trades one failure mode for another. Deliberately NOT fixed inside this phase: it is another phase's test file, and this repository's own measurement is that the worst defect in a round is usually found inside an unrelated fix made in that round. The fix is small (pick a second session id whose persona provably differs, rather than a random one) and is offered to the product owner rather than taken |
+| F-4.7-03 | 0 | minor | Every premise gate written before build phase 4.11 gates its live arms on a raw socket probe of `GRAPH_PG_HOST`/`GRAPH_PG_PORT`, the deleted SSH tunnel's local port. Those probes now report the graph unreachable on a machine where it answers fine over `GRAPH_QUERY_URL`, so arms skip while printing a skip reason that is false | open, owner: build phase 4.12 | Found while writing this phase's own marker, which deliberately does not use that probe. Not fixed here because it touches seven other phases' gate files and a sweep of that size inside this phase is how a review round finds its worst defect inside an unrelated fix. A false skip reason is the specific harm: it reads as "environment not available" when the environment is available, which is how a suite loses coverage silently |
 
 ## History
 
 - 2026-08-23: phase opened. Branch created, dependency 3.4 verified merged, `LEARNINGS.md` read filtered to Think, Plan and routing territory, product-owner decision taken on entity resolution before any ticket was written.
+- 2026-08-23: suite baseline re-measured at the branch point rather than carried forward, per build phase 4.4's lesson that a stale baseline is how a genuine regression hides. `6 failed, 3752 passed, 137 skipped, 1 xfailed in 89.48s`, all six in `tests/system_03_search_agent/synthesis/test_citation_trust_full_premise.py`. The recorded figure at build phase 4.4's close was 10; the three `test_cypher_query_e2e.py` failures are gone because Layer 1 now answers over HTTPS.
+- 2026-08-23: premise gate written and watched failing on both paths, offline and live, before any builder was dispatched. Committed at `2b6f01d`, ahead of any implementation.
+- 2026-08-23: two builders dispatched into isolated worktrees on disjoint file sets. One serial agent holds all four `core/graph.py` tickets at once (T-4.7-04, 05, 06, 08), per Rule 1: build phase 4.2 ran parallel fix agents for four rounds and each round's fix produced the next round's worst defect. The second owns the pool, its loader, its concurrency safety and the stable prefix (T-4.7-01, 02, 03, 07).
