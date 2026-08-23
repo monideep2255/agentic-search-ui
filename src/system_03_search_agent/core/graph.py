@@ -1077,6 +1077,8 @@ async def _confirm_extracted_entities(
     unresolved: list[str] = []
     seen_symbols: set[str] = set()
     gene_symbols: list[str] = []
+    # F-4.7-J1-01: keep the surface form beside the CURIE it resolved to.
+    confirmed: list[tuple[str, str]] = []
 
     for entity in entities:
         if entity.entity_type != "gene":
@@ -1092,10 +1094,15 @@ async def _confirm_extracted_entities(
             if curie not in seen_curies:
                 seen_curies.add(curie)
                 curies.append(curie)
+                confirmed.append((symbol, curie))
         else:
             unresolved.append(symbol)
 
-    return _EntityResolution(curies=curies, unresolved_symbols=unresolved)
+    return _EntityResolution(
+        curies=curies,
+        unresolved_symbols=unresolved,
+        confirmed=tuple(confirmed),
+    )
 
 
 async def think_node(state: GraphState) -> dict[str, Any]:
@@ -1166,11 +1173,40 @@ async def think_node(state: GraphState) -> dict[str, Any]:
 
     resolved_entities: list[EventResolvedEntity] = list(exact_matches)
     seen_curies = {entity.curie for entity in resolved_entities}
-    for curie in model_resolution.curies:
+    # F-4.7-J1-01, a CRITICAL filed by the judge as a regression of this
+    # phase's own gate fix. This loop previously read `model_resolution
+    # .curies` and built `EventResolvedEntity(text=curie, curie=curie)`,
+    # throwing away the surface form `_confirm_extracted_entities` already
+    # held. Two things were wrong with that, and only the second is a test
+    # problem:
+    #
+    #   - The locked event contract declares `text` and `curie` as separate
+    #     fields, so `text` is the mention the user actually wrote or the
+    #     field is redundant. Every `think` event was reporting that the
+    #     user had typed a CURIE, to the UI and to every other consumer.
+    #   - It made the premise gate's P1 arm UNFALSIFIABLE. P1 asserts a
+    #     database name mentioned in passing is not resolved as an entity,
+    #     and it reads `text`. With `text` always a CURIE, the bare token
+    #     `GTR`, `AMR` or `SRA` was not in the codomain of the value being
+    #     asserted on, so the arm could not fail under ANY model behaviour.
+    #
+    # The justifying comment for substituting the CURIE lives in
+    # `plan_node`, where "the free-text mention is not recoverable" is
+    # genuinely true. It was carried here, where it is false: this function
+    # is the one place that still has the mention.
+    #
+    # Iterating PAIRS rather than looking a mention up per CURIE is
+    # deliberate. A lookup needs a fallback for the miss case, and the
+    # obvious fallback is the CURIE itself, which would silently restore
+    # this exact defect on whatever path the mapping was incomplete. That
+    # is how the original fix survived its own populate-check.
+    for symbol, curie in model_resolution.confirmed:
         if curie in seen_curies:
             continue
         seen_curies.add(curie)
-        resolved_entities.append(EventResolvedEntity(text=curie, curie=curie, confidence=1.0))
+        resolved_entities.append(
+            EventResolvedEntity(text=symbol, curie=curie, confidence=1.0)
+        )
     resolved_entities = resolved_entities[:_TARGET_ENTITIES_MAX_ITEMS]
 
     query_class: QueryClass = classification.query_class
@@ -1698,6 +1734,26 @@ class _EntityResolution:
 
     curies: list[str]
     unresolved_symbols: list[str]
+    #: The (surface form, CURIE) pairs a live lookup actually confirmed, in
+    #: the order the model returned them. F-4.7-J1-01: `think_node` used to
+    #: build its `ResolvedEntity` events as `text=curie, curie=curie`,
+    #: discarding the surface form it already had in hand. The locked event
+    #: contract (`contracts/events.py`) declares `text` and `curie` as
+    #: SEPARATE fields, so `text` means the mention the user actually wrote
+    #: or the field is redundant, and every `think` event was telling its
+    #: consumers the user had typed a CURIE.
+    #:
+    #: Carried as PAIRS rather than as a curie-to-mention mapping so the
+    #: caller iterates them directly and there is no lookup that could miss
+    #: and fall back to the CURIE. A fallback here would silently restore
+    #: exactly the defect this field exists to remove, on whatever path the
+    #: mapping happened to be incomplete, which is the shape that made the
+    #: original defect survive its own fix.
+    #:
+    #: Default-empty so `resolve_exact_identifiers`'s own construction is
+    #: unchanged: the deterministic pre-pass already sets `text` from the
+    #: matched span, so its entities were never affected by F-4.7-J1-01.
+    confirmed: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
