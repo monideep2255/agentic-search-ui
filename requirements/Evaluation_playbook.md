@@ -33,6 +33,8 @@ The first half is depth on chosen questions. Can the system answer the hardest, 
 
 The second half is breadth against what exists. Seven passing questions can still leave most of the domain untouched, so a high pass rate can hide large gaps. That is the coverage metric, and over time the online feedback loop, which grows the question set from real usage.
 
+This document says what the evaluation set COVERS. Its companion, [Evaluation_boundary.md](Evaluation_boundary.md), says what it does not, and the two are meant to be read together. Any figure taken from here and reported without the boundary beside it is a coverage number being read as a completeness number, which is the specific misreading this set's deliberate narrowness invites. The boundary document also carries the fact that changes how every number here should be read: `eval/golden_dataset.json` currently holds zero cases, so "measured against the golden dataset" is at present a statement about a file with no rows in it.
+
 Two principles run through the whole playbook:
 
 - The competency-question set is an evaluation gate, not a menu. The system is a general agent that answers anything the three data layers support. The set is the sample of hard questions we test to decide the system is good enough, not the list of questions it will answer.

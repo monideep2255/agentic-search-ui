@@ -420,8 +420,35 @@ class TestTheGuestMintReportsAUsableName:
         from system_03_search_agent.auth import router as auth_router_module
         from system_03_search_agent.data.session import get_session
 
-        guest_id = uuid.uuid4()
         session_id = "guest-session-1"
+        # F-4.7-04: `guest_id` was `uuid.uuid4()`, and the populate-check below
+        # asserts the two keyings produce DIFFERENT personas. `persona_for_session`
+        # maps onto 32 curated scientists, so a random id collided with this
+        # fixed `session_id` about 1 run in 32 and turned the whole arm red for
+        # a reason unrelated to what it tests. MEASURED rather than reasoned:
+        # 628 collisions in 20000 random uuids, a rate of 0.0314 against
+        # 1/32 = 0.03125.
+        #
+        # The lesson is worth more than the fix and is kept here rather than
+        # only in the tracker. The unstable line was the arm's OWN ANTI-VACUITY
+        # CHECK, the thing added to stop the arm proving nothing. A
+        # populate-check written with a random value against a small codomain
+        # trades one failure mode for another: it can now fail when nothing is
+        # wrong, which is how a suite teaches people to ignore red. A
+        # populate-check must be DETERMINISTIC.
+        #
+        # So the id is chosen, not drawn, and the loop below proves the choice
+        # satisfies the property instead of assuming it. A hardcoded literal
+        # would work today and break silently the moment the persona list or
+        # the hashing changes; searching a fixed, ordered sequence cannot.
+        guest_id = next(
+            candidate
+            for candidate in (
+                uuid.UUID(int=seed) for seed in range(1, 200)
+            )
+            if persona_for_session(session_id=str(candidate), user_id=None)
+            != persona_for_session(session_id=session_id, user_id=None)
+        )
         # The mint throttle is module-level and keyed on the source hash, so
         # sixty guest mints from any other test in the same process inside the
         # same sixty-second window would turn this arm into a 429 and make it
