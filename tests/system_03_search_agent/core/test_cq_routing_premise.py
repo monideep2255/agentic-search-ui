@@ -129,6 +129,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import uuid
 from pathlib import Path
 from typing import Any
@@ -375,6 +376,17 @@ def _resolved_texts(payload: dict[str, Any]) -> list[str]:
     return [entity["text"] for entity in _resolved(payload)]
 
 
+def _word_tokens(text: str) -> set[str]:
+    """The case-folded alphanumeric tokens of one extracted surface form.
+
+    F-4.7-R2-02's fix lives here rather than inline so P1's four
+    parametrized cases cannot drift apart. `"SRA runs"`, `" SRA"` and
+    `"sra"` all yield a set containing `"sra"`; `"GTR1"` yields `{"gtr1"}`
+    and does not.
+    """
+    return {token.casefold() for token in re.split(r"[^0-9A-Za-z]+", text) if token}
+
+
 def _resolved_curies(payload: dict[str, Any]) -> list[str]:
     return [entity["curie"] for entity in _resolved(payload)]
 
@@ -438,10 +450,35 @@ async def test_p1_a_database_name_in_passing_is_not_the_subject(
     payload = _think_payload(events)
 
     resolved = _resolved_texts(payload)
-    assert passing_mention not in resolved, (
+    # F-4.7-R2-02. This WAS `passing_mention not in resolved`, which is exact
+    # element equality on a `list[str]`, not containment. With the database
+    # name genuinely resolved as a gene, an extracted span of `"SRA runs"`
+    # left the arm GREEN, as did `"SRA metadata"` and `"sra"`; only a bare
+    # exact `"SRA"` turned it red. Measured, driven through the real loop:
+    # three of four span shapes escaped.
+    #
+    # That is the arm at its weakest exactly where the risk is highest. The
+    # live gate runs against a real model whose span choice is pinned by
+    # nothing, and `"SRA runs"` is at least as natural an extraction from
+    # Q6's own text ("Find SRA runs from stool samples...") as the bare token
+    # is, so the escape route was the LIKELIER path rather than a corner.
+    #
+    # Compared by token instead: each resolved surface form is split on
+    # non-alphanumerics and case-folded, and the arm goes red if the database
+    # name appears as any of its tokens. Token equality rather than substring
+    # containment is deliberate in the other direction too: a real gene whose
+    # symbol merely CONTAINS the token (a hypothetical `GTR1`) is not a
+    # database name mentioned in passing, and failing on it would be a false
+    # red that the next reader would fix by weakening this line again.
+    offenders = [
+        surface
+        for surface in resolved
+        if passing_mention.casefold() in _word_tokens(surface)
+    ]
+    assert not offenders, (
         f"{label}: `{passing_mention}` is a database name mentioned in "
         f"passing, and it was resolved as an entity of the question. This is "
-        f"F-2.0-15 exactly. Resolved: {resolved}"
+        f"F-2.0-15 exactly. Offending spans: {offenders}. Resolved: {resolved}"
     )
 
     answer = _answer_text(events)
@@ -880,35 +917,121 @@ async def test_p12_the_interactions_row_records_the_class_the_loop_used() -> Non
 
 @premise_gate
 @pytest.mark.asyncio
-async def test_p12b_the_class_selects_a_real_act_budget() -> None:
-    """The other consumer, and the one with a floor that must survive.
+async def test_p12b_act_runs_on_the_timeout_the_routed_class_selects() -> None:
+    """The other consumer of the class, OBSERVED rather than recomputed.
 
-    `budget_for_step("act", query_class)` selects Section 21.1's per-class
-    budget, and `act_node` takes `max(budget_for_step(...),
-    CYPHER_QUERY_TIMEOUT_SECONDS)` so a class whose budget is smaller than
-    the graph tool's own 30 second timeout cannot starve it. That floor was
-    written while every query was a `"lookup"`; this is the first phase where
-    a real class can select something else, so the floor is exercised for the
-    first time here.
+    ## Why this arm was rewritten rather than repaired (F-4.7-R2-01)
 
-    Control: T-4.7-08. POPULATE-CHECK: the arm asserts a class was actually
-    produced before asserting the budget it selects, since `budget_for_step`
-    would happily return the lookup budget for a stub value.
+    It used to compute `max(budget_for_step("act", cls),
+    CYPHER_QUERY_TIMEOUT_SECONDS)` itself and then assert that value was
+    `>= CYPHER_QUERY_TIMEOUT_SECONDS`. That is `max(b, C) >= C`, a
+    mathematical identity: it holds for every float `b` except `nan`, and
+    no code path produces `nan`. Mutation-measured: `budget_for_step`
+    returning `-1.0`, returning `0.001`, and `CYPHER_QUERY_TIMEOUT_SECONDS`
+    set to `0.0`, all left it GREEN. Its populate-check was unfalsifiable
+    too, since `query_class` is a validated `Literal` at two layers and
+    `ThinkPayload` rejects a bad value at construction.
+
+    It never read `core/graph.py`'s line at all. It re-derived the same
+    expression in the test and graded its own arithmetic, which is the
+    third vacuity finding this phase produced and the same codomain shape
+    as the first: an assertion reading a value that cannot take the
+    failing value.
+
+    ## What is pinned instead
+
+    The timeout `act_node` ACTUALLY handed to `harness.enforce_timeout`,
+    captured from the real loop, checked against a value computed here
+    from the class the `think` event really carried. Three properties, all
+    falsifiable:
+
+    - Act budgeted on the class the loop routed on, not on a literal.
+    - The observed timeout equals `max(class budget, the graph tool's own
+      timeout)`, so deleting the `max()` is visible from outside.
+    - The graph tool's own timeout is a floor under it, read from
+      `tools.graph_schema_constants` rather than from the copy of the name
+      `core.graph` imported, so mutating `core.graph`'s copy (which is
+      where the floor is actually applied) turns this red instead of
+      moving the goalposts with it.
+
+    ## What this arm does NOT claim (F-4.7-R2-08)
+
+    That the per-class budget is what Act runs on. It very nearly is not.
+    `CYPHER_QUERY_TIMEOUT_SECONDS` is `90.0`, and four of the five class
+    budgets (lookup 15, single_hop 20, aggregate 30, multi_hop 30) sit
+    under it, so the `max()` resolves all four to 90.0 and only
+    `exploratory` (120) selects anything different. T-4.7-08's "a real
+    class finally selects a real budget" is true at `budget_for_step` and
+    nearly inert at Act. That is stated here rather than papered over,
+    because an arm that quietly asserted "the class selects the budget"
+    would be asserting something false for four classes out of five.
     """
-    from system_03_search_agent.harness.harness import budget_for_step
-    from system_03_search_agent.tools.cypher_query import CYPHER_QUERY_TIMEOUT_SECONDS
-
-    payload = _think_payload(await _run_raw(Q3_FLAGSHIP))
-    assert _class_of(payload) in SECTION_17_SHAPES, (
-        f"`{_class_of(payload)}` is outside Section 17's five shapes, so the "
-        "budget lookup below is not measuring a real classification"
+    from system_03_search_agent.core import graph as graph_module
+    from system_03_search_agent.harness.harness import Harness
+    from system_03_search_agent.tools.graph_schema_constants import (
+        CYPHER_QUERY_TIMEOUT_SECONDS,
     )
 
-    act_budget = max(
-        budget_for_step("act", _class_of(payload)), CYPHER_QUERY_TIMEOUT_SECONDS
+    observed: list[tuple[str, float]] = []
+    real_enforce_timeout = Harness.enforce_timeout
+
+    async def _recording_enforce_timeout(
+        self: Any, step: str, coro: Any, budget_s: float
+    ) -> Any:
+        observed.append((step, budget_s))
+        return await real_enforce_timeout(self, step, coro, budget_s)
+
+    routed_classes: list[str] = []
+    real_budget_for_step = graph_module.budget_for_step
+
+    def _recording_budget_for_step(step: str, query_class: str) -> float:
+        if step == "act":
+            routed_classes.append(query_class)
+        return real_budget_for_step(step, query_class)  # type: ignore[arg-type]
+
+    monkeypatch = pytest.MonkeyPatch()
+    try:
+        monkeypatch.setattr(Harness, "enforce_timeout", _recording_enforce_timeout)
+        monkeypatch.setattr(
+            graph_module, "budget_for_step", _recording_budget_for_step
+        )
+        events = await _run_raw(Q3_FLAGSHIP)
+    finally:
+        monkeypatch.undo()
+
+    payload = _think_payload(events)
+    routed = _class_of(payload)
+
+    # POPULATE-CHECK, and unlike the retired one it can fail. `act_node`
+    # only reaches `enforce_timeout("act", ...)` when Plan actually selected
+    # a graph call; a run that refused, that was capped, or that never
+    # reached Act produces no `act` entry, and every assertion below would
+    # then hold over an empty list.
+    act_timeouts = [budget for step, budget in observed if step == "act"]
+    assert act_timeouts, (
+        "Act never dispatched a timed call, so no timeout was observed and "
+        "nothing below is being graded. Steps seen: "
+        f"{sorted({step for step, _ in observed})}"
     )
-    assert act_budget >= CYPHER_QUERY_TIMEOUT_SECONDS, (
-        "the graph tool's own 30 second timeout is no longer a floor under "
-        "Act's per-class budget, so a lookup-classified query can now kill a "
-        "graph call that was still within its declared budget"
+    assert routed_classes, (
+        "`budget_for_step` was never asked for an Act budget, so the class "
+        "reached no budget at all"
+    )
+
+    assert routed_classes[0] == routed, (
+        f"Act budgeted on `{routed_classes[0]}` while the loop routed on "
+        f"`{routed}`. A hardcoded class at the Act site is invisible to "
+        "every other arm in this file"
+    )
+
+    expected = max(real_budget_for_step("act", routed), CYPHER_QUERY_TIMEOUT_SECONDS)
+    assert act_timeouts[0] == expected, (
+        f"Act ran on {act_timeouts[0]}s; the class it routed on "
+        f"(`{routed}`) plus the graph tool's own "
+        f"{CYPHER_QUERY_TIMEOUT_SECONDS}s floor come to {expected}s"
+    )
+    assert act_timeouts[0] >= CYPHER_QUERY_TIMEOUT_SECONDS, (
+        f"Act ran on {act_timeouts[0]}s, below the graph tool's own declared "
+        f"{CYPHER_QUERY_TIMEOUT_SECONDS}s budget, so a query can now kill a "
+        "graph call that was still inside the budget the tool declares"
     )
