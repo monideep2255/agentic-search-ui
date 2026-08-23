@@ -43,7 +43,7 @@ prevent a fifth of.
 
 Depends on:
     - system_03_search_agent.tools.cypher_query (real generation, live graph)
-    - system_03_search_agent.core.graph._extract_target_entities
+    - system_03_search_agent.core.graph.resolve_exact_identifiers
     - A live SSH local port-forward to the Hetzner AGE graph
     - OPENROUTER_API_KEY, since generation is real
 
@@ -144,20 +144,34 @@ async def _ask(question: str, row_limit: int = 100) -> Any:
     Two details here are load-bearing, and getting either wrong turns this
     gate into a fixture that flatters the code.
 
-    `query_class` is NOT a parameter. At this phase the Think step emits a
-    hardcoded `"lookup"` stub (`core/graph.py`, T-2.0-07), so `"lookup"` is
-    the ONLY value production ever sends. An earlier draft of this file
-    passed a hand-picked class per question, and the disease question then
-    returned the right answer where the judge, passing production's
-    `"lookup"`, got twenty-five orthologs. The gate was quietly testing a
-    configuration the system never runs. When Think begins classifying for
-    real, this follows it rather than guessing ahead of it.
+    `query_class` is NOT a parameter, still hardcoded to `"lookup"` here.
+    An earlier draft of this file passed a hand-picked class per question,
+    and the disease question then returned the right answer where the
+    judge, passing production's then-universal `"lookup"` stub, got
+    twenty-five orthologs. The gate was quietly testing a configuration the
+    system never ran. Build phase 4.7 (T-4.7-04) is the phase this
+    docstring's own "when Think begins classifying for real" referred to:
+    `think_node` now emits a real classification, so `"lookup"` is no
+    longer the only value production sends for these questions. This
+    file's own `query_class` handling has not been revisited for that yet;
+    it is out of build phase 4.7's own file scope (`tracker/phase_4.7.md`
+    lists only `core/graph.py` for T-4.7-04), noted here rather than left
+    to look current.
 
     Entities are extracted from the question text by the same function the
     loop uses, rather than handed in, so a defect in extraction lands
     inside this gate instead of hiding behind a fixture.
+
+    Build phase 4.7 note (T-4.7-05/T-4.7-06): `_extract_target_entities`
+    is retired; entity resolution moved to `think_node`. Every question in
+    this file embeds its subject as a verbatim CURIE (`{BRCA1}`, `{TP53}`,
+    `{ABSENT_GENE}`, all `NCBIGene:...` constants above), so Section 17's
+    deterministic exact-ID pre-pass (`resolve_exact_identifiers`) is the
+    same function that actually resolves it in production for every one of
+    these questions; no Plan-tier model call is involved in resolution for
+    this file's fixtures either way.
     """
-    from system_03_search_agent.core.graph import _extract_target_entities
+    from system_03_search_agent.core.graph import resolve_exact_identifiers
     from system_03_search_agent.harness.harness import Harness
     from system_03_search_agent.tools.cypher_query import cypher_query
     from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
@@ -167,7 +181,9 @@ async def _ask(question: str, row_limit: int = 100) -> Any:
         CypherQueryInput(
             query_intent=question,
             query_class="lookup",
-            target_entities=await _extract_target_entities(question),
+            target_entities=[
+                entity.curie for entity in resolve_exact_identifiers(question)
+            ],
             row_limit=row_limit,
         ),
     )

@@ -25,6 +25,10 @@ A COMPLIANT model: one that answers each tier the way a working provider
 would for a legitimate query.
 
 - Guard: a valid JSON classification saying "not injection".
+- Think: a valid JSON classification and gene-symbol extraction (build
+  phase 4.7, T-4.7-04/T-4.7-05: `think_node`'s response is now READ, not
+  discarded, so this is the third tier that broke the same way build
+  phase 3.0's guardrail and build phase 2.2's synth did).
 - Synth: a narrative built from the findings it was actually given, so the
   grounding pass runs for real and a defect in it still fails a test.
 - Everything else: whatever the caller configured, unchanged.
@@ -37,13 +41,16 @@ models a good model; those model a bad one and an attacker.
 
 from __future__ import annotations
 
+import json
 import re
 from types import SimpleNamespace
 from typing import Any
 
 __all__ = [
     "COMPLIANT_GUARD_CLASSIFICATION",
+    "KNOWN_GENE_SYMBOL_CURIES",
     "compliant_synth_narrative",
+    "compliant_think_classification",
     "fake_response",
     "install_dispatching_acompletion",
 ]
@@ -55,6 +62,16 @@ COMPLIANT_GUARD_CLASSIFICATION = (
     '{"is_injection": false, "is_off_topic": false, "confidence": 0.02, '
     '"reason": "an ordinary biomedical question"}'
 )
+
+# The gene symbols every caller of this module already stubs live
+# resolution for (`resolve_symbol_to_curie`), by hand, in each test file's
+# own `_stub_symbol_resolution`-shaped fixture. Named here too so the
+# compliant Think stand-in extracts exactly the symbols those fixtures can
+# actually resolve, never a symbol whose live-lookup stub does not exist.
+KNOWN_GENE_SYMBOL_CURIES: dict[str, str] = {
+    "BRCA1": "NCBIGene:672",
+    "TP53": "NCBIGene:7157",
+}
 
 # Matches the findings block the Synth prompt carries, so the stub can restate
 # what it was given rather than inventing content the grounding pass would
@@ -84,12 +101,42 @@ def compliant_synth_narrative(messages: list[dict[str, Any]]) -> str:
     return ". ".join(clauses) + "."
 
 
+def compliant_think_classification(messages: list[dict[str, Any]]) -> str:
+    """A Think reply: a real Section 17 shape, plus known gene extraction.
+
+    Build phase 4.7 (T-4.7-04/T-4.7-05). `query_class` defaults to
+    "exploratory", Section 17's catch-all shape: harmless for a no-tool
+    query (`plan_node` selects nothing regardless of class) and a real,
+    schema-valid value otherwise. Entities are limited to
+    `KNOWN_GENE_SYMBOL_CURIES`'s keys, scanned only in the USER-role
+    content (`think_node`'s `_THINK_SYSTEM_INSTRUCTION` itself names BRCA1
+    and TP53 as worked examples of a gene symbol, so scanning the full
+    joined prompt would match those example mentions on every call
+    regardless of the actual query text).
+    """
+    user_text = "\n".join(
+        message.get("content", "") for message in messages if message.get("role") == "user"
+    )
+    entities = [
+        {"text": symbol, "entity_type": "gene"}
+        for symbol in KNOWN_GENE_SYMBOL_CURIES
+        if re.search(rf"\b{re.escape(symbol)}\b", user_text)
+    ]
+    return json.dumps(
+        {
+            "query_class": "exploratory",
+            "narrative": "stand-in classification for tests",
+            "entities": entities,
+        }
+    )
+
+
 def install_dispatching_acompletion(monkeypatch: Any, harness_module: Any) -> Any:
     """Patch `litellm.acompletion` with the per-tier dispatcher.
 
     Returns the mock, so a test can still assert on call count and arguments,
-    and can still override the default non-guard, non-synth response with
-    `monkeypatch.setattr(mock, "return_value", ...)`.
+    and can still override the default non-guard, non-think, non-synth
+    response with `monkeypatch.setattr(mock, "return_value", ...)`.
 
     That override keeps working because the dispatcher reads `return_value`
     back off the mock at call time rather than closing over it. `side_effect`
@@ -100,6 +147,7 @@ def install_dispatching_acompletion(monkeypatch: Any, harness_module: Any) -> An
     """
     from unittest.mock import AsyncMock
 
+    from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
     from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
     from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
 
@@ -111,6 +159,8 @@ def install_dispatching_acompletion(monkeypatch: Any, harness_module: Any) -> An
         )
         if GUARD_SYSTEM_INSTRUCTION in joined:
             return fake_response(COMPLIANT_GUARD_CLASSIFICATION)
+        if _THINK_SYSTEM_INSTRUCTION in joined:
+            return fake_response(compliant_think_classification(messages))  # type: ignore[arg-type]
         if SYNTH_SYSTEM_INSTRUCTION in joined:
             return fake_response(compliant_synth_narrative(messages))  # type: ignore[arg-type]
         return mock_acompletion.return_value

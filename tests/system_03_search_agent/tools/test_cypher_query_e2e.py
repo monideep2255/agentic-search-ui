@@ -594,16 +594,18 @@ async def test_full_loop_works_for_a_gene_outside_the_symbol_seed_table(
 ) -> None:
     """The loop must not depend on a hardcoded symbol lookup.
 
-    `core/graph.py._extract_target_entities` has two sources: a verbatim
-    CURIE in the query text, which is general, and a gene-symbol seed
-    table, which currently holds exactly one entry (BRCA1, the gene the
-    other tests here query). Without this test the gate could pass on the
-    seed table alone and nobody would notice that symbol resolution does
-    not generalize.
-
-    This names TP53 by CURIE, which is absent from that table, so only the
-    general path can satisfy it. TP53 is NCBIGene:7157 in the live graph,
-    verified 2026-07-29.
+    Historically (before T-3.1-11/T-4.7-05), entity resolution had two
+    sources: a verbatim CURIE in the query text, which is general, and a
+    gene-symbol seed table that at one point held exactly one entry
+    (BRCA1, the gene the other tests here query). Without this test the
+    gate could pass on the seed table alone and nobody would notice that
+    symbol resolution does not generalize. As of build phase 4.7,
+    resolution is `think_node`'s job: Section 17's deterministic pre-pass
+    (`resolve_exact_identifiers`) for exact identifiers, then a Plan-tier
+    model call for anything else. This test's own property is unchanged:
+    it names TP53 by CURIE, which the exact-ID pre-pass resolves with no
+    model call and no seed table needed at all. TP53 is NCBIGene:7157 in
+    the live graph, verified 2026-07-29.
     """
     from system_03_search_agent.core.run import run
 
@@ -668,14 +670,15 @@ async def test_full_loop_refuses_when_the_graph_returns_nothing(
     two branches by itself, which is the same gap that let the original,
     broken version of this test pass unnoticed. Proving the right branch
     therefore takes two direct checks against the actual components
-    `plan_node`/`act_node` call, using this test's exact query text and
+    `think_node`/`act_node` call, using this test's exact query text and
     exact CURIE, before the full-loop assertions:
 
-    1. `_extract_target_entities` (the deterministic function `plan_node`
-       calls to build `target_entities`) must resolve this query text to
-       exactly `[absent_curie]`, not `[]`. An empty result is precisely
-       what sent the original test down the unresolved-entity, status=
-       "error" branch.
+    1. `resolve_exact_identifiers` (the deterministic pre-pass `think_node`
+       calls first, T-4.7-05, and the one this query text is fully
+       resolved by, since `absent_curie` is a verbatim CURIE) must resolve
+       this query text to exactly `[absent_curie]`, not `[]`. An empty
+       result is precisely what sent the original test down the
+       unresolved-entity, status="error" branch.
     2. `cypher_query` itself, called with that resolved entity and the same
        mocked Cypher the full loop below will use, must return
        `status="empty"` against the live graph, the exact call `act_node`
@@ -683,8 +686,15 @@ async def test_full_loop_refuses_when_the_graph_returns_nothing(
 
     Only once both are confirmed does the full-loop run below exercise the
     same path end to end and check its externally observable outcome.
+
+    Build phase 4.7 note: check 1 used to call `core.graph.
+    _extract_target_entities` (since retired, T-4.7-06). It is
+    `resolve_exact_identifiers` here instead: a verbatim CURIE is resolved
+    by Section 17's deterministic pre-pass alone, with no Plan-tier model
+    call needed, so this stays the same fast, offline, two-check shape it
+    always was.
     """
-    from system_03_search_agent.core.graph import _extract_target_entities
+    from system_03_search_agent.core.graph import resolve_exact_identifiers
     from system_03_search_agent.core.run import run
     from system_03_search_agent.tools.cypher_query import cypher_query, entity_param_bindings
     from system_03_search_agent.tools.cypher_schemas import CypherQueryInput
@@ -694,11 +704,11 @@ async def test_full_loop_refuses_when_the_graph_returns_nothing(
     param_name = next(iter(entity_param_bindings([absent_curie])))
     generated_cypher = f"MATCH (g:Gene {{id: ${param_name}}}) RETURN g"
 
-    # Check 1: the extraction step the loop actually calls resolves this
+    # Check 1: the pre-pass the loop actually calls first resolves this
     # query text to the CURIE, not to nothing.
-    extracted = await _extract_target_entities(query_text)
+    extracted = [entity.curie for entity in resolve_exact_identifiers(query_text)]
     assert extracted == [absent_curie], (
-        f"_extract_target_entities returned {extracted!r} for {query_text!r}, "
+        f"resolve_exact_identifiers returned {extracted!r} for {query_text!r}, "
         f"expected [{absent_curie!r}]. An empty result here reproduces "
         "F-2.1-08: cypher_query would refuse before generating anything, "
         "reaching status='error', never status='empty'."
@@ -871,25 +881,33 @@ async def test_a_curie_followed_by_punctuation_is_extracted_whole() -> None:
     it, so the citation gate passed a link to a dead page: host-pinning
     proves where a URL points, never that the record is real.
 
-    T-3.1-11 made `_extract_target_entities` async (live gene-symbol
-    resolution), so this test is now `async` too. It exercises only the
-    verbatim-CURIE path (`_CURIE_IN_TEXT_PATTERN`), which makes no
-    network call either way, so this stays a fast, offline test.
+    Build phase 4.7 (T-4.7-05, T-4.7-06) retires `_extract_target_entities`
+    (and the async, live-gene-symbol-resolving mechanism it fronted)
+    outright: entity resolution moved to `think_node`, and this test's own
+    property, the verbatim-CURIE path, is now `resolve_exact_identifiers`,
+    a plain `def` with no network call at all, not even the live-lookup
+    kind this test's own history describes. Re-pointed at the new source
+    of truth rather than removed, since the property (a trailing-colon
+    CURIE match must not swallow the punctuation) is still real and still
+    worth a fast, offline test.
     """
-    from system_03_search_agent.core.graph import _extract_target_entities
+    from system_03_search_agent.core.graph import resolve_exact_identifiers
 
-    entities = await _extract_target_entities(
-        "Compare NCBIGene:7157 and NCBIGene:672: how many variants?"
-    )
+    entities = [
+        entity.curie
+        for entity in resolve_exact_identifiers(
+            "Compare NCBIGene:7157 and NCBIGene:672: how many variants?"
+        )
+    ]
 
     assert "NCBIGene:672" in entities, f"BRCA1 was not extracted: {entities}"
     assert not any(e.endswith(":") for e in entities), (
         f"a trailing colon survived extraction: {entities}"
     )
     # Internal punctuation is legitimate in a local id and must be kept.
-    assert await _extract_target_entities("see MedGen:C0031485 today") == [
-        "MedGen:C0031485"
-    ]
+    assert [
+        entity.curie for entity in resolve_exact_identifiers("see MedGen:C0031485 today")
+    ] == ["MedGen:C0031485"]
 
 
 @pytest.mark.asyncio

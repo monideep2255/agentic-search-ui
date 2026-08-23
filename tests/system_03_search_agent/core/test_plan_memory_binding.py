@@ -8,12 +8,17 @@ the arm was seen red, and the control was restored. The proof for each is in
 its own docstring, because a proof recorded somewhere else is a proof the
 next reader cannot check.
 
-No live model, no live graph, no network. The one seam stubbed is
-`_resolve_query_entities`, which is a live NCBI lookup and is not the control
-under test in any arm here: what is under test is what the planner does with
-a resolution once it has one. Nothing in this file hands in the value it then
-asserts on, which is finding F-4.5-09's shape and has recurred four times in
-this phase.
+No live model, no live graph, no network. Build phase 4.7 (T-4.7-06) moved
+entity resolution from a live NCBI-calling function inside `plan_node`
+(`_resolve_query_entities`, since retired) to `think_node`, which computes
+its `_EntityResolution` upstream and passes the two lists straight in as
+`_select_planned_tool_call`'s own `target_curies`/`unresolved_symbols`
+parameters. There is no longer a seam to stub: every arm below builds the
+`_EntityResolution` it is reasoning about directly and passes it in as an
+argument, which is a STRONGER form of the same discipline this file's
+docstring already named, "nothing in this file hands in the value it then
+asserts on" (finding F-4.5-09's shape, which recurred four times in this
+phase) -- there is now no live call in the middle to stub at all.
 
 ## Coverage: what this file does and does not exercise
 
@@ -80,24 +85,28 @@ def _resolution(
     )
 
 
-@pytest.fixture
-def stub_resolver(monkeypatch: pytest.MonkeyPatch):
-    """Replace the live NCBI lookup with a fixed answer.
+async def _select(
+    resolution: graph_module._EntityResolution,
+    query_text: str,
+    query_class: str,
+    memory_curies: list[str] | None = None,
+):
+    """`_select_planned_tool_call` called with an explicit `_EntityResolution`.
 
-    Returns a setter so each arm states the resolution it is reasoning
-    about. The resolutions used are the ones the real function actually
-    returns: an unknown gene-shaped token gives `curies=[]` with the symbol
-    in `unresolved_symbols`, and a question naming no gene-shaped token at
-    all gives both lists empty.
+    T-4.7-06: entity resolution moved out of this function (it is now
+    Think's own upstream job, T-4.7-05), so the two lists it reasons about
+    are now ordinary parameters, not a live call to stub. This helper only
+    unpacks `_resolution`'s two fields into the call's own two positional
+    arguments, so every arm below states the resolution it is reasoning
+    about exactly as before, just passed in rather than mocked.
     """
-
-    def _set(resolution: graph_module._EntityResolution) -> None:
-        async def _fake(_query_text: str) -> graph_module._EntityResolution:
-            return resolution
-
-        monkeypatch.setattr(graph_module, "_resolve_query_entities", _fake)
-
-    return _set
+    return await graph_module._select_planned_tool_call(
+        query_text,
+        query_class,
+        resolution.curies,
+        resolution.unresolved_symbols,
+        memory_curies,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -106,9 +115,7 @@ def stub_resolver(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.mark.asyncio
-async def test_a_named_unresolvable_symbol_refuses_even_when_memory_holds_a_curie(
-    stub_resolver,
-) -> None:
+async def test_a_named_unresolvable_symbol_refuses_even_when_memory_holds_a_curie() -> None:
     """Pins: the unresolved-entity refusal runs BEFORE any memory branch and
     is not conditioned on what memory holds (`_select_planned_tool_call`).
 
@@ -137,9 +144,8 @@ async def test_a_named_unresolvable_symbol_refuses_even_when_memory_holds_a_curi
     needs a test asserting the same property, or it is a liability. This is
     that test.
     """
-    stub_resolver(_resolution(unresolved=[_UNRESOLVABLE_SYMBOL]))
-
-    planned = await graph_module._select_planned_tool_call(
+    planned = await _select(
+        _resolution(unresolved=[_UNRESOLVABLE_SYMBOL]),
         f"Which diseases are associated with {_UNRESOLVABLE_SYMBOL}?",
         "lookup",
         [_REMEMBERED],
@@ -155,9 +161,7 @@ async def test_a_named_unresolvable_symbol_refuses_even_when_memory_holds_a_curi
 
 
 @pytest.mark.asyncio
-async def test_the_same_turn_refuses_identically_with_no_memory(
-    stub_resolver,
-) -> None:
+async def test_the_same_turn_refuses_identically_with_no_memory() -> None:
     """Pins: the refusal decision does not read memory at all.
 
     The negative control for the arm above, and the one that makes the pair
@@ -170,14 +174,14 @@ async def test_the_same_turn_refuses_identically_with_no_memory(
         AssertionError: a symbol tried and confirmed absent must refuse; got
         _PlannedToolCall
     """
-    stub_resolver(_resolution(unresolved=[_UNRESOLVABLE_SYMBOL]))
-
-    with_memory = await graph_module._select_planned_tool_call(
+    with_memory = await _select(
+        _resolution(unresolved=[_UNRESOLVABLE_SYMBOL]),
         f"Which diseases are associated with {_UNRESOLVABLE_SYMBOL}?",
         "lookup",
         [_REMEMBERED],
     )
-    without_memory = await graph_module._select_planned_tool_call(
+    without_memory = await _select(
+        _resolution(unresolved=[_UNRESOLVABLE_SYMBOL]),
         f"Which diseases are associated with {_UNRESOLVABLE_SYMBOL}?",
         "lookup",
         [],
@@ -194,9 +198,7 @@ async def test_the_same_turn_refuses_identically_with_no_memory(
 
 
 @pytest.mark.asyncio
-async def test_a_turn_that_resolved_its_own_entity_is_never_overridden(
-    stub_resolver,
-) -> None:
+async def test_a_turn_that_resolved_its_own_entity_is_never_overridden() -> None:
     """Pins: memory binds only when this turn resolved nothing of its own.
 
     The property the original code did have and that the fix must not lose.
@@ -208,10 +210,11 @@ async def test_a_turn_that_resolved_its_own_entity_is_never_overridden(
         AssertionError: a question that resolves its own entity must query
         that entity; got ['NCBIGene:672']
     """
-    stub_resolver(_resolution(curies=["NCBIGene:7157"]))
-
-    planned = await graph_module._select_planned_tool_call(
-        "Which diseases are associated with TP53?", "lookup", [_REMEMBERED]
+    planned = await _select(
+        _resolution(curies=["NCBIGene:7157"]),
+        "Which diseases are associated with TP53?",
+        "lookup",
+        [_REMEMBERED],
     )
 
     assert isinstance(planned, graph_module._PlannedToolCall)
@@ -228,9 +231,7 @@ async def test_a_turn_that_resolved_its_own_entity_is_never_overridden(
 
 
 @pytest.mark.asyncio
-async def test_eleven_remembered_curies_do_not_crash_an_entity_less_turn(
-    stub_resolver,
-) -> None:
+async def test_eleven_remembered_curies_do_not_crash_an_entity_less_turn() -> None:
     """Pins: the memory path respects `CypherQueryInput.target_entities`'s
     own bound (`_antecedent_curie`).
 
@@ -250,19 +251,16 @@ async def test_eleven_remembered_curies_do_not_crash_an_entity_less_turn(
         target_entities
           List should have at most 10 items after validation, not 11
     """
-    stub_resolver(_resolution())
     remembered = [f"NCBIGene:{index}" for index in range(11)]
 
-    planned = await graph_module._select_planned_tool_call(
-        "What variants cause it?", "lookup", remembered
-    )
+    planned = await _select(_resolution(), "What variants cause it?", "lookup", remembered)
 
     assert isinstance(planned, graph_module._PlannedToolCall)
     assert len(planned.cypher_input.target_entities) == 1
 
 
 @pytest.mark.asyncio
-async def test_a_reference_binds_exactly_one_antecedent(stub_resolver) -> None:
+async def test_a_reference_binds_exactly_one_antecedent() -> None:
     """Pins: a reference never queries every entity the session ever saw.
 
     The milder half of the same finding, and the one a bound alone would not
@@ -275,10 +273,11 @@ async def test_a_reference_binds_exactly_one_antecedent(stub_resolver) -> None:
         AssertionError: a reference must bind one antecedent, not every
         remembered entity; got ['NCBIGene:672', 'NCBIGene:7157']
     """
-    stub_resolver(_resolution())
-
-    planned = await graph_module._select_planned_tool_call(
-        "What variants cause it?", "lookup", ["NCBIGene:672", "NCBIGene:7157"]
+    planned = await _select(
+        _resolution(),
+        "What variants cause it?",
+        "lookup",
+        ["NCBIGene:672", "NCBIGene:7157"],
     )
 
     assert isinstance(planned, graph_module._PlannedToolCall)
@@ -313,7 +312,7 @@ def test_the_antecedent_is_the_most_recently_remembered_entity() -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_memory_bound_plan_is_marked_as_such(stub_resolver) -> None:
+async def test_a_memory_bound_plan_is_marked_as_such() -> None:
     """Pins: `_PlannedToolCall.memory_bound` records where the CURIE came
     from, which is the only place that distinction still exists.
 
@@ -327,10 +326,8 @@ async def test_a_memory_bound_plan_is_marked_as_such(stub_resolver) -> None:
 
         AssertionError: assert False is True
     """
-    stub_resolver(_resolution())
-
-    planned = await graph_module._select_planned_tool_call(
-        "What variants cause it?", "lookup", [_REMEMBERED]
+    planned = await _select(
+        _resolution(), "What variants cause it?", "lookup", [_REMEMBERED]
     )
 
     assert isinstance(planned, graph_module._PlannedToolCall)
