@@ -109,7 +109,7 @@ Reporting an absence as a negative overstates what is known. Reporting it as a p
 
 ## Related documents
 
-- [requirements/Evaluation_playbook.md](requirements/Evaluation_playbook.md): what the eval set covers, the rubric, the hard-fails, the targets
-- [requirements/PRD.md](requirements/PRD.md): the seven must-pass questions and the v1 out-of-scope list
-- [PROGRESS.md](PROGRESS.md): current build state in plain language
-- [LEARNINGS.md](LEARNINGS.md): the defects above as they were recorded when found
+- [Evaluation_playbook.md](Evaluation_playbook.md): what the eval set covers, the rubric, the hard-fails, the targets
+- [PRD.md](PRD.md): the seven must-pass questions and the v1 out-of-scope list
+- [PROGRESS.md](../PROGRESS.md): current build state in plain language
+- [LEARNINGS.md](../LEARNINGS.md): the defects above as they were recorded when found

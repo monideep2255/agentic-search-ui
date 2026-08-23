@@ -166,6 +166,7 @@ agentic-search-ui/
 | [Technical specification](requirements/Technical_specification.md) | Locked. 25 sections, seven tools, six delivery surfaces (web UI, REST plus SSE API, GraphQL API, MCP server, KGX export, CLI), Section 25 build order |
 | [Strategic memo](requirements/Strategic_memo.md) | Phase 4 deliverable |
 | [Evaluation playbook](requirements/Evaluation_playbook.md) | Living |
+| [Evaluation boundary](requirements/Evaluation_boundary.md) | Living. What the eval set does NOT measure. Read beside the playbook, never instead of it: a coverage figure quoted without it is read as a completeness figure |
 
 ---
 
