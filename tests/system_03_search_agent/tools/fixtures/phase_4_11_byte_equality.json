@@ -1,0 +1,59 @@
+{
+  "cases": {
+    "scalar": {
+      "captured_at": "2026-08-22T19:50:34.256784+00:00",
+      "cypher": "MATCH (g:Gene {id: $seed}) RETURN g.name",
+      "rows": [
+        {
+          "result": "\"BRCA1 DNA repair associated\""
+        }
+      ],
+      "total_available": 1,
+      "transport": "psycopg2"
+    },
+    "vertex": {
+      "captured_at": "2026-08-22T19:50:31.866468+00:00",
+      "cypher": "MATCH (g:Gene {id: $seed})-[r:gene_associated_with_condition]->(d:Disease) RETURN d",
+      "rows": [
+        {
+          "result": "{\"id\": 1407374883560748, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C0205770\", \"name\": \"MedGen\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C0205770\", \"knowledge_level\": \"\"}}::vertex"
+        },
+        {
+          "result": "{\"id\": 1407374883579485, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C0346153\", \"name\": \"MeSH\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C0346153\", \"knowledge_level\": \"\"}}::vertex"
+        },
+        {
+          "result": "{\"id\": 1407374883579734, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C0346629\", \"name\": \"OMIM allelic variant\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C0346629\", \"knowledge_level\": \"\"}}::vertex"
+        },
+        {
+          "result": "{\"id\": 1407374883609143, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C0585442\", \"name\": \"OMIM allelic variant\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C0585442\", \"knowledge_level\": \"\"}}::vertex"
+        },
+        {
+          "result": "{\"id\": 1407374883643430, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C1835398\", \"name\": \"OMIM allelic variant\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C1835398\", \"knowledge_level\": \"\"}}::vertex"
+        },
+        {
+          "result": "{\"id\": 1407374883647374, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C1859972\", \"name\": \"OMIM\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C1859972\", \"knowledge_level\": \"\"}}::vertex"
+        },
+        {
+          "result": "{\"id\": 1407374883654046, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C2239176\", \"name\": \"SNOMEDCT_US\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C2239176\", \"knowledge_level\": \"\"}}::vertex"
+        },
+        {
+          "result": "{\"id\": 1407374883657121, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C2750850\", \"name\": \"GARD\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C2750850\", \"knowledge_level\": \"\"}}::vertex"
+        },
+        {
+          "result": "{\"id\": 1407374883661323, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C2931038\", \"name\": \"MedGen\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C2931038\", \"knowledge_level\": \"\"}}::vertex"
+        },
+        {
+          "result": "{\"id\": 1407374883662116, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C2931822\", \"name\": \"MedGen\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C2931822\", \"knowledge_level\": \"\"}}::vertex"
+        },
+        {
+          "result": "{\"id\": 1407374883670297, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C3553606\", \"name\": \"GARD\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C3553606\", \"knowledge_level\": \"\"}}::vertex"
+        },
+        {
+          "result": "{\"id\": 1407374883707463, \"label\": \"Disease\", \"properties\": {\"id\": \"MedGen:C4748488\", \"name\": \"OMIM\", \"xrefs\": \"\", \"source\": \"MedGen\", \"agent_type\": \"\", \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C4748488\", \"knowledge_level\": \"\"}}::vertex"
+        }
+      ],
+      "total_available": 12,
+      "transport": "psycopg2"
+    }
+  }
+}

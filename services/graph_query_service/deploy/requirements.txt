@@ -1,0 +1,26 @@
+# Pinned runtime dependencies for the read-only HTTPS graph query service.
+#
+# Finding F-4.11-13, filed by build phase 4.11's adversary round, 2026-08-22.
+# deploy.sh previously ran `pip install fastapi uvicorn psycopg2-binary
+# pydantic httpx` with no versions at all, on the box that holds the graph
+# credential. Every redeploy therefore installed whatever those five packages
+# resolved to that day, so a compromised release would reach the machine with
+# no gate and no record of what changed. `.claude/rules/supply-chain-security.md`
+# names that pattern directly: a hijacked version is live before any CVE
+# exists, and an unpinned install is how it arrives.
+#
+# These versions are not chosen from a changelog. They are the versions
+# measured running on the box on 2026-08-22, read back with `pip list
+# --format=freeze` from the deployed virtualenv after the service was
+# verified working end to end against the live graph. So pinning to them is
+# a no-op for behaviour and a real change for reproducibility: the next
+# deploy installs what this one proved, rather than what is newest.
+#
+# To move a pin: change it here, redeploy, and re-run the premise gate with
+# RUN_PREMISE_GATE=1 against the live service. The gate is what makes an
+# upgrade safe to accept, not the version number looking reasonable.
+fastapi==0.141.1
+uvicorn==0.52.4
+psycopg2-binary==2.9.12
+pydantic==2.13.4
+httpx==0.28.1

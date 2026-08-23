@@ -32,21 +32,41 @@ non-superuser with `session_preload_libraries = age` set at the role level,
 so `LOAD 'age'` is neither necessary nor permitted (a non-superuser raises
 `InsufficientPrivilege` on that statement). Only `search_path` is set here.
 
+Build phase 4.11 adds a second transport. When the environment variable
+GRAPH_QUERY_URL is set and non-empty, `execute_cypher` dispatches to
+`graph_http_transport.execute_cypher_over_http` instead of opening a
+psycopg2 connection at all, so the SSH tunnel this module's docstring used
+to require is no longer the only way to reach the graph. Passing
+`connection_factory` while GRAPH_QUERY_URL is set is a caller defect (two
+transports named in one call) and raises `GraphError` rather than silently
+honouring one and discarding the other. See `graph_http_transport`'s module
+docstring for the deliberate circular-import resolution between these two
+modules.
+
 Depends on:
-    - psycopg2 (the Layer 1 database driver)
+    - psycopg2 (the Layer 1 database driver, used only on the psycopg2
+      transport)
     - system_03_search_agent.tools.graph_schema_constants (GRAPH_NAME,
       DEFAULT_ROW_LIMIT, MAX_ROW_LIMIT, CYPHER_QUERY_TIMEOUT_SECONDS)
+    - system_03_search_agent.tools.graph_http_transport
+      (execute_cypher_over_http, imported at module scope so gate arm P7
+      can monkeypatch it directly; used only on the HTTPS transport)
 
 Reads:
     - Environment variables: GRAPH_PG_HOST, GRAPH_PG_PORT, GRAPH_PG_USER,
       GRAPH_PG_PASSWORD, GRAPH_PG_DBNAME (read-only `kg_reader` role on the
       Hetzner AGE graph, reached through the SSH local port-forward recorded
-      in tracker/phase_2.1.md).
+      in tracker/phase_2.1.md). Read only on the psycopg2 transport, which
+      is used whenever GRAPH_QUERY_URL is unset or empty.
+    - Environment variable GRAPH_QUERY_URL: when set and non-empty, selects
+      the HTTPS transport instead of psycopg2. Read fresh on every call to
+      execute_cypher, never cached, so a mid-session change takes effect on
+      the next call.
 
 Writes:
     - Nothing. The connection is read-only by credential: `kg_reader` carries
       `default_transaction_read_only = on`. This module adds no additional
-      write path.
+      write path on either transport.
 
 Depended by:
     - system_03_search_agent.tools.cypher_query (T-2.1-07, the pipeline that
@@ -368,6 +388,35 @@ def _build_no_params_sql(cypher: str, as_clause: str) -> str:
     )
 
 
+# Environment variable selecting the HTTPS transport. Only the presence and
+# value are read; the name itself is never a secret.
+_ENV_GRAPH_QUERY_URL = "GRAPH_QUERY_URL"
+
+# `graph_http_transport` re-exports this module's error classes and `_redact`
+# (see its module docstring), so importing it here creates a genuine
+# circular import: whichever of these two modules a caller imports first,
+# the other is pulled in partway through, against a partially loaded module.
+# Placing this import here, after GraphError/_redact are already defined
+# above, means graph_http_transport's own import of those five names always
+# succeeds regardless of import order. The reverse can still lose the race:
+# if this module is reached before graph_http_transport has finished
+# defining execute_cypher_over_http (because something imported
+# graph_http_transport directly, first, before anything touched this
+# module), the import below fails with an ImportError naming exactly that
+# symbol. That specific shape is caught and deferred; execute_cypher
+# resolves it lazily on its first HTTP-dispatched call, by which point both
+# modules are always fully loaded. Any other ImportError (a genuinely
+# missing httpx dependency, for example) is not this shape and propagates.
+try:
+    from system_03_search_agent.tools.graph_http_transport import (
+        execute_cypher_over_http,
+    )
+except ImportError as _import_exc:
+    if "execute_cypher_over_http" not in str(_import_exc):
+        raise
+    execute_cypher_over_http = None  # type: ignore[assignment]
+
+
 def execute_cypher(
     cypher: str,
     params: dict[str, Any] | None = None,
@@ -378,15 +427,24 @@ def execute_cypher(
 ) -> tuple[list[dict[str, Any]], int]:
     """Execute an already-validated Cypher query against the Layer 1 graph.
 
-    When `params` is non-empty, wraps `cypher` in a `PREPARE ...(agtype) AS
-    SELECT * FROM cypher('ncbi_kg', $$ ... $$, $1) AS (...)` statement, then
-    runs `EXECUTE` with the JSON-encoded params bound through the psycopg2
-    %s placeholder, then `DEALLOCATE`s the statement. AGE rejects a
-    client-side %s passed directly as the cypher() third argument (sqlstate
-    22023), so the params value only ever reaches AGE as a genuine bound
-    parameter through EXECUTE, never spliced into the Cypher text itself.
-    When `params` is empty or None, the cypher() call omits the third
-    argument entirely, since AGE rejects an empty params object the same way.
+    Dispatches on the GRAPH_QUERY_URL environment variable. When it is set
+    and non-empty, this call goes over the HTTPS transport
+    (`graph_http_transport.execute_cypher_over_http`) and no psycopg2
+    connection is opened at all, not even to check whether one would work.
+    When it is unset or empty, this call uses psycopg2 exactly as before.
+
+    When `params` is non-empty on the psycopg2 transport, wraps `cypher` in
+    a `PREPARE ...(agtype) AS SELECT * FROM cypher('ncbi_kg', $$ ... $$, $1)
+    AS (...)` statement, then runs `EXECUTE` with the JSON-encoded params
+    bound through the psycopg2 %s placeholder, then `DEALLOCATE`s the
+    statement. AGE rejects a client-side %s passed directly as the
+    cypher() third argument (sqlstate 22023), so the params value only ever
+    reaches AGE as a genuine bound parameter through EXECUTE, never spliced
+    into the Cypher text itself. When `params` is empty or None, the
+    cypher() call omits the third argument entirely, since AGE rejects an
+    empty params object the same way. The HTTPS transport forwards the same
+    params value in the request body; the service applies the identical
+    PREPARE/EXECUTE mechanics on its side, since it reuses this module.
 
     Args:
         cypher: An already-validated Cypher body using named parameters
@@ -394,15 +452,24 @@ def execute_cypher(
             unvalidated string; validation is cypher_validator's job.
         params: The values referenced by the Cypher's named parameters,
             passed to AGE as a JSON object through the psycopg2 %s
-            placeholder.
+            placeholder, or as the request body's "params" field on the
+            HTTPS transport.
         row_limit: The maximum number of rows to return to the caller. Rows
             beyond this count are truncated, with total_available reporting
             how many the query actually returned and truncated set True.
+            On the HTTPS transport, the clamped value is sent to the
+            service and the truncation happens there; this function does
+            not re-truncate an already-truncated HTTPS response.
         timeout_s: The per-call budget in seconds. Enforced with a session
-            level `SET statement_timeout` on the connection this call opens.
+            level `SET statement_timeout` on the psycopg2 transport, and as
+            both the HTTP request timeout and the service's own budget on
+            the HTTPS transport.
         connection_factory: A zero-argument callable returning an open
             psycopg2 connection. Defaults to the real environment-backed
-            connection. Tests inject a fake factory here.
+            connection. Tests inject a fake factory here. Passing this
+            while GRAPH_QUERY_URL is also set is a caller defect (two
+            transports named in one call) and raises GraphError rather
+            than silently honouring one and discarding the other.
         as_clause: The AGE output column declaration, for example
             "(result agtype)". Defaults to a single generic output column.
             This is an internal, code-controlled parameter, never raw
@@ -410,14 +477,53 @@ def execute_cypher(
 
     Returns:
         A tuple of (rows, total_available). Each row is a dict keyed by the
-        AGE output column name(s) declared in as_clause.
+        AGE output column name(s) declared in as_clause, identical in shape
+        on both transports.
 
     Raises:
+        GraphError: connection_factory was passed while GRAPH_QUERY_URL is
+            also set.
         GraphConnectionError: The connection could not be established or
-            was lost during execution.
-        GraphAuthError: The kg_reader role failed authentication.
-        GraphTimeoutError: The query exceeded timeout_s.
+            was lost during execution, or the HTTPS transport's request
+            failed for a reason other than auth, timeout, or rate limit.
+        GraphAuthError: The kg_reader role failed authentication, or the
+            HTTPS transport's bearer credential was rejected.
+        GraphTimeoutError: The query exceeded timeout_s on either
+            transport.
     """
+    graph_query_url = os.environ.get(_ENV_GRAPH_QUERY_URL)
+    if graph_query_url:
+        if connection_factory is not None:
+            raise GraphError(
+                "connection_factory was passed while GRAPH_QUERY_URL is "
+                "set; these name two different transports and only one "
+                "may be used per call. Unset GRAPH_QUERY_URL to use the "
+                "psycopg2 transport with connection_factory, or drop "
+                "connection_factory to use the HTTPS transport"
+            )
+        http_fn = execute_cypher_over_http
+        if http_fn is None:
+            # The module-scope import above lost the circular-import race
+            # (see this module's docstring). Both modules are fully loaded
+            # by the time any call actually reaches here, so a plain
+            # import now always succeeds; cache it so later calls in this
+            # process skip this branch.
+            from system_03_search_agent.tools.graph_http_transport import (
+                execute_cypher_over_http as http_fn,
+            )
+            globals()["execute_cypher_over_http"] = http_fn
+        bound_http_params = params or {}
+        effective_http_row_limit = (
+            min(row_limit, MAX_ROW_LIMIT) if row_limit >= 1 else DEFAULT_ROW_LIMIT
+        )
+        return http_fn(
+            cypher=cypher,
+            params=bound_http_params,
+            row_limit=effective_http_row_limit,
+            timeout_s=timeout_s,
+            as_clause=as_clause,
+        )
+
     factory = connection_factory or _default_connection_factory
     bound_params = params or {}
     effective_row_limit = min(row_limit, MAX_ROW_LIMIT) if row_limit >= 1 else DEFAULT_ROW_LIMIT

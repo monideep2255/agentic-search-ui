@@ -1,0 +1,62 @@
+# systemd unit for the read-only HTTPS graph query service.
+# Build phase 4.11, Technical_specification.md Section 24.
+#
+# Deployed to /etc/systemd/system/ by deploy.sh.
+
+[Unit]
+Description=Read-only HTTPS graph query service (System 3, Layer 1 transport)
+Documentation=file:///opt/graph-query-service/README.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=kgquery
+Group=kgquery
+WorkingDirectory=/opt/graph-query-service
+
+# Holds the graph credential and this service's own bearer credential.
+# Mode 0600, owned by the service user. Never in this repository.
+EnvironmentFile=/opt/graph-query-service/service.env
+Environment=PYTHONPATH=/opt/graph-query-service
+Environment=PYTHONUNBUFFERED=1
+
+# --factory because build_app() performs the two startup refusals: no
+# credential, or GRAPH_QUERY_URL set in this service's own environment.
+# Both must abort the start rather than be discovered at request time.
+#
+# Bound to 127.0.0.1 deliberately. Caddy is the only way in, so the service
+# has no reason to be reachable on the public interface even for a moment
+# between starting and the proxy coming up.
+ExecStart=/opt/graph-query-service/venv/bin/uvicorn \
+    --factory services.graph_query_service.app:build_app \
+    --host 127.0.0.1 \
+    --port 8080 \
+    --no-server-header \
+    --log-level info
+
+Restart=on-failure
+RestartSec=5s
+
+# Least privilege at the process level, not only at the credential level.
+# The service reads three files and talks to a local socket; it has no
+# reason to write anywhere or to see the rest of the filesystem.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+# Loopback only: the service reaches Postgres over a unix or local TCP
+# socket and needs nothing beyond the host.
+IPAddressAllow=localhost
+IPAddressDeny=any
+
+[Install]
+WantedBy=multi-user.target

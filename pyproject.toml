@@ -56,7 +56,12 @@ s3-kgx-export = "system_03_search_agent.export.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+# "." is here for `services/`, the separately deployed graph query service
+# added at build phase 4.11. It is not part of the agent distribution: it runs
+# on the Hetzner box, imports three modules out of this package, and is copied
+# there by its own deploy script, so it is deliberately not in the setuptools
+# packages list below.
+pythonpath = ["src", "."]
 markers = [
     "integration: marks tests that hit the network or require external services",
 ]
