@@ -134,6 +134,30 @@ class BoardError(Exception):
     """The board is malformed. Refuse to render rather than hide a phase."""
 
 
+#: A flag row whose disposition cell OPENS with CLOSED or RESOLVED is a closed
+#: finding kept in place, not a live one.
+#:
+#: The flags table is a LEDGER, not a queue: a closed row stays so the trail
+#: survives, which is why its length only ever grows. That is correct, and for
+#: a long time it was also unreadable, because the summary printed one number
+#: for the whole table. On 2026-08-23 the product owner read that number, 83,
+#: as a backlog of 83 outstanding problems. Twenty-six were already closed.
+#:
+#: Anchored with `match`, never `search`, and the difference is load-bearing.
+#: Live rows say things like "Not closed until build phase 6.0 revisits it", or
+#: describe how a RELATED finding was closed, so a substring test reclassifies
+#: open findings as done. Measured when this was written: switching to `search`
+#: moved the split from 57 open / 26 closed to 54 / 29, hiding three live
+#: findings behind a done count. That is the asymmetric error direction, since
+#: nothing prompts anyone to re-read a row already reported as finished.
+#: `tests/tracker/test_render_board_flags.py` pins both traps.
+_CLOSED_FLAG_RE = re.compile(r"\s*(?:CLOSED|RESOLVED)\b", re.IGNORECASE)
+
+
+def is_closed_flag(disposition: str) -> bool:
+    return _CLOSED_FLAG_RE.match(disposition) is not None
+
+
 def split_row(line: str) -> list[str]:
     return [cell.strip().strip("`") for cell in line.strip().strip("|").split("|")]
 
@@ -308,7 +332,12 @@ def parse_board(md: str) -> dict:
     open_flags = []
     for cells in find_table(lines, "## Open flags"):
         if len(cells) >= 3:
-            open_flags.append({"flag": cells[0], "detail": cells[1], "before": cells[2]})
+            open_flags.append({
+                "flag": cells[0],
+                "detail": cells[1],
+                "before": cells[2],
+                "closed": is_closed_flag(cells[2]),
+            })
 
     m = re.search(r"^Last updated:\s*(.+?)\.?$", md, re.MULTILINE)
     updated = m.group(1).strip() if m else "unknown"
@@ -348,6 +377,8 @@ def render_body(data: dict) -> str:
     c = counts(phases)
     payload = json.dumps([asdict(p) for p in phases], indent=None, separators=(",", ":"))
     cols = json.dumps([{"key": k, "label": l, "tone": t} for k, l, t in COLUMNS])
+    open_flag_count = sum(1 for f in data["open_flags"] if not f["closed"])
+    closed_flag_count = len(data["open_flags"]) - open_flag_count
 
     stats = [
         ("todo", "To do", c["by_status"]["todo"], "phases not started"),
@@ -355,7 +386,7 @@ def render_body(data: dict) -> str:
         ("blocked", "Blocked", c["by_status"]["blocked"], "hard blockers"),
         ("review", "In review", c["by_status"]["in-review"], "awaiting the judge"),
         ("done", "Done", c["by_status"]["done"], "closed"),
-        ("", "Open flags", c["flagged"], "resolve before their phase"),
+        ("", "Open flags", open_flag_count, "still to resolve"),
     ]
     stat_html = "\n".join(
         f'    <div class="stat"{f" data-tone={tone}" if tone else ""}>\n'
@@ -381,11 +412,19 @@ def render_body(data: dict) -> str:
         for label, done, total, tone in meters
     )
 
+    # Open first, closed after, each group keeping its board order. Before
+    # this they were interleaved, so a reader scanning for live work waded
+    # through 26 closed rows in whatever order the board happened to list them.
+    ordered_flags = (
+        [f for f in data["open_flags"] if not f["closed"]]
+        + [f for f in data["open_flags"] if f["closed"]]
+    )
     flag_rows = "\n".join(
-        f"          <tr><td>{esc(f['flag'])}</td><td>{esc(f['detail'])}</td>"
+        f'          <tr{" data-closed=1" if f["closed"] else ""}>'
+        f"<td>{esc(f['flag'])}</td><td>{esc(f['detail'])}</td>"
         f"<td class=\"when\">{esc(f['before'])}</td></tr>"
-        for f in data["open_flags"]
-    ) or '          <tr><td colspan="3">No open flags.</td></tr>'
+        for f in ordered_flags
+    ) or '          <tr><td colspan="3">No flags recorded.</td></tr>'
 
     return TEMPLATE.format(
         css=CSS,
@@ -394,6 +433,8 @@ def render_body(data: dict) -> str:
         stat_html=stat_html,
         meter_html=meter_html,
         flag_rows=flag_rows,
+        open_flag_count=open_flag_count,
+        closed_flag_count=closed_flag_count,
         payload=payload,
         cols=cols,
         refine_labels=json.dumps({k: v[0] for k, v in REFINEMENT.items()}),
@@ -460,11 +501,15 @@ TEMPLATE = """<title>System 3 build board</title>
   </div>
 
   <section>
-    <h2>Open flags</h2>
+    <h2>Flags: {open_flag_count} open, {closed_flag_count} closed</h2>
+    <p class="note">A ledger, not a queue. A closed finding keeps its row so the
+      trail survives, which is why the total only ever grows. Open rows are
+      listed first. Most open ones are conditional, worded "whenever X is next
+      touched", and become work only if that code is touched.</p>
     <div class="table-scroll">
       <table>
         <thead>
-          <tr><th>Flag</th><th>Why it matters</th><th>Resolve before</th></tr>
+          <tr><th>Flag</th><th>Why it matters</th><th>Owner, or how it closed</th></tr>
         </thead>
         <tbody>
 {flag_rows}
@@ -690,6 +735,11 @@ def main(argv: list[str]) -> int:
     body = render_body(data)
 
     flag_count_in_table = len(data["open_flags"])
+    # Reconciliation stays on the TOTAL, deliberately. Every flag named on a
+    # phase row must have exactly one row in the table whether it is open or
+    # closed, or the trail breaks. Only the REPORTING splits the two.
+    open_flags = sum(1 for f in data["open_flags"] if not f["closed"])
+    closed_flags = flag_count_in_table - open_flags
     if c["flagged"] != flag_count_in_table:
         print(
             f"error: {c['flagged']} flag(s) on phases but {flag_count_in_table} row(s) in the "
@@ -701,7 +751,11 @@ def main(argv: list[str]) -> int:
     summary = (
         f"{len(phases)} phases | "
         + " ".join(f"{label.lower()}={c['by_status'][key]}" for key, label, _ in COLUMNS)
-        + f" | flags={c['flagged']} needs-you={c['po']}"
+        # `flags=83` was read, correctly, as 83 outstanding problems. It was
+        # the row count of a ledger that keeps closed findings in place. Two
+        # numbers, because one could not carry both facts.
+        + f" | flags: {open_flags} open, {closed_flags} closed"
+        + f" | needs-you={c['po']}"
     )
 
     if check_only:
