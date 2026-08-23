@@ -23,11 +23,19 @@ Writes:
 
 Section 17 places the few-shot pool in a versioned file loaded once at
 process start, and build phase 4.7 owns the routing that CONSUMES it. This
-module owns the path that WRITES to it. Nothing here wires the orchestrator
-to read either destination file, and nothing under `core/` or `harness/` is
-touched by this phase. A promoted example that no orchestrator reads yet is
-the correct end state for build phase 4.6; build phase 4.7 is the one that
-reads `orchestrator/few_shot_examples.json` at process start.
+module owns the path that WRITES to it. As of build phase 4.7's T-4.7-02
+and T-4.7-03, `orchestrator.few_shot_pool` is the loader that reads
+`orchestrator/few_shot_examples.json` once per process
+(`few_shot_pool.load_pool`) and the single writer both this module and any
+other caller append through (`few_shot_pool.append_example`, closing
+F-4.6-A-08: two promotions running at once could previously interleave a
+bare read-modify-write and corrupt the file). `_append_pool_entry` below
+delegates to it rather than keeping a second, independently-drifting copy
+of the write logic. `_append_golden_entry`, the golden-dataset half, is
+unaffected: F-4.6-A-08 and build phase 4.7's premise gate (T-4.7-09, arm
+P11) are both scoped to the pool file specifically, since that is the file
+a running process reads at startup; the golden dataset has no such reader
+yet.
 
 ## Why the golden dataset lives at `eval/golden_dataset.json`
 
@@ -84,19 +92,10 @@ DEFAULT_POOL_PATH = Path(__file__).resolve().parents[1] / "orchestrator" / "few_
 #: (`feedback` -> `system_03_search_agent` -> `src` -> root).
 DEFAULT_GOLDEN_DATASET_PATH = Path(__file__).resolve().parents[3] / "eval" / "golden_dataset.json"
 
-_EMPTY_POOL: dict[str, Any] = {
-    "schema_version": 1,
-    "_scope_note": (
-        "Written by build phase 4.6's promotion path (T-4.6-11). Nothing in "
-        "this repository reads this file yet: build phase 4.7 owns wiring "
-        "the orchestrator to load it once at process start, per "
-        "`.claude/rules/prompt-cache-discipline.md`. An empty `examples` "
-        "array, or one growing slower than promotions run, is expected "
-        "until then, not a defect."
-    ),
-    "examples": [],
-}
-
+#: `few_shot_pool.append_example` (T-4.7-03) now owns the pool file's own
+#: empty-document default; this module no longer needs one for the pool
+#: side, only for the golden dataset below, which `_append_pool_entry` does
+#: not touch.
 _EMPTY_GOLDEN_DATASET: dict[str, Any] = {
     "schema_version": 1,
     "_scope_note": (
@@ -218,12 +217,15 @@ class EvalCase(BaseModel):
 def _read_json_object(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
     """Read `path` as a JSON object, or a fresh copy of `default` when it does not exist yet.
 
-    `copy.deepcopy`, not `dict(default)`: a shallow copy still shares the
-    nested `"examples"` or `"cases"` list object with the module-level
-    `_EMPTY_POOL` / `_EMPTY_GOLDEN_DATASET` constant, so an append below
-    would mutate that shared constant in place and leak entries into every
-    later call in the same process, including calls against a different
-    file. Caught by `test_promote_candidate_is_idempotent_on_repeat_run`.
+    As of T-4.7-03, `_append_golden_entry` is this helper's only remaining
+    caller (the pool side now goes through `few_shot_pool.append_example`'s
+    own atomic, lock-serialized write, which owns its own empty-document
+    default). `copy.deepcopy`, not `dict(default)`: a shallow copy still
+    shares the nested `"cases"` list object with the module-level
+    `_EMPTY_GOLDEN_DATASET` constant, so an append below would mutate that
+    shared constant in place and leak entries into every later call in the
+    same process, including calls against a different file. Caught by
+    `test_promote_candidate_is_idempotent_on_repeat_run`.
     """
     if not path.exists():
         return copy.deepcopy(default)
@@ -241,13 +243,26 @@ def _write_json_object(path: Path, data: dict[str, Any]) -> None:
 
 
 def _append_pool_entry(pool_path: Path, entry: dict[str, Any]) -> None:
-    """Append one `few_shot_example` entry, unless this candidate is already tagged in the file."""
-    data = _read_json_object(pool_path, default=_EMPTY_POOL)
-    data.setdefault("examples", [])
-    if any(e.get("cq_candidate_id") == entry.get("cq_candidate_id") for e in data["examples"]):
-        return
-    data["examples"].append(entry)
-    _write_json_object(pool_path, data)
+    """Append one `few_shot_example` entry via the single, lock-serialized writer.
+
+    Delegates to `orchestrator.few_shot_pool.append_example` (T-4.7-03),
+    which closes F-4.6-A-08: this function's previous body did a bare
+    read-modify-write with no lock between the two, so two promotions
+    running at once could interleave and either lose an entry or leave the
+    file as invalid JSON. There is now exactly one writer implementation
+    for this file; this function is a thin, import-boundary-preserving
+    call to it, not a second copy of the same logic.
+
+    Imported inside the function body, not at module top, to avoid a
+    circular import: `few_shot_pool` imports `FewShotExample` and
+    `DEFAULT_POOL_PATH` from this module at ITS top level (T-4.7-02's
+    "reuse the model rather than declaring a second one"), so this module
+    cannot also import `few_shot_pool` at its own top level without the two
+    trying to finish loading each other first.
+    """
+    from system_03_search_agent.orchestrator.few_shot_pool import append_example
+
+    append_example(pool_path, entry)
 
 
 def _append_golden_entry(golden_path: Path, entry: dict[str, Any]) -> None:
