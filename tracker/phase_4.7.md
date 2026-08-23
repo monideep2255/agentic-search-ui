@@ -1,0 +1,72 @@
+# Build phase 4.7: competency-question routing
+
+Branch: `phase/4.7-cq-routing`
+Spec: `requirements/Technical_specification.md` Section 17 ("Competency question routing": the few-shot pool, the five query shapes, exact-ID-first resolution), Section 2 (the Think row of the agent loop), Section 4 (prompt-cache discipline, the stable prefix), Section 16 stage 5 (few-shot promotion, which writes the pool file this phase first reads), Section 21.1 and Section 3.4 (the per-query-class latency budgets a real `query_class` finally selects)
+Depends on: 3.4 (citation trust across Layers 2 and 3), merged 2026-08-10 as PR #28
+Opened: 2026-08-23
+
+Taken ahead of build phase 4.12 by product-owner decision on 2026-08-22, logged in `DECISIONS.md`. Build phase 4.6 ships interaction capture, so every question now writes an `interactions` row, and `query_class` is hardcoded `"lookup"` on every one of them because `think_node` is a stub. Deploying first means collecting real questions into rows known-wrong in exactly the dimension anyone would want to analyse.
+
+## What this phase delivers
+
+Section 25's row reads "few-shot routing seeded with the seven must-pass competency questions; query-shape routing (single-hop, multi-hop, dynamic multi-source)". A product-owner decision on 2026-08-10 widened it: this phase is F-2.0-15's real home, so it is where `think_node` stops being a stub, not few-shot example selection layered on an unfixed one.
+
+- Real query-shape classification in Think: one of the five Section 17 shapes, per query, via the Plan-tier model, replacing the hardcoded `"lookup"` literal.
+- Real entity resolution in Think: Section 17's exact-ID-first order, then typed model extraction for what is left. `resolved_entities` stops being unconditionally `[]`.
+- The few-shot pool, seeded with the seven must-pass moat questions and loaded once at process start into the stable, cache-hot prefix.
+- The removal of `plan_node`'s capitalized-token gene guess and its hand-maintained stopword list, which is what refuses 4 of the 7 must-pass questions today.
+- A real `query_class` reaching `budget_for_step`, so Act's per-class latency budget (5s lookup, 10s single-hop, 30s multi-hop and aggregate, 2min exploratory) finally selects on something true, and `interactions.query_class` stops recording a known-wrong value.
+
+## The goal contract
+
+Written before any ticket, per `.claude/rules/goal-contracts.md`.
+
+- Done when: all seven v1 must-pass moat questions (Q1, Q3, Q4, Q5, Q6, Q8, Q10) reach Act with a query class that is a real classification of the question and with the question's actual subject resolved, and none is refused because a database name mentioned in passing was misread as a gene symbol; the few-shot pool loads once at process start from the versioned file and sits inside a stable prefix that is byte-identical across two requests differing only in their query; two concurrent promotions cannot corrupt that file (F-4.6-A-08); and `interactions.query_class` records the classification the loop actually used.
+- Verify: this phase's premise gate, run live with `RUN_PREMISE_GATE=1` end to end over the real loop against the real graph and the real NCBI surfaces, every arm carrying a populate-check and every arm mutation-proven; a SHA-256 byte-equality assertion over the assembled stable prefix across two requests; the Python suite against a baseline re-measured at this branch point rather than carried forward; `ruff check` on every file touched; `python tracker/check_doc_drift.py --check`; and an independent judge and adversary round before merge.
+- Output: the branch `phase/4.7-cq-routing` and one pull request.
+- Constraints: prompt-level few-shot only. No deterministic route-lookup layer that matches a query against the pool and dispatches without an LLM call, since Section 17 names that a lightweight classifier and Phase 0's decision forbids it. No retrieval or top-k selection over the pool, and no learned or fine-tuned router: Section 17's upgrade path puts both outside v1 and `.claude/rules/v1-scope-boundary.md` binds hardest here. The pool is never read from a database per request. Every gate in `production-standards` holds, including schema validation on the model's structured extraction output before any of it reaches Plan.
+- Blocked-stop: a must-pass question that cannot be routed correctly without a capability on the PRD out-of-scope list or Section 25's fast-follow table. That stops the phase and returns to the product owner rather than being built.
+
+## Product-owner decisions taken at open
+
+- 2026-08-23, entity resolution: model extraction with NO fallback guess. Think runs Section 17's deterministic exact-ID pre-pass (verbatim CURIE, `rs\d+`, PMID, `NM_`/`NC_`/`NP_` accessions) and then a Plan-tier call that returns typed entity spans for whatever text is left. `_SYMBOL_CANDIDATE_STOPWORDS` and the `_GENE_SYMBOL_TOKEN_PATTERN` guess in `plan_node` are removed outright, not tuned. When the extraction call fails, Think resolves nothing and Plan proceeds with no target entities, an honest degrade; it never falls back to guessing. This DISSOLVES F-3.1-41 (acronym-shaped tokens like `ADHD`) and F-3.1-42 (lowercase gene mentions) rather than deciding either: both are questions about how to tune a list that no longer exists. Recorded in `DECISIONS.md`.
+
+## Stated coverage exclusions
+
+Declared at open, before any arm is written, per `.claude/rules/goal-contracts.md`'s "a verify surface must state its own coverage". What this phase deliberately does not cover, so a green gate cannot be read as covering it:
+
+- Ask-back on ambiguity. Section 2's Think row says Think may "ask one clarifying question on ambiguity", and `ThinkPayload.clarifying_question` exists in the locked event contract. Measured at open rather than assumed: that field has NO consumer anywhere in `src/` or `frontend/src/` outside type declarations. It is emitted as `None` and nothing reads it. Wiring a real ask-back needs an interaction flow this phase does not have, an SSE pause, a user reply, and a run resume, and Section 25's 4.7 row does not name it. This phase keeps emitting `None` and continues to a best-effort answer. NEEDS A PRODUCT-OWNER OWNER: no phase in the build order claims it, which is exactly the shape F-2.0-15 had when it fell through twelve phases. Raised at this phase's checkpoint rather than assigned unilaterally by the lead.
+- The upgrade path in Section 17: retrieval over the pool and a learned router. Both are named there as post-v1 and both stay unbuilt.
+- Automated mining of `interactions` into new candidates. Section 16 stage 2, out of v1 scope per Decision G.
+
+## The traps this phase can most easily ship
+
+Each has a named ancestor in this repository.
+
+- A COMPONENT-LEVEL GATE THAT STRUCTURALLY CANNOT SEE THIS DEFECT. F-2.0-15 survived twelve phases and two weeks of premise gates because every one of those gates graded its own tool in isolation and none exercised Think's classification as the thing under test. Only a manual end-to-end read of real answers found it. So this phase's gate is end-to-end over the real loop from question to route, and an arm that mocks Think's own call is not an arm.
+- READING THE OUTPUT INSTEAD OF THE INPUT. Build phase 2.1 spent three review rounds hardening a parameter binder because the generator returned orthologs for a disease question, and the real cause was that the `"lookup"` stub selected a 0-hop schema slice containing no Disease label at all. That composition defect is a DIRECT ancestor of this phase: a real `query_class` changes which schema slice the generator sees. Print the assembled prompt before debugging the generation.
+- A GATE ARM THAT CANNOT FAIL. Build phase 4.11 wrote three vacuous arms and all three were caught by mutation, none by reading, one of them vacuous twice while quoting the lesson in its own docstring. Every arm here carries a populate-check from its first line: it asserts it produced the state it is about to measure, so a silently failed setup cannot read as the control working.
+- A GATE THAT PASSES BECAUSE THE HAPPY PATH IS THE ONLY PATH TESTED. Build phase 4.4's gate passed 6 of 6 while the DEFAULT invocation returned zero of the twelve edges the gate itself pinned, because five of six arms passed an explicit label list and nothing exercised the default. Here the equivalent is arming every case with a question whose entities are already CURIEs. At least one arm per query shape uses the raw natural-language question a real user types.
+
+## Tickets
+
+| ID | Title | Status | Files it may touch | Acceptance criteria |
+|----|-------|--------|--------------------|---------------------|
+| T-4.7-01 | Seed the few-shot pool with the seven must-pass moat questions | todo | `src/system_03_search_agent/orchestrator/few_shot_examples.json` | Seven entries, one per must-pass question (Q1, Q3, Q4, Q5, Q6, Q8, Q10), each in the exact `few_shot_example` shape Section 17 fixes: `query_pattern` (generalized, never one user's literal sentence), `query_class`, `resolved_entities`, `route`, `narrative_pattern`, `citation_pattern`. Every `query_class` value is one of the five Section 17 shapes. Every tool named in a `route` is one of the seven registered tools |
+| T-4.7-02 | The pool loader, loaded once at process start | todo | `src/system_03_search_agent/orchestrator/few_shot_pool.py` (new), `orchestrator/__init__.py` | Loads the versioned file exactly once per process and holds it in memory. Never reads it per request and never reads it from a database. Schema-validates every entry on load and FAILS LOUDLY at startup on a malformed file rather than degrading to an empty pool, since an empty pool is silently the old behaviour. Rejects an unknown `schema_version` |
+| T-4.7-03 | F-4.6-A-08: concurrent promotion cannot corrupt the pool | todo | `src/system_03_search_agent/feedback/promotion.py`, `orchestrator/few_shot_pool.py` | Two promotions running at once cannot lose an entry or leave the file invalid JSON. The write is atomic (temp file plus `os.replace`) and serialized by an advisory lock on the file itself. A reader never observes a partial write. Proven by a test that actually runs two concurrent promotions, not by inspection |
+| T-4.7-04 | Real query-shape classification in `think_node` | todo | `src/system_03_search_agent/core/graph.py` (`think_node` and its helpers) | `query_class` is a real classification of the question into one of the five Section 17 shapes, produced by a Plan-tier call whose response is READ rather than discarded. Structured output is schema-validated before use, and a value outside the five shapes is rejected rather than coerced. On a model failure the existing `step_error` path is used; the class is never silently defaulted to `"lookup"` while presenting as a classification. `ThinkPayload.narrative` states the actual reasoning, not the stub literal |
+| T-4.7-05 | Real entity resolution in `think_node`, exact-ID first | todo | `src/system_03_search_agent/core/graph.py` (`think_node` and its helpers) | Section 17's order, deterministic pre-pass before any fuzzy step: verbatim CURIE, `rs\d+`, PMID, `NM_`/`NC_`/`NP_` accession. Only text left unresolved by that pass reaches the Plan-tier typed-extraction call. Extraction output is schema-validated with `maxLength` on every string and `maxItems` on the array before anything downstream reads it. `resolved_entities` is populated in the locked `{text, curie, confidence}` contract shape. A span that cannot be confirmed to a CURIE contributes nothing and is never fabricated |
+| T-4.7-06 | Plan consumes Think's entities; retire the guess | todo | `src/system_03_search_agent/core/graph.py` (`plan_node`, `_resolve_query_entities`) | `plan_node` takes `target_entities` from Think's `resolved_entities`. `_SYMBOL_CANDIDATE_STOPWORDS`, `_GENE_SYMBOL_TOKEN_PATTERN` and the capitalized-token guess are removed, per the 2026-08-23 product-owner decision. No fallback path resurrects them. Every existing test that asserted the old heuristic's behaviour is re-pointed at the new source of truth or retired with a stated reason, never left asserting a mechanism that no longer exists |
+| T-4.7-07 | The pool in the stable prefix, byte-identical across requests | todo | `src/system_03_search_agent/harness/cache.py`, `core/graph.py` | The few-shot block sits inside the stable prefix in Section 4.2's fixed order, ahead of anything per-query. A SHA-256 over the assembled prefix is byte-identical across two requests whose dynamic suffix differs. Nothing per-query, and no timestamp, request id or session id, enters the prefix |
+| T-4.7-08 | Real `query_class` reaches the budgets and the interactions row | todo | `src/system_03_search_agent/core/graph.py`, the interaction-capture path | `budget_for_step("act", query_class)` now selects on a real class, and Act's existing `CYPHER_QUERY_TIMEOUT_SECONDS` floor still holds for a class whose budget is smaller. `interactions.query_class` records the class the loop actually used. Build phase 4.6's note that this column is known-wrong is retired in the same change that makes it true |
+| T-4.7-09 | The premise gate | todo | `tests/system_03_search_agent/core/test_cq_routing_premise.py` (new) | End to end over the real loop, live, `RUN_PREMISE_GATE=1`. One arm per must-pass question asserting the routed class and the resolved subject, driven by the raw natural-language question a user types, never by a pre-resolved CURIE. Arms for the four questions that refuse today (Q4, Q5, Q6, Q10) asserting the database name mentioned in passing is NOT taken as the subject. Every arm carries a populate-check. Every arm mutation-proven, with the mutation and the observed red recorded in this file. The file states its own coverage, including the exclusions above |
+| T-4.7-10 | Docs, decisions and learnings | todo | `CLAUDE.md`, `README.md`, `DECISIONS.md`, `LEARNINGS.md`, `requirements/Plan.md`, `tracker/BOARD.md` | `python tracker/check_doc_drift.py --check` passes. F-2.0-15, F-3.1-41, F-3.1-42 and F-4.6-A-08 are closed on the board with a reason. The ask-back exclusion is raised to the product owner rather than closed |
+
+## Findings
+
+None yet. This phase has not been reviewed.
+
+## History
+
+- 2026-08-23: phase opened. Branch created, dependency 3.4 verified merged, `LEARNINGS.md` read filtered to Think, Plan and routing territory, product-owner decision taken on entity resolution before any ticket was written.
