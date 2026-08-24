@@ -1,0 +1,55 @@
+# What never needs to reach a Railway build.
+#
+# Build phase 4.12. `railway up` indexes the working directory, and the first
+# attempt DIED rather than merely wasting bandwidth:
+#
+#   reference/personal-os-work/Reference-repos/agentmemory-Deep-Dive/agentmemory:
+#   IO error ... No such file or directory (os error 2)
+#
+# `reference/` holds symlinks to read-only reference material outside this
+# repository, and at least one target is absent on this machine. The indexer
+# follows the link, cannot stat the target, and aborts the whole upload. So
+# this file is a correctness fix first and a size optimisation second.
+
+# Symlinked reference material. Never part of a build, and the direct cause of
+# the failed upload above.
+reference/
+
+# The local virtualenv: 373 MB, and Nixpacks builds its own from
+# requirements.txt. Uploading it would be slow and would also be WRONG, since a
+# macOS venv cannot run on a Linux container.
+venv/
+.venv/
+
+# Installed frontend dependencies. `npm ci` reinstalls them from the lockfile
+# inside the build, which is the point of committing a lockfile.
+node_modules/
+frontend/node_modules/
+
+# Python bytecode and test caches, all machine-local.
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Local secrets. Railway variables are the deploy-time source, per Section 24,
+# and .env is gitignored anyway. Listed explicitly rather than relied upon,
+# because `railway up` indexes the WORKING DIRECTORY rather than the git index,
+# so a gitignored file is not automatically excluded here.
+.env
+
+# Documentation, planning artifacts and the tracker. Large, and none of it is
+# read at runtime.
+docs/
+requirements/
+tracker/
+eval/
+security/
+reference-repos/
+
+# Test suites. They are a merge gate, not a runtime dependency.
+tests/
+
+# Version control metadata.
+.git/
