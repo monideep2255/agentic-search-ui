@@ -16,6 +16,7 @@ Status: IN PROGRESS. Code-side work complete and deployed to the Hetzner box. Ra
 - [Still blocked on the product owner](#still-blocked-on-the-product-owner)
 - [Railway provisioning, done 2026-08-24](#railway-provisioning-done-2026-08-24)
 - [What is left, and it is not a product-owner block](#what-is-left-and-it-is-not-a-product-owner-block)
+- [What is live, 2026-08-24](#what-is-live-2026-08-24)
 - [History](#history)
 
 ## Scope, and what is deliberately not in it
@@ -43,7 +44,7 @@ The Layer 1 cutover needs NO code. `execute_cypher` has dispatched on `GRAPH_QUE
 | T-4.12-08 | Deploy the updated Caddyfile and `app.py` to the box | done, 2026-08-24, product-owner approved |
 | T-4.12-09a | Railway project, both databases, both service shells | done, 2026-08-24 |
 | T-4.12-09b | Variable sets per Section 24, and the Layer 1 cutover | done, 2026-08-24 |
-| T-4.12-09c | Build configuration so the API and web services can actually boot | OPEN, and it is the next real work |
+| T-4.12-09c | Build configuration so the API and web services can actually boot | API done and LIVE; frontend blocked on a dashboard-only field |
 | T-4.12-09d | GitHub integration watching `develop` | OPEN, blocked by 09c |
 | T-4.12-10 | Security scan before any public URL | DROPPED 2026-08-24 by product-owner decision, logged in `DECISIONS.md` |
 
@@ -148,6 +149,33 @@ T-4.12-09c is the next real work and it is engineering, not permission:
 - The frontend builds with `tsc -b && vite build` and lives in `frontend/`, so its service needs a root directory setting.
 - Both are per-service settings. A single root `Procfile` cannot serve a two-service monorepo, so this wants a `railway.json`, which Section 24 already anticipates as a Phase 6 build target rather than something that exists.
 
+## What is live, 2026-08-24
+
+THE API IS DEPLOYED AND SERVING, verified over its public URL rather than from a status field:
+
+| Check | Result |
+|-------|--------|
+| `https://search-agent-api-production.up.railway.app/health` | `{"status":"ok"}`, HTTP 200 in 0.9s |
+| Routes present | `/v1/query`, `/v1/query/{run_id}/events`, `/v1/allowance`, `/v1/persona` |
+| `/v1/allowance` with no credential | HTTP 401, `invalid or expired credentials` |
+
+That 401 is the auth layer working on a public URL, not a defect, and it is worth recording as a positive result rather than passing over it.
+
+Both start commands were VERIFIED LOCALLY before being committed: the API booted under `PYTHONPATH=src uvicorn ...` and answered `/health` with 200, and `npm run preview` served the built `dist` with 200. Neither was inferred from the README.
+
+THE FRONTEND IS NOT SERVING, and the cause is a Railway behaviour rather than a defect in this repository. Full account in `LEARNINGS.md`, 2026-08-24. In short: `railway up` deploys from the LINKED PROJECT ROOT regardless of the working directory, so `search-agent-web` received the root `railway.json`, which is the API's uvicorn config, and ran a second copy of the API. It reported `Online` and served a FastAPI 404.
+
+The redundant deployment was removed with `railway down` rather than `railway service delete`, so the service shell and its generated domain survive and nothing has to be recreated. Confirmed by the RESPONSE BODY changing, not by the status field: `{"detail":"Not Found"}` (FastAPI running) became `{"status":"error","code":404,"message":"Application not found"}` (Railway edge, no app).
+
+WHAT THE FRONTEND NEEDS, and neither option is available from this harness:
+
+- The service's Root Directory set to `frontend`. It is a dashboard-only field: `railway service source connect` has no flag for it, `railway up frontend` and `railway up .` both return `prefix not found` despite `--help` documenting a `[PATH]` argument, and Railway's GraphQL `serviceInstanceUpdate` returns HTTP 403 to the CLI's own stored token, which is not scoped for the public API.
+- Or the Railway MCP, authorised interactively, which does expose service configuration.
+
+CURRENT BILLING SHAPE: three components running, not four. `search-agent-api`, Postgres and Redis are Online; `search-agent-web` is Offline and costs nothing while it serves nothing.
+
+`CORS_ORIGINS` is still unset, deliberately. It wants the frontend's origin, and until that service actually serves the frontend there is no correct value to give it.
+
 ## History
 
 - 2026-08-24: Opened after PR #59 and PR #60 closed both hard blockers. Preflight READY on all three transports.
@@ -159,3 +187,4 @@ T-4.12-09c is the next real work and it is engineering, not permission:
 - 2026-08-24: Railway CLI upgraded 4.30.5 to 5.43.2 by the product owner, after the documented `railway setup agent` and `railway mcp install` commands were found NOT to exist on 4.30.5. The command had been given from documentation without checking it against the binary, and it was wrong.
 - 2026-08-24: Railway MCP installed with `railway mcp install --agent claude-code --oauth`, chosen over `railway setup agent` because that variant also writes third-party SKILLS into the harness, and over `--remote`/`--local` because only `--oauth` scopes to chosen workspaces with short-lived revocable tokens. It registered but needs an interactive OAuth flow, so it is unusable from a non-interactive session. The CLI did the provisioning instead, so the MCP was a convenience rather than a dependency.
 - 2026-08-24: Project, both databases, both service shells and 14 variables provisioned and verified.
+- 2026-08-24: Railway project provisioned; API built, deployed and verified live over its public URL. Frontend deployment wasted one build on the monorepo config trap above, was removed, and is blocked on a dashboard-only Root Directory field.
