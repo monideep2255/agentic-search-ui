@@ -3,7 +3,7 @@
 Branch: `phase/4.12-demo-deploy` (the board's name; `requirements/phase_6/Continuation_prompt.md` said `phase/4.12-demo-deployment`, and the board owns phase status, so the board wins. The prompt is corrected at checkpoint.)
 Depends on: 4.11, merged 2026-08-22
 Opened: 2026-08-24, after both hard blockers closed (PR #59, PR #60)
-Status: IN PROGRESS. Code-side work complete and DEPLOYED to the Hetzner box. Railway provisioning and the security scan remain.
+Status: IN PROGRESS. Code-side work complete and deployed to the Hetzner box. Railway project provisioned and configured. What remains is build configuration, which is real work rather than a product-owner block.
 
 ## Table of contents
 
@@ -14,6 +14,8 @@ Status: IN PROGRESS. Code-side work complete and DEPLOYED to the Hetzner box. Ra
 - [Evidence](#evidence)
 - [The deploy, done 2026-08-24](#the-deploy-done-2026-08-24)
 - [Still blocked on the product owner](#still-blocked-on-the-product-owner)
+- [Railway provisioning, done 2026-08-24](#railway-provisioning-done-2026-08-24)
+- [What is left, and it is not a product-owner block](#what-is-left-and-it-is-not-a-product-owner-block)
 - [History](#history)
 
 ## Scope, and what is deliberately not in it
@@ -39,8 +41,11 @@ The Layer 1 cutover needs NO code. `execute_cypher` has dispatched on `GRAPH_QUE
 | T-4.12-06 | Premise gate, 28 arms | done, `7cb9bd3` |
 | T-4.12-07 | Mutation harness, 14 mutations | done, `f54c205` |
 | T-4.12-08 | Deploy the updated Caddyfile and `app.py` to the box | done, 2026-08-24, product-owner approved |
-| T-4.12-09 | Railway provisioning, variable sets, GitHub integration | BLOCKED, product owner |
-| T-4.12-10 | Security scan before any public URL | BLOCKED, not funded |
+| T-4.12-09a | Railway project, both databases, both service shells | done, 2026-08-24 |
+| T-4.12-09b | Variable sets per Section 24, and the Layer 1 cutover | done, 2026-08-24 |
+| T-4.12-09c | Build configuration so the API and web services can actually boot | OPEN, and it is the next real work |
+| T-4.12-09d | GitHub integration watching `develop` | OPEN, blocked by 09c |
+| T-4.12-10 | Security scan before any public URL | DROPPED 2026-08-24 by product-owner decision, logged in `DECISIONS.md` |
 
 ## What this phase caused and then fixed
 
@@ -101,6 +106,48 @@ One transient worth recording so it is not read as a defect later: an `ssh` call
 - T-4.12-09, Railway provisioning. Needs the product owner's account. Product-owner direction 2026-08-24: use Railway's MCP server rather than the console by hand. That is an executable extension, so `supply-chain-security`'s enable-versus-trust gate applies before it is wired in, and this session cannot run an OAuth flow.
 - T-4.12-10, the security scan. Paused since 2026-08-03 on cost. Product-owner direction 2026-08-24: "security will be last step". Read as the last step BEFORE the public URL, which is what `tracker/BOARD.md` already requires ("its trigger is exposure, so it runs before any public URL exists, not after"). Confirm that reading before publishing anything.
 
+## Railway provisioning, done 2026-08-24
+
+Product owner chose Railway for the first month over a Netlify plus Render split, after being shown the arithmetic below.
+
+WHAT EXISTS, verified with `railway status` rather than taken from each command's own output:
+
+| Component | State |
+|-----------|-------|
+| Project `system3-search-agent` | created, id `0f85f78e-1ffc-4a62-b3d8-a03dcae9b585` |
+| `Postgres` | Online, `postgres-ssl:18`, 4.9 GB volume |
+| `Redis` | Online, with volume |
+| `search-agent-api` | created, Offline (no deployment yet, so no compute billed) |
+| `search-agent-web` | created, Offline |
+
+The two service shells were deliberately created WITHOUT a repo link. Linking a repo deploys immediately, and there is no build configuration in this repository yet (Section 24 says so itself: "no Railway config file exists yet"), so linking first would have started a build loop that fails repeatedly and bills for every attempt.
+
+THE VARIABLE SET on `search-agent-api`, 14 variables, mapped from Section 24's table:
+
+- Addon references, so no credential is copied: `USER_DB_URL=${{Postgres.DATABASE_URL}}`, `REDIS_URL=${{Redis.REDIS_URL}}`.
+- App config: `APP_ENV=production`, `LOG_LEVEL=INFO`.
+- Step 1.11 starter cost caps: `PER_QUERY_COST_CAP_USD=0.10`, `PER_USER_DAILY_QUERY_CAP=100`, `SYSTEM_DAILY_CAP_USD=10`, `PER_STEP_TIMEOUT_SECONDS=90`.
+- From `.env`: `OPENROUTER_API_KEY`, `NCBI_API_KEY`, `NCBI_EMAIL`, `GRAPH_QUERY_URL`, `GRAPH_QUERY_TOKEN`.
+- `AUTH_SECRET`, FRESHLY GENERATED rather than copied, per Section 24's "generated per environment... Never shared between dev and production". 32 bytes of `secrets.token_hex`.
+
+The credential-bearing values were set by a script that reads `.env` and hands each value to a child process, printing only variable NAMES. No secret entered a command line or the session transcript, which is what `ai-security-standards` means by "log the var name, never its value".
+
+THE LAYER 1 CUTOVER IS DONE, and it is visible as an ABSENCE: no `GRAPH_PG_*` variable is set on the service. `execute_cypher` dispatches on `GRAPH_QUERY_URL`, so with that set and the direct-connection variables empty, every Layer 1 call goes over the HTTPS service. This needed no code, because build phase 4.11 built the dispatch.
+
+`CORS_ORIGINS` is deliberately NOT set yet. It wants the deployed `search-agent-web` origin, which does not exist until that service has a URL.
+
+WHAT IT COSTS, from Railway's published per-second rates converted to a month (2,592,000 seconds): $10.00 per GB-month of RAM ($0.00000386/GB/s) and $20.01 per vCPU-month ($0.00000772/vCPU/s). Hobby is $5/month including $5 of usage credit. Four components at roughly 0.25 to 0.5 GB each is 1 to 1.5 GB continuous, so roughly $12 to $20 per month. That is an estimate from published rates, not a quote.
+
+Worth knowing for a one-month trial: deleting the services stops usage billing immediately, since it is metered per second, but the $5 monthly subscription recurs until the plan is downgraded. Two separate actions.
+
+## What is left, and it is not a product-owner block
+
+T-4.12-09c is the next real work and it is engineering, not permission:
+
+- The API needs a start command. The documented one is `uvicorn system_03_search_agent.adapters.web_sse.app:app` (README.md:102), and the package lives under `src/`, so it needs `PYTHONPATH=src` or a working `pip install .`. That install is a KNOWN-BROKEN finding already owned by build phase 6.1, so `PYTHONPATH` is the path that does not depend on fixing it first.
+- The frontend builds with `tsc -b && vite build` and lives in `frontend/`, so its service needs a root directory setting.
+- Both are per-service settings. A single root `Procfile` cannot serve a two-service monorepo, so this wants a `railway.json`, which Section 24 already anticipates as a Phase 6 build target rather than something that exists.
+
 ## History
 
 - 2026-08-24: Opened after PR #59 and PR #60 closed both hard blockers. Preflight READY on all three transports.
@@ -109,3 +156,6 @@ One transient worth recording so it is not read as a defect later: an `ssh` call
 - 2026-08-24: T-4.12-01 through T-4.12-06 landed as `7cb9bd3`, including the self-caused regression and its category fix.
 - 2026-08-24: T-4.12-07 landed as `f54c205`.
 - 2026-08-24: `check_drift.sh` run live; both expected drifts confirmed. Stopped at the deployment gate.
+- 2026-08-24: Railway CLI upgraded 4.30.5 to 5.43.2 by the product owner, after the documented `railway setup agent` and `railway mcp install` commands were found NOT to exist on 4.30.5. The command had been given from documentation without checking it against the binary, and it was wrong.
+- 2026-08-24: Railway MCP installed with `railway mcp install --agent claude-code --oauth`, chosen over `railway setup agent` because that variant also writes third-party SKILLS into the harness, and over `--remote`/`--local` because only `--oauth` scopes to chosen workspaces with short-lived revocable tokens. It registered but needs an interactive OAuth flow, so it is unusable from a non-interactive session. The CLI did the provisioning instead, so the MCP was a convenience rather than a dependency.
+- 2026-08-24: Project, both databases, both service shells and 14 variables provisioned and verified.
