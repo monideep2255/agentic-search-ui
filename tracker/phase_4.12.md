@@ -3,7 +3,7 @@
 Branch: `phase/4.12-demo-deploy` (the board's name; `requirements/phase_6/Continuation_prompt.md` said `phase/4.12-demo-deployment`, and the board owns phase status, so the board wins. The prompt is corrected at checkpoint.)
 Depends on: 4.11, merged 2026-08-22
 Opened: 2026-08-24, after both hard blockers closed (PR #59, PR #60)
-Status: IN PROGRESS. Code-side work complete; provisioning and the security scan are the product owner's.
+Status: IN PROGRESS. Code-side work complete and DEPLOYED to the Hetzner box. Railway provisioning and the security scan remain.
 
 ## Table of contents
 
@@ -12,7 +12,8 @@ Status: IN PROGRESS. Code-side work complete; provisioning and the security scan
 - [What this phase caused and then fixed](#what-this-phase-caused-and-then-fixed)
 - [Two recorded figures this phase corrected](#two-recorded-figures-this-phase-corrected)
 - [Evidence](#evidence)
-- [Blocked on the product owner](#blocked-on-the-product-owner)
+- [The deploy, done 2026-08-24](#the-deploy-done-2026-08-24)
+- [Still blocked on the product owner](#still-blocked-on-the-product-owner)
 - [History](#history)
 
 ## Scope, and what is deliberately not in it
@@ -37,7 +38,7 @@ The Layer 1 cutover needs NO code. `execute_cypher` has dispatched on `GRAPH_QUE
 | T-4.12-05 | `live_only` requires the live network, not a credential (removes the standing six-failure baseline) | done, `7cb9bd3` |
 | T-4.12-06 | Premise gate, 28 arms | done, `7cb9bd3` |
 | T-4.12-07 | Mutation harness, 14 mutations | done, `f54c205` |
-| T-4.12-08 | Deploy the updated Caddyfile and `app.py` to the box | BLOCKED, product-owner approval |
+| T-4.12-08 | Deploy the updated Caddyfile and `app.py` to the box | done, 2026-08-24, product-owner approved |
 | T-4.12-09 | Railway provisioning, variable sets, GitHub integration | BLOCKED, product owner |
 | T-4.12-10 | Security scan before any public URL | BLOCKED, not funded |
 
@@ -60,7 +61,7 @@ Both by measuring rather than inheriting, which is this repository's standing ru
 
 ## Evidence
 
-- Premise gate: 28 of 28.
+- Premise gate, `test_demo_deploy_premise.py`: 28 arms, all passing. (Deliberately NOT written in the `premise gate N of N` form. `check_doc_drift.py` carries ONE canonical fact under that phrasing, the cypher_query gate's, and flags every other use of it as stale. The checker is right and this file is the one that has to move: hedging the number to slip past it would be weakening a verify surface to reach done-when, which `.claude/rules/goal-contracts.md` forbids by name.)
 - Mutation harness: 14 of 14. Two failed on first run, both defects in the populate-checks rather than the mutations (a substring check that the explanatory comment also satisfied, twice), recorded rather than repaired quietly.
 - Offline suite: `3929 passed, 158 skipped, 1 xfailed, ZERO FAILED` in 85s, against `develop`'s `6 failed, 3887 passed, 152 skipped`.
 - Live, `RUN_PREMISE_GATE=1`: `test_citation_trust_full_premise.py` is `10 passed in 472s`. All ten arms, including the TWO that had been silently skipping since build phase 4.11, now run and pass.
@@ -75,17 +76,30 @@ DRIFT app.py
 DRIFT Caddyfile
 ```
 
-Both drifts are expected and are this phase's own commits. They resolve by running `deploy.sh`, which is T-4.12-08.
+Both drifts were expected and were this phase's own commits. They are RESOLVED: see the next section, where the post-deploy run reports 6 of 6 ok. The pre-deploy output is kept because it is the evidence that T-4.12-02's new pair works against the real box rather than only as a string in a script.
 
-## Blocked on the product owner
+## The deploy, done 2026-08-24
 
-Three items, in the order they gate each other:
+Product owner approved after confirming it incurs no new charge, which it does not: `deploy.sh` copies files to the Hetzner CPX42 already running and restarts two systemd units. It provisions no host, no addon and no paid API; the only outbound fetch is `pip install` from PyPI.
 
-1. T-4.12-08, deploying the Caddyfile and `app.py` to the Hetzner box. `ssh` from this harness works (verified: `hostname` returned `agentic-search-vps`), so this is NOT a technical blocker. It is a policy one: `.claude/rules/ai-security-standards.md` states an agent never autonomously deploys to production or modifies infrastructure. Needs an explicit go-ahead.
-2. T-4.12-09, Railway provisioning. Needs the product owner's account and credentials.
-3. T-4.12-10, the security scan. Paused since 2026-08-03 on cost; its trigger is exposure and 4.12 is the first exposure. Needs a funding decision before any public URL exists.
+Verified after the deploy rather than assumed from its own success message:
 
-Until 1 lands, the `X-Forwarded-For` fix exists in this repository and NOT on the box, so the service is still running with one safeguard. That is the honest state and it is why `check_drift.sh` now reports it.
+| Check | Result |
+|-------|--------|
+| `check_drift.sh` | 6 of 6 `ok`, including the Caddyfile, which is only in that list because T-4.12-02 put it there |
+| `preflight.py --transport graph` | `ok, HTTPS query service HTTP 200 in 372ms` |
+| `systemctl is-active caddy graph-query-service` | `active`, `active` |
+| `caddy validate --config /etc/caddy/Caddyfile` | `Valid configuration`, so Caddy parsed and accepted the new `header_up` directive rather than falling back |
+| Live premise gate, `test_graph_query_service_premise.py` | 59 of 59 passed in 13.25s, including P20, which pins the rightmost-element rule the directive is the second layer for |
+
+So the service now genuinely has two layers, which is the condition build phase 4.11 set on restoring that claim in `_client_address`'s docstring.
+
+One transient worth recording so it is not read as a defect later: an `ssh` call between the deploy and the verification timed out during banner exchange, and the next one succeeded. It was not reported as a blocker, per `LEARNINGS.md`'s 2026-08-22 entry, where a probe artifact from this harness cost a wrong blocker and an unnecessary credential request. The HTTPS probe is stronger evidence than `systemctl` anyway: it traverses Caddy and the service both.
+
+## Still blocked on the product owner
+
+- T-4.12-09, Railway provisioning. Needs the product owner's account. Product-owner direction 2026-08-24: use Railway's MCP server rather than the console by hand. That is an executable extension, so `supply-chain-security`'s enable-versus-trust gate applies before it is wired in, and this session cannot run an OAuth flow.
+- T-4.12-10, the security scan. Paused since 2026-08-03 on cost. Product-owner direction 2026-08-24: "security will be last step". Read as the last step BEFORE the public URL, which is what `tracker/BOARD.md` already requires ("its trigger is exposure, so it runs before any public URL exists, not after"). Confirm that reading before publishing anything.
 
 ## History
 
