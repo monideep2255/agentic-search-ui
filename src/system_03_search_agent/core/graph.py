@@ -1679,6 +1679,158 @@ def resolve_exact_identifiers(query_text: str) -> list[EventResolvedEntity]:
 _SYMBOL_CURIE_CACHE: dict[str, str | None] = {}
 
 
+@dataclass(frozen=True)
+class _WithdrawnGeneRecord:
+    """One symbol that named a real NCBI gene record which has been withdrawn.
+
+    `successor_curie` is the empty string when NCBI marks the record
+    discontinued but names no replacement. That is a real case and the
+    difference matters at the sentence level: "replaced by X" and "with no
+    replacement record" are different facts and only one of them may be
+    stated for a given record.
+    """
+
+    symbol: str
+    curie: str
+    successor_curie: str
+
+
+#: Parallel to `_SYMBOL_CURIE_CACHE`, same key shape (`SYMBOL:taxon`, symbol
+#: upper-cased and taxon lower-cased) and same process lifetime, holding WHY a
+#: symbol resolved to nothing when the reason was a withdrawn record rather
+#: than an absent one.
+#:
+#: F-4.7-A-02. It exists as a second map rather than as a richer return type
+#: on `resolve_symbol_to_curie` on purpose. That function is the single
+#: chokepoint every live gene-symbol lookup passes through, its `str | None`
+#: contract is pinned by name in case 14 of `test_ncbi_efetch_premise.py`
+#: (which monkeypatches the module-level name to count calls), and it is
+#: monkeypatched with `async def _fake(symbol, **kwargs) -> str | None` in
+#: four other test modules. Widening its return type would break the
+#: call-counting budget control silently, which is the exact class of defect
+#: this branch exists to close, so the contract stays and the reason travels
+#: beside it.
+#:
+#: A test that clears `_SYMBOL_CURIE_CACHE` must clear this too. Clearing one
+#: without the other lets a later lookup short-circuit on the cache while
+#: still reading a note left behind by an earlier one.
+#:
+#: Growth is bounded in practice by the number of distinct WITHDRAWN symbols
+#: a process is ever asked about, which is a small subset of the symbols
+#: `_SYMBOL_CURIE_CACHE` already holds for the same lifetime. Nothing is
+#: written here for a symbol that resolves normally.
+_WITHDRAWN_SYMBOL_RECORDS: dict[str, _WithdrawnGeneRecord] = {}
+
+
+def _classify_gene_record_status(fields: dict[str, Any]) -> str | None:
+    """Return the successor gene id when this ESummary record is withdrawn,
+    or `None` when it is a live record.
+
+    The return is deliberately a `str | None` where the string may be EMPTY:
+    `""` means "withdrawn, no replacement named", which is different from
+    `None`, "not withdrawn at all". Collapsing the two is how a withdrawn
+    record with no successor gets treated as live.
+
+    ## Read the value, never its type
+
+    Probed live against NCBI on 2026-08-24, three real records:
+
+        7157   TP53   live         status = ''  (str)   currentid = ''  (str)
+        60500  BRCA3  withdrawn    status = 1   (int)   currentid = 675 (int)
+        353129 ADHD   withdrawn    status = 1   (int)   currentid = 1816(int)
+
+    A live record's `status` is the EMPTY STRING. A withdrawn record's is the
+    INTEGER 1. Build phase 4.7's adversary report transcribed the same field
+    as the STRING `'1'`, a third shape again. So `status == 1` is correct
+    against the live API and inert against the report's transcription, and
+    `status == "1"` is inert against the live API, and "inert" here means the
+    withdrawn record resolves and the confidently wrong answer ships.
+
+    Everything is therefore normalized through `str()` before comparison,
+    which is the same "check the value, not a correlate of it" rule build
+    phase 4.3 learned by shipping the opposite twice.
+    """
+    status = fields.get("status")
+    if status is None or str(status).strip() != "1":
+        return None
+
+    successor = fields.get("currentid")
+    normalized = "" if successor is None else str(successor).strip()
+    # `0` is NCBI's "no replacement" filler in the integer shape, exactly as
+    # `""` is in the string shape. Emitting `NCBIGene:0` into a user-facing
+    # sentence would be a fabricated identifier, which is the one thing this
+    # whole subsystem exists to prevent.
+    if normalized == "0":
+        return ""
+    return normalized
+
+
+def withdrawn_record_for(
+    symbol: str, *, taxon: str = "human"
+) -> _WithdrawnGeneRecord | None:
+    """Why `resolve_symbol_to_curie` returned `None` for `symbol`, when the
+    reason was a withdrawn record. `None` here means "not withdrawn, or never
+    looked up", and those two are indistinguishable by design: both mean
+    there is nothing extra to tell the user.
+    """
+    return _WITHDRAWN_SYMBOL_RECORDS.get(
+        f"{symbol.strip().upper()}:{taxon.strip().lower()}"
+    )
+
+
+def _withdrawn_records_for_symbols(
+    symbols: list[str],
+) -> list[_WithdrawnGeneRecord]:
+    """The recorded withdrawals among `symbols`, in the caller's order.
+
+    Matches on the record's own `symbol` rather than on an exact cache key,
+    because the refusal path (`_select_planned_tool_call`) carries surface
+    forms and not the taxon they were resolved against. The taxon is not
+    recoverable there and threading it through would change three signatures
+    to sharpen a case that cannot arise in one query: a single query resolves
+    every one of its gene spans against ONE taxon
+    (`_taxon_for_extraction` returns a single value or refuses outright), so
+    two same-symbol records under different taxa cannot both belong to the
+    turn being refused. Stated rather than left implicit, since a scan that
+    could pick the wrong record is worth being able to argue about.
+    """
+    wanted = {symbol.strip().upper() for symbol in symbols}
+    by_symbol = {
+        record.symbol.strip().upper(): record
+        for record in _WITHDRAWN_SYMBOL_RECORDS.values()
+    }
+    return [
+        by_symbol[symbol.strip().upper()]
+        for symbol in symbols
+        if symbol.strip().upper() in by_symbol and symbol.strip().upper() in wanted
+    ]
+
+
+def _withdrawn_clause(records: list[_WithdrawnGeneRecord]) -> str:
+    """One sentence per withdrawn record, naming the successor only when one
+    genuinely exists.
+
+    Never phrased as an answer ABOUT the successor. F-4.7-A-02 shipped the
+    sentence "The knowledge graph search returned a gene record for BRCA2",
+    which is a claim about BRCA2 in response to a question about BRCA3; this
+    is a statement about the RECORD the user named, which is the only thing
+    that was actually established.
+    """
+    sentences = []
+    for record in records:
+        if record.successor_curie:
+            sentences.append(
+                f"{record.symbol} is a discontinued NCBI gene record "
+                f"({record.curie}), replaced by {record.successor_curie}."
+            )
+        else:
+            sentences.append(
+                f"{record.symbol} is a discontinued NCBI gene record "
+                f"({record.curie}) with no replacement record."
+            )
+    return " ".join(sentences)
+
+
 async def resolve_symbol_to_curie(symbol: str, *, taxon: str = "human") -> str | None:
     """Resolve one gene symbol to its NCBIGene CURIE via a live Layer 2 call.
 
@@ -1907,6 +2059,42 @@ async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> tuple[st
         # synonym match, not an exact symbol match. This is a definitive
         # answer (ESummary genuinely reported this id's real symbol), so
         # it is cacheable subject to the earlier legs' own status.
+        return None, cacheable
+
+    # F-4.7-A-02 (CRITICAL). The record's own symbol matches, so ESummary has
+    # confirmed this id really is the symbol that was asked for. That is where
+    # this function used to stop, and stopping here is what let a WITHDRAWN
+    # record through: "confirmed by a live lookup" was being read as
+    # "confirmed to exist", and the gap between those two claims is a
+    # discontinued record whose replacement is a different gene.
+    #
+    # `BRCA3` is NCBIGene:60500, `status=1`, `currentid=675` (BRCA2). Before
+    # this check the system answered "Which diseases are associated with
+    # BRCA3?" with "The knowledge graph search returned a gene record for
+    # BRCA2 [1]": terminal outcome `answer`, `grounded: true`, a real
+    # citation, and no sentence saying the subject had been substituted. The
+    # unconditional unresolved-entity refusal (F-4.5-J-01) could not fire,
+    # because it triggers on `not target_curies and unresolved_symbols` and a
+    # `target_curie` had in fact been produced. The safety net sat downstream
+    # of the substitution, so the fix has to be here, upstream of it.
+    #
+    # Product-owner decision, 2026-08-24: refuse, and name the successor. The
+    # withdrawn record contributes NO CURIE, so `_resolve_entities_from_model`
+    # files the symbol as unresolved and the existing refusal fires with no
+    # change to its control flow; the reason travels beside it in
+    # `_WITHDRAWN_SYMBOL_RECORDS` so the refusal text can say what was found
+    # instead of the flat "NCBI has no record matching the name", which is
+    # FALSE here: NCBI has a record, and it is withdrawn.
+    successor_id = _classify_gene_record_status(summary_output.records[0].fields)
+    if successor_id is not None:
+        _WITHDRAWN_SYMBOL_RECORDS[f"{symbol}:{taxon}"] = _WithdrawnGeneRecord(
+            symbol=symbol,
+            curie=f"NCBIGene:{gene_id}",
+            successor_curie=f"NCBIGene:{successor_id}" if successor_id else "",
+        )
+        # Cacheable on the same terms as the confirmed-mismatch branch above:
+        # ESummary gave a definitive answer about this id, and a record's
+        # withdrawn status is about as stable as data gets.
         return None, cacheable
 
     return f"NCBIGene:{gene_id}", cacheable
@@ -3561,6 +3749,23 @@ _UNRESOLVED_ENTITY_REFUSAL_MESSAGE = (
     "name in your question, so no graph query was attempted."
 )
 
+# F-4.7-A-02. Deliberately NOT the message above, for the same reason that
+# one is not "the graph query failed": it would be untrue. NCBI does hold a
+# record for a discontinued symbol, so the honest statement is that the
+# record exists and has been withdrawn, not that nothing was found.
+#
+# Phrased as a statement about the record the USER named, never as an answer
+# about its successor. The shipped defect read "The knowledge graph search
+# returned a gene record for BRCA2" in response to a question about BRCA3,
+# and the thing that made it dangerous was that it was a fluent, cited claim
+# about a gene nobody had asked about.
+_WITHDRAWN_ENTITY_REFUSAL_PREFIX = "I did not answer this question."
+_WITHDRAWN_ENTITY_REFUSAL_SUFFIX = (
+    "No graph query was attempted, and I have not substituted the "
+    "replacement record for what you asked about. Re-ask naming the "
+    "replacement if that is what you want."
+)
+
 
 def _build_unresolved_entity_refusal_text(attempted_symbols: list[str]) -> str:
     """The user-facing refusal for T-3.1-13, naming what was tried.
@@ -3573,7 +3778,62 @@ def _build_unresolved_entity_refusal_text(attempted_symbols: list[str]) -> str:
     different messages and only one is true here.
     """
     query_term = " ".join(attempted_symbols) if attempted_symbols else ""
-    return f"{_UNRESOLVED_ENTITY_REFUSAL_MESSAGE} {build_fallback_link(query_term)}"
+    link = build_fallback_link(query_term)
+    return f"{_unresolved_entity_refusal_message(attempted_symbols)} {link}"
+
+
+def _unresolved_entity_refusal_message(attempted_symbols: list[str]) -> str:
+    """The refusal SENTENCE, with no fallback link appended.
+
+    Split out from `_build_unresolved_entity_refusal_text` because the same
+    sentence has to reach the user through two different channels, and before
+    F-4.7-A-02 only one of them was built from it: `write_node` emits the
+    text as `token` events AND emits a `trust_signal` whose `message` field
+    carries the refusal for any surface that renders the structured event
+    instead of the stream.
+
+    That split is not hypothetical. The first version of this fix updated the
+    answer text and left `TrustSignalPayload.message` pointed at the raw
+    `_UNRESOLVED_ENTITY_REFUSAL_MESSAGE` constant, so a live end-to-end run
+    produced a correct answer sentence beside a `trust_signal` still saying
+    "NCBI has no record matching the name in your question" about a record
+    NCBI does hold. Two channels stating different facts about the same
+    refusal is worse than either one being wrong alone, because whichever the
+    consumer trusts is now a coin flip. One builder, both call sites.
+
+    Bounded to fit `TrustSignalPayload.message`'s `max_length=500`. The cap is
+    applied by the caller that needs it rather than here, so the token stream
+    (capped at 1000 separately) is not silently truncated to the event's
+    tighter bound.
+    """
+    # F-4.7-A-02: a withdrawn record is a DIFFERENT refusal from an absent
+    # one, and saying "NCBI has no record matching the name" about a symbol
+    # NCBI does hold a record for would be a false statement in the one
+    # sentence this system emits when it has decided not to answer.
+    withdrawn = _withdrawn_records_for_symbols(attempted_symbols)
+    if not withdrawn:
+        return _UNRESOLVED_ENTITY_REFUSAL_MESSAGE
+
+    withdrawn_symbols = {record.symbol.strip().upper() for record in withdrawn}
+    remaining = [
+        symbol
+        for symbol in attempted_symbols
+        if symbol.strip().upper() not in withdrawn_symbols
+    ]
+
+    parts = [
+        _WITHDRAWN_ENTITY_REFUSAL_PREFIX,
+        _withdrawn_clause(withdrawn),
+    ]
+    # A query can name two genes where one is withdrawn and the other simply
+    # does not exist. Reporting only the withdrawal would silently drop the
+    # other symbol from the refusal, so both statements are made.
+    if remaining:
+        parts.append(
+            "I could not identify " + ", ".join(remaining) + " at all."
+        )
+    parts.append(_WITHDRAWN_ENTITY_REFUSAL_SUFFIX)
+    return " ".join(part for part in parts if part)
 
 
 def _response_text(response: Any) -> str:
@@ -4831,7 +5091,15 @@ async def write_node(state: GraphState) -> dict[str, Any]:
                 grounded=False,
                 triangulated=None,
                 scope="answer",
-                message=_UNRESOLVED_ENTITY_REFUSAL_MESSAGE,
+                # F-4.7-A-02: built from the same one builder as the token
+                # stream above, never from the bare constant. Pointing this
+                # at `_UNRESOLVED_ENTITY_REFUSAL_MESSAGE` directly is what
+                # made a live run emit a correct answer sentence beside a
+                # `trust_signal` asserting "NCBI has no record matching the
+                # name" about a record NCBI does hold.
+                message=_unresolved_entity_refusal_message(
+                    unresolved_entity_symbols
+                )[:500],
                 fallback_link=build_fallback_link(" ".join(unresolved_entity_symbols)),
             ),
         )

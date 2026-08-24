@@ -768,8 +768,31 @@ _SUMMARY_FIELDS_BY_DB: Final[dict[str, tuple[str, ...]]] = {
         "authors", "source", "fulljournalname", "pubdate", "elocationid",
         "articleids", "pubtype",
     ),
+    # F-4.7-A-02 (CRITICAL, build phase 4.7 adversary round): `status` and
+    # `currentid` are ADDITIONS to Section 6.2's table, which names the seven
+    # fields above and no more. Stated as a deliberate deviation rather than
+    # left for a reader to notice, since every other row here is verbatim.
+    #
+    # Why the deviation is necessary: NCBI marks a discontinued gene record
+    # with `status=1` and points at its replacement with `currentid`. Without
+    # both fields, `core.graph._resolve_symbol_to_curie_uncached` cannot tell
+    # a live record from a withdrawn one, so "Which diseases are associated
+    # with BRCA3?" resolved NCBIGene:60500 (withdrawn, currentid 675) and the
+    # system answered about BRCA2, cited and grounded, with no disclosure.
+    # The two fields were sitting in the raw ESummary body the whole time and
+    # this allowlist was stripping them before the resolver was handed the
+    # record. The ticket's own premise said the fix was single-site for that
+    # reason; measured, it was not.
+    #
+    # Why the deviation is SAFE, checked rather than assumed: `action=
+    # "summary"` with `db="gene"` has exactly ONE production caller in this
+    # repository, that resolver. `act_node`'s answer-bearing Layer 2 call
+    # uses `dataset_report`, a different action, so widening this row cannot
+    # put either field into a citation a user sees. Both are small scalars
+    # and go through `_cap_value` like every other allowlisted field.
     "gene": (
         "name", "description", "chromosome", "maplocation", "genomicinfo", "mim", "organism",
+        "status", "currentid",
     ),
     # variation_set carries canonical_spdi nested inside it (Section 6.2
     # names "variation_set.canonical_spdi"); passed through as one object
