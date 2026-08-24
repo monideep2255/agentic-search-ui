@@ -12,15 +12,16 @@ connection, the agtype interpretation, the provenance mapping, and the output
 schema are all exercised for real. A test here that needs a new mock to pass
 is a test that has stopped doing its job.
 
-Skips cleanly, with a stated reason, when no tunnel to the graph is open.
+Skips cleanly, with a stated reason, when Layer 1 does not answer.
 Reachability is checked fresh before every single test, not once at import
-(finding F-2.1-B12): the tunnel is a manual, long-lived SSH process that can
-drop mid-session, and a guard evaluated once at import cannot notice that.
+(finding F-2.1-B12): the transport can stop answering mid-session, and a
+guard evaluated once at import cannot notice that.
 
 Depends on:
     - system_03_search_agent.tools.cypher_query (the assembled pipeline)
     - system_03_search_agent.tools.cypher_schemas (CypherQueryInput)
-    - A live SSH local port-forward to the Hetzner AGE graph
+    - A live Layer 1 transport: the read-only HTTPS query service via
+      GRAPH_QUERY_URL, or the legacy direct connection via GRAPH_PG_*
 
 Reads:
     - .env, loaded explicitly rather than inherited from litellm's import-time
@@ -43,12 +44,12 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
-# Finding F-2.1-B12: the exact command to reopen the tunnel, named directly in
-# the skip and failure text so diagnosis is one line, not an investigation.
-_REOPEN_TUNNEL_CMD = (
-    "ssh -o BatchMode=yes -f -N -L 15432:127.0.0.1:5432 root@46.225.128.133"
-)
-
+# Finding F-2.1-B12 asked that the exact recovery command be named directly in
+# the skip text so diagnosis is one line, not an investigation. Build phase
+# 4.12: the command it named reopened an SSH tunnel that build phase 4.11
+# deleted, so the skip text now names `tracker/preflight.py --transport graph`
+# instead, which diagnoses whichever transport is actually configured. The
+# finding's intent is kept; only the command it pointed at has changed.
 # The env var holding the graph credential. Named once here so the health
 # probe below reads it by name and the value never appears in this file.
 _GRAPH_PASSWORD_VAR = "GRAPH_PG_PASSWORD"
@@ -73,35 +74,77 @@ def _load_env_explicitly() -> None:
 
 
 def _graph_reachable() -> tuple[bool, str]:
+    """(reachable, reason). Follows whichever transport Layer 1 is actually on.
+
+    Build phase 4.12. This used to socket-probe `GRAPH_PG_HOST`/`PORT`, the
+    SSH tunnel's local port, and then confirm liveness with a direct psycopg2
+    round trip. Build phase 4.11 moved Layer 1 behind `GRAPH_QUERY_URL`, and
+    this file's own subject, `cypher_query`, went with it. Measured
+    2026-08-24: the old probe returned False with ConnectionRefusedError on a
+    machine where the graph answered over HTTPS in about 350ms, so every arm
+    here skipped while printing a reason that named a tunnel deleted two
+    phases ago.
+
+    F-2.1-C16's lesson is preserved rather than dropped, and it is the reason
+    this function is longer than a one-line delegation. "Ask the database,
+    not the socket": an open port only means the SSH forward is bound, and a
+    false "reachable" turns a dead dependency into test FAILURES rather than
+    skips, which reads exactly like a regression in whatever change is under
+    review.
+
+    How that lesson maps onto each transport, stated plainly because the two
+    are not equally strong:
+
+    - Legacy direct connection (`GRAPH_QUERY_URL` unset): unchanged. Socket,
+      then a real psycopg2 `SELECT 1`. Still the stronger check.
+    - HTTPS service (`GRAPH_QUERY_URL` set): the health endpoint answers once
+      the proxy, the certificate and the service process are up. It does NOT
+      prove the AGE graph behind it is answering, and this function does not
+      pretend otherwise. A graph that is down but fronted by a healthy
+      service will produce failures here rather than skips, which is exactly
+      what C16 objected to. Closing that properly means running a trivial
+      query through the service, which needs the bearer credential and is
+      filed as a follow-up rather than smuggled into a reachability helper.
+    """
     _load_env_explicitly()
+
+    if os.environ.get("GRAPH_QUERY_URL"):
+        from tests.system_03_search_agent.graph_gate import (
+            SKIP_REASON,
+            live_graph_arms_enabled,
+            live_network_is_permitted,
+        )
+
+        if not live_network_is_permitted():
+            return False, (
+                "RUN_PREMISE_GATE is not set, so tests/conftest.py is "
+                "blocking outbound HTTP and these arms cannot reach the "
+                "graph service whether or not it is up"
+            )
+        if live_graph_arms_enabled():
+            return True, ""
+        return False, SKIP_REASON
+
     host = os.environ.get("GRAPH_PG_HOST")
     port_raw = os.environ.get("GRAPH_PG_PORT", "")
     if not host or not port_raw:
-        return False, "GRAPH_PG_HOST or GRAPH_PG_PORT is unset"
+        return False, (
+            "neither GRAPH_QUERY_URL nor GRAPH_PG_HOST/GRAPH_PG_PORT is set, "
+            "so there is no Layer 1 transport configured to reach"
+        )
     sock = socket.socket()
     sock.settimeout(2.0)
     try:
         sock.connect((host, int(port_raw)))
     except OSError as exc:
         return False, (
-            f"{host}:{port_raw} not reachable ({type(exc).__name__}); no SSH tunnel open. "
-            f"Reopen it with: {_REOPEN_TUNNEL_CMD}"
+            f"{host}:{port_raw} not reachable ({type(exc).__name__}) on the "
+            "legacy direct-connection path"
         )
     finally:
         sock.close()
 
-    # F-2.1-C16: an open port is not a live database. An SSH local forward
-    # binds the local port the moment the tunnel process starts, and keeps it
-    # bound whether or not anything is alive at the far end. When the graph
-    # host's postgres was OOM-killed mid-session, this guard still reported
-    # "reachable" and 21 tests came back as FAILURES rather than skips, which
-    # reads exactly like a code regression in whatever change is under
-    # review. That false signal is expensive: it cost real time proving the
-    # failures were not caused by the change being tested.
-    #
-    # So ask the database, not the socket. One cheap round trip, and any
-    # connection-level failure is a skip rather than a failure, because a
-    # dead dependency is not a defect in the code under test.
+    # F-2.1-C16, unchanged on this branch: ask the database, not the socket.
     try:
         import psycopg2
 
@@ -115,10 +158,9 @@ def _graph_reachable() -> tuple[bool, str]:
         )
     except Exception as exc:  # noqa: BLE001 - any connect failure is a skip
         return False, (
-            f"{host}:{port_raw} accepts connections but the graph database did "
-            f"not answer ({type(exc).__name__}). An open port only means the SSH "
-            "forward is bound, not that postgres is running. Check the graph "
-            f"host, then reopen the tunnel with: {_REOPEN_TUNNEL_CMD}"
+            f"{host}:{port_raw} accepts connections but the graph database "
+            f"did not answer ({type(exc).__name__}). An open port only means "
+            "the forward is bound, not that postgres is running"
         )
     try:
         with conn.cursor() as cur:
@@ -142,7 +184,7 @@ def _skip_if_graph_unreachable() -> None:
     """Check reachability fresh before every test, not once at import.
 
     Finding F-2.1-B12: a module-level `_REACHABLE` computed at import time
-    freezes the answer for the whole run. The SSH tunnel is a manual,
+    freezes the answer for the whole run. The Layer 1 transport is a manual,
     long-lived process that drops mid-session, so a run that started reachable
     can go unreachable partway through, and every test after that point fails
     with an opaque connection error instead of skipping with a stated reason.

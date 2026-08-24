@@ -274,21 +274,23 @@ def _ncbi_is_reachable() -> bool:
 
 
 def _graph_is_reachable() -> bool:
-    """Fresh per call, never cached at import (F-2.1-B12).
+    """Whether Layer 1 answers right now, over whichever transport is live.
 
-    A manually opened SSH tunnel can drop mid-session, so a cached import-time
-    probe reports a connection that no longer exists.
+    Fresh per call, never cached at import (F-2.1-B12): the transport can
+    stop answering mid-session, and a cached import-time probe reports a
+    connection that no longer exists.
+
+    Build phase 4.12. This used to socket-probe `GRAPH_PG_HOST`/`PORT`, the
+    local port of the SSH tunnel build phase 4.11 deleted. Measured
+    2026-08-24: that probe returned False with ConnectionRefusedError on a
+    machine where the graph answered over HTTPS, so every arm behind it
+    skipped while printing a reason that was false. Delegates to
+    `tests.system_03_search_agent.graph_gate`, the ONE implementation, which
+    dispatches on `GRAPH_QUERY_URL` exactly as `graph_connection` does.
     """
-    _load_env_explicitly()
-    host = os.environ.get("GRAPH_PG_HOST", "").strip()
-    port = os.environ.get("GRAPH_PG_PORT", "").strip()
-    if not host or not port:
-        return False
-    try:
-        with socket.create_connection((host, int(port)), timeout=5):
-            return True
-    except (OSError, ValueError):
-        return False
+    from tests.system_03_search_agent.graph_gate import live_graph_arms_enabled
+
+    return live_graph_arms_enabled()
 
 
 premise_gate = pytest.mark.skipif(

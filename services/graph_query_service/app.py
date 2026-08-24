@@ -636,22 +636,44 @@ def client_source(request: Any) -> str:
     - Only the RIGHTMOST element is used, which is the value the proxy
       itself appended, never anything the caller sent ahead of it.
 
-    Finding F-4.11-RV-02, 2026-08-22. This docstring used to add that the
-    deployed Caddyfile "additionally OVERWRITES the header with the real
-    remote host rather than appending to it, so both layers are safe
-    independently." The re-verifier read the deployed `/etc/caddy/Caddyfile`
-    and found NO `X-Forwarded-For` directive at all, so Caddy's default
-    append applies and there is exactly ONE safeguard here, not two: the
-    rightmost-element rule above.
+    Finding F-4.11-RV-02, 2026-08-22, CLOSED by build phase 4.12 on
+    2026-08-24. The history is kept rather than tidied away, because the way
+    the claim was wrong is more useful than the claim.
 
-    The rule still holds and arm P20 pins it, so nothing is broken. What was
-    broken is the claim, and it is corrected rather than deleted because
-    this is the third false comment this phase produced, each asserting a
-    property no test checked. A confident comment is where the next reader
-    stops checking, which is why `.claude/rules/self-eval-loop.md` treats a
-    comment claiming a security property as a claim to be tested rather than
-    as documentation. Do not restore the two-layer claim without first
-    adding the directive to the Caddyfile AND an arm that reads it.
+    This docstring used to state that the deployed Caddyfile "additionally
+    OVERWRITES the header with the real remote host rather than appending to
+    it, so both layers are safe independently." A re-verifier read the
+    deployed `/etc/caddy/Caddyfile` and found NO `X-Forwarded-For` directive
+    at all. Caddy's default append applied, and there was exactly ONE
+    safeguard, the rightmost-element rule above, not two. The rule held and
+    arm P20 pinned it, so nothing was broken; what was broken was the claim.
+    It was the third false comment that phase produced, each asserting a
+    property no test checked, which is why `.claude/rules/self-eval-loop.md`
+    treats a comment claiming a security property as a claim to be tested
+    rather than as documentation.
+
+    That docstring then set an explicit condition on its own repair: "Do not
+    restore the two-layer claim without first adding the directive to the
+    Caddyfile AND an arm that reads it." Both conditions are now met, which
+    is the only reason this paragraph is allowed to exist:
+
+    - The directive is `header_up X-Forwarded-For {remote_host}`, inside the
+      `reverse_proxy` block of
+      `services/graph_query_service/deploy/Caddyfile`. A bare value REPLACES;
+      the `+X-Forwarded-For` form would append.
+    - The arm is P1 of
+      `tests/system_03_search_agent/tools/test_demo_deploy_premise.py`, which
+      reads the Caddyfile and asserts the exact form, not the substring. P2
+      asserts THIS function still reads the rightmost element, in the same
+      arm, so the two layers cannot be traded for each other.
+    - `check_drift.sh` now covers `/etc/caddy/Caddyfile` too (P3), so
+      removing the directive on the box is no longer invisible to this
+      repository.
+
+    So there are now genuinely two layers. The rightmost-element rule below
+    is still the one that must hold on its own: a proxy misconfiguration is
+    a thing that happens, and this function is not entitled to assume the
+    directive is live on the box it is running behind.
     """
     client = getattr(request, "client", None)
     peer = getattr(client, "host", None) if client is not None else None
