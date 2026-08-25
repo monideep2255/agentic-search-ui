@@ -21,7 +21,8 @@ Inserted 2026-08-25 by product-owner decision, the fifth such exception after 4.
 - [Defect 2 does not reproduce, and what looking for it found instead](#defect-2-does-not-reproduce-and-what-looking-for-it-found-instead)
 - [Defect 4, the answer presentation, measured against the card](#defect-4-the-answer-presentation-measured-against-the-card)
 - [Routing and the integrations page, both done](#routing-and-the-integrations-page-both-done)
-- [Defect 2 is salience, and the competing affordance is named](#defect-2-is-salience-and-the-competing-affordance-is-named)
+- [Defect 2 was a missing conversation thread, and both earlier readings were wrong](#defect-2-was-a-missing-conversation-thread-and-both-earlier-readings-were-wrong)
+- [Superseded: defect 2 read as salience](#superseded-defect-2-read-as-salience)
 - [Two presentation defects fixed, and one design gap the cards do not cover](#two-presentation-defects-fixed-and-one-design-gap-the-cards-do-not-cover)
 - [The browser suite cannot reach a real tool dispatch](#the-browser-suite-cannot-reach-a-real-tool-dispatch)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
@@ -110,7 +111,7 @@ So the fix for defect 1 is NOT to stream answer text into the run screen. Neithe
 | Ticket | What | Status |
 |--------|------|--------|
 | T-4.16-01 | DONE, `1786b02` and `4dd4752`. Emit `tool_start` and `tool_result` from the Act step AT DISPATCH TIME, not at node return, so the eleven-second silence becomes the tool chips both design artifacts show. Needs `get_stream_writer` plus a multi-mode `astream` in `core/run.py`, not just an `emit` call in `core/graph.py`. See the section above for why the obvious version fixes nothing. Closes defects 1 and 3's cause | todo |
-| T-4.16-02 | RESOLVED AS DISCOVERABILITY by the product owner on 2026-08-25: "I couldn't find the follow-up field". Not a dispatch failure. Open, and now scoped | todo |
+| T-4.16-02 | DONE. The real defect was that the answer screen had NO THREAD: every follow-up replaced the previous turn, which the prototype archives into a collapsed `<details>` and keeps. Settled by the product owner 2026-08-25: "follow up is part of the current search" | done |
 | T-4.16-02a | Superseded record: the reported defect DOES NOT REPRODUCE as stated. Signed in and as a guest, locally and on the deployed demo, a second turn lands. Three real defects were found while trying, all recorded below, none of them the reported one. NEEDS THE PRODUCT OWNER to say what they saw | blocked, product owner |
 | T-4.16-03 | BOTH SEPARATE DEFECTS DONE. The chip no longer repeats its source, and the `ask` outcome no longer blames the reader for the evidence. The four card gaps that traced to missing tool events are closed by T-4.16-01 and need re-measuring after deploy | done, pending re-measure |
 | T-4.16-04 | DONE. Integrations page corrected to the five surfaces that actually shipped, and cross-checked against `pyproject.toml` and the FastAPI route table by a Python test, since nothing linked the page's prose to the modules it describes | done |
@@ -236,7 +237,26 @@ TWO DEFECTS IN THAT GUARD, both found by mutation and both recorded:
 - Its own populate-check then asserted `"s3 ask" in text`, which is page CONTENT rather than fixture health. Under the mutation it fired first and masked all four real failures, reporting a broken harness for an intact page. It now counts `<Card` occurrences.
 - And its surfaces arm asserted `"GraphQL" in source`, which passes against `"GraphQLXX"`. A substring check cannot see a renamed card. Now matched as an exact card title. That is the FOURTH assertion-that-cannot-fail in this phase and the third written by the lead.
 
-## Defect 2 is salience, and the competing affordance is named
+## Defect 2 was a missing conversation thread, and both earlier readings were wrong
+
+SETTLED 2026-08-25 by the product owner: "follow up is part of the current search. Check out style in the design system that we have." Reading the design system rather than reasoning about it produced the answer in one step, after two rounds of investigation had produced two wrong ones.
+
+WHAT THE PROTOTYPE ACTUALLY DOES, which no component card covers and nothing in this repository had implemented. `askFollowUp` calls `archiveCurrent()`, which lifts the finished turn, its question, meta line, spine, answer, sources and verdict, into a collapsed `<details class="prev">` appended to `<div class="thread">`, and only then renders the new answer above it. The markup order in the prototype's answer section is `sources`, `verdict`, `thread`, then the follow-up form, so the current answer stays at the top, earlier turns sit beneath it, and the input that continues the conversation comes last.
+
+The implementation had no thread at all. Every follow-up REPLACED the answer, so the previous turn vanished and the screen stopped reading as a conversation. The dispatch always worked, which is precisely why two rounds of hunting for a failed second turn found nothing wrong.
+
+BOTH OF THIS PHASE'S EARLIER READINGS WERE WRONG, and are corrected here rather than deleted:
+
+- "It renders late." An artifact of the vacuous landed-signal described above. With a correct signal it is in the DOM the moment the answer screen is.
+- "It is salience, and `New search` is the competing affordance." Plausible, measured, and still wrong. The position measurements below stand as evidence and the conclusion drawn from them did not.
+
+The measurements, kept because they remain true and they rule position out: the follow-up input's top is 463px at 1280 by 650, at 1440 by 760 and at 1440 by 1000, and 509px on the deployed demo. Above the fold everywhere tested.
+
+THE MUTATION IS THE FINDING. Disabling the archive turns the two new arms red and leaves BOTH existing second-turn arms GREEN. Those two asked "can a second turn be taken" and answered yes, everywhere, on every path, in two environments. They were correct and they were measuring the wrong property. A test can be right, honest, and blind to the defect a person actually reported.
+
+A DESIGN-SYSTEM GAP, recorded rather than worked around: the follow-up and the thread exist ONLY in `prototype/app.html`. `design-system/screens/answer.html` does not contain either, so the component cards, which `Design_to_build_workflow.md` makes the thing builders build against and gates assert on, have nothing to say about the surface that carries the conversation. The styling here is taken from the prototype's own `.prev` and `.thread` rules rather than invented, and the card should absorb it.
+
+## Superseded: defect 2 read as salience
 
 The product owner settled it on 2026-08-25: "I couldn't find the follow-up field". Measured rather than assumed from there, and one earlier note in this file is CORRECTED rather than carried: it said the follow-up "renders late", which was an artifact of the same vacuous landed-signal described above. With a correct signal it is in the DOM the moment the answer screen is.
 
@@ -290,6 +310,7 @@ Stated up front so a gap in it is arguable rather than discovered, per `goal-con
 - 2026-08-25: Opened after the product owner ranked the UI defects ahead of build phase 4.14. Preflight READY on all three transports.
 - 2026-08-25: Scouted before writing. Measured the deployed SSE stream frame by frame, found the 10.9-second Act silence, and traced it to `tool_start` and `tool_result` never being emitted. Corrected two recorded claims in `tracker/phase_4.12.md` in the process.
 - 2026-08-25: Read both design artifacts before scoping defect 1, and found that neither specifies streaming answer text, which redirected the ticket from the browser to the Act step.
+- 2026-08-25: DEFECT 2 CLOSED, and it was neither of this phase's two earlier readings. The product owner pointed at the design system; the prototype archives each finished turn into a collapsed disclosure and keeps it on the page, and nothing had built that. The mutation proves both existing second-turn arms stay green without it.
 - 2026-08-25: T-4.16-03's two separate defects fixed, the chip label and the `ask` copy, the second a product-owner decision because the trust-pills card has no `ask` state. T-4.16-09 landed as a scripted arm after a real dispatch proved unreachable from the browser suite. Defect 2 measured to salience rather than position, and left for the design card.
 - 2026-08-25: T-4.16-05 routing and T-4.16-04 integrations both landed, each mutation-proven. Three more assertions-that-cannot-fail were found and fixed inside the integrations guard itself.
 - 2026-08-25: Defect 2 resolved to DISCOVERABILITY by the product owner, not a dispatch failure. Defect 4's gap list captured from the deployed demo against the answer card; four of its six rows trace to T-4.16-01's already-fixed missing tool events, so it must be re-measured after that deploys.

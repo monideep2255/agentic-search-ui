@@ -65,6 +65,24 @@ export interface TrustSignal {
   label: string;
 }
 
+/**
+ * One finished turn of a conversation, kept on screen after the next
+ * question replaces it (T-4.16-02).
+ *
+ * Carries exactly what the prototype's `archiveCurrent()` archives: the
+ * question asked, the meta line the run reported, and the answer's own
+ * claims, sources and verdict. Nothing is recomputed when a turn is
+ * rendered from here, so a previous turn always reads as what it was when
+ * it landed rather than as what the current run would say.
+ */
+export interface PreviousTurn {
+  question: string;
+  meta: string;
+  claims: Claim[];
+  sources: Source[];
+  trust: TrustSignal[];
+}
+
 export interface AnswerScreenProps {
   question: string;
   claims: Claim[];
@@ -105,6 +123,28 @@ export interface AnswerScreenProps {
   authToken?: string | null;
   /** Rendered under the sources. The follow-up field. */
   followUp?: React.ReactNode;
+  /**
+   * Earlier turns of THIS conversation, oldest first, each collapsed.
+   *
+   * T-4.16-02. The product owner reported "then chat does not continue" and
+   * settled on 2026-08-25 that "follow up is part of the current search".
+   * The prototype says the same thing in code: `askFollowUp` calls
+   * `archiveCurrent()`, which moves the whole finished turn, its question,
+   * meta line, spine, answer, sources and verdict, into a collapsed
+   * `<details class="prev">` inside `<div class="thread">`, and only then
+   * renders the new answer above it.
+   *
+   * Nothing built that. Every follow-up REPLACED the answer, so a reader
+   * watched their previous turn disappear and the screen stopped reading as
+   * a conversation at all. The dispatch always worked, which is why the
+   * defect survived two rounds of looking for a failed second turn.
+   *
+   * No component card covers this: the follow-up appears ONLY in the
+   * prototype, never in `design-system/screens/answer.html`. That gap is
+   * recorded in `tracker/phase_4.16.md`; the styling below is taken from
+   * the prototype's own `.prev` and `.thread` rules rather than invented.
+   */
+  previousTurns?: PreviousTurn[];
   /**
    * Start a fresh search.
    *
@@ -223,6 +263,7 @@ export function AnswerScreen({
   runId = null,
   authToken = null,
   followUp,
+  previousTurns = [],
   onNewSearch,
   refusal = null,
   failure = null,
@@ -829,6 +870,104 @@ export function AnswerScreen({
           which asks "was that useful" AFTER offering the next question rather
           than before it.
         */}
+        {/*
+          T-4.16-02. The conversation thread: every earlier turn of THIS
+          search, collapsed, still on the page.
+
+          POSITION IS THE PROTOTYPE'S, not a choice made here. Its answer
+          section orders the tail `sources`, `verdict`, `thread`, then the
+          follow-up form, so the CURRENT answer stays at the top where a
+          reader lands, earlier turns sit beneath it, and the input that
+          continues the conversation comes last. Rendering the thread above
+          the current answer would push the thing just asked for off screen
+          as the conversation grew.
+
+          NEWEST LAST, matching `archiveCurrent()`'s `appendChild`. Each
+          entry is a real `<details>`, so it is keyboard reachable and
+          announced as a disclosure without any ARIA of its own, the same
+          mechanism the sources list already uses.
+        */}
+        {previousTurns.length > 0 ? (
+          <Box
+            data-testid="thread"
+            sx={{ display: "flex", flexDirection: "column", gap: 1.75, mt: 3.25 }}
+          >
+            {previousTurns.map((turn, index) => (
+              <Box
+                key={`${turn.question}-${index}`}
+                component="details"
+                data-testid={`previous-turn-${index}`}
+                sx={{
+                  border: `1px solid ${designTokens.line}`,
+                  borderRadius: 0.5,
+                  bgcolor: designTokens.surfaceSunk,
+                  "& > summary": {
+                    cursor: "pointer",
+                    listStyle: "none",
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 1.25,
+                    px: 1.75,
+                    py: 1.5,
+                  },
+                  "& > summary::-webkit-details-marker": { display: "none" },
+                }}
+              >
+                <Box component="summary">
+                  <Box
+                    component="span"
+                    aria-hidden="true"
+                    sx={{ fontSize: 10, color: designTokens.inkFaint }}
+                  >
+                    ▶
+                  </Box>
+                  <Typography
+                    component="span"
+                    sx={{ fontWeight: 700, fontSize: 14.5, color: designTokens.ink }}
+                  >
+                    {turn.question}
+                  </Typography>
+                  <Typography
+                    component="span"
+                    sx={{ fontSize: 12, color: designTokens.inkFaint }}
+                  >
+                    {turn.meta}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    px: 1.75,
+                    pt: 0.5,
+                    pb: 2,
+                    bgcolor: designTokens.surface,
+                    borderTop: `1px solid ${designTokens.line}`,
+                  }}
+                >
+                  {turn.claims.map((claim, claimIndex) => (
+                    <Typography
+                      key={claimIndex}
+                      sx={{ fontSize: 16, mt: claimIndex === 0 ? 2 : 1.5, maxWidth: "64ch" }}
+                    >
+                      {claim.text}
+                    </Typography>
+                  ))}
+                  <Typography
+                    variant="body2"
+                    sx={{ mt: 1.75, color: designTokens.inkMuted }}
+                  >
+                    {turn.sources.length === 1
+                      ? "1 source"
+                      : `${turn.sources.length} sources`}
+                    {turn.trust.length > 0
+                      ? ` · ${turn.trust.map((signal) => signal.label).join(" · ")}`
+                      : ""}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        ) : null}
+
         {followUp}
         {/*
           T-4.6-09. `FeedbackSurface` is built here, not passed in as an

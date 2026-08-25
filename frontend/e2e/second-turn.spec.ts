@@ -131,4 +131,94 @@ test.describe("a conversation continues past the first turn", () => {
     await answerLanded(page);
     expect(pageErrors, "the second turn raised an uncaught error").toEqual([]);
   });
+
+  /**
+   * T-4.16-02, THE ACTUAL DEFECT, settled by the product owner on
+   * 2026-08-25: "follow up is part of the current search".
+   *
+   * The prototype says the same in code. `askFollowUp` calls
+   * `archiveCurrent()`, which moves the finished turn into a collapsed
+   * `<details class="prev">` inside `<div class="thread">` and only then
+   * renders the new answer above it. Nothing built that, so every
+   * follow-up REPLACED the answer and the previous turn vanished. The
+   * dispatch always worked, which is why two rounds of hunting for a failed
+   * second turn found nothing.
+   *
+   * So the property is not "a second answer appears", which the arms above
+   * already cover. It is "the first one is still there".
+   *
+   * MUTATION-PROVEN, and the asymmetry IS the finding. Disabling the
+   * archive turns this arm and the one below red, and leaves BOTH arms
+   * above GREEN. Those two are the ones that asked "can a second turn be
+   * taken", the question this phase spent two rounds answering with "yes,
+   * everywhere, on every path". They were right and they were measuring
+   * the wrong property, which is why the defect survived being looked for
+   * directly, twice, in two environments.
+   */
+  test("an earlier turn stays on the page, collapsed, after a follow-up", async ({
+    page,
+  }) => {
+    await signUpFreshAccount(page);
+
+    const first = "What gene is BRCA1?";
+    await askFromHome(page, first);
+    await answerLanded(page);
+
+    // POPULATE-CHECK. Before the follow-up there is nothing to keep, so a
+    // thread MUST be absent here. Without this the arm could pass against
+    // a build that renders a thread unconditionally, which would prove
+    // nothing about archiving.
+    await expect(
+      page.getByTestId("thread"),
+      "a thread rendered before any follow-up was asked",
+    ).toHaveCount(0);
+
+    const followUp = page.getByTestId("follow-up");
+    await followUp.getByRole("textbox").fill("What diseases are associated with it?");
+    await followUp.getByRole("textbox").press("Enter");
+    await answerLanded(page);
+
+    const previous = page.getByTestId("previous-turn-0");
+    await expect(
+      previous,
+      "the earlier turn is gone after a follow-up, so the screen does not read " +
+        "as a conversation. This is the defect: the dispatch works and the " +
+        "history does not survive it.",
+    ).toBeVisible();
+    await expect(previous).toContainText(first);
+
+    // Collapsed by default, and genuinely expandable rather than merely
+    // present: a summary nobody can open is a label, not a record.
+    await expect(previous).not.toHaveAttribute("open", /.*/);
+    await previous.getByRole("group").or(previous).locator("summary").click();
+    await expect(previous).toHaveAttribute("open", /.*/);
+  });
+
+  test("New search starts a fresh conversation rather than extending one", async ({
+    page,
+  }) => {
+    await signUpFreshAccount(page);
+    await askFromHome(page, "What gene is BRCA1?");
+    await answerLanded(page);
+
+    const followUp = page.getByTestId("follow-up");
+    await followUp.getByRole("textbox").fill("What diseases are associated with it?");
+    await followUp.getByRole("textbox").press("Enter");
+    await answerLanded(page);
+    // POPULATE-CHECK: the thread must exist before this arm can show it is
+    // cleared, or "no thread" would be true for the wrong reason.
+    await expect(
+      page.getByTestId("previous-turn-0"),
+      "populate-check failed: no thread to clear",
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "New search", exact: true }).first().click();
+    await askFromHome(page, "What is TP53?");
+    await answerLanded(page);
+
+    await expect(
+      page.getByTestId("thread"),
+      "the previous conversation carried into a new search",
+    ).toHaveCount(0);
+  });
 });
