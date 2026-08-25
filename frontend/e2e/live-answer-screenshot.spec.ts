@@ -1,0 +1,80 @@
+/**
+ * DIAGNOSTIC, not a gate. Lands one real answer on the DEPLOYED demo and
+ * captures the answer screen, for two open tickets at once:
+ *
+ *   - T-4.16-02, defect 2. The second turn provably works in both
+ *     environments, so "then chat does not continue" is about something
+ *     other than a failed dispatch. The live run reported the follow-up
+ *     field as not visible the instant the answer landed, which is the only
+ *     lead there is.
+ *   - T-4.16-03, defect 4, "the answer presentation is horrible and nothing
+ *     close to what the design sync had". `Design_to_build_workflow.md`
+ *     forbids guessing at this, so the gap list has to come from looking at
+ *     the rendered page beside the component cards.
+ *
+ * Reaches the public internet and spends one of a guest's five real
+ * answers, so it is skipped by default and run explicitly.
+ */
+
+import { expect, test, type Page } from "@playwright/test";
+
+const LIVE = "https://search-agent-web-production.up.railway.app";
+
+async function enterApp(page: Page): Promise<void> {
+  await page.goto(LIVE, { waitUntil: "domcontentloaded" });
+  const dialog = page.getByTestId("disclaimer-modal");
+  if (await dialog.isVisible().catch(() => false)) {
+    await dialog.getByRole("checkbox").check();
+    await dialog.getByRole("button", { name: /continue/i }).click();
+    await expect(dialog).toBeHidden();
+  }
+}
+
+// GATED, and this line is the gate rather than the docstring above it.
+// Both of these files reach the public internet, spend one of a real
+// guest's five answers and real model budget on every run. The first
+// draft of each said "skipped by default" in its docstring and had NO
+// skip, so an ordinary `npx playwright test` would have fired them, and
+// a CI run would have fired them on every pull request. A comment
+// claiming a property is not that property, which is this repository's
+// F-2.1-J5-01 lesson reached from a new direction.
+const LIVE_ENABLED = process.env.RUN_LIVE_DIAGNOSTICS === "1";
+
+test.describe(LIVE_ENABLED ? "LIVE diagnostic" : "LIVE diagnostic (skipped: set RUN_LIVE_DIAGNOSTICS=1)", () => {
+  test.skip(!LIVE_ENABLED, "reaches the deployed demo and spends real budget");
+  test.describe.configure({ timeout: 180_000 });
+
+  test("capture the deployed answer screen", async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await enterApp(page);
+    const main = page.getByRole("main");
+
+    await main.getByRole("textbox", { name: /question/i }).fill(
+      "Which diseases are associated with BRCA1?",
+    );
+    await main.getByRole("button", { name: /^search the knowledge graph$/i }).click();
+
+    await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible({
+      timeout: 90_000,
+    });
+
+    // Settle, so late-rendering pieces are in the capture.
+    await page.waitForTimeout(1_500);
+
+    const dir = process.env.SHOT_DIR ?? testInfo.outputPath();
+    await page.screenshot({ path: `${dir}/live-answer-full.png`, fullPage: true });
+    await page.screenshot({ path: `${dir}/live-answer-fold.png` });
+    console.log("SAVED:", dir);
+
+    const followUp = page.getByTestId("follow-up");
+    console.log("follow-up in DOM:", await followUp.count());
+    console.log("follow-up visible:", await followUp.isVisible().catch(() => false));
+    const fuBox = await followUp.boundingBox().catch(() => null);
+    console.log("follow-up box:", JSON.stringify(fuBox));
+    console.log("page height:", await page.evaluate(() => document.body.scrollHeight));
+
+    for (const id of ["feedback", "answer-cap", "trust-pills", "sources"]) {
+      console.log(`${id}: count=${await page.getByTestId(id).count()}`);
+    }
+  });
+});

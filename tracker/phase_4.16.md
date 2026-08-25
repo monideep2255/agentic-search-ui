@@ -18,6 +18,7 @@ Inserted 2026-08-25 by product-owner decision, the fifth such exception after 4.
 - [The near miss, recorded because it was one line from shipping](#the-near-miss-recorded-because-it-was-one-line-from-shipping)
 - [Defect 7, the feedback thumbs, and why it read as two problems](#defect-7-the-feedback-thumbs-and-why-it-read-as-two-problems)
 - [One pre-existing end-to-end failure, proven not ours](#one-pre-existing-end-to-end-failure-proven-not-ours)
+- [Defect 2 does not reproduce, and what looking for it found instead](#defect-2-does-not-reproduce-and-what-looking-for-it-found-instead)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
 - [History](#history)
 
@@ -104,7 +105,7 @@ So the fix for defect 1 is NOT to stream answer text into the run screen. Neithe
 | Ticket | What | Status |
 |--------|------|--------|
 | T-4.16-01 | DONE, `1786b02` and `4dd4752`. Emit `tool_start` and `tool_result` from the Act step AT DISPATCH TIME, not at node return, so the eleven-second silence becomes the tool chips both design artifacts show. Needs `get_stream_writer` plus a multi-mode `astream` in `core/run.py`, not just an `emit` call in `core/graph.py`. See the section above for why the obvious version fixes nothing. Closes defects 1 and 3's cause | todo |
-| T-4.16-02 | Reproduce defect 2 in a browser BEFORE writing a fix, then fix it. `ask()` reads correct on inspection, so the cause is not visible from the source and a fix written from reading would be a guess | todo |
+| T-4.16-02 | DOES NOT REPRODUCE as stated. Signed in and as a guest, locally and on the deployed demo, a second turn lands. Three real defects were found while trying, all recorded below, none of them the reported one. NEEDS THE PRODUCT OWNER to say what they saw | blocked, product owner |
 | T-4.16-03 | Answer presentation against the component cards, never the prototype, per `Design_to_build_workflow.md`. Scope set only after a screenshot comparison against each card, which is the step build phase 4.9 recorded as the only thing that finds this class | todo |
 | T-4.16-04 | Integrations page corrected to the surfaces that actually shipped. Four concrete errors listed below | todo |
 | T-4.16-05 | Client-side routing: `/`, `/integrations`, `/about`, `/docs`. `serve -s dist` is already SPA mode, so deep links resolve once routes exist and no server change is needed | todo |
@@ -162,6 +163,24 @@ PROVEN PRE-EXISTING rather than argued: the branch was set aside and the same sp
 
 The current end-to-end figure is 33 passed, 1 failed, and that one is the row above.
 
+## Defect 2 does not reproduce, and what looking for it found instead
+
+T-4.16-02's ticket said reproduce before fixing, because `ask()` reads correct. It was reproduced against nothing: signed in and as a guest, locally against the mock and against the deployed demo, a second turn dispatches and lands. What the attempt found instead is three defects nobody had filed, two of them in this phase's own new work.
+
+FINDING 1, AN ASSERTION THAT COULD NOT FAIL, WRITTEN BY THE LEAD. The first landed-signal helper waited for the "New search" button, copied from `e2e/feedback-submission.spec.ts`. That button is rendered by BOTH `RunScreen.tsx` line 168 and `AnswerScreen.tsx` line 305, so it is visible from the instant a question is dispatched, before a single event arrives. Both second-turn tests passed in under two seconds against it and proved nothing whatsoever. It was caught by SCREENSHOTTING the deployed demo after the helper said an answer had landed, and seeing the run screen with five pending pips and no answer on it. Reading the helper had not revealed it. This is the fifth assertion-that-cannot-fail in this repository's recorded history and the fourth written by a lead. The fix waits on `answer-meta`, which only `AnswerScreen` renders.
+
+FINDING 2, THE GUEST PATH WAS NEVER EXERCISABLE IN THE BROWSER SUITE. With a correct landed signal, the guest test failed: `POST /v1/query` returned `net::ERR_FAILED`, which reads like CORS and is not. `tests/e2e_support/mock_llm_backend.py`'s env defaults omit `ANON_DAILY_RUN_CAP`, and `cost_control.anon_daily_run_cap` reads it through `_read_int_env`, which RAISES rather than defaulting. So every anonymous run 500'd and reset the connection. Guest coverage was not failing, it was ABSENT: no spec had ever asked a question without signing up first, which is the only way the deployed demo is actually used. This is the same unset variable build phase 4.12 hit in production as its defect 3, fixed there and not here, because nothing local exercised the path that needs it.
+
+FINDING 3, A HAZARD THIS PHASE INTRODUCED AND CAUGHT. Two live diagnostic specs were written with docstrings saying "skipped by default" and NO skip in them. An ordinary `npx playwright test` would have fired both at the public demo, spending a real guest allowance and real model budget, and a CI run would have done it on every pull request. Both are now gated on `RUN_LIVE_DIAGNOSTICS=1`. A comment claiming a property is not that property, which is F-2.1-J5-01 reached from a new direction, this time in a test rather than in product code.
+
+WHAT IS ACTUALLY LEFT OF DEFECT 2, and it needs the product owner rather than another agent. Three readings fit "then chat does not continue", and they are different work:
+
+- The follow-up field was not FOUND. Measured on the deployed demo, it renders late, after the answer and after the "New search" button, and a `getByTestId` count taken the moment the answer landed returned zero before the element appeared. A reader looking for a way to continue may simply not have seen one.
+- The conversation does not ACCUMULATE. By design, a follow-up runs a full search and the answer screen shows one answer at a time, replacing the last. There is no transcript. That is what `FollowUp.tsx` says it does and what the prototype does, so if the expectation was a chat log, this is a product decision and not a bug.
+- Something environment-specific that neither environment reproduced.
+
+Nothing is being guessed at here. The question is recorded and the ticket is blocked on the answer rather than closed as "works for me".
+
 ## Coverage: what this phase does not cover
 
 Stated up front so a gap in it is arguable rather than discovered, per `goal-contracts` and build phase 4.4's stated-blind-spot lesson.
@@ -176,6 +195,7 @@ Stated up front so a gap in it is arguable rather than discovered, per `goal-con
 - 2026-08-25: Opened after the product owner ranked the UI defects ahead of build phase 4.14. Preflight READY on all three transports.
 - 2026-08-25: Scouted before writing. Measured the deployed SSE stream frame by frame, found the 10.9-second Act silence, and traced it to `tool_start` and `tool_result` never being emitted. Corrected two recorded claims in `tracker/phase_4.12.md` in the process.
 - 2026-08-25: Read both design artifacts before scoping defect 1, and found that neither specifies streaming answer text, which redirected the ticket from the browser to the Act step.
+- 2026-08-25: T-4.16-02 investigated. Defect 2 does not reproduce on any path in any environment. Three other defects found while trying: a vacuous landed-signal the lead wrote, the guest path never having been exercisable in the browser suite, and two ungated live specs this phase had just introduced. Blocked on the product owner rather than closed.
 - 2026-08-25: Defect 7 reported by the product owner and closed as T-4.16-10. Root cause measured in Chromium, not reasoned about; guard added as a bounding-box arm and mutation-run red before commit. While running the full browser suite for it, one PRE-EXISTING failure was found and proven pre-existing by re-running it at the branch point.
 - 2026-08-25: T-4.16-01 and T-4.16-07 landed. Gate 5 of 5 green, mutation harness 7 of 7, suite 3942 passed with zero failed, frontend 211, typecheck and production build clean, ruff clean, drift 0 stale 0 structural. Five `test_graph.py` `act_state` literals gained the required `seq` key: they were incomplete `GraphState`s that only worked while `act_node` did not read it, and the fixtures were corrected rather than softening the code to `state.get("seq", 0)`, which would let a mid-run seq collision pass silently. No assertion was weakened.
 - 2026-08-25: Backend premise gate written and watched failing, 5 arms, 5 red. A5's failure message printed the production event list verbatim, `guard cost think cost plan cost token citation trust_signal trust_signal cost done`, which is the deployed trace with no tool frame in it. TWO GAPS IN THE GATE RECORDED IN ITS OWN DOCSTRING rather than left to a reviewer: A3 stops at its presence check and never reaches the timing comparison that is its whole reason for existing, and A4's populate-check is currently what fails, so it proves nothing A1 does not. Both are closed by T-4.16-07's mutation, not by reading. One defect found in the gate's own fixture while watching it fail: the daily-cap stubs were written `async` against two sync call sites, so every run logged `coroutine ... was never awaited` and the stub silently did not run.
