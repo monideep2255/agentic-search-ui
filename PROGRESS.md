@@ -103,7 +103,7 @@ Both of last week's headline problems are fixed, so this section leads with what
 
 The honest headline: nothing runs the tests automatically. Every check on this project happens because a person decides to run it. Meanwhile, a change merged into the main line of work now goes straight to the live web address with nothing in between. That combination is the biggest risk we are carrying, and closing it is the next sprint.
 
-The second thing to know: the seven problems one person found in an afternoon of clicking around are all fixed, but none of those fixes has reached the live web address yet. They are finished and waiting to be merged. Until that happens, the version strangers can open still has the frozen-looking screen, the vanishing conversation, and the misplaced thumbs-down.
+The second thing to know: the seven problems one person found in an afternoon of clicking around are all fixed and all live, as of 25 August. We checked by opening the real web address afterwards rather than trusting that it had worked. One thing is better but not finished: the screen used to sit silent for about eleven seconds while it worked, and it now tells you which source it is consulting as it goes, but there is still a gap of about six seconds at the end while it writes the answer, during which it says nothing. That is the same problem one step further along, and it is written down.
 
 A correction to what this section said last week. It claimed the thing we most wanted to remove was that the tool could only be reached by someone able to run it on their own machine. That had already stopped being true when it was written: there has been a public web address since 24 August. Left in and corrected rather than quietly deleted, because a status document that silently rewrites its own past is worth less than one that shows where it was wrong.
 
@@ -273,15 +273,13 @@ The planned specification pause (updating the written plans with everything lear
 
 In order, now:
 
-1. Merging the screen fixes so they actually reach the live web address. All seven are finished and reviewed; none of them is on the version a stranger can open. Until that happens the public version still has the frozen-looking screen, the vanishing conversation and the misplaced thumbs-down button. This is first because the work is already done and the only thing between it and the people it is for is a merge.
+1. Making the tests run by themselves. Right now every check on this project happens because a person decides to run it, and a change merged into the main line goes straight to the live web address with nothing in between. Those two facts together are the biggest risk the project is carrying. This was scheduled on 24 August and has not been started.
 
-2. Making the tests run by themselves. Right now every check on this project happens because a person decides to run it, and a change merged into the main line goes straight to the live web address with nothing in between. Those two facts together are the biggest risk the project is carrying. This was scheduled on 24 August and has not been started.
+2. Saved search history that survives closing the browser. The record of what you asked is already being written; what is missing is the part that reads it back and shows it to you.
 
-3. Saved search history that survives closing the browser. The record of what you asked is already being written; what is missing is the part that reads it back and shows it to you.
+3. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
 
-4. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
-
-5. Then the remaining work: measurement and quality scoring, and finally hardening it for real use.
+4. Then the remaining work: measurement and quality scoring, and finally hardening it for real use.
 
 Two items that used to head this list are gone because they are done, and it is worth saying what they were rather than letting them disappear. The first was closing two ways the system could be made to answer about the wrong gene, both fixed on 24 August before any public address existed, which was the ordering we insisted on: a confidently worded, properly sourced answer about the wrong thing is more dangerous than no answer. The second was getting it online at all, done the same day.
 

@@ -3,7 +3,7 @@
 Branch: `phase/4.16-ui-streaming-fidelity`
 Depends on: 4.12, merged 2026-08-24 as PR #61
 Opened: 2026-08-25
-Status: OPEN. T-4.16-01 and T-4.16-07 DONE, defects 1 and 3's cause closed on both sides of the wire. Five defects remain.
+Status: MERGED as PR #63 on 2026-08-25, and VERIFIED LIVE on the deployed product. All seven defects closed. One residual named rather than glossed: 6.4 seconds still pass between the last `tool_result` and the answer, because the Write step emits nothing while it synthesises. That is T-4.16-08 and it is the same defect class one step further along.
 
 Inserted 2026-08-25 by product-owner decision, the fifth such exception after 4.8, 4.10, 4.11/4.12 and 4.14/4.15. Section 25 does not contain it. It exists because build phase 4.12 put the product in front of a person for the first time, and that person found six defects that no suite in this repository can see.
 
