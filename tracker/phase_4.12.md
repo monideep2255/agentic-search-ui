@@ -231,7 +231,31 @@ WHAT WOULD SETTLE IT, for whoever picks this up: get the actual exception. Eithe
 
 Build phase 4.12 merges with these open. That is a decision rather than an oversight: the phase's own scope was to get the product deployed and answering, and it does both. Nothing below blocks a demo.
 
-- T-4.12-12, UI AND STREAMING. Product-owner observation on the live demo, 2026-08-24: "some work on UI and the streaming still needs work". Not yet reduced to specific defects, and deliberately NOT guessed at here, because a made-up defect list is worse than an honest pointer. Whoever picks this up should drive the deployed UI, write down what is actually wrong, and file real tickets. Two things already known that may or may not be part of it: `frontend/src/stubs/registry.ts` still marks stubbed surfaces, and this repository has no visual check at all, which is build phase 4.8's recorded lesson ("nothing in this repository looks at the rendered page", after two major layout defects survived 147 unit tests and a full WCAG pass).
+- T-4.12-12, UI AND STREAMING. FOUR SPECIFIC DEFECTS, reported by the product owner from the live demo on 2026-08-24 and recorded in their own words rather than paraphrased into something tidier:
+
+  1. "Streaming does not work properly."
+  2. "Then chat does not continue" -- a second turn cannot be taken.
+  3. "The search is super super super super slow."
+  4. "The answer presentation is horrible and nothing close to what the design sync had."
+  5. "I do not see the KGX, REST API, command line or MCP setup up properly on the integrations page." All four of those surfaces EXIST and are merged (build phases 4.1 MCP, 4.2 CLI, 4.3 GraphQL, 4.4 KGX export, plus the REST plus SSE adapter), so this is a presentation gap on that page rather than missing capability. Worth checking `frontend/src/stubs/registry.ts` first: the integrations page may still be rendering stub placeholders for surfaces that have since shipped.
+  6. NO CLIENT-SIDE ROUTING. Every page is served at `/` and the URL never changes. The intended routes, given verbatim by the product owner:
+
+     | Page | Route |
+     |------|-------|
+     | Home | `/` |
+     | Integrations | `/integrations` |
+     | About | `/about` |
+     | Docs | `/docs` |
+
+     This is a real deployment consideration and not only a frontend one: the app is served by `serve -s dist`, and the `-s` flag is single-page-app mode, which rewrites unknown paths to `index.html`. So deep links will resolve to the app once routes exist, and no server change is needed. What is missing is the router itself.
+
+  ONE OBSERVATION THAT MAY COLLAPSE TWO OF THE FIRST FOUR, offered as a lead and not as a diagnosis: 1 and 3 are plausibly the same defect. Measured on the deployed API, the BRCA1 query returns in 15.8 seconds and emits `token` events throughout. If those tokens are not rendering incrementally in the browser, the reader sees nothing at all for fifteen seconds and then an answer appears at once, which is indistinguishable from "super slow" from the outside. Check whether the SSE stream is being consumed incrementally BEFORE treating latency as a separate problem, or the work will go into speeding up something that is already fast enough to feel responsive if it streamed.
+
+  Latency figures already measured, so nobody re-derives them: guard 2.1s, think about 4s, plan about 3s after the model swap, act and write about 9s, total 15.8s for a two-tool answer with five citations. The plan step was 45s before this phase and is not the constraint any more.
+
+  Defect 4 has a defined source of truth and MUST NOT be guessed at: `docs/build/design/Design_to_build_workflow.md` names which of the four design artifacts is authoritative, and build phase 4.8's rule stands that builders build against the component cards, never against the prototype, and that the cards are reconciled to the prototype first.
+
+  TWO THINGS ALREADY KNOWN that bear on all four: `frontend/src/stubs/registry.ts` still marks stubbed surfaces, and this repository has NO visual check at all. That is build phase 4.8's recorded lesson, and it is the reason a defect list like this one arrives from a person rather than from a suite: "nothing in this repository looks at the rendered page", after two major layout defects survived 147 unit tests, a clean production build and a full WCAG 2.1 AA pass.
 - The `GCK` refusal, above. Hypothesis recorded, not confirmed.
 - T-4.12-09d, the GitHub CD integration, which could not be wired before the merge because Section 24 requires CD to watch `develop` only and phase branches to never auto-deploy. It becomes wireable the moment this merges, and that ordering is the reason it was left rather than an omission.
 
