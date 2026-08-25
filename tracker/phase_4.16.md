@@ -3,7 +3,7 @@
 Branch: `phase/4.16-ui-streaming-fidelity`
 Depends on: 4.12, merged 2026-08-24 as PR #61
 Opened: 2026-08-25
-Status: OPEN. Scouted, root cause measured for the top defect, premise gate not yet written.
+Status: OPEN. Scouted, root cause measured, backend premise gate written and watched failing 5 of 5. No product code written yet.
 
 Inserted 2026-08-25 by product-owner decision, the fifth such exception after 4.8, 4.10, 4.11/4.12 and 4.14/4.15. Section 25 does not contain it. It exists because build phase 4.12 put the product in front of a person for the first time, and that person found six defects that no suite in this repository can see.
 
@@ -12,6 +12,7 @@ Inserted 2026-08-25 by product-owner decision, the fifth such exception after 4.
 - [What this phase is for](#what-this-phase-is-for)
 - [The root cause, measured before any ticket was written](#the-root-cause-measured-before-any-ticket-was-written)
 - [Two recorded claims this phase corrects](#two-recorded-claims-this-phase-corrects)
+- [The constraint is the node boundary, not the missing emit](#the-constraint-is-the-node-boundary-not-the-missing-emit)
 - [What the design actually specifies, read rather than assumed](#what-the-design-actually-specifies-read-rather-than-assumed)
 - [Tickets](#tickets)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
@@ -69,6 +70,22 @@ Both are corrected by measurement rather than quietly dropped, which is this rep
 
 The lead was still load-bearing. It said do not optimise latency before checking streaming, and that is exactly what stopped this phase from opening with a performance ticket.
 
+## The constraint is the node boundary, not the missing emit
+
+Found 2026-08-25 while scoping T-4.16-01, BEFORE any code was written, and recorded rather than quietly folded into the ticket, because the first version of that ticket would not have fixed the defect.
+
+`core/run.py`'s `run_streaming` drives `compiled_graph.astream(initial_state, stream_mode="updates")`, which yields one dict per COMPLETED node. `_EventSink` accumulates a node's events and hands them back through `sink.result()`, so a node's events reach the wire only when that node RETURNS. That is why the measured trace has three separate arrival times: guard, think and plan are three nodes.
+
+`act_node` is one node that runs every tool. So adding `sink.emit("tool_start", ...)` inside its loop, which is what T-4.16-01 originally said, would flush every tool event in a single burst at 12.3 seconds, immediately before the tokens. The stepper would flash through Act at the very end and the eleven-second silence would be unchanged. The fix would have looked right in a unit test and changed nothing a person can see.
+
+`act_node` also has no `_EventSink` at all today. Sinks are constructed at lines 700, 1290, 2519 and 5118, which is guardrail, think, plan and write. Act was written to return state, not to emit, so this is a node that has never produced an event of any kind.
+
+WHAT THE TICKET ACTUALLY NEEDS: the events must escape `act_node` while it is still running. `langgraph.config.get_stream_writer` is available in the installed version and is the idiomatic mechanism, paired with a multi-mode `astream`, so a tool event is written to the custom stream at dispatch time AND still returned through `sink.result()` for the state reducer. The two are not alternatives: the custom write is what a reader sees live, and the returned event is what keeps `seq` and the replay buffer whole.
+
+Verified rather than assumed: `get_stream_writer` imports from the installed `langgraph`, probed directly rather than read from the version pin, which is `langgraph>=0.2` and therefore says nothing about which minor is actually present.
+
+THE GENERAL FORM, and it is `attack-the-constraint` reached from a new direction: the missing emit is the visible absence, and the node boundary is what actually bounds streaming latency. A fix aimed at the absence would have been a fix aimed at a non-bottleneck.
+
 ## What the design actually specifies, read rather than assumed
 
 Defect 4 must not be guessed at, per `docs/build/design/Design_to_build_workflow.md`, and the same discipline was applied to defect 1 before writing T-4.16-01.
@@ -82,12 +99,12 @@ So the fix for defect 1 is NOT to stream answer text into the run screen. Neithe
 
 | Ticket | What | Status |
 |--------|------|--------|
-| T-4.16-01 | Emit `tool_start` and `tool_result` from the Act step, so the eleven-second silence becomes the tool chips both design artifacts show. Backend, `core/graph.py`. Closes defects 1 and 3's cause | todo |
+| T-4.16-01 | Emit `tool_start` and `tool_result` from the Act step AT DISPATCH TIME, not at node return, so the eleven-second silence becomes the tool chips both design artifacts show. Needs `get_stream_writer` plus a multi-mode `astream` in `core/run.py`, not just an `emit` call in `core/graph.py`. See the section above for why the obvious version fixes nothing. Closes defects 1 and 3's cause | todo |
 | T-4.16-02 | Reproduce defect 2 in a browser BEFORE writing a fix, then fix it. `ask()` reads correct on inspection, so the cause is not visible from the source and a fix written from reading would be a guess | todo |
 | T-4.16-03 | Answer presentation against the component cards, never the prototype, per `Design_to_build_workflow.md`. Scope set only after a screenshot comparison against each card, which is the step build phase 4.9 recorded as the only thing that finds this class | todo |
 | T-4.16-04 | Integrations page corrected to the surfaces that actually shipped. Four concrete errors listed below | todo |
 | T-4.16-05 | Client-side routing: `/`, `/integrations`, `/about`, `/docs`. `serve -s dist` is already SPA mode, so deep links resolve once routes exist and no server change is needed | todo |
-| T-4.16-06 | The premise gate, written first and watched failing. Every arm carries a populate-check from its first line | todo |
+| T-4.16-06 | The premise gate, written first and watched failing. Every arm carries a populate-check from its first line | in progress. Backend arms landed: `tests/system_03_search_agent/core/test_phase_4_16_premise.py`, 5 arms, all 5 red for the right reason with every populate-check passing first. Frontend arms (routing, integrations, second turn) not yet written |
 | T-4.16-07 | The offline mutation harness for this gate, per build phase 4.7's durable fix | todo |
 | T-4.16-08 | Re-measure the Act step after T-4.16-01 lands and decide whether defect 3 has any residue once the wait is legible. Deliberately NOT a performance ticket yet | todo |
 
@@ -112,3 +129,5 @@ Stated up front so a gap in it is arguable rather than discovered, per `goal-con
 - 2026-08-25: Opened after the product owner ranked the UI defects ahead of build phase 4.14. Preflight READY on all three transports.
 - 2026-08-25: Scouted before writing. Measured the deployed SSE stream frame by frame, found the 10.9-second Act silence, and traced it to `tool_start` and `tool_result` never being emitted. Corrected two recorded claims in `tracker/phase_4.12.md` in the process.
 - 2026-08-25: Read both design artifacts before scoping defect 1, and found that neither specifies streaming answer text, which redirected the ticket from the browser to the Act step.
+- 2026-08-25: Backend premise gate written and watched failing, 5 arms, 5 red. A5's failure message printed the production event list verbatim, `guard cost think cost plan cost token citation trust_signal trust_signal cost done`, which is the deployed trace with no tool frame in it. TWO GAPS IN THE GATE RECORDED IN ITS OWN DOCSTRING rather than left to a reviewer: A3 stops at its presence check and never reaches the timing comparison that is its whole reason for existing, and A4's populate-check is currently what fails, so it proves nothing A1 does not. Both are closed by T-4.16-07's mutation, not by reading. One defect found in the gate's own fixture while watching it fail: the daily-cap stubs were written `async` against two sync call sites, so every run logged `coroutine ... was never awaited` and the stub silently did not run.
+- 2026-08-25: Corrected T-4.16-01 before writing any code. Events flush at node return, so emitting inside `act_node`'s loop would have delivered every tool event in one burst at 12.3 seconds and changed nothing visible. The node boundary is the constraint, not the missing emit.
