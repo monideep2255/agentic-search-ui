@@ -336,7 +336,14 @@ def _comma_chain_items(text: str) -> list[str]:
     false positives over false negatives: a missed wall costs nothing, a
     wall that never fires trains a reader to ignore it.
     """
-    scrubbed = _strip_inline_code(text)
+    # Substitute a single placeholder word for each inline-code span
+    # rather than deleting it. Deleting makes a backticked series item
+    # vanish entirely, which both loses the item and inflates the
+    # mean-words-per-item figure the series test depends on: a list of
+    # four service names, two of them backticked, collapsed to three
+    # items with a falsely high average and fired as a wall. Measured on
+    # README.md's cost-model section.
+    scrubbed = re.sub(r"`[^`\n]*`", " code ", text)
     scrubbed = re.sub(r"\(https?://[^)]*\)", " ", scrubbed)
     depth = 0
     parts: list[str] = []
