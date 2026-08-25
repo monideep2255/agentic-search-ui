@@ -350,6 +350,13 @@ export function AnswerScreen({
                   every outcome, so a refusal rendered "✓ Refused" and an
                   ask-back "✓ Needs a narrower question", both ticked, both
                   green. The glyph and the colour now follow the outcome.
+
+                  That quoted string is the copy AS IT WAS when F-4.9-A-03
+                  was filed, kept verbatim so the account still reads as
+                  what happened. T-4.16-03 has since changed the `ask`
+                  wording to "Single source, not independently confirmed";
+                  `useRunView.ts`'s OUTCOME_BY_TRUST is the live source and
+                  this comment is history, not a specification.
                 */}
                 {outcome ? (
                   <Box

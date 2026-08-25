@@ -21,6 +21,9 @@ Inserted 2026-08-25 by product-owner decision, the fifth such exception after 4.
 - [Defect 2 does not reproduce, and what looking for it found instead](#defect-2-does-not-reproduce-and-what-looking-for-it-found-instead)
 - [Defect 4, the answer presentation, measured against the card](#defect-4-the-answer-presentation-measured-against-the-card)
 - [Routing and the integrations page, both done](#routing-and-the-integrations-page-both-done)
+- [Defect 2 is salience, and the competing affordance is named](#defect-2-is-salience-and-the-competing-affordance-is-named)
+- [Two presentation defects fixed, and one design gap the cards do not cover](#two-presentation-defects-fixed-and-one-design-gap-the-cards-do-not-cover)
+- [The browser suite cannot reach a real tool dispatch](#the-browser-suite-cannot-reach-a-real-tool-dispatch)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
 - [History](#history)
 
@@ -109,13 +112,13 @@ So the fix for defect 1 is NOT to stream answer text into the run screen. Neithe
 | T-4.16-01 | DONE, `1786b02` and `4dd4752`. Emit `tool_start` and `tool_result` from the Act step AT DISPATCH TIME, not at node return, so the eleven-second silence becomes the tool chips both design artifacts show. Needs `get_stream_writer` plus a multi-mode `astream` in `core/run.py`, not just an `emit` call in `core/graph.py`. See the section above for why the obvious version fixes nothing. Closes defects 1 and 3's cause | todo |
 | T-4.16-02 | RESOLVED AS DISCOVERABILITY by the product owner on 2026-08-25: "I couldn't find the follow-up field". Not a dispatch failure. Open, and now scoped | todo |
 | T-4.16-02a | Superseded record: the reported defect DOES NOT REPRODUCE as stated. Signed in and as a guest, locally and on the deployed demo, a second turn lands. Three real defects were found while trying, all recorded below, none of them the reported one. NEEDS THE PRODUCT OWNER to say what they saw | blocked, product owner |
-| T-4.16-03 | Answer presentation against the component cards, never the prototype, per `Design_to_build_workflow.md`. Scope set only after a screenshot comparison against each card, which is the step build phase 4.9 recorded as the only thing that finds this class | todo |
+| T-4.16-03 | BOTH SEPARATE DEFECTS DONE. The chip no longer repeats its source, and the `ask` outcome no longer blames the reader for the evidence. The four card gaps that traced to missing tool events are closed by T-4.16-01 and need re-measuring after deploy | done, pending re-measure |
 | T-4.16-04 | DONE. Integrations page corrected to the five surfaces that actually shipped, and cross-checked against `pyproject.toml` and the FastAPI route table by a Python test, since nothing linked the page's prose to the modules it describes | done |
 | T-4.16-05 | DONE. Client-side routing over the History API, NO new dependency for four static paths. Four browser arms including back and forward; mutation-proven | done |
 | T-4.16-06 | Backend arms DONE, frontend arms open. The premise gate, written first and watched failing. Every arm carries a populate-check from its first line | in progress. Backend arms landed: `tests/system_03_search_agent/core/test_phase_4_16_premise.py`, 5 arms, all 5 red for the right reason with every populate-check passing first. Frontend arms (routing, integrations, second turn) not yet written |
 | T-4.16-07 | DONE, `1786b02`. The offline mutation harness, 7 cases over all 5 arms. M1 applies the plausible wrong fix in process and pins A3 red on its TIMING branch, closing the gap the gate recorded about itself | done |
 | T-4.16-10 | DONE, defect 7. The thumb-down glyph rendered 8.5px outside its own button, so clicking what a reader could see missed the control. One defect, two symptoms | done |
-| T-4.16-09 | An end-to-end arm that LOOKS AT a rendered tool chip. No Playwright spec in this repository has ever emitted a `tool_start`, and only one has ever emitted a `tool_result`, so the chip path has never been exercised in a browser. Nothing at the hook level feeds `tool_start` either | todo |
+| T-4.16-09 | DONE, as a scripted-stream arm plus the producer-side premise gate. A REAL dispatch is unreachable from the browser suite and that is recorded rather than papered over. Originally: an end-to-end arm that LOOKS AT a rendered tool chip. No Playwright spec in this repository has ever emitted a `tool_start`, and only one has ever emitted a `tool_result`, so the chip path has never been exercised in a browser. Nothing at the hook level feeds `tool_start` either | todo |
 | T-4.16-08 | Re-measure the Act step after T-4.16-01 lands and decide whether defect 3 has any residue once the wait is legible. Deliberately NOT a performance ticket yet | todo |
 
 T-4.16-04's four errors, each verified against the code rather than reported from the page:
@@ -233,6 +236,46 @@ TWO DEFECTS IN THAT GUARD, both found by mutation and both recorded:
 - Its own populate-check then asserted `"s3 ask" in text`, which is page CONTENT rather than fixture health. Under the mutation it fired first and masked all four real failures, reporting a broken harness for an intact page. It now counts `<Card` occurrences.
 - And its surfaces arm asserted `"GraphQL" in source`, which passes against `"GraphQLXX"`. A substring check cannot see a renamed card. Now matched as an exact card title. That is the FOURTH assertion-that-cannot-fail in this phase and the third written by the lead.
 
+## Defect 2 is salience, and the competing affordance is named
+
+The product owner settled it on 2026-08-25: "I couldn't find the follow-up field". Measured rather than assumed from there, and one earlier note in this file is CORRECTED rather than carried: it said the follow-up "renders late", which was an artifact of the same vacuous landed-signal described above. With a correct signal it is in the DOM the moment the answer screen is.
+
+POSITION IS NOT THE CAUSE. `e2e/followup-position-diagnostic.spec.ts` measures the input's top at three viewports:
+
+| Viewport | Input top | Below the fold |
+|----------|-----------|----------------|
+| 1280 by 650, a 13-inch laptop | 463px | no |
+| 1440 by 760 | 463px | no |
+| 1440 by 1000 | 463px | no |
+
+On the deployed demo, with a real answer above it, it measured 509px. Above the fold everywhere tested.
+
+WHAT IS LEFT IS SALIENCE AND ONE COMPETING AFFORDANCE. "New search" is a bordered button in the answer's top-right corner. The follow-up is a 10.5px uppercase grey label over a quiet field, further down and below the trust pills. A reader wanting to ask another question reaches for the button they can see, and that button RESETS to the landing screen rather than continuing. That reads precisely as "then chat does not continue" while every mechanism underneath works, which is what this phase measured twice.
+
+NOT FIXED, and deliberately. Raising the follow-up's prominence or demoting "New search" is a change to the answer screen's own composition, which `docs/build/design/Design_to_build_workflow.md` says originates from the product owner editing a card. The measurement above is the evidence for that decision, not a licence to make it.
+
+## Two presentation defects fixed, and one design gap the cards do not cover
+
+THE CHIP NO LONGER REPEATS ITS SOURCE. `sourceDisplayName` in `useRunView.ts` strips a `source:` prefix from `source_id` at display time only. Neither producer was wrong, which is why the fix is there: `core/graph.py` documents that "the CURIE prefix names the source database, the full CURIE is the source id", and a resolvable CURIE is what makes a Layer 1 citation followable. Trading a provenance field for a nicer label is the wrong direction in this product. Mutation-proven: restoring the plain join reproduces "MedGen MedGen:C0346153" and turns two of five arms red while THREE stay green, those three being the shapes a narrower test would have covered.
+
+DELIBERATELY NOT NORMALISED: the case of `source` itself. Layer 2 sends "gene" and the card shows "Gene". Capitalising is right for that value and wrong for "dbSNP" and "MedGen", so it is left for the design card rather than guessed.
+
+THE `ask` OUTCOME NO LONGER BLAMES THE READER. It said "Needs a narrower question" above a grounded answer with five resolving citations. The question was fine. Locked spec 8.3.3, in its own words: "Ask is reserved for a high-stakes claim resting on a single independent-origin source." It is the `(high, grounded, insufficient)` row of the decision table, so the backend was correct and the copy described something else entirely.
+
+It now reads "Single source, not independently confirmed", stating the evidence the way the neighbouring pills do rather than instructing the reader. PRODUCT-OWNER DECISION, 2026-08-25, taken directly because the trust-pills design card has NO `ask` state at all: there was nothing to build against. That card gap is real and is recorded here for the card to absorb.
+
+## The browser suite cannot reach a real tool dispatch
+
+Found while building T-4.16-09 and recorded with an owner rather than worked around.
+
+The e2e mock replaces the outbound MODEL call only. Entity resolution and the tools are real, so `plan_node` needs a live NCBI lookup to resolve BRCA1 before it can plan any tool. Driven against the mock backend, the answer came back "0 tools, 0 sources", and raising `PER_QUERY_COST_CAP_USD` changed nothing, which rules the cost cap out.
+
+So T-4.16-09 ships as a SCRIPTED-stream arm. It proves the renderer turns tool frames into chips and a truthful meta line; it does not prove the backend emits them. That half is the Python premise gate driving the real loop. The two halves are in different languages against different surfaces, and NEITHER alone would have caught the shipped defect: the producer gate cannot see a chip, and the renderer arm cannot see a silent producer.
+
+Mutation-proven: deleting the four tool frames reproduces the deployed meta line character for character, "0 tools, 1 source from 1 layer".
+
+CARRIED, with an owner: making a real tool dispatch reachable from the browser suite. It is the same gap that leaves `query-stream-and-stop.spec.ts`'s `answer-cap` arm failing, since that arm also depends on the loop reaching a state this harness cannot produce.
+
 ## Coverage: what this phase does not cover
 
 Stated up front so a gap in it is arguable rather than discovered, per `goal-contracts` and build phase 4.4's stated-blind-spot lesson.
@@ -247,6 +290,7 @@ Stated up front so a gap in it is arguable rather than discovered, per `goal-con
 - 2026-08-25: Opened after the product owner ranked the UI defects ahead of build phase 4.14. Preflight READY on all three transports.
 - 2026-08-25: Scouted before writing. Measured the deployed SSE stream frame by frame, found the 10.9-second Act silence, and traced it to `tool_start` and `tool_result` never being emitted. Corrected two recorded claims in `tracker/phase_4.12.md` in the process.
 - 2026-08-25: Read both design artifacts before scoping defect 1, and found that neither specifies streaming answer text, which redirected the ticket from the browser to the Act step.
+- 2026-08-25: T-4.16-03's two separate defects fixed, the chip label and the `ask` copy, the second a product-owner decision because the trust-pills card has no `ask` state. T-4.16-09 landed as a scripted arm after a real dispatch proved unreachable from the browser suite. Defect 2 measured to salience rather than position, and left for the design card.
 - 2026-08-25: T-4.16-05 routing and T-4.16-04 integrations both landed, each mutation-proven. Three more assertions-that-cannot-fail were found and fixed inside the integrations guard itself.
 - 2026-08-25: Defect 2 resolved to DISCOVERABILITY by the product owner, not a dispatch failure. Defect 4's gap list captured from the deployed demo against the answer card; four of its six rows trace to T-4.16-01's already-fixed missing tool events, so it must be re-measured after that deploys.
 - 2026-08-25: T-4.16-02 investigated. Defect 2 does not reproduce on any path in any environment. Three other defects found while trying: a vacuous landed-signal the lead wrote, the guest path never having been exercisable in the browser suite, and two ungated live specs this phase had just introduced. Blocked on the product owner rather than closed.
