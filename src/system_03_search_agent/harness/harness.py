@@ -504,6 +504,7 @@ class Harness:
         messages: list[Message],
         *,
         cache_prefix: str | None = None,
+        max_tokens: int | None = None,
     ) -> LLMResponse:
         """Issue one model call for `tier` through LiteLLM/OpenRouter.
 
@@ -546,7 +547,14 @@ class Harness:
                     model=target,
                     messages=final_messages,
                     reasoning=_TIER_REASONING[tier],
-                    max_tokens=_TIER_MAX_TOKENS[tier],
+                    # Per-call override, defaulting to the tier's own cap.
+                    # F-4.12-01: a caller that KNOWS it is going to discard the
+                    # reply should not pay for a tier-sized one. The tier cap
+                    # stays the default so nothing that does not opt in
+                    # changes.
+                    max_tokens=(
+                        _TIER_MAX_TOKENS[tier] if max_tokens is None else max_tokens
+                    ),
                 )
             except asyncio.CancelledError:
                 # F-2.1-B02, second order. `enforce_timeout` cancels this
