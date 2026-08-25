@@ -360,6 +360,10 @@ def _comma_chain_items(text: str) -> list[str]:
 # "a X that does A, a Y that does B, and a Z that does C" (a list wearing
 # a paragraph, which writing-style.md names as the smell) from ordinary
 # prose that merely contains commas.
+# Mean words per item below which a comma series is treated as a bare noun
+# list rather than an enumeration of facts.
+MIN_SERIES_ITEM_WORDS = 4.0
+
 _NON_SERIES_OPENERS = {
     "because", "which", "who", "whom", "whose", "that", "so", "since",
     "when", "where", "while", "though", "although", "if", "unless",
@@ -406,6 +410,16 @@ def _is_series(items: list[str]) -> bool:
     if coord < 2:
         return False
     items = items[: coord + 1]
+    # A bare noun list is ordinary English, not a list wearing a
+    # paragraph. writing-style.md's own smell test is "a X that does A, a
+    # Y that does B, and a Z that does C", where every item carries its
+    # own predicate, and a predicate takes words. Measured on README.md:
+    # "questions about genes, diseases, variants, publications, and
+    # taxonomy" averages 1.2 words per item and reads correctly as prose,
+    # while every genuine wall found so far averages 4 or more.
+    words_per_item = sum(len(i.split()) for i in items) / len(items)
+    if words_per_item < MIN_SERIES_ITEM_WORDS:
+        return False
     # Only segments AFTER the first are checked. A real series opens with
     # the sentence's own subject ("The tool reads Layer 1 for the graph,
     # ..."), so testing the first segment rejects every genuine series.
@@ -555,8 +569,26 @@ def check_heading_case(rel: str, lines: list[str], mask: list[bool]) -> list[Fin
             continue  # H1 (single '#') is out of scope for the "##+" rule
         scrubbed = _strip_inline_code(text)
         words = re.findall(r"[A-Za-z][A-Za-z'\-]*", scrubbed)
+        # A capitalized word followed by a number is a designator, not
+        # title case: "System 1", "Layer 2", "Phase 6", "Section 25" are
+        # all names in this project. Detected structurally rather than by
+        # growing the allowlist, since the pattern generalizes and the
+        # allowlist does not.
+        tokens = re.findall(r"[A-Za-z][A-Za-z'\-]*|\d+", scrubbed)
+        designators = set()
+        for t_idx, tok in enumerate(tokens):
+            if tok[0].isalpha() and t_idx + 1 < len(tokens) and tokens[t_idx + 1].isdigit():
+                designators.add(tok.lower())
+        reported: set = set()
         for idx, word in enumerate(words):
             if idx == 0:
+                continue
+            if word.lower() in designators:
+                continue
+            # One finding per distinct word per heading. "Connection to
+            # System 1 and System 2" reported "System" twice, which reads
+            # as a duplicate defect rather than one heading to fix.
+            if word.lower() in reported:
                 continue
             if not word[0].isupper():
                 continue
@@ -579,6 +611,7 @@ def check_heading_case(rel: str, lines: list[str], mask: list[bool]) -> list[Fin
                 and words[idx - 1].lower() == LETS_ENCRYPT_PAIR[0]
             ):
                 continue
+            reported.add(word.lower())
             findings.append(Finding(
                 "heading-case", ADVISORY, rel, i + 1,
                 f'heading word "{word}" is capitalized outside the '
