@@ -266,11 +266,25 @@ Estimated monthly cost for the full System 3 deployment:
 | Item | Estimated cost |
 |------|---------------|
 | Knowledge graph hosting (Hetzner CPX42, 8 vCPU, 16 GB, 320 GB NVMe) | ~$28/month |
+| Railway Hobby plan: four services in one production environment | ~$10-30/month |
 | LLM API costs (Anthropic + OpenAI, depending on query volume) | ~$10-50/month |
-| User database (serverless PostgreSQL) | ~$5/month |
-| Redis (managed or self-hosted) | ~$0-5/month |
-| Domain + TLS | ~$1/month |
-| Total | ~$44-89/month |
+| Domain + TLS, once a custom domain replaces the `*.up.railway.app` subdomains | ~$1/month |
+| Total | ~$49-109/month |
+
+The Railway line covers the four services build phase 4.12 deployed:
+
+- `search-agent-web`
+- `search-agent-api`
+- Postgres
+- Redis
+
+It replaces the separate user-database and Redis rows this table carried before the deployment landed, which double-counted both now that Railway hosts them.
+
+How that figure is built, from Railway's published rate card:
+
+- Base subscription: $5/month on Hobby, which includes the first $5 of resource usage
+- Usage above that: charged at $10/GB/month RAM, $20/vCPU/month CPU, $0.05/GB egress, $0.15/GB/month volume storage
+- Railway's own guidance puts a stack of this shape, an API, a web service, Postgres and Redis, at $10 to $30 per month all in
 
 Cost caps enforced per-query via the multi-model harness. Guard tier uses the cheapest model, synth tier uses the strongest only when needed.
 
