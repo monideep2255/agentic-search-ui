@@ -355,6 +355,70 @@ def _comma_chain_items(text: str) -> list[str]:
     return [p for p in parts if p]
 
 
+# A segment opening with one of these is a subordinate or contrastive
+# clause, not an item in a series. Their presence is what separates
+# "a X that does A, a Y that does B, and a Z that does C" (a list wearing
+# a paragraph, which writing-style.md names as the smell) from ordinary
+# prose that merely contains commas.
+_NON_SERIES_OPENERS = {
+    "because", "which", "who", "whom", "whose", "that", "so", "since",
+    "when", "where", "while", "though", "although", "if", "unless",
+    "until", "after", "before", "as", "but", "not", "rather",
+}
+
+
+def _split_sentences_for_walls(text: str) -> list[str]:
+    """Count a series WITHIN one sentence, never across a line.
+
+    Counting across the whole line pooled the commas of two unrelated
+    sentences and reported a wall where neither sentence had one. Measured
+    on docs/build/Build_workflow_cadence.md, that alone accounted for
+    several of the arm's false positives.
+    """
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z\"'`(])", text)
+    return [p for p in (x.strip() for x in parts) if p]
+
+
+def _is_series(items: list[str]) -> bool:
+    """True only for a real enumeration: three or more parallel items whose
+    LAST one is introduced by a coordinator.
+
+    This arm used to fire on any line with three top-level commas. Measured
+    against a real document, 10 of its 14 findings were ordinary prose
+    carrying subordinate clauses and appositives, and an arm that is wrong
+    most of the time is one a reader learns to skip, which is precisely
+    the failure its own docstring said it was avoiding. Requiring the
+    coordinator and rejecting subordinate openers is what distinguishes an
+    enumeration from a sentence that merely has commas in it.
+    """
+    if len(items) < 3:
+        return False
+    # The coordinator does not have to open the FINAL segment. A series
+    # often carries a trailing modifier ("A, B, and C, closing out the
+    # stage"), and anchoring on the last segment misses every one of
+    # those. Anchor on the last segment that opens with a coordinator
+    # instead, and require at least three items up to that point.
+    coord = -1
+    for idx in range(1, len(items)):
+        head = items[idx].strip().lower()
+        if head.startswith("and ") or head.startswith("or ") or head in ("and", "or"):
+            coord = idx
+    if coord < 2:
+        return False
+    items = items[: coord + 1]
+    # Only segments AFTER the first are checked. A real series opens with
+    # the sentence's own subject ("The tool reads Layer 1 for the graph,
+    # ..."), so testing the first segment rejects every genuine series.
+    for item in items[1:]:
+        words = item.strip().lower().split()
+        if not words:
+            return False
+        head = words[0].strip(".,;:!?`\"'")
+        if head in _NON_SERIES_OPENERS:
+            return False
+    return True
+
+
 def check_prose_walls(
     rel: str, lines: list[str], mask: list[bool], wall_length: int
 ) -> list[Finding]:
@@ -373,14 +437,16 @@ def check_prose_walls(
                 f"bulleted list or a table per writing-style.md",
             ))
             continue
-        items = _comma_chain_items(stripped)
-        if len(items) >= 3:
-            findings.append(Finding(
-                "wall-comma-chain", HARD, rel, i + 1,
-                f"prose sentence enumerates {len(items)} items chained by "
-                f"commas or semicolons; render as a bulleted list per "
-                f"writing-style.md's 'No prose walls' section",
-            ))
+        for sentence in _split_sentences_for_walls(stripped):
+            items = _comma_chain_items(sentence)
+            if _is_series(items):
+                findings.append(Finding(
+                    "wall-comma-chain", HARD, rel, i + 1,
+                    f"prose sentence enumerates {len(items)} items chained by "
+                    f"commas or semicolons; render as a bulleted list per "
+                    f"writing-style.md's 'No prose walls' section",
+                ))
+                break
     return findings
 
 

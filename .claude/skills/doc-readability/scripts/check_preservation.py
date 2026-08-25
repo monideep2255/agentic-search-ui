@@ -78,14 +78,28 @@ gate itself rather than re-derived by the next reader.
   - Scope inversion and attribution swap. "A depends on B" rewritten as
     "B depends on A" keeps every atom and passes. Asserted as a known miss
     in --mutation-test.
-  - A value swap WITHIN one claim unit. "3 of 9" rewritten as "9 of 3"
-    leaves that unit's multiset identical and passes every arm. Note the
-    narrowness, which was measured rather than assumed: a swap ACROSS two
-    claim units IS caught, because Arm 3 requires a single after-unit to
-    hold every counted atom of the before-unit it anchors, so moving a
-    number into a different sentence breaks the anchor. Both halves are
-    asserted in --mutation-test, the cross-unit swap as Catchable and the
-    within-unit swap as a known miss.
+  - A value swap, whether within one claim unit or across two. "3 of 9"
+    rewritten as "9 of 3" leaves the multiset identical, and so does
+    exchanging two numbers between neighbouring sentences.
+
+    This entry was CORRECTED after being measured, and the correction is
+    left visible rather than tidied away, because the reasoning matters
+    more than the conclusion. An earlier version of Arm 3 unioned only the
+    three highest-overlap after-units, and under that rule the cross-unit
+    swap WAS caught, so this block claimed it as covered. Running the gate
+    against a real document (docs/build/Build_workflow_cadence.md) showed
+    that same narrowness reporting three legitimate sentence-to-bullets
+    splits as orphan claims. Widening the union to greedy set cover fixed
+    the false positives and gave up the cross-unit swap with it.
+
+    The two are not separable at the atom level. "One sentence carrying
+    two numbers becomes two bullets, one number each" and "two numbers
+    swapped between two sentences" present the identical evidence to any
+    set-based arm. A union wide enough to permit the first cannot reject
+    the second. The false positives were the more expensive failure, since
+    a gate that fires on correct work gets switched off, so the trade was
+    made deliberately in that direction. Both swaps are asserted as known
+    misses in --mutation-test.
   - Ordering semantics. An ordered list reordered keeps every atom.
   - Whether added prose is accurate. Additions are reported, never graded.
     That is the `doc-auditor` agent's job and the owner's review of the
@@ -147,6 +161,28 @@ MAX_LISTED_TYPES = 40
 # to ignore the arm. Every exempted unit is counted and reported as
 # `claims skipped`, so the exemption is visible rather than silent.
 MIN_CLAIM_TYPES = 5
+
+# How many after-units may be unioned to anchor one before-unit. A prose
+# wall legitimately becomes a lead-in plus several bullets, so the union
+# has to be wider than a pair, but an unbounded union would let a
+# before-unit be "covered" by scavenging words from all over the document,
+# which is the same as not checking at all.
+#
+# Raised from 4 to 6 against a measured case rather than a guess: one
+# sentence in docs/build/Build_workflow_cadence.md restructured into a
+# lead-in, three bullets, and a trailing sentence, which is five units and
+# an entirely ordinary shape. The mutation harness was re-run after the
+# change to confirm no arm went blind at the wider setting.
+MAX_UNION_UNITS = 6
+
+# How many candidate after-units the greedy cover considers. Bounded so a
+# pathological document cannot turn one claim check into a full scan.
+CANDIDATE_POOL = 24
+
+# How much of an after-unit's own wording must come from a before-unit for
+# it to count as a fragment of that sentence. Used only by the negation
+# check, to find where the other half of a split sentence went.
+FRAGMENT_COVERAGE = 0.75
 
 # Words a restructure legitimately deletes when a sentence becomes a
 # bullet or a table cell. Excluded from the ordinary-word arm before
@@ -825,15 +861,64 @@ def _covers(before_unit: Unit, counted_pool: Counter, word_pool: set,
     return hit / len(b_words) >= coverage
 
 
+def _greedy_anchor(bu: Unit, after: list[Unit], pool_ids: list[int],
+                   coverage: float) -> list[int]:
+    """Greedy set cover over candidate after-units.
+
+    Ranking by RAW shared-atom count does not work here, and the failure
+    is worth naming because it looks correct until it is measured. A long
+    after-unit wins on raw overlap simply by being long, so a Mermaid
+    fence carrying fifteen stage numbers outranked the three short bullets
+    a sentence had actually been split into, consumed every union slot,
+    and left the sentence reported as an orphan claim. Measured on
+    docs/build/Build_workflow_cadence.md: three legitimate splits failed
+    that way.
+
+    Gain is therefore counted only over what the before-unit still NEEDS,
+    never over everything the candidate happens to contain.
+    """
+    need_words = bu.word_types()
+    need_counted = bu.counted()
+    chosen: list[int] = []
+    pool_hard: Counter = Counter()
+    pool_lexo: set = set()
+
+    for _ in range(MAX_UNION_UNITS):
+        best, best_gain = None, 0
+        for idx in pool_ids:
+            if idx in chosen:
+                continue
+            au = after[idx]
+            au_words = _variant_pool(au.word_types())
+            gain = sum(
+                1 for w in need_words
+                if not _retained(w, pool_lexo) and _retained(w, au_words)
+            )
+            # Intersect with what is needed. Without this, an unrelated
+            # atom-dense unit outbids the unit that actually carries the
+            # missing fact.
+            gain += sum(((au.counted() & need_counted) - pool_hard).values())
+            if gain > best_gain:
+                best, best_gain = idx, gain
+        if best is None:
+            break
+        chosen.append(best)
+        pool_hard.update(after[best].counted())
+        pool_lexo |= _variant_pool(after[best].word_types())
+        if _covers(bu, pool_hard, pool_lexo, coverage):
+            return chosen
+    return chosen if _covers(bu, pool_hard, pool_lexo, coverage) else []
+
+
 def arm_claim_anchoring(before: list[Unit], after: list[Unit], path: str,
                         coverage: float) -> tuple[list[Finding], int]:
     """Arm 3. Catches the sentence that vanished while carrying no number.
 
     An inverted index restricts scoring to after-units that share at least
     one atom, so this is near-linear rather than the naive product. When no
-    single after-unit anchors a before-unit, the union of the three
-    best-overlapping after-units is tried, which is what lets one sentence
-    legitimately become three bullets.
+    single after-unit anchors a before-unit, a greedy set cover over the
+    candidates is tried, which is what lets one sentence legitimately
+    become three bullets.
     """
     index = _build_index(after)
     findings: list[Finding] = []
@@ -857,8 +942,24 @@ def arm_claim_anchoring(before: list[Unit], after: list[Unit], path: str,
             ))
             continue
 
+        # Rank-truncating the candidate pool drops short units, and a
+        # short unit is exactly where a restructure parks a bare
+        # identifier: a sentence naming `Phase_6_execution_flow.html`
+        # became a three-item bullet list whose third bullet is only that
+        # identifier, so it shared one atom, ranked below 24 other units,
+        # and was cut. The claim then failed for a fact that was sitting
+        # in the document. Counted atoms are mandatory, so every unit that
+        # supplies one is always considered, whatever its overlap rank.
+        pool_ids = [idx for idx, _ in candidates.most_common(CANDIDATE_POOL)]
+        must_have: set = set()
+        for atom in b_hard:
+            must_have |= index.get((atom.category, atom.value), set())
+        for idx in sorted(must_have):
+            if idx not in pool_ids:
+                pool_ids.append(idx)
+
         anchor_ids: list[int] = []
-        for idx, _ in candidates.most_common():
+        for idx in pool_ids:
             au = after[idx]
             if _covers(bu, au.counted(), _variant_pool(au.word_types()),
                        coverage):
@@ -866,14 +967,7 @@ def arm_claim_anchoring(before: list[Unit], after: list[Unit], path: str,
                 break
 
         if not anchor_ids:
-            top = [idx for idx, _ in candidates.most_common(3)]
-            pool_hard: Counter = Counter()
-            pool_lexo: set = set()
-            for idx in top:
-                pool_hard.update(after[idx].counted())
-                pool_lexo |= _variant_pool(after[idx].word_types())
-            if _covers(bu, pool_hard, pool_lexo, coverage):
-                anchor_ids = top
+            anchor_ids = _greedy_anchor(bu, after, pool_ids, coverage)
 
         if not anchor_ids:
             findings.append(Finding(
@@ -884,6 +978,29 @@ def arm_claim_anchoring(before: list[Unit], after: list[Unit], path: str,
 
         b_neg = bu.negations()
         a_neg = sum(after[i].negations() for i in anchor_ids)
+        if b_neg > a_neg:
+            # A single after-unit can clear the coverage bar while holding
+            # only half of a sentence that legitimately split in two, and
+            # the other half is where the second negation went. Widening
+            # to the greedy cover is not enough, because that also stops
+            # as soon as coverage is met.
+            #
+            # Count instead over every FRAGMENT of the original sentence:
+            # an after-unit whose own words are almost entirely contained
+            # in this before-unit is a piece of it, wherever it now sits.
+            # That is a deliberately narrow widening. It cannot scavenge a
+            # negation from an unrelated sentence, because an unrelated
+            # sentence carries words this before-unit does not have.
+            before_pool = _variant_pool(bu.word_types())
+            fragment_ids = set(anchor_ids)
+            for idx in pool_ids:
+                words = after[idx].word_types()
+                if not words:
+                    continue
+                hit = sum(1 for w in words if _retained(w, before_pool))
+                if hit / len(words) >= FRAGMENT_COVERAGE:
+                    fragment_ids.add(idx)
+            a_neg = max(a_neg, sum(after[i].negations() for i in fragment_ids))
         if b_neg > a_neg:
             findings.append(Finding(
                 "negation", path, bu.line,
@@ -1156,7 +1273,7 @@ def _mutations() -> list[tuple]:
          a.replace("does not permit", "does permit"), True),
         ("swap two numbers ACROSS claim units",
          a.replace("with 3 of 9 arms unrun", "with 12 of 9 arms unrun")
-          .replace("across the 12 stages", "across the 3 stages"), True),
+          .replace("across the 12 stages", "across the 3 stages"), False),
         ("swap two numbers WITHIN one claim unit",
          a.replace("with 3 of 9 arms unrun", "with 9 of 3 arms unrun"), False),
         ("reverse a dependency direction",

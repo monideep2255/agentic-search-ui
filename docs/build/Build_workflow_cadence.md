@@ -1,10 +1,19 @@
 # Build workflow cadence
 
-The loop one build phase runs, who does each step, and which model runs it. This is the quick reference. The visual version is `docs/build/Phase_6_execution_flow.html`, and the full detail lives in `.claude/skills/bossman-mode/SKILL.md`.
+This is the quick reference for a build phase. It covers three things:
+
+- The loop one build phase runs
+- Who does each step
+- Which model runs it
+
+Where the other versions live:
+
+- Visual version: `docs/build/Phase_6_execution_flow.html`
+- Full detail: `.claude/skills/bossman-mode/SKILL.md`
 
 The loop repeats 26 times, once per build phase in `requirements/Technical_specification.md` section 25.
 
-Last updated: 2026-08-18.
+Last updated: 2026-08-25. Restructured for readability from the 2026-08-18 version, with no content removed.
 
 ## Table of contents
 
@@ -22,9 +31,32 @@ Last updated: 2026-08-18.
 
 ## The one-paragraph version
 
-It runs like a normal engineering team. Tickets get read, picked up, worked, and moved across a board as they progress. Agents verify the engineering: does it work, is it correct, is it safe to ship. The product owner verifies the product: is this the right thing, and does it meet the user need. Nothing merges without that second check.
+It runs like a normal engineering team.
+
+- Tickets: read, picked up, worked, and moved across a board as they progress
+- Agents verify the engineering: does it work, is it correct, is it safe to ship
+- The product owner verifies the product: is this the right thing, and does it meet the user need
+
+Nothing merges without that second check.
 
 ## The twelve stages
+
+```mermaid
+flowchart TD
+  s1[1 Open the phase] --> s2[2 Read LEARNINGS]
+  s2 --> s3[3 Decompose into tickets]
+  s3 --> s4[4 Preflight and dispatch]
+  s4 --> s5[5 Premise gate]
+  s5 --> s6[6 Builders work tickets]
+  s6 --> s7[7 Record what broke]
+  s7 --> s8[8 Judge grades]
+  s8 --> s9[9 Adversary attacks]
+  s9 --> s10[10 Gates]
+  s10 --> s11[11 Close board, open PR]
+  s11 --> s12[12 Review and merge]
+  s5 -.must fail first.-> s6
+  s9 -.two rounds only.-> s6
+```
 
 | # | Stage | Who | Tier | Effort |
 |---|-------|-----|------|--------|
@@ -41,7 +73,12 @@ It runs like a normal engineering team. Tickets get read, picked up, worked, and
 | 11 | Close the board, render, republish, open the pull request | Lead | balance | low |
 | 12 | Review and merge | Product owner | human | n/a |
 
-Five of these ten model-driven stages ran at `high` or `extra high` effort and seven ran on the `depth` tier before 2026-08-02. Both numbers dropped. See "Effort and tier basis" below the model assignment table for the measured reason and per-stage reasoning.
+Before 2026-08-02, of these ten model-driven stages:
+
+- Five ran at `high` or `extra high` effort
+- Seven ran on the `depth` tier
+
+Both numbers dropped. See "Effort and tier basis" below the model assignment table for the measured reason and per-stage reasoning.
 
 Stage 10 names four gate skills, and they are not interchangeable items on one checklist. Measured against `tracker/phase_*.md` across the five build phases completed so far (1.0, 1.1, 2.0, 1.2, 2.1):
 
@@ -51,6 +88,26 @@ Stage 10 names four gate skills, and they are not interchangeable items on one c
 - `eval-harness` is required before shipping any answer-generation feature, per the AI answer grounding gate in `production-standards.md`. First dispatched on build phase 2.2, 2026-08-03, which is the phase that triggered it: none of the five phases before it shipped answer generation. It ran as the citation-synthesizer component gate rather than the full v1 must-pass gate, and said so explicitly, because that gate's questions span PubMed, ClinVar, GTR, MedGen, SRA, BioProject and ClinicalTrials, none of which have a tool until build phases 3.1 to 3.5. Superseded note, kept for the record: before 2026-08-03 this line read "0 of 5 phases, which is expected rather than a gap", since none of the five phases completed by then shipped answer generation.
 
 ## Stage 5, the premise gate, and why it blocks
+
+### What is a premise gate?
+
+A premise gate is a test that runs the real model against real ground truth, and asserts the answer means the right thing.
+
+Why it exists: an ordinary test suite checks the SHAPE of an answer. It can confirm rows came back and every row is cited, and both of those pass on an answer that is completely wrong. Nothing in that green suite was looking at whether the answer was true.
+
+An analogy: a spellchecker approves "the mitochondria is the powerhouse of the sell" for every word it knows how to check, and the sentence is still wrong. A premise gate is the reader who knows what the sentence was supposed to say.
+
+Concretely, from this repository: build phase 2.1 shipped a fully green suite that answered "which diseases are associated with BRCA1?" with twenty-five non-human orthologs. Every row carried a real, resolving NCBI citation, so every shape check passed.
+
+What this means for you, in order:
+
+- Write the gate before the code
+- Watch it fail
+- Only then build
+
+A gate that has never been seen failing has proven nothing about its own ability to fail.
+
+### Why it blocks
 
 Added 2026-08-01 after build phase 2.1 failed four consecutive reviews with
 a green suite. This stage is mandatory and blocking for any phase whose
@@ -93,9 +150,13 @@ making every two-hop question unanswerable was invisible to the gate built
 to catch exactly that class. A gate with an unstated blind spot inherits the
 blind spot of the code it grades.
 
-Cost, measured on 2.1: about 40 minutes to write, and $0.013 per run for
-eight real generations. Against ten review passes at 20 to 30 minutes each,
-it pays for itself the first time it fires. It already has: two regressions
+Cost, measured on 2.1:
+
+- To write: about 40 minutes
+- Per run: $0.013 for eight real generations
+- Compared against: ten review passes at 20 to 30 minutes each
+
+It pays for itself the first time it fires. It already has: two regressions
 introduced by 2.1's own late fixes were caught by the gate rather than by a
 sixth review round.
 
@@ -122,7 +183,11 @@ The rule: spend reasoning where a mistake is expensive and cascades, spend cheap
 | Adversary | depth | high | Finding a fluent, plausible, wrong answer needs real adversarial reasoning. A cheap tier will not find what the judge missed |
 | Test writer | balance | medium | Bounded work against a finished artifact |
 
-The role list above once also carried a Sub-planner row and an Integrator row. Both are removed: across the five build phases completed so far (1.0, 1.1, 2.0, 1.2, 2.1), `tracker/phase_*.md` shows zero dispatches of either role. If either role is genuinely needed on a future phase, add it back with its first real dispatch as evidence.
+The role list above once also carried a Sub-planner row and an Integrator row. Both are removed. The evidence:
+
+- Across the five build phases completed so far (1.0, 1.1, 2.0, 1.2, 2.1), `tracker/phase_*.md` shows zero dispatches of either role.
+
+If either role is genuinely needed on a future phase, add it back with its first real dispatch as evidence.
 
 Two notes on this table:
 
@@ -132,6 +197,22 @@ Two notes on this table:
 ## Effort and tier basis, measured 2026-08-02
 
 Both tables above were re-tiered on this date from a prior default of `depth` and `high` on most roles. This section states the measurement behind that change and what would justify raising a rung back, so the next reader does not mistake a guess for a finding.
+
+### What is reasoning effort, and why does a rung cost anything?
+
+Reasoning effort is a dial that decides how many thinking tokens a model spends before it writes its answer.
+
+Why it exists: a harder problem benefits from the model working through it internally first. The dial buys that working-out.
+
+The thing that makes it expensive is that you cannot see what you bought. Thinking tokens are billed as output but never appear in the response, so a call that spent most of its budget reasoning looks identical to a cheap one. Worse, they are replayed as input on every later turn in a session, so one high rung keeps charging for the rest of the phase.
+
+An analogy: it is a taxi meter running while the driver plans the route, with the meter hidden behind the seat. The trip looks the same to you either way.
+
+Concretely, from this repository: the plan tier at `effort: high` spent 970 of 1014 output tokens reasoning about a single line of Cypher. Dropping to `effort: none` produced the same correct answers 27 times faster.
+
+What this means for you: treat effort as a latency and cost setting first. Raise a rung only against a cited miss, never against a feeling that a role seems important.
+
+### The evidence
 
 External evidence, on reasoning effort specifically:
 
@@ -143,17 +224,47 @@ External evidence, on capability tier:
 
 - A mid-tier model costs about 0.6 times a top-tier model and performs comparably on most development work.
 
-Internal evidence, from this repo's own build. `LEARNINGS.md`'s 2026-07-31 entry on `harness/harness.py` tier configuration records that the plan tier, configured `effort: high`, spent 970 of 1014 output tokens on a single Cypher generation on reasoning rather than content. Measured over five failing query shapes, two runs each: `high` totalled 163.0 seconds with a worst case of 84.3 seconds on a multi-hop query, and dropping the same calls to `effort: none`, a rung below this ladder's own `low`, totalled 6.1 seconds with a worst case of 2.2. All five runs were correct at both settings, with neither setting ever writing an entity id as a literal. The entry calls this "a 27x latency multiple for no measurable quality" and states the general lesson directly: reasoning effort is a latency setting, not just a quality setting, and its cost is invisible in the response because reasoning tokens do not appear in the content.
+Internal evidence, from this repo's own build. `LEARNINGS.md`'s 2026-07-31 entry on `harness/harness.py` tier configuration records that the plan tier, configured `effort: high`, spent 970 of 1014 output tokens on a single Cypher generation on reasoning rather than content. Measured over five failing query shapes, two runs each:
 
-That internal data point is narrower than the change made here: it proves `none` was safe for one bounded, fixed-schema Cypher generation, not that `medium` is safe for every role in this cadence. The external 76 percent figure is the direct evidence for the specific high-to-medium move applied to most roles below. Reading both together: the internal result is a strict superset of the claim actually needed, so it supports the change without overstating what was measured.
+- `high`: totalled 163.0 seconds, with a worst case of 84.3 seconds on a multi-hop query
+- `effort: none`, a rung below this ladder's own `low`: totalled 6.1 seconds, with a worst case of 2.2
 
-Per-role reasoning is recorded inline in the "Why this tier" column above rather than repeated here. The two roles that did not move, judge and adversary, share one justification: this repo has direct evidence that a weaker review costs entire rounds, not just latency. Build phase 2.1 failed four consecutive judge and adversary reviews behind a fully green test suite before the real defect was found, and the fifth pass found a defect class (every two-hop question unanswerable) that the phase's own premise gate could not see. Reasoning effort measurably changed neither the pass rate nor the citations on a bounded lookup task; it has not been measured against a review role's job, which is finding what a prior pass missed. The premise gate design step (stage 5) is treated the same way as decomposition for a stated reason, not by default: its own section above states that a first draft of a premise gate scored 8 of 9 against a hand-picked input and 3 of 9 against what production actually sends, and that its coverage gaps are invisible to the very tests it grades. That is the same cascading-cost shape as a bad decomposition, so it stays on `depth` and `high`.
+All five runs were correct at both settings, with neither setting ever writing an entity id as a literal. The entry calls this "a 27x latency multiple for no measurable quality" and states the general lesson directly: reasoning effort is a latency setting, not just a quality setting, and its cost is invisible in the response because reasoning tokens do not appear in the content.
+
+That internal data point is narrower than the change made here. Reading the two together:
+
+- It proves `none` was safe for one bounded, fixed-schema Cypher generation
+- It does not prove that `medium` is safe for every role in this cadence
+- The external 76 percent figure is the direct evidence for the specific high-to-medium move applied to most roles below
+- The internal result is a strict superset of the claim actually needed, so it supports the change without overstating what was measured
+
+### Why judge and adversary did not move
+
+Per-role reasoning is recorded inline in the "Why this tier" column above rather than repeated here. The two roles that did not move, judge and adversary, share one justification: this repo has direct evidence that a weaker review costs entire rounds, not just latency.
+
+- Build phase 2.1 failed four consecutive judge and adversary reviews behind a fully green test suite before the real defect was found.
+- The fifth pass found a defect class (every two-hop question unanswerable) that the phase's own premise gate could not see.
+- Reasoning effort measurably changed neither the pass rate nor the citations on a bounded lookup task.
+- It has not been measured against a review role's job, which is finding what a prior pass missed.
+
+The premise gate design step (stage 5) is treated the same way as decomposition for a stated reason, not by default. Its own section above states two things:
+
+- A first draft of a premise gate scored 8 of 9 against a hand-picked input and 3 of 9 against what production actually sends.
+- Its coverage gaps are invisible to the very tests it grades.
+
+That is the same cascading-cost shape as a bad decomposition, so it stays on `depth` and `high`.
 
 What would justify raising a tier or a rung back: a specific, cited miss. A defect that a lower effort or tier demonstrably let through, recorded as a finding in a `tracker/phase_N.M.md` file or as a `LEARNINGS.md` entry naming the tier or effort setting as a contributing cause, the same evidentiary bar this section itself used to justify the cut. A feeling that a role "seems important" is not that bar. Per `goal-contracts`, this section is a verify surface for the tables above: weakening it back to a guess, rather than a fresh measurement, does not meet the bar it sets.
 
 ## Provider mapping
 
-Three providers, three capability bands each, and an identical five-rung effort ladder. This table is the only place a provider name appears in this document. Every tier reference elsewhere, in the stage table and in the model assignment table above, points back to a row here.
+What this section covers:
+
+- Three providers
+- Three capability bands each
+- An identical five-rung effort ladder
+
+This table is the only place a provider name appears in this document. Every tier reference elsewhere, in the stage table and in the model assignment table above, points back to a row here.
 
 | Tier | What it is for | Claude | Codex | Alternate backend |
 |------|-----------------|--------|-------|-------------------|
@@ -161,13 +272,35 @@ Three providers, three capability bands each, and an identical five-rung effort 
 | Balance | Normal development work, bounded construction, careful checking | Sonnet | Terra | See the local note |
 | Speed | Quick lookups, extraction, classification, repetitive work | Haiku | Luna | See the local note |
 
-Effort ladder, identical on all three providers: low, medium, high, extra high, max. Raise the rung as the task gets harder, low for quick and bounded work, max for the one hardest problem where maximum depth matters most.
+Effort ladder, identical on all three providers:
 
-The alternate backend is the metered fallback used when the primary provider's weekly budget is exhausted. Its model identifiers, prices and launch profiles are deliberately not written here: they name specific products and change monthly, which `writing-style` keeps out of tracked documentation and which would make this table stale by design. They live in a local, uncommitted note instead, `docs/build/multi-model-harness/Multi_model_harness_plan.md`, alongside the cadence visualization that shows how a phase moves across the two engines.
+- The five rungs: low, medium, high, extra high, max
+- Raise the rung as the task gets harder
+- `low` for quick and bounded work
+- `max` for the one hardest problem where maximum depth matters most
 
-One constraint from that arrangement does belong here, because it governs the cadence itself rather than the configuration: the fallback is scoped by role, not applied to a whole phase. Stages assigned Depth in the model assignment table above, decomposition, premise gate design, judge and adversary, do not fail over. A review run on the fallback records findings and closes nothing, and the phase does not reach stage 12 until those stages have run on the primary provider. This is the same evidence that held judge and adversary at Depth in the first place: a weaker review costs whole rounds, not just latency.
+The alternate backend is the metered fallback used when the primary provider's weekly budget is exhausted. Its model identifiers, prices and launch profiles are deliberately not written here, for two reasons:
 
-Switching the harness to a different provider means editing this one table and nothing else. Nothing in the stage table, the model assignment table, or `Phase_6_execution_flow.html` names a product directly, so a provider swap is a single edit here, not a search-and-replace across every planning document. That indirection is the property that makes the harness portable.
+- They name specific products and change monthly, which `writing-style` keeps out of tracked documentation
+- Writing them here would make this table stale by design
+
+They live in a local, uncommitted note instead, `docs/build/multi-model-harness/Multi_model_harness_plan.md`, alongside the cadence visualization that shows how a phase moves across the two engines.
+
+One constraint from that arrangement does belong here, because it governs the cadence itself rather than the configuration: the fallback is scoped by role, not applied to a whole phase.
+
+- Stages assigned Depth in the model assignment table above do not fail over. Those stages are decomposition, premise gate design, judge and adversary.
+- A review run on the fallback records findings and closes nothing.
+- The phase does not reach stage 12 until those stages have run on the primary provider.
+
+This is the same evidence that held judge and adversary at Depth in the first place: a weaker review costs whole rounds, not just latency.
+
+Switching the harness to a different provider means editing this one table and nothing else. Nothing in these three places names a product directly:
+
+- The stage table
+- The model assignment table
+- `Phase_6_execution_flow.html`
+
+So a provider swap is a single edit here, not a search-and-replace across every planning document. That indirection is the property that makes the harness portable.
 
 ## Where everything is written
 
@@ -188,13 +321,21 @@ The split that matters, and the reason both halves exist:
 - Agents verify the engineering. The judge asks whether it works, whether it is correct, and whether it is safe to ship, and must produce cited evidence for every claim. The adversary asks whether it can be made to fail in a way nobody wrote a check for.
 - The product owner verifies the product. Is this the right thing to have built, does it meet the user need, and on interface phases, does it actually feel right. No agent can answer that last one.
 
-One nuance worth keeping straight: the adversary sits on the boundary. It hunts the confident wrong answer, which is an engineering failure in mechanism and a product failure in consequence. It belongs to the agent half because finding it is mechanical, but what it protects is the trust moat, which is a product concern.
+One nuance worth keeping straight: the adversary sits on the boundary.
+
+- It hunts the confident wrong answer.
+- That is an engineering failure in mechanism and a product failure in consequence.
+- It belongs to the agent half because finding it is mechanical.
+- What it protects is the trust moat, which is a product concern.
 
 ## Stage 4's transport preflight
 
-Added 2026-08-18, closing the priority-1 recommendation in `Build_velocity_post_mortem.md`. `python3 tracker/preflight.py` probes one endpoint per transport before anything expensive is dispatched, and exits 1 when a transport is down.
+Added 2026-08-18, closing the priority-1 recommendation in `Build_velocity_post_mortem.md`. What `python3 tracker/preflight.py` does:
 
-There is one probe per transport rather than one probe, because the first attempt at this check probed the product's model provider while the thing dying was agent dispatch against a different endpoint, so a green result predicted nothing:
+- Probes one endpoint per transport before anything expensive is dispatched
+- Exits 1 when a transport is down
+
+There is one probe per transport rather than one probe. The reason: the first attempt at this check probed the product's model provider while the thing dying was agent dispatch against a different endpoint, so a green result predicted nothing.
 
 | Transport | Gates | Dead-dispatch cost |
 |-----------|-------|--------------------|
@@ -202,20 +343,38 @@ There is one probe per transport rather than one probe, because the first attemp
 | `harness-model` | Every agent dispatch | 15 to 25 minutes |
 | `graph` | Tool-phase premise gates, live graph tests | The run, plus the misdiagnosis |
 
-Re-probe `harness-model` immediately before a review-agent dispatch at stages 8 and 9, since phase open may have been an hour earlier. A `down` result on a host that is not on the sandbox allowlist may be a denial rather than an outage; the two are indistinguishable at that layer and the script says so instead of guessing. A `skipped` result means the transport was not configured, so nothing was verified, which is not the same as a pass.
+Re-probe `harness-model` immediately before a review-agent dispatch at stages 8 and 9, since phase open may have been an hour earlier. Two results that are easy to misread:
+
+- A `down` result on a host that is not on the sandbox allowlist may be a denial rather than an outage. The two are indistinguishable at that layer and the script says so instead of guessing.
+- A `skipped` result means the transport was not configured, so nothing was verified, which is not the same as a pass.
 
 ## Stages 8 and 9 have a budget: two rounds
 
-Added 2026-08-18. The twelve stages above describe one pass, and until this was written down nothing said what happens when stage 8 or 9 fails. In practice the answer was "run it again", which is how build phase 2.1 reached five rounds and build phase 4.2 reached six. In both, every round found its worst defect inside the previous round's fix, and rising scrutiny did not lower the recurrence rate, so the loop was never a scrutiny problem.
+Added 2026-08-18. The twelve stages above describe one pass, and until this was written down nothing said what happens when stage 8 or 9 fails. In practice the answer was "run it again", which is how build phase 2.1 reached five rounds and build phase 4.2 reached six. What both had in common:
 
-The budget is one review round plus one fix-and-reverify round. A blocking finding after round 2 escalates to the product owner with the open findings, a diff summary per fix attempt, any regression links, and options including revert-and-re-decompose. There is no round 3.
+- Every round found its worst defect inside the previous round's fix
+- Rising scrutiny did not lower the recurrence rate
+
+So the loop was never a scrutiny problem.
+
+The budget is one review round plus one fix-and-reverify round. A blocking finding after round 2 escalates to the product owner. What the escalation carries:
+
+- The open findings
+- A diff summary per fix attempt
+- Any regression links
+- Options including revert-and-re-decompose
+
+There is no round 3.
 
 Two rules govern how fixes are dispatched inside that budget, both measured on build phase 4.2:
 
 - Group findings by file, and give every finding in one file to a single fix agent working serially. Parallel fix agents are individually correct and structurally blind to the sibling editing the same function, so two correct fixes compose into a defect no reviewer of either one sees. Round 5 of that phase, run deliberately as one agent holding every finding, found a sixth defect four parallel rounds had walked past.
-- Fix by category, never by enumerating instances. A defense that lists cases (two control-character ranges rather than the Unicode category, three exception types rather than the base class, five write sites rather than every write site) has failed here every time it was tried.
+- Fix by category, never by enumerating instances. A defense that lists cases has failed here every time it was tried. The cases it listed: two control-character ranges rather than the Unicode category, three exception types rather than the base class, and five write sites rather than every write site.
 
-A finding located inside an earlier fix stops the phase mid-round, without finishing the round, because it says the fix approach is wrong rather than incomplete. `bossman-mode` holds the full statement of all four rules, and `task-tracker` holds the two ledger fields, `Round` and `Regression of`, that make them checkable rather than remembered.
+A finding located inside an earlier fix stops the phase mid-round, without finishing the round, because it says the fix approach is wrong rather than incomplete. Two files hold the rest:
+
+- `bossman-mode` holds the full statement of all four rules.
+- `task-tracker` holds the two ledger fields, `Round` and `Regression of`, that make them checkable rather than remembered.
 
 ## Known weak points
 
