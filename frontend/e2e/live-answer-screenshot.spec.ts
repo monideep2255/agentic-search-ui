@@ -54,9 +54,11 @@ test.describe(LIVE_ENABLED ? "LIVE diagnostic" : "LIVE diagnostic (skipped: set 
     );
     await main.getByRole("button", { name: /^search the knowledge graph$/i }).click();
 
-    await expect(page.getByRole("button", { name: "New search", exact: true })).toBeVisible({
-      timeout: 90_000,
-    });
+    // `answer-meta` only, NEVER "New search". That button is on the run
+    // screen too, so waiting for it captures a stepper mid-run rather than
+    // an answer. The first version of this file did exactly that and
+    // produced a screenshot of five pending pips.
+    await expect(page.getByTestId("answer-meta")).toBeVisible({ timeout: 120_000 });
 
     // Settle, so late-rendering pieces are in the capture.
     await page.waitForTimeout(1_500);
@@ -73,8 +75,15 @@ test.describe(LIVE_ENABLED ? "LIVE diagnostic" : "LIVE diagnostic (skipped: set 
     console.log("follow-up box:", JSON.stringify(fuBox));
     console.log("page height:", await page.evaluate(() => document.body.scrollHeight));
 
-    for (const id of ["feedback", "answer-cap", "trust-pills", "sources"]) {
-      console.log(`${id}: count=${await page.getByTestId(id).count()}`);
+    const vp = page.viewportSize()!;
+    for (const id of ["follow-up", "feedback", "sources-disclosure", "answer-meta"]) {
+      const loc = page.getByTestId(id);
+      const n = await loc.count();
+      const bb = n ? await loc.first().boundingBox() : null;
+      console.log(
+        `${id}: count=${n}` +
+          (bb ? ` y=${Math.round(bb.y)} belowFold=${bb.y > vp.height}` : ""),
+      );
     }
   });
 });

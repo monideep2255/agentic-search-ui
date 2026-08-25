@@ -19,6 +19,7 @@ Inserted 2026-08-25 by product-owner decision, the fifth such exception after 4.
 - [Defect 7, the feedback thumbs, and why it read as two problems](#defect-7-the-feedback-thumbs-and-why-it-read-as-two-problems)
 - [One pre-existing end-to-end failure, proven not ours](#one-pre-existing-end-to-end-failure-proven-not-ours)
 - [Defect 2 does not reproduce, and what looking for it found instead](#defect-2-does-not-reproduce-and-what-looking-for-it-found-instead)
+- [Defect 4, the answer presentation, measured against the card](#defect-4-the-answer-presentation-measured-against-the-card)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
 - [History](#history)
 
@@ -105,7 +106,8 @@ So the fix for defect 1 is NOT to stream answer text into the run screen. Neithe
 | Ticket | What | Status |
 |--------|------|--------|
 | T-4.16-01 | DONE, `1786b02` and `4dd4752`. Emit `tool_start` and `tool_result` from the Act step AT DISPATCH TIME, not at node return, so the eleven-second silence becomes the tool chips both design artifacts show. Needs `get_stream_writer` plus a multi-mode `astream` in `core/run.py`, not just an `emit` call in `core/graph.py`. See the section above for why the obvious version fixes nothing. Closes defects 1 and 3's cause | todo |
-| T-4.16-02 | DOES NOT REPRODUCE as stated. Signed in and as a guest, locally and on the deployed demo, a second turn lands. Three real defects were found while trying, all recorded below, none of them the reported one. NEEDS THE PRODUCT OWNER to say what they saw | blocked, product owner |
+| T-4.16-02 | RESOLVED AS DISCOVERABILITY by the product owner on 2026-08-25: "I couldn't find the follow-up field". Not a dispatch failure. Open, and now scoped | todo |
+| T-4.16-02a | Superseded record: the reported defect DOES NOT REPRODUCE as stated. Signed in and as a guest, locally and on the deployed demo, a second turn lands. Three real defects were found while trying, all recorded below, none of them the reported one. NEEDS THE PRODUCT OWNER to say what they saw | blocked, product owner |
 | T-4.16-03 | Answer presentation against the component cards, never the prototype, per `Design_to_build_workflow.md`. Scope set only after a screenshot comparison against each card, which is the step build phase 4.9 recorded as the only thing that finds this class | todo |
 | T-4.16-04 | Integrations page corrected to the surfaces that actually shipped. Four concrete errors listed below | todo |
 | T-4.16-05 | Client-side routing: `/`, `/integrations`, `/about`, `/docs`. `serve -s dist` is already SPA mode, so deep links resolve once routes exist and no server change is needed | todo |
@@ -181,6 +183,32 @@ WHAT IS ACTUALLY LEFT OF DEFECT 2, and it needs the product owner rather than an
 
 Nothing is being guessed at here. The question is recorded and the ticket is blocked on the answer rather than closed as "works for me".
 
+## Defect 4, the answer presentation, measured against the card
+
+Captured 2026-08-25 from the DEPLOYED demo with a correct landed signal, at 1440 by 1000, and compared line by line against `design-system/screens/answer.html`. This is the gap list `Design_to_build_workflow.md` requires instead of guessing at "horrible".
+
+| Aspect | The card | Deployed |
+|--------|----------|----------|
+| Status | "Answered", with a tick | "Needs a narrower question", with a query mark, ALONGSIDE a grounded five-citation answer |
+| Meta line | "11.4s, 3 tools, 3 layers, 3 sources" | "11.2s, 0 TOOLS, 5 sources from 2 layers" |
+| Answer body | Three claims, one per sentence, each ending in its own chip | ONE run-on sentence listing raw CURIEs, with all five chips bunched at the end |
+| Citation chip | "1 Gene 672", "2 MedGen C0677776" | "1 gene 672", "2 MedGen MedGen:C0346153" |
+| Sources | Expanded, each naming its record and layer | Collapsed behind "SOURCES 5", which is build phase 4.9's deliberate change and NOT a defect |
+| Trust pills | Three: grounded, "High-risk claim, gene to disease", "3 layers agreed" | Two: "Grounded, every claim cited", "high risk claim". The layers-agreed pill is absent and the risk pill has lost its qualifier and its capitalisation |
+
+FOUR OF THESE TRACE TO ONE ALREADY-FIXED CAUSE, which is why this ticket must be re-measured after T-4.16-01 deploys rather than worked from this table:
+
+- "0 tools" is `view.toolCalls.length`, built from `tool_start` and `tool_result`, which nothing emitted until T-4.16-01.
+- The missing "N layers agreed" pill is the same: `useRunView.ts` line 591 already records that "without `tool_result` events printed '0 layers agreed' beside source".
+- So the meta line and the verdict strip were both reporting an Act step that was invisible, not an Act step that did not happen.
+
+TWO ARE GENUINELY SEPARATE AND NEITHER IS FIXED:
+
+- THE CHIP LABEL DUPLICATES ITS SOURCE. `useRunView.ts` line 277 builds a source name as `${payload.source} ${payload.source_id}`, and the deployed Layer 1 citation carries `source: "MedGen"` with `source_id: "MedGen:C0346153"`, a full CURIE, so the chip reads "MedGen MedGen:C0346153". The card wants the bare local id. Whether the fix belongs in the citation builder or in this formatter is undecided and must be settled by looking at where the value is produced, not by stripping the prefix in the UI because that is the nearer file.
+- THE OUTCOME CONTRADICTS THE VERDICT. The strip says "Needs a narrower question" while the pills say "Grounded, every claim cited" on an answer with five resolving citations. One of the two is wrong and this is a trust-surface defect rather than a cosmetic one, since the product's whole argument is that its status line can be believed.
+
+NOT YET COMPARED, and named so the absence is arguable: the run screen against `screens/streaming.html`, the source cards expanded against `components/source-card.html`, and every screen at a narrow viewport. This table is one screen at one size.
+
 ## Coverage: what this phase does not cover
 
 Stated up front so a gap in it is arguable rather than discovered, per `goal-contracts` and build phase 4.4's stated-blind-spot lesson.
@@ -195,6 +223,7 @@ Stated up front so a gap in it is arguable rather than discovered, per `goal-con
 - 2026-08-25: Opened after the product owner ranked the UI defects ahead of build phase 4.14. Preflight READY on all three transports.
 - 2026-08-25: Scouted before writing. Measured the deployed SSE stream frame by frame, found the 10.9-second Act silence, and traced it to `tool_start` and `tool_result` never being emitted. Corrected two recorded claims in `tracker/phase_4.12.md` in the process.
 - 2026-08-25: Read both design artifacts before scoping defect 1, and found that neither specifies streaming answer text, which redirected the ticket from the browser to the Act step.
+- 2026-08-25: Defect 2 resolved to DISCOVERABILITY by the product owner, not a dispatch failure. Defect 4's gap list captured from the deployed demo against the answer card; four of its six rows trace to T-4.16-01's already-fixed missing tool events, so it must be re-measured after that deploys.
 - 2026-08-25: T-4.16-02 investigated. Defect 2 does not reproduce on any path in any environment. Three other defects found while trying: a vacuous landed-signal the lead wrote, the guest path never having been exercisable in the browser suite, and two ungated live specs this phase had just introduced. Blocked on the product owner rather than closed.
 - 2026-08-25: Defect 7 reported by the product owner and closed as T-4.16-10. Root cause measured in Chromium, not reasoned about; guard added as a bounding-box arm and mutation-run red before commit. While running the full browser suite for it, one PRE-EXISTING failure was found and proven pre-existing by re-running it at the branch point.
 - 2026-08-25: T-4.16-01 and T-4.16-07 landed. Gate 5 of 5 green, mutation harness 7 of 7, suite 3942 passed with zero failed, frontend 211, typecheck and production build clean, ruff clean, drift 0 stale 0 structural. Five `test_graph.py` `act_state` literals gained the required `seq` key: they were incomplete `GraphState`s that only worked while `act_node` did not read it, and the fixtures were corrected rather than softening the code to `state.get("seq", 0)`, which would let a mid-run seq collision pass silently. No assertion was weakened.
