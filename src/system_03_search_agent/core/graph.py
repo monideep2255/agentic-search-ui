@@ -444,6 +444,7 @@ entry; the dispatch-condition design decision: `DECISIONS.md`, 2026-08-09.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import secrets
 import time
@@ -466,6 +467,8 @@ from system_03_search_agent.contracts.events import (
     ThinkPayload,
     TokenPayload,
     ToolCall,
+    ToolResultPayload,
+    ToolStartPayload,
     TrustOutcome,
     TrustSignalPayload,
 )
@@ -538,6 +541,8 @@ from system_03_search_agent.tools.graph_schema_constants import (
 from system_03_search_agent.tools.ncbi_efetch import build_layer2_citation, ncbi_efetch
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput, NcbiEfetchOutput
 
+logger = logging.getLogger(__name__)
+
 Message = dict[str, str]
 
 # Built once at import time, matching `compiled_graph` below: the stable
@@ -593,6 +598,66 @@ class _EventSink:
     def result(self, **extra: Any) -> dict[str, Any]:
         """Build this node's partial-state return value."""
         return {"events": self.new_events, "seq": self.seq, **extra}
+
+    def emit_live(self, event_type: str, payload: Any) -> Event:
+        """Emit, and ALSO push the event out of this node immediately.
+
+        T-4.16-01. `emit` alone is not enough for a long-running node, and
+        that distinction is the whole of build phase 4.16's top defect.
+
+        `run_streaming` drives `astream(stream_mode="updates")`, which
+        yields one dict per COMPLETED node, and `result()` above is what
+        carries a node's events into that dict. So an event emitted inside
+        a node reaches a reader only when the node RETURNS. For guardrail,
+        think and plan that is invisible, because each is a short node and
+        the return follows the emit within milliseconds. For `act_node`,
+        which runs every tool call in the query, it meant the entire Act
+        step was silent: measured on the deployed API on 2026-08-25, 10.9
+        seconds passed between `plan` and the answer with nothing on the
+        wire at all.
+
+        `get_stream_writer()` is LangGraph's out-of-band channel. Written
+        here, the event leaves the node at the moment it is produced,
+        while the tool it describes is still running, which is what both
+        the streaming component card and the prototype show.
+
+        BOTH HALVES ARE REQUIRED and they are not alternatives:
+
+        - The custom write is what a live reader sees, and it alone would
+          leave the event out of `GraphState.events`, so the run's own
+          record, the replay buffer a reconnecting SSE client reads, and
+          the interaction capture row would all be missing it.
+        - The `emit` is what keeps `seq` monotonic and the state whole,
+          and it alone is the defect this method exists to fix.
+
+        `run_streaming` de-duplicates by `seq`, so an event delivered
+        twice, once live and once in the node's update, is yielded once.
+        See `core/run.py`'s own note on that.
+
+        Safe on the buffered path. Under `compiled_graph.ainvoke()`, which
+        `run()` uses, `get_stream_writer()` returns a no-op writer rather
+        than raising, verified by probing the installed LangGraph directly
+        rather than read from the `>=0.2` pin. So `run()` is unchanged and
+        still gets every event through `result()`.
+        """
+        event = self.emit(event_type, payload)
+        try:
+            from langgraph.config import get_stream_writer
+
+            get_stream_writer()({"event": event})
+        except Exception:
+            # Never let the delivery optimisation break the run. If the
+            # writer is unavailable for any reason, the event is already
+            # in `new_events` and still reaches the consumer at node
+            # return, which is exactly the pre-T-4.16-01 behaviour. A
+            # slower stream is a degradation; a crashed run is not.
+            logger.debug(
+                "live event write unavailable for trace_id=%s; "
+                "event will be delivered at node return instead",
+                self.trace_id,
+                exc_info=True,
+            )
+        return event
 
 
 async def _dispatch_tier_call(
@@ -2954,6 +3019,53 @@ async def act_node(state: GraphState) -> dict[str, Any]:
         "tool_calls", []
     )
 
+    # T-4.16-01. Until build phase 4.16 this node had no sink at all: it was
+    # the one node in the loop that returned state and emitted nothing, so
+    # the Act step was invisible on every surface and no tool chip had ever
+    # rendered in the web UI since build phase 4.8 built one.
+    #
+    # Every emit below is `emit_live`, never plain `emit`. See that method's
+    # docstring: a plain emit here would flush at node return, delivering
+    # every tool frame in one burst immediately before the answer, which
+    # leaves the silence a reader actually experiences exactly as long.
+    sink = _EventSink(trace_id, state["seq"])
+
+    def _close_tool_call(
+        call: ToolCall,
+        status: str,
+        summary: str,
+        result_count: int,
+        truncated: bool,
+    ) -> None:
+        """Write the `tool_result` that closes one dispatched call.
+
+        A local helper rather than four inline blocks because this node has
+        FOUR exit paths per iteration (each of two tools can time out or
+        return), and an unclosed `tool_start` leaves a chip spinning for
+        ever on every surface that renders one. Routing all four through one
+        function is what makes "every start is closed" a property of the
+        code rather than of whoever edits it next; the premise gate's A2
+        asserts the same thing from outside.
+
+        `status` is passed through from the tool's own output, which both
+        `CypherQueryOutput` and `NcbiEfetchOutput` already constrain to
+        exactly `ok|empty|error`. It is never inferred from whether an
+        exception was raised, which would be a proxy for the outcome rather
+        than the outcome.
+        """
+        sink.emit_live(
+            "tool_result",
+            ToolResultPayload(
+                call_id=call.call_id,
+                tool=call.tool,
+                layer=call.layer,
+                status=status,  # type: ignore[arg-type]
+                summary=summary[:1000],
+                result_count=max(0, result_count),
+                truncated=truncated,
+            ),
+        )
+
     tool_calls: list[ToolCall] = []
     results: list[ToolExecutionResult] = []
     # T-3.4-05: the real, typed output behind each dispatched Layer 2
@@ -2979,6 +3091,21 @@ async def act_node(state: GraphState) -> dict[str, Any]:
 
         tool_calls.append(planned.tool_call)
 
+        # T-4.16-01. Written immediately BEFORE dispatch, never after, so
+        # the frame describes a call that is about to run rather than one
+        # that already has. `status="running"` is the honest value and is
+        # why that enum member was added; every other member would assert
+        # an outcome this line cannot know.
+        sink.emit_live(
+            "tool_start",
+            ToolStartPayload(
+                call_id=planned.tool_call.call_id,
+                tool=planned.tool_call.tool,
+                layer=planned.tool_call.layer,
+                status="running",
+            ),
+        )
+
         if isinstance(planned, _PlannedNcbiEfetchToolCall):
             # T-3.4-05/T-3.1-28: the second, Layer 2 dispatch. A type
             # check on the planned call, never a duck-typed inspection of
@@ -3003,6 +3130,13 @@ async def act_node(state: GraphState) -> dict[str, Any]:
                         },
                     )
                 )
+                _close_tool_call(
+                    planned.tool_call,
+                    "error",
+                    "call did not complete within its per-step timeout budget",
+                    0,
+                    False,
+                )
                 continue
 
             layer2_raw_outputs[planned.tool_call.call_id] = ncbi_efetch_output
@@ -3013,6 +3147,13 @@ async def act_node(state: GraphState) -> dict[str, Any]:
                         ncbi_efetch_output
                     ),
                 )
+            )
+            _close_tool_call(
+                planned.tool_call,
+                ncbi_efetch_output.status,
+                f"{ncbi_efetch_output.action}: {ncbi_efetch_output.record_count} record(s)",
+                ncbi_efetch_output.record_count,
+                ncbi_efetch_output.truncated,
             )
             continue
 
@@ -3043,6 +3184,13 @@ async def act_node(state: GraphState) -> dict[str, Any]:
                     },
                 )
             )
+            _close_tool_call(
+                planned.tool_call,
+                "error",
+                "call did not complete within its per-step timeout budget",
+                0,
+                False,
+            )
             continue
 
         # F-2.1-C13: a Cypher row's envelope is structured data (Section
@@ -3071,6 +3219,21 @@ async def act_node(state: GraphState) -> dict[str, Any]:
                 ),
             )
         )
+        _close_tool_call(
+            planned.tool_call,
+            output.status,
+            f"{output.row_count} row(s) of {output.total_available or output.row_count}",
+            output.row_count,
+            output.truncated,
+        )
+        # NOTE, deliberately no tool frame for the quarantine pair below.
+        # `untrusted_call` is the SAME call re-entered for the free-text
+        # reader's benefit, not a second dispatch: no network request is
+        # made for it and nothing new is fetched. Emitting a frame would
+        # put a second chip on screen for one tool that fired once, and
+        # would break the premise gate's A1, which asserts one `tool_start`
+        # per PLANNED call. The quarantine mechanism is an internal trust
+        # boundary and is not a thing a reader is watching happen.
         if untrusted_rows:
             untrusted_call = ToolCall(
                 tool=planned.tool_call.tool,
@@ -3103,7 +3266,14 @@ async def act_node(state: GraphState) -> dict[str, Any]:
         # ready with whatever findings already exist; write_node already
         # knows how to turn this flag into that partial result.
         result["cap_exceeded"] = True
-    return result
+    # T-4.16-01: through `sink.result` rather than returning `result`
+    # directly, so this node's `events` reach `GraphState.events` and its
+    # advanced `seq` is carried forward to write_node. Without this the
+    # tool frames would exist only on the live custom stream, and the
+    # replay buffer a reconnecting SSE client reads, the run's own record
+    # and the interaction capture row would every one of them be missing
+    # the entire Act step.
+    return sink.result(**result)
 
 
 # ---------------------------------------------------------------------------

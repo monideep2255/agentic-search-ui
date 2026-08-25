@@ -582,12 +582,57 @@ async def run_streaming(query: Query, context: RequestContext) -> AsyncIterator[
             "start_monotonic": start,
         }
         try:
+            # T-4.16-01: TWO stream modes, not one, and the second is what
+            # makes a long-running node visible.
+            #
+            # `"updates"` yields once per COMPLETED node, so a node's events
+            # reach a reader only at its return. That is invisible for the
+            # three short nodes and was the whole of build phase 4.16's top
+            # defect for `act_node`, which runs every tool call in the
+            # query: measured on the deployed API on 2026-08-25, 10.9
+            # seconds passed between `plan` and the answer with nothing on
+            # the wire at all.
+            #
+            # `"custom"` is the out-of-band channel `_EventSink.emit_live`
+            # writes to, so an event produced deep inside a still-running
+            # node is yielded the moment it is produced.
+            #
+            # DE-DUPLICATION BY SEQ IS REQUIRED, not defensive. Every
+            # live-written event is ALSO returned in its node's update,
+            # deliberately, because that return is what puts it into
+            # `GraphState.events` for the replay buffer and the capture
+            # row. Without this guard each such event would be yielded
+            # twice, which would double every tool chip and, worse, break
+            # the `seq` monotonicity that `run_registry.py`'s resumable
+            # replay depends on.
+            #
+            # `seq` is the right key: it is assigned once in
+            # `_EventSink.emit` and is unique within a run by construction,
+            # whereas identity or equality would compare two objects that
+            # are genuinely the same event arriving by two routes.
+            yielded_seqs: set[int] = set()
+
             with tracing_context(enabled=False):
-                async for update in compiled_graph.astream(
-                    initial_state, stream_mode="updates"
+                async for mode, chunk in compiled_graph.astream(
+                    initial_state, stream_mode=["updates", "custom"]
                 ):
-                    for partial_state in update.values():
+                    if mode == "custom":
+                        # Written by `_EventSink.emit_live`. Anything else on
+                        # this channel is not ours and is ignored rather than
+                        # assumed to be an Event.
+                        event = chunk.get("event") if isinstance(chunk, dict) else None
+                        if not isinstance(event, Event) or event.seq in yielded_seqs:
+                            continue
+                        yielded_seqs.add(event.seq)
+                        next_seq = max(next_seq, event.seq + 1)
+                        seen_events.append(event)
+                        yield event
+                        continue
+                    for partial_state in chunk.values():
                         for event in partial_state.get("events", []):
+                            if event.seq in yielded_seqs:
+                                continue
+                            yielded_seqs.add(event.seq)
                             next_seq = max(next_seq, event.seq + 1)
                             seen_events.append(event)
                             yield event
