@@ -20,6 +20,7 @@ Inserted 2026-08-25 by product-owner decision, the fifth such exception after 4.
 - [One pre-existing end-to-end failure, proven not ours](#one-pre-existing-end-to-end-failure-proven-not-ours)
 - [Defect 2 does not reproduce, and what looking for it found instead](#defect-2-does-not-reproduce-and-what-looking-for-it-found-instead)
 - [Defect 4, the answer presentation, measured against the card](#defect-4-the-answer-presentation-measured-against-the-card)
+- [Routing and the integrations page, both done](#routing-and-the-integrations-page-both-done)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
 - [History](#history)
 
@@ -109,8 +110,8 @@ So the fix for defect 1 is NOT to stream answer text into the run screen. Neithe
 | T-4.16-02 | RESOLVED AS DISCOVERABILITY by the product owner on 2026-08-25: "I couldn't find the follow-up field". Not a dispatch failure. Open, and now scoped | todo |
 | T-4.16-02a | Superseded record: the reported defect DOES NOT REPRODUCE as stated. Signed in and as a guest, locally and on the deployed demo, a second turn lands. Three real defects were found while trying, all recorded below, none of them the reported one. NEEDS THE PRODUCT OWNER to say what they saw | blocked, product owner |
 | T-4.16-03 | Answer presentation against the component cards, never the prototype, per `Design_to_build_workflow.md`. Scope set only after a screenshot comparison against each card, which is the step build phase 4.9 recorded as the only thing that finds this class | todo |
-| T-4.16-04 | Integrations page corrected to the surfaces that actually shipped. Four concrete errors listed below | todo |
-| T-4.16-05 | Client-side routing: `/`, `/integrations`, `/about`, `/docs`. `serve -s dist` is already SPA mode, so deep links resolve once routes exist and no server change is needed | todo |
+| T-4.16-04 | DONE. Integrations page corrected to the five surfaces that actually shipped, and cross-checked against `pyproject.toml` and the FastAPI route table by a Python test, since nothing linked the page's prose to the modules it describes | done |
+| T-4.16-05 | DONE. Client-side routing over the History API, NO new dependency for four static paths. Four browser arms including back and forward; mutation-proven | done |
 | T-4.16-06 | Backend arms DONE, frontend arms open. The premise gate, written first and watched failing. Every arm carries a populate-check from its first line | in progress. Backend arms landed: `tests/system_03_search_agent/core/test_phase_4_16_premise.py`, 5 arms, all 5 red for the right reason with every populate-check passing first. Frontend arms (routing, integrations, second turn) not yet written |
 | T-4.16-07 | DONE, `1786b02`. The offline mutation harness, 7 cases over all 5 arms. M1 applies the plausible wrong fix in process and pins A3 red on its TIMING branch, closing the gap the gate recorded about itself | done |
 | T-4.16-10 | DONE, defect 7. The thumb-down glyph rendered 8.5px outside its own button, so clicking what a reader could see missed the control. One defect, two symptoms | done |
@@ -209,6 +210,29 @@ TWO ARE GENUINELY SEPARATE AND NEITHER IS FIXED:
 
 NOT YET COMPARED, and named so the absence is arguable: the run screen against `screens/streaming.html`, the source cards expanded against `components/source-card.html`, and every screen at a narrow viewport. This table is one screen at one size.
 
+## Routing and the integrations page, both done
+
+T-4.16-05, ROUTING, ADDS NO DEPENDENCY. `frontend/package.json` had no router and still has none. `production-standards` requires a security review for every new dependency and `system-design-patterns` puts it in the ASK bucket, which is right for a library that earns it. Four static paths, no parameters, no nested layouts, and one piece of state a router would only mirror do not earn it. `lib/routing.ts` is the History API in a few lines.
+
+Deep links needed no server change and never did: `serve -s dist` is single-page-app mode, so `/integrations` always reached the app and there was simply no code to read it.
+
+MUTATION-PROVEN, and the asymmetry is the point. Removing the `popstate` listener, leaving a push-only implementation, keeps the URL arm and the deep-link arm GREEN and fails only the back-button arm with "the URL went back but the page did not, so the address bar is lying". Three of the four arms cannot tell routing from half-routing, which is why that fourth one exists.
+
+T-4.16-04, THE INTEGRATIONS PAGE, was never missing capability. Every surface it named had shipped. It described them in shapes that do not exist:
+
+- `ncbi-search ask "..."`, a command that has never existed. `pyproject.toml` declares `s3` and `s3-kgx-export`.
+- `POST /v1/export/kgx`, a route that does not exist, while the same card's body correctly called KGX "a batch job".
+- An elided `https://.../mcp`, which cannot be copied and run.
+- GraphQL absent entirely, under a lede reading "reachable four ways", when it shipped in build phase 4.3 and there are five.
+
+THE GUARD IS A PYTHON TEST GRADING A TYPESCRIPT FILE, and that inversion is the fix rather than an oddity. The truth lives in `pyproject.toml` and the FastAPI route table, so no frontend test could have caught any of it. `tests/system_03_search_agent/test_integrations_page_claims.py` asserts that every command the page prints is a declared console script and every path it prints is a real route. A command on a page is a claim, exactly as a citation is.
+
+TWO DEFECTS IN THAT GUARD, both found by mutation and both recorded:
+
+- Its fixture read the raw file, so three arms matched `ncbi-search`, `POST /v1/export/kgx` and `https://...` inside the comment that DOCUMENTS them as the old defect. The tempting fix was deleting the comment, which would have passed the test and destroyed the record. Comments are stripped instead.
+- Its own populate-check then asserted `"s3 ask" in text`, which is page CONTENT rather than fixture health. Under the mutation it fired first and masked all four real failures, reporting a broken harness for an intact page. It now counts `<Card` occurrences.
+- And its surfaces arm asserted `"GraphQL" in source`, which passes against `"GraphQLXX"`. A substring check cannot see a renamed card. Now matched as an exact card title. That is the FOURTH assertion-that-cannot-fail in this phase and the third written by the lead.
+
 ## Coverage: what this phase does not cover
 
 Stated up front so a gap in it is arguable rather than discovered, per `goal-contracts` and build phase 4.4's stated-blind-spot lesson.
@@ -223,6 +247,7 @@ Stated up front so a gap in it is arguable rather than discovered, per `goal-con
 - 2026-08-25: Opened after the product owner ranked the UI defects ahead of build phase 4.14. Preflight READY on all three transports.
 - 2026-08-25: Scouted before writing. Measured the deployed SSE stream frame by frame, found the 10.9-second Act silence, and traced it to `tool_start` and `tool_result` never being emitted. Corrected two recorded claims in `tracker/phase_4.12.md` in the process.
 - 2026-08-25: Read both design artifacts before scoping defect 1, and found that neither specifies streaming answer text, which redirected the ticket from the browser to the Act step.
+- 2026-08-25: T-4.16-05 routing and T-4.16-04 integrations both landed, each mutation-proven. Three more assertions-that-cannot-fail were found and fixed inside the integrations guard itself.
 - 2026-08-25: Defect 2 resolved to DISCOVERABILITY by the product owner, not a dispatch failure. Defect 4's gap list captured from the deployed demo against the answer card; four of its six rows trace to T-4.16-01's already-fixed missing tool events, so it must be re-measured after that deploys.
 - 2026-08-25: T-4.16-02 investigated. Defect 2 does not reproduce on any path in any environment. Three other defects found while trying: a vacuous landed-signal the lead wrote, the guest path never having been exercisable in the browser suite, and two ungated live specs this phase had just introduced. Blocked on the product owner rather than closed.
 - 2026-08-25: Defect 7 reported by the product owner and closed as T-4.16-10. Root cause measured in Chromium, not reasoned about; guard added as a bounding-box arm and mutation-run red before commit. While running the full browser suite for it, one PRE-EXISTING failure was found and proven pre-existing by re-running it at the branch point.

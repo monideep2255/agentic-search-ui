@@ -71,7 +71,7 @@ import { useAgentRun } from "./hooks/useAgentRun";
 import { useRunView, EMPTY_RUN_VIEW } from "./hooks/useRunView";
 import { AuthGate } from "./components/auth/AuthGate";
 import { AppShell } from "./components/shell/AppShell";
-import type { ScreenName } from "./components/shell/AppShell";
+import { useScreenRoute } from "./lib/routing";
 import { HomeScreen } from "./components/screens/HomeScreen";
 import { RunScreen } from "./components/screens/RunScreen";
 import type { StepName } from "./components/screens/RunScreen";
@@ -103,7 +103,11 @@ const FOLLOW_UP_HINTS = [
 ];
 
 export function App() {
-  const [screen, setScreen] = useState<ScreenName>("search");
+  // T-4.16-05. Was `useState<ScreenName>("search")`, which is why every
+  // page served at `/` and the URL never changed. `useScreenRoute` is the
+  // same state plus the two directions of history sync; see
+  // `lib/routing.ts` for why this adds no router dependency.
+  const [screen, setScreen] = useScreenRoute();
   const [searchView, setSearchView] = useState<SearchView>({ name: "home" });
   /**
    * A guest identity this tab is holding (T-4.10-08), or `null` before one
