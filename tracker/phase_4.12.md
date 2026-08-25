@@ -17,6 +17,8 @@ Status: IN PROGRESS. Code-side work complete and deployed to the Hetzner box. Ra
 - [Railway provisioning, done 2026-08-24](#railway-provisioning-done-2026-08-24)
 - [What is left, and it is not a product-owner block](#what-is-left-and-it-is-not-a-product-owner-block)
 - [What is live, 2026-08-24](#what-is-live-2026-08-24)
+- [The demo is live and answering, 2026-08-24](#the-demo-is-live-and-answering-2026-08-24)
+- [The one open defect, stated precisely](#the-one-open-defect-stated-precisely)
 - [History](#history)
 
 ## Scope, and what is deliberately not in it
@@ -44,8 +46,9 @@ The Layer 1 cutover needs NO code. `execute_cypher` has dispatched on `GRAPH_QUE
 | T-4.12-08 | Deploy the updated Caddyfile and `app.py` to the box | done, 2026-08-24, product-owner approved |
 | T-4.12-09a | Railway project, both databases, both service shells | done, 2026-08-24 |
 | T-4.12-09b | Variable sets per Section 24, and the Layer 1 cutover | done, 2026-08-24 |
-| T-4.12-09c | Build configuration so the API and web services can actually boot | API done and LIVE; frontend blocked on a dashboard-only field |
-| T-4.12-09d | GitHub integration watching `develop` | OPEN, blocked by 09c |
+| T-4.12-09c | Build configuration so both services boot | done, both LIVE |
+| T-4.12-11 | The Q/A pipeline actually answering on the deployed demo | done for single-hit symbols, VERIFIED with citations; one open edge case below |
+| T-4.12-09d | GitHub integration watching `develop` | OPEN. Deliberately not wired while 4.12 is unmerged, since Section 24 requires CD to watch `develop` only and phase branches to never auto-deploy |
 | T-4.12-10 | Security scan before any public URL | DROPPED 2026-08-24 by product-owner decision, logged in `DECISIONS.md` |
 
 ## What this phase caused and then fixed
@@ -176,6 +179,52 @@ CURRENT BILLING SHAPE: three components running, not four. `search-agent-api`, P
 
 `CORS_ORIGINS` is still unset, deliberately. It wants the frontend's origin, and until that service actually serves the frontend there is no correct value to give it.
 
+## The demo is live and answering, 2026-08-24
+
+Both URLs serve, and the agent loop returns grounded answers with citations.
+
+| Surface | State |
+|---------|-------|
+| `https://search-agent-web-production.up.railway.app` | Online, serves the real bundle |
+| `https://search-agent-api-production.up.railway.app` | Online, `/health` 200 |
+| Postgres, Redis | Online |
+
+END TO END, measured on the deployed API rather than asserted:
+
+```
+Which diseases are associated with BRCA1?
+  [ 2.1s] guard   passed
+  [ 6.9s] plan    cypher_query + ncbi_efetch for NCBIGene:672
+  [15.8s] 5 citations: Gene 672, MedGen C0346153, C2676676, C3280442, C4554406
+  [15.8s] trust_signal outcome answer, grounded true
+```
+
+FIVE DEFECTS WERE FIXED TO GET THERE, each found by running the thing rather than reading it, and each is a separate commit:
+
+1. No database schema. `POST /auth/guest` returned 500 with `relation "guest_sessions" does not exist`. Migrations had never run. Neither `startCommand` in `railway.json` nor `RAILWAY_RUN_COMMAND` reached the container, so this moved into an opt-in startup hook in code.
+2. Missing environment variables. Found by DIFFING `env.example` against the service rather than one 500 at a time, which is what stopped this being five more round trips.
+3. `ANON_DAILY_RUN_CAP` unset, and unset in `.env` too. `env.example` documents 200.
+4. The plan step timing out on every query. See `DECISIONS.md`, 2026-08-24.
+5. `GCK` refused as an unknown gene. See below; fixed in code, still failing in production.
+
+## The one open defect, stated precisely
+
+`GCK` resolves LOCALLY to `NCBIGene:2645` and is REFUSED on the deployed API, on identical committed code, after a cache-disabled rebuild.
+
+What is established:
+
+- It is not build staleness. `NIXPACKS_NO_CACHE=1` is set on the service and the fix was redeployed after committing.
+- It is not NCBI being unreachable from Railway. `BRCA1` resolves there and answers with real citations.
+- It is not the fix being wrong. The live premise gate passes 29 of 29 including the `GCK` arm, and the full suite is 3930 passed with zero failures.
+
+The difference between the two symbols is the number of E-utilities calls needed. `BRCA1` resolves on the FIRST call, because NCBI Datasets returns exactly one report for it. `GCK` is alias-ambiguous in BOTH legs (Datasets returns 3 reports, ESearch returns 3 ids), so it needs three calls in quick succession: Datasets, then ESearch, then the batched ESummary confirmation.
+
+The hypothesis, NOT confirmed: E-utilities rate limiting against Railway's shared egress address, where three rapid calls trip a limit that one does not. `.claude/rules/tool-call-budgets.md` records the ceiling as 3 requests/second unauthenticated and 10 with a key, and notes the limit belongs to the API PER HOST rather than to any one caller, which is exactly the shape a shared egress IP would hit.
+
+It is a hypothesis rather than a finding because the traceback could not be read: Railway's log stream returns container startup and `/health` lines and no request-level logs at all, through several attempts. Recorded as unproven rather than asserted.
+
+WHAT WOULD SETTLE IT, for whoever picks this up: get the actual exception. Either make the log stream work, or add a temporary diagnostic endpoint that calls `resolve_symbol_to_curie("GCK")` and returns the tool's own `status` and `error` fields, which `ncbi_efetch` already carries and never raises through.
+
 ## History
 
 - 2026-08-24: Opened after PR #59 and PR #60 closed both hard blockers. Preflight READY on all three transports.
@@ -188,3 +237,4 @@ CURRENT BILLING SHAPE: three components running, not four. `search-agent-api`, P
 - 2026-08-24: Railway MCP installed with `railway mcp install --agent claude-code --oauth`, chosen over `railway setup agent` because that variant also writes third-party SKILLS into the harness, and over `--remote`/`--local` because only `--oauth` scopes to chosen workspaces with short-lived revocable tokens. It registered but needs an interactive OAuth flow, so it is unusable from a non-interactive session. The CLI did the provisioning instead, so the MCP was a convenience rather than a dependency.
 - 2026-08-24: Project, both databases, both service shells and 14 variables provisioned and verified.
 - 2026-08-24: Railway project provisioned; API built, deployed and verified live over its public URL. Frontend deployment wasted one build on the monorepo config trap above, was removed, and is blocked on a dashboard-only Root Directory field.
+- 2026-08-24: The demo answers end to end. Five defects fixed to get there, all found by running it. One open: `GCK` refused in production and resolving locally, hypothesis recorded as unproven because the traceback is unreadable.
