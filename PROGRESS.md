@@ -96,7 +96,7 @@ All six live-government-API connections the plan called for are now built. That 
 
 Both of last week's headline problems are fixed, so this section leads with what is true now rather than keeping solved problems at the top. What they were, and what happened to them, is in the sprint list below.
 
-The honest headline: nobody outside this team has used it yet. Everything below is what we know from testing it ourselves, and first contact with a real person reliably finds things no amount of internal testing does. Getting it in front of someone is the next piece of work.
+The honest headline, and it changed this week: IT IS NOW ON THE INTERNET. There is a web address anyone can open, and it answers real questions with real sources. That is new as of 24 August. What has NOT changed is that nobody outside this team has really used it yet, and the first afternoon of one person clicking around found six things wrong with the screen, which is exactly what putting it in front of someone is for.
 
 The limitation we would most like to remove: it can only be reached by someone who can run it on their own machine. There is no web address you can send to a colleague. That is the very next sprint.
 
@@ -207,6 +207,22 @@ The first. The written instruction for one of the fixes said, confidently, exact
 The second is stranger and more useful. We write deliberately broken versions of our own checks, to prove a check would actually notice if the thing it guards were removed. One of those broken versions produced no complaint from any check. The obvious reading was that the guard it targeted was unnecessary. The true reading was the opposite: our checks had a hole, and none of them was looking at the thing that mattered. We added three more. Reading the checks carefully had not found this. Only breaking them did.
 
 Four more of these deliberately broken versions turned out not to be broken at all, in ways that looked exactly like a check quietly failing. That is now impossible to miss: every one of them proves it actually broke something before it draws any conclusion.
+
+### Sprint: putting it on the internet (24 August)
+
+We put the thing on a public web address, and it answers.
+
+Ask it "which diseases are associated with BRCA1" at that address and about sixteen seconds later you get an answer with five sources, each one a link back to the NCBI record it came from. That is the whole product working end to end, on a real server, reachable by anyone with the link.
+
+Getting there took five separate repairs, and every single one was found by USING it rather than by reading the code:
+
+- The database had no tables at all. The very first thing the site does when you arrive is create a temporary guest account, and that failed instantly.
+- Six settings were missing. We found them by listing every setting the software expects and comparing it against what the server actually had, rather than discovering them one crash at a time.
+- One of those settings was a daily usage limit that had no value anywhere, not even on our own machines.
+- Every single question timed out after 45 seconds. The cause was a leftover step that asks the AI a question and then throws the answer away. Given no instructions, the AI wrote a long essay nobody reads, and the essay took longer than the time limit. We had already found and fixed this exact problem in a different step months ago and never checked whether it applied elsewhere.
+- One real gene was reported as not existing. The gene is GCK. Two OTHER genes list "GCK" as an old nickname, so a search for it comes back with three results, and our code refused to guess among three. The fix was to stop guessing and instead ASK which of the three actually has that name as its own.
+
+The most useful thing we learned has nothing to do with any of those. It is that a status light saying "running" is not evidence. One of our two web services reported itself perfectly healthy for several minutes while running a second copy of the WRONG program. And three separate times, a fix looked like it had failed when in truth the new version had never been loaded at all. We now check what a thing is actually DOING, not what it says about itself.
 
 ## What is next
 
@@ -323,6 +339,24 @@ That last row is the important one. None of these can affect a real person while
 | A first-time visitor never sees the five dots showing how many free searches they have, because the dots only appear after the first question is asked. The offer is invisible until it has been partly taken | Waiting on a decision about whether they should appear sooner |
 | If the day's free searches run out, the page can still show a visitor searches remaining until they actually try one. The refusal itself is honest when it comes | The next piece of web page work |
 | A search that is stopped part-way still costs one of the five. This is deliberate: the answer was already on screen, so giving the search back would be a way to read answers for free | Not planned to change |
+
+### Found on the live site, 24 August
+
+One person used the deployed site for an afternoon. These are their words, kept as they said them rather than tidied up, because the plain wording is the useful part.
+
+| What is wrong | What it means | When it gets fixed |
+|---------------|---------------|--------------------|
+| The answer does not appear gradually | It should type out as it is written, like a chat. Instead you stare at nothing, then everything appears at once | Next piece of work |
+| It feels very slow | Probably the same problem as the row above. The answer really does take about sixteen seconds, but you currently get no sign anything is happening for all sixteen of them, which feels far worse than it is | Next piece of work, and we check the row above first before assuming it is a speed problem |
+| You cannot ask a follow-up | The conversation stops after one question | Next piece of work |
+| The answer looks wrong | It does not match the design that was agreed | Next piece of work, against the agreed design files and not from memory |
+| The integrations page is not right | Four ways of connecting to this system exist and work, but that page does not present them properly | Next piece of work |
+| Every page has the same web address | Clicking to another page does not change the address bar, so you cannot bookmark or share a particular page | Next piece of work |
+| One gene works on our machines and not on the live site | The gene GCK. We know it is not the network and not an out-of-date copy, because a different gene works fine there. We do NOT yet know the actual cause, and we are saying so rather than guessing | Unscheduled. We cannot read the error messages from the live server yet, which is itself the first thing to fix |
+
+### The gap underneath all of the above
+
+Nothing automatically checks our work before it goes live. We have nearly four thousand automated checks, and they only run when a person remembers to run them. As of this week, anything merged goes straight to the public site. We have been bitten by this before: a broken build once sat unnoticed for weeks, and a broken browser test suite sat unnoticed for five rounds of work. Fixing this is now its own scheduled piece of work rather than a good intention.
 
 ## How we work
 
