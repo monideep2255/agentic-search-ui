@@ -22,16 +22,22 @@ For a plain-language, no-jargon project update, see [PROGRESS.md](PROGRESS.md).
 
 ## Live demo
 
-Deployed on Railway, 2026-08-24. Both services auto-deploy on merge to `develop`.
-
 | Surface | URL |
 |---------|-----|
 | Web UI | https://search-agent-web-production.up.railway.app |
 | API | https://search-agent-api-production.up.railway.app |
 
-Measured on the deployed API rather than asserted: "Which diseases are associated with BRCA1?" returns a grounded answer with five citations in about 16 seconds, across a Layer 1 graph query and a Layer 2 NCBI confirmation.
+Deployed on Railway since 2026-08-24. Both services auto-deploy on merge to `develop`, so the links above always serve the current state of that branch.
 
-It is a PROTOTYPE and is honest about what does not work yet. Known open defects, all recorded in `tracker/phase_4.12.md`: streaming does not render incrementally, a second conversational turn is not possible, answer presentation does not match the approved design, the integrations page does not present the KGX, REST, CLI and MCP surfaces properly, there is no client-side routing so every page serves at `/`, and one alias-ambiguous gene symbol is refused in production while resolving locally.
+Measured on the deployed API rather than asserted, 2026-08-25: "Which diseases are associated with BRCA1?" returns a grounded answer with five citations in about 10 seconds, across a Layer 1 graph query and a Layer 2 NCBI confirmation, with each tool reporting itself as it runs.
+
+It is a PROTOTYPE. What that means in practice, stated because a demo link invites the wrong assumption:
+
+- No account is needed. An anonymous visitor gets a small free allowance of searches, counted server-side.
+- Nothing runs the test suite automatically. Every gate on this project passes because a person chose to run it, while a merge to `develop` deploys straight to the URLs above. Closing that is build phase 4.14, and it has not started.
+- Coverage is uneven by organism and by database. Treat an answer as a starting point for verification, never as an endpoint.
+
+Known open items are tracked on `tracker/BOARD.md` rather than duplicated here. The six UI defects the first live session surfaced, plus a seventh found alongside them, were all closed by build phase 4.16 on 2026-08-25.
 
 ---
 
@@ -77,7 +83,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5 and 4.0 through 4.12. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), with CD watching `develop`. Build phase 4.16, the UI defects the live demo surfaced, is in review with its pull request about to open. Next after that: CI (build phase 4.14), then 5.0 and 5.1 for tracing and the eval harness. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
+| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.12, and 4.16. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), with CD watching `develop`. Next: CI (build phase 4.14), then durable history (4.13) and the two-environment release flow (4.15), then 5.0 and 5.1 for tracing and the eval harness. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
 
 ### Build phase detail
 
@@ -85,18 +91,18 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|----------|--------|
 | 1.0 | FastAPI app skeleton, health endpoint, the Pydantic event contract, a typed run() stub wired to the query endpoint | Merged into develop, PR #5, 2026-07-27 |
 | 1.1 | Minimal v1 auth and the PostgreSQL user-data schema (six tables) | Merged into develop, PR #6 |
-| 2.0 | The real five-node LangGraph Guardrail, Think, Plan, Act, Write loop and the three-tier harness, replacing the phase 1.0 stub | Merged into develop, PR #9 |
 | 1.2 | SSE streaming endpoints (POST /v1/query, GET /v1/query/{run_id}/events, POST /v1/query/{run_id}/stop) and the frontend/ React shell wired end to end against the real backend | Merged into develop, PR #12 |
+| 2.0 | The real five-node LangGraph Guardrail, Think, Plan, Act, Write loop and the three-tier harness, replacing the phase 1.0 stub | Merged into develop, PR #9 |
 | 2.1 | cypher_query over Layer 1, the first live graph access | Merged into develop, PR #15, 2026-08-01 |
 | 2.2 | Deterministic cite-or-refuse, Layer 1 provenance on every citation, the first trust signal | Merged into develop, PR #18, 2026-08-03 |
 | 3.0 | The full Section 10 guardrail: non-LLM pre-filter, boundary validation, Guard-tier injection and off-topic classification, forbidden query types | Merged into develop, PR #19, 2026-08-04 |
 | 3.1 | ncbi_efetch, the first Layer 2 tool: live NCBI record access across E-utilities, Datasets v2, and PubChem, with gene-symbol resolution | Merged into develop, PR #22, 2026-08-05; re-review debt closed via PR #23, 2026-08-07 |
 | 3.2 | ncbi_dbsnp, the second Layer 2 tool: variant normalization and dbSNP record retrieval over Variation Services and dbSNP ESummary | Merged into develop, PR #25, 2026-08-08, after six review passes |
 | 3.3 | pubtator_annotate and litvar2_lookup, the two Layer 3 enrichment tools: entity normalization and publication annotation via PubTator3, variant-to-literature evidence via LitVar2 | Merged into develop, PR #26, 2026-08-08, after ten review passes |
-| 3.5 | pathogen_detection (bulk access to the NCBI Pathogen Detection FTP snapshot tree) and clinicaltrials_search (ClinicalTrials.gov API v2), completing the seven-tool roster | Merged into develop, PR #27, 2026-08-08, after a judge round, an adversary round, and two fix rounds |
 | 3.4 | Provenance extended to Layers 2 and 3, the two-tier risk gate, freshness and conflict resolution, T-3.1-28 (dual-layer Act-step dispatch) folded in | Merged into develop, PR #28, 2026-08-10, after two judge rounds, an adversary round, and two fix rounds |
+| 3.5 | pathogen_detection (bulk access to the NCBI Pathogen Detection FTP snapshot tree) and clinicaltrials_search (ClinicalTrials.gov API v2), completing the seven-tool roster | Merged into develop, PR #27, 2026-08-08, after a judge round, an adversary round, and two fix rounds |
 | 4.0 | The REST plus SSE adapter finalized as the public API surface: resumable multi-consumer SSE, bounded registry eviction, grace-period abandonment cancellation, GET /citations, operator-scoped cost visibility, legacy POST /query removed | Merged into develop, PR #39, 2026-08-11, after four judge rounds and an adversary round (14 findings, 4 carried open to build phase 6.0 and later) |
-| 4.1 | The outbound-only MCP server wrapping the same tool functions: a single advertised tool, ask_biomedical_question, folding the REST/SSE core's event stream into one JSON result, hard-pinned no-cost surface, bearer-JWT auth reusing the existing decode path | Closed 2026-08-11 on `phase/4.1-mcp-server`, ready to ship, after three judge rounds and an adversary round (16 findings, 2 carried open with named owners) |
+| 4.1 | The outbound-only MCP server wrapping the same tool functions: a single advertised tool, ask_biomedical_question, folding the REST/SSE core's event stream into one JSON result, hard-pinned no-cost surface, bearer-JWT auth reusing the existing decode path | Merged into develop, 2026-08-11, after three judge rounds and an adversary round (16 findings, 2 carried open with named owners) |
 | 4.2 | Thin CLI client over the REST API: `system3-cli`, command `s3` | Merged into develop, PR #47, 2026-08-16 |
 | 4.3 | GraphQL surface via Strawberry, sharing auth and tools with REST | Merged into develop, PR #48, 2026-08-17, after six independent review rounds |
 | 4.4 | KGX export: a query-scoped subgraph, seed CURIEs and bounded hops, writing nodes.tsv, edges.tsv and a manifest | Merged into develop, PR #51, 2026-08-19 |
@@ -107,11 +113,11 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | 4.9 | Nine answer-screen and chrome fidelity gaps against the approved design | Merged into develop |
 | 4.10 | The anonymous run path and the server-side guest allowance, with history migration on signup | Merged into develop |
 | 4.11 | The read-only HTTPS graph query service on the Hetzner box, retiring the hand-opened SSH tunnel | Merged into develop, PR #55, 2026-08-22 |
-| 4.12 | The demo deployment on Railway: two services, Postgres and Redis, the Layer 1 cutover, and CD watching develop | Merged into develop, PR #61, 2026-08-24. THE PRODUCT IS LIVE |
+| 4.12 | The demo deployment on Railway: two services, Postgres and Redis, the Layer 1 cutover, and CD watching develop | Merged into develop, PR #62, 2026-08-24. THE PRODUCT IS LIVE |
 | 4.13 | Durable cross-reload search history over the interactions rows 4.6 writes | Not started |
 | 4.14 | CI: the ten merge-blocking gates from Section 24 | Not started, pulled forward from 6.1 by product-owner decision 2026-08-24 |
 | 4.15 | Two Railway environments and a release-branch flow, so develop and production deploy separately | Not started, inserted by product-owner decision 2026-08-24 |
-| 4.16 | The seven UI defects the product owner reported from the live demo: streaming visibility, the answer-screen presentation, a follow-up conversation thread, the integrations page, client-side routing, and the feedback thumb glyph | In review, inserted by product-owner decision 2026-08-25, pull request about to open |
+| 4.16 | The seven UI defects the first live session surfaced. The largest was backend, not frontend: the Act step emitted no events at all, so eleven seconds of a run were silent and no tool chip had ever rendered | Merged into develop, PR #63, 2026-08-25. Inserted by product-owner decision |
 
 Per-phase narrative, including what each review round found and what it cost, is `requirements/Plan.md`'s Revision history. Per-phase tickets and evidence are `tracker/phase_N.M.md`.
 
@@ -159,42 +165,47 @@ pytest tests/
 ```
 agentic-search-ui/
   src/
-    system_03_search_agent/     # Python backend (build phase 1.0: core, contracts, adapters/web_sse; build phase 1.1: auth, data; build phase 1.2: SSE streaming endpoints live)
-      core/                     # LangGraph graph: the 5-step loop, run() and run_streaming() entrypoints, run_registry.py (in-process run tracking)
-      contracts/                # Pydantic event models and JSONSchemas
-      harness/                  # Tiers, cost caps, timeouts, coordinator-worker, cache hooks
+    system_03_search_agent/
+      core/                     # The LangGraph five-step loop, run() and run_streaming(), run_registry.py, session_memory.py
+      contracts/                # Pydantic event models, the query contract, JSONSchemas
+      guardrail/                # The Section 10 pipeline: pre-filter, classifier, forbidden-type screen
+      harness/                  # Tiers, cost caps, timeouts, coordinator-worker, prompt-cache prefix
+      orchestrator/             # Step budgets and query-class routing
+      synthesis/                # Grounding, citations, trust, freshness, conflict detection, refusal
       tools/                    # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search
+      export/                   # KGX subgraph export (build phase 4.4)
+      feedback/                 # Interaction capture and the weekly review ritual (build phase 4.6)
       adapters/
-        web_sse/                # FastAPI + SSE
-        graphql/                # Strawberry schema over the same tools
+        web_sse/                # FastAPI plus SSE, the public API surface
+        graphql/                # Strawberry schema over the same core
         mcp/                    # MCP server, outbound-only
-        cli/                    # Thin REST client
-      auth/                     # Signup, login, refresh, logout, me endpoints (build phase 1.1)
-      data/                     # Postgres models: auth, interactions, cq_candidates
-  frontend/                     # React UI (build phase 1.2: Vite, React 19, TypeScript; chat UI wired to SSE)
+        cli/                    # Thin REST client, the `s3` command
+      auth/                     # Signup, login, refresh, logout, guest sessions, preferences
+      data/                     # Postgres models: auth, guest sessions, interactions, cq_candidates
+  frontend/                     # React 19, Vite, TypeScript, MUI
     src/
       components/
-        auth/                   # AuthGate (build phase 1.2, T-1.2-08)
-        chat/                   # QueryPipelineStepper, AnswerStream, GuardrailBanner, CapMessage, LoadingSkeleton, StopButton, QueryInput, EmptyState
-      hooks/                    # useAgentRun (SSE consumption via fetch() + ReadableStream)
-      lib/                      # events.ts (typed AgentEvent union), api.ts (typed fetch wrappers)
-      pages/                    # HomePage, ChatPage
-    public/
-    package.json
-  tests/                        # pytest test suite
-  docs/                         # Architecture docs, reference material
-  reference/                    # Symlink to agentic-search-data-engineering (System 1+2)
-  requirements/                 # Planning docs: Plan.md, PRD.md, Technical_specification.md, Strategic_memo.md, Evaluation_playbook.md
-  tracker/                      # In-repo build board: BOARD.md, phase tickets, render_board.py, board.html
-  .claude/                      # Claude Code rules, skills, agents, hooks (tracked in git for v1 development)
-  alembic/                      # Alembic migrations for the user-data schema (build phase 1.1)
+        screens/                # Home, Run, Answer, and the Integrations, Docs and About pages
+        answer/                 # The follow-up field and the history rail
+        chat/                   # Stop button, guardrail banner, cap message
+        shell/                  # App bar, account menu, disclaimer modal, persona chip
+        auth/, brand/, controls/, feedback/, guest/
+      hooks/                    # useAgentRun (SSE over fetch), useRunView (events to screens)
+      lib/                      # events.ts (typed AgentEvent union), api.ts, routing.ts, guestSession.ts
+      stubs/                    # The stub registry: every surface still rendering from a local stand-in
+    e2e/                        # Playwright specs, including the live diagnostics gated behind RUN_LIVE_DIAGNOSTICS
+  tests/                        # pytest suite, including the per-phase premise gates and mutation harnesses
+  docs/                         # Architecture, NCBI, build cadence, and the design system
+  reference/                    # Symlink to agentic-search-data-engineering (System 1 and 2)
+  requirements/                 # Plan.md, PRD.md, Technical_specification.md, Strategic_memo.md, Evaluation_playbook.md
+  tracker/                      # The build board: BOARD.md, phase tickets, render_board.py, check_doc_drift.py
+  alembic/                      # Migrations for the user-data schema
+  .claude/                      # Claude Code rules, skills, agents, hooks
   CLAUDE.md                     # Claude Code instructions
   AGENTS.md                     # Instructions for other AI agents
-  DECISIONS.md                  # Architecture decision log
+  DECISIONS.md                  # Decision log
   LEARNINGS.md                  # What broke during the build and what fixed it
-  pyproject.toml
-  requirements.txt
-  env.example
+  PROGRESS.md                   # The plain-language update, written for a non-technical reader
 ```
 
 ---
