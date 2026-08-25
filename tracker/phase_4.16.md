@@ -16,6 +16,8 @@ Inserted 2026-08-25 by product-owner decision, the fifth such exception after 4.
 - [What the design actually specifies, read rather than assumed](#what-the-design-actually-specifies-read-rather-than-assumed)
 - [Tickets](#tickets)
 - [The near miss, recorded because it was one line from shipping](#the-near-miss-recorded-because-it-was-one-line-from-shipping)
+- [Defect 7, the feedback thumbs, and why it read as two problems](#defect-7-the-feedback-thumbs-and-why-it-read-as-two-problems)
+- [One pre-existing end-to-end failure, proven not ours](#one-pre-existing-end-to-end-failure-proven-not-ours)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
 - [History](#history)
 
@@ -29,6 +31,7 @@ The six defects the product owner reported from the live demo on 2026-08-24, rec
 4. "The answer presentation is horrible and nothing close to what the design sync had."
 5. "I do not see the KGX, REST API, command line or MCP setup up properly on the integrations page."
 6. No client-side routing. Every page serves at `/` and the URL never changes.
+7. Added 2026-08-25, in the product owner's own words: "the feedback buttons were not working properly. The down arrow was outside the box."
 
 ## The root cause, measured before any ticket was written
 
@@ -107,6 +110,7 @@ So the fix for defect 1 is NOT to stream answer text into the run screen. Neithe
 | T-4.16-05 | Client-side routing: `/`, `/integrations`, `/about`, `/docs`. `serve -s dist` is already SPA mode, so deep links resolve once routes exist and no server change is needed | todo |
 | T-4.16-06 | Backend arms DONE, frontend arms open. The premise gate, written first and watched failing. Every arm carries a populate-check from its first line | in progress. Backend arms landed: `tests/system_03_search_agent/core/test_phase_4_16_premise.py`, 5 arms, all 5 red for the right reason with every populate-check passing first. Frontend arms (routing, integrations, second turn) not yet written |
 | T-4.16-07 | DONE, `1786b02`. The offline mutation harness, 7 cases over all 5 arms. M1 applies the plausible wrong fix in process and pins A3 red on its TIMING branch, closing the gap the gate recorded about itself | done |
+| T-4.16-10 | DONE, defect 7. The thumb-down glyph rendered 8.5px outside its own button, so clicking what a reader could see missed the control. One defect, two symptoms | done |
 | T-4.16-09 | An end-to-end arm that LOOKS AT a rendered tool chip. No Playwright spec in this repository has ever emitted a `tool_start`, and only one has ever emitted a `tool_result`, so the chip path has never been exercised in a browser. Nothing at the hook level feeds `tool_start` either | todo |
 | T-4.16-08 | Re-measure the Act step after T-4.16-01 lands and decide whether defect 3 has any residue once the wait is legible. Deliberately NOT a performance ticket yet | todo |
 
@@ -130,6 +134,34 @@ A second, quieter half: `isToolResultPayload` delegates to `isToolStartPayload`,
 
 THE GENERAL FORM: a contract widened on the producer and not on its validator does not degrade gracefully, it fails hard on the first message. And the direction of the failure is not guessable from reading the validator, which is why it needed a test rather than an argument.
 
+## Defect 7, the feedback thumbs, and why it read as two problems
+
+Reported 2026-08-25: "the feedback buttons were not working properly. The down arrow was outside the box." It is ONE defect, and the functional half falls out of the visual half rather than being a second bug.
+
+`Thumb` in `frontend/src/components/feedback/FeedbackSurface.tsx` put its rotation on the OUTERMOST `<svg>`. There, `transform` is not an SVG transform at all, it is a CSS one, resolved in the element's own pixel space instead of the viewBox coordinate system. So `rotate(180 8 8)` rotated about a point 8 CSS pixels from the element's origin rather than about the centre of a `0 0 16 16` viewBox, and displaced the glyph 16px down and to the right.
+
+MEASURED IN CHROMIUM before anything was changed, because the correct and incorrect placements are one word apart and read identically:
+
+| Variant | Result |
+|---------|--------|
+| Up, no transform | contained |
+| Down, transform on the root `<svg>` | OUTSIDE: right 8.5px, bottom 8.5px |
+| Down, transform on an inner `<g>` | contained |
+
+WHY IT ALSO READ AS "NOT WORKING". The `<button>` stayed a correct 30 by 30 hit target throughout, and the send path was working the whole time (`e2e/feedback-submission.spec.ts`'s "a rating actually reaches the backend" passes, and passed before this fix). Only the glyph moved. So the thumb a person could SEE sat outside the control it belonged to, and clicking what they saw missed it.
+
+THE GUARD is a bounding-box measurement in a real browser, added to `e2e/feedback-submission.spec.ts`, and it was mutation-run before commit: putting the `transform` back on the `<svg>` fails it on the down thumb with an 8px right overflow while the up thumb stays green, which is the asymmetry the defect actually had.
+
+This is `LEARNINGS.md` rows 107, 108 and 109 for the fourth time. Every one of this repository's 211 frontend assertions checks WHAT is on screen and never WHERE, and jsdom has no layout at all, so a pure-geometry defect is invisible to all of them. It took a person looking at the page, again.
+
+## One pre-existing end-to-end failure, proven not ours
+
+`e2e/query-stream-and-stop.spec.ts`'s "a signed-in query streams through the pipeline and produces an answer" fails waiting for `getByTestId("answer-cap")`.
+
+PROVEN PRE-EXISTING rather than argued: the branch was set aside and the same spec run at `e486310`, this phase's branch point on `develop`, where it fails identically with none of this phase's changes present. It is therefore not a regression from the Act-step events, and it is not this phase's to fix silently either. Recorded here with an owner rather than left in a passing-suite claim.
+
+The current end-to-end figure is 33 passed, 1 failed, and that one is the row above.
+
 ## Coverage: what this phase does not cover
 
 Stated up front so a gap in it is arguable rather than discovered, per `goal-contracts` and build phase 4.4's stated-blind-spot lesson.
@@ -144,6 +176,7 @@ Stated up front so a gap in it is arguable rather than discovered, per `goal-con
 - 2026-08-25: Opened after the product owner ranked the UI defects ahead of build phase 4.14. Preflight READY on all three transports.
 - 2026-08-25: Scouted before writing. Measured the deployed SSE stream frame by frame, found the 10.9-second Act silence, and traced it to `tool_start` and `tool_result` never being emitted. Corrected two recorded claims in `tracker/phase_4.12.md` in the process.
 - 2026-08-25: Read both design artifacts before scoping defect 1, and found that neither specifies streaming answer text, which redirected the ticket from the browser to the Act step.
+- 2026-08-25: Defect 7 reported by the product owner and closed as T-4.16-10. Root cause measured in Chromium, not reasoned about; guard added as a bounding-box arm and mutation-run red before commit. While running the full browser suite for it, one PRE-EXISTING failure was found and proven pre-existing by re-running it at the branch point.
 - 2026-08-25: T-4.16-01 and T-4.16-07 landed. Gate 5 of 5 green, mutation harness 7 of 7, suite 3942 passed with zero failed, frontend 211, typecheck and production build clean, ruff clean, drift 0 stale 0 structural. Five `test_graph.py` `act_state` literals gained the required `seq` key: they were incomplete `GraphState`s that only worked while `act_node` did not read it, and the fixtures were corrected rather than softening the code to `state.get("seq", 0)`, which would let a mid-run seq collision pass silently. No assertion was weakened.
 - 2026-08-25: Backend premise gate written and watched failing, 5 arms, 5 red. A5's failure message printed the production event list verbatim, `guard cost think cost plan cost token citation trust_signal trust_signal cost done`, which is the deployed trace with no tool frame in it. TWO GAPS IN THE GATE RECORDED IN ITS OWN DOCSTRING rather than left to a reviewer: A3 stops at its presence check and never reaches the timing comparison that is its whole reason for existing, and A4's populate-check is currently what fails, so it proves nothing A1 does not. Both are closed by T-4.16-07's mutation, not by reading. One defect found in the gate's own fixture while watching it fail: the daily-cap stubs were written `async` against two sync call sites, so every run logged `coroutine ... was never awaited` and the stub silently did not run.
 - 2026-08-25: Corrected T-4.16-01 before writing any code. Events flush at node return, so emitting inside `act_node`'s loop would have delivered every tool event in one burst at 12.3 seconds and changed nothing visible. The node boundary is the constraint, not the missing emit.
