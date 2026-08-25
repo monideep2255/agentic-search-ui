@@ -4,6 +4,25 @@ import react from "@vitejs/plugin-react";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Build phase 4.12. `vite preview` refuses any request whose Host header it
+  // does not recognise, and returns 403 with "Blocked request. This host ...
+  // is not allowed." That is a deliberate anti-DNS-rebinding control, not a
+  // bug, and it fires the moment the preview server sits behind a proxy on a
+  // hostname the build never knew about.
+  //
+  // Set HERE rather than as a `--allowedHosts` CLI flag, which was tried
+  // first and silently did not arrive: the deploy log showed vite receiving
+  // only `--host 0.0.0.0 --port 8080`, the flag having been dropped somewhere
+  // in the `npm run preview -- ...` chain. Vite's own error message names this
+  // file as the place to fix it, and a config value cannot be lost in
+  // argument forwarding.
+  //
+  // The host is listed explicitly rather than using `allowedHosts: true`,
+  // which disables the check entirely. This is a demo deployment, but a
+  // blanket allow would be a control switched off to make one URL work.
+  preview: {
+    allowedHosts: ["search-agent-web-production.up.railway.app"],
+  },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/setupTests.ts"],
