@@ -2,6 +2,7 @@
 
 import logging
 import os
+import pathlib
 import re
 import uuid
 from collections.abc import AsyncIterator, Callable
@@ -126,6 +127,78 @@ _mcp_asgi_app = mcp_server.streamable_http_app(stateless_http=True, streamable_h
 
 
 @asynccontextmanager
+def _run_startup_migrations_if_requested() -> None:
+    """Bring the user-data schema up to head, when explicitly asked to.
+
+    OPT-IN, via `RUN_MIGRATIONS_ON_STARTUP`. Default off, so nothing about
+    local development, the test suite, or any existing deployment changes
+    unless the variable is set.
+
+    ## Why this exists rather than a deploy-time migration step
+
+    Build phase 4.12. The correct place for this is the platform's own
+    pre-deploy or start command, and that was tried FIRST and repeatedly:
+    `startCommand` in `railway.json`, then `RAILWAY_RUN_COMMAND` as a
+    service variable. Neither reached the running container. Railway
+    snapshotted the start command on the service's first deploy and did not
+    re-read either source afterwards, so the container kept launching
+    uvicorn alone and `POST /auth/guest` kept returning 500 with
+    `relation "guest_sessions" does not exist`.
+
+    Config that will not propagate is not a mechanism to keep debugging. A
+    startup hook is in this repository's control, is version-controlled, and
+    is verifiable from the application's own logs rather than from a
+    platform setting nobody can read back.
+
+    ## What it does NOT solve, said plainly
+
+    Two instances starting at once both run this. Alembic takes a lock on
+    its own version table, so the loser waits rather than corrupting
+    anything, but a migration is still being run by application processes
+    rather than by a single deploy step, and that is the wrong shape at any
+    real concurrency. It is correct enough for a single-instance demo and
+    should be replaced by a platform pre-deploy hook the moment one is
+    available. Recorded in `tracker/phase_4.12.md` rather than left for
+    someone to discover.
+
+    Never fatal. A migration failure logs and lets the app start, because a
+    process that refuses to boot cannot serve `/health` and therefore cannot
+    tell anyone WHY it is unhealthy. The failure surfaces on the first
+    request that needs the schema, with the real database error attached.
+    """
+    if os.environ.get("RUN_MIGRATIONS_ON_STARTUP", "").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+    }:
+        return
+
+    try:
+        from alembic.config import Config
+
+        from alembic import command
+
+        root = pathlib.Path(__file__).resolve().parents[3].parent
+        ini = root / "alembic.ini"
+        if not ini.exists():
+            logging.getLogger(__name__).error(
+                "RUN_MIGRATIONS_ON_STARTUP is set but alembic.ini was not found "
+                "at %s; skipping migrations",
+                ini,
+            )
+            return
+        config = Config(str(ini))
+        config.set_main_option("script_location", str(root / "alembic"))
+        logging.getLogger(__name__).info("running alembic upgrade head")
+        command.upgrade(config, "head")
+        logging.getLogger(__name__).info("alembic upgrade head complete")
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "startup migration failed; the app will start and the failure will "
+            "surface on the first request that needs the schema"
+        )
+
+
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Enter the mounted MCP sub-app's own Starlette lifespan.
 
@@ -141,6 +214,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     ever sends the top-level ASGI `lifespan.startup` event to this outer
     `app`, never to a mounted sub-app on its own.
     """
+    _run_startup_migrations_if_requested()
     async with AsyncExitStack() as stack:
         await stack.enter_async_context(_mcp_asgi_app.router.lifespan_context(_mcp_asgi_app))
         yield
