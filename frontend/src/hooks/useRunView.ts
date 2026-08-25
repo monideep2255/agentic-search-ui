@@ -30,6 +30,7 @@ import { deriveStopEnabled } from "../components/chat/StopButton";
 import { CATEGORY_COPY } from "../components/chat/GuardrailBanner";
 import { isCapShapedError, CAP_MESSAGE_COPY } from "../components/chat/CapMessage";
 
+
 /**
  * The opening of `cost_control.PER_QUERY_CAP_PARTIAL_RESULT_NOTE`.
  *
@@ -62,6 +63,58 @@ const isSystemNote = (text: string) =>
   SYSTEM_NOTE_PREFIXES.some((prefix) => text.trimStart().startsWith(prefix));
 import type { ReasoningStep, StepName, ToolCall } from "../components/screens/RunScreen";
 import type { Claim, Source, TrustSignal } from "../components/screens/AnswerScreen";
+
+/**
+ * How a source reads on a citation chip and a source card.
+ *
+ * T-4.16-03. The deployed demo rendered "MedGen MedGen:C0346153", against a
+ * design card that says "MedGen C0677776". This was a plain
+ * `${source} ${source_id}` join, and it is wrong for exactly one of the two
+ * shapes the wire actually carries, so it looked right wherever anyone
+ * checked it:
+ *
+ * - Layer 2 (`tools/ncbi_efetch.py`) sends the NCBI database name and the
+ *   bare record id: `source: "gene"`, `source_id: "672"`. Joining gives
+ *   "gene 672", which is correct.
+ * - Layer 1 (`core/graph.py`'s `_citation_from_row`) sends the CURIE PREFIX
+ *   and the FULL CURIE: `source: "MedGen"`, `source_id: "MedGen:C0346153"`.
+ *   Joining repeats the prefix.
+ *
+ * NEITHER PRODUCER IS WRONG, which is why the fix is here. `core/graph.py`
+ * documents its choice deliberately: "the CURIE prefix names the source
+ * database, the full CURIE is the source id", and `source_id` being a
+ * resolvable CURIE is what makes a Layer 1 citation traceable. Changing it
+ * to a bare local id to suit a label would trade a provenance field for a
+ * display convenience, which is the wrong direction in a system whose whole
+ * argument is that a citation can be followed.
+ *
+ * So the redundancy is removed at the point of display only, and only when
+ * the id genuinely repeats the source: `source_id` is stripped of a leading
+ * `source:` prefix, compared case-insensitively because the two fields are
+ * assembled by different modules and nothing guarantees they agree on case.
+ *
+ * DELIBERATELY NOT NORMALISED: the case of `source` itself. Layer 2 sends
+ * "gene" and the design card shows "Gene". Capitalising would be right for
+ * that one value and wrong for the next, since this field also carries
+ * "dbSNP" and "MedGen", whose casing is meaningful and would survive a
+ * naive title-case only by accident. Guessing a display rule for values
+ * this function has not seen is how the next wrong label ships. Recorded in
+ * `tracker/phase_4.16.md` for the design card to settle.
+ *
+ * MUTATION-PROVEN before commit. Restoring the plain join reproduces the
+ * deployed string exactly, "MedGen MedGen:C0346153", and turns TWO of the
+ * five arms in `useRunView.sourceName.test.ts` red while THREE stay green.
+ * Those three are the Layer 2 and non-matching-prefix cases, which is to
+ * say: a test covering only the shape someone happened to check would have
+ * passed on the broken code.
+ */
+export function sourceDisplayName(source: string, sourceId: string): string {
+  const prefix = `${source}:`;
+  const deduped = sourceId.toLowerCase().startsWith(prefix.toLowerCase())
+    ? sourceId.slice(prefix.length)
+    : sourceId;
+  return `${source} ${deduped}`.trim();
+}
 
 /** The wire's layer strings, mapped to the design system's 1, 2, 3. */
 export function layerNumber(layer: Layer): 1 | 2 | 3 {
@@ -274,7 +327,7 @@ export function useRunView(events: AgentEvent[]): RunView {
       sources.push({
         n: index,
         layer: layerNumber(payload.layer),
-        name: `${payload.source} ${payload.source_id}`.trim(),
+        name: sourceDisplayName(payload.source, payload.source_id),
         tool: payload.field || payload.source,
         evidence: payload.evidence_kind,
         confidence: payload.assertion_confidence,
@@ -550,7 +603,33 @@ export function useRunView(events: AgentEvent[]): RunView {
     const OUTCOME_BY_TRUST: Record<string, string> = {
       answer: "Answered",
       flag: "Answered",
-      ask: "Needs a narrower question",
+      /*
+       * T-4.16-03. Was "Needs a narrower question", which described the
+       * wrong thing entirely and was seen on the live demo above a grounded
+       * answer carrying five resolving citations. The question was fine.
+       *
+       * `ask` does not mean the question was too broad. Locked spec section
+       * 8.3.3, in its own words: "Ask is reserved for a high-stakes claim
+       * resting on a single independent-origin source. It errs toward
+       * caution rather than a confident answer." It is the
+       * `(high, grounded, insufficient)` row of `synthesis/trust.py`'s
+       * DECISION_TABLE: the claim IS grounded, and the layers could not be
+       * compared against each other, so triangulation is unavailable rather
+       * than failed.
+       *
+       * Telling a reader to narrow their question is therefore not merely
+       * unhelpful, it misattributes the caution to something they did. On a
+       * product whose entire argument is that its status line can be
+       * believed, a status line that blames the reader for the evidence is
+       * a trust defect rather than a copy nit.
+       *
+       * The wording states the evidence, matching the neighbouring pills,
+       * which all report rather than instruct. Product-owner decision,
+       * 2026-08-25: the trust-pills design card has NO `ask` state, so
+       * there was nothing to build against and this was settled directly.
+       * `tracker/phase_4.16.md` records it for the card to absorb.
+       */
+      ask: "Single source, not independently confirmed",
       refuse: "Refused",
     };
     /*

@@ -85,11 +85,52 @@ const GRID = {
   gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
 } as const;
 
+/**
+ * The API origin these cards quote.
+ *
+ * A card whose command cannot be copied and run is decoration, and the MCP
+ * card's previous elided `https://.../mcp` was exactly that. Read from the
+ * same `VITE_API_BASE_URL` the app's own client uses, so the page can never
+ * advertise one origin while the app talks to another; the fallback matches
+ * `lib/api.ts`'s own default for a local dev run.
+ */
+const API_ORIGIN =
+  (import.meta.env?.VITE_API_BASE_URL as string | undefined) ?? "http://127.0.0.1:8000";
+
+/**
+ * T-4.16-04, the product owner's defect 5 from the live demo: "I do not see
+ * the KGX, REST API, command line or MCP setup up properly on the
+ * integrations page."
+ *
+ * Every surface named there had SHIPPED. This was never missing capability,
+ * it was a page describing surfaces that do not exist in the shape it
+ * described them. Four errors, each verified against the code rather than
+ * taken from the page:
+ *
+ * - The command line card printed `ncbi-search ask "..."`. No such command
+ *   exists. `pyproject.toml` declares `s3` and `s3-kgx-export`, which is
+ *   what build phase 4.2 shipped and named in its own row.
+ * - The KGX card printed `POST /v1/export/kgx`. No such route exists in
+ *   `adapters/`. Build phase 4.4 shipped KGX as a console script over a
+ *   query-scoped subgraph, seeds and bounded hops, not a live endpoint, and
+ *   the card's own body said "prepared as a batch job" while its code block
+ *   contradicted it.
+ * - The MCP card printed an elided `https://.../mcp`, which cannot be
+ *   copied and used.
+ * - GraphQL was ABSENT. It shipped in build phase 4.3 as PR #48 and is
+ *   mounted at `/graphql`. The lede said "reachable four ways" and there
+ *   are five.
+ *
+ * The general form, and the reason this sat unnoticed through two phases:
+ * this page is prose about other modules, and nothing links the two. A
+ * command here is as much a claim as a citation is, and neither should be
+ * written from memory of what a surface probably looks like.
+ */
 export function IntegrationsScreen() {
   return (
     <Page
       title="Integrations"
-      lede="The same agent, reachable four ways. Every surface runs the identical loop and returns the identical citations."
+      lede="The same agent, reachable five ways. Every surface runs the identical loop and returns the identical citations."
     >
       <Box sx={GRID}>
         <Card
@@ -98,19 +139,24 @@ export function IntegrationsScreen() {
           code={"POST /v1/query\nGET  /v1/query/{run_id}/events\nGET  /v1/query/{run_id}/citations"}
         />
         <Card
+          title="GraphQL"
+          body="One typed request and one typed response over the same core, for a client that wants the whole answer in a single round trip. Registered accounts only, and no live stream: a run is returned complete or not at all."
+          code={`POST ${API_ORIGIN}/graphql\n{ ask(input: {question: "..."}) {\n    answer citations { sourceUrl } } }`}
+        />
+        <Card
           title="MCP server"
           body="One advertised tool, ask_biomedical_question. It folds a whole run into a single cited answer; the seven internal tools are never separately reachable."
-          code={'{"mcpServers":{"ncbi-search":{\n  "url":"https://.../mcp"}}}'}
+          code={`{"mcpServers": {"ncbi-search": {\n  "url": "${API_ORIGIN}/mcp"}}}`}
         />
         <Card
           title="KGX export"
-          body="Nodes and edges in BioLink-compliant KGX, for loading into your own graph. Prepared as a batch job rather than served live."
-          code={"POST /v1/export/kgx"}
+          body="A query-scoped subgraph as BioLink-compliant KGX: seed CURIEs, bounded hops, written as nodes.tsv, edges.tsv and a manifest. A batch command rather than a live endpoint, and not a whole-graph snapshot."
+          code={'s3-kgx-export NCBIGene:672 \\\n  --hops 1 --output-dir ./kgx-out'}
         />
         <Card
           title="Command line"
-          body="The same answer, piped. Reads your NCBI API key from the environment."
-          code={'export NCBI_API_KEY=your-ncbi-api-key\nncbi-search ask "diseases linked to BRCA1"'}
+          body="The same answer, piped. Human-readable by default and JSON with --json, so answers chain into other tools."
+          code={'s3 login\ns3 ask "diseases linked to BRCA1"'}
         />
       </Box>
     </Page>

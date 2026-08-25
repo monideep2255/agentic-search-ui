@@ -1161,6 +1161,10 @@ async def test_article_rows_keep_their_record_but_never_their_raw_title(
         "query": _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT),
         "query_class": "lookup",
         "tool_calls": [planned],
+        # T-4.16-01: `seq` is a required GraphState key and every node
+        # reads it. act_node did not until this ticket gave it a sink, so
+        # this literal had been an incomplete state that happened to work.
+        "seq": 0,
     }
     act_result = await graph_module.act_node(act_state)
 
@@ -1273,6 +1277,10 @@ async def test_an_article_only_result_answers_with_a_citation_not_a_silent_refus
         "query": _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT),
         "query_class": "lookup",
         "tool_calls": [planned],
+        # T-4.16-01: `seq` is a required GraphState key and every node
+        # reads it. act_node did not until this ticket gave it a sink, so
+        # this literal had been an incomplete state that happened to work.
+        "seq": 0,
     }
     act_result = await graph_module.act_node(act_state)
     findings = act_result["findings"]
@@ -1430,6 +1438,10 @@ async def test_a_vocabulary_token_name_downgrades_confidence_instead_of_assertin
         "query": _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT),
         "query_class": "lookup",
         "tool_calls": [planned],
+        # T-4.16-01: `seq` is a required GraphState key and every node
+        # reads it. act_node did not until this ticket gave it a sink, so
+        # this literal had been an incomplete state that happened to work.
+        "seq": 0,
     }
     act_result = await graph_module.act_node(act_state)
     findings = act_result["findings"]
@@ -1725,6 +1737,10 @@ async def test_flagship_disease_row_hedges_its_citation_and_flags_its_payload_fi
         "query": _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT),
         "query_class": "lookup",
         "tool_calls": [planned],
+        # T-4.16-01: `seq` is a required GraphState key and every node
+        # reads it. act_node did not until this ticket gave it a sink, so
+        # this literal had been an incomplete state that happened to work.
+        "seq": 0,
     }
     act_result = await graph_module.act_node(act_state)
     findings = act_result["findings"]
@@ -2657,6 +2673,10 @@ async def test_act_dispatches_both_tools_for_a_gene_anchored_dual_plan(
         "query": _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT),
         "query_class": "lookup",
         "tool_calls": [cypher_planned, ncbi_planned],
+        # T-4.16-01: `seq` is a required GraphState key and every node
+        # reads it. act_node did not until this ticket gave it a sink, so
+        # this literal had been an incomplete state that happened to work.
+        "seq": 0,
     }
     act_result = await graph_module.act_node(act_state)
 

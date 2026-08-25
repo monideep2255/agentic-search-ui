@@ -165,10 +165,42 @@ class ToolStartPayload(BaseModel):
     call_id: str = Field(..., max_length=64)
     tool: ToolName
     layer: Layer
-    status: Literal["ok", "empty", "error"]
+    # T-4.16-01: `"running"` added. Additive within v1, which
+    # system-design-patterns pattern 10 permits by name ("a new optional
+    # field, a new enum value").
+    #
+    # WHY IT HAD TO BE ADDED RATHER THAN WORKED AROUND. This union was
+    # `Literal["ok", "empty", "error"]`, inherited unchanged by
+    # `ToolResultPayload` below, and build phase 4.16 is the first phase to
+    # actually EMIT a `tool_start`. A start event is written the instant
+    # before a tool is dispatched, so its outcome is not merely unknown, it
+    # does not exist yet. Every available value would therefore have been a
+    # claim about a call that had not run: emitting `"ok"` there asserts
+    # success before the fact, which is the same assert-what-you-have-not-
+    # checked shape build phase 4.3 shipped as a critical twice and build
+    # phase 4.7 hit again in its own gate. The type was wrong, not the
+    # caller.
+    #
+    # It is also what the UI already assumed. `useRunView.ts` line 231 reads
+    # `event.type === "tool_result" ? ... : "running"`, hardcoding this exact
+    # word for the chip's detail text since build phase 4.8, against an event
+    # nothing had ever emitted.
+    status: Literal["running", "ok", "empty", "error"]
 
 
 class ToolResultPayload(ToolStartPayload):
+    # Deliberately RE-NARROWED, not inherited. A result knows its outcome, so
+    # `"running"` is not a legal value here and this field must keep refusing
+    # it. Widening the parent and letting the child inherit the wider union
+    # would have made "the tool finished, and it is still running" a
+    # representable state, which is the kind of unrepresentable-made-
+    # representable that a schema exists to prevent.
+    #
+    # The accepted set on THIS model is byte-for-byte what it was before
+    # T-4.16-01, so no existing producer or consumer of a `tool_result`
+    # changes behaviour. Only `tool_start` widened.
+    status: Literal["ok", "empty", "error"]
+
     summary: str = Field(..., max_length=1000)
     result_count: int = Field(..., ge=0)
     truncated: bool

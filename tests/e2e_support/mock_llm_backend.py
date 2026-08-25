@@ -244,6 +244,24 @@ _ENV_DEFAULTS = {
     "PER_QUERY_COST_CAP_USD": "0.02",
     "PER_USER_DAILY_QUERY_CAP": "1000",
     "SYSTEM_DAILY_CAP_USD": "1000000",
+    # T-4.16-02. Its ABSENCE meant the entire guest path was unexercisable
+    # in the browser suite, and had been since build phase 4.10 built it.
+    #
+    # `cost_control.anon_daily_run_cap` reads this through `_read_int_env`,
+    # which RAISES `RuntimeError` when it is unset rather than defaulting.
+    # So every anonymous `POST /v1/query` against this backend 500'd, the
+    # connection reset, and the browser reported `net::ERR_FAILED` with no
+    # CORS headers on the response, which reads like a CORS or networking
+    # problem and is neither. Guest coverage was not failing, it was
+    # missing: no spec had ever asked a question without signing up first,
+    # which is exactly how the deployed demo is actually used.
+    #
+    # This is the same unset variable build phase 4.12 hit in production
+    # (its defect 3), fixed there and not here, because nothing local was
+    # exercising the path that needs it. 1000, matching the other caps
+    # above rather than `env.example`'s production 200, since a suite must
+    # never fail for having asked too many questions in a day.
+    "ANON_DAILY_RUN_CAP": "1000",
     "AUTH_SECRET": _TEST_AUTH_SECRET,
     "USER_DB_URL": "postgresql://localhost:5432/search_agent_users",
 }

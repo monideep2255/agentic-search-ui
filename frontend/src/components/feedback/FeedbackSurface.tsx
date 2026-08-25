@@ -73,6 +73,44 @@ const MAX_NOT_YET_CAPTURED_RETRIES = 3;
 type SendStatus = "idle" | "sending" | "retrying" | "sent" | "error";
 
 function Thumb({ down = false }: { down?: boolean }) {
+  /*
+   * T-4.16-10. The rotation is on an inner `<g>`, NOT on the `<svg>` itself,
+   * and that one move is the whole of the defect the product owner reported
+   * as "the feedback buttons were not working properly. The down arrow was
+   * outside the box."
+   *
+   * WHY THE OLD PLACEMENT BROKE IT. `transform` on the OUTERMOST `<svg>` is
+   * not an SVG transform, it is a CSS one, resolved in the element's own CSS
+   * pixel space rather than in the viewBox coordinate system. So
+   * `rotate(180 8 8)` rotated about a point 8 CSS pixels from the element's
+   * origin instead of about the centre of a `0 0 16 16` viewBox, displacing
+   * the whole glyph 16px down and to the right. On an inner `<g>` the same
+   * string is parsed as an SVG transform, where `8 8` is exactly the viewBox
+   * centre and the rotation is in place.
+   *
+   * MEASURED IN A REAL BROWSER, not reasoned about, because the two
+   * placements are one word apart and read identically:
+   *
+   *     UP    (no transform)              contained
+   *     DOWN  (transform on root <svg>)   OUTSIDE: right 8.5px, bottom 8.5px
+   *     DOWN  (transform on inner <g>)    contained
+   *
+   * AND WHY IT ALSO READ AS "NOT WORKING". The `<button>` stayed a correct
+   * 30x30 hit target the whole time; only the glyph moved. So the thumb a
+   * person could see sat outside the control it belonged to, and clicking
+   * what they saw missed the button entirely. One defect, two symptoms, and
+   * the functional one is a consequence of the visual one rather than a
+   * second bug.
+   *
+   * This is `LEARNINGS.md` rows 107 and 108 again: every frontend assertion
+   * in this repository checks what is on screen and never where it is, so a
+   * pure-geometry defect is invisible to all 211 of them. The guard is
+   * `e2e/feedback-submission.spec.ts`'s "both feedback thumbs render inside
+   * their own buttons", which measures bounding boxes in a real browser.
+   * Mutation-run before commit: restoring the `transform` to the `<svg>`
+   * fails it on the down thumb with an 8px right overflow and leaves the up
+   * thumb green, which is the asymmetry the defect actually had.
+   */
   return (
     <svg
       width={15}
@@ -83,10 +121,12 @@ function Thumb({ down = false }: { down?: boolean }) {
       strokeWidth={1.4}
       strokeLinejoin="round"
       aria-hidden="true"
-      transform={down ? "rotate(180 8 8)" : undefined}
+      data-testid={down ? "thumb-down-glyph" : "thumb-up-glyph"}
     >
-      <path d="M5.5 7 8.2 2.2a1.3 1.3 0 0 1 2.4.7V6h2.6a1.3 1.3 0 0 1 1.28 1.55l-.85 4.2A1.3 1.3 0 0 1 12.15 13H5.5z" />
-      <rect x={1.6} y={7} width={3.9} height={6} rx={0.8} />
+      <g transform={down ? "rotate(180 8 8)" : undefined}>
+        <path d="M5.5 7 8.2 2.2a1.3 1.3 0 0 1 2.4.7V6h2.6a1.3 1.3 0 0 1 1.28 1.55l-.85 4.2A1.3 1.3 0 0 1 12.15 13H5.5z" />
+        <rect x={1.6} y={7} width={3.9} height={6} rx={0.8} />
+      </g>
     </svg>
   );
 }

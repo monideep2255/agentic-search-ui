@@ -100,6 +100,58 @@ describe("AgentEvent union: every non-cost payload shape", () => {
     expect(parseAgentEvent("tool_result", event)).toEqual(event);
   });
 
+  /**
+   * T-4.16-01. These two are a pair and they guard opposite sides of one
+   * change, so neither is redundant.
+   *
+   * The first is the one that would have taken the deployed app down.
+   * The backend now emits `tool_start` with `status: "running"`, because a
+   * start event is written before dispatch and cannot know an outcome. This
+   * guard is a RUNTIME check, and `parseAgentEvent` THROWS on a payload it
+   * rejects rather than returning null. That throw propagates out of
+   * `consumeEventStream` into `useAgentRun`'s catch, which sets
+   * `status: "error"` and abandons the stream.
+   *
+   * So had the union been widened on the producer alone, every query would
+   * have died in the browser at the FIRST tool frame, with no answer shown
+   * at all. Not a dropped chip, a dead run. Recorded precisely because the
+   * first draft of this comment guessed "silently dropped", and the test
+   * below is what corrected it: the assertion was written as `toBeNull()`
+   * and failed, which is the whole argument for writing the test rather
+   * than reasoning about the guard.
+   *
+   * The second pins the re-narrowing. `isToolResultPayload` delegates to
+   * `isToolStartPayload`, so widening the start guard widens the result
+   * guard too unless it is stopped explicitly. A finished call reporting
+   * itself as still running would leave a chip spinning for ever.
+   */
+  it("accepts a tool_start carrying the running status", () => {
+    const payload: ToolStartPayload = {
+      call_id: "call-1",
+      tool: "cypher_query",
+      layer: "layer_1_graph",
+      status: "running",
+    };
+    const event = { ...BASE, type: "tool_start" as const, payload } satisfies AgentEvent;
+    expect(parseAgentEvent("tool_start", event)).toEqual(event);
+  });
+
+  it("rejects a tool_result claiming the running status", () => {
+    const payload = {
+      call_id: "call-1",
+      tool: "cypher_query",
+      layer: "layer_1_graph",
+      status: "running",
+      summary: "Found 3 matching gene nodes.",
+      result_count: 3,
+      truncated: false,
+    };
+    const event = { ...BASE, type: "tool_result", payload };
+    expect(() => parseAgentEvent("tool_result", event)).toThrow(
+      /does not match the "tool_result" payload schema/,
+    );
+  });
+
   it("accepts a token event, including one carrying marker_ids", () => {
     const payload: TokenPayload = {
       text: "CFTR is the gene most commonly implicated",

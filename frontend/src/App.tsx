@@ -71,11 +71,12 @@ import { useAgentRun } from "./hooks/useAgentRun";
 import { useRunView, EMPTY_RUN_VIEW } from "./hooks/useRunView";
 import { AuthGate } from "./components/auth/AuthGate";
 import { AppShell } from "./components/shell/AppShell";
-import type { ScreenName } from "./components/shell/AppShell";
+import { useScreenRoute } from "./lib/routing";
 import { HomeScreen } from "./components/screens/HomeScreen";
 import { RunScreen } from "./components/screens/RunScreen";
 import type { StepName } from "./components/screens/RunScreen";
 import { AnswerScreen } from "./components/screens/AnswerScreen";
+import type { PreviousTurn } from "./components/screens/AnswerScreen";
 import { AboutScreen, DocsScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
 import { GuestAllowance, SignInWall } from "./components/guest/GuestAllowance";
 import type { SignInWallReason } from "./components/guest/GuestAllowance";
@@ -103,7 +104,24 @@ const FOLLOW_UP_HINTS = [
 ];
 
 export function App() {
-  const [screen, setScreen] = useState<ScreenName>("search");
+  // T-4.16-05. Was `useState<ScreenName>("search")`, which is why every
+  // page served at `/` and the URL never changed. `useScreenRoute` is the
+  // same state plus the two directions of history sync; see
+  // `lib/routing.ts` for why this adds no router dependency.
+  const [screen, setScreen] = useScreenRoute();
+  /**
+   * The finished turns of the conversation now on screen (T-4.16-02).
+   *
+   * Held here rather than in `AnswerScreen` because it must survive that
+   * component unmounting while the next run is on the run screen, and
+   * because only this level knows the difference between continuing a
+   * conversation and starting one.
+   *
+   * Cleared by "New search" and by signing out, never trimmed: a reader who
+   * asked six follow-ups is entitled to all six, and the prototype's own
+   * `#thread` grows without a cap.
+   */
+  const [thread, setThread] = useState<PreviousTurn[]>([]);
   const [searchView, setSearchView] = useState<SearchView>({ name: "home" });
   /**
    * A guest identity this tab is holding (T-4.10-08), or `null` before one
@@ -358,7 +376,21 @@ export function App() {
   }, [view.landed, view.meta, searchView]);
 
   const ask = useCallback(
-    async (question: string, chosenDepth: AudienceDepth) => {
+    async (
+      question: string,
+      chosenDepth: AudienceDepth,
+      /**
+       * T-4.16-02. True only from the follow-up field, which continues the
+       * conversation; false from the landing screen and from the history
+       * rail, which start one.
+       *
+       * The flag is passed rather than inferred from `searchView.name`,
+       * because "the answer screen is showing" is not the same fact as
+       * "the reader chose to continue": "New search" is also on the answer
+       * screen and means the opposite.
+       */
+      continuesThread = false,
+    ) => {
       setDepth(chosenDepth);
       // F-4.10-A-05. This browser already turned its guest allowance into an
       // account, and the server revoked that guest session when it did.
@@ -398,6 +430,30 @@ export function App() {
           : [{ id: `${current.length}`, question }, ...current],
       );
       const seq = ++askSeq.current;
+      /*
+       * T-4.16-02. Archive the turn now on screen BEFORE anything resets,
+       * which is what the prototype's `archiveCurrent()` does at the top of
+       * `askFollowUp`.
+       *
+       * Ordering is load-bearing. `setRunId(null)` on the next line makes
+       * `view` fall back to `EMPTY_RUN_VIEW`, so a read taken after it
+       * would archive an empty turn: the right question with no answer
+       * under it. Guarded on `landed` so a run stopped or failed mid-flight
+       * is not filed away as if it had answered.
+       */
+      if (continuesThread && view.landed && searchView.name === "answer") {
+        const finished = searchView.question;
+        setThread((current) => [
+          ...current,
+          {
+            question: finished,
+            meta: view.meta,
+            claims: view.claims,
+            sources: view.sources,
+            trust: view.trust,
+          },
+        ]);
+      }
       setRunId(null);
       setStopped(false);
       setSearchView({ name: "run", question });
@@ -529,7 +585,10 @@ export function App() {
         setSearchView({ name: "answer", question });
       }
     },
-    [signedIn, token, guestToken, guestMigrated, sessionId],
+    // `view` and `searchView` joined the list when T-4.16-02 made `ask`
+    // archive the turn on screen: a stale closure here would file away the
+    // PREVIOUS conversation's last turn under this one's question.
+    [signedIn, token, guestToken, guestMigrated, sessionId, view, searchView],
   );
 
   const body = () => {
@@ -596,13 +655,21 @@ export function App() {
               stop();
               if (runId && authToken) void stopRun(runId, authToken).catch(() => undefined);
             }}
-            onNewSearch={() => setSearchView({ name: "home" })}
+            onNewSearch={() => {
+              // T-4.16-02: a new search is a new conversation, so the
+              // thread does not carry across. The follow-up field is the
+              // control that continues one; this is the control that does
+              // not, and they sit on the same screen.
+              setThread([]);
+              setSearchView({ name: "home" });
+            }}
           />
         );
       case "answer":
         return (
           <AnswerScreen
             question={searchView.question}
+            previousTurns={thread}
             claims={view.claims}
             sources={view.sources}
             trust={view.trust}
@@ -639,7 +706,7 @@ export function App() {
             followUp={
               <FollowUp
                 hints={FOLLOW_UP_HINTS}
-                onAsk={(next) => void ask(next, depth)}
+                onAsk={(next) => void ask(next, depth, true)}
               />
             }
             flaggedSources={flagged}
@@ -648,7 +715,14 @@ export function App() {
                 current.includes(n) ? current.filter((x) => x !== n) : [...current, n],
               )
             }
-            onNewSearch={() => setSearchView({ name: "home" })}
+            onNewSearch={() => {
+              // T-4.16-02: a new search is a new conversation, so the
+              // thread does not carry across. The follow-up field is the
+              // control that continues one; this is the control that does
+              // not, and they sit on the same screen.
+              setThread([]);
+              setSearchView({ name: "home" });
+            }}
           />
         );
       case "wall":
@@ -838,7 +912,14 @@ export function App() {
                 if (item) void ask(item.question, depth);
               }}
               onCollapse={() => setRailOpen(false)}
-              onNewSearch={() => setSearchView({ name: "home" })}
+              onNewSearch={() => {
+              // T-4.16-02: a new search is a new conversation, so the
+              // thread does not carry across. The follow-up field is the
+              // control that continues one; this is the control that does
+              // not, and they sit on the same screen.
+              setThread([]);
+              setSearchView({ name: "home" });
+            }}
               accountEmail={accountEmail ?? undefined}
               searchLimitLabel={capitalizeFirst(dailyLimitLine)}
             />

@@ -87,14 +87,45 @@ export interface PlanPayload {
   tool_calls: ToolCall[];
 }
 
+/**
+ * T-4.16-01: `"running"` added, mirroring `contracts/events.py`.
+ *
+ * A `tool_start` is written the instant before a tool is dispatched, so its
+ * outcome does not exist yet and every other member of this union would be
+ * a claim about a call that has not run.
+ *
+ * THIS FILE IS LOAD-BEARING FOR THAT CHANGE, not merely a type mirror.
+ * `isToolStartPayload` below is a runtime guard, and `parseAgentEvent`
+ * THROWS on a payload it rejects. That throw propagates out of
+ * `consumeEventStream` into `useAgentRun`'s catch, which sets
+ * `status: "error"` and abandons the stream.
+ *
+ * So while this union said only `ok | empty | error`, shipping the backend
+ * half alone would have killed EVERY query in the browser at the first tool
+ * frame, with no answer rendered at all. Not a missing chip, a dead run. A
+ * contract widened on the producer and not on its validator does not
+ * degrade, it fails hard on the first message.
+ */
+export type ToolStartStatus = "running" | "ok" | "empty" | "error";
+
+/** A result knows its outcome, so `"running"` is not one of its values. */
+export type ToolResultStatus = Exclude<ToolStartStatus, "running">;
+
 export interface ToolStartPayload {
   call_id: string;
   tool: ToolName;
   layer: Layer;
-  status: "ok" | "empty" | "error";
+  status: ToolStartStatus;
 }
 
 export interface ToolResultPayload extends ToolStartPayload {
+  /**
+   * Deliberately re-narrowed rather than inherited, matching
+   * `ToolResultPayload` in `contracts/events.py`. Inheriting the wider
+   * union would make "the tool finished, and it is still running" a
+   * representable state.
+   */
+  status: ToolResultStatus;
   summary: string;
   result_count: number;
   truncated: boolean;
@@ -306,18 +337,34 @@ function isPlanPayload(value: unknown): value is PlanPayload {
   );
 }
 
+function isToolStartStatus(value: unknown): value is ToolStartStatus {
+  return (
+    value === "running" || value === "ok" || value === "empty" || value === "error"
+  );
+}
+
 function isToolStartPayload(value: unknown): value is ToolStartPayload {
   return (
     isRecord(value) &&
     typeof value.call_id === "string" &&
     isToolName(value.tool) &&
     isLayer(value.layer) &&
-    (value.status === "ok" || value.status === "empty" || value.status === "error")
+    isToolStartStatus(value.status)
   );
 }
 
 function isToolResultPayload(value: unknown): value is ToolResultPayload {
   if (!isToolStartPayload(value)) {
+    return false;
+  }
+  // T-4.16-01. `isToolStartPayload` now admits `"running"`, and this guard
+  // delegates to it, so without this line widening the start payload would
+  // have silently widened the RESULT payload too and let a finished call
+  // report itself as still running. The re-narrowing that
+  // `ToolResultPayload` states in its type has to be enforced here as well,
+  // because the type is erased at runtime and this guard is what actually
+  // decides.
+  if (value.status === "running") {
     return false;
   }
   // Cast through `unknown` rather than directly to `Record<string,

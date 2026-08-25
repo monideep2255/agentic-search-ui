@@ -1,0 +1,118 @@
+/**
+ * Client-side routing for the four top-level screens.
+ *
+ * T-4.16-05, the product owner's defect 6 from the live demo: "NO
+ * CLIENT-SIDE ROUTING. Every page is served at `/` and the URL never
+ * changes." The routes were given verbatim and are the whole contract:
+ *
+ *     Home          /
+ *     Integrations  /integrations
+ *     About         /about
+ *     Docs          /docs
+ *
+ * WHY NO ROUTER DEPENDENCY. `frontend/package.json` has none today, and
+ * this adds none. `production-standards.md` requires a security review for
+ * every new dependency and `system-design-patterns` puts that in the ASK
+ * bucket, which would be the right thing to pay for a routing library that
+ * earned it. This does not: there are four static paths, no parameters, no
+ * nested layouts, no loaders, and one already-existing piece of state
+ * (`App.tsx`'s `screen`) that a router would only end up mirroring. The
+ * History API covers it in a few lines, adds nothing to the bundle, and
+ * introduces no new execution surface. If this app later grows real route
+ * parameters or nested layouts, revisit it then and pay for the review
+ * properly rather than pre-paying now.
+ *
+ * WHY DEEP LINKS ALREADY WORK ON THE SERVER, so nothing outside this file
+ * changes: the frontend is served by `serve -s dist` (`package.json`'s
+ * `serve` script), and `-s` is single-page-app mode, which rewrites an
+ * unknown path to `index.html`. So `/integrations` has always reached the
+ * app; there was simply no code to read it. `tracker/phase_4.12.md` records
+ * the same conclusion.
+ */
+
+import { useEffect, useState } from "react";
+
+import type { ScreenName } from "../components/shell/AppShell";
+
+/**
+ * The one mapping, screen to path. Deliberately not two objects: a
+ * hand-maintained inverse is how the two halves drift, and `screenForPath`
+ * below derives its direction from this rather than restating it.
+ */
+export const PATH_BY_SCREEN: Record<ScreenName, string> = {
+  search: "/",
+  integrations: "/integrations",
+  about: "/about",
+  docs: "/docs",
+};
+
+/** The landing screen, and the answer for any path this app does not own. */
+export const DEFAULT_SCREEN: ScreenName = "search";
+
+/**
+ * Resolve a URL path to a screen.
+ *
+ * An unknown path falls back to the landing screen rather than rendering
+ * nothing. `serve -s` has already rewritten it to `index.html`, so by the
+ * time this runs the alternative is a blank page, which is the one outcome
+ * `production-standards.md`'s graceful-degradation gate rules out.
+ *
+ * A trailing slash is tolerated (`/about/` is `/about`) because a person
+ * typing or a link generator adding one is not a different page. The root
+ * is special-cased first so `"/"` does not normalise to `""`.
+ */
+export function screenForPath(pathname: string): ScreenName {
+  const normalized =
+    pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  const match = (Object.keys(PATH_BY_SCREEN) as ScreenName[]).find(
+    (screen) => PATH_BY_SCREEN[screen] === normalized,
+  );
+  return match ?? DEFAULT_SCREEN;
+}
+
+/**
+ * Keep one `ScreenName` and the address bar in step, in both directions.
+ *
+ * Returns the current screen and a setter that also pushes history, so a
+ * caller replaces its `useState<ScreenName>` with this and changes nothing
+ * else. The two directions are genuinely different and both are needed:
+ *
+ * - Forward: navigating in the app pushes a new entry, so the URL is
+ *   shareable and the back button has somewhere to go.
+ * - Back: the browser's back and forward buttons fire `popstate`, which
+ *   this listens for and turns into a state change. Without that half the
+ *   URL would change and the page would not, which is worse than no
+ *   routing at all because the address bar would then be lying.
+ *
+ * `pushState` is skipped when the path is already correct. Otherwise
+ * clicking the current nav item would stack duplicate history entries and
+ * the back button would appear stuck.
+ *
+ * MUTATION-PROVEN, not argued. Removing the `popstate` effect below leaves
+ * `e2e/routing.spec.ts`'s URL arm and deep-link arm GREEN and fails only
+ * its back-button arm, with "the URL went back but the page did not, so
+ * the address bar is lying". Run before this landed. That asymmetry is the
+ * point: three of the four arms cannot see the difference between routing
+ * and half-routing.
+ */
+export function useScreenRoute(): [ScreenName, (next: ScreenName) => void] {
+  const [screen, setScreenState] = useState<ScreenName>(() =>
+    screenForPath(window.location.pathname),
+  );
+
+  useEffect(() => {
+    const onPopState = () => setScreenState(screenForPath(window.location.pathname));
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const navigate = (next: ScreenName) => {
+    setScreenState(next);
+    const path = PATH_BY_SCREEN[next];
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, "", path);
+    }
+  };
+
+  return [screen, navigate];
+}
