@@ -77,7 +77,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5 and 4.0 through 4.12. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), with CD watching `develop`. Next: the UI defects the live demo surfaced, then CI (build phase 4.14), then 5.0 and 5.1 for tracing and the eval harness. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
+| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5 and 4.0 through 4.12. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), with CD watching `develop`. Build phase 4.16, the UI defects the live demo surfaced, is in review with its pull request about to open. Next after that: CI (build phase 4.14), then 5.0 and 5.1 for tracing and the eval harness. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
 
 ### Build phase detail
 
@@ -111,6 +111,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | 4.13 | Durable cross-reload search history over the interactions rows 4.6 writes | Not started |
 | 4.14 | CI: the ten merge-blocking gates from Section 24 | Not started, pulled forward from 6.1 by product-owner decision 2026-08-24 |
 | 4.15 | Two Railway environments and a release-branch flow, so develop and production deploy separately | Not started, inserted by product-owner decision 2026-08-24 |
+| 4.16 | The seven UI defects the product owner reported from the live demo: streaming visibility, the answer-screen presentation, a follow-up conversation thread, the integrations page, client-side routing, and the feedback thumb glyph | In review, inserted by product-owner decision 2026-08-25, pull request about to open |
 
 Per-phase narrative, including what each review round found and what it cost, is `requirements/Plan.md`'s Revision history. Per-phase tickets and evidence are `tracker/phase_N.M.md`.
 
@@ -263,4 +264,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-08-24
+Last updated: 2026-08-25
