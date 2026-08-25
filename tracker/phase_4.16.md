@@ -3,7 +3,7 @@
 Branch: `phase/4.16-ui-streaming-fidelity`
 Depends on: 4.12, merged 2026-08-24 as PR #61
 Opened: 2026-08-25
-Status: OPEN. Scouted, root cause measured, backend premise gate written and watched failing 5 of 5. No product code written yet.
+Status: OPEN. T-4.16-01 and T-4.16-07 DONE, defects 1 and 3's cause closed on both sides of the wire. Five defects remain.
 
 Inserted 2026-08-25 by product-owner decision, the fifth such exception after 4.8, 4.10, 4.11/4.12 and 4.14/4.15. Section 25 does not contain it. It exists because build phase 4.12 put the product in front of a person for the first time, and that person found six defects that no suite in this repository can see.
 
@@ -15,6 +15,7 @@ Inserted 2026-08-25 by product-owner decision, the fifth such exception after 4.
 - [The constraint is the node boundary, not the missing emit](#the-constraint-is-the-node-boundary-not-the-missing-emit)
 - [What the design actually specifies, read rather than assumed](#what-the-design-actually-specifies-read-rather-than-assumed)
 - [Tickets](#tickets)
+- [The near miss, recorded because it was one line from shipping](#the-near-miss-recorded-because-it-was-one-line-from-shipping)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
 - [History](#history)
 
@@ -99,13 +100,14 @@ So the fix for defect 1 is NOT to stream answer text into the run screen. Neithe
 
 | Ticket | What | Status |
 |--------|------|--------|
-| T-4.16-01 | Emit `tool_start` and `tool_result` from the Act step AT DISPATCH TIME, not at node return, so the eleven-second silence becomes the tool chips both design artifacts show. Needs `get_stream_writer` plus a multi-mode `astream` in `core/run.py`, not just an `emit` call in `core/graph.py`. See the section above for why the obvious version fixes nothing. Closes defects 1 and 3's cause | todo |
+| T-4.16-01 | DONE, `1786b02` and `4dd4752`. Emit `tool_start` and `tool_result` from the Act step AT DISPATCH TIME, not at node return, so the eleven-second silence becomes the tool chips both design artifacts show. Needs `get_stream_writer` plus a multi-mode `astream` in `core/run.py`, not just an `emit` call in `core/graph.py`. See the section above for why the obvious version fixes nothing. Closes defects 1 and 3's cause | todo |
 | T-4.16-02 | Reproduce defect 2 in a browser BEFORE writing a fix, then fix it. `ask()` reads correct on inspection, so the cause is not visible from the source and a fix written from reading would be a guess | todo |
 | T-4.16-03 | Answer presentation against the component cards, never the prototype, per `Design_to_build_workflow.md`. Scope set only after a screenshot comparison against each card, which is the step build phase 4.9 recorded as the only thing that finds this class | todo |
 | T-4.16-04 | Integrations page corrected to the surfaces that actually shipped. Four concrete errors listed below | todo |
 | T-4.16-05 | Client-side routing: `/`, `/integrations`, `/about`, `/docs`. `serve -s dist` is already SPA mode, so deep links resolve once routes exist and no server change is needed | todo |
-| T-4.16-06 | The premise gate, written first and watched failing. Every arm carries a populate-check from its first line | in progress. Backend arms landed: `tests/system_03_search_agent/core/test_phase_4_16_premise.py`, 5 arms, all 5 red for the right reason with every populate-check passing first. Frontend arms (routing, integrations, second turn) not yet written |
-| T-4.16-07 | The offline mutation harness for this gate, per build phase 4.7's durable fix | todo |
+| T-4.16-06 | Backend arms DONE, frontend arms open. The premise gate, written first and watched failing. Every arm carries a populate-check from its first line | in progress. Backend arms landed: `tests/system_03_search_agent/core/test_phase_4_16_premise.py`, 5 arms, all 5 red for the right reason with every populate-check passing first. Frontend arms (routing, integrations, second turn) not yet written |
+| T-4.16-07 | DONE, `1786b02`. The offline mutation harness, 7 cases over all 5 arms. M1 applies the plausible wrong fix in process and pins A3 red on its TIMING branch, closing the gap the gate recorded about itself | done |
+| T-4.16-09 | An end-to-end arm that LOOKS AT a rendered tool chip. No Playwright spec in this repository has ever emitted a `tool_start`, and only one has ever emitted a `tool_result`, so the chip path has never been exercised in a browser. Nothing at the hook level feeds `tool_start` either | todo |
 | T-4.16-08 | Re-measure the Act step after T-4.16-01 lands and decide whether defect 3 has any residue once the wait is legible. Deliberately NOT a performance ticket yet | todo |
 
 T-4.16-04's four errors, each verified against the code rather than reported from the page:
@@ -114,6 +116,19 @@ T-4.16-04's four errors, each verified against the code rather than reported fro
 - The KGX card prints `POST /v1/export/kgx`. No such route exists in `adapters/`. KGX export ships as the `s3-kgx-export` console script, which is what build phase 4.4 delivered.
 - The MCP card prints an elided `https://.../mcp` rather than the deployed URL, so it cannot be copied and used.
 - GraphQL is absent from the page entirely. It shipped in build phase 4.3 as PR #48 and is mounted at `/graphql` (`adapters/graphql/router.py`, line 70). The page's own lede says "reachable four ways" and there are five.
+
+## The near miss, recorded because it was one line from shipping
+
+T-4.16-01 was very nearly delivered as a backend-only change. It would have taken the deployed application DOWN rather than merely underdelivering, and the reasoning that nearly allowed it is worth keeping.
+
+`frontend/src/lib/events.ts` re-validates every frame on receipt, and `isToolStartPayload` required `status` to be one of `ok`, `empty` or `error`. The widened producer emits `running`. Two things then had to be established rather than assumed:
+
+- What rejection DOES. The first draft of the fix's own comment said the browser would "silently drop" the frame. That was wrong. `parseAgentEvent` THROWS, the throw leaves `consumeEventStream`, and `useAgentRun`'s catch sets `status: "error"` and abandons the stream. So every query would have died in the browser at the first tool frame with no answer rendered at all.
+- How that was established. The test asserting rejection was written as `toBeNull()` and FAILED, which is what corrected the belief. Reading the guard had produced the wrong answer twice, once in the fix's comment and once in the test's first assertion.
+
+A second, quieter half: `isToolResultPayload` delegates to `isToolStartPayload`, so widening the start guard silently widened the result guard too. A finished call could have reported itself as still running, leaving a chip spinning for ever. The type says it is re-narrowed, but a TypeScript type is erased at runtime and the guard is what actually decides, so it had to be re-narrowed there as well.
+
+THE GENERAL FORM: a contract widened on the producer and not on its validator does not degrade gracefully, it fails hard on the first message. And the direction of the failure is not guessable from reading the validator, which is why it needed a test rather than an argument.
 
 ## Coverage: what this phase does not cover
 
@@ -129,5 +144,6 @@ Stated up front so a gap in it is arguable rather than discovered, per `goal-con
 - 2026-08-25: Opened after the product owner ranked the UI defects ahead of build phase 4.14. Preflight READY on all three transports.
 - 2026-08-25: Scouted before writing. Measured the deployed SSE stream frame by frame, found the 10.9-second Act silence, and traced it to `tool_start` and `tool_result` never being emitted. Corrected two recorded claims in `tracker/phase_4.12.md` in the process.
 - 2026-08-25: Read both design artifacts before scoping defect 1, and found that neither specifies streaming answer text, which redirected the ticket from the browser to the Act step.
+- 2026-08-25: T-4.16-01 and T-4.16-07 landed. Gate 5 of 5 green, mutation harness 7 of 7, suite 3942 passed with zero failed, frontend 211, typecheck and production build clean, ruff clean, drift 0 stale 0 structural. Five `test_graph.py` `act_state` literals gained the required `seq` key: they were incomplete `GraphState`s that only worked while `act_node` did not read it, and the fixtures were corrected rather than softening the code to `state.get("seq", 0)`, which would let a mid-run seq collision pass silently. No assertion was weakened.
 - 2026-08-25: Backend premise gate written and watched failing, 5 arms, 5 red. A5's failure message printed the production event list verbatim, `guard cost think cost plan cost token citation trust_signal trust_signal cost done`, which is the deployed trace with no tool frame in it. TWO GAPS IN THE GATE RECORDED IN ITS OWN DOCSTRING rather than left to a reviewer: A3 stops at its presence check and never reaches the timing comparison that is its whole reason for existing, and A4's populate-check is currently what fails, so it proves nothing A1 does not. Both are closed by T-4.16-07's mutation, not by reading. One defect found in the gate's own fixture while watching it fail: the daily-cap stubs were written `async` against two sync call sites, so every run logged `coroutine ... was never awaited` and the stub silently did not run.
 - 2026-08-25: Corrected T-4.16-01 before writing any code. Events flush at node return, so emitting inside `act_node`'s loop would have delivered every tool event in one burst at 12.3 seconds and changed nothing visible. The node boundary is the constraint, not the missing emit.
