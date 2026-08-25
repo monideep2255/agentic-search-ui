@@ -265,11 +265,11 @@ Estimated monthly cost for the full System 3 deployment:
 
 | Item | Estimated cost |
 |------|---------------|
-| Knowledge graph hosting (Hetzner CPX42, 8 vCPU, 16 GB, 320 GB NVMe) | ~$28/month |
+| Knowledge graph hosting (Hetzner CPX42, 8 vCPU, 16 GB, 320 GB NVMe), including tax | ~$35/month |
 | Railway Hobby plan: four services in one production environment | $5/month today, up to ~$15 under sustained traffic |
 | LLM API costs (Anthropic + OpenAI, depending on query volume) | ~$10-50/month |
 | Domain + TLS, once a custom domain replaces the `*.up.railway.app` subdomains | ~$1/month |
-| Total | ~$44-94/month |
+| Total | ~$51-101/month |
 
 The Railway line covers the four services build phase 4.12 deployed:
 

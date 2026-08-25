@@ -304,15 +304,28 @@ Verified pricing as of 2026-04-22 (post-April-1-2026 Hetzner adjustment, which r
 | Primary IPv4 address | included | $0 |
 | Snapshot `ncbi_kg_v1_2026-04-22` (28 GB compressed × €0.0143/GB/mo) | €0.40 | ~$0.43 |
 | Bandwidth (20 TB/month included for EU; expected use under 1 GB) | €0 | $0 |
-| **Total all-in** | **€26.39** | **~$28.50** |
+| **Total before tax** | **€26.39** | **~$28.50** |
+| **Actual charge including tax** | | **~$35.00** |
 
-Round to $30/month for FX volatility headroom. The earlier $34/month estimate was stale; it predates the April 1, 2026 pricing publication and assumed USD-zone Hetzner pricing rather than EU. Sources: hetzner.com/cloud/regular-performance, docs.hetzner.com/general/infrastructure-and-availability/price-adjustment, docs.hetzner.com/general/infrastructure-and-availability/ipv4-pricing.
+Two figures, and the difference between them matters:
+
+- Rate card, before tax: ~$28.50/month. That is what Hetzner lists.
+- Actual invoice, including tax: ~$35/month. That is what leaves the account.
+
+The roughly 23 percent gap is VAT plus drift from the €1≈$1.08 rate this table assumes. The $35 figure was confirmed by the product owner against the real invoice on 2026-08-25. Budget against $35.
+
+Superseded note, kept for the record: the earlier $34/month estimate was stale, since it predates the April 1, 2026 pricing publication and assumed USD-zone Hetzner pricing rather than EU.
+
+Sources:
+
+- hetzner.com/cloud/regular-performance
+- docs.hetzner.com/general/infrastructure-and-availability/price-adjustment
+- docs.hetzner.com/general/infrastructure-and-availability/ipv4-pricing
 
 Steady-state alternative if you ever downsize: CPX32 (8 vCPU, 16 GB RAM, 160 GB NVMe) at €19.99/mo ≈ $21.60/mo. Saves about €6/mo (~$6.50). With the snapshot, all-in would be roughly €20.39/mo ≈ ~$22/mo.
 
 Important: Hetzner does NOT allow disk shrink on rescale. The "Rescale" action shows CPX52, CPX62, etc. but greys out CPX32 because the local disk cannot be reduced below the current allocation. The actual downgrade path is a snapshot-restore-to-new-server flow.
 
-Important: Hetzner does NOT allow disk shrink on rescale. The "Rescale" action shows CPX52, CPX62, etc. but greys out CPX32 because the local disk cannot be reduced below the current allocation. The actual downgrade path is a snapshot-restore-to-new-server flow.
 
 Downgrade procedure (only after a verified snapshot):
 
@@ -386,4 +399,4 @@ The Postgres process gets OOM-killed during a load: confirm swap is mounted (`fr
 - AGE loader explainer: [docs/architecture/AGE_loader_explained.md](docs/architecture/AGE_loader_explained.md)
 - Health sweep snapshot: [tests/cypher/health_sweep_2026-04-22.txt](tests/cypher/health_sweep_2026-04-22.txt)
 
-Last updated: 2026-04-22
+Last updated: 2026-08-25
