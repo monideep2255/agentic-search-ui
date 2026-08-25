@@ -26,6 +26,23 @@ PAIRS=(
     "$TARGET/system_03_search_agent/tools/graph_connection.py|src/system_03_search_agent/tools/graph_connection.py"
     "$TARGET/system_03_search_agent/tools/graph_http_transport.py|src/system_03_search_agent/tools/graph_http_transport.py"
     "$TARGET/services/graph_query_service/app.py|services/graph_query_service/app.py"
+    # Build phase 4.12. The Caddyfile was NOT checked here, and it is the one
+    # file whose own header comment says a hand-edit "is invisible to this
+    # repository and survives until it causes an outage nobody can explain".
+    # The file warning about invisible edits was the file this script could
+    # not see, so the warning was unenforceable exactly where it was written.
+    #
+    # It matters more after build phase 4.12 than before it: the Caddyfile now
+    # carries a SECURITY control (`header_up X-Forwarded-For {remote_host}`,
+    # closing F-4.11-RV-02). Someone removing that line on the box while
+    # debugging a proxy problem would silently return the service to one
+    # safeguard instead of two, and nothing would report it.
+    #
+    # Note the asymmetry with every pair above: those live under $TARGET,
+    # because deploy.sh copies the service tree there. The Caddyfile is
+    # installed to /etc/caddy/Caddyfile instead, which is Caddy's own
+    # location, so this pair is absolute rather than $TARGET-relative.
+    "/etc/caddy/Caddyfile|services/graph_query_service/deploy/Caddyfile"
 )
 
 status=0

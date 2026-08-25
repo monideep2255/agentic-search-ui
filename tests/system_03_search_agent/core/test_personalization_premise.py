@@ -222,7 +222,6 @@ import asyncio
 import datetime
 import os
 import re
-import socket
 import time
 import uuid
 from pathlib import Path
@@ -404,18 +403,25 @@ def _load_env_explicitly() -> None:
 
 
 def _graph_is_reachable() -> bool:
-    """Whether the graph answers right now (F-2.1-B12: checked per test, not
-    once at import; the tunnel is a manual process that can drop)."""
-    _load_env_explicitly()
-    host = os.environ.get("GRAPH_PG_HOST")
-    port = os.environ.get("GRAPH_PG_PORT")
-    if not host or not port:
-        return False
-    try:
-        with socket.create_connection((host, int(port)), timeout=3):
-            return True
-    except (OSError, ValueError):
-        return False
+    """Whether Layer 1 answers right now, over whichever transport is live.
+
+    Build phase 4.12. This used to open a TCP socket to `GRAPH_PG_HOST` and
+    `GRAPH_PG_PORT`, the local port of the SSH tunnel build phase 4.11
+    deleted. Measured 2026-08-24 on a machine where the graph was perfectly
+    reachable over HTTPS: that probe returned False with
+    ConnectionRefusedError, so every live arm behind this gate SKIPPED while
+    printing a reason that was false. A green run then reads as "this class
+    is covered" when the arms never ran.
+
+    Delegates to `tests.system_03_search_agent.graph_gate`, the ONE
+    implementation, which dispatches on `GRAPH_QUERY_URL` exactly as
+    `graph_connection.execute_cypher` and `tracker/preflight.py` do. Eight
+    corrected copies would have left eight places for the next transport
+    change to be applied seven times.
+    """
+    from tests.system_03_search_agent.graph_gate import live_graph_arms_enabled
+
+    return live_graph_arms_enabled()
 
 
 def _model_is_configured() -> bool:
@@ -1229,6 +1235,12 @@ async def _synth_messages_for(session_memory: Any | None) -> list[dict[str, str]
         step: str,
         messages: list[dict[str, str]],
         budget_s: float,
+        # F-4.12-01 threaded an optional per-call max_tokens through
+        # `_dispatch_tier_call`. Accepted and ignored here: this stub captures
+        # MESSAGES, and the cap does not affect them. **kwargs rather than a
+        # named parameter so a future additive argument does not break the
+        # stub again for a reason that has nothing to do with what it grades.
+        **_ignored: Any,
     ) -> Any:
         if tier == "synth":
             captured.append([dict(message) for message in messages])
@@ -1288,6 +1300,12 @@ async def _step_messages_for(
         dispatched_step: str,
         messages: list[dict[str, str]],
         budget_s: float,
+        # F-4.12-01 threaded an optional per-call max_tokens through
+        # `_dispatch_tier_call`. Accepted and ignored here: this stub captures
+        # MESSAGES, and the cap does not affect them. **kwargs rather than a
+        # named parameter so a future additive argument does not break the
+        # stub again for a reason that has nothing to do with what it grades.
+        **_ignored: Any,
     ) -> Any:
         captured.append([dict(message) for message in messages])
         raise HarnessCallError("captured by the premise gate", error_class="transient")

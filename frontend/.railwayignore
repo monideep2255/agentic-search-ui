@@ -1,0 +1,34 @@
+# The frontend service is deployed from THIS directory, not the repository
+# root, so the root `.railwayignore` does not apply to it and these exclusions
+# have to be restated here rather than inherited.
+#
+# Why deploy from here at all: Railway reads `railway.json` relative to a
+# service's root directory. Running `railway up --service search-agent-web`
+# from the repository root would pick up the ROOT `railway.json`, which is the
+# API's uvicorn config, and deploy a Python start command to the static
+# frontend service. Deploying from this directory picks up
+# `frontend/railway.json`, which is the correct one.
+
+# Rebuilt by `npm ci` from the committed lockfile inside the build, which is
+# the entire reason the lockfile is committed.
+node_modules/
+
+# Rebuilt by `npm run build` inside the build. Uploading a locally-built dist
+# would also mean shipping whatever was last built on someone's laptop rather
+# than what the lockfile produces, which is the class of difference that is
+# invisible until it matters.
+dist/
+
+# Test and tooling caches, all machine-local.
+.vite/
+coverage/
+playwright-report/
+test-results/
+node_modules/.cache/
+
+# Local environment files. Railway variables are the deploy-time source, and
+# `railway up` indexes the working directory rather than the git index, so
+# being gitignored does NOT exclude a file here.
+.env
+.env.local
+.env.*.local

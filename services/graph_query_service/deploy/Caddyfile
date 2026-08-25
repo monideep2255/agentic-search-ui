@@ -16,7 +16,31 @@
 static.133.128.225.46.clients.your-server.de {
 	# The service listens on loopback only. This proxy is the sole way in,
 	# which is why the service never needs to bind a public interface.
-	reverse_proxy 127.0.0.1:8080
+	reverse_proxy 127.0.0.1:8080 {
+		# F-4.11-RV-02, closed by build phase 4.12.
+		#
+		# REPLACE the header, never append to it. Caddy's default with no
+		# directive at all is to APPEND, so a caller sending its own
+		# X-Forwarded-For produced "forged, real" and the header carried
+		# attacker-controlled text. `app.py`'s `_client_address` reads only
+		# the rightmost element, which is what kept that safe, and it was
+		# the ONLY thing that did.
+		#
+		# `header_up X-Forwarded-For {remote_host}` with a bare value
+		# replaces. A leading plus (`+X-Forwarded-For`) would append and
+		# reads almost identically, which is why the premise gate asserts
+		# the exact form rather than the substring.
+		#
+		# {remote_host} is the immediate peer address Caddy itself observed
+		# on the connection. It is not derived from any incoming header, so
+		# nothing a caller sends can influence it.
+		#
+		# This is the SECOND layer, never a replacement for the first. The
+		# rightmost-element rule stays in `app.py`, and the premise gate
+		# asserts both together in one arm so neither can be traded away
+		# for the other later.
+		header_up X-Forwarded-For {remote_host}
+	}
 
 	# Bound the request body. The payload is one Cypher template plus its
 	# parameters, so anything approaching a megabyte is not a real caller.

@@ -610,3 +610,87 @@ def test_p8_trust_signal_message_states_the_same_fact_as_the_answer_text():
     assert len(message) <= 500, (
         f"message is {len(message)} chars, over TrustSignalPayload's bound"
     )
+
+
+# ---------------------------------------------------------------------------
+# P9: an alias-ambiguous symbol still resolves to its OWN gene.
+# ---------------------------------------------------------------------------
+
+#: A real gene whose `[sym]` ESearch returns MORE THAN ONE id, because NCBI
+#: indexes that tag against alias and synonym tables as well as the approved
+#: symbol. Probed live 2026-08-24: `GCK[sym] AND human[orgn]` returns
+#: ['2645', '56975', '5871']. 2645 is GCK; the other two match by alias.
+ALIAS_AMBIGUOUS_SYMBOL = "GCK"
+ALIAS_AMBIGUOUS_GENE_ID = "2645"
+
+
+@premise_gate
+@pytest.mark.asyncio
+async def test_p9_an_alias_ambiguous_symbol_resolves_to_its_own_gene():
+    """The refusal this closes was over-strict, not wrong-headed.
+
+    The rule it replaces ("zero or multiple ids resolve to None rather than
+    guessing among them") exists because a `[sym]`-tagged match is not proof
+    the returned gene's OWN symbol is the one searched for. That reasoning is
+    correct and is NOT being relaxed: what changes is that the answer is
+    looked up rather than assumed absent.
+
+    The resolver already confirms the official symbol for a single hit. It
+    simply never did so for a multi-hit, and so refused `GCK`, a real gene
+    with a real record, because two OTHER genes list it as an alias. Measured
+    live on the deployed demo, 2026-08-24: "Variants in GCK causing MODY"
+    returned "I could not identify that gene. NCBI has no record matching the
+    name in your question", which is a false statement about a gene NCBI
+    plainly has.
+
+    The safety property is unchanged and is asserted here: EXACTLY ONE
+    candidate may claim the symbol as its own. Zero still refuses, and so
+    does more than one.
+    """
+    from system_03_search_agent.core.graph import resolve_symbol_to_curie
+
+    # POPULATE-CHECK first: the live control resolves, so a None below is
+    # about this symbol rather than about a dead lookup path.
+    live = await resolve_symbol_to_curie(LIVE_SYMBOL)
+    assert live == f"NCBIGene:{LIVE_GENE_ID}", (
+        f"the control symbol {LIVE_SYMBOL} did not resolve (got {live!r}); "
+        "the lookup path is dead and this arm would prove nothing"
+    )
+
+    resolved = await resolve_symbol_to_curie(ALIAS_AMBIGUOUS_SYMBOL)
+    assert resolved == f"NCBIGene:{ALIAS_AMBIGUOUS_GENE_ID}", (
+        f"{ALIAS_AMBIGUOUS_SYMBOL} resolved to {resolved!r}. It must resolve "
+        f"to NCBIGene:{ALIAS_AMBIGUOUS_GENE_ID}, the gene whose OWN official "
+        "symbol is that string, rather than being refused because two other "
+        "genes list it as an alias"
+    )
+
+
+def test_p9b_ambiguity_still_refuses_when_no_candidate_owns_the_symbol():
+    """The half that must NOT be relaxed.
+
+    Selecting among candidates is only safe because exactly one of them can
+    claim the symbol as its own official name. If none can, or if two could,
+    the original refusal is still the right answer, and this arm is what
+    stops the fix from degrading into "pick the first hit".
+    """
+    from system_03_search_agent.core.graph import _select_candidate_owning_symbol
+
+    def rec(uid, name):
+        return type("R", (), {"id": uid, "fields": {"name": name}})()
+
+    # None of the three owns "GCK": all match by alias only.
+    assert _select_candidate_owning_symbol(
+        [rec("1", "HK4"), rec("2", "MODY2"), rec("3", "HHF3")], "GCK"
+    ) is None
+
+    # Two claim it: genuinely ambiguous, refuse.
+    assert _select_candidate_owning_symbol(
+        [rec("1", "GCK"), rec("2", "GCK")], "GCK"
+    ) is None
+
+    # Exactly one owns it, among decoys.
+    chosen = _select_candidate_owning_symbol(
+        [rec("56975", "CTDP1"), rec("2645", "GCK"), rec("5871", "MAP4K2")], "GCK"
+    )
+    assert chosen is not None and chosen.id == "2645"

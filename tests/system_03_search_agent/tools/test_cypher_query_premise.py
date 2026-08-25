@@ -54,17 +54,12 @@ Writes:
 from __future__ import annotations
 
 import os
-import socket
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-
-_REOPEN_TUNNEL_CMD = (
-    "ssh -o BatchMode=yes -f -N -L 15432:127.0.0.1:5432 root@46.225.128.133"
-)
 
 # Ground truth, live graph, 2026-07-31. See the module docstring.
 BRCA1 = "NCBIGene:672"
@@ -105,22 +100,25 @@ def _load_env_explicitly() -> None:
 
 
 def _graph_is_reachable() -> bool:
-    """Whether the graph answers right now.
+    """Whether Layer 1 answers right now, over whichever transport is live.
 
-    Finding F-2.1-B12: checked fresh per test rather than once at import.
-    The tunnel is a manual, long-lived SSH process that can drop
-    mid-session, and a guard evaluated at import cannot notice that.
+    Build phase 4.12. This used to open a TCP socket to `GRAPH_PG_HOST` and
+    `GRAPH_PG_PORT`, the local port of the SSH tunnel build phase 4.11
+    deleted. Measured 2026-08-24 on a machine where the graph was perfectly
+    reachable over HTTPS: that probe returned False with
+    ConnectionRefusedError, so every live arm behind this gate SKIPPED while
+    printing a reason that was false. A green run then reads as "this class
+    is covered" when the arms never ran.
+
+    Delegates to `tests.system_03_search_agent.graph_gate`, the ONE
+    implementation, which dispatches on `GRAPH_QUERY_URL` exactly as
+    `graph_connection.execute_cypher` and `tracker/preflight.py` do. Eight
+    corrected copies would have left eight places for the next transport
+    change to be applied seven times.
     """
-    _load_env_explicitly()
-    host = os.environ.get("GRAPH_PG_HOST")
-    port = os.environ.get("GRAPH_PG_PORT")
-    if not host or not port:
-        return False
-    try:
-        with socket.create_connection((host, int(port)), timeout=3):
-            return True
-    except (OSError, ValueError):
-        return False
+    from tests.system_03_search_agent.graph_gate import live_graph_arms_enabled
+
+    return live_graph_arms_enabled()
 
 
 def _model_is_configured() -> bool:
@@ -132,8 +130,8 @@ premise_gate = pytest.mark.skipif(
     not (_graph_is_reachable() and _model_is_configured()),
     reason=(
         "the premise gate needs the live graph AND a real model key, since "
-        "its whole purpose is to exercise generation. Reopen the tunnel "
-        f"with: {_REOPEN_TUNNEL_CMD}"
+        "its whole purpose is to exercise generation. Check .env and "
+        "`python3 tracker/preflight.py --transport graph`"
     ),
 )
 

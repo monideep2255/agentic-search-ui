@@ -123,7 +123,6 @@ from __future__ import annotations
 
 import os
 import re
-import socket
 import uuid
 from datetime import UTC
 from pathlib import Path
@@ -177,18 +176,25 @@ def _load_env_explicitly() -> None:
 
 
 def _graph_is_reachable() -> bool:
-    """Whether the graph answers right now (F-2.1-B12: checked per test,
-    not once at import; the tunnel is a manual process that can drop)."""
-    _load_env_explicitly()
-    host = os.environ.get("GRAPH_PG_HOST")
-    port = os.environ.get("GRAPH_PG_PORT")
-    if not host or not port:
-        return False
-    try:
-        with socket.create_connection((host, int(port)), timeout=3):
-            return True
-    except (OSError, ValueError):
-        return False
+    """Whether Layer 1 answers right now, over whichever transport is live.
+
+    Build phase 4.12. This used to open a TCP socket to `GRAPH_PG_HOST` and
+    `GRAPH_PG_PORT`, the local port of the SSH tunnel build phase 4.11
+    deleted. Measured 2026-08-24 on a machine where the graph was perfectly
+    reachable over HTTPS: that probe returned False with
+    ConnectionRefusedError, so every live arm behind this gate SKIPPED while
+    printing a reason that was false. A green run then reads as "this class
+    is covered" when the arms never ran.
+
+    Delegates to `tests.system_03_search_agent.graph_gate`, the ONE
+    implementation, which dispatches on `GRAPH_QUERY_URL` exactly as
+    `graph_connection.execute_cypher` and `tracker/preflight.py` do. Eight
+    corrected copies would have left eight places for the next transport
+    change to be applied seven times.
+    """
+    from tests.system_03_search_agent.graph_gate import live_graph_arms_enabled
+
+    return live_graph_arms_enabled()
 
 
 def _model_is_configured() -> bool:
@@ -201,13 +207,42 @@ premise_gate = pytest.mark.skipif(
     reason=(
         "the premise gate needs the live graph AND a real model key, since "
         "its whole purpose is to exercise cross-layer synthesis and "
-        f"triangulation. Reopen the tunnel with: {_REOPEN_TUNNEL_CMD}"
+        "triangulation."
     ),
 )
 
+def _live_network_is_permitted() -> bool:
+    """Whether `tests/conftest.py` is letting real outbound HTTP through.
+
+    Build phase 4.12. `live_only` below used to gate on `_model_is_configured()`
+    ALONE, and a credential existing is not the same fact as the network being
+    permitted. The arms it marks reach live NCBI, PubTator, LitVar2 and
+    ClinicalTrials.gov, so in the ordinary offline suite they RAN, hit
+    conftest's block, and failed with `LiveHttpCallInUnitSuiteError`.
+
+    That was the whole of this repository's standing six-failure baseline.
+    Nothing in this file was broken: verified 2026-08-24, it is `8 passed,
+    2 skipped` under `RUN_PREMISE_GATE=1`. It FAILED where it should have
+    SKIPPED, which is the stale-tunnel-probe defect in the other direction,
+    and it had trained every reader of the suite to expect six red results.
+    A permanent red baseline is precisely where a real regression goes
+    unnoticed, which is why this is a correctness fix and not tidying.
+    """
+    _load_env_explicitly()
+    return os.environ.get("RUN_PREMISE_GATE", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+
+
 live_only = pytest.mark.skipif(
-    not _model_is_configured(),
-    reason="needs a live network path to NCBI; no model key found in .env",
+    not (_model_is_configured() and _live_network_is_permitted()),
+    reason=(
+        "needs a real model key AND RUN_PREMISE_GATE=1 so tests/conftest.py "
+        "permits the live NCBI, PubTator, LitVar2 and ClinicalTrials.gov "
+        "calls these arms make"
+    ),
 )
 
 

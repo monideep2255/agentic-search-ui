@@ -159,7 +159,6 @@ from __future__ import annotations
 
 import os
 import re
-import socket
 import uuid
 from pathlib import Path
 from typing import Any
@@ -191,16 +190,23 @@ def _load_env_explicitly() -> None:
 
 
 def _graph_is_reachable() -> bool:
-    _load_env_explicitly()
-    host = os.environ.get("GRAPH_PG_HOST")
-    port = os.environ.get("GRAPH_PG_PORT")
-    if not host or not port:
-        return False
-    try:
-        with socket.create_connection((host, int(port)), timeout=3):
-            return True
-    except (OSError, ValueError):
-        return False
+    """Whether Layer 1 answers right now, over whichever transport is live.
+
+    Fresh per call, never cached at import (F-2.1-B12): the transport can
+    stop answering mid-session, and a cached import-time probe reports a
+    connection that no longer exists.
+
+    Build phase 4.12. This used to socket-probe `GRAPH_PG_HOST`/`PORT`, the
+    local port of the SSH tunnel build phase 4.11 deleted. Measured
+    2026-08-24: that probe returned False with ConnectionRefusedError on a
+    machine where the graph answered over HTTPS, so every arm behind it
+    skipped while printing a reason that was false. Delegates to
+    `tests.system_03_search_agent.graph_gate`, the ONE implementation, which
+    dispatches on `GRAPH_QUERY_URL` exactly as `graph_connection` does.
+    """
+    from tests.system_03_search_agent.graph_gate import live_graph_arms_enabled
+
+    return live_graph_arms_enabled()
 
 
 def _model_is_configured() -> bool:
