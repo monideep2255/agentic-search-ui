@@ -19,6 +19,7 @@ Status: IN PROGRESS. Code-side work complete and deployed to the Hetzner box. Ra
 - [What is live, 2026-08-24](#what-is-live-2026-08-24)
 - [The demo is live and answering, 2026-08-24](#the-demo-is-live-and-answering-2026-08-24)
 - [The one open defect, stated precisely](#the-one-open-defect-stated-precisely)
+- [Carried past the merge, on purpose](#carried-past-the-merge-on-purpose)
 - [History](#history)
 
 ## Scope, and what is deliberately not in it
@@ -48,6 +49,7 @@ The Layer 1 cutover needs NO code. `execute_cypher` has dispatched on `GRAPH_QUE
 | T-4.12-09b | Variable sets per Section 24, and the Layer 1 cutover | done, 2026-08-24 |
 | T-4.12-09c | Build configuration so both services boot | done, both LIVE |
 | T-4.12-11 | The Q/A pipeline actually answering on the deployed demo | done for single-hit symbols, VERIFIED with citations; one open edge case below |
+| T-4.12-12 | UI polish and streaming behaviour on the deployed demo | OPEN, product-owner observation 2026-08-24, carried past the merge deliberately |
 | T-4.12-09d | GitHub integration watching `develop` | OPEN. Deliberately not wired while 4.12 is unmerged, since Section 24 requires CD to watch `develop` only and phase branches to never auto-deploy |
 | T-4.12-10 | Security scan before any public URL | DROPPED 2026-08-24 by product-owner decision, logged in `DECISIONS.md` |
 
@@ -224,6 +226,14 @@ The hypothesis, NOT confirmed: E-utilities rate limiting against Railway's share
 It is a hypothesis rather than a finding because the traceback could not be read: Railway's log stream returns container startup and `/health` lines and no request-level logs at all, through several attempts. Recorded as unproven rather than asserted.
 
 WHAT WOULD SETTLE IT, for whoever picks this up: get the actual exception. Either make the log stream work, or add a temporary diagnostic endpoint that calls `resolve_symbol_to_curie("GCK")` and returns the tool's own `status` and `error` fields, which `ncbi_efetch` already carries and never raises through.
+
+## Carried past the merge, on purpose
+
+Build phase 4.12 merges with these open. That is a decision rather than an oversight: the phase's own scope was to get the product deployed and answering, and it does both. Nothing below blocks a demo.
+
+- T-4.12-12, UI AND STREAMING. Product-owner observation on the live demo, 2026-08-24: "some work on UI and the streaming still needs work". Not yet reduced to specific defects, and deliberately NOT guessed at here, because a made-up defect list is worse than an honest pointer. Whoever picks this up should drive the deployed UI, write down what is actually wrong, and file real tickets. Two things already known that may or may not be part of it: `frontend/src/stubs/registry.ts` still marks stubbed surfaces, and this repository has no visual check at all, which is build phase 4.8's recorded lesson ("nothing in this repository looks at the rendered page", after two major layout defects survived 147 unit tests and a full WCAG pass).
+- The `GCK` refusal, above. Hypothesis recorded, not confirmed.
+- T-4.12-09d, the GitHub CD integration, which could not be wired before the merge because Section 24 requires CD to watch `develop` only and phase branches to never auto-deploy. It becomes wireable the moment this merges, and that ordering is the reason it was left rather than an omission.
 
 ## History
 
