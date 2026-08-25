@@ -1834,6 +1834,51 @@ def _withdrawn_clause(records: list[_WithdrawnGeneRecord]) -> str:
     return " ".join(sentences)
 
 
+#: How many ESearch candidates may be confirmed in one ESummary call. ESearch
+#: is already asking for `retmax=5`, so this only bounds a future widening.
+#: One batched ESummary call, never one per candidate: `.claude/rules/
+#: tool-call-budgets.md` caps E-utilities at 3 requests/second unauthenticated
+#: and a per-candidate loop would spend that budget to answer one question.
+_MAX_SYMBOL_CANDIDATES = 5
+
+
+def _select_candidate_owning_symbol(records, symbol: str):
+    """The one record whose OWN official symbol is `symbol`, or `None`.
+
+    F-4.12-02. The rule this replaces refused any multi-hit outright: "zero
+    or multiple ids resolve to None rather than guessing among them". That
+    reasoning is sound and is NOT relaxed here. A `[sym]`-tagged ESearch match
+    is not proof the returned gene's own symbol is the one searched for,
+    because NCBI indexes that tag against alias and synonym tables too, and
+    build phase 3.1 measured exactly that: `HG38[sym]` returns one id whose
+    real symbol is LGR5, `MRI[sym]` gives CYREN, `CAN[sym]` gives NUP214.
+
+    What changes is that the answer is LOOKED UP rather than assumed absent.
+    The resolver already confirmed the official symbol for a single hit; it
+    simply never did so for a multi-hit. So a real gene whose symbol two other
+    genes happen to list as an alias was refused outright. Measured live on
+    the deployed demo, 2026-08-24: `GCK[sym] AND human[orgn]` returns
+    ['2645', '56975', '5871'], and "Variants in GCK causing MODY" answered
+    "I could not identify that gene. NCBI has no record matching the name in
+    your question", which is false about a gene NCBI plainly holds.
+
+    The safety property is unchanged and is what this function enforces:
+    EXACTLY ONE candidate may claim the symbol as its own. Zero still refuses,
+    and so does more than one. This is selection by a fact about each record,
+    never by position, so "pick the first hit" cannot creep back in.
+    """
+    wanted = symbol.strip().upper()
+    owners = [
+        record
+        for record in records
+        if isinstance(getattr(record, "fields", {}).get("name"), str)
+        and record.fields["name"].strip().upper() == wanted
+    ]
+    if len(owners) != 1:
+        return None
+    return owners[0]
+
+
 async def resolve_symbol_to_curie(symbol: str, *, taxon: str = "human") -> str | None:
     """Resolve one gene symbol to its NCBIGene CURIE via a live Layer 2 call.
 
@@ -2014,46 +2059,44 @@ async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> tuple[st
         return None, cacheable
 
     idlist = search_output.records[0].fields.get("idlist")
-    if not isinstance(idlist, list) or len(idlist) != 1:
-        # Zero hits, or an ambiguous multi-id match: never fabricate a
-        # CURIE by guessing among candidates.
+    if not isinstance(idlist, list) or not idlist:
+        # A genuine zero-hit search.
         return None, cacheable
 
-    gene_id = idlist[0]
-    if not gene_id:
+    # F-4.12-02: every candidate is confirmed, not just a lone one. The old
+    # rule refused any `len(idlist) != 1` outright, which threw away real
+    # genes whose symbol other genes list as an alias. See
+    # `_select_candidate_owning_symbol` for the full account and for why the
+    # safety property is unchanged.
+    candidates = [str(i) for i in idlist[:_MAX_SYMBOL_CANDIDATES] if i]
+    if not candidates:
         return None, cacheable
 
-    # Re-review round 1, adversarial pass (2026-08-07): a `[sym]`-tagged
-    # ESearch match is not proof the returned gene's OWN official symbol
-    # is the one searched for. NCBI's gene database indexes `[sym]`
-    # against alias and synonym tables too, not only the approved symbol,
-    # so a single-hit "unambiguous" match can still be the WRONG gene
-    # entirely. Live-verified: `HG38[sym] AND human[orgn]` returns
-    # exactly one id, and that gene's real official symbol is LGR5, not
-    # HG38; `MRI[sym]` resolves the same way to CYREN, `CAN[sym]` to
-    # NUP214, `ALL[sym]` to BCR. The `len(idlist) != 1` guard above
-    # catches multiple candidates, never a single wrong one. This is
-    # exactly the fabricated-citation shape T-3.1-13/F-2.1-B10 exists to
-    # prevent, just one layer upstream of where that ticket looked: a
-    # confidently WRONG gene id can reach `cypher_query` as a real,
-    # resolved CURIE, not merely an unresolved one. Confirm the returned
-    # record's own official symbol before trusting the id.
+    # ONE batched ESummary call for all candidates, never one per candidate.
     summary_output = await ncbi_efetch(
         NcbiEfetchInput.model_validate(
-            {"action": "summary", "db": "gene", "ids": [gene_id]}
+            {"action": "summary", "db": "gene", "ids": candidates}
         )
     )
     if summary_output.status != "ok" or not summary_output.records:
-        # The id ESearch just returned could not be confirmed by
-        # ESummary: an inconclusive answer (a transient failure, or a
-        # genuinely empty record for an id ESearch just gave us), not a
-        # confirmed mismatch. Caught by this fix's own test: reusing the
-        # earlier legs' `cacheable` here would let an ESummary outage
-        # poison the cache with a permanent false negative, the exact
-        # Finding 2 / F-3.1-26 shape one confirmation step later.
+        # Inconclusive rather than a confirmed mismatch: a transient failure,
+        # or an empty record for ids ESearch just gave us. Not cacheable, or
+        # an ESummary outage would poison the cache with a permanent false
+        # negative (the Finding 2 / F-3.1-26 shape, one step later).
         return None, False
 
-    official_symbol = summary_output.records[0].fields.get("name")
+    owner = _select_candidate_owning_symbol(summary_output.records, symbol)
+    if owner is None:
+        # Either nothing claims the symbol (every hit was an alias match) or
+        # more than one does. Both are the ORIGINAL refusal, preserved: never
+        # fabricate a CURIE by guessing among candidates.
+        return None, cacheable
+
+    gene_id = owner.id
+    if not gene_id:
+        return None, cacheable
+
+    official_symbol = owner.fields.get("name")
     if (
         not isinstance(official_symbol, str)
         or official_symbol.strip().upper() != symbol.strip().upper()
@@ -2088,7 +2131,7 @@ async def _resolve_symbol_to_curie_uncached(symbol: str, taxon: str) -> tuple[st
     # `_WITHDRAWN_SYMBOL_RECORDS` so the refusal text can say what was found
     # instead of the flat "NCBI has no record matching the name", which is
     # FALSE here: NCBI has a record, and it is withdrawn.
-    successor_id = _classify_gene_record_status(summary_output.records[0].fields)
+    successor_id = _classify_gene_record_status(owner.fields)
     if successor_id is not None:
         _WITHDRAWN_SYMBOL_RECORDS[f"{symbol}:{taxon}"] = _WithdrawnGeneRecord(
             symbol=symbol,

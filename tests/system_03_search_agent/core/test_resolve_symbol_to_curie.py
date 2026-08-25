@@ -172,7 +172,13 @@ def _install_fake_ncbi_efetch(
                 "dataset_report or search request captured to confirm it "
                 "against; this fake cannot auto-confirm without one"
             )
-            gene_id = tool_input.root.ids[0]
+            # ONE RECORD PER REQUESTED ID, which is what a real ESummary
+            # returns for a batched call. F-4.12-02: this used to build a
+            # single record from `ids[0]` no matter how many ids were asked
+            # for, which made a two-candidate ambiguous match look like
+            # exactly one owner and resolve to the FIRST id. The fake was
+            # hiding the very ambiguity the test around it exists to pin.
+            gene_ids = list(tool_input.root.ids)
             return NcbiEfetchOutput(
                 status="ok",
                 action="summary",
@@ -180,9 +186,10 @@ def _install_fake_ncbi_efetch(
                     NcbiEfetchRecord(
                         id=gene_id, db="gene", fields={"name": last_symbol[-1]}
                     )
+                    for gene_id in gene_ids
                 ],
-                record_count=1,
-                total_available=1,
+                record_count=len(gene_ids),
+                total_available=len(gene_ids),
                 truncated=False,
             )
         raise AssertionError(f"unexpected ncbi_efetch action {action!r} in this test")
@@ -399,10 +406,23 @@ async def test_a_datasets_error_is_never_cached_even_when_esearch_answers(
 async def test_ambiguous_esearch_match_is_a_confirmed_negative_and_is_cached(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """An ambiguous ESearch match (more than one id) is a real, answered
-    outcome, never fabricated into a CURIE, and is just as cacheable as a
-    genuine zero-hit search: both are confirmed answers from a
-    successful call.
+    """An ambiguous ESearch match is a real, answered outcome, never
+    fabricated into a CURIE, and is just as cacheable as a genuine zero-hit
+    search: both are confirmed answers from a successful call.
+
+    F-4.12-02 changed HOW that answer is reached, and this test was updated
+    to match rather than the code being bent to keep it green. The old rule
+    refused any `len(idlist) != 1` before making an ESummary call at all, so
+    this asserted `calls == ["dataset_report", "search"]`. That rule also
+    refused REAL genes: `GCK[sym] AND human[orgn]` returns three ids because
+    two other genes list GCK as an alias, and the deployed demo answered
+    "I could not identify that gene" about a gene NCBI plainly holds.
+
+    Every candidate is now confirmed in ONE batched ESummary call, and the
+    refusal survives whenever no single candidate owns the symbol. Here the
+    fake auto-confirms, so BOTH ids claim it, which is the genuinely
+    ambiguous case: two owners, refuse. The outcome assertions below are
+    unchanged, which is the point; only the call list is.
     """
     calls = _install_fake_ncbi_efetch(
         monkeypatch,
@@ -412,11 +432,18 @@ async def test_ambiguous_esearch_match_is_a_confirmed_negative_and_is_cached(
 
     result = await graph_module.resolve_symbol_to_curie("AMBIGUOUSGENE")
     assert result is None
-    assert calls == ["dataset_report", "search"]
+    assert calls == ["dataset_report", "search", "summary"], (
+        "every candidate is confirmed in ONE batched ESummary call; a "
+        "per-candidate loop would spend the E-utilities rate budget to "
+        "answer one question"
+    )
 
     second = await graph_module.resolve_symbol_to_curie("AMBIGUOUSGENE")
     assert second is None
-    assert calls == ["dataset_report", "search"], "an ambiguous match is a confirmed negative, cached"
+    assert calls == ["dataset_report", "search", "summary"], (
+        "an ambiguous match is a confirmed negative, cached, so the second "
+        "lookup makes no further calls at all"
+    )
 
 
 # ===========================================================================

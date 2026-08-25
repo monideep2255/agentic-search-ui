@@ -1235,6 +1235,12 @@ async def _synth_messages_for(session_memory: Any | None) -> list[dict[str, str]
         step: str,
         messages: list[dict[str, str]],
         budget_s: float,
+        # F-4.12-01 threaded an optional per-call max_tokens through
+        # `_dispatch_tier_call`. Accepted and ignored here: this stub captures
+        # MESSAGES, and the cap does not affect them. **kwargs rather than a
+        # named parameter so a future additive argument does not break the
+        # stub again for a reason that has nothing to do with what it grades.
+        **_ignored: Any,
     ) -> Any:
         if tier == "synth":
             captured.append([dict(message) for message in messages])
@@ -1294,6 +1300,12 @@ async def _step_messages_for(
         dispatched_step: str,
         messages: list[dict[str, str]],
         budget_s: float,
+        # F-4.12-01 threaded an optional per-call max_tokens through
+        # `_dispatch_tier_call`. Accepted and ignored here: this stub captures
+        # MESSAGES, and the cap does not affect them. **kwargs rather than a
+        # named parameter so a future additive argument does not break the
+        # stub again for a reason that has nothing to do with what it grades.
+        **_ignored: Any,
     ) -> Any:
         captured.append([dict(message) for message in messages])
         raise HarnessCallError("captured by the premise gate", error_class="transient")
