@@ -266,10 +266,10 @@ Estimated monthly cost for the full System 3 deployment:
 | Item | Estimated cost |
 |------|---------------|
 | Knowledge graph hosting (Hetzner CPX42, 8 vCPU, 16 GB, 320 GB NVMe) | ~$28/month |
-| Railway Hobby plan: four services in one production environment | ~$10-30/month |
+| Railway Hobby plan: four services in one production environment | $5/month today, up to ~$15 under sustained traffic |
 | LLM API costs (Anthropic + OpenAI, depending on query volume) | ~$10-50/month |
 | Domain + TLS, once a custom domain replaces the `*.up.railway.app` subdomains | ~$1/month |
-| Total | ~$49-109/month |
+| Total | ~$44-94/month |
 
 The Railway line covers the four services build phase 4.12 deployed:
 
@@ -280,11 +280,19 @@ The Railway line covers the four services build phase 4.12 deployed:
 
 It replaces the separate user-database and Redis rows this table carried before the deployment landed, which double-counted both now that Railway hosts them.
 
-How that figure is built, from Railway's published rate card:
+That figure is measured from the live services rather than estimated. Resource usage across all four, sampled over 7 days on 2026-08-25:
 
-- Base subscription: $5/month on Hobby, which includes the first $5 of resource usage
-- Usage above that: charged at $10/GB/month RAM, $20/vCPU/month CPU, $0.05/GB egress, $0.15/GB/month volume storage
-- Railway's own guidance puts a stack of this shape, an API, a web service, Postgres and Redis, at $10 to $30 per month all in
+| Resource | Usage | Rate | Cost |
+|----------|-------|------|------|
+| CPU | 0.002 vCPU | $20/vCPU/month | $0.04/month |
+| RAM | 0.44 GB | $10/GB/month | $4.37/month |
+| Volume storage | 0.24 GB | $0.15/GB/month | $0.04/month |
+| Network egress | negligible | $0.05/GB | under $0.01/month |
+| Resource usage total | | | $4.45/month |
+
+Because $4.45 sits inside the $5 of usage the Hobby subscription already includes, the Railway bill today is the $5 base and nothing more. The headroom figure comes from observed peak memory across the four services, 1.31 GB, which would bill about $13/month in RAM if it were sustained rather than momentary.
+
+LLM API cost is the term that actually moves the total. It scales with query volume, and at meaningful traffic it will exceed every other line combined.
 
 Cost caps enforced per-query via the multi-model harness. Guard tier uses the cheapest model, synth tier uses the strongest only when needed.
 
