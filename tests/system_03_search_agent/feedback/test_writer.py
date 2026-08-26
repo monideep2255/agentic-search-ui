@@ -114,10 +114,9 @@ from urllib.parse import urlsplit, urlunsplit
 
 import pytest
 import sqlalchemy as sa
+from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
-
-from alembic import command
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 USER_DB_URL = os.environ.get(

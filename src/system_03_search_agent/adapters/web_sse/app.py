@@ -21,10 +21,7 @@ from fastapi import (
     status,
 )
 from fastapi import (
-    # Aliased: `Query` is already this module's domain request model
-    # (contracts.query.Query). Importing FastAPI's under its own name would
-    # shadow it silently.
-    Query as FastAPIQuery,
+    Query as FastAPIQuery,  # Aliased: `Query` is already this module's domain request model; (contracts.query.Query). Importing FastAPI's under its own name would; shadow it silently.
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -174,9 +171,8 @@ def _run_startup_migrations_if_requested() -> None:
         return
 
     try:
-        from alembic.config import Config
-
         from alembic import command
+        from alembic.config import Config
 
         root = pathlib.Path(__file__).resolve().parents[3].parent
         ini = root / "alembic.ini"

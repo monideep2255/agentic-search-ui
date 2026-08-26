@@ -1,0 +1,297 @@
+# Continuous integration: Section 24's ten merge-blocking gates.
+#
+# Build phase 4.14. Section 24 of requirements/Technical_specification.md is the
+# source of truth for the gate list and its order. Do not add, remove or reorder
+# a gate here without changing that section first.
+#
+# THIS FILE CONTAINS NO SHELL CODE, and that is the design rather than a style
+# preference. Every gate step's `run:` is exactly one token: the path of the
+# script in `.github/gates/` that implements it.
+#
+# Why. Build phase 4.14 twice tried to verify inline shell by matching strings
+# in a `run:` body, and was defeated twice. The second defeat forced this
+# rework:
+#
+#     run: ":;#ruff check"
+#
+# runs NOTHING. Bash begins a comment at `#` whenever `#` starts a word, and `;`
+# ends a word, so the command is commented out. A checker that strips comments
+# only where `#` follows WHITESPACE sees `ruff check` and reports the gate
+# correct. Eight of the ten gates were neutralised that way with all 97 premise
+# tests green, including the mutation harness meant to prove they can fail.
+#
+# Handling `;#` too would have been the fifth instance of a class whose sixth
+# was always going to be `&&#`, `(#`, or a YAML block scalar. Matching
+# substrings inside arbitrary shell is what cannot be made safe, so the shell
+# left the workflow. A step body must now EQUAL a script path, and there is no
+# room in a whole-string equality for a comment or a second command.
+#
+# `.github/gates/README.md` carries the full reasoning and what replaced it.
+#
+# Two properties every gate holds to:
+#
+#   1. A gate that cannot tell "passed" from "did not run" is not a gate. Every
+#      database-backed test here SKIPS rather than fails when PostgreSQL is
+#      unreachable, so gate 4 runs a real service AND a separate step asserts it
+#      was reached. Proven necessary on CI run 4, where gate 4 reported
+#      "4019 passed, 0 failed" while 25 tests could not reach the database.
+#   2. No gate but gate 5 needs a secret, so a fork's pull request gets the same
+#      signal as a branch's. Gate 5 is network-gated by Section 24's own design.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [develop]
+
+# A second push to the same branch makes the first run's answer irrelevant.
+# Cancel it rather than paying for both. Never cancels a run on `develop`.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "22"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Gates 1, 2, 3, 4, 6 and 9. One job, because Section 24 specifies an ORDER,
+  # and steps in a job run in order and stop at the first failure, which is what
+  # an ordered gate list means. Gates 7 and 8 are separate only because they need
+  # Node rather than Python.
+  # ---------------------------------------------------------------------------
+  python-gates:
+    name: Python gates (1, 2, 3, 4, 6, 9)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      # Not a convenience. Without it every database-backed test skips and gate
+      # 4 certifies nothing. The "no unsanctioned skips" step below is what
+      # proves this service is actually reached rather than assuming it.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: search_agent_users
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # Derived by DIFFING `env.example` against this block rather than by adding
+    # one variable each time CI went red. A developer's shell loads `.env`, so
+    # the local suite had been passing against roughly thirty variables a runner
+    # does not have. Several settings modules RAISE on a missing variable rather
+    # than defaulting, which is right for a cost cap and turns every gap into a
+    # test error.
+    #
+    # Every value is an offline-safe placeholder, never a credential. The unit
+    # suite blocks live outbound HTTP at the transport layer, and
+    # RUN_PREMISE_GATE stays unset so the ~104 live arms stay out.
+    env:
+      PYTHONPATH: src
+      USER_DB_URL: postgresql://postgres:postgres@localhost:5432/search_agent_users
+      REDIS_URL: redis://localhost:6379/0
+      AUTH_SECRET: ci-not-a-real-secret-ci-not-a-real-secret
+      PER_QUERY_COST_CAP_USD: "1.00"
+      PER_USER_DAILY_QUERY_CAP: "1000"
+      SYSTEM_DAILY_CAP_USD: "1000000"
+      PER_STEP_TIMEOUT_SECONDS: "30"
+      ANON_DAILY_RUN_CAP: "1000"
+      GUARD_MODEL: ci/placeholder-guard
+      PLAN_MODEL: ci/placeholder-plan
+      SYNTH_MODEL: ci/placeholder-synth
+      OPENROUTER_API_KEY: ci-placeholder-not-a-real-key
+      NCBI_EMAIL: ci@example.invalid
+      APP_ENV: test
+      LOG_LEVEL: warning
+      CORS_ORIGINS: http://localhost:3000
+      LANGCHAIN_TRACING_V2: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install
+        run: .github/gates/setup_python.sh
+
+      # Setup, not a gate: the service gives the job a database, this gives it a
+      # schema. The tests' own probe checks CONNECTIVITY only, so against an
+      # empty database they connect happily and then fail on missing tables.
+      - name: Create the user schema
+        run: .github/gates/setup_schema.sh
+
+      - name: "Gate 1: Python compiles and imports cleanly"
+        run: .github/gates/gate01_compile_and_import.sh
+
+      - name: "Gate 2: Import order"
+        run: .github/gates/gate02_import_order.sh
+
+      - name: "Gate 3: Lint"
+        run: .github/gates/gate03_lint.sh
+
+      - name: "Gate 4: Unit test suite"
+        run: .github/gates/gate04_unit_suite.sh
+
+      - name: "Gate 4 (cont.): no test skipped for a missing database"
+        run: .github/gates/gate04b_no_unsanctioned_skips.sh
+
+      - name: "Gate 6: Python dependency audit"
+        run: .github/gates/gate06_python_audit.sh
+
+      - name: "Gate 9: Required-path tests, never skippable"
+        run: .github/gates/gate09_required_paths.sh
+
+  # ---------------------------------------------------------------------------
+  # Gate 5. Section 24: "Yes, network-gated job".
+  # ---------------------------------------------------------------------------
+  integration:
+    name: Integration suite (5)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: src
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install
+        run: .github/gates/setup_python.sh
+
+      - name: "Gate 5: Integration test suite"
+        env:
+          GRAPH_QUERY_URL: ${{ secrets.GRAPH_QUERY_URL }}
+          GRAPH_QUERY_TOKEN: ${{ secrets.GRAPH_QUERY_TOKEN }}
+          GRAPH_PG_HOST: ${{ secrets.GRAPH_PG_HOST }}
+          # `tests/conftest.py` blocks all outbound HTTP without this, so the
+          # arms could not reach the graph service whether or not it is up. The
+          # effect was perverse: adding the credential would have switched the
+          # honest NOT RUN warning off and replaced it with a silent green.
+          RUN_PREMISE_GATE: "1"
+        run: .github/gates/gate05_integration.sh
+
+  # ---------------------------------------------------------------------------
+  # Gates 7 and 8.
+  # ---------------------------------------------------------------------------
+  frontend-gates:
+    name: Frontend gates (7, 8)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: ../.github/gates/setup_frontend.sh
+
+      - name: "Gate 7: Frontend dependency audit"
+        run: ../.github/gates/gate07_frontend_audit.sh
+
+      - name: "Gate 8: Frontend build and test"
+        run: ../.github/gates/gate08_frontend_build_and_test.sh
+
+  # ---------------------------------------------------------------------------
+  # Gate 10. Section 24: "Yes, on UI-touching PRs only".
+  # ---------------------------------------------------------------------------
+  accessibility:
+    name: Accessibility (10)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: search_agent_users
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PYTHONPATH: src
+      USER_DB_URL: postgresql://postgres:postgres@localhost:5432/search_agent_users
+      AUTH_SECRET: ci-not-a-real-secret-ci-not-a-real-secret
+      ANON_DAILY_RUN_CAP: "1000"
+      PER_QUERY_COST_CAP_USD: "1.00"
+      PER_USER_DAILY_QUERY_CAP: "1000"
+      SYSTEM_DAILY_CAP_USD: "1000000"
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Does this change touch the UI?
+        id: filter
+        # Through `env:` rather than interpolated into a script body. These are
+        # commit SHAs and so not attacker-controlled free text, but the rule
+        # that keeps a workflow safe is the one applied without case-by-case
+        # judgement about which fields are "probably fine".
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: .github/gates/gate10_filter.sh
+
+      - uses: actions/setup-python@v5
+        if: steps.filter.outputs.touched == 'true'
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        if: steps.filter.outputs.touched == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        if: steps.filter.outputs.touched == 'true'
+        run: .github/gates/setup_accessibility.sh
+
+      - name: Create the user schema
+        if: steps.filter.outputs.touched == 'true'
+        run: .github/gates/setup_schema.sh
+
+      - name: "Gate 10: Accessibility, WCAG 2.1 AA"
+        if: steps.filter.outputs.touched == 'true'
+        working-directory: frontend
+        run: ../.github/gates/gate10_accessibility.sh
+
+      - name: Upload the Playwright report
+        if: failure() && steps.filter.outputs.touched == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7

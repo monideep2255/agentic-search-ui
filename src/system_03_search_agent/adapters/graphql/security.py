@@ -81,9 +81,7 @@ import logging
 import re
 from collections.abc import AsyncIterator, Callable, Mapping
 
-from graphql import (
-    ExecutionResult as GraphQLExecutionResult,
-)
+from graphql import ExecutionResult as GraphQLExecutionResult
 from graphql import (
     FieldNode,
     FragmentDefinitionNode,

@@ -304,7 +304,7 @@ def _mock_generation(monkeypatch: pytest.MonkeyPatch, cypher: str) -> AsyncMock:
     for tier in ("guard", "plan", "synth"):
         try:
             priced[tiers_module.resolve_model(tier)] = (1e-7, 1e-7)
-        except Exception:  # noqa: BLE001 - a tier that will not resolve fails later, visibly
+        except Exception:  # noqa: BLE001, S112 - a tier that will not resolve fails later, visibly
             continue
     priced["mock-plan-tier"] = (1e-7, 1e-7)
     monkeypatch.setattr(harness_module, "_FALLBACK_PRICES_USD_PER_TOKEN", priced)

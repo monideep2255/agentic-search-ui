@@ -284,9 +284,8 @@ def scratch_db_url():
     hand. This fixture is what makes "exactly one row" a statement about
     this run.
     """
-    from alembic.config import Config
-
     from alembic import command
+    from alembic.config import Config
 
     db_name = f"phase46_gate_{uuid.uuid4().hex}"
     assert re.fullmatch(r"[a-z0-9_]+", db_name)

@@ -82,7 +82,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import UTC
-from typing import Any
+from typing import Any, Self
 
 import httpx
 import pytest
@@ -684,7 +684,7 @@ class _DirectLogCapture:
         self._level = level
         self.records: list[logging.LogRecord] = []
 
-    def __enter__(self) -> _DirectLogCapture:
+    def __enter__(self) -> Self:
         outer = self
 
         class _Handler(logging.Handler):
@@ -746,16 +746,18 @@ async def test_api_key_value_never_appears_in_log_or_exception_on_failure(
     monkeypatch.setenv("NCBI_API_KEY", secret)
     client = _FakeClient([httpx.ConnectError("refused"), httpx.ConnectError("refused again")])
 
-    with _DirectLogCapture("system_03_search_agent.tools.ncbi_transport") as capture:
-        with pytest.raises(ncbi_transport.TransportConnectionError) as exc_info:
-            await ncbi_transport.execute_get(
-                "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-                {"db": "gene", "term": "TP53"},
-                family="eutils",
-                include_api_key=True,
-                client=client,
-                sleep_fn=_no_sleep,
-            )
+    with (
+        _DirectLogCapture("system_03_search_agent.tools.ncbi_transport") as capture,
+        pytest.raises(ncbi_transport.TransportConnectionError) as exc_info,
+    ):
+        await ncbi_transport.execute_get(
+            "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+            {"db": "gene", "term": "TP53"},
+            family="eutils",
+            include_api_key=True,
+            client=client,
+            sleep_fn=_no_sleep,
+        )
 
     assert secret not in str(exc_info.value)
     # Positive control, same reasoning as the success-path test above.

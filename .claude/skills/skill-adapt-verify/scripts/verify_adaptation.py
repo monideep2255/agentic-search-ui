@@ -260,24 +260,23 @@ def check_pointers(text: str, target: Path, report: Report) -> None:
         first_col = line.split("|")[1].strip().strip("`")
         if not first_col or " " in first_col or first_col in {"Agent", "Skill", "---", "Doc", "Rule"}:
             continue
-        if first_col.startswith("-") or first_col.startswith(":"):
+        if first_col.startswith(("-", ":")):
             continue
         # only flag if it looks like a kebab-case identifier
-        if re.fullmatch(r"[a-z][a-z0-9-]*", first_col):
-            if (
-                first_col not in existing_agents
-                and first_col not in existing_skills
-                and first_col not in existing_rules
-            ):
-                # self-reference is OK
-                if first_col == target.stem:
-                    continue
-                report.add(
-                    "broken-pointer",
-                    i,
-                    line,
-                    f"'{first_col}' is not an existing agent, skill, or rule",
-                )
+        if re.fullmatch(r"[a-z][a-z0-9-]*", first_col) and (
+            first_col not in existing_agents
+            and first_col not in existing_skills
+            and first_col not in existing_rules
+        ):
+            # self-reference is OK
+            if first_col == target.stem:
+                continue
+            report.add(
+                "broken-pointer",
+                i,
+                line,
+                f"'{first_col}' is not an existing agent, skill, or rule",
+            )
 
 
 def verify(path: Path) -> Report:

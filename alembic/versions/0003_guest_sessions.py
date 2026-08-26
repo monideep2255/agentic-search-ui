@@ -31,9 +31,8 @@ not drop it on downgrade, since 0001's tables still depend on it.
 from __future__ import annotations
 
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
-
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "0003_guest_sessions"

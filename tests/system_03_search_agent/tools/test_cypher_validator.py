@@ -9,6 +9,8 @@ Depends on:
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 from system_03_search_agent.tools.cypher_validator import (
@@ -357,7 +359,11 @@ def test_validation_result_is_frozen_dataclass() -> None:
     result = validate_cypher("MATCH (g:Gene {symbol: $symbol}) RETURN g")
 
     assert isinstance(result, ValidationResult)
-    with pytest.raises(Exception):
+    # `FrozenInstanceError` by name rather than a blind `Exception`: a bare
+    # `Exception` arm passes if the assignment raises for ANY reason, including
+    # a typo in the attribute name, so it would still be green on a
+    # ValidationResult that was never frozen at all.
+    with pytest.raises(dataclasses.FrozenInstanceError):
         result.ok = False  # type: ignore[misc]
 
 

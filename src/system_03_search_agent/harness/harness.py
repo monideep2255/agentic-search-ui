@@ -74,7 +74,10 @@ import litellm
 from system_03_search_agent.harness.tiers import (
     _FALLBACK_PRICES_USD_PER_TOKEN as _TIER_FALLBACK_PRICES,
 )
-from system_03_search_agent.harness.tiers import Tier, TierContext
+from system_03_search_agent.harness.tiers import (
+    Tier,
+    TierContext,
+)
 
 # A LiteLLM chat message: {"role": "system" | "user" | "assistant", "content": str}.
 # LiteLLM's own `completion`/`acompletion` accept `list[dict]`; this alias

@@ -65,7 +65,6 @@ downgrade drops only what the upgrade created.
 """
 
 import sqlalchemy as sa
-
 from alembic import op
 
 revision = "0008_interactions_owner_id"

@@ -74,10 +74,10 @@ from urllib.parse import urlsplit, urlunsplit
 
 import pytest
 import sqlalchemy as sa
+from alembic import command
 from alembic.config import Config
 from sqlalchemy.orm import Session, sessionmaker
 
-from alembic import command
 from system_03_search_agent.data.models import CqCandidate, Interaction
 from system_03_search_agent.feedback import review
 

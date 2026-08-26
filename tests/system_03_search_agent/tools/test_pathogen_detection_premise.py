@@ -222,11 +222,12 @@ async def test_04_resolved_snapshot_is_never_mid_build() -> None:
     2026-08-08: the two newest Salmonella snapshots at probe time were
     exactly this incomplete shape).
     """
+    import httpx
+
     from system_03_search_agent.tools.pathogen_ftp_transport import (
         REQUIRED_SNAPSHOT_SUBDIRS,
         resolve_complete_snapshot,
     )
-    import httpx
 
     async with httpx.AsyncClient() as client:
         snapshot = await resolve_complete_snapshot(TAXON, client=client)

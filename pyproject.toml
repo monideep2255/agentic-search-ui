@@ -47,7 +47,16 @@ dev = [
     "pytest-cov>=5.0",
     "pytest-asyncio>=0.23",
     "httpx>=0.27",
-    "ruff>=0.4",
+    # Build phase 4.14: the three tools Section 24's gates 2, 3 and 6 name.
+    # Ruff is an EXACT pin, not a floor, and deliberately so: this repository
+    # sets no explicit `select`, so the enabled rule set is whatever the
+    # installed ruff version defaults to. A floor would let a minor bump change
+    # what gate 3 enforces without anyone editing a line of configuration, and
+    # CI would start failing (or stop catching things) on a schedule nobody
+    # chose. Bump it on purpose, and re-run `ruff check` when you do.
+    "ruff==0.16.0",
+    "isort>=5.13",
+    "pip-audit>=2.7",
 ]
 
 [project.scripts]
@@ -69,7 +78,76 @@ markers = [
 [tool.ruff]
 line-length = 100
 
+# Import order is checked by BOTH ruff's `I` rules (gate 3) and isort (gate 2),
+# and they are configured here to agree. Build phase 4.14 got this wrong once
+# and the correction is worth recording, because the wrong version looked
+# reasonable and was defended with a measurement.
+#
+# What is true. Ruff's `I` rules are enabled in this repository: with no
+# `[tool.ruff.lint]` block at all, a plain `ruff check` reports 24 I001 errors
+# and flags a deliberately-unsorted probe file. So both tools do have an
+# opinion, and out of the box they disagreed on 23 files.
+#
+# The wrong conclusion drawn from that, on 2026-08-26, was that the two are
+# irreconcilable and that `I001` should therefore be ignored, handing import
+# order to isort alone. Both the judge and the adversary rejected it
+# independently, and measurement settles it: ONE line, `known-third-party`
+# below, takes those 23 disagreements down to 2.
+#
+# The cause is worth naming because it is not obvious. Ruff sees a directory
+# called `alembic/` at the repository root and classifies `from alembic import
+# op` as a FIRST-PARTY import. It is not: it is the installed third-party
+# migration library, and `alembic/` holds migrations rather than an importable
+# package of ours. Telling ruff so is the whole fix for 21 of the 23.
+#
+# The residual 2 are a genuine conflict, and there isort is the one to overrule:
+# on those files isort collapses a multi-line explanatory comment into one line
+# joined by semicolons, which loses readability that ruff's form keeps. They are
+# skipped by isort and still fully checked by ruff's I001, so neither file goes
+# unchecked. Every file in this repository is checked by at least one of the two.
+[tool.ruff.lint.isort]
+known-first-party = ["system_03_search_agent"]
+# The 21-of-23 fix. `alembic/` is the migrations directory, not our package.
+known-third-party = ["alembic"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["system_03_search_agent"]
+src_paths = ["src", "tests", "services"]
+force_sort_within_sections = false
+# `profile = "black"` turns this ON; ruff's isort leaves it OFF. Left as black
+# sets it, isort merges an aliased import back into the main `from` block while
+# ruff accepts the split form, so each tool's fix re-breaks the other.
+# Explicitly matched to ruff rather than to the profile.
+combine_as_imports = false
+skip_gitignore = true
+# The two files where the tools genuinely disagree and isort's preferred form is
+# worse: it rewrites a multi-line aliasing comment into a single semicolon-joined
+# line. Ruff's I001 still checks both, so this narrows isort's scope rather than
+# leaving anything unpoliced. Verified by `test_p13_import_order_is_checked_by_
+# at_least_one_tool_everywhere`.
+extend_skip = [
+    "src/system_03_search_agent/core/graph.py",
+    "src/system_03_search_agent/adapters/web_sse/app.py",
+]
+
 [tool.setuptools]
+# Found by CI on its very first run, build phase 4.14 (F-4.14-CI-01), which is
+# exactly the kind of defect nothing else here could have found.
+#
+# `pip install -e .` failed with "package directory 'system_03_search_agent'
+# does not exist". setuptools auto-detects a `src/` layout only when `packages`
+# is NOT set explicitly; this file sets it, which turns the auto-detection off,
+# so setuptools looked for the package at the repository root.
+#
+# Nothing had ever exercised the install path: pytest resolves the package
+# through `pythonpath = ["src", "."]` above, and Railway's start command sets
+# `PYTHONPATH=src` rather than installing. So the two console scripts declared
+# in `[project.scripts]`, `s3` and `s3-kgx-export`, could not actually be
+# installed by anyone, and build phase 4.2 shipped the CLI without that being
+# visible.
+package-dir = { "" = "src" }
 packages = [
     "system_03_search_agent",
     "system_03_search_agent.adapters",
