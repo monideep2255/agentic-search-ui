@@ -38,7 +38,13 @@ from system_03_search_agent.data.models import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DATA_SRC_DIR = REPO_ROOT / "src" / "system_03_search_agent" / "data"
-USER_DB_URL = "postgresql://localhost:5432/search_agent_users"
+# Read from the environment, matching the ten sibling test files that already
+# do. This file hardcoded the DSN, so on any host whose database needs a
+# different one it could not connect and skipped all 25 of its tests silently.
+# Found by build phase 4.14's skip guard on CI's fourth run (F-4.14-CI-04),
+# where a healthy PostgreSQL service was running and every other
+# database-backed test passed against it.
+USER_DB_URL = os.environ.get("USER_DB_URL", "postgresql://localhost:5432/search_agent_users")
 
 
 def _can_connect() -> bool:

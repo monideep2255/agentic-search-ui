@@ -52,7 +52,12 @@ from system_03_search_agent.harness.harness import Harness
 from system_03_search_agent.harness.tiers import UnknownTierError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-USER_DB_URL = "postgresql://localhost:5432/search_agent_users"
+# Read from the environment, matching the ten sibling test files that already
+# do. Hardcoding it meant this file could not reach a database on any host
+# needing a different DSN, and skipped rather than failed when it could not.
+# Same defect as `tests/system_03_search_agent/data/test_models.py`, fixed in
+# the same pass rather than left for the next CI run to find (F-4.14-CI-04).
+USER_DB_URL = os.environ.get("USER_DB_URL", "postgresql://localhost:5432/search_agent_users")
 
 
 def _can_connect() -> bool:
