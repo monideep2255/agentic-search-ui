@@ -140,6 +140,19 @@ ERROR: Failed to build ... when getting requirements to build editable
 | ID | Severity | Raised by | Finding | State | Resolution |
 |----|----------|-----------|---------|-------|------------|
 | F-4.14-CI-01 | major | the first CI run | `pip install -e .` was broken and had been for the life of the project. setuptools auto-detects a `src/` layout only when `packages` is NOT set explicitly; `pyproject.toml` sets it, which disables the detection, so setuptools looked for the package at the repository root and found nothing | closed | `package-dir = { "" = "src" }`. Verified in a throwaway virtualenv: the package imports from outside the repository and both console scripts appear on PATH |
+| F-4.14-CI-02 | major | the second CI run | The job's `env:` block was missing most of what the suite needs. `PER_QUERY_COST_CAP_USD` and its siblings RAISE when unset rather than defaulting, deliberately, so a missing cap can never read as "no limit", and every such gap became a test error: 55 failed, 25 errors | closed | The env block derived by DIFFING `env.example` against what the job set, rather than adding one variable per red run. Verified by reproducing CI's environment locally |
+
+The root cause of F-4.14-CI-02 is worth separating from its fix, because it invalidates something this file claimed earlier.
+
+A developer's shell loads `.env`, which on this machine carries about thirty variables. Every "verified locally" figure in this phase, including "4044 passed, zero failed", was therefore measured in a materially different environment from the one CI provides, and the phase had no way to notice: a suite that passes because of ambient configuration looks exactly like a suite that passes because the code is right.
+
+The fix was proven by removing the difference rather than by reasoning about it. `.env` was moved aside, the job's `env:` block was exported verbatim, and the suite was run in a scrubbed environment (`env -i`):
+
+```text
+4044 passed, 136 skipped, 23 deselected, 1 xfailed in 93.21s
+```
+
+One deliberate substitution, stated rather than hidden: `USER_DB_URL` points at the local database, because the CI DSN carries a `postgres:postgres` credential this machine's PostgreSQL does not accept. The first attempt at this reproduction did NOT make that substitution, returned 55 failed, and was failing for local authentication reasons rather than for the reason under test, which would have been an easy and wrong thing to report as a confirmation.
 
 Why nothing had ever noticed. Three separate paths reach this code and not one of them installs it: pytest resolves the package through `pythonpath = ["src", "."]`, Railway's start command sets `PYTHONPATH=src`, and every developer works from the repository root. So the two console scripts declared in `[project.scripts]`, `s3` and `s3-kgx-export`, could not be installed by anyone, and build phase 4.2 shipped the CLI adapter without that being visible to any gate, review round or premise test in this repository.
 

@@ -78,14 +78,46 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    # Derived by DIFFING `env.example` against what this job sets, rather than by
+    # adding one variable each time CI goes red. That is build phase 4.12's
+    # lesson applied here: it found five deployment defects the same way, and
+    # noted that diffing the file beat discovering them "one 500 at a time".
+    #
+    # The first CI run needed it. A developer's shell loads `.env`, so the whole
+    # local suite had been passing against roughly thirty variables that a runner
+    # does not have, and "4044 passed locally" was measured in a materially
+    # different environment from the one CI provides. Several settings modules
+    # RAISE on a missing variable rather than defaulting, which is the right
+    # behaviour for a cost cap and turns every such gap into a test error.
+    #
+    # Every value here is an offline-safe placeholder, never a credential. The
+    # unit suite blocks live outbound HTTP at the transport layer
+    # (`tests/conftest.py`), and RUN_PREMISE_GATE stays unset so the ~104 live
+    # arms stay out, so nothing here reaches a real provider. The model names and
+    # keys exist only so objects can be constructed.
     env:
       USER_DB_URL: postgresql://postgres:postgres@localhost:5432/search_agent_users
-      # The unit suite blocks live outbound HTTP at the transport layer
-      # (tests/conftest.py). These are the offline-safe values the suite needs to
-      # construct objects, never credentials: no gate here reaches a real
-      # provider, and RUN_PREMISE_GATE stays unset so the 136 live arms stay out.
+      REDIS_URL: redis://localhost:6379/0
       AUTH_SECRET: ci-not-a-real-secret-ci-not-a-real-secret
+      # Cost caps. `cost_control` raises rather than defaulting when these are
+      # unset, deliberately, so a missing cap can never read as "no limit".
+      PER_QUERY_COST_CAP_USD: "1.00"
+      PER_USER_DAILY_QUERY_CAP: "1000"
+      SYSTEM_DAILY_CAP_USD: "1000000"
+      PER_STEP_TIMEOUT_SECONDS: "30"
       ANON_DAILY_RUN_CAP: "1000"
+      # Tier names, resolved by `resolve_model()` from the environment and never
+      # hardcoded (system-design-patterns pattern 11). Placeholders: no call
+      # leaves the runner.
+      GUARD_MODEL: ci/placeholder-guard
+      PLAN_MODEL: ci/placeholder-plan
+      SYNTH_MODEL: ci/placeholder-synth
+      OPENROUTER_API_KEY: ci-placeholder-not-a-real-key
+      NCBI_EMAIL: ci@example.invalid
+      APP_ENV: test
+      LOG_LEVEL: warning
+      CORS_ORIGINS: http://localhost:3000
+      LANGCHAIN_TRACING_V2: "false"
 
     steps:
       - uses: actions/checkout@v4
