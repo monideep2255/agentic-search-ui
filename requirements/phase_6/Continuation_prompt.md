@@ -103,7 +103,11 @@ NEXT ACTION, the single line "Start here" step 2 refers to. Keep it current: who
 - `Design_to_build_workflow.md` makes the cards the thing builders build against and gates assert on, so a surface absent from them is a surface nothing can grade.
 - That is how a missing conversation thread shipped through build phases 4.8 and 4.9 with every gate green.
 
-Separately from any build phase, the HARNESS itself changed on 2026-08-25: a `doc-readability` skill merged as PR #64 and PR #65, adding a preservation script plus a `doc-auditor` agent that together enforce a no-information-lost guarantee on any restructured document.
+Separately from any build phase, the HARNESS itself changed on 2026-08-25 across three pull requests:
+
+- PR #64: the `doc-readability` skill, a preservation script plus a `doc-auditor` agent that together enforce a no-information-lost guarantee on any restructured document.
+- PR #65: a cost-model correction, replacing an estimated hosting figure with a measured one.
+- PR #66: a phase checkpoint followed by a five-document readability pass over `Plan.md`, this file, `PROGRESS.md`, `CLAUDE.md` and `AGENTS.md`. It also carried the most serious gate fix so far, described below, and produced `tracker/locked_docs_readability_report.md`, a report-only analysis of the two LOCKED requirements documents that is ready to execute the moment the Step 6.2 reconciliation lifts the lock. Neither locked document was edited.
 
 - Running the new gate against real documents found EIGHT defects in the gate itself, every one a FALSE POSITIVE, which is the direction that gets a gate switched off rather than trusted. Where each came from:
   - `docs/build/Build_workflow_cadence.md`, four: union candidates ranked by raw overlap so a diagram outranked the bullets a sentence split into; the candidate pool truncated away a bullet holding only an identifier; the negation check read a single anchor; the comma-chain arm counted across a whole line and required no coordinator.
