@@ -133,6 +133,21 @@ extend_skip = [
 ]
 
 [tool.setuptools]
+# Found by CI on its very first run, build phase 4.14 (F-4.14-CI-01), which is
+# exactly the kind of defect nothing else here could have found.
+#
+# `pip install -e .` failed with "package directory 'system_03_search_agent'
+# does not exist". setuptools auto-detects a `src/` layout only when `packages`
+# is NOT set explicitly; this file sets it, which turns the auto-detection off,
+# so setuptools looked for the package at the repository root.
+#
+# Nothing had ever exercised the install path: pytest resolves the package
+# through `pythonpath = ["src", "."]` above, and Railway's start command sets
+# `PYTHONPATH=src` rather than installing. So the two console scripts declared
+# in `[project.scripts]`, `s3` and `s3-kgx-export`, could not actually be
+# installed by anyone, and build phase 4.2 shipped the CLI without that being
+# visible.
+package-dir = { "" = "src" }
 packages = [
     "system_03_search_agent",
     "system_03_search_agent.adapters",

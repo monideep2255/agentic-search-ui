@@ -128,6 +128,25 @@ They converged independently on the same worst defect, which is the strongest si
 | F-4.14-A-04 | critical | adversary | NOTHING makes any of these gates merge-blocking. Branch protection needs a paid plan or a public repository; `gh api .../branches/develop/protection` returns 403 "Upgrade to GitHub Pro". The done-when as written is not achievable on this repository today | OPEN, ESCALATED to the product owner | Not fixable in code. See "The one finding this phase cannot close" below |
 | F-4.14-03-CORRECTION | major | lead, during the fix round | F-4.14-03 as originally written was OVERSTATED. It claimed a runner without PostgreSQL would print "an identical, confident green". That was measured on ONE FILE and never run against the suite. Run, it is false: the full suite against a dead database returns 56 failed, 25 errors, and gate 4 goes RED | closed | The real defect survives in a narrower and still-serious form: 51 tests skip SILENTLY, and they are three ENTIRE premise gates (build phases 4.1, 4.2 and 4.10) vanishing from the run while unrelated tests fail loudly. Recorded in `LEARNINGS.md` rather than quietly reworded |
 
+### What the first CI run found, which is the point of the whole phase
+
+CI ran for the first time in this repository's history on pull request #68, and it failed. Two of four jobs went red on one root cause, and it is a real defect in shipped code rather than a defect in the workflow:
+
+```text
+error: package directory 'system_03_search_agent' does not exist
+ERROR: Failed to build ... when getting requirements to build editable
+```
+
+| ID | Severity | Raised by | Finding | State | Resolution |
+|----|----------|-----------|---------|-------|------------|
+| F-4.14-CI-01 | major | the first CI run | `pip install -e .` was broken and had been for the life of the project. setuptools auto-detects a `src/` layout only when `packages` is NOT set explicitly; `pyproject.toml` sets it, which disables the detection, so setuptools looked for the package at the repository root and found nothing | closed | `package-dir = { "" = "src" }`. Verified in a throwaway virtualenv: the package imports from outside the repository and both console scripts appear on PATH |
+
+Why nothing had ever noticed. Three separate paths reach this code and not one of them installs it: pytest resolves the package through `pythonpath = ["src", "."]`, Railway's start command sets `PYTHONPATH=src`, and every developer works from the repository root. So the two console scripts declared in `[project.scripts]`, `s3` and `s3-kgx-export`, could not be installed by anyone, and build phase 4.2 shipped the CLI adapter without that being visible to any gate, review round or premise test in this repository.
+
+The uncomfortable part, recorded rather than smoothed over: this phase's own coverage statement predicted it in as many words, saying that every gate's command had been measured locally but "the orchestration around them has not been executed". The prediction was written, published, and not acted on. It took the machine actually running to turn a known gap into a known defect.
+
+Both red jobs shared this one cause. Neither failure sat inside a round-1 fix, so the phase did not hit the Rule 4 stop condition.
+
 ### The one finding this phase cannot close
 
 F-4.14-A-04 is a product-owner decision, not a defect to fix, and it is the largest remaining gap between what this phase claims and what exists.

@@ -12,6 +12,7 @@ The phase's product is good and the three findings it filed are real. It fails o
 - [What I verified and how](#what-i-verified-and-how)
 - [What I could NOT verify](#what-i-could-not-verify)
 - [Premise check](#premise-check)
+- [Note on the working tree at the time of this review](#note-on-the-working-tree-at-the-time-of-this-review)
 
 ## Findings
 
