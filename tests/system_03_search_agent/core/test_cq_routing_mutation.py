@@ -462,12 +462,42 @@ async def test_p11_goes_red_when_the_promotion_write_loses_its_lock(
     """
     import os
     import tempfile
+    import threading
 
     from system_03_search_agent.orchestrator import few_shot_pool
+
+    # The interleaving is FORCED here rather than hoped for, and that is a
+    # correction rather than a refinement.
+    #
+    # The P11 arm being graded already starts both threads together with a
+    # barrier, and that is not the same as making them interleave. `os.replace`
+    # is fast enough that one thread can complete its whole read-modify-write
+    # before the other reads, in which case both entries survive, the mutation
+    # loses nothing, and this test reports the arm as VACUOUS when the arm is
+    # fine. Whether that happens depends on core count and scheduling.
+    #
+    # It passed on the machine where build phase 4.7 wrote it and FAILED on a
+    # GitHub runner, found by build phase 4.14's first green-enough CI run.
+    # A test whose answer moves with the hardware is the same class of defect as
+    # build phase 4.11's non-deterministic preservation gate: a real finding
+    # stops being distinguishable from noise.
+    #
+    # This second barrier sits between the READ and the WRITE, so both threads
+    # are guaranteed to have read the SAME original document before either
+    # writes. The later write then necessarily drops the earlier thread's entry,
+    # on any hardware. The timeout means a single-threaded caller (which is how
+    # `_assert_arm_is_falsifiable` runs the arm clean) does not hang.
+    read_barrier = threading.Barrier(2)
 
     def _unlocked_append(path: Path, entry: dict[str, Any]) -> None:
         document = json.loads(Path(path).read_text(encoding="utf-8"))
         document["examples"].append(entry)
+        try:
+            read_barrier.wait(timeout=5)
+        except threading.BrokenBarrierError:
+            # Fewer than two concurrent writers: nothing to interleave, and the
+            # write below is still correct. Never fail the harness for this.
+            pass
         handle, temporary = tempfile.mkstemp(dir=str(Path(path).parent))
         with os.fdopen(handle, "w", encoding="utf-8") as stream:
             json.dump(document, stream)
