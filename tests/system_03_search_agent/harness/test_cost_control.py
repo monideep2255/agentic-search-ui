@@ -21,10 +21,10 @@ from pathlib import Path
 
 import pytest
 import sqlalchemy as sa
+from alembic import command
 from alembic.config import Config
 from sqlalchemy.orm import Session
 
-from alembic import command
 from system_03_search_agent.contracts.events import CostPayload, DonePayload, Event
 from system_03_search_agent.data.models import Interaction, User
 from system_03_search_agent.harness.cost_control import (

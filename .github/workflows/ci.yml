@@ -1,0 +1,372 @@
+# Continuous integration: Section 24's ten merge-blocking gates.
+#
+# Build phase 4.14. Section 24 of requirements/Technical_specification.md is the
+# source of truth for this file: the gate list, the order, and which gates block.
+# Do not add, remove or reorder a gate here without changing that section first.
+#
+# Why this exists at all. Build phase 4.12 wired Railway's CD to `develop`, so a
+# merge now auto-deploys to a live public URL. Until this file, NOTHING ran the
+# test suite on a pull request, and the only thing between a bad commit and the
+# demo was a person choosing to run pytest. This repository has already paid for
+# that once: build phase 4.8 recorded a broken production build sitting unnoticed
+# on `develop`, and a browser suite that had been broken for five phases, both
+# for the same reason.
+#
+# Two properties every gate here holds to, both learned from this repository's
+# own findings rather than from principle:
+#
+#   1. A gate that cannot tell "passed" from "did not run" is not a gate.
+#      Every database-backed test in this repository SKIPS rather than fails when
+#      PostgreSQL is unreachable. A runner has no PostgreSQL, so without the
+#      service block below the unit gate would report a confident green while
+#      silently skipping every one of them (finding F-4.14-03).
+#   2. No gate needs a secret to produce its verdict, except gate 5, which is
+#      network-gated by Section 24's own design. A pull request from a fork gets
+#      the same signal as one from a branch.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [develop]
+
+# A second push to the same branch makes the first run's answer irrelevant.
+# Cancel it rather than paying for both. Never cancels a run on `develop`.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "22"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Gates 1, 2, 3, 4, 6 and 9. One job, because Section 24 specifies an ORDER and
+  # steps in a job run in order and stop at the first failure, which is what an
+  # ordered gate list means. Gates 7 and 8 are a separate job only because they
+  # need Node rather than Python, and they cannot fail in a way that changes
+  # whether 1 to 6 should have run.
+  # ---------------------------------------------------------------------------
+  python-gates:
+    name: Python gates (1, 2, 3, 4, 6, 9)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      # F-4.14-03. Not a convenience: without this, `tests/system_03_search_agent
+      # /auth/test_router.py` and every other database-backed test calls
+      # `pytest.skip("set USER_DB_URL and ensure the server is running")` and the
+      # job goes green having verified nothing about them. The "no test skipped
+      # for a missing database" step below is what proves this service is
+      # actually being reached, rather than trusting that it is.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: search_agent_users
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      USER_DB_URL: postgresql://postgres:postgres@localhost:5432/search_agent_users
+      # The unit suite blocks live outbound HTTP at the transport layer
+      # (tests/conftest.py). These are the offline-safe values the suite needs to
+      # construct objects, never credentials: no gate here reaches a real
+      # provider, and RUN_PREMISE_GATE stays unset so the 136 live arms stay out.
+      AUTH_SECRET: ci-not-a-real-secret-ci-not-a-real-secret
+      ANON_DAILY_RUN_CAP: "1000"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e ".[dev]"
+
+      # Not a gate: setup that gate 4 depends on.
+      #
+      # The service above gives the job a database; this gives it a schema. The
+      # distinction matters because the tests' own probe checks CONNECTIVITY
+      # only (`tests/system_03_search_agent/auth/test_router.py`, `_can_connect`),
+      # so against an empty database they would connect happily, skip nothing,
+      # and then fail on missing tables. That failure is loud rather than silent,
+      # which is the right direction, but it is still a failure nobody needs.
+      - name: Create the user schema
+        run: alembic upgrade head
+
+      # Gate 1 -----------------------------------------------------------------
+      - name: "Gate 1: Python compiles and imports cleanly"
+        run: python -m compileall -q src services tests alembic
+
+      # Gate 2 -----------------------------------------------------------------
+      # Import order has ONE owner and this is it. Ruff's own `I` rules are
+      # turned off in pyproject.toml because the two tools disagreed on 23 files
+      # and each one's fix re-broke the other; the full reasoning, including why
+      # isort is the one to believe about `alembic`, is in that file next to the
+      # `ignore = ["I001"]` line.
+      - name: "Gate 2: Import order"
+        run: isort --check-only --diff src tests services tracker alembic .claude
+
+      # Gate 3 -----------------------------------------------------------------
+      # No path argument: the whole repository, with no exclusions. Before this
+      # phase the repository's habit was `ruff check src`, which passed while
+      # `tests/` carried 5 errors and the harness scripts carried 30.
+      - name: "Gate 3: Lint"
+        run: ruff check
+
+      # Gate 4 -----------------------------------------------------------------
+      - name: "Gate 4: Unit test suite"
+        run: pytest -m "not integration" -q -rs --junitxml=unit-results.xml
+
+      # Gate 4, the check that makes gate 4 mean something -----------------------
+      # F-4.14-03's durable half. Gate 4 above passes whether the database-backed
+      # tests RAN or merely SKIPPED, and those two outcomes look identical in its
+      # summary line. This step reads the skip reasons and fails if any test
+      # skipped because it could not reach a database. It is deliberately a
+      # separate step so its failure names itself instead of hiding inside 3947
+      # dots.
+      - name: "Gate 4 (cont.): no test skipped for a missing database"
+        run: python .github/scripts/assert_no_db_skips.py unit-results.xml
+
+      # Gate 6 -----------------------------------------------------------------
+      # `-r requirements.txt`, not a bare `pip-audit`. F-4.14-01: a bare run
+      # audits the ambient environment rather than the project, and on the
+      # machine where this phase was written it reported two findings for
+      # packages this project does not declare at all (`cryptography`, which
+      # `pip show` reports as required by nothing, and `pip` itself). Scoped to
+      # what the project actually declares, it is clean. Do not "fix" this back
+      # to a bare invocation.
+      - name: "Gate 6: Python dependency audit"
+        run: pip-audit -r requirements.txt
+
+      # Gate 9 -----------------------------------------------------------------
+      # Section 24 names `test_cite_or_refuse_compliance` and
+      # `test_zero_retrieval_refusal`. Neither exists as a function (F-4.14-02);
+      # both are sections of the file below, whose own docstring quotes Section
+      # 23's instruction that they are never deleted, narrowed or weakened.
+      #
+      # Run again, on purpose, having already run inside gate 4. Section 24 calls
+      # them out precisely because they are never skippable, and a required-path
+      # failure that appears as one line among 3947 is not legible as what it is.
+      # `--no-header -q` plus `-p no:cacheprovider` keeps this a clean second run
+      # rather than a cache replay.
+      - name: "Gate 9: Required-path tests, never skippable"
+        run: |
+          pytest tests/system_03_search_agent/synthesis/test_required_paths.py \
+            -q --no-header -p no:cacheprovider -rs --junitxml=required-paths.xml
+          python .github/scripts/assert_required_paths_ran.py required-paths.xml
+
+  # ---------------------------------------------------------------------------
+  # Gate 5. Section 24: "Yes, network-gated job".
+  # ---------------------------------------------------------------------------
+  integration:
+    name: Integration suite (5)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e ".[dev]"
+
+      # The integration suite reaches the read-only graph query service, which
+      # needs a credential this repository cannot put in a fork's pull request.
+      # When the credential is absent the suite's own arms call `pytest.skip`,
+      # so the job would otherwise go green having verified nothing. This step
+      # says so out loud instead, in the job summary, which is the honest
+      # blocked-stop rather than a quiet pass.
+      - name: "Gate 5: Integration test suite"
+        env:
+          GRAPH_QUERY_URL: ${{ secrets.GRAPH_QUERY_URL }}
+          GRAPH_QUERY_TOKEN: ${{ secrets.GRAPH_QUERY_TOKEN }}
+          GRAPH_PG_HOST: ${{ secrets.GRAPH_PG_HOST }}
+        run: |
+          if [ -z "${GRAPH_QUERY_URL}" ] && [ -z "${GRAPH_PG_HOST}" ]; then
+            {
+              echo "### Gate 5: NOT RUN"
+              echo ""
+              echo "The integration suite reaches the read-only graph query service."
+              echo "Neither \`GRAPH_QUERY_URL\` nor \`GRAPH_PG_HOST\` is available to this"
+              echo "run, so its arms would every one of them skip. Reported as NOT RUN"
+              echo "rather than passed, because a gate that cannot tell those apart is"
+              echo "not a gate."
+            } >> "$GITHUB_STEP_SUMMARY"
+            # A `::warning::` annotation, not just a summary line. A job that
+            # exits 0 renders as a green check, and a green check that means
+            # "could not run" is the exact confusion this phase exists to
+            # remove. The annotation puts it on the pull request's own checks
+            # view where a reviewer sees it without opening the log.
+            echo "::warning title=Gate 5 NOT RUN::The integration suite did not run: no graph credential is available to this context. It is not passing, it is unverified."
+            exit 0
+          fi
+          pytest -m integration -q -rs
+
+  # ---------------------------------------------------------------------------
+  # Gates 7 and 8.
+  # ---------------------------------------------------------------------------
+  frontend-gates:
+    name: Frontend gates (7, 8)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # Gate 7 -----------------------------------------------------------------
+      - name: "Gate 7: Frontend dependency audit"
+        run: npm audit --audit-level=high
+
+      # Gate 8 -----------------------------------------------------------------
+      # `npm run build` is `tsc -b && vite build`, so this is the typecheck too.
+      - name: "Gate 8: Frontend build"
+        run: npm run build
+
+      - name: "Gate 8 (cont.): Frontend tests"
+        run: npm test
+
+  # ---------------------------------------------------------------------------
+  # Gate 10. Section 24: "Yes, on UI-touching PRs only".
+  # ---------------------------------------------------------------------------
+  accessibility:
+    name: Accessibility (10)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      # The accessibility spec drives the real application, and the real
+      # application needs its user database. Same reasoning as the python-gates
+      # job: without this the spec cannot sign anyone in and would fail rather
+      # than measure contrast.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: search_agent_users
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      USER_DB_URL: postgresql://postgres:postgres@localhost:5432/search_agent_users
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Section 24 scopes this gate to UI-touching pull requests. The filter is
+      # computed here rather than with `on.paths`, because `on.paths` would make
+      # the whole job disappear from the checks list on a backend-only pull
+      # request, and a required check that vanishes is indistinguishable from one
+      # that passed. This way the job always reports, and says which it did.
+      - name: Does this change touch the UI?
+        id: filter
+        # Through `env:` rather than interpolated into the script body. These
+        # two are commit SHAs and so are not attacker-controlled free text, but
+        # the rule that keeps a workflow safe is the one applied without
+        # case-by-case judgement about which fields are "probably fine".
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          base="$BASE_SHA"
+          head="$HEAD_SHA"
+          if [ -z "$base" ]; then
+            echo "touched=true" >> "$GITHUB_OUTPUT"
+            echo "Not a pull request: running the gate."
+            exit 0
+          fi
+          if git diff --name-only "$base" "$head" | grep -qE '^frontend/'; then
+            echo "touched=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "touched=false" >> "$GITHUB_OUTPUT"
+            echo "### Gate 10: not applicable" >> "$GITHUB_STEP_SUMMARY"
+            echo "No file under \`frontend/\` changed in this pull request." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.filter.outputs.touched == 'true'
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        if: steps.filter.outputs.touched == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        if: steps.filter.outputs.touched == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e ".[dev]"
+          npm ci --prefix frontend
+          npx --prefix frontend playwright install --with-deps chromium
+
+      - name: Create the user schema
+        if: steps.filter.outputs.touched == 'true'
+        run: alembic upgrade head
+
+      # Gate 10 ----------------------------------------------------------------
+      # Only `accessibility.spec.ts`, not the whole Playwright suite, and that is
+      # a deliberate scope rather than an oversight. `query-stream-and-stop.spec
+      # .ts` carries a standing `answer-cap` failure that build phase 4.16 proved
+      # PRE-EXISTING at its own branch point and left unowned. Making the whole
+      # suite merge-blocking would block every pull request on a defect none of
+      # them introduced. Section 24's gate 10 is the accessibility check; that is
+      # what runs here.
+      - name: "Gate 10: Accessibility, WCAG 2.1 AA"
+        if: steps.filter.outputs.touched == 'true'
+        working-directory: frontend
+        run: npx playwright test e2e/accessibility.spec.ts
+
+      - name: Upload the Playwright report
+        if: failure() && steps.filter.outputs.touched == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7

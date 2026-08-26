@@ -176,9 +176,9 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 ROOT = Path(__file__).resolve().parent
 REPO_ROOT = ROOT.parent
@@ -193,7 +193,7 @@ PREMISE_GATE_TEST = Path(
 )
 
 sys.path.insert(0, str(ROOT))
-import render_board  # noqa: E402  (reused so BOARD.md is parsed one way)
+import render_board
 
 # Locked documents, frozen until Step 6.2 and allowed to disagree with the
 # live system on purpose. See the module docstring's "WHAT THIS SCRIPT DOES
@@ -266,7 +266,7 @@ class AssertionPattern:
 def _run(cmd: list[str], cwd: Path, timeout: int) -> subprocess.CompletedProcess | None:
     try:
         return subprocess.run(
-            cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout
+            cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout, check=False
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -642,9 +642,7 @@ def is_historical_context(lines: list[str], idx: int, headings: list[tuple[int, 
             current_heading = h_text
         else:
             break
-    if current_heading and HISTORICAL_HEADING_RE.search(current_heading):
-        return True
-    return False
+    return bool(current_heading and HISTORICAL_HEADING_RE.search(current_heading))
 
 
 def has_nearby_hedge(line: str, start: int, end: int, window: int = 50) -> bool:
@@ -965,7 +963,7 @@ DATED_ROW_RE = re.compile(r"^\| \d{4}-\d{2}-\d{2}")
 
 
 def split_unescaped_pipes(row: str) -> list[str]:
-    """Split a markdown table row into cells, respecting escaped pipes.
+    r"""Split a markdown table row into cells, respecting escaped pipes.
 
     Four DECISIONS.md rows contain a literal `\|` inside a cell. Splitting on
     every pipe shreds those rows and would make this check report phantom

@@ -85,9 +85,7 @@ import pytest
 
 # Imported rather than restated, so this gate cannot drift from the
 # label set the traversal actually walks.
-from system_03_search_agent.tools.graph_schema_constants import (
-    EDGE_LABELS as ALL_EDGE_LABELS,
-)
+from system_03_search_agent.tools.graph_schema_constants import EDGE_LABELS as ALL_EDGE_LABELS
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 

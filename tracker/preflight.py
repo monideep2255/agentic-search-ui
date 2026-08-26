@@ -157,7 +157,7 @@ def probe_https(host: str, path: str, timeout: float) -> tuple[str, str]:
         return OK, f"HTTP {status} in {ms}ms"
     except ssl.SSLError as exc:
         return DOWN, f"TLS failed: {type(exc).__name__}"
-    except socket.timeout:
+    except TimeoutError:
         return DOWN, f"no response within {timeout:g}s"
     except OSError as exc:
         # Covers refused, unreachable, DNS failure, and a sandbox denial. These
@@ -222,7 +222,7 @@ def probe_graph(timeout: float) -> tuple[str, str]:
         with socket.create_connection((host, port), timeout=timeout):
             ms = int((time.monotonic() - started) * 1000)
             return OK, f"TCP {port} open in {ms}ms"
-    except socket.timeout:
+    except TimeoutError:
         return DOWN, f"TCP {port} did not answer within {timeout:g}s"
     except OSError as exc:
         return DOWN, f"TCP {port}: {type(exc).__name__}: {exc}"

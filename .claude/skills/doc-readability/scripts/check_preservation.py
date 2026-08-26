@@ -128,6 +128,7 @@ USAGE
 
 from __future__ import annotations
 
+import itertools
 import os
 import re
 import subprocess
@@ -497,9 +498,7 @@ def _is_carrier(raw: str, normalized: str, first_in_unit: bool) -> bool:
         return True
     if "-" in raw.strip("-"):
         return True
-    if raw[:1].isupper() and not first_in_unit:
-        return True
-    return False
+    return bool(raw[:1].isupper() and not first_in_unit)
 
 
 # --------------------------------------------------------------------------
@@ -617,7 +616,7 @@ def split_sentences(text: str) -> list[tuple[int, str]]:
         cuts.append(m.end())
     cuts.append(len(text))
     out: list[tuple[int, str]] = []
-    for a, b in zip(cuts, cuts[1:]):
+    for a, b in itertools.pairwise(cuts):
         chunk = text[a:b].strip()
         if chunk:
             out.append((a, chunk))
@@ -1142,14 +1141,14 @@ def _self_test_cases() -> list[tuple]:
          "The gate blocks the phase, and additionally, however, it also logs.\n",
          "- Gate: blocks the phase\n- Gate: logs\n", False),
         ("arm3 true positive, qualitative sentence deleted",
-         "The gate blocks the phase. A feeling that a role seems important "
-         "is not the measured bar for dispatching it.\n",
+         ("The gate blocks the phase. A feeling that a role seems important "
+         "is not the measured bar for dispatching it.\n"),
          "The gate blocks the phase.\n", True),
         ("arm3 true negative, sentence becomes three bullets",
-         "The harness probes the model provider, the graph, and the "
-         "transport before dispatch.\n",
-         "The harness probes these before dispatch:\n\n"
-         "- Model provider\n- Graph\n- Transport\n",
+         ("The harness probes the model provider, the graph, and the "
+         "transport before dispatch.\n"),
+         ("The harness probes these before dispatch:\n\n"
+         "- Model provider\n- Graph\n- Transport\n"),
          False),
         ("negation true positive, not removed",
          "Reasoning effort is a latency setting, not just a quality setting.\n",
@@ -1157,8 +1156,8 @@ def _self_test_cases() -> list[tuple]:
          True),
         ("additions never fail the gate",
          "The gate blocks the phase.\n",
-         "The gate blocks the phase.\n\nWhy does the gate exist? Before it, a "
-         "phase could ship code nobody had exercised against reality.\n",
+         ("The gate blocks the phase.\n\nWhy does the gate exist? Before it, a "
+         "phase could ship code nobody had exercised against reality.\n"),
          False),
         ("identical documents pass",
          wall, wall, False),
@@ -1437,7 +1436,7 @@ def run_determinism_test(before_path: str | None, after_path: str | None) -> int
         proc = subprocess.run(
             [sys.executable, os.path.abspath(__file__),
              "--before", before_path, "--after", after_path, "--check"],
-            capture_output=True, text=True, env=env, timeout=300,
+            capture_output=True, text=True, env=env, timeout=300, check=False,
         )
         line = proc.stdout.strip().splitlines()
         summary = line[-1] if line else f"(no output, exit {proc.returncode})"
@@ -1496,7 +1495,7 @@ def _read(path: str) -> str | None:
 def _git_show(rel: str) -> str | None:
     proc = subprocess.run(
         ["git", "show", f"HEAD:{rel}"],
-        cwd=_repo_root(), capture_output=True, text=True, timeout=30,
+        cwd=_repo_root(), capture_output=True, text=True, timeout=30, check=False,
     )
     if proc.returncode != 0:
         print(f"error: git show HEAD:{rel} failed: {proc.stderr.strip()}",

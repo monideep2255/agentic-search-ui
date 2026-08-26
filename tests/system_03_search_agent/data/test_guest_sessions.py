@@ -45,10 +45,10 @@ from urllib.parse import urlsplit, urlunsplit
 
 import pytest
 import sqlalchemy as sa
+from alembic import command
 from alembic.config import Config
 from sqlalchemy.orm import sessionmaker
 
-from alembic import command
 from system_03_search_agent.data import guest_sessions as guest_sessions_module
 from system_03_search_agent.data.guest_sessions import (
     ATTEMPT_ALLOWANCE,

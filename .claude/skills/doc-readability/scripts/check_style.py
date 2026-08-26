@@ -317,10 +317,7 @@ def _wall_excluded(stripped: str) -> bool:
     characters).
     """
     return (
-        not stripped
-        or stripped.startswith("#")
-        or stripped.startswith("|")
-        or bool(LIST_ITEM_RE.match(stripped))
+        not stripped or stripped.startswith(("#", "|")) or bool(LIST_ITEM_RE.match(stripped))
     )
 
 
@@ -412,7 +409,7 @@ def _is_series(items: list[str]) -> bool:
     coord = -1
     for idx in range(1, len(items)):
         head = items[idx].strip().lower()
-        if head.startswith("and ") or head.startswith("or ") or head in ("and", "or"):
+        if head.startswith(("and ", "or ")) or head in ("and", "or"):
             coord = idx
     if coord < 2:
         return False
@@ -756,20 +753,20 @@ def _self_test_cases() -> list[tuple]:
 
     return [
         ("wall-length TP", check_prose_walls, long_sentence,
-         dict(wall_length=DEFAULT_WALL_LENGTH), True),
+         {"wall_length": DEFAULT_WALL_LENGTH}, True),
         ("wall-length TN, same content as a bullet",
          check_prose_walls, "- " + long_sentence.strip(),
-         dict(wall_length=DEFAULT_WALL_LENGTH), False),
+         {"wall_length": DEFAULT_WALL_LENGTH}, False),
         ("wall-comma-chain TP",
          check_prose_walls,
-         "The tool reads Layer 1 for the graph, Layer 2 for the live "
+         ("The tool reads Layer 1 for the graph, Layer 2 for the live "
          "APIs, and Layer 3 for the enrichment sources before it writes "
-         "an answer.",
-         dict(wall_length=DEFAULT_WALL_LENGTH), True),
+         "an answer."),
+         {"wall_length": DEFAULT_WALL_LENGTH}, True),
         ("wall-comma-chain TN, no chain",
          check_prose_walls,
          "The tool reads the graph before it writes an answer.",
-         dict(wall_length=DEFAULT_WALL_LENGTH), False),
+         {"wall_length": DEFAULT_WALL_LENGTH}, False),
         ("toc-missing TP", check_toc_missing, toc_doc_missing, {}, True),
         ("toc-missing TN, ToC heading present",
          check_toc_missing, toc_doc_present, {}, False),
@@ -789,9 +786,9 @@ def _self_test_cases() -> list[tuple]:
          check_heading_case, "## Key trade-offs\n\nText.", {}, False),
         ("mermaid-label TP",
          check_mermaid_labels,
-         "```mermaid\nflowchart TD\n"
+         ("```mermaid\nflowchart TD\n"
          "  a[This label is definitely far longer than thirty "
-         "characters] --> b[ok]\n```\n",
+         "characters] --> b[ok]\n```\n"),
          {}, True),
         ("mermaid-label TN, short labels",
          check_mermaid_labels,

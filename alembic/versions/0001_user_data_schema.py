@@ -13,9 +13,8 @@ constraints, indexes (including opclass and sort order), and extensions.
 from __future__ import annotations
 
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
-
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "0001_user_data_schema"

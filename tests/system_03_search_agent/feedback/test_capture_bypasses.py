@@ -127,9 +127,8 @@ def _with_db_name(url: str, db_name: str) -> str:
 @pytest.fixture(scope="module")
 def scratch_db_url():
     """A throwaway database for this module, dropped when the module ends."""
-    from alembic.config import Config
-
     from alembic import command
+    from alembic.config import Config
 
     db_name = f"capture_bypass_{uuid.uuid4().hex}"
     assert re.fullmatch(r"[a-z0-9_]+", db_name)
