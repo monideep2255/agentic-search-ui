@@ -66,6 +66,43 @@ Budget or iteration caps are checkpoints, not success. When a cap is hit, the ru
 
 Rigor about the wrong layer is the third failure mode, and it hides behind a verify surface that is genuinely real. A check can audit every leaf output honestly and still certify a wrong answer, because the premise that generated those outputs was never checked. A measured instance: a research run verified all twenty of its facts against two independent authoritative sources each, an honest and rigorous verify surface, and still shipped a wrong answer, because the premise that produced the fact list (the list itself, built from model memory) went unverified. The rigor was real and pointed one layer too low. When the decomposition or premise matters, the verify surface must cover it, not only the leaves. Done-when should name the premise as a checkable element, or the contract certifies a confident wrong answer with a clean audit trail.
 
+### The inverse: never corrupt the subject to satisfy the check
+
+The reward-hacking rule above forbids weakening the CHECK so it passes. The
+mirror image is just as damaging and reads as diligence rather than as a
+shortcut: changing the SUBJECT so a correct-looking check goes green, when
+the subject was right and the check was measuring something else.
+
+Measured on 2026-08-25. `tracker/check_doc_drift.py` reported
+`requirements/Plan.md` stale for saying build phase 3.1 merged as PR #22,
+computing PR #23. Git showed PR #22 merged `phase/3.1-ncbi-efetch` and PR
+#23 merged a separate `fix/3.1-rereview-round1-critical-regressions`
+branch. The document was describing the phase merge, the checker defines a
+phase's PR as the last one that closed it, and both were right about
+different events. Editing the document to say #23 would have turned a true
+sentence into a false one and produced a green gate certifying a wrong
+record. The sentence was rewritten to state both parts instead, and
+`tracker/BOARD.md` and `tracker/phase_4.16.md` were deliberately LEFT
+UNCHANGED where the same ambiguity exists for build phase 4.12.
+
+So when a gate fires, establish which of three things is true before
+editing anything:
+
+- The subject is wrong: fix the subject. The ordinary case.
+- The check is wrong: fix the check, and say so out loud rather than
+  routing around it.
+- Both are right and they are measuring different things: make the subject
+  unambiguous, and change neither definition.
+
+The third case is the one that gets mishandled, because the second and
+third are indistinguishable from the gate's output alone. A red gate is a
+question, not an instruction.
+
+Deny:
+- Never edit a document, a fixture, or a data file so a check passes when
+  the thing you edited was correct. That is the same failed run as
+  weakening the check, arrived at from the other side.
+
 ### A verify surface must state its own coverage
 
 The failure above says a verify surface can point one layer too low. This
