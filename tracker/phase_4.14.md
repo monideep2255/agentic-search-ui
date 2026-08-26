@@ -3,7 +3,24 @@
 Branch: `phase/4.14-ci-gates`
 Depends on: 4.12, merged 2026-08-24 as PR #61
 Opened: 2026-08-26
-Status: IN PROGRESS
+Status: COMPLETE on the branch, CI FULLY GREEN on run 7, awaiting product-owner review of PR #68. One finding merges OPEN by escalation (F-4.14-A-04, the gates are advisory rather than merge-blocking) and one stays open for want of a credential (F-4.14-RV-08, gate 5's strict path).
+
+CI run 7, every gate reporting evidence rather than a check mark:
+
+```text
+Gate 1   imports ok: web_sse.app, core.graph, adapters.cli.main
+Gate 2   isort clean
+Gate 3   All checks passed!
+Gate 4   4066 passed, 136 skipped, 1 xfailed, 0 failed
+Gate 4b  4203 test cases, every skip sanctioned
+Gate 5   pass, and the ::warning annotation says NOT RUN, which is honest
+Gate 6   No known vulnerabilities found
+Gate 7   pass          Gate 8   pass
+Gate 9   27 required-path tests ran, none skipped, both paths exercised
+Gate 10  pass
+```
+
+The runner's 4066 matches the local figure exactly, which is the number that says the environment fix held.
 
 Pulled forward from build phase 6.1 by product-owner decision, 2026-08-24, the fourth such exception after 4.8, 4.10 and 4.11/4.12. Section 25 does not contain it. Section 24 specifies its ten gates in full and build phase 6.1 owned them; build phase 4.12 changed the urgency by wiring CD to `develop`, so an unguarded merge now reaches a live public URL.
 
