@@ -168,6 +168,23 @@ The uncomfortable part, recorded rather than smoothed over: this phase's own cov
 
 Both red jobs shared this one cause. Neither failure sat inside a round-1 fix, so the phase did not hit the Rule 4 stop condition.
 
+### Review round 2: the phase STOPPED here
+
+A fresh-context re-verifier, which filed none of the round-1 findings, returned **FAIL**. The phase stopped on the spot under `bossman-mode`'s Rule 4 rather than opening a third round, and it is escalated to the product owner.
+
+| ID | Severity | Finding | State |
+|----|----------|---------|-------|
+| F-4.14-RV-03 | CRITICAL, `Regression of: F-4.14-A-05` | `command_text` strips a comment only when `#` follows whitespace. Bash also starts a comment after `;`, `&&`, `\|\|` and `(`. So `:;#ruff check` runs NOTHING and the arm reads it as containing the command. Eight of the ten gate bodies were rewritten this way in a detached worktree and all 97 tests stayed green, including the mutation harness whose whole job is proving these arms can fail | OPEN, blocks the phase |
+| F-4.14-RV-09 | major, reopens F-4.14-A-06 | Gate 9's source check is a substring test, so a file of 16 `assert True` tests whose DOCSTRING names `REFUSAL_TEXT` and `ground_claim` satisfies it | OPEN |
+| F-4.14-RV-05 | major, reopens F-4.14-J-01 | `test_p13` claims to defend "no file skipped by both tools" and only checks the `ignore` spelling. Adding `per-file-ignores` for the two files isort skips leaves them checked by neither, and a scrambled import block passed both gates | OPEN |
+| F-4.14-RV-08 | major | Gate 5's strict path has never executed. Every green so far is the NOT RUN branch | OPEN, needs a credential |
+
+Four minors were also filed. Both of the lead's corrections were independently CONFIRMED, including on a real checkout of `4ea0778`, where deleting `ignore = ["I001"]` turns `All checks passed!` into 21 I001 errors.
+
+**Why this is a stop rather than a fix.** F-4.14-RV-03 sits inside `b2dfda5`, the round-1 fix commit, and it is the SAME defect class that commit was written to close: a command that is really a comment being counted as a command. Twice now the answer to "does this gate read what actually executes" has been string matching, and twice it has been beaten. Rule 4 exists for exactly this signal: a finding inside a fix means the fix APPROACH is wrong rather than incomplete, so a third string-matching patch is the move the rule forbids.
+
+The irony is worth recording rather than smoothing over. `test_p19_no_gate_is_neutralised` enumerates four named tricks and misses the fifth, which is the enumerate-the-instances shape that `assert_no_db_skips.py` correctly diagnoses and rejects, in its own docstring, in the same commit.
+
 ### The one finding this phase cannot close
 
 F-4.14-A-04 is a product-owner decision, not a defect to fix, and it is the largest remaining gap between what this phase claims and what exists.
