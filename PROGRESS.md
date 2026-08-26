@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-25.
+Last updated: 2026-08-26.
 
 ## Table of contents
 
@@ -53,6 +53,7 @@ You can ask a question and get a real, cited answer back, streamed to a web page
 
 Concretely:
 
+- Changes get checked before they reach you. Ten checks now run by themselves whenever anyone proposes a change to the project: does the code still build, are the tests still passing, do any of the outside pieces we depend on have known security holes, and does the page still work for someone using a screen reader. Before this week none of that happened unless a person remembered to do it.
 - You can see it working. Until this week the screen showed five grey step markers for about eleven seconds and then the whole answer appeared at once, so it looked frozen and then abrupt. It now shows each source being consulted as it happens. The answer was never slow in the way it looked; nothing was being said out loud while it worked.
 - A conversation stays on the page. Asking a follow-up used to wipe out the answer you had just read. Your earlier questions now stay below the new one, folded up, and you can open any of them again.
 - Every page has its own web address. You can send someone a link to the integrations page and they land on the integrations page. The back button works. Before this, every page lived at the same address and the address never changed.
@@ -107,7 +108,9 @@ All six live-government-API connections the plan called for are now built. That 
 
 Both of last week's headline problems are fixed, so this section leads with what is true now rather than keeping solved problems at the top. What they were, and what happened to them, is in the sprint list below.
 
-The honest headline: nothing runs the tests automatically. Every check on this project happens because a person decides to run it. Meanwhile, a change merged into the main line of work now goes straight to the live web address with nothing in between. That combination is the biggest risk we are carrying, and closing it is the next sprint.
+The honest headline changed this week, and the old one is worth keeping in view. It used to be that nothing ran the tests automatically: every check happened because a person decided to run it, while a change merged into the main line went straight to the live web address with nothing in between. That is fixed as of 26 August. Ten checks now run by themselves every time anyone proposes a change.
+
+The new honest headline is narrower and still real: those checks do not actually BLOCK anything. They put a red mark next to a button that still works. Making them genuinely block a merge needs either a paid plan on the service that hosts our code, or making the project's code public, and that is a decision for the product owner rather than something we can build. Until it is made, the checks inform a person rather than stopping them.
 
 The second thing to know: the seven problems one person found in an afternoon of clicking around are all fixed and all live, as of 25 August. We checked by opening the real web address afterwards rather than trusting that it had worked. One thing is better but not finished: the screen used to sit silent for about eleven seconds while it worked, and it now tells you which source it is consulting as it goes, but there is still a gap of about six seconds at the end while it writes the answer, during which it says nothing. That is the same problem one step further along, and it is written down.
 
@@ -313,6 +316,25 @@ Getting there took five separate repairs, and every single one was found by USIN
 
 The most useful thing we learned has nothing to do with any of those. It is that a status light saying "running" is not evidence. One of our two web services reported itself perfectly healthy for several minutes while running a second copy of the WRONG program. And three separate times, a fix looked like it had failed when in truth the new version had never been loaded at all. We now check what a thing is actually DOING, not what it says about itself.
 
+### Sprint: the checks that run by themselves (26 August)
+
+Ten checks now run automatically every time anyone proposes a change: the code compiles, it is tidy, the tests pass, the dependencies have no known security holes, the web pages build, and a screen-reader check runs when the appearance changes.
+
+The valuable part of this sprint is not the checks. It is what they caught the first four times they ran, none of which any person or any earlier check had noticed:
+
+- The project could not actually be installed. Anyone following our own instructions to install it got an error. This had been true for the entire life of the project, which means the two command-line tools we shipped in August could not be installed by anybody at all. Nothing had noticed because every way we run it ourselves happens to sidestep the install step.
+- The tests need about thirty settings that a fresh machine does not have. Ours worked because our own machines were quietly supplying them. So every earlier claim that "the tests pass" had been measured in a friendlier environment than a clean one.
+- One of our own checks was declaring a perfectly healthy test broken, depending on how many processors the machine had. It gave different answers on different computers, which makes a real finding impossible to tell from noise.
+- Twenty-five tests could never have run on the new machine at all, and were hiding behind a cheerful "4019 passed". They were reaching for a database using an address that only works on our own laptops.
+
+That last one is the clearest argument for the whole sprint. A green tick saying four thousand tests passed looked completely healthy, and twenty-five of them had quietly not run. The only reason we know is that we had built something specifically to tell the difference between "this test passed" and "this test never happened", and it refused to let them slide.
+
+It cost three rounds of review and one full stop, and the reason is worth telling. We had written a checker to confirm that each of the ten checks really did what it claimed. Twice, someone reviewing our work broke it in a way that looked completely convincing on the page and did nothing at all when run. The second time, eight of the ten checks were switched off and every one of our own tests still reported everything fine.
+
+The fix was not to patch it a third time. The product owner's call was to change the shape of the thing so the trick becomes impossible rather than merely harder: each check's instructions moved into its own small file, and the automated system is now only allowed to say "run that file" and nothing else. There is no longer any room for a hidden instruction, because there is no longer any room for anything.
+
+The lesson we wrote down: a test that tries to prove another test works only proves it against the tricks you thought to try. When something keeps failing in the same way, stop making the check stricter and change what it is looking at.
+
 ## What is next
 
 Where the finished work sits against what is still ahead:
@@ -371,13 +393,12 @@ The planned specification pause (updating the written plans with everything lear
 
 In order, now:
 
-1. Making the tests run by themselves. Right now every check on this project happens because a person decides to run it, and a change merged into the main line goes straight to the live web address with nothing in between. Those two facts together are the biggest risk the project is carrying. This was scheduled on 24 August and has not been started.
+1. Saved search history that survives closing the browser. The record of what you asked is already being written; what is missing is the part that reads it back and shows it to you when you return.
 
-2. Saved search history that survives closing the browser. The record of what you asked is already being written; what is missing is the part that reads it back and shows it to you.
 
-3. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
+2. Wiring the other five lookup tools (genetic variants, both literature tools, disease outbreaks, clinical trials) into the answer pipeline the same way gene lookup was wired in an earlier sprint.
 
-4. Then the remaining work: measurement and quality scoring, and finally hardening it for real use.
+3. Then the remaining work: measurement and quality scoring, and finally hardening it for real use.
 
 Two items that used to head this list are gone because they are done, and it is worth saying what they were rather than letting them disappear. The first was closing two ways the system could be made to answer about the wrong gene, both fixed on 24 August before any public address existed, which was the ordering we insisted on: a confidently worded, properly sourced answer about the wrong thing is more dangerous than no answer. The second was getting it online at all, done the same day.
 
@@ -387,7 +408,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
-| Nothing runs the tests by itself. Every check happens because a person chooses to run it, while a change merged into the main line goes straight to the live web address with nothing in between | The very next sprint, scheduled 24 August and not yet started |
+| ~~Nothing runs the tests by itself. Every check happens because a person chooses to run it, while a change merged into the main line goes straight to the live web address with nothing in between~~ | FIXED, 26 August. Ten checks now run automatically on every proposed change |
+| The automatic checks do not actually BLOCK a change. They put a red mark next to a button that still works, so a person can merge past a failing check | Needs a product-owner decision rather than building: either a paid plan on the service hosting our code, or making the project's code public. Neither is a change we can make on our own |
+| One of the ten checks, the one that talks to our big biology database, has never actually run. It reports honestly that it could not run rather than pretending to pass, but that means it has never checked anything | When the automatic system is given the password for that database. It is written and waiting; nothing is wrong with it |
 | Our own browser tests cannot exercise the product the way a visitor without an account actually uses it. That path had never once been tested in a browser, because a missing setting made every anonymous question fail before it started. Fixed for the test setup on 25 August, but it means the way most people will use this had no automated cover until now | The setting is fixed; broader cover for that path comes with the automated-testing sprint |
 | Our browser tests also cannot watch the system actually consult a source, because the test setup stands in for the AI but not for the outside services, so no lookup is ever planned. One long-standing failing test is explained by this | With the automated-testing sprint |
 | The drawings the screens are built from do not include the follow-up box or the running conversation at all, and they have nothing to say about how an answer backed by a single record should be labelled. Those are exactly the two places where problems shipped unnoticed, because a screen nobody has drawn is a screen no check can grade | Needs a decision: the drawings are owned by the product owner, not the build |

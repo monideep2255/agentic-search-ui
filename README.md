@@ -13,6 +13,7 @@ For a plain-language, no-jargon project update, see [PROGRESS.md](PROGRESS.md).
 - [Tech stack](#tech-stack)
 - [Status](#status)
 - [Quick start](#quick-start)
+- [Running the checks locally](#running-the-checks-locally)
 - [Directory structure](#directory-structure)
 - [Planning documents](#planning-documents)
 - [Documentation](#documentation)
@@ -34,7 +35,7 @@ Measured on the deployed API rather than asserted, 2026-08-25: "Which diseases a
 It is a PROTOTYPE. What that means in practice, stated because a demo link invites the wrong assumption:
 
 - No account is needed. An anonymous visitor gets a small free allowance of searches, counted server-side.
-- Nothing runs the test suite automatically. Every gate on this project passes because a person chose to run it, while a merge to `develop` deploys straight to the URLs above. Closing that is build phase 4.14, and it has not started.
+- CI now runs Section 24's ten gates on every pull request and on every push to `develop` (build phase 4.14, merged 2026-08-26). The gates are advisory rather than merge-blocking, since branch protection needs GitHub Pro or a public repository, so a merge to `develop` still deploys straight to the URLs above regardless of gate outcome.
 - Coverage is uneven by organism and by database. Treat an answer as a starting point for verification, never as an endpoint.
 
 Known open items are tracked on `tracker/BOARD.md` rather than duplicated here. The six UI defects the first live session surfaced, plus a seventh found alongside them, were all closed by build phase 4.16 on 2026-08-25.
@@ -98,7 +99,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.12, and 4.16. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), with CD watching `develop`. Next: CI (build phase 4.14), then durable history (4.13) and the two-environment release flow (4.15), then 5.0 and 5.1 for tracing and the eval harness. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
+| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.12, 4.14, and 4.16. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), with CD watching `develop` and CI running Section 24's ten gates on every pull request. Next: durable history (4.13) and the two-environment release flow (4.15), then 5.0 and 5.1 for tracing and the eval harness. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
 
 ### Build phase detail
 
@@ -130,7 +131,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | 4.11 | The read-only HTTPS graph query service on the Hetzner box, retiring the hand-opened SSH tunnel | Merged into develop, PR #55, 2026-08-22 |
 | 4.12 | The demo deployment on Railway: two services, Postgres and Redis, the Layer 1 cutover, and CD watching develop | Merged into develop, PR #62, 2026-08-24. THE PRODUCT IS LIVE |
 | 4.13 | Durable cross-reload search history over the interactions rows 4.6 writes | Not started |
-| 4.14 | CI: the ten merge-blocking gates from Section 24 | Not started, pulled forward from 6.1 by product-owner decision 2026-08-24 |
+| 4.14 | CI: the ten gates from Section 24, advisory rather than merge-blocking since branch protection needs GitHub Pro or a public repository | Merged into develop, PR #68, 2026-08-26, after three review rounds and a Rule 4 stop |
 | 4.15 | Two Railway environments and a release-branch flow, so develop and production deploy separately | Not started, inserted by product-owner decision 2026-08-24 |
 | 4.16 | The seven UI defects the first live session surfaced. The largest was backend, not frontend: the Act step emitted no events at all, so eleven seconds of a run were silent and no tool chip had ever rendered | Merged into develop, PR #63, 2026-08-25. Inserted by product-owner decision |
 
@@ -155,6 +156,8 @@ cp env.example .env   # fill in API keys and credentials
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+# pip install -e . also works now (fixed in build phase 4.14) and installs
+# the s3 and s3-kgx-export console scripts
 
 # User-data database (auth, sessions, interactions). Create it once, then migrate.
 # USER_DB_URL in .env names the target; the default is the local database below.
@@ -172,6 +175,21 @@ npm run dev
 # Run tests
 pytest tests/
 ```
+
+---
+
+## Running the checks locally
+
+The same checks CI runs on every pull request (build phase 4.14), so a failure surfaces before pushing rather than after:
+
+| Check | Command |
+|-------|---------|
+| Import order | `isort --check-only --diff src tests services tracker alembic .claude .github` |
+| Lint | `ruff check` (no path argument: the whole repository) |
+| Unit test suite | `pytest -m "not integration"` |
+| Python dependency audit | `pip-audit -r requirements.txt` |
+
+Full gate list, order, and the design rationale (why the CI workflow itself contains no inline shell): [`.github/gates/README.md`](.github/gates/README.md).
 
 ---
 
@@ -216,6 +234,7 @@ agentic-search-ui/
   tracker/                      # The build board: BOARD.md, phase tickets, render_board.py, check_doc_drift.py
   alembic/                      # Migrations for the user-data schema
   .claude/                      # Claude Code rules, skills, agents, hooks
+  .github/                      # CI workflow (ci.yml) and one script per Section 24 gate (gates/)
   CLAUDE.md                     # Claude Code instructions
   AGENTS.md                     # Instructions for other AI agents
   DECISIONS.md                  # Decision log
@@ -255,6 +274,7 @@ agentic-search-ui/
 | [Tool implementation mechanics](docs/ncbi/Tool_implementation_mechanics.md) | Per-tool API traps from tech spec section 6: edge-label enforcement, ELink target db, the `global_mafs` array, sequential dbSNP calls, snapshot pinning |
 | [Build workflow cadence](docs/build/Build_workflow_cadence.md) | The quick reference for how a build phase runs: the twelve stages, who acts at each, the model and effort per stage. Stage 5, the premise gate, is mandatory and blocking for a model-generating phase |
 | [Phase 6 execution flow](docs/build/Phase_6_execution_flow.html) | The build cadence as a visual page, also published as a Claude artifact |
+| [CI gate scripts](.github/gates/README.md) | Why the CI workflow contains no inline shell: one script per Section 24 gate, and the premise-gate defeats that forced the design |
 | [Decisions](DECISIONS.md) | Architecture and implementation decisions with rationale |
 
 ---
@@ -318,4 +338,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-08-25
+Last updated: 2026-08-26
