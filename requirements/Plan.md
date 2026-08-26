@@ -17,7 +17,18 @@ Kick-off: 2026-05-06. Last updated: 2026-08-25.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5 and 4.0 through 4.12. THE PRODUCT IS DEPLOYED AND ANSWERING as of 2026-08-24 (PR #61), live at https://search-agent-web-production.up.railway.app with CD watching `develop`. BUILD PHASE 4.16, the seven UI defects the live demo surfaced, MERGED as PR #63 on 2026-08-25 and is LIVE on the demo, verified on the deployed product rather than asserted. Next: build phase 4.14 (CI, inserted 2026-08-24 and still not started), then 4.13 (durable history) and 4.15 (the two-environment release flow). Per-phase status: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 414 (DECISIONS.md). Deliverables produced: the Phase 1 synthesis, the evaluation playbook, the PRD (locked), the verified API capability sheet, the technical specification (locked), and the strategic memo. The dated change log is in Revision history at the end of this document.
+Decisions logged: 416 (DECISIONS.md).
+
+Deliverables produced:
+
+- The Phase 1 synthesis
+- The evaluation playbook
+- The PRD (locked)
+- The verified API capability sheet
+- The technical specification (locked)
+- The strategic memo
+
+The dated change log is in Revision history at the end of this document.
 
 ## Table of contents
 
@@ -41,7 +52,17 @@ Decisions logged: 414 (DECISIONS.md). Deliverables produced: the Phase 1 synthes
 
 ## Goal
 
-Build System 3: an ever-evolving UI + agent system where a user asks a question in plain English, the agent queries across three data layers (knowledge graph, NCBI APIs, enrichment APIs) through hard guardrails, and returns a cited answer. Over time, the system collects user interactions, generates competency questions from them, and feeds those back into the orchestrator to improve query routing.
+Build System 3: an ever-evolving UI + agent system where:
+
+- A user asks a question in plain English.
+- The agent queries across three data layers (knowledge graph, NCBI APIs, enrichment APIs) through hard guardrails.
+- The agent returns a cited answer.
+
+Over time, the system:
+
+- Collects user interactions.
+- Generates competency questions from them.
+- Feeds those back into the orchestrator to improve query routing.
 
 This is not just building a product. This is two of us (human + agent) working as a team in a new format, using agent tools as teammates, with me as orchestrator. The process of building is as important as the output.
 
@@ -96,7 +117,13 @@ Output: `requirements/context/Background_requirements.md` (24 sources indexed, a
 
 Status: COMPLETE (all 13 steps done as of 2026-07-21)
 
-Goal: go through every source in `Background_requirements.md`, debate what to use, what to skip, and what needs adaptation. Lock the architecture decisions before writing the PRD.
+Goal: go through every source in `Background_requirements.md` and debate:
+
+- What to use
+- What to skip
+- What needs adaptation
+
+Lock the architecture decisions before writing the PRD.
 
 ### Phase 1 output structure
 
@@ -222,7 +249,11 @@ Source: `requirements/context/ncbi_ai_models_control_first_summary.md` (control-
 
 This composes with Step 1.10 (security and compliance cross-cutting concerns) and Step 1.11 (model routing and providers). Keep the legal decisions here so model choice and hosting are not locked before their legal constraints are cleared.
 
-Phase 1 output: session notes, decision log (DECISIONS.md), and Phase 1 synthesis document (see output structure above).
+Phase 1 output:
+
+- Session notes
+- Decision log (DECISIONS.md)
+- Phase 1 synthesis document (see output structure above)
 
 ---
 
@@ -232,7 +263,13 @@ Status: COMPLETE (all five steps 2.1 to 2.5 done as of 2026-07-22; deliverable r
 
 Goal: finalize the competency questions that define what System 3 must answer. These feed directly into the PRD as acceptance criteria and into the orchestrator as routing intelligence.
 
-Prerequisites: Phase 1 synthesis document complete (`requirements/phase_1/Phase_1_synthesis.md`). The synthesis organizes all architecture decisions, tool mappings, and design patterns by topic, providing the foundation for evaluating which competency questions the system can answer and how.
+Prerequisites: Phase 1 synthesis document complete (`requirements/phase_1/Phase_1_synthesis.md`).
+
+The synthesis organizes the following by topic, providing the foundation for evaluating which competency questions the system can answer and how:
+
+- All architecture decisions
+- Tool mappings
+- Design patterns
 
 ### Step 2.1: review existing competency questions
 
@@ -243,7 +280,13 @@ Task (Monideep): review and confirm. Are these the right questions?
 
 ### Step 2.2: scrape real user data (Monideep's task)
 
-Task (Monideep): scrape Confluence, Jira, and app logs via MCP to identify what people actually search for at NCBI. Data never lies. Compare to the CQ set.
+Task (Monideep): scrape the following via MCP, to identify what people actually search for at NCBI:
+
+- Confluence
+- Jira
+- App logs
+
+Data never lies. Compare to the CQ set.
 
 Deliverable: raw data dump of real search patterns, categorized by intent type.
 
@@ -270,7 +313,11 @@ Discussion topic (discuss): what makes a competency question worth including, th
 4. Learn from the system: the answer surfaces something the system is uniquely positioned to show, such as cross-database relationships or structured evidence, so the user gets insight a generic summary cannot give. To discuss: does this mean the user learns from the system, the system learns from usage, or both?
 5. Loop human behavior: the question, and how users follow up on it, feeds the interaction-to-competency-question loop (Step 2.5), so real human behavior sharpens the CQ set over time.
 
-Task (Discuss together): decide whether these five become explicit selection or tiering criteria for the CQ set, how to weigh them against persona coverage and real-usage frequency, and test the idea by scoring a few concrete tier 1 candidates against all five.
+Task (Discuss together): decide the following:
+
+- Whether these five become explicit selection or tiering criteria for the CQ set
+- How to weigh them against persona coverage and real-usage frequency
+- Test the idea by scoring a few concrete tier 1 candidates against all five
 
 ### Step 2.4: define the offline evaluation gate
 
@@ -306,7 +353,11 @@ The tech spec references this playbook rather than restating it. It is updated a
 
 Status: COMPLETE (PRD locked 2026-07-22; deliverable requirements/PRD.md)
 
-Goal: write the PRD. Single source of truth for what System 3 does, for whom, and how we measure success.
+Goal: write the PRD. Single source of truth for:
+
+- What System 3 does
+- For whom
+- How we measure success
 
 Prerequisites: Phase 1 decisions locked. Phase 2 competency questions finalized.
 
@@ -354,7 +405,14 @@ Prerequisites: PRD locked.
 
 ### Step 4.0: NCBI and enrichment API current-state deep dive - COMPLETE (2026-07-25)
 
-System 3 depends heavily on the NCBI E-utilities, the Datasets API v2, Variation Services, and the Layer 3 enrichment APIs (PubTator3, LitVar2, LitSense, ClinicalTrials.gov). Before writing the tool specifications, deep dive the current state of each:
+System 3 depends heavily on:
+
+- The NCBI E-utilities
+- The Datasets API v2
+- Variation Services
+- The Layer 3 enrichment APIs (PubTator3, LitVar2, LitSense, ClinicalTrials.gov)
+
+Before writing the tool specifications, deep dive the current state of each:
 
 - Live endpoints
 - Request and response schemas
@@ -376,7 +434,12 @@ The moat cap holds at seven with no demotions. Layer 1 stays trusted from its ga
 
 ### Step 4.1: outline the tech spec - COMPLETE (2026-07-25)
 
-Complete: outlined once the Step 4.1 core-architecture decisions locked. The outline below became `requirements/Technical_specification.md`'s table of contents, expanded to 25 sections through Steps 4.2 and 4.3 as the tool roster grew from five to seven and the delivery surfaces reconciled to six.
+Complete: outlined once the Step 4.1 core-architecture decisions locked.
+
+The outline below became `requirements/Technical_specification.md`'s table of contents, expanded to 25 sections through Steps 4.2 and 4.3:
+
+- The tool roster grew from five to seven.
+- The delivery surfaces reconciled to six.
 
 Sections (expected):
 - System architecture (agent loop, three-layer data, multi-model harness)
@@ -413,7 +476,15 @@ Complete: drafted to implementation level by a parallel drafting pass across sev
 
 Both agree. This is the build blueprint.
 
-Complete: reconciled the draft (unified the citation, cost, and error event schemas against the canonical Section 2 and Section 9 definitions, expanded the tool roster from five to seven, and reconciled the delivery surfaces to six against the locked PRD), graded twice fresh-context per self-eval-loop with the schema-consistency failure cleared and verified on the re-grade, then locked. Deliverable: `requirements/Technical_specification.md` (25 sections).
+Complete: reconciled the draft.
+
+- Unified the citation, cost, and error event schemas against the canonical Section 2 and Section 9 definitions
+- Expanded the tool roster from five to seven
+- Reconciled the delivery surfaces to six against the locked PRD
+- Graded twice fresh-context per self-eval-loop with the schema-consistency failure cleared and verified on the re-grade
+- Then locked
+
+Deliverable: `requirements/Technical_specification.md` (25 sections).
 
 ### Step 4.4: draft the strategic memo - COMPLETE (2026-07-25)
 
@@ -427,9 +498,24 @@ Write the 1 to 2 page strategic memo, distilled from the locked PRD and tech spe
 
 It lets a stakeholder who needs the decision, not the detail, skip the full PRD and tech spec. It gets updated after the prototype runs (see Phase 6).
 
-Complete: drafted as a one-read, six-section memo (what it is, why it exists, how it works, what v1 delivers, how we know it works, where it goes) distilled from the locked PRD and the locked tech spec, for a future collaborator or future-me to hold the whole system in their head at a glance. Deliverable: `requirements/Strategic_memo.md`.
+Complete: drafted as a one-read, six-section memo, distilled from the locked PRD and the locked tech spec, for a future collaborator or future-me to hold the whole system in their head at a glance:
 
-Phase 4 output: `requirements/phase_4/API_capability_sheet.md` (Step 4.0), `requirements/Technical_specification.md` (locked 2026-07-25), and `requirements/Strategic_memo.md` (2026-07-25). Phase 4 is now COMPLETE. These three deliverables serve as the phase synthesis; unlike Phase 1, no separate synthesis document is produced.
+- What it is
+- Why it exists
+- How it works
+- What v1 delivers
+- How we know it works
+- Where it goes
+
+Deliverable: `requirements/Strategic_memo.md`.
+
+Phase 4 output:
+
+- `requirements/phase_4/API_capability_sheet.md` (Step 4.0)
+- `requirements/Technical_specification.md` (locked 2026-07-25)
+- `requirements/Strategic_memo.md` (2026-07-25)
+
+Phase 4 is now COMPLETE. These three deliverables serve as the phase synthesis; unlike Phase 1, no separate synthesis document is produced.
 
 ---
 
@@ -490,9 +576,22 @@ Rules: added `tool-call-budgets` and `v1-scope-boundary`, adopted `prompt-cache-
 
 ### Step 5.4: create any new reference docs - COMPLETE (2026-07-26)
 
-`docs/ncbi/Tool_implementation_mechanics.md`: 19 per-tool API traps from tech spec Section 6, six identified during the coverage map and 13 more found reading the section in full. The document holds API facts; the rules hold policy, and it says so explicitly so the boundary survives future edits.
+`docs/ncbi/Tool_implementation_mechanics.md`: 19 per-tool API traps from tech spec Section 6.
 
-Phase 5 output: all project infrastructure aligned with the PRD and tech spec. Deliverables are `requirements/phase_5/Coverage_map.md` (the 303-obligation gate list), `requirements/phase_5/Phase_5_synthesis.md`, the rewritten harness under `.claude/`, `docs/ncbi/Tool_implementation_mechanics.md`, and `LEARNINGS.md`.
+- Six identified during the coverage map
+- 13 more found reading the section in full
+
+The document holds API facts. The rules hold policy. It says so explicitly, so the boundary survives future edits.
+
+Phase 5 output: all project infrastructure aligned with the PRD and tech spec.
+
+Deliverables:
+
+- `requirements/phase_5/Coverage_map.md` (the 303-obligation gate list)
+- `requirements/phase_5/Phase_5_synthesis.md`
+- The rewritten harness under `.claude/`
+- `docs/ncbi/Tool_implementation_mechanics.md`
+- `LEARNINGS.md`
 
 ---
 
@@ -508,7 +607,19 @@ Status: IN PROGRESS. Five build phases done and merged:
 - 2.2 (PR #18, 2026-08-03)
 - 3.0 (PR #19, 2026-08-04)
 
-Next up, in this order and not the build-order order: re-review build phase 3.1's fix round, then F-2.1-C15 on `fix/c15-generation-bound`, then open build phase 3.2, `ncbi_dbsnp`. Build phase 3.1 (`ncbi_efetch`) merged as PR #22 on 2026-08-05, but merged without the adversarial pass over its own fix round, so twenty-six of its twenty-seven findings sit at `fix-landed` rather than closed. The re-review is what converts them, and it runs before 3.2 opens because 3.2 depends on 3.1. Build phase 3.0 (the full Section 10 guardrail) merged as PR #19 on 2026-08-04. Build phase 2.2 closed 2026-08-03 and completed the Step 6.1 prototype group. Step 6.2 moved on 2026-08-03 to run after the 3.x tool phases, since its own reasoning names 3.x as the code its security scan most exists for, and reconciling the frozen documents after the tool phases is better input than reconciling before them. That scan is separately paused indefinitely on cost, with exposure as the one condition that turns it back on. Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
+Next up, in this order and not the build-order order:
+
+1. Re-review build phase 3.1's fix round.
+2. F-2.1-C15 on `fix/c15-generation-bound`.
+3. Open build phase 3.2, `ncbi_dbsnp`.
+
+- Build phase 3.1 (`ncbi_efetch`) landed in two parts: the phase branch on 2026-08-05 under PR #22, then its re-review debt closing separately on 2026-08-07 under PR #23, which is the number the phase is recorded by elsewhere. It went in without the adversarial pass over its own fix round, so twenty-six of its twenty-seven findings sit at `fix-landed` rather than closed.
+- The re-review is what converts them, and it runs before 3.2 opens because 3.2 depends on 3.1.
+- Build phase 3.0 (the full Section 10 guardrail) merged as PR #19 on 2026-08-04.
+- Build phase 2.2 closed 2026-08-03 and completed the Step 6.1 prototype group.
+- Step 6.2 moved on 2026-08-03 to run after the 3.x tool phases, since its own reasoning names 3.x as the code its security scan most exists for, and reconciling the frozen documents after the tool phases is better input than reconciling before them.
+- That scan is separately paused indefinitely on cost, with exposure as the one condition that turns it back on.
+- Continuation prompt at `requirements/phase_6/Continuation_prompt.md`
 
 Goal: build System 3 using bossman-mode. Agent teams execute, I orchestrate.
 
@@ -522,14 +633,23 @@ Build a running prototype from the locked PRD and tech spec. Goal: something you
 
 Position changed 2026-08-03: this step now runs AFTER the 3.x tool phases, not immediately after build phase 2.2. The build continues from 3.0 in Section 25 order and returns here once the tool roster is in.
 
-Why, and the argument is this step's own: the security-scan rationale below explains that scanning per phase would pay repeatedly for the cheap half of the surface "while the genuinely dangerous code (Cypher generation against the live graph in 2.1, LLM calls and the agent loop in 2.0, untrusted NCBI payloads reaching synthesis in 3.x) had not landed yet." That names 3.x as the dangerous code. Scanning before 3.x scans everything except the thing the scan is most for. The reconciliation half moves for the same reason: this step exists to update the frozen documents from what the prototype taught, and the tool phases teach more.
+Why, and the argument is this step's own:
+
+- The security-scan rationale below explains that scanning per phase would pay repeatedly for the cheap half of the surface "while the genuinely dangerous code (Cypher generation against the live graph in 2.1, LLM calls and the agent loop in 2.0, untrusted NCBI payloads reaching synthesis in 3.x) had not landed yet."
+- That names 3.x as the dangerous code.
+- Scanning before 3.x scans everything except the thing the scan is most for.
+- The reconciliation half moves for the same reason: this step exists to update the frozen documents from what the prototype taught, and the tool phases teach more.
 
 Two conditions, stated rather than implied:
 
 - The whole-repository security scan runs before anything is deployed or before a real user touches the system. Its trigger is exposure, not a position in the sequence.
 - The frozen-spec findings stay logged in `tracker/phase_2.2.md` and in this step's own list, so deferral cannot quietly become forgetting.
 
-What made the move safe rather than merely convenient, checked rather than assumed: the blocking risk was agents building against known-wrong documentation, and the two documents an agent actually reads, `.claude/rules/production-examples.md` and `docs/ncbi/Tool_implementation_mechanics.md`, are both already corrected. The one document still carrying the wrong claim is the locked tech spec's Section 6.1, which describes `cypher_query`, a tool already built. Build phase 3.1 reads Section 6.2 instead.
+What made the move safe rather than merely convenient, checked rather than assumed:
+
+- The blocking risk was agents building against known-wrong documentation, and the two documents an agent actually reads, `.claude/rules/production-examples.md` and `docs/ncbi/Tool_implementation_mechanics.md`, are both already corrected.
+- The one document still carrying the wrong claim is the locked tech spec's Section 6.1, which describes `cypher_query`, a tool already built.
+- Build phase 3.1 reads Section 6.2 instead.
 
 Reconcile the docs with what the build taught us. Five groups of work. The security scan that used to gate Step 6.3 is paused indefinitely, see below.
 
@@ -709,7 +829,11 @@ New information flow:
 
 We do NOT update the PRD or tech spec mid-build. v1 ships based on what we locked in Phase 3 and 4. New information collected during the build goes into the reference folder and gets evaluated for v2.
 
-Exception: if new information reveals a fundamental flaw (security vulnerability, wrong architectural assumption), we pause the build, discuss, and update.
+Exception: if new information reveals a fundamental flaw (security vulnerability, wrong architectural assumption), we:
+
+- Pause the build
+- Discuss
+- Update
 
 Prototype carve-out: the Step 6.2 reconciliation is the one planned exception. The prototype is built from the docs specifically to test them, so updating the PRD, tech spec, and memo from what the prototype teaches is expected, not a violation. Once v1 locks after that reconciliation, the hard stop applies as written.
 
@@ -732,7 +856,7 @@ Status: NOT STARTED. Opened 2026-08-18 as a parking list, not a schedule.
 
 Why this section exists. Step 1.8 locked a build-first-then-migrate hosting strategy: build the Track 1 prototype on Railway and our own stack, then migrate to NCBI or OCCS infrastructure after the proof of concept. That decision has been carried in Phase 1's synthesis and in the technical specification's fast-follow triggers ever since, but it was never a phase in this document, so the work it implies had nowhere to accumulate. Items were being remembered in conversation instead. This section is where they land from now on.
 
-What it is not. This is not a plan with an order or a date. Everything here is blocked on one event, the move from this laptop to an NCBI Linux machine, and the sequencing question cannot be answered usefully before then. Treat it as the list to read on the first day on that machine.
+What it is not. This is not a plan with an order or a date. Everything here is blocked on one event: the move from this laptop to an NCBI Linux machine. The sequencing question cannot be answered usefully before then. Treat it as the list to read on the first day on that machine.
 
 ### What triggers it
 
@@ -751,7 +875,13 @@ One event: the working environment moves to NCBI infrastructure. Nothing in this
 
 ### The design-system note, since it is the item most likely to be misread
 
-The frontend today has a working three-link token chain: the design system's own `colors.html` holds the values, `frontend/src/theme.ts` transcribes them, and a premise gate asserts the transcription so a nudged colour fails the build. Every value in that chain already claims to be USWDS, the system NCBI is built on, so the migration is expected to be a swap of the source rather than a re-design of the product.
+The frontend today has a working three-link token chain:
+
+1. The design system's own `colors.html` holds the values.
+2. `frontend/src/theme.ts` transcribes them.
+3. A premise gate asserts the transcription, so a nudged colour fails the build.
+
+Every value in that chain already claims to be USWDS, the system NCBI is built on, so the migration is expected to be a swap of the source rather than a re-design of the product.
 
 Two things follow, and both matter for not wasting effort before the move:
 
@@ -792,31 +922,20 @@ Two things follow, and both matter for not wasting effort before the move:
 
 ## How new information gets incorporated
 
-```
-Conference / research / new tool
-        |
-        v
-Save to reference/personal-os-work/NIH/Agentic-Search/Reference/
-        |
-        v
-Add entry to requirements/context/Background_requirements.md
-        |
-        v
-Is the build in progress?
-   |              |
-   YES            NO
-   |              |
-   v              v
-  Park it.       Evaluate for PRD/tech spec update.
-  Review         Discuss. Decide. Update if warranted.
-  post-v1.
-```
+1. Conference / research / new tool.
+2. Save to reference/personal-os-work/NIH/Agentic-Search/Reference.
+3. Add entry to requirements/context/Background_requirements.md.
+4. Is the build in progress?
+   - YES: park it. Review post-v1.
+   - NO: evaluate for PRD/tech spec update. Discuss. Decide. Update if warranted.
 
 This keeps the build stable while allowing continuous learning. Parked does not mean untouched until v1: Step 6.2 is the single scheduled mid-build sweep where accumulated new-intake and LEARNINGS.md fold into the one planned reconciliation, and everything after that waits for the post-v1 cycle.
 
 ---
 
 ## Revision history
+
+- 2026-08-25, harness change rather than a build phase: a `doc-readability` skill merged as PR #64, then PR #65 for a cost-model correction. It runs in two modes, optimize an existing document and author a new one, and both are enforced by a bundled preservation script plus a fresh-context `doc-auditor` agent, both of which must pass. The preservation comparison is ONE-DIRECTIONAL, before minus after, so an addition can never change the exit code, which is what lets the skill add explanation without weakening the no-loss guarantee. WHAT IT COST, and this is the transferable part: SEVEN defects were found IN THE GATE ITSELF by running it against real documents, every one a FALSE POSITIVE, the direction that gets a gate switched off rather than trusted. Two coverage claims had to be CORRECTED rather than defended, both forced by a mutation harness that asserts its known misses as well as its catches. The self-tests were green the whole time and would have caught none of it.
 
 - 2026-08-25: BUILD PHASE 4.16, THE UI DEFECTS FROM THE LIVE DEMO, MERGED as PR #63 and LIVE on the demo. Verified on the deployed product after the merge rather than asserted: the SSE trace now reads guard 2.21s, think 4.77s, plan 5.53s, tool_start 5.53s, tool_result 8.35s, tool_start 8.35s, tool_result 8.61s, answer 15.02s, so the 10.9-second silence is gone and the Act step reports itself twice; the live answer screen reads `2 tools`, `Single source, not independently confirmed`, and `MedGen C0346153`. ONE RESIDUAL is named rather than glossed: 6.4 seconds still pass between the last tool result and the answer, because the Write step emits nothing while it synthesises, which is T-4.16-08. Inserted 2026-08-25 by product-owner decision, the fifth such exception after 4.8, 4.10, 4.11/4.12 and 4.14/4.15, and ranked ahead of build phase 4.14 because the product is live at a public URL and every visitor was watching a frozen stepper. All SEVEN reported defects closed. THE TOP DEFECT WAS BACKEND, NOT FRONTEND, and was measured before a ticket was written: timestamping each SSE frame off the deployed API gave guard at 0.15s, think at 0.15s, plan at 1.41s, then 10.9 SECONDS OF SILENCE, then the whole answer inside 10ms. `sink.emit` was never called with `tool_start` or `tool_result`, both of which are in the contract and handled by the CLI, MCP and GraphQL adapters, so only the producer was missing and the Act step was invisible everywhere. `useRunView`'s own docstring had predicted the consequence in 2026-08-12 and it was read as a design principle rather than a live symptom. THE CONSTRAINT WAS THE NODE BOUNDARY, NOT THE MISSING EMIT: `_EventSink` accumulates and `astream` yields per completed node, so the obvious fix would have flushed every tool frame in one burst before the answer and left the silence exactly as long; the fix writes to LangGraph's custom stream at dispatch AND still returns through `sink.result()`, de-duplicated on `seq`.
 
