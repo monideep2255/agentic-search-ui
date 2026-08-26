@@ -29,6 +29,23 @@ Column meaning:
 - Additions: the count of manifest rows by classification (for example, how many were genuinely new explanation versus how many the auditor caught as reworded prose walls).
 - Notes: anything that does not fit the columns above, wrapped in `<details>` so the table stays scannable.
 
+A correction to a premise this log's early rows relied on, recorded rather than quietly fixed. The survey that scoped this skill reported ZERO em dashes across the repository, and that was wrong twice over. What it got wrong:
+
+- Scope: it covered `docs/`, `requirements/` and the root, and never covered `tracker/` at all.
+- Accuracy inside its own scope: `LEARNINGS.md` sits at the root and was missed anyway.
+
+The true figure, measured 2026-08-25:
+
+- Total: 11 files carrying 102 em or en dashes
+- `LEARNINGS.md`: 68, almost all in section headings
+- `tracker/` phase reports: most of the remainder
+- Runs through this skill: none of these files, ever
+
+What survives the correction, and what does not:
+
+- Still true: for the documents actually processed by this skill, punctuation linting was not where the value lay. Every one of them was clean on dashes.
+- No longer true: the same claim about the corpus as a whole. None of the 11 affected files has ever been run through this skill.
+
 Rows are append-only. A row is never edited or deleted once a real run lands it, the same rule `DECISIONS.md` and `LEARNINGS.md` already follow for their own history. A wrong row is corrected by appending a new row that says so, not by rewriting the old one.
 
 | Date | Document | Mode | Preservation | Style | Auditor | Additions | Notes |
