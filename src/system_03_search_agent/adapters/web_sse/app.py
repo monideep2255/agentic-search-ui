@@ -7,9 +7,8 @@ import re
 import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from datetime import time as dt_time
-from datetime import timedelta
 from typing import Annotated, Literal
 
 from fastapi import (
@@ -17,14 +16,12 @@ from fastapi import (
     FastAPI,
     Header,
     HTTPException,
-)
-from fastapi import (
-    Query as FastAPIQuery,  # Aliased: `Query` is already this module's domain request model; (contracts.query.Query). Importing FastAPI's under its own name would; shadow it silently.
-)
-from fastapi import (
     Request,
     Response,
     status,
+)
+from fastapi import (
+    Query as FastAPIQuery,  # Aliased: `Query` is already this module's domain request model; (contracts.query.Query). Importing FastAPI's under its own name would; shadow it silently.
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator

@@ -464,9 +464,6 @@ from system_03_search_agent.contracts.events import (
     Event,
     GuardPayload,
     PlanPayload,
-)
-from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
-from system_03_search_agent.contracts.events import (
     ThinkPayload,
     TokenPayload,
     ToolCall,
@@ -475,6 +472,7 @@ from system_03_search_agent.contracts.events import (
     TrustOutcome,
     TrustSignalPayload,
 )
+from system_03_search_agent.contracts.events import ResolvedEntity as EventResolvedEntity
 from system_03_search_agent.contracts.query import SessionMemorySummary
 from system_03_search_agent.core.session_memory import build_session_context
 from system_03_search_agent.core.state import GraphState

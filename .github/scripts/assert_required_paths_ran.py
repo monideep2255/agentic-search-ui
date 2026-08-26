@@ -44,21 +44,33 @@ from __future__ import annotations
 
 import sys
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
-# The two required paths of Section 23, matched against test names. Each entry
-# is (label, substrings that identify a test as covering that path). A test
-# matches the path if ANY substring appears in its name.
+# The module the required paths live in. Anchoring on IDENTITY rather than on
+# test names is the correction F-4.14-A-06 forced.
 #
-# Substrings, not exact function names, because F-4.14-02 is precisely the
-# lesson that the exact names in the specification do not exist in the code.
-# What must not drift is that BOTH PROPERTIES are still being exercised, and
-# that is what this matches on.
-_REQUIRED_PATHS = (
-    ("cite-or-refuse compliance", ("cite_or_refuse", "grounded", "ground_claim", "citation")),
-    ("zero-retrieval refusal", ("refus", "zero_retrieval", "no_source", "abstain")),
+# The first version matched test NAMES against substrings like "citation" and
+# "refus", and the adversary satisfied it completely with two `assert True`
+# tests called `test_the_citation_widget_renders_a_blue_border` and
+# `test_the_settings_page_refuses_to_scroll_horizontally`. It reported
+# "both paths covered". A name is not evidence of what a test does, and a
+# substring of a name is not even evidence of the name.
+_REQUIRED_MODULE = "test_required_paths"
+
+# The file must still exercise the two properties, checked by reading the SOURCE
+# for the symbols that make the assertions real, not by reading test names. If
+# the file stopped importing the refusal text or the grounding entry point, its
+# tests cannot be testing cite-or-refuse whatever they are called.
+_REQUIRED_SYMBOLS = (
+    ("the refusal text", "REFUSAL_TEXT"),
+    ("the grounding entry point", "ground_claim"),
 )
 
-_MINIMUM_CASES = 2
+# The file carried 27 tests when this gate was written. A floor well below that
+# still catches a file gutted to a couple of stubs, while leaving room for
+# ordinary deletion. Raise it if the file grows substantially; never lower it to
+# make a red build green.
+_MINIMUM_CASES = 15
 
 
 def _parse_report(report_path: str) -> ET.Element:
@@ -77,6 +89,29 @@ def _parse_report(report_path: str) -> ET.Element:
     return ET.fromstring(raw)
 
 
+def _module_source_path(cases: list[ET.Element]) -> Path | None:
+    """Map the JUnit `classname` back to the file on disk.
+
+    pytest writes `classname` as a dotted module path, for example
+    `tests.system_03_search_agent.synthesis.test_required_paths`, so the file is
+    that path with the dots turned into separators. Derived from the report
+    rather than hardcoded, so moving the file cannot leave this check pointed at
+    a stale path while the gate keeps passing.
+    """
+    for case in cases:
+        classname = case.get("classname", "")
+        if _REQUIRED_MODULE in classname:
+            parts = classname.split(".")
+            # Trim any trailing class name, which pytest appends for tests
+            # defined inside a class. The module is the segment named for the
+            # file itself.
+            while parts and parts[-1] != _REQUIRED_MODULE:
+                parts.pop()
+            if parts:
+                return Path(*parts).with_suffix(".py")
+    return None
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
         print(f"usage: {argv[0]} <junit-xml-path>", file=sys.stderr)
@@ -90,7 +125,6 @@ def main(argv: list[str]) -> int:
         return 1
 
     cases = list(tree.iter("testcase"))
-    names = [case.get("name", "") for case in cases]
 
     if len(cases) < _MINIMUM_CASES:
         print(
@@ -123,20 +157,53 @@ def main(argv: list[str]) -> int:
             print(f"  {name}", file=sys.stderr)
         return 1
 
-    missing = [
-        label
-        for label, markers in _REQUIRED_PATHS
-        if not any(marker in name.lower() for marker in markers for name in names)
-    ]
-    if missing:
+    # Identity, not naming. Every case must come from the required-paths module,
+    # so a gate accidentally (or deliberately) pointed at some other file fails
+    # instead of certifying it.
+    foreign = sorted(
+        {
+            case.get("classname", "")
+            for case in cases
+            if _REQUIRED_MODULE not in case.get("classname", "")
+        }
+    )
+    if foreign:
         print(
-            "FAIL: the collected tests cover no test for: " + ", ".join(missing) + ".\n"
-            "Both of Section 23's required paths must be exercised by this gate.",
+            f"FAIL: this gate ran tests from outside the required-path module "
+            f"({_REQUIRED_MODULE}): " + ", ".join(foreign[:5]) + ".\n"
+            "Gate 9 certifies Section 23's two required paths, not whatever file "
+            "it happens to have been pointed at.",
             file=sys.stderr,
         )
         return 1
 
-    print(f"ok: {len(cases)} required-path tests ran, none skipped, both paths covered.")
+    # The properties themselves, read out of the SOURCE rather than inferred
+    # from test names. A file whose tests no longer reach the refusal text or the
+    # grounding entry point is not testing cite-or-refuse, whatever it calls its
+    # functions.
+    source_path = _module_source_path(cases)
+    if source_path is None or not source_path.exists():
+        print(
+            f"FAIL: cannot locate the source of {_REQUIRED_MODULE} to confirm it "
+            f"still exercises both required paths. Looked for: {source_path}",
+            file=sys.stderr,
+        )
+        return 1
+    source = source_path.read_text(encoding="utf-8")
+    absent = [label for label, symbol in _REQUIRED_SYMBOLS if symbol not in source]
+    if absent:
+        print(
+            f"FAIL: {source_path} no longer references " + ", ".join(absent) + ".\n"
+            "Its tests cannot be exercising Section 23's required paths without "
+            "them, regardless of how many of them pass.",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(
+        f"ok: {len(cases)} required-path tests ran from {_REQUIRED_MODULE}, none "
+        f"skipped, and the source still exercises both required paths."
+    )
     return 0
 
 

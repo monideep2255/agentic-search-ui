@@ -1,47 +1,69 @@
-"""Premise gate for build phase 4.14: the CI workflow says what it does.
+"""Premise gate for build phase 4.14: the CI workflow does what it says.
 
 Every other premise gate in this repository grades a running artifact. This one
 grades a configuration file, and that difference is the whole reason it exists.
 A workflow's defects do not surface as a failing test. They surface as a green
-check mark that verified less than the reader believes, which is the exact
-failure mode `goal-contracts` names and the one that made F-4.14-03 possible.
+check mark that verified less than the reader believes.
 
-WHAT THIS GATE COVERS, stated here so a gap is arguable rather than discovered:
+REWRITTEN IN THE SAME PHASE, after the judge and the adversary independently
+broke the first version. That version asserted the workflow's PROSE: step names,
+and substrings that could appear anywhere in a `run:` body. Between them the two
+reviews landed 32 mutations that left it green, including:
 
-    Covered      That the workflow exists and parses. That all ten of Section
-                 24's gates are present, named, and in Section 24's order, with
-                 the gate list read OUT OF the specification at test time rather
-                 than copied into this file. That the three findings this phase
-                 filed cannot silently regress: gate 6's `-r requirements.txt`
-                 scoping (F-4.14-01), gate 9 pointing at a file that really
-                 collects tests (F-4.14-02), and the PostgreSQL service plus the
-                 no-silent-skip assertion (F-4.14-03). That every command a gate
-                 runs is a real command this repository actually has: the isort
-                 paths exist, the npm scripts exist in package.json, the
-                 Playwright spec exists, the helper scripts exist. That no gate
-                 but gate 5 needs a secret. That ruff is pinned exactly.
+  - Replacing every gate body with `true`, keeping the magic substrings in a
+    shell comment. 15 of 16 arms stayed green. This is the same defect build
+    phase 4.16 shipped, where a fixture matched the old values inside the
+    comment documenting them.
+  - `continue-on-error: true` on every gate.
+  - `|| true` appended to gate 4.
+  - Re-scoping gate 3 back to `ruff check src`, the exact defect this phase's
+    own T-4.14-03 existed to fix.
+  - Relaxing gate 7 to `--audit-level=critical`.
+  - Stripping `--check-only` from gate 2, so isort REWRITES files and exits 0.
+  - `if: false` on gate 10.
+  - Hoisting a secret to workflow-level `env`, invisible to a per-job check.
+
+The correction runs through the whole file: arms now read the EXECUTABLE text of
+a step with comments stripped, assert the actual command and its load-bearing
+flags, and reject the constructs that neutralise a step while leaving it
+present. `_command_text` is the load-bearing helper; nothing here matches raw
+`run:` bodies any more.
+
+WHAT THIS GATE COVERS, stated so a gap is arguable rather than discovered:
+
+    Covered      That the workflow parses. That all ten of Section 24's gates
+                 are present, named, and in Section 24's order, with the gate
+                 list read OUT OF the specification at test time rather than
+                 copied here. That each gate runs its actual command with the
+                 flags that make it mean something. That no gate is neutralised
+                 by `continue-on-error`, `|| true`, or `if: false`. That the
+                 three findings this phase filed cannot regress. That no gate
+                 but gate 5 depends on a secret, at job OR workflow level. That
+                 ruff is pinned and that every file's import order is checked by
+                 at least one tool.
 
     NOT covered  Whether the workflow SUCCEEDS on GitHub's runners. Nothing
-                 offline can know that, and the only honest proof is the run on
-                 this phase's own pull request, which is the first pull request
-                 in this repository's history that CI has ever seen. This file
-                 asserts the workflow is well-formed and faithful to Section 24;
-                 the run asserts it works.
+                 offline can know that. The only honest proof is the run on this
+                 phase's own pull request.
 
-    NOT covered  Whether each gate CATCHES what it exists to catch. That is
-                 mutation, and it lives in `test_ci_workflow_mutation.py` next
-                 to this file, plus the recorded live mutations in
-                 `tracker/phase_4.14.md`.
+    NOT covered  Whether the ten gates are MERGE-BLOCKING. They are not, and
+                 nothing in this repository can make them so today: branch
+                 protection needs a paid plan or a public repository, and
+                 `gh api .../branches/develop/protection` returns 403. That is
+                 finding F-4.14-A-04, it is a product-owner decision, and it is
+                 recorded in `tracker/phase_4.14.md` rather than papered over
+                 here. A red check next to a working Merge button is a real
+                 improvement over nothing running at all, and it is not the same
+                 claim as "merge-blocking".
 
-Every arm here carries a POPULATE-CHECK, per build phase 4.11's durable fix: an
-arm that cannot distinguish "the control holds" from "nothing was loaded" is not
-an arm. If the workflow failed to parse, or the specification table came back
-empty, these tests fail as a broken harness rather than passing vacuously.
+Every arm carries a POPULATE-CHECK, per build phase 4.11's durable fix: an arm
+that cannot distinguish "the control holds" from "nothing was loaded" is not an
+arm.
 
 Depends on:
     - .github/workflows/ci.yml
-    - .github/scripts/assert_no_db_skips.py
-    - .github/scripts/assert_required_paths_ran.py
+    - .github/scripts/assert_no_db_skips.py, assert_required_paths_ran.py,
+      assert_gate_ran.py
     - requirements/Technical_specification.md (Section 24's gate table)
     - pyproject.toml, frontend/package.json
 
@@ -51,7 +73,9 @@ Writes:
 
 from __future__ import annotations
 
+import json
 import re
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -65,7 +89,7 @@ EXPECTED_GATE_COUNT = 10
 
 
 # ---------------------------------------------------------------------------
-# Loading
+# Loading and the executable-text helper every arm depends on
 # ---------------------------------------------------------------------------
 
 
@@ -77,13 +101,34 @@ def load_workflow() -> dict:
     return yaml.safe_load(load_workflow_text())
 
 
+def command_text(step: dict) -> str:
+    """The EXECUTABLE text of a step: its `run:` body with comments removed.
+
+    This is the fix for the attack that beat the first version of this file.
+    A `run:` body of `true  # ruff check` contains the string "ruff check" and
+    runs nothing at all. Every arm below matches against this rather than
+    against the raw body, so a command preserved only in a comment does not
+    count as a command.
+
+    Comment stripping is deliberately naive about `#` inside quotes. It is the
+    safe direction: a stripped-too-much body makes an arm FAIL, which someone
+    then looks at. A stripped-too-little body makes an arm pass on a comment,
+    which is the failure being fixed.
+    """
+    lines = []
+    for raw in str(step.get("run", "")).splitlines():
+        without_comment = re.sub(r"(?<!\S)#.*$", "", raw)
+        if without_comment.strip():
+            lines.append(without_comment)
+    return "\n".join(lines)
+
+
 def parse_spec_gates(spec_text: str) -> list[tuple[int, str]]:
     """Read Section 24's merge-blocking gate table out of the specification.
 
-    Returned as (order, gate name). Read at test time on purpose: a copy of the
-    list in this file would be a second source of truth that drifts, and the
-    whole point is to assert the workflow against the LOCKED document rather
-    than against what someone remembered it said.
+    Read at test time on purpose: a copy of the list in this file would be a
+    second source of truth that drifts, and the point is to assert the workflow
+    against the LOCKED document rather than against what someone remembered.
     """
     marker = "Merge-blocking gates, in order:"
     start = spec_text.find(marker)
@@ -105,26 +150,39 @@ def workflow_steps(workflow: dict) -> list[dict]:
     return steps
 
 
-def gate_steps(workflow: dict) -> dict[int, dict]:
-    """Every step whose name begins `Gate N:`, keyed by N.
-
-    A gate with a `(cont.)` suffix belongs to the same gate number; the first
-    one wins for ordering purposes.
-    """
-    found: dict[int, dict] = {}
+def gate_steps(workflow: dict) -> dict[int, list[dict]]:
+    """Every step named `Gate N...`, keyed by N. A gate may have several steps."""
+    found: dict[int, list[dict]] = {}
     for step in workflow_steps(workflow):
         match = re.match(r"^Gate (\d+)\b", str(step.get("name", "")))
         if match:
-            found.setdefault(int(match.group(1)), step)
+            found.setdefault(int(match.group(1)), []).append(step)
     return found
 
 
-def all_run_bodies(workflow: dict) -> str:
-    return "\n".join(str(step.get("run", "")) for step in workflow_steps(workflow))
+def gate_command(workflow: dict, order: int) -> str:
+    """All executable text belonging to one gate, comments stripped."""
+    return "\n".join(command_text(step) for step in gate_steps(workflow).get(order, []))
+
+
+def job_containing_gate(workflow: dict, order: int) -> tuple[str, dict]:
+    for name, job in workflow["jobs"].items():
+        for step in job.get("steps", []) or []:
+            if re.match(rf"^Gate {order}\b", str(step.get("name", ""))):
+                return name, job
+    raise AssertionError(f"no job carries gate {order}")
+
+
+def all_command_text(workflow: dict) -> str:
+    return "\n".join(command_text(step) for step in workflow_steps(workflow))
+
+
+def pyproject() -> dict:
+    return tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------------------
-# Fixtures, each of which is also this file's populate-check
+# Fixtures, which are also this file's populate-checks
 # ---------------------------------------------------------------------------
 
 
@@ -133,8 +191,6 @@ def workflow_text() -> str:
     if not WORKFLOW_PATH.exists():
         pytest.fail(f"the CI workflow is missing at {WORKFLOW_PATH}")
     text = WORKFLOW_PATH.read_text(encoding="utf-8")
-    # Populate-check. Every arm below reads this; if it came back empty they
-    # would all pass against nothing.
     assert len(text) > 1000, "the workflow file is implausibly short; nothing to grade"
     return text
 
@@ -150,10 +206,6 @@ def workflow(workflow_text: str) -> dict:
 @pytest.fixture(scope="module")
 def spec_gates() -> list[tuple[int, str]]:
     rows = parse_spec_gates(SPEC_PATH.read_text(encoding="utf-8"))
-    # Populate-check, and the load-bearing one in this file. If Section 24's
-    # table were reworded so this parser stopped matching, every
-    # workflow-versus-spec arm below would compare against an empty list and
-    # pass. This turns that into a failure.
     assert len(rows) == EXPECTED_GATE_COUNT, (
         f"parsed {len(rows)} gate rows out of Section 24, expected "
         f"{EXPECTED_GATE_COUNT}. The specification's table has moved or been "
@@ -163,37 +215,24 @@ def spec_gates() -> list[tuple[int, str]]:
 
 
 # ---------------------------------------------------------------------------
-# Arm 1: the workflow is faithful to Section 24
+# Arm 1: fidelity to Section 24
 # ---------------------------------------------------------------------------
 
 
 def test_p1_all_ten_specification_gates_are_present(workflow, spec_gates):
-    """Every gate Section 24 lists has a step in the workflow."""
     present = gate_steps(workflow)
     assert present, "no step in the workflow is named `Gate N:`"
     missing = [order for order, _ in spec_gates if order not in present]
     assert not missing, f"Section 24 gates with no step in the workflow: {missing}"
 
 
-def test_p1b_the_workflow_invents_no_gate_the_specification_does_not_list(
-    workflow, spec_gates
-):
-    """The workflow does not add a gate of its own.
-
-    The inverse of P1, and it matters as much: a gate nobody agreed to is a
-    gate nobody can remove, and Section 24 is the locked source of the list.
-    """
+def test_p1b_the_workflow_invents_no_gate_the_specification_does_not_list(workflow, spec_gates):
     spec_orders = {order for order, _ in spec_gates}
     extra = sorted(set(gate_steps(workflow)) - spec_orders)
     assert not extra, f"the workflow declares gates absent from Section 24: {extra}"
 
 
 def test_p2_gates_run_in_the_specification_order_within_each_job(workflow):
-    """Section 24 specifies an ORDER, and steps in a job run in order.
-
-    Checked per job rather than globally, because gates split across jobs run
-    concurrently by design and no ordering between jobs is claimed or wanted.
-    """
     checked_any = False
     for job_name, job in workflow["jobs"].items():
         orders = [
@@ -206,120 +245,302 @@ def test_p2_gates_run_in_the_specification_order_within_each_job(workflow):
             assert orders == sorted(orders), (
                 f"job {job_name!r} runs its gates out of Section 24's order: {orders}"
             )
-    # Populate-check: if no job had two gates, this test asserted nothing.
     assert checked_any, "no job carries more than one gate; the ordering arm ran empty"
 
 
 # ---------------------------------------------------------------------------
-# Arm 2: the three findings this phase filed cannot silently regress
+# Arm 2: each gate runs its real command, with the flags that make it mean
+# something. This is the arm class the first version of this file lacked
+# entirely, and it is where 16 of the reviewers' mutations landed.
+# ---------------------------------------------------------------------------
+
+# (gate, required substrings in the gate's EXECUTABLE text, human description)
+_REQUIRED_COMMANDS: tuple[tuple[int, tuple[str, ...], str], ...] = (
+    (1, ("compileall",), "compiles every source tree"),
+    # `--check-only` is load-bearing: without it isort REWRITES the files and
+    # exits 0, so the gate silently formats instead of checking.
+    (2, ("isort", "--check-only"), "checks import order without rewriting"),
+    (3, ("ruff check",), "lints"),
+    (4, ("pytest", "-m", "not integration"), "runs the unit suite"),
+    (5, ("pytest", "-m integration"), "runs the integration suite"),
+    # `-r requirements.txt` is F-4.14-01: bare `pip-audit` audits the ambient
+    # environment rather than the project.
+    (6, ("pip-audit", "-r requirements.txt"), "audits the declared dependencies"),
+    # `--audit-level=high` is the threshold Section 24 sets. `critical` would
+    # pass a High CVE.
+    (7, ("npm audit", "--audit-level=high"), "audits the frontend dependencies"),
+    (8, ("npm run build", "npm test"), "builds and tests the frontend"),
+    (9, ("pytest", "test_required_paths.py"), "runs the required paths"),
+    (10, ("playwright test", "accessibility.spec.ts"), "runs the accessibility spec"),
+)
+
+
+@pytest.mark.parametrize(("order", "required", "description"), _REQUIRED_COMMANDS)
+def test_p16_each_gate_runs_its_real_command(workflow, order, required, description):
+    """The gate's EXECUTABLE text, not its prose.
+
+    Comments are stripped before matching (`command_text`), so a gate body of
+    `true  # ruff check` fails this arm. That exact substitution left 15 of the
+    16 arms in this file's first version green.
+    """
+    command = gate_command(workflow, order)
+    assert command.strip(), (
+        f"gate {order} has no executable command at all, only comments or nothing. "
+        f"It is supposed to be the step that {description}."
+    )
+    for token in required:
+        assert token in command, (
+            f"gate {order} ({description}) does not run `{token}`. Its executable "
+            f"text is:\n{command}"
+        )
+
+
+def test_p17_gate_3_lints_the_whole_repository(workflow):
+    """`ruff check src` was the habit this phase existed to end.
+
+    Before build phase 4.14 the repository ran `ruff check src`, which passed
+    while `tests/` carried 5 errors and the harness scripts carried 30.
+    Re-narrowing the gate to a path is the regression, and it is invisible to
+    any arm that only checks the string `ruff check` appears.
+    """
+    command = gate_command(workflow, 3)
+    assert "ruff check" in command, "gate 3 does not run ruff at all"
+    for line in command.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("ruff check"):
+            continue
+        remainder = stripped[len("ruff check") :].strip()
+        arguments = [token for token in remainder.split() if not token.startswith("-")]
+        assert not arguments, (
+            f"gate 3 narrows ruff to {arguments}, so anything outside those paths "
+            f"goes unlinted. It must run over the whole repository."
+        )
+
+
+def test_p18_gate_4_runs_the_whole_unit_suite(workflow):
+    """Narrowing gate 4 to one directory leaves the rest of the suite unrun."""
+    command = gate_command(workflow, 4)
+    pytest_lines = [line for line in command.splitlines() if "pytest" in line]
+    assert pytest_lines, "gate 4 does not invoke pytest"
+    for line in pytest_lines:
+        tokens = line.strip().split()
+        after = tokens[tokens.index("pytest") + 1 :] if "pytest" in tokens else []
+        paths = [
+            token
+            for token in after
+            if not token.startswith("-") and ("/" in token or token.endswith(".py"))
+        ]
+        assert not paths, (
+            f"gate 4 restricts pytest to {paths}. The unit gate must run the whole "
+            f"suite; a path argument silently drops everything else."
+        )
+
+
+# ---------------------------------------------------------------------------
+# Arm 3: a gate that is present but neutralised
+# ---------------------------------------------------------------------------
+
+
+def test_p19_no_gate_is_neutralised(workflow):
+    """A gate can be fully present and completely inert.
+
+    `continue-on-error: true` makes a failing step green. `|| true` makes a
+    failing command succeed. `if: false` makes the step never run. All three
+    leave the step's name, its command and every flag exactly where an arm
+    checking for those would find them.
+    """
+    checked_any = False
+    for order, steps in sorted(gate_steps(workflow).items()):
+        for step in steps:
+            checked_any = True
+            name = step.get("name")
+
+            assert step.get("continue-on-error") not in (True, "true"), (
+                f"gate {order} ({name}) sets continue-on-error, so it reports "
+                f"success even when it fails. It is not a gate."
+            )
+
+            condition = str(step.get("if", "")).strip().lower()
+            assert condition not in ("false", "${{ false }}"), (
+                f"gate {order} ({name}) is disabled by `if: {condition}` and never runs"
+            )
+
+            command = command_text(step)
+            assert not re.search(r"\|\|\s*true\b", command), (
+                f"gate {order} ({name}) appends `|| true`, so its command cannot "
+                f"fail the step:\n{command}"
+            )
+            assert not re.search(r"\bset\s+\+e\b", command), (
+                f"gate {order} ({name}) disables errexit with `set +e`"
+            )
+    assert checked_any, "no gate steps were examined; this arm ran empty"
+
+
+def test_p19b_no_job_carrying_a_gate_is_neutralised(workflow):
+    """The same three tricks, one level up, where they disable every gate at once."""
+    checked_any = False
+    for order in sorted(gate_steps(workflow)):
+        job_name, job = job_containing_gate(workflow, order)
+        checked_any = True
+        assert job.get("continue-on-error") not in (True, "true"), (
+            f"job {job_name!r} carries gate {order} and sets continue-on-error"
+        )
+        condition = str(job.get("if", "")).strip().lower()
+        assert condition not in ("false", "${{ false }}"), (
+            f"job {job_name!r} carries gate {order} and is disabled by `if: {condition}`"
+        )
+    assert checked_any, "no gate-carrying job was examined; this arm ran empty"
+
+
+# ---------------------------------------------------------------------------
+# Arm 4: the findings this phase filed cannot silently regress
 # ---------------------------------------------------------------------------
 
 
 def test_p3_gate_6_audits_the_requirements_file_not_the_ambient_environment(workflow):
-    """F-4.14-01.
-
-    A bare `pip-audit` audits whatever is installed in the runner, which on the
-    machine where this phase was written meant two findings for packages this
-    project does not declare at all. The fix is a scope, and a scope is one
-    flag away from being helpfully "simplified" back off by a later reader.
-    """
-    gate = gate_steps(workflow).get(6)
-    assert gate is not None, "gate 6 has no step"
-    body = str(gate.get("run", ""))
-    assert "pip-audit" in body, "gate 6 does not run pip-audit"
-    assert "-r requirements.txt" in body, (
+    """F-4.14-01. Also covered by P16; kept because the reason is specific."""
+    command = gate_command(workflow, 6)
+    assert "pip-audit" in command, "gate 6 does not run pip-audit"
+    assert "-r requirements.txt" in command, (
         "gate 6 runs a bare `pip-audit`, which audits the ambient environment "
         "rather than this project's declared dependencies. See F-4.14-01."
     )
 
 
 def test_p4_gate_9_points_at_a_file_that_exists_and_collects_tests(workflow):
-    """F-4.14-02.
-
-    Section 24 names two tests that do not exist as functions. This asserts the
-    gate points at something real, and that the something contains both required
-    paths, so a rename cannot leave the gate pointed at nothing.
-    """
-    gate = gate_steps(workflow).get(9)
-    assert gate is not None, "gate 9 has no step"
-    body = str(gate.get("run", ""))
-    referenced = re.findall(r"(tests/[\w/]+\.py)", body)
-    assert referenced, "gate 9 names no test file"
+    """F-4.14-02."""
+    command = gate_command(workflow, 9)
+    referenced = re.findall(r"(tests/[\w/]+\.py)", command)
+    assert referenced, "gate 9 names no test file in its executable text"
     for rel in referenced:
         target = REPO_ROOT / rel
         assert target.exists(), f"gate 9 points at a file that does not exist: {rel}"
         source = target.read_text(encoding="utf-8")
         assert source.count("def test_") >= 2, (
-            f"{rel} defines fewer than two tests; gate 9 would certify an "
-            f"almost-empty run"
+            f"{rel} defines fewer than two tests; gate 9 would certify an almost-empty run"
         )
 
 
-def test_p5_the_unit_job_runs_a_database_and_proves_it_reached_it(workflow):
-    """F-4.14-03, both halves, and this is the arm that matters most.
+def test_p5_the_unit_job_runs_a_real_database_and_proves_it_reached_it(workflow):
+    """F-4.14-03, both halves, with populate-checks that are not correlates.
 
-    Every database-backed test in this repository SKIPS rather than fails when
-    PostgreSQL is unreachable, so a runner without one reports a confident green
-    having executed none of them. Two things must both hold: the service exists,
-    and something asserts it was actually reached. The service alone is an
-    assumption.
+    The first version accepted `redis:7` as the database, because it only looked
+    for the string "postgres" anywhere in the service mapping and the
+    `POSTGRES_*` environment keys satisfied that. It also accepted
+    `USER_DB_URL: ""`. Both are checked properly here: the IMAGE must be
+    postgres, and the URL must be a non-empty postgresql DSN.
     """
-    jobs_with_unit_gate = [
-        job
-        for job in workflow["jobs"].values()
-        if any(
-            str(step.get("name", "")).startswith("Gate 4")
-            for step in job.get("steps", []) or []
-        )
-    ]
-    assert jobs_with_unit_gate, "no job runs gate 4"
+    job_name, job = job_containing_gate(workflow, 4)
 
-    job = jobs_with_unit_gate[0]
     services = job.get("services") or {}
-    assert any("postgres" in str(spec).lower() for spec in services.values()), (
-        "the unit-suite job declares no PostgreSQL service, so every "
-        "database-backed test would skip and gate 4 would certify nothing. "
-        "See F-4.14-03."
-    )
-    assert "USER_DB_URL" in str(job.get("env") or {}), (
-        "the unit-suite job sets no USER_DB_URL, so the tests cannot find the "
-        "service even though it is running"
+    assert services, f"job {job_name!r} declares no services at all"
+    images = [str((spec or {}).get("image", "")) for spec in services.values()]
+    assert any(image.startswith("postgres") for image in images), (
+        f"job {job_name!r} runs no PostgreSQL image (found {images}), so every "
+        f"database-backed test would skip and gate 4 would certify nothing. "
+        f"See F-4.14-03."
     )
 
-    step_bodies = "\n".join(str(step.get("run", "")) for step in job["steps"])
-    assert "assert_no_db_skips.py" in step_bodies, (
+    url = str((job.get("env") or {}).get("USER_DB_URL", "")).strip()
+    assert url.startswith("postgresql://"), (
+        f"job {job_name!r} sets USER_DB_URL to {url!r}, which is not a PostgreSQL "
+        f"DSN, so the tests cannot find the service even though it is running"
+    )
+
+    step_text = "\n".join(command_text(step) for step in job["steps"])
+    assert "assert_no_db_skips.py" in step_text, (
         "nothing asserts that the database was actually reached. Without it the "
-        "postgres service above is an assumption, not a proof. See F-4.14-03."
+        "postgres service is an assumption, not a proof. See F-4.14-03."
+    )
+    assert "alembic upgrade head" in step_text, (
+        "the job never creates the schema, so the tests connect to an empty "
+        "database and fail on missing tables"
+    )
+
+
+def test_p15_gate_5_cannot_pass_silently_when_it_did_not_run(workflow):
+    """F-4.14-A-03, both halves.
+
+    Gate 5 legitimately exits 0 when no credential exists, and must say so
+    loudly. The subtler half: with a credential present but unreachable, its
+    arms skip and pytest exits 0 having passed nothing, which renders as an
+    ordinary green check. Adding a credential must make the gate stricter, not
+    quieter, so the executed path is asserted too.
+    """
+    command = gate_command(workflow, 5)
+    assert "exit 0" in command, "gate 5 has no not-run path at all; this arm ran empty"
+    assert "::warning" in command, (
+        "gate 5's not-run path exits 0 without a warning annotation, so it renders "
+        "as an ordinary green check"
+    )
+    assert "NOT RUN" in command, "gate 5's not-run path does not say so in its output"
+    assert "assert_gate_ran.py" in command, (
+        "gate 5 does not assert that its run executed anything. With a credential "
+        "present but unreachable it exits 0 having passed zero tests. See F-4.14-A-03."
+    )
+    _, job = job_containing_gate(workflow, 5)
+    env = {**(workflow.get("env") or {}), **(job.get("env") or {})}
+    step_env = {}
+    for step in gate_steps(workflow)[5]:
+        step_env.update(step.get("env") or {})
+    assert str({**env, **step_env}.get("RUN_PREMISE_GATE", "")).strip() == "1", (
+        "gate 5 never sets RUN_PREMISE_GATE, and tests/conftest.py blocks all "
+        "outbound HTTP without it, so its arms cannot reach the graph service "
+        "whether or not it is up. See F-4.14-A-03."
+    )
+
+
+def test_p20_gate_10_fails_closed(workflow):
+    """F-4.14-A-07.
+
+    The path filter decides whether the WCAG gate runs. Every uncertain path
+    through it must RUN the gate, because the alternative is a gate that quietly
+    does not run and prints a false statement about why.
+    """
+    _, job = job_containing_gate(workflow, 10)
+    filters = [
+        step
+        for step in job["steps"]
+        if "GITHUB_OUTPUT" in command_text(step) and "touched" in command_text(step)
+    ]
+    assert filters, "gate 10 has no path-filter step; this arm ran empty"
+    body = command_text(filters[0])
+
+    assert "git cat-file -e" in body, (
+        "the filter does not verify the base and head commits exist before "
+        "diffing, so a shallow clone or a garbage-collected SHA silently skips "
+        "the accessibility gate. See F-4.14-A-07."
+    )
+    assert body.count("touched=true") >= 3, (
+        "the filter has fewer than three paths that RUN the gate. It must fail "
+        "closed: every error path runs the gate rather than skipping it."
+    )
+    assert not re.search(r"if\s+git diff", body), (
+        "the filter puts `git diff` directly in an `if` condition, where errexit "
+        "is suspended, so any git failure takes the skip branch. See F-4.14-A-07."
     )
 
 
 # ---------------------------------------------------------------------------
-# Arm 3: every command a gate runs is a real command this repository has
+# Arm 5: the commands are real commands this repository has
 # ---------------------------------------------------------------------------
 
 
 def test_p6_every_helper_script_the_workflow_calls_exists(workflow):
-    """A workflow that calls a script that is not there fails at runtime.
-
-    Cheap to assert here, and the failure it prevents costs a full CI round
-    trip to discover.
-    """
-    referenced = set(re.findall(r"(\.github/scripts/[\w.\-]+\.py)", all_run_bodies(workflow)))
+    referenced = set(re.findall(r"(\.github/scripts/[\w.\-]+\.py)", all_command_text(workflow)))
     assert referenced, "the workflow calls no helper script; this arm ran empty"
     for rel in sorted(referenced):
         assert (REPO_ROOT / rel).exists(), f"the workflow calls a missing script: {rel}"
 
 
 def test_p7_gate_2_lints_paths_that_exist(workflow):
-    """isort silently succeeds on a path that is not there, so the paths matter."""
-    gate = gate_steps(workflow).get(2)
-    assert gate is not None, "gate 2 has no step"
-    body = str(gate.get("run", ""))
-    assert "isort" in body, "gate 2 does not run isort"
+    """isort exits 0 on a path that is not there, so the paths matter."""
+    command = gate_command(workflow, 2)
+    assert "isort" in command, "gate 2 does not run isort"
     paths = [
         token
-        for token in body.split()
-        if not token.startswith("-") and token not in {"isort"}
+        for token in command.split()
+        if not token.startswith("-") and token not in {"isort"} and "=" not in token
     ]
     assert paths, "gate 2 passes isort no paths at all, so it checks nothing"
     for path in paths:
@@ -327,25 +548,19 @@ def test_p7_gate_2_lints_paths_that_exist(workflow):
 
 
 def test_p8_frontend_gates_call_scripts_that_package_json_defines(workflow):
-    """Gate 8's commands must be real npm scripts, not aspirational ones."""
-    import json
-
     package = json.loads((REPO_ROOT / "frontend" / "package.json").read_text(encoding="utf-8"))
     scripts = package.get("scripts") or {}
     assert scripts, "frontend/package.json defines no scripts; this arm ran empty"
 
-    bodies = all_run_bodies(workflow)
-    invoked = set(re.findall(r"npm run ([\w:-]+)", bodies))
+    invoked = set(re.findall(r"npm run ([\w:-]+)", all_command_text(workflow)))
     assert invoked, "the workflow invokes no `npm run` script; this arm ran empty"
     for name in sorted(invoked):
         assert name in scripts, f"the workflow runs `npm run {name}`, which package.json lacks"
 
 
 def test_p9_gate_10_points_at_a_playwright_spec_that_exists(workflow):
-    gate = gate_steps(workflow).get(10)
-    assert gate is not None, "gate 10 has no step"
-    body = str(gate.get("run", ""))
-    specs = re.findall(r"(e2e/[\w.\-]+\.spec\.ts)", body)
+    command = gate_command(workflow, 10)
+    specs = re.findall(r"(e2e/[\w.\-]+\.spec\.ts)", command)
     assert specs, "gate 10 names no spec file"
     for rel in specs:
         assert (REPO_ROOT / "frontend" / rel).exists(), (
@@ -354,29 +569,33 @@ def test_p9_gate_10_points_at_a_playwright_spec_that_exists(workflow):
 
 
 # ---------------------------------------------------------------------------
-# Arm 4: the workflow's own properties
+# Arm 6: the workflow's own properties
 # ---------------------------------------------------------------------------
 
 
 def test_p10_ci_runs_on_pull_requests(workflow):
-    """The entire point. A workflow that only runs on push guards nothing."""
-    # PyYAML parses a bare `on:` key as the boolean True, which is a real trap:
-    # `workflow["on"]` returns nothing and an unguarded arm here would pass.
+    """PyYAML parses a bare `on:` key as the boolean True, which is a real trap."""
     triggers = workflow.get("on", workflow.get(True))
     assert triggers, "the workflow declares no triggers"
     assert "pull_request" in triggers, (
-        "CI does not run on pull requests, which is the only trigger that can "
-        "stop a bad merge before it auto-deploys"
+        "CI does not run on pull requests, which is the only trigger that can stop "
+        "a bad merge before it auto-deploys"
     )
 
 
 def test_p11_no_gate_but_gate_5_depends_on_a_secret(workflow):
     """A fork's pull request must get the same verdict as a branch's.
 
-    Section 24 makes gate 5 network-gated, so it alone may reference a
-    credential. Any other gate that did would go green on a fork for the wrong
-    reason: not because the code is sound, but because the check could not run.
+    Checked at WORKFLOW level as well as job level: the first version dumped
+    each job and missed a secret hoisted to the top-level `env`, which reaches
+    every job including the gate-carrying ones.
     """
+    workflow_env = yaml.safe_dump(workflow.get("env") or {})
+    assert "secrets." not in workflow_env, (
+        "a secret is declared in the workflow-level `env`, so it reaches every "
+        "gate and a fork's pull request cannot get the same verdict"
+    )
+
     checked_any = False
     for job_name, job in workflow["jobs"].items():
         gates_here = [
@@ -395,57 +614,54 @@ def test_p11_no_gate_but_gate_5_depends_on_a_secret(workflow):
 
 
 def test_p12_ruff_is_pinned_exactly_so_the_lint_gate_cannot_drift():
-    """This repository sets no explicit ruff `select`.
+    """Parsed as TOML, not matched as raw text.
 
-    So the enabled rule set is whatever the installed version defaults to, and a
-    floor would let a minor bump change what gate 3 enforces with nobody editing
-    a line of configuration. Measured during this phase: ruff 0.16.0 enables a
-    far broader set than the documented defaults, which is exactly how much
-    there is to lose.
+    The first version matched the raw file, so a COMMENTED-OUT pin satisfied it.
     """
-    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    assert "ruff" in pyproject, "ruff is not declared at all; this arm ran empty"
-    assert re.search(r'"ruff==\d+\.\d+\.\d+"', pyproject), (
-        "ruff is not pinned to an exact version, so gate 3's meaning changes "
-        "whenever the runner resolves a newer release"
+    dev = pyproject()["project"]["optional-dependencies"]["dev"]
+    assert dev, "the dev extra is empty; this arm ran empty"
+    ruff = [item for item in dev if item.replace(" ", "").startswith("ruff")]
+    assert ruff, f"ruff is not declared in the dev extra: {dev}"
+    assert all(re.fullmatch(r"ruff==\d+\.\d+\.\d+", item.replace(" ", "")) for item in ruff), (
+        f"ruff is not pinned to an exact version ({ruff}), so gate 3's meaning "
+        f"changes whenever the runner resolves a newer release. This repository "
+        f"sets no explicit `select`, so the enabled rule set IS the version."
     )
 
 
-def test_p13_import_order_has_exactly_one_owner():
-    """Ruff's `I` rules and isort disagree on this tree, measured, on 23 files.
+def test_p13_import_order_is_checked_by_at_least_one_tool_everywhere():
+    """The correction to this phase's own worst judgement call.
 
-    Whichever one is left enabled alongside the other, one gate is permanently
-    red. `I001` is ignored in pyproject so gate 2's isort owns the property. If
-    someone re-enables it, this fails and says why rather than leaving them to
-    rediscover the oscillation.
+    The first version disabled ruff's `I001` repository-wide and asserted that
+    it stayed disabled, on the premise that ruff and isort were irreconcilable.
+    Measurement rejected it: `known-third-party = ["alembic"]` takes the
+    disagreement from 23 files to 2. Both tools now run, and what this arm
+    defends is the real property: no file is skipped by BOTH.
     """
-    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    assert "[tool.isort]" in pyproject, "isort is not configured; gate 2 has no owner"
-    assert re.search(r'ignore\s*=\s*\[[^\]]*"I001"', pyproject), (
-        "ruff's I001 is not ignored, so both ruff and isort police import order "
-        "and they do not agree. One of gate 2 and gate 3 will always be red."
+    config = pyproject()
+    ruff_ignore = config.get("tool", {}).get("ruff", {}).get("lint", {}).get("ignore", [])
+    assert "I001" not in ruff_ignore, (
+        "ruff's I001 is ignored repository-wide, so every file isort skips goes "
+        "completely unchecked for import order. Fix the disagreement with "
+        "`known-third-party` instead of disabling the rule."
     )
 
-
-def test_p15_gate_5_cannot_pass_silently_when_it_did_not_run(workflow):
-    """A job that exits 0 renders as a green check.
-
-    Gate 5 needs a credential a fork's pull request cannot have, and Section 24
-    makes it network-gated rather than skippable, so it does exit 0 in that
-    case. What it must not do is exit 0 QUIETLY: "passed" and "could not run"
-    are the two states this entire phase exists to keep apart, and gate 5 is
-    the one place in this workflow where they legitimately meet.
-    """
-    gate = gate_steps(workflow).get(5)
-    assert gate is not None, "gate 5 has no step"
-    body = str(gate.get("run", ""))
-    assert "exit 0" in body, "gate 5 does not have a not-run path at all; this arm ran empty"
-    assert "::warning" in body, (
-        "gate 5's not-run path exits 0 without a warning annotation, so it "
-        "renders as an ordinary green check and a reviewer cannot tell it "
-        "from a real pass"
+    isort_config = config.get("tool", {}).get("isort", {})
+    assert isort_config, "isort is not configured; gate 2 has no owner"
+    ruff_isort = config["tool"]["ruff"]["lint"]["isort"]
+    assert "alembic" in ruff_isort.get("known-third-party", []), (
+        "ruff is not told that `alembic` is third party, so it classifies "
+        "`from alembic import op` as first-party because a directory of that "
+        "name exists, and disagrees with isort on 21 files"
     )
-    assert "NOT RUN" in body, "gate 5's not-run path does not say so in its output"
+
+    # The files isort skips must still be covered by ruff, which they are only
+    # while I001 is enabled. Asserted rather than assumed.
+    for skipped in isort_config.get("extend_skip", []):
+        assert (REPO_ROOT / skipped).exists(), (
+            f"isort skips {skipped}, which does not exist. A stale skip entry "
+            f"hides the day a real file needs one."
+        )
 
 
 def test_p14_the_workflow_cancels_superseded_pull_request_runs(workflow):
