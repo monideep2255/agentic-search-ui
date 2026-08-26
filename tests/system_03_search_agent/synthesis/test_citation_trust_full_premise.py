@@ -640,16 +640,12 @@ async def test_ncbi_dbsnp_citation_carries_full_provenance() -> None:
 @pytest.mark.asyncio
 async def test_pubtator_and_litvar2_citations_default_to_literature_mention() -> None:
     from system_03_search_agent.tools.litvar2_lookup import build_citation as litvar2_build_citation
-    from system_03_search_agent.tools.litvar2_lookup import (
-        litvar2_lookup,
-    )
+    from system_03_search_agent.tools.litvar2_lookup import litvar2_lookup
     from system_03_search_agent.tools.litvar2_lookup_schemas import Litvar2LookupInput
     from system_03_search_agent.tools.pubtator_annotate import (
         build_citation as pubtator_build_citation,
     )
-    from system_03_search_agent.tools.pubtator_annotate import (
-        pubtator_annotate,
-    )
+    from system_03_search_agent.tools.pubtator_annotate import pubtator_annotate
     from system_03_search_agent.tools.pubtator_annotate_schemas import (
         PubtatorAnnotateInput,
     )

@@ -55,7 +55,15 @@ dev = [
     # CI would start failing (or stop catching things) on a schedule nobody
     # chose. Bump it on purpose, and re-run `ruff check` when you do.
     "ruff==0.16.0",
-    "isort>=5.13",
+    # EXACT, for the same reason as ruff above, and left as a floor by mistake
+    # until CI proved the point on `develop` within the hour.
+    #
+    # Gate 2 passed locally and FAILED on the runner on the same commit. Local
+    # had isort 8.0.1; a floor of `>=5.13` let the runner resolve 9.0.0, whose
+    # formatting of a parenthesised single import differs, so the two machines
+    # disagreed about a file neither had touched. The comment on ruff says the
+    # enabled rule set IS the version; the same is true of a formatter's output.
+    "isort==9.0.0",
     "pip-audit>=2.7",
 ]
 
