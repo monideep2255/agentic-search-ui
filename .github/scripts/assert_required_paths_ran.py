@@ -42,6 +42,7 @@ Writes:
 
 from __future__ import annotations
 
+import ast
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -87,6 +88,36 @@ def _parse_report(report_path: str) -> ET.Element:
             "the pytest report declares an XML entity, which pytest never emits"
         )
     return ET.fromstring(raw)
+
+
+def _symbol_is_used(source: str, symbol: str) -> bool:
+    """Is `symbol` genuinely imported or referenced in CODE, not just mentioned?
+
+    F-4.14-RV-09. The first version asked `if symbol not in source`, a plain
+    substring test over the whole file. A re-verifier replaced the required-path
+    file with sixteen `assert True` tests whose DOCSTRING happened to name
+    `REFUSAL_TEXT` and `ground_claim`, and this script reported "the source still
+    exercises both required paths".
+
+    A docstring is text. Parsing the module and looking for the name as an
+    imported alias or a loaded identifier asks the question that was meant:
+    does the code touch this symbol. A comment, a string, or a docstring cannot
+    satisfy an `ast.Name` or an `ast.alias`.
+    """
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        # An unparseable required-path file is a failure, never a pass.
+        return False
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id == symbol:
+            return True
+        if isinstance(node, ast.Attribute) and node.attr == symbol:
+            return True
+        if isinstance(node, ast.alias) and symbol in (node.name, node.asname):
+            return True
+    return False
 
 
 def _module_source_path(cases: list[ET.Element]) -> Path | None:
@@ -190,7 +221,7 @@ def main(argv: list[str]) -> int:
         )
         return 1
     source = source_path.read_text(encoding="utf-8")
-    absent = [label for label, symbol in _REQUIRED_SYMBOLS if symbol not in source]
+    absent = [label for label, symbol in _REQUIRED_SYMBOLS if not _symbol_is_used(source, symbol)]
     if absent:
         print(
             f"FAIL: {source_path} no longer references " + ", ".join(absent) + ".\n"

@@ -185,6 +185,30 @@ Four minors were also filed. Both of the lead's corrections were independently C
 
 The irony is worth recording rather than smoothing over. `test_p19_no_gate_is_neutralised` enumerates four named tricks and misses the fifth, which is the enumerate-the-instances shape that `assert_no_db_skips.py` correctly diagnoses and rejects, in its own docstring, in the same commit.
 
+### Round 3: the shell left the workflow
+
+Authorized by the product owner on 2026-08-26, after the Rule 4 stop, with their own instruction: change the approach rather than patch it again, so the defect class goes rather than its fifth instance.
+
+What changed. Every gate's command moved into a checked-in script under `.github/gates/`, and each gate step's `run:` is now exactly one token, the path of its script. The workflow contains no shell at all.
+
+That converts the check from a substring search over arbitrary text into two whole-string properties, neither with room for a comment or a second command:
+
+- A gate step's `run:` must EQUAL a script path (`test_p21`, `test_p22`).
+- Each script is CANONICAL: shebang, `set -euo pipefail`, comments, and exactly ONE executable line, matched anchored at both ends (`test_p24`, `test_p25`).
+
+The evidence that this is a class removal rather than a fifth patch: ONE structural arm now catches `:;#`, `&&#`, `||#`, `(#`, a newline-separated second command, `true # command`, an appended `|| true`, and an appended redirect. Version 2 would have needed a separate case for each, and the ninth would still have been open.
+
+| Finding | Closed by | Verified |
+|---|---|---|
+| F-4.14-RV-03 critical | The shell leaving the workflow | 8 shell-injection variants, all caught by `test_p21`, with a clean control |
+| F-4.14-RV-09 | `assert_required_paths_ran.py` parses the module with `ast` and requires the symbol as an `ast.Name`, `ast.Attribute` or `ast.alias`, so a docstring cannot satisfy it | The re-verifier's own attack, 16 `assert True` tests naming both symbols in a docstring, now FAILS |
+| F-4.14-RV-05 | `test_p13` asserts the PROPERTY, that no file is excused by both checkers, rather than the spelling of `ignore` | `test_m18b` adds `per-file-ignores` for exactly the two files isort skips and the arm goes red |
+| F-4.14-RV-08 | Not closed. Gate 5's strict path still needs a credential this repository does not hold | Recorded, not asserted |
+
+And the half no reading can provide: `tests/ci/test_gate_scripts.py` EXECUTES gates 2, 3 and 6 against deliberately broken fixtures and asserts a non-zero exit, executes them against clean fixtures and asserts zero, proves gate 2 does not rewrite the file it is supposed to check, runs gate 5's not-run branch, and drives the gate 10 filter through all four paths including the two that must fail closed. Which gates it does NOT execute, and why, is stated in the file.
+
+Totals: 119 tests in `tests/ci/` (31 premise arms, 44 workflow-and-script mutations, 29 assertion-script tests, 15 behavioural). All 36 mutations caught with a clean control.
+
 ### The one finding this phase cannot close
 
 F-4.14-A-04 is a product-owner decision, not a defect to fix, and it is the largest remaining gap between what this phase claims and what exists.

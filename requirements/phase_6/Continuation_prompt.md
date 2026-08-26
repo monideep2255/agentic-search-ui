@@ -152,7 +152,7 @@ Two things were deliberately left open rather than fixed, both genuine product d
 
 Current counts, stated once here:
 
-- Python tests: 4204 (4044 passing, 136 skipped, 1 xfailed, ZERO FAILED) on `phase/4.14-ci-gates`, re-measured 2026-08-25 rather than carried forward.
+- Python tests: 4226 (4066 passing, 136 skipped, 1 xfailed, ZERO FAILED) on `phase/4.14-ci-gates`, re-measured 2026-08-25 rather than carried forward.
   - The figure at build phase 4.12's close was 4090 (3930 passing) on `phase/4.12-demo-deploy`; build phase 4.16 adds 12, being a 5-arm premise gate and a 7-case mutation harness.
   - THE STANDING SIX-FAILURE BASELINE IS GONE, and it was never six broken tests: all six were in `test_citation_trust_full_premise.py`, all six pass under `RUN_PREMISE_GATE=1`, and that file FAILED where it should have SKIPPED because its `live_only` mark gated on a model key existing rather than on outbound HTTP being permitted. Build phase 4.12 fixed it.
   - The figure before that was 4046 (3887 passing, 6 failed) on `develop` with both fix branches merged (PR #59, F-4.7-A-02, and PR #60, F-4.7-A-01), against a baseline RE-MEASURED in a throwaway worktree at `4d759da`: 3826 passing, 146 skipped, 6 failed. Neither branch's own figure is reproduced here, deliberately: each measured only its own branch, and the merged tree is neither of them, so carrying either number forward would record a total that was never true of this commit.
@@ -180,7 +180,7 @@ Current counts, stated once here:
 - Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
 - Premise gate, build phase 4.10's own gate (the guest allowance, a normal test file, not one of the seven live tool gates above): 36 of 36, every clause mutation-proven, two-armed throughout since a control that refuses every guest passes every attack test and destroys the product
 - Decisions logged: 422
-- Learnings entries: 128, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
+- Learnings entries: 129, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 - Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below).
 - This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
@@ -537,7 +537,7 @@ Three scope readings the locked documents did not settle, each recorded before a
 
 Final gates:
 
-- 4204 Python tests (3188 passing, the same six live-network-gated cases carried since build phase 4.0)
+- 4226 Python tests (3188 passing, the same six live-network-gated cases carried since build phase 4.0)
 - the GraphQL package alone 206 to 300 tests
 - 181 frontend
 - ruff clean
