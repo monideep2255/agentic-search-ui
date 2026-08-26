@@ -522,7 +522,16 @@ Two separate checks decide whether it succeeded, and both have to sign off befor
 - A script that compares the document word for word before and after, and fails loudly if anything is missing.
 - A second reviewer who never sees what the first check decided, so it cannot simply agree with a verdict it was shown.
 
-This very page is the first thing it has been used on.
+This very page is one of the first things it has been used on.
+
+What actually happened when we used it, kept in because it is the honest part. The checking tool turned out to be the thing most in need of checking. Using it on real documents found eight faults in the tool itself, and every one was the same kind: it complained about writing that was perfectly fine. That is the worse kind of fault for a checker to have, because a checker that cries wolf gets switched off.
+
+Two of those are worth stating plainly:
+
+- The tool gave different answers to the same question on different runs. Feed it the identical pair of documents twice and it could disagree with itself. A checker whose answer moves is worse than no checker, because you can no longer tell a real complaint from noise.
+- The test written to catch that problem did not work, twice. It passed on a deliberately broken version of the tool, so it was proving nothing while looking like proof. It only started working when pointed at a real document that actually had problems in it. Testing it against a clean document had told us nothing at all, and that is the trap, because a clean document looks like a perfectly good test.
+
+None of this changes the product. It is written down because the same trap applies to every check on this project, including the ones that decide whether an answer to a question is correct.
 
 ## Where to look for more detail
 

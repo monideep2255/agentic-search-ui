@@ -17,7 +17,7 @@ Kick-off: 2026-05-06. Last updated: 2026-08-25.
 | Phase 6: build (bossman execution) | In progress. Step 6.1 (prototype) COMPLETE. Step 6.3 (build v1) has merged build phases 3.0 through 3.5 and 4.0 through 4.12. THE PRODUCT IS DEPLOYED AND ANSWERING as of 2026-08-24 (PR #61), live at https://search-agent-web-production.up.railway.app with CD watching `develop`. BUILD PHASE 4.16, the seven UI defects the live demo surfaced, MERGED as PR #63 on 2026-08-25 and is LIVE on the demo, verified on the deployed product rather than asserted. Next: build phase 4.14 (CI, inserted 2026-08-24 and still not started), then 4.13 (durable history) and 4.15 (the two-environment release flow). Per-phase status: `tracker/BOARD.md` |
 | Phase 7: iteration and new information | Not started |
 
-Decisions logged: 416 (DECISIONS.md).
+Decisions logged: 418 (DECISIONS.md).
 
 Deliverables produced:
 
