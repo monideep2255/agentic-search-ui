@@ -225,35 +225,72 @@ class TestGate10Filter:
             "runs the gate rather than silently dropping it."
         )
 
+    def _synthetic_repo(self, tmp_path: Path, second_commit_path: str) -> tuple[Path, str, str]:
+        """A throwaway git repository with two commits, and their SHAs.
+
+        Built rather than borrowed from this repository's own history, and that
+        is a correction. The first version of these two arms diffed real commits
+        found with `git rev-list --all -- frontend/`, and CI checks out at
+        depth 1, so on a runner there was no such commit and the arm SKIPPED.
+        The skip guard caught it, correctly: a test that quietly does not run is
+        the exact thing this phase exists to stop, and it does not stop being
+        that because the test is one of ours.
+
+        A synthetic repository has no ambient dependency at all, so the arm runs
+        identically on a developer machine, a shallow clone, and a fork.
+        """
+        repo = tmp_path / "repo"
+        repo.mkdir()
+
+        def git(*args: str) -> str:
+            return subprocess.run(
+                ["git", *args], cwd=str(repo), capture_output=True, text=True, check=True
+            ).stdout.strip()
+
+        git("init", "-q")
+        git("config", "user.email", "ci@example.invalid")
+        git("config", "user.name", "CI")
+        (repo / "README.md").write_text("base\n", encoding="utf-8")
+        git("add", "README.md")
+        git("commit", "-q", "-m", "base")
+        base = git("rev-parse", "HEAD")
+
+        target = repo / second_commit_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("changed\n", encoding="utf-8")
+        git("add", second_commit_path)
+        git("commit", "-q", "-m", "change")
+        head = git("rev-parse", "HEAD")
+        return repo, base, head
+
+    def _run_in(self, repo: Path, tmp_path: Path, **env: str) -> tuple[int, str]:
+        output = tmp_path / "gh_output_repo"
+        output.touch()
+        result = run_gate(
+            "gate10_filter.sh",
+            repo,
+            env={
+                "GITHUB_OUTPUT": str(output),
+                "GITHUB_STEP_SUMMARY": str(tmp_path / "s2.md"),
+                **env,
+            },
+        )
+        return result.returncode, output.read_text(encoding="utf-8")
+
     def test_a_frontend_change_runs_the_gate(self, tmp_path):
-        head = subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=str(REPO_ROOT), capture_output=True, text=True, check=True
-        ).stdout.strip()
-        base = subprocess.run(
-            ["git", "rev-list", "--max-count=1", "--all", "--", "frontend/"],
-            cwd=str(REPO_ROOT), capture_output=True, text=True, check=True,
-        ).stdout.strip()
-        if not base or base == head:
-            pytest.skip("no commit touching frontend/ available to diff against")
-        parent = subprocess.run(
-            ["git", "rev-parse", f"{base}^"], cwd=str(REPO_ROOT), capture_output=True, text=True, check=False
-        ).stdout.strip()
-        if not parent:
-            pytest.skip("the frontend commit has no parent to diff against")
-        code, output = self._run(tmp_path, BASE_SHA=parent, HEAD_SHA=base)
+        repo, base, head = self._synthetic_repo(tmp_path, "frontend/src/App.tsx")
+        code, output = self._run_in(repo, tmp_path, BASE_SHA=base, HEAD_SHA=head)
         assert code == 0
-        assert "touched=true" in output, "a real frontend change did not trigger the gate"
+        assert "touched=true" in output, "a frontend change did not trigger the gate"
 
     def test_a_backend_only_change_skips_the_gate(self, tmp_path):
         """The other direction: a filter that always runs is not a filter."""
-        head = subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=str(REPO_ROOT), capture_output=True, text=True, check=True
-        ).stdout.strip()
-        code, output = self._run(tmp_path, BASE_SHA=head, HEAD_SHA=head)
+        repo, base, head = self._synthetic_repo(tmp_path, "src/system_03_search_agent/thing.py")
+        code, output = self._run_in(repo, tmp_path, BASE_SHA=base, HEAD_SHA=head)
         assert code == 0
         assert "touched=false" in output, (
-            "an empty diff still ran the gate, so the filter never skips and "
-            "Section 24's 'UI-touching pull requests only' is not honoured"
+            "a backend-only change still ran the gate, so the filter never skips "
+            "and Section 24's 'UI-touching pull requests only' is not honoured"
         )
 
 
