@@ -115,6 +115,7 @@ USAGE
   check_preservation.py --git <path>        # working tree against git HEAD
   check_preservation.py --self-test
   check_preservation.py --mutation-test
+  check_preservation.py --determinism-test
 
   --lex-threshold F     tighten only, default 0.97
   --claim-coverage F    tighten only, default 0.70
@@ -931,9 +932,18 @@ def arm_claim_anchoring(before: list[Unit], after: list[Unit], path: str,
             skipped += 1
             continue
 
+        # Iterate the keys in SORTED order, not set order. all_keys()
+        # returns a set of tuples containing strings, and string hashing is
+        # randomized per process, so plain set iteration made Counter
+        # insertion order vary between runs. most_common then broke ties by
+        # that order, the greedy cover picked a different anchor set, and
+        # the negation check reported a drop on some runs and not others.
+        # A gate that answers the same question differently on different
+        # runs is worse than no gate, because a real finding becomes
+        # indistinguishable from noise.
         candidates: Counter = Counter()
-        for key in bu.all_keys():
-            for idx in index.get(key, ()):
+        for key in sorted(bu.all_keys()):
+            for idx in sorted(index.get(key, ())):
                 candidates[idx] += 1
         if not candidates:
             findings.append(Finding(
@@ -950,7 +960,11 @@ def arm_claim_anchoring(before: list[Unit], after: list[Unit], path: str,
         # and was cut. The claim then failed for a fact that was sitting
         # in the document. Counted atoms are mandatory, so every unit that
         # supplies one is always considered, whatever its overlap rank.
-        pool_ids = [idx for idx, _ in candidates.most_common(CANDIDATE_POOL)]
+        # Sort by descending count then ascending index, so equal-count
+        # candidates always order the same way. Counter.most_common alone
+        # leaves ties to insertion order.
+        ranked = sorted(candidates.items(), key=lambda kv: (-kv[1], kv[0]))
+        pool_ids = [idx for idx, _ in ranked[:CANDIDATE_POOL]]
         must_have: set = set()
         for atom in b_hard:
             must_have |= index.get((atom.category, atom.value), set())
@@ -1324,6 +1338,125 @@ def run_mutation_test() -> int:
     return failures
 
 
+# A fixture built specifically to CREATE anchoring ties, because the
+# ordinary golden pair does not. Measured: with the determinism fixes
+# reverted, the golden pair returned an identical result under every hash
+# seed, so an arm built on it certified a broken build as deterministic.
+# This pair is different by construction. One before-unit carries a
+# negation, and the after side splits its content across many units of
+# EQUAL overlap, so which units enter the candidate pool, and whether the
+# negation-bearing unit is among them, depends entirely on tie ordering.
+TIE_BEFORE = """# Round budget
+
+The gate does not permit a third review round without an escalation to the
+product owner, and the phase stops rather than continuing.
+"""
+
+TIE_AFTER = """# Round budget
+
+The gate permits a review round.
+
+- The gate permits an escalation
+- The gate permits the product owner a round
+- The escalation reaches the product owner
+- A third round without an escalation is not permitted
+- The product owner permits a round
+- The gate reaches the product owner
+- The phase stops rather than continuing
+- The round reaches an escalation
+"""
+
+
+def _golden_summary() -> str:
+    """One line summarizing BOTH fixture comparisons. Used by the
+    determinism test, which runs this in subprocesses under different hash
+    seeds. It reports the tie fixture too, because that is the one with the
+    power to fail."""
+    t = compare(TIE_BEFORE, TIE_AFTER, "tie",
+                DEFAULT_LEX_THRESHOLD, DEFAULT_CLAIM_COVERAGE)
+    tie_kinds = ",".join(sorted(f"{f.kind}:{f.line}" for f in t.findings))
+    r = compare(GOLDEN_BEFORE, GOLDEN_AFTER, "golden",
+                DEFAULT_LEX_THRESHOLD, DEFAULT_CLAIM_COVERAGE)
+    kinds = ",".join(sorted(f"{f.kind}:{f.line}" for f in r.findings))
+    return (f"tie_findings={len(t.findings)} tie_kinds=[{tie_kinds}] | "
+            f"findings={len(r.findings)} kinds=[{kinds}] "
+            f"additions={len(r.additions)} skipped={r.claims_skipped} "
+            f"retention={r.retention:.4f}")
+
+
+def run_determinism_test(before_path: str | None, after_path: str | None) -> int:
+    """Assert the gate answers the same question the same way every run.
+
+    This arm exists because it FAILED in the field. The claim-anchoring
+    candidate pool was built by iterating a set of tuples containing
+    strings, and string hashing is randomized per process, so tie-breaking
+    varied between runs: a negation drop was reported on some runs and not
+    others for byte-identical input.
+
+    TWO THINGS ABOUT THIS ARM'S OWN COVERAGE, BOTH LEARNED THE HARD WAY.
+
+    First, it must run in SUBPROCESSES. Python fixes the hash seed once per
+    process, so re-running compare() in a loop would pass no matter how the
+    ordering was built.
+
+    Second, and this is the part that cost three attempts: this arm only
+    has the power to fail on a pair that actually PRODUCES FINDINGS. All
+    three facts below were measured against a build with the ordering
+    fixes deliberately reverted, not reasoned about:
+
+      - The bundled golden pair: identical under every seed. Vacuous.
+      - A fixture built deliberately to create anchoring ties: identical
+        under every seed. Also vacuous. Tie density in a small fixture is
+        too low to matter.
+      - A real 355-line document pair with zero findings: identical under
+        every seed. Vacuous for the same underlying reason, and this is the
+        trap, because it LOOKS like a real test.
+      - A real 7,932-atom pair carrying 3 lost atoms and an orphan claim:
+        SIX SEEDS PRODUCED TWO DIFFERENT RESULTS, 1 orphan claim versus 2.
+        Caught.
+
+    So the honest statement of this arm's coverage: a green result on a
+    clean pair proves nothing at all, and must not be read as evidence of
+    determinism. Point it at a pair whose comparison is not empty. The
+    skill runs it at the first preservation gate, before the findings have
+    been resolved, for exactly this reason.
+    """
+    seeds = ["0", "1", "42", "12345", "99991", "random"]
+    if not (before_path and after_path):
+        print("error: --determinism-test needs --before and --after naming a "
+              "REAL document pair.")
+        print("       A synthetic fixture cannot fail this arm: measured, the "
+              "bundled fixtures return")
+        print("       an identical result under every hash seed even with the "
+              "ordering fixes reverted.")
+        return 2
+
+    outputs = []
+    for seed in seeds:
+        env = dict(os.environ, PYTHONHASHSEED=seed)
+        proc = subprocess.run(
+            [sys.executable, os.path.abspath(__file__),
+             "--before", before_path, "--after", after_path, "--check"],
+            capture_output=True, text=True, env=env, timeout=300,
+        )
+        line = proc.stdout.strip().splitlines()
+        summary = line[-1] if line else f"(no output, exit {proc.returncode})"
+        outputs.append(summary)
+        print(f"  seed {seed:>7}: {summary}")
+
+    distinct = set(outputs)
+    print()
+    if len(distinct) == 1:
+        print(f"ok: {len(seeds)} hash seeds over a real document pair, "
+              f"1 distinct result, deterministic")
+        return 0
+    print(f"error: {len(seeds)} hash seeds produced {len(distinct)} DIFFERENT "
+          f"results for byte-identical input. The gate is not deterministic.")
+    for line in sorted(distinct):
+        print(f"  {line}")
+    return 1
+
+
 # --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
@@ -1413,6 +1546,7 @@ def _print_additions(rows: list[dict]) -> None:
 KNOWN_FLAGS = {
     "--self-test", "--mutation-test", "--check", "--verbose", "--additions",
     "--before", "--after", "--git", "--lex-threshold", "--claim-coverage",
+    "--determinism-test", "--golden-summary",
 }
 
 # Flags that consume the following argv item as their value.
@@ -1445,8 +1579,14 @@ def main(argv: list[str]) -> int:
 
     if "--self-test" in argv:
         return 1 if run_self_test() else 0
+    if "--golden-summary" in argv:
+        print(_golden_summary())
+        return 0
     if "--mutation-test" in argv:
         return 1 if run_mutation_test() else 0
+    if "--determinism-test" in argv:
+        return run_determinism_test(_flag_value(argv, "--before"),
+                                    _flag_value(argv, "--after"))
 
     lex = _resolve_threshold(argv, "--lex-threshold", DEFAULT_LEX_THRESHOLD)
     cov = _resolve_threshold(argv, "--claim-coverage", DEFAULT_CLAIM_COVERAGE)

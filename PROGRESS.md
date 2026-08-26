@@ -1,6 +1,12 @@
 # Progress
 
-A plain-language update on what this project is, what works today, and what comes next. No jargon. If you have never seen the code, start here.
+A plain-language update, covering:
+
+- What this project is.
+- What works today.
+- What comes next.
+
+No jargon. If you have never seen the code, start here.
 
 Last updated: 2026-08-25.
 
@@ -17,7 +23,7 @@ Last updated: 2026-08-25.
 
 ## What we are building, in one paragraph
 
-A search tool for biomedical researchers. You ask a question in ordinary English, like "which diseases are associated with the BRCA1 gene?", and it answers you in ordinary English, with a link next to every fact showing exactly which official record that fact came from. The links are the point. Anyone can build something that sounds confident; the hard part is being able to prove every sentence, and refusing to answer when you cannot.
+A search tool for biomedical researchers. You ask a question in ordinary English, like "which diseases are associated with the BRCA1 gene?". It answers you in ordinary English, with a link next to every fact showing exactly which official record that fact came from. The links are the point. Anyone can build something that sounds confident. The hard part is being able to prove every sentence, and refusing to answer when you cannot.
 
 It searches three kinds of source. A large database we built in advance and hold ourselves, which is fast. Live government APIs at the US National Center for Biotechnology Information, which are always current. And a set of extra enrichment services that add context. The system decides which of the three to use for each question.
 
@@ -39,7 +45,7 @@ flowchart LR
     W --> A[Answer, one link per fact]
 ```
 
-The two ends are the ones worth noticing. On the left, a question can be turned away before anything is spent on it. On the right, nothing reaches you without a link attached, and if there is no link to attach, you get told so instead of being told something invented.
+The two ends are the ones worth noticing. On the left, a question can be turned away before anything is spent on it. On the right, nothing reaches you without a link attached. If there is no link to attach, you get told so instead of being told something invented.
 
 ## What works today
 
@@ -112,7 +118,7 @@ On the two problems that headlined this section last week, and why we are not si
 - The first was that someone could hide a polite-sounding instruction inside an ordinary question and make the system answer about a gene they chose rather than the one the question was about. That is fixed, and the fix does not depend on the system being clever enough to notice. It now recognises the shape of such an instruction directly, before it does any thinking at all, and turns the question away in a fraction of a second at no cost. We measured it: before the fix, the system's own judgement let this through on all six attempts of the worst example. After it, none of eighteen attempts got through.
 - The second was that asking about a retired gene name got you a confident, fully sourced answer about a different gene, with nothing saying the subject had been swapped. That is fixed too. The system now declines to answer and tells you what it found instead: that the name you used has been retired, and which record replaced it, so you can ask again.
 
-What we are deliberately NOT claiming about the first one. We closed the shapes we could recognise reliably: an instruction dressed up as a processing note, and any question that names the system's own internal machinery. Someone who writes the same trick in completely plain English, using none of those tells, still has to get past the system's judgement rather than a mechanical check, and we have measured that judgement as unreliable in principle. This raises the floor. It does not prove there is no way in. We would rather say that plainly than let a green tick imply more than we tested.
+What we are deliberately NOT claiming about the first one. We closed the shapes we could recognise reliably: an instruction dressed up as a processing note, and any question that names the system's own internal machinery. Someone who writes the same trick in completely plain English, using none of those tells, still has to get past the system's judgement rather than a mechanical check. We have measured that judgement as unreliable in principle. This raises the floor. It does not prove there is no way in. We would rather say that plainly than let a green tick imply more than we tested.
 
 An older limitation, still true: someone determined, with access to a lot of internet connections, can still use up the free searches we set aside for strangers each day and leave nothing for genuine visitors. It is a real problem for a public launch and it is scheduled.
 
@@ -155,27 +161,95 @@ Each of these is a completed, reviewed, merged piece of work.
 
 Nine of these are worth understanding, because they explain how this project works.
 
-Sprint 2.1, the expensive lesson. We asked "which diseases are associated with BRCA1?" and got back twenty-five results. All twenty-five had real, working links to official records. Every automated test passed. And every single result was wrong: they were not diseases at all, they were similar genes in other animals. The tests could not see this, because they were checking that the plumbing worked rather than that the answer was true. Finding it took four rounds of review over four days. Everything we do now is shaped by that: before writing any new feature, we now write a test that asks whether the ANSWER is right, and we watch it fail first, so we know the test is capable of catching a lie.
+Sprint 2.1, the expensive lesson. We asked "which diseases are associated with BRCA1?" and got back twenty-five results. All twenty-five had real, working links to official records. Every automated test passed. And every single result was wrong: they were not diseases at all, they were similar genes in other animals. The tests could not see this, because they were checking that the plumbing worked rather than that the answer was true.
+
+Finding it took four rounds of review over four days. Everything we do now is shaped by that: before writing any new feature, we now write a test that asks whether the ANSWER is right. We watch it fail first, so we know the test is capable of catching a lie.
 
 Sprint 3.0, the gatekeeper, and why it has two halves. A gatekeeper that refuses everything is perfectly secure and completely useless. So the tests check both directions: that bad questions get turned away, and just as importantly that good questions get through. That second half caught a real problem. An early version refused the single most important question in the whole product, "which diseases are associated with BRCA1?", because our list of biomedical words contained "disease" and the question said "diseases". One letter. No security test would ever have found that.
 
-Sprint 3.1, the check that paid for itself twice over. Gene name lookup shipped, got checked, and the check found two serious problems: the lookup was completely broken for every gene (a leftover from an unrelated fix), and a search-scoping fix was quietly returning the wrong results instead of the right ones. Both got fixed. Then, because the same team had just spent a whole day learning not to trust a fix that graded its own homework, we paid for one more check on the fix for those two problems. That last check found something worse than either original bug: for a handful of gene names, the government database was matching on a nickname instead of the real name and handing back a real gene that was simply the wrong one. Confidently, with a real-looking source link attached. That is the exact failure this whole project exists to prevent, and it was three checks deep before anyone caught it.
+Sprint 3.1, the check that paid for itself twice over. Gene name lookup shipped, got checked. The check found two serious problems: the lookup was completely broken for every gene (a leftover from an unrelated fix), and a search-scoping fix was quietly returning the wrong results instead of the right ones. Both got fixed.
 
-The database safety fix, the same lesson learned twice in one afternoon. A week and a half earlier, one automatically written question had a shape our database could not handle, and it crashed the whole database for everyone using it at the time. This sprint closed that gap: the system now recognises that dangerous shape and refuses to even try running it. But the first attempt at writing that fix had a bug of its own, an obscure one, and a reviewer caught it before it ever shipped. The fix was rewritten, and a second, completely separate reviewer checked the rewrite and confirmed it actually closed the gap. The team had already learned once, on sprint 3.1, that a fix should never be trusted just because the person who wrote it says it works. This sprint proved that lesson applies even to the fix for a problem the team already understood well: knowing exactly what is wrong is not the same as writing a correct fix on the first try.
+Then, because the same team had just spent a whole day learning not to trust a fix that graded its own homework, we paid for one more check on the fix for those two problems. That last check found something worse than either original bug: for a handful of gene names, the government database was matching on a nickname instead of the real name and handing back a real gene that was simply the wrong one. Confidently, with a real-looking source link attached.
 
-Sprint 3.2, the variant lookup tool, and the fix that broke something new twice. Building this tool found two serious problems early: it silently cut off values that were too long instead of saying so (imagine a lab report where a long diagnosis just gets chopped off mid-word with no note that anything is missing), and if you typed in a plain number instead of a real variant identifier, the system would confidently return real information about a completely different, unrelated variant. Both got fixed. Then, exactly as happened on sprint 3.1, a separate check on the fix itself found the fix had its own problems: the "stop cutting things off" fix turned out to reject roughly one in ten real, clinically important variants outright, including some of the most well known ones in medicine, because the fix refused the whole answer rather than just leaving out the one piece that was too long. And a second fix, meant to correctly tell the system "this failure is temporary, try again" versus "this input is simply wrong, do not retry," was doing the opposite of what it claimed for one common kind of failure. Both were fixed a second time and checked a third time before anyone trusted them. The lesson, now proven on two sprints in a row: a fix for a bug deserves MORE scrutiny than new code, not less, because the fix is the newest, least-tested thing in the whole system.
+That is the exact failure this whole project exists to prevent, and it was three checks deep before anyone caught it.
 
-Sprint 3.3, the literature lookup tools, and the confidently wrong answer that both tools gave at once. Both new tools ask a government search service for a match and hand back whatever comes back as a real result. Late in review, someone tried typing in a bare number, "334", instead of a real identifier. Both tools cheerfully returned real, official-looking, fully cited answers about five completely unrelated things. Separately, typing in an ordinary word like "the" returned ten confidently matched, real medical terms that had nothing to do with the word "the". Nothing was broken about the individual records returned. Both were real entries from the government's own database. The problem was that the government service itself already flags a weak, "closest guess" style match differently from an exact one, and our tools were throwing that flag away before anyone downstream ever saw it. It is now kept and passed along. This is the single most important find of this sprint, because it is exactly the failure this whole project exists to prevent: not a crash, not an error message, a fully cited, entirely wrong answer delivered with total confidence. It was also found by deliberately typing hostile and strange things into the finished tools, not by any planned test, which is why that kind of adversarial poking is now a standing step for every tool going forward, not an occasional extra.
+The database safety fix, the same lesson learned twice in one afternoon. A week and a half earlier, one automatically written question had a shape our database could not handle. It crashed the whole database for everyone using it at the time. This sprint closed that gap: the system now recognises that dangerous shape and refuses to even try running it.
 
-Sprint 3.5, the last two data tools, and the fix that broke the thing it just fixed, twice. This sprint's outbreak-cluster lookup reads a government file that turned out to be about 400 times bigger than a normal file its own size class: roughly 411 gigabytes, for one bacterial species. The tool has to read that file a little at a time and give up gracefully if it runs out of time, rather than trying to load the whole thing. The first version had a real, serious bug: it stopped reading after finding just the FIRST matching entry, then confidently reported that as the complete answer, when a real outbreak cluster of four related samples was quietly reported as having only two. That got caught and fixed, checked, and passed a full re-test. Then a second, deliberately hostile round of testing found something worse: the FIX ITSELF had broken the tool a different way. In closing the "stops too early and lies" bug, the fix removed the only thing that let the tool stop at all, so now it could never successfully finish AT ALL, not even on the exact same real outbreak cluster it had gotten wrong before. It failed silently, reporting "nothing found" instead of a wrong answer, which is safer but still wrong. That got fixed too, and a live re-check on that same real outbreak cluster still came back empty. It took a THIRD look to find the actual remaining problem: the fix that made the tool patient enough to find every real match had also made it so patient it ran out of time before ever getting to the last, quick step that turns the matches into a proper labeled result. A dedicated slice of time was reserved for that last step no matter how long the earlier steps take, and only then did a live check on the real outbreak cluster come back with the exact right answer: four related samples, with the exact genetic distances a human reviewer had worked out by hand as the ground truth to check against. Three real bugs, each one only found by actually running the finished tool against the real government service and checking the ANSWER, not by trusting that the tests still said "green".
+But the first attempt at writing that fix had a bug of its own, an obscure one. A reviewer caught it before it ever shipped. The fix was rewritten, and a second, completely separate reviewer checked the rewrite and confirmed it actually closed the gap. The team had already learned once, on sprint 3.1, that a fix should never be trusted just because the person who wrote it says it works.
 
-Sprint 3.4, the trust system's own final exam, and the two-gene question that gave a confidently incomplete answer. This was the sprint that connected everything: extending the trust-and-citation rules to all six lookup tools, teaching the system to notice when two sources disagree, and, for the first time, actually letting gene lookup contribute to a real answer alongside our own database. Building and checking it in the ordinary way went well: two rounds of review, a handful of real bugs found and fixed, all closed cleanly. Then a deliberately hostile round of testing tried something nobody had tried before: asking about two different genes in a single question. Two times out of three, the system answered fluently, cited its one source correctly, and never mentioned the second gene at all, reporting itself as a complete, trustworthy answer the whole time. Nothing was technically wrong with the sentence it wrote. It simply never tried to cover the rest of the question, and said nothing about that. This is exactly the failure this whole project exists to prevent: not a crash, not a wrong fact, a confident answer that quietly does less than it claims. It is fixed now: the system checks whether every named subject in a multi-part question actually got an answer, and if not, it downgrades its own confidence and says plainly which part it could not cover. Fixing that turned up a second problem in the same area: the check meant to catch our own database and a live government record disagreeing about the same gene had never actually been able to compare them in practice, because the two sources describe a gene's identity slightly differently (a full name versus a short symbol) and the check required an exact match. It now understands that the two are the same kind of fact. A few smaller, lower-priority gaps were found and deliberately left for later, each with a written reason why leaving it was the right call for now, not an oversight.
+This sprint proved that lesson applies even to the fix for a problem the team already understood well: knowing exactly what is wrong is not the same as writing a correct fix on the first try.
 
-Sprint 4.0, the front door, and the reconnect trick that quietly defeated its own fix. This sprint finished the one door every future way of reaching the system, a phone app, a command-line tool, another program, will eventually walk through. Building the ordinary version went the usual way: build it, review finds real problems (the reconnect feature was silently unusable by any standard tool, because of one missing line), fix them, a second reviewer confirms. Then a deliberately hostile round of testing found something nobody had tried: quickly disconnecting and reconnecting on a fast, repeating cycle, never actually reading anything. This exact trick defeated the "stop an abandoned conversation" fix from three sprints ago, keeping a conversation nobody is reading alive forever, as long as the reconnects came fast enough. It also found that a conversation someone deliberately stops now needs to say so clearly rather than just going silent, and that a partial list of sources needs to say plainly that it is partial, not look identical to a complete one. Fourteen real problems were found this way in one sitting; ten were fixed and independently re-confirmed by a fourth review, and four were deliberately left for a specific later sprint each, with the reason written down for each one rather than left unowned. The reviewer's own closing note is the throughline worth keeping: fixing one loophole is exactly when a new one is easiest to introduce, because attention is on the loophole just closed, not on every other door shaped the same way.
+Sprint 3.2, the variant lookup tool. The fix that broke something new twice.
 
-Sprint 4.1, the back door, and the check that could never fail. This sprint built the first way for another computer program, not a person on the web page, to ask the system a question directly and get one complete answer back. Before any of that code was written, a check was written to prove it worked, the usual practice by now. The first reviewer found something worse than a missing feature: two of the check's own tests had been written in a way that could never fail, no matter what the real code did, because the test compared the wrong two things to each other. A check that cannot fail is worse than no check, because it looks like proof when it proves nothing. That got rewritten and fixed. Then a deliberately hostile round of testing against the real, running door found sixteen problems, two of them serious, and both shared the same shape as the front-door problems found the sprint before: the system could tell another program "here is a confident, trustworthy answer" in exactly the moment that was least true, when the underlying work had failed, been cut off partway through, or produced nothing worth trusting. Both are fixed now: a failed or stopped answer can never again present itself as a complete, trustworthy one. Two smaller, genuine judgment calls were found and deliberately left open rather than guessed at: whether content copied in from an outside source should be visibly marked as such before being handed to another AI program, since a hostile instruction hidden inside an outside document is invisible to a person reading it but not necessarily to a program blindly following it; and a small identity check that is currently unused and harmless today, but will need attention the moment a future sprint gives it something real to check against.
+Building this tool found two serious problems early: it silently cut off values that were too long instead of saying so (imagine a lab report where a long diagnosis just gets chopped off mid-word with no note that anything is missing), and if you typed in a plain number instead of a real variant identifier, the system would confidently return real information about a completely different, unrelated variant. Both got fixed.
 
-Sprint 4.9, the design comparison nobody had run, and the check that could not fail. Somebody finally opened the built page and the approved design side by side, in the same states, and compared them. That had never been done in this project. It found nine differences, and a live bug: a visitor with no account was being shown the whole panel of saved searches that is supposed to appear only after signing in.
+Then, exactly as happened on sprint 3.1, a separate check on the fix itself found the fix had its own problems: the "stop cutting things off" fix turned out to reject roughly one in ten real, clinically important variants outright, including some of the most well known ones in medicine, because the fix refused the whole answer rather than just leaving out the one piece that was too long.
+
+And a second fix, meant to correctly tell the system "this failure is temporary, try again" versus "this input is simply wrong, do not retry," was doing the opposite of what it claimed for one common kind of failure. Both were fixed a second time and checked a third time before anyone trusted them.
+
+The lesson, now proven on two sprints in a row: a fix for a bug deserves MORE scrutiny than new code, not less, because the fix is the newest, least-tested thing in the whole system.
+
+Sprint 3.3, the literature lookup tools. The confidently wrong answer that both tools gave at once. Both new tools ask a government search service for a match and hand back whatever comes back as a real result. Late in review, someone tried typing in a bare number, "334", instead of a real identifier. Both tools cheerfully returned real, official-looking, fully cited answers about five completely unrelated things.
+
+Separately, typing in an ordinary word like "the" returned ten confidently matched, real medical terms that had nothing to do with the word "the". Nothing was broken about the individual records returned. Both were real entries from the government's own database. The problem was that the government service itself already flags a weak, "closest guess" style match differently from an exact one. Our tools were throwing that flag away before anyone downstream ever saw it.
+
+It is now kept and passed along. This is the single most important find of this sprint, because it is exactly the failure this whole project exists to prevent: not a crash, not an error message, a fully cited, entirely wrong answer delivered with total confidence.
+
+It was also found by deliberately typing hostile and strange things into the finished tools, not by any planned test, which is why that kind of adversarial poking is now a standing step for every tool going forward, not an occasional extra.
+
+Sprint 3.5, the last two data tools. The fix that broke the thing it just fixed, twice. This sprint's outbreak-cluster lookup reads a government file that turned out to be about 400 times bigger than a normal file its own size class: roughly 411 gigabytes, for one bacterial species. The tool has to read that file a little at a time and give up gracefully if it runs out of time, rather than trying to load the whole thing.
+
+The first version had a real, serious bug: it stopped reading after finding just the FIRST matching entry, then confidently reported that as the complete answer, when a real outbreak cluster of four related samples was quietly reported as having only two. That got caught and fixed, checked, and passed a full re-test. Then a second, deliberately hostile round of testing found something worse: the FIX ITSELF had broken the tool a different way.
+
+In closing the "stops too early and lies" bug, the fix removed the only thing that let the tool stop at all, so now it could never successfully finish AT ALL, not even on the exact same real outbreak cluster it had gotten wrong before. It failed silently, reporting "nothing found" instead of a wrong answer, which is safer but still wrong. That got fixed too, and a live re-check on that same real outbreak cluster still came back empty.
+
+It took a THIRD look to find the actual remaining problem: the fix that made the tool patient enough to find every real match had also made it so patient it ran out of time before ever getting to the last, quick step that turns the matches into a proper labeled result.
+
+A dedicated slice of time was reserved for that last step no matter how long the earlier steps take, and only then did a live check on the real outbreak cluster come back with the exact right answer: four related samples, with the exact genetic distances a human reviewer had worked out by hand as the ground truth to check against.
+
+Three real bugs, each one only found by actually running the finished tool against the real government service and checking the ANSWER, not by trusting that the tests still said "green".
+
+Sprint 3.4, the trust system's own final exam. The two-gene question that gave a confidently incomplete answer. This was the sprint that connected everything:
+
+- Extending the trust-and-citation rules to all six lookup tools.
+- Teaching the system to notice when two sources disagree.
+- For the first time, actually letting gene lookup contribute to a real answer alongside our own database.
+
+Building and checking it in the ordinary way went well: two rounds of review, a handful of real bugs found and fixed, all closed cleanly. Then a deliberately hostile round of testing tried something nobody had tried before: asking about two different genes in a single question. Two times out of three, the system:
+
+- Answered fluently.
+- Cited its one source correctly.
+- Never mentioned the second gene at all, reporting itself as a complete, trustworthy answer the whole time.
+
+Nothing was technically wrong with the sentence it wrote. It simply never tried to cover the rest of the question, and said nothing about that. This is exactly the failure this whole project exists to prevent: not a crash, not a wrong fact, a confident answer that quietly does less than it claims.
+
+It is fixed now: the system checks whether every named subject in a multi-part question actually got an answer, and if not, it downgrades its own confidence and says plainly which part it could not cover.
+
+Fixing that turned up a second problem in the same area: the check meant to catch our own database and a live government record disagreeing about the same gene had never actually been able to compare them in practice, because the two sources describe a gene's identity slightly differently (a full name versus a short symbol) and the check required an exact match. It now understands that the two are the same kind of fact.
+
+A few smaller, lower-priority gaps were found and deliberately left for later, each with a written reason why leaving it was the right call for now, not an oversight.
+
+Sprint 4.0, the front door. The reconnect trick that quietly defeated its own fix. This sprint finished the one door every future way of reaching the system, a phone app, a command-line tool, another program, will eventually walk through. Building the ordinary version went the usual way: build it, review finds real problems (the reconnect feature was silently unusable by any standard tool, because of one missing line), fix them, a second reviewer confirms.
+
+Then a deliberately hostile round of testing found something nobody had tried: quickly disconnecting and reconnecting on a fast, repeating cycle, never actually reading anything. This exact trick defeated the "stop an abandoned conversation" fix from three sprints ago, keeping a conversation nobody is reading alive forever, as long as the reconnects came fast enough.
+
+It also found that a conversation someone deliberately stops now needs to say so clearly rather than just going silent, and that a partial list of sources needs to say plainly that it is partial, not look identical to a complete one.
+
+Fourteen real problems were found this way in one sitting; ten were fixed and independently re-confirmed by a fourth review. Four were deliberately left for a specific later sprint each, with the reason written down for each one rather than left unowned.
+
+The reviewer's own closing note is the throughline worth keeping: fixing one loophole is exactly when a new one is easiest to introduce, because attention is on the loophole just closed, not on every other door shaped the same way.
+
+Sprint 4.1, the back door. The check that could never fail. This sprint built the first way for another computer program, not a person on the web page, to ask the system a question directly and get one complete answer back. Before any of that code was written, a check was written to prove it worked, the usual practice by now.
+
+The first reviewer found something worse than a missing feature: two of the check's own tests had been written in a way that could never fail, no matter what the real code did, because the test compared the wrong two things to each other. A check that cannot fail is worse than no check, because it looks like proof when it proves nothing. That got rewritten and fixed.
+
+Then a deliberately hostile round of testing against the real, running door found sixteen problems, two of them serious, and both shared the same shape as the front-door problems found the sprint before: the system could tell another program "here is a confident, trustworthy answer" in exactly the moment that was least true, when the underlying work had failed, been cut off partway through, or produced nothing worth trusting.
+
+Both are fixed now: a failed or stopped answer can never again present itself as a complete, trustworthy one.
+
+Two smaller, genuine judgment calls were found and deliberately left open rather than guessed at: whether content copied in from an outside source should be visibly marked as such before being handed to another AI program, since a hostile instruction hidden inside an outside document is invisible to a person reading it but not necessarily to a program blindly following it; and a small identity check that is currently unused and harmless today, but will need attention the moment a future sprint gives it something real to check against.
+
+Sprint 4.9, the design comparison nobody had run. The check that could not fail. Somebody finally opened the built page and the approved design side by side in the same states, and compared them. That had never been done in this project. It found nine differences, and a live bug: a visitor with no account was being shown the whole panel of saved searches that is supposed to appear only after signing in.
 
 Fixing the nine went the usual way, and then three separate reviews took it apart. The first, a deliberately hostile one, found the worst thing on the page: when a search failed partway through, the page printed the system's own internal error text, including how much money the search had cost, directly underneath a green badge saying "Grounded, every claim cited". A crashed search was wearing the badge of a successful one. It also found that a refused question was shown with a green tick beside the word "Refused", which at a glance reads as "done, fine".
 
@@ -185,7 +259,7 @@ The third review looked only at the repairs, and found that three of the four mo
 
 All of those are fixed. The number worth keeping is that the page was fully passing its own checks at the moment each of these was found.
 
-Sprint 4.10, letting strangers in, and four attempts to stop one of them ruining it for everybody. Until this sprint, nobody could try the product without creating an account first, which meant it could not be shown to anyone. Fixing that turned out to be the easy half.
+Sprint 4.10, letting strangers in. Four attempts to stop one of them ruining it for everybody. Until this sprint, nobody could try the product without creating an account first, which meant it could not be shown to anyone. Fixing that turned out to be the easy half.
 
 The hard half was that a free search costs us real money, and a stranger has no name. Four separate attempts went into limiting how much one person could take, and the first three were each defeated the same way.
 
@@ -195,23 +269,29 @@ The second added a daily budget for all anonymous use together. That worked, and
 
 The third was meant to stop one person taking the whole daily budget, and it did the opposite. We had decided that a question the system refuses should not cost the asker one of their five searches, which is fair. But that removed the only thing limiting how many times one person could ask, so a single visitor could ask two hundred refused questions in under two seconds and use up the entire day for everyone else. The fix for one problem created a worse one.
 
-The fourth attempt changed what was being counted. Instead of limiting a person, or an identity, it limits how much of the day any one internet connection can take. Making up more identities does not help, because they all come from the same place. That held: the same attack now gets twenty searches instead of two hundred, someone on a different connection is unaffected, and an office of four people sharing one connection still gets their full five searches each.
+The fourth attempt changed what was being counted. Instead of limiting a person, or an identity, it limits how much of the day any one internet connection can take. Making up more identities does not help, because they all come from the same place. That held: the same attack now gets twenty searches instead of two hundred, someone on a different connection is unaffected. An office of four people sharing one connection still gets their full five searches each.
 
 Three things are worth saying plainly about how that went. Every one of the five serious problems in this sprint was in our own design or in the checks we wrote to prove the design worked, not in the code somebody built from it. Three of those five were created by the fix for the previous one. And one of them came from an instruction written confidently by the lead that was simply factually wrong, which the builder then implemented exactly as told.
 
 
 Sprint 4.4 is worth one more paragraph, because the thing that went wrong is the most useful mistake this project has made so far.
 
-Before building anything, we write a check designed to catch the one failure that would be worst here: a file that looks perfect and holds the wrong information. That check passed, six out of six, against the real database. It was also nearly useless, and we had written down why on the day we created it. Five of its six cases told the system exactly which kind of connection to follow. Nobody had checked what happens when you just run it the plain way, without saying. The plain way spent its whole allowance on the single most common kind of connection and came back with five hundred research papers and none of the twelve diseases the check itself had recorded as the right answer, together with a note claiming it had looked at everything.
+Before building anything, we write a check designed to catch the one failure that would be worst here: a file that looks perfect and holds the wrong information. That check passed, six out of six, against the real database. It was also nearly useless, and we had written down why on the day we created it. Five of its six cases told the system exactly which kind of connection to follow. Nobody had checked what happens when you just run it the plain way, without saying.
 
-We had listed that gap in the check's own documentation from day one. Listing it made it something you could argue about; it did not make it safe. The lesson, in the plainest terms we can put it: test the way people will actually use the thing before you test the way you find convenient, and a gap you have written down that covers the ordinary everyday case is not a gap, it is a hole.
+The plain way spent its whole allowance on the single most common kind of connection and came back with five hundred research papers and none of the twelve diseases the check itself had recorded as the right answer, together with a note claiming it had looked at everything.
 
-One more thing from this sprint that cost nothing and was worth a lot. Ten checks failed at the end, and the written record said only six were expected to. It would have been easy, and reasonable-sounding, to argue that this sprint could not have caused the other four. Instead we went back to the version of the project from before the sprint started and ran the same checks there: identical failures. The four were old. The record had simply been wrong for weeks. A number nobody re-checks is exactly where a genuine new problem hides, because the next person compares against something that was never true.
+We had listed that gap in the check's own documentation from day one. Listing it made it something you could argue about; it did not make it safe. The lesson, in the plainest terms we can put it: test the way people will actually use the thing before you test the way you find convenient. A gap you have written down that covers the ordinary everyday case is not a gap, it is a hole.
+
+One more thing from this sprint that cost nothing and was worth a lot. Ten checks failed at the end, and the written record said only six were expected to. It would have been easy, and reasonable-sounding, to argue that this sprint could not have caused the other four. Instead we went back to the version of the project from before the sprint started and ran the same checks there: identical failures. The four were old. The record had simply been wrong for weeks.
+
+A number nobody re-checks is exactly where a genuine new problem hides, because the next person compares against something that was never true.
 Sprint of 24 August: fixing the two problems that headlined the previous section.
 
-Both had been found on purpose, by deliberately attacking our own system, and both had been left open with a note saying they must be fixed before anyone outside the team can reach the product. They were. Two things from the week are worth reading even if you skip the rest, because neither is about the code.
+Both had been found on purpose, by deliberately attacking our own system. Both had been left open with a note saying they must be fixed before anyone outside the team can reach the product. They were. Two things from the week are worth reading even if you skip the rest, because neither is about the code.
 
-The first. The written instruction for one of the fixes said, confidently, exactly where the fix should go. Two separate documents agreed with each other. Both were wrong. Had we followed them, we would have written a fix that did nothing at all while looking completely correct, and every check we ran would have passed. What caught it was spending one minute asking the real system what it actually returns, before writing a line of code. The general lesson: a confident instruction about where a problem lives is a claim to be checked, not a fact to be used, and checking it is almost always cheaper than not.
+The first. The written instruction for one of the fixes said, confidently, exactly where the fix should go. Two separate documents agreed with each other. Both were wrong. Had we followed them, we would have written a fix that did nothing at all while looking completely correct. Every check we ran would have passed. What caught it was spending one minute asking the real system what it actually returns, before writing a line of code.
+
+The general lesson: a confident instruction about where a problem lives is a claim to be checked, not a fact to be used, and checking it is almost always cheaper than not.
 
 The second is stranger and more useful. We write deliberately broken versions of our own checks, to prove a check would actually notice if the thing it guards were removed. One of those broken versions produced no complaint from any check. The obvious reading was that the guard it targeted was unnecessary. The true reading was the opposite: our checks had a hole, and none of them was looking at the thing that mattered. We added three more. Reading the checks carefully had not found this. Only breaking them did.
 
@@ -252,22 +332,40 @@ flowchart LR
         I --> Iv[Variant lookup]
         Iv --> Lit[Literature lookup, two tools]
         Lit --> Out[Outbreak + trials lookup]
-        Out --> Tr[Trust rules cover all tools, gene lookup wired in]
-        Tr --> Sp[Specification pause, found the question-understanding gap]
-        Sp --> Door[Front door finished: reconnect, watch together, self-stopping]
-        Door --> MCP[Back door: other programs can now ask questions too]
-    MCP --> Style[The web page redesigned and built]
-        Style --> Guest[Anyone can try it: five free searches, no account]
-        Guest --> Cli[Ask from a terminal]
-        Cli --> Gql[Software can ask and pick what it wants back]
+        Out --> Tr1["Trust rules cover all tools,"]
+        Tr1 --> Tr2[gene lookup wired in]
+        Tr2 --> Sp1["Specification pause, found"]
+        Sp1 --> Sp2[the question-understanding gap]
+        Sp2 --> Door1["Front door finished:"]
+        Door1 --> Door2["reconnect, watch together,"]
+        Door2 --> Door3[self-stopping]
+        Door3 --> MCP["Back door: other programs"]
+        MCP --> MCP2[can now ask questions too]
+    MCP2 --> Style1[The web page redesigned and]
+        Style1 --> Style2[built]
+        Style2 --> Guest1["Anyone can try it: five free"]
+        Guest1 --> Guest2["searches, no account"]
+        Guest2 --> Cli[Ask from a terminal]
+        Cli --> Gql1[Software can ask and pick what]
+        Gql1 --> Gql2[it wants back]
     end
-    Gql --> Dec[Question-understanding gap: given a home, a later sprint, not fixed yet]
-    Dec --> Wire[Wire the other five tools into the answer pipeline]
-    Wire --> Other[Other ways in: command line, saved history]
-    Other --> L[Everything else]
+    Gql2 --> Dec1["Question-understanding gap:"]
+    Dec1 --> Dec2["given a home, a later"]
+    Dec2 --> Dec3["sprint, not fixed yet"]
+    Dec3 --> Wire1[Wire the other five tools into]
+    Wire1 --> Wire2[the answer pipeline]
+    Wire2 --> Other1["Other ways in: command line,"]
+    Other1 --> Other2[saved history]
+    Other2 --> L[Everything else]
 ```
 
-Every planned data lookup tool, all six live-API connections, is now built AND independently checked, and the trust-and-citation rules now cover all of them. Each tool went through the same pattern: build it, find real problems in review, fix them, and find MORE problems in the fix itself before trusting it. Sprint 3.4 held that pattern too, and pushed it one step further: its hostile testing round found a real problem (the two-gene question, see the story above) that no planned test had ever thought to try, only deliberate, adversarial poking at the finished system. Sprint 4.0 repeated the pattern once more on the front door itself, and its own reviewer flagged something worth remembering going forward: a fix round is exactly where the next problem is most likely to hide, because attention is on the one loophole just closed. Sprint 4.1 repeated it a third time on the new back door, and its own hostile testing round found the identical shape of problem the front door had: a failed or cut-off answer that could still present itself as complete and trustworthy.
+Every planned data lookup tool, all six live-API connections, is now built AND independently checked. The trust-and-citation rules now cover all of them. Each tool went through the same pattern: build it, find real problems in review, fix them. Find MORE problems in the fix itself before trusting it.
+
+Sprint 3.4 held that pattern too, and pushed it one step further: its hostile testing round found a real problem (the two-gene question, see the story above) that no planned test had ever thought to try, only deliberate, adversarial poking at the finished system.
+
+Sprint 4.0 repeated the pattern once more on the front door itself, and its own reviewer flagged something worth remembering going forward: a fix round is exactly where the next problem is most likely to hide, because attention is on the one loophole just closed.
+
+Sprint 4.1 repeated it a third time on the new back door, and its own hostile testing round found the identical shape of problem the front door had: a failed or cut-off answer that could still present itself as complete and trustworthy.
 
 The planned specification pause (updating the written plans with everything learned from building all six tools and the trust system) ran and finished on 2026-08-10. It also swept a folder of outside reading material collected during the build, and it is the pause that found the question-understanding gap below, by actually asking the system real questions for the first time rather than only reviewing code.
 
@@ -297,13 +395,13 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 | ~~Asking about a gene name that has been retired and replaced gets you a confident answer about its replacement, with no mention that the question was swapped~~ | FIXED on 24 August. The system now declines to answer and tells you what it found: that the name you used has been retired, and which record replaced it, so you can ask again |
 | The system pays for one round of thinking on every question that it then throws away without reading. It is roughly a third of what each question costs to answer, bought for nothing, and it is a second place a question can fail slowly for no benefit | When we measure the cost of each thinking tier properly, which is its own scheduled piece of work later in the plan |
 | About one question in five dies partway through on a timeout when run against the live services, and the gatekeeper does not always give the same verdict on the same question twice. The second half matters more than it sounds: it means a single test of a safety check tells you what happened once, not what the check does | Not yet scheduled. Raised this week and now written down as a real problem rather than a footnote |
-| The new database connection identifies who is calling by trusting one piece of information the web server in front of it passes along. That works, but it currently relies on a single safeguard where we had believed there were two, because a setting we thought was switched on was not | When it goes online, in the very next sprint. The note that wrongly claimed two safeguards has already been corrected |
+| The new database connection identifies who is calling by trusting one piece of information the web server in front of it passes along. That works, but it currently relies on a single safeguard where we had believed there were two, because a setting we thought was switched on was not | It is already online with this still true. The note that wrongly claimed two safeguards has already been corrected. A fix for the safeguard itself is not yet scheduled |
 | If you paste a password or an access key into your question, it is stored exactly as you typed it. We cannot simply strip it out, because the whole point of keeping the question is so a person can read what was actually asked when reviewing a bad answer. The check we wrote for this looks for keys leaking out of our own configuration, which is a real risk but not this one | Decided 2026-08-21: the promise is narrowed to what we can actually keep, and no automatic hiding is built. Anything that guesses at key-shaped text gets it wrong both ways, and a wrong guess would mangle the very question a reviewer needs to read. Proper handling moves to the later production-readiness work, where who can see that column is decided |
 | Asking the same question twice leaves the second answer with no working rating button | Not yet scheduled. A visible annoyance rather than a risk |
 | About half the time, a question that should have a straightforward answer comes back as "I could not find information on this" instead. The system finds one relevant record, then writes an answer that does not actually rest on it, so our own honesty check correctly refuses to show it. Refusing is the right behaviour; needing to refuse this often is not. This is not new, and it is not something recent work caused: we measured it on the current version and on the version from before, and it was the same on both | Sprint 5.1, when the scoring harness that measures answer quality across fifty test questions gets built. That is the tool designed to find exactly this |
 | When the short, plain-language answer leaves something out, it now says so, but it can still leave something out. We tried three times to instruct it not to and none of them held, so instead it reports what it missed and lowers its own confidence. It is honest rather than complete | Reconsidered if it turns out to omit things often; the fix is a bigger change to how answers are assembled |
 | ~~The checks that run the system against the real database could not run, because the connection to it had to be opened by hand and kept failing~~ FIXED 2026-08-22. The database now answers over an ordinary secure web connection and all 59 real-data checks run on their own, with nothing opened by hand | Fixed in sprint 4.11 |
-| Six checks are reported as failing every time anyone runs the full set, and none of them is actually broken. They talk to live outside services, which the everyday run deliberately blocks, and they report that as a failure instead of as "skipped". Verified on 24 August: all six pass when run properly. It matters because a permanent set of red results is exactly where a real failure would go unnoticed | Next sprint, folded into the deployment work, which already owns the same problem in seven other files |
+| Six checks are reported as failing every time anyone runs the full set, and none of them is actually broken. They talk to live outside services, which the everyday run deliberately blocks, and they report that as a failure instead of as "skipped". Verified on 24 August: all six pass when run properly. It matters because a permanent set of red results is exactly where a real failure would go unnoticed | The sprint that makes the tests run by themselves, since it is the one already teaching the checks to tell "skipped" apart from "failed" for a handful of other files with the same problem |
 | The two shortcut commands this project installs, the terminal one and the new export one, do not actually work by typing their name. The packaging step that would put them on your computer properly has been broken for a while, so both only run the long way round. This is not new to this sprint, it just became visible again | In the hardening sprint, along with the packaging fix itself |
 | The export command tells apart "you typed something wrong" from "the database could not be reached" by the type of error rather than by the error saying which it is. It is correct today, and we checked that it is, but it stays correct only as long as nobody uses that error type for a third meaning | Whenever the export needs to report a new kind of failure |
 | When another program asks a badly-formed question, one particular kind of mistake slips past the part that scrubs our internal wording out of error messages. Today the only thing that escapes is a word the asker typed themselves, so nothing of ours gets out, but the rule we rely on is not airtight and we know it | The hardening sprint, 6.1 |
@@ -351,6 +449,9 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 | The new back door's honesty signal, for the rare case where nothing at all could be confirmed one way or the other, currently always reports itself as "low risk" rather than "we do not know." Every other case is handled correctly; only reaches this narrow case with no attempted answer at all | Whenever the product owner decides, or whichever sprint next revisits how that signal is set |
 
 That last row is the important one. None of these can affect a real person while the project runs only on a laptop with no outside users. The moment that changes, several of them stop being optional.
+
+| Problem, in plain terms | When it gets fixed |
+|-------------------------|--------------------|
 | Someone with many internet connections can still use up the day's free searches for strangers, leaving other newcomers to wait until the next morning. Anyone signed in is unaffected, and the money stays capped either way | When proper traffic limiting is built, near the end of the project |
 | A first-time visitor never sees the five dots showing how many free searches they have, because the dots only appear after the first question is asked. The offer is invisible until it has been partly taken | Waiting on a decision about whether they should appear sooner |
 | If the day's free searches run out, the page can still show a visitor searches remaining until they actually try one. The refusal itself is honest when it comes | The next piece of web page work |
@@ -358,17 +459,17 @@ That last row is the important one. None of these can affect a real person while
 
 ### Found on the live site, 24 August
 
-One person used the deployed site for an afternoon. These are their words, kept as they said them rather than tidied up, because the plain wording is the useful part.
+One person used the deployed site for an afternoon. These are their words, kept as they said them rather than tidied up, because the plain wording is the useful part. All seven are now fixed, as of 25 August, and checked by opening the real address afterwards rather than by trusting that the fix had worked.
 
-| What is wrong | What it means | When it gets fixed |
-|---------------|---------------|--------------------|
-| The answer does not appear gradually | It should type out as it is written, like a chat. Instead you stare at nothing, then everything appears at once | Next piece of work |
-| It feels very slow | Probably the same problem as the row above. The answer really does take about sixteen seconds, but you currently get no sign anything is happening for all sixteen of them, which feels far worse than it is | Next piece of work, and we check the row above first before assuming it is a speed problem |
-| You cannot ask a follow-up | The conversation stops after one question | Next piece of work |
-| The answer looks wrong | It does not match the design that was agreed | Next piece of work, against the agreed design files and not from memory |
-| The integrations page is not right | Four ways of connecting to this system exist and work, but that page does not present them properly | Next piece of work |
-| Every page has the same web address | Clicking to another page does not change the address bar, so you cannot bookmark or share a particular page | Next piece of work |
-| One gene works on our machines and not on the live site | The gene GCK. We know it is not the network and not an out-of-date copy, because a different gene works fine there. We do NOT yet know the actual cause, and we are saying so rather than guessing | Unscheduled. We cannot read the error messages from the live server yet, which is itself the first thing to fix |
+| What is wrong | What it means | Status |
+|---------------|---------------|--------|
+| The answer does not appear gradually | It should type out as it is written, like a chat. Instead you stare at nothing, then everything appears at once | Fixed. The screen now says which source it is consulting as it works. One gap remains: about six seconds of silence right at the end, while the answer itself is being written, is written down separately below rather than folded into this closed row |
+| It feels very slow | Probably the same problem as the row above | Fixed for the same reason: the long silence that made it feel slow is what the row above closed |
+| You cannot ask a follow-up | The conversation stops after one question | Fixed. Your earlier questions now stay on the page, folded up, and a follow-up no longer wipes out the answer you just read |
+| The answer looks wrong | It does not match the design that was agreed | Fixed for the seven defects checked in this pass. A separate, narrower gap remains: three parts of the approved design drawings themselves, not the code, are missing the follow-up box, the running conversation, and a rule for how a single-source answer should be labelled. That one is a decision for the product owner, not a coding fix, and is tracked further down this page |
+| The integrations page is not right | Five ways of connecting to this system exist and work, but that page did not present them properly | Fixed. The page now names the five real ways in, instead of a command that never existed and a web address that was never built |
+| Every page has the same web address | Clicking to another page does not change the address bar, so you cannot bookmark or share a particular page | Fixed. Every page now has its own address, and the back button works |
+| One gene works on our machines and not on the live site | The gene GCK. We know it is not the network and not an out-of-date copy, because a different gene works fine there | Fixed the same week, in an earlier piece of work than the other six rows above. The gene has two nicknames shared with two other genes, and the system was refusing to guess among the three matches. It now asks NCBI which of the three actually owns that name |
 
 ### The gap underneath all of the above
 
@@ -386,13 +487,13 @@ Every sprint follows the same loop, and it is deliberately slower than just writ
 6. Fix what they find, and re-run everything.
 7. Only then, a human reviews and approves it.
 
-The reason for steps 4 and 5 is that the person who wrote something is the worst person to check it. On sprint 3.0, everything passed the checklist, and the reviewer still failed it, because it turned out you could ask "what is the capital of the USA?" and get let straight through. On the same sprint, the second reviewer found that a doctor asking "should this patient be started on tamoxifen?" also got through, which is exactly the kind of question this system must never answer.
+The reason for steps 4 and 5 is that the person who wrote something is the worst person to check it. On sprint 3.0, everything passed the checklist. The reviewer still failed it, because it turned out you could ask "what is the capital of the USA?" and get let straight through. On the same sprint, the second reviewer found that a doctor asking "should this patient be started on tamoxifen?" also got through, which is exactly the kind of question this system must never answer.
 
 Both of those were found after every test was green. That is why both steps exist.
 
 ### What changed on 18 August, and why
 
-Step 6 above, "fix what they find and re-run everything", had no limit on how many times it could go round. Two sprints went round five and six times, and each time we looked, the worst problem in that round was sitting inside the repair we had made in the round before. More care did not help; we tried that, and the rate of new problems did not drop.
+Step 6 above, "fix what they find and re-run everything", had no limit on how many times it could go round. Two sprints went round five and six times, and each time we looked, the worst problem in that round was sitting inside the repair we had made in the round before. More care did not help; we tried that. The rate of new problems did not drop.
 
 The cause turned out to be how the repairs were shared out. When two problems were in the same file, we gave one to each of two workers running at the same time. Each repair was correct on its own, and neither worker could see the other, so the two correct repairs combined into a new problem that nobody reviewing either half could spot. When we tried one worker holding both problems at once, it not only fixed both but found a third that four earlier rounds had walked straight past.
 
@@ -405,6 +506,23 @@ Three things changed as a result:
 We also added a ten-second check that the connections are alive before starting any expensive piece of work. On one day in August we lost somewhere between one and one and a half hours to work that was sent off into a dead connection, and twice we read the silence as a bug in the work rather than a network outage and went looking for a fault that was not there.
 
 None of this is proven yet. It is based on measuring what went wrong before, and the next sprint is the first real test of whether it helps.
+
+### What changed on 25 August, and why
+
+This is not a change to the product. It is a change to how we keep documents like this one honest, and it is worth writing down for the same reason the 18 August change above is: it is a new part of "how we work".
+
+We now have a tool that rewrites a document to be easier to read, a document like this one, without being allowed to lose a single fact in the process. It breaks long, crammed paragraphs into lists and tables. While doing that, it will not:
+
+- Reword a sentence.
+- Invent a number.
+- Quietly drop a detail.
+
+Two separate checks decide whether it succeeded, and both have to sign off before a rewritten document counts as done:
+
+- A script that compares the document word for word before and after, and fails loudly if anything is missing.
+- A second reviewer who never sees what the first check decided, so it cannot simply agree with a verdict it was shown.
+
+This very page is the first thing it has been used on.
 
 ## Where to look for more detail
 
