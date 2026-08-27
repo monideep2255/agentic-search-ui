@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-26.
+Last updated: 2026-08-27.
 
 ## Table of contents
 
@@ -103,9 +103,14 @@ All six live-government-API connections the plan called for are now built. That 
 - There is a weekly routine, and a real script rather than a document describing one, that shows you the questions the system handled badly and lets you turn a recurring one into a new permanent test case. A person makes every judgement in that routine; the software cannot promote anything on its own.
 - Every screen was checked against the international accessibility standard by an automated tool, and four real problems it found were fixed, including text that was too faint to read against its own background and code examples a keyboard user could not scroll.
 - The system now has a first outbound door for other computer programs and AI agents to ask it questions directly, the same protocol other AI tools already speak to each other. It answers with one complete, cited result rather than a stream, and it never hands out a cost figure or lets a caller reach any of the seven lookup tools directly, only the one question-answering door. Nothing outside this project uses it yet, so there is no visible change if you are using the web page.
+- Your past searches are still there when you come back. Close the browser, open it again, sign back in, and the questions you asked before are waiting in the sidebar with the date you asked them and how many sources each answer used. Clicking one asks it again. Until this sprint that list lived only in the page you had open, so closing the tab erased it. Two things it deliberately does not do: it brings back your questions and not the answers themselves, because we never stored the answer text, and it cannot show you the list until you sign in again, which is the next thing to fix.
 
 ## What does not work yet
 
+
+The newest honest limitation, and it is the one a person will actually notice. Your searches are now saved properly on our side, but the browser still forgets WHO YOU ARE when you reload the page. So you come back, you are signed out, and you have to sign in again before your searches appear. They are not lost, they are just behind a sign-in you did not expect. Keeping you signed in is its own piece of work and is deliberately not bolted onto this one, because where a browser is allowed to store the thing that proves who you are is a security question worth deciding properly rather than in the last hour of an unrelated week.
+
+A second one, from the same sprint, and it matters most on a shared computer. If someone uses the tool without an account and then a DIFFERENT person creates an account on that same browser, the first person's questions follow them into the new account. Our system genuinely cannot tell those two situations apart: one person finally signing up looks exactly like a second person sitting down at the same machine. We found it, we can see it, and we chose to write it down rather than guess at a fix that would break the ordinary case of one person signing up.
 Both of last week's headline problems are fixed, so this section leads with what is true now rather than keeping solved problems at the top. What they were, and what happened to them, is in the sprint list below.
 
 The honest headline changed this week, and the old one is worth keeping in view. It used to be that nothing ran the tests automatically: every check happened because a person decided to run it, while a change merged into the main line went straight to the live web address with nothing in between. That is fixed as of 26 August. Ten checks now run by themselves every time anyone proposes a change.
@@ -161,6 +166,7 @@ Each of these is a completed, reviewed, merged piece of work.
 | 4.7 | The system finally understands what a question is asking. Until this sprint it never worked that out: it scanned your question for any word written in capitals and guessed that was a gene name. So if you asked about a testing panel and mentioned a database in passing, it grabbed the database name, failed to find a gene by that name, and refused the whole question. Four of the seven questions this product must be able to answer were being turned away that way, and it had been true for twelve sprints. Now it works out what kind of question it has been asked, picks out the things the question is actually about, and confirms each one against the real records before using it. All seven questions get through | 2026-08-23 |
 | 4.12 | Put it on the internet. There is now a web address anyone can open, and it answers real questions with real sources. Added at this checkpoint rather than the last one, where it was missed: the sprint that made the product reachable by a stranger had no line in this table at all. Five separate things had to be fixed before it answered even once, every one of them found by using it rather than by reading it, and the most useful lesson was that a green status light is not evidence: the word Online was true of a service quietly running a copy of the wrong program | 2026-08-24 |
 | 4.16 | The seven things one person found wrong in an afternoon with the live version, all fixed. The screen no longer looks frozen while it works: it now says which source it is consulting as it goes. A follow-up question keeps your earlier ones on the page instead of wiping them out. Every page has its own web address and the back button works. The page describing how to plug this into other software now names the five ways that exist, instead of a command that never existed and a web address never built. A source label stopped repeating itself. The line under an answer stopped telling you to narrow your question when what it meant was that only one record backed the claim. And the thumbs-down icon is now drawn inside the button you click. The most useful thing learned was not any of those: the reason the screen looked frozen was that the system never said anything out loud while it did the actual work, and a note written in the code eleven days earlier had predicted exactly that and been read as a design principle rather than a live fault | 2026-08-25 |
+| 4.13 | Your searches survive closing the browser. The sidebar now reads them back from the server instead of forgetting them, each one showing its own date and source count, and nobody can see anyone else's | 2026-08-27 |
 
 Nine of these are worth understanding, because they explain how this project works.
 
@@ -338,6 +344,9 @@ The lesson we wrote down: a test that tries to prove another test works only pro
 ## What is next
 
 Where the finished work sits against what is still ahead:
+
+The immediate next piece of work is separating the practice version of the site from the real one, so we can try changes somewhere safe before anyone else sees them. Right now there is only one, and anything merged goes straight to the address people visit.
+
 
 ```mermaid
 flowchart LR

@@ -99,7 +99,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.12, 4.14, and 4.16. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), with CD watching `develop` and CI running Section 24's ten gates on every pull request. Next: durable history (4.13) and the two-environment release flow (4.15), then 5.0 and 5.1 for tracing and the eval harness. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
+| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.14, and 4.16. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), with CD watching `develop` and CI running Section 24's ten gates on every pull request. Next: the two-environment release flow (4.15), then 5.0 and 5.1 for tracing and the eval harness. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
 
 ### Build phase detail
 
@@ -130,7 +130,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | 4.10 | The anonymous run path and the server-side guest allowance, with history migration on signup | Merged into develop |
 | 4.11 | The read-only HTTPS graph query service on the Hetzner box, retiring the hand-opened SSH tunnel | Merged into develop, PR #55, 2026-08-22 |
 | 4.12 | The demo deployment on Railway: two services, Postgres and Redis, the Layer 1 cutover, and CD watching develop | Merged into develop, PR #62, 2026-08-24. THE PRODUCT IS LIVE |
-| 4.13 | Durable cross-reload search history over the interactions rows 4.6 writes | Not started |
+| 4.13 | Durable cross-reload search history over the interactions rows 4.6 writes | Merged into develop, PR #69, 2026-08-27, after three review rounds and a Rule 4 stop |
 | 4.14 | CI: the ten gates from Section 24, advisory rather than merge-blocking since branch protection needs GitHub Pro or a public repository | Merged into develop, PR #68, 2026-08-26, after three review rounds and a Rule 4 stop |
 | 4.15 | Two Railway environments and a release-branch flow, so develop and production deploy separately | Not started, inserted by product-owner decision 2026-08-24 |
 | 4.16 | The seven UI defects the first live session surfaced. The largest was backend, not frontend: the Act step emitted no events at all, so eleven seconds of a run were silent and no tool chip had ever rendered | Merged into develop, PR #63, 2026-08-25. Inserted by product-owner decision |
@@ -207,7 +207,7 @@ agentic-search-ui/
       synthesis/                # Grounding, citations, trust, freshness, conflict detection, refusal
       tools/                    # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search
       export/                   # KGX subgraph export (build phase 4.4)
-      feedback/                 # Interaction capture and the weekly review ritual (build phase 4.6)
+      feedback/                 # Interaction capture and the weekly review ritual (build phase 4.6), plus the durable history read path (build phase 4.13)
       adapters/
         web_sse/                # FastAPI plus SSE, the public API surface
         graphql/                # Strawberry schema over the same core
@@ -338,4 +338,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-08-26
+Last updated: 2026-08-27
