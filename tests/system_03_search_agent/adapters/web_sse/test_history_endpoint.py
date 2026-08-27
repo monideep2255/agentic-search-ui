@@ -6,8 +6,19 @@ file only exercises what T-4.13-02 itself owns: caller derivation (via
 `get_caller`, admitting both a guest and an account principal, and 401 for
 neither), the `limit` query parameter's Pydantic validation (`ge=1,
 le=MAX_LIMIT`, default `DEFAULT_LIMIT`), the response shape
-(`HistoryResponse`'s `{items, count}`), and that the endpoint passes the
-caller's own `owner_id`, and only that value, through to `list_history`.
+(`HistoryResponse`'s `{items, count, omitted_count}`), and that the
+endpoint passes the caller's own `owner_id`, and only that value, through
+to `list_history`.
+
+F-4.13-J-04's fix added the class below this file previously had none of:
+`HistoryItem` and `HistoryResponse`'s own `max_length` and `extra="forbid"`
+bounds, asserted directly against the Pydantic models rather than only
+against the endpoint, since a comment in `adapters/web_sse/app.py` invokes
+`production-standards`' multi-agent pipeline gate by name for these bounds
+and nothing tested that the invocation was true. F-4.13-A-02's fix added
+the endpoint-level tests for the graceful-degradation path (one
+non-conforming row omitted and counted, never a 500 for the whole
+response). F-4.13-A-08's fix added the duplicate-`limit` refusal.
 
 The real owner-scoping SQL, the NULL-owner exclusion, the real `LIMIT`
 clause and the total order are `feedback/history.py`'s own contract,
@@ -25,10 +36,11 @@ import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
+import pydantic
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from system_03_search_agent.adapters.web_sse.app import app
+from system_03_search_agent.adapters.web_sse.app import HistoryItem, HistoryResponse, app
 from system_03_search_agent.auth.dependencies import Principal, get_caller
 from system_03_search_agent.feedback.history import DEFAULT_LIMIT, MAX_LIMIT, HistoryEntry
 
@@ -287,3 +299,192 @@ async def test_the_maximum_limit_itself_is_accepted(fake_history: _FakeHistorySt
 
     assert response.status_code == 200, response.text
     assert fake_history.calls == [{"owner_id": guest.owner_id, "limit": MAX_LIMIT}]
+
+
+# ---------------------------------------------------------------------------
+# F-4.13-A-08's fix: a `limit` query parameter presented more than once is
+# refused, never silently resolved to one occurrence's value.
+# ---------------------------------------------------------------------------
+
+
+class TestDuplicateLimitIsRefused:
+    @pytest.mark.asyncio
+    async def test_two_valid_but_different_limits_are_both_refused(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        """Neither occurrence wins silently; the request is refused outright.
+
+        Before the fix, FastAPI's own scalar coercion read only the LAST
+        occurrence, so `?limit=1&limit=50` served page-50's worth and
+        `?limit=50&limit=1` served page-1's, with no signal to the caller
+        that the other value it sent was discarded.
+        """
+        guest = _guest_principal()
+        fake_history.seed(guest.owner_id, [_entry(f"Q{n}") for n in range(6)])
+        _set_caller(guest)
+
+        async with _client() as client:
+            first_then_last = await client.get(
+                _HISTORY_PATH, params=[("limit", "1"), ("limit", "50")]
+            )
+            last_then_first = await client.get(
+                _HISTORY_PATH, params=[("limit", "50"), ("limit", "1")]
+            )
+
+        for label, response in (
+            ("limit=1 then limit=50", first_then_last),
+            ("limit=50 then limit=1", last_then_first),
+        ):
+            assert response.status_code == 422, f"{label}: {response.text}"
+            assert "limit" in response.text, (
+                f"{label}: the refusal must name the parameter it refused. "
+                f"Got: {response.text[:300]}"
+            )
+        assert fake_history.calls == [], "a refused request must never reach list_history"
+
+    @pytest.mark.asyncio
+    async def test_one_malformed_occurrence_does_not_let_the_other_win(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        """Before the fix, `?limit=abc&limit=2` succeeded on `2` (the last,
+        individually-valid occurrence), while `?limit=2&limit=abc` was
+        refused on `abc`. Both must now be refused identically: which
+        occurrence happens to be syntactically valid must not decide the
+        outcome of an ambiguous request.
+        """
+        guest = _guest_principal()
+        _set_caller(guest)
+
+        async with _client() as client:
+            invalid_then_valid = await client.get(
+                _HISTORY_PATH, params=[("limit", "abc"), ("limit", "2")]
+            )
+            valid_then_invalid = await client.get(
+                _HISTORY_PATH, params=[("limit", "2"), ("limit", "abc")]
+            )
+
+        assert invalid_then_valid.status_code == 422, invalid_then_valid.text
+        assert valid_then_invalid.status_code == 422, valid_then_invalid.text
+        assert fake_history.calls == []
+
+    @pytest.mark.asyncio
+    async def test_a_single_limit_occurrence_is_unaffected(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        """The fix must not refuse the ordinary, single-occurrence case."""
+        guest = _guest_principal()
+        fake_history.seed(guest.owner_id, [_entry("Q")])
+        _set_caller(guest)
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH, params={"limit": 5})
+
+        assert response.status_code == 200, response.text
+        assert fake_history.calls == [{"owner_id": guest.owner_id, "limit": 5}]
+
+
+# ---------------------------------------------------------------------------
+# F-4.13-A-02's fix: a row that no longer fits `HistoryItem`'s own bounds is
+# dropped and DISCLOSED (`omitted_count`), never a 500 for the whole page.
+# ---------------------------------------------------------------------------
+
+
+class TestGracefulDegradationOnAnOversizedRow:
+    @pytest.mark.asyncio
+    async def test_an_oversized_row_is_omitted_and_disclosed_not_a_500(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        guest = _guest_principal()
+        oversized = _entry("x" * 2001, trace_id="trace-oversized")
+        well_formed = _entry("What gene is BRCA1?", trace_id="trace-fine")
+        fake_history.seed(guest.owner_id, [oversized, well_formed])
+        _set_caller(guest)
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH)
+
+        assert response.status_code == 200, (
+            f"one non-conforming row must not turn the whole page into a "
+            f"500; got {response.status_code} {response.text[:300]}"
+        )
+        body = response.json()
+        assert body["omitted_count"] == 1, (
+            f"the dropped row must be disclosed, not silently absorbed. Got: {body}"
+        )
+        assert body["count"] == 1
+        assert [item["question"] for item in body["items"]] == ["What gene is BRCA1?"], (
+            "the control did not hold: the well-formed sibling row must "
+            f"still be served. Got: {body}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_every_row_conforming_reports_zero_omitted(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        """`omitted_count` defaults to, and stays, 0 in the ordinary case,
+        so an existing client that has never seen a non-zero value is
+        unaffected (additive per `system-design-patterns` pattern 10)."""
+        guest = _guest_principal()
+        fake_history.seed(guest.owner_id, [_entry("What gene is BRCA1?")])
+        _set_caller(guest)
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH)
+
+        assert response.status_code == 200, response.text
+        assert response.json()["omitted_count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# F-4.13-J-04's fix: the response models' own `max_length` and
+# `extra="forbid"` bounds, asserted directly rather than left to a comment
+# in `adapters/web_sse/app.py` that invoked `production-standards` by name
+# with no test behind it. Each of these previously passed with the bound
+# it asserts fully removed from the model (measured by the judge's mutation
+# sweep, `tracker/phase_4.13_judge_report.md`'s M20 to M22).
+# ---------------------------------------------------------------------------
+
+
+class TestResponseModelBoundsAreEnforced:
+    def _valid_item_kwargs(self, **overrides: object) -> dict[str, object]:
+        kwargs: dict[str, object] = {
+            "trace_id": "trace-1",
+            "question": "What gene is BRCA1?",
+            "asked_at": datetime.now(UTC),
+            "trust_signal": "answer",
+            "citation_count": 1,
+        }
+        kwargs.update(overrides)
+        return kwargs
+
+    def test_question_over_max_length_is_refused(self) -> None:
+        with pytest.raises(pydantic.ValidationError):
+            HistoryItem(**self._valid_item_kwargs(question="x" * 2001))
+
+    def test_question_at_max_length_is_accepted(self) -> None:
+        HistoryItem(**self._valid_item_kwargs(question="x" * 2000))
+
+    def test_trace_id_over_max_length_is_refused(self) -> None:
+        with pytest.raises(pydantic.ValidationError):
+            HistoryItem(**self._valid_item_kwargs(trace_id="t" * 65))
+
+    def test_trust_signal_over_max_length_is_refused(self) -> None:
+        with pytest.raises(pydantic.ValidationError):
+            HistoryItem(**self._valid_item_kwargs(trust_signal="s" * 21))
+
+    def test_an_unknown_field_on_history_item_is_refused(self) -> None:
+        with pytest.raises(pydantic.ValidationError):
+            HistoryItem(**self._valid_item_kwargs(), answer_narrative="not part of the contract")
+
+    def test_history_response_items_over_max_length_is_refused(self) -> None:
+        too_many = [HistoryItem(**self._valid_item_kwargs(trace_id=f"t{n}")) for n in range(MAX_LIMIT + 1)]
+        with pytest.raises(pydantic.ValidationError):
+            HistoryResponse(items=too_many, count=len(too_many))
+
+    def test_history_response_items_at_max_length_is_accepted(self) -> None:
+        exactly = [HistoryItem(**self._valid_item_kwargs(trace_id=f"t{n}")) for n in range(MAX_LIMIT)]
+        HistoryResponse(items=exactly, count=len(exactly))
+
+    def test_an_unknown_field_on_history_response_is_refused(self) -> None:
+        with pytest.raises(pydantic.ValidationError):
+            HistoryResponse(items=[], count=0, answer="not part of the contract")
