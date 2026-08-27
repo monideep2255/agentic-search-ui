@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 
 from system_03_search_agent.auth.guest import decode_guest_token
 from system_03_search_agent.auth.tokens import decode_access_token
-from system_03_search_agent.data.models import User
+from system_03_search_agent.data.models import GuestSession, User
 from system_03_search_agent.data.session import get_session
 
 _INVALID_TOKEN_DETAIL = "invalid or expired access token"
@@ -218,6 +218,116 @@ def resolve_caller_from_bearer_token(authorization: str | None, session: Session
     return Principal(owner_id=f"guest:{claims['guest_id']}", user_id=None, kind="guest")
 
 
+# F-4.13-A-01 (`tracker/phase_4.13.md`), category fix. `get_caller` used to
+# verify only the JWT signature: it decoded a guest token and returned a
+# `Principal` with no further check that the `guest_sessions` row behind it
+# was still live. A guest identity the server had already revoked (migrated
+# to an account at signup) or one whose row never existed still
+# authenticated and still claimed that `owner_id` on every route reached
+# through this dependency.
+#
+# Before this fix, only `GET /v1/allowance` and `POST /v1/query` re-checked
+# liveness, each with its OWN inline copy of the same predicate
+# (`row is None or row.revoked_at is not None`). `GET /v1/history`
+# (T-4.13-02) added a THIRD inline copy, and the adversary and judge rounds
+# both first read this as a gap unique to history. Measured rather than
+# assumed once the scope was questioned: `get_v1_persona` (which reads
+# `resolve_caller_from_bearer_token` directly, never `get_caller`, see its
+# own module below), `get_v1_query_events`, `post_v1_query_stop`,
+# `get_v1_query_citations` and `post_v1_query_feedback` contained ZERO
+# references to `GuestSession` between them, so this was a PRE-EXISTING
+# class of six routes and history was its sixth instance, not its first.
+# Adding a fourth inline copy for history would have been exactly the
+# enumeration `.claude/rules/` (Rule 2, per-finding brief) forbids and would
+# have left five siblings open. Product-owner decision, 2026-08-27: fix the
+# class once, here, in the guest branch of the one dependency every
+# owner-scoped route already shares.
+_GUEST_SESSION_REVOKED_REASON = "guest_session_revoked"
+
+# F-4.10-A-05, product-owner decision 2026-08-15, unchanged by this fix's
+# relocation. A revoked or unknown guest session gets a STRUCTURED 401 detail
+# rather than a bare string, so the client can tell it apart from every
+# other 401 (an expired, tampered, or wrong-key token, all of which
+# `get_caller`'s `except InvalidCallerError` branch below still rejects with
+# its own bare-string detail, unchanged). That distinction is load-bearing
+# for the browser: a session the server revoked at migration must NOT cause
+# the client to quietly mint a fresh guest identity and hand out five more
+# searches, while an ordinary token expiry legitimately should.
+_GUEST_SESSION_NO_LONGER_VALID_DETAIL = "this guest session is no longer valid"
+
+
+def _guest_uuid_from_owner_id(owner_id: str) -> uuid.UUID:
+    """Extract the `guest_sessions.id` UUID out of a `"guest:<uuid>"`
+    owner_id.
+
+    Moved here from `adapters/web_sse/app.py` (F-4.13-A-01's fix) so the
+    guest-liveness check below and every route's own `caller.owner_id` ->
+    `guest_sessions.id` lookup share one implementation. Behaviour is
+    unchanged by the move.
+
+    There is NO error handling here, and this docstring used to claim
+    otherwise (F-4.10-J-06, judge round 1: "the ValueError path exists as
+    a defensive backstop, never expected to fire in practice"). No such
+    path exists; the line below is a bare `uuid.UUID(...)`. A comment
+    asserting a safety property the code does not implement is the exact
+    thing this repository has been bitten by, so the claim is removed
+    rather than softened.
+
+    What is actually true. `Principal.owner_id` is only ever constructed
+    by `resolve_caller_from_bearer_token` out of a `decode_guest_token`-
+    verified `guest_id` claim, and `decode_guest_token` deliberately
+    accepts any non-empty string there (its own docstring: "this function
+    does not itself validate UUID shape"). So the UUID invariant is
+    enforced only by the minter, which is the only holder of the derived
+    signing key. A guest token carrying a non-UUID `guest_id` would
+    therefore raise `ValueError` out of this function and surface as an
+    unhandled 500, not as a handled rejection. That is unreachable without
+    the signing key, which is why it is carried as open finding
+    F-4.10-A-09 rather than fixed here: the fix is a decision about WHERE
+    the shape belongs (the decoder's contract, or this reader's), not a
+    line to add under cover of a comment correction. Since this function
+    now also runs inside `get_caller` itself (previously only inside
+    handler bodies that `get_caller` had already let through), an
+    unreachable-without-the-signing-key `ValueError` now surfaces as a 500
+    from the dependency rather than from the handler; the caller-visible
+    outcome (an unhandled server error, never a 200) is the same either
+    way, and F-4.10-A-09's disposition is unchanged by this relocation.
+    """
+    return uuid.UUID(owner_id.split(":", 1)[1])
+
+
+def _require_live_guest_session(principal: Principal, session: Session) -> None:
+    """Refuse a guest `Principal` whose `guest_sessions` row is gone or
+    revoked. Raises `HTTPException(401)` with the same structured detail
+    `GET /v1/allowance` and `POST /v1/query` already used before this fix.
+
+    Cost, stated rather than hidden (this finding's brief requires it): this
+    adds one indexed `SELECT` against `guest_sessions` (`id` is that
+    table's primary key, so this is a point lookup, not a scan) to EVERY
+    request a guest `Principal` makes through `get_caller`, including the
+    five routes that paid nothing for it before this fix (`GET /v1/history`,
+    `GET /v1/query/{run_id}/events`, `POST /v1/query/{run_id}/stop`,
+    `GET /v1/query/{run_id}/citations`, `POST /v1/query/{run_id}/feedback`).
+    Real throttling under load is build phase 6.0's, as everywhere else on
+    this surface; this fix does not attempt it.
+
+    An ACCOUNT `Principal` never reaches this function or pays this query:
+    `get_caller` below calls it only when `principal.kind == "guest"`.
+    """
+    guest_uuid = _guest_uuid_from_owner_id(principal.owner_id)
+    row = session.execute(
+        select(GuestSession.revoked_at).where(GuestSession.id == guest_uuid)
+    ).first()
+    if row is None or row[0] is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "reason": _GUEST_SESSION_REVOKED_REASON,
+                "message": _GUEST_SESSION_NO_LONGER_VALID_DETAIL,
+            },
+        )
+
+
 def get_caller(
     authorization: str | None = Header(default=None),
     session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI dependency injection
@@ -230,10 +340,22 @@ def get_caller(
     token gets the exact same status and detail string regardless of which
     token family it attempted, matching `get_current_user`'s own
     single-detail-string discipline.
+
+    F-4.13-A-01's fix: a guest token that decodes and verifies is not
+    enough on its own. Every guest `Principal` this function returns is
+    also checked against `guest_sessions` (`_require_live_guest_session`)
+    before it reaches any route, so a revoked, migrated-away, or unknown
+    guest identity is refused HERE, once, for every owner-scoped route that
+    depends on this function, rather than in a copy inline per route. An
+    account `Principal` skips this check entirely; it has no
+    `guest_sessions` row to be live or dead.
     """
     try:
-        return resolve_caller_from_bearer_token(authorization, session)
+        principal = resolve_caller_from_bearer_token(authorization, session)
     except InvalidCallerError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_CALLER_DETAIL
         ) from None
+    if principal.kind == "guest":
+        _require_live_guest_session(principal, session)
+    return principal
