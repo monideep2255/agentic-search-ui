@@ -16,9 +16,17 @@ Exercised, at the `list_history` function level rather than through HTTP:
   `InteractionRow` itself refuses to construct one) is never returned,
   paired with a real row for the SAME caller so an implementation that
   returns nothing at all cannot pass this clause by accident.
-- The `LIMIT` is real SQL, not a Python slice: seeded five rows for one
-  owner, `limit=2` returns exactly two, and they are the two NEWEST of the
-  five (proves the database applied the limit AFTER ordering, not before).
+- `limit` bounds the page to exactly that many rows, and they are the
+  NEWEST rows: seeded five rows for one owner, `limit=2` returns exactly
+  two, and they are the two newest of the five. F-4.13-J-03's correction:
+  this does NOT prove the `LIMIT` is applied by the database rather than
+  by a Python-side slice of a larger fetched result, a claim this bullet
+  used to make. Measured: replacing the SQL `.limit(limit)` with
+  `.limit(MAX_LIMIT)` plus a Python-side `[:limit]` left this clause, and
+  all 31 others in this file, green. That the `LIMIT` clause is real SQL
+  is a STATIC property of the source (`feedback/history.py`'s own
+  `.limit(limit)` call), like the f-string bullet below, not something a
+  black-box call through `list_history` can distinguish at runtime.
 - The order is a TOTAL order: two rows sharing the exact same `created_at`
   (forced via a direct INSERT, since `write_interaction`'s server default
   makes a natural collision unreliable to reproduce) still come back in a
@@ -269,12 +277,21 @@ async def test_a_null_owner_row_is_never_returned() -> None:
 
 
 # ---------------------------------------------------------------------------
-# LIMIT is real SQL, and the order is total.
+# The page is bounded and newest-first, and the order is total.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_limit_is_a_real_sql_limit_and_returns_the_newest() -> None:
+async def test_limit_returns_exactly_the_newest_n_rows() -> None:
+    """`limit` bounds the page size, and the page returned is the newest N.
+
+    F-4.13-J-03's correction: renamed from `test_limit_is_a_real_sql_
+    limit_and_returns_the_newest`. This clause cannot tell a real SQL
+    `LIMIT` apart from a Python-side slice of a larger fetch, only that
+    the OUTCOME (count and which rows) is correct; see the module
+    docstring's coverage bullet for why that half of the old name was
+    unproven.
+    """
     from system_03_search_agent.feedback.history import list_history
 
     owner = _unique_owner()
