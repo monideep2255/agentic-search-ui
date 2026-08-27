@@ -203,7 +203,25 @@ def test_interactions_indexes_exist(migrated_head):
                 "idx_interactions_rubric",
                 "idx_interactions_coverage_tags",
                 "idx_interactions_query_trgm",
+                # 0009 (F-4.13-A-03): the composite index `GET /v1/history`'s
+                # own query needs to avoid a sequential scan of every row
+                # every caller has ever had captured.
+                "idx_interactions_owner_id_created_at_id",
             }.issubset(names)
+
+            # 0009's whole point is that the composite index carries the
+            # query's OWN filter and sort order, `(owner_id, created_at
+            # DESC, id DESC)`, not just that some index by this name exists.
+            owner_history_index = conn.execute(
+                text(
+                    "SELECT indexdef FROM pg_indexes WHERE tablename = 'interactions' "
+                    "AND indexname = 'idx_interactions_owner_id_created_at_id'"
+                )
+            ).scalar_one()
+            assert "(owner_id, created_at DESC, id DESC)" in owner_history_index, (
+                f"the index exists but not in the column order `list_history`'s "
+                f"own query needs. Got: {owner_history_index}"
+            )
 
             # The GIN index on coverage_tags and the trigram index both use
             # the "gin" access method, not the default btree.
