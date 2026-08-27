@@ -24,15 +24,18 @@ from fastapi import (
     Query as FastAPIQuery,  # Aliased: `Query` is already this module's domain request model; (contracts.query.Query). Importing FastAPI's under its own name would; shadow it silently.
 )
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
 from system_03_search_agent.adapters.mcp.server import server as mcp_server
 from system_03_search_agent.auth.dependencies import (
+    _GUEST_SESSION_NO_LONGER_VALID_DETAIL,
+    _GUEST_SESSION_REVOKED_REASON,
     InvalidCallerError,
     Principal,
+    _guest_uuid_from_owner_id,
     get_caller,
     resolve_caller_from_bearer_token,
 )
@@ -73,6 +76,7 @@ from system_03_search_agent.feedback import (
     InteractionNotFound,
     record_feedback,
 )
+from system_03_search_agent.feedback.history import DEFAULT_LIMIT, MAX_LIMIT, list_history
 from system_03_search_agent.harness.cost_control import (
     anon_daily_run_cap,
     anon_daily_source_share,
@@ -386,24 +390,14 @@ class CreateRunRequest(BaseModel):
 # frees it.
 # The one wording for "this guest token decodes, but the session behind it
 # can no longer spend": migrated-and-revoked at signup, or an id with no
-# row. Shared by `POST /v1/query` and `GET /v1/allowance` so the
-# enforcement path and the reporting path answer identically (F-4.10-A-03).
-_GUEST_SESSION_NO_LONGER_VALID_DETAIL = "this guest session is no longer valid"
-
-# F-4.10-A-05, product-owner decision 2026-08-15. The 401 a revoked or
-# unknown guest session gets is now a STRUCTURED detail rather than a bare
-# string, so the client can tell it apart from every other 401 (an expired,
-# tampered, or wrong-key token, all of which `get_caller` rejects with its
-# own bare-string detail). The distinction is load-bearing for the browser:
-# a session the server revoked at migration must NOT cause the client to
-# quietly mint a fresh guest identity and hand out five more searches, while
-# an ordinary 7-day token expiry legitimately should. Without a
-# machine-readable reason the client cannot separate the two, and the
-# adversary measured that collapsing them is a second, independent path to a
-# free allowance. Additive per Section 2.6: the human-readable sentence is
-# unchanged and still travels, now under `message`.
-_GUEST_SESSION_REVOKED_REASON = "guest_session_revoked"
-
+# row. F-4.13-A-01's fix moved BOTH the reason and the message constants
+# into `auth.dependencies` (imported above), since `get_caller` is now
+# where this is enforced for every owner-scoped route, not just `POST
+# /v1/query` and `GET /v1/allowance`. Only those two names live here now,
+# re-exported from the import above so the rest of this module's inline
+# uses below need no further change; the strings themselves are unchanged
+# (F-4.10-A-03: the enforcement path and the reporting path answer
+# identically).
 _CONCURRENT_RUN_CAP_MESSAGE = (
     "you already have the maximum number of runs in flight; "
     "wait for an existing run to finish, or stop one via "
@@ -482,33 +476,12 @@ class AllowanceResponse(BaseModel):
     ) = None
 
 
-def _guest_uuid_from_owner_id(owner_id: str) -> uuid.UUID:
-    """Extract the `guest_sessions.id` UUID out of a `"guest:<uuid>"`
-    owner_id.
-
-    There is NO error handling here, and this docstring used to claim
-    otherwise (F-4.10-J-06, judge round 1: "the ValueError path exists as
-    a defensive backstop, never expected to fire in practice"). No such
-    path exists; the line below is a bare `uuid.UUID(...)`. A comment
-    asserting a safety property the code does not implement is the exact
-    thing this repository has been bitten by, so the claim is removed
-    rather than softened.
-
-    What is actually true. `Principal.owner_id` is only ever constructed
-    by `auth.dependencies.resolve_caller_from_bearer_token` out of a
-    `decode_guest_token`-verified `guest_id` claim, and `decode_guest_
-    token` deliberately accepts any non-empty string there (its own
-    docstring: "this function does not itself validate UUID shape"). So
-    the UUID invariant is enforced only by the minter, which is the only
-    holder of the derived signing key. A guest token carrying a non-UUID
-    `guest_id` would therefore raise `ValueError` out of this function and
-    surface as an unhandled 500, not as a handled rejection. That is
-    unreachable without the signing key, which is why it is carried as
-    open finding F-4.10-A-09 rather than fixed here: the fix is a decision
-    about WHERE the shape belongs (the decoder's contract, or this
-    reader's), not a line to add under cover of a comment correction.
-    """
-    return uuid.UUID(owner_id.split(":", 1)[1])
+# F-4.13-A-01's fix moved `_guest_uuid_from_owner_id` into
+# `auth.dependencies` (imported above), since the guest-liveness check
+# `get_caller` now runs needs it too, and a single implementation is what
+# keeps this module's own three call sites and that check reading the
+# UUID out of `caller.owner_id` the exact same way. See its docstring
+# there for F-4.10-A-09, unchanged by the move.
 
 
 class PersonaResponse(BaseModel):
@@ -629,6 +602,17 @@ def get_v1_allowance(
         # answer from both routes instead of a promise from one and a
         # refusal from the other. This matters more than it looks: the
         # five dots in the UI render this number.
+        #
+        # F-4.13-A-01's fix note, so a future reader does not have to
+        # rediscover it: `get_caller` above now runs this exact check
+        # itself before this handler body ever executes, so in the common
+        # case this branch is REDUNDANT rather than load-bearing; a guest
+        # `caller` reaching this line is already known live. Kept
+        # deliberately anyway, as defense in depth against a revocation
+        # racing between `get_caller`'s read and this one, and it costs
+        # NOTHING marginal: `runs_used` and `attempts_used` below are
+        # fetched in this same `SELECT` regardless, so `revoked_at` riding
+        # along in it is not a second query.
         if row is None or row[0] is not None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -728,6 +712,193 @@ def get_v1_allowance(
     # writes `interactions` rows yet), so `counted=False` says so rather
     # than presenting an uncounted zero as a real count (F-4.9-A-16).
     return AllowanceResponse(kind="user", used=0, total=per_user_daily_query_cap(), counted=False)
+
+
+# T-4.13-02 (`tracker/phase_4.13.md`): the response shapes `GET /v1/history`
+# renders. `production-standards`' multi-agent pipeline gate applies here
+# exactly as it does to every other response model on this surface: every
+# string field carries `max_length`, and the list carries `max_length` too,
+# even though this is a caller's OWN previously-validated data rather than
+# an untrusted external document, because the gate does not carve out an
+# exception for "trusted" data and a bound here costs nothing.
+class HistoryItem(BaseModel):
+    """One row of `GET /v1/history`'s response.
+
+    Field widths mirror the write path's own bounds
+    (`feedback.contracts.InteractionRow`) rather than inventing new ones:
+    `trace_id` matches `max_length=64`, `question` matches `query_text`'s
+    `max_length=2000`. `trust_signal` is one of four short literals
+    (`answer`, `flag`, `ask`, `refuse`); 20 characters is headroom, not a
+    measured bound. No answer narrative: decision D-4.13-01 is why this
+    model has no such field to bound.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    trace_id: str = Field(..., max_length=64)
+    question: str = Field(..., max_length=2000)
+    asked_at: datetime
+    trust_signal: str = Field(..., max_length=20)
+    citation_count: int = Field(..., ge=0)
+
+
+class HistoryResponse(BaseModel):
+    """`GET /v1/history`'s response: `{items, count, omitted_count}` (T-4.13-02).
+
+    `items` is bounded at `MAX_LIMIT` (`feedback.history`'s own bound on
+    what a single call can ever return), never a Python-side slice of a
+    larger list: the read path itself already applies a real SQL `LIMIT`
+    no larger than `MAX_LIMIT`, so this is the response contract agreeing
+    with the query that produced it, not a second enforcement point.
+
+    `count` is `len(items)`, the size of THIS page, never a total across
+    every row the caller has (F-4.13-A-09). There is no cursor
+    (`## Coverage`, `tracker/phase_4.13.md`), so a caller holding more rows
+    than `limit` cannot tell "you have exactly `count` searches" from "here
+    are `count` of your searches" from this response alone, and `count`'s
+    own NAME invites the first, wrong reading. Stated here rather than
+    fixed by adding a second query for a true total, which A-09's own
+    finding offers as the alternative remedy and this fix does not take:
+    doing so is a real product improvement (pagination or a running total)
+    outside the shape of a same-session security and correctness fix, so
+    the honest floor taken here is naming what `count` actually is rather
+    than leaving the field to keep inviting the wrong reading silently.
+
+    `omitted_count` (F-4.13-A-02's fix) is how many of this caller's own
+    rows were left OUT of `items`, for either of two reasons. The first is
+    that the row no longer fits this response model's own field bounds (for
+    example a stored `query_text` wider than `question`'s
+    `max_length=2000`). The second, added by F-4.13-RV-02's fix, is that the
+    row's stored `citations` value is not a list, so no honest
+    `citation_count` exists for it (`feedback/history.py`'s
+    `_citation_count` returns `None`); a row is withheld rather than shown
+    with a count nothing computed. No write path this repository ships
+    can produce such a row today (`InteractionRow.query_text` carries the
+    identical bound), so this is a defensive floor against a direct
+    database write or a future widening of that bound, not a path any real
+    caller has hit yet; see F-4.13-A-02's finding for the fragility this
+    guards. Disclosed rather than silently dropped, per this repository's
+    own rule (F-3.3-J-04, decided 2026-08-15): if the system drops or
+    shortens anything, it discloses that it did. Additive per
+    `.claude/rules/system-design-patterns.md` pattern 10: defaults to 0, so
+    an existing client that has never seen a non-zero value is unaffected.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[HistoryItem] = Field(default_factory=list, max_length=MAX_LIMIT)
+    count: int = Field(..., ge=0)
+    omitted_count: int = Field(0, ge=0)
+
+
+def _reject_duplicate_limit(request: Request) -> None:
+    """F-4.13-A-08's fix: refuse `?limit=...&limit=...` rather than
+    silently resolving it to one occurrence's value.
+
+    Measured before this fix: FastAPI's scalar `Query(...)` coercion reads
+    only the LAST `limit` occurrence in the query string and validates that
+    one alone, so `?limit=1&limit=50` served 50's page and `?limit=50&
+    limit=1` served 1's, and `?limit=abc&limit=2` succeeded on `2` while
+    `?limit=2&limit=abc` was refused on `abc`. No cap bypass exists either
+    way (`le=MAX_LIMIT` still bounds whichever value wins), so this is a
+    CONSISTENCY fix, not a control fix: any proxy, log line, or hand-built
+    URL that reads the FIRST occurrence instead disagrees with the server
+    about what was asked for, and this closes that by refusing the
+    ambiguous request outright rather than picking a side FastAPI's
+    binding already committed to before this function ever runs.
+
+    Called explicitly from the handler, not folded into a `Query(...)`
+    validator: Pydantic's own scalar coercion has already thrown away every
+    occurrence but the last by the time a field validator would run, so the
+    only place that can see all of them is the raw `Request` before
+    FastAPI's own binding, which is exactly what this function reads.
+    """
+    occurrences = request.query_params.getlist("limit")
+    if len(occurrences) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=(
+                f"send exactly one `limit` query parameter, got "
+                f"{len(occurrences)}: {occurrences}"
+            ),
+        )
+
+
+# T-4.13-02: the read path over build phase 4.6's `interactions` substrate.
+# `Depends(get_caller)` alone is what makes an unauthenticated request 401
+# rather than 200 with an empty list: a client must be able to tell "no
+# searches yet" from "not signed in", because it does opposite things with
+# them (render the empty state vs. re-authenticate), and `get_caller`
+# already refuses with 401 for a missing or invalid credential of EITHER
+# principal class, guest or account, before this handler body ever runs.
+# `caller.owner_id` is the exact namespaced principal (`user:<uuid>` or
+# `guest:<uuid>`) `feedback.history.list_history` filters on, the same
+# value every other owner-scoped route on this surface reads off
+# `Principal`, never something derived from `caller.user_id` (NULL for
+# every guest, F-4.5-A-02's lesson).
+#
+# `limit`'s bound is enforced HERE, by FastAPI's own `Query(ge=1,
+# le=MAX_LIMIT)`, which returns 422 with the violated constraint (and so
+# `MAX_LIMIT`'s value) named in the response body. `list_history`'s own
+# `ValueError` guard on `limit` is defense in depth for a caller of that
+# module that bypasses this endpoint, not the caller-facing refusal.
+# `_reject_duplicate_limit` (F-4.13-A-08) runs first, against the raw
+# request, because by the time `limit` above is bound every occurrence but
+# the last is already gone.
+@app.get("/v1/history", response_model=HistoryResponse)
+def get_v1_history(
+    request: Request,
+    limit: int = FastAPIQuery(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+    caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
+) -> HistoryResponse:
+    _reject_duplicate_limit(request)
+    entries = list_history(owner_id=caller.owner_id, limit=limit)
+    # F-4.13-A-02's fix. `HistoryItem(...)` used to be constructed eagerly
+    # inside the `HistoryResponse(...)` call below, so ONE row that no
+    # longer fit this response model's own bounds raised `ValidationError`
+    # out of the whole handler as an unhandled 500, taking every other
+    # well-formed row in this caller's own history down with it and
+    # leaving that caller permanently unable to read ANY of their history
+    # until the offending row was removed. Built one row at a time instead,
+    # so a single non-conforming row is dropped and counted
+    # (`HistoryResponse.omitted_count`, disclosed per F-3.3-J-04) rather
+    # than taking its siblings down with it.
+    items: list[HistoryItem] = []
+    omitted_count = 0
+    for entry in entries:
+        # F-4.13-RV-02's fix, the second half. `list_history` reports
+        # `citation_count is None` for a row whose stored `citations` value
+        # is not the list the column's Python type declares (a JSONB scalar,
+        # string, object, or the JSON literal `null`; see
+        # `feedback/history.py`'s `_citation_count` for why the column
+        # permits all four). Before this, that same row raised `TypeError`
+        # inside `list_history` and returned 500 for the caller's WHOLE
+        # history, one layer above this guard, or, for a JSONB string,
+        # published a fabricated count as though it were real.
+        #
+        # Dropped here rather than published with the count left out: this
+        # response model requires `citation_count`, and widening it to
+        # nullable would change a shipped v1 field's value domain for every
+        # client (`system-design-patterns` pattern 10 allows additive
+        # changes within v1, not this). Dropping reuses the disclosure
+        # already shipped below, so the caller is told a row was withheld
+        # instead of being shown a number nothing counted.
+        if entry.citation_count is None:
+            omitted_count += 1
+            continue
+        try:
+            items.append(
+                HistoryItem(
+                    trace_id=entry.trace_id,
+                    question=entry.question,
+                    asked_at=entry.asked_at,
+                    trust_signal=entry.trust_signal,
+                    citation_count=entry.citation_count,
+                )
+            )
+        except ValidationError:
+            omitted_count += 1
+    return HistoryResponse(items=items, count=len(items), omitted_count=omitted_count)
 
 
 def _guest_refund_callback(
@@ -982,6 +1153,18 @@ async def post_v1_query(
             # identity: a 401 matches "this credential is no longer
             # valid" more than a 403 ("you are you, but not permitted"),
             # and the premise gate accepts either for this exact case.
+            #
+            # F-4.13-A-01's fix note: `get_caller` above now refuses a
+            # revoked or unknown guest session before this handler body
+            # ever runs, so `spend_one_anonymous_run` reaching this state
+            # is REDUNDANT in the common case, not the primary
+            # enforcement. Kept anyway, and it costs no separate query:
+            # this state comes out of `spend_one_anonymous_run`'s own
+            # atomic `UPDATE ... RETURNING` (`data.guest_sessions`), not a
+            # second `SELECT`, so it is inherent defense in depth against
+            # the same TOCTOU window as `GET /v1/allowance`'s equivalent
+            # comment above, a revocation racing between `get_caller`'s
+            # read and this spend.
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={

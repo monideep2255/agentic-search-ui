@@ -47,8 +47,15 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
-- BUILD PHASE 4.14, CONTINUOUS INTEGRATION, IS MERGED as PR #68 on 2026-08-26, and CI IS LIVE AND GREEN on `develop`. Section 24's ten gates now run on every pull request. The deployed product was re-probed after the merge: web HTTP 200, api `/health` `{"status":"ok"}`.
-- THE NEXT ACTION IS BUILD PHASE 4.13, DURABLE CROSS-RELOAD HISTORY, then 4.15, the two-environment release flow, which DEPENDS on 4.14 and is now unblocked.
+- BUILD PHASE 4.13, DURABLE CROSS-RELOAD SEARCH HISTORY, IS COMPLETE and awaiting review on `phase/4.13-durable-history`. A person's past questions now survive closing the browser: an owner-scoped read over the `interactions` rows build phase 4.6 writes, `GET /v1/history`, and the rail that renders them. Verified: backend 4126 passing with ZERO failed, frontend 235, browser suite 47 passed with the one documented pre-existing failure, and the reload path proven in a real browser AND proven red under mutation.
+- THE NEXT ACTION IS BUILD PHASE 4.15, the two-environment release flow, which 4.14 unblocked. Then 5.0 and 5.1.
+- WHAT IT COST: THREE review rounds against a two-round budget, with the third authorised by the product owner, plus a fourth blocking finding from the final verifier. The review loop's STOP CONDITION FIRED FOR THE FIRST TIME since it was written, and on exactly the shape it was written for.
+- THE MOST TRANSFERABLE RESULT, and it is not the feature: TWO separate defects shipped because a change made an UNSTATED INVARIANT false. F-4.13-RV-01: a re-ask fix replaced a reducer that never shrank the list with one that can, while the id generator on the line above still read `${current.length}`, so two rows took one id and clicking BRCA1 ran CFTR. F-4.13-FV-01: this phase added `mergeServerHistory` as a SECOND writer to the same list, keying on `traceId` and never on text, so the meta effect's match-by-question-text rewrote a restored row with today's numbers. Neither changed line was wrong when written.
+- WHY BOTH SURVIVED REVIEW, which is the part worth carrying: in each case a comment asserted the invariant that SURVIVED. The re-ask fix's comment correctly says it preserves one-row-per-question-text, and it does. A comment asserting a NEIGHBOURING invariant is worse than no comment, because it tells the next reader identity was already thought about. Where a fix depends on a property, write the property down, including the ones you did not change.
+- THE SECOND RECURRING FAILURE, twice in one phase: a reviewer's SEVERITY is trustworthy and its SCOPE is not, because a review is bounded to a diff and a defect class is bounded by nothing. F-4.13-A-01 was filed against one endpoint and was six routes wide. F-4.13-FV-01 was filed as out-of-phase because `git blame` dated the line to two weeks earlier, when this phase is what made it reachable. Before choosing a fix for any missing-check finding, grep the siblings and count the instances; that count decides whether you are fixing a bug or a class.
+- THREE THINGS MERGE OPEN, all product-owner decisions taken 2026-08-27, none of them a surprise: a reload still signs an account out, so history appears only after signing in again, and "keep me signed in" is its own phase (F-4.13-02); on a shared browser one person's guest searches follow whoever signs up next, owned with build phase 4.10's migration rather than here (F-4.13-A-04); and three minor latent findings carry named owners (F-4.13-FV-03/04/05).
+- READ `tracker/phase_4.13.md` before touching the rail or the history read path. It carries all 21 findings, four review reports, and the coverage statement naming what the gate does NOT cover, including the sharpest omission: the gate holds one bearer token in a Python variable across its two clients, which is exactly what no browser does.
+- Previously: BUILD PHASE 4.14, CONTINUOUS INTEGRATION, MERGED as PR #68 on 2026-08-26, and CI IS LIVE AND GREEN on `develop`. Section 24's ten gates now run on every pull request. The deployed product was re-probed after the merge: web HTTP 200, api `/health` `{"status":"ok"}`.
 - TWO THINGS MERGED OPEN, and the first needs a PRODUCT-OWNER DECISION rather than code. NOTHING MAKES THESE GATES MERGE-BLOCKING: branch protection needs GitHub Pro or a public repository, and `gh api .../branches/develop/protection` returns 403. A red check currently sits beside a working Merge button, which is a real improvement over nothing running and is NOT what Section 24 claims. Options: upgrade to Pro, make the repository public, or accept advisory CI and say so wherever the deliverable is described (F-4.14-A-04).
 - The second: GATE 5's STRICT PATH HAS NEVER EXECUTED. Every green so far is its honest NOT RUN branch, because the graph credential is not available to CI. It is wired and asserted, just unexercised (F-4.14-RV-08).
 - WHAT CI FOUND ON ITS OWN, four pre-existing defects invisible to every gate, premise test and review round in this repository: `pip install -e .` had been broken for the LIFE OF THE PROJECT, so `s3` and `s3-kgx-export` were uninstallable by anyone since build phase 4.2; the suite needs about thirty environment values a clean machine lacks, which means every earlier "verified locally" figure had been measured against a developer's own `.env`; a build phase 4.7 mutation arm called a HEALTHY assertion vacuous depending on core count; and 25 tests could never run in CI at all, hidden behind a green `4019 passed`.
@@ -151,15 +158,16 @@ Two things were deliberately left open rather than fixed, both genuine product d
 
 Current counts, stated once here:
 
-- Python tests: 4226 (4066 passing, 136 skipped, 1 xfailed, ZERO FAILED) on `phase/4.14-ci-gates`, re-measured 2026-08-25 rather than carried forward.
+- Python tests: 4286 (4126 passing, 159 skipped, 1 xfailed, ZERO FAILED) on `phase/4.13-durable-history`, re-measured 2026-08-27 rather than carried forward.
+  - The figure at build phase 4.14's close was 4226 (4066 passing) on `phase/4.14-ci-gates`, measured 2026-08-25; build phase 4.13 adds 60, which are the premise gate's 11 arms plus the unit, endpoint, auth-liveness and boundary arms its three review rounds produced.
   - The figure at build phase 4.12's close was 4090 (3930 passing) on `phase/4.12-demo-deploy`; build phase 4.16 adds 12, being a 5-arm premise gate and a 7-case mutation harness.
   - THE STANDING SIX-FAILURE BASELINE IS GONE, and it was never six broken tests: all six were in `test_citation_trust_full_premise.py`, all six pass under `RUN_PREMISE_GATE=1`, and that file FAILED where it should have SKIPPED because its `live_only` mark gated on a model key existing rather than on outbound HTTP being permitted. Build phase 4.12 fixed it.
   - The figure before that was 4046 (3887 passing, 6 failed) on `develop` with both fix branches merged (PR #59, F-4.7-A-02, and PR #60, F-4.7-A-01), against a baseline RE-MEASURED in a throwaway worktree at `4d759da`: 3826 passing, 146 skipped, 6 failed. Neither branch's own figure is reproduced here, deliberately: each measured only its own branch, and the merged tree is neither of them, so carrying either number forward would record a total that was never true of this commit.
   - The figure recorded at build phase 4.7's close was 3979 total / 3826 passing, and the total was already 13 stale when that line was written, which is the exact failure the rest of this bullet warns about. The 6 are all PRE-EXISTING and none belong to build phase 4.7: all six are in `test_citation_trust_full_premise.py`, and they fail because that file's live Layer 2 and Layer 3 calls are blocked in the ordinary unit run.
   - RE-MEASURED AT THIS BRANCH POINT rather than carried forward, which is the practice this line exists to enforce: the figure recorded at build phase 4.4's close was 10, and the 3 `test_cypher_query_e2e.py` failures in it are simply gone, because build phase 4.11 moved Layer 1 behind an HTTPS service and those tests no longer depend on a hand-opened tunnel. The seventh `test_citation_trust_full_premise.py` failure recorded there is also gone. Neither disappearance was caused by build phase 4.7.
   - A stale baseline is how a genuine regression hides, since the next reader compares against a number that was never true, so re-measure at each phase close rather than carrying it forward, and say which commit you measured at.
-- Frontend tests: 216
-- Playwright end-to-end tests: 42 declarations, 49 executed cases, of which 2 are LIVE DIAGNOSTICS gated off by default behind `RUN_LIVE_DIAGNOSTICS=1` because they reach the deployed demo and spend real budget.
+- Frontend tests: 235
+- Playwright end-to-end tests: 43 declarations, 50 executed cases, of which 2 are LIVE DIAGNOSTICS gated off by default behind `RUN_LIVE_DIAGNOSTICS=1` because they reach the deployed demo and spend real budget.
   - Re-run in full on 2026-08-25 during build phase 4.16.
   - The one failure is `query-stream-and-stop.spec.ts`'s "a signed-in query streams through the pipeline and produces an answer", waiting for `answer-cap`, and it is PROVEN PRE-EXISTING rather than asserted: the same spec was run at `e486310`, build phase 4.16's branch point, where it fails identically with none of that phase's changes present. Unowned as of this line.
   - The previous figure here, 29 declarations and 30 executed ALL PASSING, was measured at build phase 4.10's close on 2026-08-15 and had been carried forward through five merged phases without re-measurement, which is exactly what this file's own baseline rule forbids.
@@ -178,8 +186,8 @@ Current counts, stated once here:
 - Premise gate, build phase 4.0's own gate (a normal test file, not one of the seven live tool gates above): 26 of 26
 - Premise gate, build phase 4.1's own gate (the MCP server, a normal test file, not one of the seven live tool gates above): 48 of 48
 - Premise gate, build phase 4.10's own gate (the guest allowance, a normal test file, not one of the seven live tool gates above): 36 of 36, every clause mutation-proven, two-armed throughout since a control that refuses every guest passes every attack test and destroys the product
-- Decisions logged: 424
-- Learnings entries: 129, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
+- Decisions logged: 429
+- Learnings entries: 134, plus a retrospective. Restructured 2026-08-10 (PR #38): every entry from build phase 1.0 onward is now a short table row ending "Full account below," pointing to a verbatim detail section, since the table cells had grown into 100 to 500-plus word paragraphs. Nothing was reworded; only relocated. See LEARNINGS.md's own table of contents
 
 - Build phase 3.4, citation trust extended to Layers 2 and 3, closed 2026-08-10 on `phase/3.4-citation-trust-full`, merged as PR #28 (see "Build phase 3.4, done" below).
 - This was the last of the six Step 6.3 tool-and-trust phases (3.0 through 3.5) named in Section 25's dependency graph; all six are now merged, and nothing in that group is left to open.
@@ -536,7 +544,7 @@ Three scope readings the locked documents did not settle, each recorded before a
 
 Final gates:
 
-- 4226 Python tests (3188 passing, the same six live-network-gated cases carried since build phase 4.0)
+- 4286 Python tests (3188 passing, the same six live-network-gated cases carried since build phase 4.0)
 - the GraphQL package alone 206 to 300 tests
 - 181 frontend
 - ruff clean
@@ -779,4 +787,4 @@ Unowned, needing an explicit decision rather than an assumed phase:
 - An outage shows every premise-gate failure carrying `source='guardrail'`, the first model call in the loop, with an empty narrative and no citations, so nothing reaches synthesis at all.
 - A genuine Write-step defect reaches synthesis and fails later.
 
-Last updated: 2026-08-26.
+Last updated: 2026-08-27.

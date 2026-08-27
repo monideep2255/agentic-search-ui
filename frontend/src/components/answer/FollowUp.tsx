@@ -8,9 +8,13 @@
  * orchestration and out of grounding, so a follow-up's citations are as
  * independently verifiable as a first question's.
  *
- * STUB: hints are canned and history is in-memory, lost on reload. Wired by
- * build phase 4.5 for the session and 4.6 for anything that must survive a
- * reload. See `stubs/registry.ts`.
+ * STUB: hints are canned. History is durable across a reload as of build
+ * phase 4.13 (T-4.13-03): `HistoryRail` still only renders whatever list
+ * `App.tsx` gives it, but that list is now seeded from `GET /v1/history`,
+ * not held in memory alone. Only the question survives; the `interactions`
+ * row it is read from stores no answer narrative, so a restored item
+ * re-asks its question rather than replaying an old answer (decision
+ * D-4.13-01, `tracker/phase_4.13.md`). See `stubs/registry.ts`.
  */
 
 import { useState } from "react";
@@ -411,7 +415,14 @@ export function HistoryRail({
       </Typography>
 
       {items.length === 0 ? (
-        // `.rempty`, verbatim from the prototype.
+        // `.rempty`. NO LONGER the prototype's own text verbatim: that copy
+        // read "Searches you run in this session appear here", which build
+        // phase 4.13 (T-4.13-03) made false the moment the rail started
+        // seeding from `GET /v1/history` rather than living only in React
+        // state. The prototype predates durable history and was never
+        // updated; this is the one place this component deliberately
+        // diverges from it, and it diverges on a factual claim, not on
+        // presentation.
         <Typography
           component="p"
           sx={{
@@ -422,7 +433,7 @@ export function HistoryRail({
             m: 0,
           }}
         >
-          Searches you run in this session appear here, with their sources attached.
+          Your searches appear here, with their sources attached.
         </Typography>
       ) : (
         items.map((item) => (
@@ -466,8 +477,16 @@ export function HistoryRail({
             >
               {item.question}
             </Box>
-            {/* `.rm`: this search's own tool, layer and source counts. Absent
-                until its run lands, which the prototype allows for too. */}
+            {/* `.rm`. For a live run, this session's own tool, layer and
+                source counts, absent until the run lands, which the
+                prototype allows for too. For a row restored from
+                `GET /v1/history` (F-4.13-A-10), the endpoint carries no
+                tool or layer count, only `citation_count` and `asked_at`,
+                so `App.tsx`'s `formatHistoryMeta` renders the closest
+                honest substitute instead: a source count and a short
+                date. Either way this component only renders whatever
+                `item.meta` already is; it does not know which shape
+                produced it. */}
             {item.meta ? (
               <Box
                 component="span"

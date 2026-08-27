@@ -55,16 +55,29 @@ vi.mock("./lib/api", async () => {
     // a guest token, and sign-in fetches the caller's real allowance.
     mintGuest: vi.fn(),
     getAllowance: vi.fn(),
+    // T-4.13-03: sign-in now also seeds the rail from `GET /v1/history`. An
+    // api mock that omits an export App actually calls throws inside the
+    // seeding effect and takes the whole render down, the same reasoning
+    // the comment above `fetchPersona` already gives.
+    fetchHistory: vi.fn(),
   };
 });
 
-import { createRun, getAllowance, login, mintGuest, openEventStream } from "./lib/api";
+import {
+  createRun,
+  fetchHistory,
+  getAllowance,
+  login,
+  mintGuest,
+  openEventStream,
+} from "./lib/api";
 
 const loginMock = vi.mocked(login);
 const createRunMock = vi.mocked(createRun);
 const openEventStreamMock = vi.mocked(openEventStream);
 const mintGuestMock = vi.mocked(mintGuest);
 const getAllowanceMock = vi.mocked(getAllowance);
+const fetchHistoryMock = vi.mocked(fetchHistory);
 
 const mainArea = () => within(screen.getByRole("main"));
 const navArea = () => within(screen.getByRole("navigation", { name: /main/i }));
@@ -107,6 +120,7 @@ describe("App", () => {
     openEventStreamMock.mockReset();
     mintGuestMock.mockReset();
     getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
     loginMock.mockResolvedValue({
       access_token: "test-token",
       refresh_token: "test-refresh",
@@ -123,6 +137,10 @@ describe("App", () => {
       guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
     });
     getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    // T-4.13-03: no server history unless a test says otherwise. Defaulted
+    // to empty rather than left unresolved so a test that merely signs in
+    // does not also have to think about this call.
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
   });
 
   it("shows the landing screen to a visitor with no account", () => {
@@ -286,5 +304,588 @@ describe("App", () => {
       expect.objectContaining({ text: "Which diseases are associated with BRCA1?" }),
       "guest-token-1",
     );
+  });
+});
+
+describe("T-4.13-03: durable history", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token",
+      refresh_token: "test-refresh",
+      token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  /** Sign out through the account menu, the same route railCollapsePremise.test.tsx uses. */
+  async function signOut(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
+    await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+  }
+
+  it("seeds the rail from the server once a signed-in principal exists", async () => {
+    // Mutation: gating the seeding effect on something other than `token`,
+    // or never calling `setHistory` from its resolved value, leaves the
+    // rail on its empty state and turns this red.
+    fetchHistoryMock.mockResolvedValue({
+      items: [{ trace_id: "row-1", question: "What is BRCA1?" }],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+
+    await signIn(user);
+
+    const rail = await screen.findByTestId("history-rail");
+    expect(within(rail).getByRole("button", { name: /what is brca1\?/i })).toBeInTheDocument();
+  });
+
+  it("does not duplicate a run this tab already made once its server copy arrives", async () => {
+    // The critical this ticket names before it is written (`tracker/
+    // phase_4.13.md`), restated at the UI layer: a session run and its
+    // later-arriving server row render as ONE item, matched on
+    // `trace_id`/`run_id`, never on question text alone (see
+    // `mergeServerHistory`'s own docstring in App.tsx). Mutation: matching
+    // on question text instead of `traceId`, or never setting `traceId`
+    // when `createRun` resolves, both turn this red, since the rail would
+    // then show the question twice.
+    let resolveHistory!: (value: {
+      items: { trace_id: string; question: string }[];
+      count: number;
+    }) => void;
+    fetchHistoryMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveHistory = resolve;
+      }),
+    );
+    createRunMock.mockResolvedValue({ run_id: "run-42", persona_name: "Mendel" });
+    const user = userEvent.setup();
+    render(<App />);
+
+    await signIn(user);
+    await ask(user, "Which diseases are associated with BRCA1?");
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+
+    // The server's own copy of the SAME run now arrives, carrying the same
+    // trace_id `createRun` just returned as `run_id`.
+    resolveHistory({
+      items: [{ trace_id: "run-42", question: "Which diseases are associated with BRCA1?" }],
+      count: 1,
+    });
+
+    const rail = await screen.findByTestId("history-rail");
+    expect(
+      within(rail).getAllByRole("button", {
+        name: /which diseases are associated with brca1\?/i,
+      }),
+    ).toHaveLength(1);
+  });
+
+  it("leaves the live list on screen when the history fetch fails", async () => {
+    // Mutation: letting the rejection propagate instead of being caught,
+    // or clearing `history` on any fetch outcome, either crashes the
+    // effect or blanks a session item that was never at fault, turning
+    // this red.
+    fetchHistoryMock.mockRejectedValue(new Error("fetchHistory failed with 401"));
+    const user = userEvent.setup();
+    render(<App />);
+
+    await signIn(user);
+    await ask(user, "What variants cause cystic fibrosis?");
+
+    const rail = await screen.findByTestId("history-rail");
+    expect(
+      within(rail).getByRole("button", { name: /what variants cause cystic fibrosis\?/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("clears on sign-out, and a second identity does not inherit the first's list", async () => {
+    // The critical build phase 4.5 already shipped once (every guest
+    // shared one ownership identity), restated at the UI layer: nothing
+    // from the previous principal's fetch may still be on screen once a
+    // different principal has signed in. Mutation: dropping
+    // `setHistory([])` from the sign-out handler turns this red, because
+    // the first identity's restored row would still be present alongside
+    // the second's rather than gone.
+    fetchHistoryMock.mockResolvedValueOnce({
+      items: [{ trace_id: "row-a", question: "Old question for the first identity" }],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+
+    await signIn(user);
+    const firstRail = await screen.findByTestId("history-rail");
+    expect(
+      within(firstRail).getByRole("button", { name: /old question for the first identity/i }),
+    ).toBeInTheDocument();
+
+    await signOut(user);
+    expect(screen.queryByTestId("history-rail")).not.toBeInTheDocument();
+
+    fetchHistoryMock.mockResolvedValueOnce({
+      items: [{ trace_id: "row-b", question: "New question for the second identity" }],
+      count: 1,
+    });
+    await signIn(user);
+
+    const secondRail = await screen.findByTestId("history-rail");
+    expect(
+      within(secondRail).getByRole("button", { name: /new question for the second identity/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(secondRail).queryByRole("button", { name: /old question for the first identity/i }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("F-4.13-A-10: a restored row renders something asked_at makes possible", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token",
+      refresh_token: "test-refresh",
+      token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("renders more than bare question text for a restored row that carries asked_at and citation_count", async () => {
+    // The endpoint carries no tool or layer count (`HistoryItem` in
+    // `adapters/web_sse/app.py` has only trace_id, question, asked_at,
+    // trust_signal, citation_count), so the closest honest substitute for
+    // the prototype's "N tools · N layers · N sources" is citation_count
+    // plus the asked date. Mutation: a fix that populates `meta` with
+    // something that never renders, or that renders only for a live run,
+    // leaves this red.
+    fetchHistoryMock.mockResolvedValue({
+      items: [
+        {
+          trace_id: "row-1",
+          question: "What is BRCA1?",
+          asked_at: "2026-08-20T12:00:00Z",
+          trust_signal: "answer",
+          citation_count: 3,
+        },
+      ],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    const rail = await screen.findByTestId("history-rail");
+    const item = within(rail).getByRole("button", { name: /what is brca1\?/i });
+    // Bare question text with nothing else is exactly what the shipped bug
+    // renders (F-4.13-A-10's own description: "arrives on screen as bare
+    // question text with no date and no meta").
+    expect(item.textContent).not.toBe("What is BRCA1?");
+    expect(item.textContent).toMatch(/3 source/i);
+  });
+
+  it("does not render 'Invalid Date' for a restored row with a malformed asked_at", async () => {
+    fetchHistoryMock.mockResolvedValue({
+      items: [{ trace_id: "row-1", question: "What is BRCA1?", asked_at: "not-a-real-timestamp" }],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    const rail = await screen.findByTestId("history-rail");
+    const item = within(rail).getByRole("button", { name: /what is brca1\?/i });
+    expect(item.textContent).not.toMatch(/invalid date/i);
+  });
+
+  it("does not crash when asked_at is absent from a restored row", async () => {
+    fetchHistoryMock.mockResolvedValue({
+      items: [{ trace_id: "row-1", question: "What is BRCA1?" }],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    const rail = await screen.findByTestId("history-rail");
+    expect(within(rail).getByRole("button", { name: /what is brca1\?/i })).toBeInTheDocument();
+  });
+});
+
+describe("F-4.13-A-07: re-asking a restored question", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token",
+      refresh_token: "test-refresh",
+      token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("moves the re-asked row to the top instead of relabeling it in place", async () => {
+    // Two restored rows, newest first (the server's own order). The
+    // OLDER one, "What is BRCA1?", is re-asked from the rail.
+    //
+    // The shipped bug (`App.tsx`'s `ask`, the `current.some(...) ? current
+    // : [...]` dedup): since the question text already exists in
+    // `history`, NOTHING is added and NOTHING is moved, so the row stays
+    // in its original, lower position. The prototype's `start()` instead
+    // filters the old entry out and unshifts a fresh one to the top
+    // (`app.html` around line 1262), which is what this test requires.
+    fetchHistoryMock.mockResolvedValue({
+      items: [
+        { trace_id: "restored-newer", question: "Which variant is pathogenic in CFTR?" },
+        { trace_id: "restored-older", question: "What is BRCA1?" },
+      ],
+      count: 2,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    const rail = await screen.findByTestId("history-rail");
+    const olderItem = within(rail).getByRole("button", { name: /what is brca1\?/i });
+    await user.click(olderItem);
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+    expect(createRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "What is BRCA1?" }),
+      "test-token",
+    );
+
+    const afterRail = screen.getByTestId("history-rail");
+    // No duplicate: still exactly one row for the re-asked question.
+    expect(
+      within(afterRail).getAllByRole("button", { name: /what is brca1\?/i }),
+    ).toHaveLength(1);
+
+    // Moved to the top: ahead of the row that was newer before the re-ask.
+    const buttonTexts = within(afterRail)
+      .getAllByRole("button")
+      .map((button) => button.textContent ?? "");
+    const brca1Index = buttonTexts.findIndex((text) => /what is brca1\?/i.test(text));
+    const cftrIndex = buttonTexts.findIndex((text) => /cftr/i.test(text));
+    expect(brca1Index).toBeGreaterThan(-1);
+    expect(cftrIndex).toBeGreaterThan(-1);
+    expect(brca1Index).toBeLessThan(cftrIndex);
+  });
+
+  it("does not relabel an unrelated restored row's meta when a different question lands", async () => {
+    // A narrower regression guard for the same defect class: landing a
+    // run for question B must never touch a DIFFERENT row's meta, which
+    // is what F-4.13-A-07's `.map` over every item matching `question`
+    // would do if two rows ever shared text. This test only pins the
+    // ordering fix above does not remove the traceId-tagging discipline
+    // `ask` already had (the comment above its own `setHistory` call).
+    fetchHistoryMock.mockResolvedValue({
+      items: [{ trace_id: "restored-1", question: "What is BRCA1?" }],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    await screen.findByTestId("history-rail");
+    await user.type(
+      screen.getByRole("textbox", { name: /question/i }),
+      "What variants cause cystic fibrosis?",
+    );
+    await user.click(screen.getByRole("button", { name: /^search the knowledge graph$/i }));
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+
+    const afterRail = screen.getByTestId("history-rail");
+    expect(
+      within(afterRail).getByRole("button", { name: /what is brca1\?/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(afterRail).getByRole("button", { name: /what variants cause cystic fibrosis\?/i }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("F-4.13-RV-01: a rail row's identity survives the list shrinking", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token",
+      refresh_token: "test-refresh",
+      token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    // Deliberately EMPTY, and that is the point of this clause. Both
+    // F-4.13-A-07 clauses above seed the rail from `fetchHistory`, so every
+    // row they touch carries a `trace_id` as its id, and a positional-id
+    // collision is unreachable from them. It is reachable only among rows
+    // this tab created itself, so this clause creates every row it uses.
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("re-asks the clicked row's own question after a re-ask has shrunk the list", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    // 1. Ask A. The rail holds one locally-created row.
+    await ask(user, "What is BRCA1?");
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+
+    // 2. Re-ask A from the rail, the exact interaction F-4.13-A-07's fix
+    //    exists to enable. Filter-then-unshift REMOVES the old row and adds
+    //    one, so the list length is 1 before and 1 after: the moment a
+    //    length-derived id stops being unique.
+    let rail = await screen.findByTestId("history-rail");
+    await user.click(within(rail).getByRole("button", { name: /what is brca1\?/i }));
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(2));
+
+    // 3. Ask B. Under a positional id it takes the SAME id the row from
+    //    step 2 holds, and `onOpen`'s `history.find` then resolves BOTH
+    //    rail rows to whichever one happens to sit first.
+    await user.click(screen.getByRole("button", { name: "New search" }));
+    await ask(user, "Which variant is pathogenic in CFTR?");
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(3));
+
+    rail = screen.getByTestId("history-rail");
+    expect(
+      within(rail).getByRole("button", { name: /what is brca1\?/i }),
+    ).toBeInTheDocument();
+    expect(within(rail).getByRole("button", { name: /cftr/i })).toBeInTheDocument();
+
+    // 4. Each row must run ITS OWN question. Both are asserted rather than
+    //    only the one that fails today: `find` returns the first match, so
+    //    which row exposes a collision depends on the ordering F-4.13-A-07's
+    //    fix deliberately changed, and pinning only one would go vacuous the
+    //    next time that ordering moves.
+    createRunMock.mockClear();
+    await user.click(within(rail).getByRole("button", { name: /what is brca1\?/i }));
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+    expect(createRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "What is BRCA1?" }),
+      "test-token",
+    );
+
+    createRunMock.mockClear();
+    rail = screen.getByTestId("history-rail");
+    await user.click(within(rail).getByRole("button", { name: /cftr/i }));
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+    expect(createRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Which variant is pathogenic in CFTR?" }),
+      "test-token",
+    );
+  });
+});
+
+/**
+ * F-4.13-FV-01: a landing run must not rewrite another row's meta.
+ *
+ * The meta effect (`App.tsx`, the `view.landed` effect) matches rail rows by
+ * QUESTION TEXT and rewrites every match. That was safe for as long as `ask`
+ * was the only writer to `history`, because `ask` guarantees at most one row
+ * per question text. Build phase 4.13 added a second writer,
+ * `mergeServerHistory`, which de-duplicates on `traceId` and never on text,
+ * so two rows carrying the same question can now coexist for the first time.
+ *
+ * The line did not change. The invariant underneath it did, which is the same
+ * shape as F-4.13-RV-01 one level up, and is why `git blame` pointing two
+ * weeks before this phase is true and misleading.
+ *
+ * What a person sees: they asked something on 1 August, ask it again today,
+ * and the August row's own source count and date are replaced by today's
+ * run's numbers. A row then reports data belonging to a run it never was,
+ * which is the fabrication class F-4.8-J-01 already made a rule about.
+ *
+ * The restored row is deliberately given a DIFFERENT citation count and a
+ * different date from the landing run's, so the two cannot be confused for
+ * each other and the assertion cannot pass by their agreeing.
+ */
+describe("F-4.13-FV-01: a landing run does not rewrite another row's meta", () => {
+  const REPEATED = "What is BRCA1?";
+  let releaseHistory: () => void = () => {};
+
+  /** One SSE frame, in the shape `lib/events.ts` actually validates. */
+  const frame = (seq: number, type: string, payload: unknown): string =>
+    `id: ${seq}\nevent: ${type}\ndata: ${JSON.stringify({
+      type,
+      version: "v1",
+      trace_id: "fv01",
+      seq,
+      ts: "2026-08-27T00:00:00Z",
+      payload,
+    })}\n\n`;
+
+  const STREAM = [
+    frame(0, "guard", { passed: true, category: "ok", reason: null }),
+    frame(1, "think", {
+      narrative: "Resolving the gene named in the question.",
+      query_class: "single_hop",
+      resolved_entities: [],
+      clarifying_question: null,
+    }),
+    frame(2, "plan", { narrative: "Read the curated edges.", tool_calls: [] }),
+    frame(3, "tool_result", {
+      call_id: "c1", tool: "cypher_query", layer: "layer_1_graph",
+      status: "ok", summary: "", result_count: 25, truncated: false,
+    }),
+    frame(4, "token", { text: "BRCA1 is associated with HBOC [1]. ", marker_ids: ["k1"] }),
+    frame(5, "citation", {
+      citation_id: "k1", display_index: 1, source: "NCBI Gene", source_id: "672",
+      source_url: "https://www.ncbi.nlm.nih.gov/672", layer: "layer_1_graph",
+      field: "cypher_query", claim_text: "x", evidence_kind: "curated assertion",
+      assertion_confidence: "high", population_ancestry_context: null,
+      license: "public domain",
+    }),
+    frame(6, "trust_signal", {
+      outcome: "answer", risk_tier: "low", grounded: true, triangulated: false,
+    }),
+    frame(7, "done", {
+      total_cost_usd: 0.0031, total_tool_calls: 1, elapsed_ms: 11400,
+      trust_outcome: "answer",
+    }),
+  ].join("");
+
+  function scriptedResponse(): Promise<Response> {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(STREAM));
+        controller.close();
+      },
+    });
+    return Promise.resolve(
+      new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }),
+    );
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token", refresh_token: "test-refresh", token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockImplementation(() => scriptedResponse());
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    // Held open deliberately. Resolving this at sign-in would put the
+    // restored row in the list BEFORE the ask, and `ask`'s own filter would
+    // then remove it on question text, so the meta effect would never see
+    // two rows at all and this clause would be red for a reason unrelated
+    // to what it tests. The finding's real sequence is ask first, server
+    // copy second: `mergeServerHistory` keys on `traceId`, so it does not
+    // collide with the local row and both survive.
+    releaseHistory = () => {};
+    fetchHistoryMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseHistory = () =>
+            resolve({
+              items: [
+                {
+                  // The SAME question, asked weeks ago, carrying its own
+                  // count and its own date. Nine sources and 1 August cannot
+                  // be confused with this run's single source and today's
+                  // date, which is what stops the assertion passing by the
+                  // two happening to agree.
+                  trace_id: "server-trace-1",
+                  question: REPEATED,
+                  asked_at: "2026-08-01T09:00:00Z",
+                  trust_signal: "answer",
+                  citation_count: 9,
+                },
+              ],
+              count: 1,
+            });
+        }),
+    );
+  });
+
+  it("leaves a restored row's own count and date alone when the same question is re-asked", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    // 1. Ask first, while the server's copy is still in flight.
+    await ask(user, REPEATED);
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+
+    // 2. The server's copy of the SAME question now arrives. It carries a
+    //    `traceId` the local row does not, so `mergeServerHistory` keeps
+    //    both, and two rows share a question text for the first time.
+    releaseHistory();
+
+    // The control, and it is what makes the assertion below mean anything.
+    // If the restored row never arrived, or arrived without its own meta,
+    // then "its meta did not change" is satisfied by a row that never had
+    // one, and this clause would pass against any implementation at all.
+    const rail = await screen.findByTestId("history-rail");
+    await within(rail).findByRole("button", { name: /9 sources/i });
+
+    // 3. Now let this run land. `source-1` is the landing signal the other
+    //    vitest suites use; `answer-cap` is reached only by the browser
+    //    suite, and waiting for it here made an earlier version of this
+    //    clause fail for a reason unrelated to what it tests.
+    await screen.findByTestId("source-1", undefined, { timeout: 5000 });
+
+    // The restored row must still report ITS OWN run. This run produced one
+    // source today; if the nine-source row is gone, the landing run has
+    // written its numbers onto a row it never belonged to.
+    const railAfter = screen.getByTestId("history-rail");
+    const rows = within(railAfter).getAllByRole("button", {
+      name: new RegExp(REPEATED.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"),
+    });
+    const stillNine = rows.some((row) => /9 sources/i.test(row.textContent ?? ""));
+    expect(stillNine).toBe(true);
   });
 });

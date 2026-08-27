@@ -85,6 +85,10 @@ function authHeaders(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}` };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 async function throwIfNotOk(response: Response, context: string): Promise<void> {
   if (!response.ok) {
     let detail = "";
@@ -332,6 +336,130 @@ export async function fetchPersona(
   );
   await throwIfNotOk(response, "fetchPersona");
   return (await response.json()) as PersonaResponse;
+}
+
+// ---------------------------------------------------------------------------
+// History (T-4.13-03). `GET /v1/history`'s response shape, per the contract
+// pinned in `tracker/phase_4.13.md` (T-4.13-02, built by a sibling ticket in
+// parallel with this one). Only `trace_id` and `question` are required here:
+// every other field is read defensively, per this ticket's own instruction,
+// rather than assumed present.
+// ---------------------------------------------------------------------------
+
+/**
+ * One restored row of `GET /v1/history`.
+ *
+ * `trace_id` is `Query.trace_id`, byte-identical to the `run_id`
+ * `createRun` returns (`adapters/web_sse/app.py`'s own "run_id/trace_id
+ * wiring" comment). `App.tsx` uses it, not `question` text, as the key that
+ * tells "this session's own run, now echoed back by the server" apart from
+ * "a different past search that happens to share the same question text";
+ * see `mergeServerHistory` there for why text alone is the wrong key.
+ *
+ * `asked_at`, `trust_signal` and `citation_count` are read only for
+ * possible future display; nothing in this phase's UI renders them yet
+ * (Coverage, `tracker/phase_4.13.md`: only the question list is durable,
+ * not the answer), so they are optional here rather than required.
+ */
+export interface HistoryItem {
+  trace_id: string;
+  /** The question exactly as asked. This is the rail's label. */
+  question: string;
+  asked_at?: string;
+  trust_signal?: string;
+  citation_count?: number;
+}
+
+export interface HistoryResponse {
+  items: HistoryItem[];
+  count: number;
+}
+
+/** The minimum shape a history item must carry to be usable at all. */
+function isHistoryItem(value: unknown): value is HistoryItem {
+  return isRecord(value) && typeof value.trace_id === "string" && typeof value.question === "string";
+}
+
+/**
+ * Keeps the three optional fields only when they carry the type this
+ * interface DECLARES, and drops each one that does not.
+ *
+ * Round 3 of build phase 4.13. `isHistoryItem` above checks `trace_id` and
+ * `question` and nothing else, so before this the declared types on the
+ * other three were a claim no code enforced, and every consumer that read
+ * one was reading `unknown` through a `string` or `number` annotation.
+ * Measured, not reasoned: an `asked_at` of `1` or `true` reaches
+ * `new Date(...)` as a millisecond offset and produces a VALID 1970 date,
+ * which `App.tsx`'s `formatHistoryMeta` then renders under a real question
+ * as though the server had said so. `Number.isNaN(date.getTime())` is a
+ * validity check and cannot see that, because the date IS valid; only a
+ * type check can. A `citation_count` of `"abc"` is worse in the same
+ * direction, rendering "abc sources", and `{}` renders "[object Object]
+ * sources": a fabricated source count presented as a real one.
+ *
+ * Dropped rather than coerced, and dropped per FIELD rather than per row.
+ * Coercing would invent the value this is here to stop inventing, and
+ * dropping the whole row would lose a question the caller really did ask
+ * over a field nothing yet renders. An absent field is already the
+ * documented "not available" state (every one is optional), and every
+ * consumer omits what is absent, so this degrades to silence rather than
+ * to a wrong number. Same rule as the server's own `omitted_count`
+ * discipline: a value that cannot be read honestly is not reported.
+ */
+function withValidatedOptionalFields(item: HistoryItem): HistoryItem {
+  const source = item as unknown as Record<string, unknown>;
+  const validated: HistoryItem = { trace_id: item.trace_id, question: item.question };
+  if (typeof source.asked_at === "string") validated.asked_at = source.asked_at;
+  if (typeof source.trust_signal === "string") validated.trust_signal = source.trust_signal;
+  // `Number.isFinite` rather than `typeof === "number"`: NaN and Infinity
+  // are both numbers and both render as text no reader can act on.
+  if (typeof source.citation_count === "number" && Number.isFinite(source.citation_count)) {
+    validated.citation_count = source.citation_count;
+  }
+  return validated;
+}
+
+/**
+ * `GET /v1/history`: the calling principal's own past questions, newest
+ * first, scoped to whichever bearer token authenticates the call (a guest
+ * or an account, per the endpoint's contract; `App.tsx` calls this only
+ * for a signed-in account today, matching where the rail actually renders,
+ * see its own seeding effect for why).
+ *
+ * The body is re-validated on receipt rather than cast straight to
+ * `HistoryResponse`, the same discipline `lib/events.ts` applies to the
+ * SSE stream: a malformed or unexpected shape is rejected here rather than
+ * handed to a component that assumes well-formed data. An individual item
+ * missing `trace_id` or `question` is dropped rather than failing the
+ * whole fetch, so one malformed row does not blank a caller's entire rail.
+ *
+ * Throws `ApiError` on a non-2xx status (401 with no credential, most
+ * relevantly) and a plain `Error` on a 2xx response whose body does not
+ * even carry a well-formed `items` array. Both are ordinary rejections a
+ * caller handles the same way: `App.tsx`'s seeding effect treats any
+ * rejection as "leave whatever is already on screen", per
+ * production-standards' graceful-degradation gate.
+ */
+export async function fetchHistory(
+  token: string,
+  options: ApiCallOptions & { limit?: number } = {},
+): Promise<HistoryResponse> {
+  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const query = options.limit != null ? `?limit=${encodeURIComponent(String(options.limit))}` : "";
+  const response = await fetch(`${baseUrl}/v1/history${query}`, {
+    method: "GET",
+    headers: authHeaders(token),
+    signal: options.signal,
+  });
+  await throwIfNotOk(response, "fetchHistory");
+  const body: unknown = await response.json();
+  if (!isRecord(body) || !Array.isArray(body.items) || typeof body.count !== "number") {
+    throw new Error("fetchHistory: response body was not the documented {items, count} shape");
+  }
+  return {
+    items: body.items.filter(isHistoryItem).map(withValidatedOptionalFields),
+    count: body.count,
+  };
 }
 
 export async function mintGuest(

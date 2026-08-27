@@ -51,13 +51,14 @@ import { theme } from "./theme";
 import {
   ApiError,
   createRun,
+  fetchHistory,
   fetchMe,
   fetchPersona,
   getAllowance,
   mintGuest,
   stopRun,
 } from "./lib/api";
-import type { AllowanceResponse } from "./lib/api";
+import type { AllowanceResponse, HistoryItem } from "./lib/api";
 import {
   capitalizeFirst,
   clearPersistedGuestToken,
@@ -102,6 +103,147 @@ const FOLLOW_UP_HINTS = [
   "Which trials are recruiting?",
   "What does the literature add?",
 ];
+
+/**
+ * One rail item.
+ *
+ * `id` INVARIANT, stated here because F-4.13-RV-01 shipped for want of it
+ * being written down anywhere: an id must be unique across the whole list
+ * and must stay the same for that row's whole life. It is therefore NEVER
+ * derived from the row's position or from the list's length. The list can
+ * SHRINK, since `ask` filters the re-asked question out before unshifting a
+ * fresh row, so a positional id is reused the moment a re-ask keeps the
+ * length flat, and three consumers read the id as though it were unique:
+ * `FollowUp.tsx` renders it as React's `key` and compares it to `activeId`,
+ * and `onOpen` below resolves a click with `history.find`, first match wins.
+ * Two rows sharing an id means clicking one question runs a different one.
+ *
+ * Two id sources, and they cannot collide with each other: a restored row
+ * takes the server's `trace_id` (`mergeServerHistory`), and a locally
+ * created row takes `nextLocalHistoryId()`, which is `local-` plus a
+ * per-tab counter that only ever increases.
+ *
+ * `traceId` is T-4.13-03: it is only present once the item's
+ * run has actually been admitted (`response.run_id` from `createRun`, set
+ * in `ask` below), and it is the SAME value the server's `GET /v1/history`
+ * calls `trace_id` for that run (`app.py`'s "run_id/trace_id wiring"
+ * comment). It exists to give `mergeServerHistory` a stable key; nothing
+ * renders it. It is deliberately NOT reused as `id`: it does not exist yet
+ * when the row is created, and a row must be clickable before its run has
+ * been admitted.
+ */
+type HistoryEntry = { id: string; question: string; meta?: string; traceId?: string };
+
+/**
+ * Mints the id of a locally created rail row (F-4.13-RV-01's fix).
+ *
+ * A plain module-scoped counter, NOT `crypto.randomUUID()`. Both were
+ * checked rather than assumed. `randomUUID` is present in this project's
+ * vitest environment (jsdom 29 on Node 24 reports `crypto.randomUUID:
+ * "function"` for both `globalThis` and `window`), but in a real browser it
+ * is only defined in a secure context, so a build served over plain HTTP on
+ * a LAN address, and Safari before 15.4, both hand back `undefined` and
+ * throw at the call site. A counter needs no environment support at all,
+ * and it is deterministic, which a test can read.
+ *
+ * `local-` prefixed so a locally minted id can never be mistaken for, or
+ * collide with, a server `trace_id`, which is a UUID.
+ *
+ * Module scope rather than a `useRef`, so the counter cannot be reset by a
+ * remount while stale rows are still on screen, and so this stays a plain
+ * function rather than something a `setHistory` updater has to close over.
+ * Never called from inside a state updater: an updater must be pure, and
+ * React invokes it twice under StrictMode.
+ */
+let localHistoryIdCounter = 0;
+function nextLocalHistoryId(): string {
+  localHistoryIdCounter += 1;
+  return `local-${localHistoryIdCounter}`;
+}
+
+/**
+ * F-4.13-A-10's fix. The prototype's `.rm` for a restored row is `(item.meta
+ * || '').split(' · ').slice(1).join(' · ')` (`app.html` around
+ * line 1263): the seed data's own `meta` minus its leading duration, i.e.
+ * "N tools · N layers · N sources". `GET /v1/history`'s
+ * `HistoryItem` (`adapters/web_sse/app.py`) carries none of that: only
+ * `trace_id`, `question`, `asked_at`, `trust_signal` and `citation_count`.
+ * The prototype's exact content is therefore not derivable, so this uses
+ * the closest honest substitute the endpoint DOES return: `citation_count`
+ * (the same "N sources" idea, one count short of three) and a short date
+ * built from `asked_at`, which is what actually resolves the finding, since
+ * a bare question with no date is what made a re-asked duplicate invisible
+ * (F-4.13-A-10's own "reason" cell).
+ *
+ * Never throws and never renders "Invalid Date": an unparseable or absent
+ * `asked_at` is omitted rather than surfaced as a broken-looking date.
+ *
+ * The guard below is `Number.isNaN(getTime())`, which decides VALIDITY and
+ * cannot decide TYPE: `new Date(1)` and `new Date(true)` are both perfectly
+ * valid 1970 dates, so a non-string `asked_at` would render a real-looking
+ * date this function has no basis for. That is a type question and it is
+ * answered one layer up, at the fetch boundary, by
+ * `api.ts`'s `withValidatedOptionalFields`, which drops any of these three
+ * fields not carrying its declared type. Both checks are load-bearing and
+ * neither substitutes for the other: this one catches a well-typed string
+ * that is not a date ("not-a-date"), that one catches a value that is not a
+ * string at all.
+ */
+function formatHistoryMeta(item: HistoryItem): string | undefined {
+  const parts: string[] = [];
+  if (item.citation_count !== undefined && item.citation_count !== null) {
+    const count = item.citation_count;
+    parts.push(`${count} source${count === 1 ? "" : "s"}`);
+  }
+  if (item.asked_at) {
+    const askedAt = new Date(item.asked_at);
+    if (!Number.isNaN(askedAt.getTime())) {
+      parts.push(askedAt.toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+    }
+  }
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
+/**
+ * T-4.13-03. Folds the server's own restored questions into the rail
+ * without showing a run this tab already ran twice.
+ *
+ * KEY: `traceId`, matched against the server's `trace_id`, never `question`
+ * text. The same question asked on two separate occasions is two separate,
+ * real `interactions` rows (a researcher re-checking the same gene is a
+ * realistic case, not an edge case), and collapsing on text would silently
+ * drop one of them. `traceId` is set on a local item the moment `createRun`
+ * resolves (see `ask`), well before the seeding effect's fetch could ever
+ * observe that row, so the match is exact rather than a best guess.
+ *
+ * A local item with no `traceId` yet (a run still in flight, or one whose
+ * best-effort capture write never landed, Section 16) is always kept
+ * unconditionally: the server response cannot contain a row for it, so
+ * there is no duplicate to resolve, only a real item that must not be
+ * dropped.
+ *
+ * Server items already carry no local counterpart are appended AFTER the
+ * current list, so this tab's own live activity (and its richer `meta`,
+ * computed from the actual event stream rather than absent) stays above
+ * older restored history, and a caller reloading with no local items yet
+ * sees exactly the server's own newest-first order.
+ */
+function mergeServerHistory(current: HistoryEntry[], serverItems: HistoryItem[]): HistoryEntry[] {
+  const localTraceIds = new Set(
+    current
+      .map((item) => item.traceId)
+      .filter((traceId): traceId is string => traceId !== undefined),
+  );
+  const restored: HistoryEntry[] = serverItems
+    .filter((item) => !localTraceIds.has(item.trace_id))
+    .map((item) => ({
+      id: item.trace_id,
+      question: item.question,
+      traceId: item.trace_id,
+      meta: formatHistoryMeta(item),
+    }));
+  return [...current, ...restored];
+}
 
 export function App() {
   // T-4.16-05. Was `useState<ScreenName>("search")`, which is why every
@@ -163,7 +305,7 @@ export function App() {
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(hasAcceptedDisclaimer);
-  const [history, setHistory] = useState<{ id: string; question: string; meta?: string }[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [flagged, setFlagged] = useState<number[]>([]);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   /**
@@ -187,6 +329,21 @@ export function App() {
    * callback without re-rendering, and it is never rendered.
    */
   const askSeq = useRef(0);
+  /**
+   * The rail row the run now in flight belongs to (F-4.13-FV-01).
+   *
+   * The meta effect below used to find its row by QUESTION TEXT, which was
+   * safe for exactly as long as `ask` was the only writer to `history`,
+   * because `ask` guarantees at most one row per question text. Build phase
+   * 4.13 added a second writer, `mergeServerHistory`, which de-duplicates on
+   * `traceId` and never on text, so two rows carrying the same question can
+   * coexist for the first time. Then one landing run rewrote BOTH, and a row
+   * restored from weeks ago reported this run's source count and date.
+   *
+   * A ref rather than state on purpose: nothing renders from this, and making
+   * it state would re-run the effect on every ask for no benefit.
+   */
+  const activeEntryId = useRef<string | null>(null);
   /** True while a stopped run should stay stopped (F-4.8-A-10). */
   const [stopped, setStopped] = useState(false);
   /**
@@ -288,6 +445,44 @@ export function App() {
     return () => controller.abort();
   }, [token]);
 
+  /**
+   * T-4.13-03: seed the rail from the server once a signed-in principal
+   * exists, and again every time `token` changes, which is what "again
+   * after sign-in" means in practice here. `token` starts `null` on every
+   * mount (it is not persisted, unlike the guest token; see its own
+   * comment above), so this effect does not yet reach a person who reloads
+   * while still signed in from an earlier visit, only one who reloads and
+   * signs back in, or one already signed in this tab. Fixing that is a
+   * token-persistence gap outside this ticket's scope, not a defect in the
+   * merge below.
+   *
+   * Scoped to `signedIn`, not to `authToken` (which would also cover a
+   * guest token): `railAvailable` below only renders the rail for a
+   * signed-in account, matching `tracker/phase_4.13.md`'s own coverage
+   * note that `GET /v1/history` is scoped for a guest principal only so
+   * the isolation property holds whether or not any UI calls it, not
+   * because this UI calls it for one.
+   *
+   * Best-effort, per production-standards' graceful-degradation gate: a
+   * failed, malformed, or 401 fetch (a token that expired between mount
+   * and this effect, most realistically) leaves whatever is already on
+   * screen, including this session's own live items, rather than blanking
+   * the rail. The `AbortController` cleanup also means a slow fetch from
+   * an account that has since signed out, or switched to a different
+   * account, can never resolve into `setHistory` after the fact, which is
+   * what keeps a second identity from ever inheriting the first's list.
+   */
+  useEffect(() => {
+    if (token === null) return undefined;
+    const controller = new AbortController();
+    fetchHistory(token, { signal: controller.signal })
+      .then((response) => {
+        setHistory((current) => mergeServerHistory(current, response.items));
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [token]);
+
   const signedIn = token !== null;
   /**
    * The bearer token every `/v1/query*` call actually authenticates with
@@ -366,9 +561,18 @@ export function App() {
       ? searchView.question
       : null;
     if (question === null) return;
+    // F-4.13-FV-01. Matched on the row's own IDENTITY, not on its question
+    // text. Text stopped identifying a row the moment `mergeServerHistory`
+    // became a second writer to this list, and a restored row asking the
+    // same question is a DIFFERENT run with its own count and its own date.
+    // The question is still compared, as a guard rather than as the key: if
+    // the ref has moved on to another ask, its row will not match this
+    // landing run's question and nothing is written.
+    const entryId = activeEntryId.current;
+    if (entryId === null) return;
     setHistory((current) =>
       current.map((item) =>
-        item.question === question && item.meta !== view.meta
+        item.id === entryId && item.question === question && item.meta !== view.meta
           ? { ...item, meta: view.meta }
           : item,
       ),
@@ -424,11 +628,52 @@ export function App() {
       // just with a guest token instead of an access token.
       setFlagged([]);
       setDispatchError(null);
-      setHistory((current) =>
-        current.some((item) => item.question === question)
-          ? current
-          : [{ id: `${current.length}`, question }, ...current],
-      );
+      // F-4.13-A-07's fix. The old form only ADDED an entry when the
+      // question text was not already present, so re-asking a question
+      // already in the rail, live or restored, did nothing here, and the
+      // meta effect a few lines below then relabeled that unmoved item
+      // with THIS run's numbers once it landed: a restored row's meta was
+      // overwritten by a run it did not represent. The prototype's own
+      // `start()` never relabels in place; it filters the old entry out and
+      // unshifts a fresh one to the top (`app.html`, around line 1262,
+      // `st.history = st.history.filter(...); st.history.unshift(...)`),
+      // which is what a re-ask actually is: a new run for an old question,
+      // not an edit of the old run's record. Transcribed the same way here,
+      // so the freshly unshifted entry starts with no `meta` and no
+      // `traceId` of its own, exactly like a brand-new question.
+      //
+      // F-4.13-FV-02. This comment used to claim the rail holds "at most one
+      // item per question text". THAT IS FALSE and stating it was actively
+      // harmful, because a comment asserting an invariant is where the next
+      // reader stops checking. The filter here dedups by text only among the
+      // rows present AT THE MOMENT OF THE ASK; `mergeServerHistory` is a
+      // second writer that keys on `traceId` and never on text, so a server
+      // copy of the same question arriving afterwards is kept, and two rows
+      // then share a text. What actually holds is narrower and is the thing
+      // to rely on: every row's `id` is unique, a local one from
+      // `nextLocalHistoryId()` and a restored one from its server `trace_id`.
+      // F-4.13-FV-01 is what it cost to learn that, and the meta effect
+      // above now keys on identity for exactly this reason.
+      //
+      // F-4.13-RV-01's fix. The id was `String(current.length)`, which the
+      // filter above silently invalidated: the filter can SHRINK the list,
+      // so a re-ask that removes one row and adds one leaves the length
+      // flat and the next question reuses the id the re-asked row holds.
+      // The fix is the identity, not the reducer: filter-then-unshift is
+      // what the prototype does and it is correct, and the prototype can do
+      // it safely because its row identity is not a positional counter.
+      // The full invariant is stated on `HistoryEntry` above. Minted HERE,
+      // outside the updater, because a state updater must be pure and React
+      // invokes it twice under StrictMode.
+      const entryId = nextLocalHistoryId();
+      // F-4.13-FV-01: the meta effect writes this run's counts onto THIS
+      // row and no other. Set before the state update rather than after, so
+      // a run that lands unusually fast cannot find a stale id here.
+      activeEntryId.current = entryId;
+      setHistory((current) => [
+        { id: entryId, question },
+        ...current.filter((item) => item.question !== question),
+      ]);
       const seq = ++askSeq.current;
       /*
        * T-4.16-02. Archive the turn now on screen BEFORE anything resets,
@@ -513,6 +758,21 @@ export function App() {
         // only the first, so a sign-in that changes the identity behind the
         // session is reflected without a reload.
         setPersona(response.persona_name);
+        // T-4.13-03: give this rail item the trace id its `interactions`
+        // row will carry, so `mergeServerHistory` can recognise the SAME
+        // run when the server later echoes it back, rather than matching
+        // on question text (see that function's own docstring for why
+        // text is the wrong key). Matched by `question`, the same way the
+        // meta-on-landing effect above matches this run's item: the
+        // in-session dedup a few lines up already guarantees at most one
+        // item exists per question text, so this cannot mis-tag a sibling.
+        setHistory((current) =>
+          current.map((item) =>
+            item.question === question && item.traceId === undefined
+              ? { ...item, traceId: response.run_id }
+              : item,
+          ),
+        );
 
         if (!signedIn) {
           // T-4.10-08: the dots must read the SERVER's own count, never a
