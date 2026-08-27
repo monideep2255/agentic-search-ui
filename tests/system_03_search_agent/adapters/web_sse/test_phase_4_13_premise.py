@@ -48,8 +48,12 @@ Durability (the admit arm):
   rather than a seeded row: build phase 4.4's premise gate passed 6 of 6
   while the DEFAULT invocation returned the wrong thing, because five of
   its six cases took a path no real caller takes.
-- Newest first, and the order is total: rows written in a known order come
-  back in that order even when their `created_at` values collide.
+- Newest first. The order being TOTAL is a real requirement and is NOT
+  asserted here: no black-box call through this endpoint can force two
+  rows onto one timestamp, and an arm that cannot reach the tie cannot
+  fail on it (F-4.13-01, measured 10 of 10 green under mutation before it
+  was corrected). That property lives in
+  `tests/system_03_search_agent/feedback/test_history.py`.
 - The question text returned is the question that was asked, not a
   truncation or a normalisation of it.
 - A guest's rows follow them into an account created while holding the
@@ -98,6 +102,19 @@ is arguable rather than invisible:
   says so.
 - Multi-process behaviour, and the browser. What renders the list is
   `frontend/`, graded by its own vitest and Playwright specs, not here.
+- WHETHER THE VISITOR STILL HAS THEIR IDENTITY AFTER THE RELOAD, and this
+  is the sharpest omission in this file. The durability clause holds one
+  bearer token in a Python variable and hands it to a second client, which
+  is precisely what no browser does: `App.tsx` keeps the access token in
+  React state alone, so a real reload signs an account out and the rail is
+  gated on being signed in. This gate proves the SERVER is durable and
+  says nothing about the BROWSER being able to identify itself, which is
+  the half a person actually experiences. Recorded as F-4.13-02 and owned
+  by the product owner, because where a bearer token may be persisted is a
+  security decision rather than a build detail. Stated here rather than
+  left implicit: build phase 4.16's transferable lesson is that a test can
+  be correct, honest, and measuring the wrong property, and that is exactly
+  what this clause would be if it did not say so.
 - Real Layer 1 answers. The agent loop runs against the same stubbed
   harness every other test in this directory uses (T-3.0-07). What is
   under test is whose questions come back, not what the runs answered.
@@ -433,13 +450,25 @@ class TestDurabilityArm:
         )
 
     @pytest.mark.asyncio
-    async def test_the_list_is_newest_first_and_the_order_is_total(self) -> None:
+    async def test_the_list_reads_newest_first(self) -> None:
         """Order is part of the contract, not an accident of the planner.
 
-        Three rows written in a known order. `created_at` carries a server
-        default, so rows written inside the same clock tick can collide; an
-        ORDER BY on `created_at` alone is then non-deterministic, and this
-        clause is what catches it.
+        This clause proves NEWEST FIRST and nothing more. It used to be
+        named for the total order too, and F-4.13-01 is the record of that
+        being false: mutation-tested by dropping the `id` tiebreaker from
+        the ORDER BY, it stayed green 10 times out of 10, because rows
+        written through separate transactions never actually collide on
+        `created_at` and the tie the tiebreaker exists for is never
+        reached here.
+
+        Measured, not reasoned about. Reversing the sort direction IS
+        caught, which is what this clause earns its place on.
+
+        The total order is a real requirement and it is asserted where it
+        can actually fail: `tests/system_03_search_agent/feedback/
+        test_history.py::test_order_is_total_when_created_at_collides`
+        forces six rows onto one explicit timestamp, which no black-box
+        call through this endpoint can do.
         """
         async with _client(_unique_source()) as client:
             guest_id, _, headers = await _mint_guest(client)

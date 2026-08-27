@@ -302,45 +302,68 @@ async def test_limit_is_a_real_sql_limit_and_returns_the_newest() -> None:
     )
 
 
+#: How many rows this clause ties on one timestamp. Six is not decoration,
+#: and F-4.13-01 is why it is not two.
+#:
+#: The clause's whole job is to fail when the `id` tiebreaker is dropped
+#: from the ORDER BY. With the tiebreaker gone, PostgreSQL returns tied
+#: rows in an order it never promised, and that order can coincide with
+#: the id-descending order this clause predicts. With two rows it
+#: coincides half the time, so the clause caught a measured 3 of 10
+#: mutation runs: a coin flip, which is worse than no clause at all,
+#: because a real finding then reads as noise (the same reasoning that
+#: made the doc-readability gate's non-determinism its worst defect).
+#:
+#: The odds of an accidental match are 1/N!, so six rows moves it from
+#: 1 in 2 to 1 in 720.
+_TIED_ROW_COUNT = 6
+
+
 def test_order_is_total_when_created_at_collides() -> None:
     from system_03_search_agent.feedback.history import list_history
 
     owner = _unique_owner()
     same_instant = datetime.now(UTC)
-    marker_first = f"tie-first-{uuid.uuid4().hex[:8]}"
-    marker_second = f"tie-second-{uuid.uuid4().hex[:8]}"
+    markers = [f"tie-{n}-{uuid.uuid4().hex[:8]}" for n in range(_TIED_ROW_COUNT)]
 
-    trace_first = _seed_with_created_at(owner, f"Question {marker_first}", same_instant)
-    trace_second = _seed_with_created_at(owner, f"Question {marker_second}", same_instant)
-    assert _row_owner(trace_first) == owner
-    assert _row_owner(trace_second) == owner
+    trace_ids = {
+        marker: _seed_with_created_at(owner, f"Question {marker}", same_instant)
+        for marker in markers
+    }
+    for marker, trace_id in trace_ids.items():
+        assert _row_owner(trace_id) == owner, f"the seed for {marker} never landed"
 
     # `id` is a `gen_random_uuid()` primary key with no ordering relation to
     # insertion sequence, so the correct tiebreak is whichever `id` sorts
-    # higher, not "the second one inserted". Read both `id`s back and
-    # predict the order from them directly, rather than assuming a
-    # particular insertion-order outcome.
+    # higher, not "the one inserted last". Read every `id` back and predict
+    # the order from them directly, rather than assuming a particular
+    # insertion-order outcome.
     engine = sa.create_engine(USER_DB_URL)
     try:
         with engine.connect() as conn:
-            id_first = conn.execute(
-                sa.text("SELECT id FROM interactions WHERE trace_id = :t"),
-                {"t": trace_first},
-            ).scalar_one()
-            id_second = conn.execute(
-                sa.text("SELECT id FROM interactions WHERE trace_id = :t"),
-                {"t": trace_second},
-            ).scalar_one()
+            ids = {
+                marker: conn.execute(
+                    sa.text("SELECT id FROM interactions WHERE trace_id = :t"),
+                    {"t": trace_id},
+                ).scalar_one()
+                for marker, trace_id in trace_ids.items()
+            }
     finally:
         engine.dispose()
-    expected_first = marker_first if id_first > id_second else marker_second
-    expected_second = marker_second if expected_first == marker_first else marker_first
+    expected = sorted(markers, key=lambda marker: ids[marker], reverse=True)
 
-    entries = list_history(owner_id=owner)
-    relevant = [e.question for e in entries if marker_first in e.question or marker_second in e.question]
-    assert len(relevant) == 2, f"expected exactly the two tied rows, got: {relevant}"
-    assert expected_first in relevant[0] and expected_second in relevant[1], (
-        f"a `created_at` collision produced a non-deterministic order. Got: {relevant}"
+    entries = list_history(owner_id=owner, limit=_TIED_ROW_COUNT)
+    returned = [
+        next(marker for marker in markers if marker in entry.question)
+        for entry in entries
+        if any(marker in entry.question for marker in markers)
+    ]
+    assert len(returned) == _TIED_ROW_COUNT, (
+        f"expected exactly the {_TIED_ROW_COUNT} tied rows, got: {returned}"
+    )
+    assert returned == expected, (
+        f"a `created_at` collision produced a non-deterministic order. "
+        f"Got: {returned}, expected: {expected}"
     )
 
 
