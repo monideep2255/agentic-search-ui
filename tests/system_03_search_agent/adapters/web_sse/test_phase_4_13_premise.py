@@ -483,8 +483,10 @@ class TestDurabilityArm:
         assert status == 200, f"got {status} {body}"
         returned = [q for q in _questions(body) if q in questions]
         assert returned == list(reversed(questions)), (
-            "history must read newest first, and the order must be total so "
-            f"rows sharing a timestamp do not shuffle. Got: {returned}"
+            "history must read newest first (the total order, for rows "
+            "sharing a timestamp, is proven separately in "
+            "tests/system_03_search_agent/feedback/test_history.py::"
+            f"test_order_is_total_when_created_at_collides). Got: {returned}"
         )
 
     @pytest.mark.asyncio
