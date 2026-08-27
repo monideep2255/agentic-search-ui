@@ -381,6 +381,45 @@ function isHistoryItem(value: unknown): value is HistoryItem {
 }
 
 /**
+ * Keeps the three optional fields only when they carry the type this
+ * interface DECLARES, and drops each one that does not.
+ *
+ * Round 3 of build phase 4.13. `isHistoryItem` above checks `trace_id` and
+ * `question` and nothing else, so before this the declared types on the
+ * other three were a claim no code enforced, and every consumer that read
+ * one was reading `unknown` through a `string` or `number` annotation.
+ * Measured, not reasoned: an `asked_at` of `1` or `true` reaches
+ * `new Date(...)` as a millisecond offset and produces a VALID 1970 date,
+ * which `App.tsx`'s `formatHistoryMeta` then renders under a real question
+ * as though the server had said so. `Number.isNaN(date.getTime())` is a
+ * validity check and cannot see that, because the date IS valid; only a
+ * type check can. A `citation_count` of `"abc"` is worse in the same
+ * direction, rendering "abc sources", and `{}` renders "[object Object]
+ * sources": a fabricated source count presented as a real one.
+ *
+ * Dropped rather than coerced, and dropped per FIELD rather than per row.
+ * Coercing would invent the value this is here to stop inventing, and
+ * dropping the whole row would lose a question the caller really did ask
+ * over a field nothing yet renders. An absent field is already the
+ * documented "not available" state (every one is optional), and every
+ * consumer omits what is absent, so this degrades to silence rather than
+ * to a wrong number. Same rule as the server's own `omitted_count`
+ * discipline: a value that cannot be read honestly is not reported.
+ */
+function withValidatedOptionalFields(item: HistoryItem): HistoryItem {
+  const source = item as unknown as Record<string, unknown>;
+  const validated: HistoryItem = { trace_id: item.trace_id, question: item.question };
+  if (typeof source.asked_at === "string") validated.asked_at = source.asked_at;
+  if (typeof source.trust_signal === "string") validated.trust_signal = source.trust_signal;
+  // `Number.isFinite` rather than `typeof === "number"`: NaN and Infinity
+  // are both numbers and both render as text no reader can act on.
+  if (typeof source.citation_count === "number" && Number.isFinite(source.citation_count)) {
+    validated.citation_count = source.citation_count;
+  }
+  return validated;
+}
+
+/**
  * `GET /v1/history`: the calling principal's own past questions, newest
  * first, scoped to whichever bearer token authenticates the call (a guest
  * or an account, per the endpoint's contract; `App.tsx` calls this only
@@ -417,7 +456,10 @@ export async function fetchHistory(
   if (!isRecord(body) || !Array.isArray(body.items) || typeof body.count !== "number") {
     throw new Error("fetchHistory: response body was not the documented {items, count} shape");
   }
-  return { items: body.items.filter(isHistoryItem), count: body.count };
+  return {
+    items: body.items.filter(isHistoryItem).map(withValidatedOptionalFields),
+    count: body.count,
+  };
 }
 
 export async function mintGuest(

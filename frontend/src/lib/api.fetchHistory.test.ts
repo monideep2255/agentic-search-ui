@@ -130,4 +130,85 @@ describe("fetchHistory", () => {
 
     await expect(fetchHistory("token-1")).rejects.toThrow(/not the documented/);
   });
+
+  it("drops an optional field whose type is not the one HistoryItem declares", async () => {
+    // Round 3 of build phase 4.13. Mutation: deleting the
+    // `withValidatedOptionalFields` map, or relaxing any one of its three
+    // `typeof` checks, turns this red.
+    //
+    // Every value below is one a caller can render into a sentence without
+    // ever hitting an exception, which is why the previous validation, a
+    // `trace_id`/`question` check plus a downstream `Number.isNaN` date
+    // guard, could not see any of them. `asked_at: 1` and `asked_at: true`
+    // are the sharp ones: `new Date(1)` and `new Date(true)` are VALID
+    // 1970 dates, so a validity check passes them and prints a real-looking
+    // date the server never sent.
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          items: [
+            { trace_id: "t-num", question: "asked_at as a number", asked_at: 1 },
+            { trace_id: "t-bool", question: "asked_at as a boolean", asked_at: true },
+            { trace_id: "t-arr", question: "asked_at as an array", asked_at: [2020] },
+            { trace_id: "t-cc", question: "citation_count as a string", citation_count: "abc" },
+            { trace_id: "t-cco", question: "citation_count as an object", citation_count: {} },
+            { trace_id: "t-ts", question: "trust_signal as a number", trust_signal: 7 },
+          ],
+          count: 6,
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchHistory("token-1");
+
+    // The QUESTIONS all survive: a field of the wrong type costs the reader
+    // that field, never the row, and never the whole rail.
+    expect(result.items.map((item) => item.trace_id)).toEqual([
+      "t-num", "t-bool", "t-arr", "t-cc", "t-cco", "t-ts",
+    ]);
+    for (const item of result.items) {
+      expect(item.asked_at).toBeUndefined();
+      expect(item.citation_count).toBeUndefined();
+      expect(item.trust_signal).toBeUndefined();
+    }
+  });
+
+  it("keeps an optional field that does carry its declared type", async () => {
+    // The populate-check for the clause above. Without it, a mutation that
+    // dropped ALL THREE optional fields unconditionally would leave that
+    // clause green while deleting the feature it validates, which is the
+    // vacuous-arm shape this repository has shipped repeatedly.
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              trace_id: "t-good",
+              question: "A well-formed row",
+              asked_at: "2026-08-27T10:00:00Z",
+              trust_signal: "verified",
+              citation_count: 3,
+            },
+          ],
+          count: 1,
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchHistory("token-1");
+
+    expect(result.items).toEqual([
+      {
+        trace_id: "t-good",
+        question: "A well-formed row",
+        asked_at: "2026-08-27T10:00:00Z",
+        trust_signal: "verified",
+        citation_count: 3,
+      },
+    ]);
+  });
 });
