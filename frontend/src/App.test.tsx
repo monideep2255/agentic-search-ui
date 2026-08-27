@@ -638,3 +638,85 @@ describe("F-4.13-A-07: re-asking a restored question", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("F-4.13-RV-01: a rail row's identity survives the list shrinking", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token",
+      refresh_token: "test-refresh",
+      token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    // Deliberately EMPTY, and that is the point of this clause. Both
+    // F-4.13-A-07 clauses above seed the rail from `fetchHistory`, so every
+    // row they touch carries a `trace_id` as its id, and a positional-id
+    // collision is unreachable from them. It is reachable only among rows
+    // this tab created itself, so this clause creates every row it uses.
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("re-asks the clicked row's own question after a re-ask has shrunk the list", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    // 1. Ask A. The rail holds one locally-created row.
+    await ask(user, "What is BRCA1?");
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+
+    // 2. Re-ask A from the rail, the exact interaction F-4.13-A-07's fix
+    //    exists to enable. Filter-then-unshift REMOVES the old row and adds
+    //    one, so the list length is 1 before and 1 after: the moment a
+    //    length-derived id stops being unique.
+    let rail = await screen.findByTestId("history-rail");
+    await user.click(within(rail).getByRole("button", { name: /what is brca1\?/i }));
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(2));
+
+    // 3. Ask B. Under a positional id it takes the SAME id the row from
+    //    step 2 holds, and `onOpen`'s `history.find` then resolves BOTH
+    //    rail rows to whichever one happens to sit first.
+    await user.click(screen.getByRole("button", { name: "New search" }));
+    await ask(user, "Which variant is pathogenic in CFTR?");
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(3));
+
+    rail = screen.getByTestId("history-rail");
+    expect(
+      within(rail).getByRole("button", { name: /what is brca1\?/i }),
+    ).toBeInTheDocument();
+    expect(within(rail).getByRole("button", { name: /cftr/i })).toBeInTheDocument();
+
+    // 4. Each row must run ITS OWN question. Both are asserted rather than
+    //    only the one that fails today: `find` returns the first match, so
+    //    which row exposes a collision depends on the ordering F-4.13-A-07's
+    //    fix deliberately changed, and pinning only one would go vacuous the
+    //    next time that ordering moves.
+    createRunMock.mockClear();
+    await user.click(within(rail).getByRole("button", { name: /what is brca1\?/i }));
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+    expect(createRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "What is BRCA1?" }),
+      "test-token",
+    );
+
+    createRunMock.mockClear();
+    rail = screen.getByTestId("history-rail");
+    await user.click(within(rail).getByRole("button", { name: /cftr/i }));
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+    expect(createRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Which variant is pathogenic in CFTR?" }),
+      "test-token",
+    );
+  });
+});

@@ -105,14 +105,61 @@ const FOLLOW_UP_HINTS = [
 ];
 
 /**
- * One rail item. `traceId` is T-4.13-03: it is only present once the item's
+ * One rail item.
+ *
+ * `id` INVARIANT, stated here because F-4.13-RV-01 shipped for want of it
+ * being written down anywhere: an id must be unique across the whole list
+ * and must stay the same for that row's whole life. It is therefore NEVER
+ * derived from the row's position or from the list's length. The list can
+ * SHRINK, since `ask` filters the re-asked question out before unshifting a
+ * fresh row, so a positional id is reused the moment a re-ask keeps the
+ * length flat, and three consumers read the id as though it were unique:
+ * `FollowUp.tsx` renders it as React's `key` and compares it to `activeId`,
+ * and `onOpen` below resolves a click with `history.find`, first match wins.
+ * Two rows sharing an id means clicking one question runs a different one.
+ *
+ * Two id sources, and they cannot collide with each other: a restored row
+ * takes the server's `trace_id` (`mergeServerHistory`), and a locally
+ * created row takes `nextLocalHistoryId()`, which is `local-` plus a
+ * per-tab counter that only ever increases.
+ *
+ * `traceId` is T-4.13-03: it is only present once the item's
  * run has actually been admitted (`response.run_id` from `createRun`, set
  * in `ask` below), and it is the SAME value the server's `GET /v1/history`
  * calls `trace_id` for that run (`app.py`'s "run_id/trace_id wiring"
  * comment). It exists to give `mergeServerHistory` a stable key; nothing
- * renders it.
+ * renders it. It is deliberately NOT reused as `id`: it does not exist yet
+ * when the row is created, and a row must be clickable before its run has
+ * been admitted.
  */
 type HistoryEntry = { id: string; question: string; meta?: string; traceId?: string };
+
+/**
+ * Mints the id of a locally created rail row (F-4.13-RV-01's fix).
+ *
+ * A plain module-scoped counter, NOT `crypto.randomUUID()`. Both were
+ * checked rather than assumed. `randomUUID` is present in this project's
+ * vitest environment (jsdom 29 on Node 24 reports `crypto.randomUUID:
+ * "function"` for both `globalThis` and `window`), but in a real browser it
+ * is only defined in a secure context, so a build served over plain HTTP on
+ * a LAN address, and Safari before 15.4, both hand back `undefined` and
+ * throw at the call site. A counter needs no environment support at all,
+ * and it is deterministic, which a test can read.
+ *
+ * `local-` prefixed so a locally minted id can never be mistaken for, or
+ * collide with, a server `trace_id`, which is a UUID.
+ *
+ * Module scope rather than a `useRef`, so the counter cannot be reset by a
+ * remount while stale rows are still on screen, and so this stays a plain
+ * function rather than something a `setHistory` updater has to close over.
+ * Never called from inside a state updater: an updater must be pure, and
+ * React invokes it twice under StrictMode.
+ */
+let localHistoryIdCounter = 0;
+function nextLocalHistoryId(): string {
+  localHistoryIdCounter += 1;
+  return `local-${localHistoryIdCounter}`;
+}
 
 /**
  * F-4.13-A-10's fix. The prototype's `.rm` for a restored row is `(item.meta
@@ -128,10 +175,19 @@ type HistoryEntry = { id: string; question: string; meta?: string; traceId?: str
  * a bare question with no date is what made a re-asked duplicate invisible
  * (F-4.13-A-10's own "reason" cell).
  *
- * Never throws and never renders "Invalid Date": both fields are read
- * defensively (`api.ts` already marks them optional on a malformed row),
- * and an unparseable or absent `asked_at` is simply omitted rather than
- * surfaced as a broken-looking date.
+ * Never throws and never renders "Invalid Date": an unparseable or absent
+ * `asked_at` is omitted rather than surfaced as a broken-looking date.
+ *
+ * The guard below is `Number.isNaN(getTime())`, which decides VALIDITY and
+ * cannot decide TYPE: `new Date(1)` and `new Date(true)` are both perfectly
+ * valid 1970 dates, so a non-string `asked_at` would render a real-looking
+ * date this function has no basis for. That is a type question and it is
+ * answered one layer up, at the fetch boundary, by
+ * `api.ts`'s `withValidatedOptionalFields`, which drops any of these three
+ * fields not carrying its declared type. Both checks are load-bearing and
+ * neither substitutes for the other: this one catches a well-typed string
+ * that is not a date ("not-a-date"), that one catches a value that is not a
+ * string at all.
  */
 function formatHistoryMeta(item: HistoryItem): string | undefined {
   const parts: string[] = [];
@@ -564,8 +620,20 @@ export function App() {
       // dedup invariant `ask`'s own traceId-tagging comment below already
       // relies on ("at most one item exists per question text") still
       // holds after this change.
+      //
+      // F-4.13-RV-01's fix. The id was `String(current.length)`, which the
+      // filter above silently invalidated: the filter can SHRINK the list,
+      // so a re-ask that removes one row and adds one leaves the length
+      // flat and the next question reuses the id the re-asked row holds.
+      // The fix is the identity, not the reducer: filter-then-unshift is
+      // what the prototype does and it is correct, and the prototype can do
+      // it safely because its row identity is not a positional counter.
+      // The full invariant is stated on `HistoryEntry` above. Minted HERE,
+      // outside the updater, because a state updater must be pure and React
+      // invokes it twice under StrictMode.
+      const entryId = nextLocalHistoryId();
       setHistory((current) => [
-        { id: `${current.length}`, question },
+        { id: entryId, question },
         ...current.filter((item) => item.question !== question),
       ]);
       const seq = ++askSeq.current;
