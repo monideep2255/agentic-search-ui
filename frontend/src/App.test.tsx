@@ -720,3 +720,172 @@ describe("F-4.13-RV-01: a rail row's identity survives the list shrinking", () =
     );
   });
 });
+
+/**
+ * F-4.13-FV-01: a landing run must not rewrite another row's meta.
+ *
+ * The meta effect (`App.tsx`, the `view.landed` effect) matches rail rows by
+ * QUESTION TEXT and rewrites every match. That was safe for as long as `ask`
+ * was the only writer to `history`, because `ask` guarantees at most one row
+ * per question text. Build phase 4.13 added a second writer,
+ * `mergeServerHistory`, which de-duplicates on `traceId` and never on text,
+ * so two rows carrying the same question can now coexist for the first time.
+ *
+ * The line did not change. The invariant underneath it did, which is the same
+ * shape as F-4.13-RV-01 one level up, and is why `git blame` pointing two
+ * weeks before this phase is true and misleading.
+ *
+ * What a person sees: they asked something on 1 August, ask it again today,
+ * and the August row's own source count and date are replaced by today's
+ * run's numbers. A row then reports data belonging to a run it never was,
+ * which is the fabrication class F-4.8-J-01 already made a rule about.
+ *
+ * The restored row is deliberately given a DIFFERENT citation count and a
+ * different date from the landing run's, so the two cannot be confused for
+ * each other and the assertion cannot pass by their agreeing.
+ */
+describe("F-4.13-FV-01: a landing run does not rewrite another row's meta", () => {
+  const REPEATED = "What is BRCA1?";
+  let releaseHistory: () => void = () => {};
+
+  /** One SSE frame, in the shape `lib/events.ts` actually validates. */
+  const frame = (seq: number, type: string, payload: unknown): string =>
+    `id: ${seq}\nevent: ${type}\ndata: ${JSON.stringify({
+      type,
+      version: "v1",
+      trace_id: "fv01",
+      seq,
+      ts: "2026-08-27T00:00:00Z",
+      payload,
+    })}\n\n`;
+
+  const STREAM = [
+    frame(0, "guard", { passed: true, category: "ok", reason: null }),
+    frame(1, "think", {
+      narrative: "Resolving the gene named in the question.",
+      query_class: "single_hop",
+      resolved_entities: [],
+      clarifying_question: null,
+    }),
+    frame(2, "plan", { narrative: "Read the curated edges.", tool_calls: [] }),
+    frame(3, "tool_result", {
+      call_id: "c1", tool: "cypher_query", layer: "layer_1_graph",
+      status: "ok", summary: "", result_count: 25, truncated: false,
+    }),
+    frame(4, "token", { text: "BRCA1 is associated with HBOC [1]. ", marker_ids: ["k1"] }),
+    frame(5, "citation", {
+      citation_id: "k1", display_index: 1, source: "NCBI Gene", source_id: "672",
+      source_url: "https://www.ncbi.nlm.nih.gov/672", layer: "layer_1_graph",
+      field: "cypher_query", claim_text: "x", evidence_kind: "curated assertion",
+      assertion_confidence: "high", population_ancestry_context: null,
+      license: "public domain",
+    }),
+    frame(6, "trust_signal", {
+      outcome: "answer", risk_tier: "low", grounded: true, triangulated: false,
+    }),
+    frame(7, "done", {
+      total_cost_usd: 0.0031, total_tool_calls: 1, elapsed_ms: 11400,
+      trust_outcome: "answer",
+    }),
+  ].join("");
+
+  function scriptedResponse(): Promise<Response> {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(STREAM));
+        controller.close();
+      },
+    });
+    return Promise.resolve(
+      new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } }),
+    );
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token", refresh_token: "test-refresh", token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockImplementation(() => scriptedResponse());
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    // Held open deliberately. Resolving this at sign-in would put the
+    // restored row in the list BEFORE the ask, and `ask`'s own filter would
+    // then remove it on question text, so the meta effect would never see
+    // two rows at all and this clause would be red for a reason unrelated
+    // to what it tests. The finding's real sequence is ask first, server
+    // copy second: `mergeServerHistory` keys on `traceId`, so it does not
+    // collide with the local row and both survive.
+    releaseHistory = () => {};
+    fetchHistoryMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseHistory = () =>
+            resolve({
+              items: [
+                {
+                  // The SAME question, asked weeks ago, carrying its own
+                  // count and its own date. Nine sources and 1 August cannot
+                  // be confused with this run's single source and today's
+                  // date, which is what stops the assertion passing by the
+                  // two happening to agree.
+                  trace_id: "server-trace-1",
+                  question: REPEATED,
+                  asked_at: "2026-08-01T09:00:00Z",
+                  trust_signal: "answer",
+                  citation_count: 9,
+                },
+              ],
+              count: 1,
+            });
+        }),
+    );
+  });
+
+  it("leaves a restored row's own count and date alone when the same question is re-asked", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    // 1. Ask first, while the server's copy is still in flight.
+    await ask(user, REPEATED);
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+
+    // 2. The server's copy of the SAME question now arrives. It carries a
+    //    `traceId` the local row does not, so `mergeServerHistory` keeps
+    //    both, and two rows share a question text for the first time.
+    releaseHistory();
+
+    // The control, and it is what makes the assertion below mean anything.
+    // If the restored row never arrived, or arrived without its own meta,
+    // then "its meta did not change" is satisfied by a row that never had
+    // one, and this clause would pass against any implementation at all.
+    const rail = await screen.findByTestId("history-rail");
+    await within(rail).findByRole("button", { name: /9 sources/i });
+
+    // 3. Now let this run land. `source-1` is the landing signal the other
+    //    vitest suites use; `answer-cap` is reached only by the browser
+    //    suite, and waiting for it here made an earlier version of this
+    //    clause fail for a reason unrelated to what it tests.
+    await screen.findByTestId("source-1", undefined, { timeout: 5000 });
+
+    // The restored row must still report ITS OWN run. This run produced one
+    // source today; if the nine-source row is gone, the landing run has
+    // written its numbers onto a row it never belonged to.
+    const railAfter = screen.getByTestId("history-rail");
+    const rows = within(railAfter).getAllByRole("button", {
+      name: new RegExp(REPEATED.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"),
+    });
+    const stillNine = rows.some((row) => /9 sources/i.test(row.textContent ?? ""));
+    expect(stillNine).toBe(true);
+  });
+});

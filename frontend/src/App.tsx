@@ -329,6 +329,21 @@ export function App() {
    * callback without re-rendering, and it is never rendered.
    */
   const askSeq = useRef(0);
+  /**
+   * The rail row the run now in flight belongs to (F-4.13-FV-01).
+   *
+   * The meta effect below used to find its row by QUESTION TEXT, which was
+   * safe for exactly as long as `ask` was the only writer to `history`,
+   * because `ask` guarantees at most one row per question text. Build phase
+   * 4.13 added a second writer, `mergeServerHistory`, which de-duplicates on
+   * `traceId` and never on text, so two rows carrying the same question can
+   * coexist for the first time. Then one landing run rewrote BOTH, and a row
+   * restored from weeks ago reported this run's source count and date.
+   *
+   * A ref rather than state on purpose: nothing renders from this, and making
+   * it state would re-run the effect on every ask for no benefit.
+   */
+  const activeEntryId = useRef<string | null>(null);
   /** True while a stopped run should stay stopped (F-4.8-A-10). */
   const [stopped, setStopped] = useState(false);
   /**
@@ -546,9 +561,18 @@ export function App() {
       ? searchView.question
       : null;
     if (question === null) return;
+    // F-4.13-FV-01. Matched on the row's own IDENTITY, not on its question
+    // text. Text stopped identifying a row the moment `mergeServerHistory`
+    // became a second writer to this list, and a restored row asking the
+    // same question is a DIFFERENT run with its own count and its own date.
+    // The question is still compared, as a guard rather than as the key: if
+    // the ref has moved on to another ask, its row will not match this
+    // landing run's question and nothing is written.
+    const entryId = activeEntryId.current;
+    if (entryId === null) return;
     setHistory((current) =>
       current.map((item) =>
-        item.question === question && item.meta !== view.meta
+        item.id === entryId && item.question === question && item.meta !== view.meta
           ? { ...item, meta: view.meta }
           : item,
       ),
@@ -632,6 +656,10 @@ export function App() {
       // outside the updater, because a state updater must be pure and React
       // invokes it twice under StrictMode.
       const entryId = nextLocalHistoryId();
+      // F-4.13-FV-01: the meta effect writes this run's counts onto THIS
+      // row and no other. Set before the state update rather than after, so
+      // a run that lands unusually fast cannot find a stale id here.
+      activeEntryId.current = entryId;
       setHistory((current) => [
         { id: entryId, question },
         ...current.filter((item) => item.question !== question),
