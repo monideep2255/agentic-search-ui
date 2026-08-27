@@ -11,6 +11,7 @@ Checks 1 through 6 had completed before the stop. Check 7, the frontend, is wher
 
 ## Table of contents
 
+- [Verdict: FAIL, and the round stopped before completing](#verdict-fail-and-the-round-stopped-before-completing)
 - [The stop: F-4.13-RV-01](#the-stop-f-413-rv-01)
 - [Checks completed before the stop](#checks-completed-before-the-stop)
 - [Checks not started](#checks-not-started)
