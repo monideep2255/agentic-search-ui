@@ -42,15 +42,32 @@ export const STUB_REGISTRY: StubEntry[] = [
   },
   {
     surface: "history",
-    rendersToday: "An in-memory list of this session's questions, lost on reload.",
-    wiredBy: "4.5",
+    rendersToday:
+      "REAL as of build phase 4.13 (T-4.13-03): the rail is seeded from " +
+      "GET /v1/history, an owner-scoped read over the interactions rows build " +
+      "phase 4.6 writes, so the list is no longer in-memory and no longer lost " +
+      "on reload. A run taken this session and its server copy render as one " +
+      "item, de-duplicated on trace_id. " +
+      "TWO BOUNDARIES, stated because a registry entry that overstates what a " +
+      "surface does is read as an inventory and is worse than none. First, only " +
+      "the QUESTIONS are durable, never the answers: interactions stores no " +
+      "synthesised narrative, so a restored item re-asks its question exactly " +
+      "as a live item already does (decision D-4.13-01). Second, and this is " +
+      "the one a reader will actually hit: after a reload a visitor must sign " +
+      "in again before any of it appears, because the access token lives in " +
+      "React state alone and the rail is gated on being signed in. The rows " +
+      "survive; the identity does not. That is F-4.13-02, it is open, and the " +
+      "product owner scoped it as its own piece of work on 2026-08-27 rather " +
+      "than settling where a bearer credential may be persisted mid-phase.",
+    wiredBy: "4.13",
     realSource:
-      "Session memory for the live thread; the interactions table for anything " +
-      "that must survive a reload, which is build phase 4.13. Corrected 2026-08-21: " +
-      "this said 4.6, which was a guess about ownership rather than a " +
-      "decision. Section 25 never named history as a 4.6 deliverable, and " +
-      "4.6 shipped the interactions substrate this needs without the read " +
-      "path or the UI.",
+      "GET /v1/history (adapters/web_sse/app.py), over " +
+      "feedback/history.py's list_history, scoped by the caller's exact " +
+      "owner_id and never by user_id, which is NULL for every guest. " +
+      "HISTORY, recorded because it must not be repeated: this entry named " +
+      "build phase 4.6 as the owner until 2026-08-21, which was a guess rather " +
+      "than a decision. Section 25 never named history as a 4.6 deliverable, " +
+      "and 4.6 shipped the substrate without the read path or the UI.",
   },
   {
     surface: "guest-allowance",
