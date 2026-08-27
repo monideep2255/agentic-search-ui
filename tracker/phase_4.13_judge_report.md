@@ -11,6 +11,7 @@ Everything the phase set out to control, it controls. Ownership scoping is corre
 
 ## Table of contents
 
+- [Verdict: FAIL](#verdict-fail)
 - [What was graded, and how](#what-was-graded-and-how)
 - [Grading item 1: correctness of the read path](#grading-item-1-correctness-of-the-read-path)
 - [Grading item 2: the production and AI security gates](#grading-item-2-the-production-and-ai-security-gates)
