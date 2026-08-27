@@ -115,6 +115,40 @@ const FOLLOW_UP_HINTS = [
 type HistoryEntry = { id: string; question: string; meta?: string; traceId?: string };
 
 /**
+ * F-4.13-A-10's fix. The prototype's `.rm` for a restored row is `(item.meta
+ * || '').split(' · ').slice(1).join(' · ')` (`app.html` around
+ * line 1263): the seed data's own `meta` minus its leading duration, i.e.
+ * "N tools · N layers · N sources". `GET /v1/history`'s
+ * `HistoryItem` (`adapters/web_sse/app.py`) carries none of that: only
+ * `trace_id`, `question`, `asked_at`, `trust_signal` and `citation_count`.
+ * The prototype's exact content is therefore not derivable, so this uses
+ * the closest honest substitute the endpoint DOES return: `citation_count`
+ * (the same "N sources" idea, one count short of three) and a short date
+ * built from `asked_at`, which is what actually resolves the finding, since
+ * a bare question with no date is what made a re-asked duplicate invisible
+ * (F-4.13-A-10's own "reason" cell).
+ *
+ * Never throws and never renders "Invalid Date": both fields are read
+ * defensively (`api.ts` already marks them optional on a malformed row),
+ * and an unparseable or absent `asked_at` is simply omitted rather than
+ * surfaced as a broken-looking date.
+ */
+function formatHistoryMeta(item: HistoryItem): string | undefined {
+  const parts: string[] = [];
+  if (item.citation_count !== undefined && item.citation_count !== null) {
+    const count = item.citation_count;
+    parts.push(`${count} source${count === 1 ? "" : "s"}`);
+  }
+  if (item.asked_at) {
+    const askedAt = new Date(item.asked_at);
+    if (!Number.isNaN(askedAt.getTime())) {
+      parts.push(askedAt.toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+    }
+  }
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
+/**
  * T-4.13-03. Folds the server's own restored questions into the rail
  * without showing a run this tab already ran twice.
  *
@@ -146,7 +180,12 @@ function mergeServerHistory(current: HistoryEntry[], serverItems: HistoryItem[])
   );
   const restored: HistoryEntry[] = serverItems
     .filter((item) => !localTraceIds.has(item.trace_id))
-    .map((item) => ({ id: item.trace_id, question: item.question, traceId: item.trace_id }));
+    .map((item) => ({
+      id: item.trace_id,
+      question: item.question,
+      traceId: item.trace_id,
+      meta: formatHistoryMeta(item),
+    }));
   return [...current, ...restored];
 }
 
@@ -509,11 +548,26 @@ export function App() {
       // just with a guest token instead of an access token.
       setFlagged([]);
       setDispatchError(null);
-      setHistory((current) =>
-        current.some((item) => item.question === question)
-          ? current
-          : [{ id: `${current.length}`, question }, ...current],
-      );
+      // F-4.13-A-07's fix. The old form only ADDED an entry when the
+      // question text was not already present, so re-asking a question
+      // already in the rail, live or restored, did nothing here, and the
+      // meta effect a few lines below then relabeled that unmoved item
+      // with THIS run's numbers once it landed: a restored row's meta was
+      // overwritten by a run it did not represent. The prototype's own
+      // `start()` never relabels in place; it filters the old entry out and
+      // unshifts a fresh one to the top (`app.html`, around line 1262,
+      // `st.history = st.history.filter(...); st.history.unshift(...)`),
+      // which is what a re-ask actually is: a new run for an old question,
+      // not an edit of the old run's record. Transcribed the same way here,
+      // so the freshly unshifted entry starts with no `meta` and no
+      // `traceId` of its own, exactly like a brand-new question, and the
+      // dedup invariant `ask`'s own traceId-tagging comment below already
+      // relies on ("at most one item exists per question text") still
+      // holds after this change.
+      setHistory((current) => [
+        { id: `${current.length}`, question },
+        ...current.filter((item) => item.question !== question),
+      ]);
       const seq = ++askSeq.current;
       /*
        * T-4.16-02. Archive the turn now on screen BEFORE anything resets,

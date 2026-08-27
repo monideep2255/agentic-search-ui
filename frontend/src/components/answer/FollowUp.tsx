@@ -477,8 +477,16 @@ export function HistoryRail({
             >
               {item.question}
             </Box>
-            {/* `.rm`: this search's own tool, layer and source counts. Absent
-                until its run lands, which the prototype allows for too. */}
+            {/* `.rm`. For a live run, this session's own tool, layer and
+                source counts, absent until the run lands, which the
+                prototype allows for too. For a row restored from
+                `GET /v1/history` (F-4.13-A-10), the endpoint carries no
+                tool or layer count, only `citation_count` and `asked_at`,
+                so `App.tsx`'s `formatHistoryMeta` renders the closest
+                honest substitute instead: a source count and a short
+                date. Either way this component only renders whatever
+                `item.meta` already is; it does not know which shape
+                produced it. */}
             {item.meta ? (
               <Box
                 component="span"

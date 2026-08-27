@@ -451,3 +451,190 @@ describe("T-4.13-03: durable history", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("F-4.13-A-10: a restored row renders something asked_at makes possible", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token",
+      refresh_token: "test-refresh",
+      token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("renders more than bare question text for a restored row that carries asked_at and citation_count", async () => {
+    // The endpoint carries no tool or layer count (`HistoryItem` in
+    // `adapters/web_sse/app.py` has only trace_id, question, asked_at,
+    // trust_signal, citation_count), so the closest honest substitute for
+    // the prototype's "N tools · N layers · N sources" is citation_count
+    // plus the asked date. Mutation: a fix that populates `meta` with
+    // something that never renders, or that renders only for a live run,
+    // leaves this red.
+    fetchHistoryMock.mockResolvedValue({
+      items: [
+        {
+          trace_id: "row-1",
+          question: "What is BRCA1?",
+          asked_at: "2026-08-20T12:00:00Z",
+          trust_signal: "answer",
+          citation_count: 3,
+        },
+      ],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    const rail = await screen.findByTestId("history-rail");
+    const item = within(rail).getByRole("button", { name: /what is brca1\?/i });
+    // Bare question text with nothing else is exactly what the shipped bug
+    // renders (F-4.13-A-10's own description: "arrives on screen as bare
+    // question text with no date and no meta").
+    expect(item.textContent).not.toBe("What is BRCA1?");
+    expect(item.textContent).toMatch(/3 source/i);
+  });
+
+  it("does not render 'Invalid Date' for a restored row with a malformed asked_at", async () => {
+    fetchHistoryMock.mockResolvedValue({
+      items: [{ trace_id: "row-1", question: "What is BRCA1?", asked_at: "not-a-real-timestamp" }],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    const rail = await screen.findByTestId("history-rail");
+    const item = within(rail).getByRole("button", { name: /what is brca1\?/i });
+    expect(item.textContent).not.toMatch(/invalid date/i);
+  });
+
+  it("does not crash when asked_at is absent from a restored row", async () => {
+    fetchHistoryMock.mockResolvedValue({
+      items: [{ trace_id: "row-1", question: "What is BRCA1?" }],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    const rail = await screen.findByTestId("history-rail");
+    expect(within(rail).getByRole("button", { name: /what is brca1\?/i })).toBeInTheDocument();
+  });
+});
+
+describe("F-4.13-A-07: re-asking a restored question", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token",
+      refresh_token: "test-refresh",
+      token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  it("moves the re-asked row to the top instead of relabeling it in place", async () => {
+    // Two restored rows, newest first (the server's own order). The
+    // OLDER one, "What is BRCA1?", is re-asked from the rail.
+    //
+    // The shipped bug (`App.tsx`'s `ask`, the `current.some(...) ? current
+    // : [...]` dedup): since the question text already exists in
+    // `history`, NOTHING is added and NOTHING is moved, so the row stays
+    // in its original, lower position. The prototype's `start()` instead
+    // filters the old entry out and unshifts a fresh one to the top
+    // (`app.html` around line 1262), which is what this test requires.
+    fetchHistoryMock.mockResolvedValue({
+      items: [
+        { trace_id: "restored-newer", question: "Which variant is pathogenic in CFTR?" },
+        { trace_id: "restored-older", question: "What is BRCA1?" },
+      ],
+      count: 2,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    const rail = await screen.findByTestId("history-rail");
+    const olderItem = within(rail).getByRole("button", { name: /what is brca1\?/i });
+    await user.click(olderItem);
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+    expect(createRunMock).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "What is BRCA1?" }),
+      "test-token",
+    );
+
+    const afterRail = screen.getByTestId("history-rail");
+    // No duplicate: still exactly one row for the re-asked question.
+    expect(
+      within(afterRail).getAllByRole("button", { name: /what is brca1\?/i }),
+    ).toHaveLength(1);
+
+    // Moved to the top: ahead of the row that was newer before the re-ask.
+    const buttonTexts = within(afterRail)
+      .getAllByRole("button")
+      .map((button) => button.textContent ?? "");
+    const brca1Index = buttonTexts.findIndex((text) => /what is brca1\?/i.test(text));
+    const cftrIndex = buttonTexts.findIndex((text) => /cftr/i.test(text));
+    expect(brca1Index).toBeGreaterThan(-1);
+    expect(cftrIndex).toBeGreaterThan(-1);
+    expect(brca1Index).toBeLessThan(cftrIndex);
+  });
+
+  it("does not relabel an unrelated restored row's meta when a different question lands", async () => {
+    // A narrower regression guard for the same defect class: landing a
+    // run for question B must never touch a DIFFERENT row's meta, which
+    // is what F-4.13-A-07's `.map` over every item matching `question`
+    // would do if two rows ever shared text. This test only pins the
+    // ordering fix above does not remove the traceId-tagging discipline
+    // `ask` already had (the comment above its own `setHistory` call).
+    fetchHistoryMock.mockResolvedValue({
+      items: [{ trace_id: "restored-1", question: "What is BRCA1?" }],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    await screen.findByTestId("history-rail");
+    await user.type(
+      screen.getByRole("textbox", { name: /question/i }),
+      "What variants cause cystic fibrosis?",
+    );
+    await user.click(screen.getByRole("button", { name: /^search the knowledge graph$/i }));
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+
+    const afterRail = screen.getByTestId("history-rail");
+    expect(
+      within(afterRail).getByRole("button", { name: /what is brca1\?/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(afterRail).getByRole("button", { name: /what variants cause cystic fibrosis\?/i }),
+    ).toBeInTheDocument();
+  });
+});
