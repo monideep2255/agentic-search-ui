@@ -108,15 +108,30 @@ def list_history(owner_id: str, limit: int = DEFAULT_LIMIT) -> list[HistoryEntry
     (`now()`), so two rows written inside the same clock tick can share a
     timestamp, and an `ORDER BY` on that column alone would then return
     them in a database-chosen, not caller-visible, order. `id` (a
-    `gen_random_uuid()` primary key) breaks every tie deterministically,
-    which is the property the premise gate's `test_the_list_is_newest_
-    first_and_the_order_is_total` clause exercises directly.
+    `gen_random_uuid()` primary key) breaks every tie deterministically.
+
+    F-4.13-J-01's correction: this docstring used to point at the premise
+    gate's `test_the_list_is_newest_first_and_the_order_is_total` clause as
+    the proof of that property. That arm was renamed to
+    `test_the_list_reads_newest_first` by commit `ebb62f4` and F-4.13-01 is
+    the record of WHY: no black-box call through `GET /v1/history` can
+    force two rows onto one shared timestamp, so that clause never reaches
+    the tie the `id` tiebreaker exists for and cannot prove the total order
+    holds (measured 10 of 10 green under mutation with the tiebreaker
+    dropped, before the correction). The total order IS proven, in
+    `tests/system_03_search_agent/feedback/test_history.py::test_order_
+    is_total_when_created_at_collides`, which forces six rows onto one
+    explicit timestamp, a shape only reachable below this HTTP endpoint.
 
     The `LIMIT` is a real SQL `LIMIT` clause, applied by the database,
     never a Python-side slice of a larger fetched result: slicing in
     Python would still pay the cost, and the query time, of fetching every
     row a caller has ever asked, for a response that only ever shows the
-    newest page of them.
+    newest page of them. F-4.13-J-03: this is a STATIC property of the
+    `.limit(limit)` call below, verified by reading this function and by
+    `ruff`, not a claim any black-box call through `list_history` can
+    prove at runtime; `tests/system_03_search_agent/feedback/
+    test_history.py`'s own coverage statement says the same.
     """
     if not owner_id:
         raise ValueError("owner_id must not be empty")
