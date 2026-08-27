@@ -765,9 +765,14 @@ class HistoryResponse(BaseModel):
     than leaving the field to keep inviting the wrong reading silently.
 
     `omitted_count` (F-4.13-A-02's fix) is how many of this caller's own
-    rows were left OUT of `items` because they no longer fit this response
-    model's own field bounds (for example a stored `query_text` wider than
-    `question`'s `max_length=2000`). No write path this repository ships
+    rows were left OUT of `items`, for either of two reasons. The first is
+    that the row no longer fits this response model's own field bounds (for
+    example a stored `query_text` wider than `question`'s
+    `max_length=2000`). The second, added by F-4.13-RV-02's fix, is that the
+    row's stored `citations` value is not a list, so no honest
+    `citation_count` exists for it (`feedback/history.py`'s
+    `_citation_count` returns `None`); a row is withheld rather than shown
+    with a count nothing computed. No write path this repository ships
     can produce such a row today (`InteractionRow.query_text` carries the
     identical bound), so this is a defensive floor against a direct
     database write or a future widening of that bound, not a path any real
@@ -861,6 +866,26 @@ def get_v1_history(
     items: list[HistoryItem] = []
     omitted_count = 0
     for entry in entries:
+        # F-4.13-RV-02's fix, the second half. `list_history` reports
+        # `citation_count is None` for a row whose stored `citations` value
+        # is not the list the column's Python type declares (a JSONB scalar,
+        # string, object, or the JSON literal `null`; see
+        # `feedback/history.py`'s `_citation_count` for why the column
+        # permits all four). Before this, that same row raised `TypeError`
+        # inside `list_history` and returned 500 for the caller's WHOLE
+        # history, one layer above this guard, or, for a JSONB string,
+        # published a fabricated count as though it were real.
+        #
+        # Dropped here rather than published with the count left out: this
+        # response model requires `citation_count`, and widening it to
+        # nullable would change a shipped v1 field's value domain for every
+        # client (`system-design-patterns` pattern 10 allows additive
+        # changes within v1, not this). Dropping reuses the disclosure
+        # already shipped below, so the caller is told a row was withheld
+        # instead of being shown a number nothing counted.
+        if entry.citation_count is None:
+            omitted_count += 1
+            continue
         try:
             items.append(
                 HistoryItem(

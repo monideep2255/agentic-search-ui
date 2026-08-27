@@ -418,6 +418,62 @@ class TestGracefulDegradationOnAnOversizedRow:
         )
 
     @pytest.mark.asyncio
+    async def test_a_row_with_no_honest_citation_count_is_omitted_and_disclosed(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        """F-4.13-RV-02's fix, the handler half.
+
+        `list_history` reports `citation_count is None` for a row whose
+        stored `citations` value is not a list, which the JSONB column
+        permits (a scalar, a string, an object, or the JSON literal `null`).
+        That row must cost the caller THAT ROW and nothing more, and the
+        loss must be disclosed. It must never be published with a
+        substituted count, and it must never take the caller's whole page
+        down, which is exactly what the pre-fix `len()` did by raising
+        `TypeError` one layer above this guard.
+
+        WHAT THIS CLAUSE DOES NOT PROVE, stated rather than left to be
+        rediscovered: it does not distinguish the handler's explicit
+        `citation_count is None` branch from `HistoryItem.citation_count`'s
+        own non-nullable `int` refusing the same row. Measured: replacing
+        that branch with `if False` leaves this clause, and all 28 others
+        in this file, green, because the two paths produce byte-identical
+        responses and no black-box arm can tell them apart. The branch is
+        kept because it states the DECISION at the point the decision is
+        made rather than leaving it as a side effect of a type annotation,
+        and `test_citation_count_is_not_nullable` below pins the fallback
+        the redundancy rests on.
+        """
+        guest = _guest_principal()
+        unknown_count = HistoryEntry(
+            trace_id="trace-unknown-count",
+            question="Which variant is pathogenic in CFTR?",
+            asked_at=datetime.now(UTC),
+            trust_signal="answer",
+            citation_count=None,
+        )
+        well_formed = _entry("What gene is BRCA1?", trace_id="trace-fine")
+        fake_history.seed(guest.owner_id, [unknown_count, well_formed])
+        _set_caller(guest)
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH)
+
+        assert response.status_code == 200, (
+            f"an unreadable citations value must cost one row, not the page; "
+            f"got {response.status_code} {response.text[:300]}"
+        )
+        body = response.json()
+        assert body["omitted_count"] == 1, (
+            f"the withheld row must be disclosed, not silently absorbed. Got: {body}"
+        )
+        assert [item["question"] for item in body["items"]] == ["What gene is BRCA1?"], (
+            "the control did not hold: the well-formed sibling row must still "
+            f"be served, and the unreadable one must not appear. Got: {body}"
+        )
+        assert body["count"] == 1
+
+    @pytest.mark.asyncio
     async def test_every_row_conforming_reports_zero_omitted(
         self, fake_history: _FakeHistoryStore
     ) -> None:
@@ -468,9 +524,65 @@ class TestResponseModelBoundsAreEnforced:
         with pytest.raises(pydantic.ValidationError):
             HistoryItem(**self._valid_item_kwargs(trace_id="t" * 65))
 
+    def test_trace_id_at_max_length_is_accepted(self) -> None:
+        """F-4.13-RV-03. The clause above proves a bound EXISTS, not that it
+        is 64: narrowing `max_length` from 64 to 63 left all 49 of this
+        phase's tests green (the re-verify round's mutation N9). `question`
+        and `items` each got an at-the-boundary control in F-4.13-J-04's own
+        fix and each catches its narrowing (N3, N4); `trace_id` was the one
+        left out. 64 is not an arbitrary number: it mirrors
+        `feedback.contracts.InteractionRow.trace_id`'s own `max_length`, so a
+        `trace_id` the write path accepts must be one this response can
+        carry, and a narrowed bound here would silently omit real rows
+        through the `omitted_count` path instead of serving them.
+        """
+        HistoryItem(**self._valid_item_kwargs(trace_id="t" * 64))
+
     def test_trust_signal_over_max_length_is_refused(self) -> None:
         with pytest.raises(pydantic.ValidationError):
             HistoryItem(**self._valid_item_kwargs(trust_signal="s" * 21))
+
+    def test_citation_count_is_not_nullable(self) -> None:
+        """F-4.13-RV-02. The handler withholds a row whose `citation_count`
+        is `None` with an explicit branch, and this model refusing `None`
+        is the SECOND, independent reason the same row never reaches a
+        caller. Measured: removing the handler's explicit branch leaves all
+        28 clauses in this file green, because both paths produce the
+        identical response.
+
+        That measurement is why this arm exists. The redundancy is only
+        safe while this field stays non-nullable, and nothing else in the
+        suite said so: widening it to `int | None` would make the handler's
+        branch the single control, and if that branch were ever removed
+        too, a row with no honest count would ship as `"citation_count":
+        null` with `omitted_count: 0`. This arm turns that widening into a
+        failing test rather than a silent change of who is guarding what.
+        """
+        with pytest.raises(pydantic.ValidationError):
+            HistoryItem(**self._valid_item_kwargs(citation_count=None))
+
+    def test_citation_count_below_zero_is_refused(self) -> None:
+        """F-4.13-RV-03. `citation_count`'s `ge=0` was asserted by nothing:
+        dropping it left all 49 of this phase's tests green (mutation M-M).
+
+        Unreachable through the shipped read path, which computes the value
+        with `len()` over a list and therefore cannot produce a negative,
+        and pinned anyway for the same reason the bound is written down at
+        all: this is a response CONTRACT, and a future writer of this field
+        (a cursor-paged total, a cached count, a differently-sourced
+        surface) has nothing else telling it that a negative source count is
+        not publishable. A bound no arm can distinguish from its own absence
+        is documentation, not a control.
+        """
+        with pytest.raises(pydantic.ValidationError):
+            HistoryItem(**self._valid_item_kwargs(citation_count=-1))
+
+    def test_citation_count_at_zero_is_accepted(self) -> None:
+        """The populate-check for the clause above: without it, a mutation
+        that tightened `ge=0` into `gt=0` would keep that clause green while
+        refusing every honestly answered question that cited nothing, which
+        `trust_signal` `refuse` and `ask` rows legitimately are."""
+        HistoryItem(**self._valid_item_kwargs(citation_count=0))
 
     def test_an_unknown_field_on_history_item_is_refused(self) -> None:
         with pytest.raises(pydantic.ValidationError):

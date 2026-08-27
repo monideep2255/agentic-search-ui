@@ -34,6 +34,14 @@ Exercised, at the `list_history` function level rather than through HTTP:
 - `question`, `trust_signal` and `citation_count` round-trip: the returned
   `HistoryEntry` carries the exact question text as stored, the exact
   `trust_signal`, and a citation count equal to `len(citations)`.
+- A stored `citations` value that is NOT a list (F-4.13-RV-02). The column
+  is `JSONB NOT NULL` with no check constraint, so it accepts a scalar
+  number, a boolean, a string, an object, and the JSON literal `null`,
+  none of which the `Mapped[list[Any]]` annotation actually guarantees.
+  Each of the five is seeded by direct parameterised INSERT (the write
+  path validates `citations` and cannot produce them) and asserted to
+  yield `citation_count is None` with no exception, beside a well-formed
+  sibling row that still reports its real count.
 - The refusal guards: an empty `owner_id`, an `owner_id` one character
   over `_MAX_OWNER_ID_LENGTH` (128), a `limit` below 1, and a `limit` one
   above `MAX_LIMIT` (50) each raise `ValueError` rather than issuing a
@@ -194,6 +202,45 @@ def _seed_with_created_at(owner_id: str, question: str, created_at: datetime) ->
                     "owner_id": owner_id,
                     "created_at": created_at,
                     "query_text": question,
+                },
+            )
+    finally:
+        engine.dispose()
+    return trace_id
+
+
+def _seed_with_raw_citations(owner_id: str, question: str, citations_json: str) -> str:
+    """Write one row whose `citations` column holds an ARBITRARY JSON value.
+
+    `interactions.citations` is `JSONB NOT NULL DEFAULT '[]'::jsonb` with no
+    check constraint (alembic 0001), so the column accepts any JSON value
+    while `Interaction.citations`'s Python annotation says `list[Any]`.
+    `InteractionRow.citations` is a validated `list[dict]`, so the live
+    write path cannot produce the mismatch and cannot seed this shape,
+    exactly the reasoning `_seed_null_owner` above gives for its own direct
+    INSERT.
+
+    `citations_json` is a JSON literal (`'5'`, `'"abc"'`, `'null'`), cast
+    server-side, and it is passed as a BOUND PARAMETER, never concatenated
+    into the statement.
+    """
+    trace_id = f"histtest-cit-{uuid.uuid4().hex}"
+    engine = sa.create_engine(USER_DB_URL)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                sa.text(
+                    "INSERT INTO interactions "
+                    "(trace_id, owner_id, user_id, query_text, query_class, route, "
+                    " trust_signal, rubric_outcome, citations) "
+                    "VALUES (:trace_id, :owner_id, NULL, :query_text, 'lookup', "
+                    " '{}'::jsonb, 'answer', 'pass', CAST(:citations AS jsonb))"
+                ),
+                {
+                    "trace_id": trace_id,
+                    "owner_id": owner_id,
+                    "query_text": question,
+                    "citations": citations_json,
                 },
             )
     finally:
@@ -406,6 +453,98 @@ async def test_question_trust_signal_and_citation_count_round_trip() -> None:
     assert entry.question == question, "the stored question was rewritten on the way out"
     assert entry.trust_signal == "flag", f"expected trust_signal='flag', got {entry.trust_signal!r}"
     assert entry.citation_count == 2, f"expected citation_count=2, got {entry.citation_count}"
+
+
+# ---------------------------------------------------------------------------
+# F-4.13-RV-02: a stored `citations` value that is not a list.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("citations_json", "shape"),
+    [
+        ("5", "a JSONB scalar number"),
+        ("true", "a JSONB scalar boolean"),
+        ('"abc"', "a JSONB string"),
+        ('{"a": 1}', "a JSONB object"),
+        ("null", "the JSON literal null"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_a_non_list_citations_value_yields_no_count_and_never_raises(
+    citations_json: str, shape: str
+) -> None:
+    """F-4.13-RV-02, measured against the real column rather than reasoned.
+
+    Two separate failures, both from one row and both reproduced here:
+
+    - `5` and `true` raised `TypeError: object of type 'int' has no len()`
+      out of `list_history` itself, ABOVE the endpoint's per-row guard, so
+      the caller's entire history returned 500. That is the outcome
+      F-4.13-A-02 was filed for, by the route A-02's fix did not reach.
+    - `"abc"` did not raise at all, which is worse: `len("abc")` is 3, so
+      the row was served with `citation_count: 3` and `omitted_count: 0`, a
+      source count nothing counted, presented as complete.
+
+    The required behaviour for every shape is the same: no exception, and
+    `citation_count is None` rather than a number. `null` is included
+    deliberately: it reads back as Python `None`, and the pre-fix
+    `len(row.citations or [])` reported it as 0, which asserts "this answer
+    cited nothing" about a row that does not say so.
+    """
+    from system_03_search_agent.feedback.history import list_history
+
+    owner = _unique_owner()
+    question = f"A row whose citations column holds {shape} {uuid.uuid4().hex[:8]}"
+    trace_id = _seed_with_raw_citations(owner, question, citations_json)
+    assert _row_owner(trace_id) == owner, "the seed never reached the table"
+
+    # Must not raise. Before the fix, three of these five parameter sets
+    # raised out of this exact call.
+    entries = list_history(owner_id=owner)
+
+    matches = [entry for entry in entries if entry.trace_id == trace_id]
+    assert len(matches) == 1, (
+        f"the row must still be READ, only its count withheld; got {len(matches)} matches"
+    )
+    assert matches[0].citation_count is None, (
+        f"an unreadable citations value must yield no count, not a substituted "
+        f"one; got citation_count={matches[0].citation_count!r}"
+    )
+    assert matches[0].question == question, "the question itself must survive intact"
+
+
+@pytest.mark.asyncio
+async def test_one_unreadable_row_does_not_cost_its_well_formed_siblings() -> None:
+    """The blast-radius half of F-4.13-RV-02, and the populate-check for the
+    clause above: a real list still counts, in the same page as a row that
+    cannot.
+
+    Without this, a fix that returned `None` for EVERY row would leave the
+    parameterised clause above fully green while deleting the feature.
+    """
+    from system_03_search_agent.feedback.history import list_history
+
+    owner = _unique_owner()
+    good_trace = await _seed(
+        owner_id=owner,
+        question=f"A well-formed row {uuid.uuid4().hex[:8]}",
+        citations=[_citation_payload(), _citation_payload(claim_text="a second claim.")],
+    )
+    bad_trace = _seed_with_raw_citations(owner, f"A scalar row {uuid.uuid4().hex[:8]}", "5")
+    assert _row_owner(good_trace) == owner
+    assert _row_owner(bad_trace) == owner
+
+    entries = list_history(owner_id=owner)
+    by_trace = {entry.trace_id: entry for entry in entries}
+
+    assert good_trace in by_trace, "the well-formed sibling was lost with the bad row"
+    assert by_trace[good_trace].citation_count == 2, (
+        f"a real list must still be counted; got "
+        f"{by_trace[good_trace].citation_count!r}"
+    )
+    assert bad_trace in by_trace
+    assert by_trace[bad_trace].citation_count is None
 
 
 # ---------------------------------------------------------------------------

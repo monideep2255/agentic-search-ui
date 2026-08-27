@@ -83,13 +83,87 @@ class HistoryEntry:
     (`tracker/phase_4.13.md`) is why this type does not invent one.
     `citation_count` is a count, not the citations themselves, for the same
     reason.
+
+    `citation_count` is `None`, never a guess, when the row's stored
+    `citations` value is not the list this table's Python type declares.
+    See `_citation_count` below for why that is reachable at all, and
+    `adapters/web_sse/app.py`'s history handler for what it does with an
+    unknown count (it drops the row and discloses the drop; it never
+    publishes a number nothing computed).
     """
 
     trace_id: str
     question: str
     asked_at: datetime
     trust_signal: str
-    citation_count: int
+    citation_count: int | None
+
+
+def _citation_count(stored: object) -> int | None:
+    """How many citations a stored `interactions.citations` value holds, or
+    `None` when that cannot be answered from what is actually stored.
+
+    F-4.13-RV-02. This used to be `len(row.citations or [])` inline, and
+    that single expression carried an assumption the DATABASE does not
+    enforce. `Interaction.citations` is annotated `Mapped[list[Any]]`, but
+    the column is `JSONB NOT NULL DEFAULT '[]'::jsonb` (alembic 0001) with
+    no check constraint, and JSONB accepts any JSON value: an object, a
+    string, a number, a boolean, or the JSON literal `null`. The annotation
+    is a statement of intent about the write path, not a guarantee about
+    what a read gets back.
+
+    Two failure shapes were measured against the real database, both from
+    one row sitting beside well-formed ones:
+
+    - a JSONB scalar (`5`, `true`) raised `TypeError: object of type 'int'
+      has no len()` out of `list_history`, one layer ABOVE the handler's
+      per-row guard, so the caller's ENTIRE history returned 500. That is
+      precisely the outcome F-4.13-A-02 was filed for, reached by the one
+      route A-02's fix did not cover.
+    - a JSONB string (`"abc"`) is quieter and worse: `len` succeeds and
+      reports `citation_count: 3` with `omitted_count: 0`, a source count
+      nothing counted, published as complete.
+
+    So this returns a count only when it actually counted something, and
+    `None` otherwise, per the rule this repository settled in F-3.3-J-04
+    (2026-08-15): if the system drops or shortens anything, it discloses
+    that it did, and it never substitutes a fabricated value for a missing
+    one. The JSON literal `null` reads back as Python `None` and is
+    UNREADABLE rather than zero: "no citations recorded" and "this row does
+    not say" are different claims, and only the first one may be shown to a
+    reader as a count of sources.
+
+    ## The class this belongs to, not just this field
+
+    The general rule, stated here because the instance is one line and the
+    rule is the part worth keeping: a value read back OUT of the database
+    is untrusted input, exactly like a value arriving over HTTP, and no
+    computation may be performed on one before its type is checked. This
+    module reads five columns, and only this one needed a guard, because
+    the other four are enforced by their own column types (`trace_id`,
+    `query_text` and `trust_signal` are `TEXT NOT NULL`, `created_at` is
+    `timestamptz NOT NULL`) and are passed onward untouched for the
+    response model to judge, which it already does. `citations` was the
+    only one this module computed over.
+
+    Swept for siblings rather than assumed unique: `interactions` has four
+    other JSONB columns (`normalized_entities`, `route`, `user_feedback`,
+    plus `sessions.memory`), and nothing else in `src/` computes over a
+    stored value of any of them on the way out. `feedback/writer.py` reads
+    those attributes only to copy an already-validated `InteractionRow`
+    INTO the database, and `core/session_memory.py`'s `_unwrap` already
+    applies exactly this posture to `sessions.memory`, which is where the
+    posture was taken from rather than invented here.
+
+    The invariant this preserves for the whole module: `list_history` never
+    raises because of what a stored row CONTAINS. It raises only on its own
+    arguments. Anything it cannot read honestly is handed onward in a form
+    the single downstream guard can judge, so exactly one place decides
+    what a bad row costs the caller.
+    """
+    if isinstance(stored, list):
+        return len(stored)
+    return None
 
 
 def list_history(owner_id: str, limit: int = DEFAULT_LIMIT) -> list[HistoryEntry]:
@@ -164,7 +238,7 @@ def list_history(owner_id: str, limit: int = DEFAULT_LIMIT) -> list[HistoryEntry
             question=row.query_text,
             asked_at=row.created_at,
             trust_signal=row.trust_signal,
-            citation_count=len(row.citations or []),
+            citation_count=_citation_count(row.citations),
         )
         for row in rows
     ]
