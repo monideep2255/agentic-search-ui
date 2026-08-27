@@ -55,16 +55,29 @@ vi.mock("./lib/api", async () => {
     // a guest token, and sign-in fetches the caller's real allowance.
     mintGuest: vi.fn(),
     getAllowance: vi.fn(),
+    // T-4.13-03: sign-in now also seeds the rail from `GET /v1/history`. An
+    // api mock that omits an export App actually calls throws inside the
+    // seeding effect and takes the whole render down, the same reasoning
+    // the comment above `fetchPersona` already gives.
+    fetchHistory: vi.fn(),
   };
 });
 
-import { createRun, getAllowance, login, mintGuest, openEventStream } from "./lib/api";
+import {
+  createRun,
+  fetchHistory,
+  getAllowance,
+  login,
+  mintGuest,
+  openEventStream,
+} from "./lib/api";
 
 const loginMock = vi.mocked(login);
 const createRunMock = vi.mocked(createRun);
 const openEventStreamMock = vi.mocked(openEventStream);
 const mintGuestMock = vi.mocked(mintGuest);
 const getAllowanceMock = vi.mocked(getAllowance);
+const fetchHistoryMock = vi.mocked(fetchHistory);
 
 const mainArea = () => within(screen.getByRole("main"));
 const navArea = () => within(screen.getByRole("navigation", { name: /main/i }));
@@ -107,6 +120,7 @@ describe("App", () => {
     openEventStreamMock.mockReset();
     mintGuestMock.mockReset();
     getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
     loginMock.mockResolvedValue({
       access_token: "test-token",
       refresh_token: "test-refresh",
@@ -123,6 +137,10 @@ describe("App", () => {
       guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
     });
     getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    // T-4.13-03: no server history unless a test says otherwise. Defaulted
+    // to empty rather than left unresolved so a test that merely signs in
+    // does not also have to think about this call.
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
   });
 
   it("shows the landing screen to a visitor with no account", () => {
@@ -286,5 +304,150 @@ describe("App", () => {
       expect.objectContaining({ text: "Which diseases are associated with BRCA1?" }),
       "guest-token-1",
     );
+  });
+});
+
+describe("T-4.13-03: durable history", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loginMock.mockReset();
+    createRunMock.mockReset();
+    openEventStreamMock.mockReset();
+    mintGuestMock.mockReset();
+    getAllowanceMock.mockReset();
+    fetchHistoryMock.mockReset();
+    loginMock.mockResolvedValue({
+      access_token: "test-token",
+      refresh_token: "test-refresh",
+      token_type: "bearer",
+    });
+    createRunMock.mockResolvedValue({ run_id: "run-1", persona_name: "Mendel" });
+    openEventStreamMock.mockReturnValue(new Promise(() => {}));
+    mintGuestMock.mockResolvedValue({
+      guest_token: "guest-token-1", guest_id: "guest-1", used: 0, total: 5,
+    });
+    getAllowanceMock.mockResolvedValue({ kind: "user", used: 0, total: 100, counted: false });
+    fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
+  });
+
+  /** Sign out through the account menu, the same route railCollapsePremise.test.tsx uses. */
+  async function signOut(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(navArea().getByRole("button", { name: /person@example\.com/i }));
+    await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+  }
+
+  it("seeds the rail from the server once a signed-in principal exists", async () => {
+    // Mutation: gating the seeding effect on something other than `token`,
+    // or never calling `setHistory` from its resolved value, leaves the
+    // rail on its empty state and turns this red.
+    fetchHistoryMock.mockResolvedValue({
+      items: [{ trace_id: "row-1", question: "What is BRCA1?" }],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+
+    await signIn(user);
+
+    const rail = await screen.findByTestId("history-rail");
+    expect(within(rail).getByRole("button", { name: /what is brca1\?/i })).toBeInTheDocument();
+  });
+
+  it("does not duplicate a run this tab already made once its server copy arrives", async () => {
+    // The critical this ticket names before it is written (`tracker/
+    // phase_4.13.md`), restated at the UI layer: a session run and its
+    // later-arriving server row render as ONE item, matched on
+    // `trace_id`/`run_id`, never on question text alone (see
+    // `mergeServerHistory`'s own docstring in App.tsx). Mutation: matching
+    // on question text instead of `traceId`, or never setting `traceId`
+    // when `createRun` resolves, both turn this red, since the rail would
+    // then show the question twice.
+    let resolveHistory!: (value: {
+      items: { trace_id: string; question: string }[];
+      count: number;
+    }) => void;
+    fetchHistoryMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveHistory = resolve;
+      }),
+    );
+    createRunMock.mockResolvedValue({ run_id: "run-42", persona_name: "Mendel" });
+    const user = userEvent.setup();
+    render(<App />);
+
+    await signIn(user);
+    await ask(user, "Which diseases are associated with BRCA1?");
+    await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
+
+    // The server's own copy of the SAME run now arrives, carrying the same
+    // trace_id `createRun` just returned as `run_id`.
+    resolveHistory({
+      items: [{ trace_id: "run-42", question: "Which diseases are associated with BRCA1?" }],
+      count: 1,
+    });
+
+    const rail = await screen.findByTestId("history-rail");
+    expect(
+      within(rail).getAllByRole("button", {
+        name: /which diseases are associated with brca1\?/i,
+      }),
+    ).toHaveLength(1);
+  });
+
+  it("leaves the live list on screen when the history fetch fails", async () => {
+    // Mutation: letting the rejection propagate instead of being caught,
+    // or clearing `history` on any fetch outcome, either crashes the
+    // effect or blanks a session item that was never at fault, turning
+    // this red.
+    fetchHistoryMock.mockRejectedValue(new Error("fetchHistory failed with 401"));
+    const user = userEvent.setup();
+    render(<App />);
+
+    await signIn(user);
+    await ask(user, "What variants cause cystic fibrosis?");
+
+    const rail = await screen.findByTestId("history-rail");
+    expect(
+      within(rail).getByRole("button", { name: /what variants cause cystic fibrosis\?/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("clears on sign-out, and a second identity does not inherit the first's list", async () => {
+    // The critical build phase 4.5 already shipped once (every guest
+    // shared one ownership identity), restated at the UI layer: nothing
+    // from the previous principal's fetch may still be on screen once a
+    // different principal has signed in. Mutation: dropping
+    // `setHistory([])` from the sign-out handler turns this red, because
+    // the first identity's restored row would still be present alongside
+    // the second's rather than gone.
+    fetchHistoryMock.mockResolvedValueOnce({
+      items: [{ trace_id: "row-a", question: "Old question for the first identity" }],
+      count: 1,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+
+    await signIn(user);
+    const firstRail = await screen.findByTestId("history-rail");
+    expect(
+      within(firstRail).getByRole("button", { name: /old question for the first identity/i }),
+    ).toBeInTheDocument();
+
+    await signOut(user);
+    expect(screen.queryByTestId("history-rail")).not.toBeInTheDocument();
+
+    fetchHistoryMock.mockResolvedValueOnce({
+      items: [{ trace_id: "row-b", question: "New question for the second identity" }],
+      count: 1,
+    });
+    await signIn(user);
+
+    const secondRail = await screen.findByTestId("history-rail");
+    expect(
+      within(secondRail).getByRole("button", { name: /new question for the second identity/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(secondRail).queryByRole("button", { name: /old question for the first identity/i }),
+    ).not.toBeInTheDocument();
   });
 });

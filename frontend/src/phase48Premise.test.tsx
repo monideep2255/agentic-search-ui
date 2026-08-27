@@ -356,6 +356,11 @@ describe("clause 3b: the assembled app is still connected to the agent", () => {
     vi.spyOn(api, "getAllowance").mockResolvedValue({
       kind: "user", used: 0, total: 100, counted: false,
     } as never);
+    // T-4.13-03: sign-in now also seeds the rail from `GET /v1/history`.
+    // Mocked for the same reason as `getAllowance` just above: without
+    // this, sign-in makes a real, unmocked network call the moment it
+    // succeeds.
+    vi.spyOn(api, "fetchHistory").mockResolvedValue({ items: [], count: 0 } as never);
 
     const user = userEvent.setup();
     const { default: App } = await loadApp();

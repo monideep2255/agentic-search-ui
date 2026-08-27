@@ -51,13 +51,14 @@ import { theme } from "./theme";
 import {
   ApiError,
   createRun,
+  fetchHistory,
   fetchMe,
   fetchPersona,
   getAllowance,
   mintGuest,
   stopRun,
 } from "./lib/api";
-import type { AllowanceResponse } from "./lib/api";
+import type { AllowanceResponse, HistoryItem } from "./lib/api";
 import {
   capitalizeFirst,
   clearPersistedGuestToken,
@@ -102,6 +103,52 @@ const FOLLOW_UP_HINTS = [
   "Which trials are recruiting?",
   "What does the literature add?",
 ];
+
+/**
+ * One rail item. `traceId` is T-4.13-03: it is only present once the item's
+ * run has actually been admitted (`response.run_id` from `createRun`, set
+ * in `ask` below), and it is the SAME value the server's `GET /v1/history`
+ * calls `trace_id` for that run (`app.py`'s "run_id/trace_id wiring"
+ * comment). It exists to give `mergeServerHistory` a stable key; nothing
+ * renders it.
+ */
+type HistoryEntry = { id: string; question: string; meta?: string; traceId?: string };
+
+/**
+ * T-4.13-03. Folds the server's own restored questions into the rail
+ * without showing a run this tab already ran twice.
+ *
+ * KEY: `traceId`, matched against the server's `trace_id`, never `question`
+ * text. The same question asked on two separate occasions is two separate,
+ * real `interactions` rows (a researcher re-checking the same gene is a
+ * realistic case, not an edge case), and collapsing on text would silently
+ * drop one of them. `traceId` is set on a local item the moment `createRun`
+ * resolves (see `ask`), well before the seeding effect's fetch could ever
+ * observe that row, so the match is exact rather than a best guess.
+ *
+ * A local item with no `traceId` yet (a run still in flight, or one whose
+ * best-effort capture write never landed, Section 16) is always kept
+ * unconditionally: the server response cannot contain a row for it, so
+ * there is no duplicate to resolve, only a real item that must not be
+ * dropped.
+ *
+ * Server items already carry no local counterpart are appended AFTER the
+ * current list, so this tab's own live activity (and its richer `meta`,
+ * computed from the actual event stream rather than absent) stays above
+ * older restored history, and a caller reloading with no local items yet
+ * sees exactly the server's own newest-first order.
+ */
+function mergeServerHistory(current: HistoryEntry[], serverItems: HistoryItem[]): HistoryEntry[] {
+  const localTraceIds = new Set(
+    current
+      .map((item) => item.traceId)
+      .filter((traceId): traceId is string => traceId !== undefined),
+  );
+  const restored: HistoryEntry[] = serverItems
+    .filter((item) => !localTraceIds.has(item.trace_id))
+    .map((item) => ({ id: item.trace_id, question: item.question, traceId: item.trace_id }));
+  return [...current, ...restored];
+}
 
 export function App() {
   // T-4.16-05. Was `useState<ScreenName>("search")`, which is why every
@@ -163,7 +210,7 @@ export function App() {
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(hasAcceptedDisclaimer);
-  const [history, setHistory] = useState<{ id: string; question: string; meta?: string }[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [flagged, setFlagged] = useState<number[]>([]);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   /**
@@ -283,6 +330,44 @@ export function App() {
         ) {
           setDepth(me.audience_depth);
         }
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [token]);
+
+  /**
+   * T-4.13-03: seed the rail from the server once a signed-in principal
+   * exists, and again every time `token` changes, which is what "again
+   * after sign-in" means in practice here. `token` starts `null` on every
+   * mount (it is not persisted, unlike the guest token; see its own
+   * comment above), so this effect does not yet reach a person who reloads
+   * while still signed in from an earlier visit, only one who reloads and
+   * signs back in, or one already signed in this tab. Fixing that is a
+   * token-persistence gap outside this ticket's scope, not a defect in the
+   * merge below.
+   *
+   * Scoped to `signedIn`, not to `authToken` (which would also cover a
+   * guest token): `railAvailable` below only renders the rail for a
+   * signed-in account, matching `tracker/phase_4.13.md`'s own coverage
+   * note that `GET /v1/history` is scoped for a guest principal only so
+   * the isolation property holds whether or not any UI calls it, not
+   * because this UI calls it for one.
+   *
+   * Best-effort, per production-standards' graceful-degradation gate: a
+   * failed, malformed, or 401 fetch (a token that expired between mount
+   * and this effect, most realistically) leaves whatever is already on
+   * screen, including this session's own live items, rather than blanking
+   * the rail. The `AbortController` cleanup also means a slow fetch from
+   * an account that has since signed out, or switched to a different
+   * account, can never resolve into `setHistory` after the fact, which is
+   * what keeps a second identity from ever inheriting the first's list.
+   */
+  useEffect(() => {
+    if (token === null) return undefined;
+    const controller = new AbortController();
+    fetchHistory(token, { signal: controller.signal })
+      .then((response) => {
+        setHistory((current) => mergeServerHistory(current, response.items));
       })
       .catch(() => undefined);
     return () => controller.abort();
@@ -513,6 +598,21 @@ export function App() {
         // only the first, so a sign-in that changes the identity behind the
         // session is reflected without a reload.
         setPersona(response.persona_name);
+        // T-4.13-03: give this rail item the trace id its `interactions`
+        // row will carry, so `mergeServerHistory` can recognise the SAME
+        // run when the server later echoes it back, rather than matching
+        // on question text (see that function's own docstring for why
+        // text is the wrong key). Matched by `question`, the same way the
+        // meta-on-landing effect above matches this run's item: the
+        // in-session dedup a few lines up already guarantees at most one
+        // item exists per question text, so this cannot mis-tag a sibling.
+        setHistory((current) =>
+          current.map((item) =>
+            item.question === question && item.traceId === undefined
+              ? { ...item, traceId: response.run_id }
+              : item,
+          ),
+        );
 
         if (!signedIn) {
           // T-4.10-08: the dots must read the SERVER's own count, never a

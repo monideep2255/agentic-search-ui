@@ -97,6 +97,11 @@ vi.mock("./lib/api", async () => {
     stopRun: vi.fn(),
     mintGuest: vi.fn(),
     getAllowance: vi.fn(),
+    // T-4.13-03: sign-in now also seeds the rail from `GET /v1/history`. An
+    // api mock that omits an export App actually calls throws inside a
+    // useEffect and takes the whole render down, the same reasoning
+    // `fetchPersona`'s own comment above already gives.
+    fetchHistory: vi.fn(async () => ({ items: [], count: 0 })),
   };
 });
 

@@ -96,6 +96,10 @@ vi.mock("./lib/api", async () => {
     // which the rail's footer line (below) is built from.
     mintGuest: vi.fn(),
     getAllowance: vi.fn(),
+    // T-4.13-03: sign-in now also seeds the rail from `GET /v1/history`.
+    // Defaulted to empty directly here, matching `fetchPersona` above,
+    // since no clause in this file needs a non-empty server history.
+    fetchHistory: vi.fn(async () => ({ items: [], count: 0 })),
   };
 });
 
@@ -436,9 +440,15 @@ describe("F-4.8-P-03: the stored-searches rail collapses", () => {
     // The prototype's `avail = st.loggedIn && onSearch` does NOT depend on
     // history, and `renderRail` emits `.rempty` when the list is empty. The
     // shipped rail rendered nothing at all here.
+    //
+    // T-4.13-03 corrected this copy: the prototype's own "in this session"
+    // wording went false the moment the rail started seeding from
+    // `GET /v1/history`, so this clause now asserts the corrected text
+    // rather than the prototype's stale claim (`FollowUp.tsx`'s own
+    // comment on the `.rempty` block records why the divergence is
+    // deliberate).
     const rail = await screen.findByTestId("history-rail");
-    expect(within(rail).getByText(/searches you run in this session appear here/i))
-      .toBeInTheDocument();
+    expect(within(rail).getByText(/your searches appear here/i)).toBeInTheDocument();
   });
 
   it("offers the toggle from sign-in, before any search has been run", async () => {
