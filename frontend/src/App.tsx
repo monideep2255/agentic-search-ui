@@ -640,10 +640,20 @@ export function App() {
       // which is what a re-ask actually is: a new run for an old question,
       // not an edit of the old run's record. Transcribed the same way here,
       // so the freshly unshifted entry starts with no `meta` and no
-      // `traceId` of its own, exactly like a brand-new question, and the
-      // dedup invariant `ask`'s own traceId-tagging comment below already
-      // relies on ("at most one item exists per question text") still
-      // holds after this change.
+      // `traceId` of its own, exactly like a brand-new question.
+      //
+      // F-4.13-FV-02. This comment used to claim the rail holds "at most one
+      // item per question text". THAT IS FALSE and stating it was actively
+      // harmful, because a comment asserting an invariant is where the next
+      // reader stops checking. The filter here dedups by text only among the
+      // rows present AT THE MOMENT OF THE ASK; `mergeServerHistory` is a
+      // second writer that keys on `traceId` and never on text, so a server
+      // copy of the same question arriving afterwards is kept, and two rows
+      // then share a text. What actually holds is narrower and is the thing
+      // to rely on: every row's `id` is unique, a local one from
+      // `nextLocalHistoryId()` and a restored one from its server `trace_id`.
+      // F-4.13-FV-01 is what it cost to learn that, and the meta effect
+      // above now keys on identity for exactly this reason.
       //
       // F-4.13-RV-01's fix. The id was `String(current.length)`, which the
       // filter above silently invalidated: the filter can SHRINK the list,
