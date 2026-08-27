@@ -73,6 +73,7 @@ from system_03_search_agent.feedback import (
     InteractionNotFound,
     record_feedback,
 )
+from system_03_search_agent.feedback.history import DEFAULT_LIMIT, MAX_LIMIT, list_history
 from system_03_search_agent.harness.cost_control import (
     anon_daily_run_cap,
     anon_daily_source_share,
@@ -728,6 +729,89 @@ def get_v1_allowance(
     # writes `interactions` rows yet), so `counted=False` says so rather
     # than presenting an uncounted zero as a real count (F-4.9-A-16).
     return AllowanceResponse(kind="user", used=0, total=per_user_daily_query_cap(), counted=False)
+
+
+# T-4.13-02 (`tracker/phase_4.13.md`): the response shapes `GET /v1/history`
+# renders. `production-standards`' multi-agent pipeline gate applies here
+# exactly as it does to every other response model on this surface: every
+# string field carries `max_length`, and the list carries `max_length` too,
+# even though this is a caller's OWN previously-validated data rather than
+# an untrusted external document, because the gate does not carve out an
+# exception for "trusted" data and a bound here costs nothing.
+class HistoryItem(BaseModel):
+    """One row of `GET /v1/history`'s response.
+
+    Field widths mirror the write path's own bounds
+    (`feedback.contracts.InteractionRow`) rather than inventing new ones:
+    `trace_id` matches `max_length=64`, `question` matches `query_text`'s
+    `max_length=2000`. `trust_signal` is one of four short literals
+    (`answer`, `flag`, `ask`, `refuse`); 20 characters is headroom, not a
+    measured bound. No answer narrative: decision D-4.13-01 is why this
+    model has no such field to bound.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    trace_id: str = Field(..., max_length=64)
+    question: str = Field(..., max_length=2000)
+    asked_at: datetime
+    trust_signal: str = Field(..., max_length=20)
+    citation_count: int = Field(..., ge=0)
+
+
+class HistoryResponse(BaseModel):
+    """`GET /v1/history`'s response: `{items, count}` (T-4.13-02).
+
+    `items` is bounded at `MAX_LIMIT` (`feedback.history`'s own bound on
+    what a single call can ever return), never a Python-side slice of a
+    larger list: the read path itself already applies a real SQL `LIMIT`
+    no larger than `MAX_LIMIT`, so this is the response contract agreeing
+    with the query that produced it, not a second enforcement point.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[HistoryItem] = Field(default_factory=list, max_length=MAX_LIMIT)
+    count: int = Field(..., ge=0)
+
+
+# T-4.13-02: the read path over build phase 4.6's `interactions` substrate.
+# `Depends(get_caller)` alone is what makes an unauthenticated request 401
+# rather than 200 with an empty list: a client must be able to tell "no
+# searches yet" from "not signed in", because it does opposite things with
+# them (render the empty state vs. re-authenticate), and `get_caller`
+# already refuses with 401 for a missing or invalid credential of EITHER
+# principal class, guest or account, before this handler body ever runs.
+# `caller.owner_id` is the exact namespaced principal (`user:<uuid>` or
+# `guest:<uuid>`) `feedback.history.list_history` filters on, the same
+# value every other owner-scoped route on this surface reads off
+# `Principal`, never something derived from `caller.user_id` (NULL for
+# every guest, F-4.5-A-02's lesson).
+#
+# `limit`'s bound is enforced HERE, by FastAPI's own `Query(ge=1,
+# le=MAX_LIMIT)`, which returns 422 with the violated constraint (and so
+# `MAX_LIMIT`'s value) named in the response body. `list_history`'s own
+# `ValueError` guard on `limit` is defense in depth for a caller of that
+# module that bypasses this endpoint, not the caller-facing refusal.
+@app.get("/v1/history", response_model=HistoryResponse)
+def get_v1_history(
+    limit: int = FastAPIQuery(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+    caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
+) -> HistoryResponse:
+    entries = list_history(owner_id=caller.owner_id, limit=limit)
+    return HistoryResponse(
+        items=[
+            HistoryItem(
+                trace_id=entry.trace_id,
+                question=entry.question,
+                asked_at=entry.asked_at,
+                trust_signal=entry.trust_signal,
+                citation_count=entry.citation_count,
+            )
+            for entry in entries
+        ],
+        count=len(entries),
+    )
 
 
 def _guest_refund_callback(
