@@ -51,7 +51,9 @@ When each applies:
 - Always run the scripted checker for substantial output. It is the accept or reject gate.
 - Add an adversary when the output is runnable and a plausible-but-wrong result is worse than an obvious failure. Agentic search is the clear case: a confident wrong answer is more dangerous than a crash, so the cite-or-refuse gate needs an adversary throwing hostile queries at it before it is trusted.
 
-Adversary findings land in a shared-ledger file, not scattered across agent outputs. Each state has a single writer, judgment states carry a reason, and every transition appends a history line, so the finder-is-not-closer rule holds by construction. The full convention is the "Shared-ledger coordination" subsection in `.claude/skills/bossman-mode/SKILL.md`. Source: the Personal Space autonomous build harness, analyzed in the personal-os Reference-repos set, which pairs a scripted qa role with a separate unscripted adversary.
+Adversary findings land in a shared-ledger file, not scattered across agent outputs. Each state has a single writer, judgment states carry a reason, and every transition appends a history line, so the finder-is-not-closer rule holds by construction.
+
+A finding is written the moment it is established, before the finder does anything else with it. Not after the round finishes, not while composing a report, not after one more check to be sure. An agent's context is not storage: it ends without warning, and on 2026-08-27 four agents in one session ended to sleep interruptions and a watchdog stall, one of them mid-sentence holding the phase's blocking regression. It was recovered only because a human noticed the agent's last line and resumed it with an instruction to write before doing anything else, which is a rescue rather than a mechanism. The cheapest possible durability, an append to a markdown file, is available at the moment of discovery and costs nothing. The full convention is the "Shared-ledger coordination" subsection in `.claude/skills/bossman-mode/SKILL.md`. Source: the Personal Space autonomous build harness, analyzed in the personal-os Reference-repos set, which pairs a scripted qa role with a separate unscripted adversary.
 
 ### Review a fix harder than new code
 
@@ -97,5 +99,8 @@ Ask:
 Deny:
 - Never skip the grading step for substantial output in bossman mode
 - Never pass conversation history to the grading agent
+- Never hold an established finding in context while doing something else first. Write it, then continue. A finding that exists only in a running process is one interruption away from never having been found
 
 The test: did my substantial output get graded by a fresh-context agent, or did I only self-review in the same context?
+
+The second test, added 2026-08-27: if this agent died right now, would anything it has established still exist?

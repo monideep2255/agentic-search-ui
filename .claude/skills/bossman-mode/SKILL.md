@@ -237,7 +237,7 @@ Verify the premise, not only the leaves. The judge's default instinct is to chec
 
 The judge is scripted verification. It checks the artifact against the plan, the tests, and the `production-standards` and `ai-security-standards` gates, so it catches the failures someone thought to specify. It is blind to the failure nobody wrote a check for. For System 3 that blind spot is the dangerous one: the failure mode here is a fluent wrong answer, not a failed assertion, and a green judge verdict does not touch it.
 
-The adversary is the unscripted half. It uses the running system in hostile ways the spec never imagined: malformed and boundary input, out-of-order operations, edge cases, and above all queries engineered to draw a confident wrong answer, especially queries where the graph returns nothing and the system should refuse rather than answer from priors. It is the pressure the cite-or-refuse gate needs before it is trusted: does the system actually refuse, or does it fabricate a fluent, uncited, biomedically plausible answer? It over-reports on purpose, because for a biomedical user a false alarm is cheap and a missed wrong answer is not. It files every finding to a shared ledger and stops there. It never fixes, triages, or closes its own findings; the judge or a fix agent triages them, and only the ledger's designated closer closes them. This is the maker-cannot-sign-off split of `self-eval-loop.md` applied to verification itself: the finder is never the closer.
+The adversary is the unscripted half. It uses the running system in hostile ways the spec never imagined: malformed and boundary input, out-of-order operations, edge cases, and above all queries engineered to draw a confident wrong answer, especially queries where the graph returns nothing and the system should refuse rather than answer from priors. It is the pressure the cite-or-refuse gate needs before it is trusted: does the system actually refuse, or does it fabricate a fluent, uncited, biomedically plausible answer? It over-reports on purpose, because for a biomedical user a false alarm is cheap and a missed wrong answer is not. It files every finding to a shared ledger AS IT FINDS IT, not in a batch at the end, and stops there. It never fixes, triages, or closes its own findings; the judge or a fix agent triages them, and only the ledger's designated closer closes them. This is the maker-cannot-sign-off split of `self-eval-loop.md` applied to verification itself: the finder is never the closer.
 
 Run the adversary after the judge, only on a phase that produced a runnable artifact. A green judge verdict is necessary but not sufficient; the adversary is what decides whether the answer path is actually trustworthy. Source: the Personal Space autonomous build harness, analyzed in the personal-os Reference-repos set, which pairs a scripted qa role with a separate unscripted adversary.
 
@@ -287,6 +287,8 @@ Rule 3, two rounds, then stop. The budget is one judge round plus one fix-and-re
 A phase that would have taken six rounds now costs two and a decision. This is the `goal-contracts` blocked-stop applied to review: a blocked stop is a valid, honest end state, and escalation must be cheaper than fighting the loop.
 
 Rule 4, a regression inside a prior fix stops the round immediately. Do not finish the round, do not batch it with the round's other findings. When a reviewer locates a finding inside code written to fix an earlier finding in this same phase, the phase escalates on the spot, even in round 1, because that is the signal that the fix approach itself is wrong rather than incomplete. The finding is filed with `Regression of: F-N.M-XX` so the pattern is visible in the ledger rather than reconstructed afterwards from five reports.
+
+Filed BEFORE the round stops, not as part of stopping. The order is written down because it was got wrong the first time this rule ever fired: on 2026-08-27 the re-verifier established the regression, announced the stop, moved on to tidying up before reporting, and died mid-sentence with the finding held only in its own context. Stopping is not an action that takes precedence over recording. Write the finding, then stop.
 
 ### Reviewing a fix, and reviewing a gate
 
@@ -375,6 +377,11 @@ Constraints: [architectural decisions that apply]
 Files to touch: [specific paths, not vague areas]
 Files to read: [paths the agent should read itself for full context]
 
+Write findings to [ledger path] the MOMENT you establish one, before you do
+anything else with it: before you verify anything, before you continue, before
+you compose your report. Your context is not storage. It ends without warning,
+and a finding that lives only there is lost when it does.
+
 Do not ask questions. Execute and report back.
 If stuck, report the blocker clearly. Do not guess on ambiguous requirements.
 ```
@@ -461,8 +468,9 @@ Partition first, isolate second. Worktrees make concurrent writes safe, they do 
 
 When parallel agents share findings, defects, or task state, they coordinate through one shared markdown ledger, not by each writing wherever they like. Without a convention, two agents writing status to the same file overwrite each other, and an agent that raised an item can quietly close it. A single-writer-per-state ledger removes both races by construction and leaves an auditable trail. The Personal Space harness, analyzed in the personal-os Reference-repos set, runs its defect and adversarial-review ledgers this way.
 
-The ledger is a real file, not an abstraction: `tracker/phase_N.M.md`, the same phase file the tickets live in, under its Findings section. Adversary findings and builder defects both land there. Keeping findings beside tickets in one file is deliberate, since a confirmed finding usually becomes a fix ticket, and that transition should not cross a file boundary. The `task-tracker` skill owns the format. Four rules:
+The ledger is a real file, not an abstraction: `tracker/phase_N.M.md`, the same phase file the tickets live in, under its Findings section. Adversary findings and builder defects both land there. Keeping findings beside tickets in one file is deliberate, since a confirmed finding usually becomes a fix ticket, and that transition should not cross a file boundary. The `task-tracker` skill owns the format. Five rules:
 
+- Write first, then continue. A finding is written to the ledger the MOMENT it is established, before the agent does anything else: before it verifies tree cleanliness, before it finishes the round, before it composes a report, before it reruns anything to be sure. This is the newest rule and the only one added from a loss rather than from a principle. On 2026-08-27 a re-verifier found the phase's blocking regression, said "the stop condition has fired, let me verify tree cleanliness and clean up before reporting", and died to an infrastructure error mid-sentence. The finding existed in exactly one place, that agent's context, and nowhere on disk. It was recovered only because the lead noticed the last line, resumed the agent, and told it to write before doing anything else. That recovery depended on a human-shaped judgment call at the right moment, which is not a mechanism. Four agents died that day to sleep interruptions and a watchdog stall, so the loss was not rare; it was survived once. An unwritten finding is not a finding, it is a memory in a process that can end between two sentences.
 - Single writer per state: each state in the ledger has exactly one role authorized to set it. The adversary files findings, the judge or a fix agent triages, only the designated closer closes. No state has two writers.
 - Mandatory reason on judgment states: any state that reflects a judgment call (accepted, rejected, closed, disputed) carries a one-line reason. A bare status change with no reason is invalid.
 - Append-only history line per transition: every transition appends a who-what-why line to the item's history. History is never rewritten, only extended, so the trail reconstructs the full life of the item.
