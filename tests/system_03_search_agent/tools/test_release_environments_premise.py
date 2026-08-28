@@ -188,9 +188,23 @@ def test_p1_both_environments_answer_at_different_hostnames() -> None:
     The second half is the half that matters. Asserting each `/health` returns
     ok would pass if the fixture named one URL twice, or if a DNS alias pointed
     develop at production, and either of those is exactly the failure "two
-    environments" is supposed to exclude. So the hostnames are compared, and
-    the service ids reported by the two deployments are compared too, because
-    two hostnames can still front one service.
+    deployments" is supposed to exclude. So the hostnames are compared, and so
+    are the Railway project ids the fixture records, since two hostnames in one
+    project cannot watch two branches (F-4.15-03) and would defeat the whole
+    phase.
+
+    WHAT THIS ARM DOES NOT DO, corrected 2026-08-27 after findings F-4.15-J-01
+    and F-4.15-A-10, which a judge and an adversary filed independently against
+    the same sentence. This docstring used to claim "the service ids reported
+    by the two deployments are compared too, because two hostnames can still
+    front one service". No such comparison existed anywhere in the body, and
+    none is possible over HTTP, because nothing this API exposes reports a
+    Railway service id. A comment asserting a check that is not there is worse
+    than no comment: it tells the next reader the case was covered, which is
+    the exact reason both reviewers went looking. The claim is replaced by the
+    project-id comparison, which IS performed, and by this paragraph naming
+    what remains uncovered: two hostnames fronting one service inside one
+    project would still pass P1, and only P2, P3a and P3b would catch it.
     """
     prod = _require("production")
     dev = _require("develop")
@@ -200,6 +214,14 @@ def test_p1_both_environments_answer_at_different_hostnames() -> None:
         "deployment wearing two labels"
     )
     assert prod["web"] != dev["web"], "production and develop name the same web URL"
+    # The check the old docstring claimed and did not perform. Two deployments
+    # in ONE Railway project cannot watch two branches (F-4.15-03), so a shared
+    # project id defeats the phase even when the hostnames differ.
+    assert prod["project_id"] != dev["project_id"], (
+        f"both deployments name Railway project {prod['project_id']}. A "
+        f"service's git branch is service-level, so one project cannot carry "
+        f"two branches and the release flow would be promoting nothing."
+    )
 
     with _client() as client:
         for label, entry in (("production", prod), ("develop", dev)):
@@ -673,8 +695,16 @@ def test_p7_env_example_documents_every_variable_the_deployment_sets() -> None:
 
     This arm runs OFFLINE against a checked-in expectation rather than against
     the live service, for one reason: it has to keep working in CI, where there
-    is no Railway credential. The expectation below is the measured set from
-    2026-08-27, and the live equivalent is P6.
+    is no Railway credential.
+
+    WHAT IT THEREFORE CANNOT DO, corrected after F-4.15-J-06 and F-4.15-A-11.
+    The set below is a SNAPSHOT taken by hand on 2026-08-27, not a reading of
+    any deployment. If someone sets a new variable on a service tomorrow and
+    documents it nowhere, this arm stays green, because the snapshot does not
+    know about it either. That is finding F-4.15-01 recurring undetected, which
+    is the one thing this arm is named for. P7b below is the arm that actually
+    reads the deployments; this one only checks that the snapshot and the
+    documentation still agree.
 
     The direction asserted is deployment-set implies documented. The converse
     is false on purpose and must stay false: `env.example` legitimately carries
@@ -718,6 +748,60 @@ def test_p7_env_example_documents_every_variable_the_deployment_sets() -> None:
         f"{len(undocumented)} variable(s) are set on the deployed services and "
         f"absent from env.example: {undocumented}. Anyone provisioning a new "
         f"environment from env.example would omit them. This is F-4.15-01."
+    )
+
+
+@requires_live
+def test_p7b_env_example_documents_what_the_deployments_actually_set() -> None:
+    """The live half of P7, and the only arm that can catch F-4.15-01 again.
+
+    ADDED 2026-08-27 after findings F-4.15-J-06 and F-4.15-A-11, filed
+    independently by a judge and an adversary against the same gap.
+
+    P7 above is named "env.example documents every variable the deployment
+    sets" and never reads a deployment. It compares `env.example` against a
+    SNAPSHOT of variable names taken by hand on 2026-08-27. That snapshot is
+    useful, because it runs in CI where there is no Railway credential, and it
+    is not the property: the day someone sets a new variable on a service and
+    does not document it, which is precisely finding F-4.15-01, the snapshot
+    still matches `env.example` and P7 stays green.
+
+    So the arm that carries the property is this one, and it reads the live
+    services. The two together are honest: P7 is a cheap always-on check that
+    the snapshot and the documentation agree, and P7b is the expensive check
+    that the snapshot is still true of reality.
+
+    Names only, never values. The comparison is over variable NAMES and the
+    values are not read into this process at all.
+    """
+    if shutil.which("railway") is None:
+        pytest.fail(
+            "the Railway CLI is not on PATH, so the deployed variable set "
+            "cannot be read. This arm is the only one that can catch a new "
+            "undocumented variable; do not weaken it to a skip."
+        )
+
+    documented = _documented_variable_names()
+    assert documented, "read zero names out of env.example, so this arm is vacuous"
+
+    undocumented: dict[str, list[str]] = {}
+    for name in ("production", "develop"):
+        entry = _require(name)
+        for service in ("search-agent-api", "search-agent-web"):
+            live = _service_variable_names(service, entry)
+            assert live, (
+                f"read zero variable names for {service} in {entry['project']}, "
+                f"so the comparison below would pass against anything"
+            )
+            missing = sorted(live - documented)
+            if missing:
+                undocumented[f"{entry['project']}/{service}"] = missing
+
+    assert not undocumented, (
+        f"variables are set on a deployed service and absent from env.example: "
+        f"{undocumented}. Anyone provisioning a new deployment from the file "
+        f"this repository tells them to provision from would omit them. This is "
+        f"finding F-4.15-01 recurring, and it is the reason this arm exists."
     )
 
 

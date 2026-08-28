@@ -11,6 +11,16 @@ those were caught ONLY by mutation and not by anybody reading them. Build phase
 its own docstring, and build phase 4.16 shipped six assertions that could not
 fail, five of them written by the lead.
 
+AND THEN THIS FILE DID IT TOO. The sentence above claiming EVERY arm is covered
+was true of seven arms out of nine: P6 and P9 had no case at all, and a judge
+and an adversary filed it independently as F-4.15-J-03 and F-4.15-A-15. The
+harness asserting the very property it exists to disprove is recorded here
+rather than quietly filled in, because the pattern is now unmistakable: the
+claim is written at the moment of most confidence, and confidence is exactly
+what nobody re-reads. Every arm, P1 through P9 including P3a, P3b and P7b, now
+has at least one case, and the way to keep that true is to add the case in the
+same edit as the arm rather than afterwards.
+
 ## Why the live arms are mutated OFFLINE
 
 P1 to P6 talk to two deployed environments. Mutating them for real would mean
@@ -83,6 +93,7 @@ class _World:
         *,
         shared_database: bool = False,
         shared_auth_secret: bool = False,
+        accepts_forged_signature: bool = False,
         shared_cors: bool = False,
         permissive_cors: bool = False,
         shared_app_env: bool = False,
@@ -91,6 +102,7 @@ class _World:
     ) -> None:
         self.shared_database = shared_database
         self.shared_auth_secret = shared_auth_secret
+        self.accepts_forged_signature = accepts_forged_signature
         self.shared_cors = shared_cors
         self.permissive_cors = permissive_cors
         self.shared_app_env = shared_app_env
@@ -143,6 +155,11 @@ class _World:
             token = raw.removeprefix("Bearer ").strip()
             minted_by = self.tokens.get(token)
             if minted_by is None:
+                # An unknown token is a forged or tampered one. A
+                # deployment that skips signature verification takes it
+                # anyway, which is what P3a exists to catch.
+                if self.accepts_forged_signature:
+                    return _Response(200, {"id": 1})
                 return _Response(401, {"detail": "invalid"})
             verified = minted_by == env or self.shared_auth_secret
             return _Response(200 if verified else 401, {"id": 1})
@@ -174,7 +191,13 @@ class _World:
             if password != body["password"] or not self._owns(env, holder):
                 return _Response(401, {"detail": "bad credentials"})
             self._counter += 1
-            token = f"tok-{self._counter}"
+            # JWT SHAPED, three dot-separated base64url segments with a
+            # signature long enough to tamper with in the middle. The fake
+            # used to mint an opaque `tok-N`, which made P3a's own
+            # structural assertion fail in the healthy control and so made
+            # the mutation case unrunnable. A fake transport that cannot
+            # satisfy the arm's preconditions cannot test the arm.
+            token = f"aGVhZGVy.cGF5bG9hZA{self._counter}.c2lnbmF0dXJlYnl0ZXM{self._counter}"
             self.tokens[token] = env
             return _Response(200, {"access_token": token, "token_type": "bearer"})
 
@@ -234,6 +257,7 @@ def _run_arm(monkeypatch: pytest.MonkeyPatch, arm_name: str, world: _World) -> B
 _HEALTHY = dict(
     shared_database=False,
     shared_auth_secret=False,
+    accepts_forged_signature=False,
     shared_cors=False,
     permissive_cors=False,
     shared_app_env=False,
@@ -253,11 +277,15 @@ _HEALTHY = dict(
             {"shared_database": True},
             "share a user database",
         ),
-        # P3: both environments verify with the same secret.
+        # P3a: a deployment that does not actually verify signatures. The
+        # old P3 case went with the old arm: it asserted that a shared
+        # signing key made the arm red, which was never true of the real
+        # system (F-4.15-J-04). Its replacement tests what P3a really
+        # holds, that a corrupted signature is rejected.
         (
-            "test_p3_a_token_minted_on_one_environment_is_refused_by_the_other",
-            {"shared_auth_secret": True},
-            "same AUTH_SECRET",
+            "test_p3a_each_deployment_actually_verifies_a_token_signature",
+            {"accepts_forged_signature": True},
+            "ACCEPTED a token whose signature was corrupted",
         ),
         # P4, first assertion: CORS_ORIGINS was carried by the duplicate, so
         # develop admits production's origin and not its own. This trips the
@@ -505,3 +533,172 @@ def test_the_premise_gate_gates_on_the_flag_alone_and_not_on_reachability() -> N
             f"phase built is down' into a skip, which is the failure the gate "
             f"exists to report."
         )
+
+
+# ---------------------------------------------------------------------------
+# P6, P7b and P9: the arms that had no mutation case at all
+# ---------------------------------------------------------------------------
+#
+# Added 2026-08-27 after findings F-4.15-J-03 and F-4.15-A-15, filed
+# independently by a judge and an adversary. This file's own docstring said
+# "Every arm in test_release_environments_premise.py is asserted here to go RED
+# when the property it guards is broken" while two of the nine arms had no case
+# at all, so the harness made exactly the claim it exists to disprove. That is
+# the same shape as a code comment asserting an untested property, and it is
+# recorded rather than quietly filled in.
+#
+# P6, P7b and P9 all read something OUTSIDE the fake transport: two shell out to
+# the Railway CLI, one reads the workflow file. They are mutated by substituting
+# the boundary rather than by flipping a flag in `_World`.
+
+
+def _run_named(monkeypatch: pytest.MonkeyPatch, arm_name: str) -> BaseException | None:
+    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
+
+    try:
+        arm = getattr(premise, arm_name)
+        arm.__wrapped__() if hasattr(arm, "__wrapped__") else arm()
+    except BaseException as exc:  # noqa: BLE001 - the failure IS the result
+        return exc
+    return None
+
+
+def _fake_variable_reader(table: dict[tuple[str, str], set[str]]):
+    """Stand in for the Railway CLI, keyed by (project, service)."""
+
+    def reader(service: str, entry: dict) -> set[str]:
+        return table[(entry["project"], service)]
+
+    return reader
+
+
+_PROD_PROJECT = "system3-search-agent"
+_DEV_PROJECT = "system3-search-agent-develop"
+_BOTH_SERVICES = ("search-agent-api", "search-agent-web")
+
+
+def _healthy_variable_table(names: set[str]) -> dict[tuple[str, str], set[str]]:
+    return {(project, service): set(names) for project in (_PROD_PROJECT, _DEV_PROJECT) for service in _BOTH_SERVICES}
+
+
+def test_p6_goes_red_when_develop_is_missing_a_variable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """P6 detects a dropped variable, and passes when nothing is dropped.
+
+    This is the arm that caught a real gap during the phase: the develop
+    project's web service was genuinely missing two build variables, and P6
+    found it. That is evidence the arm works in practice; this is the evidence
+    that it can fail on demand.
+    """
+    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
+
+    base = {"APP_ENV", "AUTH_SECRET", "CORS_ORIGINS", "USER_DB_URL"}
+    monkeypatch.setattr(premise.shutil, "which", lambda _: "/usr/bin/railway")
+
+    healthy = _healthy_variable_table(base)
+    monkeypatch.setattr(premise, "_service_variable_names", _fake_variable_reader(healthy))
+    assert _run_named(monkeypatch, "test_p6_develop_is_not_missing_a_variable_production_has") is None, (
+        "P6 fails against a healthy pair of projects, so its red result below "
+        "would prove nothing"
+    )
+
+    broken = _healthy_variable_table(base)
+    broken[(_DEV_PROJECT, "search-agent-api")] = base - {"AUTH_SECRET"}
+    monkeypatch.setattr(premise, "_service_variable_names", _fake_variable_reader(broken))
+    failure = _run_named(monkeypatch, "test_p6_develop_is_not_missing_a_variable_production_has")
+    assert failure is not None, "P6 stayed green with a variable dropped from develop"
+    assert "AUTH_SECRET" in str(failure), (
+        f"P6 failed without naming the dropped variable: {str(failure)[:300]!r}"
+    )
+
+
+def test_p7b_goes_red_when_a_deployment_sets_an_undocumented_variable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """P7b catches F-4.15-01 recurring, which P7 structurally cannot.
+
+    P7 compares env.example against a hand-taken snapshot, so a NEW variable
+    appearing on a service is invisible to it: the snapshot does not know about
+    it either. P7b reads the deployment. This case is the proof of that
+    difference, and it is the reason P7b exists.
+    """
+    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
+
+    documented = premise._documented_variable_names()
+    assert documented, "env.example parsed to nothing, so this case is vacuous"
+    monkeypatch.setattr(premise.shutil, "which", lambda _: "/usr/bin/railway")
+
+    healthy = _healthy_variable_table(set(list(documented)[:5]))
+    monkeypatch.setattr(premise, "_service_variable_names", _fake_variable_reader(healthy))
+    assert _run_named(monkeypatch, "test_p7b_env_example_documents_what_the_deployments_actually_set") is None, (
+        "P7b fails when every live variable is documented, so its red result "
+        "below would prove nothing"
+    )
+
+    broken = _healthy_variable_table(set(list(documented)[:5]))
+    broken[(_DEV_PROJECT, "search-agent-api")] |= {"A_BRAND_NEW_UNDOCUMENTED_VARIABLE"}
+    monkeypatch.setattr(premise, "_service_variable_names", _fake_variable_reader(broken))
+    failure = _run_named(monkeypatch, "test_p7b_env_example_documents_what_the_deployments_actually_set")
+    assert failure is not None, (
+        "P7b stayed green while a deployment carried a variable env.example "
+        "does not document, which is finding F-4.15-01 recurring undetected"
+    )
+    assert "A_BRAND_NEW_UNDOCUMENTED_VARIABLE" in str(failure)
+
+
+@pytest.mark.parametrize(
+    ("mutate", "must_mention"),
+    [
+        # Shell smuggled back into a step body, the failure build phase 4.14
+        # was defeated by twice.
+        (
+            lambda t: t.replace(
+                "run: .github/release/derive_version.sh",
+                'run: ".github/release/derive_version.sh;#"',
+            ),
+            "not exactly one script path",
+        ),
+        # An injection sink reintroduced into a real expression.
+        (
+            lambda t: t.replace(
+                "RELEASE_VERSION: ${{ steps.version.outputs.version }}",
+                "RELEASE_VERSION: ${{ github.event.head_commit.message }}",
+                1,
+            ),
+            "attacker-influenced text",
+        ),
+        # A step naming a script that does not exist. This is the case that
+        # actually fired during the phase, when three scripts were written
+        # without the executable bit.
+        (
+            lambda t: t.replace(
+                "run: .github/release/tag_and_release.sh",
+                "run: .github/release/does_not_exist.sh",
+            ),
+            "does not exist",
+        ),
+    ],
+)
+def test_p9_goes_red_for_each_way_the_release_workflow_can_be_broken(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mutate, must_mention: str
+) -> None:
+    """P9 detects shell smuggled back in, an injection sink, and a missing script."""
+    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
+
+    assert _run_named(monkeypatch, "test_p9_the_release_workflow_holds_the_no_shell_and_no_injection_rules") is None, (
+        "P9 is red before any mutation, so the red results below prove nothing"
+    )
+
+    original = _REPO_ROOT / ".github" / "workflows" / "release.yml"
+    mutated_text = mutate(original.read_text())
+    assert mutated_text != original.read_text(), "the mutation changed nothing"
+
+    mutated = tmp_path / "release.yml"
+    mutated.write_text(mutated_text)
+    monkeypatch.setattr(premise, "_RELEASE_WORKFLOW", mutated)
+
+    failure = _run_named(monkeypatch, "test_p9_the_release_workflow_holds_the_no_shell_and_no_injection_rules")
+    assert failure is not None, "P9 stayed green under a mutation of the release workflow"
+    assert must_mention in str(failure), (
+        f"P9 failed for a reason that does not name the breakage: expected "
+        f"{must_mention!r}, got {str(failure)[:300]!r}"
+    )

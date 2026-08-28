@@ -335,10 +335,16 @@ def get_health() -> HealthResponse:
 
     It exists because build phase 4.15 made "which deployment is this?" a
     question with two possible answers for the first time. Before it, `APP_ENV`
-    was set on the deployed service and read NOWHERE in this codebase, which is
-    finding F-4.15-02: a variable can be configured, carried by an environment
-    duplicate, and load-bearing in nobody's code at all. That is worse than an
-    undocumented variable, because it reads as configured behaviour.
+    was set on the deployed service and read NOWHERE in this codebase: a
+    variable configured, carried forward by an environment duplicate, and
+    load-bearing in nobody's code at all. That is worse than an undocumented
+    variable, because it reads as configured behaviour.
+
+    This paragraph used to cite "finding F-4.15-02" for that observation, which
+    is a different finding entirely (the Railway CLI's `--environment` flag not
+    scoping a write). Corrected after F-4.15-J-05. A citation to the wrong
+    record is worse than no citation, because the next reader follows it and
+    concludes the note is confused rather than that the pointer is.
 
     The value is not a secret. It is the environment's name, `production` or
     `develop`, and it is what the premise gate's P5 arm reads to tell the two

@@ -43,7 +43,7 @@ name: CI
 on:
   # Deliberately UNFILTERED. Build phase 4.15 measured that this is what
   # already makes a release pull request into `production` run every gate, with
-  # change needed. Adding a `branches:` list here would look like tightening
+  # NO change needed. Adding a `branches:` list here would look like tightening
   # and would silently stop the production line from being checked before a
   # merge. The premise gate's P8 arm fails if one appears.
   pull_request:

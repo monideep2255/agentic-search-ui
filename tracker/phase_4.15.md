@@ -79,37 +79,15 @@ The data split was the only part that spends money and the only part that was ge
 
 Written before the first change, per `.claude/rules/goal-contracts.md`.
 
-Done when, all five:
+Done when, all five. REWRITTEN 2026-08-27 after finding F-4.15-J-02: the original text was written before two mid-phase redesigns and three of its five items had become literally false, which made the contract useless as a verify surface at exactly the moment it was needed. The original wording is not preserved here because `requirements/Plan.md` and this file's History section already carry the narrative; what a contract must be is TRUE.
 
-1. Two Railway environments exist in `system3-search-agent`: `production`, unchanged in name and public URL, and `develop`, new. Each has its OWN Postgres and Redis, and its own `search-agent-api` and `search-agent-web` answering at distinct public hostnames.
-2. `develop` the environment watches `develop` the branch. `production` the environment watches `main`.
-3. `main` exists on origin, and CI runs on a push to it as well as on a pull request into it.
-4. The release flow is written down in one document that is the source of truth for how a change reaches production.
-5. Every arm of the premise gate passes live, and every arm is proven able to fail by a mutation harness.
+1. Two deployments exist, `production` in Railway project `system3-search-agent` and `develop` in `system3-search-agent-develop`. Each has its OWN Postgres, Redis and `AUTH_SECRET`, and its own api and web services answering at distinct public hostnames. TWO PROJECTS rather than two environments, per F-4.15-03.
+2. The develop project watches the `develop` branch and the production project watches the `production` branch.
+3. `production` exists on origin, `develop` remains the DEFAULT branch, and CI runs on a push to either as well as on a pull request into either.
+4. The release flow is written down in one document that is the source of truth for how a change reaches production, including the release branch, the tag, the changelog and the back-merge.
+5. Every arm of the premise gate that CAN pass today does, every arm is proven able to fail by a mutation harness, and any arm that cannot yet pass says so with its unblocking condition named.
 
-Verify surface, immutable for the run:
-
-- `tests/system_03_search_agent/tools/test_release_environments_premise.py`, live arms behind `RUN_PREMISE_GATE=1`, each stated below with what makes it fail.
-- `tests/system_03_search_agent/tools/test_release_environments_mutation.py`, one case per arm, asserting the arm goes red when the property it guards is broken.
-- `python tracker/check_doc_drift.py --check` reporting 0 stale, 0 structural.
-- CI green on the pull request.
-
-The arms, and what each one would catch:
-
-| Arm | Property | Goes red when |
-|---|---|---|
-| P1 | Both environments answer, at DIFFERENT hostnames | one environment is down, or both resolve to one deployment |
-| P2 | An account created on develop cannot sign in on production | the two share a user database |
-| P3 | A bearer token minted by develop is REJECTED by production, and the converse | `AUTH_SECRET` is shared between environments |
-| P4 | Each API admits its OWN web origin and refuses the other's | `CORS_ORIGINS` was copied rather than set per environment |
-| P5 | The two environments report different `APP_ENV` | the duplicate carried production's app config unchanged |
-| P6 | Every non-Railway variable name on production's API is also set on develop's | duplication or hand-provisioning dropped one |
-| P7 | `env.example` names every non-Railway variable the API service is given | a variable is load-bearing in the deployment and undocumented (this is F-4.15-01) |
-| P8 | CI's push trigger includes `main` | a merge to the production line runs no gates |
-
-P3 is the arm that carries the most weight, and it is the reason the gate is behavioural rather than a variable comparison. Reading two `AUTH_SECRET` values and asserting they differ would require printing secrets and would still only prove the values differ today. Minting a token on one environment and watching the other reject it proves the isolation through the code path that actually depends on it.
-
-P2 and P3 together are also the two arms that would go red on the exact configuration the product owner rejected, which is what makes them worth their cost: had the shared-database option been taken, this gate would have been unwritable rather than merely red.
+Item 5 is stated that way deliberately rather than as "every arm passes", and the reason is finding F-4.15-A-09. P5 compares the `app_env` field that this phase ADDS to `GET /health`. Neither deployment can report it until the code reaches it, and they get it at different times: develop when this pull request merges, production only when the first release is cut. MEASURED 2026-08-27, both return `{"status":"ok"}` with no `app_env`. A contract that demanded P5 green before merge would be demanding something the merge itself is a prerequisite for, so it would be met only by weakening the arm, which `goal-contracts` forbids. P5's unblocking condition is named here and repeated in the phase's open items.
 
 Constraints, true throughout:
 
