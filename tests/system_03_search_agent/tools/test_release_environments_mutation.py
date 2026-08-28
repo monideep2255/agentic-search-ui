@@ -68,6 +68,7 @@ import json
 import re
 import time
 from pathlib import Path
+from typing import Self
 
 import jwt
 import pytest
@@ -142,7 +143,7 @@ class _World:
         drift from the thing the premise gate actually probes.
         """
         for name, entry in self._deployments().items():
-            if url.startswith(entry["api"]) or url.startswith(entry["web"]):
+            if url.startswith((entry["api"], entry["web"])):
                 return name
         raise AssertionError(f"URL belongs to no deployment in the fixture: {url}")
 
@@ -237,7 +238,7 @@ class _FakeClient:
     def __init__(self, world: _World) -> None:
         self._world = world
 
-    def __enter__(self) -> _FakeClient:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:
@@ -269,16 +270,16 @@ def _run_arm(monkeypatch: pytest.MonkeyPatch, arm_name: str, world: _World) -> B
     return None
 
 
-_HEALTHY = dict(
-    shared_database=False,
-    shared_auth_secret=False,
-    accepts_forged_signature=False,
-    shared_cors=False,
-    permissive_cors=False,
-    shared_app_env=False,
-    health_omits_app_env=False,
-    develop_down=False,
-)
+_HEALTHY = {
+    "shared_database": False,
+    "shared_auth_secret": False,
+    "accepts_forged_signature": False,
+    "shared_cors": False,
+    "permissive_cors": False,
+    "shared_app_env": False,
+    "health_omits_app_env": False,
+    "develop_down": False,
+}
 
 
 @pytest.mark.parametrize(
@@ -736,7 +737,7 @@ class _WebWorld:
         self.stale_bundle = stale_bundle
         self.no_bundle_reference = no_bundle_reference
 
-    def __enter__(self) -> _WebWorld:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:
@@ -987,7 +988,7 @@ class _SigningWorld:
         self.server_key = server_key
         self.accepts_any_signature = accepts_any_signature
 
-    def __enter__(self) -> _SigningWorld:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:
