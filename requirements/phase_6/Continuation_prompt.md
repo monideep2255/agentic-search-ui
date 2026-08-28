@@ -48,7 +48,7 @@ Do not skip this. The constraint is not recoverable once a session is running, a
 The next action is always one line, kept current at the top of "State now" below. Right now it is:
 
 - BUILD PHASE 4.13, DURABLE CROSS-RELOAD SEARCH HISTORY, IS MERGED as PR #69 on 2026-08-27, with all four CI gates green on the pull request. Separately, the harness gained the WRITE-FIRST rule as PR #70 the same day, after four agents died in one session and one died mid-sentence holding this phase's blocking regression. A person's past questions now survive closing the browser: an owner-scoped read over the `interactions` rows build phase 4.6 writes, `GET /v1/history`, and the rail that renders them. Verified: backend 4126 passing with ZERO failed, frontend 235, browser suite 47 passed with the one documented pre-existing failure, and the reload path proven in a real browser AND proven red under mutation.
-- BUILD PHASE 4.15, THE TWO-APP RELEASE FLOW, IS MERGED as PR #71 on 2026-08-28, with all four CI gates green on the pull request. There are now TWO independent apps: a develop app on the `develop` branch in Railway project `system3-search-agent-develop`, and a production app on the new `production` branch in `system3-search-agent`, each with its own Postgres, Redis and signing key. `develop` remains the DEFAULT branch. Merging to `develop` deploys the develop app; cutting `release/<version>` and merging it into `production` deploys the production app AND cuts a release: semantic version from the Conventional Commit subjects, a CHANGELOG.md section, an annotated tag, a GitHub Release, and a back-merge pull request into `develop`.
+- BUILD PHASE 4.15, THE TWO-APP RELEASE FLOW, IS MERGED as PR #71 at the phase merge on 2026-08-28, all four CI gates green, then closed by the release-permission follow-up PR #74. There are now TWO independent apps: a develop app on the `develop` branch in Railway project `system3-search-agent-develop`, and a production app on the new `production` branch in `system3-search-agent`, each with its own Postgres, Redis and signing key. `develop` remains the DEFAULT branch. Merging to `develop` deploys the develop app; cutting `release/<version>` and merging it into `production` deploys the production app AND cuts a release: semantic version from the Conventional Commit subjects, a CHANGELOG.md section, an annotated tag, a GitHub Release, and a back-merge pull request into `develop`.
 - THE NEXT ACTION AFTER 4.15 MERGES is the FIRST RELEASE, which is not ceremony: it is the only thing that closes P5 and the only end-to-end proof the promotion path works. Then 5.0 and 5.1.
 - TWO PROJECTS RATHER THAN TWO ENVIRONMENTS, and this is the fact most likely to be "simplified" back by someone reading Section 24. A Railway service's git source, repository plus branch, is SERVICE-level. Two environments in one project CANNOT watch two branches: pointing one service at a branch for one environment moved BOTH, while an untouched service kept its own branch in both. Railway's own documentation says the opposite and the contradiction is recorded rather than resolved (F-4.15-03). The phase was designed the other way and reversed the same day.
 - WHAT IT COST: FOUR review rounds against a two-round budget, every escalation authorised by the product owner, 44 findings, and the Rule 4 stop for "a defect inside an earlier fix" fired TWICE.
@@ -167,7 +167,7 @@ Two things were deliberately left open rather than fixed, both genuine product d
 
 Current counts, stated once here:
 
-- Python tests: 4327 (4126 passing, 159 skipped, 1 xfailed, ZERO FAILED) on `phase/4.13-durable-history`, re-measured 2026-08-27 rather than carried forward.
+- Python tests: 4329 (4126 passing, 159 skipped, 1 xfailed, ZERO FAILED) on `phase/4.13-durable-history`, re-measured 2026-08-27 rather than carried forward.
   - The figure at build phase 4.14's close was 4226 (4066 passing) on `phase/4.14-ci-gates`, measured 2026-08-25; build phase 4.13 adds 60, which are the premise gate's 11 arms plus the unit, endpoint, auth-liveness and boundary arms its three review rounds produced.
   - The figure at build phase 4.12's close was 4090 (3930 passing) on `phase/4.12-demo-deploy`; build phase 4.16 adds 12, being a 5-arm premise gate and a 7-case mutation harness.
   - THE STANDING SIX-FAILURE BASELINE IS GONE, and it was never six broken tests: all six were in `test_citation_trust_full_premise.py`, all six pass under `RUN_PREMISE_GATE=1`, and that file FAILED where it should have SKIPPED because its `live_only` mark gated on a model key existing rather than on outbound HTTP being permitted. Build phase 4.12 fixed it.
@@ -553,7 +553,7 @@ Three scope readings the locked documents did not settle, each recorded before a
 
 Final gates:
 
-- 4327 Python tests (3188 passing, the same six live-network-gated cases carried since build phase 4.0)
+- 4329 Python tests (3188 passing, the same six live-network-gated cases carried since build phase 4.0)
 - the GraphQL package alone 206 to 300 tests
 - 181 frontend
 - ruff clean

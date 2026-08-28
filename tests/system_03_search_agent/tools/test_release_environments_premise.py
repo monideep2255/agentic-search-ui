@@ -1256,3 +1256,79 @@ def test_p3c_a_token_signed_with_the_other_key_is_refused_for_a_user_that_exists
         f"the original P3, because the positive control above proved this exact "
         f"user id is accepted when the token is signed with production's key."
     )
+
+
+# ---------------------------------------------------------------------------
+# P11: the repository setting the release workflow depends on
+# ---------------------------------------------------------------------------
+
+
+@requires_live
+def test_p11_actions_may_open_the_back_merge_pull_request() -> None:
+    """The repository permits a workflow to open a pull request.
+
+    ADDED 2026-08-28 after finding F-4.15-10, which the FIRST REAL RELEASE
+    found and which nothing in this repository could have found before it.
+
+    `open_backmerge_pr.sh` pushed its branch and then failed with `GitHub
+    Actions is not permitted to create or approve pull requests`. The script
+    was correct, `gh` was installed, the workflow declared
+    `pull-requests: write`, and the workflow parsed. The blocker was a GitHub
+    ACCOUNT SETTING, `can_approve_pull_request_reviews`, which ships false by
+    default and which no amount of reading this repository can observe.
+
+    That is the general shape worth carrying: a deploy path can depend on state
+    that lives outside the repository entirely, and a gate that only ever reads
+    the repository is blind to all of it by construction. The phase's own
+    coverage statement had said as much, that the gate does not prove a release
+    reaches production and the first release is the proof. This arm is what
+    that sentence turned into.
+
+    It fails rather than skips when the setting is off, because a release that
+    silently stops back-merging lets `develop` and `production` drift apart,
+    and drift is invisible until someone cuts a release from a `develop` that
+    is missing the last one's changelog.
+
+    NOT covered here: whether the token in a given run actually carries
+    `pull-requests: write`. That is declared in `release.yml` and pinned by P9,
+    and this arm is about the account-level permission that sits above it.
+    """
+    if shutil.which("gh") is None:
+        pytest.fail(
+            "the GitHub CLI is not on PATH, so the repository setting the "
+            "release workflow depends on cannot be read. Install it or run "
+            "this gate from a machine that has it; do not weaken the arm to a "
+            "skip."
+        )
+
+    completed = subprocess.run(
+        [
+            "gh",
+            "api",
+            "repos/monideep2255/agentic-search-ui/actions/permissions/workflow",
+            "--jq",
+            ".can_approve_pull_request_reviews",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        cwd=_REPO_ROOT,
+        check=False,
+    )
+    assert completed.returncode == 0, (
+        f"could not read the repository's Actions workflow permissions: exit "
+        f"{completed.returncode}, {completed.stderr.strip()[:200]}"
+    )
+    value = completed.stdout.strip()
+    assert value in {"true", "false"}, (
+        f"the API returned {value!r} rather than a boolean, so this arm cannot "
+        f"tell the setting's state and would pass against anything"
+    )
+    assert value == "true", (
+        "the repository forbids GitHub Actions from creating pull requests, so "
+        "the release workflow's back-merge step WILL fail on the next release, "
+        "after it has already pushed its branch. Turn on Settings, Actions, "
+        "General, 'Allow GitHub Actions to create and approve pull requests'. "
+        "This is finding F-4.15-10 recurring, and it needs no personal access "
+        "token."
+    )

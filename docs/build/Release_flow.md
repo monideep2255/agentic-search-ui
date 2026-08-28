@@ -64,7 +64,7 @@ Everything in this list up to and including the merge in step 5 is a human actio
 
 The back-merge lands as a pull request, never a direct push, because a back-merge can conflict, and an automatic conflicting push to the default branch is worse than a pull request a human reviews. If `develop` already contains everything on `production`, the script opens no pull request, since there would be nothing to carry back.
 
-No release has been cut yet as of this writing. The first push to `production` produces `v0.1.0`.
+The first release, `v0.1.0`, was cut on 2026-08-28. It derived its version from 798 commits with no previous tag, wrote the changelog, tagged, and published, all correct on the first run; only the back-merge step failed, on the repository setting described below.
 
 ## Rolling back
 
@@ -81,6 +81,7 @@ Said plainly rather than implied:
 - The two deployments share one read-only HTTPS graph query service by design. Layer 1 access is read-only at the connection level, so there is no develop-versus-production hazard on the graph the way there is on Postgres, Redis, `AUTH_SECRET` or `CORS_ORIGINS`, and this phase does not attempt to separate it.
 - The back-merge pull request can conflict. When it does, the release workflow still opens it, and it needs a human to resolve the conflict on that branch. Nobody force-pushes `develop` to make it apply.
 - The back-merge pull request runs NO CI, and it is the one automated pull request that reaches `develop`, the default branch. `gh pr create` authenticated with the workflow's built-in token does not raise events that start workflow runs, which is GitHub's recursion guard working as designed. The content is code that already passed CI on the release pull request, so the gap is that nothing re-checks the merge, not that unreviewed code arrives. Confirm the gates were green on the release pull request before merging the back-merge. This is findings F-4.15-J-10 and F-4.15-A-12, filed independently by a judge and an adversary.
+- The back-merge pull request depends on a REPOSITORY SETTING, not just on code. Settings, Actions, General, "Allow GitHub Actions to create and approve pull requests" must be on, and GitHub ships it off. With it off, the release workflow pushes the back-merge branch and then fails at the last step, having already tagged and published the release. The first release found this the hard way on 2026-08-28 (finding F-4.15-10); the setting is now on, and the premise gate's P11 arm fails if it is ever turned back off. This is NOT the same as the missing-CI item above: no personal access token is involved in either the problem or the fix.
 - Rollback is not exercised by any automated check in this repository. It is a console action, tested by hand, not by CI.
 
 ## Branch to deployment flow
