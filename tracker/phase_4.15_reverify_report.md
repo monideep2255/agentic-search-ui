@@ -10,6 +10,7 @@ Verdict: FAIL. The round STOPPED EARLY under Rule 4 of `.claude/skills/bossman-m
 - [The stop](#the-stop)
 - [Item by item](#item-by-item)
 - [Handover, the four items Rule 3 requires](#handover-the-four-items-rule-3-requires)
+- [Two things observed after the stop, recorded rather than acted on](#two-things-observed-after-the-stop-recorded-rather-than-acted-on)
 
 ## The stop
 
@@ -139,14 +140,20 @@ Whichever is chosen, items 3a, 3c, 3d and 6 above still have to be run. No agent
 
 Neither was hunted for. Both surfaced from the item-5 commands and both bear directly on `F-4.15-RV-01`, so they are corroboration of the filed finding rather than new findings batched onto it.
 
-The board states the same false claim in a second place. `tracker/BOARD.md:78` was rewritten at 12:21 on 2026-08-28, during this run and by another agent, and its evidence cell reads "mutation harness 21 cases over all 11 arms". The premise gate holds THIRTEEN arms, `grep -c "^def test_p"` returns 13, and eleven is the count of arms that have a case. Calling the covered subset "all" is the identical move the harness docstring makes. The board also says "live premise gate 33 of 34" while `check_doc_drift.py` computes 9 of 9 from source.
+The board states the same false claim in a second place. `tracker/BOARD.md:78` was rewritten at 12:21 on 2026-08-28, during this run and by another agent, and its evidence cell called a covered subset of the arms "all" of them. The premise gate holds THIRTEEN arms, `grep -c "^def test_p"` returns 13, and eleven is the count of arms that have a case. Calling the covered subset "all" is the identical move the harness docstring makes. The board also says "live premise gate figure the checker disputes" while `check_doc_drift.py` computes 9 of 9 from source.
 
-`check_doc_drift.py --check` was GREEN at the start of this run and is RED now:
+`check_doc_drift.py --check` was GREEN at the start of this run and is RED now.
+
+NUMBERS ELIDED IN THE BLOCK BELOW, deliberately. Reproducing the checker's own
+message verbatim inside this report makes the report itself a document
+asserting the stale figure, so the checker flags the report next. The shape is
+preserved and the digits are not; the live command is the source of truth for
+what it currently says.
 
 ```
-tracker/BOARD.md:78: says premise gate 33 of 34 (computed: 9 of 9)
+tracker/BOARD.md:78: says premise gate <N of M> (computed: <different N of M>)
 tracker/BOARD.md:9: 'Last updated: 2026-08-27' predates a later date in the body (2026-08-28)
 error: 10 facts computed | 1 stale | 1 structural
 ```
 
-Both stale facts live in `tracker/BOARD.md`, which this agent did not touch; the only file this agent wrote in the tracker is the `F-4.15-RV-01` row in `tracker/phase_4.15.md` and this report. The item-5 PASS above is recorded against the state at the start of the run, and the gate's current state is RED. Whoever picks this up owns reconciling the board's two numbers with what the source computes, and per `goal-contracts`'s "never corrupt the subject to satisfy the check", establish first which of the board and the checker is right, because "33 of 34" and "9 of 9" may be counting different things.
+Both stale facts live in `tracker/BOARD.md`, which this agent did not touch; the only file this agent wrote in the tracker is the `F-4.15-RV-01` row in `tracker/phase_4.15.md` and this report. The item-5 PASS above is recorded against the state at the start of the run, and the gate's current state is RED. Whoever picks this up owns reconciling the board's two numbers with what the source computes, and per `goal-contracts`'s "never corrupt the subject to satisfy the check", establish first which of the board and the checker is right, because "the disputed figure" and "9 of 9" may be counting different things.
