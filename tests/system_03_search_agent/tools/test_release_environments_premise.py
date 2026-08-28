@@ -22,9 +22,15 @@ deployment could hold two distinct `AUTH_SECRET` values and still verify
 tokens with a third, hardcoded one, and the comparison gate would be green.
 That is the safety-by-proxy shape build phase 4.3 shipped as a critical twice
 and build phase 4.7 hit again: the check verifies a CORRELATE of the property
-rather than the property. P3 mints a real token on one environment and
-presents it to the other, which exercises the code path that actually depends
-on the separation. If the separation is nominal, P3 goes red.
+rather than the property.
+
+That objection took FOUR attempts to actually answer, and the sequence is
+recorded in P3c's docstring because each intermediate step looked like a fix
+and was not. The answer that holds: P3c takes a token production itself minted,
+re-signs the identical claims with DEVELOP's key, and requires production to
+refuse it, with the same claims re-signed with production's own key accepted as
+the control. The user row exists, so a 401 can only mean the signature was
+rejected.
 
 ## How an arm is gated, and why "skip" is not the default here
 
@@ -52,20 +58,21 @@ thirds of the gate from CI for no reason.
 
 ## What each arm catches
 
-| Arm | Property | Goes red when |
-|-----|----------|---------------|
-| P1 | Both environments answer, at DIFFERENT hostnames | one is down, absent from the fixture, or both resolve to one deployment |
-| P2 | An account made on develop cannot sign in on production | the two share a user database |
-| P3 | A token minted by develop is REJECTED by production, and the converse | `AUTH_SECRET` is shared |
-| P4 | Each API admits its own web origin and refuses the other's | `CORS_ORIGINS` was copied rather than set per environment |
-| P5 | The two report different `APP_ENV` | the duplicate carried production's app config unchanged |
-| P6 | Every non-Railway variable on production's API is set on develop's too | provisioning dropped one |
-| P7 | `env.example` names every non-Railway variable the API is given | a variable is load-bearing and undocumented (F-4.15-01) |
-| P8 | CI's push trigger includes `production` | a merge to the production line runs no gates |
+DELIBERATELY NOT LISTED HERE, and the omission is the lesson rather than an
+oversight. This section used to hold a table of nine arms with a row each. By
+2026-08-28 the gate held fourteen, the table still described a `P3` that no
+longer exists, and it named none of P3a, P3b, P3c, P7b, P9b or P10. A summary
+table of a growing set is stale from its second edit, and a reader who trusts
+it stops reading the arms.
 
-P2 and P3 are the two arms that would have been UNWRITABLE had the shared
-database option been taken, which is the clearest statement of what the
-product owner's 2026-08-27 decision bought.
+Twice in this phase a confident summary sentence WAS the defect: P1's docstring
+claimed a comparison the body did not perform (F-4.15-J-01, F-4.15-A-10), and
+the mutation harness claimed coverage it did not have, twice (F-4.15-J-03, then
+F-4.15-RV-01 inside the fix for it). So the summary is gone.
+
+Each arm's own docstring states what it catches and what it does not, next to
+the code that has to stay true to it. Read `git grep "^def test_p" ` on this
+file for the current set.
 
 ## What this gate does NOT cover
 
@@ -80,7 +87,7 @@ Stated here rather than left to be discovered, per `.claude/rules/goal-contracts
   through the auth path, the path that matters, and says nothing about the
   `interactions` or `runs` tables.
 - P6 compares variable NAMES, never values. A variable present in both with
-  production's value copied into develop PASSES P6. P3 and P4 cover the two
+  production's value copied into develop PASSES P6. P3b, P3c and P4 cover the
   cases where that would be dangerous. Nothing covers the rest.
 - Nothing here separates the graph credential per environment, deliberately.
   Layer 1 is read-only at the connection level, so there is no
@@ -102,6 +109,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+import jwt
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -294,6 +302,60 @@ def test_p2_an_account_made_on_develop_cannot_sign_in_on_production() -> None:
     )
 
 
+def _signing_key_for(name: str) -> str:
+    """The signing key CONFIGURED on one deployment's api service.
+
+    Shared by P3b, which hashes it, and P3c, which must SIGN with it. One
+    reader on purpose: two readers of one secret is the exact shape that
+    produced three separate findings in the release scripts (F-4.15-A-01,
+    A-03, A-07), and it is not worth repeating here to save an indirection.
+
+    The plaintext is returned rather than hashed, because P3c cannot mint a
+    token with a digest. It is never rendered: no caller puts it in an
+    assertion message. Reading a credential is permitted; printing one is what
+    `.claude/rules/ai-security-standards.md` forbids.
+    """
+    if shutil.which("railway") is None:
+        pytest.fail(
+            "the Railway CLI is not on PATH, so the signing keys cannot be "
+            "read. Install it or run this gate from a machine that has it; do "
+            "not weaken the arm to a skip."
+        )
+    entry = _require(name)
+    key_name = "AUTH" + "_SECRET"
+    completed = subprocess.run(
+        [
+            "railway",
+            "variables",
+            "--project",
+            entry["project_id"],
+            "--environment",
+            entry["environment_id"],
+            "--service",
+            "search-agent-api",
+            "--kv",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        cwd=_REPO_ROOT,
+        check=False,
+    )
+    assert completed.returncode == 0, (
+        f"`railway variables` failed for {name}: exit {completed.returncode}"
+    )
+    for line in completed.stdout.splitlines():
+        if line.startswith(key_name + "="):
+            value = line.split("=", 1)[1]
+            assert value, f"{name} has an empty {key_name}"
+            return value
+    pytest.fail(
+        f"{name} has no {key_name} set on search-agent-api, so any arm "
+        f"depending on it would compare or sign with nothing"
+    )
+    raise AssertionError("unreachable")
+
+
 @requires_live
 def test_p3a_each_deployment_actually_verifies_a_token_signature() -> None:
     """Signature verification is live on each deployment, tested by tampering.
@@ -434,56 +496,17 @@ def test_p3b_the_two_deployments_hold_different_signing_keys() -> None:
     arm's mistake was believing one behavioural-looking check could carry both
     halves at once.
     """
-    if shutil.which("railway") is None:
-        pytest.fail(
-            "the Railway CLI is not on PATH, so the signing keys cannot be "
-            "compared. Install it or run this gate from a machine that has it; "
-            "do not weaken the arm to a skip."
-        )
-
-    key_name = "AUTH" + "_SECRET"
-    digests: dict[str, str] = {}
-    for name in ("production", "develop"):
-        entry = _require(name)
-        completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, no user input
-            [
-                "railway",
-                "variables",
-                "--project",
-                entry["project_id"],
-                "--environment",
-                entry["environment_id"],
-                "--service",
-                "search-agent-api",
-                "--kv",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            cwd=_REPO_ROOT,
-        )
-        assert completed.returncode == 0, (
-            f"`railway variables` failed for {name}: exit {completed.returncode}"
-        )
-        secret = None
-        for line in completed.stdout.splitlines():
-            if line.startswith(key_name + "="):
-                secret = line.split("=", 1)[1]
-                break
-        assert secret, (
-            f"{name} has no {key_name} set on search-agent-api, so this arm "
-            f"would compare nothing"
-        )
-        # Hashed immediately. The plaintext never leaves this loop and no
-        # assertion message below can render it.
-        digests[name] = hashlib.sha256(secret.encode()).hexdigest()
+    digests = {
+        name: hashlib.sha256(_signing_key_for(name).encode()).hexdigest()
+        for name in ("production", "develop")
+    }
 
     assert digests["production"] != digests["develop"], (
-        f"the two deployments hold the SAME {key_name}. A token minted on "
-        f"develop is therefore signed acceptably for production, and the only "
-        f"thing standing between them is that their user tables differ. "
-        f"Section 24 requires this value be generated per environment and "
-        f"never shared."
+        "the two deployments hold the SAME signing key. A token minted on "
+        "develop is therefore signed acceptably for production, and the only "
+        "thing standing between them is that their user tables differ. "
+        "Section 24 requires this value be generated per environment and "
+        "never shared."
     )
 # ---------------------------------------------------------------------------
 # P4: CORS is per environment
@@ -588,7 +611,7 @@ def _service_variable_names(service: str, entry: dict[str, str]) -> set[str]:
     this shells out instead of using the Railway MCP, whose response renders
     every value in full.
     """
-    completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, no user input
+    completed = subprocess.run(
         [
             "railway",
             "variables",
@@ -604,6 +627,7 @@ def _service_variable_names(service: str, entry: dict[str, str]) -> set[str]:
         text=True,
         timeout=60,
         cwd=_REPO_ROOT,
+        check=False,
     )
     if completed.returncode != 0:
         pytest.fail(
@@ -1006,11 +1030,12 @@ def test_p9b_the_release_scripts_themselves_hold_their_safety_rules() -> None:
             f"dead text or workflow syntax copied into the wrong file."
         )
 
-        parsed = subprocess.run(  # noqa: S603 - fixed argv, no shell, no user input
+        parsed = subprocess.run(
             ["bash", "-n", str(script)],
             capture_output=True,
             text=True,
             timeout=30,
+            check=False,
         )
         assert parsed.returncode == 0, (
             f"{relative} does not parse: {parsed.stderr.strip()[:300]}"
@@ -1097,3 +1122,137 @@ def test_p10_each_web_app_is_built_against_its_own_api() -> None:
             f"in a visitor's browser means the VISITOR'S OWN machine: "
             f"{found_loopback}. This is finding F-4.15-A-14."
         )
+
+
+@requires_live
+def test_p3c_a_token_signed_with_the_other_key_is_refused_for_a_user_that_exists() -> None:
+    """The direct arm. No proxy, and it distinguishes the two 401s.
+
+    ADDED 2026-08-28 after finding F-4.15-GC-01, which is the FOURTH iteration
+    on one property in this phase and the reason the whole sequence is worth
+    reading before writing a gate anywhere else.
+
+    The history, because each step looked like a fix and the first three were
+    not:
+
+    - The original P3 minted a token on develop, presented it to production,
+      and read the 401 as proof the keys differ. It was not: with separate
+      databases the 401 arrives on the MISSING USER ROW
+      (`auth/dependencies.py:108-110`) whether the key is shared or not. That
+      was F-4.15-J-04, a critical.
+    - It was split into P3a, which corrupts a signature, and P3b, which
+      compares the configured values as digests. F-4.15-GC-01 showed the PAIR
+      still proves nothing about the composition: P3a proves each deployment
+      verifies with the same key IT MINTS WITH, whatever that key is, and never
+      reads a variable; P3b reads variables and never sends a request. Nothing
+      tied the key the running process holds to the value compared.
+    - The concrete state that made both green while the property was false: two
+      containers holding the same signing key while the two CONFIGURED values
+      differ, which is what an environment duplicate followed by rotating one
+      side produces before the other side redeploys. That is not hypothetical
+      in this phase; it is close to what happened at F-4.15-04.
+
+    THIS ARM CLOSES IT by removing every proxy at once. It creates a real
+    account on production and reads that account's REAL user id, so the subject
+    exists in production's database. Then it mints a token for that id signed
+    with DEVELOP's key and presents it to production. A 401 can now only mean
+    the signature was rejected, because the row is present. The positive
+    control mints the same id with PRODUCTION's own key and requires 200, which
+    proves the 401 is about the key rather than about anything else in the
+    request.
+
+    In one line: the previous arms could not tell "wrong key" from "unknown
+    user". This one makes the user known, so only the key is left.
+
+    The token is minted here rather than fetched, using this repository's own
+    `mint_access_token` contract read from `auth/tokens.py`: HS256 over
+    `user_id`, `iat` and `exp`. Minting locally is what makes it possible to
+    sign a chosen subject with a chosen key, which no endpoint will do for us.
+    """
+    prod = _require("production")
+    prod_api = prod["api"].rstrip("/")
+
+    prod_secret = _signing_key_for("production")
+    dev_secret = _signing_key_for("develop")
+    assert prod_secret != dev_secret, (
+        "the two deployments hold the same configured signing key, so this arm "
+        "cannot distinguish them. That is P3b's finding, not this one."
+    )
+
+    email, password = _throwaway_credentials()
+    with _client() as client:
+        created = client.post(
+            prod_api + "/auth/signup", json={"email": email, "password": password}
+        )
+        assert created.status_code == 201, (
+            f"could not create an account on production: {created.status_code} "
+            f"{created.text[:200]}"
+        )
+        logged_in = client.post(
+            prod_api + "/auth/login", json={"email": email, "password": password}
+        )
+        assert logged_in.status_code == 200, (
+            f"could not log in on production: {logged_in.status_code}"
+        )
+        real_token = logged_in.json()["access_token"]
+
+        me = client.get(
+            prod_api + "/auth/me", headers={"Authorization": f"Bearer {real_token}"}
+        )
+        assert me.status_code == 200, (
+            f"could not read the account back from production: {me.status_code}"
+        )
+
+        # PRODUCTION'S OWN CLAIMS, re-signed. Not a claim set built here.
+        #
+        # The first version of this arm constructed its own claims, and the
+        # positive control below caught it: production refused a token this
+        # test minted with production's own key, so the cross-key assertion
+        # would have proved nothing about keys. Diagnosed rather than worked
+        # around, and the diagnosis is why this reads the way it does. A real
+        # production token verified against the key read from Railway, so the
+        # key was right; a re-signed copy of that token's exact claims was
+        # accepted; only a hand-built claim set was refused.
+        #
+        # So the arm stopped building claims. It takes the claim set
+        # production itself minted, without inspecting or rewriting a single
+        # value, and re-signs it. That makes the KEY the only variable in the
+        # comparison, which is the whole point, and it cannot drift when the
+        # token contract changes: `decode_access_token` enforces required
+        # claims and a 15-minute ceiling independently of the minter
+        # (F-1.1-09), and a claim set assembled here would have to track all
+        # of it forever.
+        claims = jwt.decode(real_token, options={"verify_signature": False})
+        assert "user_id" in claims, (
+            f"production's own token carries no user_id claim, so re-signing "
+            f"it proves nothing about a user that exists: {sorted(claims)}"
+        )
+
+        # Positive control FIRST. If a token this test re-signs with
+        # production's own key is not accepted, the rejection below says
+        # nothing about keys.
+        own_key = jwt.encode(claims, prod_secret, algorithm="HS256")
+        accepted = client.get(
+            prod_api + "/auth/me", headers={"Authorization": f"Bearer {own_key}"}
+        )
+        assert accepted.status_code == 200, (
+            f"production refused a token carrying its OWN claims re-signed "
+            f"with its OWN key ({accepted.status_code}). Either the key read "
+            f"from Railway is not the key the running process holds, which is "
+            f"itself the finding, or the token expired between minting and "
+            f"this request. Either way the cross-key rejection below would "
+            f"prove nothing. Response: {accepted.text[:200]}"
+        )
+
+        other_key = jwt.encode(claims, dev_secret, algorithm="HS256")
+        crossed = client.get(
+            prod_api + "/auth/me", headers={"Authorization": f"Bearer {other_key}"}
+        )
+
+    assert crossed.status_code == 401, (
+        f"production ACCEPTED a token for one of its own users signed with "
+        f"DEVELOP's key ({crossed.status_code}). The two deployments verify "
+        f"with the same key. This cannot be the missing-row 401 that defeated "
+        f"the original P3, because the positive control above proved this exact "
+        f"user id is accepted when the token is signed with production's key."
+    )

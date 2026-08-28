@@ -66,8 +66,10 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from pathlib import Path
 
+import jwt
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -179,7 +181,7 @@ class _World:
 
         raise AssertionError(f"unmodelled GET {url}")
 
-    def post(self, url: str, json: dict | None = None) -> _Response:  # noqa: A002
+    def post(self, url: str, json: dict | None = None) -> _Response:
         env = self._env_of(url)
         if env == "develop" and self.develop_down:
             return _Response(404, {"message": "Application not found"})
@@ -244,7 +246,7 @@ class _FakeClient:
     def get(self, url: str, headers: dict | None = None, **_: object) -> _Response:
         return self._world.get(url, headers)
 
-    def post(self, url: str, json: dict | None = None, **_: object) -> _Response:  # noqa: A002
+    def post(self, url: str, json: dict | None = None, **_: object) -> _Response:
         return self._world.post(url, json)
 
     def options(self, url: str, headers: dict | None = None, **_: object) -> _Response:
@@ -868,7 +870,6 @@ def test_p3b_goes_red_when_both_deployments_hold_the_same_signing_key(
     P3b is half of the pair that replaced the arm F-4.15-J-04 found unsound, so
     an unfalsifiable P3b would mean that critical was closed by nothing at all.
     """
-    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
 
     deployments = json.loads(_FIXTURE.read_text())["deployments"]
     prod = deployments["production"]["project_id"]
@@ -900,7 +901,6 @@ def test_p3b_goes_red_when_a_deployment_has_no_signing_key_at_all(
     shared and go red for the right reason by luck. This pins that the arm
     stops on the missing value with its own message instead.
     """
-    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
 
     deployments = json.loads(_FIXTURE.read_text())["deployments"]
     prod = deployments["production"]["project_id"]
@@ -908,7 +908,12 @@ def test_p3b_goes_red_when_a_deployment_has_no_signing_key_at_all(
 
     failure = _p3b_with_secrets(monkeypatch, {prod: "key-one", dev: ""})
     assert failure is not None, "P3b passed with a deployment holding no signing key"
-    assert "would compare nothing" in str(failure), (
+    # The message moved when P3b was refactored onto the shared
+    # `_signing_key_for` reader, which raises on an empty value before P3b
+    # sees it. The expectation follows the code rather than the code being
+    # bent back to an old string: the arm still stops on the missing value,
+    # which is the property, and it now says which deployment.
+    assert "empty" in str(failure), (
         f"P3b failed but not on the missing value: {str(failure)[:300]!r}"
     )
 
@@ -960,4 +965,145 @@ def test_p9b_goes_red_for_each_way_a_release_script_can_be_unsafe(
     assert must_mention in str(failure), (
         f"P9b failed for a reason that does not name the breakage: expected "
         f"{must_mention!r}, got {str(failure)[:300]!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# P3c: the arm that finally removed the proxy
+# ---------------------------------------------------------------------------
+
+
+class _SigningWorld:
+    """A production API that verifies tokens against ONE key it actually holds.
+
+    Faithful where the earlier fake was not. `_World`'s `/auth/me` looked a
+    token up in a dictionary, which models "was this token issued here" and NOT
+    "does this signature verify", and that unfaithfulness is part of what let
+    F-4.15-J-04 survive two rounds. This one decodes with a real key, so the
+    distinction P3c exists to make is present in the model.
+    """
+
+    def __init__(self, server_key: str, *, accepts_any_signature: bool = False) -> None:
+        self.server_key = server_key
+        self.accepts_any_signature = accepts_any_signature
+
+    def __enter__(self) -> _SigningWorld:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def post(self, url: str, json: dict | None = None, **_: object) -> _Response:
+        if url.endswith("/auth/signup"):
+            return _Response(201, {"id": "u-1", "email": (json or {}).get("email", "")})
+        if url.endswith("/auth/login"):
+            now = int(time.time())
+            token = jwt.encode(
+                {"user_id": "u-1", "iat": now, "exp": now + 900},
+                self.server_key,
+                algorithm="HS256",
+            )
+            return _Response(200, {"access_token": token, "token_type": "bearer"})
+        raise AssertionError(f"unmodelled POST {url}")
+
+    def get(self, url: str, headers: dict | None = None, **_: object) -> _Response:
+        if url.endswith("/auth/me"):
+            raw = (headers or {}).get("Authorization", "")
+            token = raw.removeprefix("Bearer ").strip()
+            if self.accepts_any_signature:
+                # A deployment that decodes without verifying. This is the
+                # state where the two CONFIGURED keys differ and production
+                # still takes a token signed with develop's, which is the
+                # concrete miss F-4.15-GC-01 described.
+                return _Response(200, {"id": "u-1"})
+            try:
+                jwt.decode(token, self.server_key, algorithms=["HS256"])
+            except Exception:  # noqa: BLE001 - any verification failure is a 401
+                return _Response(401, {"detail": "invalid or expired access token"})
+            return _Response(200, {"id": "u-1"})
+        raise AssertionError(f"unmodelled GET {url}")
+
+
+def _run_p3c(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    configured_prod: str,
+    configured_dev: str,
+    accepts_any_signature: bool = False,
+) -> BaseException | None:
+    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
+
+    keys = {"production": configured_prod, "develop": configured_dev}
+    monkeypatch.setattr(premise, "_signing_key_for", lambda name: keys[name])
+    # The server runs on production's CONFIGURED value, which is the honest
+    # arrangement: the mutation below changes what is configured on develop,
+    # not what production runs.
+    monkeypatch.setattr(
+        premise,
+        "_client",
+        lambda: _SigningWorld(configured_prod, accepts_any_signature=accepts_any_signature),
+    )
+    return _run_named(
+        monkeypatch,
+        "test_p3c_a_token_signed_with_the_other_key_is_refused_for_a_user_that_exists",
+    )
+
+
+def test_p3c_goes_red_when_both_deployments_sign_with_the_same_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """P3c detects a shared signing key through the path that depends on it.
+
+    The control proves the arm passes when the keys genuinely differ. The
+    mutation makes develop's configured key equal production's, so re-signing
+    production's own claims with "the other" key produces a token production
+    accepts, and the arm must go red.
+
+    This is the case none of P3, P3a or P3b could express. P3 read a 401 that
+    was really about a missing user row; P3a never read a configured key; P3b
+    never sent a request. Here the row exists, the request is real, and the key
+    is the only variable.
+    """
+    control = _run_p3c(
+        monkeypatch, configured_prod="alpha-one-two", configured_dev="beta-three-four"
+    )
+    assert control is None, (
+        f"P3c fails when the two keys genuinely differ, so its red result "
+        f"below would prove nothing: {control!r}"
+    )
+
+    # THE MUTATION THAT EXERCISES P3C'S OWN ASSERTION. The two configured
+    # keys still differ, so P3c's early guard does not fire, and production
+    # accepts a token signed with develop's key anyway. That is the state
+    # F-4.15-GC-01 named: nothing tied the key the running process uses to
+    # the value that was compared.
+    #
+    # The first version of this case made the two CONFIGURED keys equal,
+    # which trips P3c's guard and routes to P3b's finding. It went red for
+    # the right reason under the wrong arm, which is the same "red, but not
+    # for its own property" trap this harness checks for everywhere else,
+    # met here by the person writing the harness.
+    failure = _run_p3c(
+        monkeypatch,
+        configured_prod="alpha-one-two",
+        configured_dev="beta-three-four",
+        accepts_any_signature=True,
+    )
+    assert failure is not None, (
+        "P3c stayed green while production accepted a token signed with "
+        "develop's key, which is the entire property it was written to "
+        "establish"
+    )
+    assert "ACCEPTED" in str(failure), (
+        f"P3c failed for a reason that does not name the acceptance: "
+        f"{str(failure)[:300]!r}"
+    )
+
+    # And the guard itself: equal configured keys route to P3b rather than
+    # producing a confusing P3c failure.
+    guarded = _run_p3c(
+        monkeypatch, configured_prod="alpha-one-two", configured_dev="alpha-one-two"
+    )
+    assert guarded is not None and "P3b's finding" in str(guarded), (
+        f"P3c did not route equal configured keys to P3b: {str(guarded)[:200]!r}"
     )
