@@ -571,9 +571,19 @@ def test_me_expired_token_returns_401(client):
 
 
 def test_health_unaffected_by_auth_router(client):
+    """Mounting the auth router leaves /health alone.
+
+    The property is "unaffected", and exact body equality was how it used to be
+    expressed. Build phase 4.15 added `app_env` to the body (additive, pattern
+    10), so the equality had to move. It moved to the SAME shape the endpoint's
+    own test uses, so the two cannot drift apart, and it still fails if the
+    auth router changes the status, the liveness value, or the key set.
+    """
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    body = response.json()
+    assert body["status"] == "ok"
+    assert set(body) == {"status", "app_env"}
 
 
 def test_auth_router_does_not_shadow_v1_query_route(client):
