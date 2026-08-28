@@ -1,8 +1,13 @@
 """Mutation harness for build phase 4.15's premise gate.
 
-Every arm in `test_release_environments_premise.py` is asserted here to go RED
-when the property it guards is broken. An arm that stays green under mutation
-is not an arm, it is decoration that reads like one.
+Each case here drives ONE arm of `test_release_environments_premise.py`,
+breaks the property that arm guards, and asserts the arm goes RED. An arm that
+stays green under mutation is not an arm, it is decoration that reads like one.
+
+Note what that sentence does NOT say. It does not claim every arm has a case.
+That claim was made twice in this file and was false both times, most recently
+inside the fix for the finding that said so, and the account is under "AND THEN
+THIS FILE DID IT TWICE" below.
 
 This file exists because vacuous assertions are the single most repeated
 failure in `LEARNINGS.md`: eleven separate instances by 2026-08-14, and four of
@@ -11,15 +16,23 @@ those were caught ONLY by mutation and not by anybody reading them. Build phase
 its own docstring, and build phase 4.16 shipped six assertions that could not
 fail, five of them written by the lead.
 
-AND THEN THIS FILE DID IT TOO. The sentence above claiming EVERY arm is covered
-was true of seven arms out of nine: P6 and P9 had no case at all, and a judge
-and an adversary filed it independently as F-4.15-J-03 and F-4.15-A-15. The
-harness asserting the very property it exists to disprove is recorded here
-rather than quietly filled in, because the pattern is now unmistakable: the
-claim is written at the moment of most confidence, and confidence is exactly
-what nobody re-reads. Every arm, P1 through P9 including P3a, P3b and P7b, now
-has at least one case, and the way to keep that true is to add the case in the
-same edit as the arm rather than afterwards.
+AND THEN THIS FILE DID IT TWICE. The first version claimed every arm was
+covered while P6 and P9 had none; a judge and an adversary filed that
+independently as F-4.15-J-03 and F-4.15-A-15. The fix added those cases and
+wrote a NEW completeness claim, which was also false, and which named P3b as
+covered while P3b had no case. That was F-4.15-RV-01, found by a fresh
+re-verifier inside the fix for the finding that said exactly this.
+
+SO THERE IS NO COVERAGE CLAIM IN THIS DOCSTRING ANY MORE, and its absence is
+deliberate rather than an oversight to be helpfully corrected. A sentence
+asserting that every arm is covered is unverifiable by reading, goes stale the
+moment an arm is added, and reads as permission to stop checking. Twice it did
+exactly that. If you want to know which arms have cases, count them: the arms
+are the `test_p*` functions in the premise gate, and the cases here name the
+arm they drive in their own parameters.
+
+The rule that replaces the claim: ADD THE CASE IN THE SAME EDIT AS THE ARM. An
+arm added to close a finding, that cannot itself fail, has closed nothing.
 
 ## Why the live arms are mutated OFFLINE
 
@@ -806,4 +819,145 @@ def test_p10_goes_red_when_the_index_references_no_bundle(monkeypatch: pytest.Mo
     )
     assert "references no" in str(failure), (
         f"P10 failed but not on the missing bundle: {str(failure)[:300]!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# P3b and P9b: the two arms that had no case, added in round 3
+# ---------------------------------------------------------------------------
+#
+# F-4.15-RV-01, a critical, and the second time this phase produced the same
+# shape. Round 1 found this harness claiming coverage it did not have. The
+# round 2 fix added cases, then wrote a NEW claim that was also false, and
+# named P3b in it as covered while P3b had no case. A claim about completeness
+# has now failed twice here, which is why the claim is gone from the module
+# docstring rather than corrected a third time.
+
+
+class _FakeCompleted:
+    def __init__(self, stdout: str, returncode: int = 0) -> None:
+        self.stdout = stdout
+        self.returncode = returncode
+        self.stderr = ""
+
+
+def _variable_dump(pairs: dict[str, str]) -> str:
+    return "\n".join(f"{k}={v}" for k, v in pairs.items())
+
+
+def _p3b_with_secrets(monkeypatch: pytest.MonkeyPatch, per_project: dict[str, str]) -> BaseException | None:
+    """Run P3b with the Railway CLI replaced by a fixed answer per project."""
+    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
+
+    key = "AUTH" + "_SECRET"
+    monkeypatch.setattr(premise.shutil, "which", lambda _: "/usr/bin/railway")
+
+    def fake_run(argv, **_):
+        project = argv[argv.index("--project") + 1]
+        return _FakeCompleted(_variable_dump({key: per_project[project], "APP_ENV": "x"}))
+
+    monkeypatch.setattr(premise.subprocess, "run", fake_run)
+    return _run_named(monkeypatch, "test_p3b_the_two_deployments_hold_different_signing_keys")
+
+
+def test_p3b_goes_red_when_both_deployments_hold_the_same_signing_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """P3b detects a shared signing key, and passes when the keys differ.
+
+    P3b is half of the pair that replaced the arm F-4.15-J-04 found unsound, so
+    an unfalsifiable P3b would mean that critical was closed by nothing at all.
+    """
+    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
+
+    deployments = json.loads(_FIXTURE.read_text())["deployments"]
+    prod = deployments["production"]["project_id"]
+    dev = deployments["develop"]["project_id"]
+
+    control = _p3b_with_secrets(monkeypatch, {prod: "key-one", dev: "key-two"})
+    assert control is None, (
+        f"P3b fails when the two keys genuinely differ, so its red result "
+        f"below would prove nothing: {control!r}"
+    )
+
+    failure = _p3b_with_secrets(monkeypatch, {prod: "same-key", dev: "same-key"})
+    assert failure is not None, (
+        "P3b stayed green with both deployments holding an identical signing "
+        "key, which is the whole property it exists to assert"
+    )
+    assert "SAME" in str(failure), (
+        f"P3b failed for a reason that does not name the shared key: "
+        f"{str(failure)[:300]!r}"
+    )
+
+
+def test_p3b_goes_red_when_a_deployment_has_no_signing_key_at_all(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Absence must fail rather than pass by comparing nothing to nothing.
+
+    Two empty strings are equal, so a naive comparison would report them as
+    shared and go red for the right reason by luck. This pins that the arm
+    stops on the missing value with its own message instead.
+    """
+    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
+
+    deployments = json.loads(_FIXTURE.read_text())["deployments"]
+    prod = deployments["production"]["project_id"]
+    dev = deployments["develop"]["project_id"]
+
+    failure = _p3b_with_secrets(monkeypatch, {prod: "key-one", dev: ""})
+    assert failure is not None, "P3b passed with a deployment holding no signing key"
+    assert "would compare nothing" in str(failure), (
+        f"P3b failed but not on the missing value: {str(failure)[:300]!r}"
+    )
+
+
+@pytest.mark.parametrize(
+    ("body", "must_mention"),
+    [
+        # A release script that continues past a failed command while holding
+        # write access to the production line.
+        ("#!/usr/bin/env bash\necho hello\n", "set -euo pipefail"),
+        # Workflow interpolation syntax copied into a script, where GitHub does
+        # not expand it.
+        ('#!/usr/bin/env bash\nset -euo pipefail\nx="${{ github.event.head_commit.message }}"\n', "in executable code"),
+        # A script that does not parse. Three shipped non-executable earlier in
+        # this phase; a syntax error is the same class of failure at release
+        # time, on the production line, after the merge.
+        ("#!/usr/bin/env bash\nset -euo pipefail\nif [ -z ; then\n", "does not parse"),
+    ],
+)
+def test_p9b_goes_red_for_each_way_a_release_script_can_be_unsafe(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, body: str, must_mention: str
+) -> None:
+    """P9b checks the scripts the workflow delegates to. This proves it can fail.
+
+    P9b was itself added to close F-4.15-A-13, which was "P9 certifies the
+    workflow has no shell and never looks at the shell". Adding an arm to close
+    a finding and leaving it unfalsifiable closes nothing, which is the point
+    F-4.15-RV-01 makes about this whole file.
+    """
+    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
+
+    assert _run_named(monkeypatch, "test_p9b_the_release_scripts_themselves_hold_their_safety_rules") is None, (
+        "P9b is red against the real scripts before any mutation, so the red "
+        "results below prove nothing"
+    )
+
+    release_dir = tmp_path / ".github" / "release"
+    release_dir.mkdir(parents=True)
+    for name in ("commit_lib", "derive_version", "write_changelog", "tag_and_release"):
+        good = release_dir / f"{name}.sh"
+        good.write_text("#!/usr/bin/env bash\nset -euo pipefail\necho ok\n")
+    (release_dir / "open_backmerge_pr.sh").write_text(body)
+
+    monkeypatch.setattr(premise, "_REPO_ROOT", tmp_path)
+    failure = _run_named(monkeypatch, "test_p9b_the_release_scripts_themselves_hold_their_safety_rules")
+    assert failure is not None, (
+        f"P9b stayed green against a release script that is unsafe: {body!r}"
+    )
+    assert must_mention in str(failure), (
+        f"P9b failed for a reason that does not name the breakage: expected "
+        f"{must_mention!r}, got {str(failure)[:300]!r}"
     )
