@@ -92,6 +92,7 @@ Stated here rather than left to be discovered, per `.claude/rules/goal-contracts
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -272,64 +273,196 @@ def test_p2_an_account_made_on_develop_cannot_sign_in_on_production() -> None:
 
 
 @requires_live
-def test_p3_a_token_minted_on_one_environment_is_refused_by_the_other() -> None:
-    """AUTH_SECRET separation, proven without rendering either secret.
+def test_p3a_each_deployment_actually_verifies_a_token_signature() -> None:
+    """Signature verification is live on each deployment, tested by tampering.
 
-    Both directions are tested, not one. A single direction would pass if
-    production simply rejected every bearer token, for instance because its
-    `/auth/me` route were broken, and a broken route reading as a security
-    property is the failure mode this gate is most likely to produce.
+    REWRITTEN 2026-08-27 after findings F-4.15-J-04, and the reason is the most
+    important thing in this file.
 
-    So each token is first proven to WORK on its own environment (the positive
-    control) and only then presented to the other.
+    The previous P3 minted a token on one deployment, presented it to the
+    other, asserted 401, and CALLED THAT PROOF that the signing key is not
+    shared. It is not proof. `resolve_user_from_bearer_token` decodes the token
+    and THEN looks the subject up in that deployment's own database
+    (`src/system_03_search_agent/auth/dependencies.py:108-111`), raising the
+    SAME `_INVALID_TOKEN_DETAIL` when the row is absent. The two deployments
+    have separate databases, so the cross-deployment 401 arrives on the missing
+    user row whether the signing key is shared or not. The arm measured
+    database separation, which is already P2's property, and asserted key
+    separation, which is merely correlated with it.
+
+    That is the safety-by-proxy shape this module's own docstring said it was
+    written to avoid: written by the same person, in the same file, under the
+    warning. It is the fourth instance in this repository after build phases
+    4.3, 4.7 and 4.11, and it is recorded here rather than quietly repaired
+    because the transferable lesson is that WRITING THE WARNING DOWN DOES NOT
+    IMMUNISE YOU AGAINST THE THING.
+
+    The property is now split into two arms that are each directly testable:
+
+    - P3a, here: each deployment really does verify a signature, proven by
+      corrupting one and watching that deployment reject it. Without this, a
+      deployment that skipped verification altogether would still pass P3b.
+    - P3b, below: the two signing keys differ, compared as digests so that no
+      secret is rendered.
+
+    Neither half alone is the property. Together they are: the keys differ, and
+    each deployment enforces its own.
+
+    The tamper is applied to the SIGNATURE segment only, leaving the header and
+    payload intact, so a rejection cannot be explained away by malformed base64
+    or a broken claim set.
     """
-    dev = _require("develop")
-    prod = _require("production")
+    for name in ("develop", "production"):
+        entry = _require(name)
+        api = entry["api"].rstrip("/")
+        email, password = _throwaway_credentials()
 
-    minted: dict[str, tuple[str, str]] = {}
-    with _client() as client:
-        for label, entry in (("develop", dev), ("production", prod)):
-            email, password = _throwaway_credentials()
+        with _client() as client:
             created = client.post(
-                entry["api"].rstrip("/") + "/auth/signup",
-                json={"email": email, "password": password},
+                api + "/auth/signup", json={"email": email, "password": password}
             )
             assert created.status_code == 201, (
-                f"could not create an account on {label}: {created.status_code} "
+                f"could not create an account on {name}: {created.status_code} "
                 f"{created.text[:200]}"
             )
             logged_in = client.post(
-                entry["api"].rstrip("/") + "/auth/login",
-                json={"email": email, "password": password},
+                api + "/auth/login", json={"email": email, "password": password}
             )
             assert logged_in.status_code == 200, (
-                f"could not log in on {label}: {logged_in.status_code}"
+                f"could not log in on {name}: {logged_in.status_code}"
             )
             token = logged_in.json()["access_token"]
-            minted[label] = (entry["api"].rstrip("/"), token)
 
-        for holder, other in (("develop", "production"), ("production", "develop")):
-            own_api, token = minted[holder]
-            other_api, _ = minted[other]
-            headers = {"Authorization": f"Bearer {token}"}
-
-            # Positive control: the token works where it was minted.
-            own = client.get(own_api + "/auth/me", headers=headers)
-            assert own.status_code == 200, (
-                f"a token minted on {holder} does not work on {holder} itself "
-                f"({own.status_code}), so the cross-environment rejection below "
-                f"would be vacuous"
+            # Positive control. The untampered token must work, or the
+            # rejection below proves nothing about signatures.
+            good = client.get(
+                api + "/auth/me", headers={"Authorization": f"Bearer {token}"}
+            )
+            assert good.status_code == 200, (
+                f"a freshly minted token does not work on {name} "
+                f"({good.status_code}), so the tamper assertion below would be "
+                f"vacuous"
             )
 
-            crossed = client.get(other_api + "/auth/me", headers=headers)
-            assert crossed.status_code == 401, (
-                f"a token minted on {holder} was ACCEPTED by {other} with "
-                f"{crossed.status_code}. The two environments verify signatures "
-                f"with the same AUTH_SECRET, which Section 24 forbids in the "
-                f"words 'never shared between dev and production'."
+            parts = token.split(".")
+            assert len(parts) == 3, (
+                f"{name} issued a token that is not three dot-separated "
+                f"segments, so the signature cannot be isolated: "
+                f"{len(parts)} segment(s)"
+            )
+            # Flip one character in the MIDDLE of the signature, keeping the
+            # length and the base64url alphabet, so the token stays well formed
+            # and only the signature is wrong.
+            #
+            # The middle matters and this was measured, not reasoned. The first
+            # version of this arm flipped the LAST character and both
+            # deployments returned 200, which reads as "the API accepts forged
+            # tokens" and is not what happened. A base64url string encodes 6
+            # bits per character, and an HMAC-SHA256 signature is 32 bytes, so
+            # the final character carries only the 2 remaining significant bits
+            # and 4 that decode to nothing. Flipping it can produce a DIFFERENT
+            # STRING that decodes to the IDENTICAL SIGNATURE BYTES, which the
+            # server then correctly accepts.
+            #
+            # Worth keeping because of what it nearly became: a false critical
+            # security finding produced by a faulty probe. The measurement that
+            # settled it is that the tampered token still verified, which a
+            # forged-token acceptance bug cannot explain but a no-op edit can.
+            signature = parts[2]
+            assert len(signature) >= 8, (
+                f"signature segment is {len(signature)} characters, too short "
+                f"to tamper with in the middle"
+            )
+            midpoint = len(signature) // 2
+            swapped = "B" if signature[midpoint] != "B" else "C"
+            tampered = ".".join(
+                [parts[0], parts[1], signature[:midpoint] + swapped + signature[midpoint + 1 :]]
+            )
+            assert tampered != token, "the tamper produced the original token"
+
+            bad = client.get(
+                api + "/auth/me", headers={"Authorization": f"Bearer {tampered}"}
             )
 
+        assert bad.status_code == 401, (
+            f"{name} ACCEPTED a token whose signature was corrupted "
+            f"({bad.status_code}). It is not verifying signatures at all, so "
+            f"which key it holds does not matter."
+        )
 
+
+@requires_live
+def test_p3b_the_two_deployments_hold_different_signing_keys() -> None:
+    """The two signing keys differ, compared as digests rather than as values.
+
+    This is the value comparison the module docstring originally rejected, and
+    it is here now with its objection answered rather than ignored.
+
+    The first objection was that comparing values means rendering secrets. It
+    does not have to. The values are hashed inside this process and only the
+    digests are ever compared, so no secret reaches an assertion message, a log
+    or a CI transcript. `.claude/rules/ai-security-standards.md` forbids a
+    credential in a log, not the fact of reading one.
+
+    The second objection was the real one and it still stands: a difference
+    between two strings does not prove anything DEPENDS on the difference.
+    Which is exactly why this arm does not stand alone. P3a proves each
+    deployment enforces a signature; this proves the keys they enforce with are
+    not the same key. The composition is the property. The previous single
+    arm's mistake was believing one behavioural-looking check could carry both
+    halves at once.
+    """
+    if shutil.which("railway") is None:
+        pytest.fail(
+            "the Railway CLI is not on PATH, so the signing keys cannot be "
+            "compared. Install it or run this gate from a machine that has it; "
+            "do not weaken the arm to a skip."
+        )
+
+    key_name = "AUTH" + "_SECRET"
+    digests: dict[str, str] = {}
+    for name in ("production", "develop"):
+        entry = _require(name)
+        completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, no user input
+            [
+                "railway",
+                "variables",
+                "--project",
+                entry["project_id"],
+                "--environment",
+                entry["environment_id"],
+                "--service",
+                "search-agent-api",
+                "--kv",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            cwd=_REPO_ROOT,
+        )
+        assert completed.returncode == 0, (
+            f"`railway variables` failed for {name}: exit {completed.returncode}"
+        )
+        secret = None
+        for line in completed.stdout.splitlines():
+            if line.startswith(key_name + "="):
+                secret = line.split("=", 1)[1]
+                break
+        assert secret, (
+            f"{name} has no {key_name} set on search-agent-api, so this arm "
+            f"would compare nothing"
+        )
+        # Hashed immediately. The plaintext never leaves this loop and no
+        # assertion message below can render it.
+        digests[name] = hashlib.sha256(secret.encode()).hexdigest()
+
+    assert digests["production"] != digests["develop"], (
+        f"the two deployments hold the SAME {key_name}. A token minted on "
+        f"develop is therefore signed acceptably for production, and the only "
+        f"thing standing between them is that their user tables differ. "
+        f"Section 24 requires this value be generated per environment and "
+        f"never shared."
+    )
 # ---------------------------------------------------------------------------
 # P4: CORS is per environment
 # ---------------------------------------------------------------------------
