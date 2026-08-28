@@ -115,7 +115,7 @@ The newest honest limitation, and it is the one a person will actually notice. Y
 A second one, from the same sprint, and it matters most on a shared computer. If someone uses the tool without an account and then a DIFFERENT person creates an account on that same browser, the first person's questions follow them into the new account. Our system genuinely cannot tell those two situations apart: one person finally signing up looks exactly like a second person sitting down at the same machine. We found it, we can see it, and we chose to write it down rather than guess at a fix that would break the ordinary case of one person signing up.
 Both of last week's headline problems are fixed, so this section leads with what is true now rather than keeping solved problems at the top. What they were, and what happened to them, is in the sprint list below.
 
-The honest headline as of 28 August: NO RELEASE HAS EVER BEEN CUT. The practice site and the real site both exist, and all the machinery that moves work from one to the other is built and tested, but it has never actually run on a real release. It has been proven in a laboratory and not in the world, and the first release is the thing that changes that. It is being done deliberately while the two sites are identical, so a first attempt costs nothing but the finding out.
+The honest headline as of 28 August: WE STILL CANNOT SAY HOW OFTEN THE ANSWERS ARE GOOD. The system answers questions and cites every claim, and three releases have now shipped, but nothing yet records what it did on each question or scores it against a set of questions whose right answers we already know. Until that exists, the honest claim is that it answers, not that it answers well. That measurement is the next piece of work.
 
 The previous headline is worth keeping in view because it is now fixed. It used to be that nothing ran the tests automatically: every check happened because a person decided to run it, while a change merged into the main line went straight to the live web address with nothing in between. That is fixed as of 26 August, and 28 August put a second step between a merge and the public.
 
@@ -371,11 +371,33 @@ The fix was not a better sentence. We deleted the claims. A sentence saying "eve
 
 It cost four rounds of review against a budget of two, and the rule that stops us patching the same thing forever fired twice. The product owner authorised each continuation rather than it being taken quietly.
 
+### Sprint: the first releases (28 August)
+
+Three releases went out: v0.1.0, v0.1.1 and v0.1.2. The last two ran start to finish on their own, with nobody doing anything by hand.
+
+This is the sprint where the machinery built last time was actually used. Everything before it was tested; none of it had ever run for real.
+
+WHAT RUNNING IT FOR REAL FOUND, and none of it was reachable by any test we had:
+
+A permission we did not know was off. The last step of a release, the one that carries the paperwork back so the two lines stay in step, failed. Not because the code was wrong, it was correct, but because an account setting we had never looked at forbids automated tools from opening a request for review. Nothing inside the project can see a setting that lives outside it, so no test could ever have caught it. The setting is on now, and a check will fail loudly if anyone turns it back off.
+
+A release note nobody would read. The first release listed 798 changes and its page ran to sixty-two thousand characters, because a first release has nothing before it to compare against and so sweeps up the entire history of the project.
+
+Something worse than long, hiding inside it. Of those 798 entries, 173 were filed as fixes. Every single one predates the release, so we were telling a reader about 173 bugs we had fixed in a product nobody had ever used. That is not clutter, it is untrue in what it implies, and no amount of filtering could fix it because those changes genuinely were fixes during development. The first release now says what the product does rather than listing what we did to build it, and it says in its own text why it is the only entry written by hand.
+
+Two pieces of wording on a public page. A release with nothing user-facing in it read as "Plus 2 internal changes" under a bare heading, which is a sentence missing its first half. A release with exactly one read "1 internal changes".
+
+The result: the release notes went from 822 lines to 63, and the first release's page from sixty-two thousand characters to under two thousand.
+
+One thing we got wrong and are recording rather than quietly fixing. We predicted the third release would be the one to test the no-user-facing-changes wording, and it was not, because the fix itself counted as user-facing and so got its own line. That wording is proven in a practice run and still not in a real release.
+
+The lesson, and it is the one worth keeping: a thing that has never actually run is not tested, however carefully it has been checked. Three real releases found five things in an afternoon that a suite of four thousand tests could not, because all five lived outside the code.
+
 ## What is next
 
 Where the finished work sits against what is still ahead:
 
-The immediate next piece of work is CUTTING THE FIRST RELEASE. The practice site and the real site now exist and the machinery between them is built and tested, but no release has ever actually been cut, so the path from one to the other has been proven in a laboratory and not in the world. The first release is what turns that into a fact, and it is deliberately being done while the two sites are identical, so the first attempt carries no risk beyond finding out what we got wrong.
+The immediate next piece of work is making the system show its workings: recording what it did on every question it is asked, so we can tell which answers were good and which were not, and then measuring it against a fixed set of fifty questions with known answers. Until that exists we can say the system answers questions, and we cannot say how often it answers them well.
 
 
 ```mermaid
@@ -453,6 +475,7 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 | ~~Nothing runs the tests by itself. Every check happens because a person chooses to run it, while a change merged into the main line goes straight to the live web address with nothing in between~~ | FIXED, 26 August. Ten checks now run automatically on every proposed change |
 | The request that carries release paperwork back to the working line is the one request nothing checks automatically. It is opened by a machine, and the service that runs our checks deliberately ignores anything a machine opens, to stop it triggering itself forever | Left as it is, by product-owner decision on 28 August. Closing it means giving an automated job a permanent password with write access to everything, which is a bigger risk than the gap. The request itself now says in plain words that nothing checked it |
 | One test leaves a small unused account behind on the real site every time it runs | Accepted deliberately. The alternatives are worse: a fixed shared account means a password written down in the code, and cleaning up after itself means giving a test permission to delete things on the real site |
+| A release with no user-facing changes at all shows a line of wording that has only been checked in practice, never on a real release | Whenever a release happens to contain nothing but internal work. Recorded because we predicted the third release would test it and were wrong |
 | The automatic checks do not actually BLOCK a change. They put a red mark next to a button that still works, so a person can merge past a failing check | Needs a product-owner decision rather than building: either a paid plan on the service hosting our code, or making the project's code public. Neither is a change we can make on our own |
 | One of the ten checks, the one that talks to our big biology database, has never actually run. It reports honestly that it could not run rather than pretending to pass, but that means it has never checked anything | When the automatic system is given the password for that database. It is written and waiting; nothing is wrong with it |
 | Our own browser tests cannot exercise the product the way a visitor without an account actually uses it. That path had never once been tested in a browser, because a missing setting made every anonymous question fail before it started. Fixed for the test setup on 25 August, but it means the way most people will use this had no automated cover until now | The setting is fixed; broader cover for that path comes with the automated-testing sprint |
