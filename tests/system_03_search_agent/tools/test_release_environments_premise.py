@@ -1015,3 +1015,85 @@ def test_p9b_the_release_scripts_themselves_hold_their_safety_rules() -> None:
         assert parsed.returncode == 0, (
             f"{relative} does not parse: {parsed.stderr.strip()[:300]}"
         )
+
+
+# ---------------------------------------------------------------------------
+# P10: each web app is actually wired to its own API
+# ---------------------------------------------------------------------------
+
+
+@requires_live
+def test_p10_each_web_app_is_built_against_its_own_api() -> None:
+    """The shipped JavaScript bundle points at that deployment's API.
+
+    ADDED 2026-08-27 after finding F-4.15-A-14, a CRITICAL, and this arm is the
+    clearest illustration in the phase of why an adversary round is not
+    optional.
+
+    The develop web app was live, returned 200, and could not reach any API at
+    all. `VITE_API_BASE_URL` is a COMPILE-TIME substitution: Vite bakes it into
+    the bundle at build time, so setting it afterwards changes nothing that
+    ships. The develop bundle therefore carried the local development fallback
+    `http://127.0.0.1:8000`, which in a visitor's browser means the visitor's
+    own machine. The deployment satisfied every acceptance criterion this phase
+    had written, including "all four live surfaces answer 200", while being
+    useless for the single thing the phase exists to provide.
+
+    NOTHING CAUGHT IT, and that is the transferable part. P1 compared the two
+    `web` values as FIXTURE STRINGS and never issued one HTTP request to either
+    web URL. P4 tested CORS at the API. Every arm was about the API or about
+    configuration, and the web app was only ever asserted to exist. A gate can
+    be thorough about everything it looks at and blind to a whole surface.
+
+    So this arm downloads the bundle the browser would download and reads the
+    hosts out of it. Two assertions, and the second is the one that fails on a
+    stale build:
+
+    1. The deployment's own API host appears in the bundle.
+    2. No loopback address appears in it, since a loopback in shipped
+       JavaScript means the visitor's own machine.
+    """
+    for name in ("develop", "production"):
+        entry = _require(name)
+        web = entry["web"].rstrip("/")
+        api_host = entry["api"].rstrip("/")
+
+        with _client() as client:
+            index = client.get(web + "/")
+            assert index.status_code == 200, (
+                f"{name}'s web app returned {index.status_code} for its index, "
+                f"so there is no bundle to inspect"
+            )
+            bundles = re.findall(r'src="(/assets/[^"]+\.js)"', index.text)
+            assert bundles, (
+                f"{name}'s index.html references no /assets/*.js bundle, so "
+                f"this arm cannot read what the app was built against. Index "
+                f"was {len(index.text)} bytes."
+            )
+
+            found_api = False
+            found_loopback: list[str] = []
+            for path in bundles:
+                asset = client.get(web + path)
+                assert asset.status_code == 200, (
+                    f"{name} serves an index referencing {path} and that asset "
+                    f"returns {asset.status_code}"
+                )
+                if api_host in asset.text:
+                    found_api = True
+                for loopback in ("127.0.0.1", "localhost:"):
+                    if loopback in asset.text:
+                        found_loopback.append(f"{path} contains {loopback}")
+
+        assert found_api, (
+            f"{name}'s bundle does not contain its own API host {api_host}. "
+            f"VITE_API_BASE_URL is baked in at BUILD time, so this means the "
+            f"bundle was built before the variable was set and the app is "
+            f"talking to whatever the fallback is. Rebuild the service; "
+            f"setting the variable alone does not change what ships."
+        )
+        assert not found_loopback, (
+            f"{name}'s shipped JavaScript contains a loopback address, which "
+            f"in a visitor's browser means the VISITOR'S OWN machine: "
+            f"{found_loopback}. This is finding F-4.15-A-14."
+        )

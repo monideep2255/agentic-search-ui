@@ -702,3 +702,108 @@ def test_p9_goes_red_for_each_way_the_release_workflow_can_be_broken(
         f"P9 failed for a reason that does not name the breakage: expected "
         f"{must_mention!r}, got {str(failure)[:300]!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# P10: the bundle arm, mutated against a fake web server
+# ---------------------------------------------------------------------------
+
+
+class _WebWorld:
+    """A web app serving one index and one bundle, configurable to be broken.
+
+    Deliberately separate from `_World`, which models the API. P10 reads HTML
+    and JavaScript rather than JSON, and folding it into the API model would
+    have meant teaching that model two content types to save one small class.
+    """
+
+    def __init__(self, *, stale_bundle: bool = False, no_bundle_reference: bool = False) -> None:
+        self.stale_bundle = stale_bundle
+        self.no_bundle_reference = no_bundle_reference
+
+    def __enter__(self) -> _WebWorld:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def _deployment_for(self, url: str) -> dict:
+        for entry in json.loads(_FIXTURE.read_text())["deployments"].values():
+            if url.startswith(entry["web"].rstrip("/")):
+                return entry
+        raise AssertionError(f"no deployment owns {url}")
+
+    def get(self, url: str, **_: object) -> _Response:
+        entry = self._deployment_for(url)
+        if url.rstrip("/").endswith(entry["web"].rstrip("/")):
+            body = "<html><body>no bundle here</body></html>"
+            if not self.no_bundle_reference:
+                body = '<html><script src="/assets/index-abc123.js"></script></html>'
+            response = _Response(200, {})
+            response.text = body
+            return response
+
+        # The bundle itself.
+        if self.stale_bundle:
+            # Built before VITE_API_BASE_URL was set: the local development
+            # fallback ships instead of the deployment's own API host. This is
+            # exactly what F-4.15-A-14 found live.
+            js = 'const API="http://127.0.0.1:8000";'
+        else:
+            js = f'const API="{entry["api"].rstrip("/")}";'
+        response = _Response(200, {})
+        response.text = js
+        return response
+
+
+def _run_p10(monkeypatch: pytest.MonkeyPatch, world: _WebWorld) -> BaseException | None:
+    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
+
+    monkeypatch.setattr(premise, "_client", lambda: world)
+    arm = premise.test_p10_each_web_app_is_built_against_its_own_api
+    try:
+        arm.__wrapped__() if hasattr(arm, "__wrapped__") else arm()
+    except BaseException as exc:  # noqa: BLE001 - the failure IS the result
+        return exc
+    return None
+
+
+def test_p10_goes_red_when_a_bundle_ships_the_local_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The exact live defect F-4.15-A-14 found, reproduced against a fake.
+
+    The control half matters more than usual here. P10 passed the moment it was
+    written, because the live bundle had already been rebuilt by then, and an
+    arm that has only ever been green is indistinguishable from one that cannot
+    go red.
+    """
+    assert _run_p10(monkeypatch, _WebWorld()) is None, (
+        "P10 fails against a correctly built pair of bundles, so its red "
+        "result below would prove nothing"
+    )
+
+    failure = _run_p10(monkeypatch, _WebWorld(stale_bundle=True))
+    assert failure is not None, (
+        "P10 stayed green against a bundle carrying http://127.0.0.1:8000, "
+        "which is the live critical it was written for"
+    )
+    assert "loopback" in str(failure) or "does not contain its own API host" in str(failure), (
+        f"P10 failed for a reason that does not name the defect: {str(failure)[:300]!r}"
+    )
+
+
+def test_p10_goes_red_when_the_index_references_no_bundle(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An index with no script tag must fail rather than pass by absence.
+
+    Without this, a web app serving a blank page would satisfy P10, because
+    there would be no bundle in which to find a loopback address. That is the
+    populate-check build phase 4.11 paid for, applied to a surface rather than
+    to a variable.
+    """
+    failure = _run_p10(monkeypatch, _WebWorld(no_bundle_reference=True))
+    assert failure is not None, (
+        "P10 passed against an index referencing no bundle at all, so a blank "
+        "deployment would satisfy it"
+    )
+    assert "references no" in str(failure), (
+        f"P10 failed but not on the missing bundle: {str(failure)[:300]!r}"
+    )

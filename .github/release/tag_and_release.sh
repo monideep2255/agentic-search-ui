@@ -4,10 +4,31 @@
 # Build phase 4.15. Runs only on a push to `production`, which by the release
 # flow means a release pull request was merged after CI reported on it.
 #
-# The changelog commit carries [skip ci] for a specific reason rather than as a
-# habit: without it this workflow pushes to `production`, that push triggers
-# this workflow, and the second run tags a version on top of the first. The
-# marker is what makes the loop terminate.
+# WHY THIS WORKFLOW DOES NOT TRIGGER ITSELF, stated honestly after finding
+# F-4.15-J-13, which caught the comment here naming the weaker of two
+# mechanisms as the load-bearing one.
+#
+# The load-bearing mechanism is the TOKEN. This job pushes with
+# `secrets.GITHUB_TOKEN`, and GitHub documents that events raised by that token
+# do not start new workflow runs. That is what actually terminates the loop,
+# and it holds whether or not the commit message says anything.
+#
+# The `[skip ci]` marker on the changelog commit is defence in depth, not the
+# mechanism. It matters if the push is ever moved to a personal access token or
+# a GitHub App token, which DO raise events, and it also keeps the ci.yml push
+# trigger off a commit that changes only the changelog.
+#
+# WHAT IS NOT VERIFIED, said plainly rather than left to be assumed: neither
+# statement above is asserted by any test in this repository. No arm reads the
+# `[skip ci]` marker, so deleting it from the commit message below leaves every
+# gate green, and no arm can observe the token behaviour at all, since it is a
+# property of GitHub's event dispatcher rather than of this repository. The
+# recursion has also never been observed, because no release has been cut yet.
+# Per `.claude/rules/self-eval-loop.md` a comment asserting a correctness
+# property needs a test asserting the same property; this comment therefore
+# asserts no property it cannot support, and records the gap instead. Closing
+# it is finding F-4.15-A-13's job, which owns the absence of any behavioural
+# gate over these scripts.
 set -euo pipefail
 
 version="${RELEASE_VERSION:?RELEASE_VERSION is required}"
