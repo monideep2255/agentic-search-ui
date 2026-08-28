@@ -162,8 +162,21 @@ for key in $internal_group_keys; do
 done
 
 if [ "$internal_total" -gt 0 ]; then
-  echo "Plus ${internal_total} internal changes not listed individually (${internal_parts}):" \
-       "chores, documentation, tests, refactors and build configuration." >> "$section"
+  # "Plus" only reads correctly when something came before it. A release with
+  # no user-facing changes at all, a documentation or tooling release, is a
+  # real case and the first version of this line rendered it as "Plus 2
+  # internal changes" under a bare version heading, which reads as a sentence
+  # missing its first half. Found by exercising the all-internal path in a
+  # throwaway repository before a release needed it, rather than by shipping it.
+  listed="$(grep -c '^- ' "$section" || true)"
+  if [ "$listed" -gt 0 ]; then
+    echo "Plus ${internal_total} internal changes not listed individually (${internal_parts}):" \
+         "chores, documentation, tests, refactors and build configuration." >> "$section"
+  else
+    echo "No user-facing changes. ${internal_total} internal changes" \
+         "(${internal_parts}): chores, documentation, tests, refactors and" \
+         "build configuration." >> "$section"
+  fi
   echo >> "$section"
 fi
 
