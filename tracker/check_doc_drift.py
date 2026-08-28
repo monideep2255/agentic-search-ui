@@ -736,7 +736,14 @@ ASSERTION_PATTERNS: list[AssertionPattern] = [
     # file's total row count. The label-then-number forms below ("Decisions
     # logged: 183") are a self-contained total-count assertion by
     # construction, so they need no matching suffix requirement.
-    AssertionPattern("decisions_rows", re.compile(r"(\d[\d,]*)\s+decisions logged\s*\(DECISIONS\.md\)")),
+    # "logged" is OPTIONAL, and that word is why this fact went unchecked in
+    # the two most-read files in the repository. CLAUDE.md's Current focus row
+    # and its AGENTS.md mirror both say "438 decisions (DECISIONS.md)", with no
+    # "logged", so they matched none of the five patterns here and drifted
+    # silently: AGENTS.md sat at 430 while the checker reported 0 stale, and a
+    # deliberately absurd 99999 in CLAUDE.md also passed. Measured on
+    # 2026-08-28 by mutating both files and watching the check stay green.
+    AssertionPattern("decisions_rows", re.compile(r"(\d[\d,]*)\s+decisions(?:\s+logged)?\s*\(DECISIONS\.md\)")),
     AssertionPattern("decisions_rows", re.compile(r"(\d[\d,]*)\s+decision rows\b")),
     AssertionPattern("decisions_rows", re.compile(r"(\d[\d,]*)\s+DECISIONS\.md rows\b")),
     AssertionPattern("decisions_rows", _label_then_number(r"\bDecisions logged\b")),
@@ -1438,6 +1445,14 @@ def _pattern_coverage_cases() -> list[PatternCoverageCase]:
         # hyphen separator.
         PatternCoverageCase("decisions_rows number-then-label, decisions logged", "decisions_rows",
                              "183 decisions logged (DECISIONS.md)", 183),
+        # The phrasing CLAUDE.md and AGENTS.md actually use, with no "logged".
+        # Its absence from this list is the whole reason the gap existed: the
+        # suite proved the patterns match six phrasings someone thought of, and
+        # the one the repository's own most-read file uses was not among them.
+        # A coverage self-test written from imagination rather than from the
+        # documents it guards will always have this shape of hole.
+        PatternCoverageCase("decisions_rows number-then-label, bare decisions", "decisions_rows",
+                             "183 decisions (DECISIONS.md)", 183),
         PatternCoverageCase("decisions_rows number-then-label, decision rows", "decisions_rows",
                              "183 decision rows", 183),
         PatternCoverageCase("decisions_rows number-then-label, DECISIONS.md rows", "decisions_rows",
