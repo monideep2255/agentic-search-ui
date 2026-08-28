@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-08-27.
+Last updated: 2026-08-28.
 
 ## Table of contents
 
@@ -53,6 +53,8 @@ You can ask a question and get a real, cited answer back, streamed to a web page
 
 Concretely:
 
+- There is a practice site and a real site, and they share nothing. Changes appear on the practice site as soon as they are merged, and the real site moves only when someone deliberately cuts a release. An account made on one does not exist on the other. Before 28 August there was one site, and anything merged went straight to the address people visit.
+- Cutting a release does its own paperwork. It works out the new version number from the descriptions written on each change, writes the list of what is in the release, stamps the version permanently, and publishes a release page. Nobody summarises anything by hand.
 - Changes get checked before they reach you. Ten checks now run by themselves whenever anyone proposes a change to the project: does the code still build, are the tests still passing, do any of the outside pieces we depend on have known security holes, and does the page still work for someone using a screen reader. Before this week none of that happened unless a person remembered to do it.
 - You can see it working. Until this week the screen showed five grey step markers for about eleven seconds and then the whole answer appeared at once, so it looked frozen and then abrupt. It now shows each source being consulted as it happens. The answer was never slow in the way it looked; nothing was being said out loud while it worked.
 - A conversation stays on the page. Asking a follow-up used to wipe out the answer you had just read. Your earlier questions now stay below the new one, folded up, and you can open any of them again.
@@ -113,7 +115,9 @@ The newest honest limitation, and it is the one a person will actually notice. Y
 A second one, from the same sprint, and it matters most on a shared computer. If someone uses the tool without an account and then a DIFFERENT person creates an account on that same browser, the first person's questions follow them into the new account. Our system genuinely cannot tell those two situations apart: one person finally signing up looks exactly like a second person sitting down at the same machine. We found it, we can see it, and we chose to write it down rather than guess at a fix that would break the ordinary case of one person signing up.
 Both of last week's headline problems are fixed, so this section leads with what is true now rather than keeping solved problems at the top. What they were, and what happened to them, is in the sprint list below.
 
-The honest headline changed this week, and the old one is worth keeping in view. It used to be that nothing ran the tests automatically: every check happened because a person decided to run it, while a change merged into the main line went straight to the live web address with nothing in between. That is fixed as of 26 August. Ten checks now run by themselves every time anyone proposes a change.
+The honest headline as of 28 August: NO RELEASE HAS EVER BEEN CUT. The practice site and the real site both exist, and all the machinery that moves work from one to the other is built and tested, but it has never actually run on a real release. It has been proven in a laboratory and not in the world, and the first release is the thing that changes that. It is being done deliberately while the two sites are identical, so a first attempt costs nothing but the finding out.
+
+The previous headline is worth keeping in view because it is now fixed. It used to be that nothing ran the tests automatically: every check happened because a person decided to run it, while a change merged into the main line went straight to the live web address with nothing in between. That is fixed as of 26 August, and 28 August put a second step between a merge and the public.
 
 The new honest headline is narrower and still real: those checks do not actually BLOCK anything. They put a red mark next to a button that still works. Making them genuinely block a merge needs either a paid plan on the service that hosts our code, or making the project's code public, and that is a decision for the product owner rather than something we can build. Until it is made, the checks inform a person rather than stopping them.
 
@@ -341,11 +345,37 @@ The fix was not to patch it a third time. The product owner's call was to change
 
 The lesson we wrote down: a test that tries to prove another test works only proves it against the tricks you thought to try. When something keeps failing in the same way, stop making the check stricter and change what it is looking at.
 
+### Sprint: two sites instead of one (28 August)
+
+Until this sprint there was one website. Anything merged went straight to the address people visit, with nothing in between. This sprint made that two.
+
+There is now a practice site and a real site. They look identical and share no data at all: separate databases, separate memory, separate keys. An account made on the practice site does not exist on the real one. That separation is not a claim, it is checked automatically: the system creates a real account on one site and confirms the other refuses it.
+
+How work reaches people now:
+
+- Everyday work merges into the main working line and appears on the PRACTICE site within a couple of minutes. Nothing anyone outside sees changes.
+- When it is ready for the public, we cut a release, and merging that release is what moves the REAL site.
+- Cutting a release also does the paperwork by itself: it works out the new version number from the descriptions we wrote on each change, writes a plain list of what is in this release, stamps the version permanently, publishes a release page, and opens a request to carry the paperwork back so the two lines do not drift apart.
+
+That last part is why we have been writing change descriptions in a fixed format for weeks. The format was never for us. It was so a machine could read a month of work and produce the release notes without anyone summarising anything by hand.
+
+WHAT WENT WRONG, and this sprint has an unusually honest list.
+
+The plan was two sites inside one project, which is how the hosting service describes it and how we specified it. It does not work: the hosting service ties "which version of the code" to the service rather than to the site, so pointing the real site at a different version moved the practice site too. We found that by trying it and checking BOTH sites, not by reading the documentation, which says the opposite. The design was rebuilt as two entirely separate projects the same day.
+
+The practice site was live, answered correctly when asked if it was healthy, and could not reach its own service at all. The address of the service it should talk to is baked in when the site is built, and we had set it after the build, so the site was shipped pointing at the visitor's own computer. It passed every check we had written, including one that said all four addresses respond. Nothing caught it, because no check had ever actually opened the site and looked. One does now.
+
+FOUR separate times, the defect was not broken code but a confident sentence describing a check that did not exist. A note claimed a comparison the code never made. A test claimed to prove two sites use different keys when it only proved they use different databases, and that one took four attempts to fix properly. A file whose entire job is catching tests that cannot fail claimed to cover everything while missing two, twice, the second time inside the fix for the first. And then the status board made the same claim a third time, written while fixing the second.
+
+The fix was not a better sentence. We deleted the claims. A sentence saying "everything is covered" cannot be checked by reading and goes out of date the moment anyone adds anything, so it is replaced by a rule that cannot go stale: write the safety check in the same edit as the thing it checks.
+
+It cost four rounds of review against a budget of two, and the rule that stops us patching the same thing forever fired twice. The product owner authorised each continuation rather than it being taken quietly.
+
 ## What is next
 
 Where the finished work sits against what is still ahead:
 
-The immediate next piece of work is separating the practice version of the site from the real one, so we can try changes somewhere safe before anyone else sees them. Right now there is only one, and anything merged goes straight to the address people visit.
+The immediate next piece of work is CUTTING THE FIRST RELEASE. The practice site and the real site now exist and the machinery between them is built and tested, but no release has ever actually been cut, so the path from one to the other has been proven in a laboratory and not in the world. The first release is what turns that into a fact, and it is deliberately being done while the two sites are identical, so the first attempt carries no risk beyond finding out what we got wrong.
 
 
 ```mermaid
@@ -421,6 +451,8 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 | On a shared computer, if one person uses the tool without an account and a different person then creates an account in that same browser, the first person's questions follow them into the new account. The system cannot tell those two situations apart | Owned alongside the earlier work that moves a guest's searches into a new account, since this sprint made a pre-existing problem visible rather than creating it |
 | A search list longer than fifty is quietly cut to the fifty most recent, and nothing on screen says there is more | Whenever the sidebar gets a way to show more, which the approved design does not currently have |
 | ~~Nothing runs the tests by itself. Every check happens because a person chooses to run it, while a change merged into the main line goes straight to the live web address with nothing in between~~ | FIXED, 26 August. Ten checks now run automatically on every proposed change |
+| The request that carries release paperwork back to the working line is the one request nothing checks automatically. It is opened by a machine, and the service that runs our checks deliberately ignores anything a machine opens, to stop it triggering itself forever | Left as it is, by product-owner decision on 28 August. Closing it means giving an automated job a permanent password with write access to everything, which is a bigger risk than the gap. The request itself now says in plain words that nothing checked it |
+| One test leaves a small unused account behind on the real site every time it runs | Accepted deliberately. The alternatives are worse: a fixed shared account means a password written down in the code, and cleaning up after itself means giving a test permission to delete things on the real site |
 | The automatic checks do not actually BLOCK a change. They put a red mark next to a button that still works, so a person can merge past a failing check | Needs a product-owner decision rather than building: either a paid plan on the service hosting our code, or making the project's code public. Neither is a change we can make on our own |
 | One of the ten checks, the one that talks to our big biology database, has never actually run. It reports honestly that it could not run rather than pretending to pass, but that means it has never checked anything | When the automatic system is given the password for that database. It is written and waiting; nothing is wrong with it |
 | Our own browser tests cannot exercise the product the way a visitor without an account actually uses it. That path had never once been tested in a browser, because a missing setting made every anonymous question fail before it started. Fixed for the test setup on 25 August, but it means the way most people will use this had no automated cover until now | The setting is fixed; broader cover for that path comes with the automated-testing sprint |
