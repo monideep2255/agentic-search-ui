@@ -1,0 +1,730 @@
+"""Premise gate for build phase 4.15, the two-environment release flow.
+
+The premise is one sentence: `develop` and `production` are SEPARATE
+deployments, with separate URLs, separate secrets and separate data, and each
+one deploys from its own branch. Everything below tries to make that sentence
+false.
+
+## Why this gate is behavioural rather than a configuration comparison
+
+The obvious gate reads both environments' variables and asserts the values
+differ. It was rejected for two reasons, and the second is the load-bearing
+one.
+
+First, it would require rendering secrets. `AUTH_SECRET` is the variable whose
+separation matters most, and a gate that proves it by printing it into a test
+process, a CI log or an assertion message has traded the property for the
+proof. `.claude/rules/ai-security-standards.md` forbids it in those words.
+
+Second, and this is the part worth carrying: comparing two values proves they
+are different STRINGS, not that anything depends on the difference. A
+deployment could hold two distinct `AUTH_SECRET` values and still verify
+tokens with a third, hardcoded one, and the comparison gate would be green.
+That is the safety-by-proxy shape build phase 4.3 shipped as a critical twice
+and build phase 4.7 hit again: the check verifies a CORRELATE of the property
+rather than the property. P3 mints a real token on one environment and
+presents it to the other, which exercises the code path that actually depends
+on the separation. If the separation is nominal, P3 goes red.
+
+## How an arm is gated, and why "skip" is not the default here
+
+Every other live gate in this repository skips when its transport is
+unreachable, because an unreachable NCBI endpoint is a fact about the network
+rather than about the code. That rule is wrong for this gate and is
+deliberately not followed.
+
+Here, "the develop environment does not answer" is not a network condition. It
+is the exact failure this phase exists to prevent. So:
+
+- `RUN_PREMISE_GATE` unset: the live arms skip. Nothing was measured and the
+  gate says so.
+- `RUN_PREMISE_GATE=1`: the live arms FAIL when an environment is missing,
+  unreachable or misconfigured. They never skip for that reason.
+
+This is the populate-check discipline build phase 4.11 arrived at, stated as a
+gating rule rather than as an assertion: an arm that cannot distinguish "the
+control held" from "nothing happened" is not an arm. An arm that skips when
+the thing it guards is absent is that same defect wearing a skip marker.
+
+P7 and P8 are static file checks and run ALWAYS, with no flag, because nothing
+about them needs a network. Putting them behind the flag would have hidden two
+thirds of the gate from CI for no reason.
+
+## What each arm catches
+
+| Arm | Property | Goes red when |
+|-----|----------|---------------|
+| P1 | Both environments answer, at DIFFERENT hostnames | one is down, absent from the fixture, or both resolve to one deployment |
+| P2 | An account made on develop cannot sign in on production | the two share a user database |
+| P3 | A token minted by develop is REJECTED by production, and the converse | `AUTH_SECRET` is shared |
+| P4 | Each API admits its own web origin and refuses the other's | `CORS_ORIGINS` was copied rather than set per environment |
+| P5 | The two report different `APP_ENV` | the duplicate carried production's app config unchanged |
+| P6 | Every non-Railway variable on production's API is set on develop's too | provisioning dropped one |
+| P7 | `env.example` names every non-Railway variable the API is given | a variable is load-bearing and undocumented (F-4.15-01) |
+| P8 | CI's push trigger includes `production` | a merge to the production line runs no gates |
+
+P2 and P3 are the two arms that would have been UNWRITABLE had the shared
+database option been taken, which is the clearest statement of what the
+product owner's 2026-08-27 decision bought.
+
+## What this gate does NOT cover
+
+Stated here rather than left to be discovered, per `.claude/rules/goal-contracts.md`.
+
+- It does not prove a release cut from `develop` and merged to `production` actually
+  reaches production. It proves the triggers are configured. The first real
+  release is that proof and it is outside this phase.
+- It does not test rollback. Railway's rollback is a console redeploy of a
+  previous build with no API surface exercised here.
+- It does not prove the two Postgres instances differ at rest. P2 proves it
+  through the auth path, the path that matters, and says nothing about the
+  `interactions` or `runs` tables.
+- P6 compares variable NAMES, never values. A variable present in both with
+  production's value copied into develop PASSES P6. P3 and P4 cover the two
+  cases where that would be dangerous. Nothing covers the rest.
+- Nothing here separates the graph credential per environment, deliberately.
+  Layer 1 is read-only at the connection level, so there is no
+  develop-versus-production hazard to separate.
+- P4 tests the CORS preflight response, not whether a browser honours it. A
+  server that returns the right headers and a browser that ignores them is
+  outside anything this repository can assert.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import uuid
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_FIXTURE = Path(__file__).with_name("fixtures") / "release_environments.json"
+_CI_WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "ci.yml"
+_ENV_EXAMPLE = _REPO_ROOT / "env.example"
+
+_RUN_LIVE = os.environ.get("RUN_PREMISE_GATE") == "1"
+
+# Gated on the FLAG ALONE, never on reachability. See "How an arm is gated"
+# in the module docstring: an environment that does not answer is the defect
+# this gate exists to find, so it must fail rather than skip.
+requires_live = pytest.mark.skipif(
+    not _RUN_LIVE,
+    reason="needs RUN_PREMISE_GATE=1 (the live arms FAIL rather than skip when an environment is absent)",
+)
+
+_HTTP_TIMEOUT = 30.0
+
+# Railway injects these into every service. They are not ours to document in
+# env.example and not ours to provision, so both P6 and P7 exclude them.
+_RAILWAY_PREFIX = "RAILWAY_"
+
+
+def _environments() -> dict[str, dict[str, str]]:
+    """The two DEPLOYMENTS, which are two Railway projects rather than two environments.
+
+    Renamed from `environments` on 2026-08-27, finding F-4.15-03. The first
+    build of this phase put both deployments in one Railway project as two
+    environments, which is what Section 24's wording implies, and it does not
+    work: a service's git branch is service-level, so both environments
+    deployed the same branch. The key name changed with the topology so that a
+    reader of this file cannot come away with the wrong mental model.
+    """
+    return json.loads(_FIXTURE.read_text())["deployments"]
+
+
+def _require(name: str) -> dict[str, str]:
+    """The fixture entry for one environment, or a failure that says what to do.
+
+    A missing entry is a FAILURE and not a skip. Build phase 4.15 exists to
+    create the develop environment, so "develop is not in the fixture" is the
+    phase being incomplete, which is precisely what a gate should report.
+    """
+    envs = _environments()
+    if name not in envs:
+        pytest.fail(
+            f"environment {name!r} is absent from {_FIXTURE.name}. Provision it "
+            f"(T-4.15-03) and record its URLs here, or this gate is asserting "
+            f"nothing about it."
+        )
+    entry = envs[name]
+    for key in ("api", "web", "branch", "app_env", "project_id", "environment_id"):
+        if not entry.get(key):
+            pytest.fail(f"environment {name!r} has no {key!r} in {_FIXTURE.name}")
+    return entry
+
+
+def _client() -> Any:
+    import httpx
+
+    return httpx.Client(timeout=_HTTP_TIMEOUT, follow_redirects=True)
+
+
+def _throwaway_credentials() -> tuple[str, str]:
+    """A unique account per run, so a re-run never collides with its own rows.
+
+    The address is deliberately marked so anyone reading the develop database
+    can tell at a glance that these rows are gate exhaust rather than a person.
+    """
+    token = uuid.uuid4().hex
+    return f"gate-4.15-{token}@example.invalid", f"pw-{token}"
+
+
+# ---------------------------------------------------------------------------
+# P1: two environments, both answering, at different hostnames
+# ---------------------------------------------------------------------------
+
+
+@requires_live
+def test_p1_both_environments_answer_at_different_hostnames() -> None:
+    """Both APIs are healthy AND they are not the same deployment.
+
+    The second half is the half that matters. Asserting each `/health` returns
+    ok would pass if the fixture named one URL twice, or if a DNS alias pointed
+    develop at production, and either of those is exactly the failure "two
+    environments" is supposed to exclude. So the hostnames are compared, and
+    the service ids reported by the two deployments are compared too, because
+    two hostnames can still front one service.
+    """
+    prod = _require("production")
+    dev = _require("develop")
+
+    assert prod["api"] != dev["api"], (
+        "production and develop name the same API URL, so there is one "
+        "deployment wearing two labels"
+    )
+    assert prod["web"] != dev["web"], "production and develop name the same web URL"
+
+    with _client() as client:
+        for label, entry in (("production", prod), ("develop", dev)):
+            response = client.get(entry["api"].rstrip("/") + "/health")
+            assert response.status_code == 200, (
+                f"{label} API {entry['api']} returned {response.status_code}, "
+                f"not 200. A premise gate arm for an environment that does not "
+                f"answer is a failure, never a skip."
+            )
+            assert response.json().get("status") == "ok", (
+                f"{label} API answered but did not report status ok: {response.text[:200]}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# P2 and P3: one signup, two separations
+# ---------------------------------------------------------------------------
+
+
+@requires_live
+def test_p2_an_account_made_on_develop_cannot_sign_in_on_production() -> None:
+    """Data isolation, proven through the path that would actually leak.
+
+    This is the arm that would be UNWRITABLE had the two environments shared a
+    Postgres. It creates a real account on develop and then tries the same
+    credentials against production, which must not know them.
+
+    A 401 is the pass. Anything in the 2xx range means the two environments
+    read one user table, which is the configuration the product owner rejected
+    on 2026-08-27.
+    """
+    dev = _require("develop")
+    prod = _require("production")
+    email, password = _throwaway_credentials()
+
+    with _client() as client:
+        created = client.post(
+            dev["api"].rstrip("/") + "/auth/signup",
+            json={"email": email, "password": password},
+        )
+        assert created.status_code == 201, (
+            f"could not create an account on develop to test with: "
+            f"{created.status_code} {created.text[:200]}"
+        )
+
+        # The positive control. Without it, a develop API that rejects EVERY
+        # login would make the negative assertion below pass for the wrong
+        # reason, which is the vacuous-arm shape this repository has now been
+        # caught by eleven times.
+        on_develop = client.post(
+            dev["api"].rstrip("/") + "/auth/login",
+            json={"email": email, "password": password},
+        )
+        assert on_develop.status_code == 200, (
+            f"the account was created on develop but cannot log in there "
+            f"({on_develop.status_code}), so the cross-environment assertion "
+            f"below would prove nothing"
+        )
+
+        on_production = client.post(
+            prod["api"].rstrip("/") + "/auth/login",
+            json={"email": email, "password": password},
+        )
+
+    assert on_production.status_code == 401, (
+        f"an account created on develop logged in on production with "
+        f"{on_production.status_code}. The two environments share a user "
+        f"database, which is the exact configuration build phase 4.15 was "
+        f"opened to prevent."
+    )
+
+
+@requires_live
+def test_p3_a_token_minted_on_one_environment_is_refused_by_the_other() -> None:
+    """AUTH_SECRET separation, proven without rendering either secret.
+
+    Both directions are tested, not one. A single direction would pass if
+    production simply rejected every bearer token, for instance because its
+    `/auth/me` route were broken, and a broken route reading as a security
+    property is the failure mode this gate is most likely to produce.
+
+    So each token is first proven to WORK on its own environment (the positive
+    control) and only then presented to the other.
+    """
+    dev = _require("develop")
+    prod = _require("production")
+
+    minted: dict[str, tuple[str, str]] = {}
+    with _client() as client:
+        for label, entry in (("develop", dev), ("production", prod)):
+            email, password = _throwaway_credentials()
+            created = client.post(
+                entry["api"].rstrip("/") + "/auth/signup",
+                json={"email": email, "password": password},
+            )
+            assert created.status_code == 201, (
+                f"could not create an account on {label}: {created.status_code} "
+                f"{created.text[:200]}"
+            )
+            logged_in = client.post(
+                entry["api"].rstrip("/") + "/auth/login",
+                json={"email": email, "password": password},
+            )
+            assert logged_in.status_code == 200, (
+                f"could not log in on {label}: {logged_in.status_code}"
+            )
+            token = logged_in.json()["access_token"]
+            minted[label] = (entry["api"].rstrip("/"), token)
+
+        for holder, other in (("develop", "production"), ("production", "develop")):
+            own_api, token = minted[holder]
+            other_api, _ = minted[other]
+            headers = {"Authorization": f"Bearer {token}"}
+
+            # Positive control: the token works where it was minted.
+            own = client.get(own_api + "/auth/me", headers=headers)
+            assert own.status_code == 200, (
+                f"a token minted on {holder} does not work on {holder} itself "
+                f"({own.status_code}), so the cross-environment rejection below "
+                f"would be vacuous"
+            )
+
+            crossed = client.get(other_api + "/auth/me", headers=headers)
+            assert crossed.status_code == 401, (
+                f"a token minted on {holder} was ACCEPTED by {other} with "
+                f"{crossed.status_code}. The two environments verify signatures "
+                f"with the same AUTH_SECRET, which Section 24 forbids in the "
+                f"words 'never shared between dev and production'."
+            )
+
+
+# ---------------------------------------------------------------------------
+# P4: CORS is per environment
+# ---------------------------------------------------------------------------
+
+
+@requires_live
+def test_p4_each_api_admits_its_own_web_origin_and_refuses_the_other() -> None:
+    """`CORS_ORIGINS` was set per environment rather than carried by the duplicate.
+
+    Both halves are asserted for the same reason P3 tests both directions: an
+    API that allowed NOTHING would pass a refusal-only check while being
+    completely broken.
+    """
+    prod = _require("production")
+    dev = _require("develop")
+
+    with _client() as client:
+        for label, entry, other in (
+            ("production", prod, dev),
+            ("develop", dev, prod),
+        ):
+            api = entry["api"].rstrip("/")
+
+            allowed = client.options(
+                api + "/auth/login",
+                headers={
+                    "Origin": entry["web"],
+                    "Access-Control-Request-Method": "POST",
+                },
+            )
+            allow_own = allowed.headers.get("access-control-allow-origin")
+            assert allow_own == entry["web"], (
+                f"{label}'s API did not admit its OWN web origin "
+                f"{entry['web']}: allow-origin was {allow_own!r}. The refusal "
+                f"assertion below would pass vacuously against an API that "
+                f"allows nothing."
+            )
+
+            refused = client.options(
+                api + "/auth/login",
+                headers={
+                    "Origin": other["web"],
+                    "Access-Control-Request-Method": "POST",
+                },
+            )
+            allow_other = refused.headers.get("access-control-allow-origin")
+            assert allow_other != other["web"], (
+                f"{label}'s API admitted {other['web']}, the OTHER "
+                f"environment's web origin. CORS_ORIGINS was copied by the "
+                f"environment duplicate rather than set per environment."
+            )
+
+
+# ---------------------------------------------------------------------------
+# P5: the two report different APP_ENV
+# ---------------------------------------------------------------------------
+
+
+@requires_live
+def test_p5_the_two_environments_report_different_app_env() -> None:
+    """The duplicate did not carry production's app config unchanged.
+
+    `/health` is the only unauthenticated surface that reports it, so this arm
+    is bounded by what that endpoint exposes. If it stops reporting `app_env`
+    this arm fails loudly rather than silently passing, which is the intent.
+    """
+    prod = _require("production")
+    dev = _require("develop")
+
+    seen: dict[str, str] = {}
+    with _client() as client:
+        for label, entry in (("production", prod), ("develop", dev)):
+            payload = client.get(entry["api"].rstrip("/") + "/health").json()
+            assert "app_env" in payload, (
+                f"{label}'s /health does not report app_env, so this arm can "
+                f"no longer distinguish the two environments: {payload}"
+            )
+            seen[label] = payload["app_env"]
+            assert payload["app_env"] == entry["app_env"], (
+                f"{label} reports app_env={payload['app_env']!r}, but "
+                f"{_FIXTURE.name} records {entry['app_env']!r}"
+            )
+
+    assert seen["production"] != seen["develop"], (
+        f"both environments report app_env={seen['production']!r}, so the "
+        f"duplicate carried production's app config unchanged"
+    )
+
+
+# ---------------------------------------------------------------------------
+# P6: no variable was dropped in provisioning
+# ---------------------------------------------------------------------------
+
+
+def _service_variable_names(service: str, entry: dict[str, str]) -> set[str]:
+    """Variable NAMES for one service, never values.
+
+    The `sed` that strips everything after the first `=` runs before anything
+    reaches this process's memory, so no value is read, logged, or capable of
+    reaching an assertion message. That is deliberate and is the whole reason
+    this shells out instead of using the Railway MCP, whose response renders
+    every value in full.
+    """
+    completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, no user input
+        [
+            "railway",
+            "variables",
+            "--project",
+            entry["project_id"],
+            "--environment",
+            entry["environment_id"],
+            "--service",
+            service,
+            "--kv",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        cwd=_REPO_ROOT,
+    )
+    if completed.returncode != 0:
+        pytest.fail(
+            f"`railway variables` failed for {service} in project "
+            f"{entry['project']}. This arm needs the Railway CLI linked and "
+            f"logged in. Run `railway status` to check. Exit "
+            f"{completed.returncode}."
+        )
+    names = set()
+    for line in completed.stdout.splitlines():
+        name = line.split("=", 1)[0].strip()
+        if re.fullmatch(r"[A-Z][A-Z0-9_]*", name) and not name.startswith(_RAILWAY_PREFIX):
+            names.add(name)
+    return names
+
+
+@requires_live
+def test_p6_develop_is_not_missing_a_variable_production_has() -> None:
+    """Provisioning dropped nothing.
+
+    Direction matters and is asserted one way only, on purpose. Production
+    having something develop lacks is a provisioning gap and fails. Develop
+    having something extra is normal (a debug flag, a feature under test) and
+    is reported rather than failed, because failing it would make the gate
+    hostile to the exact experimentation a develop environment is for.
+    """
+    if shutil.which("railway") is None:
+        pytest.fail(
+            "the Railway CLI is not on PATH, so this arm cannot verify the "
+            "variable sets. Install it or run this gate from a machine that "
+            "has it; do not weaken the arm to a skip."
+        )
+
+    prod_entry = _require("production")
+    dev_entry = _require("develop")
+
+    assert prod_entry["project_id"] != dev_entry["project_id"], (
+        "both deployments name the same Railway project. Since a service's git "
+        "branch is service-level (F-4.15-03), one project cannot carry two "
+        "branches, so this arm's comparison would be between a thing and itself."
+    )
+
+    for service in ("search-agent-api", "search-agent-web"):
+        production = _service_variable_names(service, prod_entry)
+        develop = _service_variable_names(service, dev_entry)
+
+        assert production, (
+            f"read zero variable names for {service} in "
+            f"{prod_entry['project']}, so the comparison below would pass "
+            f"against anything"
+        )
+        assert develop, (
+            f"read zero variable names for {service} in {dev_entry['project']}"
+        )
+
+        missing = sorted(production - develop)
+        assert not missing, (
+            f"{service} in {dev_entry['project']} is missing {len(missing)} "
+            f"variable(s) that production has: {missing}. Provisioning dropped "
+            f"them. This is the arm that would have caught F-4.15-04 had the "
+            f"copy script dropped variables instead of over-copying them."
+        )
+
+
+# ---------------------------------------------------------------------------
+# P7 and P8: static, always run, no flag
+# ---------------------------------------------------------------------------
+
+
+def _documented_variable_names() -> set[str]:
+    names = set()
+    for line in _ENV_EXAMPLE.read_text().splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#") or "=" not in stripped:
+            continue
+        name = stripped.split("=", 1)[0].strip()
+        if re.fullmatch(r"[A-Z][A-Z0-9_]*", name):
+            names.add(name)
+    return names
+
+
+def test_p7_env_example_documents_every_variable_the_deployment_sets() -> None:
+    """F-4.15-01: a variable can be load-bearing in the deployment and undocumented.
+
+    `RUN_MIGRATIONS_ON_STARTUP` gates `alembic upgrade head` in `railway.json`'s
+    start command and was absent from `env.example`, so provisioning a second
+    environment from the file this repository tells people to provision from
+    would silently omit the variable that decides whether migrations run.
+
+    This arm runs OFFLINE against a checked-in expectation rather than against
+    the live service, for one reason: it has to keep working in CI, where there
+    is no Railway credential. The expectation below is the measured set from
+    2026-08-27, and the live equivalent is P6.
+
+    The direction asserted is deployment-set implies documented. The converse
+    is false on purpose and must stay false: `env.example` legitimately carries
+    alternate-provider keys and build phase 5.0/5.1 variables that no service
+    sets yet.
+    """
+    deployment_sets = {
+        "ANON_DAILY_RUN_CAP",
+        "APP_ENV",
+        "AUTH_SECRET",
+        "CORS_ORIGINS",
+        "GRAPH_QUERY_TOKEN",
+        "GRAPH_QUERY_URL",
+        "GUARD_MODEL",
+        "LANGCHAIN_TRACING_V2",
+        "LANGSMITH_PROJECT",
+        "LOG_LEVEL",
+        "NCBI_API_KEY",
+        "NCBI_EMAIL",
+        "NIXPACKS_NODE_VERSION",
+        "NIXPACKS_NO_CACHE",
+        "OPENROUTER_API_KEY",
+        "PER_QUERY_COST_CAP_USD",
+        "PER_STEP_TIMEOUT_SECONDS",
+        "PER_USER_DAILY_QUERY_CAP",
+        "PLAN_MODEL",
+        "POSTHOG_HOST",
+        "REDIS_URL",
+        "RUN_MIGRATIONS_ON_STARTUP",
+        "SYNTH_MODEL",
+        "SYSTEM_DAILY_CAP_USD",
+        "USER_DB_URL",
+        "VITE_API_BASE_URL",
+    }
+    documented = _documented_variable_names()
+
+    assert documented, "read zero names out of env.example, so this arm is vacuous"
+
+    undocumented = sorted(deployment_sets - documented)
+    assert not undocumented, (
+        f"{len(undocumented)} variable(s) are set on the deployed services and "
+        f"absent from env.example: {undocumented}. Anyone provisioning a new "
+        f"environment from env.example would omit them. This is F-4.15-01."
+    )
+
+
+def test_p8_ci_runs_on_the_production_line() -> None:
+    """A merge to `production` runs the gates.
+
+    Measured before this was written: `on: pull_request:` already carries NO
+    branch filter, so a pull request into `production` runs every gate today with no
+    change at all. What was missing is the POST-merge run. This arm therefore
+    pins the push trigger and, separately, pins that the pull_request trigger
+    stays unfiltered, because "helpfully" adding a branch list there would
+    silently stop release pull requests from being checked.
+    """
+    text = _CI_WORKFLOW.read_text()
+
+    # The `on:` block, not the first paragraph. This file opens with a ~40 line
+    # comment block explaining why it contains no shell, and the first version
+    # of this arm parsed that instead and failed for the wrong reason. Left
+    # recorded rather than quietly fixed: an arm that fails for a reason other
+    # than its own property is indistinguishable from one that works, right up
+    # until the property becomes true and the arm stays red.
+    on_block = re.search(r"^on:\s*\n((?:[ \t]+.*\n|\n)*)", text, re.MULTILINE)
+    assert on_block is not None, (
+        f"no top-level `on:` block found in {_CI_WORKFLOW.name}; every parse "
+        f"below would assert nothing"
+    )
+    # Comments are stripped BEFORE matching. The first version of this arm did
+    # not, and the very comment added to `ci.yml` explaining why the
+    # pull_request trigger is unfiltered sat between `push:` and `branches:`
+    # and broke the arm's own regex. Recorded rather than quietly fixed,
+    # because it is the same class as build phase 4.14's `:;#ruff check`: a
+    # checker that treats `#` as ordinary text sees a structure that the tool
+    # reading the file does not.
+    trigger = "\n".join(
+        line for line in on_block.group(1).splitlines() if not line.strip().startswith("#")
+    )
+    assert "pull_request" in trigger and "push" in trigger, (
+        f"the `on:` block does not carry both triggers; the parse below would "
+        f"assert nothing. Read: {trigger!r}"
+    )
+
+    push_block = re.search(r"push:\s*\n\s*branches:\s*\[([^\]]*)\]", trigger)
+    assert push_block is not None, (
+        "no `push: branches: [...]` block found in the CI workflow, so this "
+        "arm cannot tell which branches trigger a post-merge run"
+    )
+    branches = {b.strip() for b in push_block.group(1).split(",") if b.strip()}
+    assert "production" in branches, (
+        f"CI's push trigger covers {sorted(branches)} and not `production`, so "
+        f"merging a release to the production line would run no gates at all."
+    )
+    assert "develop" in branches, (
+        f"CI's push trigger lost `develop`: {sorted(branches)}. Adding the "
+        f"production line must not remove the integration line."
+    )
+
+    assert not re.search(r"pull_request:\s*\n\s*branches:", text), (
+        "the pull_request trigger has gained a branch filter. It is unfiltered "
+        "on purpose, which is what makes a release pull request into `production` "
+        "run every gate. Narrowing it would silently stop that."
+    )
+
+
+# ---------------------------------------------------------------------------
+# P9: the release workflow, structural and always run
+# ---------------------------------------------------------------------------
+
+_RELEASE_WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "release.yml"
+
+
+def test_p9_the_release_workflow_holds_the_no_shell_and_no_injection_rules() -> None:
+    """The release workflow obeys the two rules build phase 4.14 paid for.
+
+    Rule one, no shell in the workflow. Build phase 4.14 was defeated twice
+    trying to verify inline shell by matching strings in a `run:` body, the
+    second time by `run: ":;#ruff check"`, which executes nothing while reading
+    as if it runs ruff. The fix was structural: a step body must EQUAL a script
+    path, because a whole-string equality has no room for a comment or a second
+    command. This arm holds `release.yml` to the same rule `ci.yml` follows,
+    rather than trusting that whoever wrote it remembered.
+
+    Rule two, no `github.event` interpolation. A commit subject is chosen by
+    whoever opens a pull request, and `${{ }}` splices its text into the shell
+    before bash parses it. This workflow reads commit text with `git log`
+    instead, where it is data on a pipe. The arm forbids the sink outright
+    rather than trying to judge whether a particular use is safe, which is the
+    same "change what is being checked" move that ended build phase 4.14's
+    losing streak.
+    """
+    text = _RELEASE_WORKFLOW.read_text()
+
+    runs = re.findall(r"^\s*run:\s*(.+?)\s*$", text, re.MULTILINE)
+    assert runs, (
+        f"no `run:` steps found in {_RELEASE_WORKFLOW.name}; every assertion "
+        f"below would pass against a file that does nothing"
+    )
+    for body in runs:
+        assert re.fullmatch(r"\.github/release/[a-z0-9_]+\.sh", body), (
+            f"a release step's `run:` is {body!r}, which is not exactly one "
+            f"script path under .github/release/. Build phase 4.14 measured "
+            f"that a `run:` body containing shell cannot be checked by matching "
+            f"strings inside it, so the rule is a whole-string equality."
+        )
+
+    # Check the EXPRESSIONS, not the raw text. The first version of this arm
+    # searched the whole file for the sink names and failed on the workflow's
+    # own comment explaining why it does not use them. That is the build phase
+    # 4.14 lesson arriving from the other direction: there, a checker treated a
+    # comment as code and passed something dangerous; here it treated a comment
+    # as code and failed something safe. Either way, a checker that cannot tell
+    # comment from code is measuring the wrong thing.
+    expressions = re.findall(r"\$\{\{(.*?)\}\}", text, re.DOTALL)
+    for expression in expressions:
+        for sink in (
+            "github.event.head_commit",
+            "github.event.commits",
+            "github.event.pull_request",
+            "github.head_ref",
+            "github.event.issue",
+            "github.event.comment",
+        ):
+            assert sink not in expression, (
+                f"{_RELEASE_WORKFLOW.name} interpolates {sink} in "
+                f"${{{{{expression.strip()}}}}}, which is attacker-influenced "
+                f"text spliced into the shell before bash parses it. Read the "
+                f"value with `git log` inside the script instead, where it is "
+                f"data rather than code."
+            )
+
+    # The arm must be able to see expressions at all, or the loop above is a
+    # no-op that passes on any file. This workflow genuinely has some.
+    assert expressions, (
+        f"found no ${{{{ }}}} expressions in {_RELEASE_WORKFLOW.name}, so the "
+        f"injection check above scanned nothing"
+    )
+
+    # Every script the workflow names must exist and be executable. A workflow
+    # naming a missing script fails at run time, on the production line, after
+    # a release has already been merged, which is the worst place to find out.
+    for body in runs:
+        script = _REPO_ROOT / body
+        assert script.is_file(), f"{body} is named by the workflow and does not exist"
+        assert script.stat().st_mode & 0o111, f"{body} exists but is not executable"
