@@ -23,19 +23,23 @@ For a plain-language, no-jargon project update, see [PROGRESS.md](PROGRESS.md).
 
 ## Live demo
 
-| Surface | URL |
-|---------|-----|
-| Web UI | https://search-agent-web-production.up.railway.app |
-| API | https://search-agent-api-production.up.railway.app |
+There are TWO deployments as of build phase 4.15. Use the production links unless you specifically want to see unreleased work.
 
-Deployed on Railway since 2026-08-24. Both services auto-deploy on merge to `develop`, so the links above always serve the current state of that branch.
+| Deployment | Web UI | API | Deploys from |
+|---|---|---|---|
+| Production | https://search-agent-web-production.up.railway.app | https://search-agent-api-production.up.railway.app | the `production` branch |
+| Develop | https://search-agent-web-develop-2aeb.up.railway.app | https://search-agent-api-develop-43b3.up.railway.app | the `develop` branch |
+
+They are fully separate: different Railway projects, different databases, different caches, different signing keys. An account created on one does not exist on the other, and a session token from one is rejected by the other. Ask either API's `/health` endpoint which it is and it will tell you, in an `app_env` field.
+
+Deployed on Railway since 2026-08-24, split into two in build phase 4.15 on 2026-08-28. Merging to `develop` deploys the develop app. Production moves only when a release branch is cut from `develop` and merged into `production`, which also creates a version tag, a changelog entry and a GitHub Release. The full procedure is [`docs/build/Release_flow.md`](docs/build/Release_flow.md).
 
 Measured on the deployed API rather than asserted, 2026-08-25: "Which diseases are associated with BRCA1?" returns a grounded answer with five citations in about 10 seconds, across a Layer 1 graph query and a Layer 2 NCBI confirmation, with each tool reporting itself as it runs.
 
 It is a PROTOTYPE. What that means in practice, stated because a demo link invites the wrong assumption:
 
 - No account is needed. An anonymous visitor gets a small free allowance of searches, counted server-side.
-- CI now runs Section 24's ten gates on every pull request and on every push to `develop` (build phase 4.14, merged 2026-08-26). The gates are advisory rather than merge-blocking, since branch protection needs GitHub Pro or a public repository, so a merge to `develop` still deploys straight to the URLs above regardless of gate outcome.
+- CI runs Section 24's ten gates on every pull request and on every push to `develop` or `production` (build phases 4.14 and 4.15). The gates are ADVISORY rather than merge-blocking, since branch protection needs GitHub Pro or a public repository, so a merge deploys regardless of gate outcome and the only thing stopping a red merge is a person choosing not to click. Since build phase 4.15 that exposure is one step further from the audience: a merge to `develop` reaches the develop deployment, and production moves only on a deliberate release.
 - Coverage is uneven by organism and by database. Treat an answer as a starting point for verification, never as an endpoint.
 
 Known open items are tracked on `tracker/BOARD.md` rather than duplicated here. The six UI defects the first live session surfaced, plus a seventh found alongside them, were all closed by build phase 4.16 on 2026-08-25.
@@ -99,7 +103,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 |-------|--------|
 | Planning (Phases 1-4) | Complete: problem definition, evaluation playbook, PRD (locked), technical specification (locked) plus strategic memo |
 | Planning (Phase 5) | Complete (opened and closed 2026-07-26): system and tooling updates |
-| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.14, and 4.16. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), with CD watching `develop` and CI running Section 24's ten gates on every pull request. Next: the two-environment release flow (4.15), then 5.0 and 5.1 for tracing and the eval harness. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
+| Build (Phases 6-7) | In progress. Step 6.1, the prototype, is complete. Step 6.3, build v1, has merged build phases 3.0 through 3.5, 4.0 through 4.16. THE PRODUCT IS DEPLOYED AND ANSWERING (see Live demo above), now as TWO separate deployments with a release-branch flow between them, and CI running Section 24's ten gates on every pull request and on both deployment branches. Next: the first real release, which is the only end-to-end proof the promotion path works, then 5.0 and 5.1 for tracing and the eval harness. See `tracker/BOARD.md` for per-phase status and `requirements/Plan.md` for the full narrative |
 
 ### Build phase detail
 
@@ -132,7 +136,7 @@ Multi-model harness routes each step to the appropriate model tier (guard, plan,
 | 4.12 | The demo deployment on Railway: two services, Postgres and Redis, the Layer 1 cutover, and CD watching develop | Merged into develop, PR #62, 2026-08-24. THE PRODUCT IS LIVE |
 | 4.13 | Durable cross-reload search history over the interactions rows 4.6 writes | Merged into develop, PR #69, 2026-08-27, after three review rounds and a Rule 4 stop |
 | 4.14 | CI: the ten gates from Section 24, advisory rather than merge-blocking since branch protection needs GitHub Pro or a public repository | Merged into develop, PR #68, 2026-08-26, after three review rounds and a Rule 4 stop |
-| 4.15 | Two Railway environments and a release-branch flow, so develop and production deploy separately | Not started, inserted by product-owner decision 2026-08-24 |
+| 4.15 | Two SEPARATE Railway projects and a release-branch flow, plus release automation: a semantic version derived from the Conventional Commit subjects, a CHANGELOG.md section, an annotated tag, a GitHub Release, and an automated back-merge into develop | Merged into develop, PR #71, 2026-08-28, after four review rounds and two Rule 4 stops. Two projects rather than two environments because a Railway service's git branch is service-level, measured rather than assumed |
 | 4.16 | The seven UI defects the first live session surfaced. The largest was backend, not frontend: the Act step emitted no events at all, so eleven seconds of a run were silent and no tool chip had ever rendered | Merged into develop, PR #63, 2026-08-25. Inserted by product-owner decision |
 
 Per-phase narrative, including what each review round found and what it cost, is `requirements/Plan.md`'s Revision history. Per-phase tickets and evidence are `tracker/phase_N.M.md`.
@@ -286,17 +290,19 @@ Estimated monthly cost for the full System 3 deployment:
 | Item | Estimated cost |
 |------|---------------|
 | Knowledge graph hosting (Hetzner CPX42, 8 vCPU, 16 GB, 320 GB NVMe), including tax | ~$35/month |
-| Railway Hobby plan: four services in one production environment | $5/month today, up to ~$15 under sustained traffic |
+| Railway Hobby plan: eight services across two projects, four per deployment | $5/month today, up to ~$20 under sustained traffic. Build phase 4.15 doubled the service count by giving the develop deployment its own database and cache |
 | LLM API costs (Anthropic + OpenAI, depending on query volume) | ~$10-50/month |
 | Domain + TLS, once a custom domain replaces the `*.up.railway.app` subdomains | ~$1/month |
 | Total | ~$51-101/month |
 
-The Railway line covers the four services build phase 4.12 deployed:
+The Railway line covers four services per deployment, and there are two deployments as of build phase 4.15:
 
 - `search-agent-web`
 - `search-agent-api`
 - Postgres
 - Redis
+
+The develop deployment's own Postgres and Redis are a deliberate cost, taken by product-owner decision on 2026-08-27. Sharing them would have meant every test run spending production's daily quota and writing into the table the live history rail reads, and a wrong migration reaching production the moment it merged to develop.
 
 It replaces the separate user-database and Redis rows this table carried before the deployment landed, which double-counted both now that Railway hosts them.
 
@@ -338,4 +344,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ---
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28

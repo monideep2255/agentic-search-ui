@@ -1,0 +1,78 @@
+# Release: tag, changelog, GitHub Release, back-merge.
+#
+# Build phase 4.15. Fires on a push to `production`, which by the release flow
+# in docs/build/Release_flow.md means a release pull request was merged after CI
+# reported on it.
+#
+# THIS FILE CONTAINS NO SHELL CODE, the same rule ci.yml follows and for the
+# same measured reason. Build phase 4.14 twice tried to verify inline shell by
+# matching strings in a `run:` body and was defeated twice, the second time by
+# `run: ":;#ruff check"`, which executes nothing while reading as if it runs
+# ruff. Every step's `run:` here is exactly one token: the path of a script in
+# `.github/release/`. A whole-string equality has no room for a comment or a
+# second command.
+#
+# SCRIPT INJECTION, and why no commit text appears in this file. A commit
+# subject is attacker-influenced: anyone who can open a pull request can choose
+# it. GitHub's own guidance names `github.event.commits.*.message` and
+# `github.event.head_commit.message` as injection sinks, because `${{ }}`
+# interpolation splices their text into the shell before bash parses it. This
+# workflow never interpolates any `github.event` value. The scripts read commit
+# text with `git log`, where it arrives as data on a pipe and is only matched
+# against, never executed.
+name: Release
+
+on:
+  push:
+    branches: [production]
+
+# Two jobs never race to tag the same commit.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# Least privilege, and both are genuinely needed: `contents` to push the
+# changelog commit and the tag, `pull-requests` to open the back-merge.
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Tag, changelog and back-merge
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The full history and every tag. `git describe --tags` finds the
+          # previous release, and a shallow clone has no tags to find, so the
+          # first release would look like the only release on every run.
+          fetch-depth: 0
+          ref: production
+
+      - name: Derive the next version from the conventional commits
+        id: version
+        run: .github/release/derive_version.sh
+
+      - name: Write the changelog section
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          PREVIOUS_TAG: ${{ steps.version.outputs.previous_tag }}
+        run: .github/release/write_changelog.sh
+
+      - name: Tag and publish the release
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: .github/release/tag_and_release.sh
+
+      - name: Open the back-merge into develop
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: .github/release/open_backmerge_pr.sh
