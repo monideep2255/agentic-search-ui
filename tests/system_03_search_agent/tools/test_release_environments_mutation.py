@@ -1108,3 +1108,61 @@ def test_p3c_goes_red_when_both_deployments_sign_with_the_same_key(
     assert guarded is not None and "P3b's finding" in str(guarded), (
         f"P3c did not route equal configured keys to P3b: {str(guarded)[:200]!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# P11: the repository setting, mutated by substituting the API answer
+# ---------------------------------------------------------------------------
+
+
+def _run_p11(monkeypatch: pytest.MonkeyPatch, *, api_says: str, exit_code: int = 0):
+    import tests.system_03_search_agent.tools.test_release_environments_premise as premise
+
+    monkeypatch.setattr(premise.shutil, "which", lambda _: "/usr/bin/gh")
+
+    class _Completed:
+        returncode = exit_code
+        stdout = api_says
+        stderr = "boom" if exit_code else ""
+
+    monkeypatch.setattr(premise.subprocess, "run", lambda *a, **k: _Completed())
+    return _run_named(monkeypatch, "test_p11_actions_may_open_the_back_merge_pull_request")
+
+
+def test_p11_goes_red_when_the_repository_forbids_actions_opening_pull_requests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """P11 detects the setting that broke the first real release.
+
+    Three cases, and the third is the one that matters most. An arm that reads
+    an external API has a failure mode the other arms do not: the API can
+    answer something that is neither true nor false, and a naive `== "true"`
+    check would then read an error page as "the setting is off" and a missing
+    key as the same. Both are wrong for different reasons, and neither is the
+    finding this arm exists to report.
+    """
+    assert _run_p11(monkeypatch, api_says="true\n") is None, (
+        "P11 fails when the setting is on, so its red results below would "
+        "prove nothing"
+    )
+
+    off = _run_p11(monkeypatch, api_says="false\n")
+    assert off is not None, (
+        "P11 stayed green with the setting OFF, which is exactly the state "
+        "that broke the first real release after the branch had been pushed"
+    )
+    assert "F-4.15-10" in str(off), (
+        f"P11 failed without naming the finding it exists for: {str(off)[:200]!r}"
+    )
+
+    unreadable = _run_p11(monkeypatch, api_says="null\n")
+    assert unreadable is not None, (
+        "P11 treated a non-boolean API answer as a pass. An arm that cannot "
+        "tell 'the setting is off' from 'I could not read the setting' reports "
+        "the wrong thing in both directions"
+    )
+    assert "rather than a boolean" in str(unreadable)
+
+    failed_call = _run_p11(monkeypatch, api_says="", exit_code=1)
+    assert failed_call is not None, "P11 passed when the API call itself failed"
+    assert "could not read" in str(failed_call)
