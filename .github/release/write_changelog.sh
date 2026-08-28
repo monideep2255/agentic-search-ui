@@ -43,7 +43,28 @@ section="${work}/section.md"
 # housekeeping last, and the catch-all after that so nothing can fall off the
 # end. Ordering is by severity, which is what the Conventional Commits spec
 # implies, not alphabetical.
-group_keys="breaking revert feat fix security maintenance other"
+# TWO CLASSES OF GROUP, and the split is the whole point of this file.
+#
+# `user_group_keys` get a bullet each, because a person using the product can
+# perceive the difference they made. `internal_group_keys` get a COUNTED
+# SUMMARY LINE and no bullets, because "tracker: refresh the computed test
+# count" is true, useful to us, and noise to everyone else.
+#
+# WHY A COUNT AND NOT A DELETION. Finding F-4.15-A-07 was that this script
+# silently DROPPED every commit whose type it did not recognise while the
+# version deriver still counted it, so a release could be built from commits
+# that appeared nowhere. The populate-check below exists because of it. This
+# split does not reopen that: every commit still reaches the reader, either as
+# a bullet or inside a stated number, and the check now proves
+# bullets + counted == total rather than bullets == total. Silence is the
+# defect; brevity with a number is not.
+#
+# Measured on the first real release, which is what prompted this: 798 commits
+# produced 798 bullets and a 62,014-character GitHub Release page, of which 518
+# were maintenance and other.
+user_group_keys="breaking revert feat fix security"
+internal_group_keys="maintenance other"
+group_keys="$user_group_keys $internal_group_keys"
 group_heading_breaking="Breaking changes"
 group_heading_revert="Reverts"
 group_heading_feat="Features"
@@ -109,7 +130,7 @@ fi
   echo
 } > "$section"
 
-for key in $group_keys; do
+for key in $user_group_keys; do
   file="${work}/group_${key}.md"
   [ -s "$file" ] || continue
   eval "heading=\"\${group_heading_${key}}\""
@@ -122,6 +143,30 @@ for key in $group_keys; do
   echo >> "$section"
 done
 
+# The internal groups, as one stated line rather than as bullets. Counted here
+# so the populate-check below can prove nothing went missing.
+internal_total=0
+internal_parts=""
+for key in $internal_group_keys; do
+  file="${work}/group_${key}.md"
+  [ -s "$file" ] || continue
+  n="$(grep -c '^- ' "$file" || true)"
+  internal_total=$((internal_total + n))
+  # The KEY, not the heading. "1 other changes" reads as a typo, and the
+  # headings are written to title a section rather than to follow a number.
+  if [ -z "$internal_parts" ]; then
+    internal_parts="${n} ${key}"
+  else
+    internal_parts="${internal_parts}, ${n} ${key}"
+  fi
+done
+
+if [ "$internal_total" -gt 0 ]; then
+  echo "Plus ${internal_total} internal changes not listed individually (${internal_parts}):" \
+       "chores, documentation, tests, refactors and build configuration." >> "$section"
+  echo >> "$section"
+fi
+
 # The populate-check build phase 4.11 paid for, counted over the ASSEMBLED
 # SECTION rather than over an intermediate. This is finding F-4.15-FX-02: the
 # first version of this check compared commits read against lines written into
@@ -132,8 +177,10 @@ done
 # this repository has already shipped as a critical three times, so this one
 # reads the bytes that ship.
 emitted="$(grep -c '^- ' "$section" || true)"
-if [ "$emitted" -ne "$total" ]; then
-  echo "read ${total} commits and the section carries ${emitted} entries;" \
+accounted=$((emitted + internal_total))
+if [ "$accounted" -ne "$total" ]; then
+  echo "read ${total} commits and the section accounts for ${accounted}" \
+       "(${emitted} listed, ${internal_total} summarised);" \
        "refusing to write a confidently incomplete changelog" >&2
   exit 1
 fi
