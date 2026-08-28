@@ -5,6 +5,15 @@ Every release of System 3, newest first. Generated on each push to
 Commit subjects since the previous tag. Do not hand-edit a released
 section: correct the commit history or add a new entry instead.
 
+## v0.1.1 (2026-08-28)
+
+### Fixes
+
+- release: the changelog lists user-facing changes and counts the rest (448bc48)
+- deploy: pin the repository setting the first release found missing (7b4697c)
+
+Full diff: `v0.1.0..v0.1.1`
+
 ## v0.1.0 (2026-08-28)
 
 ### Features
