@@ -945,3 +945,73 @@ def test_p9_the_release_workflow_holds_the_no_shell_and_no_injection_rules() -> 
         script = _REPO_ROOT / body
         assert script.is_file(), f"{body} is named by the workflow and does not exist"
         assert script.stat().st_mode & 0o111, f"{body} exists but is not executable"
+
+
+def test_p9b_the_release_scripts_themselves_hold_their_safety_rules() -> None:
+    """P9 checks the workflow. This checks the scripts the workflow runs.
+
+    ADDED 2026-08-27 after finding F-4.15-A-13. P9 asserts that `release.yml`
+    contains no shell and interpolates no `github.event` value, and then never
+    looks at the shell it delegates to. The workflow having no shell is not a
+    safety property on its own: it MOVED the shell into four scripts, and an
+    unchecked script is exactly where the shell went.
+
+    The gap mattered because the workflow's whole security argument is that
+    commit text reaches the scripts as data through `git log` rather than as
+    code through `${{ }}`. Nothing was checking the second half of that
+    sentence, which is the half that lives in the scripts.
+
+    Three properties, each chosen because it is a real failure this phase
+    already had or nearly had:
+
+    1. `set -euo pipefail`. Two of these scripts push to a branch and publish a
+       permanent tag; a script that continues past a failed command does so
+       holding write access to the production line.
+    2. No `${{` anywhere. A script is not a workflow and GitHub does not expand
+       expressions inside it, so a `${{ }}` in a script is either dead text or
+       a sign someone copied workflow syntax into the wrong file.
+    3. Every script parses under `bash -n`. Three of the four shipped
+       non-executable earlier in this phase, which P9 caught; a syntax error is
+       the same class of "it would have failed at release time, on the
+       production line, after the merge".
+    """
+    scripts = sorted((_REPO_ROOT / ".github" / "release").glob("*.sh"))
+    assert len(scripts) >= 4, (
+        f"expected the four release scripts, found {len(scripts)}. This arm "
+        f"would otherwise pass by checking almost nothing."
+    )
+
+    for script in scripts:
+        text = script.read_text()
+        relative = script.relative_to(_REPO_ROOT)
+
+        assert "set -euo pipefail" in text, (
+            f"{relative} does not `set -euo pipefail`. It runs with write "
+            f"access to the production line, so continuing past a failed "
+            f"command is how a half-finished release gets published."
+        )
+        # Comments stripped BEFORE the check, for the second time in this
+        # file. The first version failed on the scripts' own comments
+        # explaining why they do not use workflow interpolation. That is the
+        # same mistake P8 made and the same one build phase 4.14 was defeated
+        # by from the other side: a checker that cannot tell comment from code
+        # is measuring the wrong text, whether it then passes something unsafe
+        # or fails something safe.
+        code = "\n".join(
+            line for line in text.splitlines() if not line.lstrip().startswith("#")
+        )
+        assert "${{" not in code, (
+            f"{relative} contains a `${{{{` expression in executable code. "
+            f"GitHub does not expand those inside a script, so it is either "
+            f"dead text or workflow syntax copied into the wrong file."
+        )
+
+        parsed = subprocess.run(  # noqa: S603 - fixed argv, no shell, no user input
+            ["bash", "-n", str(script)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert parsed.returncode == 0, (
+            f"{relative} does not parse: {parsed.stderr.strip()[:300]}"
+        )
