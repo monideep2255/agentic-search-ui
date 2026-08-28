@@ -41,12 +41,24 @@
 name: CI
 
 on:
+  # Deliberately UNFILTERED. Build phase 4.15 measured that this is what
+  # already makes a release pull request into `production` run every gate, with
+  # NO change needed. Adding a `branches:` list here would look like tightening
+  # and would silently stop the production line from being checked before a
+  # merge. The premise gate's P8 arm fails if one appears.
   pull_request:
   push:
-    branches: [develop]
+    # Both deployment lines. `develop` is the integration line and Railway's
+    # develop environment watches it; `production` is the production line, added at
+    # build phase 4.15, and Railway's production environment watches it. A
+    # merge to either reaches a live URL, so a merge to either runs the gates.
+    branches: [develop, production]
 
 # A second push to the same branch makes the first run's answer irrelevant.
-# Cancel it rather than paying for both. Never cancels a run on `develop`.
+# Cancel it rather than paying for both. Never cancels a PUSH run, so the
+# record for a merged commit on either deployment line survives: the condition
+# below is on the event type, not on a branch name, which is why adding `production`
+# to the push trigger above needed no change here.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

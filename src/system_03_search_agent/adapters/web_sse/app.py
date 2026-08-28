@@ -322,11 +322,42 @@ app.add_middleware(RequestTimeoutMiddleware)
 
 class HealthResponse(BaseModel):
     status: str
+    app_env: str
 
 
 @app.get("/health", response_model=HealthResponse)
 def get_health() -> HealthResponse:
-    return HealthResponse(status="ok")
+    """Liveness, plus which environment answered.
+
+    `app_env` is ADDITIVE, per `system-design-patterns` pattern 10: within v1
+    a contract may gain a field and may not change one. Nothing that read
+    `{"status": "ok"}` breaks.
+
+    It exists because build phase 4.15 made "which deployment is this?" a
+    question with two possible answers for the first time. Before it, `APP_ENV`
+    was set on the deployed service and read NOWHERE in this codebase: a
+    variable configured, carried forward by an environment duplicate, and
+    load-bearing in nobody's code at all. That is worse than an undocumented
+    variable, because it reads as configured behaviour.
+
+    This paragraph used to cite "finding F-4.15-02" for that observation, which
+    is a different finding entirely (the Railway CLI's `--environment` flag not
+    scoping a write). Corrected after F-4.15-J-05. A citation to the wrong
+    record is worse than no citation, because the next reader follows it and
+    concludes the note is confused rather than that the pointer is.
+
+    The value is not a secret. It is the environment's name, `production` or
+    `develop`, and it is what the premise gate's P5 arm reads to tell the two
+    apart from outside. Deliberately unauthenticated: the point is that anyone
+    holding a URL can tell which environment it is, which is what stops a
+    develop URL being mistaken for the live one.
+
+    It defaults to `unknown` rather than to `production`. A missing variable
+    must never make a develop box claim to be production, and a default of
+    `development` would be just as wrong the other way once this runs anywhere
+    real. `unknown` is the only honest answer to "APP_ENV is unset".
+    """
+    return HealthResponse(status="ok", app_env=os.environ.get("APP_ENV", "unknown"))
 
 
 # ---------------------------------------------------------------------------

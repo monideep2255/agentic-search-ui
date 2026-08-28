@@ -1,0 +1,43 @@
+{
+  "_comment": [
+    "The two deployments of build phase 4.15, and the record of what was actually",
+    "provisioned. These are PUBLIC hostnames and ids, not secrets: the URLs are",
+    "printed in docs/build/Release_flow.md and handed to anyone using the demo.",
+    "No credential, token or variable VALUE ever belongs in this file.",
+    "",
+    "TWO PROJECTS, not two environments, and the reason is finding F-4.15-03: a",
+    "Railway service's git source (repo plus branch) is SERVICE-level, so two",
+    "environments inside one project cannot watch two different branches. The",
+    "first attempt at this phase built two environments and had to be reversed.",
+    "The reversal is logged in DECISIONS.md on 2026-08-27.",
+    "",
+    "This file is the gate's source of truth for where to probe. An entry naming",
+    "a URL nothing answers on fails P1 on reachability; a missing entry fails P1",
+    "on absence. Both halves of 'wrong' are caught rather than one.",
+    "",
+    "Adding a deployment here does not create it. Creating one and forgetting",
+    "this file is what P1 exists to catch."
+  ],
+  "deployments": {
+    "production": {
+      "branch": "production",
+      "app_env": "production",
+      "project": "system3-search-agent",
+      "project_id": "0f85f78e-1ffc-4a62-b3d8-a03dcae9b585",
+      "environment": "production",
+      "environment_id": "e8dee09d-2991-48e7-ac46-998b7e3f9b80",
+      "api": "https://search-agent-api-production.up.railway.app",
+      "web": "https://search-agent-web-production.up.railway.app"
+    },
+    "develop": {
+      "branch": "develop",
+      "app_env": "develop",
+      "project": "system3-search-agent-develop",
+      "project_id": "4879a10f-d4ae-4d67-8274-bec6cbc15038",
+      "environment": "develop",
+      "environment_id": "90eba8f6-2ebb-49de-babb-1dc78174b755",
+      "api": "https://search-agent-api-develop-43b3.up.railway.app",
+      "web": "https://search-agent-web-develop-2aeb.up.railway.app"
+    }
+  }
+}
