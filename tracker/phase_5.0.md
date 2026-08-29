@@ -3,7 +3,8 @@
 Branch: `phase/5.0-observability`
 Depends on: 2.0, merged. Section 25 names 2.0 as the only dependency.
 Opened: 2026-08-29
-Status: OPEN. Decomposed from three research reports; no builder dispatched yet.
+Status: OPEN, PAUSED 2026-08-29 at the product owner's request, mid-phase, BLOCKED ON ONE DECISION.
+Resume by reading the "Where this stops, and what the next session does first" section below. Do not re-plan the phase; six of seven tickets are built, verified and committed.
 
 Section 25 contains this phase as written, so unlike build phases 4.8 and 4.10 through 4.16 this is not an inserted exception. It delivers tech spec Section 20 in full: LangSmith per-run tracing (20.1), PostHog behavioral analytics (20.2), and the append-only tool-call audit log (20.3).
 
@@ -98,6 +99,37 @@ So the naive reading of this phase's title, delete the override, is a live PII b
 Redaction is therefore part of the deliverable, not a follow-up. The mechanism was probed live rather than read from documentation: `langsmith.Client` accepts `hide_inputs`, `hide_outputs`, `hide_metadata` and `anonymizer`, each taking a bool or a `Callable[[dict], dict]`.
 
 Both call sites change together. `core/run.py:548-549` and `:570` state that `run_streaming()`, not `run()`, is the entry point a real SSE surface uses and the one real users reach, so wiring only `run()` would leave production traffic untraced while looking done.
+
+## Where this stops, and what the next session does first
+
+PAUSED 2026-08-29 by the product owner, ahead of a session limit. The branch is `phase/5.0-observability`, the working tree is CLEAN and 11 commits are pushed. Nothing is held in a running agent's context.
+
+THE ONE THING BLOCKING THIS PHASE IS A DECISION, NOT WORK: F-5.0-13, escalated under Rule 4 because half of it sits inside this phase's own F-5.0-08 fix. The product owner had not answered when the session paused, so nothing about it has been touched. Read its Findings row, then take one of:
+
+- Option A, the lead's recommendation: fix both halves category-first. Redact the `error` field the way `params` already is, and make the value scanner find a credential ANYWHERE in a string rather than only when the whole string is a URL. One fix agent, then one re-verify round by a FRESH agent, never by whoever wrote the fix.
+- Option B: redact `error` only, and carry the embedded-URL gap as latent with a named owner.
+- Option C: revert the F-5.0-08 fix and re-decompose the redaction model. Heaviest, and only if value-scanning strings is judged the wrong model.
+
+WHAT IS DONE, all committed and independently verified by the lead rather than accepted on a builder's report:
+
+| Ticket | State |
+|---|---|
+| T-5.0-01 config resolver | done, 18 arms, 4 mutations proven red |
+| T-5.0-02 audit log | done, F-5.0-08 fixed and re-verified on the real path with a positive control |
+| T-5.0-03 tracing | done, F-5.0-03 and F-5.0-09 fixed, PII proven absent by reading data back OUT of LangSmith |
+| T-5.0-04 analytics | done, built and wired, sends NOTHING pending F-5.0-12 |
+| T-5.0-05 wiring | done, both `run.py` sites, three transport chokepoints, live-verified |
+| T-5.0-06 gitignore and env | done, `.env` and `env.example` synced at 40 keys each |
+| T-5.0-07 premise gate and mutation harness | done, 9 arms and 6 mutation cases, both real bypass callers driven |
+
+Measured at the pause: `4259 passed, 171 skipped, 1 xfailed, 0 failed`; `ruff check` clean over the WHOLE repository, no path argument; observability directory `101 passed, 1 skipped`.
+
+WHAT REMAINS AFTER THE DECISION, in order: the fix and a fresh-agent re-verify, then the judge round, then the adversary round (its target here is the PII boundary and the no-credential path, not cite-or-refuse, since this phase generates no answers), then the stage-10 gates, then `/phase-checkpoint` and `/ship`.
+
+TWO THINGS THE NEXT SESSION MUST NOT REDISCOVER:
+
+- Doc drift is KNOWN and deliberately deferred: `CLAUDE.md`, `AGENTS.md` and this phase's continuation prompt still cite 4329 Python tests against a computed 4416 at the time it was checked, and the figure moved again after the gate landed. It is `/phase-checkpoint`'s job at phase close, not a defect.
+- `eval-harness` does NOT apply to this phase. Nothing here touches answer generation, grounding or citations.
 
 ## Goal contract
 
@@ -322,3 +354,4 @@ Filed the moment they are established, per `.claude/rules/self-eval-loop.md`'s w
 - 2026-08-29: `.env` and `env.example` brought key-for-key into sync at the product owner's request, 40 keys each, verified by a two-way diff of key names. F-5.0-10 filed and fixed. `.env` re-confirmed gitignored at `.gitignore:19`, never tracked and absent from git history.
 - 2026-08-29: the product owner provisioned both credentials. That closed F-5.0-07 by making it urgent rather than latent, and opened F-5.0-12: the PostHog credential is a personal API key rather than a project token, so nothing will be sent to PostHog until it is replaced.
 - 2026-08-29: F-5.0-13 filed and the phase ESCALATED under Rule 4. The second half of it sits inside the F-5.0-08 fix, which is the stop condition, so it is handed to the product owner with options rather than patched in place by the lead.
+- 2026-08-29: PAUSED by the product owner ahead of a session limit, with F-5.0-13 open and awaiting a decision. Tree clean, branch pushed, six of seven tickets complete.
