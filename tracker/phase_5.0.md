@@ -1,0 +1,180 @@
+# Build phase 5.0: observability
+
+Branch: `phase/5.0-observability`
+Depends on: 2.0, merged. Section 25 names 2.0 as the only dependency.
+Opened: 2026-08-29
+Status: OPEN. Decomposed from three research reports; no builder dispatched yet.
+
+Section 25 contains this phase as written, so unlike build phases 4.8 and 4.10 through 4.16 this is not an inserted exception. It delivers tech spec Section 20 in full: LangSmith per-run tracing (20.1), PostHog behavioral analytics (20.2), and the append-only tool-call audit log (20.3).
+
+## Table of contents
+
+- [What this phase is for](#what-this-phase-is-for)
+- [Everything measured before any change was made](#everything-measured-before-any-change-was-made)
+- [The three findings that changed the design](#the-three-findings-that-changed-the-design)
+- [Goal contract](#goal-contract)
+- [Tickets](#tickets)
+- [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
+- [Findings](#findings)
+- [History](#history)
+
+## What this phase is for
+
+Nothing in this system can currently be asked what it did. A query runs, emits events to whoever was listening, writes one `interactions` row, and leaves no durable per-step record. When build phase 4.12 put the product in front of a person and `GCK` resolved locally but was refused on the deployed API, the traceback could not be read at all, and that open item is still recorded in the continuation prompt as an unproven hypothesis rather than a finding. It is unproven because there was nothing to read.
+
+Three separate records, each with one job, so no single outage blinds the whole picture:
+
+- LangSmith holds the full-fidelity replay a build phase 5.1 eval grader re-scores offline without re-executing the run.
+- PostHog holds aggregate product usage, and nothing else, ever.
+- The audit log holds one durable append-only line per Layer 2 and Layer 3 access with its authorization, which is a PRD requirement (Step 1.12 decision) that must survive a LangSmith outage or a free-tier retention limit.
+
+## Everything measured before any change was made
+
+Measured on `phase/5.0-observability` at its branch point on 2026-08-29, following build phases 4.14 and 4.15's practice. This table is the input to the design rather than a summary of it, and three of its rows changed what the tickets say.
+
+| What | Measured value |
+|------|----------------|
+| Suite at the branch point | `4158 passed, 170 skipped, 1 xfailed, 0 failed` out of 4329 collected, in 133s |
+| Doc drift at the branch point | `10 facts computed, 0 stale, 0 structural` |
+| Transports at phase open | all three green: `product-model`, `harness-model`, `graph` (HTTPS query service) |
+| `LANGSMITH_API_KEY` | ABSENT. Empty in `.env` and `env.example`, and absent from the shell environment. No credential exists anywhere |
+| `POSTHOG_API_KEY` | SET, a real 47-character `phc_`-prefixed project key, in the SHELL ENVIRONMENT rather than in `.env`. A first pass that grepped only `.env` reported this empty and was wrong |
+| PostHog capture, probed live with a DELIBERATELY INVALID key | `https://us.posthog.com/i/v0/e` and `https://us.i.posthog.com/i/v0/e` BOTH returned `200 {"status":"Ok"}` |
+| `LANGCHAIN_TRACING_V2` | SET to `true` in `.env`, and in `env.example:107` |
+| `LANGSMITH_PROJECT` | SET to `agentic-search-ui` |
+| Installed langsmith | `0.10.10`, a declared direct dependency at `requirements.txt:11`, absent from `pyproject.toml` |
+| Installed langgraph / langchain-core | `1.2.9` / `1.5.1` |
+| `posthog` the package | installed NOWHERE: absent from `pyproject.toml`, `requirements.txt` and `frontend/package.json` |
+| Existing PostHog integration code | ZERO lines. The env var names are reserved in Section 24 and nothing reads them |
+| Existing audit log | ZERO lines. No `logs/` directory, no file logging, no settings module anywhere in the repository |
+| `logs/` in `.gitignore` | ABSENT. Writing Section 20.3's `logs/tool_audit.jsonl` today would commit it |
+| Tools with a production call site | TWO of seven: `cypher_query` and `ncbi_efetch` |
+| Call sites that bypass `act_node` | FIVE, listed below |
+| Per-tool latency | tracked NOWHERE. The only latency in the codebase is whole-query `elapsed_ms` in `core/run.py` |
+| Numeric HTTP status in a tool output | DISCARDED. Classified to `ok|empty|error` inside the action modules before the tool returns |
+
+## The three findings that changed the design
+
+### One: hooking `act_node` is the enumeration fix, and it misses five sites on day one
+
+The obvious implementation of an audit log is a hook in `act_node`, where `tool_start` and `tool_result` already fire. It is wrong, and it is wrong in the exact shape `.claude/rules/bossman-mode.md` Rule 2 forbids: a defense that lists instances rather than naming the class.
+
+Five production call sites reach a data layer without passing through `act_node`:
+
+| Site | What runs | What it bypasses |
+|---|---|---|
+| `core/graph.py:2038` | `ncbi_efetch`, `action=dataset_report` | `act_node` entirely. Inside `_resolve_symbol_to_curie_uncached`, called from `think_node` |
+| `core/graph.py:2098` | `ncbi_efetch`, `action=search`, db=gene | same |
+| `core/graph.py:2139` | `ncbi_efetch`, `action=summary`, db=gene | same |
+| `export/traversal.py:558` | `graph_connection.execute_cypher` directly | `act_node` AND the `cypher_query` tool wrapper. KGX export's seed lookup |
+| `export/traversal.py:801` | same | same. KGX export's hop traversal, the bulk of `s3-kgx-export`'s graph reads |
+
+An `act_node` hook would log zero lines for all five while passing every acceptance criterion written against it, which is build phase 4.4's stated-blind-spot failure and build phase 4.6's manufactured-requirement failure arriving together.
+
+The category fix is to hook the transport, not the caller. Verified directly rather than assumed: every Layer 2 and Layer 3 tool module imports `tools/ncbi_transport.py`, so there are exactly three chokepoints below every one of the seven tools and below all five bypasses.
+
+| Chokepoint | Covers |
+|---|---|
+| `tools/ncbi_transport.py`, `execute_get` (line 1134) | every Layer 2 and Layer 3 HTTPS call, from all seven tools and from the three `think_node` bypasses |
+| `tools/graph_connection.py`, `execute_cypher` (line 420) | every Layer 1 read, from `cypher_query` and from both KGX export bypasses |
+| `tools/pathogen_ftp_transport.py` | the Pathogen Detection bulk FTP path, which is not an HTTPS call and would be missed by the other two |
+
+### Two: the transport is the only place Section 20.3's required fields actually exist
+
+This is the argument that makes the chokepoint design correct rather than merely convenient, and it was found by asking what each field costs at each site rather than by preference.
+
+Section 20.3 requires HTTP status and latency in milliseconds on every line. At `act_node`, neither is reachable. The numeric `response.status_code` is real, but it lives inside `ncbi_eutils_actions.py`, `ncbi_datasets_actions.py`, `ncbi_pubchem_actions.py` and `ncbi_coordinate_overlap.py`, where it is classified into a three-value `status: ok|empty|error` plus a capped message, and the number is discarded before the tool returns. Latency is computed nowhere per call. Threading both up through the action modules to satisfy an `act_node` hook would be a wide change to four modules and seven tool outputs, in service of a hook that still misses five call sites.
+
+At the transport, both are free. `execute_get` holds the `httpx.Response` and can bracket its own await.
+
+`trace_id` is the exact inverse: a local at `act_node`, absent at the transport, where `execute_get(url, params, ...)` has no run scope. A `contextvars.ContextVar` set once per run carries it down without changing seven tool signatures, and it covers the five bypass sites for free. Where no run is in scope, as in `s3-kgx-export`, the field records null against a source marker rather than a fabricated id, which is the honest reading and is asserted by an arm.
+
+### Three: tracing is already switched on, and only a hardcoded override is holding it back
+
+`LANGCHAIN_TRACING_V2=true` is set in `.env` and in `env.example:107`. Verified against the installed langsmith 0.10.10 source rather than its documentation: `utils.py:121-139` resolves tracing through `get_env_var("TRACING_V2")` across both the `LANGSMITH_` and `LANGCHAIN_` namespaces, so that spelling is honoured. The only thing suppressing tracing today is `tracing_context(enabled=False)`, hardcoded at `core/run.py:478-480` around the `ainvoke` call and at `core/run.py:615-618` around the whole `astream` loop.
+
+So the naive reading of this phase's title, delete the override, is a live PII breach the moment a key is present. LangGraph's tracing integration captures node inputs and outputs automatically through LangChain's callback system, independent of anything in this repository, and the object it captures is `GraphState`, which carries `Query.owner_id` (`contracts/query.py:216`) and `Query.user_id` (`contracts/query.py:199`) plus `RequestContext.session_memory`. Section 20.1's PII rule is explicit that user-account PII never leaves the auth service boundary and is never attached to a trace.
+
+Redaction is therefore part of the deliverable, not a follow-up. The mechanism was probed live rather than read from documentation: `langsmith.Client` accepts `hide_inputs`, `hide_outputs`, `hide_metadata` and `anonymizer`, each taking a bool or a `Callable[[dict], dict]`.
+
+Both call sites change together. `core/run.py:548-549` and `:570` state that `run_streaming()`, not `run()`, is the entry point a real SSE surface uses and the one real users reach, so wiring only `run()` would leave production traffic untraced while looking done.
+
+## Goal contract
+
+Written before the first change, per `.claude/rules/goal-contracts.md`.
+
+Done when:
+
+- Every Layer 1, Layer 2 and Layer 3 access from any of the three chokepoints writes exactly one append-only JSONL line carrying every Section 20.3 field, including the five call sites that bypass `act_node`.
+- Enabling tracing attaches `trace_id` as the join key and provably transmits no `owner_id`, `user_id` or session-memory content.
+- A PostHog event is emitted for each product signal this repository can honestly produce today, carrying event name, count-shaped properties and no raw query text or citation content.
+- With no credential configured, tracing and analytics are OFF and make provably zero outbound calls, asserted by an arm that fails if a call is attempted.
+- The audit log is gitignored.
+
+Verify surface, immutable for the run:
+
+- A premise gate whose arms are each proven red by a mutation, added in the same edit as the arm per build phase 4.15's rule.
+- One arm per bypass call site, asserting a line is written. The gate must be able to distinguish a written line from nothing having happened (the populate-check, build phase 4.11).
+- A no-credential arm that asserts zero outbound calls, not merely that no exception was raised.
+- A PII arm that inspects the actual assembled trace payload for `owner_id` and `user_id`, not a proxy for it.
+- The full Python suite against the re-measured `4158 passed, 0 failed` baseline.
+- `ruff check` over the WHOLE repository with no path argument, per build phase 4.15's CI finding.
+- `python tracker/check_doc_drift.py --check` at 0 stale, 0 structural.
+
+Constraints:
+
+- No new Python dependency. PostHog ships as an httpx POST against a documented wire contract, since `httpx` is already a dependency and `.claude/rules/supply-chain-security.md` requires a review before any new package.
+- Every outbound call carries a declared timeout, per `.claude/rules/tool-call-budgets.md`.
+- Observability is best-effort and never blocks or fails a user's query, following `feedback/writer.py`'s existing discipline.
+- No secret in any log line, trace, event or audit record.
+- Locked documents are not edited. Where Section 20.1 and Section 13.1 contradict each other on who mints `trace_id`, the shipped code wins and the contradiction is recorded, per LEARNINGS.md's build phase 4.6 entry.
+
+Blocked-stop:
+
+- The two halves are NOT symmetric, corrected after a first measurement that grepped only `.env` and got PostHog wrong. A real PostHog project key IS present in the shell environment, so the analytics half can reach the live service. No `LANGSMITH_API_KEY` exists anywhere, so the tracing half cannot be verified live at all, by anyone, until the product owner provisions one.
+- Reaching the live PostHog service is NOT the same as verifying it, per F-5.0-05: capture returns an identical 200 for an invented key, so a live call confirms only reachability. Ingestion cannot be confirmed with a project key at all, since reading events back needs a separate personal API key that nobody has asked for. Every substantive arm therefore runs against a local stub, and the live call is recorded as reachability and labelled as such.
+
+## Tickets
+
+Dispatch shape, per `.claude/rules/plan-then-fan-out.md` and bossman-mode Rule 1. `core/run.py` is a shared seam for tracing, analytics and the contextvar set, so it is NOT split across builders. Wave 1 builds pure modules with no call-site wiring, in parallel on disjoint files. Wave 2 is a single serial builder holding every integration point at once.
+
+| Ticket | Wave | Deliverable | Files it may touch | Status |
+|---|---|---|---|---|
+| T-5.0-01 | 0, lead | `observability/config.py` and `__init__.py`: one resolver for every `LANGSMITH_*` and `POSTHOG_*` value and the audit path. No key means off, everywhere, by construction | `src/system_03_search_agent/observability/config.py`, `__init__.py` | todo |
+| T-5.0-02 | 1 | `observability/audit.py`: the append-only JSONL writer, the `trace_id` contextvar, the params redactor, one writer per process, never mutating a written line | `src/system_03_search_agent/observability/audit.py` | todo |
+| T-5.0-03 | 1 | `observability/tracing.py`: the configured tracing context and the `RunnableConfig` builder, with a redaction client that strips `owner_id`, `user_id` and session memory | `src/system_03_search_agent/observability/tracing.py` | todo |
+| T-5.0-04 | 1 | `observability/analytics.py`: the PostHog client over httpx with a declared timeout, and the aggregate-only event catalogue | `src/system_03_search_agent/observability/analytics.py` | todo |
+| T-5.0-05 | 2, serial | Every integration point, held by ONE builder: both `core/run.py` tracing sites, the contextvar set, the analytics epilogue, the three transport hooks, the feedback endpoint event | `core/run.py`, `tools/ncbi_transport.py`, `tools/graph_connection.py`, `tools/pathogen_ftp_transport.py`, `adapters/web_sse/app.py` | todo |
+| T-5.0-06 | 3 | `.gitignore` the audit log, update `env.example`, and document the three records | `.gitignore`, `env.example`, `docs/build/` | todo |
+| T-5.0-07 | 3 | The premise gate and its mutation harness, one mutation case added in the same edit as each arm | `tests/system_03_search_agent/observability/` | todo |
+
+## Coverage: what this phase does not cover
+
+Stated here rather than discovered later, per `.claude/rules/goal-contracts.md`'s rule that a verify surface must state its own coverage. Build phase 4.4's premise gate passed 6 of 6 while the default path it never exercised returned a wrong answer, and its coverage statement had named that omission from day one.
+
+- NOTHING IS VERIFIED AGAINST LIVE LANGSMITH. No `LANGSMITH_API_KEY` exists anywhere, so every tracing arm proves the wiring against a local stub or an injected fake. A green gate there means the payload this system WOULD send is correct, and says nothing about whether LangSmith accepts it.
+- POSTHOG IS REACHABLE BUT STILL NOT VERIFIABLE, which is a sharper statement than it sounds and is the reason F-5.0-05 exists. A real project key is present, so a live call can be made, and it will return `200 {"status":"Ok"}`. So will a call carrying a key that was invented on the spot, measured. Capture is fire-and-forget by design and reports success for anything shape-valid, and reading an event back to confirm ingestion needs a personal API key that is a different credential nobody has. So the live call proves REACHABILITY and nothing downstream of it, and no arm in this phase may claim otherwise.
+- FIVE OF THE SEVEN TOOLS HAVE NO PRODUCTION CALL SITE. `ncbi_dbsnp`, `pubtator_annotate`, `litvar2_lookup`, `pathogen_detection` and `clinicaltrials_search` are reachable only from their own tests, because `plan_node`'s planned-call union has just two members. The transport hook covers them by construction, and that coverage is exercised by test-driven calls rather than by production traffic. An audit log with zero lines for five tools is a fact about `plan_node`, not about this hook.
+- THE FTP CHOKEPOINT IS THE LEAST EXERCISED. `pathogen_detection` has no production caller, so its transport hook is proven only by direct test invocation.
+- THREE OF SECTION 20.2'S SIX NAMED EVENTS CANNOT BE PRODUCED HONESTLY TODAY. Saved-query creation has a model at `data/models.py:311` and zero endpoint across all eight routes in `app.py`. The follow-up funnel has its join keys (`session_id`, and `askSeq` client-side) and no funnel logic anywhere. Session length is derivable retrospectively from `interactions.created_at` grouped by `session_id`, and no live session-start or session-end event exists. These three are recorded as not built rather than emitted as approximations.
+- NUMERIC HTTP STATUS IS CAPTURED AT THE TRANSPORT ONLY. A tool output still carries the classified three-value status, unchanged by this phase. The audit line and the tool output therefore describe the same call at different resolutions, deliberately.
+- THE ADVERSARY'S USUAL TARGET IS ABSENT. This phase generates no answers, so cite-or-refuse is untouched and `eval-harness` does not apply. The adversary's target here is the PII boundary and the no-credential path.
+
+## Findings
+
+Filed the moment they are established, per `.claude/rules/self-eval-loop.md`'s write-first rule and PR #70.
+
+| ID | Severity | Summary | Raised by | State | Reason |
+|---|---|---|---|---|---|
+| F-5.0-01 | major | `logs/` is absent from `.gitignore`, so Section 20.3's `logs/tool_audit.jsonl` would be committed to git, carrying tool params and returned record ids into the repository's history | lead, at phase open | open | Found while measuring, before any code was written. Owned by T-5.0-06 |
+| F-5.0-02 | major | An `act_node` audit hook, the obvious implementation, structurally misses five production call sites: three `ncbi_efetch` calls in `think_node` and two `execute_cypher` calls in KGX export | lead, from research | open | Design changed to the three transport chokepoints before any builder was dispatched. Owned by T-5.0-02 and T-5.0-05 |
+| F-5.0-03 | critical | Removing the hardcoded `tracing_context(enabled=False)` without adding redaction would transmit `Query.owner_id`, `Query.user_id` and `RequestContext.session_memory` to LangSmith, because `LANGCHAIN_TRACING_V2=true` is already set and LangGraph traces `GraphState` automatically | lead, from research | open | Not yet reachable: no `LANGSMITH_API_KEY` exists, so nothing is transmitted today. It becomes reachable the moment a key is provisioned, which makes it a blocker on this phase rather than on a later one. Owned by T-5.0-03 |
+| F-5.0-05 | major | A 200 `{"status":"Ok"}` from PostHog's capture endpoint proves NOTHING. Measured directly: an invented key, `phc_thisisnotarealkey_probe_only`, returns byte-identical success to what a real key returns, on both hosts | lead, probed live at phase open | open | Shapes the gate rather than the code. Any arm asserting "PostHog accepted the event" is vacuous by construction and would pass against a garbage key, a garbage project and a garbage event name. Owned by T-5.0-07 |
+| F-5.0-06 | minor | `POSTHOG_HOST` is `https://us.posthog.com` in `.env` and `env.example:109`, while PostHog documents `https://us.i.posthog.com` as the ingest host. Probed: both accept `/i/v0/e`, so this is a divergence from the documented endpoint rather than a break | lead, probed live at phase open | open | Move to the documented ingest host, since "works today" is not a contract. Owned by T-5.0-06 |
+| F-5.0-04 | minor | Section 20.1 says the Guardrail step mints `trace_id`; the shipped code mints it in three adapters (`web_sse/app.py:1299`, `graphql/schema.py:291`, `mcp/server.py:765`) and Section 13.1 agrees with the code | lead, from research | open | A re-confirmation of the build phase 4.6 finding, not a new defect. Recorded so this phase does not re-manufacture the requirement that phase already reverted. No code change |
+
+## History
+
+- 2026-08-29: phase opened on `phase/5.0-observability`. Baseline re-measured at the branch point rather than carried forward, per build phase 4.4: `4158 passed, 170 skipped, 1 xfailed, 0 failed`, drift 0 stale 0 structural, all three transports green.
+- 2026-08-29: three researchers dispatched in parallel (audit call sites, LangSmith API surface, PostHog wire contract). All three reported. F-5.0-01 through F-5.0-04 filed from their output before any builder was dispatched.
+- 2026-08-29: design settled on three transport chokepoints rather than an `act_node` hook, on two independent grounds: coverage (five bypass sites) and field availability (HTTP status and latency exist only at the transport).
