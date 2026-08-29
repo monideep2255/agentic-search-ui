@@ -225,6 +225,72 @@ F-5.0-03 read back OUT of LangSmith, on a second query carrying generated identi
 
 with `trace_id` present as the join key, the question text present (Section 20.1 permits it), and 30 `[redacted]` markers in the stored payload. The marker count is the populate-check: it distinguishes "redaction fired" from "those fields were never in the payload to begin with", which is the difference between an arm and a decoration.
 
+### Coverage for T-5.0-07's premise gate and mutation harness, run 2026-08-29
+
+Two new files, `tests/system_03_search_agent/observability/test_observability_premise.py`
+and `tests/system_03_search_agent/observability/test_observability_mutation.py`. Full
+coverage statements live in each file's own module docstring, per
+`.claude/rules/goal-contracts.md`'s rule that a verify surface must state its
+own coverage; summarized here rather than restated in full.
+
+The premise gate closes `test_wiring.py`'s own stated central gap: its
+bypass arms call `graph_connection.execute_cypher` and `ncbi_transport.
+execute_get` directly, proving the chokepoint is reached by a call SHAPED
+like the two real bypass callers, not that the real callers themselves
+still reach it. `TestRealBypassCallersAreAudited` calls `core.graph.
+_resolve_symbol_to_curie_uncached("BRCA1", "human")` and `export.
+traversal.traverse_subgraph(["MONDO:0007254"], hops=0, ...)` directly,
+unmodified, faking only the one genuine external boundary each has. The
+symbol-resolution arm reproduces this phase's own live evidence verbatim:
+`api.ncbi.nlm.nih.gov/datasets/v2/gene/symbol/BRCA1/taxon/human` as the
+recorded endpoint, the same line a real production run wrote first.
+
+Six further arms: zero outbound tracing attempts with no `LANGSMITH_API_KEY`
+(against a call-counting spy, with a populate-check proving `tracing_
+enabled()` was genuinely consulted); every Section 20.3 field present,
+checked against the spec's OWN text (both governing bullets, since
+`authorization` is named in the first bullet and not the second's
+enumerated list) rather than against the code's own docstring; an NCBI API
+key confirmed present in the outbound request (positive control) and
+confirmed absent from the audit line, with `authorization` recording
+`"ncbi_api_key"` by identifier; `trace_id` present in scope and null out of
+scope; and append-only, proven as byte-identical first-line bytes after a
+second real call. One live, opt-in arm reads `Client.info` (read-only)
+against the real LangSmith service, gated behind `RUN_PREMISE_GATE=1` AND a
+real `LANGSMITH_API_KEY`; it ran and passed during this work. No arm
+anywhere in either file reaches PostHog, gated or not: F-5.0-12 stands, and
+the provisioned key is the wrong credential for that job.
+
+Stated gaps: the KGX bypass arm proves the audit hook fires from the real
+caller, not that `MONDO:0007254` resolves (the fake connection returns no
+rows for any candidate label, so it never does); `export/test_kgx_
+traversal.py` owns seed-resolution correctness. `ncbi_dbsnp`, `pubtator_
+annotate`, `litvar2_lookup`, `pathogen_detection` and `clinicaltrials_
+search` still have no production caller for a "real bypass caller" arm to
+drive, unchanged from the phase-level coverage statement above.
+
+The mutation harness covers six mutations, monkeypatch-based rather than
+file-text-edit-based (the file's own docstring states why: `audit.py`
+imports `audit_enabled`/`audit_log_path` by name from `config.py`, so
+reloading `config.py` alone would not propagate, and reloading `audit.py`
+too would reset its module-level lock for the whole session). Each of the
+six runs its target arm unmutated first (must be green, the control half
+`test_release_environments_mutation.py` calls not optional) and mutated
+second (must be red), then asserts the mutated attribute is restored to
+the exact original object by identity. Two of the six close gaps
+`test_wiring.py`'s own coverage statement named as unproven-by-mutation
+(`TestCredentialNeverLeaksThroughTheTransport`, via `ncbi_transport.
+_endpoint_for_audit`) without editing that file; a third proves the F-5.0-07
+hermetic-guard regression without ever writing to `tests/conftest.py`,
+by mutating `requests.adapters.HTTPAdapter.send` one layer below the
+session-scoped fixture instead. Verified stable across three consecutive
+random-ordered runs of the observability directory (`101 passed, 1
+skipped` each time) and once under `-p no:randomly`, so no state leak
+between the mutation harness and the rest of the suite in this directory.
+No completeness claim is made beyond the six named mutations, per build
+phase 4.15's rule that the fix for a false completeness claim is deletion,
+not a better sentence.
+
 ## Findings
 
 Filed the moment they are established, per `.claude/rules/self-eval-loop.md`'s write-first rule and PR #70.
