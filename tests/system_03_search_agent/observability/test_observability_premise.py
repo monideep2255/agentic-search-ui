@@ -435,6 +435,38 @@ class TestAuditLineCarriesEverySection20_3Field:
     hand from both bullets together rather than by regex-extracting the
     second bullet alone. Driven through the real transport chokepoint,
     not through `record_tool_call` directly.
+
+    The error field is `error_code` rather than `error`, changed when the
+    audit sink stopped accepting free text (F-5.0-13, F-5.0-14, F-5.0-19,
+    and the design change that closed them).
+
+    What this class proves, and what it does not (F-5.0-23):
+
+    - Proved here: every field Section 20.3 names is PRESENT on a line
+      written through the real transport chokepoint. Presence only. This
+      class asserts nothing about any field's value.
+    - Covered by the design: every failure that reaches a chokepoint as an
+      EXCEPTION. `http_status` carries the numeric status wherever one
+      exists, and `error_code` carries a classified reason drawn from
+      `audit.AUDIT_ERROR_CODES` wherever the failure had no HTTP semantics
+      at all, which is every graph call and every connection-level
+      failure. The spec never required the reason to be a message, and a
+      code is more machine-readable than the prose it replaced.
+    - NOT covered, stated rather than implied: Section 20.3's "body-level
+      error and empty signal for E-utilities calls". `classify_eutils_
+      response` runs in the ACTION modules above the transport, none of
+      which calls `record_tool_call`, so an E-utilities body-level error
+      and a genuine empty result are both indistinguishable from a success
+      on the audit line (`http_status 200, error_code None, error_class
+      None`). The vocabulary members reserved for that case, `http_error`
+      and `empty`, are DECLARED AND UNEXERCISED: they have no producer
+      anywhere in `src/`. `audit.py`'s own comment on `AUDIT_ERROR_CODES`
+      says the same thing, and this docstring is written to agree with it
+      rather than contradict it.
+
+    The gap is pre-existing rather than introduced by the error-field
+    change: before it, the same success path wrote `error=None`. It is
+    open with an owner (F-5.0-23) and is not closed by this class.
     """
 
     _SECTION_20_3_REQUIRED_FIELDS: tuple[str, ...] = (
@@ -445,7 +477,7 @@ class TestAuditLineCarriesEverySection20_3Field:
         "params",
         "record_ids",
         "http_status",
-        "error",
+        "error_code",
         "latency_ms",
         "timestamp",
     )

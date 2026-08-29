@@ -242,7 +242,7 @@ class TestLayer2AuditLine:
         assert len(entries) == 1
         assert entries[0]["layer"] == 2
         assert entries[0]["http_status"] == 200
-        assert entries[0]["error"] is None
+        assert entries[0]["error_code"] is None
         assert entries[0]["latency_ms"] >= 0
 
 
@@ -269,7 +269,7 @@ class TestLayer1AuditLine:
         assert len(entries) == 1
         assert entries[0]["layer"] == 1
         assert entries[0]["tool"] == "cypher_query"
-        assert entries[0]["error"] is None
+        assert entries[0]["error_code"] is None
 
 
 # ---------------------------------------------------------------------------

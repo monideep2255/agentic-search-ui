@@ -46,12 +46,13 @@ unmutated first (must be green) and mutated second (must be red), matching
 
 ## What this file does NOT claim
 
-Six mutations are covered, one per function, each named for the specific
-regression it reproduces. This sentence does not say "every arm in this
-phase's premise gates is covered": build phase 4.15 shipped that exact
-completeness claim wrong three times, once inside the fix for the finding
-that said so the first time. Count the functions below if you want to know
-what is actually covered.
+One mutation per function, each named for the specific regression it
+reproduces. No count is stated here on purpose: build phase 4.15 shipped
+that exact completeness claim wrong three times, once inside the fix for
+the finding that said so the first time, and a number in a docstring rots
+the moment a case is added. Count the functions below if you want to know
+what is actually covered, and add the mutation case in the same edit as
+the arm it proves.
 
 ## Targets, and why each was chosen over an alternative in the same file
 
@@ -94,6 +95,52 @@ phase's own tracker had flagged as unproven:
    that attribute puts the conftest-installed blocker back in place for
    the rest of the session, proven by identity comparison exactly like
    the other five.
+7. The audit redactor's EMBEDDED-URL scanning (F-5.0-13, gap two)
+   collapsed back to F-5.0-08's whole-string-only check: breaks
+   `test_audit.TestEmbeddedUrlRedaction.
+   test_dsn_embedded_after_a_prose_prefix_is_redacted`, the shape gap two
+   exists for, a credential inside a URL that is itself embedded in a
+   larger string rather than filling the whole value.
+8. The error field carrying a raw exception message again: breaks
+   `test_audit.TestErrorFieldIsStructurallyBounded.
+   test_credential_in_a_raised_exception_message_never_reaches_the_line`.
+   This case previously targeted an arm proving a free-text `error` was
+   REDACTED; that arm was replaced, not deleted, when the field stopped
+   accepting free text at all, and this case follows it. Two layers must
+   be reverted together to put the message back on the line, and the case
+   probes each layer alone and states what it measured rather than what
+   it expected. See its own comment block: the first draft's
+   defense-in-depth claim was half wrong and is recorded there.
+9. The audit redactor reverted to F-5.0-14's URL-token scan: breaks
+   `test_audit.TestSecretAssignmentRedaction.
+   test_a_bracket_in_an_earlier_query_parameter_no_longer_truncates_the_
+   scan` while LEAVING `test_control_no_boundary_character_before_the_
+   credential_is_redacted` green under the same mutation, which is what
+   distinguishes a truncation defect from a dead scanner.
+10. The secret-assignment rule removed: breaks `test_audit.
+    TestSecretAssignmentRedaction.
+    test_secret_assignment_in_prose_with_no_url_at_all_is_redacted`, an
+    input with no `scheme://` anywhere, so only this rule can catch it.
+11. The netloc-credential rule removed: breaks `test_audit.
+    TestEmbeddedUrlRedaction.test_dsn_embedded_after_a_prose_prefix_is_
+    redacted`. A userinfo password has no key name to match, only a
+    position, so mutation 10 cannot reach it.
+12. The same regression as 8 at the OTHER converted chokepoint,
+    `ncbi_transport.execute_get`: breaks `test_audit.
+    TestErrorFieldIsStructurallyBounded.test_credential_in_a_transport_
+    exception_message_never_reaches_the_line`. Separate from 8 because
+    the two call sites were converted separately, and 8 going red says
+    nothing about whether this one ever could.
+13. `classify_error_code`'s fail-closed branch softened into a permissive
+    passthrough: breaks `test_audit.TestLegacyErrorKeywordFailsClosed.
+    test_a_message_passed_to_the_legacy_keyword_records_unexpected`. One
+    layer is enough here, unlike 8, because the deprecated keyword's one
+    remaining caller passes `str(exc)` already.
+14. `graph_connection`'s exception mapping emptied to the catch-all:
+    breaks `test_audit.TestExceptionTypesAreEnumeratedNotHandTyped.
+    test_every_graph_error_subclass_maps_to_a_specific_code`. An arm that
+    walks a set can pass vacuously if the walk finds nothing, so this is
+    what proves that one discriminates.
 
 Depends on:
     - system_03_search_agent.observability.config
@@ -118,13 +165,17 @@ Writes:
 from __future__ import annotations
 
 import asyncio
+import inspect
+import os
+import re
+import urllib.parse
 from typing import Any
 
 import pytest
 import requests
 
 from system_03_search_agent.observability import analytics, audit, config, tracing
-from system_03_search_agent.tools import ncbi_transport
+from system_03_search_agent.tools import graph_connection, ncbi_transport
 from tests.system_03_search_agent.observability import (
     test_analytics,
     test_audit,
@@ -235,22 +286,31 @@ def test_redact_value_string_removed_turns_the_url_leak_arm_red(
     function removes it and reopens the exact leak F-5.0-08 reproduced.
     """
     original = audit._redact_value_string
+    original_enabled = audit.audit_enabled
+    original_log_path = audit.audit_log_path
 
     control_arm = test_audit.TestValueLevelRedaction()
-    control_arm.test_reproduction_api_key_in_url_under_endpoint_key(
-        tmp_path / "control", pytest.MonkeyPatch()
-    )
+    with pytest.MonkeyPatch.context() as arm_mp:
+        control_arm.test_reproduction_api_key_in_url_under_endpoint_key(
+            tmp_path / "control", arm_mp
+        )
 
     monkeypatch.setattr(audit, "_redact_value_string", lambda value: value)
 
     mutated_arm = test_audit.TestValueLevelRedaction()
-    with pytest.raises(_ARM_WENT_RED):
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
         mutated_arm.test_reproduction_api_key_in_url_under_endpoint_key(
-            tmp_path / "mutated", pytest.MonkeyPatch()
+            tmp_path / "mutated", arm_mp
         )
 
     monkeypatch.undo()
+    # F-5.0-16: every attribute this case caused to be patched is checked,
+    # not only the one the outer fixture owned. The target arm patches the
+    # two audit-config lookups itself, so a leaked patch here would follow
+    # the rest of the session.
     assert audit._redact_value_string is original
+    assert audit.audit_enabled is original_enabled
+    assert audit.audit_log_path is original_log_path
 
 
 # ---------------------------------------------------------------------------
@@ -276,26 +336,38 @@ def test_endpoint_for_audit_reverted_to_raw_url_turns_the_wiring_arm_red(
     assumed equivalent." This function closes exactly that gap.
     """
     original = ncbi_transport._endpoint_for_audit
+    original_enabled = audit.audit_enabled
+    original_log_path = audit.audit_log_path
+    original_api_key = os.environ.get("NCBI_API_KEY")
 
     control_arm = test_wiring.TestCredentialNeverLeaksThroughTheTransport()
-    _run_async(
-        control_arm.test_api_key_reaches_the_request_but_never_the_audit_line(
-            tmp_path / "control", pytest.MonkeyPatch()
+    with pytest.MonkeyPatch.context() as arm_mp:
+        _run_async(
+            control_arm.test_api_key_reaches_the_request_but_never_the_audit_line(
+                tmp_path / "control", arm_mp
+            )
         )
-    )
 
     monkeypatch.setattr(ncbi_transport, "_endpoint_for_audit", lambda url: url)
 
     mutated_arm = test_wiring.TestCredentialNeverLeaksThroughTheTransport()
-    with pytest.raises(_ARM_WENT_RED):
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
         _run_async(
             mutated_arm.test_api_key_reaches_the_request_but_never_the_audit_line(
-                tmp_path / "mutated", pytest.MonkeyPatch()
+                tmp_path / "mutated", arm_mp
             )
         )
 
     monkeypatch.undo()
+    # F-5.0-16: this target arm patches the two audit-config lookups AND
+    # sets NCBI_API_KEY to a generated credential, so an un-undone patch
+    # here would leave that credential in os.environ for the rest of the
+    # session. All four are checked, not just the one the outer fixture
+    # owned.
     assert ncbi_transport._endpoint_for_audit is original
+    assert audit.audit_enabled is original_enabled
+    assert audit.audit_log_path is original_log_path
+    assert os.environ.get("NCBI_API_KEY") == original_api_key
 
 
 # ---------------------------------------------------------------------------
@@ -368,6 +440,535 @@ def test_requests_blocker_removed_turns_the_hermetic_guard_arm_red() -> None:
         mp.undo()
 
     assert requests.adapters.HTTPAdapter.send is original
+
+
+# ---------------------------------------------------------------------------
+# Mutation 7: the audit redactor's embedded-URL scanning (F-5.0-13, gap two)
+# reverted to F-5.0-08's whole-string-only check.
+# ---------------------------------------------------------------------------
+
+
+def _whole_string_only_redact_value_string(value: str) -> str:
+    """What `_redact_value_string` did before F-5.0-13's gap two: the exact
+    pre-fix implementation, reproduced here rather than imported, since the
+    fixed version is what `audit.py` now exports under this name. Redacts
+    a value only when the ENTIRE string parses as a URL, which is the
+    defect gap two closed: a credential embedded in a URL sitting inside a
+    larger string, an exception message's prose, was invisible to this
+    check.
+    """
+    if "://" not in value:
+        return value
+    parsed = urllib.parse.urlsplit(value)
+    if not parsed.scheme or not parsed.netloc:
+        return value
+    # The two redaction rules themselves are the CURRENT ones. What this
+    # stand-in reproduces is the pre-fix GATE in front of them, refusing to
+    # act unless the entire string parses as a URL, which is the defect gap
+    # two closed. Reproducing the old rules too would conflate two
+    # regressions in one mutation, and F-5.0-14 removed the helpers they
+    # were built from.
+    return audit._redact_secret_assignments(audit._redact_netloc_credentials(value))
+
+
+def test_embedded_url_scan_reverted_to_whole_string_only_turns_the_gap_two_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-5.0-13, gap two: `_redact_value_string` scanning for a
+    URL-shaped TOKEN anywhere in a string, rather than requiring the whole
+    string to parse as one, is what catches a credential embedded in an
+    exception message's prose. Reverting to the whole-string-only version
+    reopens exactly that gap while leaving the whole-string case (mutation
+    3, F-5.0-08's original reproduction) untouched, which is why this is a
+    separate mutation rather than a duplicate of mutation 3.
+    """
+    original = audit._redact_value_string
+
+    control_arm = test_audit.TestEmbeddedUrlRedaction()
+    control_arm.test_dsn_embedded_after_a_prose_prefix_is_redacted()
+
+    monkeypatch.setattr(audit, "_redact_value_string", _whole_string_only_redact_value_string)
+
+    mutated_arm = test_audit.TestEmbeddedUrlRedaction()
+    with pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_dsn_embedded_after_a_prose_prefix_is_redacted()
+
+    monkeypatch.undo()
+    assert audit._redact_value_string is original
+
+
+# ---------------------------------------------------------------------------
+# Mutation 8: the error field carries a raw exception message again, the
+# state this whole design change removed (F-5.0-13, F-5.0-14, F-5.0-19).
+# ---------------------------------------------------------------------------
+
+#: Reverting BOTH layers at once is deliberate, and the two single-layer
+#: probes below say exactly what each layer buys. Two independent things
+#: stop a credential in an exception message reaching the sink: the call
+#: site classifies instead of stringifying, and `classify_error_code`
+#: fails closed on anything outside the vocabulary.
+#:
+#: A first draft of this case claimed each layer alone leaves the target
+#: arm green. RUNNING IT SHOWED THAT IS FALSE, and the false half is
+#: recorded here rather than quietly corrected, because it is the same
+#: "confident sentence describing a check that was not there" shape build
+#: phase 4.15 shipped four times. What is actually true, measured:
+#:
+#: - Sink layer alone reverted: arm GREEN. The call site still passes a
+#:   vocabulary member, so a permissive sink has nothing hostile to admit.
+#: - Call-site layer alone reverted: arm RED, but on its `error_code ==
+#:   "connection"` assertion rather than on the leak, and the credential
+#:   still does NOT reach the file. That is the defense-in-depth result
+#:   worth having, and the probe below asserts the absence directly
+#:   instead of inferring it from the arm's colour.
+#: - Both reverted: arm RED and the message genuinely lands on the line,
+#:   which is the pre-change state this case reproduces.
+
+
+def _passthrough_classify(value):
+    """`classify_error_code` with its fail-closed branch softened into a
+    permissive passthrough, the single change that would reopen the hole.
+    """
+    return value
+
+
+def test_error_field_written_raw_again_turns_the_graph_credential_arm_red(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Replaces the earlier version of this case, whose target arm proved
+    a free-text `error` was REDACTED. That arm no longer exists because
+    the field no longer accepts free text; this proves the successor arm,
+    that a credential in a raised exception's MESSAGE cannot reach the
+    line, driven through the real `execute_cypher` chokepoint.
+    """
+    original_classify = audit.classify_error_code
+    original_graph_classifier = graph_connection.audit_error_code
+
+    control_arm = test_audit.TestErrorFieldIsStructurallyBounded()
+    with pytest.MonkeyPatch.context() as arm_mp:
+        control_arm.test_credential_in_a_raised_exception_message_never_reaches_the_line(
+            tmp_path / "control", arm_mp
+        )
+
+    # Single-layer probe one: a permissive sink alone changes nothing,
+    # because the call site still hands it a vocabulary member.
+    with pytest.MonkeyPatch.context() as single_mp:
+        single_mp.setattr(audit, "classify_error_code", _passthrough_classify)
+        with pytest.MonkeyPatch.context() as arm_mp:
+            control_arm.test_credential_in_a_raised_exception_message_never_reaches_the_line(
+                tmp_path / "sink-only", arm_mp
+            )
+
+    # Single-layer probe two: a stringifying call site alone DOES turn the
+    # arm red, on its code assertion, and the sink's fail-closed branch
+    # still keeps the message off the line. Asserted against the file
+    # rather than inferred from the arm's colour, since "it went red" says
+    # nothing about which assertion fired.
+    call_site_only_dir = tmp_path / "call-site-only"
+    with pytest.MonkeyPatch.context() as single_mp:
+        single_mp.setattr(graph_connection, "audit_error_code", lambda exc: str(exc))
+        with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
+            control_arm.test_credential_in_a_raised_exception_message_never_reaches_the_line(
+                call_site_only_dir, arm_mp
+            )
+    written = (call_site_only_dir / "audit.jsonl").read_text(encoding="utf-8")
+    assert "postgresql" not in written
+    assert "connection failed" not in written
+
+    monkeypatch.setattr(audit, "classify_error_code", _passthrough_classify)
+    monkeypatch.setattr(graph_connection, "audit_error_code", lambda exc: str(exc))
+
+    mutated_arm = test_audit.TestErrorFieldIsStructurallyBounded()
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_credential_in_a_raised_exception_message_never_reaches_the_line(
+            tmp_path / "mutated", arm_mp
+        )
+
+    monkeypatch.undo()
+    assert audit.classify_error_code is original_classify
+    assert graph_connection.audit_error_code is original_graph_classifier
+
+
+# ---------------------------------------------------------------------------
+# Mutation 9: the audit redactor reverted to F-5.0-14's URL-token scan, the
+# implementation this round replaced.
+# ---------------------------------------------------------------------------
+
+#: The exact pattern `audit.py` carried when F-5.0-14 was raised against it.
+#: It stops the token at the FIRST boundary character anywhere in it, which
+#: is the defect: a bracket, parenthesis or quote in the path or in an
+#: earlier query parameter truncates the match, and the credential
+#: `_append_api_key` appends LAST is then never scanned at all.
+_F_5_0_14_URL_TOKEN = re.compile(r"[A-Za-z][A-Za-z0-9+.\-]*://[^\s\"'<>()\[\]{}]+")
+
+
+def _url_token_only_redact_value_string(value: str) -> str:
+    """What `_redact_value_string` did when F-5.0-14 was raised: delimit a
+    URL-shaped token inside the string, then redact only within it.
+
+    The redaction rules applied inside the token are the CURRENT ones, so
+    the only thing this mutation changes is WHERE they are allowed to look.
+    That is what isolates the finding: the defect was never that the rules
+    were wrong, it was that a boundary character upstream of the credential
+    ended the region they were allowed to see.
+    """
+    if "://" not in value:
+        return value
+
+    def _redact_token(match: re.Match[str]) -> str:
+        token = match.group(0)
+        return audit._redact_secret_assignments(audit._redact_netloc_credentials(token))
+
+    redacted = _F_5_0_14_URL_TOKEN.sub(_redact_token, value)
+    return redacted if redacted != value else value
+
+
+def test_url_token_scan_restored_turns_the_bracket_truncation_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-5.0-14: an Entrez bracketed field parameter sitting BEFORE the
+    appended credential. Restoring the URL-token scan reopens the leak.
+
+    This case runs the CONTROL arm under the mutation too, not only the
+    unmutated control every case here runs. That is the evidentiary point
+    of F-5.0-14: the same URL with no boundary character is still redacted
+    by the broken implementation, so a suite that only checked "something
+    gets redacted" could not tell truncation from a dead scanner. Green
+    control plus red bracket arm, under one mutation, is what makes this a
+    truncation finding rather than a coverage guess.
+    """
+    original = audit._redact_value_string
+
+    control_arm = test_audit.TestSecretAssignmentRedaction()
+    control_arm.test_a_bracket_in_an_earlier_query_parameter_no_longer_truncates_the_scan()
+
+    monkeypatch.setattr(audit, "_redact_value_string", _url_token_only_redact_value_string)
+
+    mutated_arm = test_audit.TestSecretAssignmentRedaction()
+    with pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_a_bracket_in_an_earlier_query_parameter_no_longer_truncates_the_scan()
+    # Still green under the same mutation: no boundary character upstream
+    # of the credential, so there is nothing to truncate.
+    mutated_arm.test_control_no_boundary_character_before_the_credential_is_redacted()
+
+    monkeypatch.undo()
+    assert audit._redact_value_string is original
+
+
+# ---------------------------------------------------------------------------
+# Mutation 10: the secret-assignment rule removed (F-5.0-14's first half).
+# ---------------------------------------------------------------------------
+
+
+def test_secret_assignment_rule_removed_turns_the_bare_prose_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`_redact_secret_assignments` is the rule that redacts a secret-ish
+    `name=value` wherever it occurs, with no URL wrapper required. The
+    target arm has no `scheme://` in it at all, so it isolates this rule
+    from the netloc rule mutation 11 covers: only this one can catch it.
+    """
+    original = audit._redact_secret_assignments
+
+    control_arm = test_audit.TestSecretAssignmentRedaction()
+    control_arm.test_secret_assignment_in_prose_with_no_url_at_all_is_redacted()
+
+    monkeypatch.setattr(audit, "_redact_secret_assignments", lambda value: value)
+
+    mutated_arm = test_audit.TestSecretAssignmentRedaction()
+    with pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_secret_assignment_in_prose_with_no_url_at_all_is_redacted()
+
+    monkeypatch.undo()
+    assert audit._redact_secret_assignments is original
+
+
+# ---------------------------------------------------------------------------
+# Mutation 11: the netloc-credential rule removed (F-5.0-14's second half).
+# ---------------------------------------------------------------------------
+
+
+def test_netloc_credential_rule_removed_turns_the_dsn_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`_redact_netloc_credentials` is the rule that blanks a password in a
+    `scheme://user:pw@host` userinfo segment. A DSN password carries no key
+    name to test against `_SECRET_KEY_MARKERS`, only a position, so the
+    assignment rule structurally cannot catch it and this mutation is not a
+    duplicate of mutation 10.
+    """
+    original = audit._redact_netloc_credentials
+
+    control_arm = test_audit.TestEmbeddedUrlRedaction()
+    control_arm.test_dsn_embedded_after_a_prose_prefix_is_redacted()
+
+    monkeypatch.setattr(audit, "_redact_netloc_credentials", lambda value: value)
+
+    mutated_arm = test_audit.TestEmbeddedUrlRedaction()
+    with pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_dsn_embedded_after_a_prose_prefix_is_redacted()
+
+    monkeypatch.undo()
+    assert audit._redact_netloc_credentials is original
+
+
+# ---------------------------------------------------------------------------
+# Mutation 12: the same regression at the OTHER converted chokepoint.
+# ---------------------------------------------------------------------------
+
+
+def test_error_field_written_raw_again_turns_the_transport_credential_arm_red(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`ncbi_transport.execute_get` is a separate call site from
+    `graph_connection.execute_cypher` and was converted separately, so its
+    arm needs its own mutation. Mutation 8 proving the graph arm red says
+    nothing about whether this one could ever fail, which is the exact
+    assumption `test_wiring.py`'s own coverage statement warned against
+    when it recorded two of its classes as unproven-by-mutation.
+    """
+    original_classify = audit.classify_error_code
+    original_transport_classifier = ncbi_transport.audit_error_code
+
+    control_arm = test_audit.TestErrorFieldIsStructurallyBounded()
+    with pytest.MonkeyPatch.context() as arm_mp:
+        _run_async(
+            control_arm.test_credential_in_a_transport_exception_message_never_reaches_the_line(
+                tmp_path / "control", arm_mp
+            )
+        )
+
+    monkeypatch.setattr(audit, "classify_error_code", _passthrough_classify)
+    monkeypatch.setattr(ncbi_transport, "audit_error_code", lambda exc: str(exc))
+
+    mutated_arm = test_audit.TestErrorFieldIsStructurallyBounded()
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
+        _run_async(
+            mutated_arm.test_credential_in_a_transport_exception_message_never_reaches_the_line(
+                tmp_path / "mutated", arm_mp
+            )
+        )
+
+    monkeypatch.undo()
+    assert audit.classify_error_code is original_classify
+    assert ncbi_transport.audit_error_code is original_transport_classifier
+
+
+# ---------------------------------------------------------------------------
+# Mutation 13: the fail-closed branch alone, softened into a passthrough.
+# ---------------------------------------------------------------------------
+
+
+def test_permissive_vocabulary_fallback_turns_the_legacy_keyword_arm_red(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The fail-closed branch is what makes the deprecated `error` keyword
+    safe for `pathogen_ftp_transport.py`, the one caller this design
+    change could not edit (F-5.0-20). Softening it to a passthrough is the
+    plausible future regression, since "just let a string through" reads
+    as a small convenience rather than as reopening a credential path.
+
+    Unlike mutation 8 this needs only ONE layer reverted, because that
+    caller passes `str(exc)` already: the vocabulary check is the only
+    thing standing between its message and the sink.
+    """
+    original_classify = audit.classify_error_code
+
+    control_arm = test_audit.TestLegacyErrorKeywordFailsClosed()
+    with pytest.MonkeyPatch.context() as arm_mp:
+        control_arm.test_a_message_passed_to_the_legacy_keyword_records_unexpected(
+            tmp_path / "control", arm_mp
+        )
+
+    monkeypatch.setattr(audit, "classify_error_code", _passthrough_classify)
+
+    mutated_arm = test_audit.TestLegacyErrorKeywordFailsClosed()
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_a_message_passed_to_the_legacy_keyword_records_unexpected(
+            tmp_path / "mutated", arm_mp
+        )
+
+    monkeypatch.undo()
+    assert audit.classify_error_code is original_classify
+
+
+# ---------------------------------------------------------------------------
+# Mutation 14: an exception type left unmapped.
+# ---------------------------------------------------------------------------
+
+
+def test_an_unmapped_exception_type_turns_the_enumerating_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The enumerating arm reads both error families from their own
+    `__subclasses__()` so a NEW type with no mapping row cannot be
+    silently classified `unexpected`. An arm that walks a set can pass
+    vacuously if the walk finds nothing useful, so this proves it
+    actually discriminates: emptying the mapping down to the catch-all
+    makes every subclass fall through, which is precisely the "silently
+    unmapped" state the arm exists to forbid.
+    """
+    original = graph_connection._AUDIT_ERROR_CODE_BY_CLASS_NAME
+
+    control_arm = test_audit.TestExceptionTypesAreEnumeratedNotHandTyped()
+    control_arm.test_every_graph_error_subclass_maps_to_a_specific_code()
+
+    monkeypatch.setattr(
+        graph_connection,
+        "_AUDIT_ERROR_CODE_BY_CLASS_NAME",
+        {"GraphError": audit.UNEXPECTED_ERROR_CODE},
+    )
+
+    mutated_arm = test_audit.TestExceptionTypesAreEnumeratedNotHandTyped()
+    with pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_every_graph_error_subclass_maps_to_a_specific_code()
+
+    monkeypatch.undo()
+    assert graph_connection._AUDIT_ERROR_CODE_BY_CLASS_NAME is original
+
+
+# ---------------------------------------------------------------------------
+# Mutation 15: the vocabulary check reverted to `isinstance` plus a
+# passthrough of the caller's own object.
+# ---------------------------------------------------------------------------
+
+
+def _isinstance_vocabulary_check(value: Any) -> Any:
+    """`classify_error_code` exactly as it stood before F-5.0-22.
+
+    Kept as a real reimplementation rather than a stub, so the mutation
+    reproduces the actual regression: a `str` subclass overriding `__eq__`
+    satisfies tuple containment and is then returned verbatim.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str) and value in audit.AUDIT_ERROR_CODES:
+        return value
+    return audit.UNEXPECTED_ERROR_CODE
+
+
+def test_isinstance_vocabulary_check_turns_the_hostile_eq_arm_red(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`isinstance` reads as the ordinary, idiomatic spelling, which is why
+    the exact-type test is the plausible thing for a future reader to
+    "simplify" back. This makes that edit a failure rather than a review
+    finding.
+    """
+    original_classify = audit.classify_error_code
+
+    control_arm = test_audit.TestGuardsRefuseAHostileStrSubclass()
+    with pytest.MonkeyPatch.context() as arm_mp:
+        control_arm.test_a_subclass_overriding_eq_cannot_write_itself_into_error_code(
+            tmp_path / "control", arm_mp
+        )
+
+    monkeypatch.setattr(audit, "classify_error_code", _isinstance_vocabulary_check)
+
+    mutated_arm = test_audit.TestGuardsRefuseAHostileStrSubclass()
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_a_subclass_overriding_eq_cannot_write_itself_into_error_code(
+            tmp_path / "mutated", arm_mp
+        )
+
+    monkeypatch.undo()
+    assert audit.classify_error_code is original_classify
+
+
+# ---------------------------------------------------------------------------
+# Mutation 16: the class-name check reverted to `isinstance`, leaving both
+# of its bounds on methods a subclass owns.
+# ---------------------------------------------------------------------------
+
+
+def _isinstance_error_class_check(value: Any) -> Any:
+    """`_safe_error_class` exactly as it stood before F-5.0-22."""
+    if value is None:
+        return None
+    if (
+        isinstance(value, str)
+        and len(value) <= audit._MAX_ERROR_CLASS_CHARS
+        and value.isidentifier()
+    ):
+        return value
+    return audit._REFUSED_ERROR_CLASS
+
+
+def test_isinstance_error_class_check_turns_the_hostile_identifier_arm_red(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The same reversion at the other guard. Reverting one does not turn
+    the other's arm red, which is why both mutations exist: the two guards
+    share the hole but neither covers the other.
+    """
+    original_safe_error_class = audit._safe_error_class
+
+    control_arm = test_audit.TestGuardsRefuseAHostileStrSubclass()
+    with pytest.MonkeyPatch.context() as arm_mp:
+        control_arm.test_a_subclass_lying_about_both_bounds_cannot_reach_error_class(
+            tmp_path / "control", arm_mp
+        )
+
+    monkeypatch.setattr(audit, "_safe_error_class", _isinstance_error_class_check)
+
+    mutated_arm = test_audit.TestGuardsRefuseAHostileStrSubclass()
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_a_subclass_lying_about_both_bounds_cannot_reach_error_class(
+            tmp_path / "mutated", arm_mp
+        )
+
+    monkeypatch.undo()
+    assert audit._safe_error_class is original_safe_error_class
+
+
+# ---------------------------------------------------------------------------
+# Mutation 17: a call site going back to a data-derived `error_class`.
+# ---------------------------------------------------------------------------
+
+
+def _source_with_a_stringified_error_class(module: Any) -> str:
+    """The module's real source with the class-name literal replaced by
+    `str(exc)`, which is precisely the expression this phase removed from
+    both call sites and the one a future edit is most likely to restore.
+
+    Returns real source rather than a hand-written snippet so the arm is
+    fed something that parses the same way the genuine file does.
+    """
+    return inspect.getsource(module).replace(
+        "error_class=type(exc).__name__",
+        "error_class=str(exc)",
+    )
+
+
+def test_a_stringified_call_site_turns_the_call_site_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The call-site arm is what carries F-5.0-21's real guarantee, since
+    the guard in front of it is a shape check rather than a secrecy check.
+    An arm that walks parsed source can pass vacuously by matching
+    nothing, so this proves it discriminates: feed it a source where the
+    class-name literal became `str(exc)` and it must go red.
+    """
+    original_module_source = test_audit._module_source
+
+    control_arm = test_audit.TestErrorClassCallSitesPassAClassNameLiteral()
+    control_arm.test_every_record_tool_call_passes_a_class_name_or_none()
+
+    monkeypatch.setattr(
+        test_audit, "_module_source", _source_with_a_stringified_error_class
+    )
+
+    mutated_arm = test_audit.TestErrorClassCallSitesPassAClassNameLiteral()
+    with pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_every_record_tool_call_passes_a_class_name_or_none()
+
+    monkeypatch.undo()
+    assert test_audit._module_source is original_module_source
 
 
 if __name__ == "__main__":

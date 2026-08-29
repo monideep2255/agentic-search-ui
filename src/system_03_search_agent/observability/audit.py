@@ -57,14 +57,68 @@ exception's CLASS NAME only, never `str(exc)`: a driver or client
 exception can carry a DSN, an API key, or a connection string in its
 message text, and Section 16 and the production-standards secrets gate
 both apply here exactly as they do to the interactions writer.
+
+## Why the error field is a code, not a message
+
+Three consecutive rounds of this phase (F-5.0-13, F-5.0-14, F-5.0-19)
+tried to make a string scanner safe enough to let a caught exception's
+message reach this append-only sink. Each round passed its own tests and
+was then defeated by an input of the same family: something upstream of
+the credential consumed it before it was ever scanned. Build phase 4.14
+recorded the durable lesson that this phase then reproduced three more
+times, when a check keeps losing to inputs of the same shape, stop
+hardening the check and change what it is checking.
+
+So the error field no longer accepts free text at all. It accepts a code
+drawn from `AUDIT_ERROR_CODES`, a closed vocabulary defined below, plus
+optionally the exception's CLASS NAME. The distinction that makes this
+structural rather than another scanner is the one `feedback/writer.py`
+already relies on: an exception's class name is chosen by the code that
+declares it, while an exception's message is assembled from data, which
+in this system means URLs, DSNs and response bodies that carry
+credentials.
+
+## The two halves are not bounded to the same degree
+
+Stated because the sentence that used to sit here said they were, and it
+was false in the dangerous direction (F-5.0-21). Build phase 4.15's
+durable lesson is that the fix for a confident sentence describing a
+check that is not there is deletion plus a test, never a better sentence.
+
+The closed vocabulary IS a complete bound. A value that is not a member
+is discarded, so nothing derived from data has a path through it.
+
+`str.isidentifier()` is NOT a bound of that kind. It is a SHAPE guard: it
+excludes every character a URL, a DSN or a query-string assignment needs,
+which is what makes an exception MESSAGE unspellable as a class name, and
+it does not exclude a bare alphanumeric token, which is the shape of an
+opaque API key. Measured on this branch: `"a" + uuid.uuid4().hex` is 33
+characters and `isidentifier()` returns True, and the check accepts the
+full Unicode ID_Start range, so a Cyrillic-led token passes too.
+`_MAX_ERROR_CLASS_CHARS` bounds length and nothing else.
+
+What keeps a credential out of `error_class` today is therefore the
+CALLER, not the guard: both shipped call sites pass `type(exc).__name__`,
+a source-code literal rather than data. That guarantee is pinned where it
+actually lives rather than asserted here, by
+`test_audit.TestErrorClassCallSitesPassAClassNameLiteral`, which parses
+both modules and turns red the moment a `record_tool_call` call site
+passes anything else. The guard behind it is what stops a wrong caller
+writing a URL or a message; it is not the reason the field is safe.
+
+A value that is not in the vocabulary FAILS CLOSED to `unexpected`
+(`UNEXPECTED_ERROR_CODE`) rather than being passed through. A permissive
+fallback here would reintroduce exactly the hole this design removes, so
+there is deliberately no way for a caller to widen the vocabulary at a
+call site.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
-import urllib.parse
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
@@ -75,6 +129,9 @@ from typing import Any
 from system_03_search_agent.observability.config import audit_enabled, audit_log_path
 
 __all__ = [
+    "AUDIT_ERROR_CODES",
+    "UNEXPECTED_ERROR_CODE",
+    "classify_error_code",
     "current_trace_id",
     "record_tool_call",
     "redact_params",
@@ -110,11 +167,65 @@ _SECRET_KEY_MARKERS: tuple[str, ...] = (
     "connection",
 )
 
-#: Cap on the SERIALIZED, already-redacted params, in UTF-8 bytes. One
-#: oversized retrieved or returned payload must not blow up a log line or
-#: crowd out the rest of the record (tool-call-budgets.md's bounded-context
-#: principle, applied here to an audit line instead of a model prompt).
+#: Cap on the SERIALIZED, already-redacted `params` value, in UTF-8 bytes.
+#: One oversized retrieved or returned payload must not blow up a log line
+#: or crowd out the rest of the record (tool-call-budgets.md's
+#: bounded-context principle, applied here to an audit line instead of a
+#: model prompt). It briefly also covered the `error` field, between
+#: F-5.0-13's fix and this design change; the error half is now bounded by
+#: its own vocabulary rather than by a size cap, so `params` is the only
+#: field a cap can still apply to.
 _MAX_PARAMS_BYTES = 4096
+
+#: The code recorded when a caller supplies anything this module does not
+#: recognize. Named separately from the tuple below so a caller and a test
+#: can both refer to the fail-closed outcome without spelling it.
+UNEXPECTED_ERROR_CODE = "unexpected"
+
+#: THE CLOSED VOCABULARY. The only values that may ever reach the audit
+#: line's `error_code` field. Closed rather than open because the whole
+#: point of this design is that the field's contents are chosen by code
+#: rather than derived from data: an enumerated set has no path a
+#: credential can travel down, and a free string has several, all three of
+#: which this phase measured (F-5.0-13, F-5.0-14, F-5.0-19).
+#:
+#: Which codes have a producer TODAY, stated rather than implied so a
+#: reader does not assume every member is exercised:
+#:
+#: - `timeout`, `connection`, `auth`: raised by `graph_connection`'s typed
+#:   GraphError family and by `ncbi_transport`'s TransportError family.
+#: - `rate_limited`: `TransportRateLimitedError` and, over the HTTPS graph
+#:   transport, `graph_http_transport.GraphRateLimitedError`.
+#: - `unexpected`: the fail-closed outcome, and the mapping for a bare
+#:   base-class exception that no more specific rule claimed.
+#: - `http_error` and `empty`: reserved for Section 20.3's "body-level
+#:   error and empty signal" case, which today is classified inside the
+#:   action modules above the transport (`classify_eutils_response`,
+#:   `classify_status_coded_response`) and never reaches a chokepoint as
+#:   an exception. They are declared here so the action layer has a code
+#:   to use when it is wired, not because a chokepoint emits them now.
+AUDIT_ERROR_CODES: tuple[str, ...] = (
+    "timeout",
+    "connection",
+    "auth",
+    "rate_limited",
+    "http_error",
+    "empty",
+    UNEXPECTED_ERROR_CODE,
+)
+
+#: Cap on a recorded exception class name. A real class name is a short
+#: Python identifier; this bounds a caller that passes something else
+#: entirely, so the field cannot become a channel for bulk text. It bounds
+#: LENGTH and nothing else: at 128 it sits far above every credential this
+#: system handles, so it is not a second bound on secrecy (F-5.0-21).
+_MAX_ERROR_CLASS_CHARS = 128
+
+#: What is recorded when `error_class` is present but is not a plain
+#: identifier. A constant rather than silence, because this repository's
+#: standing rule is that a system dropping something says that it did;
+#: it carries no part of the refused value.
+_REFUSED_ERROR_CLASS = "[not-an-identifier]"
 
 #: One writer per process (Section 20.3, stated explicitly). Guards every
 #: append so two concurrent tool calls can never interleave their lines or
@@ -167,6 +278,90 @@ def current_trace_id() -> str | None:
     return _trace_id_var.get()
 
 
+def classify_error_code(value: Any) -> str | None:
+    """Reduce a caller-supplied error code to the closed vocabulary, or fail closed.
+
+    Three outcomes, and there is deliberately no fourth:
+
+    - `None` in, `None` out. A call that succeeded records no code, and
+      routing None through the vocabulary check would turn a success into
+      an `unexpected` failure.
+    - A member of `AUDIT_ERROR_CODES` is recorded as the VOCABULARY
+      MEMBER, not as the caller's object (F-5.0-22). The two are equal by
+      definition when the caller passed a plain `str`, so this changes
+      nothing for a real caller and removes a class of problem for a
+      hostile one.
+    - EVERYTHING ELSE becomes `UNEXPECTED_ERROR_CODE`. Not the value, not
+      a truncated or redacted form of the value, not a scanned form of the
+      value: the value is discarded entirely and never touches the line.
+
+    That last branch is the whole design. It is what makes this a
+    structural bound rather than a fourth attempt at a scanner: a caller
+    that passes `str(exc)`, a URL, a DSN or a response body gets
+    `unexpected` written, so no amount of hostile message text has a path
+    to the append-only sink. It also means a legitimate but MISSPELLED
+    code is silently downgraded rather than recorded, which is the correct
+    trade when the alternative is a credential in a file that is never
+    rewritten. The enumerating tests in `test_audit.py` are what catch a
+    misspelling, at build time rather than at read time.
+
+    `type(value) is str` rather than `isinstance` (F-5.0-22): tuple
+    containment evaluates `value.__eq__(member)`, so a `str` subclass
+    overriding `__eq__` was measured being admitted and then returned
+    VERBATIM, writing a value that is in no vocabulary at all. An exact
+    type test is the one check a subclass cannot override, and returning
+    the matched member rather than the caller's object closes the same
+    hole from the other side.
+    """
+    if value is None:
+        return None
+    if type(value) is str:
+        for code in AUDIT_ERROR_CODES:
+            if value == code:
+                return code
+    return UNEXPECTED_ERROR_CODE
+
+
+def _safe_error_class(value: Any) -> str | None:
+    """Admit an exception CLASS NAME, refuse anything that is not one.
+
+    A class name is developer-controlled: it is written in a `class`
+    statement, never assembled from a URL, a response body or a driver's
+    message text. `feedback/writer.py` already relies on exactly this
+    distinction, logging `type(exc).__name__` and never `str(exc)`, and
+    this module's own failure handler does the same.
+
+    `str.isidentifier()` is the check because it is the same rule Python
+    itself applies to a class name, and it structurally excludes every
+    character a credential needs to travel: no `=`, no `:`, no `/`, no
+    `@`, no `?`, no `&`, no whitespace and no quote can appear in an
+    identifier, so neither a query-string assignment nor a DSN's userinfo
+    segment can be spelled as one.
+
+    What it does NOT exclude is a bare alphanumeric token, the shape of an
+    opaque API key: this is a SHAPE guard, not a secrecy guard (F-5.0-21).
+    The length cap bounds bulk text only. The module docstring above names
+    what the field's safety actually rests on, and the arm that pins it.
+
+    `type(value) is str` rather than `isinstance` (F-5.0-22): both bounds
+    below are `str` METHODS, and a subclass whose `isidentifier()` returns
+    True and whose `__len__` returns 4 was measured being returned
+    verbatim carrying `=`, `:`, `/` and `?`, the exact character class the
+    paragraph above says an identifier cannot contain. An exact type test
+    is the one check a subclass cannot override, so it stands in front of
+    the two it can.
+    """
+    if value is None:
+        return None
+    if (
+        type(value) is str
+        and len(value) <= _MAX_ERROR_CLASS_CHARS
+        and value.isidentifier()
+    ):
+        return value
+    return _REFUSED_ERROR_CLASS
+
+
 def _is_secret_key(key: Any) -> bool:
     """Whether a params key name matches the secret-ish category, not a specific name."""
     if not isinstance(key, str):
@@ -175,76 +370,172 @@ def _is_secret_key(key: Any) -> bool:
     return any(marker in lowered for marker in _SECRET_KEY_MARKERS)
 
 
-def _redact_netloc(netloc: str) -> str:
-    """Blank a connection-string password living in a URL's userinfo segment.
+#: Matches `://user:password@` wherever it occurs, with no attempt to find
+#: where the surrounding URL ends. The leading `://` is a literal, so the
+#: regex engine skips straight to each candidate rather than scanning a
+#: scheme name from every position, which is what keeps this linear on a
+#: long string. The username half excludes `:` so the first colon is always
+#: the split, matching RFC 3986's userinfo rule; the password half allows
+#: `:` and `@` but not `/?#`, so it stops at the netloc's own end and,
+#: being greedy, takes the LAST `@` inside it, which is the host delimiter
+#: when a password itself contains one.
+_NETLOC_CREDENTIAL_PATTERN = re.compile(r"://([^\s/?#@:\"'<>]*):([^\s/?#\"'<>]*)@")
 
-    `user:password@host:port` is the shape, and the password half is
-    sensitive by definition, not because its own name matches a marker.
-    Unlike the query-string case below, nothing here checks
-    `_SECRET_KEY_MARKERS` before redacting: there is no key name attached to
-    a netloc password to check against, only its position. A bare username
-    with no password (`user@host`, no colon) carries nothing to redact and
-    is left alone.
+#: The single characters that end a `name=value` assignment's value, beyond
+#: whitespace: an ampersand, a fragment marker, a quote of either kind, or
+#: an angle bracket. Named once so `_ASSIGNMENT_PATTERN` below and the
+#: `_redact_value_string` docstring can both point at this set instead of
+#: each spelling it out separately, which is how F-5.0-16 and F-5.0-18
+#: happened, one round declared the set in prose and the next round's
+#: prose drifted from it in opposite directions, one dropping a real
+#: member and the other inventing members that were never in it. Brackets,
+#: parentheses, braces, commas and semicolons are deliberately NOT in this
+#: set: they are legal inside a query value (Entrez's own field syntax
+#: puts square brackets there) and treating them as boundaries is exactly
+#: what F-5.0-14 measured leaking.
+_VALUE_TERMINATOR_CHARS = "&#\"'<>"
+
+#: Matches a `name=value` assignment wherever it occurs. The lookbehind
+#: pins the name to its own start so a longer name cannot match by its
+#: suffix, and it is also what keeps this linear: inside a run of name
+#: characters every position but the first fails in one step, so the
+#: unbounded `+` is paid once per run rather than once per character. The
+#: value runs to whatever terminates it locally per `_VALUE_TERMINATOR_CHARS`
+#: plus whitespace, which is a far more local decision than finding the end
+#: of the enclosing URL.
+_ASSIGNMENT_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_.%+\-])([A-Za-z0-9_.%+\-]+)=([^\s" + _VALUE_TERMINATOR_CHARS + r"]*)"
+)
+
+
+def _redact_netloc_credential(match: re.Match[str]) -> str:
+    """Blank the password half of one `://user:password@` match.
+
+    A password in a userinfo segment is sensitive by position rather than
+    by name: there is no key name attached to it to test against
+    `_SECRET_KEY_MARKERS`, only where it sits. The username and everything
+    after the `@` are preserved so the audit line still names who connected
+    and to which host, which is what Section 20.3 wants the line for.
     """
-    if "@" not in netloc:
-        return netloc
-    userinfo, _, hostpart = netloc.rpartition("@")
-    if ":" not in userinfo:
-        return netloc
-    user, _, _password = userinfo.partition(":")
-    return user + ":" + REDACTED_PLACEHOLDER + "@" + hostpart
+    return "://" + match.group(1) + ":" + REDACTED_PLACEHOLDER + "@"
 
 
-def _redact_query(query: str) -> str:
-    """Replace the value of any secret-ish-NAMED query parameter.
+def _redact_secret_assignment(match: re.Match[str]) -> str:
+    """Blank the value of one `name=value` match whose NAME is secret-ish.
 
-    Reuses `_is_secret_key` (and therefore `_SECRET_KEY_MARKERS`) rather
-    than a second, separately maintained marker list, per F-5.0-08's
-    instruction: the key-name rule and this value-level rule must not be
-    able to drift into two different definitions of "secret". A parameter
-    whose name does not match passes through with its original value.
+    Reuses `_is_secret_key`, and therefore `_SECRET_KEY_MARKERS`, rather
+    than a second marker list: the key-name rule in `redact_params` and
+    this value-level rule must not be able to drift into two different
+    definitions of "secret".
+
+    An empty value is left exactly as it was, because a name with nothing
+    after the equals sign carries no secret, and writing a placeholder
+    there would tell an operator a credential had been present when none
+    was.
     """
-    if not query:
-        return query
-    pairs = urllib.parse.parse_qsl(query, keep_blank_values=True)
-    redacted_pairs = [
-        (key, REDACTED_PLACEHOLDER if _is_secret_key(key) else value) for key, value in pairs
-    ]
-    return urllib.parse.urlencode(redacted_pairs)
+    name, value = match.group(1), match.group(2)
+    if not value or not _is_secret_key(name):
+        return match.group(0)
+    return name + "=" + REDACTED_PLACEHOLDER
+
+
+def _redact_netloc_credentials(value: str) -> str:
+    """Apply the netloc-credential rule everywhere it matches in a string."""
+    return _NETLOC_CREDENTIAL_PATTERN.sub(_redact_netloc_credential, value)
+
+
+def _redact_secret_assignments(value: str) -> str:
+    """Apply the secret-assignment rule everywhere it matches in a string."""
+    return _ASSIGNMENT_PATTERN.sub(_redact_secret_assignment, value)
 
 
 def _redact_value_string(value: str) -> str:
-    """Scan a single string leaf for a credential riding inside a URL or DSN.
+    """BEST EFFORT defense in depth over caller-supplied `params`. NOT a control.
 
-    F-5.0-08: a key-name rule alone cannot see `_append_api_key`'s
-    `api_key=` query parameter once it is embedded in a URL held under an
-    innocuous key such as `endpoint`. This is the category fix: not a list
-    of known secret-carrying URLs, but a structural read of any string that
-    is shaped like `scheme://...`, redacting whatever sits in the two
-    places a credential actually rides (a netloc password, a secret-ish
-    query parameter) and leaving everything else, scheme, host, path,
-    non-secret query, byte-identical.
+    Read this paragraph before relying on anything below it. This function
+    is not a guarantee and must never be cited as one. A KNOWN GAP EXISTS
+    and is open: F-5.0-19 measured that a non-secret assignment whose value
+    is a URL swallows a secret assignment inside it, so
+    `url=https://h/x?api_key=<secret>` passes through BYTE-IDENTICAL with
+    nothing redacted at all. That gap is pinned by an executable arm,
+    `TestKnownGapF5019` in `test_audit.py`, which asserts the leak still
+    happens, so it cannot be quietly forgotten and cannot be closed
+    without someone also correcting this paragraph.
 
-    Only strings containing "://" are inspected at all, since anything else
-    cannot be this shape. `urlsplit` never raises on a plain string, so no
-    exception handling is needed here; a string that merely contains "://"
-    without being real URL/DSN syntax fails the `scheme and netloc` check
-    below and is returned untouched. When nothing in the string actually
-    needed redacting, the ORIGINAL string is returned rather than a
-    reserialized one, since `urlencode`'s percent-encoding style need not
-    match the caller's, and a value with nothing to hide should never come
-    back byte-different from what it went in as.
+    What this is FOR, and why it is kept despite that gap: `params` is a
+    caller-supplied mapping whose values this module does not control, and
+    on the shapes it does catch (F-5.0-08's and F-5.0-13's measured
+    reproductions) it is the only thing standing between a DSN or an
+    api_key query parameter and an append-only file. Removing it would
+    regress that coverage for no gain, so it stays, demoted to what it
+    actually is.
+
+    What the REAL controls are, neither of which is a scanner:
+
+    - For the transport: `ncbi_transport._endpoint_for_audit` records host
+      plus path and never the raw URL, so the credential
+      `_append_api_key` appends is never handed to this module in the
+      first place. That is unchanged by this demotion and stays.
+    - For the error field: `record_tool_call` accepts a code from
+      `AUDIT_ERROR_CODES` and an exception class name, never free text,
+      so there is no longer any message body for this function to be the
+      last line of defense over.
+
+    ## What it does, on the shapes it does catch
+
+    Three rounds of this control tried to DELIMIT a URL inside prose and
+    then redact within it, and each round was defeated by an input of the
+    same family, because the end of a URL embedded in human text is
+    genuinely ambiguous: brackets, parentheses and quotes are all legal in
+    a query value and all ordinary prose punctuation, so every boundary
+    rule is wrong for some real input. F-5.0-14 measured the last one
+    failing on Entrez's own bracketed field syntax, and the failure was not
+    a leak of the bracketed value: the bracket TRUNCATED the token, so the
+    credential appended after it was never scanned at all.
+
+    So this attacks the secret assignment directly instead, and never asks
+    where the URL ends:
+
+    1. `_redact_netloc_credentials`: a password in a `scheme://user:pw@host`
+       userinfo segment, wherever that segment occurs.
+    2. `_redact_secret_assignments`: the value of any `name=value` whose
+       name matches `_SECRET_KEY_MARKERS`, wherever it occurs, ending at
+       the value's own local terminator rather than at the enclosing URL's.
+
+    Neither needs to know where the URL ends, which is the whole point.
+    Rule 2 also covers, for free, the case the previous implementation
+    declared out of scope: a bare secret-ish assignment sitting in prose
+    with no URL wrapper around it at all.
+
+    When nothing actually needed redacting, the ORIGINAL string is returned
+    rather than a rebuilt one. Section 20.3 records the endpoint and the
+    error so an operator can diagnose a failure, and a line redacted into
+    uselessness defeats the purpose of writing it, so an ordinary URL or
+    message carrying no secret must come back byte-identical.
+
+    What genuinely defeats this is a test rather than a sentence here:
+    `TestSecretAssignmentRedaction` and `TestValueTerminatorSet` in
+    `test_audit.py` pin it, a raw character from `_VALUE_TERMINATOR_CHARS`
+    (an ampersand, a fragment marker, a quote of either kind, or an angle
+    bracket) or whitespace inside the credential itself ends the value
+    there, because under URL rules those characters end a value and no
+    parser could decide otherwise. This paragraph names the set by
+    reference to `_VALUE_TERMINATOR_CHARS` rather than spelling it out a
+    third time in prose: F-5.0-16 found a previous version of this exact
+    sentence had dropped the angle bracket, and F-5.0-18 found the
+    following attempt to correct it invented several characters, brackets,
+    braces, commas, a semicolon, that were never in the set at all,
+    because prose enumerated here has no way to stay tied to the regex it
+    describes. Nothing else in this docstring asserts a security property,
+    deliberately: build phase 4.15 shipped four defects that were a
+    confident sentence describing a check that was not there, and the
+    durable fix recorded there was deletion plus a test, never a more
+    careful sentence.
     """
-    if "://" not in value:
+    if "=" not in value and "://" not in value:
         return value
-    parsed = urllib.parse.urlsplit(value)
-    if not parsed.scheme or not parsed.netloc:
-        return value
-    netloc = _redact_netloc(parsed.netloc)
-    query = _redact_query(parsed.query)
-    if netloc == parsed.netloc and query == parsed.query:
-        return value
-    return urllib.parse.urlunsplit((parsed.scheme, netloc, parsed.path, query, parsed.fragment))
+    redacted = _redact_secret_assignments(_redact_netloc_credentials(value))
+    return redacted if redacted != value else value
 
 
 def redact_params(value: Any) -> Any:
@@ -260,17 +551,28 @@ def redact_params(value: Any) -> Any:
        under a key named `credentials` might itself be a structure carrying
        more than one secret, and redacting only a leaf inside it would
        still leak the rest.
-    2. Value-scanning rule (F-5.0-08): a string value that SURVIVES rule 1,
-       because its key name was innocuous, is itself inspected for a
-       credential embedded in a URL query parameter or a connection-string
-       password (`_redact_value_string`). This is the case a key-name rule
-       structurally cannot see: `_append_api_key` in `ncbi_transport.py`
-       appends the NCBI API key to a query string, so a field named
-       `endpoint` or `url` can carry the credential with no secret-ish key
-       anywhere above it.
+    2. Value-scanning rule (F-5.0-08, extended by F-5.0-13 and F-5.0-14):
+       BEST EFFORT ONLY, with a known open gap. A string value that
+       SURVIVES rule 1, because its key name was innocuous, is itself
+       scanned for a secret-ish `name=value` assignment and for a
+       connection-string password (`_redact_value_string`). Read that
+       function's own docstring before relying on this: F-5.0-19 measured
+       a shape it does not catch, and it must not be described as a
+       guarantee. It exists because `params` is caller-supplied and a
+       credential can ride inside a value under a key like `endpoint`
+       that the key-name rule structurally cannot see. Both rules decide
+       "secret" from `_SECRET_KEY_MARKERS`, so they cannot drift into two
+       different definitions of the word.
 
     Non-dict, non-list, non-string leaves (numbers, booleans, None) pass
     through unchanged.
+
+    This function is no longer on the error field's path at all. It was,
+    between F-5.0-13's fix and this design change, and that arrangement
+    made a best-effort scanner the ONLY thing between a caught exception's
+    message and an append-only file. `record_tool_call` now takes a code
+    from a closed vocabulary instead, so the message never exists as a
+    field for this to guard.
 
     This is a pure function with no knowledge of the size cap or the
     disclosure marker below; `record_tool_call` composes it with both.
@@ -287,8 +589,18 @@ def redact_params(value: Any) -> Any:
     return value
 
 
-def _bounded(redacted: Any) -> Any:
-    """Cap the serialized size of an already-redacted params value.
+def _bounded(redacted: Any, *, field_name: str = "params") -> Any:
+    """Cap the serialized size of an already-redacted value.
+
+    `params` is the only caller today. `field_name` is kept as a
+    parameter rather than hardcoded because the disclosure marker names
+    the field it refers to, and a second capped field is a plausible
+    future addition; it is not kept because `error` still uses it, which
+    it no longer does. The error half is bounded by `AUDIT_ERROR_CODES`
+    and `_MAX_ERROR_CLASS_CHARS` instead, which is a stronger bound than a
+    size cap: a size cap shortens an oversized value, while a closed
+    vocabulary means an oversized value never becomes a field value at
+    all.
 
     Applied AFTER redaction, never before: redacting a value that has
     already been truncated could redact a fragment of a secret while
@@ -308,13 +620,13 @@ def _bounded(redacted: Any) -> Any:
         # object slipping through as a leaf) is exactly as reportable as an
         # oversized one: name what happened, never raise.
         return {
-            "_audit_note": "params could not be serialized and were dropped",
+            "_audit_note": f"{field_name} could not be serialized and was dropped",
         }
     encoded_len = len(serialized.encode("utf-8"))
     if encoded_len <= _MAX_PARAMS_BYTES:
         return redacted
     return {
-        "_audit_note": "params exceeded the audit log size cap and were dropped",
+        "_audit_note": f"{field_name} exceeded the audit log size cap and was dropped",
         "_audit_original_bytes": encoded_len,
         "_audit_cap_bytes": _MAX_PARAMS_BYTES,
     }
@@ -348,6 +660,8 @@ def record_tool_call(
     params: Mapping[str, Any] | None = None,
     record_ids: Sequence[Any] | None = None,
     http_status: int | None = None,
+    error_code: str | None = None,
+    error_class: str | None = None,
     error: str | None = None,
 ) -> None:
     """Append one Section 20.3 audit line for a single Layer 1/2/3 access.
@@ -379,7 +693,40 @@ def record_tool_call(
             HTTP semantics (a graph query, an FTP transfer) or a
             body-level failure E-utilities reports with no status code at
             all (Section 20.3's own "empty signal for E-utilities" case).
-        error: a short error string, or None for a call that succeeded.
+        error_code: one member of `AUDIT_ERROR_CODES`, or None for a call
+            that succeeded. NOT free text, and not derived from any
+            exception message, URL or response body: see this module's
+            docstring for why three rounds of scanning free text were
+            abandoned in favour of a closed vocabulary. Anything outside
+            the vocabulary FAILS CLOSED to `unexpected` and the supplied
+            value is discarded, never written in any form.
+        error_class: the exception's class name, `type(exc).__name__`, or
+            None. Developer-controlled by construction, the same thing
+            `feedback/writer.py` logs and for the same reason. Admitted
+            only when it is a plain Python identifier within
+            `_MAX_ERROR_CLASS_CHARS`; anything else records
+            `_REFUSED_ERROR_CLASS` instead of the value.
+        error: DEPRECATED legacy keyword, kept only so a caller this
+            design change may not edit keeps working. It is routed through
+            the SAME `classify_error_code` as `error_code`, so a message
+            string passed here is not in the vocabulary and records
+            `unexpected`. It can therefore never carry text onto the line,
+            only lose fidelity relative to a converted call site.
+            `src/system_03_search_agent/tools/pathogen_ftp_transport.py`
+            is the one remaining caller, tracked as F-5.0-20 in
+            `tracker/phase_5.0.md` with the one-line change it needs.
+            `error_code` wins when both are supplied.
+
+    Section 20.3 compliance for the error half of "HTTP status or the
+    body-level error and empty signal": the line carries `http_status`
+    (the numeric status, unchanged) alongside `error_code`, so a reader
+    gets the status where one exists and a classified reason where the
+    failure had no HTTP semantics at all, which is every graph call and
+    every connection-level failure. A code plus a status is strictly more
+    machine-readable than the free-text message it replaces, and it is
+    what the premise gate's Section 20.3 field-completeness arm now
+    checks for.
+
         trace_id is not a parameter here: it is read from the ContextVar
         this module owns, via `current_trace_id()`, so every caller in a
         given run threads the same value with no argument to remember to
@@ -406,7 +753,16 @@ def record_tool_call(
             "params": _bounded(redact_params(dict(params) if params else {})),
             "record_ids": list(record_ids) if record_ids is not None else [],
             "http_status": http_status,
-            "error": error,
+            # Neither of these two runs through `redact_params`, and that
+            # is the point rather than an omission: a closed vocabulary
+            # and a Python identifier have no path a credential can travel
+            # down, so there is nothing for a redactor to find. Sending
+            # them through one anyway would restate the scanner as the
+            # control, which is the arrangement this change removes.
+            "error_code": classify_error_code(
+                error_code if error_code is not None else error
+            ),
+            "error_class": _safe_error_class(error_class),
             "latency_ms": latency_ms,
         }
         line = json.dumps(entry, default=str)

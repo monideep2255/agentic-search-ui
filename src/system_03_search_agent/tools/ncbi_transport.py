@@ -278,7 +278,10 @@ from xml.etree import ElementTree
 
 import httpx
 
-from system_03_search_agent.observability.audit import record_tool_call
+from system_03_search_agent.observability.audit import (
+    UNEXPECTED_ERROR_CODE,
+    record_tool_call,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -406,6 +409,47 @@ class TransportRateLimitedError(TransportError):
         super().__init__(message)
         self.family = family
         self.retry_after = retry_after
+
+
+#: Maps this module's typed TransportError family onto
+#: `audit.AUDIT_ERROR_CODES`. Every member of the family is defined in this
+#: file, so unlike `graph_connection`'s equivalent this one binds class
+#: OBJECTS: there is no circular import to route around, and a class object
+#: cannot be defeated by a rename the way a name string can.
+#:
+#: The base `TransportError` maps to `unexpected` on purpose. It is the
+#: catch-all, so a NEW direct subclass added without a row here inherits
+#: `unexpected` by MRO rather than leaking anything, and `test_audit.py`'s
+#: enumerating arm turns red because it asserts every direct subclass maps
+#: to something other than the catch-all.
+_AUDIT_ERROR_CODE_BY_CLASS: dict[type[BaseException], str] = {
+    TransportTimeoutError: "timeout",
+    TransportConnectionError: "connection",
+    TransportRateLimitedError: "rate_limited",
+    TransportError: UNEXPECTED_ERROR_CODE,
+}
+
+
+def audit_error_code(exc: BaseException) -> str:
+    """Classify one exception into the audit log's closed vocabulary.
+
+    Walks the MRO so a subclass of an already-mapped error inherits its
+    parent's code rather than falling to the catch-all.
+
+    Anything that is not a `TransportError`, an `httpx` exception that
+    escaped `_execute_with_retry`'s own classification, or a failure while
+    building the client, returns `unexpected`. That fail-closed branch is
+    why `execute_get`'s `except Exception` needs no provenance argument:
+    whatever arrives, the audit line records a code chosen here rather
+    than anything derived from the exception's message, which for this
+    module is the one place a URL carrying `_append_api_key`'s appended
+    credential could otherwise have appeared.
+    """
+    for klass in type(exc).__mro__:
+        code = _AUDIT_ERROR_CODE_BY_CLASS.get(klass)
+        if code is not None:
+            return code
+    return UNEXPECTED_ERROR_CODE
 
 
 @dataclass(frozen=True)
@@ -1276,7 +1320,16 @@ async def execute_get(
             # applies its own key-name and value-scanning rules on top.
             params=dict(params),
             http_status=None,
-            error=str(exc),
+            # Classified, never stringified. `str(exc)` used to go here.
+            # `_host_of` keeps this module's OWN diagnostics free of the
+            # api_key `_append_api_key` appends, but an exception raised
+            # by httpx or by any future caller is not bound by that
+            # convention, and `except Exception` is bounded by nothing. A
+            # code from a closed vocabulary plus a class name are both
+            # chosen by this repository's own code, so neither can carry
+            # a URL, a query string, or a response body at all.
+            error_code=audit_error_code(exc),
+            error_class=type(exc).__name__,
         )
         raise
     record_tool_call(
@@ -1287,7 +1340,8 @@ async def execute_get(
         authorization="ncbi_api_key" if include_api_key else "none",
         params=dict(params),
         http_status=response.status_code,
-        error=None,
+        error_code=None,
+        error_class=None,
     )
     return response
 
