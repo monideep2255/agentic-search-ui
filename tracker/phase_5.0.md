@@ -160,6 +160,19 @@ Stated here rather than discovered later, per `.claude/rules/goal-contracts.md`'
 - NUMERIC HTTP STATUS IS CAPTURED AT THE TRANSPORT ONLY. A tool output still carries the classified three-value status, unchanged by this phase. The audit line and the tool output therefore describe the same call at different resolutions, deliberately.
 - THE ADVERSARY'S USUAL TARGET IS ABSENT. This phase generates no answers, so cite-or-refuse is untouched and `eval-harness` does not apply. The adversary's target here is the PII boundary and the no-credential path.
 
+### Mutation evidence for T-5.0-01, run 2026-08-29
+
+Four mutations, each restoring `config.py` byte-identical afterwards and confirmed by `diff`. Recorded here so T-5.0-07 inherits a proven starting set rather than re-deriving one, per build phase 4.15's rule that the mutation case is added in the same edit as the arm.
+
+| Mutation applied to `config.py` | Suite result |
+|---|---|
+| `tracing_enabled()` returns `tracing_flag_set()` alone, dropping the key requirement. This IS the naive implementation of this phase | 1 failed, 17 passed |
+| `_first_set` returns a present-but-empty value instead of treating it as absent | 4 failed, 14 passed |
+| `_is_truthy` accepts `1`, `yes` and `on`, diverging from the installed langsmith's narrow rule | 3 failed, 15 passed |
+| `audit_enabled()` returns False for any value of the env var | 1 failed, 17 passed |
+
+Unmutated: `18 passed in 0.02s`.
+
 ## Findings
 
 Filed the moment they are established, per `.claude/rules/self-eval-loop.md`'s write-first rule and PR #70.
@@ -171,6 +184,7 @@ Filed the moment they are established, per `.claude/rules/self-eval-loop.md`'s w
 | F-5.0-03 | critical | Removing the hardcoded `tracing_context(enabled=False)` without adding redaction would transmit `Query.owner_id`, `Query.user_id` and `RequestContext.session_memory` to LangSmith, because `LANGCHAIN_TRACING_V2=true` is already set and LangGraph traces `GraphState` automatically | lead, from research | open | Not yet reachable: no `LANGSMITH_API_KEY` exists, so nothing is transmitted today. It becomes reachable the moment a key is provisioned, which makes it a blocker on this phase rather than on a later one. Owned by T-5.0-03 |
 | F-5.0-05 | major | A 200 `{"status":"Ok"}` from PostHog's capture endpoint proves NOTHING. Measured directly: an invented key, `phc_thisisnotarealkey_probe_only`, returns byte-identical success to what a real key returns, on both hosts | lead, probed live at phase open | open | Shapes the gate rather than the code. Any arm asserting "PostHog accepted the event" is vacuous by construction and would pass against a garbage key, a garbage project and a garbage event name. Owned by T-5.0-07 |
 | F-5.0-06 | minor | `POSTHOG_HOST` is `https://us.posthog.com` in `.env` and `env.example:109`, while PostHog documents `https://us.i.posthog.com` as the ingest host. Probed: both accept `/i/v0/e`, so this is a divergence from the documented endpoint rather than a break | lead, probed live at phase open | open | Move to the documented ingest host, since "works today" is not a contract. Owned by T-5.0-06 |
+| F-5.0-07 | major | The suite's hermetic guard cannot see LangSmith. `tests/conftest.py` blocks real outbound calls by patching `httpx.AsyncHTTPTransport.handle_async_request` and `httpx.HTTPTransport.handle_request`, deliberately at the socket-I/O layer so in-process ASGI clients are unaffected. The installed langsmith 0.10.10 drives its HTTP through `requests` (38 references in `client.py`) rather than httpx, so nothing in the guard covers it | lead, while reading conftest before writing config tests | open | Masked today only because tracing is hardcoded off and no key exists, which is exactly the pair this phase removes. Owned by T-5.0-07, which extends the guard to the `requests` layer. Recorded with its mechanism because a FIRST reading of the same file got it wrong in the safe direction, believing the guard was patched at `ncbi_transport.execute_get` and therefore narrower than it is |
 | F-5.0-04 | minor | Section 20.1 says the Guardrail step mints `trace_id`; the shipped code mints it in three adapters (`web_sse/app.py:1299`, `graphql/schema.py:291`, `mcp/server.py:765`) and Section 13.1 agrees with the code | lead, from research | open | A re-confirmation of the build phase 4.6 finding, not a new defect. Recorded so this phase does not re-manufacture the requirement that phase already reverted. No code change |
 
 ## History
