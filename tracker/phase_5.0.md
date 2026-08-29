@@ -144,7 +144,7 @@ Dispatch shape, per `.claude/rules/plan-then-fan-out.md` and bossman-mode Rule 1
 | T-5.0-02 | 1 | `observability/audit.py`: the append-only JSONL writer, the `trace_id` contextvar, the params redactor, one writer per process, never mutating a written line | `src/system_03_search_agent/observability/audit.py` | todo |
 | T-5.0-03 | 1 | `observability/tracing.py`: the configured tracing context and the `RunnableConfig` builder, with a redaction client that strips `owner_id`, `user_id` and session memory | `src/system_03_search_agent/observability/tracing.py` | todo |
 | T-5.0-04 | 1 | `observability/analytics.py`: the PostHog client over httpx with a declared timeout, and the aggregate-only event catalogue | `src/system_03_search_agent/observability/analytics.py` | todo |
-| T-5.0-05 | 2, serial | Every integration point, held by ONE builder: both `core/run.py` tracing sites, the contextvar set, the analytics epilogue, the three transport hooks, the feedback endpoint event | `core/run.py`, `tools/ncbi_transport.py`, `tools/graph_connection.py`, `tools/pathogen_ftp_transport.py`, `adapters/web_sse/app.py` | todo |
+| T-5.0-05 | 2, serial | Every integration point, held by ONE builder: both `core/run.py` tracing sites, the contextvar set, the analytics epilogue, the three transport hooks, the feedback endpoint event | `core/run.py`, `tools/ncbi_transport.py`, `tools/graph_connection.py`, `tools/pathogen_ftp_transport.py`, `adapters/web_sse/app.py` | done |
 | T-5.0-06 | 3 | `.gitignore` the audit log, update `env.example`, and document the three records | `.gitignore`, `env.example`, `docs/build/` | todo |
 | T-5.0-07 | 3 | The premise gate and its mutation harness, one mutation case added in the same edit as each arm | `tests/system_03_search_agent/observability/` | todo |
 
@@ -159,6 +159,15 @@ Stated here rather than discovered later, per `.claude/rules/goal-contracts.md`'
 - THREE OF SECTION 20.2'S SIX NAMED EVENTS CANNOT BE PRODUCED HONESTLY TODAY. Saved-query creation has a model at `data/models.py:311` and zero endpoint across all eight routes in `app.py`. The follow-up funnel has its join keys (`session_id`, and `askSeq` client-side) and no funnel logic anywhere. Session length is derivable retrospectively from `interactions.created_at` grouped by `session_id`, and no live session-start or session-end event exists. These three are recorded as not built rather than emitted as approximations.
 - NUMERIC HTTP STATUS IS CAPTURED AT THE TRANSPORT ONLY. A tool output still carries the classified three-value status, unchanged by this phase. The audit line and the tool output therefore describe the same call at different resolutions, deliberately.
 - THE ADVERSARY'S USUAL TARGET IS ABSENT. This phase generates no answers, so cite-or-refuse is untouched and `eval-harness` does not apply. The adversary's target here is the PII boundary and the no-credential path.
+
+### Coverage for T-5.0-05's wiring tests (test_wiring.py), run 2026-08-29
+
+`tests/system_03_search_agent/observability/test_wiring.py` proves the SEAM T-5.0-05 built, not the four modules it wires (each already has its own test file and its own coverage statement above). Stated separately, per the same rule, because this file's gap is a different shape from theirs.
+
+- THE BYPASS ARMS DO NOT INVOKE THE REAL BYPASS CALLERS. `TestBypassArms` calls `graph_connection.execute_cypher` and `ncbi_transport.execute_get` directly, with the same call shape `export/traversal.py:558`/`:801` and `core/graph.py`'s `_resolve_symbol_to_curie_uncached` use, but does not stand up either module's own dependency graph. This is sufficient to prove the chokepoint design's central claim (the same function is reached regardless of caller, because there is only one function to reach), since both real callers import and call the identical `execute_cypher`/`execute_get` names this file calls directly. It does NOT prove those two real callers still pass the correct arguments into that shared call today; `export/test_kgx_traversal.py` and `core/test_graph.py` own that, and neither of those files was touched by this ticket, so neither was re-verified against the now-audited transport as part of this change.
+- MUTATION-PROVEN FOR THE TWO PRIMARY CHOKEPOINTS ONLY. Every arm depending on `ncbi_transport.execute_get` or `graph_connection.execute_cypher` was hand-mutated (the `record_tool_call(...)` call site replaced with a no-op) and confirmed to turn red, then the source file was restored and confirmed byte-identical by `diff`. The `TestNoLangsmithKeyMeansZeroTraceThroughRun` arm's populate-check (the `config.tracing_enabled` call-counting spy) was mutation-proven the same way, against `core/run.py`'s own `traced_graph_run` call site, and incidentally reproduced this repository's original F-5.0-03 shape live: with the wrap removed, LangGraph's ambient LangSmith tracer attempted a genuine outbound HTTPS call, caught by `tests/conftest.py`'s hermetic-suite guard rather than by this file's own assertion. `TestPathogenChokepoint` and `TestCredentialNeverLeaksThroughTheTransport` were NOT separately hand-mutated; they share the identical file-existence populate-check shape as the two proven classes, and are recorded as unproven-by-mutation rather than assumed equivalent.
+- `AnalyticsEvent.QUERY_COMPLETED`'s wiring in `core/run.py`'s epilogue has NO dedicated arm in this file. It is exercised incidentally by `TestNoLangsmithKeyMeansZeroTraceThroughRun`'s full `run()` invocation (with `audit_enabled()` forced off so no audit file is written) but that arm asserts nothing about the analytics call itself; `POSTHOG_API_KEY` is not set in that fixture stack either, so `capture_event` is a no-op the whole way through and no assertion would have caught a broken property mapping. `AnalyticsEvent.FEEDBACK_SUBMITTED`'s wiring is covered by `tests/system_03_search_agent/adapters/web_sse/test_feedback_endpoint.py`, not by this file.
+- THE PATHOGEN CHOKEPOINT REMAINS THE LEAST EXERCISED, unchanged from the phase-level coverage statement above: `_get_directory_listing`'s own audit hook has no test in this file at all, only `stream_filtered_tsv_rows`'s does.
 
 ### Mutation evidence for T-5.0-01, run 2026-08-29
 
@@ -183,6 +192,38 @@ Constructed rather than reasoned, per this repository's standard that a claimed 
 | The identical credential as an E-utilities query parameter inside a URL, held under a key named `endpoint` | LEAKED verbatim |
 
 The two differ only in where the same secret sits, which is the whole finding. `_append_api_key` puts it in the query string, so the second shape is the one the transport actually produces and the first is the one the redactor was written against.
+
+### Live end-to-end verification, run 2026-08-29
+
+The product owner provisioned both credentials mid-phase, which turned the tracing half from "provable against a stub" into "seen working". Everything below is measured against the real services rather than a fake, and the PostHog half is deliberately absent for the reason F-5.0-12 gives.
+
+What one live query produced, `trace_id` `live-verify-8ae70ae8`:
+
+| Audit line | Layer | Endpoint | HTTP |
+|---|---|---|---|
+| `ncbi_transport:datasets` | 2 | `api.ncbi.nlm.nih.gov/datasets/v2/gene/symbol/BRCA1/taxon/human` | 200 |
+| `cypher_query` | 1 | `ncbi_kg` | none, this path carries no HTTP status |
+| `ncbi_transport:datasets` | 2 | `api.ncbi.nlm.nih.gov/datasets/v2/gene/id/672` | 200 |
+
+THE FIRST ROW IS THE PHASE'S CENTRAL CLAIM PROVING ITSELF ON REAL TRAFFIC, not in a test. `gene/symbol/BRCA1/taxon/human` is `think_node`'s symbol resolution (`core/graph.py:2038`), one of the five call sites that never reach `act_node`. An `act_node` hook would have written nothing for it while passing every criterion written against it. All three lines carry one `trace_id`, and both layers appear.
+
+F-5.0-08 on the real path, with a positive control, which is the half that makes it evidence rather than decoration:
+
+| Check | Result |
+|---|---|
+| The credential really was in the request URL (`_append_api_key` applied) | true, asserted before the negative check |
+| Credential present in the audit log | false |
+| Any `api_key` fragment in the audit log | false |
+
+F-5.0-03 read back OUT of LangSmith, on a second query carrying generated identity values, `trace_id` `pii-check-b958f3ec`, 9 spans and 190,335 characters of stored payload:
+
+| Field | Leaked to LangSmith |
+|---|---|
+| `owner_id` | NO |
+| `user_id` | NO |
+| `session_id` | NO |
+
+with `trace_id` present as the join key, the question text present (Section 20.1 permits it), and 30 `[redacted]` markers in the stored payload. The marker count is the populate-check: it distinguishes "redaction fired" from "those fields were never in the payload to begin with", which is the difference between an arm and a decoration.
 
 ## Findings
 

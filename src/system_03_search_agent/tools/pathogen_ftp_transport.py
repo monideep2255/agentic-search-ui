@@ -45,11 +45,14 @@ from __future__ import annotations
 import logging
 import re
 import time
+import urllib.parse
 from collections.abc import Collection
 from dataclasses import dataclass, field
 from typing import Final
 
 import httpx
+
+from system_03_search_agent.observability.audit import record_tool_call
 
 logger = logging.getLogger(__name__)
 
@@ -92,11 +95,55 @@ class TsvScanResult:
     total_rows_scanned: int = 0
 
 
+def _endpoint_for_audit(url: str) -> str:
+    """Host plus path for an audit line. Never the query string.
+
+    Nothing in this module appends a credential to a URL (there is no API
+    key on the public FTP tree), but the audit line's `endpoint` field
+    reads the same shape across every transport chokepoint on principle,
+    matching `ncbi_transport.py`'s own `_endpoint_for_audit`. A separate
+    copy rather than a cross-module import: that one is a private,
+    underscore-prefixed helper of its own module.
+    """
+    parsed = urllib.parse.urlsplit(url)
+    return (parsed.hostname or "unknown-host") + (parsed.path or "")
+
+
 async def _get_directory_listing(
     url: str, *, client: httpx.AsyncClient
 ) -> str:
-    response = await client.get(url, timeout=_DIRECTORY_LISTING_TIMEOUT_S)
-    response.raise_for_status()
+    # T-5.0-05: this and `stream_filtered_tsv_rows` below are this
+    # module's two network-reaching functions, so both are audited
+    # chokepoints, not one, despite the ticket brief's shorthand naming
+    # "the bulk FTP path" as a single item. This one is the small,
+    # frequent directory-listing GET; the other is the actual bulk
+    # transfer. Timed around the actual await only.
+    audit_started = time.monotonic()
+    status_code: int | None = None
+    try:
+        response = await client.get(url, timeout=_DIRECTORY_LISTING_TIMEOUT_S)
+        status_code = response.status_code
+        response.raise_for_status()
+    except Exception as exc:
+        record_tool_call(
+            tool="pathogen_detection",
+            layer=2,
+            endpoint=_endpoint_for_audit(url),
+            latency_ms=(time.monotonic() - audit_started) * 1000,
+            authorization="none",
+            http_status=status_code,
+            error=str(exc),
+        )
+        raise
+    record_tool_call(
+        tool="pathogen_detection",
+        layer=2,
+        endpoint=_endpoint_for_audit(url),
+        latency_ms=(time.monotonic() - audit_started) * 1000,
+        authorization="none",
+        http_status=status_code,
+        error=None,
+    )
     return response.text
 
 
@@ -231,37 +278,72 @@ async def stream_filtered_tsv_rows(
     key_index: int | None = None
 
     remaining_s = max(deadline - time.monotonic(), 0.1)
-    async with client.stream("GET", url, timeout=remaining_s) as response:
-        response.raise_for_status()
-        async for line in response.aiter_lines():
-            if time.monotonic() >= deadline:
-                truncated = True
-                break
-            if header is None:
-                header = line.split("\t")
-                try:
-                    key_index = header.index(key_column)
-                except ValueError as exc:
-                    raise PathogenTransportError(
-                        f"Column '{key_column}' not found in {url}'s header: {header}"
-                    ) from exc
-                continue
-            if not line:
-                continue
-            total_scanned += 1
-            fields = line.split("\t")
-            if key_index >= len(fields):
-                continue
-            value = fields[key_index]
-            if value not in key_values_set:
-                continue
-            matched.append(dict(zip(header, fields, strict=False)))
-            if max_matches and len(matched) >= max_matches:
-                break
-            if one_row_per_key:
-                remaining_keys.discard(value)
-                if not remaining_keys:
+    # T-5.0-05: the bulk-transfer chokepoint proper, per audit.py's module
+    # docstring and tracker/phase_5.0.md finding one, this module's other
+    # audited call being the small directory-listing GET in
+    # `_get_directory_listing` above. Timed around the whole streamed
+    # read, the actual await this call spends on the network, not around
+    # the deadline arithmetic above or the TsvScanResult construction
+    # below.
+    audit_started = time.monotonic()
+    status_code: int | None = None
+    try:
+        async with client.stream("GET", url, timeout=remaining_s) as response:
+            status_code = response.status_code
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if time.monotonic() >= deadline:
+                    truncated = True
                     break
+                if header is None:
+                    header = line.split("\t")
+                    try:
+                        key_index = header.index(key_column)
+                    except ValueError as exc:
+                        raise PathogenTransportError(
+                            f"Column '{key_column}' not found in {url}'s header: {header}"
+                        ) from exc
+                    continue
+                if not line:
+                    continue
+                total_scanned += 1
+                fields = line.split("\t")
+                if key_index >= len(fields):
+                    continue
+                value = fields[key_index]
+                if value not in key_values_set:
+                    continue
+                matched.append(dict(zip(header, fields, strict=False)))
+                if max_matches and len(matched) >= max_matches:
+                    break
+                if one_row_per_key:
+                    remaining_keys.discard(value)
+                    if not remaining_keys:
+                        break
+    except Exception as exc:
+        record_tool_call(
+            tool="pathogen_detection",
+            layer=2,
+            endpoint=_endpoint_for_audit(url),
+            latency_ms=(time.monotonic() - audit_started) * 1000,
+            authorization="none",
+            params={"key_column": key_column, "one_row_per_key": one_row_per_key},
+            http_status=status_code,
+            error=str(exc),
+        )
+        raise
+
+    record_tool_call(
+        tool="pathogen_detection",
+        layer=2,
+        endpoint=_endpoint_for_audit(url),
+        latency_ms=(time.monotonic() - audit_started) * 1000,
+        authorization="none",
+        params={"key_column": key_column, "one_row_per_key": one_row_per_key},
+        record_ids=None,
+        http_status=status_code,
+        error=None,
+    )
 
     return TsvScanResult(
         rows=matched, truncated_by_deadline=truncated, total_rows_scanned=total_scanned

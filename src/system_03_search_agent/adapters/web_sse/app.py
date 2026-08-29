@@ -84,6 +84,7 @@ from system_03_search_agent.harness.cost_control import (
     per_user_daily_query_cap,
     sanitize_event_for_end_user,
 )
+from system_03_search_agent.observability.analytics import AnalyticsEvent, capture_event
 
 
 def _seconds_until_utc_midnight() -> int:
@@ -1830,4 +1831,27 @@ async def post_v1_query_feedback(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="you do not own this run"
         ) from None
+
+    # T-5.0-05: Section 20.2's "feedback-button clicks" signal, fired only
+    # once `record_feedback` above has actually succeeded, never on the
+    # 409/403 paths, so this counts a feedback SUBMISSION, not an attempt.
+    # Aggregates only, per this ticket's binding constraint: never the
+    # comment text or the flagged_reason text itself, only whether one was
+    # present, and never citation_id/reason content from citation_flags,
+    # only their count. `capture_event` never raises (best-effort by its
+    # own contract), so this needs no try/except of its own and can never
+    # turn a successful feedback write into a failed response.
+    feedback_properties: dict[str, bool | int | str] = {
+        "has_comment": bool(payload.comment),
+        "was_flagged": bool(payload.flagged_reason),
+        "citation_flag_count": len(payload.citation_flags),
+    }
+    if payload.rating is not None:
+        feedback_properties["rating"] = payload.rating
+    await capture_event(
+        AnalyticsEvent.FEEDBACK_SUBMITTED,
+        distinct_id=caller.owner_id,
+        properties=feedback_properties,
+    )
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)

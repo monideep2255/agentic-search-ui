@@ -79,6 +79,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 import uuid
 from collections.abc import Callable
 from typing import Any
@@ -87,6 +88,7 @@ import psycopg2
 import psycopg2.errors
 import psycopg2.extensions
 
+from system_03_search_agent.observability.audit import record_tool_call
 from system_03_search_agent.tools.graph_schema_constants import (
     CYPHER_QUERY_TIMEOUT_SECONDS,
     DEFAULT_ROW_LIMIT,
@@ -417,7 +419,7 @@ except ImportError as _import_exc:
     execute_cypher_over_http = None  # type: ignore[assignment]
 
 
-def execute_cypher(
+def _execute_cypher_impl(
     cypher: str,
     params: dict[str, Any] | None = None,
     row_limit: int = DEFAULT_ROW_LIMIT,
@@ -617,4 +619,68 @@ def execute_cypher(
     if truncated:
         rows = rows[:effective_row_limit]
 
+    return rows, total_available
+
+
+def execute_cypher(
+    cypher: str,
+    params: dict[str, Any] | None = None,
+    row_limit: int = DEFAULT_ROW_LIMIT,
+    timeout_s: float = CYPHER_QUERY_TIMEOUT_SECONDS,
+    connection_factory: ConnectionFactory | None = None,
+    as_clause: str = _DEFAULT_AS_CLAUSE,
+) -> tuple[list[dict[str, Any]], int]:
+    """Every Layer 1 read, on either transport. See `_execute_cypher_impl` for
+    the actual connection and query mechanics; this wrapper's only job is
+    T-5.0-05's audit chokepoint (audit.py's module docstring, tracker/
+    phase_5.0.md finding one): every caller reaches the graph through here,
+    including `cypher_query` AND the two `export/traversal.py` calls that
+    bypass the tool layer entirely (`act_node` sees neither), so hooking
+    this one function covers both by construction with no change needed in
+    either caller.
+
+    Timed around the actual call to `_execute_cypher_impl` only, per this
+    ticket's instruction, never around argument validation the impl does
+    internally. `endpoint` is the graph database name (`GRAPH_NAME`,
+    "ncbi_kg"), the same value on both the psycopg2 and HTTPS transports,
+    since a caller here has no visibility into which one actually ran; the
+    graph credential itself never has HTTP semantics for this audit line,
+    so `http_status` is always None (`record_tool_call`'s own docstring
+    names a graph query as exactly this case). `record_tool_call` never
+    raises by its own best-effort contract, so this is not wrapped in a
+    second try/except; the audit line is written and the real outcome,
+    success or a typed `GraphError`, is preserved unchanged either way.
+    """
+    audit_started = time.monotonic()
+    try:
+        rows, total_available = _execute_cypher_impl(
+            cypher,
+            params,
+            row_limit=row_limit,
+            timeout_s=timeout_s,
+            connection_factory=connection_factory,
+            as_clause=as_clause,
+        )
+    except Exception as exc:
+        record_tool_call(
+            tool="cypher_query",
+            layer=1,
+            endpoint=GRAPH_NAME,
+            latency_ms=(time.monotonic() - audit_started) * 1000,
+            authorization="kg_reader",
+            params={"cypher": cypher, "params": params or {}},
+            http_status=None,
+            error=str(exc),
+        )
+        raise
+    record_tool_call(
+        tool="cypher_query",
+        layer=1,
+        endpoint=GRAPH_NAME,
+        latency_ms=(time.monotonic() - audit_started) * 1000,
+        authorization="kg_reader",
+        params={"cypher": cypher, "params": params or {}},
+        http_status=None,
+        error=None,
+    )
     return rows, total_available
