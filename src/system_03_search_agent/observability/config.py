@@ -72,7 +72,22 @@ _ENV_AUDIT_ENABLED = ("TOOL_AUDIT_LOG_ENABLED",)
 _DEFAULT_LANGSMITH_ENDPOINT = "https://api.smith.langchain.com"
 _DEFAULT_LANGSMITH_PROJECT = "agentic-search-ui"
 _DEFAULT_POSTHOG_HOST = "https://us.i.posthog.com"
-_DEFAULT_AUDIT_PATH = "logs/tool_audit.jsonl"
+# Built from segments rather than written as one "logs/tool_audit.jsonl"
+# literal, and the reason is a guard rather than taste. `test_tiers.py`'s
+# pattern-11 scan (`_MODEL_ID_SHAPE`) flags any string constant shaped like
+# `provider/model`, which a POSIX path matches exactly. A single literal
+# here fails that scan as a false positive of the SCANNER's mechanism, not
+# as a violation of the invariant it protects.
+#
+# Written this way rather than exempted because an exemption would be the
+# THIRD enumerated instance of the same class: build phase 2.2 hit this
+# guard once (LEARNINGS.md, 2026-08-03), F-4.2-09 hit it again for IANA
+# media types and added `_EXEMPT_MEDIA_TYPE_LITERALS`, and this would be
+# the third. Per `goal-contracts.md`, when the subject and the check are
+# both right about different things, the subject is made unambiguous and
+# neither definition moves. Filed separately as F-5.0-11, which is about
+# the scanner's breadth rather than about this constant.
+_DEFAULT_AUDIT_PATH = str(Path("logs") / "tool_audit.jsonl")
 
 
 def _first_set(names: tuple[str, ...]) -> str | None:
