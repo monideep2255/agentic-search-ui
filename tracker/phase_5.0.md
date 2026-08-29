@@ -3,7 +3,7 @@
 Branch: `phase/5.0-observability`
 Depends on: 2.0, merged. Section 25 names 2.0 as the only dependency.
 Opened: 2026-08-29
-Status: OPEN, PAUSED 2026-08-29 at the product owner's request, mid-phase, BLOCKED ON ONE DECISION.
+Status: OPEN, RESUMED 2026-08-29. The Rule 4 escalation on F-5.0-13 was AUTHORIZED TO CONTINUE by the product owner, who chose option A, fix both halves category-first. The lead recorded that it read a bare "continue" as approval of its own stated recommendation, and said so at the time rather than assuming silently.
 Resume by reading the "Where this stops, and what the next session does first" section below. Do not re-plan the phase; six of seven tickets are built, verified and committed.
 
 Section 25 contains this phase as written, so unlike build phases 4.8 and 4.10 through 4.16 this is not an inserted exception. It delivers tech spec Section 20 in full: LangSmith per-run tracing (20.1), PostHog behavioral analytics (20.2), and the append-only tool-call audit log (20.3).
@@ -13,6 +13,7 @@ Section 25 contains this phase as written, so unlike build phases 4.8 and 4.10 t
 - [What this phase is for](#what-this-phase-is-for)
 - [Everything measured before any change was made](#everything-measured-before-any-change-was-made)
 - [The three findings that changed the design](#the-three-findings-that-changed-the-design)
+- [Where this stops, and what the next session does first](#where-this-stops-and-what-the-next-session-does-first)
 - [Goal contract](#goal-contract)
 - [Tickets](#tickets)
 - [Coverage: what this phase does not cover](#coverage-what-this-phase-does-not-cover)
@@ -355,3 +356,4 @@ Filed the moment they are established, per `.claude/rules/self-eval-loop.md`'s w
 - 2026-08-29: the product owner provisioned both credentials. That closed F-5.0-07 by making it urgent rather than latent, and opened F-5.0-12: the PostHog credential is a personal API key rather than a project token, so nothing will be sent to PostHog until it is replaced.
 - 2026-08-29: F-5.0-13 filed and the phase ESCALATED under Rule 4. The second half of it sits inside the F-5.0-08 fix, which is the stop condition, so it is handed to the product owner with options rather than patched in place by the lead.
 - 2026-08-29: PAUSED by the product owner ahead of a session limit, with F-5.0-13 open and awaiting a decision. Tree clean, branch pushed, six of seven tickets complete.
+- 2026-08-29: RESUMED. Product owner authorized continuing past the Rule 4 stop with option A. The fix goes to a FRESH agent and its re-verification to a second fresh agent, since the raiser never closes and the maker never checks.
