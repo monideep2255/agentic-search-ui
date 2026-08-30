@@ -103,12 +103,9 @@ from typing import Any
 
 import pytest
 
+import system_03_search_agent.tools.graph_http_transport  # noqa: F401 - registers GraphRateLimitedError
 from system_03_search_agent.observability import audit
-from system_03_search_agent.tools import (
-    graph_connection,
-    graph_http_transport,  # noqa: F401 - registers GraphRateLimitedError
-    ncbi_transport,
-)
+from system_03_search_agent.tools import graph_connection, ncbi_transport
 
 
 def _read_lines(path: Path) -> list[str]:
