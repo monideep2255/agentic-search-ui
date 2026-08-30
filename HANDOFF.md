@@ -1,8 +1,29 @@
 # Handoff: build phase 5.0, observability
 
-Written 2026-08-29 at a deliberate stopping point. Branch `phase/5.0-observability`, 21 commits, tree clean, pushed.
+Written 2026-08-29 at a deliberate stopping point. Branch `phase/5.0-observability`, tree clean, pushed.
 
-This file orients someone starting cold. It is deliberately NOT the source of truth: `requirements/phase_6/Continuation_prompt.md` is, per `CLAUDE.md`, and where the two ever disagree that file wins. Everything below points into the real records rather than restating them, because two documents describing the same phase drift, and this phase has already paid five rounds for the cost of a confident sentence that stopped being true.
+THIS FILE IS THE ENTRY POINT. If you were handed it and nothing else, work "Start here" below top to bottom, then stop reading and act.
+
+On precedence, which matters because two documents describing one phase always drift: this file carries the next action and enough state to act on it. `requirements/phase_6/Continuation_prompt.md` carries the fuller narrative and is the source of truth for anything not stated here. Where the two disagree, that file wins and this one is stale. This phase spent five rounds on the cost of a confident sentence that stopped being true, so the precedence is written down rather than assumed.
+
+## Start here
+
+Four steps. None is optional and the first cannot be undone later.
+
+1. Know which session you are in. Run `echo "${ANTHROPIC_BASE_URL:-primary provider}"`. If it prints `primary provider` you are on the subscription and every stage is available. If it prints a URL you are on the metered backend, where a session-wide subagent model silently overrides per-dispatch choices, so a judge would run on a builder's model and nothing would report it. Read "Which session to open" in the continuation prompt before doing anything else. The choice cannot be changed inside a running session.
+2. Get on the branch and confirm the state matches this file:
+
+   ```bash
+   git checkout phase/5.0-observability && git pull
+   git status --short          # expect clean
+   source venv/bin/activate
+   python3 tracker/preflight.py    # expect all three transports ok
+   ```
+
+3. Read the two sections below, "The one next action" and "What is deliberately left open". Together they are the whole remaining scope.
+4. Act. Do not re-plan the phase, do not re-run the research, do not reopen the design. All of it is on disk and every round is recorded.
+
+If `git status` is not clean, or the suite figures below do not reproduce, STOP and say so rather than building on a state this file does not describe.
 
 ## Table of contents
 
