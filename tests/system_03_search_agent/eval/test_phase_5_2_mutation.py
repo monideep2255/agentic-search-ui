@@ -299,13 +299,17 @@ def test_m_p10b_the_score_leads_the_summary(monkeypatch):
 def test_m_p10c_unknown_query_ids_are_skipped(monkeypatch):
     original = replay.replay
 
-    def skipping(*, records, dataset, judge=None, k=3):
+    # The signature mirrors the real `replay`, `acknowledge_parked`
+    # included. A stand-in whose signature drifts from the function it
+    # replaces stops exercising the arm and starts testing the stand-in.
+    def skipping(*, records, dataset, judge=None, k=3, acknowledge_parked=False):
         known = {q.id for q in dataset.queries}
         return original(
             records=[r for r in records if r.query_id in known],
             dataset=dataset,
             judge=judge,
             k=k,
+            acknowledge_parked=acknowledge_parked,
         )
 
     monkeypatch.setattr(replay, "replay", skipping)

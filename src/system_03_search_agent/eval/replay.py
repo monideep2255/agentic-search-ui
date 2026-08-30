@@ -141,12 +141,35 @@ class ReplayReport:
         return lines
 
 
+class HarnessParkedError(RuntimeError):
+    """Raised when the parked harness is run without acknowledging that.
+
+    Build phase 5.2 was PARKED on 2026-08-30 after four review rounds
+    returned FAIL. The harness's own suite is GREEN with every defect
+    live, so nothing about running it looks wrong, which is exactly why a
+    docstring is not enough.
+
+    `system-design-patterns` pattern 8: the strongest constraint is
+    removing the ability, not asking the caller not to use one. A comment
+    is a request the next reader can miss; this cannot be missed.
+
+    THE SPECIFIC DEFECT, so a caller can judge for themselves: grounding
+    compares the agent's prose against the agent's OWN citation payload,
+    because a trace carries the agent's description of a record rather
+    than the record. An answer about a gene that does not exist, citing a
+    record that does not exist, scored 16 of 16 with no hard-fail.
+
+    Read `tracker/phase_5.2.md` before passing `acknowledge_parked=True`.
+    """
+
+
 def replay(
     *,
     records: Sequence[RunRecord],
     dataset: GoldenDataset | None = None,
     judge: Judge | None = None,
     k: int = 3,
+    acknowledge_parked: bool = False,
 ) -> ReplayReport:
     """Grade every supplied run against the golden dataset.
 
@@ -156,6 +179,15 @@ def replay(
     dropping such a record would let a replay report a clean pass over a
     set that no longer matches what was run.
     """
+    if not acknowledge_parked:
+        raise HarnessParkedError(
+            "build phase 5.2 is PARKED and this harness is known broken. Its "
+            "own suite is green with every defect live. Grounding measures "
+            "self-consistency rather than grounding, so a fabricated answer "
+            "citing a fabricated record scores full marks. Read "
+            "tracker/phase_5.2.md, then pass acknowledge_parked=True if you "
+            "still want a number from it."
+        )
     dataset = dataset or load_golden_dataset()
     by_id = {q.id: q for q in dataset.queries}
 

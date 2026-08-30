@@ -452,7 +452,14 @@ def test_p10a_a_query_with_fewer_than_k_samples_is_reported_unscored():
         _record(trace_id="t4", query_id="G-002"),
     ]
     report = replay(
-        records=records, dataset=dataset, judge=_stub_judge(_ALL_TWOS), k=3
+        records=records,
+        dataset=dataset,
+        judge=_stub_judge(_ALL_TWOS),
+        k=3,
+        # Build phase 5.2 is parked and `replay` refuses to run without this.
+        # The arm still has value: it grades the harness's own reporting
+        # honesty, which is true regardless of whether its scores are.
+        acknowledge_parked=True,
     )
     assert report.queries_in_dataset == 2
     assert report.queries_scored == 1
@@ -472,7 +479,14 @@ def test_p10b_the_denominator_leads_the_summary():
     dataset = _dataset_of(["G-001"])
     records = [_record(trace_id=f"t{i}", query_id="G-001") for i in range(3)]
     report = replay(
-        records=records, dataset=dataset, judge=_stub_judge(_ALL_TWOS), k=3
+        records=records,
+        dataset=dataset,
+        judge=_stub_judge(_ALL_TWOS),
+        k=3,
+        # Build phase 5.2 is parked and `replay` refuses to run without this.
+        # The arm still has value: it grades the harness's own reporting
+        # honesty, which is true regardless of whether its scores are.
+        acknowledge_parked=True,
     )
     lines = report.summary_lines()
     assert lines[0].startswith("scored 1 of 1")
@@ -494,6 +508,7 @@ def test_p10c_a_record_naming_an_unknown_query_is_an_error(monkeypatch):
             dataset=dataset,
             judge=_stub_judge(_ALL_TWOS),
             k=1,
+            acknowledge_parked=True,
         )
     assert "drifted" in str(excinfo.value)
 
@@ -505,7 +520,14 @@ def test_p10d_rubric_score_updates_are_keyed_on_trace_id():
     dataset = _dataset_of(["G-001"])
     records = [_record(trace_id=f"t{i}", query_id="G-001") for i in range(3)]
     report = replay(
-        records=records, dataset=dataset, judge=_stub_judge(_ALL_TWOS), k=3
+        records=records,
+        dataset=dataset,
+        judge=_stub_judge(_ALL_TWOS),
+        k=3,
+        # Build phase 5.2 is parked and `replay` refuses to run without this.
+        # The arm still has value: it grades the harness's own reporting
+        # honesty, which is true regardless of whether its scores are.
+        acknowledge_parked=True,
     )
     updates = rubric_score_updates(report)
     assert set(updates) == {"t0", "t1", "t2"}
