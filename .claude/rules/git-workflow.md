@@ -44,9 +44,34 @@ MR flow:
 2. Create PR/MR with deliverables checklist from `requirements/Plan.md`
 3. User reviews and approves
 4. Merge into `develop` (no squash, preserve commit history)
-5. Delete the phase branch after merge
+5. Delete the phase branch after merge, LOCALLY AND ON THE REMOTE
 
 Do not start the next phase branch until the current MR is merged or the user says to proceed.
+
+### The steady state: develop locally, develop and production on the remote
+
+Step 5 says to delete the branch. This section says what "deleted" should leave behind, because the step alone was read as optional and was not enforced.
+
+Confirmed by the product owner on 2026-08-30:
+
+- Locally: `develop` and nothing else.
+- On the remote: `develop` and `production` and nothing else.
+
+Anything else on either side is a branch that has not been cleaned up, or work still genuinely in flight. There is no third category, so a stray branch is always a question worth asking rather than background noise.
+
+How to get there safely, in this order:
+
+1. Merge with branch deletion ON. Passing `--delete-branch=false` to `gh pr merge` keeps the branch and is the thing that went wrong on 2026-08-30.
+2. Switch back to `develop` and fast-forward, rather than staying on the merged branch.
+3. Confirm the branch is genuinely merged before deleting it: `git merge-base --is-ancestor <branch> origin/develop`.
+4. Delete with `git branch -d`, never `-D`. The lowercase form refuses an unmerged branch, which is the check that makes this safe rather than a habit.
+5. Delete the remote copy too: `git push origin --delete <branch>`.
+
+Deleting a merged branch loses nothing, since every commit stays reachable from `develop`. Say that out loud when confirming a deletion, so the check is visible rather than assumed.
+
+Why this is written down rather than left to habit: on 2026-08-30 three pull requests were merged with `--delete-branch=false`, the local checkout was left sitting on a merged phase branch, and the product owner had to notice and ask. Step 5 already said to delete. A convention that exists in one line and is departed from silently is not enforcement, and the departure is the real error rather than the leftover branches.
+
+If there is ever a reason to keep a branch after merge, say so at merge time and say why. Silence reads as having followed the rule.
 
 ### Commit hygiene
 
