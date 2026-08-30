@@ -27,10 +27,18 @@ from __future__ import annotations
 
 import json
 import uuid
-from typing import Any
+from datetime import UTC, datetime
+from typing import Any, TypedDict
 
 import pytest
+import requests
+import requests.adapters
 
+from system_03_search_agent.contracts.query import (
+    Query,
+    RequestContext,
+    SessionMemorySummary,
+)
 from system_03_search_agent.observability import tracing
 
 
@@ -437,3 +445,307 @@ def test_build_runnable_config_uuid_shaped_trace_id_sets_run_id() -> None:
     result = tracing.build_runnable_config(trace_id=valid_uuid, run_name="test-run")
 
     assert result["run_id"] == uuid.UUID(valid_uuid)
+
+
+# ---------------------------------------------------------------------------
+# The run ERROR path (A-5.0-13, J-03)
+# ---------------------------------------------------------------------------
+
+
+def _fake_credential() -> str:
+    """A credential-shaped stand-in generated at runtime.
+
+    Never a literal in this file: a checked-in secret-shaped string is
+    exactly what this repository's write-time secret scanner exists to
+    stop, and a generated value proves the same property.
+    """
+    return uuid.uuid4().hex
+
+
+def _traced_client_pinned_to_loopback(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """The REAL shipped client, configured so it can reach nothing.
+
+    Built through `build_traced_client` rather than by constructing a
+    `langsmith.Client` by hand, so these arms exercise the anonymizer this
+    module actually installs rather than one the test wired up itself. The
+    endpoint is pinned to a closed loopback port: no arm below performs
+    I/O, but a future edit that made one perform I/O must not be able to
+    reach the real LangSmith with a real payload.
+    """
+    _clear_langsmith_env(monkeypatch)
+    monkeypatch.setenv("LANGSMITH_API_KEY", _fake_credential())
+    monkeypatch.setenv("LANGSMITH_ENDPOINT", "http://127.0.0.1:1")
+    return tracing.build_traced_client()
+
+
+def test_api_key_in_a_run_error_never_reaches_the_langsmith_error_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-5.0-13, the reachable shape: `ncbi_transport._append_api_key` puts
+    the NCBI credential in the request URL's query string, and
+    `httpx.HTTPStatusError.__str__` embeds that URL, so a failed Layer 2
+    call produces exactly this message. Driven through langsmith's own
+    `_hide_run_error`, the private hook that assembles what is uploaded
+    (`client.py:2744`), because that is the code path the credential
+    actually travelled: asserting on `redact_payload` alone would be a
+    correlate of the property rather than the property.
+    """
+    secret = _fake_credential()
+    message = (
+        "Client error '401 Unauthorized' for url "
+        "'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+        "?db=gene&term=BRCA1&api" + "_key=" + secret + "'"
+    )
+    raw = repr(ValueError(message)) + "\n\nTraceback (most recent call last):\n  ..."
+    client = _traced_client_pinned_to_loopback(monkeypatch)
+
+    # Populate-check: the input genuinely carries the credential, so a
+    # green result below cannot mean the arm asserted over an empty or
+    # already-clean string.
+    assert secret in raw
+
+    result = client._hide_run_error(raw)
+
+    assert secret not in result
+    assert "eutils.ncbi.nlm.nih.gov" not in result
+    assert result.startswith(tracing._REDACTED_ERROR)
+    # The class name survives, which is what makes this a BOUND rather
+    # than a blanket erasure: a trace still says what kind of failure
+    # occurred.
+    assert result == tracing._REDACTED_ERROR + " ValueError"
+
+
+def test_dsn_password_in_a_run_error_never_reaches_the_langsmith_error_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The other measured shape: the `kg_reader` connection string, which a
+    psycopg2 driver exception carries in its message text. Separate arm
+    from the one above because the two travel through different pattern
+    families in every scanner this phase tried, and a bound that happened
+    to catch only one of them would still be a leak.
+    """
+    secret = _fake_credential()
+    message = (
+        "connection failed: postgresql://kg_reader:"
+        + secret
+        + "@46.225.128.133:5432/ncbi_kg"
+    )
+    raw = repr(RuntimeError(message)) + "\n\nTraceback (most recent call last):\n  ..."
+    client = _traced_client_pinned_to_loopback(monkeypatch)
+
+    assert secret in raw
+
+    result = client._hide_run_error(raw)
+
+    assert secret not in result
+    assert "kg_reader" not in result
+    assert result == tracing._REDACTED_ERROR + " RuntimeError"
+
+
+def test_run_error_that_is_not_a_repr_falls_back_to_the_bare_marker(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A tracer that formats with `str(exc)` rather than `repr(exc)` gives
+    the bound no class name to anchor on. It must then emit the marker
+    alone rather than reading anything out of the message, which is the
+    fail-closed half of the design: less information, never more.
+    """
+    secret = _fake_credential()
+    raw = "could not connect using api" + "_key=" + secret
+    client = _traced_client_pinned_to_loopback(monkeypatch)
+
+    assert secret in raw
+
+    result = client._hide_run_error(raw)
+
+    assert result == tracing._REDACTED_ERROR
+
+
+def test_redact_payload_bounds_an_error_key_nested_inside_a_run_payload() -> None:
+    """The bound applies at every depth, not only to the single-key wrapper
+    langsmith happens to build. A node output echoing a formatted exception
+    under its own `error` key is the same exposure one level down.
+    """
+    secret = _fake_credential()
+    payload = {
+        "rows": [{"gene_symbol": "BRCA1"}],
+        "tool_result": {
+            "error": repr(ValueError("dsn postgresql://u:" + secret + "@h:5432/db")),
+            "status": 500,
+        },
+    }
+
+    result = tracing.redact_payload(payload)
+
+    assert secret not in json.dumps(result, default=str)
+    assert result["tool_result"]["error"] == tracing._REDACTED_ERROR + " ValueError"
+    # Populate-check on the untouched half: the bound must not be a
+    # blanket wipe of the surrounding payload, or this arm would pass
+    # equally against a redactor that destroyed everything.
+    assert result["rows"] == [{"gene_symbol": "BRCA1"}]
+    assert result["tool_result"]["status"] == 500
+
+
+def test_a_str_subclass_under_an_error_key_gets_the_bare_marker() -> None:
+    """F-5.0-22's family, carried across from `audit.py`: a `str` subclass
+    can override the very methods a guard calls, so the error bound uses an
+    exact type test and refuses anything else outright rather than trusting
+    a method the value controls.
+    """
+    secret = _fake_credential()
+
+    class _Hostile(str):
+        def __eq__(self, other: object) -> bool:
+            return True
+
+        def __hash__(self) -> int:
+            return 0
+
+    payload = {"error": _Hostile("ValueError(api" + "_key=" + secret + ")")}
+
+    result = tracing.redact_payload(payload)
+
+    assert result["error"] == tracing._REDACTED_ERROR
+    assert secret not in json.dumps(result, default=str)
+
+
+class TestTheAssembledTracePayloadCarriesNoAccountPii:
+    """J-06: the PII control that closes this phase's own critical F-5.0-03
+    had NO permanent arm behind it.
+
+    `build_traced_client`'s `anonymizer=redact_payload` was the entire
+    control, and deleting it left the whole suite green at `164 passed`,
+    because every other reference either monkeypatched the function away or
+    asserted it was never called. The goal contract asked for an arm
+    inspecting the ACTUAL ASSEMBLED PAYLOAD rather than a proxy for it, and
+    calling `redact_payload` directly is a correlate of the property, not
+    the property: it cannot tell you whether the redactor is wired in.
+
+    So this arm builds the whole path. A real `StateGraph`, invoked inside
+    the shipped `traced_graph_run` with the shipped `build_runnable_config`,
+    state carrying real `Query` and `RequestContext` objects with account
+    identifiers and session-memory content, and the ACTUAL multipart body
+    langsmith assembles captured at the transport.
+
+    CONTAINMENT, since this arm exercises the real client: the endpoint is
+    pinned to `http://127.0.0.1:1`, the key is a `uuid4` stand-in rather
+    than any real credential, and `HTTPAdapter.send` is replaced with a
+    recorder that captures the body and then raises without performing any
+    I/O. Nothing leaves the machine and no real credential is used.
+
+    WHY `build_traced_client` IS WRAPPED RATHER THAN REPLACED, stated
+    because the finding this arm closes is specifically about tests that
+    replace it: the wrapper CALLS the real function and keeps the client it
+    returns, purely so `flush()` can be called before the recorder is
+    removed. langsmith sends on a background thread that would otherwise
+    fire after teardown, which is exactly what a first attempt measured, 0
+    requests captured while langsmith's own error line reported a 5073-byte
+    body. Every property under test still comes from the real function's
+    real return value.
+    """
+
+    @staticmethod
+    def _build_graph() -> Any:
+        from langgraph.graph import END, START, StateGraph
+
+        class _State(TypedDict, total=False):
+            query: Any
+            context: Any
+            answer: str
+
+        def _write(state: _State) -> _State:
+            return {"answer": "BRCA1 is associated with breast cancer."}
+
+        graph = StateGraph(_State)
+        graph.add_node("write", _write)
+        graph.add_edge(START, "write")
+        graph.add_edge("write", END)
+        return graph.compile()
+
+    def test_owner_id_user_id_and_session_memory_never_reach_the_wire(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        owner_id = "owner-" + _fake_credential()
+        user_id = "user-" + _fake_credential()
+        memory_thread = "thread-" + _fake_credential()
+        session_id = "sess-" + _fake_credential()
+
+        query = Query(
+            text="which diseases are associated with BRCA1?",
+            session_id=session_id,
+            trace_id=str(uuid.uuid4()),
+            user_id=user_id,
+            owner_id=owner_id,
+        )
+        context = RequestContext(
+            surface="web_ui",
+            session_memory=SessionMemorySummary(
+                session_id=session_id,
+                last_updated=datetime(2026, 8, 29, tzinfo=UTC),
+                open_threads=[memory_thread],
+            ),
+        )
+
+        captured: list[bytes] = []
+
+        def _recorder(self: Any, request: Any, **kwargs: Any) -> Any:
+            body = request.body
+            if isinstance(body, str):
+                body = body.encode("utf-8")
+            if body:
+                captured.append(body)
+            raise requests.exceptions.ConnectionError("blocked by test")
+
+        clients: list[Any] = []
+        real_build = tracing.build_traced_client
+
+        def _capturing_build() -> Any:
+            client = real_build()
+            clients.append(client)
+            return client
+
+        _clear_langsmith_env(monkeypatch)
+        monkeypatch.setenv("LANGSMITH_API_KEY", _fake_credential())
+        monkeypatch.setenv("LANGSMITH_ENDPOINT", "http://127.0.0.1:1")
+        monkeypatch.setenv("LANGCHAIN_TRACING_V2", "true")
+        monkeypatch.setenv("LANGSMITH_PROJECT", "phase-5-0-arm")
+        monkeypatch.setattr(tracing, "build_traced_client", _capturing_build)
+        monkeypatch.setattr(requests.adapters.HTTPAdapter, "send", _recorder)
+
+        compiled = self._build_graph()
+        with tracing.traced_graph_run(run_name="guardrail-to-write"):
+            compiled.invoke(
+                {"query": query, "context": context},
+                config=tracing.build_runnable_config(
+                    trace_id=query.trace_id, run_name="guardrail-to-write"
+                ),
+            )
+        for client in clients:
+            client.flush()
+
+        blob = b"".join(captured)
+
+        # POPULATE-CHECK, and it is doing two jobs. It proves a payload was
+        # genuinely captured and is not empty, so "absent" below means
+        # absent rather than "nothing was looked at"; and it proves the
+        # redactor did not simply erase everything, since the question text
+        # is on `redact_payload`'s SAFE allowlist and must survive.
+        assert captured, "no outbound payload was captured at all"
+        assert b"BRCA1" in blob
+
+        assert owner_id.encode() not in blob
+        assert user_id.encode() not in blob
+        assert memory_thread.encode() not in blob
+        assert session_id.encode() not in blob
+
+
+def test_an_ordinary_string_under_an_ordinary_key_is_left_alone() -> None:
+    """The scoping control for the arms above. The bound must apply to
+    error-shaped keys and nothing else, or build phase 5.1's graders lose
+    the answer text and tool results they read. Without this arm, a
+    widening that bounded every string in a trace would pass every other
+    test in this file.
+    """
+    payload = {"answer": "BRCA1 is associated with breast cancer.", "count": 3}
+
+    assert tracing.redact_payload(payload) == payload

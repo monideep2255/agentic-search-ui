@@ -464,6 +464,21 @@ class TestAuditLineCarriesEverySection20_3Field:
       says the same thing, and this docstring is written to agree with it
       rather than contradict it.
 
+    - NOT covered either, and in exactly the same state as the two members
+      above (J-01): `record_ids` has NO PRODUCER anywhere in `src/`. Every
+      audit line the running system writes carries `[]`, including for an
+      E-utilities response body that carried an `idlist`, because no
+      chokepoint passes the argument. The field is a Section 20.3
+      requirement, so its presence on the line is real and this class does
+      assert it; what nobody asserts is that anything ever fills it.
+      `test_audit.TestRoundTrip.test_written_line_carries_every_contract_
+      field` passes a value in itself and therefore exercises the field's
+      SHAPE rather than its production, and that arm now says so in its own
+      docstring. This entry exists because the coverage statement above
+      named `http_error` and `empty` and omitted the third field in the
+      identical condition, which is the same class of omission it was
+      written to prevent.
+
     The gap is pre-existing rather than introduced by the error-field
     change: before it, the same success path wrote `error=None`. It is
     open with an owner (F-5.0-23) and is not closed by this class.

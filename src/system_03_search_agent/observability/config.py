@@ -166,16 +166,85 @@ def tracing_enabled() -> bool:
     return tracing_flag_set() and langsmith_api_key() is not None
 
 
-def posthog_api_key() -> str | None:
-    """The PostHog project key, or None when analytics are not configured.
+#: The ONLY PostHog credential kind this system may send with: a project
+#: key, the write-only public token that travels in the request body as
+#: `api_key`. Capture is all this repository does, and a project key is
+#: exactly the privilege capture needs.
+_POSTHOG_PROJECT_PREFIX = "phc_"
 
-    This is PostHog's PROJECT api key, the write-only public token that
-    travels in the request BODY as `api_key` rather than in a header. It is
-    still read through this module and still never logged, because a key
-    that is safe to embed in a browser bundle is not thereby safe to print
-    into a server log that also carries user identifiers.
+#: Credential kinds that are REFUSED BY NAME rather than merely failing the
+#: check above, so a misconfiguration reports what is wrong instead of a
+#: bare "analytics off". Each carries far more privilege than capture
+#: needs, which is a least-privilege violation under
+#: `.claude/rules/ai-security-standards.md` regardless of whether anything
+#: is actually sent.
+_POSTHOG_REFUSED_PREFIXES: dict[str, str] = {
+    "phx_": "a PERSONAL api key, account-wide and read-write",
+    "phs_": "a PROJECT SECRET key, server-side and privileged",
+}
+
+
+def posthog_api_key() -> str | None:
+    """The PostHog PROJECT key, or None when analytics must not run.
+
+    RETURNS NONE FOR ANY KEY THAT IS NOT A PROJECT KEY, which is the whole
+    point of this function rather than a detail (J-07, F-5.0-12). Before
+    this, any prefix was accepted, and `.env` carried a `phx_` PERSONAL api
+    key: account-wide, read-write, and live in any shell that had not
+    exported the right value, because importing `litellm` calls
+    `load_dotenv()` at import time. The finding's own claim that "none will
+    be sent until the product owner replaces it" was enforced by nothing.
+
+    FAILS CLOSED ON ANYTHING UNRECOGNISED. An unknown prefix is not a
+    reason to try; PostHog's own key kinds are a small closed set, and a
+    value outside it is either a new credential type nobody here has
+    reasoned about or a mistake. Either way the correct answer is to send
+    nothing.
+
+    This is the same move this phase already made once, on the audit
+    error field: bound the input rather than reason about whether the
+    dangerous case can be reached. Refusing a non-project key makes
+    F-5.0-12's claim true by construction instead of by which shell you
+    happen to be in.
+
+    The value is still never logged. A key that is safe to embed in a
+    browser bundle is not thereby safe to print into a server log that
+    also carries user identifiers.
     """
-    return _first_set(_ENV_POSTHOG_API_KEY)
+    raw = _first_set(_ENV_POSTHOG_API_KEY)
+    if raw is None or not raw.startswith(_POSTHOG_PROJECT_PREFIX):
+        return None
+    return raw
+
+
+def posthog_key_refusal_reason() -> str | None:
+    """Why a configured PostHog key was refused, or None when none was.
+
+    A diagnostic, deliberately separate from `posthog_api_key()`: this
+    repository's standing rule is that a system dropping something says
+    that it did, and "analytics off" with a key visibly present in `.env`
+    is the kind of silence an operator burns an afternoon on.
+
+    Returns None in the two cases that are not a refusal, no key
+    configured at all and a valid project key, so a caller can tell a
+    misconfiguration from an absence. It NEVER returns any part of the
+    key's value, only the prefix's meaning, which is the same rule the PRD
+    applies to the audit line's `authorization` field: by identifier, never
+    by value.
+    """
+    raw = _first_set(_ENV_POSTHOG_API_KEY)
+    if raw is None or raw.startswith(_POSTHOG_PROJECT_PREFIX):
+        return None
+    for prefix, description in _POSTHOG_REFUSED_PREFIXES.items():
+        if raw.startswith(prefix):
+            return (
+                f"POSTHOG_API_KEY is {description}; capture needs a "
+                f"{_POSTHOG_PROJECT_PREFIX} project key, so analytics are off"
+            )
+    return (
+        f"POSTHOG_API_KEY is not a {_POSTHOG_PROJECT_PREFIX} project key; "
+        "an unrecognised credential kind fails closed, so analytics are off"
+    )
 
 
 def posthog_host() -> str:
@@ -194,6 +263,12 @@ def analytics_enabled() -> bool:
     Only the credential gates this one. Unlike tracing there is no ambient
     flag already set to `true` across the project, so there is no inherited
     intent to disambiguate, and a provisioned key is the whole signal.
+
+    "A provisioned key" now means a PROJECT key specifically, because
+    `posthog_api_key()` returns None for every other kind (J-07). The
+    change is stated here rather than left implicit in the delegation: a
+    reader of this function must not conclude that any configured value
+    turns analytics on, since that is exactly what it used to mean.
     """
     return posthog_api_key() is not None
 

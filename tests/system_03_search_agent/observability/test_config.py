@@ -27,6 +27,8 @@ one, since an arm whose result depends on the developer's own `.env` is
 measuring the machine rather than the code.
 """
 
+import uuid
+
 import pytest
 
 from system_03_search_agent.observability import config
@@ -193,3 +195,92 @@ class TestHosts:
     def test_defaults_are_the_documented_hosts(self) -> None:
         assert config.posthog_host() == "https://us.i.posthog.com"
         assert config.langsmith_endpoint() == "https://api.smith.langchain.com"
+
+
+class TestPostHogKeyKindIsBounded:
+    """J-07 and F-5.0-12: `analytics_enabled()` accepted ANY prefix, and the
+    key actually configured was a `phx_` PERSONAL api key, account-wide and
+    read-write. `litellm`'s import-time `load_dotenv()` made it live in any
+    shell that had not exported the right value, so the finding's claim
+    that nothing would be sent was enforced by which shell you were in.
+
+    Every key below is a generated stand-in with a real prefix, never a
+    literal credential and never whatever the ambient environment holds:
+    the autouse fixture clears the real variable first, so these arms
+    measure the code rather than the machine.
+    """
+
+    def test_a_project_key_is_accepted(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The positive control, without which every arm below would pass
+        equally against a function that refused everything.
+        """
+        key = "phc_" + uuid.uuid4().hex
+        monkeypatch.setenv("POSTHOG_API_KEY", key)
+
+        assert config.posthog_api_key() == key
+        assert config.analytics_enabled() is True
+        assert config.posthog_key_refusal_reason() is None
+
+    def test_a_personal_key_is_refused_by_name(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The exact credential that was live. Refused, and the reason says
+        which kind it was so an operator is not left with a bare
+        "analytics off" beside a key visibly present in `.env`.
+        """
+        monkeypatch.setenv("POSTHOG_API_KEY", "phx_" + uuid.uuid4().hex)
+
+        assert config.posthog_api_key() is None
+        assert config.analytics_enabled() is False
+        reason = config.posthog_key_refusal_reason()
+        assert reason is not None
+        assert "PERSONAL" in reason
+
+    def test_a_project_secret_key_is_refused_by_name(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("POSTHOG_API_KEY", "phs_" + uuid.uuid4().hex)
+
+        assert config.posthog_api_key() is None
+        assert config.analytics_enabled() is False
+        reason = config.posthog_key_refusal_reason()
+        assert reason is not None
+        assert "SECRET" in reason
+
+    def test_an_unrecognised_prefix_fails_closed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The load-bearing arm. A key kind nobody here has reasoned about
+        must mean analytics OFF, never on: this is the difference between a
+        bound and an enumerated blocklist, and an enumerated blocklist is
+        what the pre-fix code effectively was with an empty list.
+        """
+        monkeypatch.setenv("POSTHOG_API_KEY", "phz_" + uuid.uuid4().hex)
+
+        assert config.posthog_api_key() is None
+        assert config.analytics_enabled() is False
+        assert config.posthog_key_refusal_reason() is not None
+
+    def test_a_refusal_reason_never_carries_the_key_value(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The diagnostic exists so a misconfiguration is not silent, and a
+        diagnostic that prints the credential would be a worse outcome than
+        the silence it replaces.
+        """
+        secret_value = uuid.uuid4().hex
+        monkeypatch.setenv("POSTHOG_API_KEY", "phx_" + secret_value)
+
+        reason = config.posthog_key_refusal_reason()
+
+        assert reason is not None
+        assert secret_value not in reason
+
+    def test_no_key_at_all_is_an_absence_not_a_refusal(self) -> None:
+        """A caller must be able to tell "nothing configured" from "the
+        wrong thing configured", which is why the reason is a separate
+        function rather than a second return value.
+        """
+        assert config.posthog_api_key() is None
+        assert config.analytics_enabled() is False
+        assert config.posthog_key_refusal_reason() is None

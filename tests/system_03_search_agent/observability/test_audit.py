@@ -199,7 +199,19 @@ class _HostileIdentifierStr(str):
 
 class TestRoundTrip:
     def test_written_line_carries_every_contract_field(self, tmp_path, monkeypatch):
-        """Fails if any Section 20.3 / ticket field is dropped from the entry dict."""
+        """Fails if any Section 20.3 / ticket field is dropped from the entry dict.
+
+        WHAT THIS ARM DOES NOT PROVE, stated because it was read as
+        proving it (J-01): the `record_ids` assertion below exercises the
+        field's SHAPE, that a value passed by a caller round-trips onto the
+        line, and says nothing about its PRODUCTION. Nothing in `src/`
+        passes `record_ids` today, so every audit line the running system
+        writes carries `[]`, including for a response body that carried
+        ids. This arm supplies the value itself, which is exactly why it
+        cannot see that gap. The gap is named in the premise gate's
+        coverage statement alongside `http_error` and `empty`, which are in
+        the same state.
+        """
         log_path = tmp_path / "audit.jsonl"
         monkeypatch.setattr(audit, "audit_enabled", lambda: True)
         monkeypatch.setattr(audit, "audit_log_path", lambda: log_path)
@@ -1580,6 +1592,505 @@ class TestParamsAreOptional:
         entry = json.loads(_read_lines(log_path)[0])
         assert entry["params"] == {}
         assert entry["record_ids"] == []
+
+
+class TestSinkFieldsAreBoundedAndRedacted:
+    """A-5.0-03 and A-5.0-04: `tool`, `endpoint`, `authorization` and
+    `record_ids` reached the append-only line with no redaction and no
+    bound of any kind.
+
+    Every arm here calls `record_tool_call` DIRECTLY rather than through a
+    transport, which is the point: F-5.0-08 was closed caller-side at one
+    of three chokepoints, so the sink itself stayed defenceless and the
+    other two chokepoints plus every future caller were one careless
+    argument away from reproducing a finding this phase rated critical.
+    """
+
+    def test_a_credential_in_the_endpoint_field_is_redacted_at_the_sink(
+        self, tmp_path, monkeypatch
+    ):
+        """F-5.0-08's exact shape, arriving through the argument rather
+        than through the transport that was taught to strip it.
+        """
+        log_path = tmp_path / "audit.jsonl"
+        monkeypatch.setattr(audit, "audit_enabled", lambda: True)
+        monkeypatch.setattr(audit, "audit_log_path", lambda: log_path)
+
+        secret_value = uuid.uuid4().hex
+        audit.record_tool_call(
+            tool="probe",
+            layer=2,
+            endpoint="https://h/x?db=gene&api" + "_key=" + secret_value,
+            latency_ms=1.0,
+        )
+
+        raw_text = log_path.read_text(encoding="utf-8")
+        assert secret_value not in raw_text
+        # Still diagnostically useful, which is what separates a redaction
+        # from a deletion.
+        assert "db=gene" in raw_text
+
+    def test_a_credential_in_the_tool_and_authorization_fields_is_redacted(
+        self, tmp_path, monkeypatch
+    ):
+        """`authorization`'s own docstring said "never the credential value
+        itself" while nothing enforced it, which is build phase 4.15's
+        recorded defect class. Both fields in one arm because both were
+        placed verbatim by the same line of code.
+        """
+        log_path = tmp_path / "audit.jsonl"
+        monkeypatch.setattr(audit, "audit_enabled", lambda: True)
+        monkeypatch.setattr(audit, "audit_log_path", lambda: log_path)
+
+        secret_value = uuid.uuid4().hex
+        audit.record_tool_call(
+            tool="token=" + secret_value,
+            layer=2,
+            endpoint="/x",
+            latency_ms=1.0,
+            authorization="password=" + secret_value,
+        )
+
+        raw_text = log_path.read_text(encoding="utf-8")
+        assert secret_value not in raw_text
+        assert raw_text.count(audit.REDACTED_PLACEHOLDER) >= 2
+
+    def test_an_oversized_text_field_is_dropped_with_a_disclosure(
+        self, tmp_path, monkeypatch
+    ):
+        """Dropped rather than truncated: a shortened redaction can leave a
+        fragment of a credential while reading as complete. The marker
+        names the field and the real size so a reader can tell a dropped
+        field from a field that was never populated.
+        """
+        log_path = tmp_path / "audit.jsonl"
+        monkeypatch.setattr(audit, "audit_enabled", lambda: True)
+        monkeypatch.setattr(audit, "audit_log_path", lambda: log_path)
+
+        oversized = "e" * (audit._MAX_TEXT_FIELD_BYTES + 1)
+        audit.record_tool_call(
+            tool="probe", layer=2, endpoint=oversized, latency_ms=1.0
+        )
+
+        entry = json.loads(_read_lines(log_path)[0])
+        assert "endpoint" in entry["endpoint"]
+        assert "dropped" in entry["endpoint"]
+        assert str(audit._MAX_TEXT_FIELD_BYTES + 1) in entry["endpoint"]
+
+    def test_record_ids_elements_are_redacted_and_stringified(
+        self, tmp_path, monkeypatch
+    ):
+        """A-5.0-04's exact reproduction: a credential assignment as one
+        element and a deferred-`__str__` object as the next. `record_ids`
+        is the one field whose contents are by design whatever a third
+        party returned, which `ai-security-standards.md` classifies as
+        untrusted external content by name.
+        """
+        log_path = tmp_path / "audit.jsonl"
+        monkeypatch.setattr(audit, "audit_enabled", lambda: True)
+        monkeypatch.setattr(audit, "audit_log_path", lambda: log_path)
+
+        secret_value = uuid.uuid4().hex
+
+        class _Deferred:
+            def __str__(self) -> str:
+                return "postgresql://kg_reader:" + secret_value + "@host/db"
+
+        audit.record_tool_call(
+            tool="probe",
+            layer=2,
+            endpoint="/x",
+            latency_ms=1.0,
+            record_ids=["api" + "_key=" + secret_value, _Deferred(), "672"],
+        )
+
+        raw_text = log_path.read_text(encoding="utf-8")
+        assert secret_value not in raw_text
+        entry = json.loads(raw_text)
+        # Populate-check: the ordinary id survives, so this arm cannot be
+        # passing because the field was emptied.
+        assert "672" in entry["record_ids"]
+
+    def test_record_ids_over_the_item_cap_are_truncated_with_a_disclosure(
+        self, tmp_path, monkeypatch
+    ):
+        """`maxItems`, which `production-standards`' multi-agent pipeline
+        gate calls required rather than optional. Whole elements are
+        dropped, never split, so a marker element cannot expose half a
+        value.
+        """
+        log_path = tmp_path / "audit.jsonl"
+        monkeypatch.setattr(audit, "audit_enabled", lambda: True)
+        monkeypatch.setattr(audit, "audit_log_path", lambda: log_path)
+
+        overflow = 5
+        audit.record_tool_call(
+            tool="probe",
+            layer=2,
+            endpoint="/x",
+            latency_ms=1.0,
+            record_ids=[str(i) for i in range(audit._MAX_RECORD_IDS + overflow)],
+        )
+
+        entry = json.loads(_read_lines(log_path)[0])
+        assert len(entry["record_ids"]) == audit._MAX_RECORD_IDS + 1
+        assert str(overflow) in entry["record_ids"][-1]
+        assert "truncated" in entry["record_ids"][-1]
+
+    def test_no_line_can_exceed_the_atomic_append_budget(
+        self, tmp_path, monkeypatch
+    ):
+        """A-5.0-19: the whole-line bound is the half of the append-only
+        guarantee the per-process lock cannot provide, since a line over
+        the platform text-buffer size stops being one `write` call and
+        starts interleaving with other PROCESSES. Every variable field is
+        driven far past its own cap at once, which is also the case a
+        per-field-arithmetic argument would get wrong.
+        """
+        log_path = tmp_path / "audit.jsonl"
+        monkeypatch.setattr(audit, "audit_enabled", lambda: True)
+        monkeypatch.setattr(audit, "audit_log_path", lambda: log_path)
+
+        audit.record_tool_call(
+            tool="t" * 5000,
+            layer=2,
+            endpoint="e" * 5000,
+            latency_ms=1.0,
+            authorization="a" * 5000,
+            params={"blob": "p" * 20000},
+            record_ids=["r" * 500 for _ in range(200)],
+        )
+
+        lines = _read_lines(log_path)
+        assert len(lines) == 1
+        assert len(lines[0].encode("utf-8")) <= audit._MAX_LINE_BYTES
+        # Populate-check plus the Section 20.3 requirement: a bounded line
+        # is still a COMPLETE line, not a stub.
+        entry = json.loads(lines[0])
+        for field in ("trace_id", "tool", "layer", "endpoint", "authorization",
+                      "http_status", "error_code", "error_class", "latency_ms"):
+            assert field in entry
+
+    def test_bounded_line_reduces_an_oversized_entry_and_discloses_it(self):
+        """The whole-line belt, exercised DIRECTLY, and here is why it has
+        to be.
+
+        WHAT THIS ARM MEASURED AND THE ARM ABOVE COULD NOT: with today's
+        per-field caps in place, no call through `record_tool_call` can
+        produce a line over `_MAX_LINE_BYTES` at all, so `_bounded_line`'s
+        reduction branch is UNREACHABLE from there. Neutering it left the
+        arm above green, which is how this was found rather than assumed.
+
+        That is not a reason to delete the belt, it is the reason it
+        exists. The per-field caps happen to sum to something under the
+        budget today; that sum is a sentence about the code, and this
+        repository shipped four defects in build phase 4.15 that were
+        exactly a sentence describing a check that was not there. The belt
+        is what still holds after a field is added, widened, or its cap is
+        changed, and this arm is what keeps the belt from rotting into
+        dead code nobody notices is gone.
+        """
+        entry = {
+            "trace_id": "t",
+            "tool": "probe",
+            "layer": 2,
+            "endpoint": "/x",
+            "authorization": "none",
+            "params": {"blob": "p" * 20000},
+            "record_ids": ["r" * 20000],
+            "http_status": None,
+            "error_code": None,
+            "error_class": None,
+            "latency_ms": 1.0,
+        }
+
+        # Populate-check: the entry really is over budget before the bound
+        # runs, so a short result below cannot mean the input was small.
+        assert len(json.dumps(entry, default=str).encode("utf-8")) > audit._MAX_LINE_BYTES
+
+        line = audit._bounded_line(entry)
+
+        assert len(line.encode("utf-8")) <= audit._MAX_LINE_BYTES
+        reduced = json.loads(line)
+        assert "reduced" in reduced["_audit_note"]
+        # Section 20.3's required fields survive the reduction; only the
+        # two variable-size fields are given up.
+        assert reduced["tool"] == "probe"
+        assert reduced["endpoint"] == "/x"
+        assert reduced["latency_ms"] == 1.0
+
+
+class TestAnUnserializableValueDegradesRatherThanDeletingTheLine:
+    """A-5.0-05: the opposite failure to a leak, and for an audit sink the
+    worse one. `record_tool_call` guaranteed "never raises" and never
+    separately guaranteed "always records"; one value `json.dumps` refuses
+    fell into the gap between those two sentences and removed the whole
+    line, leaving zero lines written and one `logger.warning`.
+    """
+
+    def test_an_unserializable_record_id_still_writes_a_line(
+        self, tmp_path, monkeypatch
+    ):
+        """The adversary's exact reproduction. A non-string dict key is the
+        shape that matters because `default=str` is never even consulted
+        for it, so the serializer refuses outright rather than coercing.
+        """
+        log_path = tmp_path / "audit.jsonl"
+        monkeypatch.setattr(audit, "audit_enabled", lambda: True)
+        monkeypatch.setattr(audit, "audit_log_path", lambda: log_path)
+
+        audit.record_tool_call(
+            tool="probe",
+            layer=2,
+            endpoint="/x",
+            latency_ms=1.0,
+            record_ids=[{("a", "b"): 1}],
+        )
+
+        # Asserted before reading so total loss of the record fails as an
+        # assertion naming the defect, rather than as a FileNotFoundError
+        # a reader has to interpret.
+        assert log_path.exists(), "no audit line was written at all"
+        lines = _read_lines(log_path)
+        assert len(lines) == 1
+        entry = json.loads(lines[0])
+        # The record is still a record: the identifying fields survive.
+        assert entry["tool"] == "probe"
+        assert entry["endpoint"] == "/x"
+
+    def test_an_unserializable_scalar_field_still_writes_a_line(
+        self, tmp_path, monkeypatch
+    ):
+        """The residual path `redact_params` cannot reach: a field that is
+        not `params` or `record_ids` and therefore never walks a redactor.
+        `latency_ms` is the one a caller is most likely to get wrong.
+        """
+        log_path = tmp_path / "audit.jsonl"
+        monkeypatch.setattr(audit, "audit_enabled", lambda: True)
+        monkeypatch.setattr(audit, "audit_log_path", lambda: log_path)
+
+        class _Hostile:
+            def __str__(self) -> str:
+                raise RuntimeError("cannot render")
+
+        audit.record_tool_call(
+            tool="probe",
+            layer=2,
+            endpoint="/x",
+            latency_ms=_Hostile(),  # type: ignore[arg-type]
+        )
+
+        assert log_path.exists(), "no audit line was written at all"
+        lines = _read_lines(log_path)
+        assert len(lines) == 1
+        entry = json.loads(lines[0])
+        assert entry["latency_ms"] == audit._UNREPRESENTABLE_PLACEHOLDER
+        assert "degraded rather than dropped" in entry["_audit_note"]
+        assert entry["tool"] == "probe"
+
+    def test_the_degraded_line_cannot_itself_fail(self):
+        """The load-bearing property, exercised directly. `_degraded_line`
+        is the last step on the path, so if it could raise there would be
+        no fallback behind it. It is handed nothing but JSON primitives and
+        has no `default` hook, which is what makes that true.
+        """
+
+        class _Hostile:
+            def __str__(self) -> str:
+                raise RuntimeError("cannot render")
+
+        entry = {
+            "tool": "probe",
+            "layer": 2,
+            "latency_ms": 1.0,
+            "params": {("a", "b"): _Hostile()},
+            "record_ids": [_Hostile()],
+        }
+
+        # Populate-check: the entry really is unserializable both with and
+        # without the `default` hook, so this arm is exercising the case it
+        # claims to.
+        with pytest.raises(TypeError):
+            json.dumps(entry, default=str)
+
+        line = audit._degraded_line(entry)
+
+        parsed = json.loads(line)
+        assert parsed["tool"] == "probe"
+        assert parsed["params"] == audit._UNREPRESENTABLE_PLACEHOLDER
+        assert parsed["record_ids"] == audit._UNREPRESENTABLE_PLACEHOLDER
+
+
+class TestSubclassKeysAndValuesCannotDefeatRedaction:
+    """A-5.0-01: F-5.0-22's `str`-subclass family, closed at the two error
+    guards and left open at the third site, `_is_secret_key`, which BOTH
+    redaction rules delegate to.
+
+    The fix here is deliberately not F-5.0-22's exact type test. Refusing a
+    subclass at an error guard fails closed, because the value is then
+    discarded; refusing a subclass KEY would fail open, because
+    `_is_secret_key` returning False means "keep the value". So the
+    subclass is admitted and read through base `str` methods only.
+    """
+
+    def test_a_key_subclass_lying_about_lower_still_redacts_its_value(
+        self, tmp_path, monkeypatch
+    ):
+        """The adversary's arm A1, which wrote a live credential onto the
+        append-only line under a key literally named `api_key`.
+        """
+        log_path = tmp_path / "audit.jsonl"
+        monkeypatch.setattr(audit, "audit_enabled", lambda: True)
+        monkeypatch.setattr(audit, "audit_log_path", lambda: log_path)
+
+        secret_value = uuid.uuid4().hex
+
+        class _LyingKey(str):
+            def lower(self) -> str:
+                return "harmless"
+
+        # Populate-check on the premise: the override really does defeat a
+        # naive `.lower()` read, so this arm is testing the hostile input
+        # it claims to test.
+        assert _LyingKey("api_key").lower() == "harmless"
+
+        audit.record_tool_call(
+            tool="probe",
+            layer=2,
+            endpoint="/x",
+            latency_ms=1.0,
+            params={_LyingKey("api_key"): secret_value},
+        )
+
+        raw_text = log_path.read_text(encoding="utf-8")
+        assert secret_value not in raw_text
+        assert audit.REDACTED_PLACEHOLDER in raw_text
+
+    def test_a_value_subclass_lying_about_contains_is_still_scanned(self):
+        """The adversary's arm A2. `_redact_value_string`'s early return
+        asks the value whether it contains `=` or `://`, and a subclass
+        answering False skipped the scan entirely.
+        """
+        secret_value = uuid.uuid4().hex
+
+        class _LyingValue(str):
+            def __contains__(self, other: object) -> bool:
+                return False
+
+        hostile = _LyingValue("https://h/x?db=gene&api" + "_key=" + secret_value)
+
+        assert "=" not in hostile  # populate-check: the lie is live
+
+        result = audit.redact_params({"endpoint": hostile})
+
+        assert secret_value not in json.dumps(result, default=str)
+        assert "db=gene" in result["endpoint"]
+
+    def test_an_ordinary_key_and_value_are_unaffected(self):
+        """The scoping control. Flattening a subclass must not change what
+        a plain `str` does, or every existing redaction arm would be
+        measuring something new.
+        """
+        result = audit.redact_params({"api_key": "abc", "endpoint": "https://h/x"})
+
+        assert result["api_key"] == audit.REDACTED_PLACEHOLDER
+        assert result["endpoint"] == "https://h/x"
+
+
+class TestDeferredStringificationIsRedacted:
+    """A-5.0-02, the fifth family, and an ORDERING defect rather than a
+    scanner gap.
+
+    `redact_params` used to return any leaf that was not a dict, a list or
+    a `str` unchanged, and `record_tool_call` then serialized the entry
+    with `json.dumps(entry, default=str)`. The conversion that produced the
+    dangerous text therefore ran AFTER redaction had finished. No pattern
+    could have caught this, because at redaction time there was no string
+    to match against.
+    """
+
+    def test_a_deferred_dsn_under_an_innocuous_key_is_redacted(
+        self, tmp_path, monkeypatch
+    ):
+        """The adversary's exact reproduction: an ordinary object with no
+        overridden dunder except `__str__`, held under a key name the
+        key-name rule cannot see. Under the defect the DSN password landed
+        on the line whole.
+        """
+        log_path = tmp_path / "audit.jsonl"
+        monkeypatch.setattr(audit, "audit_enabled", lambda: True)
+        monkeypatch.setattr(audit, "audit_log_path", lambda: log_path)
+
+        secret_value = uuid.uuid4().hex
+
+        class _Deferred:
+            def __str__(self) -> str:
+                return "postgresql://kg_reader:" + secret_value + "@host:5432/db"
+
+        # Populate-check on the premise: the object really does yield the
+        # credential when converted, so a clean line below cannot mean the
+        # arm asserted over something that never carried a secret.
+        assert secret_value in str(_Deferred())
+
+        audit.record_tool_call(
+            tool="probe",
+            layer=2,
+            endpoint="/x",
+            latency_ms=1.0,
+            params={"endpoint": _Deferred()},
+        )
+
+        raw_text = log_path.read_text(encoding="utf-8")
+        assert secret_value not in raw_text
+        # The line must still be diagnostically useful: this is a
+        # redaction, not a deletion.
+        assert "kg_reader" in raw_text
+        assert "host" in raw_text
+
+    def test_a_deferred_api_key_url_under_an_innocuous_key_is_redacted(self):
+        """The other measured shape, at the pure-function level. `httpx.URL`
+        and `pathlib.Path` both stringify to something carrying a query
+        string, so this is the ordinary case rather than a hostile one.
+        """
+        secret_value = uuid.uuid4().hex
+
+        class _DeferredUrl:
+            def __str__(self) -> str:
+                return "https://h/x?db=gene&api" + "_key=" + secret_value
+
+        result = audit.redact_params({"endpoint": _DeferredUrl()})
+
+        assert secret_value not in json.dumps(result, default=str)
+        assert "db=gene" in result["endpoint"]
+
+    def test_native_scalars_keep_their_json_type(self):
+        """The scoping control. Stringifying every non-`str` leaf would
+        turn an HTTP status into `"200"` and a flag into `"True"`, losing
+        the machine-readability the line exists for. Without this arm a fix
+        that stringified everything would pass both arms above.
+        """
+        result = audit.redact_params(
+            {"status": 200, "ratio": 1.5, "cached": True, "missing": None}
+        )
+
+        assert result["status"] == 200
+        assert result["ratio"] == 1.5
+        assert result["cached"] is True
+        assert result["missing"] is None
+
+    def test_a_leaf_whose_str_raises_becomes_a_disclosed_placeholder(self):
+        """Best-effort by construction: a hostile or half-constructed
+        `__str__` must not fail the tool call being described, and the
+        substitution must be visible rather than silent.
+        """
+
+        class _Unrepresentable:
+            def __str__(self) -> str:
+                raise RuntimeError("cannot render")
+
+        result = audit.redact_params({"endpoint": _Unrepresentable()})
+
+        assert result["endpoint"] == audit._UNREPRESENTABLE_PLACEHOLDER
 
 
 if __name__ == "__main__":

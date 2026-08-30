@@ -61,6 +61,64 @@ from system_03_search_agent.observability import config
 #: intentionally withheld, not an unexplained gap that reads like a bug.
 _REDACTED = "[redacted]"
 
+#: What replaces an exception MESSAGE once its class name has been taken
+#: off the front. A literal marker for the same reason `_REDACTED` is one:
+#: a reader of the trace must be able to tell that a message existed and
+#: was withheld by design, rather than that a run failed with no detail.
+_REDACTED_ERROR = "[redacted error]"
+
+#: The closed set of NORMALIZED key names whose value is treated as an
+#: exception message rather than as trace content.
+#:
+#: WHY THIS FIELD IS BOUNDED RATHER THAN SCANNED (A-5.0-13, J-03). langsmith
+#: routes a run's error through the configured anonymizer, wrapped as
+#: `{"error": <string>}` (`client.py:2759-2764`), and that string is
+#: `repr(exc)` plus a formatted traceback
+#: (`run_helpers._format_error_with_exceptions_to_handle:1442`). In this
+#: system that message carries a URL with the NCBI api_key appended by
+#: `ncbi_transport._append_api_key`, or the `kg_reader` DSN password, both
+#: measured. Before this change `redact_payload` walked dicts and lists and
+#: returned every other type unchanged, so the string came back
+#: byte-identical and shipped off-box to a third-party SaaS.
+#:
+#: `audit.py`'s module docstring records what this phase already paid four
+#: rounds to learn about exactly that string: three consecutive rounds tried
+#: to make a scanner safe enough for it, each passed its own tests, and each
+#: was defeated by an input of the same family. The durable fix there was to
+#: stop accepting free text at all and accept a closed vocabulary plus an
+#: exception class name instead. This is the same bound applied at the other
+#: sink, and it is applied here rather than in the message's assembly for a
+#: reason worth stating: langsmith assembles the string, but it takes this
+#: module's RETURN VALUE verbatim as the field it uploads
+#: (`client.py:2318`, `client.py:3684`), so emission is a chokepoint this
+#: repository does control even though assembly is not.
+#:
+#: What a trace actually needs from a failure is which run failed, already
+#: carried by the run record and by `trace_id`, and what KIND of failure it
+#: was. A class name answers the second. Build phase 5.1's eval graders need
+#: a run's inputs, outputs, citations and tool results, none of which travel
+#: under any key named below, so bounding this field costs them nothing.
+_ERROR_TEXT_KEYS: frozenset[str] = frozenset(
+    {"error", "errors", "exception", "traceback", "stacktrace"}
+)
+
+#: Cap on an extracted exception class name, the same bound and the same
+#: reasoning as `audit._MAX_ERROR_CLASS_CHARS`: it bounds LENGTH and
+#: nothing else, so it is not a second bound on secrecy (F-5.0-21).
+_MAX_ERROR_CLASS_CHARS = 128
+
+#: A dotted Python identifier, applied ANCHORED at position 0 of the error
+#: string and required to be followed immediately by `(`. Both constraints
+#: are load-bearing. Anchoring means the only thing this can ever capture
+#: is the leading `repr(exc)`'s class name, which is written in a `class`
+#: statement rather than assembled from data, the same developer-controlled
+#: versus data-assembled distinction `audit._safe_error_class` rests on; a
+#: message cannot place itself in front of its own class name. The
+#: character class excludes every character a credential needs to travel,
+#: no `=`, `:`, `/`, `@`, `?`, `&`, whitespace or quote, so neither a
+#: query-string assignment nor a DSN userinfo segment is spellable here.
+_ERROR_CLASS_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
+
 # Category patterns for identity- and credential-shaped keys, matched against
 # a NORMALIZED key (lowercased, every non-alphanumeric character stripped),
 # not against an enumerated list of exact field names. This is the
@@ -205,6 +263,80 @@ def _looks_like_model(key_set: set[str], model_fields: frozenset[str]) -> bool:
     return len(key_set & model_fields) >= 2
 
 
+def _is_error_text_key(key: object) -> bool:
+    """Whether `key` names a field carrying an exception message."""
+    return _normalize_key(key) in _ERROR_TEXT_KEYS
+
+
+def _bound_error_text(value: str) -> str:
+    """Reduce an exception message to a marker plus, at most, its class name.
+
+    The message itself is DISCARDED, never scanned, truncated or rewritten.
+    That is what makes this a structural bound rather than a fourth attempt
+    at the scanner this phase abandoned: there is no path down which any
+    part of a URL, a DSN or a response body can reach the returned value,
+    because nothing but an anchored dotted identifier is ever read out of
+    the input at all.
+
+    A class name is recovered only when the string opens with the exact
+    shape `repr(exc)` produces, a dotted identifier immediately followed by
+    `(`. Anything else, including a message langsmith or a LangChain tracer
+    formatted with `str(exc)` rather than `repr(exc)`, yields the bare
+    marker. Failing closed to less information is correct here: the class
+    name is a diagnostic nicety on top of the run record, never the record.
+
+    The residual, stated rather than assumed, and it is the same one
+    `audit._safe_error_class` documents under F-5.0-21: an identifier is a
+    SHAPE, and a bare alphanumeric token is a legal identifier, so this
+    bound would not by itself exclude an opaque API key sitting where a
+    class name belongs. What keeps that from happening is position, not the
+    character class: position 0 followed by `(` is occupied by
+    `type(exc).__name__`, which the raising code chooses, and a message
+    cannot move itself in front of it.
+    """
+    match = _ERROR_CLASS_PATTERN.match(value)
+    if match is None or match.end() >= len(value) or value[match.end()] != "(":
+        return _REDACTED_ERROR
+    class_name = match.group(0)
+    if len(class_name) > _MAX_ERROR_CLASS_CHARS:
+        return _REDACTED_ERROR
+    return _REDACTED_ERROR + " " + class_name
+
+
+def _bound_error_value(value: Any) -> Any:
+    """Apply the error-field bound to whatever sits under an error-shaped key.
+
+    Four cases, and there is deliberately no fifth that passes text
+    through:
+
+    - `None` stays `None`. A run that did not fail records no error, and
+      inventing a marker there would read as a failure that never happened.
+    - An exact `str` is bounded by `_bound_error_text`. This is the only
+      shape langsmith actually produces (`client.py:2761` wraps the
+      formatted message and nothing else).
+    - A `str` SUBCLASS becomes the bare marker with no class-name
+      extraction attempted. `type(value) is str` rather than `isinstance`
+      is F-5.0-22's lesson carried across from `audit.py`: a subclass can
+      override the very methods a guard calls, so the exact type test
+      stands in front of the ones it could lie to.
+    - A dict or list recurses under the ordinary rules, because a container
+      is structure rather than a message. Its own keys get this same
+      treatment at depth.
+
+    Any other scalar (a number, a bool) is returned unchanged: it carries
+    no text and therefore no credential.
+    """
+    if value is None:
+        return None
+    if type(value) is str:
+        return _bound_error_text(value)
+    if isinstance(value, str):
+        return _REDACTED_ERROR
+    if isinstance(value, dict | list):
+        return redact_payload(value)
+    return value
+
+
 def _allowlist_for(keys: Iterable[str]) -> frozenset[str] | None:
     """Return the SAFE-field allowlist for a dict recognized as Query or
     RequestContext shaped, or None when the dict is neither.
@@ -251,10 +383,28 @@ def redact_payload(payload: Any) -> Any:
        object this module does not structurally recognize at all, for
        example a nested echo of an identifier inside a tool result.
 
+    3. ERROR BOUND (A-5.0-13, J-03): a value under an error-shaped key
+       (`_ERROR_TEXT_KEYS`) never passes through as free text. The message
+       is discarded and replaced with a marker plus, at most, the leading
+       `repr(exc)`'s class name. This is the third anonymizer path
+       langsmith drives, `_hide_run_error`, and it is the one that carried
+       a live credential off-box before this bound existed. See
+       `_ERROR_TEXT_KEYS` for why the field is bounded rather than scanned,
+       and `_bound_error_text` for what the bound does and does not
+       guarantee.
+
     Never raises on an unexpected shape. A value that is neither a dict
     nor a list (a string, a number, `None`, a bool) is returned unchanged
     once it survives whichever pass above it fell under, since a scalar
     value cannot itself carry nested PII.
+
+    WHAT THIS STILL DOES NOT DO, stated because a green gate that reads as
+    "strings are handled" would be worse than no statement at all
+    (A-5.0-14, open): an ordinary string under an ordinary key is returned
+    unchanged. A credential echoed into a tool result under a key named
+    neither for a secret nor for an error is not caught here. Pass 3 bounds
+    the one position langsmith is known to put a formatted exception
+    message in, not every position a string can occupy.
     """
     if isinstance(payload, dict):
         allowlist = _allowlist_for(payload.keys())
@@ -263,6 +413,12 @@ def redact_payload(payload: Any) -> Any:
             unlisted = allowlist is not None and key not in allowlist
             if unlisted or _is_pii_key(key):
                 result[key] = _REDACTED
+            elif _is_error_text_key(key):
+                # Ordered AFTER the two redaction rules on purpose: a key
+                # that is both error-shaped and PII-shaped must take the
+                # stronger outcome, and full redaction is stronger than a
+                # bound that keeps a class name.
+                result[key] = _bound_error_value(value)
             else:
                 result[key] = redact_payload(value)
         return result

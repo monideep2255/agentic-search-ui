@@ -47,6 +47,55 @@ might run on; the lock removes the dependency on that guarantee rather
 than relying on it, which is what Section 20.3's "one writer per process"
 line actually asks for.
 
+## The lock and the field caps are ONE control, not two
+
+Read those two words literally, because this paragraph replaces two
+earlier ones that each described its half as if it stood alone, and the
+gap between them was measured (A-5.0-19).
+
+A `threading.Lock` is per-PROCESS. Two PROCESSES on one sink is ordinary
+use here, not a hypothetical: `s3-kgx-export` is a separate CLI process
+that reaches the graph through the same audited chokepoint and resolves
+the same default `logs/tool_audit.jsonl`, and any multi-worker uvicorn
+configuration is a third. Four processes writing 1200 short lines
+produced 1200 intact lines and zero unparseable ones; the same four
+writing 20 KB lines produced 924 lines and 251 unparseable ones, permanent
+damage in a file that by contract is never rewritten.
+
+What separates those two runs is LINE SIZE and nothing else. Below the
+platform text-buffer size, roughly 8 KB, one `write` call reaches the
+kernel and POSIX `O_APPEND` keeps it whole across processes; above it,
+Python emits several syscalls and they interleave. So the lock covers
+threads within a process, and the SIZE CAPS are what cover processes,
+by keeping every line inside the size where the kernel's own guarantee
+holds. Neither is sufficient alone, and weakening either one silently
+removes half of a single guarantee.
+
+That is why `_MAX_LINE_BYTES` exists as a whole-line bound rather than as
+arithmetic over the per-field caps stated in a comment. Per-field caps
+that happen to sum to something under the buffer today are a sentence
+about the code, not a check in it, and this repository has shipped four
+defects that were exactly that (build phase 4.15). The whole-line bound
+holds even after a field is added, widened, or its cap is changed.
+
+## Never raises AND always records
+
+Two guarantees, not one, and they were not always both true. The module
+promised the first and the second was assumed to follow from it
+(A-5.0-05). It did not: one value `json.dumps` refuses removed the entire
+line, leaving a `logger.warning` and nothing in the file. For an audit
+sink that is the worse failure of the two, because an absent line is
+indistinguishable from the call never having happened, and the file is
+append-only so nothing can be added later to correct it.
+
+Every field is therefore reduced to something writable rather than
+allowed to fail: a value that cannot be converted becomes
+`_UNREPRESENTABLE_PLACEHOLDER` (`_stringify_leaf`), a value too large is
+dropped with a disclosure (`_bounded`, `_bounded_text`), a line too large
+is reduced (`_bounded_line`), and a line that cannot be serialized at all
+still gets written in a degraded form (`_degraded_line`). One policy at
+four points on the same path: name what was lost, write the line.
+
 ## Best-effort by construction
 
 Matches `feedback/writer.py`'s discipline exactly: audit failure must
@@ -177,6 +226,36 @@ _SECRET_KEY_MARKERS: tuple[str, ...] = (
 #: field a cap can still apply to.
 _MAX_PARAMS_BYTES = 4096
 
+#: Cap on each already-redacted TEXT field, in UTF-8 bytes: `tool`,
+#: `endpoint`, `authorization` and `trace_id`. A-5.0-03: every one of these
+#: reached the append-only line verbatim, with no redaction and no bound of
+#: any kind, which made the sink itself exactly as defenceless as the day
+#: F-5.0-08 was filed as a critical. That finding was closed CALLER-side,
+#: at one of three chokepoints, so the other two and every future caller
+#: were one careless argument away from reproducing it. 256 bytes sits far
+#: above any endpoint path, tool name or credential NAME this system uses,
+#: and far below the line budget below.
+_MAX_TEXT_FIELD_BYTES = 256
+
+#: `maxItems` and a size cap for `record_ids` (A-5.0-04). This is the one
+#: field on the line whose contents are by design whatever a third party
+#: returned, which `.claude/rules/ai-security-standards.md` classifies as
+#: untrusted external content by name, and it had the fewest controls of
+#: any field on the line: `list(record_ids)` and nothing else.
+_MAX_RECORD_IDS = 256
+_MAX_RECORD_IDS_BYTES = 2048
+
+#: THE WHOLE-LINE BOUND, in UTF-8 bytes, and the half of the append-only
+#: guarantee that covers other PROCESSES (A-5.0-19; see the module
+#: docstring section "The lock and the field caps are ONE control"). Set
+#: below the roughly 8 KB platform text-buffer size at which Python stops
+#: emitting one `write` per line and concurrent appends begin interleaving.
+#: A whole-line check rather than arithmetic over the per-field caps
+#: because a sum stated in a comment is a sentence about the code rather
+#: than a check in it, and it stops being true the moment a field is added
+#: or widened.
+_MAX_LINE_BYTES = 7168
+
 #: The code recorded when a caller supplies anything this module does not
 #: recognize. Named separately from the tuple below so a caller and a test
 #: can both refer to the fail-closed outcome without spelling it.
@@ -220,6 +299,21 @@ AUDIT_ERROR_CODES: tuple[str, ...] = (
 #: LENGTH and nothing else: at 128 it sits far above every credential this
 #: system handles, so it is not a second bound on secrecy (F-5.0-21).
 _MAX_ERROR_CLASS_CHARS = 128
+
+#: The exact scalar types `json.dumps` serializes from the VALUE rather
+#: than by calling `str()` on it. Exact types via `type(...) is`, not
+#: `isinstance`, and the difference is the whole point: a subclass of one
+#: of these is not guaranteed to take the same encoder path, so it is
+#: routed through the stringify-then-redact branch instead of being
+#: trusted. See `_stringify_leaf` for the ordering defect this closes.
+_JSON_NATIVE_SCALARS: tuple[type, ...] = (bool, int, float)
+
+#: What replaces a value this module could not turn into text at all. It
+#: DISCLOSES the substitution rather than dropping the field or the line:
+#: this repository's standing rule is that a system dropping something says
+#: so, and in an append-only sink a silent omission can never be corrected
+#: afterwards.
+_UNREPRESENTABLE_PLACEHOLDER = "[unrepresentable value]"
 
 #: What is recorded when `error_class` is present but is not a plain
 #: identifier. A constant rather than silence, because this repository's
@@ -362,11 +456,45 @@ def _safe_error_class(value: Any) -> str | None:
     return _REFUSED_ERROR_CLASS
 
 
+def _plain_str(value: str) -> str:
+    """The real character data of a `str`, with no subclass method consulted.
+
+    A-5.0-01: F-5.0-22 closed the `str`-subclass family at two guards by
+    replacing `isinstance` with `type(value) is str`, and MISSED the third
+    site, `_is_secret_key`, which both redaction rules delegate to. A
+    subclass overriding `lower()` to return `"harmless"` was measured
+    writing a live credential onto the line under a key literally named
+    `api_key`, and a subclass overriding `__contains__` to return False was
+    measured defeating `_redact_value_string`'s early return the same way.
+
+    An exact type test is the wrong shape of fix HERE, and this is the one
+    place in this module where that is true. At the two guards F-5.0-22
+    changed, refusing a subclass FAILS CLOSED: the value is discarded and
+    replaced with a marker. Refusing a subclass KEY would fail OPEN
+    instead, because `_is_secret_key` returning False means "this key is
+    not secret-ish, keep the value", which is exactly what the attack
+    wanted. So the fix is to keep accepting a subclass and stop trusting
+    its methods.
+
+    `str.__str__` is the unbound base method, so a subclass override cannot
+    intercept it, and like every base `str` method it returns an exact
+    `str`. Measured on this branch against a subclass overriding `lower`,
+    `__contains__` and `__str__` together: it returned the genuine
+    characters as `type(...) is str`.
+    """
+    return str.__str__(value)
+
+
 def _is_secret_key(key: Any) -> bool:
-    """Whether a params key name matches the secret-ish category, not a specific name."""
+    """Whether a params key name matches the secret-ish category, not a specific name.
+
+    `isinstance` is deliberate rather than F-5.0-22's exact type test: see
+    `_plain_str` for why refusing a subclass here would fail open. The
+    subclass is admitted and then read through base methods only.
+    """
     if not isinstance(key, str):
         return False
-    lowered = key.lower()
+    lowered = _plain_str(key).lower()
     return any(marker in lowered for marker in _SECRET_KEY_MARKERS)
 
 
@@ -538,6 +666,42 @@ def _redact_value_string(value: str) -> str:
     return redacted if redacted != value else value
 
 
+def _stringify_leaf(value: Any) -> str:
+    """Convert a non-JSON-native leaf to text HERE, so redaction can see it.
+
+    A-5.0-02, THE ORDERING GAP, and it is worth naming precisely because it
+    is not another scanner gap and no fix to a pattern would have closed
+    it. `redact_params` used to inspect `dict`, `list` and `str` and return
+    every other leaf unchanged. `record_tool_call` then serialized the
+    whole entry with `json.dumps(entry, default=str)`, and `default=str` is
+    what converted the leaf to text, AFTER redaction was over. So an
+    object whose `__str__` returns a DSN, an `httpx.URL` carrying a query
+    string, a `pathlib.Path`, an exception object, travelled past every
+    rule as an opaque leaf and was re-materialized as a credential at write
+    time with nothing left to look at it.
+
+    Every previous defeat in this phase was "something upstream consumed
+    the credential before the check saw it". Here the upstream was the type
+    system. The fix is therefore the ORDER, not a new pattern: convert
+    first, then redact, so the string that `json.dumps` would eventually
+    have produced is the same string the value rules actually inspect.
+
+    A conversion that raises is not allowed to propagate: this module is
+    best-effort by construction, and a hostile or half-constructed
+    `__str__` must not be able to fail the tool call being described. It
+    yields `_UNREPRESENTABLE_PLACEHOLDER`, which is the SAME disclosure
+    substitution `_bounded` makes for a value `json.dumps` cannot encode
+    (A-5.0-05). The two are one policy applied at two points on the same
+    path, deliberately not two different answers to the same question: a
+    value that cannot be represented is replaced by a marker naming that
+    fact, and the line is still written.
+    """
+    try:
+        return str(value)
+    except Exception:  # noqa: BLE001 - a hostile __str__ must not fail the caller
+        return _UNREPRESENTABLE_PLACEHOLDER
+
+
 def redact_params(value: Any) -> Any:
     """Recursively replace any secret-ish-keyed value, or embedded secret, with a placeholder.
 
@@ -564,8 +728,19 @@ def redact_params(value: Any) -> Any:
        "secret" from `_SECRET_KEY_MARKERS`, so they cannot drift into two
        different definitions of the word.
 
-    Non-dict, non-list, non-string leaves (numbers, booleans, None) pass
-    through unchanged.
+    3. Deferred-stringification rule (A-5.0-02): a leaf that is neither a
+       container nor a `str` nor a JSON-native scalar is converted to text
+       HERE and then run through rule 2, rather than being passed through
+       as an opaque object for `json.dumps(default=str)` to convert after
+       redaction has finished. See `_stringify_leaf` for why this is an
+       ordering fix and not a pattern fix.
+
+    `None` and the exact scalar types in `_JSON_NATIVE_SCALARS` still pass
+    through unchanged, and they are the only leaves that do. They carry no
+    text, and `json.dumps` encodes them from the value rather than through
+    `str()`, so there is no deferred conversion for rule 3 to get in front
+    of. Stringifying them anyway would turn an HTTP status into `"200"` and
+    lose the line's machine-readability for no gain.
 
     This function is no longer on the error field's path at all. It was,
     between F-5.0-13's fix and this design change, and that arrangement
@@ -585,18 +760,101 @@ def redact_params(value: Any) -> Any:
     if isinstance(value, list):
         return [redact_params(item) for item in value]
     if isinstance(value, str):
-        return _redact_value_string(value)
-    return value
+        # A-5.0-01: `_redact_value_string` calls `str` methods on what it
+        # is given, including the `in` test its early return depends on. A
+        # subclass overriding `__contains__` was measured defeating that
+        # return outright, so the subclass is flattened to its real
+        # characters before any method of its own can answer for it.
+        return _redact_value_string(_plain_str(value))
+    if value is None or type(value) in _JSON_NATIVE_SCALARS:
+        return value
+    return _redact_value_string(_stringify_leaf(value))
 
 
-def _bounded(redacted: Any, *, field_name: str = "params") -> Any:
+def _bounded_text(value: Any, *, field_name: str) -> str:
+    """Redact and cap one scalar TEXT field on the line.
+
+    A-5.0-03. `tool`, `endpoint`, `authorization` and `trace_id` were each
+    placed into the entry dict verbatim. `authorization`'s own docstring
+    states the rule it did not enforce, "the NAME of the credential used
+    ... Never the credential value itself", which is build phase 4.15's
+    recorded defect class exactly: a confident sentence describing a check
+    that is not there.
+
+    Redaction is the SAME `_redact_value_string` `params` values get, and
+    that is deliberate rather than convenient. Two different definitions of
+    "secret" on one line is how a control drifts; the caveats on that
+    function apply here unchanged, including the open gap its own docstring
+    pins, and it is best effort here for the same reason it is best effort
+    there. What is NOT best effort is the cap.
+
+    Over the cap the value is DROPPED and the drop is disclosed, never
+    truncated. A truncated redaction can leave a fragment of a credential
+    while reading as complete, and the disclosure marker names the field
+    and the real size so an operator can tell a dropped field from a field
+    that was never populated.
+    """
+    if isinstance(value, str):
+        text = _redact_value_string(_plain_str(value))
+    else:
+        text = _redact_value_string(_stringify_leaf(value))
+    encoded_len = len(text.encode("utf-8"))
+    if encoded_len <= _MAX_TEXT_FIELD_BYTES:
+        return text
+    return (
+        f"[{field_name} exceeded the audit log size cap and was dropped: "
+        f"{encoded_len} bytes, cap {_MAX_TEXT_FIELD_BYTES}]"
+    )
+
+
+def _bounded_record_ids(record_ids: Sequence[Any] | None) -> Any:
+    """Redact, item-cap and size-cap the one field filled by a third party.
+
+    A-5.0-04. `record_ids` holds identifiers a live NCBI or enrichment API
+    returned, and it got `list(record_ids)` and nothing else: no redaction,
+    no element handling, no `maxItems`, no size bound. Both halves of the
+    adversary's reproduction landed verbatim, a credential assignment as a
+    string element and a deferred-`__str__` object as the next one.
+
+    Three bounds, in this order, and the order is the same one `_bounded`
+    already relies on:
+
+    1. `maxItems` FIRST, so a pathological element count cannot make the
+       redaction walk itself the expensive part.
+    2. `redact_params` over the truncated list, which is what gives each
+       element the value rule and, since fix A-5.0-02, the deferred
+       stringification rule as well.
+    3. The size cap last, over the already-redacted list, so no fragment of
+       a secret is ever produced by shortening.
+
+    Item truncation appends a marker element rather than dropping silently.
+    That keeps the field a list, which every reader of the line expects,
+    and it discloses the loss: whole elements are dropped, never split, so
+    a marker here cannot expose half a value.
+    """
+    if record_ids is None:
+        return []
+    items = list(record_ids)
+    dropped = len(items) - _MAX_RECORD_IDS
+    if dropped > 0:
+        items = items[:_MAX_RECORD_IDS]
+    redacted = redact_params(items)
+    if dropped > 0:
+        redacted.append(f"[record_ids truncated, {dropped} more not recorded]")
+    return _bounded(redacted, field_name="record_ids", cap_bytes=_MAX_RECORD_IDS_BYTES)
+
+
+def _bounded(
+    redacted: Any, *, field_name: str = "params", cap_bytes: int = _MAX_PARAMS_BYTES
+) -> Any:
     """Cap the serialized size of an already-redacted value.
 
-    `params` is the only caller today. `field_name` is kept as a
-    parameter rather than hardcoded because the disclosure marker names
-    the field it refers to, and a second capped field is a plausible
-    future addition; it is not kept because `error` still uses it, which
-    it no longer does. The error half is bounded by `AUDIT_ERROR_CODES`
+    `params` and `record_ids` are the two callers, the second added under
+    A-5.0-04 with its own smaller `cap_bytes`. `field_name` names the field
+    the disclosure marker refers to, which is why it was already a
+    parameter before a second caller existed; it is not kept because
+    `error` still uses it, which it no longer does. The error half is
+    bounded by `AUDIT_ERROR_CODES`
     and `_MAX_ERROR_CLASS_CHARS` instead, which is a stronger bound than a
     size cap: a size cap shortens an oversized value, while a closed
     vocabulary means an oversized value never becomes a field value at
@@ -623,13 +881,97 @@ def _bounded(redacted: Any, *, field_name: str = "params") -> Any:
             "_audit_note": f"{field_name} could not be serialized and was dropped",
         }
     encoded_len = len(serialized.encode("utf-8"))
-    if encoded_len <= _MAX_PARAMS_BYTES:
+    if encoded_len <= cap_bytes:
         return redacted
     return {
         "_audit_note": f"{field_name} exceeded the audit log size cap and was dropped",
         "_audit_original_bytes": encoded_len,
-        "_audit_cap_bytes": _MAX_PARAMS_BYTES,
+        "_audit_cap_bytes": cap_bytes,
     }
+
+
+def _bounded_line(entry: dict[str, Any]) -> str:
+    """Serialize one entry, guaranteed to fit inside one atomic append.
+
+    A-5.0-19, and the half of the append-only guarantee the per-process
+    lock cannot provide. See the module docstring section "The lock and the
+    field caps are ONE control" for the measurement: four processes writing
+    short lines lost nothing, and the same four writing 20 KB lines lost a
+    quarter of every line permanently.
+
+    The two variable-size fields are the only ones that can push a line
+    over, and both are replaced wholesale rather than shortened, for the
+    same reason `_bounded` drops rather than truncates: a fragment of a
+    redacted structure reads as complete. The reduction is disclosed on the
+    line itself, so a reader can tell a reduced record from a record whose
+    call genuinely carried nothing.
+
+    Section 20.3's required fields all survive a reduction: `trace_id`,
+    `tool`, `layer`, `endpoint`, `authorization`, `http_status`,
+    `error_code`, `error_class`, `latency_ms` and the timestamp are each
+    bounded by their own cap already, so the reduced line is bounded by
+    construction rather than by a second measurement.
+    """
+    try:
+        line = json.dumps(entry, default=str)
+    except Exception:  # noqa: BLE001 - see _degraded_line: never lose the record
+        return _degraded_line(entry)
+    encoded_len = len(line.encode("utf-8"))
+    if encoded_len <= _MAX_LINE_BYTES:
+        return line
+    reduced = dict(entry)
+    reduced["params"] = {"_audit_note": "params dropped to keep the line atomic"}
+    reduced["record_ids"] = ["[record_ids dropped to keep the line atomic]"]
+    reduced["_audit_note"] = (
+        f"line was {encoded_len} bytes, over the {_MAX_LINE_BYTES} byte cap, "
+        "and was reduced so a concurrent process cannot interleave with it"
+    )
+    try:
+        return json.dumps(reduced, default=str)
+    except Exception:  # noqa: BLE001 - the reduced form can fail for the same reason
+        return _degraded_line(entry)
+
+
+def _degraded_line(entry: dict[str, Any]) -> str:
+    """The line that gets written when the entry cannot be serialized at all.
+
+    A-5.0-05, and it is the OPPOSITE failure to a leak. `record_tool_call`
+    guaranteed "never raises" and never separately guaranteed "always
+    records", and the gap between those two sentences was measurable: one
+    value `json.dumps` refuses, a non-string dict key inside `record_ids`
+    being the shape that `default=str` is never even consulted for, and the
+    whole line vanished. Zero lines written, one `logger.warning` naming an
+    exception class, and nothing else. In a sink whose entire purpose is
+    proving what happened, an absent line is indistinguishable from the
+    call never having happened, and the file is append-only so it can never
+    be reconstructed afterwards.
+
+    Every value is reduced to a JSON primitive it already is, or to
+    `_UNREPRESENTABLE_PLACEHOLDER`, and the disclosure says so. That makes
+    this function's own `json.dumps` unable to fail: it is handed nothing
+    but `None`, `bool`, `int`, `float` and `str`, with no `default` hook to
+    invoke and therefore no third-party code left to run.
+
+    Note what is NOT attempted: no `str()` is called on the offending
+    value. `_stringify_leaf` already tried that upstream for the leaves it
+    owns, and calling it again here on a value that has already refused to
+    serialize would be running the same hostile code a second time to
+    salvage a field, in the one code path whose whole job is to stop
+    failing. The composition with fix A-5.0-02 is therefore: convert early
+    where a conversion is safe and useful, and here, at the last step,
+    convert nothing and disclose instead.
+    """
+    safe: dict[str, Any] = {}
+    for key, value in entry.items():
+        if value is None or type(value) in _JSON_NATIVE_SCALARS or type(value) is str:
+            safe[str(key)] = value
+        else:
+            safe[str(key)] = _UNREPRESENTABLE_PLACEHOLDER
+    safe["_audit_note"] = (
+        "one or more fields could not be serialized and were replaced; "
+        "the record is degraded rather than dropped"
+    )
+    return json.dumps(safe)
 
 
 def _utc_timestamp() -> str:
@@ -673,22 +1015,33 @@ def record_tool_call(
     Args:
         tool: the tool or caller name (for example "cypher_query",
             "ncbi_efetch", or the KGX export traversal that bypasses the
-            tool layer entirely).
+            tool layer entirely). Redacted and capped like every other
+            text field on the line (A-5.0-03).
         layer: 1, 2, or 3, naming which of the three data-access layers
             this call reached (system-design-patterns.md pattern 3).
         endpoint: the endpoint or database called (a URL path, an NCBI
-            db name, or the graph database name).
+            db name, or the graph database name). Redacted and capped
+            (A-5.0-03). That is a bound at the SINK, and it does not
+            replace `ncbi_transport._endpoint_for_audit`, which stops the
+            raw URL being handed here in the first place; a caller-side
+            fix covers one caller, this covers every caller.
         latency_ms: wall-clock time the call took, measured by the
             transport that holds the actual request, never estimated here.
         authorization: the NAME of the credential used, for example
             "ncbi_api_key", "kg_reader", or "none". Never the credential
             value itself (PRD: every Layer 2/3 access logged with its
-            authorization, by identifier, never by value).
+            authorization, by identifier, never by value). That sentence
+            described a rule nothing enforced until A-5.0-03; the field is
+            now redacted and capped, which is a bound rather than a
+            guarantee that a caller passed a name.
         params: the call's parameters, redacted by category and size
             capped before they are written. May be None or empty.
         record_ids: identifiers the call returned, for example a list of
             NCBI UIDs or graph node ids. May be None, recorded as an empty
-            list.
+            list. UNTRUSTED EXTERNAL CONTENT by definition, since its
+            contents are whatever a third-party API returned, so it is
+            item-capped, redacted element by element and size-capped
+            (A-5.0-04). See `_bounded_record_ids`.
         http_status: the numeric HTTP status, or None for a call with no
             HTTP semantics (a graph query, an FTP transfer) or a
             body-level failure E-utilities reports with no status code at
@@ -743,15 +1096,25 @@ def record_tool_call(
     if not audit_enabled():
         return
     try:
+        raw_trace_id = current_trace_id()
         entry: dict[str, Any] = {
-            "trace_id": current_trace_id(),
+            # A-5.0-03: every text field below now carries the same
+            # redaction and the same cap. Before this, four of them were
+            # placed here verbatim, which left the SINK exactly as
+            # defenceless as the day F-5.0-08 was filed, since that
+            # critical was closed at one caller rather than here.
+            "trace_id": (
+                None
+                if raw_trace_id is None
+                else _bounded_text(raw_trace_id, field_name="trace_id")
+            ),
             "timestamp": _utc_timestamp(),
-            "tool": tool,
+            "tool": _bounded_text(tool, field_name="tool"),
             "layer": layer,
-            "endpoint": endpoint,
-            "authorization": authorization,
+            "endpoint": _bounded_text(endpoint, field_name="endpoint"),
+            "authorization": _bounded_text(authorization, field_name="authorization"),
             "params": _bounded(redact_params(dict(params) if params else {})),
-            "record_ids": list(record_ids) if record_ids is not None else [],
+            "record_ids": _bounded_record_ids(record_ids),
             "http_status": http_status,
             # Neither of these two runs through `redact_params`, and that
             # is the point rather than an omission: a closed vocabulary
@@ -765,7 +1128,7 @@ def record_tool_call(
             "error_class": _safe_error_class(error_class),
             "latency_ms": latency_ms,
         }
-        line = json.dumps(entry, default=str)
+        line = _bounded_line(entry)
         path = audit_log_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         _append_line(path, line)

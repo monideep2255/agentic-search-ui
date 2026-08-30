@@ -141,6 +141,54 @@ phase's own tracker had flagged as unproven:
     test_every_graph_error_subclass_maps_to_a_specific_code`. An arm that
     walks a set can pass vacuously if the walk finds nothing, so this is
     what proves that one discriminates.
+15. The NEVER-LOSE-THE-RECORD fallback removed (A-5.0-05): breaks
+    `test_audit.TestAnUnserializableValueDegradesRatherThanDeletingTheLine.
+    test_an_unserializable_scalar_field_still_writes_a_line`. Targets
+    `_bounded_line` rather than `_degraded_line`, because neutering the
+    fallback alone would still write something and the defect was TOTAL
+    loss of the record. It drives the SCALAR arm rather than the
+    `record_ids` one because `record_ids` is caught a layer above by
+    `_bounded`, measured rather than assumed.
+16. The PII CONTROL ITSELF deleted from `build_traced_client` (J-06),
+    this phase's own critical F-5.0-03: breaks `test_tracing.
+    TestTheAssembledTracePayloadCarriesNoAccountPii.
+    test_owner_id_user_id_and_session_memory_never_reach_the_wire`, an arm
+    that inspects the ACTUAL multipart body langsmith assembles rather
+    than calling `redact_payload` directly. Deleting the line used to
+    leave the suite green at `164 passed`.
+17. The PostHog credential-kind bound made permissive (J-07), in two
+    cases: any prefix accepted, which breaks `test_config.
+    TestPostHogKeyKindIsBounded.test_a_personal_key_is_refused_by_name`;
+    and a two-entry BLOCKLIST substituted for the bound, which passes that
+    first case and breaks `..._an_unrecognised_prefix_fails_closed`. The
+    second is the one the design rests on, since an empty blocklist is
+    exactly what the pre-fix code was.
+18. The SINK's own field bounds removed (A-5.0-03, A-5.0-04, A-5.0-19),
+    one case per bound: `_bounded_text`, `_bounded_record_ids` and
+    `_bounded_line`. The third targets a DIRECT arm rather than one
+    writing through `record_tool_call`, because today's per-field caps
+    make the whole-line branch unreachable from there, measured rather
+    than assumed and recorded in that arm's own docstring.
+19. The audit redactor's SUBCLASS FLATTENING removed (A-5.0-01), mutated
+    once per delegating rule: breaks `test_audit.
+    TestSubclassKeysAndValuesCannotDefeatRedaction.
+    test_a_key_subclass_lying_about_lower_still_redacts_its_value` and
+    `..._value_subclass_lying_about_contains_is_still_scanned`. Two cases
+    because the key rule and the value rule reach the same function by
+    different paths and either could be fixed without the other.
+20. The audit redactor's DEFERRED-STRINGIFICATION branch removed
+    (A-5.0-02, an ordering gap rather than a scanner gap): breaks
+    `test_audit.TestDeferredStringificationIsRedacted.
+    test_a_deferred_dsn_under_an_innocuous_key_is_redacted`. Mutated
+    together with a pre-fix `_redact_value_string`, because the real one
+    raises on a non-`str` and a raised exception would suppress the line
+    rather than leak it, turning the arm red for the wrong reason.
+21. The tracing redactor's ERROR BOUND removed, in two separately mutated
+    layers (A-5.0-13, J-03): the key test that recognizes an error-shaped
+    field, and the bound that discards the message under it. Both break
+    arms in `test_tracing` that drive langsmith's own `_hide_run_error`
+    rather than `redact_payload` directly, so the property proved is the
+    one on the wire.
 
 Depends on:
     - system_03_search_agent.observability.config
@@ -150,6 +198,7 @@ Depends on:
     - system_03_search_agent.tools.ncbi_transport
     - tests.system_03_search_agent.observability.test_tracing
     - tests.system_03_search_agent.observability.test_audit
+    - tests.system_03_search_agent.observability.test_config
     - tests.system_03_search_agent.observability.test_analytics
     - tests.system_03_search_agent.observability.test_hermetic_guard
     - tests.system_03_search_agent.observability.test_wiring
@@ -166,6 +215,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import json
 import os
 import re
 import urllib.parse
@@ -179,6 +229,7 @@ from system_03_search_agent.tools import graph_connection, ncbi_transport
 from tests.system_03_search_agent.observability import (
     test_analytics,
     test_audit,
+    test_config,
     test_hermetic_guard,
     test_tracing,
     test_wiring,
@@ -334,8 +385,28 @@ def test_endpoint_for_audit_reverted_to_raw_url_turns_the_wiring_arm_red(
     "share[s] the identical file-existence populate-check shape as the two
     proven classes, and [is] recorded as unproven-by-mutation rather than
     assumed equivalent." This function closes exactly that gap.
+
+    TWO LAYERS MUST NOW BE REVERTED TOGETHER, and this is a real change in
+    what the case proves rather than a convenience (F-5.0-24, filed in
+    `tracker/phase_5.0.md` the moment it was measured). A-5.0-03's fix gave
+    the SINK its own bound on the endpoint field, so reverting
+    `_endpoint_for_audit` alone leaves the credential still redacted and
+    this case reported `DID NOT RAISE`. What each layer alone was measured
+    doing, stated rather than assumed:
+
+    - `_endpoint_for_audit` reverted alone: arm stays GREEN, because the
+      sink redacts the query-string assignment itself.
+    - `_bounded_text` neutered alone: arm stays GREEN, because the caller
+      never hands the sink a raw URL to begin with.
+
+    That is defense in depth working, and it is the same shape mutation 8
+    already documents for the error field. The case reverts both because
+    the property it exists to prove, that a credential cannot reach the
+    line through the endpoint field, now has two independent guards and
+    neither one alone is the reason it holds.
     """
     original = ncbi_transport._endpoint_for_audit
+    original_bounded_text = audit._bounded_text
     original_enabled = audit.audit_enabled
     original_log_path = audit.audit_log_path
     original_api_key = os.environ.get("NCBI_API_KEY")
@@ -349,6 +420,7 @@ def test_endpoint_for_audit_reverted_to_raw_url_turns_the_wiring_arm_red(
         )
 
     monkeypatch.setattr(ncbi_transport, "_endpoint_for_audit", lambda url: url)
+    monkeypatch.setattr(audit, "_bounded_text", lambda value, *, field_name: value)
 
     mutated_arm = test_wiring.TestCredentialNeverLeaksThroughTheTransport()
     with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
@@ -359,6 +431,7 @@ def test_endpoint_for_audit_reverted_to_raw_url_turns_the_wiring_arm_red(
         )
 
     monkeypatch.undo()
+    assert audit._bounded_text is original_bounded_text
     # F-5.0-16: this target arm patches the two audit-config lookups AND
     # sets NCBI_API_KEY to a generated credential, so an un-undone patch
     # here would leave that credential in os.environ for the rest of the
@@ -969,6 +1042,511 @@ def test_a_stringified_call_site_turns_the_call_site_arm_red(
 
     monkeypatch.undo()
     assert test_audit._module_source is original_module_source
+
+
+# ---------------------------------------------------------------------------
+# Mutation 18: the never-lose-the-record fallback removed (A-5.0-05).
+# ---------------------------------------------------------------------------
+
+
+def test_degraded_line_fallback_removed_turns_the_unserializable_arm_red(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-5.0-05. A bare `json.dumps` with no fallback is the pre-fix code:
+    the exception escapes into `record_tool_call`'s blanket handler and the
+    line is never written at all, which for an append-only audit sink is
+    permanent and silent.
+
+    The mutation targets `_bounded_line` rather than `_degraded_line`,
+    because neutering the fallback alone would still leave SOMETHING
+    written; the defect was total loss of the record, and only removing the
+    call to the fallback reproduces that.
+
+    IT DRIVES THE SCALAR-FIELD ARM, NOT THE `record_ids` ONE, and that is a
+    measurement rather than a choice. `record_ids` now reaches the line
+    through `_bounded`, whose own try/except substitutes a disclosure
+    marker, so the adversary's original reproduction is caught a layer
+    ABOVE this fallback and stayed green under this mutation. `latency_ms`
+    is a field no redactor walks, so the fallback is the only thing
+    standing behind it. Both arms are kept: one pins the shape the finding
+    was filed against, the other pins the layer this fix added.
+    """
+    original = audit._bounded_line
+
+    control_arm = test_audit.TestAnUnserializableValueDegradesRatherThanDeletingTheLine()
+    with pytest.MonkeyPatch.context() as arm_mp:
+        control_arm.test_an_unserializable_scalar_field_still_writes_a_line(
+            tmp_path / "control", arm_mp
+        )
+
+    monkeypatch.setattr(
+        audit, "_bounded_line", lambda entry: json.dumps(entry, default=str)
+    )
+
+    mutated_arm = test_audit.TestAnUnserializableValueDegradesRatherThanDeletingTheLine()
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_an_unserializable_scalar_field_still_writes_a_line(
+            tmp_path / "mutated", arm_mp
+        )
+
+    monkeypatch.undo()
+    assert audit._bounded_line is original
+
+
+# ---------------------------------------------------------------------------
+# Mutation 19: the PII control itself deleted from build_traced_client
+# (J-06). This is the phase's own critical, F-5.0-03.
+# ---------------------------------------------------------------------------
+
+
+def _client_with_no_anonymizer() -> Any:
+    """`build_traced_client` with the PII control removed, and nothing else.
+
+    Byte-for-byte the shipped function minus `anonymizer=redact_payload`,
+    which is the single line standing between `GraphState` and LangSmith.
+    `hide_metadata` is deliberately LEFT WIRED so this mutation isolates
+    the anonymizer rather than removing both controls at once and proving
+    less than it appears to.
+    """
+    from langsmith import Client
+
+    return Client(
+        api_key=config.langsmith_api_key(),
+        api_url=config.langsmith_endpoint(),
+        hide_metadata=tracing.redact_payload,
+    )
+
+
+def test_deleting_the_anonymizer_turns_the_assembled_payload_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """J-06. Deleting this line left the whole suite green at `164 passed`,
+    because every reference to `build_traced_client` either monkeypatched
+    it away or asserted it was never called. That is the twelfth recorded
+    instance in this repository of an assertion that could not fail, and it
+    sat on the most sensitive control the phase ships.
+
+    This case exists so the deletion is a `pytest` failure. The arm it
+    drives inspects the ACTUAL multipart body langsmith assembles, which is
+    the property, rather than calling `redact_payload` directly, which is a
+    correlate of it and is exactly what could not catch this.
+    """
+    original = tracing.build_traced_client
+
+    control_arm = test_tracing.TestTheAssembledTracePayloadCarriesNoAccountPii()
+    control_mp = pytest.MonkeyPatch()
+    try:
+        control_arm.test_owner_id_user_id_and_session_memory_never_reach_the_wire(
+            control_mp
+        )
+    finally:
+        control_mp.undo()
+
+    monkeypatch.setattr(tracing, "build_traced_client", _client_with_no_anonymizer)
+
+    mutated_arm = test_tracing.TestTheAssembledTracePayloadCarriesNoAccountPii()
+    mutated_mp = pytest.MonkeyPatch()
+    try:
+        with pytest.raises(_ARM_WENT_RED):
+            mutated_arm.test_owner_id_user_id_and_session_memory_never_reach_the_wire(
+                mutated_mp
+            )
+    finally:
+        mutated_mp.undo()
+
+    monkeypatch.undo()
+    assert tracing.build_traced_client is original
+
+
+# ---------------------------------------------------------------------------
+# Mutation 19: the PostHog credential-kind bound made permissive (J-07).
+# ---------------------------------------------------------------------------
+
+
+def test_any_posthog_prefix_accepted_turns_the_personal_key_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """J-07 and F-5.0-12. Accepting any configured value is the pre-fix
+    code exactly, and it is what made an account-wide read-write PERSONAL
+    api key live in any shell that had not exported the right one.
+
+    The mutation reads the raw environment the same way the real function
+    does, so the only thing removed is the prefix bound itself.
+    """
+    original = config.posthog_api_key
+
+    control_arm = test_config.TestPostHogKeyKindIsBounded()
+    control_mp = pytest.MonkeyPatch()
+    try:
+        for name in test_config._ALL_OBSERVABILITY_VARS:
+            control_mp.delenv(name, raising=False)
+        control_arm.test_a_personal_key_is_refused_by_name(control_mp)
+    finally:
+        control_mp.undo()
+
+    monkeypatch.setattr(
+        config, "posthog_api_key", lambda: os.environ.get("POSTHOG_API_KEY") or None
+    )
+
+    mutated_arm = test_config.TestPostHogKeyKindIsBounded()
+    mutated_mp = pytest.MonkeyPatch()
+    try:
+        for name in test_config._ALL_OBSERVABILITY_VARS:
+            mutated_mp.delenv(name, raising=False)
+        with pytest.raises(_ARM_WENT_RED):
+            mutated_arm.test_a_personal_key_is_refused_by_name(mutated_mp)
+    finally:
+        mutated_mp.undo()
+
+    monkeypatch.undo()
+    assert config.posthog_api_key is original
+
+
+def test_unknown_prefix_failing_open_turns_the_fail_closed_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The second half, and the one the design actually rests on. A
+    blocklist of the two known-bad prefixes would pass the case above and
+    still admit every credential kind nobody has reasoned about, which is
+    what the pre-fix code was with an empty blocklist.
+    """
+    original = config.posthog_api_key
+    refused = tuple(config._POSTHOG_REFUSED_PREFIXES)
+
+    def _blocklist_only() -> str | None:
+        raw = os.environ.get("POSTHOG_API_KEY") or None
+        if raw is None or raw.startswith(refused):
+            return None
+        return raw
+
+    control_arm = test_config.TestPostHogKeyKindIsBounded()
+    control_mp = pytest.MonkeyPatch()
+    try:
+        for name in test_config._ALL_OBSERVABILITY_VARS:
+            control_mp.delenv(name, raising=False)
+        control_arm.test_an_unrecognised_prefix_fails_closed(control_mp)
+    finally:
+        control_mp.undo()
+
+    monkeypatch.setattr(config, "posthog_api_key", _blocklist_only)
+
+    mutated_arm = test_config.TestPostHogKeyKindIsBounded()
+    mutated_mp = pytest.MonkeyPatch()
+    try:
+        for name in test_config._ALL_OBSERVABILITY_VARS:
+            mutated_mp.delenv(name, raising=False)
+        with pytest.raises(_ARM_WENT_RED):
+            mutated_arm.test_an_unrecognised_prefix_fails_closed(mutated_mp)
+    finally:
+        mutated_mp.undo()
+
+    monkeypatch.undo()
+    assert config.posthog_api_key is original
+
+
+# ---------------------------------------------------------------------------
+# Mutation 19: the sink's own field bounds removed (A-5.0-03, A-5.0-04,
+# A-5.0-19), one case per bound.
+# ---------------------------------------------------------------------------
+
+
+def test_bounded_text_removed_turns_the_sink_endpoint_arm_red(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-5.0-03. Placing the caller's value verbatim is exactly what the
+    sink did before this fix, and it is why F-5.0-08's caller-side fix left
+    the sink itself as defenceless as the day that critical was filed.
+    """
+    original = audit._bounded_text
+
+    control_arm = test_audit.TestSinkFieldsAreBoundedAndRedacted()
+    with pytest.MonkeyPatch.context() as arm_mp:
+        control_arm.test_a_credential_in_the_endpoint_field_is_redacted_at_the_sink(
+            tmp_path / "control", arm_mp
+        )
+
+    monkeypatch.setattr(audit, "_bounded_text", lambda value, *, field_name: value)
+
+    mutated_arm = test_audit.TestSinkFieldsAreBoundedAndRedacted()
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_a_credential_in_the_endpoint_field_is_redacted_at_the_sink(
+            tmp_path / "mutated", arm_mp
+        )
+
+    monkeypatch.undo()
+    assert audit._bounded_text is original
+
+
+def test_record_ids_bound_removed_turns_the_untrusted_content_arm_red(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-5.0-04. `list(record_ids)` and nothing else is the pre-fix code
+    verbatim. Separate from the case above because `record_ids` reaches the
+    line through a different function and neither bound covers the other.
+    """
+    original = audit._bounded_record_ids
+
+    control_arm = test_audit.TestSinkFieldsAreBoundedAndRedacted()
+    with pytest.MonkeyPatch.context() as arm_mp:
+        control_arm.test_record_ids_elements_are_redacted_and_stringified(
+            tmp_path / "control", arm_mp
+        )
+
+    monkeypatch.setattr(
+        audit,
+        "_bounded_record_ids",
+        lambda record_ids: list(record_ids) if record_ids is not None else [],
+    )
+
+    mutated_arm = test_audit.TestSinkFieldsAreBoundedAndRedacted()
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_record_ids_elements_are_redacted_and_stringified(
+            tmp_path / "mutated", arm_mp
+        )
+
+    monkeypatch.undo()
+    assert audit._bounded_record_ids is original
+
+
+def test_line_bound_removed_turns_the_atomic_append_arm_red(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-5.0-19. A plain `json.dumps` with no whole-line check is the
+    pre-fix code, and it is what let a 20 KB line be written, which four
+    concurrent PROCESSES then interleaved into 251 unparseable lines in an
+    append-only file. This case is what stops that guarantee decaying back
+    into arithmetic stated in a comment.
+
+    It targets the DIRECT arm rather than the one that writes through
+    `record_tool_call`, and the reason is a measurement rather than a
+    preference: with today's per-field caps in place no call through
+    `record_tool_call` can produce a line over the budget at all, so
+    neutering `_bounded_line` left that arm GREEN. That is recorded in the
+    direct arm's own docstring as the belt's coverage statement.
+    """
+    original = audit._bounded_line
+
+    control_arm = test_audit.TestSinkFieldsAreBoundedAndRedacted()
+    control_arm.test_bounded_line_reduces_an_oversized_entry_and_discloses_it()
+
+    monkeypatch.setattr(
+        audit, "_bounded_line", lambda entry: json.dumps(entry, default=str)
+    )
+
+    mutated_arm = test_audit.TestSinkFieldsAreBoundedAndRedacted()
+    with pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_bounded_line_reduces_an_oversized_entry_and_discloses_it()
+
+    monkeypatch.undo()
+    assert audit._bounded_line is original
+
+
+# ---------------------------------------------------------------------------
+# Mutation 19: the subclass flattening removed from the audit redactor
+# (A-5.0-01), mutated once per delegating rule.
+# ---------------------------------------------------------------------------
+
+
+def test_plain_str_removed_turns_the_lying_key_arm_red(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-5.0-01, the KEY rule. An identity `_plain_str` is precisely the
+    pre-fix code: `_is_secret_key` then calls the subclass's own `lower()`,
+    which answers `"harmless"`, so a key literally named `api_key` is not
+    recognized as secret-ish and its value lands on the line.
+    """
+    original = audit._plain_str
+
+    control_arm = test_audit.TestSubclassKeysAndValuesCannotDefeatRedaction()
+    with pytest.MonkeyPatch.context() as arm_mp:
+        control_arm.test_a_key_subclass_lying_about_lower_still_redacts_its_value(
+            tmp_path / "control", arm_mp
+        )
+
+    monkeypatch.setattr(audit, "_plain_str", lambda value: value)
+
+    mutated_arm = test_audit.TestSubclassKeysAndValuesCannotDefeatRedaction()
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_a_key_subclass_lying_about_lower_still_redacts_its_value(
+            tmp_path / "mutated", arm_mp
+        )
+
+    monkeypatch.undo()
+    assert audit._plain_str is original
+
+
+def test_plain_str_removed_turns_the_lying_value_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The same mutation at the VALUE rule, which delegates to the same
+    function through a different path. Separate case because the key arm
+    going red says nothing about whether the value arm ever could: the two
+    rules fail for different reasons and one could be fixed without the
+    other.
+    """
+    original = audit._plain_str
+
+    control_arm = test_audit.TestSubclassKeysAndValuesCannotDefeatRedaction()
+    control_arm.test_a_value_subclass_lying_about_contains_is_still_scanned()
+
+    monkeypatch.setattr(audit, "_plain_str", lambda value: value)
+
+    mutated_arm = test_audit.TestSubclassKeysAndValuesCannotDefeatRedaction()
+    with pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_a_value_subclass_lying_about_contains_is_still_scanned()
+
+    monkeypatch.undo()
+    assert audit._plain_str is original
+
+
+# ---------------------------------------------------------------------------
+# Mutation 19: the audit redactor's deferred-stringification branch removed
+# (A-5.0-02, the ordering gap).
+# ---------------------------------------------------------------------------
+
+
+def test_stringify_leaf_removed_turns_the_deferred_dsn_arm_red(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-5.0-02: making `_stringify_leaf` return the object unchanged puts
+    the ordering defect back exactly as it was. `_redact_value_string` then
+    receives a non-`str`, its `"=" not in value` guard raises no error but
+    matches nothing useful, and `json.dumps(default=str)` converts the
+    object to a credential-bearing string after redaction has finished.
+
+    The mutation returns the OBJECT rather than a neutered string on
+    purpose: an identity function on the string form would still be
+    redacted by the value rule, which would prove nothing about the
+    ordering.
+    """
+    original = audit._stringify_leaf
+
+    control_arm = test_audit.TestDeferredStringificationIsRedacted()
+    with pytest.MonkeyPatch.context() as arm_mp:
+        control_arm.test_a_deferred_dsn_under_an_innocuous_key_is_redacted(
+            tmp_path / "control", arm_mp
+        )
+
+    monkeypatch.setattr(audit, "_redact_value_string", _passthrough_unless_str)
+    monkeypatch.setattr(audit, "_stringify_leaf", lambda value: value)
+
+    mutated_arm = test_audit.TestDeferredStringificationIsRedacted()
+    with pytest.MonkeyPatch.context() as arm_mp, pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_a_deferred_dsn_under_an_innocuous_key_is_redacted(
+            tmp_path / "mutated", arm_mp
+        )
+
+    monkeypatch.undo()
+    assert audit._stringify_leaf is original
+    assert audit._redact_value_string is _ORIGINAL_REDACT_VALUE_STRING
+
+
+#: Captured at import so the restoration check below compares against the
+#: genuine original rather than against whatever the last mutation left.
+_ORIGINAL_REDACT_VALUE_STRING = audit._redact_value_string
+
+
+def _passthrough_unless_str(value: Any) -> Any:
+    """The pre-fix `_redact_value_string`, which only ever saw strings.
+
+    Needed alongside the `_stringify_leaf` mutation because the real
+    function calls `str` methods unconditionally and would raise on the
+    object the mutation now lets through, and a raised `TypeError` inside
+    `record_tool_call`'s best-effort handler would suppress the line
+    entirely. That would turn the arm red for the wrong reason: no line at
+    all rather than a leaked credential. Restoring the pre-fix contract,
+    strings scanned and everything else untouched, reproduces the actual
+    historical behaviour.
+    """
+    if isinstance(value, str):
+        return _ORIGINAL_REDACT_VALUE_STRING(value)
+    return value
+
+
+# ---------------------------------------------------------------------------
+# Mutation 19: the tracing redactor's error bound removed (A-5.0-13, J-03).
+# ---------------------------------------------------------------------------
+
+
+def test_error_bound_removed_turns_the_run_error_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-5.0-13: before the bound existed, `redact_payload` walked dicts
+    and lists and returned every other type unchanged, so the string
+    langsmith wraps as `{"error": ...}` came back byte-identical carrying a
+    live credential. Making `_is_error_text_key` answer False restores
+    exactly that state: the dict walk still runs and the two redaction
+    passes still fire, so only the third pass disappears.
+
+    Targeting the key test rather than `_bound_error_text` is deliberate.
+    Neutering the bound function alone would still leave every value under
+    an error key replaced by something, which is not the defect; the defect
+    was the free text reaching the wire, and only a key test that says "this
+    is not an error field" reproduces it.
+    """
+    original = tracing._is_error_text_key
+
+    control_mp = pytest.MonkeyPatch()
+    try:
+        test_tracing.test_api_key_in_a_run_error_never_reaches_the_langsmith_error_field(
+            control_mp
+        )
+    finally:
+        control_mp.undo()
+
+    monkeypatch.setattr(tracing, "_is_error_text_key", lambda key: False)
+
+    mutated_mp = pytest.MonkeyPatch()
+    try:
+        with pytest.raises(_ARM_WENT_RED):
+            test_tracing.test_api_key_in_a_run_error_never_reaches_the_langsmith_error_field(
+                mutated_mp
+            )
+    finally:
+        mutated_mp.undo()
+
+    monkeypatch.undo()
+    assert tracing._is_error_text_key is original
+
+
+def test_bound_error_text_made_a_passthrough_turns_the_dsn_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The second layer, mutated alone. Mutation 18 proves the key test
+    discriminates; this proves the bound itself is what removes the
+    credential rather than some incidental rewrite elsewhere in the walk.
+    Both must exist, because either one going red says nothing about
+    whether the other could.
+    """
+    original = tracing._bound_error_text
+
+    control_mp = pytest.MonkeyPatch()
+    try:
+        test_tracing.test_dsn_password_in_a_run_error_never_reaches_the_langsmith_error_field(
+            control_mp
+        )
+    finally:
+        control_mp.undo()
+
+    monkeypatch.setattr(tracing, "_bound_error_text", lambda value: value)
+
+    mutated_mp = pytest.MonkeyPatch()
+    try:
+        with pytest.raises(_ARM_WENT_RED):
+            test_tracing.test_dsn_password_in_a_run_error_never_reaches_the_langsmith_error_field(
+                mutated_mp
+            )
+    finally:
+        mutated_mp.undo()
+
+    monkeypatch.undo()
+    assert tracing._bound_error_text is original
 
 
 if __name__ == "__main__":
