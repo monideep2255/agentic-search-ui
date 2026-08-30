@@ -348,6 +348,51 @@ def _bound_error_text(value: str) -> str:
     return _REDACTED_ERROR + " " + class_name
 
 
+#: The exact scalar types langsmith's own serializer encodes from the VALUE
+#: rather than by calling `str()` on it. Exact types via `type(...) is`, not
+#: `isinstance`, for the same reason `audit._JSON_NATIVE_SCALARS` uses exact
+#: types: a subclass is not guaranteed to take the same encoder path, so it
+#: is routed through the stringify branch instead of being trusted.
+#:
+#: Declared here rather than imported from `audit.py`. The two modules do
+#: not import each other today and this fix is not worth creating that
+#: dependency for a three-element tuple; the shapes are deliberately kept
+#: recognisably the same instead, so a reader who knows one knows the other.
+_JSON_NATIVE_SCALARS: tuple[type, ...] = (bool, int, float)
+
+
+def _stringify_leaf(value: Any) -> str:
+    """Convert a non-JSON-native leaf to text HERE, so the bound can see it.
+
+    F-5.0-28, and it is `audit._stringify_leaf`'s A-5.0-02 at the OTHER
+    sink. Fix 2 of the consolidated round named that family, a non-`str`
+    object that travels past every redaction rule as an opaque leaf and is
+    materialized as text by a serializer afterwards, closed it in
+    `audit.redact_params`, and left this module's identical shape open.
+    Measured: an object whose `__str__` yields the `kg_reader` DSN came
+    back from `redact_payload` UNCHANGED, and langsmith's own `_dumps_json`
+    then emitted the password intact.
+
+    Like the audit fix, this is an ORDER change rather than a new pattern:
+    convert first, then bound, so the value rule inspects the same string
+    the serializer would later have produced. A conversion that raises is
+    not allowed to propagate, since a hostile or half-constructed `__str__`
+    must not be able to fail the run it is describing; it yields the bare
+    marker, which is this module's fail-closed outcome everywhere else too.
+
+    The result is flattened through `str.__str__` because `str(value)`
+    accepts a `str` SUBCLASS back from `__str__`, and `_bound_error_text`
+    then indexes and measures what it is handed. That is F-5.0-22's family
+    again, a subclass overriding the very methods a guard calls, and
+    `str.__str__` is the unbound base method a subclass cannot intercept.
+    """
+    try:
+        text = str(value)
+    except Exception:  # noqa: BLE001 - a hostile __str__ must not fail the run
+        return _REDACTED_ERROR
+    return str.__str__(text)
+
+
 def _bound_error_value(value: Any) -> Any:
     """Apply the error-field bound to whatever sits under an error-shaped key.
 
@@ -368,8 +413,24 @@ def _bound_error_value(value: Any) -> Any:
       is structure rather than a message. Its own keys get this same
       treatment at depth.
 
-    Any other scalar (a number, a bool) is returned unchanged: it carries
-    no text and therefore no credential.
+    A JSON-native scalar, exactly `bool`, `int` or `float`, is returned
+    unchanged: it carries no text, and langsmith's serializer encodes it
+    from the value rather than through `str()`, so there is no deferred
+    conversion to get in front of.
+
+    ANYTHING ELSE IS CONVERTED TO TEXT AND THEN BOUNDED (F-5.0-28). This
+    branch used to `return value`, justified as "any other scalar (a
+    number, a bool) carries no text and therefore no credential", which is
+    a sentence true of scalars applied to a branch that caught every
+    non-container, non-`str` type there is. See `_stringify_leaf` for the
+    measurement and for why this is an ordering fix rather than a pattern
+    fix.
+
+    Scope, stated so it is not read as more than it is: this closes the
+    deferred-`__str__` family under an ERROR-shaped key only. An ordinary
+    string under an ordinary key is still returned unchanged, which is
+    A-5.0-14's separately stated open gap in `redact_payload`'s docstring,
+    not something this fix touches.
     """
     if value is None:
         return None
@@ -379,7 +440,9 @@ def _bound_error_value(value: Any) -> Any:
         return _REDACTED_ERROR
     if isinstance(value, dict | list):
         return redact_payload(value)
-    return value
+    if type(value) in _JSON_NATIVE_SCALARS:
+        return value
+    return _bound_error_text(_stringify_leaf(value))
 
 
 def _allowlist_for(keys: Iterable[str]) -> frozenset[str] | None:

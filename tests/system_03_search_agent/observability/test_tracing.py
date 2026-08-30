@@ -561,6 +561,62 @@ def test_run_error_that_is_not_a_repr_falls_back_to_the_bare_marker(
     assert result == tracing._REDACTED_ERROR
 
 
+class TestDeferredStringificationUnderAnErrorKeyIsBounded:
+    """F-5.0-28, the fifth family at the OTHER sink. `audit.redact_params`
+    closed it with `_stringify_leaf` under A-5.0-02; `tracing.redact_payload`
+    has the identical shape and did not get the fix, so an object whose
+    `__str__` yields a DSN came back UNCHANGED and langsmith's own
+    `_dumps_json` then emitted the password intact.
+
+    The fix is an ORDER change, the same one `audit.py` makes: convert the
+    leaf to text before the bound runs, so the value rule inspects the same
+    string the serializer would later have produced.
+    """
+
+    def test_a_deferred_dsn_under_an_error_key_never_survives_redaction(
+        self,
+    ) -> None:
+        """The measured reproduction: an object under `error` whose only
+        text lives behind `__str__`.
+        """
+        secret = _fake_credential()
+
+        class _Deferred:
+            def __str__(self) -> str:
+                return (
+                    "connection failed: postgresql://kg_reader:"
+                    + secret
+                    + "@46.225.128.133:5432/ncbi_kg"
+                )
+
+        payload = {"error": _Deferred()}
+
+        # Populate-check: the object really does carry the credential once
+        # something asks it for text, which is what the serializer does.
+        assert secret in str(payload["error"])
+
+        result = tracing.redact_payload(payload)
+
+        assert result["error"] == tracing._REDACTED_ERROR
+        # Serialized the way langsmith serializes, since the defect was
+        # that the object survived redaction and was converted afterwards.
+        assert secret not in json.dumps(result, default=str)
+
+    def test_a_json_native_scalar_under_an_error_key_is_still_left_alone(
+        self,
+    ) -> None:
+        """The other side of the same branch, so the fix cannot be a
+        blanket stringification wearing a bound's name. A number carries no
+        text and langsmith encodes it from the value, so there is no
+        deferred conversion to get in front of and turning it into `"500"`
+        would lose the record's machine-readability for no gain.
+        """
+        result = tracing.redact_payload({"error": 500, "errors": True})
+
+        assert result["error"] == 500
+        assert result["errors"] is True
+
+
 class TestAnOverriddenReprFailsClosedToTheBareMarker:
     """F-5.0-26: the class-name extraction's premise is not universally
     true, and this class pins what is actually true instead of the sentence

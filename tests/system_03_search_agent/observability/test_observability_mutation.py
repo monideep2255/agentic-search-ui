@@ -191,6 +191,13 @@ phase's own tracker had flagged as unproven:
     arms in `test_tracing` that drive langsmith's own `_hide_run_error`
     rather than `redact_payload` directly, so the property proved is the
     one on the wire.
+22. The tracing redactor's DEFERRED-STRINGIFICATION branch removed
+    (F-5.0-28, the same fifth family as 20 at the other sink): breaks
+    `test_tracing.TestDeferredStringificationUnderAnErrorKeyIsBounded.
+    test_a_deferred_dsn_under_an_error_key_never_survives_redaction`.
+    Mutated together with a pre-fix `_bound_error_text`, because the real
+    one calls `re.match` on what it is handed and a raised `TypeError`
+    would turn the arm red for the wrong reason.
 
 Depends on:
     - system_03_search_agent.observability.config
@@ -1557,6 +1564,62 @@ def test_bound_error_text_made_a_passthrough_turns_the_dsn_arm_red(
 
     monkeypatch.undo()
     assert tracing._bound_error_text is original
+
+
+# ---------------------------------------------------------------------------
+# Mutation 22: the tracing redactor's deferred-stringification branch
+# removed (F-5.0-28, the fifth family at the other sink).
+# ---------------------------------------------------------------------------
+
+
+def test_tracing_stringify_leaf_removed_turns_the_deferred_dsn_arm_red(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-5.0-28. Making `_stringify_leaf` return the object unchanged puts
+    the pre-fix `return value` fallthrough back exactly as it was: the
+    object survives `redact_payload` and langsmith's serializer converts it
+    to a credential-bearing string afterwards.
+
+    The mutation returns the OBJECT rather than a neutered string, for the
+    same reason mutation 20 does at the audit sink: an identity function on
+    the string form would still be bounded by `_bound_error_text`, which
+    would prove nothing about the ordering. `_bound_error_text` is mutated
+    alongside it to a passthrough for non-`str` input, because the real one
+    calls `re.match` on what it is handed and a raised `TypeError` would
+    turn the arm red for the wrong reason.
+    """
+    original_stringify = tracing._stringify_leaf
+    original_bound = tracing._bound_error_text
+
+    control_arm = test_tracing.TestDeferredStringificationUnderAnErrorKeyIsBounded()
+    control_arm.test_a_deferred_dsn_under_an_error_key_never_survives_redaction()
+
+    monkeypatch.setattr(tracing, "_stringify_leaf", lambda value: value)
+    monkeypatch.setattr(
+        tracing, "_bound_error_text", _tracing_bound_unless_non_str(original_bound)
+    )
+
+    mutated_arm = test_tracing.TestDeferredStringificationUnderAnErrorKeyIsBounded()
+    with pytest.raises(_ARM_WENT_RED):
+        mutated_arm.test_a_deferred_dsn_under_an_error_key_never_survives_redaction()
+
+    monkeypatch.undo()
+    assert tracing._stringify_leaf is original_stringify
+    assert tracing._bound_error_text is original_bound
+
+
+def _tracing_bound_unless_non_str(original: Any) -> Any:
+    """The pre-fix `_bound_error_text`'s reachable contract: it only ever
+    saw an exact `str`, because the branch above it returned every other
+    type unchanged.
+    """
+
+    def _bound(value: Any) -> Any:
+        if type(value) is str:
+            return original(value)
+        return value
+
+    return _bound
 
 
 if __name__ == "__main__":
