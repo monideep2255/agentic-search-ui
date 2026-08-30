@@ -11,7 +11,7 @@ Status: COMPLETE. Sections were appended as each result was established, per the
 - [Scope of the change](#scope-of-the-change)
 - [G1 the central design claim](#g1-the-central-design-claim)
 - [G2 Section 20.3 field compliance](#g2-section-203-field-compliance)
-- [G3 the PII boundary](#g3-the-pii-boundary)
+- [G3 the PII boundary](#g3-the-pii-boundary-section-201)
 - [G4 mutation testing every gate](#g4-mutation-testing-every-gate)
 - [G5 the round-4 fixes](#g5-the-round-4-fixes)
 - [G6 production and AI security gates](#g6-production-and-ai-security-gates)
