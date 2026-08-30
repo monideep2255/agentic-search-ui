@@ -1,6 +1,6 @@
 # Handoff: build phase 5.0, observability
 
-Written 2026-08-29 at a deliberate stopping point. Branch `phase/5.0-observability`, tree clean, pushed.
+Written 2026-08-29 at a deliberate stopping point, and CORRECTED 2026-08-30 when the stated next action turned out to be already done (F-5.0-29). Branch `phase/5.0-observability`.
 
 THIS FILE IS THE ENTRY POINT. If you were handed it and nothing else, work "Start here" below top to bottom, then stop reading and act.
 
@@ -27,6 +27,7 @@ If `git status` is not clean, or the suite figures below do not reproduce, STOP 
 
 ## Table of contents
 
+- [Start here](#start-here)
 - [The one next action](#the-one-next-action)
 - [What this phase delivers](#what-this-phase-delivers)
 - [State at the cut](#state-at-the-cut)
@@ -37,9 +38,13 @@ If `git status` is not clean, or the suite figures below do not reproduce, STOP 
 
 ## The one next action
 
-Finish F-5.0-28, then close the phase: gates, then `/phase-checkpoint`, then `/ship`.
+Close the phase: gates, then `/phase-checkpoint`, then `/ship`. There is no code left to write.
 
-F-5.0-28 is the only unfinished work. The "fifth family", a deferred `__str__` object that survives redaction and is materialized later by serialization, is CLOSED in `observability/audit.py` and still OPEN in `observability/tracing.py`. Close it the way `audit.py` does, as an ORDER change so the value rule sees what serialization would produce, never as another pattern. It is minor and NOT reachable at any of the four anonymizer entry points today, which is what made this a safe place to stop.
+F-5.0-28 IS DONE, and this section said otherwise until 2026-08-30. The fix, its two arms, its mutation case, its `fixed` status and its History entry all landed in commit `53be4cb`, whose own message says "fix not yet in". Re-measured on this branch rather than inferred from the diff: `redact_payload({"error": obj})` for an object whose `__str__` yields the `kg_reader` DSN returns `[redacted error]`, `json.dumps(result, default=str)` does not carry the secret, the observability suite is `213 passed, 1 skipped`, and mutation case 22 passes, so the arm is proven able to go red rather than merely green.
+
+What the previous session's re-probe actually found is real and is a DIFFERENT item: a deferred-`__str__` object under an ORDINARY key still survives, `redact_payload({"note": obj})` returns the object unchanged. That is A-5.0-14, listed below under "What is deliberately left open", not the error-key branch F-5.0-28 named. One probe varying the key was read as evidence about the fix, which is this phase's own F-5.0-16 lesson arriving a second time.
+
+Filed as F-5.0-29 in `tracker/phase_5.0.md`. The commit message is NOT amended: it is published, and `git-workflow` forbids amending a published commit, so the durable record is the tracker rather than `git log`.
 
 Do not re-plan the phase, do not re-run the research, do not reopen the design. All of it is on disk.
 
@@ -55,11 +60,11 @@ Tech spec Section 20, in full. Three records, each with one job, so no single ou
 
 | What | Value |
 |---|---|
-| Observability suite | 207 passed, 1 skipped |
+| Observability suite | 213 passed, 1 skipped, re-measured 2026-08-30 |
 | Full Python suite | 4364 passed, 171 skipped, 1 xfailed, 0 failed |
 | `ruff check`, whole repository, no path | clean |
 | Review rounds run | one judge, one adversary, five fix-and-verify |
-| Findings filed | 28 in the phase file, plus 30 from the adversary |
+| Findings filed | 29 in the phase file, plus 30 from the adversary |
 
 Two gates are known-red and deliberately deferred. Neither is a defect:
 
@@ -70,7 +75,7 @@ Two gates are known-red and deliberately deferred. Neither is a defect:
 
 Carried forward with named owners rather than dropped quietly.
 
-- F-5.0-24: the analytics event is `await`ed INLINE on the query path, so a slow PostHog slows a user's search. Diagnosed at `core/run.py:346` and `app.py:1851`, with the patch written out in the tracker. NOT applied because it necessarily breaks `test_analytics.py`, whose arms assert on a recording spy immediately after the await, and that file was outside the fixing agent's scope. Recommended scope: `analytics.py` plus `test_analytics.py`, with a timing arm and a mutation reverting `create_task` to a bare `await`.
+- A-5.0-24: the analytics event is `await`ed INLINE on the query path, so a slow PostHog slows a user's search. Diagnosed at `core/run.py:346` and `app.py:1851`, with the patch written out in the tracker. NOT applied because it necessarily breaks `test_analytics.py`, whose arms assert on a recording spy immediately after the await, and that file was outside the fixing agent's scope. Recommended scope: `analytics.py` plus `test_analytics.py`, with a timing arm and a mutation reverting `create_task` to a bare `await`.
 - A-5.0-14: an ordinary string under an ordinary key still reaches LangSmith unredacted. Declared in `redact_payload`'s own docstring. Confirmed reachable on the wire, and confirmed that no credential reaches it today, since all producers are static literals.
 - Roughly 20 minor adversary findings, all in `tracker/phase_5.0_adversary_report.md`.
 - One item for the product owner, which no code change substitutes for: revoke the old `phx_` PostHog personal key. It has been removed from `.env` and its local backup deleted, and nothing depends on it.
