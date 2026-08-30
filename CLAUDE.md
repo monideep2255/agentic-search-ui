@@ -178,6 +178,7 @@ The agent checks adapter availability before attempting operations. If a source 
 | git-sync | `sync`, `push`, `pull` | GitHub operations |
 | docs-sync | `update docs`, `sync docs` | Update documentation |
 | doc-auditor | dispatched by doc-readability, never by phrase | Grade a restructured or authored document for lost facts and style, from fresh context |
+| phase-reviewer | dispatched by name at cadence stages 8 and 9, never by phrase | Judge, adversary or re-review round for a build phase. Runs probes, files findings to one report, closes nothing. Has Read, Grep, Glob and Bash, and deliberately NO Write or Edit: a round with full access once deleted a tracked file outside its brief |
 
 ---
 
@@ -202,7 +203,7 @@ The invocation is always the skill's exact name. A shortened alias does not reso
 | release-workflow | End-to-end release verification and ship | `/release-workflow` |
 | eval-harness | The offline evaluation gate, operationalizing the evaluation playbook: 8-point rubric, hard-fails, coverage metric, must-pass set | `/eval-harness` |
 | verify | Pre-commit checks: Python compile, tests, lint, git status | `/verify` |
-| standup | Where the build stands right now, in five plain lines: phase, what landed, what is in motion this moment, what is next, what is blocked. Reports committed AND uncommitted work, including running agents and commands. Reads the tracker and git, never the conversation, so it is correct in a fresh session. Reports only, never edits | `/standup` |
+| standup | Where the build stands right now, in seven plain lines: phase, what landed, what is in motion this moment, what is next, how long until done, what decisions are waiting on the product owner, and what is blocked. Reports committed AND uncommitted work, including running agents and commands. Reads the tracker and git, never the conversation, so it is correct in a fresh session. Reports only, never edits | `/standup` |
 | phase-checkpoint | Sync planning docs at a phase or sub-phase boundary (decisions, session doc, meeting note, continuation prompt, and at phase end the synthesis and Plan status). Runs before `/ship`, never touches git | `/phase-checkpoint` |
 | doc-readability | Make one named document readable in house style: break prose walls, add the table of contents, add Mermaid, add first-principles explanation. Gated by a bundled no-loss script plus a fresh-context auditor, so no fact is lost. Refuses the two locked requirements documents | `/doc-readability` |
 
